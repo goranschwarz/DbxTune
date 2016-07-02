@@ -743,6 +743,22 @@ public class PreparedStatementCache
 		{
 			_ps.setUnicodeStream(parameterIndex, x, length);
 		}
+
+		//#######################################################
+		//############################# JDBC 4.1
+		//#######################################################
+
+		@Override
+		public void closeOnCompletion() throws SQLException
+		{
+			_ps.closeOnCompletion();
+		}
+
+		@Override
+		public boolean isCloseOnCompletion() throws SQLException
+		{
+			return _ps.isCloseOnCompletion();
+		}
 		
 	}
 }

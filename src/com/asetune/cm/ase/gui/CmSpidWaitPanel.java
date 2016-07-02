@@ -499,10 +499,10 @@ extends TabularCntrPanel
 
 		// some "statics" that can be used in the graphs
 		final String          chartTitle              = "Summary Graph - by EventID and by ClassName";
-		final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+		final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10); // SwingUtils.hiDpiScale(10));
 		final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
 
-		final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+		final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9); // SwingUtils.hiDpiScale(9));
 		
 		if (createPieChart)
 		{
@@ -714,8 +714,8 @@ extends TabularCntrPanel
 		final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
 
 		String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
-		final JLabel    graphType_lbl    = new JLabel("Type");
-		final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+		final JLabel            graphType_lbl    = new JLabel("Type");
+		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
 		final RSyntaxTextArea extraWhereClause_txt = new RSyntaxTextArea();
 		final JButton         extraWhereClause_but = new JButton("Apply Extra Where Clause");
@@ -812,7 +812,8 @@ extends TabularCntrPanel
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				helperActionSave(PROPKEY_includeSystemThreads, ((JCheckBox)e.getSource()).isSelected());
+				helperActionSave(PROPKEY_includeSystemThreads,                      ((JCheckBox)e.getSource()).isSelected());
+				helperActionSave(CmSpidWait.PROPKEY_trendGraph_skipSystemThreads, ! ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
 

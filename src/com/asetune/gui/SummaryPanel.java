@@ -247,7 +247,7 @@ public class SummaryPanel
 //		JPanel panel = SwingUtils.createPanel("title", false);
 //		panel.setLayout(new MigLayout("", "5[grow]5", ""));
 //
-//		_title_lbl.setFont(new java.awt.Font("Dialog", 1, 16));
+//		_title_lbl.setFont(new java.awt.Font("Dialog", 1, SwingUtils.hiDpiScale(16)));
 //		_title_lbl.setText("Summary panel");
 //
 //		// create new panel
@@ -1000,8 +1000,8 @@ public class SummaryPanel
 //	{
 //		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 //
-//		conf.setProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
-//		conf.setProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
+//		conf.setLayoutProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
+//		conf.setLayoutProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
 //
 //		conf.save();
 //	}
@@ -1029,8 +1029,8 @@ public class SummaryPanel
 //		_clusterView_cbx.setSelectedItem(clusterView);
 //				
 //
-//		int width   = conf.getIntProperty("summaryPanel.serverInfo.width",  -1);
-//		int height  = conf.getIntProperty("summaryPanel.serverInfo.height",  -1);
+//		int width   = conf.getLayoutProperty("summaryPanel.serverInfo.width",  SwingUtils.hiDpiScale(300));
+//		int height  = conf.getLayoutProperty("summaryPanel.serverInfo.height", SwingUtils.hiDpiScale(5000));
 //		if (width != -1 && height != -1)
 //		{
 //			_dataPanelScroll.setPreferredSize(new Dimension(width, height));

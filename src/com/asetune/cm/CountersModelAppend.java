@@ -17,7 +17,9 @@ import javax.swing.SwingUtilities;
 import org.apache.log4j.Logger;
 
 import com.asetune.DbxTune;
+import com.asetune.ICounterController;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 
 
 public class CountersModelAppend
@@ -39,6 +41,7 @@ public class CountersModelAppend
 	private boolean   _initialized      = false;
 
 	public CountersModelAppend(
+		ICounterController counterController,
 		String name, 
 		String groupName, 
 		String sql, 
@@ -49,7 +52,7 @@ public class CountersModelAppend
 		int dependsOnCeVersion, 
 		boolean systemCm)
 	{
-		super(name, groupName, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
+		super(counterController, name, groupName, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
 
 		setDataSource(DATA_ABS, false);
 	}
@@ -317,7 +320,7 @@ public class CountersModelAppend
 
 
 	@Override
-	protected int refreshGetData(Connection conn) throws Exception
+	protected int refreshGetData(DbxConnection conn) throws Exception
 	{
 		if (_logger.isDebugEnabled())
 			_logger.debug("Entering refresh() method for " + getName());

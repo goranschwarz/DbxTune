@@ -1,206 +1,219 @@
 package com.asetune.tools.sqlwc;
 
+import java.io.PrintWriter;
+import java.util.Iterator;
+import java.util.Map;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.log4j.Logger;
+
+import com.asetune.DebugOptions;
+import com.asetune.NormalExitException;
+import com.asetune.Version;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Debug;
+import com.asetune.utils.JavaVersion;
+import com.asetune.utils.StringUtil;
 
 public class SqlCommandLine
 {
-//	private static Logger _logger = Logger.getLogger(SqlCommandLine.class);
-//
-//	
-//	public SqlCommandLine(CommandLine cmd)
-//	throws Exception
-//	{
-//		// -----------------------------------------------------------------
-//		// CHECK JAVA JVM VERSION
-//		// -----------------------------------------------------------------
-//		int javaVersionInt = JavaVersion.getVersion();
-//		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
-//		    && javaVersionInt <  JavaVersion.VERSION_1_6
-//		   )
-//		{
-//			System.out.println("");
-//			System.out.println("===============================================================");
-//			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
-//			System.out.println(" java.version = " + System.getProperty("java.version"));
-//			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
-//			System.out.println("---------------------------------------------------------------");
-//			System.out.println("");
-//			throw new Exception("This application needs a JVM 1.6 or higher.");
-////			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
-//		}
-//
-//		//---------------------------------------------------------------
-//		// OK, lets get ASE user/passwd/server/dbname
-//		//---------------------------------------------------------------
-//		String aseUsername  = System.getProperty("user.name"); 
-//		String asePassword  = null;
-//		String aseServer    = System.getenv("DSQUERY");
-//		String aseDbname    = "";
-//		String jdbcUsername = System.getProperty("user.name");
-//		String jdbcPassword = null;
-//		String jdbcUrl      = "";
-//		String jdbcDriver   = "";
-//		String connProfile  = "";
-//		String sqlQuery     = "";
-//		String sqlFile      = "";
-//		if (cmd.hasOption('U'))	aseUsername  = cmd.getOptionValue('U');
-//		if (cmd.hasOption('P'))	asePassword  = cmd.getOptionValue('P');
-//		if (cmd.hasOption('S'))	aseServer    = cmd.getOptionValue('S');
-//		if (cmd.hasOption('D'))	aseDbname    = cmd.getOptionValue('D');
-//		if (cmd.hasOption('q'))	sqlQuery     = cmd.getOptionValue('q');
-//		if (cmd.hasOption('U'))	jdbcUsername = cmd.getOptionValue('U');
-//		if (cmd.hasOption('P'))	jdbcPassword = cmd.getOptionValue('P');
-//		if (cmd.hasOption('u'))	jdbcUrl      = cmd.getOptionValue('u');
-//		if (cmd.hasOption('d'))	jdbcDriver   = cmd.getOptionValue('d');
-//		if (cmd.hasOption('p'))	connProfile  = cmd.getOptionValue('p');
-//		if (cmd.hasOption('i'))	sqlFile      = cmd.getOptionValue('i');
-//
-//		if (aseServer == null)
-//			aseServer = "SYBASE";
-//
-//		DebugOptions.init();
-//		if (cmd.hasOption('x'))
-//		{
-//			String cmdLineDebug = cmd.getOptionValue('x');
-//			String[] sa = cmdLineDebug.split(",");
-//			for (int i=0; i<sa.length; i++)
-//			{
-//				String str = sa[i].trim();
-//
-//				if (str.equalsIgnoreCase("list"))
-//				{
-//					System.out.println();
-//					System.out.println(" Option          Description");
-//					System.out.println(" --------------- -------------------------------------------------------------");
-//					for (Map.Entry<String,String> entry : Debug.getKnownDebugs().entrySet()) 
-//					{
-//						String debugOption = entry.getKey();
-//						String description = entry.getValue();
-//
-//						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
-//					}
-//					System.out.println();
-//					// Get of of here if it was a list option
-//					throw new NormalExitException("List of debug options");
-//				}
-//				else
-//				{
-//					// add debug option
-//					Debug.addDebug(str);
-//				}
-//			}
-//		}
-//
-////		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
-////		Logging.init("sqlw.", propFile);
-//
-//		// Print out the memory configuration
-//		// And the JVM info
-//		_logger.debug("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
-//		_logger.debug("Debug Options enabled: "+Debug.getDebugsString());
-//
-//		_logger.debug("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
-//		_logger.debug("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
-//		_logger.debug("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
-//		_logger.debug("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
-//		_logger.debug("Using Java VM Home:    "+System.getProperty("java.home"));
-//		_logger.debug("Java class format version number: " +System.getProperty("java.class.version"));
-//		_logger.debug("Java class path: " +System.getProperty("java.class.path"));
-//		_logger.debug("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
-//		_logger.debug("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
-//		_logger.debug("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
-//
-//		_logger.debug("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
-//		_logger.debug("Running on Operating System Name:  "+System.getProperty("os.name"));
-//		_logger.debug("Running on Operating System Version:  "+System.getProperty("os.version"));
-//		_logger.debug("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
-//		_logger.debug("The application was started by the username:  "+System.getProperty("user.name"));
-//		_logger.debug("The application was started in the directory:   "+System.getProperty("user.dir"));
-//
-////		_logger.debug("System configuration file is '"+propFile+"'.");
-////		_logger.debug("User configuration file is '"+userPropFile+"'.");
-////		_logger.debug("Storing temporary configurations in file '"+tmpPropFile+"'.");
-////		_logger.debug("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
-//
-//
+	private static Logger _logger = Logger.getLogger(SqlCommandLine.class);
+
+	
+	public SqlCommandLine(CommandLine cmd)
+	throws Exception
+	{
+		// -----------------------------------------------------------------
+		// CHECK JAVA JVM VERSION
+		// -----------------------------------------------------------------
+		int javaVersionInt = JavaVersion.getVersion();
+		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
+		    && javaVersionInt <  JavaVersion.VERSION_1_7
+		   )
+		{
+			System.out.println("");
+			System.out.println("===============================================================");
+			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			System.out.println(" java.version = " + System.getProperty("java.version"));
+			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
+			System.out.println("---------------------------------------------------------------");
+			System.out.println("");
+			throw new Exception("This application needs a JVM 1.7 or higher.");
+//			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+		}
+
+		//---------------------------------------------------------------
+		// OK, lets get ASE user/passwd/server/dbname
+		//---------------------------------------------------------------
+		String aseUsername  = System.getProperty("user.name"); 
+		String asePassword  = null;
+		String aseServer    = System.getenv("DSQUERY");
+		String aseDbname    = "";
+		String jdbcUsername = System.getProperty("user.name");
+		String jdbcPassword = null;
+		String jdbcUrl      = "";
+		String jdbcDriver   = "";
+		String connProfile  = "";
+		String sqlQuery     = "";
+		String sqlFile      = "";
+		if (cmd.hasOption('U'))	aseUsername  = cmd.getOptionValue('U');
+		if (cmd.hasOption('P'))	asePassword  = cmd.getOptionValue('P');
+		if (cmd.hasOption('S'))	aseServer    = cmd.getOptionValue('S');
+		if (cmd.hasOption('D'))	aseDbname    = cmd.getOptionValue('D');
+		if (cmd.hasOption('q'))	sqlQuery     = cmd.getOptionValue('q');
+		if (cmd.hasOption('U'))	jdbcUsername = cmd.getOptionValue('U');
+		if (cmd.hasOption('P'))	jdbcPassword = cmd.getOptionValue('P');
+		if (cmd.hasOption('u'))	jdbcUrl      = cmd.getOptionValue('u');
+		if (cmd.hasOption('d'))	jdbcDriver   = cmd.getOptionValue('d');
+		if (cmd.hasOption('p'))	connProfile  = cmd.getOptionValue('p');
+		if (cmd.hasOption('i'))	sqlFile      = cmd.getOptionValue('i');
+
+		if (aseServer == null)
+			aseServer = "SYBASE";
+
+		DebugOptions.init();
+		if (cmd.hasOption('x'))
+		{
+			String cmdLineDebug = cmd.getOptionValue('x');
+			String[] sa = cmdLineDebug.split(",");
+			for (int i=0; i<sa.length; i++)
+			{
+				String str = sa[i].trim();
+
+				if (str.equalsIgnoreCase("list"))
+				{
+					System.out.println();
+					System.out.println(" Option          Description");
+					System.out.println(" --------------- -------------------------------------------------------------");
+					for (Map.Entry<String,String> entry : Debug.getKnownDebugs().entrySet()) 
+					{
+						String debugOption = entry.getKey();
+						String description = entry.getValue();
+
+						System.out.println(" "+StringUtil.left(debugOption, 15, true) + " " + description);
+					}
+					System.out.println();
+					// Get of of here if it was a list option
+					throw new NormalExitException("List of debug options");
+				}
+				else
+				{
+					// add debug option
+					Debug.addDebug(str);
+				}
+			}
+		}
+
+//		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
+//		Logging.init("sqlw.", propFile);
+
+		// Print out the memory configuration
+		// And the JVM info
+		_logger.debug("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
+		_logger.debug("Debug Options enabled: "+Debug.getDebugsString());
+
+		_logger.debug("Using Java Runtime Environment Version: "+System.getProperty("java.version"));
+		_logger.debug("Using Java VM Implementation  Version: "+System.getProperty("java.vm.version"));
+		_logger.debug("Using Java VM Implementation  Vendor:  "+System.getProperty("java.vm.vendor"));
+		_logger.debug("Using Java VM Implementation  Name:    "+System.getProperty("java.vm.name"));
+		_logger.debug("Using Java VM Home:    "+System.getProperty("java.home"));
+		_logger.debug("Java class format version number: " +System.getProperty("java.class.version"));
+		_logger.debug("Java class path: " +System.getProperty("java.class.path"));
+		_logger.debug("List of paths to search when loading libraries: " +System.getProperty("java.library.path"));
+		_logger.debug("Name of JIT compiler to use: " +System.getProperty("java.compiler"));
+		_logger.debug("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
+
+		_logger.debug("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.debug("Running on Operating System Name:  "+System.getProperty("os.name"));
+		_logger.debug("Running on Operating System Version:  "+System.getProperty("os.version"));
+		_logger.debug("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
+		_logger.debug("The application was started by the username:  "+System.getProperty("user.name"));
+		_logger.debug("The application was started in the directory:   "+System.getProperty("user.dir"));
+
+//		_logger.debug("System configuration file is '"+propFile+"'.");
+//		_logger.debug("User configuration file is '"+userPropFile+"'.");
+//		_logger.debug("Storing temporary configurations in file '"+tmpPropFile+"'.");
+//		_logger.debug("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+
+
 //		String hostPortStr = "";
 //		if (aseServer.indexOf(":") == -1)
 //			hostPortStr = AseConnectionFactory.getIHostPortStr(aseServer);
 //		else
 //			hostPortStr = aseServer;
-//
-//		// use IGNORE_DONE_IN_PROC=true, if not set in the options in the connection dialog
-////		AseConnectionFactory.setPropertiesForAppname(APP_NAME, "IGNORE_DONE_IN_PROC", "true");
-//
-////		// Try make an initial connection...
-//		Connection conn = connect();
-//
-//		String sql = getSql();
+
+		// use IGNORE_DONE_IN_PROC=true, if not set in the options in the connection dialog
+//		AseConnectionFactory.setPropertiesForAppname(APP_NAME, "IGNORE_DONE_IN_PROC", "true");
+
+//		// Try make an initial connection...
+		DbxConnection conn = connect();
+
+		String sql = getSql();
 //		execSql(conn, sql);
-//
-//	}
-//
-//	private String getSql()
+
+	}
+
+	private String getSql()
+	{
+		return "select @@servername";
+	}
+
+	private DbxConnection connect()
+	throws Exception
+	{
+		DbxConnection conn = null;
+
+		conn.connect(null);
+		_connectedToProductName = conn.getDatabaseProductName();
+
+		return conn;
+	}
+
+	private void output(String str)
+	{
+		System.out.println(str);
+	}
+
+	private static final String REGEXP_MLC_SLC = "(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?:--.*)"; // SLC=SingleLineComment, MLC=MultiLineComment
+
+	private String  _connectedToProductName = "";
+	private boolean _abortOnDbMessages  = false;
+	private String  _sqlBatchTerminator = "go";
+	private boolean _useSemicolonHack   = false;
+	private boolean _sendCommentsOnly   = false;
+
+//	private void execSql(Connection conn)
 //	{
-//		return "select @@servername";
-//	}
-//
-//	private Connection connect()
-//	throws Exception
-//	{
-//		Connection conn = null;
-//
-//		try
+//		// Setup a message handler
+//		// Set an empty Message handler
+//		SybMessageHandler curMsgHandler = null;
+//		if (conn instanceof SybConnection)
 //		{
-//			_connectedToProductName = conn.getMetaData().getDatabaseProductName();
+//			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
+////			((SybConnection)conn).setSybMessageHandler(null);
+//			((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
+//			{
+//				@Override
+//				public SQLException messageHandler(SQLException sqle)
+//				{
+//					// If we want to STOP if we get any errors...
+//					// Then we should return the origin Exception
+//					// SQLException will abort current SQL Batch, while SQLWarnings will continue to execute
+//					if (_abortOnDbMessages)
+//						return sqle;
+//
+//					// Downgrade ALL messages to SQLWarnings, so executions wont be interrupted.
+//					return AseConnectionUtils.sqlExceptionToWarning(sqle);
+//				}
+//			});
 //		}
-//		catch (SQLException e)
-//		{
-//			System.out.println("Problems getting Database product name. Caught: "+e);
-//		}
-//
-//		return conn;
 //	}
-//
-//	private void output(String str)
-//	{
-//		System.out.println(str);
-//	}
-//
-//	private static final String REGEXP_MLC_SLC = "(?:/\\*(?:[^*]|(?:\\*+[^*/]))*\\*+/)|(?:--.*)"; // SLC=SingleLineComment, MLC=MultiLineComment
-//
-//	private String  _connectedToProductName = "";
-//	private boolean _abortOnDbMessages  = false;
-//	private String  _sqlBatchTerminator = "go";
-//	private boolean _useSemicolonHack   = false;
-//	private boolean _sendCommentsOnly   = false;
-//
-////	private void execSql(Connection conn)
-////	{
-////		// Setup a message handler
-////		// Set an empty Message handler
-////		SybMessageHandler curMsgHandler = null;
-////		if (conn instanceof SybConnection)
-////		{
-////			curMsgHandler = ((SybConnection)conn).getSybMessageHandler();
-//////			((SybConnection)conn).setSybMessageHandler(null);
-////			((SybConnection)conn).setSybMessageHandler(new SybMessageHandler()
-////			{
-////				@Override
-////				public SQLException messageHandler(SQLException sqle)
-////				{
-////					// If we want to STOP if we get any errors...
-////					// Then we should return the origin Exception
-////					// SQLException will abort current SQL Batch, while SQLWarnings will continue to execute
-////					if (_abortOnDbMessages)
-////						return sqle;
-////
-////					// Downgrade ALL messages to SQLWarnings, so executions wont be interrupted.
-////					return AseConnectionUtils.sqlExceptionToWarning(sqle);
-////				}
-////			});
-////		}
-////	}
-//
+
 //	private void execSql(Connection conn, String goSql)
 //	throws Exception
 //	{
@@ -977,170 +990,170 @@ public class SqlCommandLine
 ////				null, true, WindowType.JFRAME, null);
 ////		qw.openTheWindow();
 //	}	
-//	/**
-//	 * Print command line options.
-//	 * @param options
-//	 */
-//	private static void printHelp(Options options, String errorStr)
-//	{
-//		PrintWriter pw = new PrintWriter(System.out);
-//
-//		if (errorStr != null)
-//		{
-//			pw.println();
-//			pw.println(errorStr);
-//			pw.println();
-//		}
-//
-////		pw.println("usage: sqlc [-U <user>] [-P <passwd>] [-S <server>] [-D <dbname>]");
-////		pw.println("            [-u <jdbcUrl>] [-d <jdbcDriver>]");
-////		pw.println("            [-q <sqlStatement>] [-h] [-v] [-x] <debugOptions> ");
-//		pw.println("usage: sqlc [-U <user>] [-P <passwd>]");
+	/**
+	 * Print command line options.
+	 * @param options
+	 */
+	private static void printHelp(Options options, String errorStr)
+	{
+		PrintWriter pw = new PrintWriter(System.out);
+
+		if (errorStr != null)
+		{
+			pw.println();
+			pw.println(errorStr);
+			pw.println();
+		}
+
+//		pw.println("usage: sqlc [-U <user>] [-P <passwd>] [-S <server>] [-D <dbname>]");
 //		pw.println("            [-u <jdbcUrl>] [-d <jdbcDriver>]");
-//		pw.println("            [-i <input_file>");
-//		pw.println("            [-h] [-v] [-x] <debugOptions> ");
-//		pw.println("  ");
-//		pw.println("options:");
-//		pw.println("  -h,--help                 Usage information.");
-//		pw.println("  -v,--version              Display Application and JVM Version.");
-//		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
-//		pw.println("                            To get available option, do -x list");
-//		pw.println("  ");
-//		pw.println("  -U,--user <user>          Username when connecting to server.");
-//		pw.println("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
-////		pw.println("  -S,--server <server>      Server to connect to.");
-////		pw.println("  -D,--dbname <dbname>      Database to use when connecting");
-//		pw.println("  -u,--jdbcUrl <url>        JDBC URL. if not a sybase/TDS server");
-//		pw.println("  -d,--jdbcDriver <driver>  JDBC Driver. if not a sybase/TDS server");
-//		pw.println("                            If the JDBC drivers is registered with the ");
-//		pw.println("                            DriverManager, this is NOT needed");
-////		pw.println("  -p,--connProfile <name>   Connect using an existing Connection Profile");
-////		pw.println("  -q,--query <sqlStatement> SQL Statement to execute");
-//		pw.println("  -i,--inputFile <filename> Input File");
-//		pw.println("");
-//		pw.flush();
-//	}
-//
-//	/**
-//	 * Build the options com.asetune.parser. Has to be synchronized because of the way
-//	 * Options are constructed.
-//	 * 
-//	 * @return an options com.asetune.parser.
-//	 */
-//	private static synchronized Options buildCommandLineOptions()
-//	{
-//		Options options = new Options();
-//
-//		// create the Options
-//		options.addOption( "h", "help",        false, "Usage information." );
-//		options.addOption( "v", "version",     false, "Display Application and JVM Version." );
-//		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
-//
-//		options.addOption( "U", "user",        true, "Username when connecting to server." );
-//		options.addOption( "P", "passwd",      true, "Password when connecting to server. (null=noPasswd)" );
-////		options.addOption( "S", "server",      true, "Server to connect to." );
-////		options.addOption( "D", "dbname",      true, "Database use when connecting" );
-//		options.addOption( "u", "jdbcUrl",     true, "JDBC URL. if not a sybase/TDS server" );
-//		options.addOption( "d", "jdbcDriver",  true, "JDBC Driver. if not a sybase/TDS server. If the JDBC drivers is registered with the DriverManager, this is NOT needed." );
-////		options.addOption( "p", "connProfile", true, "Connect using an existing Connection Profile");
-////		options.addOption( "q", "sqlStatement",true, "SQL statement to execute" );
-//		options.addOption( "i", "inputFile",   true, "Input File to open in editor" );
-//
-//		return options;
-//	}
-//
-//
-//	//---------------------------------------------------
-//	// Command Line Parsing
-//	//---------------------------------------------------
-//	private static CommandLine parseCommandLine(String[] args, Options options)
-//	throws ParseException
-//	{
-//		// create the command line com.asetune.parser
-//		CommandLineParser parser = new PosixParser();	
-//	
-//		// parse the command line arguments
-//		CommandLine cmd = parser.parse( options, args );
-//
-//		// Validate any mandatory options or dependencies of switches
-//		
-//
-//		if (_logger.isDebugEnabled())
-//		{
-//			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
-//			{
-//				Option opt = it.next();
-//				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
-//			}
-//		}
-//
-//		return cmd;
-//	}
-//
-//	//---------------------------------------------------
-//	// MAIN
-//	//---------------------------------------------------
-//	public static void main(String[] args)
-//	{
-////		jConnectEnableLogging();
-//
-//		Options options = buildCommandLineOptions();
-//		try
-//		{
-//			CommandLine cmd = parseCommandLine(args, options);
-//
-//			//-------------------------------
-//			// HELP
-//			//-------------------------------
-//			if ( cmd.hasOption("help") )
-//			{
-//				printHelp(options, "The option '--help' was passed.");
-//			}
-//			//-------------------------------
-//			// VERSION
-//			//-------------------------------
-//			else if ( cmd.hasOption("version") )
-//			{
-//				System.out.println();
-////				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
-//				System.out.println("sqlc Version: 1.0.0, JVM: " + System.getProperty("java.version"));
-//				System.out.println();
-//			}
-//			//-------------------------------
-//			// Check for correct number of cmd line parameters
-//			//-------------------------------
-//			else if ( cmd.getArgs() != null && cmd.getArgs().length > 0 )
-//			{
-//				String error = "Unknown options: " + StringUtil.toCommaStr(cmd.getArgs());
-//				printHelp(options, error);
-//			}
-//			//-------------------------------
-//			// Start AseTune, GUI/NOGUI will be determined later on.
-//			//-------------------------------
-//			else
-//			{
-//				new SqlCommandLine(cmd);
-//			}
-//		}
-//		catch (ParseException pe)
-//		{
-//			String error = "Error: " + pe.getMessage();
-//			printHelp(options, error);
-//		}
-//		catch (NormalExitException e)
-//		{
-//			// This was probably throws when checking command line parameters
-//			// do normal exit
-//		}
-//		catch (Exception e)
-//		{
-//			System.out.println();
-//			System.out.println("Error: " + e.getMessage());
-//			System.out.println();
-//			System.out.println("Printing a stacktrace, where the error occurred.");
-//			System.out.println("--------------------------------------------------------------------");
-//			e.printStackTrace();
-//			System.out.println("--------------------------------------------------------------------");
-//		}
-//	}
+//		pw.println("            [-q <sqlStatement>] [-h] [-v] [-x] <debugOptions> ");
+		pw.println("usage: sqlc [-U <user>] [-P <passwd>]");
+		pw.println("            [-u <jdbcUrl>] [-d <jdbcDriver>]");
+		pw.println("            [-i <input_file>");
+		pw.println("            [-h] [-v] [-x] <debugOptions> ");
+		pw.println("  ");
+		pw.println("options:");
+		pw.println("  -h,--help                 Usage information.");
+		pw.println("  -v,--version              Display Application and JVM Version.");
+		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
+		pw.println("                            To get available option, do -x list");
+		pw.println("  ");
+		pw.println("  -U,--user <user>          Username when connecting to server.");
+		pw.println("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
+//		pw.println("  -S,--server <server>      Server to connect to.");
+//		pw.println("  -D,--dbname <dbname>      Database to use when connecting");
+		pw.println("  -u,--jdbcUrl <url>        JDBC URL. if not a sybase/TDS server");
+		pw.println("  -d,--jdbcDriver <driver>  JDBC Driver. if not a sybase/TDS server");
+		pw.println("                            If the JDBC drivers is registered with the ");
+		pw.println("                            DriverManager, this is NOT needed");
+//		pw.println("  -p,--connProfile <name>   Connect using an existing Connection Profile");
+//		pw.println("  -q,--query <sqlStatement> SQL Statement to execute");
+		pw.println("  -i,--inputFile <filename> Input File");
+		pw.println("");
+		pw.flush();
+	}
+
+	/**
+	 * Build the options com.asetune.parser. Has to be synchronized because of the way
+	 * Options are constructed.
+	 * 
+	 * @return an options com.asetune.parser.
+	 */
+	private static synchronized Options buildCommandLineOptions()
+	{
+		Options options = new Options();
+
+		// create the Options
+		options.addOption( "h", "help",        false, "Usage information." );
+		options.addOption( "v", "version",     false, "Display Application and JVM Version." );
+		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
+
+		options.addOption( "U", "user",        true, "Username when connecting to server." );
+		options.addOption( "P", "passwd",      true, "Password when connecting to server. (null=noPasswd)" );
+//		options.addOption( "S", "server",      true, "Server to connect to." );
+//		options.addOption( "D", "dbname",      true, "Database use when connecting" );
+		options.addOption( "u", "jdbcUrl",     true, "JDBC URL. if not a sybase/TDS server" );
+		options.addOption( "d", "jdbcDriver",  true, "JDBC Driver. if not a sybase/TDS server. If the JDBC drivers is registered with the DriverManager, this is NOT needed." );
+//		options.addOption( "p", "connProfile", true, "Connect using an existing Connection Profile");
+//		options.addOption( "q", "sqlStatement",true, "SQL statement to execute" );
+		options.addOption( "i", "inputFile",   true, "Input File to open in editor" );
+
+		return options;
+	}
+
+
+	//---------------------------------------------------
+	// Command Line Parsing
+	//---------------------------------------------------
+	private static CommandLine parseCommandLine(String[] args, Options options)
+	throws ParseException
+	{
+		// create the command line com.asetune.parser
+		CommandLineParser parser = new DefaultParser();	
+	
+		// parse the command line arguments
+		CommandLine cmd = parser.parse( options, args );
+
+		// Validate any mandatory options or dependencies of switches
+		
+
+		if (_logger.isDebugEnabled())
+		{
+			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
+			{
+				Option opt = it.next();
+				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
+			}
+		}
+
+		return cmd;
+	}
+
+	//---------------------------------------------------
+	// MAIN
+	//---------------------------------------------------
+	public static void main(String[] args)
+	{
+//		jConnectEnableLogging();
+
+		Options options = buildCommandLineOptions();
+		try
+		{
+			CommandLine cmd = parseCommandLine(args, options);
+
+			//-------------------------------
+			// HELP
+			//-------------------------------
+			if ( cmd.hasOption("help") )
+			{
+				printHelp(options, "The option '--help' was passed.");
+			}
+			//-------------------------------
+			// VERSION
+			//-------------------------------
+			else if ( cmd.hasOption("version") )
+			{
+				System.out.println();
+//				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
+				System.out.println("sqlc Version: 1.0.0, JVM: " + System.getProperty("java.version"));
+				System.out.println();
+			}
+			//-------------------------------
+			// Check for correct number of cmd line parameters
+			//-------------------------------
+			else if ( cmd.getArgs() != null && cmd.getArgs().length > 0 )
+			{
+				String error = "Unknown options: " + StringUtil.toCommaStr(cmd.getArgs());
+				printHelp(options, error);
+			}
+			//-------------------------------
+			// Start AseTune, GUI/NOGUI will be determined later on.
+			//-------------------------------
+			else
+			{
+				new SqlCommandLine(cmd);
+			}
+		}
+		catch (ParseException pe)
+		{
+			String error = "Error: " + pe.getMessage();
+			printHelp(options, error);
+		}
+		catch (NormalExitException e)
+		{
+			// This was probably throws when checking command line parameters
+			// do normal exit
+		}
+		catch (Exception e)
+		{
+			System.out.println();
+			System.out.println("Error: " + e.getMessage());
+			System.out.println();
+			System.out.println("Printing a stacktrace, where the error occurred.");
+			System.out.println("--------------------------------------------------------------------");
+			e.printStackTrace();
+			System.out.println("--------------------------------------------------------------------");
+		}
+	}
 }

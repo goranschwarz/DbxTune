@@ -154,7 +154,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	private static final boolean DEFAULT_SHOW_ONLY_LOCAL_COMMANDS = false;
 	
 	private static final String  PROPKEY_SPLITPANE_DIV_LOC        = "CommandHistory.splitpane.divider.location";
-	private static final int     DEFAULT_SPLITPANE_DIV_LOC        = 300;
+	private static final int     DEFAULT_SPLITPANE_DIV_LOC        = SwingUtils.hiDpiScale(300);
 	
 	private static final String  PROPKEY_FILE_MAX_SIZE_KB         = "CommandHistory.file.max.size.kb";
 	private static final int     DEFAULT_FILE_MAX_SIZE_KB         = 1024;
@@ -926,16 +926,16 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		//------------------
 		// SPLIT PANE
 		//------------------
-		conf.setProperty(PROPKEY_SPLITPANE_DIV_LOC, _splitPane.getDividerLocation());
+		conf.setLayoutProperty(PROPKEY_SPLITPANE_DIV_LOC, _splitPane.getDividerLocation());
 
 		
 		//------------------
 		// WINDOW
 		//------------------
-		conf.setProperty("CommandHistory.dialog.window.width",  this.getSize().width);
-		conf.setProperty("CommandHistory.dialog.window.height", this.getSize().height);
-		conf.setProperty("CommandHistory.dialog.window.pos.x",  this.getLocationOnScreen().x);
-		conf.setProperty("CommandHistory.dialog.window.pos.y",  this.getLocationOnScreen().y);
+		conf.setLayoutProperty("CommandHistory.dialog.window.width",  this.getSize().width);
+		conf.setLayoutProperty("CommandHistory.dialog.window.height", this.getSize().height);
+		conf.setLayoutProperty("CommandHistory.dialog.window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty("CommandHistory.dialog.window.pos.y",  this.getLocationOnScreen().y);
 
 		conf.save();
 	}
@@ -971,10 +971,10 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("CommandHistory.dialog.window.width",  900);
-		int height = conf.getIntProperty("CommandHistory.dialog.window.height", 740);
-		int x      = conf.getIntProperty("CommandHistory.dialog.window.pos.x",  -1);
-		int y      = conf.getIntProperty("CommandHistory.dialog.window.pos.y",  -1);
+		int width  = conf.getLayoutProperty("CommandHistory.dialog.window.width",  SwingUtils.hiDpiScale(900));
+		int height = conf.getLayoutProperty("CommandHistory.dialog.window.height", SwingUtils.hiDpiScale(740));
+		int x      = conf.getLayoutProperty("CommandHistory.dialog.window.pos.x",  -1);
+		int y      = conf.getLayoutProperty("CommandHistory.dialog.window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 			this.setSize(width, height);
@@ -986,7 +986,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 		//------------------
 		// SPLIT PANE
 		//------------------
-		int dividerLocation = conf.getIntProperty(PROPKEY_SPLITPANE_DIV_LOC, DEFAULT_SPLITPANE_DIV_LOC);
+		int dividerLocation = conf.getLayoutProperty(PROPKEY_SPLITPANE_DIV_LOC, DEFAULT_SPLITPANE_DIV_LOC);
 		_splitPane.setDividerLocation(dividerLocation);
 
 	}

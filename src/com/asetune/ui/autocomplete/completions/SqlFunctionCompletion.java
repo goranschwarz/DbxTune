@@ -45,7 +45,7 @@ extends SqlCompletion
 		String shortDesc = 
 			"<font color=\"blue\">"+fi._funcType+"</font>" +
 //			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._funcRemark) ? "No Description" : ti._funcRemark) + "</font></i>";
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(fi._funcRemark) ? "" : fi._funcRemark) + "</font></i>";
+			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(fi._funcRemark) ? "" : stripMultiLineHtml(fi._funcRemark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_functionInfo.toHtmlString());
 	}

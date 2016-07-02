@@ -84,6 +84,8 @@ DB Cleanup:
 	$rpt_timeoutInfo           = $_GET['timeoutInfo'];
 	$rpt_full                  = $_GET['full'];
 	$rpt_sap                   = $_GET['sap'];
+	$rpt_appName               = $_GET['appName'];
+	$rpt_appVersion            = $_GET['appVersion'];
 
 	$rpt_sqlw                  = $_GET['sqlw'];
 	$rpt_sqlw_stat             = $_GET['sqlwStat'];
@@ -994,36 +996,59 @@ DB Cleanup:
 	//-------------------------------------------
 	// SUMMARY REPORT, VERSION COUNT
 	//-------------------------------------------
-	//mysql_query("CREATE TABLE sumAseTuneVersionNow (clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
-	//mysql_query("CREATE TABLE sumAseTuneVersionPriv(clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+//	mysql_query("DROP TABLE sumAseTuneVersionNow") or die("ERROR: " . mysql_error());
+//	mysql_query("DROP TABLE sumAseTuneVersionPriv") or die("ERROR: " . mysql_error());
+//	mysql_query("CREATE TABLE sumAseTuneVersionNow (clientAppName varchar(30), clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+//	mysql_query("CREATE TABLE sumAseTuneVersionPriv(clientAppName varchar(30), clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
 
 	if ( $rpt_summary_version == "true" )
 	{
 		//----------- Trunacte NOW table and pupulate it again
 		mysql_query("TRUNCATE TABLE sumAseTuneVersionNow") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumAseTuneVersionNow(clientAsemonVersion, usageCount, lastUsedSrvDate, pollTime)
+		mysql_query("INSERT INTO    sumAseTuneVersionNow(clientAppName, clientAsemonVersion, usageCount, lastUsedSrvDate, pollTime)
 			SELECT
+				clientAppName,
 				clientAsemonVersion,
 				count(*),
 				max(serverAddTime),
 				NOW()
 			FROM asemon_usage
 			GROUP BY
-				clientAsemonVersion
+				clientAppName, clientAsemonVersion
 			ORDER BY
-				clientAsemonVersion desc
+				clientAsemonVersion desc, clientAppName
 			") or die("ERROR: " . mysql_error());
+
+		//----------- GET RESULTS & PRINT IT (at AppName level)
+		$result = mysql_query("
+			SELECT
+				n.clientAppName,
+				sum(n.usageCount) AS usageNow,
+				sum(n.usageCount) - IFNULL(sum(p.usageCount),0) AS usageDiff,
+				max(n.lastUsedSrvDate) as lastUsedSrvDate,
+				p.pollTime AS lastPollTime
+			FROM sumAseTuneVersionNow n LEFT JOIN sumAseTuneVersionPriv p ON (n.clientAppName = p.clientAppName AND n.clientAsemonVersion = p.clientAsemonVersion)
+			GROUP BY
+				n.clientAppName
+			ORDER BY 4 desc");
+
+		if (!$result) {
+			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "Application Name Level, Summary Report");
 
 		//----------- GET RESULTS & PRINT IT
 		$result = mysql_query("
 			SELECT
+				n.clientAppName,
 				n.clientAsemonVersion,
 				n.usageCount AS usageNow,
 				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
 				n.lastUsedSrvDate,
 				p.pollTime AS lastPollTime
-			FROM sumAseTuneVersionNow n LEFT JOIN sumAseTuneVersionPriv p ON n.clientAsemonVersion = p.clientAsemonVersion
-			ORDER BY 3 desc, 4 desc");
+			FROM sumAseTuneVersionNow n LEFT JOIN sumAseTuneVersionPriv p ON (n.clientAppName = p.clientAppName AND n.clientAsemonVersion = p.clientAsemonVersion)
+			ORDER BY 4 desc, 5 desc");
 
 		if (!$result) {
 			echo mysql_errno() . ": " . mysql_error() . "<br>";
@@ -2073,12 +2098,22 @@ DB Cleanup:
 //			ORDER BY rowid desc
 //			LIMIT 300
 //		";
+
+		if ( empty($rpt_appName) )
+			$rpt_appName = '%';
+
+		if ( empty($rpt_appVersion) )
+			$rpt_appVersion = '%';
+
 		$sql = "
 			SELECT *
 			FROM asemon_usage
+			WHERE clientAppName       like '$rpt_appName'
+			  AND clientAsemonVersion like '$rpt_appVersion'
 			ORDER BY rowid desc
 			LIMIT 300
 		";
+
 
 		// sending query
 		$result = mysql_query($sql) or die("ERROR: " . mysql_error());

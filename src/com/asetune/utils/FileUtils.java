@@ -8,6 +8,7 @@ import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -557,4 +558,34 @@ public class FileUtils
 			return _retFile;
 		}
 	}
+
+	/**
+	 * Simply do the close in a try/catch block and ignore exceptions
+	 * @param c
+	 */
+	public static void safeClose(final Closeable c)
+	{
+		if ( c != null )
+		{
+			try
+			{
+				c.close();
+			}
+			catch (final IOException e)
+			{
+				// SILENT EXCEPTION
+			}
+		}
+	}
+
+	/**
+	 * If the directory doesn't exists, simply create it
+	 * @param f
+	 * @return
+	 */
+	public static boolean ensureDirectoryExists(final File f)
+	{
+		return f.exists() || f.mkdir();
+	}
+
 }

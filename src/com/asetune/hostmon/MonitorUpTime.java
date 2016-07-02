@@ -9,6 +9,11 @@ import com.asetune.ssh.SshConnection;
 public abstract class MonitorUpTime
 extends HostMonitor
 {
+	public MonitorUpTime(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
 	throws Exception
 	{
@@ -49,6 +54,8 @@ extends HostMonitor
 		}
 		else if (osname.equals("Linux"))
 		{
+			//int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.UPTIME);
+			//mon = new MonitorUpTimeAllOs(utilVersion);
 			mon = new MonitorUpTimeAllOs();
 		}
 		else if (osname.equals("AIX"))

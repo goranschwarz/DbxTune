@@ -403,6 +403,12 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 					}
 				}
 
+				else if ( $colname == "clientAppName" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?full=true&appName=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "clientAsemonVersion" )
+					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?full=true&appVersion=" . $cell . "\">$cell</A></td>";
+
 				else if ( $colname == "deleteUserIdDesc" )
 					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?userId_key=" . $cell . "\">$cell</A></td>";
 

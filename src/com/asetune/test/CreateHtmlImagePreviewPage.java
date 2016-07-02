@@ -8,6 +8,8 @@ public class CreateHtmlImagePreviewPage
 	{
 		String pathname = "";
 		pathname = "C:\\Users\\i063783\\Desktop\\icons\\fatcow-hosting-icons-3.9.2-all\\fatcow-hosting-icons-3.9.2\\FatCow_Icons16x16";
+		pathname = "C:\\Users\\gorans\\Desktop\\icons\\fatcow-hosting-icons-3.9.2\\FatCow_Icons16x16";
+		pathname = "C:\\Users\\gorans\\Desktop\\icons\\fatcow-hosting-icons-3.9.2\\FatCow_Icons32x32";
 
 		if ( args.length == 0 )
 		{

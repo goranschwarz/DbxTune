@@ -30,10 +30,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
@@ -46,6 +45,8 @@ import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class CheckDialog
@@ -528,7 +529,7 @@ public class CheckDialog
 
 		JLabel appName_lbl = new JLabel(); 
 		appName_lbl.setText(Version.getAppName());
-		appName_lbl.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
+		appName_lbl.setFont(new java.awt.Font("Dialog", Font.BOLD, SwingUtils.hiDpiScale(20)));
 
 		String msg = "";
 		boolean showWhatsNew     = false;
@@ -596,12 +597,16 @@ public class CheckDialog
 
 
 		
+		String fontSize = "";
+		if (SwingUtils.isHiDpi())
+			fontSize = "font-size: " + UIManager.getFont("Label.font").getSize() + "px";
+
 		String str = 
 			"<html>" +
 			"<HEAD> " +
 			"<style type=\"text/css\"> " +
 			"<!-- " +
-			"body {font-family: Arial, Helvetica, sans-serif;} " +
+			"body {font-family: Arial, Helvetica, sans-serif; " + fontSize + "} " +
 			"--> " +
 			"</style> " +
 			"</HEAD> " +

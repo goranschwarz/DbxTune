@@ -26,6 +26,7 @@ import org.apache.log4j.PropertyConfigurator;
 import com.asetune.Version;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SwingUtils;
 
 
 
@@ -56,8 +57,11 @@ public class TabularCntrPanelTester extends JFrame
 	public TabularCntrPanelTester(String title) 
 	{
 		super(title);
-		ImageIcon icon = new ImageIcon(getClass().getResource("swing/images/table_16.gif"));
-		setIconImage(icon.getImage());
+//		ImageIcon icon = new ImageIcon(getClass().getResource("swing/images/table_16.gif"));
+//		setIconImage(icon.getImage());
+		ImageIcon icon = SwingUtils.readImageIcon(Version.class, "gui/swing/images/table_16.gif");
+		if (icon != null)
+			setIconImage(icon.getImage());
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();

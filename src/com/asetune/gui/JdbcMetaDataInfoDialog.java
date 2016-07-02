@@ -12,6 +12,7 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
@@ -111,6 +112,44 @@ extends JDialog
 	private JTextField             _sc_filter_txt = new JTextField();
 	private JLabel                 _sc_filter_cnt = new JLabel();
 
+	private JLabel                 _ta_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _ta_filter_txt = new JTextField();
+	private JLabel                 _ta_filter_cnt = new JLabel();
+
+	private JLabel                 _ta_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _ta_cat_txt = new JTextField("null");
+	private JLabel                 _ta_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _ta_sch_txt = new JTextField("null");
+	private JLabel                 _ta_val_lbl = new JLabel("Table Name Pattern: ");
+	private JTextField             _ta_val_txt = new JTextField("%");
+	private JLabel                 _ta_typ_lbl = new JLabel("Table Types: ");
+	private JTextField             _ta_typ_txt = new JTextField("null");
+	private JLabel                 _ta_api_lbl = new JLabel("Press button to call getTables(catalog, schemaPattern, tableNamePattern, types)");
+
+	private JLabel                 _pr_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _pr_filter_txt = new JTextField();
+	private JLabel                 _pr_filter_cnt = new JLabel();
+
+	private JLabel                 _pr_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _pr_cat_txt = new JTextField("null");
+	private JLabel                 _pr_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _pr_sch_txt = new JTextField("null");
+	private JLabel                 _pr_val_lbl = new JLabel("Procedure Name Pattern: ");
+	private JTextField             _pr_val_txt = new JTextField("%");
+	private JLabel                 _pr_api_lbl = new JLabel("Press button to call getProcedures(catalog, schemaPattern, procedureNamePattern)");
+
+	private JLabel                 _fu_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _fu_filter_txt = new JTextField();
+	private JLabel                 _fu_filter_cnt = new JLabel();
+
+	private JLabel                 _fu_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _fu_cat_txt = new JTextField("null");
+	private JLabel                 _fu_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _fu_sch_txt = new JTextField("null");
+	private JLabel                 _fu_val_lbl = new JLabel("Function Name Pattern: ");
+	private JTextField             _fu_val_txt = new JTextField("%");
+	private JLabel                 _fu_api_lbl = new JLabel("Press button to call getFunctions(catalog, schemaPattern, functionNamePattern)");
+
 	private JLabel                 _ci_filter_lbl = new JLabel("Filter: ");
 	private JTextField             _ci_filter_txt = new JTextField();
 	private JLabel                 _ci_filter_cnt = new JLabel();
@@ -122,6 +161,9 @@ extends JDialog
 	private DriverPropsTable       _dp_tab  = null;
 	private CatalogsTable          _ca_tab  = null;
 	private SchemasTable           _sc_tab  = null;
+	private TablesTable            _ta_tab  = null;
+	private ProceduresTable        _pr_tab  = null;
+	private FunctionsTable         _fu_tab  = null;
 	private ConnInfoTable          _ci_tab  = null;
 
 	private JButton                _ok     = new JButton("OK");
@@ -196,6 +238,9 @@ extends JDialog
 		_tabPane.addTab("Driver Propertis",     createDriverPropsPanel());
 		_tabPane.addTab("Catalogs",             createCatalogPanel());
 		_tabPane.addTab("Schemas",              createSchemasPanel());
+		_tabPane.addTab("Tables",               createTablesPanel());
+		_tabPane.addTab("Procedures",           createProceduresPanel());
+		_tabPane.addTab("Functions",            createFunctionsPanel());
 		_tabPane.addTab("getClientInfo()",      createClientInfoPanel());
 
 		add(createTopPanel(),        "growx, pushx, wrap");
@@ -210,6 +255,9 @@ extends JDialog
 		_dp_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyDpFilter(); } });
 		_ca_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyCaFilter(); } });
 		_sc_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyScFilter(); } });
+		_ta_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyTaFilter(); } });
+		_pr_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyPrFilter(); } });
+		_fu_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyFuFilter(); } });
 		_ci_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyCiFilter(); } });
 
 		_ok.addActionListener(new ActionListener()
@@ -250,10 +298,8 @@ extends JDialog
 		if (conf == null)
 			return;
 
-		String screenResStr = SwingUtils.getScreenResulutionAsString();
-
-		conf.setProperty("JdbcMetaDataInfoDialog."+screenResStr+".size.width",  this.getSize().width);
-		conf.setProperty("JdbcMetaDataInfoDialog."+screenResStr+".size.height", this.getSize().height);
+		conf.setLayoutProperty("JdbcMetaDataInfoDialog.size.width",  this.getSize().width);
+		conf.setLayoutProperty("JdbcMetaDataInfoDialog.size.height", this.getSize().height);
 		
 		conf.save();
 	}
@@ -262,9 +308,8 @@ extends JDialog
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
 		// Restore windows size
-		String screenResStr = SwingUtils.getScreenResulutionAsString();
-		int width  = conf.getIntProperty("JdbcMetaDataInfoDialog."+screenResStr+".size.width",  1200);
-		int height = conf.getIntProperty("JdbcMetaDataInfoDialog."+screenResStr+".size.height", 800);
+		int width  = conf.getLayoutProperty("JdbcMetaDataInfoDialog.size.width",  SwingUtils.hiDpiScale(1200));
+		int height = conf.getLayoutProperty("JdbcMetaDataInfoDialog.size.height", SwingUtils.hiDpiScale(800));
 		setSize(width, height);
 	}
 
@@ -500,6 +545,165 @@ extends JDialog
 	}
 
 	
+	private JPanel createTablesPanel()
+	{
+		_ta_tab = new TablesTable(_conn);
+
+		JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_ta_tab.refresh();
+			}
+		});
+		
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getTables(catalog, schemaPattern, TablePattern, types)</code></b><br>"
+				+ "</html>";
+		
+		_ta_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_ta_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_ta_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_ta_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_ta_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+		_ta_typ_txt.setToolTipText("<html>a list of table types, which must be from the list of table types returned from <code>getTableTypes()</code>,to include; <code>null</code> returns all types</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_ta_cat_lbl,              "");
+		p1.add(_ta_cat_txt,              "growx, pushx, wrap");
+		p1.add(_ta_sch_lbl,              "");
+		p1.add(_ta_sch_txt,              "growx, pushx, wrap");
+		p1.add(_ta_val_lbl,              "");
+		p1.add(_ta_val_txt,              "growx, pushx, wrap");
+		p1.add(_ta_typ_lbl,              "");
+		p1.add(_ta_typ_txt,              "growx, pushx, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_ta_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_ta_filter_lbl,           "gap 5, split");
+		p.add(_ta_filter_txt,           "growx, pushx");
+		p.add(_ta_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_ta_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createProceduresPanel()
+	{
+		_pr_tab = new ProceduresTable(_conn);
+
+		JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_pr_tab.refresh();
+			}
+		});
+		
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getProcedures(catalog, schemaPattern, procedurePattern)</code></b><br>"
+				+ "</html>";
+		
+		_pr_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_pr_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_pr_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_pr_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_pr_val_txt.setToolTipText("<html>a procedure name pattern; must match the procedure name as it is stored in the database (default is %, which means all procedure)</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_pr_cat_lbl,              "");
+		p1.add(_pr_cat_txt,              "growx, pushx, wrap");
+		p1.add(_pr_sch_lbl,              "");
+		p1.add(_pr_sch_txt,              "growx, pushx, wrap");
+		p1.add(_pr_val_lbl,              "");
+		p1.add(_pr_val_txt,              "growx, pushx, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_pr_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_pr_filter_lbl,           "gap 5, split");
+		p.add(_pr_filter_txt,           "growx, pushx");
+		p.add(_pr_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_pr_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createFunctionsPanel()
+	{
+		_fu_tab = new FunctionsTable(_conn);
+
+		JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_fu_tab.refresh();
+			}
+		});
+		
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getFunctions(catalog, schemaPattern, functionPattern)</code></b><br>"
+				+ "</html>";
+		
+		_fu_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_fu_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_fu_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_fu_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_fu_val_txt.setToolTipText("<html>a procedure name pattern; must match the procedure name as it is stored in the database (default is %, which means all procedure)</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_fu_cat_lbl,              "");
+		p1.add(_fu_cat_txt,              "growx, pushx, wrap");
+		p1.add(_fu_sch_lbl,              "");
+		p1.add(_fu_sch_txt,              "growx, pushx, wrap");
+		p1.add(_fu_val_lbl,              "");
+		p1.add(_fu_val_txt,              "growx, pushx, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_fu_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_fu_filter_lbl,           "gap 5, split");
+		p.add(_fu_filter_txt,           "growx, pushx");
+		p.add(_fu_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_fu_tab), "grow, push");
+
+		return p;
+	}
+
+	
 	public void applyKfFilter() { applyFilter(_kf_filter_txt, _kf_tab, _kf_filter_cnt); }
 	public void applyMdFilter() { applyFilter(_md_filter_txt, _md_tab, _md_filter_cnt); }
 	public void applyDtFilter() { applyFilter(_dt_filter_txt, _dt_tab, _dt_filter_cnt); }
@@ -507,6 +711,9 @@ extends JDialog
 	public void applyDpFilter() { applyFilter(_dp_filter_txt, _dp_tab, _dp_filter_cnt); }
 	public void applyCaFilter() { applyFilter(_ca_filter_txt, _ca_tab, _ca_filter_cnt); }
 	public void applyScFilter() { applyFilter(_sc_filter_txt, _sc_tab, _sc_filter_cnt); }
+	public void applyTaFilter() { applyFilter(_ta_filter_txt, _ta_tab, _ta_filter_cnt); }
+	public void applyPrFilter() { applyFilter(_pr_filter_txt, _pr_tab, _pr_filter_cnt); }
+	public void applyFuFilter() { applyFilter(_fu_filter_txt, _fu_tab, _fu_filter_cnt); }
 	public void applyCiFilter() { applyFilter(_ci_filter_txt, _ci_tab, _ci_filter_cnt); }
 
 	public void applyFilter(JTextField filter_txt, GTable tab, JLabel cnt)
@@ -752,6 +959,72 @@ extends JDialog
 
 			setModel(createSchemasTableModel(conn));
 
+			packAll();
+		}
+	}
+	
+	private class TablesTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public TablesTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.TablesTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createTablesTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class ProceduresTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public ProceduresTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.ProceduresTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createProceduresTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class FunctionsTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public FunctionsTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.FunctionsTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createFunctionsTableModel(_conn));
 			packAll();
 		}
 	}
@@ -1068,6 +1341,131 @@ extends JDialog
 			Vector<Object> row = new Vector<Object>();
 
 			row.add("conn.getMetaData().getSchemas()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createTablesTableModel(Connection conn)
+	{
+		String   catalog          = _ta_cat_txt.getText();
+		String   schemaPattern    = _ta_sch_txt.getText();
+		String   valueNamePattern = _ta_val_txt.getText();
+		String[] tableTypes       = null;
+		String   tableTypesStr    = _ta_typ_txt.getText();;
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+		if (tableTypesStr   .equalsIgnoreCase("null")) tableTypesStr    = null;
+		if (tableTypesStr   != null)                   tableTypes       = StringUtil.commaStrToArray(tableTypesStr);
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		String tableTypesDesc       = tableTypes       == null ? "null" : Arrays.asList(tableTypes)+"";
+		
+		String apiCall = "parameters to getTables("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+tableTypesDesc+")";
+		_ta_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getTables(catalog, schemaPattern, valueNamePattern, tableTypes);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.TablesModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getTables()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createProceduresTableModel(Connection conn)
+	{
+		String   catalog          = _pr_cat_txt.getText();
+		String   schemaPattern    = _pr_sch_txt.getText();
+		String   valueNamePattern = _pr_val_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getProcedures("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		_pr_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getProcedures(catalog, schemaPattern, valueNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.ProceduresModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getTables()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createFunctionsTableModel(Connection conn)
+	{
+		String   catalog          = _fu_cat_txt.getText();
+		String   schemaPattern    = _fu_sch_txt.getText();
+		String   valueNamePattern = _fu_val_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getFunctions("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		_fu_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getFunctions(catalog, schemaPattern, valueNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.FunctionsModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getTables()");
 			row.add(e.getMessage());
 			rows.add(row);
 

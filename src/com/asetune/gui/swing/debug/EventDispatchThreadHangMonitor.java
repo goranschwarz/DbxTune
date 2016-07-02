@@ -75,7 +75,8 @@ public final class EventDispatchThreadHangMonitor extends EventQueue {
     // late-2004 hardware isn't really up to it; there are too many parts of
     // the JDK that can go away for that long (often code that has to be
     // called on the event dispatch thread, like font loading).
-    private static final long UNREASONABLE_DISPATCH_DURATION_MS = 1000;
+//    private static final long UNREASONABLE_DISPATCH_DURATION_MS = 1000;
+    private static final long UNREASONABLE_DISPATCH_DURATION_MS = 2000;
 
     // Help distinguish multiple hangs in the log, and match start and end too.
     // Only access this via getNewHangNumber.

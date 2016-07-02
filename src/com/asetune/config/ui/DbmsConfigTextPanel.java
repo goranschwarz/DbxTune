@@ -55,6 +55,7 @@ extends JPanel
 	}
 
 	public void refresh()
+	throws Exception
 	{
 		Timestamp     ts        = null;
 		boolean       hasGui    = DbxTune.hasGui();

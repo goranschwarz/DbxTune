@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
+import com.asetune.utils.Ver;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
@@ -12,6 +13,7 @@ public abstract class TdsConnection extends DbxConnection
 	public TdsConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::TdsConnection(conn): conn="+conn);
 	}
 

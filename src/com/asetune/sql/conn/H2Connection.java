@@ -5,6 +5,7 @@ import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.utils.Ver;
 
 public class H2Connection extends DbxConnection
 {
@@ -12,6 +13,7 @@ public class H2Connection extends DbxConnection
 	public H2Connection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = false;
 //System.out.println("constructor::H2Connection(conn): conn="+conn);
 	}
 

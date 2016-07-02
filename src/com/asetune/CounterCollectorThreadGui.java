@@ -1,11 +1,13 @@
 package com.asetune;
 
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
 
@@ -80,7 +82,7 @@ extends CounterCollectorThreadAbstract
 
 		if (cmdLineUsername != null || cmdLinePassword != null || cmdLineServer != null)
 		{
-			String ppeStr = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP + 
+			String ppeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + 
 				"={aseUsername="+ conf.getProperty("cmdLine.aseUsername") + 
 				",asePassword=" + conf.getProperty("cmdLine.asePassword") + 
 				",aseServer="   + conf.getProperty("cmdLine.aseServer") + 
@@ -92,13 +94,13 @@ extends CounterCollectorThreadAbstract
 			MainFrame mf = MainFrame.getInstance();
 			if (mf != null)
 			{
-//				mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP +":"+cmdLineUsername+":"+cmdLinePassword+":"+cmdLineServer));
+//				mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP +":"+cmdLineUsername+":"+cmdLinePassword+":"+cmdLineServer));
 				mf.action_connect(new ActionEvent(this, 1, ppeStr));
 			}
 		}
-		else
+		else if (hasGui)
 		{
-			if ( conf.getBooleanProperty(ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP, false) )
+			if ( conf.getBooleanProperty(ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP, ConnectionDialog.DEFAULT_CONNECT_ON_STARTUP) )
 			{
 				// Use the below info just to write the message of what we THINK the
 				// ConnectionDialog will connect us to...
@@ -108,10 +110,23 @@ extends CounterCollectorThreadAbstract
 				String aseServer = AseConnectionFactory.getServer();
 				_logger.info("Connecting ON-STARTUP to host='"+host+"', port='"+port+"', srvName='"+aseServer+"', user='"+user+"'. This by using a non visible ConnectionDialog.");
 	
-				MainFrame mf = MainFrame.getInstance();
+				final MainFrame mf = MainFrame.getInstance();
 				if (mf != null)
 				{
-					mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP));
+//					mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP));
+					
+					// Make/Show the Connection dialog after the main window has been loaded
+					Timer deferedAction = new Timer(250, new ActionListener() 
+					{
+						@Override
+						public void actionPerformed(ActionEvent evt) 
+						{
+							mf.action_connect(new ActionEvent(CounterCollectorThreadGui.this, 1, ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP));
+						}    
+					});
+					deferedAction.setInitialDelay(250);
+					deferedAction.setRepeats(false);
+					deferedAction.start();
 				}
 			}
 		}
@@ -136,8 +151,8 @@ extends CounterCollectorThreadAbstract
 		_logger.info("Starting GetCounters GUI collector");
 
 		// loop
-		@SuppressWarnings("unused")
-		int loopCounter = 0;
+		int  loopCounter = 0;
+		long cmLastRefreshTime = 0; // number of milliseconds used to refresh data last time
 
 		//---------------------------
 		// START the InMemory Counter Handler
@@ -190,6 +205,7 @@ extends CounterCollectorThreadAbstract
 			// this to be more responsive for new connections.
 			else if ( ! getCounterController().isMonConnected() )
 			{
+//System.out.println("XXXXXX: -not-connected- threadName="+Thread.currentThread().getName());
 				firstLoopAfterConnect = true;
 				if ( ! _canDoReconnect )
 					startNewPcsSession = true;
@@ -204,7 +220,7 @@ extends CounterCollectorThreadAbstract
 				{
 					Configuration tmpConf = Configuration.getCombinedConfiguration();
 
-					boolean optReconnectOnFailure = tmpConf.getBooleanProperty(ConnectionDialog.CONF_OPTION_RECONNECT_ON_FAILURE, false);
+					boolean optReconnectOnFailure = tmpConf.getBooleanProperty(ConnectionDialog.PROPKEY_RECONNECT_ON_FAILURE, ConnectionDialog.DEFAULT_RECONNECT_ON_FAILURE);
 					if ( optReconnectOnFailure )
 					{
 						// Give up after X number of reconnects
@@ -213,7 +229,7 @@ extends CounterCollectorThreadAbstract
 							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Trying to Re-connect to the monitored server.");
 
 							// NOTE: we might have to do:
-							//   mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP));
+							//   mf.action_connect(new ActionEvent(this, 1, ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP));
 							// But for now just try to grab a connection and continue, revisit this later
 							try
 							{
@@ -260,8 +276,6 @@ extends CounterCollectorThreadAbstract
 				_canDoReconnect = true;
 			}
 
-			loopCounter++;
-
 			// When 130 MB of memory or less, enable Java Garbage Collect after each Sample
 			if (Memory.getMemoryLeftInMB() <= MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB)
 			{
@@ -277,8 +291,13 @@ extends CounterCollectorThreadAbstract
 				MainFrame.getInstance().actionPerformed(doGcEvent);
 			}
 
+			loopCounter++;
 			try
 			{
+				if (firstLoopAfterConnect)
+					loopCounter = 0;
+				
+//System.out.println("XXXXXXXXXXXXXXXXX: firstLoopAfterConnect="+firstLoopAfterConnect+", loopCounter="+loopCounter);
 				// Sleep (if not first loop)
 				if ( ! firstLoopAfterConnect )
 				{
@@ -294,6 +313,18 @@ extends CounterCollectorThreadAbstract
 						doJavaGcAfterRefreshShowGui = false;
 						
 					int sleepTime = MainFrame.getRefreshInterval();
+
+					// First loop, we might want to be more responsive (not sleeping as long as we normally do)
+					// This so we get some info at the graphs...
+					if (loopCounter <= 3 && cmLastRefreshTime < 5000)
+					{
+						int shorterSleepTime = 5;
+						if (sleepTime > shorterSleepTime)
+						{
+							_logger.info("Setting initial sleep time from "+sleepTime+" seconds to "+shorterSleepTime+" seconds the first 3 times we refresh data, this so graphs initially has some representive value.");
+							sleepTime = shorterSleepTime;
+						}
+					}
 					for (int i=sleepTime; i>0; i--)
 					{						
 						boolean doJavaGc = false;
@@ -381,6 +412,9 @@ extends CounterCollectorThreadAbstract
 						}
 
 						MainFrame.getInstance().setStatus(MainFrame.ST_MEMORY);
+						
+						if ( ! getCounterController().isMonConnected() ) // Do not continue in here if we have hit disconnect button
+							break; // no need to sleep if not connected...
 
 					} // end: sleep loop
 				}
@@ -420,7 +454,7 @@ extends CounterCollectorThreadAbstract
 						true,
 						MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum(),
 						MonTablesDictionaryManager.getInstance().isClusterEnabled(),
-						MonTablesDictionaryManager.getInstance().getMdaVersion());
+						MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion());
 
 					// emulate a slow INIT time...
 					//try { Thread.sleep(7000); }
@@ -514,6 +548,7 @@ extends CounterCollectorThreadAbstract
 
 				// LOOP all CounterModels, and get new data,
 				//   if it should be done
+				long cmRefreshStartTime = System.currentTimeMillis();
 				for (CountersModel cm : getCounterController().getCmList())
 				{
 					if (cm == null)
@@ -581,6 +616,8 @@ extends CounterCollectorThreadAbstract
 					cm.endOfRefresh();
 
 				} // END: LOOP all CounterModels, and get new data
+				
+				cmLastRefreshTime = System.currentTimeMillis() - cmRefreshStartTime;
 
 
 				//---------------------------------------------------
@@ -648,7 +685,7 @@ extends CounterCollectorThreadAbstract
 			}
 			catch (Exception e)
 			{
-				//        System.out.println(Version.getAppName()+" : error in GetCounters loop. "+e);
+				// System.out.println(Version.getAppName()+" : error in GetCounters loop. "+e);
 				_logger.error(Version.getAppName()+" : error in GetCounters loop ("+e.getMessage()+").", e);
 			}
 			finally

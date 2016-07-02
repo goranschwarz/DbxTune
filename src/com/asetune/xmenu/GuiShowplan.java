@@ -27,20 +27,22 @@ extends XmenuActionBase
 
 		if (xmlPlan.startsWith("<?xml version"))
 		{
-			if (xmlPlan.indexOf("<planVersion>") >= 0)
-			{
-				AsePlanViewer pv = new AsePlanViewer(xmlPlan);
-				pv.setVisible(true);
-			}
-			else
-			{
-				String htmlMsg = 
-					"<html>" +
-					"<b>Can't find the tag '<planVersion>' in the XML.</b> <br>" +
-					"So this is NOT a 'supported' XML plan." +
-					"</html>";
-				SwingUtils.showErrorMessage("No XML input found", htmlMsg, null);
-			}
+			AsePlanViewer pv = new AsePlanViewer(xmlPlan);
+			pv.setVisible(true);
+//			if (xmlPlan.indexOf("<planVersion>") >= 0)
+//			{
+//				AsePlanViewer pv = new AsePlanViewer(xmlPlan);
+//				pv.setVisible(true);
+//			}
+//			else
+//			{
+//				String htmlMsg = 
+//					"<html>" +
+//					"<b>Can't find the tag '<planVersion>' in the XML.</b> <br>" +
+//					"So this is NOT a 'supported' XML plan." +
+//					"</html>";
+//				SwingUtils.showErrorMessage("No XML input found", htmlMsg, null);
+//			}
 		}
 		else
 		{

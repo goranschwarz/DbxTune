@@ -270,10 +270,10 @@ extends TabularCntrPanel
 		// some "statics" that can be used in the graphs
 //		final String          chartTitle              = "Wait Event Graph - by Event and by Class";
 		final String          chartTitle              = "Wait Graph - by EventID and by ClassName";
-		final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10);
+		final Font            defaultLegendItemFont   = new Font("SansSerif", Font.PLAIN, 10); // SwingUtils.hiDpiScale(10));
 		final RectangleInsets defaultLegendItemInsets = new RectangleInsets(0, 0, 0, 0);
 
-		final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9);
+		final Font            defaultLabelFont        = new Font("SansSerif", Font.PLAIN, 9); // SwingUtils.hiDpiScale(9));
 		
 		if (createPieChart)
 		{
@@ -483,8 +483,8 @@ extends TabularCntrPanel
 		final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
 
 		String[] graphTypeArr = {"Pie Chart", "Bar Graph"};
-		final JLabel    graphType_lbl    = new JLabel("Type");
-		final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+		final JLabel            graphType_lbl    = new JLabel("Type");
+		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
 		final JButton   trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
 

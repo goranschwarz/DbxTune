@@ -2,10 +2,14 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 
@@ -95,7 +99,8 @@ extends CountersModel
 
 	public CmObjectActivity(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -311,16 +316,16 @@ extends CountersModel
 		String AvgLevel0WaitTime   = "";
 		String ase1570_SP100_nl    = ""; // NL for this section
 
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
 		if (aseVersion >= Ver.ver(15,0))
 			bigint = "bigint";
 
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
 		if (aseVersion >= Ver.ver(15,0,2))
 		{
-			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID)),             -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			String rowCountOption = "          ";
+			if (aseVersion >= Ver.ver(15,7,0, 130))
+				rowCountOption = ",'noblock'";
+
+			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID"+rowCountOption+")),   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			DBName       = "A.DBName, \n";
@@ -489,20 +494,14 @@ extends CountersModel
 		cols3 += ObjectCacheDate + "LastOptSelectDate, LastUsedDate";
 	//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
 	// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
 		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			cols2 += "HkgcRequests, HkgcPending, HkgcOverflows, \n";
 		}
-//		if (aseVersion >= 15701)
-//		if (aseVersion >= 1570010)
 		if (aseVersion >= Ver.ver(15,7,0,1))
 		{
 			cols2 += HkgcRequestsDcomp + HkgcPendingDcomp + HkgcOverflowsDcomp + nl_15701;
 		}
-//		if (aseVersion >= 15702)
-//		if (aseVersion >= 1570020)
 		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			cols2 += PRSSelectCount + LastPRSSelectDate + PRSRewriteCount + LastPRSRewriteDate + nl_15702;
@@ -629,8 +628,6 @@ extends CountersModel
 
 	/**
 	 * Called when a timeout has been found in the refreshGetData() method
-	 * <p>
-	 * This method should be overridden by a CounterMoitor object
 	 */
 	@Override
 	public void handleTimeoutException()
@@ -640,7 +637,7 @@ extends CountersModel
 		// FIRST try to reset timeout if it's below the default
 		if (getQueryTimeout() < getDefaultQueryTimeout())
 		{
-			if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, true))
+			if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, DEFAULT_disable_tabRowCount_onTimeout))
 			{
 				setQueryTimeout(getDefaultQueryTimeout(), true);
 				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
@@ -652,7 +649,7 @@ extends CountersModel
 		// It might be that what causing the timeout
 		if (conf.getBooleanProperty(PROPKEY_disable_tabRowCount_onTimeout, DEFAULT_disable_tabRowCount_onTimeout))
 		{
-			if (conf.getBooleanProperty(PROPKEY_sample_tabRowCount, DEFAULT_sample_tabRowCount) == false)
+			if (conf.getBooleanProperty(PROPKEY_sample_tabRowCount, DEFAULT_sample_tabRowCount) == true)
 			{
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -669,12 +666,23 @@ extends CountersModel
 				
 				if (getGuiController() != null && getGuiController().hasGUI())
 				{
-//					FIXME
-					// show GUI Dialog, which can undo the above setting
-					// and also disable this action in the future.
-					
-//					- Also change 'getName()+".TabRowCount"' to PROPKEY
-//					- Also how should 'sample.ObjectName' be handel
+					String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
+
+					JOptionPane optionPane = new JOptionPane(
+							"<html>" +
+							"The query for CM '"+getName()+"' took to long... and received a Timeout.<br>" +
+							"<br>" +
+							"This may be caused by the function row_count(objid, dbid), which is used to get how many rows a table holds.<br>" +
+							"In combination that someone was holding an exclusive table lock, which in some Ase Versions causes row_count() to block.<br>" +
+							"This is only done when 'Sample Table Row Count' is enabled and ASE Version is lower than 15.7 SP130<br>" +
+							"<br>" +
+							"To Workaround this issue:<br>" +
+							"I just disabled option 'Sample Table Row Count'... You can try to enable it again later.<br>" +
+							"</html>",
+							JOptionPane.INFORMATION_MESSAGE);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Table Row Count' @ "+dateStr);
+					dialog.setModal(false);
+					dialog.setVisible(true);
 				}
 			}
 		}
@@ -701,6 +709,7 @@ extends CountersModel
 		int IndexID_pos      = -1;
 		int LogicalReads_pos = -1;
 		int RowsInserted_pos = -1;
+		int PagesRead_pos    = -1;
 		
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -721,6 +730,7 @@ extends CountersModel
 			else if (colName.equals("IndexID"))      IndexID_pos      = colId;
 			else if (colName.equals("LogicalReads")) LogicalReads_pos = colId;
 			else if (colName.equals("RowsInserted")) RowsInserted_pos = colId;
+			else if (colName.equals("PagesRead"))    PagesRead_pos = colId;
 
 			// Noo need to continue, we got all our columns
 			if (    LockRequests_pos  >= 0 
@@ -734,6 +744,7 @@ extends CountersModel
 			     && IndexID_pos       >= 0  
 			     && LogicalReads_pos  >= 0  
 			     && RowsInserted_pos  >= 0  
+			     && PagesRead_pos     >= 0  
 			   )
 				break;
 		}
@@ -788,8 +799,13 @@ extends CountersModel
 				int IndexID      = ((Number)diffData.getValueAt(rowId, IndexID_pos     )).intValue();
 				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos)).intValue();
 				int RowsInserted = ((Number)diffData.getValueAt(rowId, RowsInserted_pos)).intValue();
+				int PagesRead    = ((Number)diffData.getValueAt(rowId, PagesRead_pos   )).intValue();
 				
 				String remark = null;
+				if (IndexID == 0 && PagesRead > 1000)
+				{
+					remark = RemarkDictionary.PROBABLY_TABLE_SCAN;
+				}
 				if (IndexID == 0 && UsedCount > 0 && LogicalReads > 0)
 				{
 //					remark = RemarkDictionary.T_SCAN_OR_HTAB_INS;

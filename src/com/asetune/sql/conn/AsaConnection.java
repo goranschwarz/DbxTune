@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 public class AsaConnection 
 extends TdsConnection
@@ -14,6 +15,7 @@ extends TdsConnection
 	public AsaConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::AsaConnection(conn): conn="+conn);
 	}
 

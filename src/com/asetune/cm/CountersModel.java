@@ -55,6 +55,8 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.ResultSetMetaDataCached;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
@@ -127,7 +129,7 @@ implements Cloneable, ITableTooltip
 	private boolean            _runtimeInitialized= false;
 	private int                _serverVersion     = 0;
 	private boolean            _isClusterEnabled  = false;
-	private List<String>       _activeRoleList    = null;
+	private List<String>       _activeServerRolesOrPermissions = null;
 	private Map<String,Integer>_monitorConfigsMap = null;
 	private String             _sqlInit           = null;
 	private String             _sqlClose          = null; // Not used yet
@@ -223,6 +225,7 @@ implements Cloneable, ITableTooltip
 	private State _state = State.NORMAL;
 
 	private GTable.ITableTooltip _cmToolTipSupplier = null;
+	private Map<String, String> _cmLocalToolTipColumnDescriptions = new HashMap<String, String>();
 	
 	//-------------------------------------------------------
 	// BEGIN: Graph members
@@ -287,7 +290,7 @@ implements Cloneable, ITableTooltip
 		setRuntimeInitialized(false);
 		_serverVersion     = 0;
 		_isClusterEnabled  = false;
-		_activeRoleList    = null;
+		_activeServerRolesOrPermissions = null;
 		_monitorConfigsMap = null;
 		_sqlInit           = null;
 		_sqlClose          = null; // Not used yet
@@ -377,6 +380,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public CountersModel
 	(
+			ICounterController counterController,
 			String       name,             // Name of the Counter Model
 			String       groupName,        // Name of the Group this counter belongs to, can be null
 			String       sql,              // SQL Used to grab a sample from the counter data
@@ -392,7 +396,7 @@ implements Cloneable, ITableTooltip
 			boolean      systemCm
 	)
 	{
-		this(name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, 0);
+		this(counterController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, 0);
 	}
 
 
@@ -414,6 +418,7 @@ implements Cloneable, ITableTooltip
 	 */
 	public CountersModel
 	(
+			ICounterController counterController,
 			String       name,
 			String       groupName,
 			String       sql,
@@ -442,6 +447,9 @@ implements Cloneable, ITableTooltip
 		// Check if name is OK
 		checkInConstructor(); 
 
+		// Register it at the CounterController
+		setCounterController(counterController);
+
 		_sqlRequest         = sql;
 		_sqlWhere           = "";
 		_pkCols             = pkList;
@@ -459,6 +467,9 @@ implements Cloneable, ITableTooltip
 		_sybMessageHandler  = createSybMessageHandler();
 		
 		_cmToolTipSupplier  = createToolTipSupplier();
+		
+		_cmLocalToolTipColumnDescriptions = createLocalToolTipTextOnTableColumnHeader();
+		initLocalToolTipTextOnTableColumnHeader();
 		
 		//		filterColId       = -1;
 		_prevSample       = null; // Contains old raw data
@@ -554,7 +565,7 @@ implements Cloneable, ITableTooltip
 		c._runtimeInitialized         = this._runtimeInitialized;
 		c._serverVersion              = this._serverVersion;
 		c._isClusterEnabled           = this._isClusterEnabled;
-		c._activeRoleList             = this._activeRoleList;      // no need to full copy, static usage
+		c._activeServerRolesOrPermissions = this._activeServerRolesOrPermissions;      // no need to full copy, static usage
 		c._monitorConfigsMap          = this._monitorConfigsMap;   // no need to full copy, static usage
 		c._sqlInit                    = this._sqlInit;
 		c._sqlClose                   = this._sqlClose;
@@ -771,12 +782,23 @@ implements Cloneable, ITableTooltip
 	 */
 	public ICounterController getCounterController()
 	{
-		// Remove this, this is just for backward compatibility.
-		if (_counterController == null)
-//			return AseTune.getCounterCollector();
-			return CounterController.getInstance();
+		if (_counterController != null)
+			return _counterController;
 
-		return _counterController;
+		// Remove this, this is just for backward compatibility.
+		return CounterController.getInstance();
+	}
+	/**
+	 * Does this CounterModel have a counter controller
+	 * @return counterController
+	 */
+	public boolean hasCounterController()
+	{
+		if (_counterController != null)
+			return true;
+
+		// Remove this, this is just for backward compatibility.
+		return CounterController.hasInstance();
 	}
 
 	/**
@@ -1540,7 +1562,7 @@ implements Cloneable, ITableTooltip
 	 * to be able to grab at a later stage
 	 * 
 	 * @param key name of the loosely connected object
-	 * @return the object, if it couldnt be found a null value will be returned
+	 * @return the object, if it couldn't be found a null value will be returned
 	 */
 	public Object getClientProperty(String key)
 	{
@@ -1567,7 +1589,9 @@ implements Cloneable, ITableTooltip
 	 */
 	public GTable.ITableTooltip createToolTipSupplier()
 	{
-		return CounterController.getInstance().createCmToolTipSupplier(this);
+		if (hasCounterController())
+			return getCounterController().createCmToolTipSupplier(this);
+		return null;
 	}
 
 	/**
@@ -1578,10 +1602,53 @@ implements Cloneable, ITableTooltip
 	@Override
 	public String getToolTipTextOnTableColumnHeader(String colName)
 	{
+		String tooltip = getLocalToolTipTextOnTableColumnHeader(colName);
+		if (StringUtil.hasValue(tooltip))
+			return tooltip;
+		
 		if (_cmToolTipSupplier == null)
 			return null;
 
 		return _cmToolTipSupplier.getToolTipTextOnTableColumnHeader(colName);
+	}
+
+	/**
+	 * Get description stored locally for this CM 
+	 * @param colName
+	 * @return a description of the column if any was present, or NULL of no description was found.
+	 */
+	public String getLocalToolTipTextOnTableColumnHeader(String colName)
+	{
+		return _cmLocalToolTipColumnDescriptions.get(colName);
+	}
+
+	/**
+	 * Create a Map that holds columns description stored locally for this CM 
+	 * @return
+	 */
+	public Map<String, String> createLocalToolTipTextOnTableColumnHeader()
+	{
+		return new HashMap<String, String>();
+	}
+
+	/**
+	 * Initialize columns description stored locally for this CM 
+	 * @param colName
+	 * @return
+	 */
+	public void initLocalToolTipTextOnTableColumnHeader()
+	{
+	}
+
+	/**
+	 * Add columns description stored locally for this CM 
+	 * @param colName
+	 * @param description Note: this <b>can</b> be in HTML format
+	 * @return Previous value that was used. returns null if it wasn't previously set
+	 */
+	public String setLocalToolTipTextOnTableColumnHeader(String colName, String description)
+	{
+		return _cmLocalToolTipColumnDescriptions.put(colName, description);
 	}
 
 	/**
@@ -1878,8 +1945,7 @@ implements Cloneable, ITableTooltip
 		if (addToSummary)
 		{
 			MainFrame.addGraphViewMenu( tg.getViewMenuItem() );
-//			SummaryPanel.getInstance().addTrendGraph(tg);
-			CounterController.getSummaryPanel().addTrendGraph(tg);
+			getCounterController().getSummaryPanel().addTrendGraph(tg);
 		}
 	}
 	
@@ -2212,24 +2278,24 @@ implements Cloneable, ITableTooltip
 	}
 	
 	/** */
-	public void setActiveRoles(List<String> activeRoleList)
+	public void setActiveServerRolesOrPermissions(List<String> permissionList)
 	{
-		_activeRoleList = activeRoleList;
+		_activeServerRolesOrPermissions = permissionList;
 	}
 	/** if not initialized it will return null */
-	public List<String> getActiveRoles()
+	public List<String> getActiveServerRolesOrPermissions()
 	{
-		return _activeRoleList;
+		return _activeServerRolesOrPermissions;
 	}
 
 	/** check if the <b>locally cached</b> List of role names contains the role */
-	public boolean isRoleActive(String role)
+	public boolean isServerRoleOrPermissionActive(String role)
 	{
 		if ( ! isRuntimeInitialized() ) throw new RuntimeException("This can't be called before the CM has been connected to any monitored server.");
-		if (_activeRoleList == null) 
+		if (_activeServerRolesOrPermissions == null) 
 			return false;
 
-		return _activeRoleList.contains(role);
+		return _activeServerRolesOrPermissions.contains(role);
 	}
 	
 	/** */
@@ -2712,7 +2778,7 @@ implements Cloneable, ITableTooltip
 
 			String roleName = dependsOnRole[i].trim();
 //			boolean b = AseConnectionUtils.hasRole(conn, dependsOnRole[i].trim());
-			if ( ! isRoleActive(roleName) )
+			if ( ! isServerRoleOrPermissionActive(roleName) )
 			{
 				didNotHaveRoles += roleName + ", ";
 				rc = false;
@@ -3188,6 +3254,22 @@ implements Cloneable, ITableTooltip
 
 	/**
 	 * do local calculation, this should be overridden for local calculations...
+	 * <p>
+	 * This only allow changing Absolute values, and it's called before the localCalculation(prevSample, newSample, diffData)<br>
+	 * It's NOT called the first time... It's only called if prevSample != null
+	 * <p>
+	 * So use this if you need to change some values in the Absolute values, but you need to check something in <b>previous</b> sample.
+	 * 
+	 * @param prevSample the previous sample (note: if this is null, this method wont be called)
+	 * @param newSample the new values
+	 */
+	public void localCalculation(CounterSample prevSample, CounterSample newSample)
+	{
+	}
+
+
+	/**
+	 * do local calculation, this should be overridden for local calculations...
 	 * 
 	 * @param prevSample
 	 * @param newSample
@@ -3522,7 +3604,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	/** Refresh data */
-	public final synchronized void refresh(Connection conn) throws Exception
+	public final synchronized void refresh(DbxConnection conn) throws Exception
 	{
 		// check if we depends on other CM's
 		try 
@@ -3639,13 +3721,13 @@ implements Cloneable, ITableTooltip
 
 	/**
 	 * This is the method to override if you want to different refresh
-	 * TODO: check for more Exception, so we dont leave this code without resetting: _newSample, _diffData, _rateData
+	 * TODO: check for more Exception, so we don't leave this code without resetting: _newSample, _diffData, _rateData
 	 * 
 	 * @param conn
 	 * @return number of rows in the new sample.
 	 * @throws Exception
 	 */
-	protected int refreshGetData(Connection conn) throws Exception
+	protected int refreshGetData(DbxConnection conn) throws Exception
 	{
 		if (_logger.isDebugEnabled())
 			_logger.debug("Entering refreshCM() method for " + _name);
@@ -3747,6 +3829,18 @@ implements Cloneable, ITableTooltip
 			_diffData  = null;
 			_rateData  = null;
 
+			// Will this work, or will it just "hang" as well
+			if (conn instanceof SybConnection)
+			{
+				_logger.info("Calling 'cancel()' on the SybConnection.");
+				((SybConnection)conn).cancel();
+				
+				// Execute the cancel in some "timeout" sensitive code block...
+				// If it takes to long... close() the connection... 
+				// but that might also take to long time... Then what...
+				//conn.close();
+			}
+
 			// If we got an exception, go and check if we are still connected
 			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 			{
@@ -3770,7 +3864,7 @@ implements Cloneable, ITableTooltip
 					_logger.warn("Monitoring has been disabled. someone has done (sp_configure 'enable monitoring', 0) from another session. I cant continue... Closing the database connection.");
 //					try { conn.close(); }
 //					catch (SQLException ignore) {}
-					CounterController.getInstance().closeMonConnection();
+					getCounterController().closeMonConnection();
 					
 					// NOTE: can we do this in a better way?
 					// I dont like 'hasGUI()' switches...
@@ -3791,11 +3885,14 @@ implements Cloneable, ITableTooltip
 								  "Please reconnect to the server again.<br>" +
 								"</html>", 
 								JOptionPane.ERROR_MESSAGE);
-						JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Monitoring has been disabled @ "+dateStr);
+//						JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Monitoring has been disabled @ "+dateStr);
+						JDialog dialog = optionPane.createDialog((getGuiController() == null ? null : getGuiController().getGuiHandle()), "Monitoring has been disabled @ "+dateStr);
 						dialog.setModal(false);
 						dialog.setVisible(true);
 
 						MainFrame.getInstance().setStatus(MainFrame.ST_DISCONNECT);
+						if (getGuiController() != null)
+							getGuiController().setStatus(MainFrame.ST_DISCONNECT);
 					}
 				}
 				else
@@ -3863,6 +3960,8 @@ implements Cloneable, ITableTooltip
 		// translate some fields in the Absolute Counters
 		beginLcRefresh();
 		localCalculation(tmpNewSample);
+		if (_prevSample != null)
+			localCalculation(_prevSample, tmpNewSample);
 		long firstLcTime = endLcRefresh();
 
 		// initialize Diss/Diff/Pct column bitmaps
@@ -4000,7 +4099,9 @@ implements Cloneable, ITableTooltip
 					beginGuiRefresh();
 
 					// Set: Info fields
-					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
+//					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
+					if (getGuiController() != null)
+						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
 
 					// Simulate a SLOW action, for example a massive sort...
 					// which would case the GUI to block for a while...
@@ -4067,7 +4168,9 @@ implements Cloneable, ITableTooltip
 					updateGraphData();
 		
 					// reset: Info fields
-					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+//					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+					if (getGuiController() != null)
+						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "");
 
 					endGuiRefresh();
 
@@ -4545,7 +4648,7 @@ implements Cloneable, ITableTooltip
 		if (diffData == null)
 			return;
 
-		// No need to continue iff al rows has already been added :)
+		// No need to continue if all rows has already been added :)
 		int rows = Math.min(maxNumOfDdlsToPersist, diffData.getRowCount());
 		if (rows == diffData.getRowCount())
 			return;
@@ -4564,7 +4667,7 @@ implements Cloneable, ITableTooltip
 				continue;
 			}
 
-			//FIXME: the below can be donne more efficient
+			//FIXME: the below can be done more efficient
 			// instead of copyList + sort + takeFirt#Rows
 			// do some kind of sort into a array holding only top X rows (some kind of bubble sort on the Top#Rows array)
 			
@@ -4595,6 +4698,24 @@ implements Cloneable, ITableTooltip
 			{
 				Object DBName_obj     = sorted.get(r).get(DBName_pos);
 				Object ObjectName_obj = sorted.get(r).get(ObjectName_pos);
+
+				// discard diff values that are zero (this will/may happen when load is NOT HIGH)
+				Object counter_obj = sorted.get(r).get(colPos);
+				if (counter_obj instanceof Number)
+				{
+					Number counter = (Number)counter_obj;
+					//if (counter.doubleValue() == 0.0)
+					if (counter.intValue() == 0)
+					{
+						if (_logger.isDebugEnabled())
+							_logger.debug("- - - - - - - - - CM("+getName()+").sendDdlDetailsRequest  - - - - - Skipping ZERO VALUE for dbname='"+DBName_obj+"', ObjectName='"+ObjectName_obj+"', column='"+column+"', row="+r+", counterObj="+counter_obj+", counter.intValue()="+counter.intValue());
+						continue;
+					}
+				}
+				else
+				{
+					continue; // Not a number so lets grab next...
+				}
 
 //Object sortOnCol_obj  = sorted.get(r).get(colPos);
 //System.out.println("CM='"+getName()+"', DIFF TOP("+rows+") ROWS: "+column+" = "+sortOnCol_obj+", db='"+DBName_obj+"', objName='"+ObjectName_obj+"'.");
@@ -5460,8 +5581,18 @@ implements Cloneable, ITableTooltip
 		return (_rsmd != null);
 	}
 	public void setResultSetMetaData(ResultSetMetaData rsmd)
+	throws SQLException
 	{
-		_rsmd = rsmd;		
+		// Copy/Clone the ResultSetMetaData some JDBC implementations needs this (otherwise we might get a 'The result set is closed', this was first seen for MS SQL-Server JDBC Driver)
+		if (rsmd == null)
+			_rsmd = null;
+		else
+		{
+//			ResultSetMetaDataChangable xe = new ResultSetMetaDataChangable(rsmd);
+//			_rsmd = rsmd;
+			String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
+			_rsmd = new ResultSetMetaDataCached(rsmd, productName);
+		}
 	}
 	public ResultSetMetaData getResultSetMetaData()
 	{

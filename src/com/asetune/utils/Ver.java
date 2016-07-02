@@ -5,7 +5,7 @@ import org.apache.log4j.Logger;
 public class Ver
 {
 	private static Logger _logger = Logger.getLogger(Ver.class);
-
+	public static boolean majorVersion_mustBeTenOrAbove = true;
 //	/**
 //	 * compose a long integer version number (9 digits, MMMMSSSPP) based on the more readable input
 //	 *
@@ -43,7 +43,7 @@ public class Ver
 	 */
 	public static int ver(int major, int minor, int maint, int sp, int pl)
 	{
-		if (major < 10)
+		if (major < 10 && majorVersion_mustBeTenOrAbove)
 			_logger.warn("Version Converter. major="+major+", minor="+minor+",maint="+maint+",sp="+sp+", pl="+pl+". Major must be above 10 otherwise the calcuation will be wrong.");
 
 		return    (major * 10000000)
@@ -679,7 +679,249 @@ public class Ver
 
 	public static int iqVersionStringToNumber(String versionStr)
 	{
-		return sybVersionStringToNumber(versionStr);
+//		IQ:
+//		Sybase IQ/16.0.0.656/140812/P/sp04.06/RS6000MP/AIX 6.1.0/64bit/2014-08-12 12:26:08	61	2015-12-01 19:07:31
+//		Sybase IQ/15.4.0.3046/141204/P/ESD 5/Enterprise Linux64 - x86_64 - 2.6.18-194.el5/64bit/2014-12-04 17:24:15	1	2015-10-23 09:31:29
+//		Sybase IQ/15.4.0.3019/120816/P/ESD 2/Sun_Sparc/OS 5.10/64bit/2012-08-16 12:40:47	3	2015-10-30 18:21:13
+//		Sybase IQ/15.2.0.5615/101123/P/ESD 2/Enterprise Linux64 - x86_64 - 2.6.9-67.0.4.ELsmp/64bit/2010-11-23 10:53:30	16	2016-02-05 11:55:59
+//		SAP IQ/16.0.102.2.1297/20080/P/sp10.06/MS/Windows 2003/64bit/2015-10-27 01:04:33	2	2016-01-26 16:24:53
+//		SAP IQ/16.0.102.1257/20056/P/sp10.03/Enterprise Linux64 - x86_64 - 2.6.18-194.el5/64bit/2015-08-20 17:45:23	2	2016-02-24 14:14:58
+//		SAP IQ/16.0.0.809/150928/P/sp08.38/RS6000MP/AIX 6.1.0/64bit/2015-09-28 09:22:15	33	2016-02-29 12:24:36
+//		SAP IQ/16.0.0.808/150223/P/sp08.27/MS/Windows 2003/64bit/2015-02-23 16:42:29
+//		Summary:
+//		if ^sp: unly use 16.0, use sp##.##
+//		if ^ESD: use 15.0.0 then ESD#[.#]
+				
+		int major       = 0; // <15>.4.0
+		int minor       = 0; // 15.<4>.0
+		int maint       = 0; // 15.4.<0>
+		int servicePack = 0; // sp<04>.06 or ESD <4>
+		int patchLevel  = 0; // sp04.<06>
+
+		String[] iqVersionParts = versionStr.split("/");
+		if (iqVersionParts.length > 0)
+		{
+			String iqVersionNumberStr = null;
+			String iqEsdStr = null;
+			String servivePackStr = null;
+			String patchLevelStr  = null;
+
+			// Scan the string to see if there are any part that looks like a version str (##.#)
+			for (int i=0; i<iqVersionParts.length; i++)
+			{
+				if ( iqVersionParts[i].matches("^[0-9][0-9][.][0-9].*") && iqVersionNumberStr == null )
+				{
+					iqVersionNumberStr = iqVersionParts[i];
+				}
+
+				// Check for Sybase ESD level
+				if ( iqVersionParts[i].indexOf("ESD ") >= 0 && iqEsdStr == null)
+				{
+					iqEsdStr = iqVersionParts[i];
+				}
+
+				// Check for "SAP Service Pack, with three numbers SP100, SP110, etc"
+				// Check for "SAP Service Pack, with two numbers SP50, SP51, etc"
+				if ( iqVersionParts[i].matches(".*[Ss][Pp][0-9].*") && servivePackStr == null)
+				{
+					servivePackStr = iqVersionParts[i];
+				}
+
+				// Check for "SAP Patch Level, with two numbers PL01, PL02, etc", introduced in ASE 16.0
+				if ( iqVersionParts[i].matches(".*[Pp][Ll][0-9].*") && patchLevelStr == null)
+				{
+					patchLevelStr = iqVersionParts[i];
+				}
+			}
+
+			if (iqVersionNumberStr == null)
+			{
+//				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.", new Exception("DUMMY EXCEPTION TO GET CALLSTACK"));
+				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.");
+				return 0; // which probably is 0
+			}
+
+			String[] aseVersionNumberParts = iqVersionNumberStr.split("\\.");
+			if (aseVersionNumberParts.length > 1)
+			{
+				// Version parts can contain characters...
+				// hmm version could be: 12.5.3a
+				try
+				{
+					String versionPart = null;
+					// MAJOR version: ( <12>.5.2.1 - MAJOR.minor.maint.rollup )
+					if (aseVersionNumberParts.length >= 1)
+					{
+						versionPart = aseVersionNumberParts[0].trim();
+						major = fixVersionOverflow(VERSION_MAJOR, Integer.parseInt(versionPart));
+					}
+
+					// MINOR version: ( 12.<5>.2.1 - major.MINOR.maint.rollup )
+					if (aseVersionNumberParts.length >= 2)
+					{
+						versionPart = aseVersionNumberParts[1].trim().substring(0, 1);
+						minor = fixVersionOverflow(VERSION_MINOR, Integer.parseInt(versionPart));
+					}
+
+//					// MAINTENANCE version: ( 12.5.<2>.1 - major.minor.MAINT.rollup )
+//					if (aseVersionNumberParts.length >= 3)
+//					{
+//						versionPart = aseVersionNumberParts[2].trim().substring(0, 1);
+//						maint = fixVersionOverflow(VERSION_MAINTENANCE, Integer.parseInt(versionPart));
+//					}
+//
+//					// ROLLUP version: ( 12.5.2.<1> - major.minor.maint.ROLLUP )
+//					if (aseVersionNumberParts.length >= 4 && iqVersionNumberStrArrayPos != iqEsdStrArrayPos)
+//					{
+////						versionPart = aseVersionNumberParts[3].trim().substring(0, 1);
+//						versionPart = aseVersionNumberParts[3].trim();
+//						servicePack = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
+////						aseVersionNumber += 10 * rollup;
+//					}
+//					else // go and check for ESD string, which is another way of specifying ROLLUP
+//					{
+						if (iqEsdStr != null)
+						{
+							int subEsdStart = -1; // find out ESD# 4.2  (second level)
+							int subEsdEnd   = -1;
+
+							int esdStart = iqEsdStr.indexOf("ESD ");
+							if (esdStart >= 0)
+								esdStart += "ESD ".length();
+
+							// set end to first NON digit (or end of string)
+							int esdEnd = esdStart;
+							for (; esdEnd<iqEsdStr.length(); esdEnd++)
+							{
+								if ( ! Character.isDigit(iqEsdStr.charAt(esdEnd)) )
+								{
+									if ( iqEsdStr.charAt(esdEnd) == '.' )
+									{
+										subEsdStart = esdEnd + 1;
+										subEsdEnd   = subEsdStart;
+										for (; subEsdEnd<iqEsdStr.length(); subEsdEnd++)
+											if ( ! Character.isDigit(iqEsdStr.charAt(subEsdEnd)) )
+												break;
+									}
+									break;
+								}
+							}
+
+							if (esdStart != -1)
+							{
+								try
+								{
+									versionPart = iqEsdStr.trim().substring(esdStart, esdEnd);
+									servicePack = fixVersionOverflow(VERSION_SERVICE_PACK, Integer.parseInt(versionPart));
+								}
+								catch (RuntimeException e) // NumberFormatException,
+								{
+									_logger.warn("Problems converting some part(s) of the 'ESD ' in the version string '" + iqVersionNumberStr + "' into a number. 'ESD ' string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								}
+							}
+							if (subEsdStart != -1)
+							{
+								try
+								{
+									versionPart = iqEsdStr.trim().substring(subEsdStart, subEsdEnd);
+									patchLevel = fixVersionOverflow(VERSION_PATCH_LEVEL, Integer.parseInt(versionPart));
+								}
+								catch (RuntimeException e) // NumberFormatException,
+								{
+									_logger.warn("Problems converting some part(s) of the 'ESD ' in the version string '" + iqVersionNumberStr + "' into a number. 'ESD ' string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								}
+							}
+						}
+//					}
+					
+					if (servivePackStr != null)
+					{
+						int start = servivePackStr.indexOf("SP");
+						// Forward compatible with SAP version string if they will change it to 'SP## PL##' instead of 'sp##.##'  
+						if (start >= 0)
+						{
+							if (start >= 0)
+								start += "SP".length();
+
+							// set end to first NON digit (or end of string)
+							int end = start;
+							for (; end<servivePackStr.length(); end++)
+							{
+								if ( ! Character.isDigit(servivePackStr.charAt(end)) )
+									break;
+							}
+
+							if (start != -1)
+							{
+								try
+								{
+									versionPart = servivePackStr.trim().substring(start, end);
+									servicePack = fixVersionOverflow(VERSION_SERVICE_PACK, Integer.parseInt(versionPart));
+								}
+								catch (RuntimeException e) // NumberFormatException,
+								{
+									_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + iqVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								}
+							}
+						}
+						else if (servivePackStr.indexOf("sp") >= 0) // 'sp##.##'
+						{
+							String tmp = servivePackStr.replaceAll("[^0-9.]", ""); // remove everything except numbers(0-9) and dot(.)
+							String[] sa = tmp.split("\\.");
+							if (sa.length >= 1)
+								servicePack = fixVersionOverflow(VERSION_SERVICE_PACK, Integer.parseInt(sa[0]));
+							if (sa.length >= 2)
+								patchLevel = fixVersionOverflow(VERSION_PATCH_LEVEL,   Integer.parseInt(sa[1]));
+						}
+					}
+					if (patchLevelStr != null)
+					{
+						int start = patchLevelStr.indexOf("PL");
+						if (start >= 0)
+							start += "PL".length();
+
+						// set end to first NON digit (or end of string)
+						int end = start;
+						for (; end<patchLevelStr.length(); end++)
+						{
+							if ( ! Character.isDigit(patchLevelStr.charAt(end)) )
+								break;
+						}
+
+						if (start != -1)
+						{
+							try
+							{
+								versionPart = patchLevelStr.trim().substring(start, end);
+								patchLevel = fixVersionOverflow(VERSION_PATCH_LEVEL, Integer.parseInt(versionPart));
+//								aseVersionNumber += 1 * patchLevel;
+							}
+							catch (RuntimeException e) // NumberFormatException,
+							{
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + iqVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+							}
+						}
+					}
+				}
+				// catch (NumberFormatException e)
+				catch (RuntimeException e) // NumberFormatException,
+											// IndexOutOfBoundsException
+				{
+					_logger.warn("Problems converting some part(s) of the version string '" + iqVersionNumberStr + "' into a number. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+				}
+			}
+			else
+			{
+				_logger.warn("There ASE version string seems to be faulty, can't find any '.' in the version number subsection '" + iqVersionNumberStr + "'.");
+			}
+		}
+		else
+		{
+			_logger.warn("There ASE version string seems to be faulty, can't find any / in the string '" + versionStr + "'.");
+		}
+
+//System.out.println("  <- sybVersionStringToNumber(): <<<--- "+Ver.ver(major, minor, maint, servicePack, patchLevel));
+		return Ver.ver(major, minor, maint, servicePack, patchLevel);
 	}
 
 	public static int oracleVersionStringToNumber(String versionStr)
@@ -845,11 +1087,55 @@ public class Ver
 		// Some real life version strings for 16
 		testVersion(Ver.ver(16,0,0,0,0), "Adaptive Server Enterprise/16.0/EBF 22385 SMP/P/X64/Windows Server/asecepheus/3530/64-bit/FBO/Sun Feb 16 06:52:50 2014");
 		testVersion(Ver.ver(16,0,0,0,1), "Adaptive Server Enterprise/16.0 GA PL01/EBF 22544 SMP/P/x86_64/Enterprise Linux/ase160sp00pl01/3523/64-bit/FBO/Tue Apr 15 13:24:31 2014");
+
+		
+		
+		// Some IQ real life
+		testIqVersion(Ver.ver(16,0,0, 4, 6), "Sybase IQ/16.0.0.656/140812/P/sp04.06/RS6000MP/AIX 6.1.0/64bit/2014-08-12 12:26:08");
+		testIqVersion(Ver.ver(15,4,0, 5, 0), "Sybase IQ/15.4.0.3046/141204/P/ESD 5/Enterprise Linux64 - x86_64 - 2.6.18-194.el5/64bit/2014-12-04 17:24:15");
+		testIqVersion(Ver.ver(15,4,0, 2, 0), "Sybase IQ/15.4.0.3019/120816/P/ESD 2/Sun_Sparc/OS 5.10/64bit/2012-08-16 12:40:47");
+		testIqVersion(Ver.ver(15,2,0, 2, 0), "Sybase IQ/15.2.0.5615/101123/P/ESD 2/Enterprise Linux64 - x86_64 - 2.6.9-67.0.4.ELsmp/64bit/2010-11-23 10:53:30");
+		testIqVersion(Ver.ver(16,0,0, 10,6), "SAP IQ/16.0.102.2.1297/20080/P/sp10.06/MS/Windows 2003/64bit/2015-10-27 01:04:33");
+		testIqVersion(Ver.ver(16,0,0, 10,3), "SAP IQ/16.0.102.1257/20056/P/sp10.03/Enterprise Linux64 - x86_64 - 2.6.18-194.el5/64bit/2015-08-20 17:45:23");
+		testIqVersion(Ver.ver(16,0,0, 8,38), "SAP IQ/16.0.0.809/150928/P/sp08.38/RS6000MP/AIX 6.1.0/64bit/2015-09-28 09:22:15");
+		testIqVersion(Ver.ver(16,0,0, 8,27), "SAP IQ/16.0.0.808/150223/P/sp08.27/MS/Windows 2003/64bit/2015-02-23 16:42:29");
+
+		// Some IQ Made up in case of SAP decides to go: SP PL
+		testIqVersion(Ver.ver(16,1,0, 1, 0), "SAP IQ/16.1.102.2.1297/20080/P/SP01/MS/Windows 2003/64bit/2015-10-27 01:04:33");
+		testIqVersion(Ver.ver(16,1,0, 20,1), "SAP IQ/16.1.102.2.1297/20080/P/SP20 PL01/MS/Windows 2003/64bit/2015-10-27 01:04:33");
+		testIqVersion(Ver.ver(16,1,0, 1, 0), "SAP IQ/16.1.102.2.1297/20080/P/xxx SP01/MS/Windows 2003/64bit/2015-10-27 01:04:33");
+		testIqVersion(Ver.ver(16,1,0, 20,1), "SAP IQ/16.1.102.2.1297/20080/P/xxx SP20 PL01/MS/Windows 2003/64bit/2015-10-27 01:04:33");
+
+		// Some IQ Made up in case of SAP decides to go: SP PL and also removes everything after 16.1  16.1<.102.2.1297> 
+		testIqVersion(Ver.ver(16,1,0, 1, 0), "SAP IQ/16.1/20080/P/SP01/MS/...");
+		testIqVersion(Ver.ver(16,1,0, 20,1), "SAP IQ/16.1/20080/P/SP20 PL01/MS/...");
+		testIqVersion(Ver.ver(16,1,0, 1, 0), "SAP IQ/16.1/20080/P/xxx SP01/MS/...");
+		testIqVersion(Ver.ver(16,1,0, 20,1), "SAP IQ/16.1/20080/P/xxx SP20 PL01/MS/...");
+		// Some IQ Made up in case of SAP decides to go: 16.1 SP## PL## like it's in ASE
+		testIqVersion(Ver.ver(16,1,0, 1, 0), "SAP IQ/16.1 SP01/20080/P/MS/...");
+		testIqVersion(Ver.ver(16,1,0, 0, 1), "SAP IQ/16.1 PL01/20080/P/MS/...");
+		testIqVersion(Ver.ver(16,1,0, 20,1), "SAP IQ/16.1 SP20 PL01/20080/P/MS/...");
 	}
-	
+
 	private static boolean testVersion(int expectedIntVer, String verStr)
 	{
 		int version = sybVersionStringToNumber(verStr);
+		
+		if (version != expectedIntVer) 
+		{
+			System.out.println("FAILED: version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			return false;
+		}
+		else 
+		{
+			System.out.println("OK    : version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			return true;
+		}
+	}
+
+	private static boolean testIqVersion(int expectedIntVer, String verStr)
+	{
+		int version = iqVersionStringToNumber(verStr);
 		
 		if (version != expectedIntVer) 
 		{

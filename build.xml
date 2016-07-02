@@ -167,6 +167,11 @@
 		<copy file="oracletune.properties"                              toFile="${dist}/beta/oracletune.properties"/>
 		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/beta/lib/oracletune_splash.jpg"/>
 
+		<copy file="postgrestune.bat"                                   toFile="${dist}/beta/postgrestune.bat"/>
+<!--		<copy file="postgrestune.sh"                                    toFile="${dist}/beta/postgrestune.sh"/>-->
+		<copy file="postgrestune.properties"                            toFile="${dist}/beta/postgrestune.properties"/>
+		<copy file="${src}/com/asetune/images/postgrestune_splash.jpg"  toFile="${dist}/beta/lib/postgrestune_splash.jpg"/>
+
 		<zip destfile="${dist}/dbxtune_beta_tools.zip"
 			basedir="${dist}/beta"
 		/>

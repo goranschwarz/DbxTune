@@ -88,7 +88,8 @@ extends CountersModel
 	 */
 	public CmThreads(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -174,7 +175,7 @@ extends CountersModel
 		String preDropTmpTables =
 			"\n " +
 			"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +
-			"if ((select object_id('#tempResult')) IS NOT NULL) drop table #tempResult \n" +
+			"if ((select object_id('#tmpCmThreads')) IS NOT NULL) drop table #tmpCmThreads \n" +
 			"go \n" +
 			"\n";
 
@@ -214,21 +215,21 @@ extends CountersModel
 			"                               ELSE ta.Name \n" +
 			"                          END, \n" +
 			"     ThreadPoolNameTypeNum = convert(int, 0) \n" +
-			"into #tempResult \n" +
+			"into #tmpCmThreads \n" +
 			"from master..monThread th, master..monTask ta \n" +
 			"where th.InstanceID *= ta.InstanceID \n" +
 			"  and th.ThreadID   *= ta.ThreadID \n" +
 			"  and th.KTID       *= ta.KTID \n" +
 			"order by th.ThreadPoolID, th.ThreadID \n" +
 			"     \n" +
-			"update #tempResult \n" +
-			"set ThreadPoolNameTypeNum = isnull((select #tempResult.ThreadID - min(TMP.ThreadID) + 1 \n" +
-			"                                      from #tempResult TMP \n" +
-			"                                     where #tempResult.ThreadPoolNameType  = TMP.ThreadPoolNameType  \n" +
-			"                                   ), #tempResult.ThreadID)  \n" +
+			"update #tmpCmThreads \n" +
+			"set ThreadPoolNameTypeNum = isnull((select #tmpCmThreads.ThreadID - min(TMP.ThreadID) + 1 \n" +
+			"                                      from #tmpCmThreads TMP \n" +
+			"                                     where #tmpCmThreads.ThreadPoolNameType  = TMP.ThreadPoolNameType  \n" +
+			"                                   ), #tmpCmThreads.ThreadID)  \n" +
 			"    \n" +
-			"select * from #tempResult \n" +
-			"drop table #tempResult \n" +
+			"select * from #tmpCmThreads \n" +
+			"drop table #tmpCmThreads \n" +
 			"";
 			
 		return sql;

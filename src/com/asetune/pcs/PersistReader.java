@@ -2305,7 +2305,8 @@ implements Runnable, ConnectionProvider
 		//    "VersionString"    VARCHAR(30) NOT NULL,
 		//    "BuildString"      VARCHAR(30) NOT NULL,
 		//    "SourceDate"       VARCHAR(30) NOT NULL,
-		//    "SourceRev"        INT         NOT NULL
+		//    "SourceRev"        INT         NOT NULL,
+//		//    "DbProductName"    VARCHAR(30) NOT NULL
 		// )
 
 		String sql = 
@@ -2321,16 +2322,19 @@ implements Runnable, ConnectionProvider
 
 			MonVersionInfo monVersionInfo = new MonVersionInfo();
 			ResultSet rs = pstmnt.executeQuery();
+//			int colCount = rs.getMetaData().getColumnCount();
 			boolean foundRows = false;
 			while (rs.next())
 			{
 				foundRows = true;
-				monVersionInfo._sessionStartTime = rs.getTimestamp(1);
-				monVersionInfo._productString    = rs.getString   (2);
-				monVersionInfo._versionString    = rs.getString   (3);
-				monVersionInfo._buildString      = rs.getString   (4);
-				monVersionInfo._sourceDate       = rs.getString   (5);
-				monVersionInfo._sourceRev        = rs.getInt      (6);
+				monVersionInfo._sessionStartTime  = rs.getTimestamp(1);
+				monVersionInfo._productString     = rs.getString   (2);
+				monVersionInfo._versionString     = rs.getString   (3);
+				monVersionInfo._buildString       = rs.getString   (4);
+				monVersionInfo._sourceDate        = rs.getString   (5);
+				monVersionInfo._sourceRev         = rs.getInt      (6);
+//				if (colCount >= 7)
+//					monVersionInfo._dbProductName = rs.getString   (7);
 			}
 			rs.close();
 			pstmnt.close();
@@ -2364,11 +2368,13 @@ implements Runnable, ConnectionProvider
 		public String    _buildString      = null;
 		public String    _sourceDate       = null;
 		public int       _sourceRev        = 0;
+//		public String    _dbProductName    = null;
 		
 		@Override
 		public String toString()
 		{
-			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+")";
+//			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+"', _dbProductName='"+_dbProductName+"')";
+			return "MonVersionInfo(sessionStartTime='"+_sessionStartTime+"', productString='"+_productString+"', versionString='"+_versionString+"', buildString='"+_buildString+"', sourceDate='"+_sourceDate+"', sourceRev='"+_sourceRev+"')";
 		}
 	}
 

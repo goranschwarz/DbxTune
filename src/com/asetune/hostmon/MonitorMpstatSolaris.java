@@ -6,6 +6,15 @@ import com.asetune.utils.Configuration;
 public class MonitorMpstatSolaris
 extends MonitorVmstat
 {
+	public MonitorMpstatSolaris()
+	{
+		this(-1);
+	}
+	public MonitorMpstatSolaris(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	@Override
 	public String getModuleName()
 	{
@@ -20,7 +29,7 @@ extends MonitorVmstat
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData()
+	public HostMonitorMetaData createMetaData(int utilVersion)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

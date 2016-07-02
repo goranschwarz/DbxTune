@@ -19,6 +19,7 @@ import com.asetune.gui.focusabletip.ResolverReturn;
 import com.asetune.gui.focusabletip.ResolverReturn.Type;
 import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
+import com.asetune.utils.SwingUtils;
 
 public class ToolTipSupplierTest extends JFrame
 {
@@ -83,7 +84,7 @@ public class ToolTipSupplierTest extends JFrame
 			Font font = UIManager.getFont("Label.font");
 			if (font == null) 
 			{
-				font = new Font("SansSerif", Font.PLAIN, 12);
+				font = new Font("SansSerif", Font.PLAIN, SwingUtils.hiDpiScale(12));
 			}
 
 //			https://code.google.com/p/swingbox-javahelp-viewer/source/browse/src/main/java/org/fit/cssbox/css/CSSNorm.java?r=da0121a8aea206f9ff9950590546dcfe404f4c65
@@ -140,10 +141,10 @@ public class ToolTipSupplierTest extends JFrame
 			"<br>" +
 
 			"<h3>gorans</h3>" +
-			"<A HREF=\"http://gorans.no-ip.org\">http://gorans.no-ip.org</A>" +
+			"<A HREF=\"http://gorans.org\">http://gorans.org</A>" +
 			"<br>";
 
-			for (int i=0; i<60; i++)
+			for (int i=0; i<100; i++)
 				str += "row - "+i+"<br>";
 
 			str += "END<br>";
@@ -165,7 +166,7 @@ public class ToolTipSupplierTest extends JFrame
 
 			if (desc.endsWith(".pdf"))
 			{
-				return new ResolverReturn(event, Type.OPEN_URL_IN_EXTERNAL_BROWSER);
+				return new ResolverReturn(event, ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER);
 			}
 
 			if (desc.equals("String Functions"))

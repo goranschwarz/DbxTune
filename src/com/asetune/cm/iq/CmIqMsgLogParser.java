@@ -573,7 +573,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 	@Override public synchronized Timestamp getTimestamp() { return _thisSamplingTime; }
 
 	@Override
-	protected int refreshGetData(Connection conn) 
+	protected int refreshGetData(DbxConnection conn) 
 	throws Exception
 	{
 System.out.println("Entering refresh() method for " + getName());

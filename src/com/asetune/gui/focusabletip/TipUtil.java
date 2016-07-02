@@ -37,6 +37,8 @@ import javax.swing.plaf.ColorUIResource;
 import javax.swing.text.Document;
 import javax.swing.text.html.HTMLDocument;
 
+import com.asetune.utils.SwingUtils;
+
 
 /**
  * Static utility methods for focusable tips.
@@ -137,7 +139,7 @@ class TipUtil {
 		// All standard LookAndFeels, even Nimbus (!), define Label.font.
 		Font font = UIManager.getFont("Label.font");
 		if (font == null) { // Try to make a sensible default
-			font = new Font("SansSerif", Font.PLAIN, 12);
+			font = new Font("SansSerif", Font.PLAIN, SwingUtils.hiDpiScale(12));
 		}
 		Document doc = textArea.getDocument();
 //System.out.println("TipUtil: tweakTipEditorPane(). doc.getClass().getName()="+doc.getClass().getName());

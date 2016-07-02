@@ -149,7 +149,7 @@ public class AseConfigMonitoringDialog
 	private JSpinner           _maxSqlTextMonitored_sp        = new JSpinner(_maxSqlTextMonitored_spm);
 
 	private JLabel             _predefinedConfigs_lbl         = new JLabel("Configuration Templates");
-	private JComboBox          _predefinedConfigs_cbx         = new JComboBox(PDC_OPTIONS_STR);
+	private JComboBox<String>  _predefinedConfigs_cbx         = new JComboBox<String>(PDC_OPTIONS_STR);
 
 	private JLabel             _configurabelMemory_lbl        = new JLabel("#"+default_configurabelMemoryText);
 
@@ -1346,6 +1346,10 @@ public class AseConfigMonitoringDialog
 	private void reInitializeDependantPerformanceCounters(String aseConfig, boolean newValue) 
 //	throws SQLException
 	{
+		// If no CounterController, there is nothing to reinitialize
+		if ( ! CounterController.hasInstance() )
+			return;
+
 		if ( ! StringUtil.isNullOrBlank(aseConfig) )
 		{
 			int newConfigVal = newValue ? 1 : 0;
@@ -1840,23 +1844,26 @@ public class AseConfigMonitoringDialog
 			tt = "<html>"+tt;
 
 			// Add CM's that depends on this configuration
-			String cfg = (String) comp.getClientProperty(ASE_CONFIG);
-			if ( ! StringUtil.isNullOrBlank(cfg) )
+			if (CounterController.hasInstance())
 			{
-				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _aseVersionNum, _isClusterEnabled);
-				if (cmList.size() > 0)
-				{
-					tt += "<br><br>";
-					tt += "Configuration '<b>"+cfg+"</b>', must be set for the following Performance Counters to work.";
-					tt += "<ul>";
-					for (CountersModel cm : cmList)
-					{
-						tt += "<li>";
-						tt += cm.getDisplayName();
-						tt += "</li>";
-					}
-					tt += "</ul>";
-				}
+    			String cfg = (String) comp.getClientProperty(ASE_CONFIG);
+    			if ( ! StringUtil.isNullOrBlank(cfg) )
+    			{
+    				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _aseVersionNum, _isClusterEnabled);
+    				if (cmList.size() > 0)
+    				{
+    					tt += "<br><br>";
+    					tt += "Configuration '<b>"+cfg+"</b>', must be set for the following Performance Counters to work.";
+    					tt += "<ul>";
+    					for (CountersModel cm : cmList)
+    					{
+    						tt += "<li>";
+    						tt += cm.getDisplayName();
+    						tt += "</li>";
+    					}
+    					tt += "</ul>";
+    				}
+    			}
 			}
 
 			// Add END html tag

@@ -26,6 +26,7 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -66,7 +67,7 @@ public class JdbcDriverHelper
 
 	private static JdbcDriverTableModel _jdbcDriverModel = null;
 	private static String               _filename        = DEFAULT_DriversFileName;
-	
+
 	public static JdbcDriverTableModel getModel()
 	{
 		if (_jdbcDriverModel == null)
@@ -76,7 +77,7 @@ public class JdbcDriverHelper
 	}
 
 	/**
-	 * Get a list of available JDBC classes that is in the classpath or the XML File, which describes JDBC Drivers 
+	 * Get a list of available JDBC classes that is in the classpath or the XML File, which describes JDBC Drivers
 	 * @return
 	 */
 	public static List<String> getAvailableDriverList()
@@ -100,7 +101,7 @@ public class JdbcDriverHelper
 		DriverInfoEntry entry = model.getEntry(driverName);
 		if (entry != null)
 			return entry.getUrlTemplateList();
-		
+
 		return getDefaultUrlTemplateList(driverName);
 	}
 	/**
@@ -110,13 +111,13 @@ public class JdbcDriverHelper
 	{
 		// Entry wasn't found: add some static entries found on the Internet
 		ArrayList<String> templates = new ArrayList<String>();
-		
-		if ("sun.jdbc.odbc.JdbcOdbcDriver".equals(driverName)) 
-		{ 
+
+		if ("sun.jdbc.odbc.JdbcOdbcDriver".equals(driverName))
+		{
 			templates.add("jdbc:odbc:DSN");
 		}
-		else if (    "com.sybase.jdbc3.jdbc.SybDriver".equals(driverName) 
-		          || "com.sybase.jdbc4.jdbc.SybDriver".equals(driverName) ) 
+		else if (    "com.sybase.jdbc3.jdbc.SybDriver".equals(driverName)
+		          || "com.sybase.jdbc4.jdbc.SybDriver".equals(driverName) )
 		{
 			templates.add("jdbc:sybase:Tds:<host>:<port>");
 			templates.add("jdbc:sybase:Tds:<host>:<port>[/<dbname>]");
@@ -147,38 +148,38 @@ public class JdbcDriverHelper
 			templates.add("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 			templates.add("jdbc:h2:zip:<zipFileName>!/<dbname>");
 		}
-		else if ("com.sap.db.jdbc.Driver".equals(driverName)) 
+		else if ("com.sap.db.jdbc.Driver".equals(driverName))
 		{
 			templates.add("jdbc:sap://<host>:<port>");
 			templates.add("jdbc:sap://<host>:3##15");
 			templates.add("jdbc:sap://<host>:3##15 (replace## with instance_number)");
 			templates.add("jdbc:sap://<host>:30015");
 		}
-		else if ("com.sap.dbtech.jdbc.DriverSapDB".equals(driverName)) 
+		else if ("com.sap.dbtech.jdbc.DriverSapDB".equals(driverName))
 		{
 			templates.add("jdbc:sapdb://<host>/<database_name>");
 			templates.add("jdbc:sapdb://<host>[:<port>]/<database_name>[?<opt1>[&<opt>]...]");
 		}
-		else if ("oracle.jdbc.OracleDriver".equals(driverName)) 
+		else if ("oracle.jdbc.OracleDriver".equals(driverName))
 		{
 			templates.add("jdbc:oracle:thin:@//[HOST][:PORT]/SERVICE");
 			templates.add("jdbc:oracle:thin:@[HOST][:PORT]:SID");
 		}
-		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) //    (Microsoft SQL Server JDBC Driver ) 
+		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) //    (Microsoft SQL Server JDBC Driver )
 		{
 			templates.add("jdbc:microsoft:sqlserver://<host>:<port> ");
 			templates.add("jdbc:microsoft:sqlserver://<host>:<port>;databasename=name");
 		}
-		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) //    (Microsoft SQL Server 2005 JDBC Driver ) 
+		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) //    (Microsoft SQL Server 2005 JDBC Driver )
 		{
 			templates.add("jdbc:sqlserver://<host>:<port> ");
 		}
-		else if ("com.ibm.db2.jcc.DB2Driver".equals(driverName)) 
+		else if ("com.ibm.db2.jcc.DB2Driver".equals(driverName))
 		{
 			templates.add("jdbc:db2://<host>:<port>/<dbname>");
 			templates.add("jdbc:db2://<host>:50000");
 		}
-		else if ("org.postgresql.Driver".equals(driverName)) 
+		else if ("org.postgresql.Driver".equals(driverName))
 		{
 			templates.add("jdbc:postgresql:database");
 			templates.add("jdbc:postgresql://host/database");
@@ -186,17 +187,22 @@ public class JdbcDriverHelper
 			templates.add("jdbc:postgresql://host:port/database?user=userName&password=pass");
 			templates.add("jdbc:postgresql://host:port/database?charSet=LATIN1&compatible=7.2");
 		}
-		else if ("com.mysql.jdbc.Driver".equals(driverName)) 
+		else if ("org.apache.hive.jdbc.HiveDriver".equals(driverName))
+		{
+			templates.add("jdbc:hive2://<host>:<port>/<db>");
+			templates.add("jdbc:hive2://<host>:10000/default");
+		}
+		else if ("com.mysql.jdbc.Driver".equals(driverName))
 		{
 			templates.add("jdbc:mysql://[host][:port]/[database][?p1=v1]...");
 			templates.add("jdbc:mysql://[host][,failoverhost...][:port]/[database]");
-			templates.add("jdbc:mysql://[host][,failoverhost...][:port]/[database][?propertyName1][=propertyValue1][&propertyName2][=propertyValue2]...");
+			templates.add("jdbc:mysql://[host][,failoverhost...][:port]/[database][?p1][=v1][&p2][=v2]...");
 		}
-		else if ("org.apache.derby.jdbc.EmbeddedDriver".equals(driverName)) 
+		else if ("org.apache.derby.jdbc.EmbeddedDriver".equals(driverName))
 		{
 			templates.add("jdbc:derby://host/database");
 		}
-		else if ("org.apache.derby.jdbc.ClientDriver".equals(driverName)) 
+		else if ("org.apache.derby.jdbc.ClientDriver".equals(driverName))
 		{
 			templates.add("jdbc:derby://host/database");
 		}
@@ -210,27 +216,28 @@ public class JdbcDriverHelper
 		DriverInfoEntry entry = model.getEntry(driverName);
 		if (entry != null)
 			return entry.getDescription();
-		
+
 		return getDefaultDescription(driverName);
 	}
 
 	public static String getDefaultDescription(String driverName)
 	{
 		if      ("sun.jdbc.odbc.JdbcOdbcDriver"                .equals(driverName)) return "JDBC - ODBC Bridge";
-		else if ("com.sybase.jdbc3.jdbc.SybDriver"             .equals(driverName))	return "Sybase JDBC 3.0 Driver";
-		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName))	return "Sybase JDBC 4.0 Driver";
-		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName))	return "jTDS JDBC Driver";
-		else if ("org.h2.Driver"                               .equals(driverName))	return "H2 JDBC Driver";
-		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName))	return "SAP HANA JDBC Driver";
-		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName))	return "SAP MaxDB JDBC Driver";
-		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName))	return "Oracle JDBC Driver";
-		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server JDBC Driver"; 
-		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server 2005 JDBC Driver"; 
-		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName))	return "IBM DB2 Driver";
-		else if ("org.postgresql.Driver"                       .equals(driverName))	return "Postgres JDBC Driver";
-		else if ("com.mysql.jdbc.Driver"                       .equals(driverName))	return "MySQL JDBC Driver";
-		else if ("org.apache.derby.jdbc.EmbeddedDriver"        .equals(driverName))	return "Derby Embedded JDBC Driver";
-		else if ("org.apache.derby.jdbc.ClientDriver"          .equals(driverName))	return "Derby Client JDBC Driver";
+		else if ("com.sybase.jdbc3.jdbc.SybDriver"             .equals(driverName)) return "Sybase JDBC 3.0 Driver";
+		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName)) return "Sybase JDBC 4.0 Driver";
+		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName)) return "jTDS JDBC Driver";
+		else if ("org.h2.Driver"                               .equals(driverName)) return "H2 JDBC Driver";
+		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName)) return "SAP HANA JDBC Driver";
+		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName)) return "SAP MaxDB JDBC Driver";
+		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName)) return "Oracle JDBC Driver";
+		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server JDBC Driver";
+		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server 2005 JDBC Driver";
+		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName)) return "IBM DB2 Driver";
+		else if ("org.postgresql.Driver"                       .equals(driverName)) return "Postgres JDBC Driver";
+		else if ("org.apache.hive.jdbc.HiveDriver"             .equals(driverName)) return "Apache Hive JDBC Driver";
+		else if ("com.mysql.jdbc.Driver"                       .equals(driverName)) return "MySQL JDBC Driver";
+		else if ("org.apache.derby.jdbc.EmbeddedDriver"        .equals(driverName)) return "Derby Embedded JDBC Driver";
+		else if ("org.apache.derby.jdbc.ClientDriver"          .equals(driverName)) return "Derby Client JDBC Driver";
 
 		return "";
 	}
@@ -241,27 +248,28 @@ public class JdbcDriverHelper
 		DriverInfoEntry entry = model.getEntry(driverName);
 		if (entry != null)
 			return entry.getHomePage();
-		
+
 		return getDefaultHomePage(driverName);
 	}
 
 	public static String getDefaultHomePage(String driverName)
 	{
 		if      ("sun.jdbc.odbc.JdbcOdbcDriver"                .equals(driverName)) return "en.wikipedia.org/wiki/JDBC_driver";
-		else if ("com.sybase.jdbc3.jdbc.SybDriver"             .equals(driverName))	return "www.sybase.com/jconnect";
-		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName))	return "www.sybase.com/jconnect";
-		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName))	return "jtds.sourceforge.net";
-		else if ("org.h2.Driver"                               .equals(driverName))	return "www.h2database.com";
-		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName))	return "www.sap.com/HANA";
-		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName))	return "maxdb.sap.com";
-		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName))	return "www.oracle.com/technetwork/database/features/jdbc";
-		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724"; 
-		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724"; 
-		else if ("org.postgresql.Driver"                       .equals(driverName))	return "jdbc.postgresql.org";
-		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName))	return "www.ibm.com/software/data/db2";
-		else if ("com.mysql.jdbc.Driver"                       .equals(driverName))	return "www.mysql.com/products/connector";
-		else if ("org.apache.derby.jdbc.EmbeddedDriver"        .equals(driverName))	return "db.apache.org/derby";
-		else if ("org.apache.derby.jdbc.ClientDriver"          .equals(driverName))	return "db.apache.org/derby";
+		else if ("com.sybase.jdbc3.jdbc.SybDriver"             .equals(driverName)) return "www.sybase.com/jconnect";
+		else if ("com.sybase.jdbc4.jdbc.SybDriver"             .equals(driverName)) return "www.sybase.com/jconnect";
+		else if ("net.sourceforge.jtds.jdbc.Driver"            .equals(driverName)) return "jtds.sourceforge.net";
+		else if ("org.h2.Driver"                               .equals(driverName)) return "www.h2database.com";
+		else if ("com.sap.db.jdbc.Driver"                      .equals(driverName)) return "www.sap.com/HANA";
+		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName)) return "maxdb.sap.com";
+		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName)) return "www.oracle.com/technetwork/database/features/jdbc";
+		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724";
+		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "msdn.microsoft.com/en-US/sqlserver/aa937724";
+		else if ("org.postgresql.Driver"                       .equals(driverName)) return "jdbc.postgresql.org";
+		else if ("org.apache.hive.jdbc.HiveDriver"             .equals(driverName)) return "hive.apache.org";
+		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName)) return "www.ibm.com/software/data/db2";
+		else if ("com.mysql.jdbc.Driver"                       .equals(driverName)) return "www.mysql.com/products/connector";
+		else if ("org.apache.derby.jdbc.EmbeddedDriver"        .equals(driverName)) return "db.apache.org/derby";
+		else if ("org.apache.derby.jdbc.ClientDriver"          .equals(driverName)) return "db.apache.org/derby";
 
 		return "";
 	}
@@ -279,10 +287,11 @@ public class JdbcDriverHelper
 		else if (jarName.equals ("ngdbc.jar"))          return "com.sap.db.jdbc.Driver";
 		else if (jarName.equals ("sapdbc.jar.jar"))     return "com.sap.dbtech.jdbc.DriverSapDB";
 		else if (jarName.matches("ojdbc.*\\.jar"))      return "oracle.jdbc.OracleDriver";
-		else if (jarName.matches("sqljdbc.*\\.jar"))    return "com.microsoft.sqlserver.jdbc.SQLServerDriver"; 
+		else if (jarName.matches("sqljdbc.*\\.jar"))    return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
 		else if (jarName.matches("db2jcc.*\\.jar"))     return "com.ibm.db2.jcc.DB2Driver";
 		else if (jarName.matches("postgresql.*\\.jar")) return "org.postgresql.Driver";
-		else if (jarName.equals ("mysql.jar"))          return "com.mysql.jdbc.Driver";
+		else if (jarName.matches("hive-jdbc.*\\.jar"))  return "org.apache.hive.jdbc.HiveDriver";
+		else if (jarName.equals ("mysql*\\.jar"))       return "com.mysql.jdbc.Driver";
 		else if (jarName.equals ("derby.jar"))          return "org.apache.derby.jdbc.EmbeddedDriver";
 		else if (jarName.equals ("derbyclient.jar"))    return "org.apache.derby.jdbc.ClientDriver";
 
@@ -306,6 +315,7 @@ public class JdbcDriverHelper
 		if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
 		if (jdbcUrl.startsWith("jdbc:db2:"))                 return "com.ibm.db2.jcc.DB2Driver";
 		if (jdbcUrl.startsWith("jdbc:postgresql:"))          return "org.postgresql.Driver";
+		if (jdbcUrl.startsWith("jdbc:hive2:"))               return "org.apache.hive.jdbc.HiveDriver";
 		if (jdbcUrl.startsWith("jdbc:mysql:"))               return "com.mysql.jdbc.Driver";
 		if (jdbcUrl.startsWith("jdbc:derby:"))               return "org.apache.derby.jdbc.ClientDriver";
 		if (jdbcUrl.startsWith("jdbc:derby:"))               return "org.apache.derby.jdbc.EmbeddedDriver";
@@ -327,17 +337,17 @@ public class JdbcDriverHelper
 			_driver = driver;
 		}
 
-		public static void install(String className, String jarFile, String homePage, String desc, List<String> urlTemplateList) 
+		public static void install(String className, String jarFile, String homePage, String desc, List<String> urlTemplateList)
 		throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException, MalformedURLException
 		{
 			// Fix a class loader
-			// FIXME: the URLClassLoader first searched the Parent ClassLoader, so if any JARS are part 
+			// FIXME: the URLClassLoader first searched the Parent ClassLoader, so if any JARS are part
 			//        of the CLASSPATH it will still pick it up from there...
 			//        So maybe create our own class loader, which FIRTS checks the JAR file, then the CLASSPATH
 			URL url = new URL("jar:file:"+jarFile+"!/");
 //			URLClassLoader cl = new URLClassLoader(new URL[] { url });
 
-			ArrayList<URL> urlList = new ArrayList<URL>(); 
+			ArrayList<URL> urlList = new ArrayList<URL>();
 			urlList.add(url);
 			ParentLastURLClassLoader cl = new ParentLastURLClassLoader( urlList );
 
@@ -369,11 +379,11 @@ public class JdbcDriverHelper
 			{
 				Driver dmDriver    = driversEnum.nextElement();
 				String dmClassName = dmDriver.getClass().getName();
-	
+
 				// If it's already a Wrapper lets get the "origin" class name
 				if (dmDriver instanceof JdbcDriverHelper.DriverWrapper)
 					dmClassName = ((JdbcDriverHelper.DriverWrapper) dmDriver).getClassName();
-	
+
 				if (dmClassName.equals(className))
 				{
 					try
@@ -465,14 +475,20 @@ public class JdbcDriverHelper
 		{
 			return _urlTemplateList;
 		}
+
+		@Override
+		public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException
+		{
+			return _driver.getParentLogger();
+		}
 	}
 
 	/**
 	 * A parent-last classloader that will try the child classloader first and then the parent.
 	 * This takes a fair bit of doing because java really prefers parent-first.
-	 * 
+	 *
 	 * For those not familiar with class loading trickery, be wary
-	 * grabbed from: http://stackoverflow.com/questions/5445511/how-do-i-create-a-parent-last-child-first-classloader-in-java-or-how-to-overr 
+	 * grabbed from: http://stackoverflow.com/questions/5445511/how-do-i-create-a-parent-last-child-first-classloader-in-java-or-how-to-overr
 	 */
 	private static class ParentLastURLClassLoader extends ClassLoader
 	{
@@ -552,10 +568,10 @@ public class JdbcDriverHelper
 			}
 		}
 	}
-	
+
 //	private static class Test
 //	{
-//		String jdbcJar   = System.getProperty("SQLW_HOME")+"/lib/jtds-1.2.7.jar";
+//		String jdbcJar   = System.getProperty("SQLW_HOME")+"/lib/jtds-1.3.1.jar";
 //		String jdbcClass = "net.sourceforge.jtds.jdbc.Driver";
 ////		String jdbcUrl   = "jdbc:jtds:sybase://<host>[:<port>][/<database>]";
 //		String jdbcUrl   = "jdbc:jtds:sybase://localhost:5000";
@@ -609,7 +625,7 @@ public class JdbcDriverHelper
 	public static List<String> getDriverList()
 	{
 		ArrayList<String> driverList = new ArrayList<String>();
-		
+
 		for (Enumeration<Driver> drivers = DriverManager.getDrivers(); drivers.hasMoreElements();)
 		{
 			Driver driver = drivers.nextElement();
@@ -619,7 +635,7 @@ public class JdbcDriverHelper
 			else
 				driverList.add( driver.getClass().getName() );
 		}
-		
+
 		return driverList;
 	}
 
@@ -628,7 +644,7 @@ public class JdbcDriverHelper
 	 * Small JPanel with a JTable that holds currently loaded JDBC Drivers (registered in DriverManager)
 	 * <p>
 	 * You may add, remove drivers
-	 * 
+	 *
 	 * @author gorans
 	 */
 	public static class JdbcDriverInfoPanel
@@ -657,7 +673,7 @@ public class JdbcDriverHelper
 				if (driversDir.mkdir())
 					_logger.info("Creating directory '"+driversDir+"' to hold JDBC Driver files for "+Version.getAppName());
 			}
-			
+
 			return driversDir.toString();
 		}
 		private void init()
@@ -686,7 +702,7 @@ public class JdbcDriverHelper
 			_table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 			_table.setColumnControlVisible(true);
 			_table.packAll();
-			
+
 			// make this low, otherwise it will grow to much because of any outer JScrollPane
 			_table.setPreferredScrollableViewportSize(new Dimension(400, 100));
 
@@ -723,7 +739,7 @@ public class JdbcDriverHelper
 						Desktop desktop = Desktop.getDesktop();
 						if ( desktop.isSupported(Desktop.Action.BROWSE) )
 						{
-							_logger.info("You clicked on Download Drivers '"+JDBC_DRIVER_DOWNLOAD_URL+"'. Browser will be opened.");  
+							_logger.info("You clicked on Download Drivers '"+JDBC_DRIVER_DOWNLOAD_URL+"'. Browser will be opened.");
 
 							try
 							{
@@ -781,7 +797,7 @@ public class JdbcDriverHelper
 					_reload_but.doClick();
 				}
 			});
-			
+
 			_delDriver_but.addActionListener(new ActionListener()
 			{
 				@Override
@@ -896,7 +912,7 @@ public class JdbcDriverHelper
 		{
 			if (jarFile == null)
 				jarFile = "";
-			
+
 			if (jarFile.startsWith("file:/"))
 				jarFile = jarFile.substring("file:/".length());
 
@@ -933,7 +949,7 @@ public class JdbcDriverHelper
 		{
 			// Add entry
 			StringBuilder sb = new StringBuilder();
-			
+
 			sb.append("\n");
 			sb.append("    ").append(XML_BEGIN_TAG_DRIVER_ENTRY).append("\n");
 			sb.append("        ").append(XML_BEGIN_SUBTAG_CLASSNAME)  .append(StringUtil.xmlSafe(getClassName()    )).append(XML_END___SUBTAG_CLASSNAME)  .append("\n");
@@ -947,7 +963,7 @@ public class JdbcDriverHelper
 			return sb.toString();
 		}
 	}
-	
+
 
 	public static class JdbcDriverTableModel
 	extends AbstractTableModel
@@ -1031,7 +1047,7 @@ public class JdbcDriverHelper
 				if (entry != null)
 					DriverWrapper.deregisterDriver(entry.getClassName());
 			}
-			
+
 			_rows.remove(mrow);
 			setChanged(true);
 			fireTableDataChanged();
@@ -1053,13 +1069,13 @@ public class JdbcDriverHelper
 		}
 
 		@Override
-		public int getColumnCount() 
+		public int getColumnCount()
 		{
 			return TAB_HEADER.length;
 		}
 
 		@Override
-		public String getColumnName(int column) 
+		public String getColumnName(int column)
 		{
 			switch (column)
 			{
@@ -1077,7 +1093,7 @@ public class JdbcDriverHelper
 		@Override
 		public boolean isCellEditable(int row, int column)
 		{
-			if (column == TAB_POS_SYSTEM) 
+			if (column == TAB_POS_SYSTEM)
 				return false;
 			return true;
 		}
@@ -1108,7 +1124,7 @@ public class JdbcDriverHelper
 		@Override
 		public Class<?> getColumnClass(int column)
 		{
-			if (column == TAB_POS_SYSTEM) 
+			if (column == TAB_POS_SYSTEM)
 				return Boolean.class;
 
 			return super.getColumnClass(column);
@@ -1131,22 +1147,22 @@ public class JdbcDriverHelper
 
 				JdbcDriverFileXmlParser parser = new JdbcDriverFileXmlParser();
 				ArrayList<DriverInfoEntry> parsedEntries = parser.parseFile(getFileName());
-	
+
 				_logger.info("Get User Defined JDBC Drivers by parsing the file '"+getFileName()+"', which contained "+parsedEntries.size()+" entries.");
-	
+
 				//-------------------------------------------------------
 				// First install all entries from the XML file
 				for (DriverInfoEntry entry : parsedEntries)
 				{
-					// The install will de-register all classes in the current Driver Manager with the same class name 
+					// The install will de-register all classes in the current Driver Manager with the same class name
 					try
 					{
 //System.out.println("JdbcDriverHelper: in(parseXmlFile): entry: classname='"+entry.getClassName()+"', jarFile='"+entry.getJarFile()+"', homePage='"+entry.getHomePage()+"', desc='"+entry.getDescription()+"', urlTemplateList='"+entry.getUrlTemplateList()+"'.");
 						DriverWrapper.install(
-								entry.getClassName(), 
-								entry.getJarFile(), 
-								entry.getHomePage(), 
-								entry.getDescription(), 
+								entry.getClassName(),
+								entry.getJarFile(),
+								entry.getHomePage(),
+								entry.getDescription(),
 								entry.getUrlTemplateList());
 					}
 					catch (Exception ex)
@@ -1226,7 +1242,7 @@ public class JdbcDriverHelper
 						{
 							String dpiName  = dpi[i].name;
 							String dpiValue = dpi[i].value;
-							
+
 							if (dpiName != null && dpiName.toLowerCase().startsWith("version"))
 							{
 								version = dpiValue;
@@ -1298,7 +1314,7 @@ public class JdbcDriverHelper
 
 		private DriverInfoEntry _return = null;
 		private DriverInfoEntry _entry  = null;
-		
+
 		private JLabel               _className_lbl         = new JLabel("Classname");
 		private JTextField           _className_txt         = new JTextField();
 
@@ -1344,7 +1360,7 @@ public class JdbcDriverHelper
 			return dialog._return;
 		}
 
-		protected void initComponents() 
+		protected void initComponents()
 		{
 			JPanel panel = new JPanel();
 			panel.setLayout(new MigLayout("insets 20 20"));   // insets Top Left Bottom Right
@@ -1368,7 +1384,7 @@ public class JdbcDriverHelper
 			_jarFile_lbl    .setToolTipText("<html>Name of the JAR file the Driver (above Classname) is located in.</html>");
 			_jarFile_txt    .setToolTipText(_jarFile_lbl.getToolTipText());
 			_jarFile_but    .setToolTipText("<html>Open a File Dialog where you can choose a JAR File.</html>");
-			
+
 			_urlTemplateLst_lbl   .setToolTipText("<html>List of Examples/Templates that could be used when connecting using this Driver.</html>");
 			_urlTemplateLst_lst   .setToolTipText(_urlTemplateLst_lst.getToolTipText());
 			_urlTemplate_lbl      .setToolTipText("<html><i><b>Optional</b></i> A Template which can be used when connecting using this JDBC Driver.<br>Multiple Templates can be added.</html>");
@@ -1378,13 +1394,13 @@ public class JdbcDriverHelper
 
 			panel.add(_className_lbl,         "");
 			panel.add(_className_txt,         "pushx, growx, wrap");
-			
+
 			panel.add(_description_lbl,       "");
 			panel.add(_description_txt,       "pushx, growx, wrap");
-			
+
 			panel.add(_homePage_lbl,          "");
 			panel.add(_homePage_txt,          "pushx, growx, wrap");
-			
+
 			panel.add(_jarFile_lbl,           "");
 			panel.add(_jarFile_txt,           "split, span 2, pushx, growx");
 			panel.add(_jarFile_but,           "wrap 15");
@@ -1398,7 +1414,7 @@ public class JdbcDriverHelper
 			panel.add(_urlTemplate_txt,       "split, span 3, pushx, growx");
 			panel.add(_urlTemplateAdd_but,    "");
 			panel.add(_urlTemplateRemove_but, "wrap 15");
-			
+
 			// ADD the OK, Cancel, Apply buttons
 			panel.add(_ok,     "tag ok,     gap top 20, skip, split, bottom, right, pushx");
 			panel.add(_cancel, "tag cancel,                   split, bottom");
@@ -1415,7 +1431,7 @@ public class JdbcDriverHelper
 //System.out.println("ADD CHANGE: add template '"+urlTemplate+"'.");
 				_urlTemplateLst_dlm.addElement(urlTemplate);
 			}
-			
+
 			// ADD KEY listeners
 
 			// ADD ACTIONS TO COMPONENTS
@@ -1466,14 +1482,14 @@ public class JdbcDriverHelper
 			if (_jarFile_but.equals(source))
 			{
 				String dir = _jarFile_txt.getText();
-	
+
 				JFileChooser fc = new JFileChooser(dir);
 				int returnVal = fc.showOpenDialog(this);
-				if(returnVal == JFileChooser.APPROVE_OPTION) 
+				if(returnVal == JFileChooser.APPROVE_OPTION)
 				{
 					File retFile = fc.getSelectedFile();
 					_jarFile_txt.setText(retFile.getAbsolutePath());
-					
+
 					String filename = retFile.getName();
 					String className = getDefaultClassNameForJarFile(filename);
 					_className_txt.setText(className);
@@ -1622,12 +1638,12 @@ public class JdbcDriverHelper
 			RandomAccessFile raf = new RandomAccessFile(fileName, "rw");
 			FileChannel channel = raf.getChannel();
 
-			try 
+			try
 			{
 				// Get an exclusive lock on the whole file
 				FileLock lock = channel.lock();
 
-				try 
+				try
 				{
 					// To start of the file, truncate everything beyond position 0
 					channel.truncate(0);
@@ -1671,18 +1687,18 @@ public class JdbcDriverHelper
 							continue;
 
 						sb.setLength(0);
-						
+
 						sb.append(entry.toXml());
-						
+
 						byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
 						channel.write(byteBuffer);
 					}
 
-					
+
 					//-----------------------------------------
 					// Write -end- entries
 					sb.setLength(0);
-					
+
 					sb.append("\n");
 					sb.append(XML_END___TAG_DRIVERS_LIST).append("\n");
 
@@ -1692,15 +1708,15 @@ public class JdbcDriverHelper
 					// Make sure it's written to disk.
 					channel.force(true);
 				}
-				finally 
+				finally
 				{
 					lock.release();
 				}
-			} 
-			finally 
+			}
+			finally
 			{
 				channel.close();
-			}			
+			}
 		}
 		catch (IOException e)
 		{
@@ -1708,14 +1724,14 @@ public class JdbcDriverHelper
 			throw e;
 		}
 	}
-	
+
 	//---------------------------------------------------
 	// Below is XML tags
 	//---------------------------------------------------
 	private static final String       XML_TAG_DRIVERS_LIST           = "DriversList";
 	private static final String XML_BEGIN_TAG_DRIVERS_LIST           = "<"  + XML_TAG_DRIVERS_LIST + ">";
 	private static final String XML_END___TAG_DRIVERS_LIST           = "</" + XML_TAG_DRIVERS_LIST + ">";
-	
+
 	private static final String       XML_TAG_DRIVER_ENTRY           = "DriverEntry";
 	private static final String XML_BEGIN_TAG_DRIVER_ENTRY           = "<"  + XML_TAG_DRIVER_ENTRY + ">";
 	private static final String XML_END___TAG_DRIVER_ENTRY           = "</" + XML_TAG_DRIVER_ENTRY + ">";
@@ -1800,7 +1816,7 @@ public class JdbcDriverHelper
 		/**
 		 *  Parse a file
 		 *  @param filename        Name of the file
-		 *  
+		 *
 		 *  @return A ArrayList with DriverInfoEntry
 		 */
 		public ArrayList<DriverInfoEntry> parseFile(String fileName)
@@ -1843,7 +1859,7 @@ public class JdbcDriverHelper
 		}
 
 		@Override
-		public void startElement(String uri, String localName, String qName, org.xml.sax.Attributes attributes) 
+		public void startElement(String uri, String localName, String qName, org.xml.sax.Attributes attributes)
 		throws SAXException
 		{
 			_xmlTagBuffer.setLength(0);
@@ -1855,7 +1871,7 @@ public class JdbcDriverHelper
 		}
 
 		@Override
-		public void endElement(String uri, String localName, String qName) 
+		public void endElement(String uri, String localName, String qName)
 		throws SAXException
 		{
 //			System.out.println("SAX: endElement: qName='"+qName+"', _xmlTagBuffer="+_xmlTagBuffer);
@@ -1883,7 +1899,7 @@ public class JdbcDriverHelper
 //	public static void main(String[] args)
 //	{
 //		printDrivers();
-//		
+//
 //		Test test = new Test();
 //		try
 //		{
@@ -1896,7 +1912,7 @@ public class JdbcDriverHelper
 //			e.printStackTrace();
 //		}
 //
-//		
+//
 //		printDrivers();
 //
 //		try

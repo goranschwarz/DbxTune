@@ -40,14 +40,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -56,9 +54,12 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.swing.GLabel;
+import com.asetune.gui.swing.GTextField;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshFileSystemView;
 import com.asetune.tools.NormalExitException;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
@@ -70,6 +71,8 @@ import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class LogTailWindow
 //extends JDialog
@@ -85,62 +88,62 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	public static final String TAIL_CONFIG_FILE_NAME = System.getProperty("TAIL_CONFIG_FILE_NAME", "tailw.save.properties");
 
 	
-	private boolean         _startTailAfterSartup   = false;
+	private boolean            _startTailAfterSartup   = false;
+                               
+	private FileType           _fileType               = FileType.UNKNOWN_LOG;
+	private Connection         _conn                   = null;
+	private String             _servername             = null;
+	private String             _srvVersionStr          = null;
+//	private String             _tailFileName           = null;
+                               
+	private FileTail           _fileTail               = null;
+//	private int                _initialLinesInTail     = 50;
+                               
+	private JPanel             _topPanel               = null;
+	private JLabel             _warning_lbl            = new JLabel("Choose 'SSH connection' or 'remote mount'.");
+	private JButton            _startTail_but          = new JButton("Start Tail");
+	private JButton            _stopTail_but           = new JButton("Stop Tail");
+	private JButton            _serverNameRemove_but   = new JButton("Remove");
+	private JLabel             _serverName_lbl         = new JLabel("Server/Label Name");
+	private JComboBox<String>  _serverName_cbx         = new JComboBox<String>();
+	private JLabel             _logFilename_lbl        = new JLabel("Name of the Log File");
+	private JTextField         _logFilename_txt        = new JTextField("");
+	private JButton            _logFilename_but        = new JButton("...");
+	private JCheckBox          _tailNewRecordsTop_chk  = new JCheckBox("Move to last row when input is received", true);
+	private JCheckBox          _tailNewRecordsBot_chk  = new JCheckBox("Move to last row when input is received", true);
 
-	private FileType        _fileType               = FileType.UNKNOWN_LOG;
-	private Connection      _conn                   = null;
-	private String          _servername             = null;
-	private String          _srvVersionStr          = null;
-//	private String          _tailFileName           = null;
-
-	private FileTail        _fileTail               = null;
-//	private int             _initialLinesInTail     = 50;
-
-	private JPanel          _topPanel               = null;
-	private JLabel          _warning_lbl            = new JLabel("Choose 'SSH connection' or 'remote mount'.");
-	private JButton         _startTail_but          = new JButton("Start Tail");
-	private JButton         _stopTail_but           = new JButton("Stop Tail");
-	private JButton         _serverNameRemove_but   = new JButton("Remove");
-	private JLabel          _serverName_lbl         = new JLabel("Server/Label Name");
-	private JComboBox       _serverName_cbx         = new JComboBox();
-	private JLabel          _logFilename_lbl        = new JLabel("Name of the Log File");
-	private JTextField      _logFilename_txt        = new JTextField("");
-	private JButton         _logFilename_but        = new JButton("...");
-	private JCheckBox       _tailNewRecordsTop_chk  = new JCheckBox("Move to last row when input is received", true);
-	private JCheckBox       _tailNewRecordsBot_chk  = new JCheckBox("Move to last row when input is received", true);
-
-	private JLabel             _tailSize_lbl        = new JLabel("Start at line from end");
-	private SpinnerNumberModel _tailSize_spm        = new SpinnerNumberModel(DEFAULT_TAIL_SIZE, 10, 99999, 10);
-	private JSpinner           _tailSize_sp         = new JSpinner(_tailSize_spm);
-	private JCheckBox          _tailFromStart_cbx   = new JCheckBox("Start at begining of file", DEFAULT_TAIL_FROM_START);
+	private JLabel             _tailSize_lbl           = new JLabel("Start at line from end");
+	private SpinnerNumberModel _tailSize_spm           = new SpinnerNumberModel(DEFAULT_TAIL_SIZE, 10, 99999, 10);
+	private JSpinner           _tailSize_sp            = new JSpinner(_tailSize_spm);
+	private JCheckBox          _tailFromStart_cbx      = new JCheckBox("Start at begining of file", DEFAULT_TAIL_FROM_START);
 	
 	
-	private String[]        _accessTypeArr          = new String[] {"Choose a method", "SSH Access", "Direct/Local Access"};
-	private JPanel          _accessTypePanel        = null;
-	private JLabel          _accessType_lbl         = new JLabel("Log File Access");
-	private JComboBox       _accessType_cbx         = new JComboBox(_accessTypeArr);
-	private static final int ACCESS_TYPE_NOT_SELECTED = 0;
-	private static final int ACCESS_TYPE_SSH        = 1;
-	private static final int ACCESS_TYPE_LOCAL      = 2;
+	private String[]           _accessTypeArr          = new String[] {"Choose a method", "SSH Access", "Direct/Local Access"};
+	private JPanel             _accessTypePanel        = null;
+	private JLabel             _accessType_lbl         = new JLabel("Log File Access");
+	private JComboBox<String>  _accessType_cbx         = new JComboBox<String>(_accessTypeArr);
+	private static final int ACCESS_TYPE_NOT_SELECTED  = 0;
+	private static final int ACCESS_TYPE_SSH           = 1;
+	private static final int ACCESS_TYPE_LOCAL         = 2;
 
-	private JPanel          _sshPanel               = null;
-	private SshConnection   _sshConn                = null;
-//	private JCheckBox       _sshConnect_chk         = new JCheckBox("SSH Connection", true);
-	private JLabel          _sshUsername_lbl        = new JLabel("Username");
-	private JTextField      _sshUsername_txt        = new JTextField("");
-	private JLabel          _sshPassword_lbl        = new JLabel("Password");
-	private JTextField      _sshPassword_txt        = new JPasswordField("");
-	private JCheckBox       _sshPassword_chk        = new JCheckBox("Save Password", true);
-	private JLabel          _sshHostname_lbl        = new JLabel("Hostname");
-	private JTextField      _sshHostname_txt        = new JTextField("");
-	private JLabel          _sshPort_lbl            = new JLabel("Port num");
-	private JTextField      _sshPort_txt            = new JTextField("22");
-	private JLabel          _sshInitOsCmd_lbl       = new JLabel("Init Cmd");
-	private JTextField      _sshInitOsCmd_txt       = new JTextField("");
-	
-	private JPanel          _logTailPanel           = null;
-	private RSyntaxTextArea _logTail_txt            = new RSyntaxTextArea();
-	private RTextScrollPane _logTail_scroll         = new RTextScrollPane(_logTail_txt);
+	private JPanel             _sshPanel               = null;
+	private SshConnection      _sshConn                = null;
+//	private JCheckBox          _sshConnect_chk         = new JCheckBox("SSH Connection", true);
+	private JLabel             _sshUsername_lbl        = new JLabel("Username");
+	private JTextField         _sshUsername_txt        = new JTextField("");
+	private JLabel             _sshPassword_lbl        = new JLabel("Password");
+	private JTextField         _sshPassword_txt        = new JPasswordField("");
+	private JCheckBox          _sshPassword_chk        = new JCheckBox("Save Password", true);
+	private JLabel             _sshHostname_lbl        = new JLabel("Hostname");
+	private JTextField         _sshHostname_txt        = new JTextField("");
+	private JLabel             _sshPort_lbl            = new JLabel("Port num");
+	private JTextField         _sshPort_txt            = new JTextField("22");
+	private GLabel             _sshTailOsCmd_lbl       = new GLabel("Tail Cmd");
+	private GTextField         _sshTailOsCmd_txt       = new GTextField("");
+	                           
+	private JPanel             _logTailPanel           = null;
+	private RSyntaxTextArea    _logTail_txt            = new RSyntaxTextArea();
+	private RTextScrollPane    _logTail_scroll         = new RTextScrollPane(_logTail_txt);
 
 
 	
@@ -238,17 +241,17 @@ PropertyConfigurator.configure(log4jProps);
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
-		    && javaVersionInt <  JavaVersion.VERSION_1_6
+		    && javaVersionInt <  JavaVersion.VERSION_1_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -649,15 +652,50 @@ PropertyConfigurator.configure(log4jProps);
 //		_sshConnect_chk  .setToolTipText("ASE is located on a unix/linux host that has SSH Secure Shell");
 		_sshUsername_lbl .setToolTipText("<html>User name that can access the Application Log on the Server side.<br><br><b>Note:</b> The user needs to read the Log</html>");
 		_sshUsername_txt .setToolTipText("<html>User name that can access the Application Log on the Server side.<br><br><b>Note:</b> The user needs to read the Log</html>");
-		_sshPassword_lbl .setToolTipText("Password to the User that can access the Log on the Server side");
-		_sshPassword_txt .setToolTipText("Password to the User that can access the Log on the Server side");
+		_sshPassword_lbl .setToolTipText("<html>"
+		                                  + "Password to the User that can access the Log on the Server side<br>"
+		                                  + "<br>"
+		                                  + "If SSH Authentication model is 'publickey' and you have a password for the <i>private key file</i>, then type this password here.<br>"
+		                                  + "If the <i>private key file</i> does <b>not</b> have a password, just type <i>anything here</i> so the button is enabled.<br>"
+		                                  + "</html>");
+		_sshPassword_txt .setToolTipText(_sshPassword_lbl.getToolTipText());
 		_sshPassword_chk .setToolTipText("Save the password in the configuration file, and YES it's encrypted.");
 		_sshHostname_lbl .setToolTipText("Host name where the Log is located");
 		_sshHostname_txt .setToolTipText("Host name where the Log is located");
 		_sshPort_lbl     .setToolTipText("Port number of the SSH Server, normally 22.");
 		_sshPort_txt     .setToolTipText("Port number of the SSH Server, normally 22.");
-		_sshInitOsCmd_lbl.setToolTipText("<html>Execute OS command(s) before we start to tail the file.<br>This is if you need to do <b><code>su username</code></b> or <b><code>sudo cmd</code></b> or similar stuff to be able to read the file.</html>");
-		_sshInitOsCmd_txt.setToolTipText(_sshInitOsCmd_lbl.getToolTipText());
+//		_sshTailOsCmd_lbl.setToolTipText("<html>Execute OS command(s) before we start to tail the file.<br>This is if you need to do <b><code>su username</code></b> or <b><code>sudo cmd</code></b> or similar stuff to be able to read the file.</html>");
+		String tooltip = "<html>"
+				+ "The normal OS Command to view log file changes are: <code>tail -n 999 -f /var/logs/somefile</code><br>"
+				+ "Note: <i>command may vary basen on the Operating System</i><br>"
+				+ "<br>"
+				+ "With this you can change how you access the logfile.<br>"
+				+ "If you need to change account/user due to improper authorizations, this is where you do it.<br>"
+				+ "<br>"
+				+ "Here are a couple of examples:"
+				+ "<ul>"
+				+ "    <li>Do tail as another user, using <code>sudo</code>.<br>"
+				+ "    <code>echo '${password}' | sudo -p '' -S -u sybase ${cmd}</code></li>"
+				+ ""
+				+ "    <li>Do tail as another user, using <code>su</code><br>Note: this only works on some platforms.<br>"
+				+ "    <code>su - sybase -c '${cmd}' &lt;&lt;&lt; '$password' </code></li>"
+				+ ""
+				+ "    <li>Using a <i>jump</i> server, where you start another SSH Session.<br>Note: this needs keygen files, due to password.<br>Note2: Test this before you use it.<br>"
+				+ "    <code>ssh sybase@hostname '${cmd}'</code></li>"
+				+ ""
+				+ "    <li>Execute your own shell script that does whatever you need to do...<br>"
+				+ "    <code>yourShellScript -a '${password}' -b '${filename}'</code></li>"
+				+ ""
+				+ "</ul>"
+				+ "The below variables that will be substituted before execution"
+				+ "<ul>"
+				+ "    <li><code>${password}</code> - The password in the above password field</li>"
+				+ "    <li><code>${filename}</code> - The filename which we want to look at</li>"
+				+ "    <li><code>${cmd}</code>      - The tail command we would normally use, example: <code>tail -n 999 -f /var/logs/somefile</code></li>"
+				+ "</ul>"
+				+ "</html>";
+		_sshTailOsCmd_lbl.setToolTipText(tooltip);
+		_sshTailOsCmd_txt.setToolTipText(tooltip);
 
 //		panel.add(_sshConnect_chk,     "span, wrap");
 
@@ -674,8 +712,8 @@ PropertyConfigurator.configure(log4jProps);
 		panel.add(_sshPort_lbl,        "");
 		panel.add(_sshPort_txt,        "growx, pushx, wrap");
 
-		panel.add(_sshInitOsCmd_lbl,   "");
-		panel.add(_sshInitOsCmd_txt,   "growx, pushx, wrap");
+		panel.add(_sshTailOsCmd_lbl,   "");
+		panel.add(_sshTailOsCmd_txt,   "growx, pushx, wrap");
 
 		
 		// disable input to some fields
@@ -791,10 +829,57 @@ PropertyConfigurator.configure(log4jProps);
 		{
 			String filename = _logFilename_txt.getText();
 
-			JFileChooser fc = new JFileChooser(filename);
-			int returnVal = fc.showOpenDialog(this);
-			if(returnVal == JFileChooser.APPROVE_OPTION) 
-				_logFilename_txt.setText( fc.getSelectedFile().getAbsolutePath() );
+			int index = _accessType_cbx.getSelectedIndex();
+
+			if (index == ACCESS_TYPE_SSH)
+			{
+//				SwingUtils.showInfoMessage(this, "Not yet supported", "Sorry: Pick a file from a Remote server is currently NOT possible.");
+				
+				SshConnection sshConn = sshConnect();
+				if (sshConn != null)
+				{
+					try
+					{
+						SshFileSystemView fsv = new SshFileSystemView(sshConn);
+						
+						String hostPortLabel = _sshHostname_txt.getText() + ":" +_sshPort_txt.getText();
+
+		    			JFileChooser fc = new JFileChooser(filename, fsv);
+						fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+//						fc.setApproveButtonText("Choose");
+						fc.setDialogTitle("SSH Remote Files at "+hostPortLabel+" (NOTE: This is NOT working in a good manner)");
+//						fc.setAccessory( new JLabel("NOTE: This is NOT working in a good manner...") );
+						
+//						String str = _logFilename_txt.getText();
+//						if (StringUtil.hasValue(str))
+//							fc.setSelectedFile(new File(str));
+
+		    			int returnVal = fc.showOpenDialog(this);
+		    			if(returnVal == JFileChooser.APPROVE_OPTION)
+		    			{
+		    				// NOTE: well the FileChooser seems to return windows file path (if we run this on windows) so strip some stuff off
+		    				String selectedFile = fc.getSelectedFile().getAbsolutePath();
+		    				if (selectedFile.startsWith("c:") || selectedFile.startsWith("C:"))
+		    					selectedFile = selectedFile.substring(2);
+		    				selectedFile = selectedFile.replace('\\', '/');
+
+		    				_logFilename_txt.setText( selectedFile );
+		    			}
+					}
+					catch(Exception ex)
+					{
+						ex.printStackTrace();
+					}
+					sshConn.close();
+				}
+			}
+			else
+			{
+    			JFileChooser fc = new JFileChooser(filename);
+    			int returnVal = fc.showOpenDialog(this);
+    			if(returnVal == JFileChooser.APPROVE_OPTION) 
+    				_logFilename_txt.setText( fc.getSelectedFile().getAbsolutePath() );
+			}
 
 			saveProps();
 		}
@@ -1017,8 +1102,8 @@ PropertyConfigurator.configure(log4jProps);
 		if ( ! StringUtil.isNullOrBlank(_sshUsername_txt.getText()) )
 			conf.setProperty("LogTail.ssh.conn."+getServername()+".username",   _sshUsername_txt.getText() );
 
-		if ( ! StringUtil.isNullOrBlank(_sshInitOsCmd_txt.getText()) )
-			conf.setProperty("LogTail.ssh.conn."+getServername()+".initOsCmd",   _sshInitOsCmd_txt.getText() );
+		if ( ! StringUtil.isNullOrBlank(_sshTailOsCmd_txt.getText()) )
+			conf.setProperty("LogTail.ssh.conn."+getServername()+".tailOsCmd",   _sshTailOsCmd_txt.getText() );
 
 		if (_sshPassword_chk.isSelected())
 			conf.setProperty("LogTail.ssh.conn."+getServername()+".password", _sshPassword_txt.getText(), true);
@@ -1045,10 +1130,10 @@ PropertyConfigurator.configure(log4jProps);
 		//------------------
 		if (isVisible())
 		{
-			conf.setProperty("LogTail.dialog.window.width",  this.getSize().width);
-			conf.setProperty("LogTail.dialog.window.height", this.getSize().height);
-			conf.setProperty("LogTail.dialog.window.pos.x",  this.getLocationOnScreen().x);
-			conf.setProperty("LogTail.dialog.window.pos.y",  this.getLocationOnScreen().y);
+			conf.setLayoutProperty("LogTail.dialog.window.width",  this.getSize().width);
+			conf.setLayoutProperty("LogTail.dialog.window.height", this.getSize().height);
+			conf.setLayoutProperty("LogTail.dialog.window.pos.x",  this.getLocationOnScreen().x);
+			conf.setLayoutProperty("LogTail.dialog.window.pos.y",  this.getLocationOnScreen().y);
 		}
 
 		conf.save();
@@ -1130,11 +1215,11 @@ PropertyConfigurator.configure(log4jProps);
 		//----------------------------------
 		// SSH
 		//----------------------------------
-		_sshHostname_txt .setText( conf.getProperty("LogTail.ssh.conn."+servername+".hostname",  _sshHostname_txt .getText()) );
-		_sshPort_txt     .setText( conf.getProperty("LogTail.ssh.conn."+servername+".port",      _sshPort_txt     .getText()) );
-		_sshInitOsCmd_txt.setText( conf.getProperty("LogTail.ssh.conn."+servername+".initOsCmd", _sshInitOsCmd_txt.getText()) );
-		_sshUsername_txt .setText( conf.getProperty("LogTail.ssh.conn."+servername+".username",  _sshUsername_txt .getText()) );
-		_sshPassword_txt .setText( conf.getProperty("LogTail.ssh.conn."+servername+".password",  _sshPassword_txt .getText()) );
+		_sshHostname_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".hostname",  _sshHostname_txt .getText()) );
+		_sshPort_txt     .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".port",      _sshPort_txt     .getText()) );
+		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("LogTail.ssh.conn."+servername+".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
+		_sshUsername_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".username",  _sshUsername_txt .getText()) );
+		_sshPassword_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".password",  _sshPassword_txt .getText()) );
 
 		_sshPassword_chk.setSelected( conf.getBooleanProperty("LogTail.ssh.conn."+servername+".savePassword", _sshPassword_chk.isSelected()) );
 	}
@@ -1150,10 +1235,10 @@ PropertyConfigurator.configure(log4jProps);
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("LogTail.dialog.window.width",  900);
-		int height = conf.getIntProperty("LogTail.dialog.window.height", 740);
-		int x      = conf.getIntProperty("LogTail.dialog.window.pos.x",  -1);
-		int y      = conf.getIntProperty("LogTail.dialog.window.pos.y",  -1);
+		int width  = conf.getLayoutProperty("LogTail.dialog.window.width",  SwingUtils.hiDpiScale(900));
+		int height = conf.getLayoutProperty("LogTail.dialog.window.height", SwingUtils.hiDpiScale(740));
+		int x      = conf.getLayoutProperty("LogTail.dialog.window.pos.x",  -1);
+		int y      = conf.getLayoutProperty("LogTail.dialog.window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 			this.setSize(width, height);
@@ -1189,6 +1274,78 @@ PropertyConfigurator.configure(log4jProps);
 		}
 	}
 
+	public SshConnection sshConnect()
+	{
+		final String user    = _sshUsername_txt.getText();
+		final String passwd  = _sshPassword_txt.getText();
+		final String host    = _sshHostname_txt.getText();
+		final String portStr = _sshPort_txt.getText();
+//		final String initCmd = _sshTailOsCmd_txt.getText();
+
+		int port = 22;
+		try {port = Integer.parseInt(portStr);} 
+		catch(NumberFormatException ignore) {}
+
+		final SshConnection sshConn = new SshConnection(host, port, user, passwd);
+		WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
+		sshConn.setWaitForDialog(wait);
+
+		BgExecutor waitTask = new BgExecutor(wait)
+		{
+			@Override
+			public Object doWork()
+			{
+				try
+				{
+					sshConn.connect();
+					
+//					if (StringUtil.hasValue(initCmd))
+//					{
+//						String[] cmdArr = initCmd.split(";");
+//						for (int i=0; i<cmdArr.length; i++)
+//						{
+//							String osCmd = cmdArr[i].trim();
+//							if (StringUtil.isNullOrBlank(osCmd))
+//								continue;
+//							
+//							_logger.info("SSH Connect, Init Cmd, Executing Command ("+(i+1)+" of "+cmdArr.length+") = '"+osCmd+"'. When Connection to "+host+":"+portStr+" with user '"+user+"'.");
+//							try
+//							{
+//    							String output = sshConn.execCommandOutputAsStr(osCmd);
+//    							if (StringUtil.hasValue(output))
+//    							{
+//    								String htmlStr = 
+//    									"<html>" +
+//    									"Init Command ("+(i+1)+" of "+cmdArr.length+") '<code>"+osCmd+"</code>' produced the following output" +
+//    									"<pre>" + output + "</pre>" +
+//    									"</html>";
+//    								SwingUtils.showInfoMessage(LogTailWindow.this, "Init Command Output", htmlStr);
+//    							}
+//							}
+//							catch (IOException e) 
+//							{
+//								SwingUtils.showErrorMessage(LogTailWindow.this, "Init Command Failed", "Init Command '"+osCmd+"' Failed...", e);
+//							}
+//						}
+//					}
+				}
+				catch (IOException e) 
+				{
+					SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
+//					sshConn = null;
+				}
+				return null;
+			}
+		};
+		wait.execAndWait(waitTask);
+//		if (sshConn == null)
+//			return false;
+		if (sshConn.isConnected())
+			return sshConn;
+		else 
+			return null;
+	}
+
 	/** 
 	 * START a file tail session<br>
 	 * This involves
@@ -1210,66 +1367,72 @@ PropertyConfigurator.configure(log4jProps);
 
 		if (index == ACCESS_TYPE_SSH)
 		{
-			final String user    = _sshUsername_txt.getText();
-			final String passwd  = _sshPassword_txt.getText();
-			final String host    = _sshHostname_txt.getText();
-			final String portStr = _sshPort_txt.getText();
-			final String initCmd = _sshInitOsCmd_txt.getText();
+//			final String user    = _sshUsername_txt.getText();
+//			final String passwd  = _sshPassword_txt.getText();
+//			final String host    = _sshHostname_txt.getText();
+//			final String portStr = _sshPort_txt.getText();
+//			final String initCmd = _sshTailOsCmd_txt.getText();
+//
+//			int port = 22;
+//			try {port = Integer.parseInt(portStr);} 
+//			catch(NumberFormatException ignore) {}
+//
+//			_sshConn = new SshConnection(host, port, user, passwd);
+//			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
+//			_sshConn.setWaitForDialog(wait);
+//
+//			BgExecutor waitTask = new BgExecutor(wait)
+//			{
+//				@Override
+//				public Object doWork()
+//				{
+//					try
+//					{
+//						_sshConn.connect();
+//						
+//						if (StringUtil.hasValue(initCmd))
+//						{
+//							String[] cmdArr = initCmd.split(";");
+//							for (int i=0; i<cmdArr.length; i++)
+//							{
+//								String osCmd = cmdArr[i].trim();
+//								if (StringUtil.isNullOrBlank(osCmd))
+//									continue;
+//								
+//								_logger.info("SSH Connect, Init Cmd, Executing Command ("+(i+1)+" of "+cmdArr.length+") = '"+osCmd+"'. When Connection to "+host+":"+portStr+" with user '"+user+"'.");
+//								try
+//								{
+//	    							String output = _sshConn.execCommandOutputAsStr(osCmd);
+//	    							if (StringUtil.hasValue(output))
+//	    							{
+//	    								String htmlStr = 
+//	    									"<html>" +
+//	    									"Init Command ("+(i+1)+" of "+cmdArr.length+") '<code>"+osCmd+"</code>' produced the following output" +
+//	    									"<pre>" + output + "</pre>" +
+//	    									"</html>";
+//	    								SwingUtils.showInfoMessage(LogTailWindow.this, "Init Command Output", htmlStr);
+//	    							}
+//								}
+//								catch (IOException e) 
+//								{
+//									SwingUtils.showErrorMessage(LogTailWindow.this, "Init Command Failed", "Init Command '"+osCmd+"' Failed...", e);
+//								}
+//							}
+//						}
+//					}
+//					catch (IOException e) 
+//					{
+//						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
+//						_sshConn = null;
+//					}
+//					return null;
+//				}
+//			};
+//			wait.execAndWait(waitTask);
+//			if (_sshConn == null)
+//				return false;
 
-			int port = 22;
-			try {port = Integer.parseInt(portStr);} 
-			catch(NumberFormatException ignore) {}
-
-			_sshConn = new SshConnection(host, port, user, passwd);
-			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
-			BgExecutor waitTask = new BgExecutor(wait)
-			{
-				@Override
-				public Object doWork()
-				{
-					try
-					{
-						_sshConn.connect();
-						
-						if (StringUtil.hasValue(initCmd))
-						{
-							String[] cmdArr = initCmd.split(";");
-							for (int i=0; i<cmdArr.length; i++)
-							{
-								String osCmd = cmdArr[i].trim();
-								if (StringUtil.isNullOrBlank(osCmd))
-									continue;
-								
-								_logger.info("SSH Connect, Init Cmd, Executing Command ("+(i+1)+" of "+cmdArr.length+") = '"+osCmd+"'. When Connection to "+host+":"+portStr+" with user '"+user+"'.");
-								try
-								{
-	    							String output = _sshConn.execCommandOutputAsStr(osCmd);
-	    							if (StringUtil.hasValue(output))
-	    							{
-	    								String htmlStr = 
-	    									"<html>" +
-	    									"Init Command ("+(i+1)+" of "+cmdArr.length+") '<code>"+osCmd+"</code>' produced the following output" +
-	    									"<pre>" + output + "</pre>" +
-	    									"</html>";
-	    								SwingUtils.showInfoMessage(LogTailWindow.this, "Init Command Output", htmlStr);
-	    							}
-								}
-								catch (IOException e) 
-								{
-									SwingUtils.showErrorMessage(LogTailWindow.this, "Init Command Failed", "Init Command '"+osCmd+"' Failed...", e);
-								}
-							}
-						}
-					}
-					catch (IOException e) 
-					{
-						SwingUtils.showErrorMessage("SSH Connect failed", "SSH Connection to "+host+":"+portStr+" with user '"+user+"' Failed.", e);
-						_sshConn = null;
-					}
-					return null;
-				}
-			};
-			wait.execAndWait(waitTask);
+			_sshConn = sshConnect();
 			if (_sshConn == null)
 				return false;
 
@@ -1279,18 +1442,32 @@ PropertyConfigurator.configure(log4jProps);
 			else
 				_fileTail = new FileTail(_sshConn, getTailFilename(), _tailSize_spm.getNumber().intValue());
 
-			if (_fileTail.doFileExist())
+			// If we use "special command for tail", then do NOT check if file exists 
+			if (StringUtil.hasValue(_sshTailOsCmd_txt.getText()))
 			{
+				final String tailCmd = _sshTailOsCmd_txt.getText();
+				final String passwd  = _sshPassword_txt.getText();
+				if (StringUtil.hasValue(tailCmd))
+					_fileTail.setOsCmd(tailCmd, passwd);
+
 				_fileTail.addTraceListener(this);
 				_fileTail.start();
 			}
 			else
 			{
-				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
-				_logger.error(msg);
-				SwingUtils.showErrorMessage("Trace file not found", msg, null);
-				stopTail();
-				return false;
+				if (_fileTail.doFileExist())
+				{
+					_fileTail.addTraceListener(this);
+					_fileTail.start();
+				}
+				else
+				{
+					String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
+					_logger.error(msg);
+					SwingUtils.showErrorMessage("Trace file not found", msg, null);
+					stopTail();
+					return false;
+				}
 			}
 		}
 		else if (index == ACCESS_TYPE_LOCAL)
@@ -1590,7 +1767,7 @@ PropertyConfigurator.configure(log4jProps);
 	throws ParseException
 	{
 		// create the command line com.asetune.parser
-		CommandLineParser parser = new PosixParser();	
+		CommandLineParser parser = new DefaultParser();	
 	
 		// parse the command line arguments
 		CommandLine cmd = parser.parse( options, args );
@@ -1600,7 +1777,7 @@ PropertyConfigurator.configure(log4jProps);
 
 		if (_logger.isDebugEnabled())
 		{
-			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
+			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
 				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");

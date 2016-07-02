@@ -90,7 +90,8 @@ extends CountersModel
 
 	public CmEngines(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -225,7 +226,6 @@ extends CountersModel
 		// Get if we are in "process" or "threaded" kernel mode, which will be an input if "IOCPUTime" should be treated as "IdleCPUTime" 
 		// This is only valid for ASE 15.7 and relates to: CR 757246- sp_sysmon IO Busy is over weighted in threaded mode.
 		//sp_configure 'kernel mode' = 'threaded'|'process'
-//		if (aseVersion >= 1570000 && conn != null)
 		if (aseVersion >= Ver.ver(15,7) && conn != null)
 		{
 			_config_kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
@@ -237,7 +237,6 @@ extends CountersModel
 
 		
 		String ThreadID = "";
-//		if (aseVersion >= 1570000)
 		if (aseVersion >= Ver.ver(15,7))
 		{
 			ThreadID = "ThreadID, ";
@@ -252,7 +251,6 @@ extends CountersModel
 		String HkgcPendingItemsDcomp = "";
 		String HkgcOverflowsDcomp    = "";
 		String nl_15701              = "";
-//		if (aseVersion >= 1570010)
 		if (aseVersion >= Ver.ver(15,7,0,1))
 		{
 			HkgcPendingItemsDcomp = "HkgcPendingItemsDcomp, ";
@@ -266,17 +264,48 @@ extends CountersModel
 		String IdleCPUTime         = "IdleCPUTime, ";
 		
 		String NonIdleCPUTime_calc = "SystemCPUTime + UserCPUTime";
-//		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
 		if (aseVersion >= Ver.ver(15,5) || (aseVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
 		{
 			NonIdleCPUTime_calc = "convert(bigint,SystemCPUTime) + convert(bigint,UserCPUTime) + convert(bigint,IOCPUTime)";
 
 			// take away IOCPUTime in 15.7 & inThreadedMode & checkBoxIsEnabled
-//			if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 			if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				NonIdleCPUTime_calc = "convert(bigint,SystemCPUTime) + convert(bigint,UserCPUTime)";
 				
 		}
+		
+		// ------------------------------------------------------------------------------------------------
+		// New monEngines Cols in ASE 15.7 SP 136 (and possible 16.0 SP2 PL#unknown#) (not in SP02, PL01)
+		// ------------------------------------------------------------------------------------------------
+		String HkgcOverflowsCmpact = "";
+		String HkgcOverflowsRec    = "";
+		String LotsDelRolXacts     = "";
+		String LotsDelCmtXacts     = "";
+		String LongXacts           = "";
+		String PostcommitPageCount = "";
+		String HkgcReq             = "";
+		String HkgcReqCmpact       = "";
+		String HkgcReqDcomp        = "";
+		String HkgcReqRec          = "";
+		String HkgcRetries         = "";
+		String nl_1570_sp136       = "";
+//		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) || aseVersion >= Ver.ver(16,0,0, 2, #) )
+		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) )
+		{
+			HkgcOverflowsCmpact = "HkgcOverflowsCmpact, ";
+			HkgcOverflowsRec    = "HkgcOverflowsRec, ";
+			LotsDelRolXacts     = "LotsDelRolXacts, ";
+			LotsDelCmtXacts     = "LotsDelCmtXacts, ";
+			LongXacts           = "LongXacts, ";
+			PostcommitPageCount = "PostcommitPageCount, ";
+			HkgcReq             = "HkgcReq, ";
+			HkgcReqCmpact       = "HkgcReqCmpact, ";
+			HkgcReqDcomp        = "HkgcReqDcomp, ";
+			HkgcReqRec          = "HkgcReqRec, ";
+			HkgcRetries         = "HkgcRetries, ";
+			nl_1570_sp136       = "\n";
+		}
+
 
 		String NonIdleCPUTimePct = "NonIdleCPUTimePct = CASE WHEN CPUTime > 0 \n"+
 			       		           "                         THEN convert(numeric(10,1), (("+NonIdleCPUTime_calc+" + 0.0) / (CPUTime + 0.0)) * 100.0 ) \n" + 
@@ -306,7 +335,6 @@ extends CountersModel
 			                       "                    END,   \n";
 		}
 
-//		if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 		if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 		{
 			IOCPUTime    = "IOCPUTime    = convert(int, -1), \n";
@@ -322,22 +350,23 @@ extends CountersModel
 		cols2 += "";
 		cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, "+ThreadID+"OSPID";
 
-//		if (aseVersion >= 1253020)
 		if (aseVersion >= Ver.ver(12,5,3,2))
 		{
 			cols2 += "Yields, DiskIOChecks, DiskIOPolled, DiskIOCompleted, \n";
 		}
-//		if (aseVersion >= 1502050)
 		if (aseVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2 += "MaxOutstandingIOs, ";
 		}
-//		if (aseVersion >= 1500000)
 		if (aseVersion >= Ver.ver(15,0))
 		{
 			cols2 += "HkgcMaxQSize, HkgcPendingItems, HkgcHWMItems, HkgcOverflows, \n";
 		}
 		cols2 += HkgcPendingItemsDcomp + HkgcOverflowsDcomp + nl_15701;
+
+		// New Columns for ASE 15.7 SP136 and possible in some 16.0 SP1 PL##
+		cols2 += HkgcOverflowsCmpact + HkgcOverflowsRec + LotsDelRolXacts + LotsDelCmtXacts + LongXacts + nl_1570_sp136 +
+				PostcommitPageCount + HkgcReq + HkgcReqCmpact + HkgcReqDcomp + HkgcReqRec + HkgcRetries + nl_1570_sp136;
 
 		String sql = 
 			"select " + cols1 + cols2 + cols3 + "\n" +
@@ -358,10 +387,8 @@ extends CountersModel
 		{
 			Double[] dataArray  = new Double[3];
 			String[] labelArray = new String[3];
-//			if (aseVersion >= 1550000)
 			if (aseVersion >= Ver.ver(15,5))
 			{
-//				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
 					// dummy for easier logic (multiple negation are hard to understand)
@@ -384,10 +411,8 @@ extends CountersModel
 			dataArray[1] = this.getDiffValueAvg("SystemCPUTimePct");
 			dataArray[2] = this.getDiffValueAvg("UserCPUTimePct");
 
-//			if (aseVersion >= 1550000)
 			if (aseVersion >= Ver.ver(15,5))
 			{
-//				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
 					// dummy for easier logic (multiple negation are hard to understand)
@@ -421,10 +446,8 @@ extends CountersModel
 		if (GRAPH_NAME_CPU_ENG.equals(tgdp.getName()))
 		{
 			// Set label on the TrendGraph if we are above 15.5
-//			if (aseVersion >= 1550000)
 			if (aseVersion >= Ver.ver(15,5))
 			{
-//				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
     				TrendGraph tg = getTrendGraph(tgdp.getName());
@@ -580,13 +603,10 @@ extends CountersModel
 			diffData.setValueAt(calcUserCPUTime,   rowId, UserCPUTimePct_pos    );
 			diffData.setValueAt(calcIdleCPUTime,   rowId, IdleCPUTimePct_pos    );
 	
-//			if (aseVersion >= 15500)
-//			if (aseVersion >= 1550000)
 			if (aseVersion >= Ver.ver(15,5))
 			{
 				diffData.setValueAt(calcIoCPUTime, rowId, IOCPUTimePct_pos);
 
-//				if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
 					diffData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
@@ -622,7 +642,6 @@ extends CountersModel
 		// Loop on all rateData rows
 		for (int rowId=0; rowId < rateData.getRowCount(); rowId++) 
 		{
-//			if (aseVersion >= 1570000 && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 			if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 			{
 				rateData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);

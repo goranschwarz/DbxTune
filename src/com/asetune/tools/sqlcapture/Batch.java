@@ -3,8 +3,8 @@
 
 package com.asetune.tools.sqlcapture;
 
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Vector;
 
 class Batch
 {
@@ -13,6 +13,7 @@ class Batch
 	protected int	   batchId       = 0;
 
 	protected int      dbid          = 0;
+	protected int	   objectOwnerId = 0;
 	protected int	   procedureId   = 0;  // Id of the StoredProc (if any)
 	protected String   dbname        = ""; // Name of the database
 	protected String   procedureName = ""; // name of the StoredProc (if any)
@@ -20,8 +21,8 @@ class Batch
 	protected int      planId        = 0;  // ID of the compiled plan
 	protected int      lineNumber    = 0;  // Line number of the stored proc or the batch
 
-	private Vector	   sqlTextLines   = new Vector();
-	private Vector	   showplanLines  = new Vector();
+	private ArrayList<StringBuilder> _sqlTextLines = new ArrayList<StringBuilder>();
+	private ArrayList<StringBuilder> _showplanLines = new ArrayList<StringBuilder>();
 
 	Batch()
 	{
@@ -42,31 +43,31 @@ class Batch
 		return this.spid + ":" + this.kpid + ":" + this.batchId;
 	}
 
-	public void addSqlTextLine(StringBuffer line)
+	public void addSqlTextLine(StringBuilder line)
 	{
-		sqlTextLines.add(line);
+		_sqlTextLines.add(line);
 	}
 	public void appendSqlText(String line)
 	{
-		StringBuffer sb = null;
+		StringBuilder sb = null;
 
-		if ( sqlTextLines.size() == 0 )
+		if ( _sqlTextLines.size() == 0 )
 		{
-			sb = new StringBuffer(line);
-			sqlTextLines.add( sb );
+			sb = new StringBuilder(line);
+			_sqlTextLines.add( sb );
 		}
 		else
 		{
-			sb = (StringBuffer) sqlTextLines.lastElement();
+			sb = _sqlTextLines.get(_sqlTextLines.size()-1);
 			sb.append(line);
 		}
 	}
 
-	public void addShowplanTextLine(StringBuffer line)
+	public void addShowplanTextLine(StringBuilder line)
 	{
 		addShowplanTextLine(line, false);
 	}
-	public void addShowplanTextLine(StringBuffer line, boolean chopLastNewLine)
+	public void addShowplanTextLine(StringBuilder line, boolean chopLastNewLine)
 	{
 		// Get rid of last newline
 		if (chopLastNewLine)
@@ -78,7 +79,7 @@ class Batch
 			}
 		}
 
-		showplanLines.add(line);
+		_showplanLines.add(line);
 	}
 	public void appendShowplanText(String line)
 	{
@@ -89,7 +90,7 @@ class Batch
 		if (line == null)
 			return;
 
-		StringBuffer sb = null;
+		StringBuilder sb = null;
 
 		// Get rid of last newline
 		if (chopLastNewLine)
@@ -101,23 +102,23 @@ class Batch
 			}
 		}
 
-		if ( showplanLines.size() == 0 )
+		if ( _showplanLines.size() == 0 )
 		{
-			sb = new StringBuffer(line);
-			showplanLines.add( sb );
+			sb = new StringBuilder(line);
+			_showplanLines.add( sb );
 		}
 		else
 		{
-			sb = (StringBuffer) showplanLines.lastElement();
+			sb = _showplanLines.get(_showplanLines.size()-1);
 			sb.append(line);
 		}
 	}
 
-	public Iterator getIterator()
-	{
-		SqlTextIterator bi = new SqlTextIterator();
-		return bi;
-	}
+//	public Iterator getIterator()
+//	{
+//		SqlTextIterator bi = new SqlTextIterator();
+//		return bi;
+//	}
 
 	public Iterator getSqlTextIterator()
 	{
@@ -143,7 +144,7 @@ class Batch
 	public String getSqlText(boolean number)
 	{
 		Iterator bi = this.getSqlTextIterator();
-		StringBuffer sb = new StringBuffer ();
+		StringBuilder sb = new StringBuilder ();
 		int lineNum=0;
 		while (bi.hasNext()) 
 		{
@@ -160,7 +161,7 @@ class Batch
 	public String getShowplanText()
 	{
 		Iterator bi = this.getShowplanTextIterator();
-		StringBuffer sb = new StringBuffer ();
+		StringBuilder sb = new StringBuilder ();
 		while (bi.hasNext()) 
 		{
 			sb.append( bi.next() + "\n" );
@@ -180,7 +181,7 @@ class Batch
 
 		public boolean hasNext()
 		{
-			if (currentLine < sqlTextLines.size())
+			if (currentLine < _sqlTextLines.size())
 				return true;
 			else
 				return false;
@@ -189,7 +190,7 @@ class Batch
 		public Object next()
 		{
 			currentLine++;
-			return sqlTextLines.get(currentLine - 1);
+			return _sqlTextLines.get(currentLine - 1);
 		}
 
 		public void remove()
@@ -208,7 +209,7 @@ class Batch
 
 		public boolean hasNext()
 		{
-			if (currentLine < showplanLines.size())
+			if (currentLine < _showplanLines.size())
 				return true;
 			else
 				return false;
@@ -217,7 +218,7 @@ class Batch
 		public Object next()
 		{
 			currentLine++;
-			return showplanLines.get(currentLine - 1);
+			return _showplanLines.get(currentLine - 1);
 		}
 
 		public void remove()

@@ -13,6 +13,7 @@ import org.fife.ui.autocomplete.Completion;
 
 import com.asetune.Version;
 import com.asetune.ui.autocomplete.completions.BasicCompletionX;
+import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.ui.autocomplete.completions.SavedCacheCompletionWarning;
 import com.asetune.ui.autocomplete.completions.SqlColumnCompletion;
 import com.asetune.ui.autocomplete.completions.SqlDbCompletion;
@@ -140,6 +141,16 @@ extends DefaultListCellRenderer
 		else if (completion instanceof SavedCacheCompletionWarning)
 		{
 			return ICON_CC_SAVE_WARNING;
+		}
+		else if (completion instanceof CompletionTemplate.ShorthandCompletionHtml)
+		{
+			CompletionTemplate.ShorthandCompletionHtml ct = (CompletionTemplate.ShorthandCompletionHtml) completion;
+
+			Icon icon = ct.getIcon();
+			if ( icon != null )
+				return icon;
+
+			return ICON_TEMPLATE;
 		}
 
 		return ICON_TEMPLATE;

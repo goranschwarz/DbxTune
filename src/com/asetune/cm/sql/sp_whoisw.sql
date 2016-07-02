@@ -157,6 +157,7 @@ begin
 			tran_name,
 			loginame=suser_name(suid),
 			hostname,
+			hostprocess,
 			program_name,
 			DBName=db_name(dbid),
 			loggedindatetime,

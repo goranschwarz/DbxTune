@@ -125,29 +125,37 @@ implements DbxConnectionStateInfo
 				stmnt.close();
 			}
 			else // MS SQL do not have syslocks anymore, so use: sys.dm_tran_locks, and simulate some kind of equal question...
-			{
-				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
-				    + " from sys.dm_tran_locks "
-				    + " where request_session_id = @@spid "
-				    + "  and resource_type = 'OBJECT' ";
-
-				_lockCount = 0;
-				_lockList.clear();
-
-				rs = stmnt.executeQuery(sql);
-				while(rs.next())
+			{    // NOTE: this needs permission 'VIEW SERVER STATE'
+				List<String> permissions = conn.getActiveServerRolesOrPermissions();
+				if (permissions != null && permissions.contains("VIEW SERVER STATE"))
 				{
-					String dbname    = rs.getString(1);
-					String tableName = rs.getString(2);
-					String lockType  = rs.getString(3);
-					int    lockCount = rs.getInt   (4);
-
-					_lockCount += lockCount;
-					_lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+    				sql = "select dbname=db_name(resource_database_id),	table_name=object_name(resource_associated_entity_id, resource_database_id), lock_type=request_mode, lock_count=request_reference_count "
+    				    + " from sys.dm_tran_locks "
+    				    + " where request_session_id = @@spid "
+    				    + "  and resource_type = 'OBJECT' ";
+    
+    				_lockCount = 0;
+    				_lockList.clear();
+    
+    				rs = stmnt.executeQuery(sql);
+    				while(rs.next())
+    				{
+    					String dbname    = rs.getString(1);
+    					String tableName = rs.getString(2);
+    					String lockType  = rs.getString(3);
+    					int    lockCount = rs.getInt   (4);
+    
+    					_lockCount += lockCount;
+    					_lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+    				}
+    
+    				rs.close();
+    				stmnt.close();
 				}
-
-				rs.close();
-				stmnt.close();
+				else
+				{
+					_lockCount = -999;
+				}
 			}
 
 		}
@@ -158,7 +166,8 @@ implements DbxConnectionStateInfo
 
 //		select count(*) from master.dbo.syslogshold where spid = @@spid
 
-		_logger.debug("refresh(): db_name()='"+_dbname+"', @@spid='"+_spid+"', user_name()='"+_username+"', suser_name()='"+_susername+"', @@transtate="+_tranState+", '"+getTranStateStr()+"', @@trancount="+_tranCount+".");
+		if (_logger.isDebugEnabled())
+			_logger.debug("refresh(): db_name()='"+_dbname+"', @@spid='"+_spid+"', user_name()='"+_username+"', suser_name()='"+_susername+"', @@transtate="+_tranState+", '"+getTranStateStr()+"', @@trancount="+_tranCount+".");
 //		return csi;
 	}
 
@@ -197,14 +206,14 @@ implements DbxConnectionStateInfo
 	@Override
 	public String getStatusBarText()
 	{
-		String dbname      = "db="          + _dbname;
-		String spid        = "spid="        + _spid;
-		String username    = "user="        + _username;
-		String susername   = "login="       + _susername;
-		String tranState   = "TranState="   + getTranStateStr();
-		String tranCount   = "TranCount="   + _tranCount;
-		String tranChained = "TranChained=" + _tranChained;
-		String lockCount   = "LockCount="   + _lockCount;
+		String dbname      = "db=<b>"          + _dbname           + "</b>";
+		String spid        = "spid=<b>"        + _spid             + "</b>";
+		String username    = "user=<b>"        + _username         + "</b>";
+		String susername   = "login=<b>"       + _susername        + "</b>";
+		String tranState   = "TranState=<b>"   + getTranStateStr() + "</b>";
+		String tranCount   = "TranCount=<b>"   + _tranCount        + "</b>";
+		String tranChained = "TranChained=<b>" + _tranChained      + "</b>";
+		String lockCount   = "LockCount=<b>"   + _lockCount        + "</b>";
 
 		if (_tranCount > 0)
 			tranCount = "TranCount=<b><font color=\"red\">" + _tranCount        + "</font></b>";
@@ -218,12 +227,15 @@ implements DbxConnectionStateInfo
 		if (_lockCount > 0)
 			lockCount = "LockCount=<b><font color=\"red\">" + _lockCount    + "</font></b>";
 
-		String text = spid + ", " + username + ", " + susername;
+		// status: Normal state
+		String text = "<html>" + spid + ", " + dbname + ", " + username + ", " + susername + "</html>";
+
+		// status: "problem" state
 		if (_tranCount > 0 || isNonNormalTranState())
 		{
 			text = "<html>"
-				+ dbname    + ", "
 				+ spid      + ", " 
+				+ dbname    + ", "
 				+ username  + ", " 
 				+ susername + ", " 
 				+ (isTranStateUsed() ? (tranState + ", ") : "") 
@@ -235,7 +247,7 @@ implements DbxConnectionStateInfo
 		// If we are in CHAINED mode, and do NOT hold any locks, set state to "normal"
 		if (_tranChained == 1 && _lockCount == 0)
 		{ // color #B45F04 = dark yellow/orange
-			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, "+spid + ", " + username + ", " + susername + "</html>";
+			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, " + spid + ", " + dbname + ", " + username + ", " + susername + "</html>";
 		}
 
 		return text;
@@ -248,6 +260,10 @@ implements DbxConnectionStateInfo
 		if (_lockCount > 0)
 			lockText = "<hr>Locks held by this SPID:" + getLockListTableAsHtmlTable() + "<hr>";
 
+		String lockCountStr = _lockCount +"";
+		if (_lockCount == -999)
+			lockCountStr = "<font color=\"red\"> To see lock count/table you need permission 'VIEW SERVER STATE'</font>";
+
 		String tooltip = "<html>" +
 			"<table border=0 cellspacing=0 cellpadding=1>" +
 			                         "<tr> <td>Current DB:    </td> <td><b>" + _dbname           + "</b> </td> </tr>" +
@@ -257,7 +273,7 @@ implements DbxConnectionStateInfo
 			    (isTranStateUsed() ? "<tr> <td>Tran State:    </td> <td><b>" + getTranStateStr() + "</b> </td> </tr>" : "") +
 			                         "<tr> <td>Tran Count:    </td> <td><b>" + _tranCount        + "</b> </td> </tr>" +
 			                         "<tr> <td>Tran Chained:  </td> <td><b>" + _tranChained      + "</b> </td> </tr>" +
-			                         "<tr> <td>Lock Count:    </td> <td><b>" + _lockCount        + "</b> </td> </tr>" +
+			                         "<tr> <td>Lock Count:    </td> <td><b>" + lockCountStr      + "</b> </td> </tr>" +
 			"</table>" +
 			lockText +
 			(isTranStateUsed() ? ASE_STATE_INFO_TOOLTIP_BASE : ASE_STATE_INFO_TOOLTIP_BASE_NO_TRANSTATE).replace("<html>", ""); // remove the first/initial <html> tag...

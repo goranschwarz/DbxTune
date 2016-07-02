@@ -97,6 +97,10 @@ public class SshTunnelInfo
 	
 	public String getConfigString(boolean hidePasswd)
 	{
+		return getConfigString(hidePasswd, false);
+	}
+	public String getConfigString(boolean hidePasswd, boolean passwdInPlainText)
+	{
 		LinkedHashMap<String, String> cfg = new LinkedHashMap<String, String>();
 		
 		cfg.put("isLocalPortGenerated", isLocalPortGenerated()+"");
@@ -107,7 +111,7 @@ public class SshTunnelInfo
 		cfg.put("SshHost",              getSshHost());
 		cfg.put("SshPort",              getSshPort()+"");
 		cfg.put("SshUsername",          getSshUsername());
-		cfg.put("SshPassword",          hidePasswd ? "**secret**" : Configuration.encryptPropertyValue("SshPassword", getSshPassword()));
+		cfg.put("SshPassword",          hidePasswd ? "**secret**" : passwdInPlainText ? getSshPassword() : Configuration.encryptPropertyValue("SshPassword", getSshPassword()));
 		cfg.put("SshInitOsCmd",         getSshInitOsCmd());
 		
 		return StringUtil.toCommaStr(cfg);
@@ -118,7 +122,10 @@ public class SshTunnelInfo
 		if (StringUtil.isNullOrBlank(cfgStr))
 			return null;
 
+//System.out.println("----");
+//System.out.println("SshTunnelInfo.parseConfigString(): cfgStr='"+cfgStr+"'.");
 		Map<String, String> cfg = StringUtil.parseCommaStrToMap(cfgStr);
+//System.out.println("SshTunnelInfo.parseConfigString(): cfgMap='"+StringUtil.toCommaStr(cfg)+"'.");
 		
 		SshTunnelInfo ti = new SshTunnelInfo();
 		
@@ -132,6 +139,8 @@ public class SshTunnelInfo
 		     ti.setSshUsername(               cfg.get("SshUsername") );
 		     ti.setSshPassword(               Configuration.decryptPropertyValue("SshPassword", cfg.get("SshPassword")) );
 		     ti.setSshInitOsCmd(              cfg.get("SshInitOsCmd") );
+//System.out.println("SshTunnelInfo.parseConfigString(): SshPassword='"+cfg.get("SshPassword")+"'.");
+//System.out.println("SshTunnelInfo.parseConfigString(): returns='"+ti.getConfigString(false, true)+"'.");
 		
 		return ti;
 	}

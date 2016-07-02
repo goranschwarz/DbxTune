@@ -7,6 +7,7 @@ import java.sql.Statement;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.utils.Ver;
 
 public class Db2Connection
 extends DbxConnection
@@ -15,6 +16,7 @@ extends DbxConnection
 	public Db2Connection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::Db2Connection(conn): conn="+conn);
 	}
 

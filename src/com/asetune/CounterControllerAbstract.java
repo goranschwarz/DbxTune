@@ -241,7 +241,9 @@ implements ICounterController
 	@Override
 	public void addCm(CountersModel cm)
 	{ 
-		getCmList().add(cm);
+		List<CountersModel> cmList = getCmList();
+		if ( ! cmList.contains(cm) )
+			cmList.add(cm);
 	}
 
 	/** Get a list of all available <code>CountersModel</code> that exists. System and UDC */
@@ -943,7 +945,7 @@ implements ICounterController
 
 			// Finally create the Counter model and all it's surroundings...
 			@SuppressWarnings("serial")
-			CountersModel cm = new CountersModelUserDefined( name, MainFrame.TCP_GROUP_UDC, udcSql, sqlVer,
+			CountersModel cm = new CountersModelUserDefined(counterController, name, MainFrame.TCP_GROUP_UDC, udcSql, sqlVer,
 					udcPkList, //pk1, pk2, pk3, 
 					udcDiffArray, udcPctArray, 
 					udcTTMTArray, udcNeedRoleArray, udcNeedConfigArray, 

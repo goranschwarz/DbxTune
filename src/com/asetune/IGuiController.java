@@ -20,4 +20,22 @@ public interface IGuiController
 	
 	public void splashWindowProgress(String msg);
 
+	/**
+	 * Sets values in the status panel.
+	 * @param type <code>ST_CONNECT, ST_DISCONNECT, ST_STATUS_FIELD, ST_MEMORY</code>
+	 */
+	public void setStatus(int type);
+
+	/**
+	 * Sets values in the status panel.
+	 * @param type <code>ST_CONNECT, ST_DISCONNECT, ST_STATUS_FIELD, ST_MEMORY</code>
+	 * @param param The actual string to set (this is only used for <code>ST_STATUS_FIELD</code>)
+	 */
+	public void setStatus(int type, String param);
+	
+	/**
+	 * Get GUI "main" window, so it can be used for various message windows etc
+	 * @return
+	 */
+	public Component getGuiHandle();
 }

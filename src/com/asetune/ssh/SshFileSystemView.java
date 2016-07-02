@@ -3,17 +3,28 @@ package com.asetune.ssh;
 import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Vector;
 
+import javax.swing.Icon;
+import javax.swing.UIManager;
 import javax.swing.filechooser.FileSystemView;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.utils.StringUtil;
+
 import ch.ethz.ssh2.SFTPv3Client;
+import ch.ethz.ssh2.SFTPv3DirectoryEntry;
 
 // got the idea from: http://mindtreeinsight.sourceforge.net/ui/xref/com/mindtree/techworks/insight/download/sftpbrowse/SFTPRemoteFileSystemView.html
 // This needs A LOT MORE before it can be used
 // * create a SftpFile extends File object
 
+/**
+ * THIS IS NOT READY FOR USE.... IT NEEDS *MORE* WORK... or it needs to be deleted and replaced by something else. 
+ * @author Goran Schwarz
+ */
 public class SshFileSystemView extends FileSystemView
 {
 	private static Logger _logger = Logger.getLogger(SshFileSystemView.class);
@@ -27,24 +38,56 @@ public class SshFileSystemView extends FileSystemView
 	
 	private String _startDirectory;
 	private String _homeDirectory;
+	private SshFile _homeDirectorySshFile;
+	private SshFile _rootDirectorySshFile;
 
 	public SshFileSystemView(SshConnection sshConn)
+	throws Exception
 	{
 		_sshConn = sshConn;
+		createSftpConnection();
 	}
-	
-	private synchronized void createSftpConnection () 
+
+private SshFile[] _homeAllFilesArray = null;
+
+	private synchronized void createSftpConnection() 
 //	throws SftpBrowseException 
 	throws Exception 
 	{
-//		_sftpClient = new SFTPv3Client(_sshConn.getConnection());
-//
-//		if (StringUtil.hasValue(_startDirectory)) 
-//		{
+		_sftpClient = new SFTPv3Client(_sshConn.getConnection());
+
+		if (StringUtil.hasValue(_startDirectory)) 
+		{
+			_sshConn.execCommandOutputAsStr("cd "+_startDirectory);
 //			_sftpClient.cd(_startDirectory);
-//		}
-//
-//		_homeDirectory = _sftpClient.pwd();
+		}
+
+		_homeDirectory = _sshConn.execCommandOutputAsStr("pwd");
+		if (StringUtil.hasValue(_homeDirectory))
+		{
+			_homeDirectory = _homeDirectory.trim();
+
+			try
+			{
+				_homeDirectorySshFile = new SshFile(_homeDirectory, _sftpClient.stat(_homeDirectory));
+				_rootDirectorySshFile = new SshFile("/", _sftpClient.stat("/"));
+
+				Vector<SFTPv3DirectoryEntry> v = _sftpClient.ls(_homeDirectory);
+				_homeAllFilesArray = new SshFile[v.size()];
+				for (int i=0; i<v.size(); i++)
+				{
+					_homeAllFilesArray[i] = new SshFile(v.get(i));
+				}
+//System.out.println("XXXXXXXXXXXXX" + StringUtil.toCommaStr(_homeAllFilesArray));
+			}
+			catch(IOException ex)
+			{
+				ex.printStackTrace();
+			}
+		}
+		
+//System.out.println("SshFileSystemView.constructor: _homeDirectory='"+_homeDirectory+"'.");
+//		_homeDirectory = "~"; // THis will probably NOT work
 	}
 
 	/**
@@ -68,7 +111,9 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public File getDefaultDirectory()
 	{
-		return getHomeDirectory();
+		File file = getHomeDirectory();
+//		System.out.println("SshFileSystemView.getDefaultDirectory() <<-- "+file);
+		return file;
 	}
 	/**
 	 * @see javax.swing.filechooser.FileSystemView#getHomeDirectory()
@@ -76,8 +121,14 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public File getHomeDirectory()
 	{
+//		File file = super.getHomeDirectory();
+//		File file = new File(_homeDirectory);
+		File file = _homeDirectorySshFile;
+//		System.out.println("SshFileSystemView.getHomeDirectory() <<-- "+file);
+		return file;
+
 		// TODO Auto-generated method stub
-		return super.getHomeDirectory();
+//		return super.getHomeDirectory();
 //		346 		try {
 //		347 			checkConnection();
 //		348 			//If home directory is the root directory then return that
@@ -116,14 +167,39 @@ public class SshFileSystemView extends FileSystemView
 
 	}
 	
+	@Override
+	public Icon getSystemIcon(File f)
+	{
+//		System.out.println("SshFileSystemView.getSystemIcon(f='"+f+"'.");
+        return UIManager.getIcon(f.isDirectory() ? "FileView.directoryIcon" : "FileView.fileIcon");
+
+//		System.out.println("SshFileSystemView.getSystemIcon(f='"+f+"') <<-- "+super.getSystemIcon(f));
+//		return super.getSystemIcon(f);
+	}
+
+	@Override
+	protected File createFileSystemRoot(File f)
+	{
+//		System.out.println("SshFileSystemView.createFileSystemRoot(f='"+f+"') <<-- "+super.createFileSystemRoot(f));
+		return super.createFileSystemRoot(f);
+	}
+
 	/**
 	 * @see javax.swing.filechooser.FileSystemView#getRoots()
 	 */
 	@Override
 	public File[] getRoots()
 	{
+//		File[] files = super.getRoots();
+		File[] files = new File[1];
+		files[0] = new File("/");
+		files[0] = _rootDirectorySshFile;
+		createFileSystemRoot(files[0]);
+//		System.out.println("SshFileSystemView.getRoots() <<-- "+StringUtil.toCommaStr(files));
+		return files;
+
 		// TODO Auto-generated method stub
-		return super.getRoots();
+//		return super.getRoots();
 //		388 		SFTPFileFile [] sftpFiles = null;
 //		389 		try {
 //		390 			checkConnection();
@@ -149,9 +225,13 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public File createFileObject(File dir, String filename)
 	{
-		// We should never get here. If we ever do, call the parent and hope for the best!!!
-		_logger.debug("Calling Super with: " + dir.toString() + " " + filename);
-		return super.createFileObject(dir, filename);	
+		File file = super.createFileObject(dir, filename);
+//		System.out.println("SshFileSystemView.createFileObject(dir="+dir+", filename='"+filename+"') -WE-SHOULD-NOT-BE-CALLED- <<-- "+file);
+		return file;	
+
+//		// We should never get here. If we ever do, call the parent and hope for the best!!!
+//		_logger.debug("Calling Super with: " + dir.toString() + " " + filename);
+//		return super.createFileObject(dir, filename);	
 	}
 
 	/**
@@ -160,9 +240,13 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public File createFileObject(String path)
 	{
-		// We should never get here. If we ever do, call the parent and hope for the best!!!
-		_logger.debug("Calling Super with: " + path);
-		return super.createFileObject(path);
+		File file = super.createFileObject(path);
+//		System.out.println("SshFileSystemView.createFileObject(path='"+path+"') -WE-SHOULD-NOT-BE-CALLED- <<-- "+file);
+		return file;	
+
+//		// We should never get here. If we ever do, call the parent and hope for the best!!!
+//		_logger.debug("Calling Super with: " + path);
+//		return super.createFileObject(path);
 	}
 	
 	/**
@@ -171,8 +255,12 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public File getChild(File parent, String fileName)
 	{
-		// TODO Auto-generated method stub
-		return super.getChild(parent, fileName);
+		File file = super.getChild(parent, fileName);
+//		System.out.println("######### getChild() ############### SshFileSystemView.getChild(parent="+parent+", fileName='"+fileName+"') <<-- "+file);
+		return file;	
+
+//		// TODO Auto-generated method stub
+//		return super.getChild(parent, fileName);
 //		435 		if (parent instanceof SFTPFileFile) {
 //		436 			SftpFile parentDir = ((SFTPFileFile) parent).getSftpFile();
 //		437 			SFTPFileFile returnedFile = null;
@@ -207,11 +295,52 @@ public class SshFileSystemView extends FileSystemView
 	/**
 	 * @see javax.swing.filechooser.FileSystemView#getFiles(java.io.File, boolean)
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public File[] getFiles(File dir, boolean useFileHiding)
 	{
-		// TODO Auto-generated method stub
-		return super.getFiles(dir, useFileHiding);
+//		System.out.println("--> SshFileSystemView.getFiles(dir="+dir+", useFileHiding="+useFileHiding+")");
+//		File[] files = super.getFiles(dir, useFileHiding);
+//		System.out.println("SshFileSystemView.getFiles(dir="+dir+", useFileHiding="+useFileHiding+") <<-- "+StringUtil.toCommaStr(files));
+//		return files;
+		
+		try
+		{
+			String dirname = dir.getAbsolutePath().replace('\\', '/');
+
+			// Only do this the first time... otherwise we will get strange errors (PLAF subsystem stack traces, since it tries to call getFiles())
+			if (_homeAllFilesArray != null && dirname.equals(_homeDirectory))
+			{
+				SshFile[] tmp = _homeAllFilesArray;
+				_homeAllFilesArray = null;
+				return tmp;
+			}
+			_homeDirectory = _sshConn.execCommandOutputAsStr("pwd");
+			
+//System.out.println("    SshFileSystemView.getFiles(): dir.getAbsolutePath()='"+dirname+"'.");
+			Vector<SFTPv3DirectoryEntry> v = _sftpClient.ls(dirname);
+//			SshFile[] sshFileArray = new SshFile[v.size()];
+			ArrayList<SshFile> sshFileList = new ArrayList<SshFile>();
+			for (int i=0; i<v.size(); i++)
+			{
+				SFTPv3DirectoryEntry entry = v.get(i);
+				if ( ! (".".equals(entry.filename) || "..".equals(entry.filename)) )
+				{
+					sshFileList.add(new SshFile(entry, dir));
+//					sshFileArray[i] = new SshFile(entry, dir);
+				}
+			}
+			return sshFileList.toArray(new SshFile[0]);
+//			return sshFileArray;
+		}
+		catch(IOException ex)
+		{
+			ex.printStackTrace();
+			return new File[0];
+		}
+
+//		// TODO Auto-generated method stub
+//		return super.getFiles(dir, useFileHiding);
 //		472 		if (dir instanceof SFTPFileFile && dir.isDirectory()) {
 //		473 			SftpFile sftpFile = ((SFTPFileFile) dir).getSftpFile();
 //		474 			String name = sftpFile.getAbsolutePath();
@@ -258,8 +387,102 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public File getParentDirectory(File dir)
 	{
-		// TODO Auto-generated method stub
+//		System.out.println("######### getParentDirectory() ############### SshFileSystemView.getParentDirectory(dir="+dir+").");
+//		File file = super.getParentDirectory(dir);
+//		System.out.println("######### getParentDirectory() ############### SshFileSystemView.getParentDirectory(dir="+dir+") <<-- "+file);
+//		return file;
+
+//		// TODO Auto-generated method stub
+//		return super.getParentDirectory(dir);
+
+		if ( dir instanceof SshFile )
+		{
+			SshFile sshFile = (SshFile) dir;
+			String name = sshFile.getAbsolutePath();
+
+			if ( "/".equals(name) || "\\".equals(name) )
+			{
+				return null;
+			}
+
+			int pos = name.lastIndexOf("/");
+			if (pos < 0)
+				pos = name.lastIndexOf("\\");
+			String parent = name.substring(0, pos);
+
+			// Parent is the root
+			if ( "".equals(parent) || "/".equals(parent) || "\\".equals(parent) )
+			{
+				return getRoots()[0];
+			}
+
+			try
+			{
+				String unixStyle = parent.replace('\\', '/');
+//				System.out.println("---------------- UnixStyleName='"+unixStyle+"'. do sftpClient.stat()");
+				return new SshFile(parent, _sftpClient.stat(unixStyle));
+			}
+			catch(IOException ex)
+			{
+				ex.printStackTrace();
+//				return null;
+				return getRoots()[0];
+			}
+
+//			// Parent of the parent to list the parent
+//			pos = parent.lastIndexOf("/");
+//			if (pos < 0)
+//				pos = parent.lastIndexOf("\\");
+//			String pparent = parent.substring(0, pos);
+//			if ( StringUtil.isNullOrBlank(pparent) )
+//			{
+//				pparent = "/";
+//			}
+//
+//			SshFile parentFile = null;
+//			try
+//			{
+//				// FIXME Correct list parsing
+//				pparent = pparent.replace('\\', '/');
+//				Vector<SFTPv3DirectoryEntry> returnedFiles = _sftpClient.ls(pparent);
+//
+////				String parentName = parent.substring(parent.lastIndexOf(FILE_SEPERATOR) + 1);
+//				pos = parent.lastIndexOf("/");
+//				if (pos < 0)
+//					pos = parent.lastIndexOf("\\");
+//				String parentName = parent.substring(0, pos + 1);
+//
+//				for (int i=0; i<returnedFiles.size(); i++)
+//				{
+//					SFTPv3DirectoryEntry returnedFile = (SFTPv3DirectoryEntry) returnedFiles.get(i);
+//					if ( returnedFile.filename.equals(parentName) )
+//					{
+//						parentFile = new SshFile(returnedFile);
+//					}
+//				}
+//			}
+////			catch (SFTPBrowseException e)
+////			{
+////				logger.log(Level.WARNING, "Problem browsing file system", e);
+////			}
+//			catch (IOException e)
+//			{
+//				e.printStackTrace();
+////				logger.log(Level.WARNING, "Problem browsing file system", e);
+//			}
+//
+//			if ( null == parentFile )
+//			{
+//				parentFile = (SshFile) getRoots()[0];
+//			}
+//
+//			return parentFile;
+		}
+
+//		logger.fine("Calling Super with: " + dir.toString());
+//		System.out.println("Calling Super with: " + dir.toString());
 		return super.getParentDirectory(dir);
+		
 //		517 		if (dir instanceof SFTPFileFile) {
 //		518 
 //		519 			SftpFile sftpFile = ((SFTPFileFile) dir).getSftpFile();
@@ -320,8 +543,20 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public String getSystemDisplayName(File f)
 	{
-		// TODO Auto-generated method stub
-		return super.getSystemDisplayName(f);
+		if (f instanceof SshFile)
+		{
+//			String name = ((SshFile)f).getAbsolutePath();
+			String name = ((SshFile)f).getSftpName();;
+//			System.out.println("             SshFileSystemView.(SshFile)getSystemDisplayName(f="+f+") <<-- "+name);
+			return name;
+		}
+
+		String str = super.getSystemDisplayName(f);
+//		System.out.println("             SshFileSystemView.getSystemDisplayName(f="+f+") <<-- "+str);
+		return str;
+
+//		// TODO Auto-generated method stub
+//		return super.getSystemDisplayName(f);
 //		576 		if (f instanceof SFTPFileFile) {
 //		577 			SftpFile sftpFile = ((SFTPFileFile) f).getSftpFile();
 //		578 			String name = sftpFile.getAbsolutePath();
@@ -344,6 +579,7 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public String getSystemTypeDescription(File f)
 	{
+//		System.out.println("SshFileSystemView.getSystemTypeDescription(f="+f+") <<-- "+null);
 		return null;
 	}
 	
@@ -353,8 +589,12 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isComputerNode(File dir)
 	{
-		// TODO Auto-generated method stub
-		return super.isComputerNode(dir);
+		boolean b = super.isComputerNode(dir);
+//		System.out.println("SshFileSystemView.isComputerNode(dir="+dir+") <<-- "+b);
+		return b;
+
+//		// TODO Auto-generated method stub
+//		return super.isComputerNode(dir);
 //		606 		if (dir instanceof SFTPFileFile) {
 //		607 			SftpFile sftpFile = ((SFTPFileFile) dir).getSftpFile();
 //		608 			String name = sftpFile.getAbsolutePath();
@@ -377,6 +617,7 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isDrive(File dir)
 	{
+//		System.out.println("SshFileSystemView.isDrive(dir="+dir+") <<-- "+false);
 		return false;
 	}
 
@@ -389,8 +630,12 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isFileSystem(File f)
 	{
-		// TODO Auto-generated method stub
-		return super.isFileSystem(f);
+		boolean b = super.isFileSystem(f);
+//		System.out.println("SshFileSystemView.isFileSystem(f="+f+") <<-- "+b);
+		return b;
+
+//		// TODO Auto-generated method stub
+//		return super.isFileSystem(f);
 //		639 		if (f instanceof SFTPFileFile) {
 //		640 			SftpFile sftpFile = ((SFTPFileFile) f).getSftpFile();
 //		641 			return !sftpFile.isLink();
@@ -406,8 +651,12 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isFileSystemRoot(File dir)
 	{
-		// TODO Auto-generated method stub
-		return super.isFileSystemRoot(dir);
+		boolean b = super.isFileSystemRoot(dir);
+//		System.out.println("SshFileSystemView.isFileSystemRoot(dir="+dir+") <<-- "+b);
+		return b;
+
+//		// TODO Auto-generated method stub
+//		return super.isFileSystemRoot(dir);
 //		652 		if (dir instanceof SFTPFileFile) {
 //		653 			SftpFile sftpFile = ((SFTPFileFile) dir).getSftpFile();
 //		654 			String name = sftpFile.getAbsolutePath();
@@ -429,6 +678,7 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isFloppyDrive(File dir)
 	{
+//		System.out.println("SshFileSystemView.isFloppyDrive(dir="+dir+") <<-- "+false);
 		return false;
 	}
 	
@@ -439,6 +689,7 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isHiddenFile(File f)
 	{
+//		System.out.println("SshFileSystemView.isHiddenFile(f="+f+") <<-- "+false);
 		return false;
 	}
 
@@ -448,8 +699,12 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isParent(File folder, File file)
 	{
-		// TODO Auto-generated method stub
-		return super.isParent(folder, file);
+		boolean b = super.isParent(folder, file);
+//		System.out.println("######### isParent() ############### SshFileSystemView.isParent(folder="+folder+", file="+file+") <<-- "+b);
+		return b;
+
+//		// TODO Auto-generated method stub
+//		return super.isParent(folder, file);
 //		691 		if (folder instanceof SFTPFileFile && file instanceof SFTPFileFile) {
 //		692 			// If file is a SFTPFileFile, you will always get back an SFTPFileFile
 //		693 			SFTPFileFile calculatedParent = (SFTPFileFile) getParentDirectory(file);
@@ -470,7 +725,20 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public boolean isRoot(File f)
 	{
-		return super.isRoot(f);
+		if (f instanceof SshFile)
+		{
+			String name = ((SshFile)f).getAbsolutePath();
+			boolean b = "/".equals(name) || "\\".equals(name);
+//			System.out.println("SshFileSystemView.(SshFile)isRoot(f="+f+") <<-- "+b);
+			return b;
+		}
+
+		boolean b = super.isRoot(f);
+//		System.out.println("SshFileSystemView.isRoot(f="+f+") <<-- "+b);
+		return b;
+
+//		return super.isRoot(f);
+
 //		710 		if (null == f) {
 //		711 			return false;
 //		712 		}
@@ -494,7 +762,18 @@ public class SshFileSystemView extends FileSystemView
 	@Override
 	public Boolean isTraversable(File f)
 	{
- 		return super.isTraversable(f);
+		if (f instanceof SshFile)
+		{
+			boolean b = ((SshFile)f).isDirectory();
+//			System.out.println("SshFileSystemView.(SshFile)isTraversable(f.className="+f.getClass().getName()+", f="+f+") <<-- "+b);
+			return b;
+		}
+		Boolean b = super.isTraversable(f);
+//		System.out.println("SshFileSystemView.isTraversable(f.className="+f.getClass().getName()+", f="+f+") <<-- "+b);
+		return b;
+
+//		return super.isTraversable(f);
+		
 // 		732 		if (f instanceof SFTPFileFile) {
 //		733 			SftpFile sftpFile = ((SFTPFileFile) f).getSftpFile();
 //		734 			return new Boolean(sftpFile.isDirectory());

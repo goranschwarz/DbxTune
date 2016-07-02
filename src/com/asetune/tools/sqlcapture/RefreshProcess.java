@@ -4,8 +4,6 @@
 
 package com.asetune.tools.sqlcapture;
 import java.awt.Color;
-import java.awt.Container;
-import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedWriter;
@@ -14,43 +12,32 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.Hashtable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
 import javax.swing.JCheckBox;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.DbxTune;
 import com.asetune.Version;
-import com.asetune.cm.CmSybMessageHandler;
+import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
-import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -93,79 +80,83 @@ public class RefreshProcess extends Thread
 
 	private boolean            _firstTimeSample      = true;
 	private boolean            _discardPreOpenStmnts = true;
+	
+	private boolean            _discardAseTuneAppName= true;
 
 	private Statement	       stmt;
-	private int	               kpid;
-	private int	               spid;
-	private ResultSet	       rs;
-	private int	               currentSpid	         = -1;
-	private int	               currentKpid	         = -1;
-	private int	               currentBatchID	     = -1;
-	private int	               currentDBID	         = -1;
-	private int	               currentProcedureID	 = -1;
-	private int	               currentPlanID	     = -1;
-	private int	               currentSqlLine        = -1;
-	private String             currentDbname         = "";
-	private String             currentProcName       = "";
+	private int	               _kpid;
+	private int	               _spid;
+	private int	               _activeSpid	         = -1;
+	private int	               _activeKpid	         = -1;
+	private int	               _activeBatchID	     = -1;
+	private int	               _activeDBID	         = -1;
+	private int	               _activeObjOwnerID     = -1;
+	private int	               _activeProcedureID	 = -1;
+	private int	               _activePlanID	     = -1;
+	private int	               _activeSqlLine        = -1;
+	private String             _activeDbname         = "";
+	private String             _activeProcName       = "";
 
 	// rs.getXXX(pos_xxx), use the below variables when positioning in the resultset
-	private int pos_currentSpid        = -1;
-	private int pos_currentKpid        = -1;
-	private int pos_currentBatchID     = -1;
-	private int pos_currentSqlLine     = -1;
-	private int pos_currentDbname      = -1;
-	private int pos_currentProcName    = -1;
-	private int pos_currentPlanID      = -1;
-	private int pos_currentDBID        = -1;
-	private int pos_currentProcedureID = -1;
-	private int pos_currentWaitEventID = -1;
-	private int pos_currentWaitEventDesc = -1;
+	private int pos_activeSpid        = -1;
+	private int pos_activeKpid        = -1;
+	private int pos_activeBatchID     = -1;
+	private int pos_activeSqlLine     = -1;
+	private int pos_activeDbname      = -1;
+	private int pos_activeProcName    = -1;
+	private int pos_activePlanID      = -1;
+	private int pos_activeDBID        = -1;
+	private int pos_activeObjOwnerID  = -1;
+	private int pos_activeProcedureID = -1;
+	private int pos_activeWaitEventID = -1;
+	private int pos_activeWaitEventDesc = -1;
 
 	// rs.getXXX(pos_xxx), use the below variables when positioning in the resultset
-	private int pos_capturedSpid        = -1;
-	private int pos_capturedKpid        = -1;
-	private int pos_capturedBatchID     = -1;
-	private int pos_capturedSqlLine     = -1;
-	private int pos_capturedDbname      = -1;
-	private int pos_capturedProcName    = -1;
-	private int pos_capturedPlanID      = -1;
-	private int pos_capturedDBID        = -1;
-	private int pos_capturedProcedureID = -1;
+	private int pos_historySpid        = -1;
+	private int pos_historyKpid        = -1;
+	private int pos_historyBatchID     = -1;
+	private int pos_historySqlLine     = -1;
+	private int pos_historyDbname      = -1;
+	private int pos_historyObjOwnerID  = -1;
+	private int pos_historyProcName    = -1;
+	private int pos_historyPlanID      = -1;
+	private int pos_historyDBID        = -1;
+	private int pos_historyProcedureID = -1;
 	
-	private Vector	           currentStmtColNames	 = null;
-	private StatementsModel	   currentStmtModel;
-	private boolean	           currentSMInitialized	 = false;
-	private Vector	           currentStmt	         = null;
-//	private Vector	           currentStmtRow	     = null;
-	private Vector	           currentStmtRows	     = null; // multiple currentStmtRow objects
-	private Batch	           currentBatch          = null;
+	private Vector	           _activeStmtColNames	 = null;
+	private StatementsModel	   _activeStmtModel;
+	private boolean	           _activeSMInitialized	 = false;
+	private Vector	           _activeStmt	         = null;
+//	private Vector	           _activeStmtRow	     = null;
+	private Vector	           _activeStmtRows	     = null; // multiple currentStmtRow objects
+	private Batch	           _activeBatch          = null;
 
-	private Vector	           capturedStmtColNames	 = null;
-	private StatementsModel	   capturedStmtModel;
-	private boolean	           capturedSMInitialized = false;
-	private boolean            capturedTableColmnsIsResized = false;
+	private Vector	           _historyStmtColNames	 = null;
+	private StatementsModel	   _historyStmtModel;
+	private boolean	           _historySMInitialized = false;
+	private boolean            _historyTableColmnsIsResized = false;
 
 
-	private Vector	           newCapturedStatements = null;
+	private Vector	           _newHistoryStatements = null;
 
-	private int	               selectedStatement;
+	private int	               _selectedStatement;
 
-	private Hashtable	       batchHistory          = new Hashtable();
-	private Hashtable	       plansHistory          = new Hashtable();
-	private Hashtable	       compiledPlansHistory  = new Hashtable();
-	private Hashtable	       procedureTextCache    = new Hashtable();
+	private HashMap<String, Batch>  _batchHistory         = new HashMap<String, Batch>();
+//	private HashMap	                _plansHistory         = new HashMap();
+//	private HashMap	                _compiledPlansHistory = new HashMap();
+	private HashMap<String, String>	_procedureTextCache   = new HashMap<String, String>();
 
-	public CountersModel	   CMProcObjects;
-	public CountersModel	   CMProcWaits;
-	public CountersModel	   CMLocks;
+	public CountersModel	   _cmProcObjects;
+	public CountersModel	   _cmProcWaits;
+	public CountersModel	   _cmLocks;
 
 	private int     _aseVersion       = 0;
 	private boolean _isClusterEnabled = false;
 	private int     _monTablesVersion = 0;
 	 
 
-	private String  _captureRestrictionSql = "";
-	private boolean _captureRestrictions   = false;
+	private String  _historyRestrictionSql = "";
+	private boolean _historyRestrictions   = false;
 
 	private String _activeStatementsSql = "";
 	private String _historyStatementsSql = "";
@@ -173,21 +164,25 @@ public class RefreshProcess extends Thread
 	public String getActiveStatementsSql()  { return _activeStatementsSql; }
 	public String getHistoryStatementsSql() { return _historyStatementsSql; }
 	
-	public void setCaptureRestriction(String str)
+	public void setHistoryRestriction(String str)
 	{
-		_captureRestrictionSql = str;
+		_historyRestrictionSql = str;
 		
-		if (_captureRestrictionSql != null && _captureRestrictionSql.length() > 0)
-			_captureRestrictions = true;
+		if (_historyRestrictionSql != null && _historyRestrictionSql.length() > 0)
+			_historyRestrictions = true;
 		else
-			_captureRestrictions = false;
+			_historyRestrictions = false;
 
 //		RuntimeException rte =  new RuntimeException("DEBUG exception to get from where this method was called from.");
 //		_logger.debug("Setting CaptureRestrictingSql to '"+str+"'.", rte);
-		_logger.debug("Setting CaptureRestrictingSql to '"+str+"'.");
+		_logger.debug("Setting HistoryRestrictingSql to '"+str+"'.");
 	}
 	
 
+	public void setDiscardAseTuneAppname(boolean b)
+	{
+		_discardAseTuneAppName = b;
+	}
 	public void setSqlTextSample(boolean b)
 	{
 		sqlTextSample = b;
@@ -202,25 +197,25 @@ public class RefreshProcess extends Thread
 	}
 	
 
-//	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int spid, int kpid) 
+//	public RefreshProcess(ProcessDetailFrame aPdf, Connection conn, int _spid, int kpid) 
 	public RefreshProcess(ProcessDetailFrame aPdf, DbxConnection conn, int spid, int kpid) 
 	{
 		this.pdf = aPdf;
 		this._conn = conn;
-		this.spid = spid;
-		this.kpid = kpid;
+		this._spid = spid;
+		this._kpid = kpid;
 		refreshProcessFlag=true;
-		selectedStatement=-1;
+		_selectedStatement=-1;
 		try 
 		{
 			stmt = conn.createStatement();
-			currentStmt = new Vector();
+			_activeStmt = new Vector();
 			
-			currentStmtModel = new StatementsModel();
-			pdf.currentStatementTable.setModel(currentStmtModel);
+			_activeStmtModel = new StatementsModel();
+			pdf.activeStatementTable.setModel(_activeStmtModel);
 			
-			capturedStmtModel = new StatementsModel();
-			pdf.capturedStatementsTable.setModel(capturedStmtModel);
+			_historyStmtModel = new StatementsModel();
+			pdf._historyStatementsTable.setModel(_historyStmtModel);
 		}
 		catch (Exception e) {}
 	}
@@ -230,12 +225,12 @@ public class RefreshProcess extends Thread
 		String id = batch.getKey();
 		if (_logger.isDebugEnabled())
 			_logger.debug("Adding SQL text for for id='"+id+"'. text="+batch.getSqlText(false));
-		batchHistory.put(id, batch);
+		_batchHistory.put(id, batch);
 	}
 
 	private Batch getBatchHistory(String id)
 	{
-		Batch batch = (Batch) batchHistory.get(id);
+		Batch batch = _batchHistory.get(id);
 		
 		if (batch == null)
 			_logger.debug("No SQL text was found for batch  id='"+id+"'.");
@@ -245,7 +240,7 @@ public class RefreshProcess extends Thread
 	private Batch getBatchHistory(int spid, int kpid, int batchId)
 	{
 		String id = spid + ":" + kpid + ":" + batchId;
-		Batch batch = (Batch) batchHistory.get(id);
+		Batch batch = _batchHistory.get(id);
 		
 		if (batch == null)
 			_logger.debug("No SQL text was found for batch  id='"+id+"', spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"'.");
@@ -255,10 +250,10 @@ public class RefreshProcess extends Thread
 
 
 	/** TODO: keep plans for procedures in a specific cache */ 
-//	private void addPlanHistory(int spid, int kpid, int batchId, int dbId, int procId, Batch batch, StringBuffer planText)
+//	private void addPlanHistory(int spid, int kpid, int batchId, int dbId, int procId, Batch batch, StringBuilder planText)
 //	{
 //		if (planText == null)
-//			throw new RuntimeException("Passed StringBuffer 'planText' cant be null.");
+//			throw new RuntimeException("Passed StringBuilder 'planText' cant be null.");
 //
 //		// Get rid of last newline
 //		int len = planText.length() - 1;
@@ -269,7 +264,7 @@ public class RefreshProcess extends Thread
 //
 //		String id = spid + ":" + kpid + ":" + batchId + ":" + procId;
 //
-//		Batch existingBatch = (Batch) plansHistory.get(id);
+//		Batch existingBatch = (Batch) _plansHistory.get(id);
 //		if (existingBatch != null)
 //		{
 //			if (_logger.isDebugEnabled())
@@ -281,14 +276,14 @@ public class RefreshProcess extends Thread
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("Adding SHOWPLAN for spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'. text="+planText);
 //			batch.addShowplanTextLine(planText);
-//			plansHistory.put(id, batch);
+//			_plansHistory.put(id, batch);
 //		}
 //	}
 //	private void addPlanHistory(Batch batch)
 //	{
 //		String id = batch.spid + ":" + batch.kpid + ":" + batch.batchId + ":" + batch.procedureId;
 //
-//		Batch existingBatch = (Batch) plansHistory.get(id);
+//		Batch existingBatch = (Batch) _plansHistory.get(id);
 //		if (existingBatch != null)
 //		{
 //			if (_logger.isDebugEnabled())
@@ -300,7 +295,7 @@ public class RefreshProcess extends Thread
 //			if (_logger.isDebugEnabled())
 //				_logger.debug("Adding SHOWPLAN for spid='"+batch.spid+"', kpid='"+batch.kpid+"', batchId='"+batch.batchId+"', procId='"+batch.procedureId+"', hashtable.key='"+id+"'. text="+batch.getShowplanText());
 //			//batch.addShowplanTextLine(planText);
-//			plansHistory.put(id, batch);
+//			_plansHistory.put(id, batch);
 //		}
 //		
 //	}
@@ -311,7 +306,7 @@ public class RefreshProcess extends Thread
 //		//String id = batchId + ":" + dbId + ":" + procId;
 ////		String id = batchId + ":" + procId;
 //		String id = spid + ":" + kpid + ":" + batchId + ":" + procId;
-//		Batch batch = (Batch) plansHistory.get(id);
+//		Batch batch = (Batch) _plansHistory.get(id);
 //		
 //		if (batch == null)
 //			_logger.debug("No SHOWPLAN text was found for spid='"+spid+"', kpid='"+kpid+"', batchId='"+batchId+"', procId='"+procId+"', hashtable.key='"+id+"'.");
@@ -330,11 +325,11 @@ public class RefreshProcess extends Thread
 		String currentSql = "";
 		try
 		{
-			if (spid > 0 || kpid > 0)
+			if (_spid > 0 || _kpid > 0)
 			{
 				String whereSpidKpid = "";
-				if (spid > 0) whereSpidKpid += "  and P.spid=" + spid + "\n";
-				if (kpid > 0) whereSpidKpid += "  and P.kpid=" + kpid + "\n";
+				if (_spid > 0) whereSpidKpid += "  and P.spid=" + _spid + "\n";
+				if (_kpid > 0) whereSpidKpid += "  and P.kpid=" + _kpid + "\n";
 				
 				// Refresh process information
 				currentSql = 
@@ -351,12 +346,12 @@ public class RefreshProcess extends Thread
 					"where P.kpid=A.KPID \n" +
 					"  and N.KPID=P.kpid \n" +
 					whereSpidKpid;
-				rs = stmt.executeQuery(currentSql);
+				ResultSet rs = stmt.executeQuery(currentSql);
 	
 				rs.next();
 				if (rs.getRow() > 0)
 				{
-					spid = ((Number) rs.getObject(1)).intValue();
+					_spid = ((Number) rs.getObject(1)).intValue();
 
 					pdf.spidFld            .setText(nullFix(rs.getObject(1)));
 					pdf.enginenumFld       .setText(nullFix(rs.getObject(2)));
@@ -423,32 +418,38 @@ public class RefreshProcess extends Thread
 				}
 				else
 				{
-					pdf.statusBarLbl.setText("Process disconnected");
+					pdf.setStatusBar("Process disconnected", false);
 					stopRefresh();
 				}
 			}
 
 			//------------------------------------
 			// refresh current statement
-			// current statements will be stored in currentStmtRows and aplied to the JTable later
+			// current statements will be stored in _activeStmtRows and aplied to the JTable later
 			//------------------------------------
-			currentStmtRows               = null;
-			boolean currentStmtHasRow     = false;
-			boolean currentStmtHasChanged = false;
+			_activeStmtRows              = null;
+			boolean activeStmtHasRow     = false;
+			boolean activeStmtHasChanged = false;
 			if (stmtStat)
 			{
+				pdf.setWatermarkActiveTable("Refreshing...");
+
 				/* 
 				 * 12.5.4 version of monProcessStatement
 				 * SPID        KPID        DBID        ProcedureID PlanID      BatchID     ContextID   LineNumber  CpuTime     WaitTime    MemUsageKB  PhysicalReads LogicalReads PagesModified PacketsSent PacketsReceived NetworkPacketSize PlansAltered RowsAffected StartTime                      
 				 */
 				String extraCols = "";
-//				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
-//				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
 				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
 				{
 					extraCols = "  S.RowsAffected, \n";
 				}
 
+				String ObjOwnerID = "ObjOwnerID = convert(int, 0), ";
+				if (_aseVersion >= Ver.ver(15,0,3) )
+				{
+					ObjOwnerID = "ObjOwnerID = object_owner_id(S.ProcedureID, S.DBID), ";
+				}
+				
 //				String sql = 
 //					"select  SPID, KPID, BatchID, LineNumber, dbname=db_name(DBID), procname=isnull(object_name(ProcedureID,DBID),''), \n" 
 //					+ "  CpuTime, WaitTime, ExecTimeInMs=datediff(ms, StartTime, getdate()), MemUsageKB, PhysicalReads, LogicalReads, \n"
@@ -458,9 +459,10 @@ public class RefreshProcess extends Thread
 //				    + "from monProcessStatement \n";
 				String sql = 
 					"select  S.SPID, S.KPID, S.BatchID, S.LineNumber, \n"
-					+ "  dbname=db_name(S.DBID), procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), \n"
+					+ "  dbname=db_name(S.DBID), \n"
+//					+ "  procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), \n"
+					+ "  procname=isnull(isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),object_name(S.ProcedureID,db_id('sybsystemprocs'))),''), \n"
 					+ "  P.Command, S.CpuTime, S.WaitTime, \n"
-//					+ "  ExecTimeInMs=datediff(ms, S.StartTime, getdate()), \n"
 					+ "  ExecTimeInMs = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n"  // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 					+ "  S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n"
 					+ extraCols
@@ -469,67 +471,79 @@ public class RefreshProcess extends Thread
 					+ "  P.SecondsWaiting, P.BlockingSPID, \n"
 					+ "  S.PagesModified, S.PacketsSent, S.PacketsReceived, \n"
 					+ "  S.NetworkPacketSize, S.PlansAltered, \n"
-					+ "  S.StartTime, S.PlanID, S.DBID, S.ProcedureID, \n"
+					+ "  S.StartTime, S.PlanID, S.DBID, " + ObjOwnerID + "S.ProcedureID, \n"
 					+ "  P.SecondsConnected, P.EngineNumber, P.NumChildren \n" 
 					+ "from monProcessStatement S, monProcess P \n"
 					+ "where S.KPID = P.KPID\n";
 
 				Configuration conf = Configuration.getCombinedConfiguration();
-				String extraWhere = conf.getProperty(ProcessDetailFrame.PROP_CURRENT_STATEMENT_EXTRA_WHERE);
-				String orderBy    = conf.getProperty(ProcessDetailFrame.PROP_CURRENT_STATEMENT_ORDER_BY);
+				String extraWhere = conf.getProperty(ProcessDetailFrame.PROP_ACTIVE_STATEMENT_EXTRA_WHERE);
+				String orderBy    = conf.getProperty(ProcessDetailFrame.PROP_ACTIVE_STATEMENT_ORDER_BY);
+
+				boolean hide_activeSqlWaitEventId250 = Configuration.getCombinedConfiguration().getBooleanProperty(ProcessDetailFrame.PROPKEY_hide_activeSqlWaitEventId250, ProcessDetailFrame.DEFAULT_hide_activeSqlWaitEventId250);
+				
 
 				if (StringUtil.isNullOrBlank(extraWhere))
-					extraWhere = " 1 = 1 ";
+					extraWhere = " 1 = 1 -- where clause from the 'Where: ' field goes here";
 				if (StringUtil.isNullOrBlank(orderBy))
 					orderBy = "S.LogicalReads desc \n";
 
-				if (spid > 0 || kpid > 0)
+				if (_spid > 0 || _kpid > 0)
 				{
-					if (spid > 0) sql += "  and S.SPID = " + spid + "\n";
-					if (kpid > 0) sql += "  and S.KPID = " + kpid + "\n";
+					if (_spid > 0) sql += "  and S.SPID = " + _spid + "\n";
+					if (_kpid > 0) sql += "  and S.KPID = " + _kpid + "\n";
 				}
 				else
+				{
 					sql += "  and S.SPID != @@spid \n";
+					if (_discardAseTuneAppName)
+						sql += "  and P.Application != '"+ProcessDetailFrame.DISCARD_APP_NAME+"' \n";
+					
+					if (hide_activeSqlWaitEventId250)
+						sql += "  and not (P.WaitEventID = 250 and S.WaitTime > 60000) -- get rid of incorrect rows with 'AWAITING COMMAND'... CR###### \n";
+				}
 				sql += "  and " + extraWhere + " \n";
 				sql += "order by " + orderBy;
 
 				currentSql = sql;
 				_activeStatementsSql = sql;
-				rs = stmt.executeQuery(sql);
+				ResultSet rs = stmt.executeQuery(sql);
 				ResultSetMetaData rsmdCurStmt = rs.getMetaData();
 				int nbColsCurStmt = rsmdCurStmt.getColumnCount();
-				if (currentStmtColNames == null)
+				if (_activeStmtColNames == null)
 				{
-					currentStmtColNames = new Vector();
+					_activeStmtColNames = new Vector();
 					for (int i = 1; i <= nbColsCurStmt; i++)
 					{
 						String colName = rsmdCurStmt.getColumnName(i);
-						currentStmtColNames.add(colName);
+						_activeStmtColNames.add(colName);
 
-						if (colName.equals("SPID")       ) pos_currentSpid        = i;
-						if (colName.equals("KPID")       ) pos_currentKpid        = i;
-						if (colName.equals("BatchID")    ) pos_currentBatchID     = i;
-						if (colName.equals("LineNumber") ) pos_currentSqlLine     = i;
-						if (colName.equals("dbname")     ) pos_currentDbname      = i;
-						if (colName.equals("procname")   ) pos_currentProcName    = i;
-						if (colName.equals("PlanID")     ) pos_currentPlanID      = i;
-						if (colName.equals("DBID")       ) pos_currentDBID        = i;
-						if (colName.equals("ProcedureID")) pos_currentProcedureID = i;
+						if (colName.equals("SPID")       ) pos_activeSpid        = i;
+						if (colName.equals("KPID")       ) pos_activeKpid        = i;
+						if (colName.equals("BatchID")    ) pos_activeBatchID     = i;
+						if (colName.equals("LineNumber") ) pos_activeSqlLine     = i;
+						if (colName.equals("dbname")     ) pos_activeDbname      = i;
+						if (colName.equals("procname")   ) pos_activeProcName    = i;
+						if (colName.equals("PlanID")     ) pos_activePlanID      = i;
+						if (colName.equals("DBID")       ) pos_activeDBID        = i;
+						if (colName.equals("ObjOwnerID") ) pos_activeObjOwnerID  = i;
+						if (colName.equals("ProcedureID")) pos_activeProcedureID = i;
 						
-						if (colName.equals("WaitEventDesc")) pos_currentWaitEventDesc = i;
-						if (colName.equals("WaitEventID")) pos_currentWaitEventID = i;
+						if (colName.equals("WaitEventDesc")) pos_activeWaitEventDesc = i;
+						if (colName.equals("WaitEventID")) pos_activeWaitEventID = i;
 					}
 				}
 
-				currentSpid        = -1;
-				currentKpid        = -1;
-				currentBatchID     = -1;
-				currentSqlLine     = -1;
-				currentDbname      = null;
-				currentProcName    = null;
-				currentPlanID      = -1;
-				currentDBID        = -1;
-				currentProcedureID = -1;
+				_activeSpid        = -1;
+				_activeKpid        = -1;
+				_activeBatchID     = -1;
+				_activeSqlLine     = -1;
+				_activeDbname      = null;
+				_activeProcName    = null;
+				_activePlanID      = -1;
+				_activeDBID        = -1;
+				_activeObjOwnerID  = -1;
+				_activeProcedureID = -1;
 				
 				MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 
@@ -541,18 +555,18 @@ public class RefreshProcess extends Thread
 					{
 						Object o = rs.getObject(i);
 						
-						if (i == pos_currentWaitEventDesc && mtd != null)
+						if (i == pos_activeWaitEventDesc && mtd != null)
 						{
-							int witEventId = rs.getInt(pos_currentWaitEventID);
+							int witEventId = rs.getInt(pos_activeWaitEventID);
 							o = mtd.getWaitEventDescription(witEventId);
 						}
 						row.add(o);
 					}
-					if (currentStmtRows == null)
+					if (_activeStmtRows == null)
 					{
-						currentStmtRows = new Vector();
+						_activeStmtRows = new Vector();
 					}
-					currentStmtRows.add(row);
+					_activeStmtRows.add(row);
 
 					// old code - for only 1 row
 					//currentStmtRow = new Vector();
@@ -563,84 +577,98 @@ public class RefreshProcess extends Thread
 
 					if (firstRow)
 					{
-						currentStmtHasRow  = true;
+						activeStmtHasRow  = true;
 						firstRow           = false;
-						currentSpid        = rs.getInt(pos_currentSpid);
-						currentKpid        = rs.getInt(pos_currentKpid);
-						currentBatchID     = rs.getInt(pos_currentBatchID);
-						currentSqlLine     = rs.getInt(pos_currentSqlLine);
-						currentDbname      = rs.getString(pos_currentDbname).trim();
-						currentProcName    = rs.getString(pos_currentProcName).trim();
-						currentPlanID      = rs.getInt(pos_currentPlanID);
-						currentDBID        = rs.getInt(pos_currentDBID);
-						currentProcedureID = rs.getInt(pos_currentProcedureID);
+						_activeSpid        = rs.getInt(pos_activeSpid);
+						_activeKpid        = rs.getInt(pos_activeKpid);
+						_activeBatchID     = rs.getInt(pos_activeBatchID);
+						_activeSqlLine     = rs.getInt(pos_activeSqlLine);
+						_activeDbname      = rs.getString(pos_activeDbname).trim();
+						_activeProcName    = rs.getString(pos_activeProcName).trim();
+						_activePlanID      = rs.getInt(pos_activePlanID);
+						_activeDBID        = rs.getInt(pos_activeDBID);
+						_activeObjOwnerID  = rs.getInt(pos_activeObjOwnerID);
+						_activeProcedureID = rs.getInt(pos_activeProcedureID);
 
-						if (currentBatch == null)
+						if (_activeBatch == null)
 						{
-							currentBatch = new Batch();
+							_activeBatch = new Batch();
 						}
 
 						// If the another statement
-						if (    currentBatch.spid    != currentSpid 
-						     && currentBatch.kpid    != currentKpid 
-						     && currentBatch.batchId != currentBatchID
+						if (    _activeBatch.spid    != _activeSpid 
+						     && _activeBatch.kpid    != _activeKpid 
+						     && _activeBatch.batchId != _activeBatchID
 						   )
 						{
-							currentStmtHasChanged      = true;
+							activeStmtHasChanged      = true;
 							if (_logger.isDebugEnabled())
 							{
-								_logger.debug("currentStmtHasChanged: currentBatch.spid("+currentBatch.spid+") != currentSpid("+currentSpid+")   &&   currentBatch.kpid("+currentBatch.kpid+") != currentKpid("+currentKpid+")   &&   currentBatch.batchId("+currentBatch.batchId+") != currentBatchID("+currentBatchID+").");
+								_logger.debug("currentStmtHasChanged: _activeBatch.spid("+_activeBatch.spid+") != _activeSpid("+_activeSpid+")   &&   _activeBatch.kpid("+_activeBatch.kpid+") != _activeKpid("+_activeKpid+")   &&   _activeBatch.batchId("+_activeBatch.batchId+") != _activeBatchID("+_activeBatchID+").");
 							}
 
-							currentBatch.spid          = currentSpid;
-							currentBatch.kpid          = currentKpid;
-							currentBatch.batchId       = currentBatchID;
-							currentBatch.dbid          = currentDBID;
-							currentBatch.dbname        = currentDbname;
-							currentBatch.procedureId   = currentProcedureID;
-							currentBatch.procedureName = currentProcName;
-							currentBatch.planId        = currentPlanID;
+							_activeBatch.spid          = _activeSpid;
+							_activeBatch.kpid          = _activeKpid;
+							_activeBatch.batchId       = _activeBatchID;
+							_activeBatch.dbid          = _activeDBID;
+							_activeBatch.dbname        = _activeDbname;
+							_activeBatch.objectOwnerId = _activeObjOwnerID;
+							_activeBatch.procedureId   = _activeProcedureID;
+							_activeBatch.procedureName = _activeProcName;
+							_activeBatch.planId        = _activePlanID;
 						}
 
 						// Always change these values, for first running statement
-						currentBatch.lineNumber    = currentSqlLine;
+						_activeBatch.lineNumber    = _activeSqlLine;
 					}
 				}
 				// Refresh of the associated JTable will be done at the end, in
 				// the swing thread
+
+				pdf.setWatermarkActiveTable("");
 			}
-			if ( ! currentStmtHasRow )
+			else
 			{
-				currentBatch = null;
+				// message that SQL Text isn't sampled
+				String msg = "Refresh disabled due to:\n";
+				if ( ! stmtStat ) msg += "sp_configure 'statement statistics active', 0\n";
+
+				pdf.setWatermarkActiveTable(msg);
 			}
 
-			// If   NO rows from the captured SQL is choosed
+			if ( ! activeStmtHasRow )
+			{
+				_activeBatch = null;
+			}
+
+			// If   NO rows from the History SQL is selected
 			// and  current SQL is empty
 			// SET the batch field to empty
-			if (selectedStatement == -1  && ! currentStmtHasRow)
+			if (_selectedStatement == -1  && ! activeStmtHasRow)
 				pdf.batchTextArea.setText("");
 
 
 			
 			//------------------------------------
 			// Refresh the current SQL text
-			// Do only get SQL text for the "first" rows fetched from 
-			//   curently executed statements
+			// Do only get SQL text for the "first" rows fetched from Currently executed statements
 			//------------------------------------
 //			_logger.debug("SQLTextMonitor="+SQLTextMonitor+", batchCapture="+batchCapture+", currentStmtHasRow="+currentStmtHasRow+", currentStmtHasChanged="+currentStmtHasChanged);
 			if (    SQLTextMonitor     // is enabled
 			     && batchCapture       // is enabled
-			     && currentStmtHasRow  // there ARE SQL currently running
-			     && currentStmtHasChanged
+			     && activeStmtHasRow  // there ARE SQL currently running
+			     && activeStmtHasChanged
 			   )
 			{
+//				pdf.setWatermarkActiveTable("Refreshing...");
+
 				// get this new batch SQL text
 				String sql = 
 					"select SPID, KPID, BatchID, LineNumber, SQLText \n" 
 					+ "from monProcessSQLText \n" 
-					+ "where KPID=" + currentBatch.kpid + " \n"
-					+ " and  SPID=" + currentBatch.spid + " \n"
-					+ " and  BatchID=" + currentBatch.batchId + " \n" 
+					+ "where KPID=" + _activeBatch.kpid + " \n"
+					+ " and  SPID=" + _activeBatch.spid + " \n"
+					+ " and  BatchID=" + _activeBatch.batchId + " \n" 
 					+ " order by SPID, KPID, LineNumber, SequenceInLine \n";
 
 				_logger.debug("EXEC SQL: " + sql);
@@ -669,7 +697,7 @@ public class RefreshProcess extends Thread
 				// -----------------------------------------------------
 
 				currentSql = sql;
-				rs = stmt.executeQuery(sql);
+				ResultSet rs = stmt.executeQuery(sql);
 				int saveLineNumber = 1;
 				String sqlText = "";
 				while (rs.next())
@@ -704,53 +732,55 @@ public class RefreshProcess extends Thread
 				}
 				// Add the composed string
 				if ( ! sqlText.equals("") )
-					currentBatch.appendSqlText( sqlText );
+					_activeBatch.appendSqlText( sqlText );
 					
 //				int curLine = 0;
-//				StringBuffer lineSb = null;
+//				StringBuilder lineSb = null;
 //				while (rs.next())
 //				{
 //					int lineNum = rs.getInt(4);
 //					if (lineNum != curLine)
 //					{
 //						if (lineSb != null)
-//							currentBatch.addSqlTextLine(lineSb); // add previous lineSb to batch
+//							_activeBatch.addSqlTextLine(lineSb); // add previous lineSb to batch
 //						curLine = lineNum;
-//						lineSb = new StringBuffer();
+//						lineSb = new StringBuilder();
 //					}
 //					lineSb.append(rs.getString(5));
 //				}
 //				if (lineSb != null)
-//					currentBatch.addSqlTextLine(lineSb); // add last lineSb to batch
+//					_activeBatch.addSqlTextLine(lineSb); // add last lineSb to batch
 
 				//------------------------------------
 				// Get current plan using sp_showplanfull 
 				// if user has sa_role
 				//------------------------------------
-				boolean doExecSpShowplanfull = Configuration.getCombinedConfiguration().getBooleanProperty(ProcessDetailFrame.PROPKEY_sample_spShowplanfull, ProcessDetailFrame.DEFAULT_sample_spShowplanfull);
+				boolean sample_spShowplanfull        = Configuration.getCombinedConfiguration().getBooleanProperty(ProcessDetailFrame.PROPKEY_sample_spShowplanfull,        ProcessDetailFrame.DEFAULT_sample_spShowplanfull);
 //System.out.println("has_sa_role='"+has_sa_role+"', doExecSpShowplanfull='"+doExecSpShowplanfull+"'.");
 
-				if (has_sa_role && doExecSpShowplanfull)
+				if (has_sa_role && sample_spShowplanfull)
 				{
-					// if no showplan exists in currentBatch
+	//				FIXME: get xml showplan for *ss#### or *sd####
+					
+					// if no showplan exists in _activeBatch
 					// If the plan/object cant be found in compiledPlansCache
 					//...
 //					if ()
-					_logger.debug("EXEC sp_showplanfull " + currentSpid);
+					_logger.debug("EXEC sp_showplanfull " + _activeSpid);
 
-					String showplanSql = "sp_showplanfull " + currentSpid; 
+					String showplanSql = "sp_showplanfull " + _activeSpid; 
 //System.out.println("EXEC: '"+showplanSql+"'.");
 					currentSql = showplanSql;
 					stmt.executeUpdate(showplanSql);
 
-					StringBuffer planSb = null;
+					StringBuilder planSb = null;
 					SQLWarning sqlw = stmt.getWarnings();
 					while (true)
 					{
 						// _logger.debug(sqlw.getErrorCode()+" " +
 						// sqlw.getSQLState() +" "+sqlw.getMessage());
 						if (planSb == null)
-							planSb = new StringBuffer();
+							planSb = new StringBuilder();
 
 						// Ignore "10233 01ZZZ The specified statement
 						// number..." message
@@ -768,40 +798,55 @@ public class RefreshProcess extends Thread
 					}
 					if (planSb != null)
 					{
-						currentBatch.addShowplanTextLine(planSb);
+						_activeBatch.addShowplanTextLine(planSb);
 					}
 
 					// FIXME
 					// Maybe add the PLAN (planId) to 
 					// a compiledProcShowplan cache
-					if (currentBatch.procedureId > 0)
+					if (_activeBatch.procedureId > 0)
 					{
-						//procedureTextCache
-						String key = Integer.toString(currentBatch.planId);
-//						compiledPlansCache.put(key, currentBatch);
+						//_procedureTextCache
+						String key = Integer.toString(_activeBatch.planId);
+//						compiledPlansCache.put(key, _activeBatch);
 					}
 				}
 
 				// save this batch in history
-				addBatchHistory(currentBatch);
+				addBatchHistory(_activeBatch);
+				
+//				pdf.setWatermarkActiveTable("");
 			}
+//			else
+//			{
+//				// message that SQL Text isn't sampled
+//				String msg = "Refresh disabled due to:\n";
+//				if ( ! SQLTextMonitor      ) msg += "sp_configure 'max SQL text monitored', 0\n";
+//				if ( ! batchCapture        ) msg += "sp_configure 'SQL batch capture', 0\n";
+//				if ( ! activeStmtHasRow    ) msg += "activeStmtHasRow = false\n";
+//				if ( ! activeStmtHasChanged) msg += "activeStmtHasChanged = false\n";
+//
+//				pdf.setWatermarkActiveTable(msg);
+//			}
 
 			// Show this in the GUI, it might takes along time
 			// to do the rest of the SQL below
-			if (selectedStatement == -1)
+			if (_selectedStatement == -1)
 			{
-				displayCurrentBatch();
+				displayActiveBatch();
 			}
 			
 			
 			//------------------------------------
 			// Get recent statements
-			// store them in newCapturedStatements, which will be moved over to the TableModel later
+			// store them in _newHistoryStatements, which will be moved over to the TableModel later
 			//------------------------------------
-			Hashtable restrictionsCapturedKeys = new Hashtable(); 
-			newCapturedStatements = null;
+			HashMap<String, String> restrictionsHistoricalKeys = new HashMap<String, String>(); 
+			_newHistoryStatements = null;
 			if (stmtPipe && stmtPipeMsg)
 			{
+				pdf.setWatermarkHistoryTable("Refreshing...");
+
 //				 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 
 //				 Adaptive Server Enterprise/15.0.3/EBF 17770 ESD#4/P/x86_64/Enterprise Linux/ase1503/2768/64-bit/FBO/Thu Aug 26 09:54:27 2010                                                                                             
 //				 
@@ -813,24 +858,27 @@ public class RefreshProcess extends Thread
 				//       in method: saveCapturedStatements
 
 				String extraCols = "";
-//				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
-//				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
 				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
 				{
 					extraCols = "       RowsAffected, ErrorStatus, \n";
 				}
-//				if (_aseVersion >= 15030 )
-//				if (_aseVersion >= 1503000 )
 				if (_aseVersion >= Ver.ver(15,0,3) )
 				{
 					extraCols += "      ProcNestLevel, StatementNumber, \n";
+				}
+
+				String ObjOwnerID = "      ObjOwnerID = convert(int, 0), \n";
+				if (_aseVersion >= Ver.ver(15,0,3) )
+				{
+					ObjOwnerID = "      ObjOwnerID = object_owner_id(ProcedureID, DBID), \n";
 				}
 				
 				
 				String sql =
 					"select SPID, KPID, BatchID, LineNumber, \n" +
 					"       dbname=db_name(DBID), \n" +
-					"       procname=isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),''), \n" +
+//					"       procname=isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),''), \n" +
+					"       procname=isnull(isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),object_name(ProcedureID,db_id('sybsystemprocs'))),''), \n" +
 //					"       Elapsed_ms=datediff(ms,StartTime, EndTime), \n" +
 					"       Elapsed_ms = CASE WHEN datediff(day, StartTime, EndTime) > 20 THEN -1 ELSE  datediff(ms, StartTime, EndTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 					"       CpuTime, WaitTime, MemUsageKB, PhysicalReads, LogicalReads, \n" +
@@ -838,22 +886,26 @@ public class RefreshProcess extends Thread
 					"       PagesModified, PacketsSent, \n" +
 					"       PacketsReceived, NetworkPacketSize, \n" +
 					"       PlansAltered, StartTime, EndTime, \n" +
-					"       PlanID, DBID, ProcedureID \n" +
+					"       PlanID, DBID, " + ObjOwnerID + "ProcedureID \n" +
 					"from monSysStatement \n" +
 					"where 1 = 1\n";
 
 				
-				if (spid > 0 || kpid > 0)
+				if (_spid > 0 || _kpid > 0)
 				{
-					if (spid > 0) sql += "  and SPID = " + spid + "\n";
-					if (kpid > 0) sql += "  and KPID = " + kpid + "\n";
+					if (_spid > 0) sql += "  and SPID = " + _spid + "\n";
+					if (_kpid > 0) sql += "  and KPID = " + _kpid + "\n";
 				}
 				else
-					sql += "  and SPID != @@spid\n";
-
-				if ( _captureRestrictions )
 				{
-					sql += "  and (" + _captureRestrictionSql + ")\n";
+					sql += "  and SPID != @@spid \n";
+					if (_discardAseTuneAppName)
+						sql += "  and SPID not in (select spid from master.dbo.sysprocesses where program_name = '"+ProcessDetailFrame.DISCARD_APP_NAME+"') \n";
+				}
+
+				if ( _historyRestrictions )
+				{
+					sql += "  and (" + _historyRestrictionSql + ")\n";
 				}
 
 				// EMPTY monSysStatement on first execution.
@@ -866,7 +918,7 @@ public class RefreshProcess extends Thread
 					_logger.info("BEGIN: Discarding everything in the transient monSysStatement table in the first sample.");
 
 					currentSql = "select count(*) from monSysStatement";
-					rs = stmt.executeQuery(currentSql);
+					ResultSet rs = stmt.executeQuery(currentSql);
 					while(rs.next()) 
 					{
 						// DO nothing, we are "emptying" the table
@@ -878,42 +930,43 @@ public class RefreshProcess extends Thread
 				currentSql = sql;
 				_historyStatementsSql = sql;
 
-				rs = stmt.executeQuery(sql);
+				ResultSet rs = stmt.executeQuery(sql);
 				ResultSetMetaData rsmd = rs.getMetaData();
 				int nbCols = rsmd.getColumnCount();
-				if (capturedStmtColNames == null)
+				if (_historyStmtColNames == null)
 				{
-					capturedStmtColNames = new Vector();
+					_historyStmtColNames = new Vector();
 					for (int i = 1; i <= nbCols; i++)
 					{
 						String colName = rsmd.getColumnName(i);
-						capturedStmtColNames.add(colName);
+						_historyStmtColNames.add(colName);
 
-						if (colName.equals("SPID")       ) pos_capturedSpid        = i;
-						if (colName.equals("KPID")       ) pos_capturedKpid        = i;
-						if (colName.equals("BatchID")    ) pos_capturedBatchID     = i;
-						if (colName.equals("LineNumber") ) pos_capturedSqlLine     = i;
-						if (colName.equals("dbname")     ) pos_capturedDbname      = i;
-						if (colName.equals("procname")   ) pos_capturedProcName    = i;
-						if (colName.equals("PlanID")     ) pos_capturedPlanID      = i;
-						if (colName.equals("DBID")       ) pos_capturedDBID        = i;
-						if (colName.equals("ProcedureID")) pos_capturedProcedureID = i;
+						if (colName.equals("SPID")       ) pos_historySpid        = i;
+						if (colName.equals("KPID")       ) pos_historyKpid        = i;
+						if (colName.equals("BatchID")    ) pos_historyBatchID     = i;
+						if (colName.equals("LineNumber") ) pos_historySqlLine     = i;
+						if (colName.equals("dbname")     ) pos_historyDbname      = i;
+						if (colName.equals("procname")   ) pos_historyProcName    = i;
+						if (colName.equals("PlanID")     ) pos_historyPlanID      = i;
+						if (colName.equals("DBID")       ) pos_historyDBID        = i;
+						if (colName.equals("ObjOwnerID") ) pos_historyObjOwnerID  = i;
+						if (colName.equals("ProcedureID")) pos_historyProcedureID = i;
 					}
 				}
-				newCapturedStatements = new Vector();
+				_newHistoryStatements = new Vector();
 				while (rs.next())
 				{
 					// Add KEY elemets to a temporary array, just so we know WHAT
 					// WHAT key elements we can KEEP later on
-					// This is only valid if _captureRestrictions is set to something
-					if (_captureRestrictions)
+					// This is only valid if _historyRestrictions is set to something
+					if (_historyRestrictions)
 					{
 						int lSpid    = rs.getInt(1);
 						int lKpid    = rs.getInt(2);
 						int lBatchId = rs.getInt(3);
 						
 						String key = lSpid + ":" + lKpid + ":" + lBatchId;
-						restrictionsCapturedKeys.put(key, "dummy");
+						restrictionsHistoricalKeys.put(key, "dummy");
 					}
 
 					// Add the FULL row to the Vector
@@ -922,25 +975,38 @@ public class RefreshProcess extends Thread
 					{
 						row.add(rs.getObject(i));
 					}
-					newCapturedStatements.add(row);
+					_newHistoryStatements.add(row);
 				}
+
+				pdf.setWatermarkHistoryTable("");
+			}
+			else
+			{
+				// message that SQL Text isn't sampled
+				String msg = "Refresh disabled due to:\n";
+				if ( ! stmtPipe    ) msg += "sp_configure 'statement pipe active', 0\n";
+				if ( ! stmtPipeMsg ) msg += "sp_configure 'statement pipe max messages', 0\n";
+
+				pdf.setWatermarkHistoryTable(msg);
 			}
 
 			//------------------------------------
-			// Get recent SQL TEXT into batchs
+			// Get recent SQL TEXT into batch
 			//------------------------------------
 			if (    sqlTextSample        // is checkbox "ON"
 				 && sqlTextPipe 
 				 && sqlTextPipeMsg 
 				 && SQLTextMonitor)
 			{
+				pdf.setWatermarkSqlText("Refreshing...");
+
 				String sql =
 					"select SPID, KPID, BatchID, SQLText \n" +
 					"from monSysSQLText \n" +
 					"where 1=1 \n";
 
-				if (spid > 0) sql += "  and SPID = " + spid + "\n";
-				if (kpid > 0) sql += "  and KPID = " + kpid + "\n";
+				if (_spid > 0) sql += "  and SPID = " + _spid + "\n";
+				if (_kpid > 0) sql += "  and KPID = " + _kpid + "\n";
 
 				if ( _firstTimeSample && _discardPreOpenStmnts )
 				{
@@ -952,7 +1018,7 @@ public class RefreshProcess extends Thread
 					_logger.info("BEGIN: Discarding everything in the transient monSysSQLText table in the first sample.");
 
 					currentSql = "select count(*) from monSysSQLText";
-					rs = stmt.executeQuery(currentSql);
+					ResultSet rs = stmt.executeQuery(currentSql);
 					while(rs.next()) 
 					{
 						// DO nothing, we are "emptying" the table
@@ -964,7 +1030,7 @@ public class RefreshProcess extends Thread
 				sql += " order by SPID, KPID, BatchID, SequenceInBatch \n";
 
 				currentSql = sql;
-				rs = stmt.executeQuery(sql);
+				ResultSet rs = stmt.executeQuery(sql);
 				String       lastKey = "";
 				Batch        batch   = null;
 				while (rs.next())
@@ -989,9 +1055,9 @@ public class RefreshProcess extends Thread
 						// Can we skip this row?
 						// If it's not part of the captured rows in previous section
 						boolean addBatch = true;
-						if (_captureRestrictions)
+						if (_historyRestrictions)
 						{
-							if ( restrictionsCapturedKeys.get(lKey) == null)
+							if ( restrictionsHistoricalKeys.get(lKey) == null)
 							{
 								addBatch = false;
 							}
@@ -1012,11 +1078,24 @@ public class RefreshProcess extends Thread
 					// important...
 					lastKey = lKey;
 				}
-				// Add any "leftovers" that wasnt added in the loop above
+				// Add any "leftovers" that wasn't added in the loop above
 				if (batch != null)
 				{
 					addBatchHistory(batch);
 				}
+
+				pdf.setWatermarkSqlText("");
+			}
+			else
+			{
+				// message that SQL Text isn't sampled
+				String msg = "Refresh disabled due to:\n";
+				if ( ! sqlTextPipe    ) msg += "sp_configure 'sql text pipe active', 0\n";
+				if ( ! sqlTextPipeMsg ) msg += "sp_configure 'sql text pipe max messages', 0\n";
+				if ( ! SQLTextMonitor ) msg += "sp_configure 'max SQL text monitored', 0\n";
+				if ( ! sqlTextSample  ) msg += "Checkbox 'Sample SQL batch text' is OFF\n";
+
+				pdf.setWatermarkSqlText(msg);
 			}
 
 			//------------------------------------
@@ -1024,13 +1103,15 @@ public class RefreshProcess extends Thread
 			//------------------------------------
 			if (planTextSample && planTextPipe && planTextPipeMsg)
 			{
+				pdf.setWatermarkPlanText("Refreshing...");
+
 				String sql =
 					"select SPID, KPID, BatchID, PlanID, PlanText, DBID, ProcedureID \n" + 
 					"from monSysPlanText \n" +
 					"where 1=1 \n";
 
-				if (spid > 0) sql += "  and SPID = " + spid;
-				if (kpid > 0) sql += "  and KPID = " + kpid;
+				if (_spid > 0) sql += "  and SPID = " + _spid;
+				if (_kpid > 0) sql += "  and KPID = " + _kpid;
 
 				if ( _firstTimeSample && _discardPreOpenStmnts )
 				{
@@ -1041,7 +1122,7 @@ public class RefreshProcess extends Thread
 					long startTime = System.currentTimeMillis();
 					_logger.info("BEGIN: Discarding everything in the transient monSysPlanText table in the first sample.");
 
-					rs = stmt.executeQuery("select count(*) from monSysSQLText");
+					ResultSet rs = stmt.executeQuery("select count(*) from monSysSQLText");
 					while(rs.next()) 
 					{
 						// DO nothing, we are "emptying" the table
@@ -1060,7 +1141,7 @@ public class RefreshProcess extends Thread
 //				int curProcId  = -1;
 //				int curDbId    = -1;
 //				Batch batch    = null;
-//				StringBuffer planSb = null;
+//				StringBuilder planSb = null;
 //				while (rs.next())
 //				{
 //					int l_spid  = rs.getInt(1);
@@ -1084,7 +1165,7 @@ public class RefreshProcess extends Thread
 //						curDbId    = l_dbId;
 //						curProcId  = l_procId;
 //						batch      = new Batch(curPlanId);
-//						planSb     = new StringBuffer();
+//						planSb     = new StringBuilder();
 //					}
 //					planSb.append(rs.getString(5));
 //				}
@@ -1124,7 +1205,7 @@ public class RefreshProcess extends Thread
 //						// Can we skip his row?
 //						// If it's not part of the captured rows in previous section
 //						boolean addBatch = true;
-//						if (_captureRestrictions)
+//						if (_historyRestrictions)
 //						{
 //							if ( restrictionsCapturedKeys.get(lKeyX) == null)
 //							{
@@ -1156,7 +1237,7 @@ public class RefreshProcess extends Thread
 
 				
 				currentSql = sql;
-				rs = stmt.executeQuery(sql);
+				ResultSet rs = stmt.executeQuery(sql);
 				String       lastKey = "";
 				Batch        batch   = null;
 				while (rs.next())
@@ -1177,9 +1258,9 @@ public class RefreshProcess extends Thread
 						// Can we skip his row?
 						// If it's not part of the captured rows in previous section
 						boolean addBatch = true;
-						if (_captureRestrictions)
+						if (_historyRestrictions)
 						{
-							if ( restrictionsCapturedKeys.get(lKey) == null)
+							if ( restrictionsHistoricalKeys.get(lKey) == null)
 							{
 								addBatch = false;
 							}
@@ -1207,26 +1288,38 @@ public class RefreshProcess extends Thread
 					// important...
 					lastKey = lKey;
 				}
+				
+				pdf.setWatermarkPlanText("");
+			}
+			else
+			{
+				// message that SQL Text isn't sampled
+				String msg = "Refresh disabled due to:\n";
+				if ( ! planTextPipe    ) msg += "sp_configure 'plan text pipe active', 0\n";
+				if ( ! planTextPipeMsg ) msg += "sp_configure 'sql text pipe max messages', 0\n";
+				if ( ! planTextSample  ) msg += "Checkbox 'Sample showplan text' is OFF\n";
+				
+				pdf.setWatermarkPlanText(msg);
 			}
 
 //			//------------------------------------
 //			// Get current plan if not found in planHistory and if user has sa_role
 //			//------------------------------------
-//			if (has_sa_role && (currentBatchID != -1))
+//			if (has_sa_role && (_activeBatchID != -1))
 //			{
 //				// Check if plan exists
-//				Batch batch = getPlanHistory(currentSpid, currentKpid, currentBatchID, currentDBID, currentProcedureID);
+//				Batch batch = getPlanHistory(_activeSpid, _activeKpid, _activeBatchID, _activeDBID, _activeProcedureID);
 //				if (batch == null)
 //				{
-//					stmt.executeUpdate("sp_showplanfull " + currentSpid);
-//					StringBuffer planSb = null;
+//					stmt.executeUpdate("sp_showplanfull " + _activeSpid);
+//					StringBuilder planSb = null;
 //					SQLWarning sqlw = stmt.getWarnings();
 //					while (true)
 //					{
 //						// _logger.debug(sqlw.getErrorCode()+" " +
 //						// sqlw.getSQLState() +" "+sqlw.getMessage());
 //						if (planSb == null)
-//							planSb = new StringBuffer();
+//							planSb = new StringBuilder();
 //
 //						// Ignore "10233 01ZZZ The specified statement
 //						// number..." message
@@ -1244,33 +1337,33 @@ public class RefreshProcess extends Thread
 //					}
 //					if (planSb != null)
 //					{
-//						batch = new Batch(currentBatchID);
-//						addPlanHistory(currentSpid, currentKpid, currentBatchID, currentDBID, currentProcedureID, batch, planSb);
+//						batch = new Batch(_activeBatchID);
+//						addPlanHistory(_activeSpid, _activeKpid, _activeBatchID, _activeDBID, _activeProcedureID, batch, planSb);
 //					}
 //				}
 //			}
 
 			// If CURRENT SQL is selected, show some stuff.
-			if (selectedStatement == -1)
+			if (_selectedStatement == -1)
 			{
 				// If anything is running for the moment
-//				if (currentBatchID != -1)
+//				if (_activeBatchID != -1)
 //				{
 //					// Display current plan
-//					displayPlan(currentSpid, currentKpid, currentBatchID, 0, currentDBID, currentProcedureID, currentSqlLine);
+//					displayPlan(_activeSpid, _activeKpid, _activeBatchID, 0, _activeDBID, _activeProcedureID, _activeSqlLine);
 //				}
-				if (currentBatch != null)
+				if (_activeBatch != null)
 				{
 					// Display current plan
-					displayPlan(currentBatch.spid, currentBatch.kpid, currentBatch.batchId, 
-							currentBatch.planId, 
-							currentBatch.dbid, currentBatch.procedureId, 
-							currentBatch.lineNumber);
+					displayPlan(_activeBatch.spid, _activeBatch.kpid, _activeBatch.batchId, 
+							_activeBatch.planId, 
+							_activeBatch.dbid, _activeBatch.procedureId, 
+							_activeBatch.lineNumber);
 				}
 				else
 				{
 					// Empty the PLAN text area
-					pdf.planTextArea.setText("");
+					pdf.setPlanText("");
 				}
 			}
 
@@ -1295,8 +1388,7 @@ public class RefreshProcess extends Thread
 
 			pdf.setRefreshError(SQLEx);
 			
-			pdf.statusBarLbl.setForeground(Color.RED);
-			pdf.statusBarLbl.setText("Error when executing SQL, check 'Restrictions syntax'. ASE Message '"+SQLEx.getMessage()+"'.");
+			pdf.setStatusBar("Error when executing SQL, check 'Restrictions syntax'. ASE Message '"+SQLEx.getMessage()+"'.", true);
 
 			if (DbxTune.hasGui())
 			{
@@ -1325,11 +1417,11 @@ public class RefreshProcess extends Thread
 	{
 		StringTokenizer st = new StringTokenizer(text.getText(),"\n",true);
 		int linenumber = 0;
-		int count = 0;
+//		int count = 0;
 		while ( st.hasMoreTokens() )
 		{
 			String s = st.nextToken();
-			count += s.length();
+//			count += s.length();
 
 			if (s.equals("\n")) 
 				linenumber++;
@@ -1340,57 +1432,12 @@ public class RefreshProcess extends Thread
 
 	}
 
-	public void setSelectionAndMoveToTop(JTextArea text, int start, int end) 
-	{
-		if (start > 0  && end > 0)
-		{
-			// MARK the text as "selected" with the text colour red
-			text.setSelectedTextColor(Color.RED);
-			text.setCaretPosition(start);
-			text.setSelectionStart(start);
-			text.setSelectionEnd(end);
-			// workaround to get the selection visible
-			text.getCaret().setSelectionVisible(true);
-
-			// Move the marked text to "top of the text field"
-			try
-			{
-				//Rectangle rectAtPos = text.modelToView(start);
-				Point pointAtPos = text.modelToView(start).getLocation();
-				pointAtPos.x = 0; // Always point to LEFT in the viewport/scrollbar
-				
-				_logger.debug("text.modelToView(start): "+ pointAtPos);
-				Container parent = text.getParent();
-				while ( parent != null )
-				{
-					// if viewport, move the position to "top of viewport"
-					if (parent instanceof JViewport)
-					{
-						((JViewport)parent).setViewPosition(pointAtPos);
-						break;
-					}
-					// if scrollpane, move the position to "top of viewport"
-					if (parent instanceof JScrollPane)
-					{
-						((JScrollPane)parent).getViewport().setViewPosition(pointAtPos);
-						break;
-					}
-					// Get next parent if it's NOT a JViewport or JScrollPane
-					parent = parent.getParent();
-				}
-			}
-			catch (BadLocationException e)
-			{
-				_logger.debug("text.modelToView(): " + e);
-			}
-		}
-	}
-	
 	public void setCaretToBatchLine(JTextArea text, int linenumber) 
 	{
-//		text.setCaretPosition(0);
 		if (linenumber <= 0) 
 			return;
+
+		text.setCaretPosition(0);
 
 		StringTokenizer st = new StringTokenizer(text.getText(),"\n",true);
 		int count = 0;
@@ -1410,172 +1457,445 @@ public class RefreshProcess extends Thread
 			countRowAfter += 1;
 		}
 
-		setSelectionAndMoveToTop(text, count, countRowAfter);
+		ProcessDetailFrame.setSelectionAndMoveToTop(text, count, countRowAfter);
 	}
 
-	public void setCaretToPlanLine(JTextArea text, int sqlLine) 
+	/**
+	 * 
+	 * @param dbname
+	 * @param procName
+	 * @param procLine
+	 * @return 
+	 * <ul>
+	 * <li>-1 = Text not found</li>
+	 * <li>1 = Statement Cache Entry</li>
+	 * <li>2 = SQL Batch</li>
+	 * </ul>
+	 */
+	public int displayProcInBatchWindow(String dbname, int objOwnerId, String procName, int procLine, int planId)
 	{
-//		text.setCaretPosition(0);
+		if (objOwnerId <= 0)
+			objOwnerId = 1;
 
-		int start = text.getText().indexOf("(at line "+sqlLine+")");
-		int end = text.getText().indexOf("\n", start);
-		end += 1;
-
-		setSelectionAndMoveToTop(text, start, end);
+		return displayProcInBatchWindow(dbname, objOwnerId+"", procName, procLine, planId);
 	}
-
-	public void displayProcInBatchWindow(String dbname, String procName, int procLine)
+	public int displayProcInBatchWindow(String dbname, String objOwnerNameOrId, String procName, int procLine, int planId)
 	{
 		if (_logger.isDebugEnabled())
-			_logger.debug("displayProcInBatchWindow(dbname='"+dbname+"', procName='"+procName+"', procLine="+procLine+").");
+			_logger.debug("displayProcInBatchWindow(dbname='"+dbname+"', objOwnerNameOrId='"+objOwnerNameOrId+"', procName='"+procName+"', procLine="+procLine+", planId="+planId+").");
 
-		String sqlStatement = null;
-		StringBuffer procTextSb  = null;
-		String       procTextStr = null;
-		String       fullProcName = dbname+".dbo."+procName;
+		if (StringUtil.isNullOrBlank(procName))
+			return -1; // -1 = Text not found
 
-//		if (1==1)
-//		throw new RuntimeException("debug exception, to find out from where it was called.");
+		if (StringUtil.isNullOrBlank(objOwnerNameOrId) || (objOwnerNameOrId != null && (objOwnerNameOrId.equals("-1") || objOwnerNameOrId.equals("0") || objOwnerNameOrId.equals("1"))) )
+			objOwnerNameOrId = "dbo";
+		
+//		String        sqlStatement = null;
+//		StringBuilder procTextSb   = null;
+		String        procTextStr  = null;
+		String        fullProcName = dbname+"."+objOwnerNameOrId+"."+procName;
+		boolean       isStatementCacheEntry = false;
 
-		// If the procedure text is already loaded, dont do it again.
+		// See if this the procName is a StatementCache or a Dynamic/Prepared statement and if it is: get the text via show_ached_plan_in_xml()
+		if (procName.startsWith("*ss") || procName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
+		{
+			fullProcName = "StatementCache." + procName;
+			isStatementCacheEntry = true;
+		}
+//System.out.println("displayProcInBatchWindow(dbname='"+dbname+"', objOwnerNameOrId='"+objOwnerNameOrId+"', procName='"+procName+"', procLine="+procLine+", planId="+planId+").");
+//System.out.println("displayProcInBatchWindow(): fullProcName='"+fullProcName+"'.");
+
+		// If the text is already loaded, don't do it again.
 		if ( pdf.titledBorderBatch.getTitle().equals(fullProcName) )
 		{
 			setCaretToBatchLine(pdf.batchTextArea, procLine);
-			return;
+			
+			if (isStatementCacheEntry)
+				return 1; // 1 = Statement Cache Entry
+			return 2;     // 2 = SQL Batch
 		}
 
-		// get check if we already has the text for this procedure.
-		procTextStr = (String) procedureTextCache.get(fullProcName);
-
-		if (procTextStr != null)
+		if (isStatementCacheEntry && _conn.getDbmsVersionNumber() >= Ver.ver(15, 7))
 		{
-			_logger.debug("Found object '"+fullProcName+"' in procedureTextCache.");
+//System.out.println("----GET FROM XmlPlanCache: procName='"+procName+"', planId="+planId+" ------------------------------------");
+			procTextStr = XmlPlanCache.getInstance().getPlan(procName, planId);
+//System.out.println("    <<<<<<<< XmlPlanCache: procName='"+procName+"', planId="+planId+" Returned: " + (StringUtil.hasValue(procTextStr)?"HAS XML PLAN":"--NO-HIT-IN-PLAN-CACHE-WHICH-NEVER-HAPPENS--"));
 		}
 		else
 		{
-//			// First get the DBNAME and PROCNAME
-//			sqlStatement = "select db_name("+dbId+"), object_name("+procId+", "+dbId+")";
+			procTextStr = _procedureTextCache.get(fullProcName);
+			if (procTextStr == null)
+			{
+//System.out.println("----GET FROM DB: procTextStr------------------------------------");
+//				procTextStr = AseConnectionUtils.cachedPlanInXml(_conn, procName, false);
+				procTextStr = AseConnectionUtils.getObjectText(_conn, dbname, procName, objOwnerNameOrId, planId, _conn.getDbmsVersionNumber());
+
+				// Store SQL text in "procText" cache
+				_procedureTextCache.put(fullProcName, procTextStr);
+//System.out.println("----BEGIN: procTextStr------------------------------------");
+//System.out.println(procTextStr);
+//System.out.println("------END: procTextStr------------------------------------");
+    		}
+    		else
+    		{
+//System.out.println("----USE CACHED entry for procTextStr------------------------------------");
+    		}
+		}
+
+		
+//		String procOrStmntText = AseConnectionUtils.getObjectText(_conn, dbname, procName, objOwnerNameOrId, _conn.getDbmsVersionNumber());
+		if (StringUtil.hasValue(procTextStr))
+		{
+			int textType = -1; // Unknown
+
+			if      (procTextStr.indexOf("SSQL_DESC ")       >= 0) textType = 1; // dbcc prsqlcache(ssqlid, 1) 
+			else if (procTextStr.indexOf("<?xml version=\"") >= 0) textType = 2; // select show_cached_plan_in_xml(ssqlid, 0, 0)
+			else                                                   textType = 3; // procedure text
+
+//System.out.println("textType="+textType);
+
+			// XML PLAN or DBCC PRSQLCACHE
+			if (textType == 1 || textType == 2)
+			{
+				String xmlPlan = procTextStr;
+
+				String sqlText = "";
+				String planText = xmlPlan;
+
+				// XML PLAN
+				if (textType == 2 && xmlPlan != null)
+				{
+					int cDataStart = xmlPlan.indexOf("<![CDATA[");
+					int cDataEnd   = xmlPlan.indexOf("]]>");
+					if (cDataStart != -1 && cDataEnd != -1)
+					{
+						cDataStart += "<![CDATA[".length(); // move "pointer" past the "<![CDATA[" string
+						
+						int startPos = xmlPlan.indexOf("SQL Text:", cDataStart);
+						if (startPos != -1)
+						{
+							startPos += "SQL Text:".length(); // move "pointer" past the "SQL Text:" string
+							if (Character.isWhitespace(xmlPlan.charAt(startPos))) // If it is a space after "SQL Text:": move start with 1   
+								startPos ++;
+						}
+						else
+						{
+							startPos = cDataStart;
+						}
+						
+						sqlText = xmlPlan.substring(startPos, cDataEnd);
+					}
+				}
+
+				// DBCC PRSQLCACHE
+				if (textType == 1 && xmlPlan != null)
+				{
+					int sqlStart = xmlPlan.indexOf("SQL TEXT: ");
+					int sqlEnd   = xmlPlan.indexOf("QUERY PLAN FOR STATEMENT");
+					
+					if (sqlStart != -1 && sqlEnd != -1)
+					{
+						sqlStart += "SQL TEXT: ".length(); // move "pointer" past the "SQL TEXT: " string
+						
+						sqlText = xmlPlan.substring(sqlStart, sqlEnd);
+					}
+				}
+				
+				
+				// Set SQL Text
+				pdf.titledBorderBatch.setTitle(fullProcName);
+				pdf.batchTextArea.setText(sqlText);
+				setCaretToBatchLine(pdf.batchTextArea, procLine);
+
+				// Set PLAN Text
+//				pdf.titledBorderBatch.setTitle(fullProcName);
+				pdf.setPlanText(planText, procLine);
+
+				return 1; // 1 = Statement Cache Entry
+			}
+			
+			// Procedure Text
+			if (textType == 3)
+			{
+				pdf.titledBorderBatch.setTitle(fullProcName);
+				pdf.batchTextArea.setText(procTextStr);
+				setCaretToBatchLine(pdf.batchTextArea, procLine);
+				//setTextFix(pdf.batchTextArea);
+				return 2; // 2 = SQL Batch
+			}
+		}
+
+		// 
+		pdf.batchTextArea.setText("Can't find text for procedure.");
+		return -1; // -1 = Text not found
+
+	} // end: method displayProcInBatchWindow
+
+//FIXME: for the below .... just call: AseConnectionUtils.getObjectText(_conn, dbname, procName, owner, _conn.getDbmsVersionNumber())
+//
+//if its a 15.x the output will look like:
+//
+//SSQL_DESC 0x0x15181e090
+//ssql_name *ss0399073476_1965424952ss*
+//ssql_hashkey 0x0x75260138	ssql_id 399073476
+//ssql_suid 1		ssql_uid 1	ssql_dbid 1	ssql_spid 0
+//ssql_status 0x0xa0	ssql_parallel_deg 1
+//ssql_isolate 1		ssql_tranmode 32
+//ssql_keep 0		ssql_usecnt 2	ssql_pgcount 8
+//ssql_optgoal allrows_mix	ssql_optlevel ase_default
+//opt options bitmap  0080bf972c6181fffb160100008001000000000000000000000000000000
+//SQL TEXT: select db_name(), user_name(uid), name from sysobjects where type in('P')
+//
+//
+//QUERY PLAN FOR STATEMENT 1 (at line 1).
+//Optimized using Serial Mode
+//
+//
+//    STEP 1
+//        The type of query is SELECT.
+//
+//	2 operator(s) under root
+//
+//       |ROOT:EMIT Operator (VA = 2)
+//       |
+//       |   |RESTRICT Operator (VA = 1)(0)(3)(0)(0)(3)
+//       |   |
+//       |   |   |SCAN Operator (VA = 0)
+//       |   |   |  FROM TABLE
+//       |   |   |  sysobjects
+//       |   |   |  Table Scan.
+//       |   |   |  Forward Scan.
+//       |   |   |  Positioning at start of table.
+//       |   |   |  Using I/O Size 4 Kbytes for data pages.
+//       |   |   |  With LRU Buffer Replacement Strategy for data pages.
+//
+//
+//
+//
+//DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role.
+
+
+//		//--------------------------------------
+//		// FIRTS: Check for Statement Cache
+//		//--------------------------------------
+//		// See if this the procName is a StatementCache or a Dynamic/Prepared statement and if it is: get the text via show_ached_plan_in_xml()
+//		if (procName.startsWith("*ss") || procName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
+//		{
+//			fullProcName = "stmntcache." + procName;
+//			
+//			// If the text is already loaded, don't do it again.
+//			if ( pdf.titledBorderBatch.getTitle().equals(fullProcName) )
+//			{
+//				setCaretToBatchLine(pdf.batchTextArea, procLine);
+//				return 1;
+//			}
+//
+//			procTextStr = _procedureTextCache.get(fullProcName);
+//			if (procTextStr == null)
+//			{
+//				procTextStr = AseConnectionUtils.cachedPlanInXml(_conn, procName, false);
+//
+//				// Store SQL text in "procText" cache
+//				_procedureTextCache.put(fullProcName, procTextStr);
+//			}
+//
+//			// Yes it can still be null if cachedPlanInXml() fails
+//			if (procTextStr != null)
+//			{
+//				String xmlPlan = procTextStr;
+//
+//				String sqlText = "";
+//				String planText = xmlPlan;
+//
+//				if (xmlPlan != null)
+//				{
+//					int cDataStart = xmlPlan.indexOf("<![CDATA[");
+//					int cDataEnd   = xmlPlan.indexOf("]]>");
+//					if (cDataStart != -1 && cDataEnd != -1)
+//					{
+//						cDataStart += "<![CDATA[".length(); // move "pointer" past the "<![CDATA[" string
+//						
+//						int startPos = xmlPlan.indexOf("SQL Text:", cDataStart);
+//						if (startPos != -1)
+//						{
+//							startPos += "SQL Text:".length(); // move "pointer" past the "SQL Text:" string
+//							if (Character.isWhitespace(xmlPlan.charAt(startPos))) // If it is a space after "SQL Text:": move start with 1   
+//								startPos ++;
+//						}
+//						else
+//						{
+//							startPos = cDataStart;
+//						}
+//						
+//						sqlText = xmlPlan.substring(startPos, cDataEnd);
+//					}
+//				}
+//
+//				// Set SQL Text
+//				pdf.titledBorderBatch.setTitle(fullProcName);
+//				pdf.batchTextArea.setText(sqlText);
+//				setCaretToBatchLine(pdf.batchTextArea, procLine);
+//
+//				// Set PLAN Text
+////				pdf.titledBorderBatch.setTitle(fullProcName);
+//				pdf.planTextArea.setText(planText);
+//				setCaretToPlanLine(pdf.planTextArea, procLine);
+//
+//				return 1;
+//			}
+//			else
+//			{
+//				pdf.batchTextArea.setText("Can't find text from Statement Cache.");
+//				return -1;
+//			}
+//		}
+//
+//
+//		//--------------------------------------
+//		// NOT Statement Cache logic
+//		//--------------------------------------
+//		
+//		// If the procedure text is already loaded, don't do it again.
+//		if ( pdf.titledBorderBatch.getTitle().equals(fullProcName) )
+//		{
+//			setCaretToBatchLine(pdf.batchTextArea, procLine);
+//			return 2;
+//		}
+//
+//		// get check if we already has the text for this procedure.
+//		procTextStr = _procedureTextCache.get(fullProcName);
+//
+//		if (procTextStr != null)
+//		{
+//			_logger.debug("Found object '"+fullProcName+"' in _procedureTextCache.");
+//		}
+//		else
+//		{
+////			// First get the DBNAME and PROCNAME
+////			sqlStatement = "select db_name("+dbId+"), object_name("+procId+", "+dbId+")";
+////			try
+////			{
+////				Statement statement = conn.createStatement();
+////				ResultSet rs = statement.executeQuery(sqlStatement);
+////				while(rs.next())
+////				{
+////					dbname   = rs.getString(1)();
+////					procName = rs.getString(2)();
+////				}
+////			}
+////			catch (Exception e)
+////			{
+////				JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+////			}
+////			
+////			_logger.debug("Getting object dbid='"+dbId+"', dbname='"+dbname+"', procId='"+procId+"', procName='"+procName+"' from database.");
+//
+//			_logger.debug("Getting object '"+fullProcName+"' from database.");
+////			/*
+////			** See if the object is hidden (SYSCOM_TEXT_HIDDEN will be set)
+////			*/
+////			if exists (select 1
+////			        from syscomments where (status & 1 = 
+////			 1)
+////			        and id = object_id(@objname))
+////			begin
+////			        /*
+////			        ** 18406, "Source text for compiled object %!1
+////			        ** (id = %!2) is hidden."
+////			        */
+////			        select @proc_id = object_id(@objname)
+////			        raiserror 18406, @objname, @proc_id
+////			       
+////			  return (1)
+////			end
+//
+//			sqlStatement = "select c.text, c.status, c.id"
+//				+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
+//				+ " where o.name = '"+procName+"'"
+//				+ "   and o.id = c.id"
+//				+ " order by c.number, c.colid2, c.colid";
+//	
 //			try
 //			{
-//				Statement statement = conn.createStatement();
+//				Statement statement = _conn.createStatement();
 //				ResultSet rs = statement.executeQuery(sqlStatement);
 //				while(rs.next())
 //				{
-//					dbname   = rs.getString(1)();
-//					procName = rs.getString(2)();
+//					String textPart = rs.getString(1);
+//					int    status   = rs.getInt(2);
+//					int    id       = rs.getInt(3);
+//					
+//					if (procTextSb == null)
+//						procTextSb = new StringBuilder();
+//	
+//					// if status is ASE: SYSCOM_TEXT_HIDDEN
+//					if ((status & 1) == 1)
+//					{
+//						procTextSb.append("ASE StoredProcedure Source text for compiled object '"+dbname+".dbo."+procName+"' (id = "+id+") is hidden.");
+//						break;
+//					}
+//
+//					procTextSb.append(textPart);
 //				}
+//				rs.close();
 //			}
 //			catch (Exception e)
 //			{
 //				JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
 //			}
-//			
-//			_logger.debug("Getting object dbid='"+dbId+"', dbname='"+dbname+"', procId='"+procId+"', procName='"+procName+"' from database.");
+//
+//			if (procTextSb != null)
+//			{
+//				procTextStr = procTextSb.toString();
+//
+//				// Store the procedure cache text in cache
+//				_procedureTextCache.put(fullProcName, procTextStr);
+//			}
+//		}
+//
+//		if (procTextStr != null)
+//		{
+//			pdf.titledBorderBatch.setTitle(fullProcName);
+//			pdf.batchTextArea.setText(procTextStr);
+//			setCaretToBatchLine(pdf.batchTextArea, procLine);
+//			//setTextFix(pdf.batchTextArea);
+//			return 2;
+//		}
+//		else
+//		{
+//			pdf.batchTextArea.setText("Can't find text for procedure.");
+//			return -1;
+//		}
+//	}
 
-			_logger.debug("Getting object '"+fullProcName+"' from database.");
-//			/*
-//			** See if the object is hidden (SYSCOM_TEXT_HIDDEN will be set)
-//			*/
-//			if exists (select 1
-//			        from syscomments where (status & 1 = 
-//			 1)
-//			        and id = object_id(@objname))
-//			begin
-//			        /*
-//			        ** 18406, "Source text for compiled object %!1
-//			        ** (id = %!2) is hidden."
-//			        */
-//			        select @proc_id = object_id(@objname)
-//			        raiserror 18406, @objname, @proc_id
-//			       
-//			  return (1)
-//			end
-
-			sqlStatement = "select c.text, c.status, c.id"
-				+ " from "+dbname+"..sysobjects o, "+dbname+"..syscomments c"
-				+ " where o.name = '"+procName+"'"
-				+ "   and o.id = c.id"
-				+ " order by c.number, c.colid2, c.colid";
-	
-			try
-			{
-				Statement statement = _conn.createStatement();
-				ResultSet rs = statement.executeQuery(sqlStatement);
-				while(rs.next())
-				{
-					String textPart = rs.getString(1);
-					int    status   = rs.getInt(2);
-					int    id       = rs.getInt(3);
-					
-					if (procTextSb == null)
-						procTextSb = new StringBuffer();
-	
-					// if status is ASE: SYSCOM_TEXT_HIDDEN
-					if ((status & 1) == 1)
-					{
-						procTextSb.append("ASE StoredProcedure Source text for compiled object '"+dbname+".dbo."+procName+"' (id = "+id+") is hidden.");
-						break;
-					}
-
-					procTextSb.append(textPart);
-				}
-				rs.close();
-			}
-			catch (Exception e)
-			{
-				JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
-			}
-
-			if (procTextSb != null)
-			{
-				procTextStr = procTextSb.toString();
-
-				// Store the procedure cache text in cache
-				procedureTextCache.put(fullProcName, procTextStr);
-			}
-		}
-
-		if (procTextStr != null)
-		{
-			pdf.titledBorderBatch.setTitle(fullProcName);
-			pdf.batchTextArea.setText(procTextStr);
-			setCaretToBatchLine(pdf.batchTextArea, procLine);
-			//setTextFix(pdf.batchTextArea);
-		}
-		else
-		{
-			pdf.batchTextArea.setText("Can't find text for procedure.");
-		}
-	}
-
-	public void displayCurrentBatch()
+	public void displayActiveBatch()
 	{
 		pdf.titledBorderBatch.setTitle("Batch text");
 		pdf.batchTextArea.setCaretPosition(0);
 		pdf.batchTextArea.setFocusable(true);
 
-		if (currentBatch == null)
+		if (_activeBatch == null)
 		{
 			pdf.batchTextArea.setText("");
 			return;
 		}
 
-		if (    !currentBatch.dbname.equals("") 
-			 && !currentBatch.procedureName.equals("") 
-			 && !currentBatch.procedureName.startsWith("*")
-			 && currentSqlLine > 0
+		if (    !_activeBatch.dbname.equals("") 
+			 && !_activeBatch.procedureName.equals("") 
+			 && !_activeBatch.procedureName.startsWith("*")
+			 && _activeSqlLine > 0
 			 && pdf.sqlTextShowProcSrcCheckbox.isSelected() 
 		   )
 		{
 			// Display current running stored proc
-			displayProcInBatchWindow(currentBatch.dbname, currentBatch.procedureName, currentBatch.lineNumber);
+			displayProcInBatchWindow(_activeBatch.dbname, _activeBatch.objectOwnerId, _activeBatch.procedureName, _activeBatch.lineNumber, _activeBatch.planId);
 
-//			_logger.debug("BATCH SQL: " + currentBatch.getSqlText());
+//			_logger.debug("BATCH SQL: " + _activeBatch.getSqlText());
 		}
 		else
 		{
-			pdf.batchTextArea.setText( currentBatch.getSqlText() );
-			setCaretToBatchLine(pdf.batchTextArea, currentSqlLine);
+			pdf.batchTextArea.setText( _activeBatch.getSqlText() );
+			setCaretToBatchLine(pdf.batchTextArea, _activeSqlLine);
 		}
 	}
 
@@ -1616,7 +1936,7 @@ public class RefreshProcess extends Thread
 		Batch batch = getBatchHistory(spid, kpid, batchId);
 		if (batch == null)
 		{
-			pdf.planTextArea.setText("No SHOWPLAN text was found in the plan history.");
+			pdf.setPlanText("No SHOWPLAN text was found in the plan history.");
 			return;
 		}
 
@@ -1627,9 +1947,7 @@ public class RefreshProcess extends Thread
 		 */
 
 		String planStr = batch.getShowplanText();
-		pdf.planTextArea.setText(planStr);
-		if (sqlLine >= 0)
-			setCaretToPlanLine(pdf.planTextArea, sqlLine);
+		pdf.setPlanText(planStr, sqlLine);
 	}
 
 	public void setSelectedStatement(int rowid)
@@ -1639,151 +1957,157 @@ public class RefreshProcess extends Thread
 		// This method is called *several* times...
 		// So only do action when, rowid, chaanges
 		// Make shure we only do stuf when the rowid changes
-		if (rowid == selectedStatement)
+		if (rowid == _selectedStatement)
 			return;
-		selectedStatement = rowid;
+		_selectedStatement = rowid;
 
-		// if rowid is -1, then it's the current running SQL that is choosed
-		// if rowid >= 0, the it's the capturred statements we are looking at.
+		// if rowid is -1, then it's the current running SQL that is selected
+		// if rowid >= 0, the it's the captured statements we are looking at.
 		if (rowid >= 0)
 		{
-			Object o = capturedStmtModel.getValueAt(rowid, 0);
+			Object o = _historyStmtModel.getValueAt(rowid, 0);
 			if (o == null)
 			{
 				_logger.error("Row "+rowid+" column 0, does NOT contain any data...");
 				return;
 			}
 //			_logger.debug("setSelectedStatement()"
-//					+ ", pos_capturedSpid="        + pos_capturedSpid 
-//					+ ", pos_capturedKpid="        + pos_capturedKpid 
-//					+ ", pos_capturedBatchID="     + pos_capturedBatchID 
-//					+ ", pos_capturedSqlLine="     + pos_capturedSqlLine 
-//					+ ", pos_capturedPlanID="      + pos_capturedPlanID
-//					+ ", pos_capturedDBID="        + pos_capturedDBID
-//					+ ", pos_capturedProcedureID=" + pos_capturedProcedureID
-//					+ ", pos_capturedDbname="      + pos_capturedDbname
-//					+ ", pos_capturedProcName="    + pos_capturedProcName
+//					+ ", pos_historySpid="        + pos_historySpid 
+//					+ ", pos_historyKpid="        + pos_historyKpid 
+//					+ ", pos_historyBatchID="     + pos_historyBatchID 
+//					+ ", pos_historySqlLine="     + pos_historySqlLine 
+//					+ ", pos_historyPlanID="      + pos_historyPlanID
+//					+ ", pos_historyDBID="        + pos_historyDBID
+//					+ ", pos_historyProcedureID=" + pos_historyProcedureID
+//					+ ", pos_historyDbname="      + pos_historyDbname
+//					+ ", pos_historyProcName="    + pos_historyProcName
 //					+ ".");
 
-			int spid    = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedSpid       -1))).intValue();
-			int kpid    = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedKpid       -1))).intValue();
-			int batchId = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedBatchID    -1))).intValue();
-			int sqlLine = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedSqlLine    -1))).intValue();
-			int planId  = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedPlanID     -1))).intValue();
-			int dbId    = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedDBID       -1))).intValue();
-			int procId  = ((Number) (capturedStmtModel.getValueAt(rowid, pos_capturedProcedureID-1))).intValue();
+			int spid       = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historySpid       -1))).intValue();
+			int kpid       = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyKpid       -1))).intValue();
+			int batchId    = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyBatchID    -1))).intValue();
+			int sqlLine    = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historySqlLine    -1))).intValue();
+			int planId     = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyPlanID     -1))).intValue();
+			int dbId       = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyDBID       -1))).intValue();
+			int objOwnerId = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyObjOwnerID -1))).intValue();
+			int procId     = ((Number) (_historyStmtModel.getValueAt(rowid, pos_historyProcedureID-1))).intValue();
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("setSelectedStatement(), batchId='" + batchId + "', planId='" + planId + "', dbId='" + dbId + "', procId='" + procId + "', (sqlLine='"+sqlLine+"')");
 
+			int textType = -1;
+
 			if (procId > 0 && sqlLine > 0 && pdf.sqlTextShowProcSrcCheckbox.isSelected())
 			{
-				String dbname   = (String) (capturedStmtModel.getValueAt(rowid, pos_capturedDbname  -1));
-				String procname = (String) (capturedStmtModel.getValueAt(rowid, pos_capturedProcName-1));
+				String dbname   = (String) (_historyStmtModel.getValueAt(rowid, pos_historyDbname  -1));
+				String procname = (String) (_historyStmtModel.getValueAt(rowid, pos_historyProcName-1));
 
-				displayProcInBatchWindow(dbname, procname, sqlLine);
+				textType = displayProcInBatchWindow(dbname, objOwnerId, procname, sqlLine, planId);
 			}
-			else
-			{
+
+			if ( textType < 0 ) // if the ProcText wasn't found, go and get the SQL Batch Text
 				displayBatch(spid, kpid, batchId, sqlLine);
-			}
-			displayPlan(spid, kpid, batchId, planId, dbId, procId, sqlLine);
+
+			if ( textType != 1 ) // Not for Statement Cache: that is done in displayProcInBatchWindow()
+				displayPlan(spid, kpid, batchId, planId, dbId, procId, sqlLine);
 		}
-		else // then it's the current running SQL that is choosed
+		else // then it's the current running SQL that is selected
 		{
-			if (    currentDbname   != null && !currentDbname.equals("")
-			     && currentProcName != null && !currentProcName.equals("")
-			     && currentProcName != null && !currentProcName.startsWith("*")
-			     && currentSqlLine > 0
+			int textType = -1;
+
+			if (    _activeDbname   != null && !_activeDbname.equals("")
+			     && _activeProcName != null && !_activeProcName.equals("")
+			     && _activeProcName != null && !_activeProcName.startsWith("*")
+			     && _activeSqlLine > 0
 				 && pdf.sqlTextShowProcSrcCheckbox.isSelected() 
 			   )
 			{
 				// Display current running stored proc
-				displayProcInBatchWindow(currentDbname, currentProcName, currentSqlLine);
+				textType = displayProcInBatchWindow(_activeDbname, _activeObjOwnerID, _activeProcName, _activeSqlLine, _activePlanID);
 			}
-			else
-			{
-				// Display current batch
-				displayCurrentBatch();
-			}
-			displayPlan(currentSpid, currentKpid, currentBatchID, 0, currentDBID, currentProcedureID, currentSqlLine);
+
+			if ( textType < 0 ) // if the ProcText wasn't found, go and get the SQL Batch Text
+				displayActiveBatch();
+
+			if ( textType != 1 ) // Not for Statement Cache: that is done in displayProcInBatchWindow()
+				displayPlan(_activeSpid, _activeKpid, _activeBatchID, 0, _activeDBID, _activeProcedureID, _activeSqlLine);
 		}
 	}
 
 	public int getSelectedStatement()
 	{
-		return selectedStatement;
+		return _selectedStatement;
 	}
 
 	private void updatePanel_code()
 	{
 		// Refresh the current statement JTable
-		if (!currentSMInitialized)
+		if (!_activeSMInitialized)
 		{
-			currentStmtModel.setDataVector(currentStmt, currentStmtColNames);
-			currentSMInitialized = true;
+			_activeStmtModel.setDataVector(_activeStmt, _activeStmtColNames);
+			_activeSMInitialized = true;
 		}
 //		if (currentStmtRow != null)
 //		{
 //			// insert or update in the curStmt JTable
-//			if (currentStmtModel.getRowCount() == 0)
+//			if (_activeStmtModel.getRowCount() == 0)
 //			{
-//				currentStmtModel.addRow(currentStmtRow);
-//				currentStmtModel.setRowCount(1);
+//				_activeStmtModel.addRow(currentStmtRow);
+//				_activeStmtModel.setRowCount(1);
 //			}
 //			else
 //			{
 //				for (int i = 0; i < currentStmtRow.size(); i++)
 //				{
-//					currentStmtModel.setValueAt(currentStmtRow.get(i), 0, i);
+//					_activeStmtModel.setValueAt(currentStmtRow.get(i), 0, i);
 //				}
 //			}
 //		}
-//		else if (currentStmtModel.getRowCount() == 1)
+//		else if (_activeStmtModel.getRowCount() == 1)
 //		{
-//			currentStmtModel.removeRow(0);
-//			currentStmtModel.setRowCount(0);
+//			_activeStmtModel.removeRow(0);
+//			_activeStmtModel.setRowCount(0);
 //		}
-		if (currentStmtRows != null)
+		if (_activeStmtRows != null)
 		{
 			// refresh
-			currentStmtModel.setDataVector(currentStmtRows, currentStmtColNames);
+			_activeStmtModel.setDataVector(_activeStmtRows, _activeStmtColNames);
 			
 			// resize the columns
-			SwingUtils.calcColumnWidths(pdf.currentStatementTable);
+			SwingUtils.calcColumnWidths(pdf.activeStatementTable);
 		}
-		else if (currentStmtModel.getRowCount() > 0)
+		else if (_activeStmtModel.getRowCount() > 0)
 		{
 			// Clear the table
-			currentStmtModel.setRowCount(0);
+			_activeStmtModel.setRowCount(0);
 		}
 
 		// Refresh the captured statement JTable
-		if (newCapturedStatements != null)
+		if (_newHistoryStatements != null)
 		{
-			if (!capturedSMInitialized)
+			if (!_historySMInitialized)
 			{
-				capturedStmtModel.setDataVector(new Vector(), capturedStmtColNames);
-				capturedSMInitialized = true;
+				_historyStmtModel.setDataVector(new Vector(), _historyStmtColNames);
+				_historySMInitialized = true;
 
 				// resize the columns, it's only done when new header
 				// It could be done always, but since we loop all rows in the table, 
 				//    it might takte to long time to do this
-				SwingUtils.calcColumnWidths(pdf.capturedStatementsTable);
-				capturedTableColmnsIsResized = false;
+				SwingUtils.calcColumnWidths(pdf._historyStatementsTable);
+				_historyTableColmnsIsResized = false;
 			}
-			for (int i = 0; i < newCapturedStatements.size(); i++)
+			for (int i = 0; i < _newHistoryStatements.size(); i++)
 			{
-				capturedStmtModel.addRow((Vector) newCapturedStatements.get(i));
+				_historyStmtModel.addRow((Vector) _newHistoryStatements.get(i));
 
 				// resize, but only check with for newly inserted rows.
-				//TabularCntrPanel.calcColumnWidths(pdf.capturedStatementsTable, newCapturedStatements.size(), true);
+				//TabularCntrPanel.calcColumnWidths(pdf.capturedStatementsTable, _newHistoryStatements.size(), true);
 
 				// resize, But only do this first time we see data
-				if ( ! capturedTableColmnsIsResized )
+				if ( ! _historyTableColmnsIsResized )
 				{
-					capturedTableColmnsIsResized = true;
-					SwingUtils.calcColumnWidths(pdf.capturedStatementsTable);
+					_historyTableColmnsIsResized = true;
+					SwingUtils.calcColumnWidths(pdf._historyStatementsTable);
 				}
 			}
 		}
@@ -1811,40 +2135,55 @@ public class RefreshProcess extends Thread
 	 */
 	public void clear()
 	{
-		_logger.debug("Before clear(), batchHistory had "+batchHistory.size()+" entries.");
-		batchHistory.clear();
+		_logger.debug("Before clear(), _batchHistory had "+_batchHistory.size()+" entries.");
+		_batchHistory.clear();
 
-		_logger.debug("Before clear(), plansHistory had "+plansHistory.size()+" entries.");
-		plansHistory.clear();
+//		_logger.debug("Before clear(), _plansHistory had "+_plansHistory.size()+" entries.");
+//		_plansHistory.clear();
+//
+//		_logger.debug("Before clear(), _compiledPlansHistory had "+_compiledPlansHistory.size()+" entries.");
+//		_compiledPlansHistory.clear();
 
-		_logger.debug("Before clear(), compiledPlansHistory had "+compiledPlansHistory.size()+" entries.");
-		compiledPlansHistory.clear();
+		_logger.debug("Before clear(), _procedureTextCache had "+_procedureTextCache.size()+" entries.");
+		_procedureTextCache.clear();
 
-		_logger.debug("Before clear(), procedureTextCache had "+procedureTextCache.size()+" entries.");
-		procedureTextCache.clear();
+		_logger.debug("Before clear(), _activeStmtModel had "+_activeStmtModel.getRowCount()+" entries.");
+		_activeStmtModel.clear();
 
-		_logger.debug("Before clear(), currentStmtModel had "+currentStmtModel.getRowCount()+" entries.");
-		currentStmtModel.clear();
-
-		_logger.debug("Before clear(), capturedStmtModel had "+capturedStmtModel.getRowCount()+" entries.");
-		capturedStmtModel.clear();
+		_logger.debug("Before clear(), _historyStmtModel had "+_historyStmtModel.getRowCount()+" entries.");
+		_historyStmtModel.clear();
 
 		pdf.batchTextArea.setText("");
-		pdf.planTextArea.setText("");
+		pdf.setPlanText("");
 	}
 
-	public void saveCapturedStatementsToFile()
+	/** Called from ProcessDetailFrame outOfMemoryHandler() */
+	public void outOfMemoryHandler()
+	{
+		_logger.info("outOfMemoryHandler(): Clearing Batch History.");
+		_batchHistory.clear();
+
+		_logger.info("outOfMemoryHandler(): Clearing Procedure Text Cache.");
+		_procedureTextCache.clear();
+	}
+
+	/** Called from ProcessDetailFrame memoryConsumption() */
+	public void memoryConsumption(int memoryLeftInMB)
+	{
+	}
+
+	public void saveHistoryStatementsToFile()
   	{
-		saveCapturedStatementsToFile(null, "", "", "");
+		saveHistoryStatementsToFile(null, "", "", "");
   	}
-	public void saveCapturedStatementsToFile(String saveToDir, String bcpFilename, String txtFilename, String tabDefFilename)
+	public void saveHistoryStatementsToFile(String saveToDir, String bcpFilename, String txtFilename, String tabDefFilename)
   	{
 		// BCP file (open in append mode, write data only)
 		BufferedWriter bcpWriter     = null;
 
 		// Write header + data (can be used in Excel or simular)
 		BufferedWriter txtWriter        = null;
-		boolean        txtWriterNewFile = false;
+//		boolean        txtWriterNewFile = false;
 
 		// Write SQL Table definition
 		BufferedWriter tabWriter     = null;
@@ -1872,7 +2211,7 @@ public class RefreshProcess extends Thread
 
 				if (saveToDir == null)
 				{
-					_logger.error("Directory name was not specified and "+envNameSaveDir+" or "+envNameHomeDir+" was not set, can't save information about Captured Statements.");
+					_logger.error("Directory name was not specified and "+envNameSaveDir+" or "+envNameHomeDir+" was not set, can't save information about Historical Statements.");
 					return;
 				}
 			}
@@ -1914,10 +2253,10 @@ public class RefreshProcess extends Thread
 			{
 				File txtWriterFile = new File(txtFilename);
 
-				if (txtWriterFile.exists())
-					txtWriterNewFile = false;
-				else
-					txtWriterNewFile = true;
+//				if (txtWriterFile.exists())
+//					txtWriterNewFile = false;
+//				else
+//					txtWriterNewFile = true;
 					
 				txtWriter     = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(txtWriterFile, true)));
 			}
@@ -1942,7 +2281,7 @@ public class RefreshProcess extends Thread
 		{
 			try
 			{
-				tabWriter.write("create table CapturedStatements \n");
+				tabWriter.write("create table HistoryStatements \n");
 				tabWriter.write("( \n");
 				tabWriter.write("    SaveTime           datetime        not null,\n");
 				tabWriter.write("    SPID               int             not null,\n");
@@ -1957,15 +2296,11 @@ public class RefreshProcess extends Thread
 				tabWriter.write("    MemUsageKB         int             not null,\n");
 				tabWriter.write("    PhysicalReads      int             not null,\n");
 				tabWriter.write("    LogicalReads       int             not null,\n");
-//				if (_aseVersion >= 15002 || (_aseVersion >= 12540 && _aseVersion < 15000) )
-//				if (_aseVersion >= 1500020 || (_aseVersion >= 1254000 && _aseVersion < 1500000) )
 				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
 				{
 				tabWriter.write("    RowsAffected       int             not null,\n");
 				tabWriter.write("    ErrorStatus        int             not null,\n");
 				}
-//				if (_aseVersion >= 15030 )
-//				if (_aseVersion >= 1503000 )
 				if (_aseVersion >= Ver.ver(15,0,3) )
 				{
 				tabWriter.write("    ProcNestLevel      int             not null,\n");
@@ -1980,14 +2315,15 @@ public class RefreshProcess extends Thread
 				tabWriter.write("    EndTime            datetime        not null,\n");
 				tabWriter.write("    PlanID             int             not null,\n");
 				tabWriter.write("    DBID               int             not null,\n");
+				tabWriter.write("    ObjOwnerID         int             not null,\n");
 				tabWriter.write("    ProcedureID        int             not null,\n");
 				tabWriter.write(") \n");
 				tabWriter.write("go\n");
 				tabWriter.write("\n");
-				tabWriter.write("create index CapStmnts_ix1 on CapturedStatements(SaveTime)\n");
+				tabWriter.write("create index CapStmnts_ix1 on HistoryStatements(SaveTime)\n");
 				tabWriter.write("go\n");
 				tabWriter.write("\n");
-				tabWriter.write("create index CapStmnts_ix2 on CapturedStatements(procname, LineNumber)\n");
+				tabWriter.write("create index CapStmnts_ix2 on HistoryStatements(procname, LineNumber)\n");
 				tabWriter.write("go\n");
 			}
 			catch (IOException e)
@@ -2000,21 +2336,21 @@ public class RefreshProcess extends Thread
 		// Write to the files
 		//------------------------------
 		String colSep = "\t";
-		String rowSep = "\n";
+//		String rowSep = "\n";
 		
 		Object       colObj    = null;
-		StringBuffer rowSb     = new StringBuffer();
-		StringBuffer headerSb  = new StringBuffer();
+		StringBuilder rowSb     = new StringBuilder();
+		StringBuilder headerSb  = new StringBuilder();
 
-		int rows = capturedStmtModel.getRowCount();
-		int cols = capturedStmtModel.getColumnCount();
+		int rows = _historyStmtModel.getRowCount();
+		int cols = _historyStmtModel.getColumnCount();
 
 		// Loop all headers, to get name(s)
 		headerSb.append("SaveTime");
 		headerSb.append(colSep);
 		for (int c=0; c<cols; c++)
 		{
-			String colName = capturedStmtModel.getColumnName(c);
+			String colName = _historyStmtModel.getColumnName(c);
 			if (colName != null)
 				headerSb.append(colName);
 			else
@@ -2036,7 +2372,7 @@ public class RefreshProcess extends Thread
 			// loop all columns
 			for (int c=0; c<cols; c++)
 			{
-				colObj = capturedStmtModel.getValueAt(r, c);
+				colObj = _historyStmtModel.getValueAt(r, c);
 				if (colObj != null)
 					rowSb.append(colObj);
 				else
@@ -2096,537 +2432,569 @@ public class RefreshProcess extends Thread
 
   	} // end: method
 
-	public void createCounters()
-	{
-//		String   cols1 = null;
-//		String   cols2 = null;
-//		String   cols3 = null;
-
-//		String   name;
-//		String   displayName;
-//		String   description;
-		int      needVersion   = 0;
-		int      needCeVersion = 0;
-		String[] monTables;
-		String[] needRole;
-		String[] needConfig;
-		String[] colsCalcDiff;
-		String[] colsCalcPCT;
-//		List     pkList;
-
-		String groupName = "RefreshProcess";
-
-		String whereSpidKpid = "";
-		if (spid > 0) whereSpidKpid += "  and SPID = " + spid + "\n";
-		if (kpid > 0) whereSpidKpid += "  and KPID = " + kpid + "\n";
-
-		
-		//------------------------------------
-		//------------------------------------
-		// Objects
-		//------------------------------------
-		//------------------------------------
-//		name         = "CMProcObjects";
-//		displayName  = "Objects";
-//		description  = "What objects are accessed right now.";
-
-		needVersion  = 0;
-		monTables    = new String[] { "monProcessObject" };
-		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"enable monitoring", "per object statistics active"};
-		colsCalcDiff = new String[] { "LogicalReads", "PhysicalReads", "PhysicalAPFReads" };
-		colsCalcPCT  = new String[] {};
-//		pkList       = new LinkedList();
-//		     pkList.add("KPID");
-//		     pkList.add("DBName");
-//		     pkList.add("ObjectID");
-//		     pkList.add("IndexID");
-//		     pkList.add("OwnerUserID");
+//	public void createCounters()
+//	{
+////		String   cols1 = null;
+////		String   cols2 = null;
+////		String   cols3 = null;
 //
-//		cols1 = cols2 = cols3 = "";
-//		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
-//		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
-//		cols3 = "";
-////		if (_aseVersion >= 12520)
-////		if (_aseVersion >= 1252000)
-//		if (_aseVersion >= Ver.ver(12,5,2))
-//		{
-//			cols3 = ", TableSize";
-//		}
-////		if (_aseVersion >= 15000)
-////		if (_aseVersion >= 1500000)
-//		if (_aseVersion >= Ver.ver(15,0))
-//		{
-//			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
-//			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
+////		String   name;
+////		String   displayName;
+////		String   description;
+//		int      needVersion   = 0;
+//		int      needCeVersion = 0;
+//		String[] monTables;
+//		String[] needRole;
+//		String[] needConfig;
+//		String[] colsCalcDiff;
+//		String[] colsCalcPCT;
+////		List     pkList;
 //
-//			pkList.add("PartitionID");
-//		}
+//		String groupName = "RefreshProcess";
 //
-//		String CMProcObjectsSqlBase = 
-//			"select " + cols1 + cols2 + cols3 + "\n" +
-//		    "from monProcessObject \n" +
-//		    "where 1=1 ";
-
-		CMProcObjects = new CountersModel(
-				"CMProcObjects", groupName, null, null, 
-				colsCalcDiff, colsCalcPCT, 
-				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
-		{
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-			{
-				String cols1 = "";
-				String cols2 = "";
-				String cols3 = "";
-				cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
-				cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
-				cols3 = "";
-//				if (srvVersion >= 12520)
-//				if (srvVersion >= 1252000)
-				if (srvVersion >= Ver.ver(12,5,2))
-				{
-					cols3 = ", TableSize";
-				}
-//				if (srvVersion >= 15000)
-//				if (srvVersion >= 1500000)
-				if (srvVersion >= Ver.ver(15,0))
-				{
-					cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
-					cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
-				}
-
-				String sql = 
-					"select " + cols1 + cols2 + cols3 + "\n" +
-					"from monProcessObject \n" +
-					"where 1=1 ";
-
-				return sql;
-			}
-
-			@Override
-			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-			{
-				List <String> pkCols = new LinkedList<String>();
-
-//				if (isClusterEnabled)
-//					pkCols.add("InstanceID");
-
-				pkCols.add("KPID");
-				pkCols.add("DBName");
-				pkCols.add("ObjectID");
-				pkCols.add("IndexID");
-				pkCols.add("OwnerUserID");
-
-//				if (srvVersion >= 15000)
-//				if (srvVersion >= 1500000)
-				if (srvVersion >= Ver.ver(15,0))
-					pkCols.add("PartitionID");
-
-				return pkCols;
-			}
-
-			@Override
-			public boolean isRefreshable()
-			{
-				boolean refresh = false;
-
-				// Current TAB is visible
-				if ( equalsTabPanel(pdf.getActiveTab()) )
-					refresh = true;
-		
-				// Current TAB is un-docked (in it's own window)
-				if (getTabPanel() != null)
-				{
-					JTabbedPane tp = pdf.getTabbedPane();
-					if (tp instanceof GTabbedPane)
-					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
-							refresh = true;
-					}
-				}
-
-				// Background poll is checked
-				if ( isBackgroundDataPollingEnabled() )
-					refresh = true;
-
-				// NO-REFRESH if data polling is PAUSED
-				if ( isDataPollingPaused() )
-					refresh = false;
-
-				// Check postpone
-				if ( getTimeToNextPostponedRefresh() > 0 )
-				{
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-					refresh = false;
-				}
-
-				return refresh;
-			}
-		};
-
-		CMProcObjects.setTabPanel(pdf.processObjectsPanel);
-		
-		if (spid > 0 || kpid > 0)
-			CMProcObjects.setSqlWhere(whereSpidKpid);
-
-		
-		//------------------------------------
-		//------------------------------------
-		// Waits
-		//------------------------------------
-		//------------------------------------
-//		name         = "CMProcWaits";
-//		displayName  = "Waits";
-//		description  = "What is this spid waiting for right now.";
-
-		needVersion  = 0;
-		monTables    = new String[] { "monProcessWaits", "monWaitEventInfo", "monWaitClassInfo" };
-		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"enable monitoring", "process wait events", "wait event timing"};
-		colsCalcDiff = new String[] { "WaitTime", "Waits" };
-		colsCalcPCT  = new String[] {};
-//		pkList       = new LinkedList();
-//		     pkList.add("KPID");
-//		     pkList.add("WaitEventID");
+//		String whereSpidKpid = "";
+//		if (_spid > 0) whereSpidKpid += "  and SPID = " + _spid + "\n";
+//		if (_kpid > 0) whereSpidKpid += "  and KPID = " + _kpid + "\n";
 //
-//		String   CMProcWaitsSqlBase = 
-//			"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits " + 
-//		    "from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C " + 
-//		    "where W.WaitEventID=I.WaitEventID " + 
-//		    "  and I.WaitClassID=C.WaitClassID ";
-//		CMProcWaits = new CountersModel(
-//				"CMProcWaits", 
-//				CMProcWaitsSqlBase, 
-//				pkList,	colsCalcDiff, colsCalcPCT, 
+//		
+//		//------------------------------------
+//		//------------------------------------
+//		// Objects
+//		//------------------------------------
+//		//------------------------------------
+////		name         = "_cmProcObjects";
+////		displayName  = "Objects";
+////		description  = "What objects are accessed right now.";
+//
+//		needVersion  = 0;
+//		monTables    = new String[] { "monProcessObject" };
+//		needRole     = new String[] {"mon_role"};
+//		needConfig   = new String[] {"enable monitoring", "per object statistics active"};
+//		colsCalcDiff = new String[] { "LogicalReads", "PhysicalReads", "PhysicalAPFReads" };
+//		colsCalcPCT  = new String[] {};
+////		pkList       = new LinkedList();
+////		     pkList.add("KPID");
+////		     pkList.add("DBName");
+////		     pkList.add("ObjectID");
+////		     pkList.add("IndexID");
+////		     pkList.add("OwnerUserID");
+////
+////		cols1 = cols2 = cols3 = "";
+////		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
+////		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
+////		cols3 = "";
+//////		if (_aseVersion >= 12520)
+//////		if (_aseVersion >= 1252000)
+////		if (_aseVersion >= Ver.ver(12,5,2))
+////		{
+////			cols3 = ", TableSize";
+////		}
+//////		if (_aseVersion >= 15000)
+//////		if (_aseVersion >= 1500000)
+////		if (_aseVersion >= Ver.ver(15,0))
+////		{
+////			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
+////			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
+////
+////			pkList.add("PartitionID");
+////		}
+////
+////		String CMProcObjectsSqlBase = 
+////			"select " + cols1 + cols2 + cols3 + "\n" +
+////		    "from monProcessObject \n" +
+////		    "where 1=1 ";
+//
+//		_cmProcObjects = new CountersModel(
+//				"cmProcObjects", groupName, null, null, 
+//				colsCalcDiff, colsCalcPCT, 
 //				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
 //		{
-		CMProcWaits = new CountersModel(
-				"CMProcWaits", groupName, null, null,
-				colsCalcDiff, colsCalcPCT, 
-				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
-		{
-			private static final long	serialVersionUID	= 1L;
-
-			@Override
-			protected CmSybMessageHandler createSybMessageHandler()
-			{
-				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
-	
-				// If ASE is above 15.0.3 esd#1, and dbcc traceon(3604) is given && 'capture missing stats' is 
-				// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
-				//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
-				//if (getServerVersion() >= 1503010) // NOTE this is done early in initialization, so getServerVersion() can't be used
-				//if (getServerVersion() >= Ver.ver(15,0,3,1)) // NOTE this is done early in initialization, so getServerVersion() can't be used
-				msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
-	
-				return msgHandler;
-			}
-
-			@Override
-			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-			{
-				String sql = 
-					"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
-					"from master..monProcessWaits W, master..monWaitEventInfo I, master..monWaitClassInfo C \n" + 
-					"where W.WaitEventID=I.WaitEventID \n" + 
-					"  and I.WaitClassID=C.WaitClassID \n";
-//				if (srvVersion >= 15700)
-//				if (srvVersion >= 1570000)
-				if (srvVersion >= Ver.ver(15,7))
-				{
-					sql += "  and C.Language = 'en_US' \n";
-					sql += "  and I.Language = 'en_US' \n";
-				}
-				return sql;
-			}
-
-			@Override
-			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-			{
-				List <String> pkCols = new LinkedList<String>();
-
-//				if (isClusterEnabled)
-//					pkCols.add("InstanceID");
-
-				pkCols.add("KPID");
-				pkCols.add("WaitEventID");
-
-				return pkCols;
-			}
-
-			@Override
-			public boolean isRefreshable()
-			{
-				boolean refresh = false;
-
-				// Current TAB is visible
-				if ( equalsTabPanel(pdf.getActiveTab()) )
-					refresh = true;
-		
-				// Current TAB is un-docked (in it's own window)
-				if (getTabPanel() != null)
-				{
-					JTabbedPane tp = pdf.getTabbedPane();
-					if (tp instanceof GTabbedPane)
-					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
-							refresh = true;
-					}
-				}
-
-				// Background poll is checked
-				if ( isBackgroundDataPollingEnabled() )
-					refresh = true;
-
-				// NO-REFRESH if data polling is PAUSED
-				if ( isDataPollingPaused() )
-					refresh = false;
-
-				// Check postpone
-				if ( getTimeToNextPostponedRefresh() > 0 )
-				{
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-					refresh = false;
-				}
-
-				return refresh;
-			}
-		};
-
-
-		CMProcWaits.setTabPanel(pdf.processWaitsPanel);
-
-		if (spid > 0 || kpid > 0)
-			CMProcWaits.setSqlWhere(whereSpidKpid);
-
-
-		//------------------------------------
-		//------------------------------------
-		// Locks
-		//------------------------------------
-		//------------------------------------
-		/*
-		** SPID        KPID        DBID        ParentSPID  LockID      Context     ObjectID    LockState            LockType             LockLevel                      WaitTime    PageNumber  RowNumber   
-		** ----------- ----------- ----------- ----------- ----------- ----------- ----------- ---------            --------             ---------                      ----------- ----------- ----------- 
-		**         221  1222509855          17           0         442           8   757577737 Granted              shared page          PAGE                                  NULL      854653        NULL 
-		**         221  1222509855          17           0         442           8  1073438898 Granted              shared page          PAGE                                  NULL      479900        NULL 
-		**         405   222298460           4           0         810           0  1768445424 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		**         405   222298460           4           0         810           0  1560444683 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		**         405   222298460           4           0         810           0  1592444797 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		**         405   222298460           4           0         810           0  1736445310 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
-		*/
-//		name         = "CMProcLocks";
-//		displayName  = "Locks";
-//		description  = "What locks does this spid hold right now.";
-
-		needVersion  = 0;
-		monTables    = new String[] { "monLocks" };
-		needRole     = new String[] {"mon_role"};
-		needConfig   = new String[] {"enable monitoring"};
-		colsCalcDiff = new String[] {};
-		colsCalcPCT  = new String[] {};
-
-//		//List pkList_CMLocks = new LinkedList();
-//		pkList = null;
-
-//		cols1 = cols2 = cols3 = "";
-//		cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, ObjectID, ObjectName=object_name(ObjectID, DBID), LockState, LockType, LockLevel, ";
-//		cols2 = "";
-//		cols3 = "WaitTime, PageNumber, RowNumber";
-////		if (_aseVersion >= 15002)
-////		if (_aseVersion >= 1500020)
-//		if (_aseVersion >= Ver.ver(15,0,0,2))
-//		{
-//			cols2 = "BlockedState, BlockedBy, ";  //
-//		}
-////		if (_aseVersion >= 15020)
-////		if (_aseVersion >= 1502000)
-//		if (_aseVersion >= Ver.ver(15,0,2))
-//		{
-//			cols3 += ", SourceCodeID";  //
-//		}
+//			private static final long serialVersionUID = 1L;
+//
+//			@Override
+//			public boolean isConnected()
+//			{
+//				if (_conn == null)
+//					return false;
+//				return _conn.isConnectionOk();
+//			}
+//
+//			@Override
+//			public ITableTooltip createToolTipSupplier()
+//			{
+//				//return CounterController.getInstance().createCmToolTipSupplier(this);
+//				return null;
+//			}
+//
+//			@Override
+//			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			{
+//				String cols1 = "";
+//				String cols2 = "";
+//				String cols3 = "";
+//				cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
+//				cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
+//				cols3 = "";
+//				if (srvVersion >= Ver.ver(12,5,2))
+//				{
+//					cols3 = ", TableSize";
+//				}
+//				if (srvVersion >= Ver.ver(15,0))
+//				{
+//					cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
+//					cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
+//				}
+//
+//				String sql = 
+//					"select " + cols1 + cols2 + cols3 + "\n" +
+//					"from monProcessObject \n" +
+//					"where 1=1 ";
+//
+//				return sql;
+//			}
+//
+//			@Override
+//			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			{
+//				List <String> pkCols = new LinkedList<String>();
+//
+////				if (isClusterEnabled)
+////					pkCols.add("InstanceID");
+//
+//				pkCols.add("KPID");
+//				pkCols.add("DBName");
+//				pkCols.add("ObjectID");
+//				pkCols.add("IndexID");
+//				pkCols.add("OwnerUserID");
+//
+//				if (srvVersion >= Ver.ver(15,0))
+//					pkCols.add("PartitionID");
+//
+//				return pkCols;
+//			}
+//
+//			@Override
+//			public boolean isRefreshable()
+//			{
+//				boolean refresh = false;
+//
+//				// Current TAB is visible
+//				if ( equalsTabPanel(pdf.getActiveTab()) )
+//					refresh = true;
 //		
-//		String   CMLocksSqlBase =
-//			"select " + cols1 + cols2 + cols3 + "\n" +
-//			"from monLocks L " + 
-//			"where 1=1 ";
+//				// Current TAB is un-docked (in it's own window)
+//				if (getTabPanel() != null)
+//				{
+//					JTabbedPane tp = pdf.getTabbedPane();
+//					if (tp instanceof GTabbedPane)
+//					{
+//						GTabbedPane gtp = (GTabbedPane) tp;
+//						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
+//							refresh = true;
+//					}
+//				}
+//
+//				// Background poll is checked
+//				if ( isBackgroundDataPollingEnabled() )
+//					refresh = true;
+//
+//				// NO-REFRESH if data polling is PAUSED
+//				if ( isDataPollingPaused() )
+//					refresh = false;
+//
+//				// Check postpone
+//				if ( getTimeToNextPostponedRefresh() > 0 )
+//				{
+//					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+//					refresh = false;
+//				}
+//
+//				return refresh;
+//			}
+//		};
+//
+//		_cmProcObjects.setTabPanel(pdf.processObjectsPanel);
+//		
+//		if (_spid > 0 || _kpid > 0)
+//			_cmProcObjects.setSqlWhere(whereSpidKpid);
+//
+//		
+//		//------------------------------------
+//		//------------------------------------
+//		// Waits
+//		//------------------------------------
+//		//------------------------------------
+////		name         = "_cmProcWaits";
+////		displayName  = "Waits";
+////		description  = "What is this spid waiting for right now.";
+//
+//		needVersion  = 0;
+//		monTables    = new String[] { "monProcessWaits", "monWaitEventInfo", "monWaitClassInfo" };
+//		needRole     = new String[] {"mon_role"};
+//		needConfig   = new String[] {"enable monitoring", "process wait events", "wait event timing"};
+//		colsCalcDiff = new String[] { "WaitTime", "Waits" };
+//		colsCalcPCT  = new String[] {};
+////		pkList       = new LinkedList();
+////		     pkList.add("KPID");
+////		     pkList.add("WaitEventID");
+////
+////		String   CMProcWaitsSqlBase = 
+////			"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits " + 
+////		    "from monProcessWaits W, monWaitEventInfo I, monWaitClassInfo C " + 
+////		    "where W.WaitEventID=I.WaitEventID " + 
+////		    "  and I.WaitClassID=C.WaitClassID ";
+////		_cmProcWaits = new CountersModel(
+////				"_cmProcWaits", 
+////				CMProcWaitsSqlBase, 
+////				pkList,	colsCalcDiff, colsCalcPCT, 
+////				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
+////		{
+//		_cmProcWaits = new CountersModel(
+//				"cmProcWaits", groupName, null, null,
+//				colsCalcDiff, colsCalcPCT, 
+//				monTables, needRole, needConfig, needVersion, needCeVersion, true, true)
+//		{
+//			private static final long	serialVersionUID	= 1L;
+//
+//			@Override
+//			public boolean isConnected()
+//			{
+//				if (_conn == null)
+//					return false;
+//				return _conn.isConnectionOk();
+//			}
+//
+//			@Override
+//			public ITableTooltip createToolTipSupplier()
+//			{
+//				//return CounterController.getInstance().createCmToolTipSupplier(this);
+//				return null;
+//			}
+//
+//			@Override
+//			protected CmSybMessageHandler createSybMessageHandler()
+//			{
+//				CmSybMessageHandler msgHandler = super.createSybMessageHandler();
+//	
+//				// If ASE is above 15.0.3 esd#1, and dbcc traceon(3604) is given && 'capture missing stats' is 
+//				// on the 'CMsysWaitActivity' CM will throw an warning which should NOT be throws...
+//				//if (getServerVersion() >= 15031) // NOTE this is done early in initialization, so getServerVersion() can't be used
+//				//if (getServerVersion() >= 1503010) // NOTE this is done early in initialization, so getServerVersion() can't be used
+//				//if (getServerVersion() >= Ver.ver(15,0,3,1)) // NOTE this is done early in initialization, so getServerVersion() can't be used
+//				msgHandler.addDiscardMsgStr("WaitClassID, WaitEventID");
+//	
+//				return msgHandler;
+//			}
+//
+//			@Override
+//			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			{
+//				String sql = 
+//					"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
+//					"from master..monProcessWaits W, master..monWaitEventInfo I, master..monWaitClassInfo C \n" + 
+//					"where W.WaitEventID=I.WaitEventID \n" + 
+//					"  and I.WaitClassID=C.WaitClassID \n";
+//
+//				if (srvVersion >= Ver.ver(15,7))
+//				{
+//					sql += "  and C.Language = 'en_US' \n";
+//					sql += "  and I.Language = 'en_US' \n";
+//				}
+//				return sql;
+//			}
+//
+//			@Override
+//			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			{
+//				List <String> pkCols = new LinkedList<String>();
+//
+////				if (isClusterEnabled)
+////					pkCols.add("InstanceID");
+//
+//				pkCols.add("KPID");
+//				pkCols.add("WaitEventID");
+//
+//				return pkCols;
+//			}
+//
+//			@Override
+//			public boolean isRefreshable()
+//			{
+//				boolean refresh = false;
+//
+//				// Current TAB is visible
+//				if ( equalsTabPanel(pdf.getActiveTab()) )
+//					refresh = true;
+//		
+//				// Current TAB is un-docked (in it's own window)
+//				if (getTabPanel() != null)
+//				{
+//					JTabbedPane tp = pdf.getTabbedPane();
+//					if (tp instanceof GTabbedPane)
+//					{
+//						GTabbedPane gtp = (GTabbedPane) tp;
+//						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
+//							refresh = true;
+//					}
+//				}
+//
+//				// Background poll is checked
+//				if ( isBackgroundDataPollingEnabled() )
+//					refresh = true;
+//
+//				// NO-REFRESH if data polling is PAUSED
+//				if ( isDataPollingPaused() )
+//					refresh = false;
+//
+//				// Check postpone
+//				if ( getTimeToNextPostponedRefresh() > 0 )
+//				{
+//					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+//					refresh = false;
+//				}
+//
+//				return refresh;
+//			}
+//		};
+//
+//
+//		_cmProcWaits.setTabPanel(pdf.processWaitsPanel);
+//
+//		if (_spid > 0 || _kpid > 0)
+//			_cmProcWaits.setSqlWhere(whereSpidKpid);
+//
+//
+//		//------------------------------------
+//		//------------------------------------
+//		// Locks
+//		//------------------------------------
+//		//------------------------------------
+//		/*
+//		** SPID        KPID        DBID        ParentSPID  LockID      Context     ObjectID    LockState            LockType             LockLevel                      WaitTime    PageNumber  RowNumber   
+//		** ----------- ----------- ----------- ----------- ----------- ----------- ----------- ---------            --------             ---------                      ----------- ----------- ----------- 
+//		**         221  1222509855          17           0         442           8   757577737 Granted              shared page          PAGE                                  NULL      854653        NULL 
+//		**         221  1222509855          17           0         442           8  1073438898 Granted              shared page          PAGE                                  NULL      479900        NULL 
+//		**         405   222298460           4           0         810           0  1768445424 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+//		**         405   222298460           4           0         810           0  1560444683 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+//		**         405   222298460           4           0         810           0  1592444797 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+//		**         405   222298460           4           0         810           0  1736445310 Granted              shared intent        TABLE                                 NULL        NULL        NULL 
+//		*/
+////		name         = "CMProcLocks";
+////		displayName  = "Locks";
+////		description  = "What locks does this _spid hold right now.";
+//
+//		needVersion  = 0;
+//		monTables    = new String[] { "monLocks" };
+//		needRole     = new String[] {"mon_role"};
+//		needConfig   = new String[] {"enable monitoring"};
+//		colsCalcDiff = new String[] {};
+//		colsCalcPCT  = new String[] {};
+//
+////		//List pkList_CMLocks = new LinkedList();
+////		pkList = null;
+//
+////		cols1 = cols2 = cols3 = "";
+////		cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, ObjectID, ObjectName=object_name(ObjectID, DBID), LockState, LockType, LockLevel, ";
+////		cols2 = "";
+////		cols3 = "WaitTime, PageNumber, RowNumber";
+//////		if (_aseVersion >= 15002)
+//////		if (_aseVersion >= 1500020)
+////		if (_aseVersion >= Ver.ver(15,0,0,2))
+////		{
+////			cols2 = "BlockedState, BlockedBy, ";  //
+////		}
+//////		if (_aseVersion >= 15020)
+//////		if (_aseVersion >= 1502000)
+////		if (_aseVersion >= Ver.ver(15,0,2))
+////		{
+////			cols3 += ", SourceCodeID";  //
+////		}
+////		
+////		String   CMLocksSqlBase =
+////			"select " + cols1 + cols2 + cols3 + "\n" +
+////			"from monLocks L " + 
+////			"where 1=1 ";
+//
+//		_cmLocks = new CountersModel(
+//				"cmLocks", groupName, null, null, 
+//				colsCalcDiff, colsCalcPCT, 
+//				monTables, needRole, needConfig, needVersion, needCeVersion, false, true)
+//		{
+//			private static final long serialVersionUID = 1L;
+//
+//			@Override
+//			public boolean isConnected()
+//			{
+//				if (_conn == null)
+//					return false;
+//				return _conn.isConnectionOk();
+//			}
+//
+//			@Override
+//			public ITableTooltip createToolTipSupplier()
+//			{
+//				//return CounterController.getInstance().createCmToolTipSupplier(this);
+//				return null;
+//			}
+//
+//			@Override
+//			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			{
+//				String cols1 = "";
+//				String cols2 = "";
+//				String cols3 = "";
+//
+//				cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, \n" +
+//						"ObjectID, ObjectName=object_name(ObjectID, DBID), \n" +
+//						"LockState, LockType, LockLevel, ";
+//				cols2 = "";
+//				cols3 = "WaitTime, PageNumber, RowNumber";
+//				if (srvVersion >= Ver.ver(15,0,0,2))
+//				{
+//					cols2 = "BlockedState, BlockedBy, ";  //
+//				}
+//				if (srvVersion >= Ver.ver(15,0,2))
+//				{
+//					cols3 += ", SourceCodeID";  //
+//				}
+//				if (srvVersion >= Ver.ver(16,0))
+//				{
+//					cols3 += ", PartitionID";  //
+//				}
+//				
+//				String sql =
+//					"select " + cols1 + cols2 + cols3 + "\n" +
+//					"from monLocks L " + 
+//					"where 1=1 ";
+//
+//				return sql;
+//			}
+//
+//			@Override
+//			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			{
+//				return null;
+//			}
+//
+//			@Override
+//			public boolean isRefreshable()
+//			{
+//				boolean refresh = false;
+//
+//				// Current TAB is visible
+//				if ( equalsTabPanel(pdf.getActiveTab()) )
+//					refresh = true;
+//		
+//				// Current TAB is un-docked (in it's own window)
+//				if (getTabPanel() != null)
+//				{
+//					JTabbedPane tp = pdf.getTabbedPane();
+//					if (tp instanceof GTabbedPane)
+//					{
+//						GTabbedPane gtp = (GTabbedPane) tp;
+//						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
+//							refresh = true;
+//					}
+//				}
+//
+//				// Background poll is checked
+//				if ( isBackgroundDataPollingEnabled() )
+//					refresh = true;
+//
+//				// NO-REFRESH if data polling is PAUSED
+//				if ( isDataPollingPaused() )
+//					refresh = false;
+//
+//				// Check postpone
+//				if ( getTimeToNextPostponedRefresh() > 0 )
+//				{
+//					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+//					refresh = false;
+//				}
+//
+//				return refresh;
+//			}
+//		};
+//
+//		_cmLocks.setTabPanel(pdf.processLocksPanel);
+//
+//		if (_spid > 0 || _kpid > 0)
+//			_cmLocks.setSqlWhere(whereSpidKpid);
+//	}
 
-		CMLocks = new CountersModel(
-				"CMLocks", groupName, null, null, 
-				colsCalcDiff, colsCalcPCT, 
-				monTables, needRole, needConfig, needVersion, needCeVersion, false, true)
-		{
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-			{
-				String cols1 = "";
-				String cols2 = "";
-				String cols3 = "";
-
-				cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, \n" +
-						"ObjectID, ObjectName=object_name(ObjectID, DBID), \n" +
-						"LockState, LockType, LockLevel, ";
-				cols2 = "";
-				cols3 = "WaitTime, PageNumber, RowNumber";
-//				if (srvVersion >= 15002)
-//				if (srvVersion >= 1500020)
-				if (srvVersion >= Ver.ver(15,0,0,2))
-				{
-					cols2 = "BlockedState, BlockedBy, ";  //
-				}
-//				if (srvVersion >= 15020)
-//				if (srvVersion >= 1502000)
-				if (srvVersion >= Ver.ver(15,0,2))
-				{
-					cols3 += ", SourceCodeID";  //
-				}
-//				if (srvVersion >= 1600000)
-				if (srvVersion >= Ver.ver(16,0))
-				{
-					cols3 += ", PartitionID";  //
-				}
-				
-				String sql =
-					"select " + cols1 + cols2 + cols3 + "\n" +
-					"from monLocks L " + 
-					"where 1=1 ";
-
-				return sql;
-			}
-
-			@Override
-			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
-			{
-				return null;
-			}
-
-			@Override
-			public boolean isRefreshable()
-			{
-				boolean refresh = false;
-
-				// Current TAB is visible
-				if ( equalsTabPanel(pdf.getActiveTab()) )
-					refresh = true;
-		
-				// Current TAB is un-docked (in it's own window)
-				if (getTabPanel() != null)
-				{
-					JTabbedPane tp = pdf.getTabbedPane();
-					if (tp instanceof GTabbedPane)
-					{
-						GTabbedPane gtp = (GTabbedPane) tp;
-						if (gtp.isTabUnDocked(getTabPanel().getPanelName()))
-							refresh = true;
-					}
-				}
-
-				// Background poll is checked
-				if ( isBackgroundDataPollingEnabled() )
-					refresh = true;
-
-				// NO-REFRESH if data polling is PAUSED
-				if ( isDataPollingPaused() )
-					refresh = false;
-
-				// Check postpone
-				if ( getTimeToNextPostponedRefresh() > 0 )
-				{
-					_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-					refresh = false;
-				}
-
-				return refresh;
-			}
-		};
-
-		CMLocks.setTabPanel(pdf.processLocksPanel);
-
-		if (spid > 0 || kpid > 0)
-			CMLocks.setSqlWhere(whereSpidKpid);
-	}
-
-	private List<String> _activeRoleList    = null;
-	private boolean      _isInitialized     = false;
-	private boolean      _countersIsCreated = false;
-
-	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
-	throws Exception
-	{
-		if (_isInitialized)
-			return;
-
-		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
-			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
-
-			
-		if (! _countersIsCreated)
-			createCounters();
-		
-		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
-
-		// Get active ASE Roles
-		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
-		_activeRoleList = AseConnectionUtils.getActiveSystemRoles(conn);
-		
-		// Get active Monitor Configuration
-		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
-
-		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
-		// This will hurt performance, especially when querying sysmonitors table, so set this to off
-//		if (aseVersion >= 15031)
-//		if (aseVersion >= 1503010)
-		if (aseVersion >= Ver.ver(15,0,3,1))
-			AseConnectionUtils.setCompatibilityMode(conn, false);
-
-		ArrayList<CountersModel> CMList = new ArrayList<CountersModel>();
-		CMList.add(CMProcWaits);
-		CMList.add(CMProcObjects);
-		CMList.add(CMLocks);
-
-		// initialize all the CM's
-		for (CountersModel cm : CMList)
-		{
-			if (cm != null)
-			{
-				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
-
-				// set the version
-//				cm.setServerVersion(aseVersion);
-				cm.setServerVersion(monTablesVersion);
-				cm.setClusterEnabled(isClusterEnabled);
-				
-				// set the active roles, so it can be used in initSql()
-				cm.setActiveRoles(_activeRoleList);
-
-				// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
-				cm.setMonitorConfigs(monitorConfigMap);
-
-				// Now when we are connected to a server, and properties are set in the CM, 
-				// mark it as runtime initialized (or late initialization)
-				// do NOT do this at the end of this method, because some of the above stuff
-				// will be used by the below method calls.
-				cm.setRuntimeInitialized(true);
-
-				// Initializes SQL, use getServerVersion to check what we are connected to.
-				cm.initSql(conn);
-
-				// Use this method if we need to check anything in the database.
-				// for example "deadlock pipe" may not be active...
-				// If server version is below 15.0.2 statement cache info should not be VISABLE
-				cm.init(conn);
-			}
-		}
-			
-		_isInitialized = true;
-	}
+//	private List<String> _activeRoleList    = null;
+//	private boolean      _isInitialized     = false;
+//	private boolean      _countersIsCreated = false;
+//
+//	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
+//	throws Exception
+//	{
+//		if (_isInitialized)
+//			return;
+//
+//		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
+//			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
+//
+//			
+//		if (! _countersIsCreated)
+//			createCounters();
+//		
+//		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+//
+//		// Get active ASE Roles
+//		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
+//		_activeRoleList = AseConnectionUtils.getActiveSystemRoles(conn);
+//		
+//		// Get active Monitor Configuration
+//		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
+//
+//		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
+//		// This will hurt performance, especially when querying sysmonitors table, so set this to off
+//		if (aseVersion >= Ver.ver(15,0,3,1))
+//			AseConnectionUtils.setCompatibilityMode(conn, false);
+//
+//		ArrayList<CountersModel> CMList = new ArrayList<CountersModel>();
+//		CMList.add(_cmProcWaits);
+//		CMList.add(_cmProcObjects);
+//		CMList.add(_cmLocks);
+//
+//Create Some Cind of CounterController and set that at the CM level, this so that the Global used in AseTune if called from there isn't messed up...
+//		// initialize all the CM's
+//		for (CountersModel cm : CMList)
+//		{
+//			if (cm != null)
+//			{
+//				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
+//
+//				// set the version
+////				cm.setServerVersion(aseVersion);
+//				cm.setServerVersion(monTablesVersion);
+//				cm.setClusterEnabled(isClusterEnabled);
+//				
+//				// set the active roles, so it can be used in initSql()
+//				cm.setActiveServerRolesOrPermissions(_activeRoleList);
+//
+//				// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
+//				cm.setMonitorConfigs(monitorConfigMap);
+//
+//				// Now when we are connected to a server, and properties are set in the CM, 
+//				// mark it as runtime initialized (or late initialization)
+//				// do NOT do this at the end of this method, because some of the above stuff
+//				// will be used by the below method calls.
+//				cm.setRuntimeInitialized(true);
+//
+//				// Initializes SQL, use getServerVersion to check what we are connected to.
+//				cm.initSql(conn);
+//
+//				// Use this method if we need to check anything in the database.
+//				// for example "deadlock pipe" may not be active...
+//				// If server version is below 15.0.2 statement cache info should not be VISABLE
+//				cm.init(conn);
+//			}
+//		}
+//			
+//		_isInitialized = true;
+//	}
 
 	
 	@Override
@@ -2663,18 +3031,18 @@ public class RefreshProcess extends Thread
 		}
 
 		// Display warning if all configuration parameters are not set
-		StringBuffer              msg = new StringBuffer();
+		StringBuilder             msg = new StringBuilder();
 		if (!stmtStat)            msg = msg.append("<li>'statement statistics active' to 1 </li>" );
 		if (!batchCapture)        msg = msg.append("<li>'SQL batch capture' to 1 </li>");
 		if (!SQLTextMonitor)      msg = msg.append("<li>'max SQL text monitored' to a value greater than 0 (ex : 4096) </li>");
-		if (sqlTextSample)
+		if (sqlTextSample) // Only if the checkbox is true
 		{
 			if (!sqlTextPipe)     msg = msg.append("<li>'sql text pipe active' to 1 </li>");
 			if (!sqlTextPipeMsg)  msg = msg.append("<li>'sql text pipe max messages' to a value greater than 0 </li>");
 		}
 		if (!stmtPipe)            msg = msg.append("<li>'statement pipe active' to 1 </li>");
 		if (!stmtPipeMsg)         msg = msg.append("<li>'statement pipe max messages' to a value greater than 0 </li>");
-		if (planTextSample)
+		if (planTextSample) // Only if the checkbox is true
 		{
 			if (!planTextPipe)    msg = msg.append("<li>'plan text pipe active' to 1 </li>");
 			if (!planTextPipeMsg) msg = msg.append("<li>'plan text pipe max messages' to a value greater than 0 </li>");
@@ -2722,7 +3090,7 @@ public class RefreshProcess extends Thread
 		{
 			try 
 			{
-				rs=stmt.executeQuery("select name from sybsystemprocs..sysobjects where name ='sp_showplanfull' and type='P'");
+				ResultSet rs=stmt.executeQuery("select name from sybsystemprocs..sysobjects where name ='sp_showplanfull' and type='P'");
 				rs.next();
 				if (rs.getRow() == 0) 
 				{
@@ -2748,7 +3116,7 @@ public class RefreshProcess extends Thread
 						"select @return_value = show_plan(@spid, -1, -1, -1)   \n" +
 						"if (@return_value < 0)   \n" +
 						"begin   \n" +
-						"        print 'No plan for spid %1!', @spid   \n" +
+						"        print 'No plan for _spid %1!', @spid   \n" +
 						"        goto fin   \n" +
 						"end   \n" +
 						"else   \n" +
@@ -2793,13 +3161,58 @@ public class RefreshProcess extends Thread
 			}
 		}
 
-		_aseVersion       = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
-		_isClusterEnabled = MonTablesDictionaryManager.getInstance().isClusterEnabled();
-		_monTablesVersion = MonTablesDictionaryManager.getInstance().getMdaVersion();
+//		try
+//		{
+    		_aseVersion       = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
+    		_isClusterEnabled = MonTablesDictionaryManager.getInstance().isClusterEnabled();
+    		_monTablesVersion = MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion();
+//		}
+//		catch(RuntimeException rte) // if MonTablesDictionary hasn't been initialized... java.lang.RuntimeException: No MonTablesDictionary has been set...
+//		{
+//    		_aseVersion       = _conn.getDbmsVersionNumber();
+//    		_isClusterEnabled = false; // _conn.isClusterEnabled();
+//    		_monTablesVersion = _aseVersion; // hopefully good enough
+//		}
 
+//		try
+//		{
+//			initCounters(_conn, true, _aseVersion, _isClusterEnabled, _monTablesVersion);
+//		}
+//		catch (Exception ex)
+//		{
+//			SwingUtils.showErrorMessage("Problems Initalize CM's", 
+//					"Problems when initializing some of the Performance Counters", ex);
+//			return;
+//		}
 		try
 		{
-			initCounters(_conn, true, _aseVersion, _isClusterEnabled, _monTablesVersion);
+			CounterControllerSqlCapture counterController = new CounterControllerSqlCapture(true, this, pdf);
+			counterController.setMonConnection(_conn);
+			counterController.initCounters(_conn, true, _aseVersion, _isClusterEnabled, _monTablesVersion);
+			
+			String whereSpidKpid = "";
+			if (_spid > 0) whereSpidKpid += "  and SPID = " + _spid + "\n";
+			if (_kpid > 0) whereSpidKpid += "  and KPID = " + _kpid + "\n";
+
+			_cmProcObjects = counterController.getCmByName(CmProcessObjects.CM_NAME);
+			_cmProcWaits   = counterController.getCmByName(CmProcessWaits  .CM_NAME);
+			_cmLocks       = counterController.getCmByName(CmLocks         .CM_NAME);
+			
+//			_cmProcObjects.setTabPanel(pdf.processObjectsPanel);
+//			pdf.mainTabbedPanel.add(_cmProcObjects.getTabPanel(), _cmProcObjects.getDisplayName());
+			if (_spid > 0 || _kpid > 0)
+				_cmProcObjects.setSqlWhere(whereSpidKpid);
+
+//			_cmProcWaits.setTabPanel(pdf.processWaitsPanel);
+//			pdf.mainTabbedPanel.add(_cmProcWaits.getTabPanel(), _cmProcWaits.getDisplayName());
+			if (_spid > 0 || _kpid > 0)
+				_cmProcWaits.setSqlWhere(whereSpidKpid);
+
+//			_cmLocks.setTabPanel(pdf.processLocksPanel);
+//			pdf.mainTabbedPanel.add(_cmLocks.getTabPanel(), _cmLocks.getDisplayName());
+			if (_spid > 0 || _kpid > 0)
+				_cmLocks.setSqlWhere(whereSpidKpid);
+
 		}
 		catch (Exception ex)
 		{
@@ -2826,7 +3239,7 @@ public class RefreshProcess extends Thread
 
 			if (_paused)
 			{
-				pdf.statusBarLbl.setText("Paused");
+				pdf.setStatusBar("Paused", false);
 				continue;
 			}
 
@@ -2843,7 +3256,7 @@ public class RefreshProcess extends Thread
 		{
 			_logger.error("SQL problems", sqlex);
 		}
-		pdf.statusBarLbl.setText("Process disconnected");
+		pdf.setStatusBar("Process disconnected", false);
 	}
 
 	public void setRefreshInterval(int interval)
@@ -2876,56 +3289,55 @@ public class RefreshProcess extends Thread
 		try
 		{
 			// Refresh statement panel
-			pdf.statusBarLbl.setText("Refreshing");
-			pdf.statusBarLbl.setForeground(Color.BLACK);
+			pdf.refreshBegin();
 			refreshStmt();
 
-			if (true)           CMProcObjects.getTabPanel().setWatermark();
-			if (procWaitEvents) CMProcWaits  .getTabPanel().setWatermark();
-			if (true)           CMLocks      .getTabPanel().setWatermark();
+			if (true)           _cmProcObjects.getTabPanel().setWatermark();
+			if (procWaitEvents) _cmProcWaits  .getTabPanel().setWatermark();
+			if (true)           _cmLocks      .getTabPanel().setWatermark();
 
-			if (spid > 0 || kpid > 0)
+			if (_spid > 0 || _kpid > 0)
 			{
 				// Refresh process objects
-				if (CMProcObjects.isRefreshable())
-					CMProcObjects.refresh();
+				if (_cmProcObjects.isRefreshable())
+					_cmProcObjects.refresh();
 	
 				// Refresh process waits
-				if (procWaitEvents && CMProcWaits.isRefreshable())
-					CMProcWaits.refresh();
+				if (procWaitEvents && _cmProcWaits.isRefreshable())
+					_cmProcWaits.refresh();
 	
 				// Refresh locks
-				if (CMLocks.isRefreshable())
-					CMLocks.refresh();
+				if (_cmLocks.isRefreshable())
+					_cmLocks.refresh();
 			}
 			else
 			{
-				if (currentBatch != null)
+				if (_activeBatch != null)
 				{
-					pdf.kpidFld.setText(currentBatch.kpid+"");
+					pdf.kpidFld.setText(_activeBatch.kpid+"");
 					pdf.kpidFld.setForeground(Color.BLUE);
 
-					pdf.spidFld.setText(currentBatch.spid+"");
+					pdf.spidFld.setText(_activeBatch.spid+"");
 					pdf.spidFld.setForeground(Color.BLUE);
 
-					if (true)           CMProcObjects.setSqlWhere(" and KPID = " + currentBatch.kpid);
-					if (procWaitEvents) CMProcWaits  .setSqlWhere(" and KPID = " + currentBatch.kpid);
-					if (true)           CMLocks      .setSqlWhere(" and KPID = " + currentBatch.kpid);
+					if (true)           _cmProcObjects.setSqlWhere(" and KPID = " + _activeBatch.kpid);
+					if (procWaitEvents) _cmProcWaits  .setSqlWhere(" and KPID = " + _activeBatch.kpid);
+					if (true)           _cmLocks      .setSqlWhere(" and KPID = " + _activeBatch.kpid);
 
-					if (                  CMProcObjects.isRefreshable()) CMProcObjects.refresh();
-					if (procWaitEvents && CMProcWaits.isRefreshable()  ) CMProcWaits  .refresh();
-					if (                  CMLocks.isRefreshable()      ) CMLocks      .refresh();
+					if (                  _cmProcObjects.isRefreshable()) _cmProcObjects.refresh();
+					if (procWaitEvents && _cmProcWaits  .isRefreshable()) _cmProcWaits  .refresh();
+					if (                  _cmLocks      .isRefreshable()) _cmLocks      .refresh();
 				}
 				else
 				{
-					if (true)           CMProcObjects.clear();
-					if (procWaitEvents) CMProcWaits  .clear();
-					if (true)           CMLocks      .clear();
+					if (true)           _cmProcObjects.clear();
+					if (procWaitEvents) _cmProcWaits  .clear();
+					if (true)           _cmLocks      .clear();
 
-					String watermark = "No SQL Statement is executing, the \"Current Statements\" table is empty.";
-					if (true)           CMProcObjects.getTabPanel().setWatermarkText(watermark);
-					if (procWaitEvents) CMProcWaits  .getTabPanel().setWatermarkText(watermark);
-					if (true)           CMLocks      .getTabPanel().setWatermarkText(watermark);
+					String watermark = "No Active SQL Statement is executing, the tab \"Active Statements\" data table is empty.";
+					if (true)           _cmProcObjects.getTabPanel().setWatermarkText(watermark);
+					if (procWaitEvents) _cmProcWaits  .getTabPanel().setWatermarkText(watermark);
+					if (true)           _cmLocks      .getTabPanel().setWatermarkText(watermark);
 					
 					pdf.kpidFld.setText("none");
 					pdf.kpidFld.setForeground(Color.BLACK);
@@ -2942,10 +3354,7 @@ public class RefreshProcess extends Thread
 		}
 		finally
 		{
-			if ( ! pdf.statusBarLbl.getText().startsWith("Error") )
-			{
-				pdf.statusBarLbl.setText("");
-			}
+			pdf.refreshEnd();
 		}
 	}
 

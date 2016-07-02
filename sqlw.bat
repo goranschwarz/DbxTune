@@ -61,10 +61,32 @@ rem set JAVA_HOME=C:\Program Files\Java\jdk1.6.0_07
 
 
 rem ------------------------------------------------------------------------
+rem --- set JVM MEMORY parameters
+rem ------------------------------------------------------------------------
+echo NOTE: Set/Change JVM Memory parameters by setting Environment variable: SQLW_JVM_MEMORY_PARAMS 
+
+set JVM_MEMORY_PARAMS_32=-Xmx1024m -Xms64m
+set JVM_MEMORY_PARAMS_64=-Xmx2048m -Xms64m
+
+IF DEFINED SQLW_JVM_MEMORY_PARAMS set JVM_MEMORY_PARAMS_32=%SQLW_JVM_MEMORY_PARAMS%
+IF DEFINED SQLW_JVM_MEMORY_PARAMS set JVM_MEMORY_PARAMS_64=%SQLW_JVM_MEMORY_PARAMS%
+
+
+rem ------------------------------------------------------------------------
+rem --- set JVM GARBAGE COLLECTION parameters
+rem ------------------------------------------------------------------------
+set JVM_GC_PARAMS_32=
+set JVM_GC_PARAMS_64=
+
+IF DEFINED SQLW_JVM_GC_PARAMS set JVM_GC_PARAMS_32=%SQLW_JVM_GC_PARAMS%
+IF DEFINED SQLW_JVM_GC_PARAMS set JVM_GC_PARAMS_64=%SQLW_JVM_GC_PARAMS%
+
+
+rem ------------------------------------------------------------------------
 rem --- set JVM parameters   and   DEBUG stuff
 rem ------------------------------------------------------------------------
-set JVM_PARAMS=-Xmx700m
-set JVM_PARAMS=-Xmx4096m
+rem --- set JVM_PARAMS=-Xmx700m
+rem --- set JVM_PARAMS=-Xmx4096m
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.ericsson.se -Dhttp.proxyPort=8080
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dcom.sun.management.jmxremote
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Djava.net.useSystemProxies=true
@@ -97,17 +119,21 @@ set classpath=%SQLW_HOME%\classes
 set classpath=%classpath%;%SQLW_HOME%\lib\asetune.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\jtds-1.2.7.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\jtds-1.3.1.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\sqljdbc4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.3.176.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.4.192.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\wizard.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-core-4.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\swingx-all-1.6.5-1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jchart2d-3.2.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\planviewer.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.2.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-lang3-3.4.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-io-2.4.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-csv-1.2.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.3.1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\proxy-vole_20131209.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\rsyntaxtextarea.jar
@@ -117,6 +143,8 @@ set classpath=%classpath%;%SQLW_HOME%\lib\jcommon-1.0.21.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jfreechart-1.0.14.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\juniversalchardet-1.0.3.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\DDLGen.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\EccpressoFIPS.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\EccpressoFIPSJca.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\simplemagic-1.6.jar
 
 rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
@@ -142,8 +170,27 @@ set PATH=%SQLW_JAVA_HOME%\bin;%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version
 rem ------------------------------------------------------------------------
-java com.asetune.utils.JavaVersion 6
+java com.asetune.utils.JavaVersion 7
 IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
+
+
+
+rem ------------------------------------------------------------------------
+rem --- SET memory parameters, if 64 bit java: add more memory
+rem ------------------------------------------------------------------------
+java com.asetune.utils.JavaBitness
+set JavaBitness=%ERRORLEVEL%
+rem ---echo Java Bitness: %JavaBitness%
+
+set JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS_32%
+set JVM_GC_PARAMS=%JVM_GC_PARAMS_32%
+if %JavaBitness% == 64 (
+	set JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS_64%
+	set JVM_GC_PARAMS=%JVM_GC_PARAMS_64%
+	echo NOTE: Java is a 64 bit, AseTune will be allowed to use more memory
+)
+echo JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS%
+echo JVM_GC_PARAMS=%JVM_GC_PARAMS%
 
 
 
@@ -154,7 +201,13 @@ rem ------------------------------------------------------------------------
 pushd %SQLW_HOME%
 REM echo %CLASSPATH%
 
-java %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.sqlw.QueryWindow %*
+rem set OTHER_FLAGS=-Dglass.win.uiScale=200%%
+rem set OTHER_FLAGS=-Dglass.win.uiScale=192dpi
+rem set OTHER_FLAGS=-Dglass.win.uiScale=2.00
+
+java -version
+echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %OTHER_FLAGS% -noverify -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.sqlw.QueryWindow %*
+     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %OTHER_FLAGS% -noverify -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DSQLW_HOME="%SQLW_HOME%" -DSQLW_SAVE_DIR="%SQLW_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.tools.sqlw.QueryWindow %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_sqlw
@@ -204,7 +257,7 @@ echo Mail to: goran_schwarz@hotmail.com
 echo Subject: SqlW starting problem
 echo -----------------------------------------------------------------------
 echo .
-goto exit_asetune
+goto exit_sqlw
 
 :no_sybase
 echo -----------------------------------------------------------------------

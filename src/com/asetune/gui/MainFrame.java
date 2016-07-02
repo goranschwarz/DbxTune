@@ -27,6 +27,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.AbstractAction;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -71,8 +73,6 @@ import javax.swing.event.PopupMenuListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.lf5.LogLevel;
 
@@ -82,6 +82,7 @@ import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.cache.XmlPlanCache;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.check.MailGroupDialog;
@@ -90,10 +91,10 @@ import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.GMemoryIndicator;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPane.TabOrderAndVisibilityListener;
 import com.asetune.gui.swing.GTabbedPaneViewDialog;
@@ -105,6 +106,7 @@ import com.asetune.gui.wizard.WizardUserDefinedCm;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.PersistWriterStatistics;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
@@ -123,6 +125,8 @@ import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 
 //public class MainFrame
@@ -168,6 +172,9 @@ public abstract class MainFrame
 
 	//-------------------------------------------------
 	// PROPERTIES KEYS
+	public final static String    PROPKEY_openConnDialogAtStartup      = "MainFrame.openConnDialogAtStartup";
+	public final static boolean   DEFAULT_openConnDialogAtStartup      = false;
+
 	public static final String    PROPKEY_refreshInterval              = "main.refresh.interval";
 	public static final int       DEFAULT_refreshInterval              = 10; // NOTE use: getDefaultRefreshIntervall() to get this, which depends on different implementations
 
@@ -218,6 +225,7 @@ public abstract class MainFrame
 	// Actions
 	public static final String ACTION_CONNECT                           = "CONNECT";
 	public static final String ACTION_DISCONNECT                        = "DISCONNECT";
+	public static final String ACTION_SAVE_PROPS                        = "SAVE_PROPS";
 	public static final String ACTION_EXIT                              = "EXIT";
 
 	public static final String ACTION_OPEN_LOG_VIEW                     = "OPEN_LOG_VIEW";
@@ -298,7 +306,7 @@ public abstract class MainFrame
 //	private OfflineReadWatermark _offlineReadWatermark         = null;
 	private Timer               _offlineSelectionTimer         = new Timer(100, new OfflineSelectionTimerAction(this));
 
-	private JComboBox           _workspace_cbx                 = new JComboBox();
+	private JComboBox<String>   _workspace_cbx                 = new JComboBox<String>();
 	
 //	private JMenuBar            _main_mb                       = new JMenuBar();
 //
@@ -356,6 +364,7 @@ public abstract class MainFrame
 	private JMenu               _file_m;
 	private JMenuItem           _connect_mi;
 	private JMenuItem           _disconnect_mi;
+	private JCheckBoxMenuItem   _openConnDialogAtStart_mi;
 	private JMenuItem           _exit_mi;
 
 	// View
@@ -411,18 +420,23 @@ public abstract class MainFrame
 	private JButton                   _refreshNow_but            = new JButton();
 	private JButton                   _samplePause_but           = new JButton();
 	private JButton                   _samplePlay_but            = new JButton();
-	private JComboBox                 _sampleInterval_cbx        = new JComboBox(new Integer[] {5, 10, 15, 20, 30, 45, 60, 90, 60*2, 60*5, 60*10, 60*30, 60*60});
+	private JComboBox<Integer>        _sampleInterval_cbx        = new JComboBox<Integer>(new Integer[] {5, 10, 15, 20, 30, 45, 60, 90, 60*2, 60*5, 60*10, 60*30, 60*60});
 	private JButton                   _gcNow_but                 = new JButton();
 	private static JLabel             _statusStatus              = new JLabel(ST_DEFAULT_STATUS_FIELD);
 	private static JLabel             _statusStatus2             = new JLabel(ST_DEFAULT_STATUS2_FIELD);
 	private static JLabel             _statusServerName          = new JLabel(ST_DEFAULT_SERVER_NAME);
 	private static JLabel             _statusServerListeners     = new JLabel(ST_DEFAULT_SERVER_LISTENERS);
 	private static JLabel             _statusMemory              = new JLabel("JVM Memory Usage");
-	private static JLabel             _statusPcsQueueSize          = new JLabel();
-	private static JLabel             _statusPcsPersistInfo        = new JLabel();
-	private static JLabel             _statusPcsDdlLookupQueueSize = new JLabel();
-	private static JLabel             _statusPcsDdlStoreQueueSize  = new JLabel();
+	private static JLabel             _statusPcsQueueSize            = new JLabel();
+	private static JLabel             _statusPcsPersistInfo          = new JLabel();
+	private static JLabel             _statusPcsDdlLookupQueueSize   = new JLabel();
+	private static JLabel             _statusPcsDdlStoreQueueSize    = new JLabel();
+	private static JLabel             _statusPcsSqlCapStoreQueueSize = new JLabel();
 
+	// almost status panel... 
+	private JLabel                    _srvWarningMessage = new JLabel();
+	
+	
 	//-------------------------------------------------
 	// Toolbar Panel
 	private JButton                   _connectTb_but             = null;
@@ -499,11 +513,10 @@ public abstract class MainFrame
 		AsetuneTokenMaker.init();  
 
 		initComponents();
-		loadProps();
 
-		// Calculate initial size
-//		pack();
-		//setSize(new Dimension(747, 536));
+		pack();
+
+		loadProps();
 
 		// Install shutdown hook
 		Runtime.getRuntime().addShutdownHook(new Thread()
@@ -522,6 +535,26 @@ public abstract class MainFrame
 		// ADD this to the out of memory listener, which is started in AseTune.java
 		Memory.addMemoryListener(this);
 		
+		//--------------------------
+		// Do some post processing... (after initialization is DONE) open the Connection dialog
+		boolean doConnectOnStartup      = Configuration.getCombinedConfiguration().getBooleanProperty(ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP, ConnectionDialog.DEFAULT_CONNECT_ON_STARTUP);
+		boolean openConnDialogOnStartup = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_openConnDialogAtStartup,             DEFAULT_openConnDialogAtStartup);
+		if ( !doConnectOnStartup && openConnDialogOnStartup )
+		{
+			// The above (SwingUtilities.invokeLater) causes NullPointerException in Java 8, so lets try this instead
+			new Timer(100, new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent evt)
+				{
+					((Timer)evt.getSource()).stop();
+					if (_connectTb_but != null)
+						_connectTb_but.doClick();
+				}
+			}).start();
+		}
+
+		// Now we are initialized
 		_initialized = true;
 	}
 
@@ -533,6 +566,12 @@ public abstract class MainFrame
 	** END: constructors
 	**---------------------------------------------------
 	*/
+
+	@Override
+	public Component getGuiHandle()
+	{
+		return this;
+	}
 
 	public static MainFrame getInstance()
 	{
@@ -852,15 +891,15 @@ public abstract class MainFrame
 
 		//--------------------------
 		// TOOLBAR
-		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "connect_16.png",    ACTION_CONNECT,    this, "Connect to a DB Server",         "Connect");
-		_disConnectTb_but   = SwingUtils.makeToolbarButton(Version.class, "disconnect_16.png", ACTION_DISCONNECT, this, "Close the DB Server Connection", "Disconnect");
+		_connectTb_but      = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a DB Server",         "Connect");
+		_disConnectTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the DB Server Connection", "Disconnect");
 
-		_screenshotTb_but   = SwingUtils.makeToolbarButton(Version.class, "screenshot.png",   ACTION_SCREENSHOT,     this, "Take a screenshot of the application", "Screenshot");
-		_samplePauseTb_but  = SwingUtils.makeToolbarButton(Version.class, "sample_pause.png", ACTION_SAMPLING_PAUSE, this, "Pause ALL sampling activity",          "Pause");
-		_samplePlayTb_but   = SwingUtils.makeToolbarButton(Version.class, "sample_play.png",  ACTION_SAMPLING_PLAY,  this, "Continue to sample...",          "Pause");
+		_screenshotTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/screenshot.png",   ACTION_SCREENSHOT,     this, "Take a screenshot of the application", "Screenshot");
+		_samplePauseTb_but  = SwingUtils.makeToolbarButton(Version.class, "images/sample_pause.png", ACTION_SAMPLING_PAUSE, this, "Pause ALL sampling activity",          "Pause");
+		_samplePlayTb_but   = SwingUtils.makeToolbarButton(Version.class, "images/sample_play.png",  ACTION_SAMPLING_PLAY,  this, "Continue to sample...",          "Pause");
 		_samplePlayTb_but.setVisible(false);
 
-		JButton tabSelectorNoSort = SwingUtils.makeToolbarButton(Version.class, "tab_selector_no_sort.gif", ACTION_TAB_SELECTOR, this, "Activate a specific tab", "Activate Tab");
+		JButton tabSelectorNoSort = SwingUtils.makeToolbarButton(Version.class, "images/tab_selector_no_sort.gif", ACTION_TAB_SELECTOR, this, "Activate a specific tab", "Activate Tab");
 		final JPopupMenu tabSelectorNoSortPopupMenu = new JPopupMenu();
 		tabSelectorNoSortPopupMenu.add(new JMenuItem("No Tab's is Visible"));
 		tabSelectorNoSort.setComponentPopupMenu(tabSelectorNoSortPopupMenu);
@@ -919,7 +958,7 @@ public abstract class MainFrame
 			public void popupMenuCanceled(PopupMenuEvent e)	{/*empty*/}
 		});
 
-		JButton tabSelectorSorted = SwingUtils.makeToolbarButton(Version.class, "tab_selector_sorted.gif", ACTION_TAB_SELECTOR, this, "Activate a specific tab (sorted by name)", "Activate Tab");
+		JButton tabSelectorSorted = SwingUtils.makeToolbarButton(Version.class, "images/tab_selector_sorted.gif", ACTION_TAB_SELECTOR, this, "Activate a specific tab (sorted by name)", "Activate Tab");
 		final JPopupMenu tabSelectorSortedPopupMenu = new JPopupMenu();
 		tabSelectorSortedPopupMenu.add(new JMenuItem("No Tab's is Visible"));
 		tabSelectorSorted.setComponentPopupMenu(tabSelectorSortedPopupMenu);
@@ -973,7 +1012,7 @@ public abstract class MainFrame
 
 
 		// NAVIGATOR: PREVIOUS
-		_prevCmNavigator_but = SwingUtils.makeToolbarButton(Version.class, "prev_cm.png", ACTION_CM_NAVIGATOR_PREV, this, "<html>Goto <i>previously</i> used Performance Counter Tab<br>Press <i>right click</i> to see the usage stack.<br>Shortcut: Alt-left</html>", "Previous Tab");
+		_prevCmNavigator_but = SwingUtils.makeToolbarButton(Version.class, "images/prev_cm.png", ACTION_CM_NAVIGATOR_PREV, this, "<html>Goto <i>previously</i> used Performance Counter Tab<br>Press <i>right click</i> to see the usage stack.<br>Shortcut: Alt-left</html>", "Previous Tab");
 		final JPopupMenu prevCmNavigatorPopupMenu = new JPopupMenu();
 		prevCmNavigatorPopupMenu.add(new JMenuItem("Empty"));
 		_prevCmNavigator_but.setComponentPopupMenu(prevCmNavigatorPopupMenu);
@@ -1025,7 +1064,7 @@ public abstract class MainFrame
 		});
 
 		// NAVIGATOR: NEXT
-		_nextCmNavigator_but = SwingUtils.makeToolbarButton(Version.class, "next_cm.png", ACTION_CM_NAVIGATOR_NEXT, this, "<html>Goto <i>next</i> used Performance Counter Tab, in the usage stack<br>Press <i>right click</i> to see the usage stack.<br>Shortcut: Alt-right</html>", "Next Tab");
+		_nextCmNavigator_but = SwingUtils.makeToolbarButton(Version.class, "images/next_cm.png", ACTION_CM_NAVIGATOR_NEXT, this, "<html>Goto <i>next</i> used Performance Counter Tab, in the usage stack<br>Press <i>right click</i> to see the usage stack.<br>Shortcut: Alt-right</html>", "Next Tab");
 		final JPopupMenu nextCmNavigatorPopupMenu = new JPopupMenu();
 		nextCmNavigatorPopupMenu.add(new JMenuItem("Empty"));
 		_nextCmNavigator_but.setComponentPopupMenu(nextCmNavigatorPopupMenu);
@@ -1111,6 +1150,23 @@ public abstract class MainFrame
 //		_toolbar.add(_workspace_cbx, "push, right");
 //		_toolbar.add(_workspace_cbx, "split, push, right, growpriox 0, shrink 0");
 
+		// Warning message goes on the ToolBar
+		_toolbar.add(_srvWarningMessage, "hidemode 3");
+		_srvWarningMessage.setVisible(false);
+		// Add a popup menu for _srvWarningMessage, so we can remove the message...
+		JPopupMenu srvWarnMessagePopup = new JPopupMenu();
+		JMenuItem hideMenuItem = new JMenuItem(new AbstractAction("Hide this message")
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_srvWarningMessage.setVisible(false);
+			}
+			private static final long serialVersionUID = 1L;
+		});
+		srvWarnMessagePopup.add(hideMenuItem);
+		_srvWarningMessage.setComponentPopupMenu(srvWarnMessagePopup);
+
 		// ReadSlider
 		_readTsWatermark = new ReadTsWatermark(_readSlider, "empty");
 		_readSlider.setVisible(_viewStorage_chk.isSelected());
@@ -1185,11 +1241,12 @@ public abstract class MainFrame
 		_statusServerName     .setToolTipText("<html>The local name of the ASE Server, as named in the interfaces or sql.ini file.<BR>Also show the HOST:PORT, which we are connected to.</html>");
 		_statusServerListeners.setToolTipText("<html>This is the network listeners the ASE Servers listens to.<BR>This is good to see if we connect via SSH tunnels or other proxy functionality.<br>The format is netlibdriver: HOST PORT, next entry...</html>");
 		_statusMemory         .setToolTipText("How much memory does the JVM consume for the moment.");
-		_statusPcsQueueSize         .setToolTipText("Number of entries in the Performance Counter Storage Queue.");
-		_statusPcsPersistInfo       .setToolTipText("PCS Information, For Example: How long did the last persist took");
-		_statusPcsDdlLookupQueueSize.setToolTipText("Number of entries in the DDL Lookup Queue.");
-		_statusPcsDdlStoreQueueSize .setToolTipText("Number of entries in the DDL Storage Queue.");
-
+		_statusPcsQueueSize           .setToolTipText("Number of entries in the Performance Counter Storage Queue.");
+		_statusPcsPersistInfo         .setToolTipText("PCS Information, For Example: How long did the last persist took");
+		_statusPcsDdlLookupQueueSize  .setToolTipText("Number of entries in the DDL Lookup Queue.");
+		_statusPcsDdlStoreQueueSize   .setToolTipText("Number of entries in the DDL Storage Queue.");
+		_statusPcsSqlCapStoreQueueSize.setToolTipText("Number of entries in the SQL Capture Storage Queue (batchesInQueue : entriesInQueue)");
+		
 		// Blocking LOCK alert butt
 		_blockAlert_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/block_lock_alert.png"));
 		_blockAlert_but.setText("");
@@ -1270,8 +1327,8 @@ public abstract class MainFrame
 		_statusPanel.add(_blockAlert_but,                         "hidemode 3");
 		_statusPanel.add(_fullTranlogAlert_but,                   "hidemode 3");
 		_statusPanel.add(_oldestOpenTran_but,                     "hidemode 3");
-		_statusPanel.add(_statusStatus,                           "gaptop 3, gapbottom 5, grow, push");
-		_statusPanel.add(_statusStatus2,                          "");
+		_statusPanel.add(_statusStatus,                           "gaptop 3, gapbottom 5");
+		_statusPanel.add(_statusStatus2,                          "grow, push");
 		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
 		_statusPanel.add(_statusServerName,                       "right");
 		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
@@ -1281,7 +1338,9 @@ public abstract class MainFrame
 		_statusPanel.add(_statusPcsPersistInfo,                   "hidemode 3");
 		_statusPanel.add(_statusPcsDdlLookupQueueSize,            "hidemode 3");
 		_statusPanel.add(_statusPcsDdlStoreQueueSize,             "hidemode 3");
+		_statusPanel.add(_statusPcsSqlCapStoreQueueSize,          "hidemode 3");
 		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
+		_statusPanel.add(new GMemoryIndicator(1000),  "growx, hidemode 3");
 		_statusPanel.add(_statusMemory,                           "right");
 		_statusPanel.add(_gcNow_but,                              "right");
 
@@ -1366,8 +1425,6 @@ public abstract class MainFrame
 				System.exit(0);
 			}
 		});
-		
-		pack();
 	}
 
 	/*---------------------------------------------------
@@ -1400,6 +1457,7 @@ public abstract class MainFrame
 
 		_connect_mi                    = new JMenuItem("Connect...");
 		_disconnect_mi                 = new JMenuItem("Disconnect");
+		_openConnDialogAtStart_mi      = new JCheckBoxMenuItem("Open Connection Dialog at Startup");
 		_exit_mi                       = new JMenuItem("Exit");
 
 		_connect_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/connect_16.png"));
@@ -1408,10 +1466,12 @@ public abstract class MainFrame
 
 		_connect_mi                   .setActionCommand(ACTION_CONNECT);
 		_disconnect_mi                .setActionCommand(ACTION_DISCONNECT);
+		_openConnDialogAtStart_mi     .setActionCommand(ACTION_SAVE_PROPS);
 		_exit_mi                      .setActionCommand(ACTION_EXIT);
 
 		_connect_mi                   .addActionListener(this);
 		_disconnect_mi                .addActionListener(this);
+		_openConnDialogAtStart_mi     .addActionListener(this);
 		_exit_mi                      .addActionListener(this);
 
 		_connect_mi                   .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
@@ -1419,6 +1479,7 @@ public abstract class MainFrame
 
 		menu.add(_connect_mi);
 		menu.add(_disconnect_mi);
+		menu.add(_openConnDialogAtStart_mi);
 		menu.add(_exit_mi);
 		
 		return menu;
@@ -1777,6 +1838,9 @@ public abstract class MainFrame
 		if (ACTION_DISCONNECT.equals(actionCmd))
 			action_disconnect(e, true);
 
+		if (ACTION_SAVE_PROPS.equals(actionCmd))
+			saveProps();
+
 		if (ACTION_EXIT.equals(actionCmd))
 			action_exit(e);
 
@@ -1877,10 +1941,10 @@ public abstract class MainFrame
 				PersistReader reader = PersistReader.getInstance();
 				if (reader != null)
 				{
-					String jdbcDriver = reader.getJdbcDriver();
-					String jdbcUrl    = reader.getJdbcUrl();
-					String jdbcUser   = reader.getJdbcUser();
-					String jdbcPasswd = reader.getJdbcPasswd();
+//					String jdbcDriver = reader.getJdbcDriver();
+//					String jdbcUrl    = reader.getJdbcUrl();
+//					String jdbcUser   = reader.getJdbcUser();
+//					String jdbcPasswd = reader.getJdbcPasswd();
 //NOTE: probably needs to get ConnProps from PersistReader and use that (or can we trust the "default ConnProps")
 					try 
 					{
@@ -2075,6 +2139,18 @@ public abstract class MainFrame
 			TrendGraphDashboardPanel tgdp = CounterController.getSummaryPanel().getGraphPanel();
 			tgdp.setInMemHistoryEnable(false);
 
+			// XML Plan Cache
+			if (XmlPlanCache.hasInstance())
+			{
+				XmlPlanCache.getInstance().outOfMemoryHandler();
+			}
+
+			// Persistent Counter Storage
+			if (PersistentCounterHandler.hasInstance())
+			{
+				PersistentCounterHandler.getInstance().outOfMemoryHandler();
+			}
+
 			// While doing GC show GUI
 			if (MainFrame.getInstance().isActive())
 			{
@@ -2132,6 +2208,19 @@ public abstract class MainFrame
 			
 			// boolean doJavaGcAfterRefresh = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_doJavaGcAfterRefresh, DEFAULT_doJavaGcAfterRefresh);
 			
+			// XML Plan Cache
+			if (XmlPlanCache.hasInstance())
+			{
+				XmlPlanCache.getInstance().lowOnMemoryHandler();
+			}
+
+			// Persistent Counter Storage
+			if (PersistentCounterHandler.hasInstance())
+			{
+				PersistentCounterHandler.getInstance().lowOnMemoryHandler();
+			}
+
+
 			if ( ! _optDoGcAfterRefresh_mi.isSelected() )
 			{
 				int memLeft = Memory.getFreeMemoryInMB();
@@ -2670,8 +2759,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		else
 		{
-			return PersistReader.getInstance().getConnection();
+			if (PersistReader.hasInstance())
+				return PersistReader.getInstance().getConnection();
 		}
+		return null;
 	}
 	@Override
 //	public Connection getNewConnection(String appName)
@@ -2766,7 +2857,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		ConnectionDialog connDialog = new ConnectionDialog(this, connDialogOptions);
 		if (source instanceof CounterCollectorThreadGui && connDialogOptions._showAseTab)
 		{
-			if ( action != null && action.startsWith(ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP) )
+			if ( action != null && action.startsWith(ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP) )
 			{
 				try
 				{
@@ -2775,7 +2866,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					// PropPropEntry parses the entries and then we can query the PPE object
 					_logger.debug(action);
 					PropPropEntry ppe = new PropPropEntry(action);
-					String key = ConnectionDialog.CONF_OPTION_CONNECT_ON_STARTUP;
+					String key = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP;
 
 					if (!isNull(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
 					if (!isNull(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
@@ -2790,8 +2881,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //					if (sa.length >= 4) connDialog.setAseServer  (sa[3]); // THIS MUST BE FIRST
 //					if (sa.length >= 3) connDialog.setAsePassword(sa[2]);
 //					if (sa.length >= 2) connDialog.setAseUsername(sa[1]);
-//					_logger.debug("CONF_OPTION_CONNECT_ON_STARTUP: sa.length="+sa.length+"; "+StringUtil.toCommaStr(sa));
-//					_logger.debug("CONF_OPTION_CONNECT_ON_STARTUP: aseUser='"+connDialog.getAseUsername()+"', asePasswd='"+connDialog.getAsePassword()+"', aseServer='"+connDialog.getAseServer()+"'.");
+//					_logger.debug("PROPKEY_CONNECT_ON_STARTUP: sa.length="+sa.length+"; "+StringUtil.toCommaStr(sa));
+//					_logger.debug("PROPKEY_CONNECT_ON_STARTUP: aseUser='"+connDialog.getAseUsername()+"', asePasswd='"+connDialog.getAsePassword()+"', aseServer='"+connDialog.getAseServer()+"'.");
 	
 					connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
 				}
@@ -2839,6 +2930,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				if (PersistentCounterHandler.hasInstance())
 				{
 					PersistentCounterHandler.getInstance().addChangeListener(this);
+					startPcsConsumeMonitor();
 				}
 
 				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getAseConn(), true);
@@ -2872,6 +2964,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				if (PersistentCounterHandler.hasInstance())
 				{
 					PersistentCounterHandler.getInstance().addChangeListener(this);
+					startPcsConsumeMonitor();
 				}
 
 				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getJdbcConn(), true);
@@ -3130,6 +3223,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				// If we have a PersistentCounterHandler, stop it...
 				if ( PersistentCounterHandler.hasInstance() )
 				{
+					stopPcsConsumeMonitor();
+					
 					getWaitDialog().setState("Stopping Persist Storage Handler, if H2 do SHUTDOWN.");
 					PersistentCounterHandler.getInstance().stop(true, 10*1000);
 					
@@ -3288,20 +3383,20 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 	}
 
-	private void action_openAseMonitorConfigDialog(ActionEvent e)
-	{
-//		Connection conn = AseTune.getCounterCollector().getMonConnection();
-//		Connection conn = CounterController.getInstance().getMonConnection();
-		DbxConnection conn = CounterController.getInstance().getMonConnection();
-		AseConfigMonitoringDialog.showDialog(this, conn, -1);
-
-		// If monitoring is NOT enabled anymore, do disconnect
-		// By the way, changes can only be made if you have SA_ROLE
-		boolean hasSaRole           = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
-		boolean isMonitoringEnabled = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
-		if ( ! isMonitoringEnabled && hasSaRole )
-			action_disconnect(e, false);
-	}
+//	private void action_openAseMonitorConfigDialog(ActionEvent e)
+//	{
+////		Connection conn = AseTune.getCounterCollector().getMonConnection();
+////		Connection conn = CounterController.getInstance().getMonConnection();
+//		DbxConnection conn = CounterController.getInstance().getMonConnection();
+//		AseConfigMonitoringDialog.showDialog(this, conn, -1);
+//
+//		// If monitoring is NOT enabled anymore, do disconnect
+//		// By the way, changes can only be made if you have SA_ROLE
+//		boolean hasSaRole           = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
+//		boolean isMonitoringEnabled = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
+//		if ( ! isMonitoringEnabled && hasSaRole )
+//			action_disconnect(e, false);
+//	}
 
 	private void action_about(ActionEvent e)
 	{
@@ -3322,11 +3417,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		int toPos  = slider.getValue() + moveValue;
 		if (toPos >= 0 && toPos <= slider.getMaximum())
 			slider.setValue(toPos); // This will call the stateChanged, which does the rest of the work.
+		
+		slider.requestFocusInWindow();
 	}
 
 	private void action_sliderKeyLeft(ActionEvent e)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
+//		if ( ! _viewStorage_chk.isSelected() )
+//			return;
+
 		if (CounterController.getInstance().isMonConnectedStatus())
 			moveSlider(_readSlider, -1);
 
@@ -3336,7 +3435,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyRight(ActionEvent e)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		if (CounterController.getInstance().isMonConnectedStatus())
 			moveSlider(_readSlider, 1);
 
@@ -3346,7 +3444,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyLeftLeft(ActionEvent e)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		if (CounterController.getInstance().isMonConnectedStatus())
 			moveSlider(_readSlider, -10);
 
@@ -3356,7 +3453,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyRightRight(ActionEvent e)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		if (CounterController.getInstance().isMonConnectedStatus())
 			moveSlider(_readSlider, 10);
 
@@ -3366,7 +3462,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyLeftNext(ActionEvent e)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		if (CounterController.getInstance().isMonConnectedStatus())
 			_logger.info("No action has been assigned 'Ctrl+Shift+left' in 'onlinde mode'");
 
@@ -3379,7 +3474,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	private void action_sliderKeyRightNext(ActionEvent e)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		if (CounterController.getInstance().isMonConnectedStatus())
 			_logger.info("No action has been assigned 'Ctrl+Shift+right' in 'onlinde mode'");
 
@@ -3392,7 +3486,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	public void action_openDdlViewer(String dbname, String objectname)
 	{
-//		if (AseTune.getCounterCollector().isMonConnectedStatus())
 		if (CounterController.getInstance().isMonConnectedStatus())
 		{
 			SwingUtils.showInfoMessage("DDL Viewer", 
@@ -4519,40 +4612,119 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	/** implemets PersistentCounterHandler.PcsQueueChange */
 	@Override
-	public void pcsStorageQueueChange(int pcsQueueSize, int ddlLookupQueueSize, int ddlStoreQueueSize)
+	public void pcsStorageQueueChange(int pcsQueueSize, int ddlLookupQueueSize, int ddlStoreQueueSize, int sqlCapStoreQueueSize, int sqlCapStoreQueueEntries)
 	{
-		_statusPcsQueueSize         .setVisible(true);
-		_statusPcsDdlLookupQueueSize.setVisible(true);
-		_statusPcsDdlStoreQueueSize .setVisible(true);
+		_statusPcsQueueSize           .setVisible(true);
+		_statusPcsDdlLookupQueueSize  .setVisible(true);
+		_statusPcsDdlStoreQueueSize   .setVisible(true);
+		_statusPcsSqlCapStoreQueueSize.setVisible(true);
 
-		_statusPcsQueueSize         .setText("" + pcsQueueSize);
-		_statusPcsDdlLookupQueueSize.setText("" + ddlLookupQueueSize);
-		_statusPcsDdlStoreQueueSize .setText("" + ddlStoreQueueSize);
+		_statusPcsQueueSize           .setText("" + pcsQueueSize);
+		_statusPcsDdlLookupQueueSize  .setText("" + ddlLookupQueueSize);
+		_statusPcsDdlStoreQueueSize   .setText("" + ddlStoreQueueSize);
+		_statusPcsSqlCapStoreQueueSize.setText( (sqlCapStoreQueueSize + sqlCapStoreQueueEntries == 0) ? "0" : (sqlCapStoreQueueSize + ":" + sqlCapStoreQueueEntries) );
+
+		if ( CounterController.getInstance().isMonConnectedStatus() )
+		{
+			boolean pcsQueueSizeWarning         = false;
+			boolean ddlInputQueueSizeWarning    = false;
+			boolean ddlStoreQueueSizeWarning    = false;
+			boolean sqlCapStoreQueueSizeWarning = false;
+
+			int warnQueueSizeThresh        = Configuration.getCombinedConfiguration().getIntProperty(PersistentCounterHandler.PROPKEY_warnQueueSizeThresh,             PersistentCounterHandler.DEFAULT_warnQueueSizeThresh);
+			int ddlInputQueueSizeThresh    = Configuration.getCombinedConfiguration().getIntProperty(PersistentCounterHandler.PROPKEY_ddl_warnDdlInputQueueSizeThresh, PersistentCounterHandler.DEFAULT_ddl_warnDdlInputQueueSizeThresh);
+			int ddlStoreQueueSizeThresh    = Configuration.getCombinedConfiguration().getIntProperty(PersistentCounterHandler.PROPKEY_ddl_warnDdlStoreQueueSizeThresh, PersistentCounterHandler.DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
+			int sqlCapStoreQueueSizeThresh = Configuration.getCombinedConfiguration().getIntProperty(PersistentCounterHandler.PROPKEY_sqlCap_warnStoreQueueSizeThresh, PersistentCounterHandler.DEFAULT_sqlCap_warnStoreQueueSizeThresh);
+
+			pcsQueueSizeWarning         = pcsQueueSize             > warnQueueSizeThresh;
+			ddlInputQueueSizeWarning    = ddlLookupQueueSize       > ddlInputQueueSizeThresh;
+			ddlStoreQueueSizeWarning    = ddlStoreQueueSize        > ddlStoreQueueSizeThresh;
+			sqlCapStoreQueueSizeWarning = sqlCapStoreQueueEntries  > sqlCapStoreQueueSizeThresh;
+
+//			Color defaultColor = UIManager.getColor("Panel.background");
+			Color defaultColor = Color.BLACK;
+			_statusPcsQueueSize           .setForeground(pcsQueueSizeWarning         ? Color.RED : defaultColor);
+			_statusPcsDdlLookupQueueSize  .setForeground(ddlInputQueueSizeWarning    ? Color.RED : defaultColor);
+			_statusPcsDdlStoreQueueSize   .setForeground(ddlStoreQueueSizeWarning    ? Color.RED : defaultColor);
+			_statusPcsSqlCapStoreQueueSize.setForeground(sqlCapStoreQueueSizeWarning ? Color.RED : defaultColor);
+		}
 	}
 	@Override
-	public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, int inserts, int updates, int deletes, int createTables, int alterTables, int dropTables)
+	public void pcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStats)
 	{
-		_statusPcsPersistInfo.setVisible(true);
-		_statusPcsPersistInfo.setText("(" + persistTimeInMs + " ms)");
+		_pcsConsumeInfoLastReceived = System.currentTimeMillis();
 		
+		_statusPcsPersistInfo.setVisible(true);
+		_statusPcsPersistInfo.setText("(" + NumberFormat.getInstance().format(persistTimeInMs) + " ms)");
+
+		if ( CounterController.getInstance().isMonConnectedStatus() )
+		{
+			boolean persistTimeWarning  = false;
+
+			persistTimeWarning  = persistTimeInMs > _refreshInterval * 1000;
+
+//			Color defaultColor = UIManager.getColor("Panel.background");
+			Color defaultColor = Color.BLACK;
+			_statusPcsPersistInfo.setForeground(persistTimeWarning ? Color.RED : defaultColor);
+		}
+
+		NumberFormat nf = NumberFormat.getInstance();
 		StringBuilder sb = new StringBuilder();
 			sb.append("<html>\n");
 			sb.append("Last PCS Information, For Example: How long did the last persist took.<br>\n");
 			sb.append("<br>\n");
 			sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=0 WIDTH=\"100%\">\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>WriterName      </TD> <TD>").append( persistWriterName ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>sessionStartTime</TD> <TD>").append( sessionStartTime  ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>mainSampleTime  </TD> <TD>").append( mainSampleTime    ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>persistTimeInMs </TD> <TD>").append( persistTimeInMs   ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>inserts         </TD> <TD>").append( inserts           ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>updates         </TD> <TD>").append( updates           ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>deletes         </TD> <TD>").append( deletes           ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>createTables    </TD> <TD>").append( createTables      ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>alterTables     </TD> <TD>").append( alterTables       ).append("</TD></TR>\n");
-			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>dropTables      </TD> <TD>").append( dropTables        ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>WriterName           </TD> <TD colspan='2'>").append( persistWriterName                     ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>sessionStartTime     </TD> <TD colspan='2'>").append( sessionStartTime                      ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>mainSampleTime       </TD> <TD colspan='2'>").append( mainSampleTime                        ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>persistTimeInMs      </TD> <TD colspan='2'>").append( nf.format(persistTimeInMs)            ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD><hr width='90%'>     </TD> <TD>")            .append( "<b>Last</b>"                         ).append("</TD><TD>").append( "<b>Summary</b>"                         ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>inserts              </TD> <TD>")            .append( nf.format(writerStats.getInserts()             ) ).append("</TD><TD>").append( nf.format(writerStats.getInsertsSum()             ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>updates              </TD> <TD>")            .append( nf.format(writerStats.getUpdates()             ) ).append("</TD><TD>").append( nf.format(writerStats.getUpdatesSum()             ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>deletes              </TD> <TD>")            .append( nf.format(writerStats.getDeletes()             ) ).append("</TD><TD>").append( nf.format(writerStats.getDeletesSum()             ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>createTables         </TD> <TD>")            .append( nf.format(writerStats.getCreateTables()        ) ).append("</TD><TD>").append( nf.format(writerStats.getCreateTablesSum()        ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>alterTables          </TD> <TD>")            .append( nf.format(writerStats.getAlterTables()         ) ).append("</TD><TD>").append( nf.format(writerStats.getAlterTablesSum()         ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>dropTables           </TD> <TD>")            .append( nf.format(writerStats.getDropTables()          ) ).append("</TD><TD>").append( nf.format(writerStats.getDropTablesSum()          ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>ddlSaveCount         </TD> <TD>")            .append( nf.format(writerStats.getDdlSaveCount()        ) ).append("</TD><TD>").append( nf.format(writerStats.getDdlSaveCountSum()        ) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>sqlCaptureBatchCount </TD> <TD>")            .append( nf.format(writerStats.getSqlCaptureBatchCount()) ).append("</TD><TD>").append( nf.format(writerStats.getSqlCaptureBatchCountSum()) ).append("</TD></TR>\n");
+			sb.append("    <TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>sqlCaptureEntryCount </TD> <TD>")            .append( nf.format(writerStats.getSqlCaptureEntryCount()) ).append("</TD><TD>").append( nf.format(writerStats.getSqlCaptureEntryCountSum()) ).append("</TD></TR>\n");
 			sb.append("</TABLE>\n");
 			sb.append("</html>");
 		_statusPcsPersistInfo.setToolTipText(sb.toString());
+	}
+	private long  _pcsConsumeInfoLastReceived = 0;
+	private Timer _pcsConsumeInfoTimer = new Timer(1000, new ActionListener() // Check if we have received any new PCS info
+	{
+		@Override
+		public void actionPerformed(ActionEvent paramActionEvent)
+		{
+			if ( CounterController.getInstance().isMonConnectedStatus() )
+			{
+				// only do stuff if we have received at least ONE notification
+				if (_pcsConsumeInfoLastReceived > 0)
+				{
+					long age = System.currentTimeMillis() - _pcsConsumeInfoLastReceived;
+					if (age > _refreshInterval * 2 * 1000) // double the refresh, just to give it some extra breathing room
+					{
+						_statusPcsPersistInfo.setText("(last store info is " + NumberFormat.getInstance().format(age) + " ms old)");
+						_statusPcsPersistInfo.setForeground(Color.RED);
+					}
+				}
+			}
+			else
+			{
+				_pcsConsumeInfoTimer.stop();
+			}
+		}
+	});
+	private void startPcsConsumeMonitor()
+	{
+		_pcsConsumeInfoTimer.start();
+	}
+	private void stopPcsConsumeMonitor()
+	{
+		_pcsConsumeInfoTimer.stop();
+		_pcsConsumeInfoLastReceived = 0;
 	}
 
 	/**
@@ -4575,6 +4747,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	 * Sets values in the status panel.
 	 * @param type <code>ST_CONNECT, ST_DISCONNECT, ST_STATUS_FIELD, ST_MEMORY</code>
 	 */
+	@Override
 	public void setStatus(int type)
 	{
 		setStatus(type, null);
@@ -4630,6 +4803,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	 * @param type <code>ST_CONNECT, ST_DISCONNECT, ST_STATUS_FIELD, ST_MEMORY</code>
 	 * @param param The actual string to set (this is only used for <code>ST_STATUS_FIELD</code>)
 	 */
+	@Override
 	public void setStatus(int type, String param)
 	{
 		// If this is NOT the event queue thread, dispatch it to that thread
@@ -4806,6 +4980,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			// Reset servername in windows - title
 			getInstance().setTitle(Version.getAppName(), null);
 
+			// Reset server Warning status
+			setServerWarningStatus(false, Color.BLACK, "");
+
 			setMenuMode(ST_DISCONNECT);
 			_lastKnownStatus = ST_DISCONNECT;
 		}
@@ -4832,10 +5009,21 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		// MEMORY
 		if (type == ST_MEMORY)
 		{
-			_statusMemory.setText(
-				"Memory: Used "+Memory.getUsedMemoryInMB() +
-				" MB, Free "+Memory.getMemoryLeftInMB() + " MB");
+//			_statusMemory.setText(
+//				"Memory: Used "+Memory.getUsedMemoryInMB() +
+//				" MB, Free "+Memory.getMemoryLeftInMB() + " MB");
+			_statusMemory.setText("Free "+Memory.getMemoryLeftInMB() + " MB");
 		}
+	}
+
+	protected void setServerWarningStatus(boolean visibale, Color color, String text)
+	{
+		if (text  == null) text  = "";
+		if (color == null) color = Color.BLACK;
+
+		_srvWarningMessage.setVisible(visibale);
+		_srvWarningMessage.setForeground(color);
+		_srvWarningMessage.setText(text);
 	}
 
 	/**
@@ -4910,7 +5098,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				{
 //					if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
 //					if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
-					if (MonTablesDictionaryManager.getInstance().getMdaVersion() >= Ver.ver(15,7))
+					if (MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion() >= Ver.ver(15,7))
 						monWaitEventInfoWhere = " and W.Language = 'en_US'";
 				}
 
@@ -5068,6 +5256,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		//_logger.debug("xxxxx: " + e.getWindow().getSize());
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
 
+		tmpConf.setProperty(PROPKEY_openConnDialogAtStartup,               _openConnDialogAtStart_mi.isSelected());
+
 		tmpConf.setProperty("main.refresh.interval", _refreshInterval);
 		tmpConf.setProperty("nogui.sleepTime",       _refreshNoGuiInterval);
 
@@ -5084,12 +5274,12 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 //		tmpConf.setProperty("mainTabbedPane.tabLayoutPolicy", _mainTabbedPane.getTabLayoutPolicy());
 
-		tmpConf.setProperty("window.width",  getSize().width);
-		tmpConf.setProperty("window.height", getSize().height);
+		tmpConf.setLayoutProperty("window.width",  getSize().width);
+		tmpConf.setLayoutProperty("window.height", getSize().height);
 		if (isVisible())
 		{
-			tmpConf.setProperty("window.pos.x",  getLocationOnScreen().x);
-			tmpConf.setProperty("window.pos.y",  getLocationOnScreen().y);
+			tmpConf.setLayoutProperty("window.pos.x",  getLocationOnScreen().x);
+			tmpConf.setLayoutProperty("window.pos.y",  getLocationOnScreen().y);
 		}
 		
 //		getSummaryPanel().saveLayoutProps();
@@ -5106,10 +5296,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //		Dimension crtSize = Toolkit.getDefaultToolkit().getScreenSize();
 		Rectangle crtSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 
-		int width   = tmpConf.getIntProperty("window.width",  crtSize.width  - 200);
-		int height  = tmpConf.getIntProperty("window.height", crtSize.height - 200);
-		int winPosX = tmpConf.getIntProperty("window.pos.x",  -1);
-		int winPosY = tmpConf.getIntProperty("window.pos.y",  -1);
+		int width   = tmpConf.getLayoutProperty("window.width",  crtSize.width  - 200);
+		int height  = tmpConf.getLayoutProperty("window.height", crtSize.height - 200);
+		int winPosX = tmpConf.getLayoutProperty("window.pos.x",  -1);
+		int winPosY = tmpConf.getLayoutProperty("window.pos.y",  -1);
 
 		// Set last known size, or Set a LARGE size
 		setSize(width, height);
@@ -5123,7 +5313,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			Rectangle screenSize = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 			Dimension frameSize = getSize();
 
-			// We cant be larger than the screen
+			// We can't be larger than the screen
 			if (frameSize.height > screenSize.height) frameSize.height = screenSize.height;
 			if (frameSize.width  > screenSize.width)  frameSize.width  = screenSize.width;
 
@@ -5172,9 +5362,12 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		_optDoGcAfterRefresh_mi       .setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefresh,        DEFAULT_doJavaGcAfterRefresh));
 		_optDoGcAfterRefreshShowGui_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefreshShowGui, DEFAULT_doJavaGcAfterRefreshShowGui));
 
-		_optSummaryOperShowAbs_mi .setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showAbs,  DEFAULT_summaryOperations_showAbs));
-		_optSummaryOperShowDiff_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showDiff, DEFAULT_summaryOperations_showDiff));
-		_optSummaryOperShowRate_mi.setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showRate, DEFAULT_summaryOperations_showRate));
+		_optSummaryOperShowAbs_mi     .setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showAbs,   DEFAULT_summaryOperations_showAbs));
+		_optSummaryOperShowDiff_mi    .setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showDiff,  DEFAULT_summaryOperations_showDiff));
+		_optSummaryOperShowRate_mi    .setSelected(tmpConf.getBooleanProperty(PROPKEY_summaryOperations_showRate,  DEFAULT_summaryOperations_showRate));
+
+		_openConnDialogAtStart_mi     .setSelected(tmpConf.getBooleanProperty(PROPKEY_openConnDialogAtStartup,     DEFAULT_openConnDialogAtStartup) );
+
 	}
 	/*---------------------------------------------------
 	** END: private helper methods
@@ -5301,6 +5494,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				{
 					_mainframe.readSliderMoveToCurrentTs();
 					_mainframe._readSelectionTimer.stop();
+					_mainframe._readSlider.requestFocusInWindow();
 					
 					return null;
 				}
@@ -5328,6 +5522,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		{
 			_mainframe.offlineSliderMoveToCurrentTs();
 			_mainframe._offlineSelectionTimer.stop();
+			_mainframe._offlineSlider.requestFocusInWindow();
 		}
 	}
 

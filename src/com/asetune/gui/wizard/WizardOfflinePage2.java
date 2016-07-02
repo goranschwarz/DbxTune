@@ -53,15 +53,15 @@ implements ActionListener
 	private static final String WIZ_DESC = "JDBC Connection information";
 	private static final String WIZ_HELP = "This is the JDBC Connectivity information to a datastore where the sampled data will be stored.\nIf desired tables are not created in the destination database, they will be created be the offline sampler.";
 
-//	private JComboBox  _writer_cbx     = new JComboBox();
-	private JComboBox  _jdbcDriver_cbx = new JComboBox();
-	private JComboBox  _jdbcUrl_cbx    = new JComboBox();
-//	private JTextField _jdbcDriver   = new JTextField("org.h2.Driver");
-//	private JTextField _jdbcUrl      = new JTextField("jdbc:h2:pcdb_yyy");
-//	private JTextField _jdbcUrl      = new JTextField("jdbc:h2:file:[<path>]<dbname>"); 
-	private JButton    _jdbcUrl_but  = new JButton("...");
-	private JTextField _jdbcUsername = new JTextField("sa");
-	private JTextField _jdbcPassword = new JPasswordField();
+//	private JComboBox          _writer_cbx     = new JComboBox();
+	private JComboBox<String>  _jdbcDriver_cbx = new JComboBox<String>();
+	private JComboBox<String>  _jdbcUrl_cbx    = new JComboBox<String>();
+//	private JTextField         _jdbcDriver     = new JTextField("org.h2.Driver");
+//	private JTextField         _jdbcUrl        = new JTextField("jdbc:h2:pcdb_yyy");
+//	private JTextField         _jdbcUrl        = new JTextField("jdbc:h2:file:[<path>]<dbname>"); 
+	private JButton            _jdbcUrl_but    = new JButton("...");
+	private JTextField         _jdbcUsername   = new JTextField("sa");
+	private JTextField         _jdbcPassword   = new JPasswordField();
 
 	// Specific options if we are using H2 as PCS
 	private JCheckBox  _pcsH2Option_startH2NetworkServer_chk = new JCheckBox("Start H2 Database as a Network Server", false);
@@ -286,6 +286,10 @@ implements ActionListener
 //				// Take away db suffix. ".h2.db"
 //				if (path.matches(".*\\.h2\\.db.*"))
 //					path = path.replaceAll("\\.h2\\.db", "");
+//
+//				// Take away db suffix. ".mv.db"
+//				if (path.matches(".*\\.mv\\.db.*"))
+//					path = path.replaceAll("\\.mv\\.db", "");
 //
 //				// Take away db suffix. ".data.db"
 //				if (path.matches(".*\\.data\\.db.*"))

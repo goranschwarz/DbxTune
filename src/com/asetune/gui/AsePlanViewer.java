@@ -2,9 +2,13 @@ package com.asetune.gui;
 
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.sql.Connection;
@@ -15,22 +19,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 
-import net.miginfocom.swing.MigLayout;
-
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
+import com.asetune.cache.XmlPlanCache;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
-import com.asetune.utils.AseConnectionFactory;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.sybase.ase.planviewer.ASEPlanViewer;
+
+import net.miginfocom.swing.MigLayout;
 
 public class AsePlanViewer
 extends JFrame
@@ -41,19 +51,66 @@ implements ActionListener
     private final String      SHOW_SQL_PANEL = "Show SQL";
     private final String      HIDE_SQL_PANEL = "Hide SQL";
     
-    private Connection        _conn          = null;
-	private String            _sql           = null;
-	private List<String>	  _plan          = null;
-	private boolean	          _hasPlan       = false;
-	private JPanel            _sqlPanel      = null;
-	private JPanel            _planPanel     = null;
-	private JPanel            _butPanel      = null;
-	private JButton           _toggleSql_but = new JButton(HIDE_SQL_PANEL);
-	private JButton           _close_but     = new JButton("Close");
+    private Connection        _conn              = null;
+	private String            _sql               = null;
+	private List<String>	  _plan              = null;
+	private boolean	          _hasPlan           = false;
+	private JPanel            _sqlPanel          = null;
+	private JPanel            _planPanel         = null;
+	private JPanel            _butPanel          = null;
+	private JButton           _toggleSql_but     = new JButton(HIDE_SQL_PANEL);
+	private JButton           _cloneWindow_but   = new JButton("Clone Window");
+	private JButton           _loadClipboard_but = new JButton("Load Clipboard");
+	private JButton           _loadFile_but      = new JButton("Load File");
+	private JButton           _close_but         = new JButton("Close");
+
+	private RSyntaxTextArea   _sqlText = new RSyntaxTextArea(7, 30);
+	private RTextScrollPane   _sqlScroll = new RTextScrollPane(_sqlText);
 
 	private AseMessageHandler _aseMsg  = new AseMessageHandler();
 	
 	private String            _inputXmlPlan = null;
+	private String            _statementId  = "";
+	private String            _planId       = "";
+	private ASEPlanViewer     _view = null;
+
+	private static String     _lastFileLoaded = null; // static so that several instances can share the last directory
+
+	private final static String EMPTY_PLAN = getEmptySimplePlan();
+	private final static String TITLE      = "Plan Viewer";
+
+	//----------------------------------------------------------------
+	// BEGIN: instance
+	private static AsePlanViewer _instance = null;
+	public static AsePlanViewer getInstance()
+	{
+		if (_instance == null)
+		{
+			//throw new RuntimeException("AsePlanViewer dosn't have an instace yet, please set with setInstance(instance).");
+			_instance = new AsePlanViewer();
+			// Well first time load of the above... will take some time, and if we load another one instantly it will cause issue, so lets sleep for a short while and see if it helps
+			// NOTE: This is not needed if we do *Deferred* calls, but lets have it in here anyway
+			try { Thread.sleep(500); } catch (InterruptedException ignore) {}
+		}
+		return _instance;
+	}
+	public static void setInstance(AsePlanViewer instance)
+	{
+		_instance = instance;
+	}
+	public static boolean hasInstance()
+	{
+		return _instance != null;
+	}
+	// END: instance
+	//----------------------------------------------------------------
+
+	//----------------------------------------------------------------
+	// BEGIN: Constructors
+	public AsePlanViewer()
+	{
+		this(null, null, EMPTY_PLAN);
+	}
 
 	public AsePlanViewer(String xmlPlan)
 	{
@@ -67,7 +124,7 @@ implements ActionListener
 
 	public AsePlanViewer(Connection conn, String sql, String xmlPlan)
 	{
-		super("Plan Viewer"); // Set window title
+		super(TITLE); // Set window title
 
 //		ImageIcon icon = new ImageIcon(getClass().getResource("swing/images/query16.gif"));
 //		super.setIconImage(icon.getImage());
@@ -78,6 +135,8 @@ implements ActionListener
 
 		init();
 	}
+	// END: Constructors
+	//----------------------------------------------------------------
 
 	protected void init()
 	{
@@ -85,6 +144,37 @@ implements ActionListener
 //FIXME: should this be here or NOT
 //		((SybConnection)_conn).setSybMessageHandler(_aseMsg);
 
+//		if (_inputXmlPlan != null)
+//			_inputXmlPlan = _inputXmlPlan.replace("<plan>", "<!-- <plan> The plan tag is not handled by AsePlanViewer -->").replace("</plan>", "<!-- </plan> The plan tag is not handled by AsePlanViewer-->");
+//
+//		if (_sql == null && _inputXmlPlan != null)
+//		{
+//			int startPos = _inputXmlPlan.indexOf("<text>");
+//			int endPos   = _inputXmlPlan.indexOf("</text>");
+//			
+//			if (startPos >= 0 && endPos >= 0)
+//			{
+//				startPos += "<text>".length();
+//
+//				String sql = _inputXmlPlan.substring(startPos, endPos);
+//				sql = sql.replace("<![CDATA[", "").replace("]]>", "");
+//				sql = sql.replace("Subordinate SQL Text: ", "").replace("SQL Text: ", "");
+//				
+//				_sql = sql.trim();
+//			}
+//		}
+		
+		// Set Icon
+		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/ase_plan_viewer_16.png");
+		ImageIcon icon32 = SwingUtils.readImageIcon(Version.class, "images/ase_plan_viewer_32.png");
+
+		ArrayList<Image> iconList = new ArrayList<Image>();
+		if (icon16 != null) iconList.add(icon16.getImage());
+		if (icon32 != null) iconList.add(icon32.getImage());
+		setIconImages(iconList);
+
+
+		// Plan
 		_planPanel = getPlanViewer();
 
 		if (_planPanel != null)
@@ -94,17 +184,16 @@ implements ActionListener
 			_sqlPanel.setLayout(new MigLayout());
 
 //			JTextArea sqlText = new JTextArea();
-			RSyntaxTextArea sqlText = new RSyntaxTextArea(7, 30);
-			RTextScrollPane sqlScroll = new RTextScrollPane(sqlText);
-			sqlText.setText(_sql);
-			sqlText.setEditable(false);
-			sqlText.setOpaque(false);
+			_sqlText.setText(_sql);
+			_sqlText.setCaretPosition(0);
+//			_sqlText.setEditable(false);
+			_sqlText.setOpaque(false);
 
-			sqlText.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
+			_sqlText.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 //FIXME: fix_a_splitpane, or use Tooltip is the SQL text is to big...
 
 //			_sqlPanel.add(sqlText,    "grow, push, wrap");
-			_sqlPanel.add(sqlScroll,  "grow, push, wrap");
+			_sqlPanel.add(_sqlScroll,  "grow, push, wrap");
 			_sqlPanel.setMinimumSize(new Dimension(100, 200));
 
 			
@@ -115,11 +204,18 @@ implements ActionListener
 			_butPanel = SwingUtils.createPanel("Buttons", false);
 			_butPanel.setLayout(new MigLayout());
 			
-			_butPanel.add(_toggleSql_but, "left");
-			_butPanel.add(_close_but,     "push, right");
+			_butPanel.add(_toggleSql_but,     "left");
+			_butPanel.add(new JLabel(),       "pushx, growx");
+			_butPanel.add(_cloneWindow_but,   "");
+			_butPanel.add(_loadClipboard_but, "");
+			_butPanel.add(_loadFile_but,      "");
+			_butPanel.add(_close_but,         "");
 
-			_toggleSql_but.addActionListener(this);
-			_close_but    .addActionListener(this);
+			_toggleSql_but    .addActionListener(this);
+			_cloneWindow_but  .addActionListener(this);
+			_loadClipboard_but.addActionListener(this);
+			_loadFile_but     .addActionListener(this);
+			_close_but        .addActionListener(this);
 			
 
 
@@ -143,6 +239,9 @@ implements ActionListener
 		}
 	}
 
+	/**
+	 * Internal action handler for various internal Components
+	 */
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
@@ -166,38 +265,294 @@ implements ActionListener
 		// BUTTON: CLOSE
 		if (_close_but.equals(source))
 		{
+			if (this.equals(_instance))
+				this.setVisible(false);
+			else
+				dispose();
+		}
+
+		// BUTTON: CLONE
+		if (_cloneWindow_but.equals(source))
+		{
+			String currentTitle = getTitle();
+			AsePlanViewer clone = new AsePlanViewer(_inputXmlPlan);
+			clone.setVisible(true);
+			clone.setTitle(currentTitle);
+		}
+
+		// BUTTON: LOAD FILE
+		if (_loadClipboard_but.equals(source))
+		{
+			try
+			{
+				String data = (String) Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+				
+				if (data.indexOf("<?xml version=") == -1)
+				{
+					// Or maybe we can open a Editor so we can edit the content...
+					SwingUtils.showErrorMessage(this, "Error loading XML", "The clipboard do not contain xml.\n\n"+data, null);
+				}
+
+				loadXml(data);
+				setTitle(TITLE + " - From Clipboard");
+			}
+			catch (Exception ex)
+			{
+				SwingUtils.showErrorMessage(this, "Error loading XML", "Can't load the Clipboard'. Caught: "+ex, ex);
+			}
+		}
+
+		// BUTTON: LOAD FILE
+		if (_loadFile_but.equals(source))
+		{
+			String envName = "DBXTUNE_SAVE_DIR";
+			String saveDir = StringUtil.getEnvVariableValue(envName);
+					
+			JFileChooser fc = new JFileChooser(_lastFileLoaded);
+//			JFileChooser fc = new JFileChooser();
+			if (saveDir != null)
+				fc.setCurrentDirectory(new File(saveDir));
+
+			int returnVal = fc.showOpenDialog(null);
+			if (returnVal == JFileChooser.APPROVE_OPTION) 
+	        {
+				File file = fc.getSelectedFile();
+				_lastFileLoaded = file.toString();
+				//This is where a real application would open the file.
+				//String filename = file.getAbsolutePath();
+
+				try
+				{
+					loadXmlFile(file);
+				}
+				catch(Exception ex)
+				{
+					SwingUtils.showErrorMessage(this, "Error loading file", "Can't load the file '"+file+"'. Caught: "+ex, ex);
+				}
+	        }
+		}
+	}
+
+	/**
+	 * Load a XML File
+	 * @param file
+	 * @throws Exception
+	 */
+	public void loadXmlFile(File file)
+	throws Exception
+	{
+		_inputXmlPlan = FileUtils.readFileToString(file);
+		getPlan();
+		_view.generatePlan(listToStringBuffer(_plan), new StringBuffer());
+		setTitle(TITLE + " - " + file);
+		setVisible(true);
+	}
+
+
+
+	/**
+	 * Load the following XML String, but do it deferred...<br>
+	 * It will be displayed in 500ms<br>
+	 * If the same xmlString is passed within the 500ms time frame, it will be "skipped"<br>
+	 * If a new xmlString is passed, we restart the clock<br>
+	 * <br>
+	 * This is perfect if calling from ToolTip, since that can do the <b>multiple</b> times.
+	 * @param xmlString
+	 */
+	public void loadXmlDeferred(String xmlString)
+	{
+		if (_deferredXmlPlan != null && _deferredXmlPlan.equals(xmlString))
+			return;
+
+//System.out.println("+++ loadXmlDeferred() xmlString.lenth()="+xmlString.length());
+		_deferredXmlPlan = xmlString;
+
+		if ( ! _deferredXmlPlanTimer.isRunning() )
+			_deferredXmlPlanTimer.start();
+		else
+			_deferredXmlPlanTimer.restart();
+	}
+	//----------------------------------
+	// BEGIN: Deferred plan
+	private String _deferredXmlPlan = ""; 
+	private Timer  _deferredXmlPlanTimer = new Timer(500, new ActionListener() // Setup timer for not overloading the AseShowplan component
+	{
+		@Override
+		public void actionPerformed(ActionEvent paramActionEvent)
+		{
+			_deferredXmlPlanTimer.stop();
+			loadXml(_deferredXmlPlan);
+//System.out.println(">>>>>>>>>> _deferredXmlPlanTimer : SHOW XML PLAN... _deferredXmlPlan.lenth()="+_deferredXmlPlan.length());
+			_deferredXmlPlan = "";
+		}
+	});
+	// END: Deferred plan
+	//----------------------------------
+
+	/**
+	 * Load the following XML String
+	 * @param xmlString
+	 */
+	public void loadXml(String xmlString)
+	{
+		_inputXmlPlan = xmlString;
+		getPlan();
+		try
+		{
+			_view.generatePlan(listToStringBuffer(_plan), new StringBuffer());
+			setTitle(TITLE + " - StatementId=" + _statementId + ", PlanId=" + _planId);
+			setVisible(true);
+		}
+		catch (Exception ex)
+		{
+			SwingUtils.showErrorMessage(this, "Error loading XML", "Can't load the XML String'. Caught: "+ex, ex);
+
+			// get a new instance next time
+			setInstance(null);
+			setVisible(false);
 			dispose();
 		}
 	}
 
+	/**
+	 * Load and display a XML plan from the <code>XmlPlanCache</code><br>
+	 * @param planName
+	 * @throws RuntimeException if the XmlPlanCache isn't initialized
+	 */
+	public String loadXmlFromCache(String planName)
+	{
+		return loadXmlFromCache(planName, 0);
+	}
+
+	
+	/**
+	 * Load and display a XML plan from the <code>XmlPlanCache</code><br>
+	 * @param planName
+	 * @param planId
+	 * @throws RuntimeException if the XmlPlanCache isn't initialized
+	 */
+	public String loadXmlFromCache(String planName, int planId)
+	{
+		String xmlString = XmlPlanCache.getInstance().getPlan(planName, planId);
+		loadXml(xmlString);
+		setTitle(TITLE + " - " + planName + (planId<=0 ? "" : ":"+planId) );
+		setVisible(true);
+		return xmlString;
+	}
+
+
+	/**
+	 * Load the XML String from Cache (or grab it from the cache), but the GUI ShowPlan parsing is deferred...<br>
+	 * It will be displayed in 500ms<br>
+	 * If the same <code>planName</code> is passed within the 500ms time frame, it will be "skipped"<br>
+	 * If a new <code>planName</code> is passed, we restart the clock<br>
+	 * <br>
+	 * This is perfect if calling from ToolTip, since that can do the <b>multiple</b> times.
+	 * @param planName
+	 */
+	public String loadXmlFromCacheDeferred(String planName)
+	{
+		return loadXmlFromCacheDeferred(planName, 0);
+	}
+	/**
+	 * Load the XML String from Cache (or grab it from the cache), but the GUI ShowPlan parsing is deferred...<br>
+	 * It will be displayed in 500ms<br>
+	 * If the same <code>planName</code> is passed within the 500ms time frame, it will be "skipped"<br>
+	 * If a new <code>planName</code> is passed, we restart the clock<br>
+	 * <br>
+	 * This is perfect if calling from ToolTip, since that can do the <b>multiple</b> times.
+	 * @param planName
+	 * @param planId
+	 */
+	public String loadXmlFromCacheDeferred(String planName, int planId)
+	{
+//System.out.println("+++ loadXmlFromCacheDeferred() planName='"+planName+"', planId="+planId);
+		String xmlString = XmlPlanCache.getInstance().getPlan(planName, planId);
+		if (_deferredCachedXmlPlan != null && _deferredCachedXmlPlan.equals(xmlString))
+			return _deferredCachedXmlPlan;
+
+		_deferredCachedXmlPlan = xmlString;
+		_deferredPlanName      = planName;
+		_deferredPlanId        = planId;
+
+		if ( ! _deferredCachedXmlPlanTimer.isRunning() )
+			_deferredCachedXmlPlanTimer.start();
+		else
+			_deferredCachedXmlPlanTimer.restart();
+		
+		return _deferredCachedXmlPlan;
+	}
+	//----------------------------------
+	// BEGIN: Deferred Cached plan
+	private String _deferredCachedXmlPlan = ""; 
+	private String _deferredPlanName      = ""; 
+	private int    _deferredPlanId        = 0; 
+	private Timer  _deferredCachedXmlPlanTimer = new Timer(500, new ActionListener() // Setup timer for not overloading the AseShowplan component
+	{
+		@Override
+		public void actionPerformed(ActionEvent paramActionEvent)
+		{
+			_deferredCachedXmlPlanTimer.stop();
+			loadXml(_deferredCachedXmlPlan);
+			setTitle(TITLE + " - " + _deferredPlanName + (_deferredPlanId<=0 ? "" : ":"+_deferredPlanId) );
+			_deferredCachedXmlPlan = "";
+			_deferredPlanName      = "";
+			_deferredPlanId        = 0;
+//System.out.println(">>>>>>>>>> _deferredCachedXmlPlan : SHOW XML PLAN...");
+		}
+	});
+	// END: Deferred plan
+	//----------------------------------
+
+	
+	/**
+	 * Stuff the internal List into a StringBuffer
+	 * @param list
+	 * @return
+	 */
+	private StringBuffer listToStringBuffer(List<String> list)
+	{
+		StringBuffer sb = new StringBuffer(256);
+		String s = System.getProperty("line.separator");
+		int planSize = _plan.size();
+		for (int i=0; i<planSize; i++)
+		{
+			sb.append((String) _plan.get(i));
+			sb.append(s);
+		}
+		return sb;
+	}
+	
 	protected JPanel getPlanViewer()
 	{
 		if (getPlan())
 		{
-			StringBuffer stringbuffer = new StringBuffer(256);
-			String s = System.getProperty("line.separator");
-			int planSize = _plan.size();
-			for (int i=0; i<planSize; i++)
-			{
-				stringbuffer.append((String) _plan.get(i));
-				stringbuffer.append(s);
-			}
+//			StringBuffer db = listToStringBuffer(_plan);
+//			StringBuffer stringbuffer = new StringBuffer(256);
+//			String s = System.getProperty("line.separator");
+//			int planSize = _plan.size();
+//			for (int i=0; i<planSize; i++)
+//			{
+//				stringbuffer.append((String) _plan.get(i));
+//				stringbuffer.append(s);
+//			}
 
 			try 
 			{
-				ASEPlanViewer view = new ASEPlanViewer(_conn);
+				if (_view == null)
+					_view = new ASEPlanViewer(_conn);
 
-				JPanel panel = view.getPanel();
+				JPanel panel = _view.getPanel();
 
 //System.out.println("## all #######################################################");
 //System.out.println(stringbuffer);
 //System.out.println("############################################################");
-//				view.generatePlan(stringbuffer, new StringBuffer((String) _sql));
-//				view.generatePlan(stringbuffer, new StringBuffer((String) _plan.get(0)));
-				view.generatePlan(stringbuffer, new StringBuffer());
-//				view.setShowExec(true);
-//				view.setShowExecIO(true);
-//				view.setShowOpt(true);
+//				_view.generatePlan(stringbuffer, new StringBuffer((String) _sql));
+//				_view.generatePlan(stringbuffer, new StringBuffer((String) _plan.get(0)));
+				_view.generatePlan(listToStringBuffer(_plan), new StringBuffer());
+//				_view.setShowExec(true);
+//				_view.setShowExecIO(true);
+//				_view.setShowOpt(true);
 				
 				return panel;
 			}
@@ -220,8 +575,63 @@ implements ActionListener
 		// STATIC FILE INPUT
 		if (_inputXmlPlan != null)
 		{
-			_plan = new ArrayList<String>();
+			if (_inputXmlPlan.indexOf("<plan>") >= 0)
+			{
+				// If it's a "cloned" entry we don't want to make comments inside a comment... 
+				if (_inputXmlPlan.indexOf("<!-- <plan>") == -1)
+				{
+					_inputXmlPlan = _inputXmlPlan.replace("<plan>",  "<!-- <plan> The plan tag is not handled by AsePlanViewer -->");
+					_inputXmlPlan = _inputXmlPlan.replace("</plan>", "<!-- </plan> The plan tag is not handled by AsePlanViewer-->");
+				}
+			}
+			
+			_statementId = "";
+			if (_inputXmlPlan.indexOf("<statementId>") >= 0)
+			{
+				int startPos = _inputXmlPlan.indexOf("<statementId>");
+				int endPos   = _inputXmlPlan.indexOf("</statementId>");
+				if (startPos >= 0 && endPos >= 0)
+				{
+					startPos += "<statementId>".length();
+					_statementId = _inputXmlPlan.substring(startPos, endPos);
+				}
+			}
 
+			_planId = "";
+			if (_inputXmlPlan.indexOf("<planId>") >= 0)
+			{
+				int startPos = _inputXmlPlan.indexOf("<planId>");
+				int endPos   = _inputXmlPlan.indexOf("</planId>");
+				if (startPos >= 0 && endPos >= 0)
+				{
+					startPos += "<planId>".length();
+					_planId = _inputXmlPlan.substring(startPos, endPos);
+				}
+			}
+
+			// Get SQL from the XML
+//			if (_sql == null && _inputXmlPlan != null)
+			if (true)
+			{
+				int startPos = _inputXmlPlan.indexOf("<text>");
+				int endPos   = _inputXmlPlan.indexOf("</text>");
+				
+				if (startPos >= 0 && endPos >= 0)
+				{
+					startPos += "<text>".length();
+
+					String sql = _inputXmlPlan.substring(startPos, endPos);
+					sql = sql.replace("<![CDATA[", "").replace("]]>", "");
+					sql = sql.replace("Subordinate SQL Text: ", "").replace("SQL Text: ", "");
+					
+					_sql = sql.trim();
+				}
+			}
+			_sqlText.setText(_sql);
+			_sqlText.setCaretPosition(0);
+
+
+			_plan = new ArrayList<String>();
 			try
 			{
 				BufferedReader reader = new BufferedReader(new StringReader(_inputXmlPlan));
@@ -244,6 +654,12 @@ implements ActionListener
 			ResultSet resultset = null;
 			int saveTextSize = 32768;
 	
+			if (_conn == null)
+			{
+				//_logger.debug("Sorry no connection...");
+				return false;
+			}
+
 			try
 			{
 				statement = _conn.createStatement();
@@ -260,10 +676,12 @@ implements ActionListener
 				StringBuffer stringbuffer = new StringBuffer();
 				String as[] = _sql.split("\n");
 				for(int j = 0; j < as.length; j++)
-				if(as[j].trim().toLowerCase().equals("go"))
-					stringbuffer.append(" \n");
-				else
-					stringbuffer.append(as[j]).append(" \n");
+				{
+					if(as[j].trim().toLowerCase().equals("go"))
+						stringbuffer.append(" \n");
+					else
+						stringbuffer.append(as[j]).append(" \n");
+				}
 		
 				statement.execute(stringbuffer.toString());
 				while(statement.getMoreResults() || statement.getUpdateCount() != -1) ;
@@ -298,6 +716,71 @@ implements ActionListener
 		}
 	}
 
+	private static String getEmptySimplePlan()
+	{
+		return 
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?> \n" + 
+			"<query> \n" + 
+			"	<planVersion> 1.0 </planVersion> \n" + 
+			"	<statementNum>1</statementNum> \n" + 
+			"	<lineNum>1</lineNum> \n" + 
+			"	<text> \n" + 
+			"		<![CDATA[ \n" + 
+			"			SQL Text: /* ACTION: Open a XML Plan with one on the buttons at the buttom. */\n" +
+			"/*         This below SQL is just a dummy statement to open the tool. */\n" +
+			"select 'empty plan'  \n" + 
+			"			 \n" + 
+			"		]]> \n" + 
+			"	</text> \n" + 
+			"	<abstractPlan> \n" + 
+			"		<![CDATA[> \n" + 
+			"		 \n" + 
+			"		]]> \n" + 
+			"	</abstractPlan> \n" + 
+			"	<costs> \n" + 
+			"		<lio> 0 </lio> \n" + 
+			"		<pio> 0 </pio> \n" + 
+			"		<cpu> 0 </cpu> \n" + 
+			"	</costs> \n" + 
+			"	<resource> \n" + 
+			"		<threads> 0 </threads> \n" + 
+			"		<auxSdes>0</auxSdes> \n" + 
+			"	</resource> \n" + 
+			"	<optimizerMetrics> \n" + 
+			"		<optTimeMs>0</optTimeMs> \n" + 
+			"		<optTicks>0</optTicks> \n" + 
+			"		<plansEvaluated>0</plansEvaluated> \n" + 
+			"		<plansValid>0</plansValid> \n" + 
+			"		<procCacheBytes>0</procCacheBytes> \n" + 
+			"	</optimizerMetrics> \n" + 
+			"	<opTree> \n" + 
+			"		<lavaContext/> \n" + 
+			"		<Emit> \n" + 
+			"		<VA>1</VA> \n" + 
+			"		<est> \n" + 
+			"			<rowCnt>0</rowCnt> \n" + 
+			"			<rowSz>0</rowSz> \n" + 
+			"		</est> \n" + 
+			"		<act> \n" + 
+			"			<rowCnt>1</rowCnt> \n" + 
+			"		</act> \n" + 
+			"		<arity>1</arity> \n" + 
+			"			<Scalar> \n" + 
+			"			<VA>0</VA> \n" + 
+			"			<est> \n" + 
+			"				<rowCnt>-1</rowCnt> \n" + 
+			"				<lio>-1</lio> \n" + 
+			"				<pio>-1</pio> \n" + 
+			"				<rowSz>-1</rowSz> \n" + 
+			"			</est> \n" + 
+			"			<act> \n" + 
+			"				<rowCnt>1</rowCnt> \n" + 
+			"			</act> \n" + 
+			"			</Scalar> \n" + 
+			"		</Emit> \n" + 
+			"	</opTree> \n" + 
+			"</query> \n";
+	}
 	
 	public static void main(String args[]) throws Exception
 	{
@@ -318,7 +801,8 @@ implements ActionListener
 			e.printStackTrace();
 		}
 		
-		Connection conn = AseConnectionFactory.getConnection("localhost", 15700, null, "sa", "", Version.getAppName()+"-AsePlanViewer", null);
+//		Connection conn = AseConnectionFactory.getConnection("localhost", 15700, null, "sa", "", Version.getAppName()+"-AsePlanViewer", null);
+//		Connection conn = AseConnectionFactory.getConnection("192.168.0.110", 1600, null, "sa", "sybase", Version.getAppName()+"-AsePlanViewer", null);
 
 //		String sql = "select * from sybsystemprocs..sysobjects order by crdate \n" +
 //				"select * from sybsystemprocs..syscomments \n" +
@@ -326,8 +810,8 @@ implements ActionListener
 		String sql = "select * from sybsystemprocs..sysobjects order by crdate \n";
 
 		// Create a QueryWindow component that uses the factory object.
-		AsePlanViewer pv = new AsePlanViewer(conn, sql);
-		pv.setVisible(true);
+//		AsePlanViewer pv = new AsePlanViewer(conn, sql);
+//		pv.setVisible(true);
 		
 
 		String xmlPlan = 

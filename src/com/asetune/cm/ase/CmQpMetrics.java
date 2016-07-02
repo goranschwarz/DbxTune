@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -80,7 +81,8 @@ extends CountersModel
 
 	public CmQpMetrics(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -194,6 +196,7 @@ extends CountersModel
 	@Override
 	/** override this so we can change datatype for column 'qtext' from varchar(255) -> text */
 	public void setResultSetMetaData(ResultSetMetaData rsmd)
+	throws SQLException
 	{
 		int qtext_pos = AseConnectionUtils.findColumn(rsmd, "qtext");
 		if (qtext_pos == -1)

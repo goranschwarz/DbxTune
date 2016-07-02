@@ -89,7 +89,6 @@ rem ------------------------------------------------------------------------
 rem --- set JVM_PARAMS=%JVM_PARAMS% -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Xrunhprof:cpu=samples,depth=16
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Dhttp.proxyHost=www-proxy.domain.com -Dhttp.proxyPort=8080
-rem --- set JVM_PARAMS=%JVM_PARAMS% -Dcom.sun.management.jmxremote
 rem --- set JVM_PARAMS=%JVM_PARAMS% -Djava.net.useSystemProxies=true
 
 set EXTRA=%NOGUI%
@@ -128,18 +127,22 @@ set classpath=%DBXTUNE_HOME%\classes
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\asetune.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\jconn3.jar
-set classpath=%classpath%;%DBXTUNE_HOME%\lib\jtds-1.2.7.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\jtds-1.3.1.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%DBXTUNE_HOME%\lib\h2-1.3.176.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\h2-1.4.192.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\wizard.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\miglayout-core-4.2.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\swingx-all-1.6.5-1.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\jchart2d-3.2.2.jar
+rem set classpath=%classpath%;C:\Users\gorans\git\jchart2d\jchart2d-3.3.0.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\planviewer.jar
-set classpath=%classpath%;%DBXTUNE_HOME%\lib\commons-cli-1.2.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\commons-lang3-3.4.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\commons-io-2.4.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\commons-csv-1.2.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\commons-cli-1.3.1.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
@@ -150,6 +153,7 @@ set classpath=%classpath%;%DBXTUNE_HOME%\lib\jfreechart-1.0.17.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\antlr-4.0-complete.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\juniversalchardet-1.0.3.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\DDLGen.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\simplemagic-1.6.jar
 
 set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
 set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%
@@ -168,7 +172,7 @@ set PATH=%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH%
 rem ------------------------------------------------------------------------
 rem --- CHECK current Java Version
 rem ------------------------------------------------------------------------
-java com.asetune.utils.JavaVersion 6
+java com.asetune.utils.JavaVersion 7
 IF %ERRORLEVEL% NEQ 0 GOTO to_low_java_version
 
 
@@ -193,13 +197,26 @@ echo JVM_GC_PARAMS=%JVM_GC_PARAMS%
 
 
 rem ------------------------------------------------------------------------
+rem --- SET JVM Debugging parameters, so we can attach to it
+rem ------------------------------------------------------------------------
+rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dcom.sun.management.jmxremote=true
+rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Djava.rmi.server.hostname=192.168.0.198 
+rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dcom.sun.management.jmxremote.port=5656
+rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dcom.sun.management.jmxremote.authenticate=false
+rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dcom.sun.management.jmxremote.ssl=false
+rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dcom.sun.management.jmxremote.local.only=false
+
+
+
+rem ------------------------------------------------------------------------
 rem --- START: just call java, it should have been added to the path priviously
 rem --- pushd \\192.168.0.130\xxx\yyy     if it's a UNC path like the example, pushd will map a network drive, which will be unmounted at popd
 rem ------------------------------------------------------------------------
 pushd %DBXTUNE_HOME%
 REM echo %CLASSPATH%
 
-java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%SQLW_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.AseTune %*
+echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.AseTune %*
+     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %EXTRA% %DEBUG_OPTIONS% %SPLASH% com.asetune.AseTune %*
 
 IF %ERRORLEVEL% NEQ 0 GOTO unexpected_error
 goto exit_dbxtune

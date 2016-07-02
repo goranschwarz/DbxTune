@@ -52,7 +52,8 @@ extends TabularCntrPanel
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String blockedState = adapter.getString(adapter.getColumnIndex("BlockedState"));
-				if ("Blocked".equals(blockedState))
+//				if ("Blocked".equals(blockedState))
+				if (blockedState.indexOf("Blocked") >= 0)
 					return true;
 				return false;
 			}
@@ -66,7 +67,8 @@ extends TabularCntrPanel
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String blockedState = adapter.getString(adapter.getColumnIndex("BlockedState"));
-				if ("Blocking".equals(blockedState))
+//				if ("Blocking".equals(blockedState))
+				if (blockedState.indexOf("Blocking") >= 0)
 					return true;
 				return false;
 			}

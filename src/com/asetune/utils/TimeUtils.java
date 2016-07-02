@@ -4,6 +4,7 @@
 package com.asetune.utils;
 
 import java.util.Date;
+import java.util.HashMap;
 
 /**
  * @author qschgor
@@ -16,6 +17,7 @@ public class TimeUtils
 	** class members
 	**---------------------------------------------------
 	*/
+	private static HashMap<String, Long> _timeExpiredMap = new HashMap<String, Long>();   
 
 	/*---------------------------------------------------
 	** Constructors
@@ -26,6 +28,62 @@ public class TimeUtils
 	** Methods: local to class
 	**---------------------------------------------------
 	*/
+
+	
+	/**
+	 * Ask if we should print a message<br>
+	 * Or basically if <code>timeLimitInMs</code> has passed since last call with the same <code>key</code><br>
+	 * If we call this many times
+	 * <ul>
+	 *   <li>First time it will always return true.</li>
+	 *   <li>Second time will it return</li>
+	 *   <ul>
+	 *     <li>true if it has passed <code>timeLimitInMs</code> since last call</li>
+	 *     <li>false if not enough time has passed since last message</li>
+	 *   </ul>
+	 * </ul>
+	 * @param key              Just a string that will identify this specific "event"
+	 * @param timeLimitInMs    Time limit since last call (return true|false)
+	 * @return true if first time, or if the time limit has passed since last call
+	 */
+	public static boolean timeExpired(String key, long timeLimitInMs)
+	{
+		// Get previous start time
+		Long lastCallTime = _timeExpiredMap.get(key);
+
+		// If not found... print message and store the time
+		if (lastCallTime == null)
+		{
+			lastCallTime = new Long(System.currentTimeMillis()); 
+			_timeExpiredMap.put(key, lastCallTime);
+			return true;
+		}
+			
+		// if "over" the timeLimit... print message and store the "new" time
+		if (System.currentTimeMillis() - lastCallTime > timeLimitInMs)
+		{
+			lastCallTime = new Long(System.currentTimeMillis()); 
+			_timeExpiredMap.put(key, lastCallTime);
+			return true;
+		}
+		return false;
+	}
+
+	/** @see timeExpired */
+	public static boolean printMessage(String key, long timeLimitInMs)
+	{
+		return timeExpired(key, timeLimitInMs);
+	}
+
+//	public static boolean printMessage(String key, long timeLimitInMs, String messageToPrint, boolean appendDiscardCount)
+//	{
+//	}
+
+	/** simply does: System.currentTimeMillis() - startTime; */
+	public static long msDiffNow(long startTime)
+	{
+		return System.currentTimeMillis() - startTime;
+	}
 
 	/**
 	 * Convert a long into a time string HH:MM:SS.ms

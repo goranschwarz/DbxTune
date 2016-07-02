@@ -25,12 +25,21 @@ public class NumberUtils
 			return new BigDecimal(asStr);
 		}
 
-		if (asStr.length() > 10)  // Integer.MAX_VALUE == 2147483647 ... "2147483647".length() == 10
+		// handle "number" that are still 10 char length but above 2147483647... between 2147483647 and 9999999999
+		if (asStr.length() == 10)  // Integer.MAX_VALUE == 2147483647 ... "2147483647".length() == 10
+		{
+			Long l = new Long(asStr);
+			if (l > Integer.MAX_VALUE)
+				return l;
+			else
+				return new Integer(l.intValue());
+		}
+		// Handle longer values than Integer.MAX_VALUE
+		else if (asStr.length() > 10)  // Integer.MAX_VALUE == 2147483647 ... "2147483647".length() == 10
 		{
 			return new Long(asStr);
 		}
 
 		return new Integer(asStr);
 	}
-
 }

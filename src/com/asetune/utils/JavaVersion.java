@@ -14,6 +14,8 @@ public class JavaVersion
 	public static final int	VERSION_1_5			= 150;
 	public static final int	VERSION_1_6			= 160;
 	public static final int	VERSION_1_7			= 170;
+	public static final int	VERSION_1_8			= 170;
+	public static final int	VERSION_1_9			= 170;
 
 	private static int _major = -1;
 	private static int _minor = -1;
@@ -123,6 +125,8 @@ public class JavaVersion
 			System.out.println("               - 5 for Java 1.5");
 			System.out.println("               - 6 for Java 1.6");
 			System.out.println("               - 7 for Java 1.7");
+			System.out.println("               - 8 for Java 1.8");
+			System.out.println("               - 9 for Java 1.9");
 			System.out.println("");
 			
 			System.exit(1);

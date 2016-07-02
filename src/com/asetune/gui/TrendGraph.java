@@ -3,25 +3,6 @@
 
 package com.asetune.gui;
 
-import info.monitorenter.gui.chart.Chart2D;
-import info.monitorenter.gui.chart.IAxis;
-import info.monitorenter.gui.chart.IPointPainter;
-import info.monitorenter.gui.chart.IToolTipType;
-import info.monitorenter.gui.chart.ITrace2D;
-import info.monitorenter.gui.chart.ITracePoint2D;
-import info.monitorenter.gui.chart.TracePoint2D;
-import info.monitorenter.gui.chart.ZoomableChart;
-import info.monitorenter.gui.chart.labelformatters.LabelFormatterDate;
-import info.monitorenter.gui.chart.labelformatters.LabelFormatterSimple;
-import info.monitorenter.gui.chart.pointpainters.APointPainter;
-import info.monitorenter.gui.chart.rangepolicies.RangePolicyFixedViewport;
-import info.monitorenter.gui.chart.rangepolicies.RangePolicyMinimumViewport;
-import info.monitorenter.gui.chart.rangepolicies.RangePolicyUnbounded;
-import info.monitorenter.gui.chart.traces.Trace2DLtd;
-import info.monitorenter.gui.chart.traces.painters.ATracePainter;
-import info.monitorenter.gui.chart.views.ChartPanel;
-import info.monitorenter.util.Range;
-
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -37,6 +18,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.geom.Rectangle2D;
@@ -73,10 +55,30 @@ import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.ClickListener;
+import com.asetune.gui.swing.DeferredResizeListener;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import info.monitorenter.gui.chart.Chart2D;
+import info.monitorenter.gui.chart.IAxis;
+import info.monitorenter.gui.chart.IPointPainter;
+import info.monitorenter.gui.chart.IToolTipType;
+import info.monitorenter.gui.chart.ITrace2D;
+import info.monitorenter.gui.chart.ITracePoint2D;
+import info.monitorenter.gui.chart.TracePoint2D;
+import info.monitorenter.gui.chart.ZoomableChart;
+import info.monitorenter.gui.chart.labelformatters.LabelFormatterDate;
+import info.monitorenter.gui.chart.labelformatters.LabelFormatterSimple;
+import info.monitorenter.gui.chart.pointpainters.APointPainter;
+import info.monitorenter.gui.chart.rangepolicies.RangePolicyFixedViewport;
+import info.monitorenter.gui.chart.rangepolicies.RangePolicyMinimumViewport;
+import info.monitorenter.gui.chart.rangepolicies.RangePolicyUnbounded;
+import info.monitorenter.gui.chart.traces.Trace2DLtd;
+import info.monitorenter.gui.chart.traces.painters.ATracePainter;
+import info.monitorenter.gui.chart.views.ChartPanel;
+import info.monitorenter.util.Range;
 
 
 
@@ -115,6 +117,7 @@ implements ActionListener, MouseListener
 	private JPanel             _panel                 = null;
 	private JPopupMenu         _panelPopupMenu        = null;
 	private int                _panelMinHeight        = PANEL_MIN_HEIGHT_NOT_USED;
+	private int                _panelMinHeightAtStart = PANEL_MIN_HEIGHT_NOT_USED;
 	private CountersModel      _cm                    = null;
 	private boolean            _initialVisible        = true;
 	private int                _validFromVersion      = 0; // 0 = all versions; > 0 = only in specific version
@@ -153,14 +156,15 @@ implements ActionListener, MouseListener
 //	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int panelMinHeight)
 	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
 	{
-		_graphName            = name;
-		_labelName            = label;
-		_menuItemText         = chkboxText;
-		_seriesNames          = seriesNames;
-		_cm                   = cm;
-		_initialVisible       = initialVisible;
-		_validFromVersion     = validFromVersion; 
-		_panelMinHeight       = panelMinHeight;
+		_graphName             = name;
+		_labelName             = label;
+		_menuItemText          = chkboxText;
+		_seriesNames           = seriesNames;
+		_cm                    = cm;
+		_initialVisible        = initialVisible;
+		_validFromVersion      = validFromVersion; 
+		_panelMinHeight        = panelMinHeight;
+		_panelMinHeightAtStart = panelMinHeight;
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
@@ -173,7 +177,6 @@ implements ActionListener, MouseListener
 		_dummySeries = new Trace2DLtd(1) ;
 
 		_tracePainter   = new MyTracePainter();
-
 
 		/*
 		** Use the feature below when it is available. Current version 3.10 does not have it
@@ -804,7 +807,17 @@ implements ActionListener, MouseListener
 	 */
 	public void setMinimumChartArea()
 	{
-		int minChartHeight = 51;
+		//int minChartHeight = 51;
+		// 51 = 113(PANEL_MIN_HEIGHT_DEFAULT) - 62(extra_height_for_default_simple_lable_etc)
+//		int heightForLabelsEtc = 62;
+//		int minChartHeight = (_panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : _panelMinHeight) - heightForLabelsEtc;
+		
+		// 86 is the new value, when we use _chart.getHeight()
+		// 86 = 113(PANEL_MIN_HEIGHT_DEFAULT) - 27(extra_height_for_default_simple_lable_etc)
+		int heightForLabelsEtc = 27;
+		int minChartHeight = (_panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : _panelMinHeight) - heightForLabelsEtc;
+		
+		// Try to calculate the minimum size for this graph
 		setMinimumChartArea(minChartHeight);
 	}
 	/**
@@ -813,15 +826,37 @@ implements ActionListener, MouseListener
 	 */
 	public void setMinimumChartArea(int minChartHeight)
 	{
-		int currentChartHeight = _chart.getYChartStart() - _chart.getYChartEnd();
-		if (currentChartHeight < minChartHeight && _panel != null) 
+		// If not enabled, no need to continue
+		if ( ! isGraphEnabled() )
+			return;
+		if ( ! _chart.isVisible() )
+			return;
+		if ( _panel == null )
+			return;
+
+		//---------------------------------------
+		// NOTE: the below code seems to be a little unstable, sometimes it does the wrong thing (hopefully due to underlying data "faults")
+		//---------------------------------------
+
+		int curPanelHeight = _panel.getHeight();
+//		int curChartHeight = _chart.getYChartStart() - _chart.getYChartEnd(); // This can't be trusted when the graph dosn't have "visible rect" (out of scroll) 
+		int curChartHeight = _chart.getHeight();
+		if (_logger.isDebugEnabled())
+			_logger.debug("TrendGraph["+StringUtil.left(getName(),30)+"].setMinimumChartArea(minChartHeight="+minChartHeight+"): curPanelHeight="+curPanelHeight+", curChartHeight="+curChartHeight+", resize="+(curChartHeight < minChartHeight && curChartHeight > 0)+".");
+
+		if (curChartHeight < minChartHeight && curChartHeight > 0) 
 		{
-			int currentHeight     = _panel.getHeight();
-			int newPanelMinHeight = currentHeight + (minChartHeight - currentChartHeight);
+			int newPanelHeight = curPanelHeight + (minChartHeight - curChartHeight);
+
+			if (curPanelHeight < _panelMinHeight)
+				return;
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("TrendGraph["+StringUtil.left(getName(),30)+"].setMinimumChartArea(minChartHeight="+minChartHeight+"): IN RESIZE --- curPanelHeight="+curPanelHeight+", curChartHeight="+curChartHeight+": newPanelHeight="+newPanelHeight);
 			
 			// only setMinimumSize() did not resize the panel straight away, so setSize() was also added.
-			_panel.setMinimumSize(new Dimension(-1, newPanelMinHeight));
-			_panel.setSize(       new Dimension(-1, newPanelMinHeight));
+			_panel.setMinimumSize(new Dimension(-1, newPanelHeight));
+			_panel.setSize(       new Dimension(-1, newPanelHeight));
 		}
 	}
 
@@ -1122,7 +1157,7 @@ implements ActionListener, MouseListener
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				_panelMinHeight = PANEL_MIN_HEIGHT_NOT_USED;
+				_panelMinHeight = _panelMinHeightAtStart;
 				int panelMinHeight = _panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : _panelMinHeight;
 
 				_panel.setMinimumSize(new Dimension(-1, panelMinHeight));
@@ -1131,6 +1166,37 @@ implements ActionListener, MouseListener
 
 				setMinimumChartArea();
 
+				saveProps();
+			}
+		});
+
+		//------------------------------------------------------------
+		mi = new JMenuItem("Set Graph Minimum Height to DEFAULT, on ALL Graphs");
+		list.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Loop all CM's, get Grapgs, and set minimum size
+				for (CountersModel cm : CounterController.getInstance().getCmList())
+				{
+					for (TrendGraph tg : cm.getTrendGraphs().values())
+					{
+						if (tg.isGraphEnabled())
+						{
+							_panelMinHeight = _panelMinHeightAtStart;
+							int panelMinHeight = tg._panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : tg._panelMinHeight;
+
+							tg._panel.setMinimumSize(new Dimension(-1, panelMinHeight));
+							// only setMinimumSize() did not resize the panel straight away, so setSize() was also added.
+							tg._panel.setSize(new Dimension(-1, panelMinHeight));
+
+							tg.setMinimumChartArea();
+						}
+					}
+				}
+				
 				saveProps();
 			}
 		});
@@ -1386,6 +1452,17 @@ implements ActionListener, MouseListener
 			// NOTE: probably not the best place to have this... move later on...
 			if ( ! _loadProps_menuItem_checkbox )
 				_chkboxMenuItem.doClick();
+			
+
+			// Install resize listener: after 500ms take action 
+			_panel.addComponentListener(new DeferredResizeListener()
+			{
+				@Override
+				public void deferredResize(ComponentEvent e)
+				{
+					setMinimumChartArea();
+				}
+			});
 		}
 
 		return _panel;
@@ -1519,7 +1596,7 @@ implements ActionListener, MouseListener
 			r = getDecorationBounds();
 			g = (Graphics2D) graphics;
 			
-			Font f = UIManager.getDefaults().getFont("Label.font").deriveFont(14f).deriveFont(Font.BOLD);
+			Font f = UIManager.getDefaults().getFont("Label.font").deriveFont(14f*SwingUtils.getHiDpiScale()).deriveFont(Font.BOLD);
 			g.setFont(f);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			

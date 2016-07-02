@@ -1,11 +1,23 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
+import org.apache.log4j.Logger;
+
+import com.asetune.CounterController;
 import com.asetune.Version;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.DbxConnection;
@@ -15,6 +27,7 @@ public class MainFrameSqlServer
 extends MainFrame
 {
 	private static final long serialVersionUID = 1L;
+	private static Logger _logger = Logger.getLogger(MainFrameSqlServer.class);
 
 	public MainFrameSqlServer()
 	{
@@ -52,15 +65,15 @@ extends MainFrame
 	{
 		return new ConnectionProgressExtraActions()
 		{
-			@Override public boolean doInitializeVersionInfo() { return false; } 
+			@Override public boolean doInitializeVersionInfo() { return true; } 
 			@Override public boolean initializeVersionInfo(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
-//				// Just get ASE Version, this will be good for error messages, sent to WEB server, this will write ASE Version in the info...
-//				MonTablesDictionary.getInstance().initializeVersionInfo(conn, true);
+//				// Just get DBMS Version, this will be good for error messages, sent to WEB server, this will write DBMS Version in the info...
+				MonTablesDictionaryManager.getInstance().initializeVersionInfo(conn, true);
 				return true;
 			}
 			
-			@Override public boolean doCheckMonitorConfig() { return false; } 
+			@Override public boolean doCheckMonitorConfig() { return true; } 
 			@Override public boolean checkMonitorConfig(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
 				Thread.sleep(1*1000);
@@ -68,44 +81,52 @@ extends MainFrame
 //				return AseConnectionUtils.checkForMonitorOptions(conn, null, true, cpd, "enable monitoring");
 			}
 
-			@Override public boolean doInitMonitorDictionary() { return false; } 
+			@Override public boolean doInitMonitorDictionary() { return true; } 
 			@Override public boolean initMonitorDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
-//				if ( ! ConnectionDialog.checkReconnectVersion(conn) )
-//					throw new Exception("Connecting to a different ASE Version, This is NOT supported now...");
-//
-//				MonTablesDictionary.getInstance().initialize(conn, true);
-//				CounterControllerAse.initExtraMonTablesDictionary();
-				
-				Thread.sleep(1*1000);
+				MonTablesDictionaryManager.getInstance().initialize(conn, true);
+//				Thread.sleep(1*1000);
 				return true;
 			}
 			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws SQLException
 			{
-//				AseConfig aseCfg = AseConfig.getInstance();
-//				if ( ! aseCfg.isInitialized() )
-//					aseCfg.initialize(conn, true, false, null);
-//
-//				// initialize ASE Config Text Dictionary
-//				AseConfigText.initializeAll(conn, true, false, null);
+				if (DbmsConfigManager.hasInstance())
+				{
+					cpd.setStatus("Getting SQL-Server Configurations");
+					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+					if ( ! dbmsCfg.isInitialized() )
+						dbmsCfg.initialize(conn, true, false, null);
+				}
+				if (DbmsConfigTextManager.hasInstances())
+				{
+					List<IDbmsConfigText> list = DbmsConfigTextManager.getInstanceList();
+					for (IDbmsConfigText t : list)
+					{
+						if ( ! t.isInitialized() )
+						{
+							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
+							t.initialize(conn, true, false, null);
+						}
+					}
 
-				Thread.sleep(1*1000);
+					cpd.setStatus("");
+				}
 				return true;
 			}
 			
-			@Override public boolean doInitCounterCollector() { return false; } 
+			@Override public boolean doInitCounterCollector() { return true; } 
 			@Override public boolean initCounterCollector(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
-//				CounterController.getInstance().initCounters(
-//						conn,
-//						true,
-//						MonTablesDictionary.getInstance().getAseExecutableVersionNum(),
-//						MonTablesDictionary.getInstance().isClusterEnabled(),
-//						MonTablesDictionary.getInstance().getMdaVersion());
+				CounterController.getInstance().initCounters(
+						conn,
+						true,
+						MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum(),
+						MonTablesDictionaryManager.getInstance().isClusterEnabled(),
+						MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion());
 
-				Thread.sleep(1*1000);
+//				Thread.sleep(1*1000);
 				return true;
 			}			
 		};
@@ -114,6 +135,21 @@ extends MainFrame
 	@Override
 	public void connectMonitorHookin()
 	{
+		Connection conn = CounterController.getInstance().getMonConnection();
+
+		// Add: SET DEADLOCK_PRIORITY LOW
+		// see: https://msdn.microsoft.com/en-us/library/ms186736.aspx
+		String sql = "SET DEADLOCK_PRIORITY LOW";
+		try
+		{
+			Statement stmnt = conn.createStatement();
+			stmnt.executeUpdate(sql);
+			stmnt.close();
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems in connectMonitorHookin(): when executing '"+sql+"'. Continuing... Caught: MsgNum="+ex.getErrorCode()+": "+ex);
+		}
 	}
 
 	@Override

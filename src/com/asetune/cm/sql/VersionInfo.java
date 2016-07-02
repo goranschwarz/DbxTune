@@ -23,10 +23,10 @@ public class VersionInfo
 	public static final String  SP_LIST_UNUSED_INDEXES_CR_STR = "2011-04-14";  // "YYYY-MM-DD"
 	public static       Date    SP_LIST_UNUSED_INDEXES_CRDATE = null;
 
-	public static final String  SP_WHOISW_CR_STR              = "2011-04-14";  // "YYYY-MM-DD"
+	public static final String  SP_WHOISW_CR_STR              = "2016-04-18";  // "YYYY-MM-DD"
 	public static       Date    SP_WHOISW_CRDATE              = null;
 
-	public static final String  SP_WHOISB_CR_STR              = "2011-04-14";  // "YYYY-MM-DD"
+	public static final String  SP_WHOISB_CR_STR              = "2016-04-18";  // "YYYY-MM-DD"
 	public static       Date    SP_WHOISB_CRDATE              = null;
 
 	public static final String  SP_LOCK2_CR_STR               = "2011-04-14";  // "YYYY-MM-DD"
@@ -43,6 +43,9 @@ public class VersionInfo
 
 	public static final String  SP__OPTDIAG_CR_STR            = "2006-06-20";  // "YYYY-MM-DD"
 	public static       Date    SP__OPTDIAG_CRDATE            = null;
+
+	public static final String  SP__UPDATE_INDEX_STAT_CR_STR  = "2011-04-14";  // "YYYY-MM-DD"
+	public static       Date    SP__UPDATE_INDEX_STAT_CRDATE  = null;
 
 	static
 	{
@@ -62,6 +65,7 @@ public class VersionInfo
 			SP_OPENTRAN_CRDATE            = sdf.parse(SP_OPENTRAN_CR_STR);
 
 			SP__OPTDIAG_CRDATE            = sdf.parse(SP__OPTDIAG_CR_STR);
+			SP__UPDATE_INDEX_STAT_CRDATE  = sdf.parse(SP__UPDATE_INDEX_STAT_CR_STR);
 		}
 		catch(ParseException e)
 		{

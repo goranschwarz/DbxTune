@@ -61,6 +61,15 @@ public class MonTablesDictionaryDefault extends MonTablesDictionary
 		setVersionInfoInitialized(true);
 	}
 
+	/**
+	 * NO, do not save MonTableDictionary in PCS
+	 */
+	@Override
+	public boolean isSaveMonTablesDictionaryInPcsEnabled()
+	{
+		return false;
+	}
+	
 	@Override
 	public void initializeMonTabColHelper(DbxConnection conn, boolean offline)
 	{

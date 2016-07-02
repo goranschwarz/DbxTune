@@ -896,14 +896,14 @@ public class AseSqlScriptReader
 					// Get go | pipeCmd
 					if ( ! StringUtil.isNullOrBlank(goPipeStr) )
 					{
-						_pipeCommand = new PipeCommand(goPipeStr);
+						_pipeCommand = new PipeCommand(goPipeStr, batchBuffer.toString());
 					}
 
 //					// get how many 
 //					try { _multiExecCount = Integer.parseInt( row.substring(3) ); }
 //					catch (NumberFormatException ignore) {}
 
-				} // end has 'gp' terminator
+				} // end has 'go' terminator
 
 				return batchBuffer.toString();
 			}

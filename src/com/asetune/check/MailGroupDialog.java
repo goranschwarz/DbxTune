@@ -207,14 +207,18 @@ public class MailGroupDialog
 
 		JLabel appName     = new JLabel(); 
 		appName.setText(appNameStr);
-		appName.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
+		appName.setFont(new java.awt.Font("Dialog", Font.BOLD, SwingUtils.hiDpiScale(20)));
+
+		String fontSize = "";
+		if (SwingUtils.isHiDpi())
+			fontSize = "font-size: " + UIManager.getFont("Label.font").getSize() + "px";
 
 		String msg =
 			"<html>" +
 			"<HEAD> " +
 			"<style type=\"text/css\"> " +
 			"<!-- " +
-			"body {font-family: Arial, Helvetica, sans-serif;} " +
+			"body {font-family: Arial, Helvetica, sans-serif; " + fontSize + "} " +
 			"--> " +
 			"</style> " +
 			"</HEAD> " +

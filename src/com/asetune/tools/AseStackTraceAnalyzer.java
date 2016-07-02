@@ -1586,45 +1586,45 @@ public class AseStackTraceAnalyzer
 				SwingUtils.setSizeWithingScreenLimit(this, 5);
 			}
 
-			private JLabel       _openStackName_lbl      = new JLabel("Open at Stack Path");
-			private JTextField   _openStackName_txt      = new JTextField();
-
-			private JLabel       _currStackName_lbl      = new JLabel("Current Stack Path");
-			private JTextField   _currStackName_txt      = new JTextField();
-
-			private JLabel       _currSample_lbl         = new JLabel("Current Sample");
-			private JTextField   _currSample_txt         = new JTextField(4);
-
-			private JLabel       _currEngine_lbl         = new JLabel("Current Engine");
-			private JTextField   _currEngine_txt         = new JTextField(4);
-
-			private JLabel       _currKpid_lbl           = new JLabel("Current KPID");
-			private JTextField   _currKpid_txt           = new JTextField(12);
-			private JComboBox    _currKpid_cbx           = new JComboBox();
-			private int          _currKpid               = -1;
-			private int          _lastKpid               = -1;
-
-			private JLabel       _currSpid_lbl           = new JLabel("Current SPID");
-			private JTextField   _currSpid_txt           = new JTextField(5);
-			private JComboBox    _currSpid_cbx           = new JComboBox();
-			private int          _currSpid               = -1;
-			private int          _lastSpid               = -1;
-
-			private JLabel       _currSuid_lbl           = new JLabel("Current SUID");
-			private JTextField   _currSuid_txt           = new JTextField(5);
-			private JComboBox    _currSuid_cbx           = new JComboBox();
-			private int          _currSuid               = -1;
-			private int          _lastSuid               = -1;
-
-			
-			private JLabel       _sampleHighlight_lbl    = new JLabel("Highlight Cell(s) based on");
-			private JRadioButton _sampleHighlightKPID_rb = new JRadioButton("kpid", true);
-			private JRadioButton _sampleHighlightSPID_rb = new JRadioButton("spid", false);
-			private JRadioButton _sampleHighlightSUID_rb = new JRadioButton("suid", false);
-
-			private JLabel       _currObjid_lbl          = new JLabel("Current Object ID's");
-			private JTextField   _currObjid_txt          = new JTextField();
-			private JComboBox    _currObjid_cbx          = new JComboBox();
+			private JLabel            _openStackName_lbl      = new JLabel("Open at Stack Path");
+			private JTextField        _openStackName_txt      = new JTextField();
+                                      
+			private JLabel            _currStackName_lbl      = new JLabel("Current Stack Path");
+			private JTextField        _currStackName_txt      = new JTextField();
+                                      
+			private JLabel            _currSample_lbl         = new JLabel("Current Sample");
+			private JTextField        _currSample_txt         = new JTextField(4);
+                                      
+			private JLabel            _currEngine_lbl         = new JLabel("Current Engine");
+			private JTextField        _currEngine_txt         = new JTextField(4);
+                                      
+			private JLabel            _currKpid_lbl           = new JLabel("Current KPID");
+			private JTextField        _currKpid_txt           = new JTextField(12);
+			private JComboBox<String> _currKpid_cbx           = new JComboBox<String>();
+			private int               _currKpid               = -1;
+			private int               _lastKpid               = -1;
+                                      
+			private JLabel            _currSpid_lbl           = new JLabel("Current SPID");
+			private JTextField        _currSpid_txt           = new JTextField(5);
+			private JComboBox<String> _currSpid_cbx           = new JComboBox<String>();
+			private int               _currSpid               = -1;
+			private int               _lastSpid               = -1;
+                                      
+			private JLabel            _currSuid_lbl           = new JLabel("Current SUID");
+			private JTextField        _currSuid_txt           = new JTextField(5);
+			private JComboBox<String> _currSuid_cbx           = new JComboBox<String>();
+			private int               _currSuid               = -1;
+			private int               _lastSuid               = -1;
+                                      
+			                          
+			private JLabel            _sampleHighlight_lbl    = new JLabel("Highlight Cell(s) based on");
+			private JRadioButton      _sampleHighlightKPID_rb = new JRadioButton("kpid", true);
+			private JRadioButton      _sampleHighlightSPID_rb = new JRadioButton("spid", false);
+			private JRadioButton      _sampleHighlightSUID_rb = new JRadioButton("suid", false);
+                                      
+			private JLabel            _currObjid_lbl          = new JLabel("Current Object ID's");
+			private JTextField        _currObjid_txt          = new JTextField();
+			private JComboBox<String> _currObjid_cbx          = new JComboBox<String>();
 
 
 			public void setOpenStackName(String stackPath)
@@ -2088,12 +2088,12 @@ public class AseStackTraceAnalyzer
 				//------------------
 				// WINDOW
 				//------------------
-				conf.setProperty("StackMatrixTable.dialog.window.width",  this.getSize().width);
-				conf.setProperty("StackMatrixTable.dialog.window.height", this.getSize().height);
-				conf.setProperty("StackMatrixTable.dialog.window.pos.x",  this.getLocationOnScreen().x);
-				conf.setProperty("StackMatrixTable.dialog.window.pos.y",  this.getLocationOnScreen().y);
+				conf.setLayoutProperty("StackMatrixTable.dialog.window.width",  this.getSize().width);
+				conf.setLayoutProperty("StackMatrixTable.dialog.window.height", this.getSize().height);
+				conf.setLayoutProperty("StackMatrixTable.dialog.window.pos.x",  this.getLocationOnScreen().x);
+				conf.setLayoutProperty("StackMatrixTable.dialog.window.pos.y",  this.getLocationOnScreen().y);
 
-				conf.setProperty("StackMatrixTable.dialog.divLocation",   _splitPane.getDividerLocation());
+				conf.setLayoutProperty("StackMatrixTable.dialog.divLocation",   _splitPane.getDividerLocation());
 
 				conf.save();
 			}
@@ -2120,10 +2120,10 @@ public class AseStackTraceAnalyzer
 					return;
 				}
 
-				int width  = conf.getIntProperty("StackMatrixTable.dialog.window.width",  1024);
-				int height = conf.getIntProperty("StackMatrixTable.dialog.window.height", 768);
-				int x      = conf.getIntProperty("StackMatrixTable.dialog.window.pos.x",  -1);
-				int y      = conf.getIntProperty("StackMatrixTable.dialog.window.pos.y",  -1);
+				int width  = conf.getLayoutProperty("StackMatrixTable.dialog.window.width",  SwingUtils.hiDpiScale(1024));
+				int height = conf.getLayoutProperty("StackMatrixTable.dialog.window.height", SwingUtils.hiDpiScale(768));
+				int x      = conf.getLayoutProperty("StackMatrixTable.dialog.window.pos.x",  -1);
+				int y      = conf.getLayoutProperty("StackMatrixTable.dialog.window.pos.y",  -1);
 				if (width != -1 && height != -1)
 				{
 					this.setSize(width, height);
@@ -2134,7 +2134,7 @@ public class AseStackTraceAnalyzer
 						this.setLocation(x, y);
 				}
 				
-				int divLoc = conf.getIntProperty("StackMatrixTable.dialog.divLocation",  -1);
+				int divLoc = conf.getLayoutProperty("StackMatrixTable.dialog.divLocation",  -1);
 				if (divLoc >= 0)
 					_splitPane.setDividerLocation(divLoc);
 			}
@@ -2466,10 +2466,10 @@ public class AseStackTraceAnalyzer
 			//------------------
 			// WINDOW
 			//------------------
-			conf.setProperty("AseStackTraceAnalyzer.dialog.window.width",  this.getSize().width);
-			conf.setProperty("AseStackTraceAnalyzer.dialog.window.height", this.getSize().height);
-			conf.setProperty("AseStackTraceAnalyzer.dialog.window.pos.x",  this.getLocationOnScreen().x);
-			conf.setProperty("AseStackTraceAnalyzer.dialog.window.pos.y",  this.getLocationOnScreen().y);
+			conf.setLayoutProperty("AseStackTraceAnalyzer.dialog.window.width",  this.getSize().width);
+			conf.setLayoutProperty("AseStackTraceAnalyzer.dialog.window.height", this.getSize().height);
+			conf.setLayoutProperty("AseStackTraceAnalyzer.dialog.window.pos.x",  this.getLocationOnScreen().x);
+			conf.setLayoutProperty("AseStackTraceAnalyzer.dialog.window.pos.y",  this.getLocationOnScreen().y);
 
 			conf.save();
 		}
@@ -2525,10 +2525,10 @@ public class AseStackTraceAnalyzer
 			//----------------------------------
 			// TAB: Offline
 			//----------------------------------
-			int width  = conf.getIntProperty("AseStackTraceAnalyzer.dialog.window.width",  1024);
-			int height = conf.getIntProperty("AseStackTraceAnalyzer.dialog.window.height", 768);
-			int x      = conf.getIntProperty("AseStackTraceAnalyzer.dialog.window.pos.x",  -1);
-			int y      = conf.getIntProperty("AseStackTraceAnalyzer.dialog.window.pos.y",  -1);
+			int width  = conf.getLayoutProperty("AseStackTraceAnalyzer.dialog.window.width",  SwingUtils.hiDpiScale(1024));
+			int height = conf.getLayoutProperty("AseStackTraceAnalyzer.dialog.window.height", SwingUtils.hiDpiScale(768));
+			int x      = conf.getLayoutProperty("AseStackTraceAnalyzer.dialog.window.pos.x",  -1);
+			int y      = conf.getLayoutProperty("AseStackTraceAnalyzer.dialog.window.pos.y",  -1);
 			if (width != -1 && height != -1)
 			{
 				this.setSize(width, height);

@@ -15,16 +15,18 @@ import com.asetune.utils.StringUtil;
 public class PipeCommand
 {
 	private String _cmdStr     = null;
+	private String _sqlStr     = null;
 //	private String _paramStr   = null;
 	private ArrayList<IPipeCommand> _pipeList = new ArrayList<IPipeCommand>();
 	private IPipeCommand _cmd = null; // tmp solution
 
-	public PipeCommand(String cmd)
+	public PipeCommand(String cmd, String sqlString)
 	throws PipeCommandException
 	{
 		if (StringUtil.isNullOrBlank(cmd))
 			throw new PipeCommandException("PipeCommand, cmd can't be null or empty.");
 		_cmdStr = cmd;
+		_sqlStr = sqlString;
 		parse();
 	}
 	
@@ -61,7 +63,7 @@ public class PipeCommand
 		   )
 		{
 			//_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
-			IPipeCommand cmd = new PipeCommandGrep(_cmdStr);
+			IPipeCommand cmd = new PipeCommandGrep(_cmdStr, _sqlStr);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
@@ -69,23 +71,30 @@ public class PipeCommand
 		else if (_cmdStr.startsWith("bcp ") || _cmdStr.equals("bcp"))
 		{
 //			_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
-			IPipeCommand cmd = new PipeCommandBcp(_cmdStr);
+			IPipeCommand cmd = new PipeCommandBcp(_cmdStr, _sqlStr);
+			_pipeList.add(cmd);
+			_cmd = cmd;
+			// for the moment this doesn't support MULTIPLE commands in the pipe
+		}
+		else if (_cmdStr.startsWith("tofile ") || _cmdStr.equals("tofile"))
+		{
+			IPipeCommand cmd = new PipeCommandToFile(_cmdStr, _sqlStr);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp");
+			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile");
 		}
 	}
 	
-	public String getRegExp()
-	{
-		if (_cmd instanceof PipeCommandGrep)
-			return _cmd.getConfig();
-		throw new RuntimeException("No grep command...");
-	}
+//	public String getRegExp()
+//	{
+//		if (_cmd instanceof PipeCommandGrep)
+//			return _cmd.getConfig();
+//		throw new RuntimeException("No grep command...");
+//	}
 
 	/**
 	 * TODO: this is a temp workaround, to be deleted

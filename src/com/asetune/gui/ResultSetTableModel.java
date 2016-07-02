@@ -13,6 +13,7 @@ import java.sql.Types;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
@@ -64,6 +65,7 @@ public class ResultSetTableModel
 	
 	private int	_numcols;
 	
+	private ArrayList<String>            _rsmdRefTableName      = new ArrayList<String>();  // rsmd.getXXX(c); 
 	private ArrayList<String>            _rsmdColumnName        = new ArrayList<String>();  // rsmd.getColumnName(c); 
 	private ArrayList<String>            _rsmdColumnLabel       = new ArrayList<String>();  // rsmd.getColumnLabel(c); 
 	private ArrayList<Integer>           _rsmdColumnType        = new ArrayList<Integer>(); // rsmd.getColumnType(c); 
@@ -96,6 +98,17 @@ public class ResultSetTableModel
 	public int getResultSetReadTime() { return _readResultSetTime; }
 	
 	/**
+	 * INTERNAL: used by: <code>public static String getResultSetInfo(ResultSetTableModel rstm)</code>
+	 * @param rsmd
+	 * @throws SQLException
+	 */
+	private ResultSetTableModel(ResultSetMetaData rsmd) 
+	throws SQLException
+	{
+		this(null, rsmd, false, "getResultSetInfo", -1, false, null, null);
+	}
+
+	/**
 	 * This constructor creates a TableModel from a ResultSet.  
 	 **/
 	public ResultSetTableModel(ResultSet rs, String name) 
@@ -109,6 +122,11 @@ public class ResultSetTableModel
 		this(rs, editable, name, -1, false, null, null);
 	}
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	throws SQLException
+	{
+		this(rs, rs.getMetaData(), editable, name, stopAfterXrows, noData, pipeCommand, progress);
+	}
+	public ResultSetTableModel(ResultSet rs, ResultSetMetaData rsmd, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
 		long startTime = System.currentTimeMillis();
@@ -125,7 +143,7 @@ public class ResultSetTableModel
 		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
 		catch (NumberFormatException ignore) {};
 
-		ResultSetMetaData rsmd = rs.getMetaData();
+//		ResultSetMetaData rsmd = rs.getMetaData();
 		_numcols = rsmd.getColumnCount() + 1;
 		_classType = new Class[_numcols + (_showRowNumber ? 1 : 0)];
 
@@ -144,6 +162,20 @@ public class ResultSetTableModel
 
 		for (int c=1; c<_numcols; c++)
 		{
+//			String refCatName        = rsmd.getCatalogName(c);
+//			String refSchName        = rsmd.getSchemaName(c);
+//			String refTabName        = rsmd.getTableName(c);
+			String refCatName = "";
+			String refSchName = "";
+			String refTabName = "";
+			try { refCatName        = rsmd.getCatalogName(c); } catch(SQLException ignore) {}
+			try { refSchName        = rsmd.getSchemaName(c);  } catch(SQLException ignore) {}
+			try { refTabName        = rsmd.getTableName(c);   } catch(SQLException ignore) {}
+			refCatName = StringUtil.isNullOrBlank(refCatName) ? "" : refCatName + ".";
+			refSchName = StringUtil.isNullOrBlank(refSchName) ? "" : refSchName + ".";
+			refTabName = StringUtil.isNullOrBlank(refTabName) ? "-none-" : refTabName;
+			String fullRefTableName  = refCatName + refSchName + refTabName;
+			
 			String columnLabel       = rsmd.getColumnLabel(c);
 			String columnName        = rsmd.getColumnName(c);
 			String columnClassName   = rsmd.getColumnClassName(c);
@@ -170,6 +202,7 @@ public class ResultSetTableModel
 				}
 			}
 
+			_rsmdRefTableName     .add(fullRefTableName);
 			_rsmdColumnLabel      .add(columnLabel);
 			_rsmdColumnName       .add(columnName);
 			_rsmdColumnType       .add(new Integer(columnType));
@@ -181,6 +214,11 @@ public class ResultSetTableModel
 			
 //			System.out.println("name='"+_cols.get(c-1)+"', getColumnClassName("+c+")='"+_type.get(c-1)+"', getColumnTypeName("+c+")='"+_sqlType.get(c-1)+"'.");
 		}
+		
+		// If there is no ResultSet, then this object is just used to get a ResultSet Information String
+		// see: public static String getResultSetInfo(ResultSetTableModel rstm)
+		if (rs == null)
+			return;
 
 		String originProgressState = null;
 		if (progress != null)
@@ -314,7 +352,7 @@ public class ResultSetTableModel
 //		rs.close();
 
 		if (progress != null)
-			progress.setState(originProgressState + " Read done, rows "+_readCount);
+			progress.setState(originProgressState + " Read done, rows "+_readCount + (_abortedAfterXRows<0 ? "" : ", then stopped, due to 'top' restriction.") );
 		
 		_readResultSetTime = (int) (System.currentTimeMillis() - startTime);
 	}
@@ -468,7 +506,7 @@ public class ResultSetTableModel
 		if ( ! grep.isValidForType(PipeCommandGrep.TYPE_RESULTSET) )
 			return true;
 
-		String regexpStr = ".*" + grep.getConfig() + ".*";
+		String regexpStr = ".*" + grep.getConfig() + ".*";  // NOTE: maybe use: Pattern.compile("someRegExpPattern").matcher(str).find()
 //		String regexpStr = ".*" + _pipeCmd.getRegExp() + ".*";
 //System.out.println("ResultSetTableModel: applying filter: java-regexp '"+regexpStr+"', on row: "+row);
 
@@ -501,7 +539,8 @@ public class ResultSetTableModel
 		{
 			if (colObj != null)
 			{
-				if ( colObj.toString().matches(regexpStr) )
+				if (Pattern.compile(grep.getConfig()).matcher(colObj.toString()).find())
+//				if ( colObj.toString().matches(regexpStr) )
 				{
 					aMatch = true;
 					break;
@@ -911,6 +950,7 @@ public class ResultSetTableModel
 		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Guessed DBMS Type         </TD> <TD>rsmd.getColumnTypeName()<b>+size</b> </TD> <TD>").append(_rsmdColumnTypeNameStr.get(index)).append("</TD> </TR>");
 		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>TableModel Class Name     </TD> <TD>TableModel.getColumnClass()          </TD> <TD>").append(getColumnClass(index))            .append("</TD> </TR>");
 //		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Display size max(disp/len)</TD> <TD>_displaySize                         </TD> <TD>").append(_displaySize.get(index))          .append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Table Name                </TD> <TD>rsmd.getTableName()                  </TD> <TD>").append(_rsmdRefTableName.get(index))     .append("</TD> </TR>");
 		
 		sb.append("</TABLE>");
 
@@ -1002,6 +1042,7 @@ public class ResultSetTableModel
 		if (ld) { header1.add("JDBC Class Name");             header2.add("rsmd.getColumnClassName()"); }
 		if (ld) { header1.add("Raw DBMS Datatype");           header2.add("rsmd.getColumnTypeName()"); }
 		          header1.add("Guessed DBMS type");           header2.add("rsmd.getColumnTypeName()+size");
+		          header1.add("Source Table");                header2.add("rsmd.getTableName()");
 		if (ld) { header1.add("TableModel Class Name");       header2.add("TableModel.getColumnClass()"); }
 
 		int headCols = header1.size();
@@ -1029,6 +1070,7 @@ public class ResultSetTableModel
 			if (ld) row.add( "" + _rsmdColumnClassName  .get(c) );
 			if (ld) row.add( "" + _rsmdColumnTypeName   .get(c) );
 			        row.add( "" + _rsmdColumnTypeNameStr.get(c) );
+			        row.add( "" + _rsmdRefTableName     .get(c) );
 			if (ld) row.add( "" + getColumnClass(c) );
 		}
 
@@ -1088,6 +1130,20 @@ public class ResultSetTableModel
 
 		return sb.toString();
 	}
+	
+	public static String getResultSetInfo(ResultSetMetaData rsmd)
+	{
+		try
+		{
+    		ResultSetTableModel rstm = new ResultSetTableModel(rsmd);
+    		return rstm.getResultSetInfo();
+		}
+		catch (SQLException e)
+		{
+			return e.toString();
+		}
+	}
+
 	
 	//////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////

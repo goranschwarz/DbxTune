@@ -174,8 +174,7 @@ extends TabularCntrPanel
 		{
 			if (cm.isRuntimeInitialized())
 			{
-//				boolean visible = cm.getServerVersion() >= 1570100;
-				boolean visible = cm.getServerVersion() >= Ver.ver(15,7,0,100);
+				boolean visible = cm.getServerVersion() >= Ver.ver(15,7,0);
 
 				_collapse_IoCpuTime_to_IdleCpuTime_chk.setVisible(visible);
 

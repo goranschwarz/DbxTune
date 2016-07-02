@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 import org.fife.ui.autocomplete.CompletionProvider;
 
+import com.asetune.utils.StringUtil;
+
 public class SqlCompletion
 extends ShorthandCompletionX
 implements Serializable
@@ -13,5 +15,13 @@ implements Serializable
 	public SqlCompletion(CompletionProvider provider, String inputText, String replacementText)
 	{
 		super(provider, inputText, replacementText);
+	}
+
+	protected String stripMultiLineHtml(String str)
+	{
+//		return str;
+//		System.out.println("stripMultiLineHtml(): >>>> "+str);
+//		System.out.println("stripMultiLineHtml(): <<<< "+StringUtil.stripHtml(str));
+		return StringUtil.stripHtml(str);
 	}
 }

@@ -33,6 +33,7 @@ import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
@@ -60,8 +61,12 @@ extends CompletionProviderAbstract
 		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
-//		ac.setChoicesWindowSize(600, 600);
-		ac.setDescriptionWindowSize(600, 600);
+		ac.setChoicesWindowSize(
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setChoicesWindowSize.width", 600), 
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setChoicesWindowSize.height", 600));
+		ac.setDescriptionWindowSize(
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setDescriptionWindowSize.width", 600), 
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setDescriptionWindowSize.height", 600));
 
 		textPane.addParser(new QueryWindowMessageParser(scroll));
 

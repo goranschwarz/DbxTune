@@ -27,6 +27,8 @@ import org.fife.ui.autocomplete.CompletionProvider;
  */
 public class BasicCompletionX extends AbstractCompletionX {
 
+	private static final long serialVersionUID = 1L;
+
 	private String replacementText;
 	private String shortDesc;
 	private String summary;
@@ -79,6 +81,7 @@ public class BasicCompletionX extends AbstractCompletionX {
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public String getReplacementText() {
 		return replacementText;
 	}
@@ -99,6 +102,7 @@ public class BasicCompletionX extends AbstractCompletionX {
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	public String getSummary() {
 		return summary;
 	}

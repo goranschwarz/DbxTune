@@ -33,7 +33,7 @@ extends CountersModel
 	public static final int      NEED_SRV_VERSION = 0;
 	public static final int      NEED_CE_VERSION  = 0;
 
-	public static final String[] MON_TABLES       = new String[] {};
+	public static final String[] MON_TABLES       = new String[] {"dm_exec_procedure_stats"};
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
@@ -96,7 +96,8 @@ extends CountersModel
 
 	public CmProcedureStats(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -154,8 +155,8 @@ extends CountersModel
 	{
 		String sql = 
 			"select  \n" +
-			"  db_name     = convert(varchar(30), isnull(db_name(database_id), database_id) ), \n" +
-			"  pbject_name = convert(varchar(30), isnull(object_name(object_id,database_id), object_id) ),  \n" +
+			"  DBName     = convert(varchar(30), isnull(db_name(database_id), database_id) ), \n" +
+			"  ObjectName = convert(varchar(30), isnull(object_name(object_id,database_id), object_id) ),  \n" +
 			"  type, \n" +
 			"  type_desc, \n" +
 			"  cached_time, \n" +
@@ -190,5 +191,40 @@ extends CountersModel
 			"from sys.dm_exec_procedure_stats \n";
 
 		return sql;
+	}
+
+	
+	
+	/** 
+	 * Get number of rows to save/request ddl information for 
+	 * if 0 is return no lookup will be done.
+	 */
+	@Override
+	public int getMaxNumOfDdlsToPersist()
+	{
+		return 10;
+	}
+
+	/** 
+	 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 2 strings. 
+	 */
+	@Override
+	public String[] getDdlDetailsColNames()
+	{
+		String[] sa = {"DBName", "ObjectName"};
+		return sa;
+	}
+	/**
+	 * Sort descending on this column(s) to get values from the diff/rate structure<br>
+	 * One sort for every value will be done, meaning we can do "top" for more than 1 column<br>
+	 * So if we want to do top 10 LogicalReads AND top 10 LockContention
+	 * If this one returns null, this will not be done
+	 * @return
+	 */
+	@Override
+	public String[] getDdlDetailsSortOnColName()
+	{
+		String[] sa = {"execution_count", "total_logical_reads", "total_elapsed_time"};
+		return sa;
 	}
 }

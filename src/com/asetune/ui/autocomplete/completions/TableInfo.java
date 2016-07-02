@@ -9,6 +9,8 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 
@@ -58,6 +60,8 @@ implements Serializable
 			DatabaseMetaData dbmd = conn.getMetaData();
 
 			ResultSet rs = dbmd.getColumns(_tabCat, _tabSchema, _tabName, "%");
+
+			MonTablesDictionary mtd = MonTablesDictionaryManager.hasInstance() ? MonTablesDictionaryManager.getInstance() : null;
 			while(rs.next())
 			{
 				TableColumnInfo ci = new TableColumnInfo();
@@ -70,6 +74,10 @@ implements Serializable
 				ci._colDefault    = rs.getString("COLUMN_DEF");
 				ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
 				
+				// Check with the MonTable dictionary for Descriptions
+				if (mtd != null && StringUtil.isNullOrBlank(ci._colRemark))
+					ci._colRemark = StringUtil.stripHtmlStartEnd(mtd.getDescription(_tabName, ci._colName));
+
 				addColumn(ci);
 			}
 			rs.close();
@@ -91,7 +99,7 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append(_tabSchema).append(".<B>").append(_tabName).append("</B> - <font color=\"blue\">").append(_tabType).append("</font>");
+		sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat).append(".<B>").append(_tabName).append("</B> - <font color=\"blue\">").append(_tabType).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_tabRemark) ? "not available" : _tabRemark).append("<BR>");

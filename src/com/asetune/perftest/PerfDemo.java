@@ -41,8 +41,6 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXMultiSplitPane;
@@ -51,6 +49,8 @@ import org.jdesktop.swingx.MultiSplitLayout;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.sql.conn.AseConnection;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -60,6 +60,8 @@ import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 import com.sybase.util.ds.interfaces.SyInterfacesDriver;
 
+import net.miginfocom.swing.MigLayout;
+
 public class PerfDemo
 extends JFrame
 implements ActionListener
@@ -67,11 +69,11 @@ implements ActionListener
 	private static Logger _logger = Logger.getLogger(PerfDemo.class);
 	private static final long serialVersionUID	= 1L;
 
-	private Connection _qProdGenConn   = null;
-	private Connection _qProdInfoConn  = null;
-	private Connection _qCntrlConn     = null;
-	private Connection _qConsInfoConn  = null;
-	private Connection _qStatInfoConn  = null;
+	private DbxConnection _qProdGenConn   = null;
+	private DbxConnection _qProdInfoConn  = null;
+	private DbxConnection _qCntrlConn     = null;
+	private DbxConnection _qConsInfoConn  = null;
+	private DbxConnection _qStatInfoConn  = null;
 	
 	private String _initialDbname  = "";
 
@@ -80,67 +82,67 @@ implements ActionListener
 	String _splitPaneLayoutFilename = Version.APP_STORE_DIR + "/perfDemo.layout.save.xml";
 
 	// JDBC PANEL
-	private JComboBox  _aseName	    = new JComboBox();
-	private JTextField _aseHost     = new JTextField("");
-	private JTextField _asePort     = new JTextField("");
-	private JTextField _aseUsername = new JTextField("");
-	private JTextField _asePassword = new JPasswordField();
-	private JTextField _aseDbname   = new JTextField();
-	private JButton    _aseConnect  = new JButton("Connect");
+	private JComboBox<String>   _aseName	    = new JComboBox<String>();
+	private JTextField          _aseHost     = new JTextField("");
+	private JTextField          _asePort     = new JTextField("");
+	private JTextField          _aseUsername = new JTextField("");
+	private JTextField          _asePassword = new JPasswordField();
+	private JTextField          _aseDbname   = new JTextField();
+	private JButton             _aseConnect  = new JButton("Connect");
 
-	private SyInterfacesDriver _interfacesDriver = null;
+	private SyInterfacesDriver  _interfacesDriver = null;
 
 	// Queue Producer Info PANEL
-	private JTextField _qProdQSize     = new JTextField();
-	private JTextField _qProdQSizeRate = new JTextField();
-	private int        _qProdQSizeSave = 0;
-	private long       _qProdQSizeTime = 0;
+	private JTextField          _qProdQSize     = new JTextField();
+	private JTextField          _qProdQSizeRate = new JTextField();
+	private int                 _qProdQSizeSave = 0;
+	private long                _qProdQSizeTime = 0;
 
 	// Queue Producer Generator PANEL
-	private final String QTYPE_ALL     = "All Types";
-	private final String QTYPE_1       = "dest1";
-	private final String QTYPE_2       = "dest2";
-	private final String QTYPE_3       = "dest3";
+	private final String        QTYPE_ALL     = "All Types";
+	private final String        QTYPE_1       = "dest1";
+	private final String        QTYPE_2       = "dest2";
+	private final String        QTYPE_3       = "dest3";
 
-	private JTextField _qProdGenType   = new JTextField();
-	private JTextField _qProdGenNum    = new JTextField();
-	private JComboBox  _qProdGenHow_cbx= new JComboBox(new String[] {"<Choose Type>", QTYPE_ALL, QTYPE_1, QTYPE_2, QTYPE_3});
-	private JButton    _qProdGen_but   = new JButton("Generate new values");
-	private JButton    _qTruncate_but  = new JButton("Truncate Queue");
-	private JCheckBox  _qProdAutoGen_chk = new JCheckBox("Auto Generate new values (queue < 10000)");
+	private JTextField          _qProdGenType   = new JTextField();
+	private JTextField          _qProdGenNum    = new JTextField();
+	private JComboBox<String>   _qProdGenHow_cbx= new JComboBox<String>(new String[] {"<Choose Type>", QTYPE_ALL, QTYPE_1, QTYPE_2, QTYPE_3});
+	private JButton             _qProdGen_but   = new JButton("Generate new values");
+	private JButton             _qTruncate_but  = new JButton("Truncate Queue");
+	private JCheckBox           _qProdAutoGen_chk = new JCheckBox("Auto Generate new values (queue < 10000)");
 
 	// Queue Consumer PANEL
-	private final String RESUME_CONSUMERS     = "Resume All Consumers";
-	private final String PAUSE_CONSUMERS_WAIT = "Pause All Consumers, Wait";
-	private final String PAUSE_CONSUMERS_NOW  = "Pause All Consumers, NOW";
-	private final String STOP_CONSUMERS_WAIT  = "Stop All Consumers";
+	private final String        RESUME_CONSUMERS     = "Resume All Consumers";
+	private final String        PAUSE_CONSUMERS_WAIT = "Pause All Consumers, Wait";
+	private final String        PAUSE_CONSUMERS_NOW  = "Pause All Consumers, NOW";
+	private final String        STOP_CONSUMERS_WAIT  = "Stop All Consumers";
+                                
+	private final String        Q_CONS_PARAM_DEFAULT = "<Use Default parameters>";
+	private final String        Q_CONS_PARAM_SET1    = "Batch Size=10, Update Queue Status=1, Use Transaction=1";
+	private final String        Q_CONS_PARAM_SET2    = "Batch Size=10, Update Queue Status=0, Use Transaction=1";
+	private final String        Q_CONS_PARAM_SET3    = "Batch Size=10, Update Queue Status=0, Use Transaction=0";
+	private final String        Q_CONS_PARAM_SET4    = "Batch Size=1, Update Queue Status=0, Use Transaction=0";
 
-	private final String Q_CONS_PARAM_DEFAULT = "<Use Default parameters>";
-	private final String Q_CONS_PARAM_SET1    = "Batch Size=10, Update Queue Status=1, Use Transaction=1";
-	private final String Q_CONS_PARAM_SET2    = "Batch Size=10, Update Queue Status=0, Use Transaction=1";
-	private final String Q_CONS_PARAM_SET3    = "Batch Size=10, Update Queue Status=0, Use Transaction=0";
-	private final String Q_CONS_PARAM_SET4    = "Batch Size=1, Update Queue Status=0, Use Transaction=0";
-
-	private Vector<String>       _qConsTableCols  = new Vector<String>( Arrays.asList(new String[] {"spid", "status", "cmd", "qThreadInState", "msgToOther"}));
-	private JXTable              _qConsTable      = null;
-	private GTableModel          _qConsTableModel = null;
-	private JTextField           _qConsExecCount  = new JTextField();
-	private JTextField           _qConsExecParams = new JTextField();
-	private JComboBox            _qConsExecParams_cbx = new JComboBox(new String[] {Q_CONS_PARAM_DEFAULT, Q_CONS_PARAM_SET1, Q_CONS_PARAM_SET2, Q_CONS_PARAM_SET3, Q_CONS_PARAM_SET4});
-	private JButton              _qConsStart_but  = new JButton("Start a new Consumer");
-	private JComboBox            _qConsStatus_cbx = new JComboBox(new String[] {"<Choose Status>", RESUME_CONSUMERS, PAUSE_CONSUMERS_WAIT, PAUSE_CONSUMERS_NOW, STOP_CONSUMERS_WAIT});
-	private JButton              _qConsStop_but   = new JButton("Stop last Consumer");
-	private List<QueueConsumer>  _qConsThreadList = new LinkedList<QueueConsumer>();
+	private Vector<String>      _qConsTableCols  = new Vector<String>( Arrays.asList(new String[] {"spid", "status", "cmd", "qThreadInState", "msgToOther"}));
+	private JXTable             _qConsTable      = null;
+	private GTableModel         _qConsTableModel = null;
+	private JTextField          _qConsExecCount  = new JTextField();
+	private JTextField          _qConsExecParams = new JTextField();
+	private JComboBox<String>   _qConsExecParams_cbx = new JComboBox<String>(new String[] {Q_CONS_PARAM_DEFAULT, Q_CONS_PARAM_SET1, Q_CONS_PARAM_SET2, Q_CONS_PARAM_SET3, Q_CONS_PARAM_SET4});
+	private JButton             _qConsStart_but  = new JButton("Start a new Consumer");
+	private JComboBox<String>   _qConsStatus_cbx = new JComboBox<String>(new String[] {"<Choose Status>", RESUME_CONSUMERS, PAUSE_CONSUMERS_WAIT, PAUSE_CONSUMERS_NOW, STOP_CONSUMERS_WAIT});
+	private JButton             _qConsStop_but   = new JButton("Stop last Consumer");
+	private List<QueueConsumer> _qConsThreadList = new LinkedList<QueueConsumer>();
 
 	// Queue Statistics PANEL
-	private final String STAT_QUEUE_INFO = "Queue Info Statistics";
-	private final String STAT_TAB_ROWS   = "Destination Table Row Count";
-	private String            _qStatCurrentType   = STAT_QUEUE_INFO;
-	private JComboBox         _qStatType_cbx      = new JComboBox(new String[] {STAT_QUEUE_INFO, STAT_TAB_ROWS});
-	private Vector<String>    _qStatTableCols     = new Vector<String>( Arrays.asList(new String[] {"operation", "execCounter", "lastExecTime", "lastExecTimeMs", "avgExecTimeMs", "minExecTimeMs", "maxExecTimeMs"}));
-	private JXTable           _qStatTable         = null;
-	private GTableModel       _qStatTmDefault     = null;
-	private CountersModel     _qStatTmRowCount    = null;
+	private final String        STAT_QUEUE_INFO = "Queue Info Statistics";
+	private final String        STAT_TAB_ROWS   = "Destination Table Row Count";
+	private String              _qStatCurrentType   = STAT_QUEUE_INFO;
+	private JComboBox<String>   _qStatType_cbx      = new JComboBox<String>(new String[] {STAT_QUEUE_INFO, STAT_TAB_ROWS});
+	private Vector<String>      _qStatTableCols     = new Vector<String>( Arrays.asList(new String[] {"operation", "execCounter", "lastExecTime", "lastExecTimeMs", "avgExecTimeMs", "minExecTimeMs", "maxExecTimeMs"}));
+	private JXTable             _qStatTable         = null;
+	private GTableModel         _qStatTmDefault     = null;
+	private CountersModel       _qStatTmRowCount    = null;
 
 	// LOG PANEL
 	private JTextPane         _logArea         = new JTextPane();
@@ -270,11 +272,14 @@ implements ActionListener
 			
 			_aseName.addItem("<-Choose a server->");
 			String[] servers = _interfacesDriver.getServers();
-			Arrays.sort(servers);
-			for (int i=0; i<servers.length; i++)
+			if (servers != null)
 			{
-				_logger.debug("Adding server '"+ servers[i] +"' to serverListCB.");
-				_aseName.addItem(servers[i]);
+    			Arrays.sort(servers);
+    			for (int i=0; i<servers.length; i++)
+    			{
+    				_logger.debug("Adding server '"+ servers[i] +"' to serverListCB.");
+    				_aseName.addItem(servers[i]);
+    			}
 			}
 		}
 
@@ -453,7 +458,7 @@ implements ActionListener
 		LinkedList<String> pkList        = new LinkedList<String>();
 		pkList.add("tabName");
 
-		_qStatTmRowCount = new CountersModel("StatRowCount", null,
+		_qStatTmRowCount = new CountersModel(null, "StatRowCount", null,
 				sql, 
 				pkList, colsCalcDiff, colsCalcPCT, 
 				monTables, needRole, needConfig, needVersion, needCeVersion, 
@@ -852,7 +857,7 @@ implements ActionListener
 
 	protected void refreshQStatInfo()
 	{
-		Connection conn = _qStatInfoConn;
+		DbxConnection conn = _qStatInfoConn;
 		
 		if (_qStatCurrentType.equals(STAT_QUEUE_INFO))
 		{
@@ -929,7 +934,7 @@ implements ActionListener
 	}
 
 
-	private Connection aseConnection(boolean showInfo, boolean closeConn, String appname, String dbname, String user, String passwd, String host, String port)
+	private DbxConnection aseConnection(boolean showInfo, boolean closeConn, String appname, String dbname, String user, String passwd, String host, String port)
 	{
 //		String driverClassName = System.getProperty("jdbc_driver_class_name", "com.sybase.jdbc4.jdbc.SybDriver");
 //		String startOfConnUrl  = System.getProperty("jdbc_start_of_conn_url", "jdbc:sybase:Tds:");
@@ -950,7 +955,8 @@ implements ActionListener
 //			_logger.debug("Try getConnection to " + host + ":" + port + " user=" + user);
 //			Connection conn = DriverManager.getConnection(startOfConnUrl + host + ":" + port, props);
 
-			Connection conn = AseConnectionFactory.getConnection(host, port, dbname, user, passwd, appname, "", null);
+			Connection aseConn = AseConnectionFactory.getConnection(host, port, dbname, user, passwd, appname, "", null);
+			DbxConnection conn = new AseConnection(aseConn);
 
 			if (conn instanceof SybConnection)
 				((SybConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
@@ -1385,6 +1391,7 @@ implements ActionListener
 			return _logPrefix;
 		}
 		
+		@Override
 		public SQLException messageHandler(SQLException sqle)
 		{
 			// Take care of some specific messages...

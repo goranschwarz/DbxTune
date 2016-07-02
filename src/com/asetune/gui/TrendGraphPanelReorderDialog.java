@@ -39,9 +39,12 @@ public class TrendGraphPanelReorderDialog
 //	private static Logger _logger = Logger.getLogger(TrendGraphPanelReorderDialog.class);
 	private static final long serialVersionUID = 1L;
 
-	private ImageIcon                _iconDialog      = new ImageIcon(Version.class.getResource("images/graph.png"));
-	private ImageIcon                _iconUp          = new ImageIcon(Version.class.getResource("images/up.png"));
-	private ImageIcon                _iconDown        = new ImageIcon(Version.class.getResource("images/down.png"));
+//	private ImageIcon                _iconDialog      = new ImageIcon(Version.class.getResource("images/graph.png"));
+//	private ImageIcon                _iconUp          = new ImageIcon(Version.class.getResource("images/up.png"));
+//	private ImageIcon                _iconDown        = new ImageIcon(Version.class.getResource("images/down.png"));
+	private ImageIcon                _iconDialog      = SwingUtils.readImageIcon(Version.class, "images/graph.png");
+	private ImageIcon                _iconUp          = SwingUtils.readImageIcon(Version.class, "images/up.png");
+	private ImageIcon                _iconDown        = SwingUtils.readImageIcon(Version.class, "images/down.png");
 
 	private MultiLineLabel           _description1    = new MultiLineLabel("Choose in what order the Graphs will be arranged.");
 	private MultiLineLabel           _description2    = new MultiLineLabel("You can also enable or disable Graphs from here.");

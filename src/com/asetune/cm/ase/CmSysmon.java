@@ -71,7 +71,8 @@ extends CountersModel
 
 	public CmSysmon(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -178,6 +179,65 @@ extends CountersModel
 			"where d.cntrltype = 0 \n" +
 			"";
 
+//		String sqlCaches = 
+//			"\n" +
+//			"------- Append Cache information \n" +
+//			"select \n" +
+//			"  field_name  = cu.comment, \n" +
+//			"  group_name  = 'ase-cache-info', \n" +
+//			"  field_id    = config_admin(15,0,0,0,NULL,cu.comment), \n" +
+//			"  value       = cu.value, \n" +
+//			"  description = cu.comment \n" +
+//			"from master.dbo.syscurconfigs cu \n" +
+//			"where config = 19 \n" + 
+//			"  and value > 0 \n" +
+//			"";
+		String sqlCaches = 
+			"\n" +
+			"------- Append Cache information \n" +
+			"select \n" +
+			"  field_name  = co.name, \n" +
+			"  group_name  = 'ase-cache-info', \n" +
+			"  field_id    = config_admin(15,0,0,0,NULL,co.name), \n" +
+			"  value       = cu.value, \n" +
+			"  description = 'ConfigSize=' + convert(varchar(10),co.value) \n" +
+			"	           + ', CacheType='   + CASE  \n" +
+			"                                       WHEN co.status & 2       = 2       THEN 'Mixed'               \n" + 
+			"                                       WHEN co.status & 4       = 4       THEN 'Log Only'            \n" +
+			"                                       WHEN co.status & 1       = 1       THEN 'Default'             \n" +
+			"                                       WHEN co.status & 1048576 = 1048576 THEN 'Lockless Data Cache' \n" + 
+			"                                       ELSE                                    '-unknown-type-'      \n" +
+			"                                   END \n" +
+			"              + ', CacheStatus1='+ CASE \n" + 
+			"                                       WHEN co.status & 32  = 32  THEN 'Active'   \n" + 
+			"                                       WHEN co.status & 64  = 64  THEN 'Pend/Act' \n" +
+			"                                       WHEN co.status & 128 = 128 THEN 'Act/Del'  \n" +
+			"                                       ELSE                            '-unknown-status-' \n" +
+			"                                   END \n" +
+			"              + ', CacheStatus2='+ CASE \n" + 
+			"                                       WHEN cu.status & 256   = 256   THEN 'relaxed LRU' \n" + 
+			"                                       WHEN cu.status & 65536 = 65536 THEN 'none'        \n" +
+			"                                       ELSE                                'strict LRU'  \n" +
+			"                                   END \n" +
+			"from master.dbo.sysconfigures co, master.dbo.syscurconfigs cu \n" +
+			"where co.parent = 19 \n" +
+			"  and co.config = 19 \n" +
+			"  and co.config = cu.config \n" +
+			"  and co.name   = cu.comment \n" +
+			"order by co.name \n" + 
+			"\n" +
+			"------- Append Cache POOL information \n" +
+			"select \n" +
+			"  field_name  = co.name + ':pool=' + substring(co.comment, 1, charindex('K', co.comment) - 1), \n" +
+			"  group_name  = 'ase-cache-pool-info', \n" +
+			"  field_id    = config_admin(15,0,0,0,NULL,co.name), \n" +
+			"  value       = convert(int, substring(co.comment, 1, charindex('K', co.comment) - 1) ), \n" +
+			"  description = co.comment \n" +
+			"from master.dbo.sysconfigures co\n" +
+			"where co.parent = 19 \n" +
+			"  and co.comment like '%Buffer Pool%' \n" +
+			"";
+
 		// @@kernelmode
 		String kernelmode = "convert(varchar(255), 'process')";
 		if (aseVersion >= Ver.ver(15,7))
@@ -192,11 +252,18 @@ extends CountersModel
 			"  field_id    = convert(int, 0), \n" +
 			"  value       = convert(int, 0), \n" +
 			"  description = "+kernelmode+" \n" +
+			"select \n" +
+			"  field_name  = convert(varchar(100), '@@maxpagesize'), \n" +
+			"  group_name  = 'ase-global-var', \n" +
+			"  field_id    = convert(int, 0), \n" +
+			"  value       = convert(int, @@maxpagesize), \n" +
+			"  description = convert(varchar(30), @@maxpagesize) \n" +
 			"";
 				
 		return 
 			sql + 
 			sqlDevices + 
+			sqlCaches + 
 			sqlGlobalVariableKernelmode;
 	}
 

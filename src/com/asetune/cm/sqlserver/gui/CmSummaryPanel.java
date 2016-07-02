@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
@@ -336,7 +337,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		JPanel panel = SwingUtils.createPanel("title", false);
 		panel.setLayout(new MigLayout("", "5[grow]5", ""));
 
-		_title_lbl.setFont(new java.awt.Font("Dialog", 1, 16));
+		_title_lbl.setFont(new java.awt.Font("Dialog", 1, SwingUtils.hiDpiScale(16)));
 		_title_lbl.setText("Summary panel");
 
 		// create new panel
@@ -1510,7 +1511,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 			MainFrame.getInstance().setBlockingLocks(true, lockWaits);
 
-			String toTabName = "Blocking";
+			String toTabName = "Active Statements";
 			if ( _focusToBlockingTab == null )
 				_focusToBlockingTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks in the SQL-Server", cm.getGuiController().getTabbedPane(), toTabName);
 			_focusToBlockingTab.setVisible(true);
@@ -1579,11 +1580,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	@Override
 	public void resetGoToTabSettings(String tabName)
 	{
-//		if (CmBlocking.SHORT_NAME.equals(tabName))
-//		{
-//			_focusToBlockingTab = null;
-//		}
-//
+		if (CmActiveStatements.SHORT_NAME.equals(tabName))
+		{
+			_focusToBlockingTab = null;
+		}
+
 //		if (CmOpenDatabases.SHORT_NAME.equals(tabName))
 //		{
 //			_focusToDatabasesTab_fullLog        = null;
@@ -1730,8 +1731,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
-		conf.setProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
-		conf.setProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
+		conf.setLayoutProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
+		conf.setLayoutProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
 
 		conf.save();
 	}
@@ -1747,8 +1748,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		int width   = conf.getIntProperty("summaryPanel.serverInfo.width",  -1);
-		int height  = conf.getIntProperty("summaryPanel.serverInfo.height",  -1);
+		int width   = conf.getLayoutProperty("summaryPanel.serverInfo.width",  SwingUtils.hiDpiScale(300));
+		int height  = conf.getLayoutProperty("summaryPanel.serverInfo.height", SwingUtils.hiDpiScale(5000));
 		if (width != -1 && height != -1)
 		{
 			_dataPanelScroll.setPreferredSize(new Dimension(width, height));
@@ -1812,7 +1813,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();

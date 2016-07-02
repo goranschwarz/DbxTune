@@ -20,6 +20,7 @@ import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.ColorUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 public class JAseMessage
 extends JTextArea
@@ -111,7 +112,7 @@ extends JTextArea
 			ToolTipManager.sharedInstance().registerComponent(this);
 
 		if (_aseMsgFont == null)
-			_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
+			_aseMsgFont = new Font("Courier", Font.PLAIN, SwingUtils.hiDpiScale(12));
 		setFont(_aseMsgFont);
 
 		if (_msgSeverity > 10)

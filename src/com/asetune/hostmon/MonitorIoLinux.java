@@ -1,10 +1,20 @@
 package com.asetune.hostmon;
 
 import com.asetune.utils.Configuration;
+import com.asetune.utils.VersionShort;
 
 public class MonitorIoLinux 
 extends MonitorIo
 {
+	public MonitorIoLinux()
+	{
+		this(-1);
+	}
+	public MonitorIoLinux(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	@Override
 	public String getModuleName()
 	{
@@ -20,7 +30,7 @@ extends MonitorIo
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData()
+	public HostMonitorMetaData createMetaData(int utilVersion)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
@@ -28,22 +38,64 @@ extends MonitorIo
 		// Device:         rrqm/s   wrqm/s     r/s     w/s   rsec/s   wsec/s avgrq-sz avgqu-sz   await  svctm  %util
 		// sda               0.02     1.49    0.16    0.95     3.27    19.52    20.57     0.04   36.29   2.10   0.23
 
-		md.addStrColumn( "device",        1,  1, false,   30, "Disk device name");
-		md.addIntColumn( "samples",       2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
+		// gorans@gorans-ub:~$ iostat -V
+		// sysstat version 10.2.0
+		// (C) Sebastien Godard (sysstat <at> orange.fr)
+		//
+		// Device:         rrqm/s   wrqm/s     r/s     w/s    rkB/s    wkB/s avgrq-sz avgqu-sz   await r_await w_await  svctm  %util
+		// sda               0.40     7.40    0.74    1.50    20.08    46.56    59.67     0.12   52.65   19.91   68.77   7.93   1.77
+		//                                                                                             ^^^^^^^ ^^^^^^^
+		//                                                                                             new columns
+		// at github oldest version (9.5.1): https://github.com/sysstat/sysstat/commits/master/iostat.c
+		// I can still see r_await and w_await, so let start use those columns from 9.5.1
+		// 
+		// and: http://sebastien.godard.pagesperso-orange.fr/
+		// Sysstat 9.1.2 released (development version).
+		// New fields have been added to iostat's extended statistics, giving the average time for read and write requests to be served (thanks go to Jérôme Marchand from Redhat for his help with that). 
+		// Note that those fields should not be mistaken for read and write service times as they also include the time spent by the requests in queue... 
+		// Also with this version, tickless CPUs will no longer be displayed as offline processors, but as 100% idle ones.
 
-		md.addStatColumn("rrqmPerSec",    3,  2, true, 10, 1, "The number of read requests merged per second that were queued to the device");
-		md.addStatColumn("wrqmPerSec",    4,  3, true, 10, 1, "The number of write requests merged per second that were queued to the device.");
-		md.addStatColumn("readsPerSec",   5,  4, true, 10, 1, "The number of read requests that were issued to the device per second.");
-		md.addStatColumn("writesPerSec",  6,  5, true, 10, 1, "The number of write requests that were issued to the device per second.");
-		md.addStatColumn("kbReadPerSec",  7,  6, true, 10, 1, "The number of kilobytes read from the device per second.");
-		md.addStatColumn("kbWritePerSec", 8,  7, true, 10, 1, "The number of kilobytes writ to the device per second.");
+//System.out.println("MonitorIoLinux.createMetaData(utilVersion="+utilVersion+")");
+		if ( utilVersion >= VersionShort.toInt(9,1,2) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
+		{
+			md.addStrColumn( "device",        1,  1, false,   30, "Disk device name");
+			md.addIntColumn( "samples",       2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
 
-		md.addStatColumn("avgrq-sz",      9,  8, true, 10, 1, "The average size (in  sectors) of the requests that were issued to the device.");
-		md.addStatColumn("avgqu-sz",     10,  9, true, 10, 1, "The average queue length of the requests that were issued to the device.");
+			md.addStatColumn("rrqmPerSec",    3,  2, true, 10, 1, "The number of read requests merged per second that were queued to the device");
+			md.addStatColumn("wrqmPerSec",    4,  3, true, 10, 1, "The number of write requests merged per second that were queued to the device.");
+			md.addStatColumn("readsPerSec",   5,  4, true, 10, 1, "The number of read requests that were issued to the device per second.");
+			md.addStatColumn("writesPerSec",  6,  5, true, 10, 1, "The number of write requests that were issued to the device per second.");
+			md.addStatColumn("kbReadPerSec",  7,  6, true, 10, 1, "The number of kilobytes read from the device per second.");
+			md.addStatColumn("kbWritePerSec", 8,  7, true, 10, 1, "The number of kilobytes writ to the device per second.");
 
-		md.addStatColumn("await",        11, 10, true, 10, 1, "The average time (in milliseconds) for I/O requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
-		md.addStatColumn("svctm",        12, 11, true, 10, 1, "The average service time (in milliseconds) for I/O requests that were issued to the device.");
-		md.addStatColumn("utilPct",      13, 12, true, 5,  1, "Percentage of CPU time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100%.");
+			md.addStatColumn("avgrq-sz",      9,  8, true, 10, 1, "The average size (in  sectors) of the requests that were issued to the device.");
+			md.addStatColumn("avgqu-sz",     10,  9, true, 10, 1, "The average queue length of the requests that were issued to the device.");
+
+			md.addStatColumn("await",        11, 10, true, 10, 1, "The average time (in milliseconds) for I/O requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("r_await",      12, 11, true, 10, 1, "The average time (in milliseconds) for read requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("w_await",      13, 12, true, 10, 1, "The average time (in milliseconds) for write requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("svctm",        14, 13, true, 10, 1, "The average service time (in milliseconds) for I/O requests that were issued to the device.");
+			md.addStatColumn("utilPct",      15, 14, true, 5,  1, "Percentage of CPU time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100%.");
+		}
+		else
+		{
+			md.addStrColumn( "device",        1,  1, false,   30, "Disk device name");
+			md.addIntColumn( "samples",       2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
+
+			md.addStatColumn("rrqmPerSec",    3,  2, true, 10, 1, "The number of read requests merged per second that were queued to the device");
+			md.addStatColumn("wrqmPerSec",    4,  3, true, 10, 1, "The number of write requests merged per second that were queued to the device.");
+			md.addStatColumn("readsPerSec",   5,  4, true, 10, 1, "The number of read requests that were issued to the device per second.");
+			md.addStatColumn("writesPerSec",  6,  5, true, 10, 1, "The number of write requests that were issued to the device per second.");
+			md.addStatColumn("kbReadPerSec",  7,  6, true, 10, 1, "The number of kilobytes read from the device per second.");
+			md.addStatColumn("kbWritePerSec", 8,  7, true, 10, 1, "The number of kilobytes writ to the device per second.");
+
+			md.addStatColumn("avgrq-sz",      9,  8, true, 10, 1, "The average size (in  sectors) of the requests that were issued to the device.");
+			md.addStatColumn("avgqu-sz",     10,  9, true, 10, 1, "The average queue length of the requests that were issued to the device.");
+
+			md.addStatColumn("await",        11, 10, true, 10, 1, "The average time (in milliseconds) for I/O requests issued to the device to be served. This includes the time spent by the requests in queue and the time spent servicing them.");
+			md.addStatColumn("svctm",        12, 11, true, 10, 1, "The average service time (in milliseconds) for I/O requests that were issued to the device.");
+			md.addStatColumn("utilPct",      13, 12, true, 5,  1, "Percentage of CPU time during which I/O requests were issued to the device (bandwidth utilization for the device). Device saturation occurs when this value is close to 100%.");
+		}
 
 		// Use "device" as the Primary Key, which is used to du summary/average calculations
 		md.setPkCol("device");

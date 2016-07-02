@@ -307,6 +307,8 @@
 		//doCleanup("ALTER TABLE asemon_usage ADD clientAppName      varchar(30)     AFTER clientSourceVersion");
 		//doCleanup("UPDATE asemon_usage SET clientAppName = 'AseTune', serverAddTime=serverAddTime");
 
+		//doCleanup("ALTER TABLE asemon_usage ADD COLUMN screenResolution varchar(100)  AFTER callerIpAddress");
+		//doCleanup("ALTER TABLE asemon_usage ADD COLUMN hiDpiScale       varchar(20)   AFTER screenResolution");
 
 		//doCleanup("
 		//CREATE TABLE asemon_mda_info...
@@ -574,6 +576,9 @@
 //		doCleanup("alter table asemon_connect_info add jdbcDriverClass   varchar(60)");
 //		doCleanup("alter table asemon_connect_info add jdbcDriverName    varchar(255)");
 //		doCleanup("alter table asemon_connect_info add jdbcDriverVersion varchar(255)");
+
+//		doCleanup("ALTER TABLE asemon_connect_info CHANGE srvUserRoles  srvUserRoles  varchar(1024)");
+//		doCleanup("ALTER TABLE asemon_connect_info CHANGE srvVersionStr srvVersionStr varchar(255)");
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}

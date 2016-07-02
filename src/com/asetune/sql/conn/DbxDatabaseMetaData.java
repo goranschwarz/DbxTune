@@ -61,6 +61,22 @@ public class DbxDatabaseMetaData implements DatabaseMetaData
 	@Override
 	public String getURL() throws SQLException
 	{
+		// Something like this can be done for all methods, that is if we want to be able to trace all the method calls... but do I really want to write all that code...
+		// How do I generate all that code???
+		if (_logger.isDebugEnabled())
+		{
+			try
+			{
+				String str = _dbmd.getURL();
+				_logger.debug("DbxDatabaseMetaData.getURL(): returns: "+str);
+				return str;
+			}
+			catch (SQLException e)
+			{
+				_logger.debug("DbxDatabaseMetaData.getURL(): throws: "+e, e);
+				throw e;
+			}
+		}
 		return _dbmd.getURL();
 	}
 
@@ -1078,6 +1094,20 @@ public class DbxDatabaseMetaData implements DatabaseMetaData
 		return _dbmd.getFunctionColumns(catalog, schemaPattern, functionNamePattern, columnNamePattern);
 	}
 
+	//#######################################################
+	//############################# JDBC 4.1
+	//#######################################################
 
+	@Override
+	public boolean generatedKeyAlwaysReturned() throws SQLException
+	{
+		return _dbmd.generatedKeyAlwaysReturned();
+	}
+
+	@Override
+	public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException
+	{
+		return _dbmd.getPseudoColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern);
+	}
 
 }

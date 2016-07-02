@@ -1,5 +1,6 @@
 package com.asetune.config.dbms;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -20,14 +21,18 @@ extends TableModel
 	/**
 	 * Initialize 
 	 * @param conn
+	 * @throws Exception when severe errors like Not Connected anymore, so we can stop initializing...
 	 */
-	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts);
+	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts) 
+	throws SQLException;
 
 	/**
 	 * refresh 
 	 * @param conn
+	 * @throws Exception when severe errors like Not Connected anymore, so we can stop refreshing...
 	 */
-	public void refresh(DbxConnection conn, Timestamp ts);
+	public void refresh(DbxConnection conn, Timestamp ts) 
+	throws SQLException;
 
 	/**
 	 * Get description for the configuration name

@@ -52,6 +52,7 @@ public class JdbcUrlParser
 		{
 			try
 			{
+				// FIXME: make AseUrlHelper a subclass of JdbcUrlParser
 				AseUrlHelper aseUrl = AseUrlHelper.parseUrl(url);
 				
 				p.setDbType("sybase");

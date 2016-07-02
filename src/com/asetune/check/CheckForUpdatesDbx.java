@@ -32,6 +32,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 public abstract class CheckForUpdatesDbx extends CheckForUpdates
@@ -99,6 +100,9 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		catch (UnknownHostException e)
 		{
 		}
+
+		urlParams.add("screenResolution",   SwingUtils.getScreenResulutionAsString());
+		urlParams.add("hiDpiScale",         SwingUtils.getHiDpiScale()+"");
 
 		urlParams.add("user_name",          System.getProperty("user.name"));
 		urlParams.add("user_home",          System.getProperty("user.home"));
@@ -410,8 +414,9 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			// Get role list from the Summary CM
 //			CountersModel summaryCm = GetCounters.getInstance().getCmByName(GetCounters.CM_NAME__SUMMARY);
 			CountersModel summaryCm = CounterController.getInstance().getSummaryCm();
+
 			if (summaryCm != null && summaryCm.isRuntimeInitialized())
-				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveRoles());
+				srvUserRoles = StringUtil.toCommaStr(summaryCm.getActiveServerRolesOrPermissions());
 
 			usePcs           = "false";
 			pcsConfig        = "";

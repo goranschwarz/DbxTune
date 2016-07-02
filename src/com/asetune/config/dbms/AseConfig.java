@@ -292,6 +292,7 @@ implements IDbmsConfig
 	 */
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts)
+	throws SQLException
 	{
 		_hasGui  = hasGui;
 		_offline = offline;
@@ -304,6 +305,7 @@ implements IDbmsConfig
 	 */
 	@Override
 	public void refresh(DbxConnection conn, Timestamp ts)
+	throws SQLException
 	{
 		if (conn == null)
 			return;
@@ -437,6 +439,11 @@ implements IDbmsConfig
 			_configMap = null;
 			_configList = null;
 			_configSectionList = null;
+
+			// JZ0C0: Connection is already closed.
+			if ("JZ0C0".equals(ex.getSQLState()))
+				throw ex;
+
 			return;
 		}
 

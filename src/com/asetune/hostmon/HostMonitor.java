@@ -15,12 +15,12 @@ import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
 
-import ch.ethz.ssh2.ChannelCondition;
-import ch.ethz.ssh2.Session;
-
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+
+import ch.ethz.ssh2.ChannelCondition;
+import ch.ethz.ssh2.Session;
 
 /**
  * FIXME: describe me
@@ -67,7 +67,10 @@ implements Runnable
 	
 	/** Set this when we have some kind off communication exception, so the "client" can check if we have problems */
 	private ArrayList<Exception> _exceptionList = new ArrayList<Exception>();
-	
+
+	/** What version is the OS utility of, that is if the OS has different versions of the utility that has different number of columns etc */
+	private int _utilVersion = -1;
+
 	static
 	{
 //		_logger.setLevel(Level.DEBUG);
@@ -76,9 +79,12 @@ implements Runnable
 	/**
 	 * Implicitly called by any that extends this class
 	 */
-	public HostMonitor()
+	public HostMonitor(int utilVersion)
 	{
-		setMetaData( createMetaData() );
+		_utilVersion = utilVersion;
+		
+		setMetaData( createMetaData(_utilVersion) );
+		
 		_sampleHolder = new OsTableSampleHolder(getMetaData());
 		_currentSample = new OsTable(getMetaData());
 	}
@@ -103,6 +109,16 @@ implements Runnable
 		return null;
 	}
 
+	public void setUtilVersion(int utilVersion)
+	{
+		_utilVersion = utilVersion;
+	}
+	
+	public int getUtilVersion()
+	{
+		return _utilVersion;
+	}
+	
 	/**
 	 * A sample is considered to be closed/finished after X ms<br>
 	 * This simply means when to more records has been received for X ms, 
@@ -186,7 +202,7 @@ implements Runnable
 	 * <p>
 	 * Here is an example of how to do this:
 	 * <pre>
-	 * public HostMonitorMetaData createMetaData()
+	 * public HostMonitorMetaData createMetaData(int utilVersion)
 	 * {
 	 * 	HostMonitorMetaData md = new HostMonitorMetaData();
 	 * 
@@ -227,7 +243,12 @@ implements Runnable
 	 * Override this method by any subclass that implements a HostMonitor 
 	 * @return
 	 */
-	abstract public HostMonitorMetaData createMetaData();
+	abstract public HostMonitorMetaData createMetaData(int utilVersion);
+
+	public HostMonitorMetaData createMetaData()
+	{
+		return createMetaData(getUtilVersion());		
+	}
 
 	/** Get what the SQL and Parse columns looks like */
 	public HostMonitorMetaData getMetaData()

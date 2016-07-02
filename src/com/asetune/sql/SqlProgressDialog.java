@@ -5,6 +5,8 @@ import java.awt.Font;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.sql.Connection;
@@ -20,8 +22,6 @@ import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 import javax.swing.Timer;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
@@ -35,6 +35,8 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.sybase.jdbcx.SybConnection;
+
+import net.miginfocom.swing.MigLayout;
 
 /*----------------------------------------------------------------------
 ** BEGIN: SqlProgressDialog
@@ -77,9 +79,10 @@ implements PropertyChangeListener, ActionListener
 
 //	private SwingWorker<String, Object>	_swingWorker = null;
 
-	private boolean          _cancelled             = false;
+	private boolean          _cancelWasCalled       = false;
 	
 	private Window           _owner                 = null;
+	private boolean          _normalExit            = false; // set to true when the SwingWorker ends
 
 	/**
 	 * This timer is started just before we execute the SQL ststement that refreshes the data
@@ -105,7 +108,7 @@ implements PropertyChangeListener, ActionListener
 		_conn  = conn;
 
 		Font f = _totalExecTimeDesc_lbl.getFont();
-		_allSql_lbl          .setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+		_allSql_lbl          .setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, SwingUtils.hiDpiScale(16)));
 		_totalExecTimeVal_lbl.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_batchExecTimeVal_lbl.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 
@@ -135,7 +138,7 @@ implements PropertyChangeListener, ActionListener
 		add(_totalExecTimeVal_lbl,  "wrap");
 		add(_batchExecTimeDesc_lbl, "split, width 85, hidemode 3");
 		add(_batchExecTimeVal_lbl,  "wrap");
-		add(_allSql_sroll,          "push, grow, wrap");
+		add(_allSql_sroll,          "push, grow, hmin 50mm, wrap");  // hmin = minimum height
 		add(_msg_lbl,               "pushx, growx, wrap, hidemode 3");
 		add(_msg_sroll,             "hmin 150, push, grow, wrap, hidemode 3");
 		add(_cancel,                "center");
@@ -149,6 +152,16 @@ implements PropertyChangeListener, ActionListener
 		setSize( getSize().width + 100, getSize().height + 70);
 		SwingUtils.setSizeWithingScreenLimit(this, 200);
 		setLocationRelativeTo(owner);
+
+		// When the "X" close window is pressed, call some method.
+		addWindowListener( new WindowAdapter()
+		{
+			@Override
+			public void windowClosing(WindowEvent e)
+			{
+				SqlProgressDialog.this.windowClosing(_normalExit, e);
+			}
+		});
 	}
 	
 	public void setCurrentSqlText(String sql, int batchCount, int totalExecCount)
@@ -205,12 +218,12 @@ implements PropertyChangeListener, ActionListener
 		else
 			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
 
-		_currentExecSql = null;
-		if (StringUtil.isNullOrBlank(sql) && _msgList.size() > 0)
-			return;
+//		System.out.println("XXXXXX: deferredTimerAction(): sql = " + sql);
+//		System.out.println("XXXXXX: deferredTimerAction(): _msgList.size() = " + _msgList.size());
 
-//System.out.println("XXXXXX: deferredTimerAction(): sql = " + sql);
-//System.out.println("XXXXXX: deferredTimerAction(): _msgList.size() = " + _msgList.size());
+		_currentExecSql = null;
+//		if (StringUtil.isNullOrBlank(sql) && _msgList.size() > 0)
+//			return;
 
 		if ( ! StringUtil.isNullOrBlank(sql) )
 		{
@@ -304,51 +317,9 @@ implements PropertyChangeListener, ActionListener
 	
 	public void addMessage(SQLException sqle)
 	{
+//System.out.println("addMessage: "+sqle);
 		_msgList.add(sqle);
 	}
-//	public void addMessage(SQLException sqle)
-//	{
-//		// if RSyntaxTextArea has problem with this, catch it...
-//		try
-//		{
-//			// First time make the window a bit larger
-//			if (_firstMsgWasReceived == false)
-//			{
-////				Dimension dimS = _msg_sroll.getSize();
-////				dimS.height += 150;
-////				_msg_sroll.setSize(dimS);
-//
-//				Dimension dimW = getSize();
-//				dimW.height += 150;
-//				setSize(dimW);
-//
-//				SwingUtils.setSizeWithingScreenLimit(this, 0);
-//			}
-//
-//			_firstMsgWasReceived = true;
-//			_msg_lbl.setVisible(true);
-//			_msg_sroll.setVisible(true);
-//
-//			String msg = AseConnectionUtils.getSqlWarningMsgs(sqle);
-//			_msg_txt.append(msg);
-//
-//			_msg_txt.setCaretPosition(_msg_txt.getText().length());
-//
-////			SearchContext sc = new SearchContext();
-////			sc.setSearchFor(msg);
-////			sc.setMatchCase(true);
-////			sc.setWholeWord(false);
-////			sc.setRegularExpression(false);
-////
-////			// Position in text...
-////			SearchEngine.find(_msg_txt, sc);
-//
-//		}
-//		catch (Throwable t) 
-//		{
-//			_logger.warn("Problems adding a message to the progress dialog, but will continue anyway...", t);
-//		}
-//	}
 
 	/**
 	 * Called by SwingWorker on completion<br>
@@ -360,6 +331,7 @@ implements PropertyChangeListener, ActionListener
 		// Close this window when the Swing worker has completed
 		if ("state".equals(event.getPropertyName()) && StateValue.DONE == event.getNewValue()) 
 		{
+			_normalExit = true;
 			setVisible(false);
 			dispose();
 		}
@@ -373,22 +345,51 @@ implements PropertyChangeListener, ActionListener
 		// CANCEL
 		if (_cancel.equals(source))
 		{
-			_cancelled = true;
+			cancel_private();
+		}
+	}
 
-			if (_conn != null )
+	/**
+	 * If the cancel button is pressed, this method will be called
+	 */
+	private void cancel_private()
+	{
+		_cancelWasCalled = true;
+
+		if (_conn != null )
+		{
+			// jConnect supports CANCEL on the connection level, so lets use that
+			if (_conn instanceof SybConnection || _conn instanceof TdsConnection)
 			{
-				// jConnect supports CANCEL on the connection level, so lets use that
-				if (_conn instanceof SybConnection || _conn instanceof TdsConnection)
+				try
+				{
+					if (_conn instanceof SybConnection) ((SybConnection)_conn).cancel();
+					if (_conn instanceof TdsConnection) ((TdsConnection)_conn).cancel();
+				}
+				catch(SQLException ex)
+				{
+					SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server: "+ex, ex);
+//					SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server (conn will be closed): "+ex, ex);
+
+					// Close the Connection
+					//try {     _conn.close(); }
+					//catch (SQLException ignore) {}
+					//finally { _conn = null; }
+				}
+			}
+			// All others try to call cancel on the statement level
+			else
+			{
+				if (_stmnt != null)
 				{
 					try
 					{
-						if (_conn instanceof SybConnection) ((SybConnection)_conn).cancel();
-						if (_conn instanceof TdsConnection) ((TdsConnection)_conn).cancel();
+						_stmnt.cancel();
 					}
 					catch(SQLException ex)
 					{
-						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server: "+ex, ex);
-//						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems sending cancel to Server (conn will be closed): "+ex, ex);
+						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level: "+ex, ex);
+//						SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level (conn will be closed): "+ex, ex);
 
 						// Close the Connection
 						//try {     _conn.close(); }
@@ -396,34 +397,13 @@ implements PropertyChangeListener, ActionListener
 						//finally { _conn = null; }
 					}
 				}
-				// All others try to call cancel on the statement level
-				else
-				{
-					if (_stmnt != null)
-					{
-						try
-						{
-							_stmnt.cancel();
-						}
-						catch(SQLException ex)
-						{
-							SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level: "+ex, ex);
-//							SwingUtils.showErrorMessage(_owner, "Cancel", "Problems doing cancel to on the Statement level (conn will be closed): "+ex, ex);
-
-							// Close the Connection
-							//try {     _conn.close(); }
-							//catch (SQLException ignore) {}
-							//finally { _conn = null; }
-						}
-					}
-				}
-			} // end: conn != null
-		}
+			}
+		} // end: conn != null
 	}
 
 	public boolean isCancelled()
 	{
-		return _cancelled;
+		return _cancelWasCalled;
 	}
 
 	public void setSqlStatement(Statement stmnt)
@@ -431,14 +411,17 @@ implements PropertyChangeListener, ActionListener
 		_stmnt = stmnt;
 	}
 
-
-//	@Override
-//	public void setVisible(boolean state) 
-//	{
-//		super.setVisible(state);
-//		if (state == false)
-//			_execSqlTimer.stop();
-//	}
+	/**
+	 * called if someone pressed the "X" button on the window before the bgThread has ended.<br>
+	 * This will just call cancel() method if normalExit is FALSE.
+	 * 
+	 * @param normalExit This will be true if the SwingWorker thread has ended. and false if the "X" has been pressed.
+	 */
+	public void windowClosing(boolean normalExit, WindowEvent e)
+	{
+		if ( ! normalExit )
+			cancel_private();
+	}
 
 	/**
 	 * Wait for the background thread to execute before continue<br>

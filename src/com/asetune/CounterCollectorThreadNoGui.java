@@ -32,6 +32,8 @@ import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
@@ -618,7 +620,10 @@ extends CounterCollectorThreadAbstract
 		PersistentCounterHandler pch = null;
 		try
 		{
-			pch = new PersistentCounterHandler();
+			IObjectLookupInspector oli = DbxTune.getInstance().createPcsObjectLookupInspector();
+			ISqlCaptureBroker      scb = DbxTune.getInstance().createPcsSqlCaptureBroker();
+
+			pch = new PersistentCounterHandler(oli, scb);
 			pch.init( _storeProps );
 			pch.start();
 		}
@@ -668,6 +673,7 @@ extends CounterCollectorThreadAbstract
 				// get a connection
 				try
 				{
+					// FIXME: this doesn't work for OTHER DBMS than Sybase...
 					AseConnectionFactory.setUser(_aseUsername); // Set this just for SendConnectInfo uses it
 					AseConnectionFactory.setHostPort(_aseHostPortStr);
 
@@ -768,17 +774,24 @@ extends CounterCollectorThreadAbstract
 //				// initialize ASE Config Text Dictionary
 //				AseConfigText.initializeAll(getCounterController().getMonConnection(), false, false, null);
 
-				// initialize DBMS Config Dictionary
-				if (DbmsConfigManager.hasInstance())
+				try
 				{
-					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
-					if ( ! dbmsCfg.isInitialized() )
-						dbmsCfg.initialize(getCounterController().getMonConnection(), false, false, null);
+					// initialize DBMS Config Dictionary
+					if (DbmsConfigManager.hasInstance())
+					{
+						IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+						if ( ! dbmsCfg.isInitialized() )
+							dbmsCfg.initialize(getCounterController().getMonConnection(), false, false, null);
+					}
+					
+					// initialize DBMS Config Text Dictionary
+					if (DbmsConfigTextManager.hasInstances())
+						DbmsConfigTextManager.initializeAll(getCounterController().getMonConnection(), false, false, null);
 				}
-				
-				// initialize DBMS Config Text Dictionary
-				if (DbmsConfigTextManager.hasInstances())
-					DbmsConfigTextManager.initializeAll(getCounterController().getMonConnection(), false, false, null);
+				catch(SQLException ex) 
+				{
+					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+				}
 			}
 
 			// HOST Monitoring connection
@@ -831,7 +844,7 @@ extends CounterCollectorThreadAbstract
 							false, 
 							mtd.getDbmsExecutableVersionNum(), 
 							mtd.isClusterEnabled(), 
-							mtd.getMdaVersion());
+							mtd.getDbmsMonTableVersion());
 
 					// Hopefully this is a better place to send connect info
 //					CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);

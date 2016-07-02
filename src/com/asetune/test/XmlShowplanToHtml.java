@@ -45,7 +45,6 @@ public class XmlShowplanToHtml
 	public void transform(String dataXML, String inputXSL, String outputHTML) 
 	throws TransformerConfigurationException, TransformerException
 	{
-
 		TransformerFactory factory = TransformerFactory.newInstance();
 		StreamSource xslStream = new StreamSource(inputXSL);
 		Transformer transformer = factory.newTransformer(xslStream);

@@ -170,7 +170,7 @@ public class ExpandableToolTip  implements KeyListener, MouseListener, FocusList
 		 * TODO fix the two screen to be not too strict.
 		 */
 		Dimension screenSize = Toolkit.getDefaultToolkit ().getScreenSize();
-		boolean exceed = false;
+//		boolean exceed = false;
 		if((x+this.WIDTH_SC)>screenSize.getWidth()){
 			x=(x-10-this.WIDTH_SC);
 		}
@@ -295,7 +295,7 @@ public class ExpandableToolTip  implements KeyListener, MouseListener, FocusList
 		
 		//JComboBox with expandable toolTip
 		String[] cont = {"This Box is special but I'm not","I'm not special","neither am I"};
-		JComboBox el3 = new JComboBox(cont);
+		JComboBox<String> el3 = new JComboBox<String>(cont);
 		String t3="Expandable toolTips for JComboBoxes";
 		String h3="<p>The <b>expandable toolTip</b> can be used for all <font color='red'>JComponents</font>.</p>The <b>expandable toolTip</b> is here shown for <i>JComboBox</i><p><font size=-2>More info at <a href='http://www.allPower.de'>www.allPower.de</a></font></p>";
 		new ExpandableToolTip(t3,h3,el3);

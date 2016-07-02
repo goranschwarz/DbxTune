@@ -22,6 +22,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Properties;
@@ -46,8 +47,6 @@ import javax.swing.UIManager;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeNode;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTreeTable;
@@ -69,6 +68,8 @@ import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistReader.SessionInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class OfflineSessionVeiwer 
@@ -98,9 +99,9 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 	private JLabel                 _day_lbl         = new JLabel("Day");
 	private JLabel                 _hour_lbl        = new JLabel("Hour");
 	private JLabel                 _minute_lbl      = new JLabel("Minute");
-	private JComboBox              _day_cbx         = new JComboBox(new String[] {"1"});
-	private JComboBox              _hour_cbx        = new JComboBox(new String[] {"1", "2", "3", "4", "6", "12"});
-	private JComboBox              _minute_cbx      = new JComboBox(new String[] {"1", "2", "5", "10", "15", "20", "30"});
+	private JComboBox<String>      _day_cbx         = new JComboBox<String>(new String[] {"1"});
+	private JComboBox<String>      _hour_cbx        = new JComboBox<String>(new String[] {"1", "2", "3", "4", "6", "12"});
+	private JComboBox<String>      _minute_cbx      = new JComboBox<String>(new String[] {"1", "2", "5", "10", "15", "20", "30"});
 	private int                    _dayLevel        = 1;
 	private int                    _hourLevel       = 1;
 	private int                    _minuteLevel     = 10;
@@ -602,11 +603,18 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 ////		AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 //		AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
-		if (DbmsConfigManager.hasInstance())
-			DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+		try
+		{
+			if (DbmsConfigManager.hasInstance())
+				DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
-		if (DbmsConfigTextManager.hasInstances())
-			DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+			if (DbmsConfigTextManager.hasInstances())
+				DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+		}
+		catch(SQLException ex) 
+		{
+			_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+		}
 
 		// load the column tool tip (if any was saved)
 		if (MonTablesDictionaryManager.hasInstance())
@@ -693,11 +701,18 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 //			//AseCacheConfig.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 //			AseConfigText.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
-			if (DbmsConfigManager.hasInstance())
-				DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
+			try
+			{
+				if (DbmsConfigManager.hasInstance())
+					DbmsConfigManager.getInstance().initialize(reader.getConnection(), true, true, sl.getPeriodStartTime());
 
-			if (DbmsConfigTextManager.hasInstances())
-				DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+				if (DbmsConfigTextManager.hasInstances())
+					DbmsConfigTextManager.initializeAll(reader.getConnection(), true, true, sl.getPeriodStartTime());
+			}
+			catch(SQLException ex) 
+			{
+				_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
+			}
 		}
 		
 		DbmsConfigViewDialog.showDialog(this, reader);
@@ -732,6 +747,7 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 					"   <TR> <TD><B>                 <B>&nbsp;</TD> <TD></TD> </TR>" +
 					"   <TR> <TD><B>Source Date:     <B>&nbsp;</TD> <TD>"+ monVersionInfo._sourceDate    +"</TD> </TR>" +
 					"   <TR> <TD><B>Source Revision: <B>&nbsp;</TD> <TD>"+ monVersionInfo._sourceRev     +"</TD> </TR>" +
+//					"   <TR> <TD><B>DB Product Name: <B>&nbsp;</TD> <TD>"+ monVersionInfo._dbProductName +"</TD> </TR>" +
 					"</TABLE>" +
 					"</HTML>";
 				SwingUtils.showInfoMessage(this, Version.getAppName()+" Version used when storing counters", msg);
@@ -774,10 +790,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 		if (tmpConf != null)
 		{
-			tmpConf.setProperty(base + "window.width", this.getSize().width);
-			tmpConf.setProperty(base + "window.height", this.getSize().height);
-			tmpConf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
-			tmpConf.setProperty(base + "window.pos.y", this.getLocationOnScreen().y);
+			tmpConf.setLayoutProperty(base + "window.width",  this.getSize().width);
+			tmpConf.setLayoutProperty(base + "window.height", this.getSize().height);
+			tmpConf.setLayoutProperty(base + "window.pos.x",  this.getLocationOnScreen().x);
+			tmpConf.setLayoutProperty(base + "window.pos.y",  this.getLocationOnScreen().y);
 
 			tmpConf.setProperty(base + "colSessionsPrefSize", _colSessionsPrefSize);
 			tmpConf.setProperty(base + "colSessionsActSize",  _colSessionsActSize);
@@ -796,8 +812,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
   	private void loadProps()
   	{
-		int     width     = 600;
-		int     height    = 350;
+		int     width     = SwingUtils.hiDpiScale(600);
+		int     height    = SwingUtils.hiDpiScale(350);
 		int     x         = -1;
 		int     y         = -1;
 
@@ -834,10 +850,10 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 //		int defWidth  = (3 * Toolkit.getDefaultToolkit().getScreenSize().width)  / 4;
 //		int defHeight = (3 * Toolkit.getDefaultToolkit().getScreenSize().height) / 4;
 
-		width  = tmpConf.getIntProperty(base + "window.width",  width);
-		height = tmpConf.getIntProperty(base + "window.height", height);
-		x      = tmpConf.getIntProperty(base + "window.pos.x",  -1);
-		y      = tmpConf.getIntProperty(base + "window.pos.y",  -1);
+		width  = tmpConf.getLayoutProperty(base + "window.width",  width);
+		height = tmpConf.getLayoutProperty(base + "window.height", height);
+		x      = tmpConf.getLayoutProperty(base + "window.pos.x",  -1);
+		y      = tmpConf.getLayoutProperty(base + "window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 		{
@@ -1288,7 +1304,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();

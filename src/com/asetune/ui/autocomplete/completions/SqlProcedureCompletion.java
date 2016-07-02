@@ -63,7 +63,7 @@ extends SqlCompletion
 			"<font color=\"blue\">"+(pi._oraPackageName==null?"":"PACKAGE ")+pi._procType+"</font>" +
 			(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName="+pi._procSpecificName) +
 //			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : pi._procRemark) + "</font></i>";
+			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : stripMultiLineHtml(pi._procRemark)) + "</font></i>";
 		setShortDescription(shortDesc);
 		//setSummary(_procInfo.toHtmlString());
 	}

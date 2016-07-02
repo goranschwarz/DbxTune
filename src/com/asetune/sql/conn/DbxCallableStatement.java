@@ -1320,4 +1320,32 @@ public class DbxCallableStatement implements CallableStatement
 		_cstmnt.setNClob(parameterName, reader);
 	}
 
+	//#######################################################
+	//############################# JDBC 4.1
+	//#######################################################
+
+	@Override
+	public void closeOnCompletion() throws SQLException
+	{
+		_cstmnt.closeOnCompletion();
+	}
+
+	@Override
+	public boolean isCloseOnCompletion() throws SQLException
+	{
+		return _cstmnt.isCloseOnCompletion();
+	}
+
+	@Override
+	public <T> T getObject(int parameterIndex, Class<T> type) throws SQLException
+	{
+		return _cstmnt.getObject(parameterIndex, type);
+	}
+
+	@Override
+	public <T> T getObject(String parameterName, Class<T> type) throws SQLException
+	{
+		return _cstmnt.getObject(parameterName, type);
+	}
+
 }

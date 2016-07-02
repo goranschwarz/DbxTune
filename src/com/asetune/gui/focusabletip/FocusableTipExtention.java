@@ -239,13 +239,13 @@ implements MouseListener, FocusListener
 		
 		//JComboBox with expandable toolTip
 		String[] cont = {"entry 1", "entry 2", "entry 3"};
-		JComboBox cbx1 = new JComboBox(cont);
+		JComboBox<String> cbx1 = new JComboBox<String>(cont);
 		cbx1.setToolTipText("Combobox 1 tooltip");
 		panel.add(cbx1);
 		FocusableTipExtention.install(cbx1);
 
 		//JComboBox with expandable toolTip
-		JComboBox cbx2 = new JComboBox(cont);
+		JComboBox<String> cbx2 = new JComboBox<String>(cont);
 		cbx2.addItem("String 1");
 		cbx2.addItem("String 2");
 		cbx2.addItem("String 3");

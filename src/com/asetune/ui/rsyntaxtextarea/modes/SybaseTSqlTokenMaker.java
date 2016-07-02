@@ -2650,7 +2650,8 @@ public class SybaseTSqlTokenMaker extends AbstractJFlexTokenMaker {
 	 *         it out.
 	 */
 	@Override
-	public String[] getLineCommentStartAndEnd() {
+//	public String[] getLineCommentStartAndEnd() {
+	public String[] getLineCommentStartAndEnd(int languageIndex) {
 //		System.out.println("getLineCommentStartAndEnd: will return: [--], null");
 		return new String[] { "--", null };
 	}

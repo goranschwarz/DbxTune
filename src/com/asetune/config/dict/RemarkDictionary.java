@@ -34,8 +34,9 @@ public class RemarkDictionary
 	}
 
 //	public static final String T_SCAN_OR_HTAB_INS = "TabScan/HeapTabIns";
-	public static final String TABLE_SCAN   = "TabScan";
-	public static final String HEAP_TAB_INS = "HeapTabIns";
+	public static final String PROBABLY_TABLE_SCAN = "ProbTabScan";
+	public static final String TABLE_SCAN          = "TabScan";
+	public static final String HEAP_TAB_INS        = "HeapTabIns";
 	
 	private void init()
 	{
@@ -65,6 +66,28 @@ public class RemarkDictionary
 //			"</html>";
 //		add(key, desc);
 
+		key = PROBABLY_TABLE_SCAN;
+		desc = "<html>" +
+			"<h2>Probably Table Scan</h2>" +
+			"This could be a 'select that does a table scan'.<br>" +
+			"<b>Algorithm</b>: <code>IndexID == 0 && PagesRead > 1000</code><br>" +
+			"<br>" +
+
+			"If it's a 'table scan', high LogicalReads/PhysicalReads/APFReads/PagesRead should be visible.<br>" +
+			"I guess it's a <b>long</b> running table scans since the <i>normal 'TabScan' remark</i> didn't pick it up.<br>" +
+			"To get current SQL Statement that is executing: check Performance counter 'Server-&gt;Active Statements'.<br>" +
+			"<br>" +
+
+			"<h3>Action:</h3>" +
+			"Figure out what SQL statement(s) are accessing the table, what columns is used in the where " +
+			"clause, then investigate if appropriate indexing has been applied.<br>" +
+			"Also check if statistics has been updated on the table/indexes.<br>" +
+			"Use performance counter 'Active Statements' and/or the tool 'Capture SQL' to figure out what what SQL is issued.<br>" +
+			"</html>";
+		add(key, desc);
+
+	
+	
 		key = TABLE_SCAN;
 		desc = "<html>" +
 			"<h2>Table Scan</h2>" +

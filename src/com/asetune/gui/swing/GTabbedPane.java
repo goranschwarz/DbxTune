@@ -41,6 +41,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeListener;
@@ -50,6 +51,7 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 
 
@@ -68,9 +70,12 @@ public class GTabbedPane
 	*/
 	private static final long serialVersionUID = 6963407617181792852L;
 
-	private ImageIcon _undockedFrameIcon  = new ImageIcon(GTabbedPane.class.getResource("images/undocked_frame_icon.gif"));
-	private ImageIcon _iconWinPlus        = new ImageIcon(GTabbedPane.class.getResource("images/window_plus.gif"));
-	private ImageIcon _iconWinMinus       = new ImageIcon(GTabbedPane.class.getResource("images/window_minus.gif"));
+//	private ImageIcon _undockedFrameIcon  = new ImageIcon(GTabbedPane.class.getResource("images/undocked_frame_icon.gif"));
+//	private ImageIcon _iconWinPlus        = new ImageIcon(GTabbedPane.class.getResource("images/window_plus.gif"));
+//	private ImageIcon _iconWinMinus       = new ImageIcon(GTabbedPane.class.getResource("images/window_minus.gif"));
+	private ImageIcon _undockedFrameIcon  = SwingUtils.readImageIcon(GTabbedPane.class, "images/undocked_frame_icon.gif");
+	private ImageIcon _iconWinPlus        = SwingUtils.readImageIcon(GTabbedPane.class, "images/window_plus.gif");
+	private ImageIcon _iconWinMinus       = SwingUtils.readImageIcon(GTabbedPane.class, "images/window_minus.gif");
 
 
 	/*---------------------------------------------------
@@ -2618,7 +2623,7 @@ public class GTabbedPane
 				}
 
 				// If we double clicked on it, locate it into its own window
-				if ( tabComp instanceof JPanel )
+				if ( tabComp instanceof JPanel || tabComp instanceof JScrollPane )
 				{
 					windowOpenClose(tabIndex);
 					return;
@@ -2643,7 +2648,9 @@ public class GTabbedPane
 				{
 					JOptionPane.showMessageDialog(this, 
 						"The tab named '"+tabName+"' Can't be UnDocked.\n" +
-						"It needs to be a JPanel or implements the interface 'DockUndockManagement'.", 
+						"It needs to be a JPanel, JScrollPane or implements the interface 'DockUndockManagement'.\n" +
+						"\n" +
+						"Current class name is '"+tabComp.getClass().getName()+"'.", 
 						"UnDock", JOptionPane.ERROR_MESSAGE);
 					return;
 				}
@@ -2958,7 +2965,8 @@ public class GTabbedPane
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();
@@ -3065,10 +3073,10 @@ public class GTabbedPane
 		String base = "GTabbedPane." + name + ".";
 		conf.setProperty(base + "window.active", wp.undocked);
 
-		if ( wp.width  > 0 ) conf.setProperty(base + "window.width",  wp.width);
-		if ( wp.height > 0 ) conf.setProperty(base + "window.height", wp.height);
-		if ( wp.posX   > 0 ) conf.setProperty(base + "window.pos.x",  wp.posX);
-		if ( wp.posY   > 0 ) conf.setProperty(base + "window.pos.y",  wp.posY);
+		if ( wp.width  > 0 ) conf.setLayoutProperty(base + "window.width",  wp.width);
+		if ( wp.height > 0 ) conf.setLayoutProperty(base + "window.height", wp.height);
+		if ( wp.posX   > 0 ) conf.setLayoutProperty(base + "window.pos.x",  wp.posX);
+		if ( wp.posY   > 0 ) conf.setLayoutProperty(base + "window.pos.y",  wp.posY);
 
 		conf.save();
 	}
@@ -3087,10 +3095,10 @@ public class GTabbedPane
 		GTabbedPaneWindowProps wp = new GTabbedPaneWindowProps();
 		String base = "GTabbedPane." + getName() + ".";
 		wp.undocked = conf.getBooleanProperty(base + "window.active", false);
-		wp.width    = conf.getIntProperty    (base + "window.width", -1);
-		wp.height   = conf.getIntProperty    (base + "window.height", -1);
-		wp.posX     = conf.getIntProperty    (base + "window.pos.x", -1);
-		wp.posY     = conf.getIntProperty    (base + "window.pos.y", -1);
+		wp.width    = conf.getLayoutProperty (base + "window.width", -1);
+		wp.height   = conf.getLayoutProperty (base + "window.height", -1);
+		wp.posX     = conf.getLayoutProperty (base + "window.pos.x", -1);
+		wp.posY     = conf.getLayoutProperty (base + "window.pos.y", -1);
 
 		_logger.trace(name + ": getWindowProps(): return " + wp);
 

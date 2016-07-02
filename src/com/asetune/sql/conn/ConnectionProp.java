@@ -40,7 +40,12 @@ public class ConnectionProp
 		_driverClass   = cp._driverClass;
 		_url           = cp._url;
 
-		_urlOptions    = (cp._urlOptions == null) ? null : new Properties(cp._urlOptions);
+//		_urlOptions    = (cp._urlOptions == null) ? null : new Properties(cp._urlOptions);
+		if (cp._urlOptions != null)
+		{
+			_urlOptions = new Properties();
+			_urlOptions.putAll(cp._urlOptions);
+		}
 
 		_appName       = cp._appName;
 		_appVersion    = cp._appVersion;
@@ -120,5 +125,24 @@ public class ConnectionProp
 				_urlOptions.put(key, val);
 			}
 		}
+	}
+	
+	@Override
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("_username")     .append("=").append(_username)     .append(", ");
+		sb.append("_password")     .append("=").append(_password)     .append(", ");
+		sb.append("_server")       .append("=").append(_server)       .append(", ");
+		sb.append("_dbname")       .append("=").append(_dbname)       .append(", ");
+		sb.append("_loginTimeout") .append("=").append(_loginTimeout) .append(", ");
+		sb.append("_driverClass")  .append("=").append(_driverClass)  .append(", ");
+		sb.append("_url")          .append("=").append(_url)          .append(", ");
+		sb.append("_urlOptions")   .append("=").append(_urlOptions)   .append(", ");
+		sb.append("_appName")      .append("=").append(_appName)      .append(", ");
+		sb.append("_appVersion")   .append("=").append(_appVersion)   .append(", ");
+		sb.append("_sshTunnelInfo").append("=").append(_sshTunnelInfo).append("");
+
+		return super.toString() + ": " + sb.toString();
 	}
 }

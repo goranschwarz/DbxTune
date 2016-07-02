@@ -162,11 +162,11 @@ public class WizardOffline
 		//offlineProps.save();
 
 		//Process some props for PCS functionality, or change name in WizardPanel?
-		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcDriver,           true, false);
-		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcUrl,              true, false);
-		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcUsername,         true, false);
-		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_jdbcPassword,         true, true);
-		fixProp(settings, PersistWriterJdbc.PROP_BASE, PersistWriterJdbc.PROP_PART_startH2NetworkServer, true, false);
+		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_jdbcDriver,           true, false);
+		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_jdbcUrl,              true, false);
+		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_jdbcUsername,         true, false);
+		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_jdbcPassword,         true, true);
+		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_startH2NetworkServer, true, false);
 
 		fixProp(settings, "conn.",    "aseHost",     false, false);
 		fixProp(settings, "conn.",    "aseName",     false, false);

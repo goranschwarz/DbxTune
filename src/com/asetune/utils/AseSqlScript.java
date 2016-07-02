@@ -23,6 +23,8 @@ import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.ConnectionProp;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -33,19 +35,24 @@ implements SybMessageHandler
 {
 	private static Logger _logger = Logger.getLogger(AseSqlScript.class);
 
-	private Connection                      _conn;
+	private Connection         _conn;
 
 	@SuppressWarnings("unused")
-	private String                          _sqlMessage         = null;
+	private String             _sqlMessage                 = null;
 
-	private SybMessageHandler               _saveMsgHandler     = null;
-	private boolean                         _saveAutoCommit     = false;
-	private String                          _dbnameBeforeScript = null;
-//	private ArrayList<ResultSetTableModel>  _resultCompList     = null;
-	private String                          _msgPrefix          = "";
-	private int                             _queryTimeout       = 0;
-	private boolean                         _rememberStates     = true;
-	private List<Integer>                   _discardDbmsErrorList = null;
+	private SybMessageHandler  _saveMsgHandler             = null;
+	private boolean            _saveAutoCommit             = false;
+	private String             _dbnameBeforeScript         = null;
+	private String             _msgPrefix                  = "";
+	private int                _queryTimeout               = 0;
+	private boolean            _rememberStates             = true;
+	private List<Integer>      _discardDbmsErrorList       = null;
+	private boolean            _sybMessageNumberDebug      = false;
+	private boolean            _useGlobalMsgHandler        = false;
+	private boolean            _printSqlInGlobalMsgHandler = true;
+	
+	private String             _currentSqlStatement        = null;
+
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
 	 * @param conn The Connection 
@@ -115,6 +122,21 @@ implements SybMessageHandler
 		return _queryTimeout;
 	}
 
+	public void setSybMessageNumberDebug(boolean debug)
+	{
+		_sybMessageNumberDebug = debug;
+	}
+	
+	public void setUseGlobalMsgHandler(boolean b)
+	{
+		_useGlobalMsgHandler = b;
+	}
+	
+	public void setPrintSqlInGlobalMsgHandler(boolean b)
+	{
+		_printSqlInGlobalMsgHandler = b;
+	}
+	
 	/**
 	 * This just restores the Message Handler, and dbname to what it was previously.<br>
 	 * This does NOT close the database connection.
@@ -252,6 +274,8 @@ implements SybMessageHandler
 
 		for(String sql=readCommand(br); sql!=null; sql=readCommand(br))
 		{
+			_currentSqlStatement = sql;
+
 			// This can't be part of the for loop, then it just stops if empty row
 			if ( StringUtil.isNullOrBlank(sql) )
 				continue;
@@ -331,6 +355,7 @@ implements SybMessageHandler
 //				PluginSupport.LogInfoMessage(sqlwarning.getMessage(), MessageText.formatSQLExceptionDetails(sqlwarning));
 			}
 		}
+		_currentSqlStatement = null;
 	}
 
 	
@@ -432,10 +457,15 @@ implements SybMessageHandler
 			@Override
 			public SQLException messageHandler(SQLException sqe)
 			{
-//System.out.println("DISCARD("+sqe.getErrorCode()+"): "+StringUtil.toCommaStr(_discardDbmsErrorList));
-//System.out.println("SQLEX: "+sqe);
-//new Exception("Dummy Trace Message to locate from WHERE this was called.").printStackTrace();
 				int errorCode = sqe.getErrorCode();
+
+				if (_sybMessageNumberDebug)
+				{
+                    System.out.println("DISCARD(errorCode="+errorCode+"): discardList="+StringUtil.toCommaStr(_discardDbmsErrorList));
+                    System.out.println("SQLEX: "+sqe);
+                    //new Exception("Dummy Trace Message to locate from WHERE this was called.").printStackTrace();
+				}
+
 				if (_discardDbmsErrorList != null && _discardDbmsErrorList.contains(errorCode))
 				{
 					if (_logger.isDebugEnabled())
@@ -458,12 +488,16 @@ implements SybMessageHandler
 		SybMessageHandler oldMsgHandler = null;
 		if (_conn instanceof SybConnection)
 		{
-			((SybConnection)_conn).getSybMessageHandler();
+//System.out.println("AseSqlScript: executeSql(br, aseExceptionsToWarnings="+aseExceptionsToWarnings+"): SybConnection: setSybMessageHandler() ");
+			oldMsgHandler = ((SybConnection)_conn).getSybMessageHandler();
 			((SybConnection)_conn).setSybMessageHandler(newMessageHandler);
 		}
 		// Set a TDS Message Handler
 		if (_conn instanceof TdsConnection)
+		{
+//System.out.println("AseSqlScript: executeSql(br, aseExceptionsToWarnings="+aseExceptionsToWarnings+"): TdsConnection: setSybMessageHandler() ");
 			((TdsConnection)_conn).setSybMessageHandler(newMessageHandler);
+		}
 
 		String sql = "";
 		try
@@ -482,6 +516,7 @@ implements SybMessageHandler
 					stmnt.setQueryTimeout(_queryTimeout);
 
 				sql = sqlChunc;
+				_currentSqlStatement = sql;
 				if (_logger.isDebugEnabled()) 
 					_logger.debug("EXECUTING: "+sql);
 
@@ -544,11 +579,18 @@ implements SybMessageHandler
 		finally
 		{
 			if (_conn instanceof SybConnection)
+			{
+//System.out.println("AseSqlScript: executeSql(br, aseExceptionsToWarnings="+aseExceptionsToWarnings+"): SybConnection: setSybMessageHandler(RESTORE) ");
 				((SybConnection)_conn).setSybMessageHandler(oldMsgHandler);
+			}
 
 			// Restore old message handler
 			if (_conn instanceof TdsConnection)
+			{
+//System.out.println("AseSqlScript: executeSql(br, aseExceptionsToWarnings="+aseExceptionsToWarnings+"): TdsConnection: restoreSybMessageHandler() ");
 				((TdsConnection)_conn).restoreSybMessageHandler();
+			}
+			_currentSqlStatement = null;
 		}
 		return sb.toString();
 	}
@@ -799,6 +841,9 @@ implements SybMessageHandler
 	@Override
 	public SQLException messageHandler(SQLException sqe)
 	{
+		if ( ! _useGlobalMsgHandler )
+			return sqe;
+
 		boolean isInformational = false;
 		StringBuffer m = new StringBuffer(500);
 
@@ -873,27 +918,33 @@ implements SybMessageHandler
 		}
 		m.append(".");
 
-		// Write a dummy message so we can trece from where this happened.
+		// Write a dummy message so we can trace from where this happened.
 		if (_logger.isTraceEnabled())
 			_logger.trace("Dummy Trace Message to locate from WHERE this was called.", new Exception("Dummy Trace Message to locate from WHERE this was called."));
+
+		String sqlStatement = "";
+		if (_printSqlInGlobalMsgHandler && _currentSqlStatement != null)
+		{
+			sqlStatement = "\nSQL Causing the message: " + _currentSqlStatement;
+		}
 
 		if (sqe instanceof SQLWarning)
 		{
 			if (isInformational)
 			{
 				_sqlMessage = "INFO: " + m.toString();
-				_logger.info(getMsgPrefix() + m.toString());
+				_logger.info(getMsgPrefix() + m.toString() + sqlStatement);
 			}
 			else
 			{
 				_sqlMessage = "WARNING: " + m.toString();
-				_logger.warn(getMsgPrefix() + m.toString());
+				_logger.warn(getMsgPrefix() + m.toString() + sqlStatement);
 			}
 		}
 		else
 		{
 			_sqlMessage = "ERROR: " + m.toString();
-			_logger.error(getMsgPrefix() + m.toString());
+			_logger.error(getMsgPrefix() + m.toString() + sqlStatement, sqe);
 		}
 
 		return sqe;
@@ -1137,14 +1188,21 @@ implements SybMessageHandler
 		{
 			System.out.println("Open DB connection.");
 
-			AseConnectionFactory.setAppName("xxx");
-			AseConnectionFactory.setUser("sa");
-			AseConnectionFactory.setPassword("");
-//			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
-			AseConnectionFactory.setHostPort("gorans-xp", "5000");
-//			AseConnectionFactory.setHostPort("gorans-xp", "15700");
-			
-			final Connection conn = AseConnectionFactory.getConnection();
+//			AseConnectionFactory.setAppName("xxx");
+//			AseConnectionFactory.setUser("sa");
+//			AseConnectionFactory.setPassword("");
+////			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
+//			AseConnectionFactory.setHostPort("gorans-xp", "5000");
+////			AseConnectionFactory.setHostPort("gorans-xp", "15700");
+//			
+//			final Connection conn = AseConnectionFactory.getConnection();
+
+			ConnectionProp cp = new ConnectionProp();
+			cp.setAppName("xxx");
+			cp.setUsername("sa");
+			cp.setPassword("");
+			cp.setUrl("jdbc:sybase:Tds:localhost:5000");;
+			final DbxConnection conn = DbxConnection.connect(null, cp);
 			
 			String dbname  = "perfdemo";
 			String owner   = "dbo";

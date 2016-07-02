@@ -73,7 +73,8 @@ extends CountersModel
 
 	public CmBlocking(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -129,7 +130,7 @@ extends CountersModel
 		cols2 = ", ObjectName = isnull(object_name(ObjectID, DBID), 'ObjId='+convert(varchar(30),ObjectID))"; // if user is not a valid user in A.DBID, then object_name() will return null
 		cols3 = "";
 		
-		String whereArgs = "where BlockedState = 'Blocked' or BlockedState = 'Blocking' or BlockedBy > 0 ";
+		String whereArgs = "where BlockedState like 'Blocked%' or BlockedState like 'Blocking%' or BlockedBy > 0 ";
 
 		String sql = 
 			"select " + cols1 + cols2 + cols3 + "\n" +

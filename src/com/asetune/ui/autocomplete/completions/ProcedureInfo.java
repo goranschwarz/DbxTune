@@ -9,6 +9,8 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
@@ -54,6 +56,7 @@ implements Serializable
 			int colId = 0;
 			ResultSet rs = dbmd.getProcedureColumns(_procCat, _procSchema, _procName, "%");
 
+			MonTablesDictionary mtd = MonTablesDictionaryManager.hasInstance() ? MonTablesDictionaryManager.getInstance() : null;
 			while(rs.next())
 			{
 				colId++;
@@ -69,6 +72,10 @@ implements Serializable
 				ppi._paramDefault    = rs.getString("COLUMN_DEF");
 				ppi._paramScale      = rs.getInt   ("SCALE");
 				
+				// Check with the MonTable dictionary for Descriptions
+				if (mtd != null && StringUtil.isNullOrBlank(ppi._paramRemark))
+					ppi._paramRemark = StringUtil.stripHtmlStartEnd(mtd.getDescription(_procName, ppi._paramName));
+
 				addParameter(ppi);
 			}
 			rs.close();

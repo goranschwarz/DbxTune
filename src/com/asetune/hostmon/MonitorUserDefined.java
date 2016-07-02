@@ -24,6 +24,8 @@ extends HostMonitor
 	public MonitorUserDefined(Configuration conf, String moduleName, SshConnection conn, boolean start)
 	throws Exception
 	{
+		super(-1);
+
 		_moduleName = moduleName;
 
 		if ( ! conn.isConnected() )
@@ -59,7 +61,7 @@ extends HostMonitor
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData()
+	public HostMonitorMetaData createMetaData(int utilVersion)
 	{
 		return _metaData;
 	}

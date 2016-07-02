@@ -1,14 +1,23 @@
 package com.asetune.ui.rsyntaxtextarea;
 
+import java.awt.Component;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 
+import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.JComponent;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.UIDefaults;
+import javax.swing.UIManager;
 import javax.swing.event.HyperlinkListener;
+import javax.swing.text.StyleContext;
 
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -22,6 +31,7 @@ import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.PreviousWordActi
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToLowerCaseAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
+import com.asetune.utils.SwingUtils;
 
 public class RSyntaxTextAreaX
 extends RSyntaxTextArea
@@ -127,7 +137,7 @@ extends RSyntaxTextArea
     /**
 	 * initialize this class
 	 */
-	public static void localInit(RSyntaxTextArea textArea)
+	public static void localInit(final RSyntaxTextArea textArea)
 	{
 		ActionMap am = textArea.getActionMap();
 		am.put(RTextAreaEditorKit.selectWordAction,            new SelectWordAction());
@@ -135,6 +145,9 @@ extends RSyntaxTextArea
 		am.put(RTextAreaEditorKit.selectionNextWordAction,     new NextWordAction(    RTextAreaEditorKit.selectionNextWordAction, true));
 		am.put(RTextAreaEditorKit.previousWordAction,          new PreviousWordAction(RTextAreaEditorKit.previousWordAction,          false));
 		am.put(RTextAreaEditorKit.selectionPreviousWordAction, new PreviousWordAction(RTextAreaEditorKit.selectionPreviousWordAction, true));
+
+		am.put(RTextAreaEditorKit.rtaIncreaseFontSizeAction,   new RSyntaxTextAreaEditorKit.IncreaseFontSizeAction());
+		am.put(RTextAreaEditorKit.rtaDecreaseFontSizeAction,   new RSyntaxTextAreaEditorKit.DecreaseFontSizeAction());
 
 		am.put(toUpperCase, new ToUpperCaseAction(toUpperCase));
 		am.put(toLowerCase, new ToLowerCaseAction(toLowerCase));
@@ -155,6 +168,89 @@ extends RSyntaxTextArea
 		// TO LOWER and UPPPER mapping
 		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toUpperCase);
 		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_L, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toLowerCase);
+
+		// Increase/Decrease font size with keyboard Ctrl+ and Ctrl-
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PLUS,  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), RTextAreaEditorKit.rtaIncreaseFontSizeAction);
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), RTextAreaEditorKit.rtaDecreaseFontSizeAction);
+
+//System.out.println("UIManager.getLookAndFeel()="+UIManager.getLookAndFeel());
+//com.sun.java.swing.plaf.windows.WindowsLookAndFeel
+
+//System.out.println("XXXXXXX: TextArea.font   = " + UIManager.getFont("TextArea.font"));
+//System.out.println("XXXXXXX: TextField.font  = " + UIManager.getFont("TextField.font"));
+//System.out.println("XXXXXXX: Label.font      = " + UIManager.getFont("Label.font"));
+//System.out.println("XXXXXXX: rstaDefaultFont = " + getDefaultFont());
+		// Fix font size, use same size as JLabel
+		if (SwingUtils.isHiDpi())
+		{
+//    		Font labelFont = UIManager.getFont("Label.font");
+    		Font rstaDefaultFont = getDefaultFont();
+
+//    		int scaledFontSize = labelFont.getSize(); 
+//    		int scaledFontSize = SwingUtils.hiDpiScale(13); // 13 is the default size, so lets try to scale that
+    		int scaledFontSize = SwingUtils.hiDpiScale(rstaDefaultFont.getSize());
+    		
+    		Font rstaNewFont = StyleContext.getDefaultStyleContext().getFont(
+    				rstaDefaultFont.getFontName(), 
+    				rstaDefaultFont.getStyle(), // Font.PLAIN, 
+    				scaledFontSize);
+    		textArea.setFont( rstaNewFont );
+    		
+    		// The line numbers in the ScrollBar dosn't adjust...
+    		// Try the same hack as in RSyntaxTextAreaEditorKit.IncreaseFontSizeAction()
+			Component parent = textArea.getParent();
+			if (parent instanceof javax.swing.JViewport) 
+			{
+				parent = parent.getParent();
+				if (parent instanceof JScrollPane) 
+					parent.repaint();
+			}
+		}
+		
+		// Install a Mouse Wheel Listener, so we can increase decrease the font sizes 
+		textArea.addMouseWheelListener(new MouseWheelListener()
+		{
+			private JScrollPane getParentScrollPane(JComponent component)
+			{
+				Component parent = component.getParent();
+				while (!(parent instanceof JScrollPane) && parent != null)
+				{
+					parent = parent.getParent();
+				}
+				if (parent instanceof JScrollPane)
+					return (JScrollPane)parent;
+				return null;
+			}
+
+		    @Override
+			public void mouseWheelMoved(MouseWheelEvent e)
+			{
+				JComponent component = (JComponent) e.getComponent();
+				if ( e.isControlDown() )
+				{
+					if ( e.getWheelRotation() < 0 )
+					{
+						//System.out.println("Ctrl-Wheel-UP (IncreaseFontSize)");
+						Action action = component.getActionMap().get(RSyntaxTextAreaEditorKit.rtaIncreaseFontSizeAction);
+						if ( action != null )
+							action.actionPerformed(null);
+					}
+					else
+					{
+						//System.out.println("Ctrl-Wheel-DOWN (DecreaseFontSize)");
+						Action action = component.getActionMap().get(RSyntaxTextAreaEditorKit.rtaDecreaseFontSizeAction);
+						if ( action != null )
+							action.actionPerformed(null);
+					}
+				}
+				else // dispatch the event to the parent scroll
+				{
+					JScrollPane scrollPane = getParentScrollPane(component);
+					if (scrollPane != null)
+						scrollPane.dispatchEvent(e);
+				}
+			}
+		});
 	}
 
 	/** 

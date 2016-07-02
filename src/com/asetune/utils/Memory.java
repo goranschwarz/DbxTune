@@ -17,7 +17,7 @@ public class Memory
 	//-----------------------------------------------------------------------
 	private static Thread  _checkThread = null;
 	private static boolean _running = false;
-	private static int     _memLimitInMb = 10;
+	private static int     _memLimitInMb = 20;
 	private static int     _sleepTimeInSec = 3;
 	private static ArrayList<MemoryListener> _memListeners = new ArrayList<Memory.MemoryListener>();
 
@@ -70,6 +70,7 @@ public class Memory
 	{
 		for (MemoryListener ml : getMemoryListener())
 		{
+			_logger.info("Memory.fireOutOfMemory(): calling outOfMemoryHandler() on listener: "+ml);
 			ml.outOfMemoryHandler();
 		}
 	}
@@ -133,6 +134,11 @@ public class Memory
 			public void run()
 			{
 				_logger.info("Starting memory checker thread.");
+				int  exceptionCount = 0;
+				int  exceptionCountExitThreshold = 25;
+				long lastExceptionTime = 0;
+				long lastExceptionTimeThreshold = 10000;
+
 				while(_running)
 				{
 					try
@@ -163,8 +169,21 @@ public class Memory
 					}
 					catch (Throwable t)
 					{
-						_logger.info("Caught '"+t+"', so I will stop the memory checker thread.", t);
-						_running = false;
+						exceptionCount++;
+						
+						if (exceptionCount > exceptionCountExitThreshold)
+						{
+							_logger.info("Caught '"+t+"', so I will stop the memory checker thread. exceptionCount="+exceptionCount+", exceptionCountExitThreshold="+exceptionCountExitThreshold, t);
+							_running = false;
+						}
+						else
+						{
+							_logger.warn("Memory checker, Caught '"+t+"', skipping this and continuing... exceptionCount="+exceptionCount+", exceptionCountExitThreshold="+exceptionCountExitThreshold, t);
+						}
+						// Reset execption count, if it has gone more that X milliseconds since last exception
+						if (System.currentTimeMillis() - lastExceptionTime > lastExceptionTimeThreshold)
+							exceptionCount = 0;
+						lastExceptionTime = System.currentTimeMillis();
 					}
 				} // end: while(_running)
 

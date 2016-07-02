@@ -10,6 +10,7 @@ import java.util.Map;
 import javax.naming.NameNotFoundException;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.StringUtil;
 
 
 public abstract class MonTablesDictionary
@@ -157,7 +158,7 @@ public abstract class MonTablesDictionary
 	 * depends on Executable/installMaster/monTable and to some extent the ASE version if below ASE 12.5.4 
 	 * and user questions '_trustMonTablesVersion' 
 	 */
-	public int getMdaVersion()
+	public int getDbmsMonTableVersion()
 	{
 		if (_trustMonTablesVersion)
 			return getDbmsMonTableVersionNum();
@@ -210,6 +211,15 @@ public abstract class MonTablesDictionary
 //	public void setDbmsHostPortStr(String hostPortStr)        { _dbmsHostPortStr = hostPortStr; }
 //	public void setDbmsUser(String userName)                  { _dbmsUser        = userName; }
 
+
+
+	/**
+	 * If the dictionary brings counter descriptions from the DBMS, we would want to store them in the PCS database recording.<br>
+	 * But if it's <b>only</b> static values that are initiated/created by provider, then we do NOT need to store it in the PCS.
+	 * 
+	 * @return true if you want to save it in the PCS
+	 */
+	public abstract boolean isSaveMonTablesDictionaryInPcsEnabled();
 
 
 	public static class MonTableEntry
@@ -1152,6 +1162,24 @@ public abstract class MonTablesDictionary
 	}
 
 	/**
+	 * Get description for a table name
+	 * 
+	 * @param tabName
+	 * @return null if nothing was found
+	 */
+	public String getDescriptionForTable(String tabName)
+	{
+		if (_monTables == null)
+			return null;
+
+		MonTableEntry mte = _monTables.get(tabName);
+		if (mte != null)
+			return mte._description;
+
+		return null;
+	}
+
+	/**
 	 * Get description for the column name, this one will return a 
 	 * description on the first table where the column name matches
 	 * 
@@ -1286,6 +1314,10 @@ public abstract class MonTablesDictionary
 		return desc;
 	}
 
+	public Map<String,String> getSpinlockMap()
+	{
+		return _sysMonitorsInfo;
+	}
 
 	/**
 	 * Get description for specific waitEventId

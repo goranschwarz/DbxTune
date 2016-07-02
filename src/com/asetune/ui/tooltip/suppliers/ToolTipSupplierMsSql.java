@@ -17,7 +17,7 @@ extends ToolTipSupplierAbstractSql
 	@Override
 	public String getName() 
 	{
-		return "Oracle";
+		return "SQL-Server";
 	}
 
 	@Override

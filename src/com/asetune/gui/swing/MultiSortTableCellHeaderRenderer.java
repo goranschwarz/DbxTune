@@ -17,15 +17,18 @@ import javax.swing.plaf.basic.BasicArrowButton;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
 
+import com.asetune.utils.SwingUtils;
+
 @SuppressWarnings("serial")
 public class MultiSortTableCellHeaderRenderer
 extends DefaultTableCellRenderer
 {
-	protected SortIcon	sortIcon	= new SortIcon(8);
+	protected SortIcon	sortIcon	= new SortIcon(SwingUtils.hiDpiScale(8));
 
 	public MultiSortTableCellHeaderRenderer()
 	{
 		setHorizontalAlignment(0);
+//		setHorizontalTextPosition(SwingUtils.hiDpiScale(10));
 		setHorizontalTextPosition(10);
 	}
 
@@ -133,11 +136,11 @@ class SortIcon implements Icon, SwingConstants
 	@Override
 	public void paintIcon(Component c, Graphics g, int x, int y)
 	{
-		iconRenderer.paintTriangle(g, x, y-4, size, direction, true);
+		iconRenderer.paintTriangle(g, x, y-SwingUtils.hiDpiScale(4), size, direction, true);
 
 		Font f = g.getFont();
-		g.setFont(new Font(Font.DIALOG_INPUT, Font.PLAIN, 10));
-		g.drawString(Integer.toString(_priority+1), x+5, y+1);
+		g.setFont(new Font(Font.DIALOG_INPUT, Font.PLAIN, SwingUtils.hiDpiScale(10)));
+		g.drawString(Integer.toString(_priority+1), x+SwingUtils.hiDpiScale(5), y+SwingUtils.hiDpiScale(1));
 		g.setFont(f);
 	}
 

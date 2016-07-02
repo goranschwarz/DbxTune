@@ -59,8 +59,6 @@ import javax.swing.event.CaretListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.text.BadLocationException;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -69,8 +67,12 @@ import org.jdesktop.swingx.JXTable;
 
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.swing.GLabel;
+import com.asetune.gui.swing.GTextField;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
+import com.asetune.sql.conn.ConnectionProp;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
@@ -82,6 +84,8 @@ import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class AseAppTraceDialog
 extends JDialog
@@ -104,99 +108,101 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private ArrayList<String> _dblist               = new ArrayList<String>();
 
 	/** What ASE host name are we connected to */
-	private String          _aseHostName            = "";
-	private String          _aseServerName          = DEFAULT_aseServerName;
-	private String          _aseVersionStr          = "";
+	private String            _aseHostName            = "";
+	private String            _aseServerName          = DEFAULT_aseServerName;
+	private String            _aseVersionStr          = "";
+                              
+	private JPanel            _aseOptionsPanel        = null;
+	private Connection        _aseConn                = null;
+	private JCheckBox         _aseOptShowSql_chk      = new JCheckBox("SQL Text",            true);
+	private JCheckBox         _aseOptShowplan_chk     = new JCheckBox("Showplan",            false);
+	private JCheckBox         _aseOptStatIo_chk       = new JCheckBox("Statistics IO",       false);
+	private JCheckBox         _aseOptStatTime_chk     = new JCheckBox("Statistics Time",     false);
+	private JCheckBox         _aseOptStatPlanCost_chk = new JCheckBox("Statistics Plancost", false);
+	private JButton           _aseOptAllOff_but       = new JButton("All Options to OFF");
+                              
+	private JButton           _aseExtenedOption_but   = new JButton("Extended Options...");
+	private OptionsDialog     _aseOptionsDialog       = new OptionsDialog(this);
+	private JButton           _aseSpHelpAppTrace_but  = new JButton("sp_helpapptrace");
+	private JCheckBox         _aseDelSrvFileOnStop_chk= new JCheckBox("Delete ASE Trace File", false);
+                              
+	private JLabel            _aseTraceFile_lbl       = new JLabel("ASE Trace File");
+	private JTextField        _aseTraceFile_txt       = new JTextField("");
+	private JLabel            _aseSaveTemplate_lbl    = new JLabel("File name template");
+	private JComboBox<String> _aseSaveTemplate_cbx    = new JComboBox<String>(_aseSaveTemplateArr);
+	private JLabel            _aseSaveDir_lbl         = new JLabel("ASE Save Dir");
+	private JTextField        _aseSaveDir_txt         = new JTextField("/tmp");
+	private JLabel            _warning_lbl            = new JLabel("Choose 'SSH connection' or 'remote mount'.");
+	private JLabel            _aseSpid_lbl            = new JLabel("Spid");
+	private JTextField        _aseSpid_txt            = new JTextField("     ");
+	private JButton           _aseSpid_but            = new JButton("...");
+	private JButton           _aseStartTrace_but      = new JButton("Start Trace");
+	private JButton           _aseStopTrace_but       = new JButton("Stop Trace");
+                              
+	private JPanel            _accessTypePanel        = null;
+	private JLabel            _accessType_lbl         = new JLabel("Trace File Access");
+	private JComboBox<String> _accessType_cbx         = new JComboBox<String>(_accessTypeArr);
+	private static final int  ACCESS_TYPE_NOT_SELECTED = 0;
+	private static final int  ACCESS_TYPE_SSH         = 1;
+	private static final int  ACCESS_TYPE_LOCAL       = 2;
+	private static final int  ACCESS_TYPE_NONE        = 3;
 
-	private JPanel          _aseOptionsPanel        = null;
-	private Connection      _aseConn                = null;
-	private JCheckBox       _aseOptShowSql_chk      = new JCheckBox("SQL Text",            true);
-	private JCheckBox       _aseOptShowplan_chk     = new JCheckBox("Showplan",            false);
-	private JCheckBox       _aseOptStatIo_chk       = new JCheckBox("Statistics IO",       false);
-	private JCheckBox       _aseOptStatTime_chk     = new JCheckBox("Statistics Time",     false);
-	private JCheckBox       _aseOptStatPlanCost_chk = new JCheckBox("Statistics Plancost", false);
-	private JButton         _aseOptAllOff_but       = new JButton("All Options to OFF");
-
-	private JButton         _aseExtenedOption_but   = new JButton("Extended Options...");
-	private OptionsDialog   _aseOptionsDialog       = new OptionsDialog(this);
-	private JButton         _aseSpHelpAppTrace_but  = new JButton("sp_helpapptrace");
-	private JCheckBox       _aseDelSrvFileOnStop_chk= new JCheckBox("Delete ASE Trace File", false);
-
-	private JLabel          _aseTraceFile_lbl       = new JLabel("ASE Trace File");
-	private JTextField      _aseTraceFile_txt       = new JTextField("");
-	private JLabel          _aseSaveTemplate_lbl    = new JLabel("File name template");
-	private JComboBox       _aseSaveTemplate_cbx    = new JComboBox(_aseSaveTemplateArr);
-	private JLabel          _aseSaveDir_lbl         = new JLabel("ASE Save Dir");
-	private JTextField      _aseSaveDir_txt         = new JTextField("/tmp");
-	private JLabel          _warning_lbl            = new JLabel("Choose 'SSH connection' or 'remote mount'.");
-	private JLabel          _aseSpid_lbl            = new JLabel("Spid");
-	private JTextField      _aseSpid_txt            = new JTextField("     ");
-	private JButton         _aseSpid_but            = new JButton("...");
-	private JButton         _aseStartTrace_but      = new JButton("Start Trace");
-	private JButton         _aseStopTrace_but       = new JButton("Stop Trace");
-
-	private JPanel          _accessTypePanel        = null;
-	private JLabel          _accessType_lbl         = new JLabel("Trace File Access");
-	private JComboBox       _accessType_cbx         = new JComboBox(_accessTypeArr);
-	private static final int ACCESS_TYPE_NOT_SELECTED = 0;
-	private static final int ACCESS_TYPE_SSH        = 1;
-	private static final int ACCESS_TYPE_LOCAL      = 2;
-	private static final int ACCESS_TYPE_NONE       = 3;
-
-	private JPanel          _sshPanel               = null;
-	private SshConnection   _sshConn                = null;
-//	private JCheckBox       _sshConnect_chk         = new JCheckBox("SSH Connection", true);
-	private JLabel          _sshUsername_lbl        = new JLabel("Username");
-	private JTextField      _sshUsername_txt        = new JTextField("");
-	private JLabel          _sshPassword_lbl        = new JLabel("Password");
-	private JTextField      _sshPassword_txt        = new JPasswordField("");
-	private JCheckBox       _sshPassword_chk        = new JCheckBox("Save Password", true);
-	private JLabel          _sshHostname_lbl        = new JLabel("Hostname");
-	private JTextField      _sshHostname_txt        = new JTextField("");
-	private JLabel          _sshPort_lbl            = new JLabel("Port num");
-	private JTextField      _sshPort_txt            = new JTextField("22");
-	
-	private JPanel          _remotePanel            = null;
-	private JLabel          _remoteMount_lbl        = new JLabel("Local Dir");
-	private JTextField      _remoteMount_txt        = new JTextField("C:/");
-	private JButton         _remoteMount_but        = new JButton("...");
-	private JLabel          _remoteFile_lbl         = new JLabel("Local File");
-	private JTextField      _remoteFile_txt         = new JTextField();
-
-	private JPanel          _noTailPanel            = null;
-	private JLabel          _noTail_lbl             = new JLabel();
-
-	private JSplitPane      _splitPane1             = null;
-	private JSplitPane      _splitPane2             = null;
-
-	private JPanel          _traceOutPanel          = null;
-	private JCheckBox       _traceOutSave_chk       = new JCheckBox("Save trace file to location", true);
-	private JTextField      _traceOutSave_txt       = new JTextField("");
-	private JButton         _traceOutSave_but       = new JButton("...");
-	private JCheckBox       _traceOutTail_chk       = new JCheckBox("Move to last row when input is received", true);
-	private JCheckBox       _traceShowProcPanel_chk = new JCheckBox("Show Procedure Text",   true);
-	private RSyntaxTextArea _traceOut_txt           = new RSyntaxTextArea();
-	private RTextScrollPane _traceOut_scroll        = new RTextScrollPane(_traceOut_txt);
-
-	private JPanel          _procPanel              = null;
-	private JCheckBox       _procGet_chk            = new JCheckBox("Get Stored Procedure Text from ASE", true);
-	private JCheckBox       _procSave_chk           = new JCheckBox("Save to Dir", true);
-	private JTextField      _procSave_txt           = new JTextField("");
-	private JButton         _procSave_but           = new JButton("...");
-	private JCheckBox       _procMvToLine_chk       = new JCheckBox("Move to correct line in the procedure", true);
-	private DefaultComboBoxModel _procName_cbxmdl   = new DefaultComboBoxModel();
-	private JComboBox       _procName_cbx           = new JComboBox(_procName_cbxmdl);
-	private RSyntaxTextArea _proc_txt               = new RSyntaxTextArea();
-	private RTextScrollPane _proc_scroll            = new RTextScrollPane(_proc_txt);
-
-	private JPanel          _traceCmdLogPanel       = null;
-	private RSyntaxTextArea _traceCmdLog_txt        = new RSyntaxTextArea();
-	private RTextScrollPane _traceCmdLog_scroll     = new RTextScrollPane(_traceCmdLog_txt);
-
-	private int             _spid                   = -1;
-	private boolean         _spidExistsInAse        = false; // this is set during login
-	
-	private List<String>    _aseUserHasRoles        = new LinkedList<String>();
+	private JPanel            _sshPanel               = null;
+	private SshConnection     _sshConn                = null;
+//	private JCheckBox         _sshConnect_chk         = new JCheckBox("SSH Connection", true);
+	private JLabel            _sshUsername_lbl        = new JLabel("Username");
+	private JTextField        _sshUsername_txt        = new JTextField("");
+	private JLabel            _sshPassword_lbl        = new JLabel("Password");
+	private JTextField        _sshPassword_txt        = new JPasswordField("");
+	private JCheckBox         _sshPassword_chk        = new JCheckBox("Save Password", true);
+	private JLabel            _sshHostname_lbl        = new JLabel("Hostname");
+	private JTextField        _sshHostname_txt        = new JTextField("");
+	private JLabel            _sshPort_lbl            = new JLabel("Port num");
+	private JTextField        _sshPort_txt            = new JTextField("22");
+	private GLabel            _sshTailOsCmd_lbl       = new GLabel("Tail Cmd");
+	private GTextField        _sshTailOsCmd_txt       = new GTextField("");
+	                          
+	private JPanel            _remotePanel            = null;
+	private JLabel            _remoteMount_lbl        = new JLabel("Local Dir");
+	private JTextField        _remoteMount_txt        = new JTextField("C:/");
+	private JButton           _remoteMount_but        = new JButton("...");
+	private JLabel            _remoteFile_lbl         = new JLabel("Local File");
+	private JTextField        _remoteFile_txt         = new JTextField();
+                              
+	private JPanel            _noTailPanel            = null;
+	private JLabel            _noTail_lbl             = new JLabel();
+                              
+	private JSplitPane        _splitPane1             = null;
+	private JSplitPane        _splitPane2             = null;
+                              
+	private JPanel            _traceOutPanel          = null;
+	private JCheckBox         _traceOutSave_chk       = new JCheckBox("Save trace file to location", true);
+	private JTextField        _traceOutSave_txt       = new JTextField("");
+	private JButton           _traceOutSave_but       = new JButton("...");
+	private JCheckBox         _traceOutTail_chk       = new JCheckBox("Move to last row when input is received", true);
+	private JCheckBox         _traceShowProcPanel_chk = new JCheckBox("Show Procedure Text",   true);
+	private RSyntaxTextArea   _traceOut_txt           = new RSyntaxTextArea();
+	private RTextScrollPane   _traceOut_scroll        = new RTextScrollPane(_traceOut_txt);
+                              
+	private JPanel            _procPanel              = null;
+	private JCheckBox         _procGet_chk            = new JCheckBox("Get Stored Procedure Text from ASE", true);
+	private JCheckBox         _procSave_chk           = new JCheckBox("Save to Dir", true);
+	private JTextField        _procSave_txt           = new JTextField("");
+	private JButton           _procSave_but           = new JButton("...");
+	private JCheckBox         _procMvToLine_chk       = new JCheckBox("Move to correct line in the procedure", true);
+	private DefaultComboBoxModel<String> _procName_cbxmdl   = new DefaultComboBoxModel<String>();
+	private JComboBox<String> _procName_cbx           = new JComboBox<String>(_procName_cbxmdl);
+	private RSyntaxTextArea   _proc_txt               = new RSyntaxTextArea();
+	private RTextScrollPane   _proc_scroll            = new RTextScrollPane(_proc_txt);
+                              
+	private JPanel            _traceCmdLogPanel       = null;
+	private RSyntaxTextArea   _traceCmdLog_txt        = new RSyntaxTextArea();
+	private RTextScrollPane   _traceCmdLog_scroll     = new RTextScrollPane(_traceCmdLog_txt);
+                              
+	private int               _spid                   = -1;
+	private boolean           _spidExistsInAse        = false; // this is set during login
+	                          
+	private List<String>      _aseUserHasRoles        = new LinkedList<String>();
 
 	public AseAppTraceDialog(int spid, String servername, String aseVersionStr)
 	{
@@ -523,6 +529,38 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_sshPort_lbl    .setToolTipText("Port number of the SSH Server, normally 22.");
 		_sshPort_txt    .setToolTipText("Port number of the SSH Server, normally 22.");
 
+		String tooltip = "<html>"
+				+ "The normal OS Command to view log file changes are: <code>tail -n 999 -f /var/logs/somefile</code><br>"
+				+ "Note: <i>command may vary basen on the Operating System</i><br>"
+				+ "<br>"
+				+ "With this you can change how you access the logfile.<br>"
+				+ "If you need to change account/user due to improper authorizations, this is where you do it.<br>"
+				+ "<br>"
+				+ "Here are a couple of examples:"
+				+ "<ul>"
+				+ "    <li>Do tail as another user, using <code>sudo</code>.<br>"
+				+ "    <code>echo '${password}' | sudo -p '' -S -u sybase ${cmd}</code></li>"
+				+ ""
+				+ "    <li>Do tail as another user, using <code>su</code><br>Note: this only works on some platforms.<br>"
+				+ "    <code>su - sybase -c '${cmd}' &lt;&lt;&lt; '$password' </code></li>"
+				+ ""
+				+ "    <li>Using a <i>jump</i> server, where you start another SSH Session.<br>Note: this needs keygen files, due to password.<br>Note2: Test this before you use it.<br>"
+				+ "    <code>ssh sybase@hostname '${cmd}'</code></li>"
+				+ ""
+				+ "    <li>Execute your own shell script that does whatever you need to do...<br>"
+				+ "    <code>yourShellScript -a '${password}' -b '${filename}'</code></li>"
+				+ ""
+				+ "</ul>"
+				+ "The below variables that will be substituted before execution"
+				+ "<ul>"
+				+ "    <li><code>${password}</code> - The password in the above password field</li>"
+				+ "    <li><code>${filename}</code> - The filename which we want to look at</li>"
+				+ "    <li><code>${cmd}</code>      - The tail command we would normally use, example: <code>tail -n 999 -f /var/logs/somefile</code></li>"
+				+ "</ul>"
+				+ "</html>";
+		_sshTailOsCmd_lbl.setToolTipText(tooltip);
+		_sshTailOsCmd_txt.setToolTipText(tooltip);
+		
 //		panel.add(_sshConnect_chk,     "span, wrap");
 
 		panel.add(_sshUsername_lbl,    "");
@@ -537,6 +575,9 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 		panel.add(_sshPort_lbl,        "");
 		panel.add(_sshPort_txt,        "growx, pushx, wrap");
+
+		panel.add(_sshTailOsCmd_lbl,   "");
+		panel.add(_sshTailOsCmd_txt,   "growx, pushx, wrap");
 
 		
 		// disable input to some fields
@@ -738,6 +779,16 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	//------------------------------------------------------------
 	//------------------------------------------------------------
 	
+	private String getSaveDir()
+	{
+		String saveDir = null;
+		
+		if (saveDir == null) saveDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+		if (saveDir == null) saveDir = StringUtil.getEnvVariableValue("APP_SAVE_DIR");
+		if (saveDir == null) saveDir = StringUtil.getEnvVariableValue("SQLW_SAVE_DIR");
+		
+		return saveDir;
+	}
 
 	/** save the position right before we setVisible(false) */
 	private int _splitPane1_saveDividerLocation = 0;
@@ -829,8 +880,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		{
 			String baseDir = _traceOutSave_txt.getText();
 			if (StringUtil.isNullOrBlank(baseDir))
-//				baseDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
-				baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+				baseDir = getSaveDir();
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -848,8 +898,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		{
 			String baseDir = _procSave_txt.getText();
 			if (StringUtil.isNullOrBlank(baseDir))
-//				baseDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
-				baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+				baseDir = getSaveDir();
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -1059,8 +1108,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				if ( ! f.exists() )
 				{
 					String curDir = _traceOutSave_txt.getText();
-//					String newDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
-					String newDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+					String newDir = getSaveDir();
 					if (newDir != null)
 						newDir = newDir.replace('\\', '/');
 					_traceOutSave_txt.setText(newDir);
@@ -1081,8 +1129,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				if ( ! f.exists() )
 				{
 					String curDir = _procSave_txt.getText();
-//					String newDir = StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName()); // ASETUNE_SAVE_DIR
-					String newDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+					String newDir = getSaveDir();
 					if (newDir != null)
 						newDir = newDir.replace('\\', '/');
 					_procSave_txt.setText(newDir);
@@ -1307,6 +1354,8 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 			_sshConn = new SshConnection(host, port, user, passwd);
 			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
+			_sshConn.setWaitForDialog(wait);
+
 			BgExecutor waitTask = new BgExecutor(wait)
 			{
 				@Override
@@ -1333,18 +1382,31 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 
 			// Start the TAIL on the file...
 			_fileTail = new FileTail(_sshConn, getAseTraceFileFinal(), true);
-			if (_fileTail.doFileExist())
+			// If we use "special command for tail", then do NOT check if file exists 
+			if (StringUtil.hasValue(_sshTailOsCmd_txt.getText()))
 			{
+				final String tailCmd = _sshTailOsCmd_txt.getText();
+				if (StringUtil.hasValue(tailCmd))
+					_fileTail.setOsCmd(tailCmd, passwd);
+
 				_fileTail.addTraceListener(this);
 				_fileTail.start();
 			}
 			else
 			{
-				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
-				_logger.error(msg);
-				SwingUtils.showErrorMessage("Trace file not found", msg, null);
-				stopTrace();
-				return false;
+    			if (_fileTail.doFileExist())
+    			{
+    				_fileTail.addTraceListener(this);
+    				_fileTail.start();
+    			}
+    			else
+    			{
+    				String msg = "The trace file '"+_fileTail.getFilename()+"' was not found. (SSH Access mode)";
+    				_logger.error(msg);
+    				SwingUtils.showErrorMessage("Trace file not found", msg, null);
+    				stopTrace();
+    				return false;
+    			}
 			}
 
 			if (_procGet_chk.isSelected())
@@ -1647,6 +1709,9 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".port",       _sshPort_txt.getText() );
 		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".username",   _sshUsername_txt.getText() );
 
+		if ( StringUtil.hasValue(_sshTailOsCmd_txt.getText()) )
+			conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".tailOsCmd", _sshTailOsCmd_txt.getText() );
+
 		if (_sshPassword_chk.isSelected())
 			conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".password", _sshPassword_txt.getText(), true);
 		else
@@ -1682,16 +1747,16 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		if (_splitPane1 != null)
 		{
 			if (_traceShowProcPanel_chk.isSelected())
-				conf.setProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  _splitPane1.getDividerLocation());
+				conf.setLayoutProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  _splitPane1.getDividerLocation());
 		}
 
 		if (_splitPane2 != null)
-			conf.setProperty("aseAppTrace.dialog.splitPane.dividerLocation2",  _splitPane2.getDividerLocation());
+			conf.setLayoutProperty("aseAppTrace.dialog.splitPane.dividerLocation2",  _splitPane2.getDividerLocation());
 
-		conf.setProperty("aseAppTrace.dialog.window.width",  this.getSize().width);
-		conf.setProperty("aseAppTrace.dialog.window.height", this.getSize().height);
-		conf.setProperty("aseAppTrace.dialog.window.pos.x",  this.getLocationOnScreen().x);
-		conf.setProperty("aseAppTrace.dialog.window.pos.y",  this.getLocationOnScreen().y);
+		conf.setLayoutProperty("aseAppTrace.dialog.window.width",  this.getSize().width);
+		conf.setLayoutProperty("aseAppTrace.dialog.window.height", this.getSize().height);
+		conf.setLayoutProperty("aseAppTrace.dialog.window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty("aseAppTrace.dialog.window.pos.y",  this.getLocationOnScreen().y);
 
 		conf.save();
 	}
@@ -1768,10 +1833,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		//----------------------------------
 		// SSH
 		//----------------------------------
-		_sshHostname_txt.setText( conf.getProperty("aseAppTrace.ssh.conn."+_aseHostName+".hostname", _aseHostName) );
-		_sshPort_txt    .setText( conf.getProperty("aseAppTrace.ssh.conn."+_aseHostName+".port",     _sshPort_txt    .getText()) );
-		_sshUsername_txt.setText( conf.getProperty("aseAppTrace.ssh.conn."+_aseHostName+".username", _sshUsername_txt.getText()) );
-		_sshPassword_txt.setText( conf.getProperty("aseAppTrace.ssh.conn."+_aseHostName+".password", _sshPassword_txt.getText()) );
+		_sshHostname_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".hostname",  _aseHostName) );
+		_sshPort_txt     .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".port",      _sshPort_txt    .getText()) );
+		_sshUsername_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".username",  _sshUsername_txt.getText()) );
+		_sshPassword_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".password",  _sshPassword_txt.getText()) );
+		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("aseAppTrace.ssh.conn."+_aseHostName+".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
 
 		_sshPassword_chk.setSelected( conf.getBooleanProperty("aseAppTrace.ssh.conn."+_aseHostName+".savePassword", _sshPassword_chk.isSelected()) );
 
@@ -1785,8 +1851,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		// TRACE OUTPUT
 		//----------------------------------
 		_traceOutSave_chk      .setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.save",          _traceOutSave_chk.isSelected()));
-//		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName() ))); // ASETUNE_SAVE_DIR
-		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR"))); // ASETUNE_SAVE_DIR
+		_traceOutSave_txt      .setText(    conf.getProperty       ("aseAppTrace.traceOut.dir",           getSaveDir() )); // ASETUNE_SAVE_DIR
 		_traceOutTail_chk      .setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.tail",          _traceOutTail_chk.isSelected()));
 		_traceShowProcPanel_chk.setSelected(conf.getBooleanProperty("aseAppTrace.traceOut.showProcPanel", _traceShowProcPanel_chk.isSelected()));
 
@@ -1795,8 +1860,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		//----------------------------------
 		_procGet_chk     .setSelected(conf.getBooleanProperty("aseAppTrace.proc.getProcText", _procGet_chk.isSelected()));
 		_procSave_chk    .setSelected(conf.getBooleanProperty("aseAppTrace.proc.save",        _procSave_chk.isSelected()));
-//		_procSave_txt    .setText(    conf.getProperty       ("aseAppTrace.proc.dir",         StringUtil.getEnvVariableValue(DbxTune.getInstance().getAppSaveDirEnvName() ))); // ASETUNE_SAVE_DIR
-		_procSave_txt    .setText(    conf.getProperty       ("aseAppTrace.proc.dir",         StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR"))); // ASETUNE_SAVE_DIR
+		_procSave_txt    .setText(    conf.getProperty       ("aseAppTrace.proc.dir",         getSaveDir() )); // ASETUNE_SAVE_DIR
 		_procMvToLine_chk.setSelected(conf.getBooleanProperty("aseAppTrace.proc.moveToLine",  _procMvToLine_chk.isSelected()));
 	}
 	private void getSavedWindowProps()
@@ -1810,10 +1874,10 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("aseAppTrace.dialog.window.width",  900);
-		int height = conf.getIntProperty("aseAppTrace.dialog.window.height", 740);
-		int x      = conf.getIntProperty("aseAppTrace.dialog.window.pos.x",  -1);
-		int y      = conf.getIntProperty("aseAppTrace.dialog.window.pos.y",  -1);
+		int width  = conf.getLayoutProperty("aseAppTrace.dialog.window.width",  SwingUtils.hiDpiScale(900));
+		int height = conf.getLayoutProperty("aseAppTrace.dialog.window.height", SwingUtils.hiDpiScale(740));
+		int x      = conf.getLayoutProperty("aseAppTrace.dialog.window.pos.x",  -1);
+		int y      = conf.getLayoutProperty("aseAppTrace.dialog.window.pos.y",  -1);
 		if (width != -1 && height != -1)
 		{
 			this.setSize(width, height);
@@ -1824,17 +1888,17 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 				this.setLocation(x, y);
 		}
 		
-		int divLoc = conf.getIntProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  -1);
+		int divLoc = conf.getLayoutProperty("aseAppTrace.dialog.splitPane.dividerLocation1",  -1);
 		if (divLoc < 0)
 			divLoc = width / 2;
 		if (_traceShowProcPanel_chk.isSelected())
 			_splitPane1.setDividerLocation(divLoc);
 
-		divLoc = conf.getIntProperty("aseAppTrace.dialog.splitPane.dividerLocation2",  -1);
+		divLoc = conf.getLayoutProperty("aseAppTrace.dialog.splitPane.dividerLocation2",  -1);
 		if (divLoc < 0)
 		{
 			Dimension d = _aseOptionsPanel.getSize();
-			divLoc = height - d.height - 120;
+			divLoc = height - d.height - SwingUtils.hiDpiScale(120);
 		}
 		_splitPane2.setDividerLocation(divLoc);
 
@@ -3068,14 +3132,22 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		{
 			System.out.println("Open DB connection.");
 
-			AseConnectionFactory.setAppName("xxx");
-			AseConnectionFactory.setUser("sa");
-			AseConnectionFactory.setPassword("");
-//			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
-			AseConnectionFactory.setHostPort("gorans-xp", "5000");
-//			AseConnectionFactory.setHostPort("gorans-xp", "15700");
+//			AseConnectionFactory.setAppName("xxx");
+//			AseConnectionFactory.setUser("sa");
+//			AseConnectionFactory.setPassword("");
+////			AseConnectionFactory.setHostPort("sweiq-linux", "2750");
+//			AseConnectionFactory.setHostPort("gorans-xp", "5000");
+////			AseConnectionFactory.setHostPort("gorans-xp", "15700");
+//			
+//			final Connection conn = AseConnectionFactory.getConnection();
 			
-			final Connection conn = AseConnectionFactory.getConnection();
+			ConnectionProp cp = new ConnectionProp();
+			cp.setAppName("xxx");
+			cp.setUsername("sa");
+			cp.setPassword("");
+			cp.setUrl("jdbc:sybase:Tds:localhost:5000");;
+			final DbxConnection conn = DbxConnection.connect(null, cp);
+
 			try
 			{
 				System.out.println("EXEC: set statement_cache off");

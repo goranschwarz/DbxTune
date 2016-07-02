@@ -25,6 +25,7 @@ import java.util.Map;
 
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import net.miginfocom.swing.MigLayout;
@@ -36,6 +37,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
+import com.asetune.tools.sqlw.msg.JAseRowCount;
 import com.sybase.jdbc4.jdbc.SybSQLWarning;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -2725,7 +2727,7 @@ public class AseConnectionUtils
 
 		String htmlBegin   = "";
 		String htmlEnd     = "";
-		String htmlNewLine = "";
+		String htmlNewLine = "\n";
 		if ( addHtmlTags )
 		{
 			htmlBegin   = "<html>"+htmlStartStr+"<pre>";
@@ -2748,10 +2750,46 @@ public class AseConnectionUtils
 
 		try
 		{
-			Statement stmt = conn.createStatement();
-			stmt.executeUpdate(sql);
+			Statement stmnt = conn.createStatement();
+			boolean hasRs = stmnt.execute(sql);
+			ResultSet rs;
+			int rowsAffected = 0;
+			do
+			{
+				// In ASE 16, there is a ResultSet, that contains the SQL Statement
+				if(hasRs)
+				{
+					if (sb == null)
+						sb = new StringBuilder(htmlBegin).append("---- BEGIN: SQL Statement Executed ------------------------------------").append(htmlNewLine);
 
-			for (SQLWarning sqlw = stmt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+					rs = stmnt.getResultSet();
+					//int colCount = rs.getMetaData().getColumnCount();
+					while (rs.next())
+					{
+						sb = sb.append(rs.getString(1));
+					}
+					rs.close();
+					sb.append(htmlNewLine).append("---- END: SQL Statement Executed --------------------------------------").append(htmlNewLine);
+				}
+				else // Treat update/row count(s) for NON RESULTSETS
+				{
+					// Java DOC: getUpdateCount() Retrieves the current result as an update count; if the result is a ResultSet object 
+					//           or there are no more results, -1 is returned. This method should be called only once per result.
+					// Without this else statement, some drivers might fail... (MS-SQL actually did)
+
+					rowsAffected = stmnt.getUpdateCount();
+					if (rowsAffected >= 0)
+						_logger.debug("---- DDL or DML (statement with no-resultset) Rowcount: "+rowsAffected);
+					else
+						_logger.debug("---- No more results to process.");
+				} // end: no-resultset
+
+				hasRs = stmnt.getMoreResults();
+			}
+			while (hasRs || rowsAffected != -1);
+
+			// Read messages: this is where The ShowPlan is
+			for (SQLWarning sqlw = stmnt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
 			{
 				// Ignore "10233 01ZZZ The specified statement number..." message
 				if (sqlw.getErrorCode() == 10233)
@@ -2763,10 +2801,13 @@ public class AseConnectionUtils
 				if (sb == null)
 					sb = new StringBuilder(htmlBegin);
 
-				sb = sb.append(sqlw.getMessage()).append(htmlNewLine);
+				String msg = sqlw.getMessage();
+				sb.append(msg);
+				if ( ! msg.endsWith("\n"))
+					sb.append(htmlNewLine);
 			}
 
-			stmt.close();
+			stmnt.close();
 		}
 		catch (SQLException e)
 		{
@@ -3114,7 +3155,7 @@ public class AseConnectionUtils
 		String StatementNumber = "StatementNumber='', ";
 		if (MonTablesDictionaryManager.hasInstance())
 		{
-			 aseVersion = MonTablesDictionaryManager.getInstance().getMdaVersion();
+			 aseVersion = MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion();
 			
 //			if (aseVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
 //			if (aseVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
@@ -3226,7 +3267,7 @@ public class AseConnectionUtils
 			{
 //				if (MonTablesDictionary.getInstance().getMdaVersion() >= 15700)
 //				if (MonTablesDictionary.getInstance().getMdaVersion() >= 1570000)
-				if (MonTablesDictionaryManager.getInstance().getMdaVersion() >= Ver.ver(15,7))
+				if (MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion() >= Ver.ver(15,7))
 				{
 					monWaitClassInfoWhere = " and CI.Language = 'en_US'";
 					monWaitEventInfoWhere = "      and WI.Language = 'en_US' \n";
@@ -3334,6 +3375,81 @@ public class AseConnectionUtils
 	}
 
 	
+
+	/** 
+	 * Get XML ShowPlan a specific plan
+	 * <p>
+	 * Execute 'select show_cached_plan_in_xml(1966128182, 0, 0)' on the passed planid 
+	 * @param conn The database connection to use
+	 * @param objectName The "planid" to get Text for, but it's in the form '*ss##########_##########ss*' or '*sq##########_##########sq*
+	 * @param addHtmlTags add html tags around the sql output
+	 * @return the XML text (null if it can't be found, or if the name doesn't start with *ss or *sq)
+	 */
+	public static String cachedPlanInXml(Connection conn, String objectName, boolean addHtmlTags)
+	{
+		if (objectName.startsWith("*ss") || objectName.startsWith("*sq") ) // *sq in ASE 15.7 esd#2, DynamicSQL can/will end up in statement cache
+		{
+			int    sep   = objectName.indexOf('_');
+			String ssqlidStr = objectName.substring(3, sep);
+			//String haskey    = objectName.substring(sep+1, objectName.length()-3);
+			
+			int ssqlid = StringUtil.parseInt(ssqlidStr, -1);
+			if (ssqlid != -1)
+				return cachedPlanInXml(conn, ssqlid, addHtmlTags);
+		}
+		return null;
+	}
+	/** 
+	 * Get XML ShowPlan a specific plan
+	 * <p>
+	 * Execute 'select show_cached_plan_in_xml(1966128182, 0, 0)' on the passed planid 
+	 * @param conn The database connection to use
+	 * @param ssqlid The planid to get Text for
+	 * @param addHtmlTags add html tags around the sql output
+	 * @return the XML text (null if it can't be found)
+	 */
+	public static String cachedPlanInXml(Connection conn, int ssqlid, boolean addHtmlTags)
+	{
+		String htmlBegin   = "";
+		String htmlEnd     = "";
+//		String htmlNewLine = "\n";
+		if ( addHtmlTags )
+		{
+			htmlBegin   = "<html><pre>";
+			htmlEnd     = "</pre></html>";
+//			htmlNewLine = "<br>\n";
+		}
+
+		String query_plan = null;
+		
+		String sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while(rs.next())
+			{
+				query_plan = rs.getString(1);
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Problems when executing sql: "+sql, e);
+		}
+
+		if (query_plan == null)
+			return null;
+
+		if (! addHtmlTags)
+			return query_plan;
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(htmlBegin).append(query_plan).append(htmlEnd);
+		return sb.toString();
+	}
+
 	/**
 	 * Check if a stored procedure exists or not
 	 * <p>
@@ -3504,15 +3620,16 @@ public class AseConnectionUtils
 	 * @param aseVersion Version of the ASE, if 0, the version will be fetched from ASE
 	 * @return Text of the procedure/view/trigger...
 	 */
-	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int aseVersion)
+	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int planId, int aseVersion)
 	{
-		if (StringUtil.isNullOrBlank(owner))
+		if (StringUtil.isNullOrBlank(owner) || (owner != null && (owner.equals("-1") || owner.equals("0") || owner.equals("1"))) )
 			owner = "dbo";
 
 		if (aseVersion <= 0)
-		{
 			aseVersion = getAseVersionNumber(conn);
-		}
+
+		if (planId < 0)
+			planId = 0;
 
 		String returnText = null;
 		
@@ -3530,8 +3647,6 @@ public class AseConnectionUtils
 		// Statement Cache objects
 		if (isStatementCache)
 		{
-//			if (aseVersion >= 15700)
-//			if (aseVersion >= 1570000)
 			if (aseVersion >= Ver.ver(15,7))
 			{
 				//-----------------------------------------------------------
@@ -3579,9 +3694,11 @@ public class AseConnectionUtils
 				// 5                     YES             YES
 				// 6                     YES    YES      YES
 				//-----------------------------------------------------------
+				int levelOfDetail = Configuration.getCombinedConfiguration().getIntProperty("AseConnectionUtil.getObjectText.show_cached_plan_in_xml.level_of_detail", 0);
+				
+				String sql = "select show_cached_plan_in_xml("+ssqlid+", "+planId+", "+levelOfDetail+")";
 
-				String sql = "select show_cached_plan_in_xml("+ssqlid+", 0, 0)";
-
+				boolean foundXmlPlan = false;
 				try
 				{
 					Statement stmnt = conn.createStatement();
@@ -3595,11 +3712,15 @@ public class AseConnectionUtils
 					while (rs.next())
 					{
 						sb.append(rs.getString(1));
+						foundXmlPlan = true;
 					}
 					rs.close();
 					stmnt.close();
 
-					returnText = sb.toString().trim();
+					if (foundXmlPlan)
+						returnText = sb.toString().trim();
+					else
+						returnText = "";   // FIXME: should this be null or ""... also make sure we return the best thing later on (xmlplan or prsqlcache)
 				}
 				catch(SQLException e)
 				{
@@ -3663,14 +3784,21 @@ public class AseConnectionUtils
 				dbnameStr = "";
 			else
 				dbnameStr = dbname + ".dbo.";
-				
+
+			// Check if the "owner" is a number
+			boolean ownerIsNumber = false;
+			try { Integer.parseInt(owner); ownerIsNumber = true; } catch(NumberFormatException ignore) {}
+
 			//--------------------------------------------
 			// GET OBJECT TEXT
 			String sql;
-			sql = " select c.text "
+			sql = " select c.text, c.status, c.id \n"
 				+ " from "+dbnameStr+"sysobjects o, "+dbnameStr+"syscomments c, "+dbnameStr+"sysusers u \n"
-				+ " where o.name = '"+objectName+"' \n"
-				+ "   and u.name = '"+owner+"' \n" 
+				+ " where o.name = '"+objectName+"' \n" +
+				(ownerIsNumber 
+				? "   and u.uid  = "  + owner + "  \n" // if owner is a *number* we will use this 
+				: "   and u.name = '" + owner + "' \n" // if owner is a *string* we will use this
+				) 
 				+ "   and o.id   = c.id \n"
 				+ "   and o.uid  = u.uid \n"
 				+ " order by c.number, c.colid2, c.colid ";
@@ -3684,6 +3812,16 @@ public class AseConnectionUtils
 				while(rs.next())
 				{
 					String textPart = rs.getString(1);
+					int    status   = rs.getInt(2);
+					int    id       = rs.getInt(3);
+
+					// if status is ASE: SYSCOM_TEXT_HIDDEN
+					if ((status & 1) == 1)
+					{
+						sb.append("ASE StoredProcedure Source text for compiled object '"+dbname+"."+owner+"."+objectName+"' (id = "+id+") is hidden.");
+						break;
+					}
+
 					sb.append(textPart);
 				}
 				rs.close();
@@ -3691,6 +3829,12 @@ public class AseConnectionUtils
 
 				if (sb.length() > 0)
 					returnText = sb.toString();
+				else
+				{
+					// Maybe the MetaData is wrong... so if it's "master" and a proc starting with "sp_", lets try to look it up in sybsystemprocs 
+					if ("master".equals(dbname) && objectName.startsWith("sp_"))
+						returnText = getObjectText(conn, "sybsystemprocs", objectName, owner, planId, aseVersion);
+				}
 			}
 			catch (SQLException e)
 			{
@@ -4133,6 +4277,51 @@ public class AseConnectionUtils
 		{
 			_logger.warn("Authoritization problems when checking simple select on table '"+tableName+"'. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
 			return false;
+		}
+	}
+
+	/**
+	 * Check if the ASE is is grace period
+	 * @param conn 
+	 * @return null if OK, otherwise a String with the warning message
+	 */
+	public static String getAseGracePeriodWarning(Connection conn)
+	{
+		String sql = "select Status, GraceExpiry, Name, Edition, Type, srvName=@@servername from master.dbo.monLicense";
+
+		try 
+		{
+			String warningStr = null;
+			
+			// do dummy select, which will return 0 rows
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) 
+			{
+				String    licStatus      = rs.getString   (1);
+				Timestamp licGraceExpiry = rs.getTimestamp(2);
+				String    licName        = rs.getString   (3);
+				String    licEdition     = rs.getString   (4);
+				String    licType        = rs.getString   (5);
+				String    aseSrvName     = rs.getString   (6);
+
+				if ("graced".equalsIgnoreCase(licStatus))
+				{
+					// add newline if we have several rows
+					warningStr = warningStr == null ? "" : warningStr + "\n";
+
+					warningStr += "Server '"+aseSrvName+"' is in grace period and will stop working at '"+licGraceExpiry+"'. (licName='"+licName+"', licEdition='"+licEdition+"', licType='"+licType+"').";
+				}
+			}
+			rs.close();
+			stmt.close();
+			
+			return warningStr;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+			return "Problems when checking grace period. ("+StringUtil.stripNewLine(ex.getMessage()+").");
 		}
 	}
 }

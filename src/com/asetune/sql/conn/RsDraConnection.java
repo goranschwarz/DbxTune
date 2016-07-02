@@ -4,12 +4,14 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
+import com.asetune.utils.Ver;
 
 public class RsDraConnection extends TdsConnection
 {
 	public RsDraConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::RsDraConnection(conn): conn="+conn);
 	}
 
