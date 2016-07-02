@@ -73,7 +73,7 @@ extends CountersModelAppend
 
 	public CmThresholdEvent(ICounterController counterController, IGuiController guiController)
 	{
-		super( CM_NAME, GROUP_NAME, null, MON_TABLES, NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, IS_SYSTEM_CM);
+		super(counterController, CM_NAME, GROUP_NAME, null, MON_TABLES, NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, IS_SYSTEM_CM);
 
 		setDisplayName(SHORT_NAME);
 		setDescription(HTML_DESC);

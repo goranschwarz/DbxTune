@@ -5,10 +5,16 @@ import java.util.Properties;
 import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.ssh.SshConnection;
+import com.asetune.ssh.SshConnection.LinuxUtilType;
 
 public abstract class MonitorVmstat
 extends HostMonitor
 {
+	public MonitorVmstat(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
 	throws Exception
 	{
@@ -49,7 +55,8 @@ extends HostMonitor
 		}
 		else if (osname.equals("Linux"))
 		{
-			mon = new MonitorVmstatLinux();
+			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.VMSTAT);
+			mon = new MonitorVmstatLinux(utilVersion);
 		}
 		else if (osname.equals("AIX"))
 		{

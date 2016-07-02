@@ -51,6 +51,9 @@ public abstract class PersistWriterBase
 	public static final int SESSION_DBMS_CONFIG      = 8;
 	public static final int SESSION_DBMS_CONFIG_TEXT = 9;
 	public static final int DDL_STORAGE              = 50;
+	public static final int SQL_CAPTURE_SQLTEXT      = 60;
+	public static final int SQL_CAPTURE_STATEMENTS   = 61;
+	public static final int SQL_CAPTURE_PLANS        = 62;
 	public static final int ABS                      = 100;
 	public static final int DIFF                     = 101;
 	public static final int RATE                     = 102;
@@ -76,13 +79,21 @@ public abstract class PersistWriterBase
 	/** when DDL is "created" we do not need to do this again */
 	private List<String> _saveDdlIsCalled = new LinkedList<String>();
 
-	private int _inserts      = 0;
-	private int _updates      = 0;
-	private int _deletes      = 0;
-
-	private int _createTables = 0;
-	private int _alterTables  = 0;
-	private int _dropTables   = 0;
+//	private int _inserts      = 0;
+//	private int _updates      = 0;
+//	private int _deletes      = 0;
+//
+//	private int _createTables = 0;
+//	private int _alterTables  = 0;
+//	private int _dropTables   = 0;
+//	
+//	private int _ddlSaveCount = 0;
+//	private int _ddlSaveCountSum = 0;
+//
+//	private int _sqlCaptureEntryCount = 0;
+//	private int _sqlCaptureBatchCount = 0;
+	/** Statistics for the Writer */
+	private PersistWriterStatistics _writerStatistics = new PersistWriterStatistics();
 
 	/** Determines if a session is started or not, or needs initialization */
 	private boolean _isSessionStarted = false;
@@ -118,43 +129,54 @@ public abstract class PersistWriterBase
 	** Methods handling counters
 	**---------------------------------------------------
 	*/
-	@Override public void incInserts() { _inserts++; }
-	@Override public void incUpdates() { _updates++; }
-	@Override public void incDeletes() { _deletes++; }
+	@Override public PersistWriterStatistics getStatistics() 
+	{
+		if (_writerStatistics == null)
+			_writerStatistics = new PersistWriterStatistics();
 
-	@Override public void incInserts(int cnt) { _inserts += cnt; }
-	@Override public void incUpdates(int cnt) { _updates += cnt; }
-	@Override public void incDeletes(int cnt) { _deletes += cnt; }
+		return _writerStatistics; 
+	}
 
-	@Override public void incCreateTables() { _createTables++; }
-	@Override public void incAlterTables()  { _alterTables++;  }
-	@Override public void incDropTables()   { _dropTables++;   }
-
-	@Override public void incCreateTables(int cnt) { _createTables += cnt; }
-	@Override public void incAlterTables (int cnt) { _alterTables  += cnt; }
-	@Override public void incDropTables  (int cnt) { _dropTables   += cnt; }
-
-	
-	@Override public int getInserts() { return _inserts; }
-	@Override public int getUpdates() { return _updates; }
-	@Override public int getDeletes() { return _deletes; }
-
-	@Override public int getCreateTables() { return _createTables; }
-	@Override public int getAlterTables()  { return _alterTables;  }
-	@Override public int getDropTables()   { return _dropTables;   }
-
-	
 	@Override
 	public void resetCounters()
 	{ 
-		_inserts = 0;
-		_updates = 0;
-		_deletes = 0;
-
-		_createTables = 0;
-		_alterTables  = 0;
-		_dropTables   = 0;
+		_writerStatistics.clear();
 	}
+	
+//	@Override public void incInserts() { _writerStatistics.incInserts(); }
+//	@Override public void incUpdates() { _writerStatistics.incUpdates(); }
+//	@Override public void incDeletes() { _writerStatistics.incDeletes(); }
+//
+//	@Override public void incInserts(int cnt) { _writerStatistics.incInserts(cnt); }
+//	@Override public void incUpdates(int cnt) { _writerStatistics.incUpdates(cnt); }
+//	@Override public void incDeletes(int cnt) { _writerStatistics.incDeletes(cnt); }
+//
+//	@Override public void incCreateTables() { _writerStatistics.incCreateTables(); }
+//	@Override public void incAlterTables()  { _writerStatistics.incAlterTables();  }
+//	@Override public void incDropTables()   { _writerStatistics.incDropTables();   }
+//	@Override public void incDdlSaveCount() { _writerStatistics.incDdlSaveCount(); }
+//	@Override public void incSqlCaptureEntryCount() { _writerStatistics.incSqlCaptureEntryCount(); }
+//	@Override public void incSqlCaptureBatchCount() { _writerStatistics.incSqlCaptureBatchCount(); }
+//
+//	@Override public void incCreateTables(int cnt) { _writerStatistics.incCreateTables(cnt); }
+//	@Override public void incAlterTables (int cnt) { _writerStatistics.incAlterTables (cnt); }
+//	@Override public void incDropTables  (int cnt) { _writerStatistics.incDropTables  (cnt); }
+//	@Override public void incDdlSaveCount(int cnt) { _writerStatistics.incDdlSaveCount(cnt); }
+//	@Override public void incSqlCaptureEntryCount(int cnt) { _writerStatistics.incSqlCaptureEntryCount(cnt); }
+//	@Override public void incSqlCaptureBatchCount(int cnt) { _writerStatistics.incSqlCaptureBatchCount(cnt); }
+//
+//	
+//	@Override public int getInserts() { return _writerStatistics.getInserts(); }
+//	@Override public int getUpdates() { return _writerStatistics.getUpdates(); }
+//	@Override public int getDeletes() { return _writerStatistics.getDeletes(); }
+//
+//	@Override public int getCreateTables()    { return _writerStatistics.getCreateTables(); }
+//	@Override public int getAlterTables()     { return _writerStatistics.getAlterTables();  }
+//	@Override public int getDropTables()      { return _writerStatistics.getDropTables();   }
+//	@Override public int getDdlSaveCount()    { return _writerStatistics.getDdlSaveCount(); }
+//	@Override public int getDdlSaveCountSum() { return _writerStatistics.getDdlSaveCountSum(); }
+//	@Override public int getSqlCaptureEntryCount() { return _writerStatistics.getSqlCaptureEntryCount(); }
+//	@Override public int getSqlCaptureBatchCount() { return _writerStatistics.getSqlCaptureBatchCount(); }
 	
 	/*---------------------------------------------------
 	** Methods implementing: IPersistWriter
@@ -299,6 +321,11 @@ public abstract class PersistWriterBase
 		_saveDdlIsCalled.add(tabName);
 	}
 
+	@Override
+	public void storageQueueSizeWarning(int queueSize, int thresholdSize)
+	{
+	}
+
 
 	
 	
@@ -319,7 +346,7 @@ public abstract class PersistWriterBase
 	}
 
 	/** Helper method */
-	public String fill(String str, int fill)
+	public static String fill(String str, int fill)
 	{
 		if (str.length() < fill)
 		{
@@ -383,7 +410,7 @@ public abstract class PersistWriterBase
 	/**
 	 * This method can be overladed and used to change the syntax for various datatypes 
 	 */
-	public String getDatatype(String type, int length, int prec, int scale)
+	public static String getDatatype(String type, int length, int prec, int scale)
 	{
 		if ( type.equals("char") || type.equals("varchar") )
 			type = type + "(" + length + ")";
@@ -441,7 +468,7 @@ public abstract class PersistWriterBase
 //		}
 //		return getDatatype(type, length, prec, scale);
 //	}
-	public String getDatatype(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
+	public static String getDatatype(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
 	throws SQLException
 	{
 		String type   = null;
@@ -473,12 +500,12 @@ public abstract class PersistWriterBase
 			return type;
 		}
 	}
-	public String getNullable(boolean nullable)
+	public static String getNullable(boolean nullable)
 	{
 		return nullable ? "    null" : "not null";
 		
 	}
-	public String getNullable(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
+	public static String getNullable(int col, ResultSetMetaData rsmd, boolean isDeltaOrPct)
 	throws SQLException
 	{
 		// datatype "bit" can't be NULL declared in ASE
@@ -511,6 +538,9 @@ public abstract class PersistWriterBase
 		case SESSION_DBMS_CONFIG:      return q + "MonSessionDbmsConfig"        + q; // old name MonSessionAseConfig,     so AseTune needs to backward compatible
 		case SESSION_DBMS_CONFIG_TEXT: return q + "MonSessionDbmsConfigText"    + q; // old name MonSessionAseConfigText, so AseTune needs to backward compatible
 		case DDL_STORAGE:              return q + "MonDdlStorage"               + q;
+		case SQL_CAPTURE_SQLTEXT:      return q + "MonSqlCapSqlText"            + q;
+		case SQL_CAPTURE_STATEMENTS:   return q + "MonSqlCapStatements"         + q;
+		case SQL_CAPTURE_PLANS:        return q + "MonSqlCapPlans"              + q;
 		case ABS:                      return q + cm.getName() + "_abs"         + q;
 		case DIFF:                     return q + cm.getName() + "_diff"        + q;
 		case RATE:                     return q + cm.getName() + "_rate"        + q;
@@ -549,6 +579,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"BuildString"     +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"SourceDate"      +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"SourceRev"       +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"DbProductName"   +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+qic+"SessionStartTime"+qic+")\n");
 				sbSql.append(") \n");
@@ -711,6 +742,63 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,PRIMARY KEY ("+qic+"dbname"+qic+", "+qic+"owner"+qic+", "+qic+"objectName"+qic+")\n");
 				sbSql.append(") \n");
 			}
+//			else if (type == SQL_CAPTURE_SQLTEXT)
+//			{
+//				sbSql.append("create table " + tabName + "\n");
+//				sbSql.append("( \n");
+//				sbSql.append("    "+fill(qic+"SPID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"KPID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"InstanceID"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"BatchID"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"Login"            +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PollTime"         +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"SQLText"          +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+////				sbSql.append("\n");
+////				sbSql.append("   ,PRIMARY KEY ("+qic+"SPID"+qic+", "+qic+"KPID"+qic+", "+qic+"InstanceID"+qic+", "+qic+"BatchID"+qic+")\n");
+//				sbSql.append(") \n");
+//			}
+//			else if (type == SQL_CAPTURE_STATEMENTS)
+//			{
+//				sbSql.append("create table " + tabName + "\n");
+//				sbSql.append("( \n");
+//				sbSql.append("    "+fill(qic+"SPID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"KPID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"InstanceID"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"BatchID"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"LineNumber"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"dbname"           +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"procname"         +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"Elapsed_ms"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"CpuTime"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"WaitTime"         +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"MemUsageKB"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PhysicalReads"    +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"LogicalReads"     +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"RowsAffected"     +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ErrorStatus"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ProcNestLevel"    +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"StatementNumber"  +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PagesModified"    +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PacketsSent"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PacketsReceived"  +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"NetworkPacketSize"+qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PlansAltered"     +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"StartTime"        +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"EndTime"          +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"PlanID"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"DBID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ObjOwnerID"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ProcedureID"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"ContextID"        +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"HashKey"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"SsqlId"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+////				sbSql.append("\n");
+////				sbSql.append("   ,PRIMARY KEY ("+qic+"SPID"+qic+", "+qic+"KPID"+qic+", "+qic+"InstanceID"+qic+", "+qic+"BatchID"+qic+")\n");
+//				sbSql.append(") \n");
+//			}
+////			else if (type == SQL_CAPTURE_PLANS)
+////			{
+////			}
 			else if (type == ABS || type == DIFF || type == RATE)
 			{
 				sbSql.append("create table " + tabName + "\n");
@@ -833,7 +921,8 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("VersionString")   .append(qic).append(", ");
 			sbSql.append(qic).append("BuildString")     .append(qic).append(", ");
 			sbSql.append(qic).append("SourceDate")      .append(qic).append(", ");
-			sbSql.append(qic).append("SourceRev")       .append(qic).append("");
+			sbSql.append(qic).append("SourceRev")       .append(qic).append("  ");
+//			sbSql.append(qic).append("DbProductName")   .append(qic).append("  ");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?) \n");
@@ -1021,6 +1110,15 @@ public abstract class PersistWriterBase
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 		}
+//		else if (type == SQL_CAPTURE_SQLTEXT)
+//		{
+//		}
+//		else if (type == SQL_CAPTURE_STATEMENTS)
+//		{
+//		}
+//		else if (type == SQL_CAPTURE_PLANS)
+//		{
+//		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
 			sbSql.append("insert into ").append(tabName) .append(" (");
@@ -1167,6 +1265,18 @@ public abstract class PersistWriterBase
 		{
 			return null;
 		}
+//		else if (type == SQL_CAPTURE_SQLTEXT)
+//		{
+//			return null;
+//		}
+//		else if (type == SQL_CAPTURE_STATEMENTS)
+//		{
+//			return null;
+//		}
+//		else if (type == SQL_CAPTURE_PLANS)
+//		{
+//			return null;
+//		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
 			String tabName = getTableName(type, cm, false);

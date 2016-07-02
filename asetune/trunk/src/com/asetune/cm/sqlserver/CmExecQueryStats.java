@@ -75,7 +75,7 @@ extends CountersModel
 //		"last_rows",
 //		"min_rows",
 //		"max_rows",
-		"_last_column_name_only_used_as_a_place_holder_here"
+		"_last_column_name_only_used_as_a_place_holder_here_"
 		};
 
 // Microsoft SQL Server 2008 R2 (SP2) - 10.50.4000.0 (X64)  	Jun 28 2012 08:36:30  	Copyright (c) Microsoft Corporation 	Express Edition with Advanced Services (64-bit) on Windows NT 6.1 <X64> (Build 7601: Service Pack 1)
@@ -144,7 +144,8 @@ extends CountersModel
 
 	public CmExecQueryStats(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -171,7 +172,7 @@ extends CountersModel
 	private static final String  PROP_PREFIX                      = CM_NAME;
 
 	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
-	public static final String  DEFAULT_sample_extraWhereClause   = "";
+	public static final String  DEFAULT_sample_extraWhereClause   = "last_logical_reads > 100";
 
 	public static final String  PROPKEY_sample_afterPrevSample    = PROP_PREFIX + ".sample.afterPrevSample";
 	public static final boolean DEFAULT_sample_afterPrevSample    = false;
@@ -306,5 +307,42 @@ extends CountersModel
 
 		// Now get the SQL from super method...
 		return super.getSql();
+	}
+
+	
+	/** 
+	 * Get number of rows to save/request ddl information for 
+	 * if 0 is return no lookup will be done.
+	 */
+	@Override
+	public int getMaxNumOfDdlsToPersist()
+	{
+		return 10;
+	}
+
+	/** 
+	 * Get Column names to where DBName and ObjectName is called, this must always return at least a array with 2 strings. 
+	 */
+	@Override
+	public String[] getDdlDetailsColNames()
+	{
+		String[] sa = {"sql_handle", "plan_handle"};
+		return sa;
+	}
+	/**
+	 * Sort descending on this column(s) to get values from the diff/rate structure<br>
+	 * One sort for every value will be done, meaning we can do "top" for more than 1 column<br>
+	 * So if we want to do top 10 LogicalReads AND top 10 LockContention
+	 * If this one returns null, this will not be done
+	 * @return
+	 */
+	@Override
+	public String[] getDdlDetailsSortOnColName()
+	{
+//fixme: maybe add an object for every column here, like new ObjectLookupSortPredicate("execution_count", GT, ABS|DIFF|RATE, 0);
+//This so we dont extract so many "extra objects"...
+
+		String[] sa = {"execution_count", "total_logical_reads", "total_elapsed_time"};
+		return sa;
 	}
 }

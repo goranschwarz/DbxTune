@@ -20,6 +20,8 @@ import javax.imageio.stream.ImageOutputStream;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.utils.SwingUtils;
+
 
 public class Screenshot
 {
@@ -101,7 +103,7 @@ public class Screenshot
 			g2d.setColor(Color.GRAY);
 			g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-			g2d.setFont(new Font("Arial", Font.BOLD, 20));
+			g2d.setFont(new Font("Arial", Font.BOLD, SwingUtils.hiDpiScale(20)));
 
 			FontMetrics fontMetrics = g2d.getFontMetrics();
 			Rectangle2D rect = fontMetrics.getStringBounds(extraInfo, g2d);

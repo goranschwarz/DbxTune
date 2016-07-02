@@ -2,6 +2,7 @@ package com.asetune.cm.rax;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -11,6 +12,8 @@ import java.util.List;
 import java.util.Locale;
 
 import javax.naming.NameNotFoundException;
+
+import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
@@ -35,7 +38,7 @@ import com.asetune.utils.Configuration;
 public class CmRaStatistics
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmRaStatistics.class);
+	private static Logger        _logger          = Logger.getLogger(CmRaStatistics.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmRaStatistics.class.getSimpleName();
@@ -83,7 +86,8 @@ extends CountersModel
 
 	public CmRaStatistics(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -669,7 +673,8 @@ extends CountersModel
 //		newSample.initPkStructures();
 
 //		if ( ! hasResultSetMetaData() )
-			setResultSetMetaData(_xrstm);
+		try{ setResultSetMetaData(_xrstm); }
+		catch(SQLException ex) { _logger.error("Problems setting setResultSetMetaData(), this is extreamly bisar if it happends.", ex); }
 
 		// Find column Id's
 		List<String> colNames = newSample.getColNames();

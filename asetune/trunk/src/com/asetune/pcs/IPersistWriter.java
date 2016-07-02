@@ -6,6 +6,7 @@ package com.asetune.pcs;
 import java.sql.Timestamp;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.utils.Configuration;
 
 
@@ -105,6 +106,9 @@ public interface IPersistWriter
 	/** If we opens a database, then get information that is already stored in the database, this so we don't store it "again" */
 	public void populateDdlDetailesCache();
 	
+	/** Save a batch of SQL Statements that was captured by any SQL Capture provider/broker */
+	public void saveSqlCaptureDetails(SqlCaptureDetails sqlCaptureDetails);
+
 	/**
 	 * Called from the {@link PersistentCounterHandler#consume} as the first thing it does.
 	 * @param cont 
@@ -140,36 +144,54 @@ public interface IPersistWriter
 	 * @return name of the Writer
 	 */
 	public String getName();
-	
+
+	/**
+	 * Called when the Storage queue size is higher that the warning threshold<br>
+	 * The idea is that you can do various stuff in the Writes to help resolving this issue.
+	 * @param queueSize
+	 * @param thresholdSize 
+	 */
+	public void storageQueueSizeWarning(int queueSize, int thresholdSize);
 	
 	/*---------------------------------------------------
 	** Methods handling counters
 	**---------------------------------------------------
 	*/
-	public void incInserts();
-	public void incUpdates();
-	public void incDeletes();
+//	public void incInserts();
+//	public void incUpdates();
+//	public void incDeletes();
+//
+//	public void incInserts(int cnt);
+//	public void incUpdates(int cnt);
+//	public void incDeletes(int cnt);
+//
+//	public void incCreateTables();
+//	public void incAlterTables();
+//	public void incDropTables();
+//	public void incDdlSaveCount();
+//	public void incSqlCaptureEntryCount();
+//	public void incSqlCaptureBatchCount();
+//
+//	public void incCreateTables        (int cnt);
+//	public void incAlterTables         (int cnt);
+//	public void incDropTables          (int cnt);
+//	public void incDdlSaveCount        (int cnt);
+//	public void incSqlCaptureEntryCount(int cnt);
+//	public void incSqlCaptureBatchCount(int cnt);
+//
+//	
+//	public int getInserts();
+//	public int getUpdates();
+//	public int getDeletes();
+//
+//	public int getCreateTables();
+//	public int getAlterTables();
+//	public int getDropTables();
+//	public int getDdlSaveCount();
+//	public int getDdlSaveCountSum();
+//	public int getSqlCaptureEntryCount();
+//	public int getSqlCaptureBatchCount();
 
-	public void incInserts(int cnt);
-	public void incUpdates(int cnt);
-	public void incDeletes(int cnt);
-
-	public void incCreateTables();
-	public void incAlterTables();
-	public void incDropTables();
-
-	public void incCreateTables(int cnt);
-	public void incAlterTables (int cnt);
-	public void incDropTables  (int cnt);
-
-	
-	public int getInserts();
-	public int getUpdates();
-	public int getDeletes();
-
-	public int getCreateTables();
-	public int getAlterTables();
-	public int getDropTables();
-
+	public PersistWriterStatistics getStatistics();
 	public void resetCounters();
 }

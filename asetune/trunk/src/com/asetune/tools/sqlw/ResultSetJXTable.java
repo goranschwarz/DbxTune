@@ -377,7 +377,8 @@ extends JXTable
 //			System.out.println("info.getMessage()        = |" + info.getMessage()        +"|.");
 //			System.out.println("info.getFileExtensions() = |" + StringUtil.toCommaStr(info.getFileExtensions()) +"|.");
 
-			if (info.getMimeType().startsWith("image/"))
+			String mimeType = info.getMimeType();
+			if (mimeType != null && mimeType.startsWith("image/"))
 			{
 				boolean imageToolTipInline = Configuration.getCombinedConfiguration().getBooleanProperty("QueryWindow.tooltip.cellContent.image.inline.", false);
 				if (imageToolTipInline)

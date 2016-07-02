@@ -77,7 +77,8 @@ extends CountersModel
 
 	public CmIqVersionUse(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -127,18 +128,12 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("sp_iqversionuse",  "Displays version usage for the IQ main store.");
 
-			mtd.addColumn("sp_iqversionuse","VersionID",
-					"<html>The version identifier</html>");
-			mtd.addColumn("sp_iqversionuse","Server",
-					"<html>The server to which users of this version are connected</html>");
-			mtd.addColumn("sp_iqversionuse","IQConnID",
-					" <html>The connection ID using this version</html>");
-			mtd.addColumn("sp_iqversionuse","WasReported",
-					" <html>Indicates whether the server has received usage information for this version</html>");
-			mtd.addColumn("sp_iqversionuse","MinKBRelease",
-					" <html>The minimum amount of space returned once this version is no longer in use</html>");
-			mtd.addColumn("sp_iqversionuse","MaxKBRelease",
-					" <html>The maximum amount of space returned once this version is no longer in use</html>");
+			mtd.addColumn("sp_iqversionuse","VersionID",    "<html>The version identifier</html>");
+			mtd.addColumn("sp_iqversionuse","Server",       "<html>The server to which users of this version are connected</html>");
+			mtd.addColumn("sp_iqversionuse","IQConnID",     "<html>The connection ID using this version</html>");
+			mtd.addColumn("sp_iqversionuse","WasReported",  "<html>Indicates whether the server has received usage information for this version</html>");
+			mtd.addColumn("sp_iqversionuse","MinKBRelease", "<html>The minimum amount of space returned once this version is no longer in use</html>");
+			mtd.addColumn("sp_iqversionuse","MaxKBRelease", "<html>The maximum amount of space returned once this version is no longer in use</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -148,7 +143,8 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("IQConnID");
+//		pkCols.add("IQConnID");
+		pkCols.add("VersionID");
 
 		return pkCols;
 	}

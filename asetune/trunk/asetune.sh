@@ -29,7 +29,7 @@ export APPL_SAVE_DIR=${DBXTUNE_SAVE_DIR}
 #----------------------------------
 #--- Java
 #----------------------------------
-export JAVA_HOME=${JAVA_HOME:-$SYBASE_JRE6}
+export JAVA_HOME=${JAVA_HOME:-$SYBASE_JRE7}
 
 echo "NOTE: Set/Change JVM Memory parameters by setting Environment variable: DBXTUNE_JVM_MEMORY_PARAMS" 
 
@@ -52,17 +52,20 @@ export CLASSPATH=${APPL_HOME}/classes
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.2.7.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.3.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.3.176.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.192.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/swingx-all-1.6.5-1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jchart2d-3.2.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/planviewer.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.2.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-lang3-3.4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-io-2.4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-csv-1.2.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.3.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-build251beta1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea.jar
@@ -73,6 +76,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-1.0.3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.6.jar
 
 export PATH=${DBXTUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
@@ -90,7 +94,7 @@ echo JAVA_HOME=${JAVA_HOME}
 #------------------------------------------------------------------------
 #--- CHECK current Java Version
 #------------------------------------------------------------------------
-java com.asetune.utils.JavaVersion 6
+java com.asetune.utils.JavaVersion 7
 if [ $? -ne 0 ]
 then
 	echo "-----------------------------------------------------------------------"
@@ -154,7 +158,7 @@ echo "JVM_PARAMS=${JVM_PARAMS}"
 
 
 
-#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
-      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
 
 

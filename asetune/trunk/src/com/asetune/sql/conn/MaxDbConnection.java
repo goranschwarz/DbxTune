@@ -5,6 +5,7 @@ import java.sql.SQLException;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.utils.Ver;
 
 public class MaxDbConnection extends DbxConnection
 {
@@ -12,6 +13,7 @@ public class MaxDbConnection extends DbxConnection
 	public MaxDbConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::MaxDbConnection(conn): conn="+conn);
 	}
 

@@ -75,6 +75,12 @@ public class FileTail
 	/** This will be set to true right before the thread is ending */
 	private boolean _shutdownIsComplete = false;
 
+	/** Used if we want to execute some other command like |echo 'some-password' | sudo -p '' -S -u sybase tail -f /opt/.../filename| */
+	private String _osCmd    = null;
+
+	/** Used if we want to execute some other command like |echo 'some-password' | sudo -p '' -S -u sybase tail -f /opt/.../filename| */
+	private String _password = null;
+
 	/** Listeners */
 	private Set<TraceListener> _listeners = new LinkedHashSet<TraceListener>();
 
@@ -158,6 +164,23 @@ public class FileTail
 		return _sleepTime;
 	}
 
+	/**
+	 * If we want something else than tail to be executed<br> 
+	 * Most likely some: sudo or similar<br>
+	 * The following "variables" will be substituted to something better
+	 * <ul>
+	 *   <li><code>${cmd}     </code> to: tail -f logFileName</li>
+	 *   <li><code>${password}</code> to: the password you passed in</li>
+	 *   <li><code>${filename}</code> to: the name of the log file</li>
+	 * </ul>
+	 * @param osCmd
+	 * @param passwd
+	 */
+	public void setOsCmd(String osCmd, String passwd)
+	{
+		_osCmd    = osCmd;
+		_password = passwd;
+	}
 
 	public void addTraceListener(TraceListener l)
 	{
@@ -341,8 +364,8 @@ public class FileTail
 		_logger.info("The '"+getName()+"' has now been stopped.");
 	}
 
-	/** Get commund used by the SSH connection */
-	private String getCommand()
+	/** Get command used by the SSH connection */
+	private String getCommand(boolean hidePassword)
 	{
 		String os  = _sshConn.getOsName();
 		String opt = "-f";
@@ -356,7 +379,22 @@ public class FileTail
 			else if (os.equals("HP-UX")) opt = "-"+num+"f";
 			else if (os.equals("AIX"))   opt = "-"+num+"f";
 		}
-		return "tail " + opt + " " + _filename;
+		
+		if (StringUtil.hasValue(_osCmd))
+		{
+			String tailCmd = "tail " + opt + " " + _filename;
+			String osCmd   = _osCmd;
+			
+			osCmd = hidePassword ? osCmd.replace("${password}", "_hidden_password_") : osCmd.replace("${password}", _password);
+			osCmd = osCmd.replace("${cmd}",      tailCmd);
+			osCmd = osCmd.replace("${filename}", _filename);
+
+			return osCmd;
+		}
+		else
+		{
+			return "tail " + opt + " " + _filename;
+		}
 	}
 
 	/**
@@ -377,13 +415,13 @@ public class FileTail
 				Session sess = null;
 				try
 				{
-					_logger.info("Executing command '"+getCommand()+"'.");
-					sess = _sshConn.execCommand(getCommand());
+					_logger.info("Executing command '"+getCommand(true)+"'.");
+					sess = _sshConn.execCommand(getCommand(false));
 				}
 				catch (IOException e)
 				{
 //					addException(e);
-					_logger.error("Problems when executing OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+					_logger.error("Problems when executing OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);
 					_running = false;
 					return;
 				}
@@ -447,7 +485,7 @@ public class FileTail
 								if ((conditions & (ChannelCondition.STDOUT_DATA | ChannelCondition.STDERR_DATA)) == 0)
 								{
 									// ... and we have consumed all data in the local arrival window.
-									_logger.info("Received EOF from the command '"+getCommand()+"'.");
+									_logger.info("Received EOF from the command '"+getCommand(true)+"'.");
 //									addException(new Exception("Received EOF from the command at time: "+new Timestamp(System.currentTimeMillis())+", \nThe module will be restarted, and the command '"+getCommand()+"' re-executed."));
 				/*<--*/				break;
 								}
@@ -576,7 +614,7 @@ public class FileTail
 									{
 										if (row != null && row.toLowerCase().indexOf("command not found") >= 0)
 										{
-											_logger.error("FileTail(SSH): was the command '"+getCommand()+"' in current $PATH, got following message on STDERR: "+row);
+											_logger.error("FileTail(SSH): was the command '"+getCommand(true)+"' in current $PATH, got following message on STDERR: "+row);
 										}
 										//System.out.println("STDERR: "+row);
 										fireNewTraceRow(row);
@@ -588,7 +626,7 @@ public class FileTail
 					}
 					catch (IOException e)
 					{
-						_logger.error("Problems when reading output from the OS Command '"+getCommand()+"', Caught: "+e.getMessage(), e);
+						_logger.error("Problems when reading output from the OS Command '"+getCommand(true)+"', Caught: "+e.getMessage(), e);
 						_running = false;
 					}
 				}

@@ -62,6 +62,7 @@ import net.miginfocom.swing.MigLayout;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -130,119 +131,119 @@ implements ActionListener
 //	public static final String OUT_TEXT_LONG               = "Plain Text (long)";
 //	public static final String OUT_JTABLE                  = "Table Format";
 	
-	private JLabel          _outputFormat_lbl              = new JLabel("Show Output As");
-//	private final String[]  _outputFormat_arr              = {OUT_TEXT_SHORT, OUT_TEXT_LONG, OUT_JTABLE};
-//	private JComboBox       _outputFormat_cbx              = new JComboBox(_outputFormat_arr);
-	private JCheckBox       _outputFile_chk                = new JCheckBox("Save to File", DEFAULT_outputFile_chk);
-	private JTextField      _outputFile_txt                = new JTextField(DEFAULT_outputFile_txt);
-	private JRadioButton    _outputFormatTxtShort_rbt      = new JRadioButton("Plain Text (short)");
-	private JRadioButton    _outputFormatTxtLong_rbt       = new JRadioButton("Plain Text (long)");
-	private JRadioButton    _outputFormatTab_rbt           = new JRadioButton("Table Format");
-
-	private String          _selectedDestSrvName   = null;
-	private String          _selectedDestDbName    = null;
-	private String          _selectedDestRouteName = null;
-	// Queue name/type
-	private JLabel          _queueName1_lbl                = new JLabel("Connection Type");
-	private JLabel          _queueName2_lbl                = new JLabel("Connection Name");
-	private JRadioButton    _queueNameLconn_rbt            = new JRadioButton("Warm Standby Connections");
-	private JRadioButton    _queueNamePconn_rbt            = new JRadioButton("Regular DB Connections");
-	private JRadioButton    _queueNameRoute_rbt            = new JRadioButton("Routes");
+	private JLabel            _outputFormat_lbl              = new JLabel("Show Output As");
+//	private final String[]    _outputFormat_arr              = {OUT_TEXT_SHORT, OUT_TEXT_LONG, OUT_JTABLE};
+//	private JComboBox         _outputFormat_cbx              = new JComboBox(_outputFormat_arr);
+	private JCheckBox         _outputFile_chk                = new JCheckBox("Save to File", DEFAULT_outputFile_chk);
+	private JTextField        _outputFile_txt                = new JTextField(DEFAULT_outputFile_txt);
+	private JRadioButton      _outputFormatTxtShort_rbt      = new JRadioButton("Plain Text (short)");
+	private JRadioButton      _outputFormatTxtLong_rbt       = new JRadioButton("Plain Text (long)");
+	private JRadioButton      _outputFormatTab_rbt           = new JRadioButton("Table Format");
+                              
+	private String            _selectedDestSrvName   = null;
+	private String            _selectedDestDbName    = null;
+	private String            _selectedDestRouteName = null;
+	// Queue name/type        
+	private JLabel            _queueName1_lbl                = new JLabel("Connection Type");
+	private JLabel            _queueName2_lbl                = new JLabel("Connection Name");
+	private JRadioButton      _queueNameLconn_rbt            = new JRadioButton("Warm Standby Connections");
+	private JRadioButton      _queueNamePconn_rbt            = new JRadioButton("Regular DB Connections");
+	private JRadioButton      _queueNameRoute_rbt            = new JRadioButton("Routes");
 //	public static final String QUEUE_TYPE_OUT              = "Outbound Queue (0)";
 //	public static final String QUEUE_TYPE_IN               = "Inbound Queue (1)";
-//	private JLabel          _queueNameLconn_lbl            = new JLabel("Warm Standby Connections");
-	private JComboBox       _queueNameLconn_cbx            = new JComboBox(); // Logical Server.DB name
-//	private JLabel          _queueNamePconn_lbl            = new JLabel("Physical Connections");
-	private JComboBox       _queueNamePconn_cbx            = new JComboBox(); // Physical Server.DB name
-//	private JLabel          _queueNameRoute_lbl            = new JLabel("Routes");
-	private JComboBox       _queueNameRoute_cbx            = new JComboBox(); // Physical Server.DB name
-	private JLabel          _queueType_lbl                 = new JLabel("Queue Type");
-//	private final String[]  _queueType_arr                 = {QUEUE_TYPE_OUT, QUEUE_TYPE_IN};
-//	private JComboBox       _queueType_cbx                 = new JComboBox(_queueType_arr);
-	private JRadioButton    _queueTypeIn_rbt               = new JRadioButton("Inbound Queue (1)");
-	private JRadioButton    _queueTypeOut_rbt              = new JRadioButton("Outbound Queue (0)");
-//	private JLabel          _wsConnDesc_lbl                = new JLabel();
+//	private JLabel            _queueNameLconn_lbl            = new JLabel("Warm Standby Connections");
+	private JComboBox         _queueNameLconn_cbx            = new JComboBox(); // Logical Server.DB name
+//	private JLabel            _queueNamePconn_lbl            = new JLabel("Physical Connections");
+	private JComboBox         _queueNamePconn_cbx            = new JComboBox(); // Physical Server.DB name
+//	private JLabel            _queueNameRoute_lbl            = new JLabel("Routes");
+	private JComboBox         _queueNameRoute_cbx            = new JComboBox(); // Physical Server.DB name
+	private JLabel            _queueType_lbl                 = new JLabel("Queue Type");
+//	private final String[]    _queueType_arr                 = {QUEUE_TYPE_OUT, QUEUE_TYPE_IN};
+//	private JComboBox         _queueType_cbx                 = new JComboBox(_queueType_arr);
+	private JRadioButton      _queueTypeIn_rbt               = new JRadioButton("Inbound Queue (1)");
+	private JRadioButton      _queueTypeOut_rbt              = new JRadioButton("Outbound Queue (0)");
+//	private JLabel            _wsConnDesc_lbl                = new JLabel();
 
 	// Filter Options
-	private JCheckBox       _doSimpleDumpQueue             = new JCheckBox("Simple Dump Queue", DEFAULT_filterOutAppliedTrans);
-	private JCheckBox       _filterOutAppliedTrans_chk     = new JCheckBox("<html>Do <b>not</b> show already replicated records</html>", DEFAULT_filterOutAppliedTrans);
-//	private JCheckBox       _filterOutAppliedTrans_chk     = new JCheckBox("Filter out already applied transactions", true);
-	private JCheckBox       _filterDebugAppliedTrans_chk   = new JCheckBox("<html>Include discarded trans as comment", false);
-	private JLabel          _maintUsername_lbl             = new JLabel("Maintenance User");
-	private JTextField      _maintUsername_txt             = new JTextField(DEFAULT_maintUsername);
-	private JLabel          _maintPassword_lbl             = new JLabel("Maintenance Password");
-	private JTextField      _maintPassword_txt             = new JTextField(DEFAULT_maintPassword);
-
-	private JLabel          _filterSeg_lbl                 = new JLabel("Segment");
-	private SpinnerModel    _filterSeg_spm                 = new SpinnerNumberModel(0, 0, 999999, 1);
-	private JSpinner        _filterSeg_sp                  = new JSpinner(_filterSeg_spm);
-	private JCheckBox       _filterSegStartFirstActive_chk = new JCheckBox("Start at first active segment", true);
-	private JCheckBox       _filterSegShowDeletedData_chk  = new JCheckBox("Show deleted data", false);
-
-	private JLabel          _filterStartBlk_lbl            = new JLabel("Starting Block");
-	private SpinnerModel    _filterStartBlk_spm            = new SpinnerNumberModel(0, 0, 999999, 1);
-	private JSpinner        _filterStartBlk_sp             = new JSpinner(_filterStartBlk_spm);
-
-	private JLabel          _filterBlkCount_lbl            = new JLabel("Block Count");
-	private SpinnerModel    _filterBlkCount_spm            = new SpinnerNumberModel(0, 0, 999999, 1);
-	private JSpinner        _filterBlkCount_sp             = new JSpinner(_filterBlkCount_spm);
-	private JCheckBox       _filterBlkCountToEndSeg_chk    = new JCheckBox("View to end of segment", true);
-	private JCheckBox       _filterBlkCountToEndQueue_chk  = new JCheckBox("View to end of queue",   false);
-
-	private JLabel          _filterRows_lbl                = new JLabel("Rows");
-	private SpinnerModel    _filterRows_spm                = new SpinnerNumberModel(0, 0, 999999, 1);
-	private JSpinner        _filterRows_sp                 = new JSpinner(_filterRows_spm);
-	private JCheckBox       _filterRowsShowAll_chk         = new JCheckBox("All rows", true);
-
-	private JCheckBox       _rclCmd_chk                    = new JCheckBox("Use RCS Command", DEFAULT_rclCmd_chk);
-	private JTextField      _rclCmd_txt                    = new JTextField(DEFAULT_rclCmd_txt); // show the RCL which will be executed
-//	private String dummyRcl = "sysadmin dump_queue, 'GORAN_DS', 'wsdb3', 1, -1, -2, -1, L0, client";
-//	private JCheckBox       _rclCmd_chk                    = new JCheckBox("Use RCS Command", true);
-//	private JTextField      _rclCmd_txt                    = new JTextField(dummyRcl); // show the RCL which will be executed
+	private JCheckBox         _doSimpleDumpQueue             = new JCheckBox("Simple Dump Queue", DEFAULT_filterOutAppliedTrans);
+	private JCheckBox         _filterOutAppliedTrans_chk     = new JCheckBox("<html>Do <b>not</b> show already replicated records</html>", DEFAULT_filterOutAppliedTrans);
+//	private JCheckBox         _filterOutAppliedTrans_chk     = new JCheckBox("Filter out already applied transactions", true);
+	private JCheckBox         _filterDebugAppliedTrans_chk   = new JCheckBox("<html>Include discarded trans as comment", false);
+	private JLabel            _maintUsername_lbl             = new JLabel("Maintenance User");
+	private JTextField        _maintUsername_txt             = new JTextField(DEFAULT_maintUsername);
+	private JLabel            _maintPassword_lbl             = new JLabel("Maintenance Password");
+	private JTextField        _maintPassword_txt             = new JTextField(DEFAULT_maintPassword);
+                              
+	private JLabel            _filterSeg_lbl                 = new JLabel("Segment");
+	private SpinnerModel      _filterSeg_spm                 = new SpinnerNumberModel(0, 0, 999999, 1);
+	private JSpinner          _filterSeg_sp                  = new JSpinner(_filterSeg_spm);
+	private JCheckBox         _filterSegStartFirstActive_chk = new JCheckBox("Start at first active segment", true);
+	private JCheckBox         _filterSegShowDeletedData_chk  = new JCheckBox("Show deleted data", false);
+                              
+	private JLabel            _filterStartBlk_lbl            = new JLabel("Starting Block");
+	private SpinnerModel      _filterStartBlk_spm            = new SpinnerNumberModel(0, 0, 999999, 1);
+	private JSpinner          _filterStartBlk_sp             = new JSpinner(_filterStartBlk_spm);
+                              
+	private JLabel            _filterBlkCount_lbl            = new JLabel("Block Count");
+	private SpinnerModel      _filterBlkCount_spm            = new SpinnerNumberModel(0, 0, 999999, 1);
+	private JSpinner          _filterBlkCount_sp             = new JSpinner(_filterBlkCount_spm);
+	private JCheckBox         _filterBlkCountToEndSeg_chk    = new JCheckBox("View to end of segment", true);
+	private JCheckBox         _filterBlkCountToEndQueue_chk  = new JCheckBox("View to end of queue",   false);
+                              
+	private JLabel            _filterRows_lbl                = new JLabel("Rows");
+	private SpinnerModel      _filterRows_spm                = new SpinnerNumberModel(0, 0, 999999, 1);
+	private JSpinner          _filterRows_sp                 = new JSpinner(_filterRows_spm);
+	private JCheckBox         _filterRowsShowAll_chk         = new JCheckBox("All rows", true);
+                              
+	private JCheckBox         _rclCmd_chk                    = new JCheckBox("Use RCS Command", DEFAULT_rclCmd_chk);
+	private JTextField        _rclCmd_txt                    = new JTextField(DEFAULT_rclCmd_txt); // show the RCL which will be executed
+//	private String dummyRcl   = "sysadmin dump_queue, 'GORAN_DS', 'wsdb3', 1, -1, -2, -1, L0, client";
+//	private JCheckBox         _rclCmd_chk                    = new JCheckBox("Use RCS Command", true);
+//	private JTextField        _rclCmd_txt                    = new JTextField(dummyRcl); // show the RCL which will be executed
 
 	// Queue Content
-	private JXTable         _dumpQueueTab          = new JXTable();
-	private JScrollPane     _dumpQueueTabScroll    = new JScrollPane(_dumpQueueTab);
-	private RSyntaxTextArea _dumpQueueTxt          = new RSyntaxTextArea();
-	private RTextScrollPane _dumpQueueTxtScroll    = new RTextScrollPane(_dumpQueueTxt);
+	private JXTable           _dumpQueueTab          = new JXTable();
+	private JScrollPane       _dumpQueueTabScroll    = new JScrollPane(_dumpQueueTab);
+	private RSyntaxTextArea   _dumpQueueTxt          = new RSyntaxTextArea();
+	private RTextScrollPane   _dumpQueueTxtScroll    = new RTextScrollPane(_dumpQueueTxt);
 
 	
-	private int         _srvVersion                = 0;
-	private String      _connectedToProductName    = null;
-	private String      _connectedToProductVersion = null;
-	private String      _connectedToServerName     = null;
-	private String      _connectedAsUser           = null;
-	private String      _connectedWithUrl          = null;
+	private int               _srvVersion                = 0;
+	private String            _connectedToProductName    = null;
+	private String            _connectedToProductVersion = null;
+	private String            _connectedToServerName     = null;
+	private String            _connectedAsUser           = null;
+	private String            _connectedWithUrl          = null;
 
 	// The base Window can be either a JFrame or a JDialog
-	private Window      _window          = null;
-	private JFrame      _jframe          = null;
-	private JDialog     _jdialog         = null;
-	private String      _titlePrefix     = null;
+	private Window            _window          = null;
+	private JFrame            _jframe          = null;
+	private JDialog           _jdialog         = null;
+	private String            _titlePrefix     = null;
+                              
+	private JButton           _connect_but     = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
+	private JButton           _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
 
-	private JButton     _connect_but     = SwingUtils.makeToolbarButton(Version.class, "connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-	private JButton     _disconnect_but  = SwingUtils.makeToolbarButton(Version.class, "disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
-
-	private JMenuBar            _main_mb                = new JMenuBar();
-	private JToolBar            _toolbar                = new JToolBar();
+	private JMenuBar          _main_mb                = new JMenuBar();
+	private JToolBar          _toolbar                = new JToolBar();
 
 	// File
-	private JMenu               _file_m                 = new JMenu("File");
-	private JMenuItem           _connect_mi             = new JMenuItem("Connect...");
-	private JMenuItem           _disconnect_mi          = new JMenuItem("Disconnect");
-	private JMenuItem           _fNew_mi                = new JMenuItem("New File");
-	private JMenuItem           _fOpen_mi               = new JMenuItem("Open File...");
-//	private JMenuItem           _fClose_mi              = new JMenuItem("Close");
-	private JMenuItem           _fSave_mi               = new JMenuItem("Save");
-	private JMenuItem           _fSaveAs_mi             = new JMenuItem("Save As...");
-	private JMenu               _fHistory_m             = new JMenu("Last Used Files");
-	private JMenuItem           _exit_mi                = new JMenuItem("Exit");
+	private JMenu             _file_m                 = new JMenu("File");
+	private JMenuItem         _connect_mi             = new JMenuItem("Connect...");
+	private JMenuItem         _disconnect_mi          = new JMenuItem("Disconnect");
+	private JMenuItem         _fNew_mi                = new JMenuItem("New File");
+	private JMenuItem         _fOpen_mi               = new JMenuItem("Open File...");
+//	private JMenuItem         _fClose_mi              = new JMenuItem("Close");
+	private JMenuItem         _fSave_mi               = new JMenuItem("Save");
+	private JMenuItem         _fSaveAs_mi             = new JMenuItem("Save As...");
+	private JMenu             _fHistory_m             = new JMenu("Last Used Files");
+	private JMenuItem         _exit_mi                = new JMenuItem("Exit");
 
 	// Tools
-	private JMenu               _view_m                 = new JMenu("View");
-	private JMenuItem           _ase_viewConfig_mi      = new JMenuItem("View ASE Configuration...");
-	private JMenuItem           _rs_configChangedDdl_mi = new JMenuItem("View RCL for changed configurations...");
-	private JMenuItem           _rs_configAllDdl_mi     = new JMenuItem("View RCL for ALL configurations...");
+	private JMenu             _view_m                 = new JMenu("View");
+	private JMenuItem         _ase_viewConfig_mi      = new JMenuItem("View ASE Configuration...");
+	private JMenuItem         _rs_configChangedDdl_mi = new JMenuItem("View RCL for changed configurations...");
+	private JMenuItem         _rs_configAllDdl_mi     = new JMenuItem("View RCL for ALL configurations...");
 	//---------------------------------------
 
 	/**
@@ -294,17 +295,17 @@ implements ActionListener
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
-		    && javaVersionInt <  JavaVersion.VERSION_1_6
+		    && javaVersionInt <  JavaVersion.VERSION_1_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
 		}
 
 		// The SAVE Properties...
@@ -523,8 +524,8 @@ implements ActionListener
 			_fSaveAs_mi        .setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_MASK));
 
 			// TOOLBAR
-//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
-//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
+//			_connect_but    = SwingUtils.makeToolbarButton(Version.class, "images/connect_16.png",    ACTION_CONNECT,    this, "Connect to a ASE",         "Connect");
+//			_disConnect_but = SwingUtils.makeToolbarButton(Version.class, "images/disconnect_16.png", ACTION_DISCONNECT, this, "Close the ASE Connection", "Disconnect");
 
 			_toolbar.setLayout(new MigLayout("insets 0 0 0 3", "", "")); // insets Top Left Bottom Right
 			_toolbar.add(_connect_but);
@@ -1007,15 +1008,15 @@ implements ActionListener
 		if (_window == null)
 			return;
 
-		conf.setProperty(prefix + "size.width",         _window.getSize().width);
-		conf.setProperty(prefix + "size.height",        _window.getSize().height);
+		conf.setLayoutProperty(prefix + "size.width",         _window.getSize().width);
+		conf.setLayoutProperty(prefix + "size.height",        _window.getSize().height);
 
 //		conf.setProperty(prefix + "splitPane.location", _splitPane.getDividerLocation());
 
 		if (_window.isVisible())
 		{
-			conf.setProperty(prefix + "size.pos.x",  _window.getLocationOnScreen().x);
-			conf.setProperty(prefix + "size.pos.y",  _window.getLocationOnScreen().y);
+			conf.setLayoutProperty(prefix + "size.pos.x",  _window.getLocationOnScreen().x);
+			conf.setLayoutProperty(prefix + "size.pos.y",  _window.getLocationOnScreen().y);
 		}
 		
 		conf.save();
@@ -1496,7 +1497,7 @@ System.out.println("----- setDsDbName(): dsdb='"+dsdb+"'.");
 //		
 //		RsDatabases.Entry entry = _rsDatabases.getEntry(dsdb);
 
-		JComboBox    cbx;
+		JComboBox cbx;
 		JRadioButton rbt;
 		boolean found = false;
 		// CHECK LOGICAL CONNECTIONS
@@ -2683,7 +2684,7 @@ System.out.println("TO TXT");
 	throws ParseException
 	{
 		// create the command line parser
-		CommandLineParser parser = new PosixParser();	
+		CommandLineParser parser = new DefaultParser();	
 	
 		// parse the command line arguments
 		CommandLine cmd = parser.parse( options, args );

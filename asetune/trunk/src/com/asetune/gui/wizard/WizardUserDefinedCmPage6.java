@@ -119,9 +119,9 @@ implements ActionListener, TableModelListener
 
 	private JCheckBox  _crGraph_chk   = new JCheckBox("Create a User Defined Graph", false);
 
-	private JLabel     _graphType_lbl = new JLabel("Graph Type");
-	private JComboBox  _graphType_cbx = new JComboBox(_validGraphTypesBoxStr);
-//	private JComboBox  _graphMethods_cbx = new JComboBox(_validGraphMethods);
+	private JLabel             _graphType_lbl = new JLabel("Graph Type");
+	private JComboBox<String>  _graphType_cbx = new JComboBox<String>(_validGraphTypesBoxStr);
+//	private JComboBox<String>  _graphMethods_cbx = new JComboBox<String>(_validGraphMethods);
 
 	private JLabel     _name_lbl       = new JLabel("Graph Name");
 	private JTextField _name_txt       = new JTextField("");
@@ -132,6 +132,7 @@ implements ActionListener, TableModelListener
 	private JXTable    _table          = null;//new JXTable();
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardUserDefinedCm.preferredSize; }
 
 	public WizardUserDefinedCmPage6()
@@ -197,6 +198,7 @@ implements ActionListener, TableModelListener
 
 		AbstractHighlighter disableSomeRows = new AbstractHighlighter()
 		{ 
+			@Override
 			protected Component doHighlight(Component comp, ComponentAdapter adapter) 
 			{
 				if (_crGraph_chk.isSelected())
@@ -215,6 +217,7 @@ implements ActionListener, TableModelListener
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if (column == TAB_POS_COL_PK)   return Boolean.class;
@@ -223,6 +226,7 @@ implements ActionListener, TableModelListener
 				if (column == TAB_POS_CHECK)    return Boolean.class;
 				return Object.class;
 			}
+			@Override
 			public boolean isCellEditable(int row, int column)
 			{
 				if (column == TAB_POS_CHECK)
@@ -254,6 +258,7 @@ implements ActionListener, TableModelListener
 		{
 	        private static final long serialVersionUID = 0L;
 
+			@Override
 			public String getToolTipText(MouseEvent e) 
 			{
 				String tip = null;
@@ -299,7 +304,7 @@ implements ActionListener, TableModelListener
 		_graphType_cbx.addActionListener(this);
 	}
 
-	private void refreshComboBox(JComboBox cbx)
+	private void refreshComboBox(JComboBox<String> cbx)
 	{
 		int    typeInt = _graphType_cbx.getSelectedIndex();
 		String typeStr = "";
@@ -381,7 +386,7 @@ implements ActionListener, TableModelListener
 				}
 
 				// TAB_POS_METHOD
-				JComboBox comboBox = new JComboBox();
+				JComboBox<String> comboBox = new JComboBox<String>();
 				refreshComboBox(comboBox);
 				TableColumn tc = _table.getColumnModel().getColumn(TAB_POS_METHOD);
 				tc.setCellEditor(new DefaultCellEditor(comboBox));
@@ -623,6 +628,7 @@ implements ActionListener, TableModelListener
 		return null;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();
@@ -632,7 +638,7 @@ implements ActionListener, TableModelListener
 
 		if (_graphType_cbx.equals(src))
 		{
-			JComboBox comboBox = new JComboBox();
+			JComboBox<String> comboBox = new JComboBox<String>();
 			refreshComboBox(comboBox);
 			TableColumn tc = _table.getColumnModel().getColumn(TAB_POS_METHOD);
 			tc.setCellEditor(new DefaultCellEditor(comboBox));
@@ -653,6 +659,7 @@ implements ActionListener, TableModelListener
 	}
 
 	
+	@Override
 	public void tableChanged(TableModelEvent e)
 	{
 		TableModel tm = _table.getModel();

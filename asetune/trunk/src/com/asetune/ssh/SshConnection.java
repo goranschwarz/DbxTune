@@ -1,9 +1,11 @@
 package com.asetune.ssh;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,20 +14,26 @@ import javax.swing.BoxLayout;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.VersionShort;
+
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Connection;
 import ch.ethz.ssh2.InteractiveCallback;
+import ch.ethz.ssh2.KnownHosts;
 import ch.ethz.ssh2.LocalPortForwarder;
+import ch.ethz.ssh2.ServerHostKeyVerifier;
 import ch.ethz.ssh2.Session;
 import ch.ethz.ssh2.StreamGobbler;
-
-import com.asetune.utils.StringUtil;
 
 public class SshConnection
 {
@@ -58,6 +66,28 @@ public class SshConnection
 
 	/** There is stderr data available that is ready to be consumed. */
 	public static final int STDERR_DATA = ChannelCondition.STDERR_DATA;
+
+	private KnownHosts _knownHostsDb = new KnownHosts();
+
+	private static final String _homeDir = System.getProperty("user.home", "");
+
+	private static final String _knownHostPath = _homeDir + File.separator + ".ssh" + File.separator + "known_hosts";
+	private static final String _idDSAPath     = _homeDir + File.separator + ".ssh" + File.separator + "id_dsa";
+	private static final String _idRSAPath     = _homeDir + File.separator + ".ssh" + File.separator + "id_rsa";
+
+	private WaitForExecDialog _waitforDialog = null;
+	private static Component         _guiOwner = null;
+
+	public static String getRsaKeyFilename() { return _idRSAPath; }
+
+	public static final String  PROPKEY_sshAuthenticateEnableKeyboardInteractive = "ssh.authenticate.enable.KeyboardInteractive";
+	public static final boolean DEFAULT_sshAuthenticateEnableKeyboardInteractive = true;
+
+	public static final String  PROPKEY_sshAuthenticateEnableDSA                 = "ssh.authenticate.enable.DSA";
+	public static final boolean DEFAULT_sshAuthenticateEnableDSA                 = true;
+
+	public static final String  PROPKEY_sshAuthenticateEnableRSA                 = "ssh.authenticate.enable.RSA";
+	public static final boolean DEFAULT_sshAuthenticateEnableRSA                 = true;
 
 	/**
 	 * Create an empty SshConnection, but you need to setUser,password,host
@@ -102,6 +132,26 @@ public class SshConnection
 	public String getHost()     { return _hostname; }
 	public int    getPort()     { return _port; }
 
+	public WaitForExecDialog getWaitForDialog()                       { return _waitforDialog; }
+	public void              setWaitForDialog(WaitForExecDialog wait) { _waitforDialog = wait; }
+	public boolean           hasWaitForDialog()                       { return _waitforDialog != null; }
+
+	public static Component         getGuiOwner()                       { return _guiOwner; }
+	public static void              setGuiOwner(Component guiHandle)    { _guiOwner = guiHandle; }
+	public static boolean           hasGuiOwner()                       { return _guiOwner != null; }
+
+	private void logInfoMsg(String logMsg)
+	{
+		_logger.info(logMsg);
+		if (_waitforDialog != null)
+			_waitforDialog.setState(logMsg);
+	}
+	
+	protected Connection getConnection()
+	{
+		return _conn;
+	}
+
 	/**
 	 * Connect to a remote host
 	 * @return true if we succeeded to connect.
@@ -120,9 +170,35 @@ public class SshConnection
 			_conn = new Connection(_hostname, _port);
 
 		// And connect to the host
-		_conn.connect();
+		File hostKeyFile = new File(_knownHostPath);
+		if (hostKeyFile.exists())
+		{
+			try 
+			{ 
+				_knownHostsDb.addHostkeys(hostKeyFile); 
+
+				String[] hostkeyAlgos = _knownHostsDb.getPreferredServerHostkeyAlgorithmOrder(_hostname);
+				if (hostkeyAlgos != null)
+					_conn.setServerHostKeyAlgorithms(hostkeyAlgos);
+			}
+			catch (IOException ex) 
+			{ 
+				logInfoMsg("SSH Problems reading the 'host-key-database' from file '"+hostKeyFile+"'. Caught: "+ex);
+				_knownHostsDb = null;
+			}
+		}
+
+		if (_waitforDialog != null)
+			_waitforDialog.setState("SSH Connecting to host '"+_hostname+"' on port "+_port+" with username '"+_username+"'.");
+
+		if (_knownHostsDb != null)
+			_conn.connect(new AdvancedVerifier());
+		else
+			_conn.connect();
 
 		// Authenticate
+		if (_waitforDialog != null)
+			_waitforDialog.setState("SSH Authenticating the Connection, in order: 'publickey', 'keyboard-interactive' and 'password'");
 //		_isAuthenticated = _conn.authenticateWithPassword(_username, _password);
 		_isAuthenticated = authenticate();
 
@@ -143,82 +219,90 @@ public class SshConnection
 	private boolean authenticate()
 	throws IOException
 	{
-//		final String knownHostPath = "~/.ssh/known_hosts";
-//		final String idDSAPath     = "~/.ssh/id_dsa";
-//		final String idRSAPath     = "~/.ssh/id_rsa";
-
-		boolean enableKeyboardInteractive = true;
-//		boolean enableDSA = true;
-//		boolean enableRSA = true;
+		boolean enableKeyboardInteractive = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sshAuthenticateEnableKeyboardInteractive, DEFAULT_sshAuthenticateEnableKeyboardInteractive);;
+		boolean enableDSA                 = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sshAuthenticateEnableDSA,                 DEFAULT_sshAuthenticateEnableDSA);
+		boolean enableRSA                 = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sshAuthenticateEnableRSA,                 DEFAULT_sshAuthenticateEnableRSA);
 
 		String lastError = null;
 
 		while (true)
 		{
-//			if ((enableDSA || enableRSA) && _conn.isAuthMethodAvailable(_username, "publickey"))
-//			{
-//System.out.println("SSH-authenticate-Query: isAuthMethodAvailable(publickey) == TRUE");
-//				_logger.debug("SSH-authenticate-Query: isAuthMethodAvailable(publickey) == TRUE");
-//
-//				if (enableDSA)
-//				{
-//					File key = new File(idDSAPath);
-//
-//					if (key.exists())
-//					{
+			if ((enableDSA || enableRSA) && _conn.isAuthMethodAvailable(_username, "publickey"))
+			{
+				logInfoMsg("SSH Authentication method 'publickey' is available, and will be tested first.");
+				
+				if (enableDSA)
+				{
+					File key = new File(_idDSAPath);
+
+					if (key.exists())
+					{
+						logInfoMsg("SSH Authentication method 'publickey': Trying DSA using key file '"+key+"'.");
+						
 //						EnterSomethingDialog esd = new EnterSomethingDialog(null, "DSA Authentication",
 //								new String[] { lastError, "Enter DSA private key password:" }, true);
 //						esd.setVisible(true);
-//
-//System.out.println("SSH-authenticate-DO: authenticateWithPublicKey:DSA");
-//						_logger.debug("SSH-authenticate-DO: authenticateWithPublicKey:DSA");
+
 //						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
-//
-//						if (res == true)
-//							break;
-//
-//						lastError = "DSA authentication failed.";
-//					}
-//					enableDSA = false; // do not try again
-//				}
-//
-//				if (enableRSA)
-//				{
-//					File key = new File(idRSAPath);
-//
-//					if (key.exists())
-//					{
+						boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
+
+						if (res == true)
+						{
+							logInfoMsg("SSH Authentication method 'publickey' DSA: SUCCEEDED");
+							break;
+						}
+
+						lastError = "DSA authentication failed.";
+
+						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+					}
+					enableDSA = false; // do not try again
+				}
+
+				if (enableRSA)
+				{
+					File key = new File(_idRSAPath);
+
+					if (key.exists())
+					{
+						logInfoMsg("SSH Authentication method 'publickey': Trying RSA using key file '"+key+"'.");
+						
 //						EnterSomethingDialog esd = new EnterSomethingDialog(null, "RSA Authentication",
 //								new String[] { lastError, "Enter RSA private key password:" }, true);
 //						esd.setVisible(true);
-//
-//System.out.println("SSH-authenticate-DO: authenticateWithPublicKey:RSA");
-//						_logger.debug("SSH-authenticate-DO: authenticateWithPublicKey:RSA");
+
 //						boolean res = _conn.authenticateWithPublicKey(_username, key, esd.answer);
-//
-//						if (res == true)
-//							break;
-//
-//						lastError = "RSA authentication failed.";
-//					}
-//					enableRSA = false; // do not try again
-//				}
-//
-//				continue;
-//			}
+						boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
+
+						if (res == true)
+						{
+							logInfoMsg("SSH Authentication method 'publickey' RSA: SUCCEEDED");
+							break;
+						}
+
+						lastError = "RSA authentication failed.";
+
+						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+					}
+					enableRSA = false; // do not try again
+				}
+
+				continue;
+			}
 
 			if (enableKeyboardInteractive && _conn.isAuthMethodAvailable(_username, "keyboard-interactive"))
 			{
-//System.out.println("SSH-authenticate-Query: isAuthMethodAvailable(keyboard-interactive) == TRUE");
-				_logger.debug("SSH-authenticate-Query: isAuthMethodAvailable(keyboard-interactive) == TRUE");
+				logInfoMsg("SSH Authentication method 'keyboard-interactive': Trying...");
+
 				InteractiveLogic il = new InteractiveLogic(lastError);
 
-//System.out.println("SSH-authenticate-DO: authenticateWithKeyboardInteractive");
-				_logger.debug("SSH-authenticate-DO: authenticateWithKeyboardInteractive");
 				boolean res = _conn.authenticateWithKeyboardInteractive(_username, il);
 
 				if (res == true)
+				{
+					logInfoMsg("SSH Authentication method 'keyboard-interactive': SUCCEEDED");
 					break;
+				}
 
 				if (il.getPromptCount() == 0)
 				{
@@ -228,12 +312,16 @@ public class SshConnection
 					// We just disable the "keyboard-interactive" method and notify the user.
 
 					lastError = "Keyboard-interactive does not work.";
+					
+					logInfoMsg("SSH Authentication method 'keyboard-interactive': "+lastError);
 
 					enableKeyboardInteractive = false; // do not try this again
 				}
 				else
 				{
 					lastError = "Keyboard-interactive auth failed."; // try again, if possible
+
+					logInfoMsg("SSH Authentication method 'keyboard-interactive': "+lastError);
 				}
 
 				continue;
@@ -241,26 +329,19 @@ public class SshConnection
 
 			if (_conn.isAuthMethodAvailable(_username, "password"))
 			{
-//System.out.println("SSH-authenticate-Query: isAuthMethodAvailable(password) == TRUE");
-				_logger.debug("SSH-authenticate-Query: isAuthMethodAvailable(password) == TRUE");
-//				final EnterSomethingDialog esd = new EnterSomethingDialog(loginFrame,
-//						"Password Authentication",
-//						new String[] { lastError, "Enter password for " + _username }, true);
-//
-//				esd.setVisible(true);
-//
-//				if (esd.answer == null)
-//					throw new IOException("Login aborted by user");
-//
-//				boolean res = _conn.authenticateWithPassword(_username, esd.answer);
-
-//System.out.println("SSH-authenticate-DO: authenticateWithPassword");
-				_logger.debug("SSH-authenticate-DO: authenticateWithPassword");
+				logInfoMsg("SSH Authentication method 'password': Trying...");
+				
 				boolean res = _conn.authenticateWithPassword(_username, _password);
+
 				if (res == true)
+				{
+					logInfoMsg("SSH Authentication method 'password': SUCCEEDED");
 					break;
+				}
 
 				lastError = "Password authentication failed."; // try again, if possible
+
+				logInfoMsg("SSH Authentication method 'password': "+lastError);
 
 				continue;
 			}
@@ -409,6 +490,91 @@ public class SshConnection
 				answer = answerField.getText();
 
 			dispose();
+		}
+	}
+
+	/**
+	 * This ServerHostKeyVerifier asks the user on how to proceed if a key cannot be found
+	 * in the in-memory database.
+	 */
+	class AdvancedVerifier implements ServerHostKeyVerifier
+	{
+		@Override
+		public boolean verifyServerHostKey(String hostname, int port, String serverHostKeyAlgorithm, byte[] serverHostKey) throws Exception
+		{
+			final String host = hostname;
+			final String algo = serverHostKeyAlgorithm;
+
+			String message;
+
+			/* Check database */
+			int result = _knownHostsDb.verifyHostkey(hostname, serverHostKeyAlgorithm, serverHostKey);
+
+			switch (result)
+			{
+			case KnownHosts.HOSTKEY_IS_OK:
+				return true;
+
+			case KnownHosts.HOSTKEY_IS_NEW:
+				message = "Do you want to accept the hostkey (type " + algo + ") from " + host + " ?\n";
+				break;
+
+			case KnownHosts.HOSTKEY_HAS_CHANGED:
+				message = "WARNING! Hostkey for " + host + " has changed!\nAccept anyway?\n";
+				break;
+
+			default:
+				throw new IllegalStateException();
+			}
+
+			/* Include the fingerprint in the message */
+			String hexFingerprint = KnownHosts.createHexFingerprint(serverHostKeyAlgorithm, serverHostKey);
+			String bubblebabbleFingerprint = KnownHosts.createBubblebabbleFingerprint(serverHostKeyAlgorithm, serverHostKey);
+
+			message += "Hex Fingerprint: " + hexFingerprint + "\nBubblebabble Fingerprint: " + bubblebabbleFingerprint;
+
+			String htmlMsg 
+				= "<html>"
+				+ "<h2>Question: When establishing a SSH Connection</h2>"
+				+ "<b>Host Key database, needed to be updated. </b><br>"
+				+ "Host Key database File: <code>" + _knownHostPath + "</code><br>"
+				+ "<br>"
+				+ message.replace("\n", "<br>")
+				+ "</html>";
+
+			/* Now ask the user */
+			int choice = JOptionPane.showConfirmDialog( (hasWaitForDialog() ? getWaitForDialog() : getGuiOwner()), htmlMsg);
+			if (choice == JOptionPane.YES_OPTION)
+			{
+				/* Be really paranoid. We use a hashed hostname entry */
+				String hashedHostname = KnownHosts.createHashedHostname(hostname);
+
+				/* Add the hostkey to the in-memory database */
+				_knownHostsDb.addHostkey(new String[] { hashedHostname }, serverHostKeyAlgorithm, serverHostKey);
+
+				/* Also try to add the key to a known_host file */
+				try
+				{
+					File hostKeyFile = new File(_knownHostPath);
+					KnownHosts.addHostkeyToFile(hostKeyFile, new String[] { hashedHostname }, serverHostKeyAlgorithm, serverHostKey);
+
+					logInfoMsg("SSH Added '"+hostname+"' to the HostKey file '"+hostKeyFile+"'.");
+				}
+				catch (IOException ignore)
+				{
+					logInfoMsg("SSH Problems Adding '"+hostname+"' to the HostKey file '"+_knownHostPath+"'.");
+				}
+
+				return true;
+			}
+
+			if (choice == JOptionPane.CANCEL_OPTION)
+			{
+				logInfoMsg("The user aborted the server hostkey verification.");
+				throw new Exception("The user aborted the server hostkey verification.");
+			}
+
+			return false;
 		}
 	}
 
@@ -703,6 +869,7 @@ public class SshConnection
 			output += line;
 		}
 
+		br.close();
 		sess.close();
 		
 		_uname = output;
@@ -753,6 +920,7 @@ public class SshConnection
 				output += line;
 			}
 
+			br.close();
 			sess.close();
 			
 			_logger.debug("doFileExist: '"+filename+"' produced '"+output+"'.");
@@ -796,6 +964,7 @@ public class SshConnection
 
 		Integer rc = sess.getExitStatus();
 
+		br.close();
 		sess.close();
 		
 		_logger.debug("createNewFile: '"+filename+"' produced '"+output+"'.");
@@ -837,6 +1006,7 @@ public class SshConnection
 
 		Integer rc = sess.getExitStatus();
 
+		br.close();
 		sess.close();
 		
 		_logger.debug("removeFile: '"+filename+"' produced '"+output+"'.");
@@ -865,16 +1035,36 @@ public class SshConnection
 		Session sess = _conn.openSession();
 		sess.execCommand("vxstat");
 
-		InputStream stdout = new StreamGobbler(sess.getStdout());
-		BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+		BufferedReader stdout_br = new BufferedReader(new InputStreamReader(new StreamGobbler(sess.getStdout())));
+		BufferedReader stderr_br = new BufferedReader(new InputStreamReader(new StreamGobbler(sess.getStderr())));
 
+		boolean hasVeritasMsg = false;
+
+		// Read output (probably on stderr)
+		// expected string if vxstat is available
+		// VxVM vxstat ERROR V-5-1-15324 Specify a disk group with -g <diskgroup> or configure a default disk group. Refer to the vxdctl(1m) man page for more details on configuring a default disk group
 		while (true)
 		{
-			String line = br.readLine();
+			String line = stdout_br.readLine();
 			if (line == null)
 				break;
 
-			_logger.debug("hasVeritas(): "+line);
+			if (line.indexOf("VxVM vxstat ERROR") >= 0)
+				hasVeritasMsg = true;
+			
+			_logger.debug("hasVeritas() stdout: "+line);
+		}
+
+		while (true)
+		{
+			String line = stderr_br.readLine();
+			if (line == null)
+				break;
+
+			if (line.indexOf("VxVM vxstat ERROR") >= 0)
+				hasVeritasMsg = true;
+			
+			_logger.debug("hasVeritas() stderr: "+line);
 		}
 
 		boolean retStatus = true;
@@ -882,11 +1072,108 @@ public class SshConnection
 		if ( exitCode == null || exitCode != null && exitCode != 0 )
 			retStatus = false;
 
+		stdout_br.close();
+		stderr_br.close();
 		sess.close();
 
-		_logger.debug("hasVeritas(): returned "+retStatus);
+		_logger.debug("hasVeritas(): returned " + (retStatus || hasVeritasMsg) );
+		return retStatus || hasVeritasMsg;
+	}
 
-		return retStatus;
+	/**
+	 * Different Linux Utilities that we want to check version information for
+	 */
+	public enum LinuxUtilType
+	{
+		IOSTAT, VMSTAT, MPSTAT, UPTIME
+	};
+
+	/**
+	 * On Linux, utilities is upgraded some times... which means there could be new columns etc...
+	 * Get version of some unix utilities
+	 * 
+	 * @param utilityType
+	 * @return version number as an integer version... holding (major, minor, maintenance) 2 "positions" each in the integer<br>
+	 *         version "10.2.0" is returned as 100200 <br>
+	 *         version "3.3.9"  is returned as  30309 <br>
+	 * @throws Exception
+	 */
+	public int getLinuxUtilVersion(LinuxUtilType utilType)
+	throws Exception
+	{
+//		gorans@gorans-ub:~$ iostat -V
+//		sysstat version 10.2.0
+//		(C) Sebastien Godard (sysstat <at> orange.fr)
+		
+//		gorans@gorans-ub:~$ vmstat -V
+//		vmstat from procps-ng 3.3.9
+
+//		gorans@gorans-ub:~$ uptime -V
+//		uptime from procps-ng 3.3.9
+
+//		gorans@gorans-ub:~$ mpstat -V
+//		sysstat version 10.2.0
+//		(C) Sebastien Godard (sysstat <at> orange.fr)
+
+		String cmd = "";
+		if      (LinuxUtilType.IOSTAT.equals(utilType)) cmd = "iostat -V";
+		else if (LinuxUtilType.VMSTAT.equals(utilType)) cmd = "vmstat -V";
+		else if (LinuxUtilType.MPSTAT.equals(utilType)) cmd = "mpstat -V";
+		else if (LinuxUtilType.UPTIME.equals(utilType)) cmd = "uptime -V";
+		else
+			throw new Exception("Unsupported utility of '"+utilType+"'.");
+	
+		if (isClosed())
+			throw new IOException("SSH is not connected. (host='"+_hostname+"', port="+_port+", user='"+_username+"', osName='"+_osName+"', osCharset='"+_osCharset+"'.)");
+
+		Session sess = _conn.openSession();
+		sess.execCommand(cmd);
+
+		BufferedReader stdout_br = new BufferedReader(new InputStreamReader(new StreamGobbler(sess.getStdout())));
+		BufferedReader stderr_br = new BufferedReader(new InputStreamReader(new StreamGobbler(sess.getStderr())));
+
+		int intVersion = -1;
+		// Read output (probably on stdout)
+		while (true)
+		{
+			String line = stdout_br.readLine();
+			if (line == null)
+				break;
+
+			int i = VersionShort.parse(line);
+			_logger.debug("getLinuxUtilVersion() stdout: '"+line+"'. VersionShort.parse() returned: "+i);
+//System.out.println("getLinuxUtilVersion() stdout: '"+line+"'. VersionShort.parse() returned: "+i);
+
+			if (i >= 0)
+				intVersion = i;
+		}
+
+		while (true)
+		{
+			String line = stderr_br.readLine();
+			if (line == null)
+				break;
+
+			int i = VersionShort.parse(line);
+			_logger.debug("getLinuxUtilVersion() stderr: '"+line+"'. VersionShort.parse() returned: "+i);
+//System.out.println("getLinuxUtilVersion() stderr: '"+line+"'. VersionShort.parse() returned: "+i);
+
+			if (i >= 0)
+				intVersion = i;
+		}
+
+		Integer exitCode = sess.getExitStatus();
+
+		stdout_br.close();
+		stderr_br.close();
+		sess.close();
+
+		if ( exitCode == null || exitCode != null && exitCode != 0 )
+			return -1;
+
+		_logger.debug("getLinuxUtilVersion(): returned " + intVersion );
+//System.out.println("getLinuxUtilVersion(): returned " + intVersion );
+		return intVersion;
 	}
 
 	@Override
@@ -899,8 +1186,5 @@ public class SshConnection
 			"osCharset='"+_osCharset+"', " +
 			"isConnected='"+_isConnected+"'.";
 	}
-
-
-
 }
 

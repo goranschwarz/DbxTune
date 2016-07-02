@@ -17,6 +17,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
+import org.apache.log4j.Logger;
+
 import net.miginfocom.swing.MigLayout;
 
 import com.asetune.Version;
@@ -37,7 +39,7 @@ extends JFrame
 implements ActionListener, ConnectionProvider
 {
 	private static final long serialVersionUID = 1L;
-//	private static Logger _logger = Logger.getLogger(DbmsConfigViewDialog.class);
+	private static Logger _logger = Logger.getLogger(DbmsConfigViewDialog.class);
 
 	// PANEL: OK-CANCEL
 	private JButton                _ok              = new JButton("OK");
@@ -298,20 +300,27 @@ implements ActionListener, ConnectionProvider
 			@Override
 			public Object doWork()
 			{
-				for (int t=0; t<_tabPane.getTabCount(); t++)
+				try
 				{
-					Component comp = _tabPane.getComponentAt(t);
-					String    name = _tabPane.getTitleAt(t);
-		
-					getWaitDialog().setState("Refreshing tab '"+name+"'.");
-					if (comp instanceof DbmsConfigPanel)
+					for (int t=0; t<_tabPane.getTabCount(); t++)
 					{
-						((DbmsConfigPanel)comp).refresh();
+						Component comp = _tabPane.getComponentAt(t);
+						String    name = _tabPane.getTitleAt(t);
+			
+						getWaitDialog().setState("Refreshing tab '"+name+"'.");
+						if (comp instanceof DbmsConfigPanel)
+						{
+							((DbmsConfigPanel)comp).refresh();
+						}
+						else if (comp instanceof DbmsConfigTextPanel)
+						{
+							((DbmsConfigTextPanel)comp).refresh();
+						}
 					}
-					else if (comp instanceof DbmsConfigTextPanel)
-					{
-						((DbmsConfigTextPanel)comp).refresh();
-					}
+				}
+				catch(Exception ex) 
+				{
+					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
 				}
 				getWaitDialog().setState("Done");
 
@@ -336,10 +345,10 @@ implements ActionListener, ConnectionProvider
 
 		if (tmpConf != null)
 		{
-			tmpConf.setProperty(base + "window.width", this.getSize().width);
-			tmpConf.setProperty(base + "window.height", this.getSize().height);
-			tmpConf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
-			tmpConf.setProperty(base + "window.pos.y", this.getLocationOnScreen().y);
+			tmpConf.setLayoutProperty(base + "window.width", this.getSize().width);
+			tmpConf.setLayoutProperty(base + "window.height", this.getSize().height);
+			tmpConf.setLayoutProperty(base + "window.pos.x", this.getLocationOnScreen().x);
+			tmpConf.setLayoutProperty(base + "window.pos.y", this.getLocationOnScreen().y);
 
 			tmpConf.save();
 		}
@@ -347,8 +356,8 @@ implements ActionListener, ConnectionProvider
 
   	private void loadProps()
   	{
-		int     width     = 1160;  // initial window with   if not opened before
-		int     height    = 700;  // initial window height if not opened before
+		int     width     = SwingUtils.hiDpiScale(1160);  // initial window with   if not opened before
+		int     height    = SwingUtils.hiDpiScale(700);   // initial window height if not opened before
 		int     x         = -1;
 		int     y         = -1;
 
@@ -361,10 +370,10 @@ implements ActionListener, ConnectionProvider
 		if (tmpConf == null)
 			return;
 
-		width  = tmpConf.getIntProperty(base + "window.width",  width);
-		height = tmpConf.getIntProperty(base + "window.height", height);
-		x      = tmpConf.getIntProperty(base + "window.pos.x",  -1);
-		y      = tmpConf.getIntProperty(base + "window.pos.y",  -1);
+		width  = tmpConf.getLayoutProperty(base + "window.width",  width);
+		height = tmpConf.getLayoutProperty(base + "window.height", height);
+		x      = tmpConf.getLayoutProperty(base + "window.pos.x",  -1);
+		y      = tmpConf.getLayoutProperty(base + "window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 		{

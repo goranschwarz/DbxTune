@@ -136,7 +136,8 @@ import org.fife.ui.rsyntaxtextarea.*;
 	 *         it out.
 	 */
 	@Override
-	public String[] getLineCommentStartAndEnd() {
+//	public String[] getLineCommentStartAndEnd() {
+	public String[] getLineCommentStartAndEnd(int languageIndex) {
 		return new String[] { "--", null };
 	}
 

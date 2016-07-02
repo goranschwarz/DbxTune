@@ -319,10 +319,10 @@ implements ActionListener, TableModelListener
 
 		if (tmpConf != null)
 		{
-			tmpConf.setProperty(base + "window.width", this.getSize().width);
-			tmpConf.setProperty(base + "window.height", this.getSize().height);
-			tmpConf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
-			tmpConf.setProperty(base + "window.pos.y", this.getLocationOnScreen().y);
+			tmpConf.setLayoutProperty(base + "window.width", this.getSize().width);
+			tmpConf.setLayoutProperty(base + "window.height", this.getSize().height);
+			tmpConf.setLayoutProperty(base + "window.pos.x", this.getLocationOnScreen().x);
+			tmpConf.setLayoutProperty(base + "window.pos.y", this.getLocationOnScreen().y);
 
 			tmpConf.save();
 		}
@@ -330,8 +330,8 @@ implements ActionListener, TableModelListener
 
   	private void loadProps()
   	{
-		int     width     = 1024;  // initial window with   if not opened before
-		int     height    = 630;   // initial window height if not opened before
+		int     width     = SwingUtils.hiDpiScale(1024);  // initial window with   if not opened before
+		int     height    = SwingUtils.hiDpiScale(630);   // initial window height if not opened before
 		int     x         = -1;
 		int     y         = -1;
 
@@ -344,10 +344,10 @@ implements ActionListener, TableModelListener
 		if (tmpConf == null)
 			return;
 
-		width  = tmpConf.getIntProperty(base + "window.width",  width);
-		height = tmpConf.getIntProperty(base + "window.height", height);
-		x      = tmpConf.getIntProperty(base + "window.pos.x",  -1);
-		y      = tmpConf.getIntProperty(base + "window.pos.y",  -1);
+		width  = tmpConf.getLayoutProperty(base + "window.width",  width);
+		height = tmpConf.getLayoutProperty(base + "window.height", height);
+		x      = tmpConf.getLayoutProperty(base + "window.pos.x",  -1);
+		y      = tmpConf.getLayoutProperty(base + "window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 		{

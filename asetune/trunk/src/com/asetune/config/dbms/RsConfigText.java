@@ -1,5 +1,6 @@
 package com.asetune.config.dbms;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,7 @@ public abstract class RsConfigText
 	{
 		@Override
 		public void refresh(DbxConnection conn, Timestamp ts)
+		throws SQLException
 		{
 			if (isOffline())
 			{
@@ -72,6 +74,7 @@ public abstract class RsConfigText
 	{
 		@Override
 		public void refresh(DbxConnection conn, Timestamp ts)
+		throws SQLException
 		{
 			if (isOffline())
 			{

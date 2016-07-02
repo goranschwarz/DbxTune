@@ -4,6 +4,7 @@
 package com.asetune.utils;
 
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -23,8 +24,15 @@ import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
 import javax.swing.JComboBox;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.log4j.Logger;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+
+import com.sun.org.apache.xml.internal.serialize.OutputFormat;
+import com.sun.org.apache.xml.internal.serialize.XML11Serializer;
 
 /**
  * A String utility class.
@@ -241,18 +249,35 @@ public class StringUtil
 		parser.useDelimiter(entrySep);
 		while (parser.hasNext())
 		{
+//			String keyVal = parser.next().trim();
+//			String sa[] = split(keyValSep, keyVal);
+//			if (sa.length == 2)
+//			{
+//				String key = sa[0];
+//				String val = sa[1];
+//
+//				Object oldVal = map.put(key, val);
+//				if (oldVal != null)
+//					_logger.warn("Found an already existing value for the key '"+key+"'. The existing value '"+oldVal+"' is replaced with the new value '"+val+"'.");
+//			}
 			String keyVal = parser.next().trim();
-			String sa[] = split(keyValSep, keyVal);
-			if (sa.length == 2)
-			{
-				String key = sa[0];
-				String val = sa[1];
 
-				Object oldVal = map.put(key, val);
-				if (oldVal != null)
-					_logger.warn("Found an already existing value for the key '"+key+"'. The existing value '"+oldVal+"' is replaced with the new value '"+val+"'.");
+			// NOTE: if the value part contains "keyValSep" character, the  following will NOT work: String sa[] = split(keyValSep, keyVal);
+			//       instead take everything after "keyValSep" character
+			String key = keyVal;
+			String val = "";
+			int keyValSepPos = keyVal.indexOf(keyValSep);
+			if (keyValSepPos >= 0)
+			{
+				key = keyVal.substring(0, keyValSepPos);
+				val = keyVal.substring(keyValSepPos+1);
 			}
+
+			Object oldVal = map.put(key, val);
+			if (oldVal != null)
+				_logger.warn("Found an already existing value for the key '"+key+"'. The existing value '"+oldVal+"' is replaced with the new value '"+val+"'.");
 		}
+		parser.close();
 
 		return map;
 	}
@@ -352,6 +377,7 @@ public class StringUtil
 				map.put(key, list);
 			}
 		}
+		parser.close();
 
 		return map;
 	}
@@ -733,6 +759,25 @@ public class StringUtil
 			sb.append("                                                           ");
 
 		return sb.substring(0, fill);
+	}
+
+	/**
+	 * Simply remove start/end tag of the string: so "&lt;html&gt;12345&lt;/html&gt" returns "12345"
+	 * @param str
+	 * @return
+	 */
+	public static String stripHtmlStartEnd(String str)
+	{
+		if (str == null)
+			return null;
+		
+		if (str.startsWith("<html>") || str.startsWith("<HTML>") )
+			str = str.substring("<html>".length());
+
+		if (str.endsWith("</html>") || str.endsWith("</HTML>") )
+			str = str.substring(0, str.length() - "</html>".length());
+		
+		return str;
 	}
 
 	/**
@@ -1257,6 +1302,48 @@ public class StringUtil
 		return sb.append("<").append(tagName).append(">").append(value).append("</").append(tagName).append(">\n");
 	}
 
+	public static String xmlFormat(String xml)
+	{
+//		try
+//		{
+//			final InputSource src = new InputSource(new StringReader(xml));
+//			final Node document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src).getDocumentElement();
+//			final Boolean keepDeclaration = Boolean.valueOf(xml.startsWith("<?xml"));
+//
+//			// May need this: System.setProperty(DOMImplementationRegistry.PROPERTY,"com.sun.org.apache.xerces.internal.dom.DOMImplementationSourceImpl");
+//
+//			final DOMImplementationRegistry registry = DOMImplementationRegistry.newInstance();
+//			final DOMImplementationLS impl = (DOMImplementationLS) registry.getDOMImplementation("LS");
+//			final LSSerializer writer = impl.createLSSerializer();
+//
+//			writer.getDomConfig().setParameter("format-pretty-print", Boolean.TRUE); // Set this to true if the output needs to be beautified.
+//			writer.getDomConfig().setParameter("xml-declaration", keepDeclaration); // Set this to true if the declaration is needed to be in the output.
+//
+//			return writer.writeToString(document);
+//		}
+//		catch (Exception e)
+//		{
+//			throw new RuntimeException(e);
+//		}
+		try
+		{
+			final InputSource src = new InputSource(new StringReader(xml));
+			final Node document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src).getDocumentElement();
+
+			// the last parameter sets indenting/pretty-printing to true:
+			OutputFormat outputFormat = new OutputFormat("WHATEVER", "UTF-8", true);
+			// line width = 0 means no line wrapping:
+			outputFormat.setLineWidth(0);
+			StringWriter sw = new StringWriter();
+			XML11Serializer writer = new XML11Serializer(sw, outputFormat);
+			writer.serialize((Element) document);
+			return sw.toString();
+		}
+		catch (Exception e)
+		{
+			throw new RuntimeException(e);
+		}
+	}
 
 	/**
 	 * if input string has \t, \f, \n or \r they will be escaped into \\t, \\f, \\n, \\r
@@ -1324,6 +1411,7 @@ public class StringUtil
 			
 			sb.append("\n");
 		}
+		scanner.close();
 		return sb.toString();
 	}
 
@@ -1412,6 +1500,7 @@ public class StringUtil
 	 * @param combo the combobox 
 	 * @return always a string (toString() on the selected object)
 	 */
+	@SuppressWarnings("rawtypes")
 	public static String getSelectedItemString(JComboBox combo)
 	{
 		if (combo == null)
@@ -1515,7 +1604,30 @@ public class StringUtil
 	 */
 	public static List<String> splitOnCommasAllowQuotes(String input, boolean trim)
 	{
-		return splitOnCharAllowQuotes(input, ',', trim);
+		return splitOnCharAllowQuotes(input, ',', trim, false, false);
+	}
+
+	/**
+	 * Split on commas (,) but if a commas is found inside quotes (" or ') then treat that comma to be part of the string
+	 * <p>
+	 * It allows both single(') and double quotes(") to start/terminate a string.<br>
+	 * Example:<br>
+	 * <pre>
+	 *      splitOnCommasAllowQuotes("a, b, c, 'd,d,d', 'It''s a str', \"e,f,g\", \"now that's \"\"strange\"\".\"");
+	 *      returns 7 elements: [a][b][c]['d,d,d']['It''s a str']["e,f,g"]["now that's ""strange""."]
+	 * </pre> 
+	 * to unquote a string see {@link #unquote(String str)}
+	 * <p>
+	 * 
+	 * @param input a comma separated String
+	 * @param trim if you want any leading/trailing blanks before/after the commas to be trimmed away.
+	 * @param unquote If you want to unquote strings using {@link #unquote(String str)}
+	 * @return A List of Strings 
+	 * 
+	 */
+	public static List<String> splitOnCommasAllowQuotes(String input, boolean trim, boolean unquote)
+	{
+		return splitOnCharAllowQuotes(input, ',', trim, unquote, false);
 	}
 
 	/**
@@ -1537,6 +1649,29 @@ public class StringUtil
 	 * 
 	 */
 	public static List<String> splitOnCharAllowQuotes(String input, char splitChar, boolean trim)
+	{
+		return splitOnCharAllowQuotes(input, splitChar, trim, false, false);
+	}
+	/**
+	 * Split on input:splitChar, but if the splitChar is found inside quotes (" or ') then treat that splitChar to be part of the string
+	 * <p>
+	 * It allows both single(') and double quotes(") to start/terminate a string.<br>
+	 * Example:<br>
+	 * <pre>
+	 *      splitOnCharAllowQuotes("a, b, c, 'd,d,d', 'It''s a str', \"e,f,g\", \"now that's \"\"strange\"\".\"", ',');
+	 *      returns 7 elements: [a][b][c]['d,d,d']['It''s a str']["e,f,g"]["now that's ""strange""."]
+	 * </pre> 
+	 * to unquote a string see {@link #unquote(String str)}
+	 * <p>
+	 * 
+	 * @param input     a String that should be split
+	 * @param splitChar The character to split the string on
+	 * @param trim      if you want any leading/trailing blanks before/after the commas to be trimmed away.
+	 * @param unquote If you want to unquote strings using {@link #unquote(String str)}
+	 * @return A List of Strings 
+	 * 
+	 */
+	public static List<String> splitOnCharAllowQuotes(String input, char splitChar, boolean trim, boolean unquote, boolean removeEmty)
 	{
 		List<String> tokensList = new ArrayList<String>();
 		if (input == null)
@@ -1582,7 +1717,19 @@ public class StringUtil
 				}
 				else
 				{
-					tokensList.add( trim ? b.toString().trim() : b.toString() );
+					String str = b.toString();
+					if (trim)
+						str = str.trim();
+					if (unquote)
+						str = unquote(str);
+
+					boolean addVal = true;
+					if (removeEmty && isNullOrBlank(str))
+						addVal = false;
+					
+					if (addVal)
+						tokensList.add( str );
+
 					b = new StringBuilder();
 				}
 			}
@@ -1591,8 +1738,19 @@ public class StringUtil
 				b.append(c);
 			}
 		}
-		tokensList.add( trim ? b.toString().trim() : b.toString() );
+		String str = b.toString();
+		if (trim)
+			str = str.trim();
+		if (unquote)
+			str = unquote(str);
+
+		boolean addVal = true;
+		if (removeEmty && isNullOrBlank(str))
+			addVal = false;
 		
+		if (addVal)
+			tokensList.add( str );
+
 		return tokensList;
 	}
 
@@ -1611,6 +1769,7 @@ public class StringUtil
 	public static String unquote(String str)
 	{
 		if (str == null)           return null;
+		if (str.length() == 0)     return str;
 
 		// If first char isn't: single-quote or double-quote, just return
 		str = str.trim();
@@ -1789,6 +1948,435 @@ public class StringUtil
 	    return s.substring(0,i+1);
 	}
 
+
+    /**
+     * as str.indexOf("someStr") but ignore string case sensitivity.
+     *
+	 * @param haystack The String to check if needle is part of
+	 * @param needle   The String to find in the haystack
+     * @return  if the string argument occurs as a substring within this
+     *          object, then the index of the first character of the first
+     *          such substring is returned; if it does not occur as a
+     *          substring, <code>-1</code> is returned.
+	 * 
+	 * @return
+	 */
+	// NOTE: grabbed from http://stackoverflow.com/questions/1126227/indexof-case-sensitive
+	public static int indexOfIgnoreCase(final String haystack, final String needle)
+	{
+		if ( needle.isEmpty() || haystack.isEmpty() )
+		{
+			// Fallback to legacy behavior.
+			return haystack.indexOf(needle);
+		}
+
+		for (int i = 0; i < haystack.length(); ++i)
+		{
+			// Early out, if possible.
+			if ( i + needle.length() > haystack.length() )
+			{
+				return -1;
+			}
+
+			// Attempt to match substring starting at position i of haystack.
+			int j = 0;
+			int ii = i;
+			while (ii < haystack.length() && j < needle.length())
+			{
+				char c = Character.toLowerCase(haystack.charAt(ii));
+				char c2 = Character.toLowerCase(needle.charAt(j));
+				if ( c != c2 )
+				{
+					break;
+				}
+				j++;
+				ii++;
+			}
+			// Walked all the way to the end of the needle, return the start
+			// position that this was found.
+			if ( j == needle.length() )
+			{
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	/**
+	 * Transform a string into a string according to RFC 4180<br>
+	 * see: <a href="http://tools.ietf.org/html/rfc4180">http://tools.ietf.org/html/rfc4180</a>
+	 * @param data a String value
+	 * @return
+	 */
+	public static String toRfc4180String(String str) 
+	{
+		if (str == null)
+			return null;
+
+		boolean hasNewline = str.indexOf('\n') >= 0 || str.indexOf('\r') >= 0;
+		boolean hasQuote   = str.indexOf('"')  >= 0;
+		boolean hasComma   = str.indexOf(',')  >= 0;
+
+		if (hasNewline || hasQuote || hasComma)
+		{
+			if (hasQuote)
+				str = str.replace("\"", "\"\"");
+			str = "\"" + str + "\"";
+		}
+		return str;
+	}
+
+	
+	
+	
+	
+	
+	public static String toTableString(List<String> tHead, List<List<Object>> tData)
+	{
+		return toTableString(tHead, tData, "<SQL-NULL>", false, null, null, -1, -1, null);
+	}
+	public static String toTableString(List<String> tHead, List<List<Object>> tData, String nullValue)
+	{
+		return toTableString(tHead, tData, nullValue, false, null, null, -1, -1, null);
+	}
+	public static String toTableString(List<String> tHead, List<List<Object>> tData, String nullValue, int[] justRowNumbers)
+	{
+		int firstRow = justRowNumbers[0];
+		int lastRow  = justRowNumbers[justRowNumbers.length-1] + 1;
+		return toTableString(tHead, tData, nullValue, false, null, null, firstRow, lastRow, justRowNumbers);
+	}
+	public static String toTableString(List<String> tHead, List<List<Object>> tData, String nullValue, int justRowNumber)
+	{
+		return toTableString(tHead, tData, nullValue, false, null, null, justRowNumber, justRowNumber+1, null);
+	}
+	public static String toTableString(List<String> tHead, List<List<Object>> tData, String nullValue, boolean stripHtml, String[] prefixColName, Object[] prefixColData)
+	{
+		return toTableString(tHead, tData, nullValue, stripHtml, prefixColName, prefixColData, -1, -1, null);
+	}
+	/**
+	 * Turn a <List <List<Object> > into a String table
+	 * 
+	 * @param model a JTable's TableModel
+	 * @param stripHtml If cell value contains html tags, remove them...
+	 * @param prefixColName Optional Column Names to be added as "prefix" columns
+	 * @param prefixColData Optional Column Data to be added as "prefix" columns, the value will be repeated for every row
+	 * @param firstRow Starting row number in the table. If this is -1, it means start from row 0
+	 * @param lastRow Last row number in the table. If this is -1, it means 'to the end of the table'
+	 * 
+	 * @return a String in a table format
+	 * <p>
+	 * <pre>
+	 * +-------+-------+-------+----------+
+	 * |SPID   |KPID   |BatchID|LineNumber|
+	 * +-------+-------+-------+----------+
+	 * |38     |2687017|2      |1         |
+	 * |38     |2687017|2      |1         |
+	 * +-------+-------+-------+----------+
+	 * Rows 2
+	 * </pre>
+	 */
+	private static String REGEXP_NEW_LINE = "\\r?\\n|\\r";
+
+	public static String toTableString(List<String> tHead, List<List<Object>> tData, String nullValue, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers)
+	{
+		//------------------------------------------------------------------------------------------------------------------
+		// NOTE: the code is copied from SwingUtilites.tableToString()... so it might look a bit strange in some places.
+		//       hopefully later the SwingUtilites.tableToString() will call this code... just so we don't have duplicate code...
+		//------------------------------------------------------------------------------------------------------------------
+
+		String colSepOther = "+";
+		String colSepData  = "|";
+		String lineSpace   = "-";
+		String newLine     = "\n";
+
+		// first copy the information to Array list
+		// This was simples to do if we want to add pre/post columns...
+		ArrayList<String>       tableHead = new ArrayList<String>();
+		ArrayList<List<Object>> tableData = new ArrayList<List<Object>>();
+
+		StringBuilder sb = new StringBuilder();
+
+		boolean doPrefix = false;
+		if (prefixColName != null && prefixColData != null)
+		{
+			if (prefixColName.length != prefixColData.length)
+				throw new IllegalArgumentException("tableToString(): prefixColName.length="+prefixColName.length+" is NOT equal prefixColData.length="+prefixColData.length);
+			doPrefix = true;
+		}
+
+		if (tHead == null)
+		{
+			int cols = tData.get(0).size();
+			tHead = new ArrayList<String>();
+
+			for (int c=0; c<cols; c++)
+				tableHead.add("dummy-"+(c+1));
+			
+		}
+
+		int cols = tHead.size();
+//		boolean useAllRows = (firstRow < 0) && (lastRow  < 0);
+		
+		if (firstRow < 0) firstRow = 0;
+		if (lastRow  < 0) lastRow = tData.size();
+		int copiedRows = 0;
+
+		//------------------------------------
+		// Copy COL NAMES
+		//------------------------------------
+		if (doPrefix)
+			for (int c=0; c<prefixColName.length; c++)
+				tableHead.add(prefixColName[c]);
+
+		for (int c=0; c<cols; c++)
+			tableHead.add(tHead.get(c));
+
+		//------------------------------------
+		// Copy ROWS (from firstRow to lastRow)
+		//------------------------------------
+		for (int r=firstRow; r<lastRow; r++)
+		{
+			if (justRowNumbers != null)
+			{
+				boolean addThisRow = false;
+				for (int a=0; a<justRowNumbers.length; a++)
+				{
+					if ( r == justRowNumbers[a] )
+					{
+						addThisRow = true;
+						break;
+					}
+				}
+				if ( ! addThisRow )
+					continue;
+			}
+
+			ArrayList<Object> row = new ArrayList<Object>();
+			if (doPrefix)
+				for (int c=0; c<prefixColData.length; c++)
+					row.add(prefixColData[c]);
+
+			List<Object> dataRow = tData.get(r);
+			for (int c=0; c<cols; c++)
+			{
+//				Object obj = jtable.getValueAt(r, c);
+				Object obj = dataRow.get(c);
+
+				// Strip of '\n' at the end of Strings
+				if (obj != null && obj instanceof String)
+				{
+					String str = (String) obj;
+					
+					// strip off HTML chars
+					if (stripHtml)
+						str = StringUtil.stripHtml(str);
+
+					// if the string ENDS with a newline, remove it
+					while (str.endsWith("\r") || str.endsWith("\n"))
+						str = str.substring(0, str.length()-1);
+
+					// replace all tab's with 8 spaces
+					if (str.indexOf('\t') >= 0)
+						str = str.replace("\t", "        ");
+
+					// if we have a "multiple row/line cell"
+					if (str.indexOf('\r') >= 0 || str.indexOf('\n') >= 0)
+						obj = str.split(REGEXP_NEW_LINE); // object "type" would be String[]
+					else
+						obj = str;
+				}
+				
+				if (obj == null)
+					obj = nullValue;
+
+				row.add(obj);
+			}
+			
+			tableData.add(row);
+			copiedRows++;
+		}
+
+		// Add prefixColCount to cols
+		if (doPrefix)
+			cols += prefixColName.length;
+
+		//------------------------------------
+		// Get MAX column length and store in colLength[]
+		// Get MAX newLines/numberOfRows in each cell...
+		//------------------------------------
+		boolean tableHasMultiLineCells = false;
+		int[]   colLength           = new int[cols];
+		int[][] rowColCellLineCount = new int[copiedRows][cols];
+//		int[]   rowMaxLineCount     = new int[copiedRows];
+		for (int c=0; c<cols; c++)
+		{
+			int maxLen = 0;
+
+			// ColNames
+			String cellName = tableHead.get(c);
+			maxLen = Math.max(maxLen, cellName.length());
+			
+			// All the rows, for this column
+			for (int r=0; r<copiedRows; r++)
+			{
+				Object cellObj = tableData.get(r).get(c);
+				String cellStr = cellObj == null ? "" : cellObj.toString();
+
+				// Set number of "rows" within the cell
+				rowColCellLineCount[r][c] = 0;
+				if (cellObj instanceof String[])
+				{
+					String[]sa = (String[]) cellObj;
+					tableHasMultiLineCells = true;
+
+					rowColCellLineCount[r][c] = sa.length;
+
+					for (int l=0; l<sa.length; l++)
+						maxLen = Math.max(maxLen, sa[l].length());
+				}
+				else
+				{
+					maxLen = Math.max(maxLen, cellStr.length());
+				}
+			}
+			
+			colLength[c] = maxLen;
+		}
+
+
+		//-------------------------------------------
+		// Print the TABLE HEAD
+		//-------------------------------------------
+		// +------+------+-----+\n
+		for (int c=0; c<cols; c++)
+		{
+			String line = StringUtil.replicate(lineSpace, colLength[c]);
+			sb.append(colSepOther).append(line);
+		}
+		sb.append(colSepOther).append(newLine);
+
+		// |col1|col2   |col3|\n
+		for (int c=0; c<cols; c++)
+		{
+			String cellName = tableHead.get(c);
+			String data = StringUtil.fill(cellName, colLength[c]);
+			sb.append(colSepData).append(data);
+		}
+		sb.append(colSepData).append(newLine);
+
+		// +------+------+-----+\n
+		for (int c=0; c<cols; c++)
+		{
+			String line = StringUtil.replicate(lineSpace, colLength[c]);
+			sb.append(colSepOther).append(line);
+		}
+		sb.append(colSepOther).append(newLine);
+
+		
+		//-------------------------------------------
+		// Print the TABLE DATA
+		//-------------------------------------------
+		for (int r=0; r<copiedRows; r++)
+		{
+			// First loop cols on this row and check for any multiple lines in any o the cells
+			int maxCellLineCountOnThisRow = 0;
+			for (int c=0; c<cols; c++)
+			{
+				maxCellLineCountOnThisRow = Math.max(maxCellLineCountOnThisRow, rowColCellLineCount[r][c]);
+			}
+
+			// Add a extra "row" separator if any cells has multiple lines
+			if (tableHasMultiLineCells && r > 0)
+			{
+				// +------+------+-----+\n
+				for (int c=0; c<cols; c++)
+				{
+					String line = StringUtil.replicate(lineSpace, colLength[c]);
+					sb.append(colSepOther).append(line);
+				}
+				sb.append(colSepOther).append(newLine);
+			}
+
+			// NO multiple lines for any cells on this row
+			if (maxCellLineCountOnThisRow == 0)
+			{
+				// |col1|col2   |col3|\n
+				for (int c=0; c<cols; c++)
+				{
+					Object cellObj = tableData.get(r).get(c);
+					String cellStr = cellObj == null ? "" : cellObj.toString();
+	
+					String data = StringUtil.fill(cellStr, colLength[c]);
+					sb.append(colSepData).append(data);
+				}
+				sb.append(colSepData).append(newLine);
+			}
+			// MULTIPLE line in one or more cells
+			else
+			{
+				for (int l=0; l<maxCellLineCountOnThisRow; l++)
+				{
+					// |col1|col2   |col3|\n
+					for (int c=0; c<cols; c++)
+					{
+						Object cellObj = tableData.get(r).get(c);
+						String cellStr = cellObj == null ? "" : cellObj.toString();
+
+						// first line
+						if (l == 0)
+						{
+							// this cell has multiple lines, so just choose first line
+							if ( cellObj instanceof String[] )
+							{
+								String[]sa = (String[]) cellObj;
+
+								cellStr = sa[0];
+							}
+							String data = StringUtil.fill(cellStr, colLength[c]);
+							sb.append(colSepData).append(data);
+						}
+						else // next of the lines
+						{
+							// this cell has multiple lines
+							if ( cellObj instanceof String[] )
+							{
+								String[]sa = (String[]) cellObj;
+
+								cellStr = "";
+								if (l < sa.length)
+									cellStr = sa[l];
+							}
+							else
+							{
+								cellStr = "";
+							}
+							String data = StringUtil.fill(cellStr, colLength[c]);
+							sb.append(colSepData).append(data);
+						}
+					}
+					sb.append(colSepData).append(newLine);
+				}
+			}
+		}
+
+		//-------------------------------------------
+		// Print the TABLE FOOTER
+		//-------------------------------------------
+		// +------+------+-----+\n
+		for (int c=0; c<cols; c++)
+		{
+			String line = StringUtil.replicate(lineSpace, colLength[c]);
+			sb.append(colSepOther).append(line);
+		}
+		sb.append(colSepOther).append(newLine);
+		sb.append("Rows ").append(copiedRows).append(newLine);
+		
+		return sb.toString();
+	}
+
+	
+	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE
@@ -1797,13 +2385,18 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		System.out.println("stripHtmlStartEnd(): |" + StringUtil.stripHtmlStartEnd("<html>12345</html>") + "|");
+		System.out.println("stripHtmlStartEnd(): |" + StringUtil.stripHtmlStartEnd("<html> 1 2 3 4 5 </html>") + "|");
+		System.exit(0);
+
+
 		System.out.println("ltrim(): |" + StringUtil.ltrim(" 1 2 3 4 5 ") + "|");
 		System.out.println("rtrim(): |" + StringUtil.rtrim(" 1 2 3 4 5 ") + "|");
 		System.exit(0);
 
-		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("string='',str='x,y',str3='''', int=99,int=null", true), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
+		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("string='',str='x,y',str3='''', int=99,int=null", true, false), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
 
-		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("1,2,'a,b,c', 'it''s true 2sq'''''", true), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
+		System.out.println("splitOnCommasAllowQuotes(): " + StringUtil.toCommaStr(StringUtil.splitOnCommasAllowQuotes("1,2,'a,b,c', 'it''s true 2sq'''''", true, false), "|") ); // size=4, toString=[1, 2, 'a,b,c', 'it''s true 2sq''''']
 		System.out.println("unquote(): " + StringUtil.unquote("'it''s 2 single-quotes'''''") ); // |it's 2 single-quotes''|
 		System.exit(0);
 		

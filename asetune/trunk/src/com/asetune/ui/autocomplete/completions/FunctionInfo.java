@@ -9,6 +9,8 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 
@@ -67,6 +69,8 @@ if (existingCi._colName == null || ci._colName == null)
 			DatabaseMetaData dbmd = conn.getMetaData();
 
 			ResultSet rs = dbmd.getFunctionColumns(_funcCat, _funcSchema, _funcName, "%");
+
+			MonTablesDictionary mtd = MonTablesDictionaryManager.hasInstance() ? MonTablesDictionaryManager.getInstance() : null;
 			while(rs.next())
 			{
 				FunctionColumnInfo ci = new FunctionColumnInfo();
@@ -79,6 +83,10 @@ if (existingCi._colName == null || ci._colName == null)
 //				ci._colDefault    = rs.getString("COLUMN_DEF");
 //				ci._colScale      = rs.getInt   ("SCALE"); // SCALE short => scale - null is returned for data types where SCALE is not applicable.
 				
+				// Check with the MonTable dictionary for Descriptions
+				if (mtd != null && StringUtil.isNullOrBlank(ci._colRemark))
+					ci._colRemark = StringUtil.stripHtmlStartEnd(mtd.getDescription(_funcName, ci._colName));
+
 				addColumn(ci);
 			}
 			rs.close();

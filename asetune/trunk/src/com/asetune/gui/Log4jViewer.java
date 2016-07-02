@@ -602,10 +602,10 @@ implements ActionListener, TableModelListener
 		{
 			conf.setProperty(base + "openOnErrors", _openOnErrors_chk.isSelected());
 
-			conf.setProperty(base + "window.width", this.getSize().width);
-			conf.setProperty(base + "window.height", this.getSize().height);
-			conf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
-			conf.setProperty(base + "window.pos.y", this.getLocationOnScreen().y);
+			conf.setLayoutProperty(base + "window.width", this.getSize().width);
+			conf.setLayoutProperty(base + "window.height", this.getSize().height);
+			conf.setLayoutProperty(base + "window.pos.x", this.getLocationOnScreen().x);
+			conf.setLayoutProperty(base + "window.pos.y", this.getLocationOnScreen().y);
 
 			conf.save();
 		}
@@ -633,10 +633,10 @@ implements ActionListener, TableModelListener
 		int defWidth  = (3 * screenSize.width)  / 4;
 		int defHeight = (3 * screenSize.height) / 4;
 
-		width  = conf.getIntProperty(base + "window.width",  defWidth);
-		height = conf.getIntProperty(base + "window.height", defHeight);
-		x      = conf.getIntProperty(base + "window.pos.x",  -1);
-		y      = conf.getIntProperty(base + "window.pos.y",  -1);
+		width  = conf.getLayoutProperty(base + "window.width",  defWidth);
+		height = conf.getLayoutProperty(base + "window.height", defHeight);
+		x      = conf.getLayoutProperty(base + "window.pos.x",  -1);
+		y      = conf.getLayoutProperty(base + "window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 		{

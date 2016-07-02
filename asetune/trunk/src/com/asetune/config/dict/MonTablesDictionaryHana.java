@@ -142,6 +142,15 @@ extends MonTablesDictionaryDefault
 //	}
 
 
+	/**
+	 * YES, save MonTableDictionary in PCS
+	 */
+	@Override
+	public boolean isSaveMonTablesDictionaryInPcsEnabled()
+	{
+		return true;
+	}
+	
 	@Override
 	public void initializeMonTabColHelper(DbxConnection conn, boolean offline)
 	{

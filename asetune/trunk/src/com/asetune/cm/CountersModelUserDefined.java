@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.ICounterController;
 import com.asetune.utils.Ver;
 
 
@@ -30,6 +31,7 @@ public class CountersModelUserDefined
 	
 	public CountersModelUserDefined
 	(
+			ICounterController counterController,
 			String              name,             // Name of the Counter Model
 			String              groupName,        // Group this belongs to
 			String              sql,              // SQL Used to grab a sample from the counter data
@@ -45,7 +47,7 @@ public class CountersModelUserDefined
 			boolean             negativeDiffCountersToZero // if diff calculations is negative, reset the counter to zero.
 	)
 	{
-		super(name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
+		super(counterController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, false);
 		
 		_sqlVerStr  = sqlVerStr;
 		_sqlInitial = sql;

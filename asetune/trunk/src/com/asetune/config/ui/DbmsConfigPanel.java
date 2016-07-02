@@ -13,8 +13,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -42,11 +45,14 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.DbxTune;
+import com.asetune.config.dbms.AseConfig;
+import com.asetune.config.dbms.DbmsConfigManager;
 //import com.asetune.config.dbms.AseConfig;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -63,14 +69,16 @@ implements ActionListener
 	private static final String SECTION_NOT_CONNECTED = "<NOT CONNECTED>"; 
 	private static final String SECTION_ALL           = "<SHOW ALL SECTIONS>"; 
 
-	private JLabel     _timestamp_lbl           = new JLabel("Time");
-	private JTextField _timestamp_txt           = new JTextField(SECTION_NOT_CONNECTED);
-	private JLabel     _section_lbl             = new JLabel("Section Name");
-	private JComboBox  _section_cbx             = new JComboBox( new String[] {SECTION_NOT_CONNECTED} );
-	private JLabel     _config_lbl              = new JLabel("Config Name");
-	private JTextField _config_txt              = new JTextField();
-	private JCheckBox  _showOnlyNonDefaults_chk = new JCheckBox("Show Only Non Default Values", false);
-	private JButton    _copy_but                = new JButton("Copy");
+	private JLabel             _timestamp_lbl           = new JLabel("Time");
+	private JTextField         _timestamp_txt           = new JTextField(SECTION_NOT_CONNECTED);
+	private JLabel             _section_lbl             = new JLabel("Section Name");
+	private JComboBox<String>  _section_cbx             = new JComboBox<String>( new String[] {SECTION_NOT_CONNECTED} );
+	private JLabel             _config_lbl              = new JLabel("Config Name");
+	private JTextField         _config_txt              = new JTextField();
+	private JCheckBox          _excludeMonitoring_chk   = new JCheckBox("Exclude values for Monitoring", false);
+	private JCheckBox          _showOnlyNonDefaults_chk = new JCheckBox("Show Only Non Default Values", false);
+	private JLabel             _rowcount2_lbl           = new JLabel("");
+	private JButton            _copy_but                = new JButton("Copy");
 
 	private ConnectionProvider _connProvider    = null;
 	private IDbmsConfig        _dbmsConfig      = null;
@@ -91,6 +99,7 @@ implements ActionListener
 
 
 	public void refresh()
+	throws SQLException
 	{
 		Timestamp     ts        = null;
 		boolean       hasGui    = DbxTune.hasGui();
@@ -140,15 +149,37 @@ implements ActionListener
 		if ( ! _dbmsConfig.isInitialized() )
 		{
 			JLabel notConnected = new JLabel("Not yet Initialized, please connect first.");
-			notConnected.setFont(new Font(Font.DIALOG, Font.BOLD, 16));
+			notConnected.setFont(new Font(Font.DIALOG, Font.BOLD, SwingUtils.hiDpiScale(16)));
 			add(notConnected,  BorderLayout.NORTH);
 			
 			// FIXME: the createFilterPanel() createTablePanel() components will NOT be visible when doing "refresh"...
 			return;
 		}
 
+		// Set how many items the "sections" can have before a JScrollBar is visible
+		_section_cbx.setMaximumRowCount(50);
+
 		add(createFilterPanel(), BorderLayout.NORTH);
 		add(createTablePanel(),  BorderLayout.CENTER);
+		
+		// Hide/show: Include/exclude Monitoring Checkbox
+		boolean isSybaseAse = false;
+		if (DbmsConfigManager.hasInstance())
+		{
+			IDbmsConfig configInstance = DbmsConfigManager.getInstance();
+			if (configInstance instanceof AseConfig)
+				isSybaseAse = true;
+		}
+		_excludeMonitoring_chk.setVisible(isSybaseAse);
+//		try 
+//		{
+//			boolean isSybaseAse = DbUtils.isProductName(_connProvider.getConnection().getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE);
+//			_excludeMonitoring_chk.setVisible(isSybaseAse);
+//		}
+//		catch(SQLException e) 
+//		{ 
+//			_excludeMonitoring_chk.setVisible(false); 
+//		}
 	}
 
 	private JPanel createFilterPanel()
@@ -164,18 +195,23 @@ implements ActionListener
 		_config_lbl             .setToolTipText("Show only config name with this name.");
 		_config_txt             .setToolTipText("Show only config name with this name.");
 		_showOnlyNonDefaults_chk.setToolTipText("Show only modified configuration values (same as sp_configure 'nondefault')");
+		_excludeMonitoring_chk  .setToolTipText("Include or Exclude values from sp_configure 'Monitoring'");
 		_copy_but               .setToolTipText("Copy the ASE Configuration table into the clip board as ascii table.");
 
 		panel.add(_section_lbl,             "");
 		panel.add(_section_cbx,             "split");
+//		panel.add(_rowcount2_lbl,           "");
 		panel.add(new JLabel(),             "pushx, growx");
 		panel.add(_timestamp_lbl,           "");
 		panel.add(_timestamp_txt,           "wrap");
 
 		panel.add(_config_lbl,              "");
-		panel.add(_config_txt,              "pushx, growx, wrap");
+//		panel.add(_config_txt,              "pushx, growx, wrap");
+		panel.add(_config_txt,              "span 2, split, pushx, growx");
+		panel.add(_rowcount2_lbl,           "wrap");
 
-		panel.add(_showOnlyNonDefaults_chk, "span 2, split");
+		panel.add(_showOnlyNonDefaults_chk, "span 3, split");
+		panel.add(_excludeMonitoring_chk,   "");
 		panel.add(_copy_but,                "tag right, wrap");
 
 		// disable input to some fields
@@ -185,7 +221,9 @@ implements ActionListener
 		_section_cbx.removeAllItems();
 		_section_cbx.addItem(SECTION_ALL);
 //		for (String section : AseConfig.getInstance().getSectionList())
-		for (String section : _dbmsConfig.getSectionList())
+		List<String> sectionList = _dbmsConfig.getSectionList();
+		Collections.sort(sectionList);
+		for (String section : sectionList)
 			_section_cbx.addItem(section);
 
 //		_timestamp_txt.setText(AseConfig.getInstance().getTimestamp()+"");
@@ -195,6 +233,7 @@ implements ActionListener
 		_section_cbx            .addActionListener(this);
 		_config_txt             .addActionListener(this);
 		_showOnlyNonDefaults_chk.addActionListener(this);
+		_excludeMonitoring_chk  .addActionListener(this);
 		_copy_but               .addActionListener(this);
 
 		// Key listener for the config
@@ -219,6 +258,7 @@ implements ActionListener
 			public void run()
 			{
 				_showOnlyNonDefaults_chk.setSelected(true);
+				_excludeMonitoring_chk  .setSelected(_excludeMonitoring_chk.isVisible()); // Otherwise Monitoring values will not be visible when the field is hidden, but the value is TRUE...
 				setTableFilter();
 			}
 		};
@@ -330,6 +370,12 @@ implements ActionListener
 			setTableFilter();
 		}
 
+		// --- CHECKBOX: NON-DEFAULTS ---
+		if (_excludeMonitoring_chk.equals(source))
+		{
+			setTableFilter();
+		}
+
 		// --- BUT: COPY ---
 		if (_copy_but.equals(source))
 		{
@@ -429,11 +475,37 @@ implements ActionListener
 			}
 		}
 
+		// Exclude-Monitoring
+		if ( _excludeMonitoring_chk.isSelected() )
+		{
+			String colName     = _dbmsConfig.getColName_sectionName(); 
+			final int colIndex = _dbmsConfig.findColumn(colName);
+			final String str   = "Monitoring";
+
+			if (colIndex < 0)
+				_logger.warn("Column name '"+colName+"' can't be found in AseConfig table.");
+			else
+			{
+				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
+				{
+					@Override
+					public boolean include(RowFilter.Entry<? extends TableModel, ? extends Integer> entry)
+					{
+						return ! entry.getStringValue(colIndex).equals(str);
+					}
+				};
+				filters.add(filter);
+			}
+		}
+
 		// Now SET filter
 		if (filters.size() == 0)
 			_table.setRowFilter( null );
 		else
 			_table.setRowFilter( RowFilter.andFilter(filters) );
+		
+		// Update the row count label
+		_rowcount2_lbl.setText(_table.getModel().getRowCount() + "/" + _table.getRowCount());
 	}
 
 	

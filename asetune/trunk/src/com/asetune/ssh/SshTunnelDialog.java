@@ -276,8 +276,22 @@ implements ActionListener, KeyListener, FocusListener
 
 		_sshUser_lbl  .setToolTipText("User name to use when logging in to the below Operating System Host.");
 		_sshUser_txt  .setToolTipText("User name to use when logging in to the below Operating System Host.");
-		_sshPasswd_lbl.setToolTipText("Password to use when logging in to the below Operating System Host");
-		_sshPasswd_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
+		_sshPasswd_lbl.setToolTipText("<html>"
+		                               + "Password to use when logging in to the below Operating System Host<br>"
+		                               + "<br>"
+		                               + "If SSH Authentication model is 'publickey' and you have a password for the <i>private key file</i>, then type this password here.<br>"
+		                               + "If the <i>private key file</i> does <b>not</b> have a password, just type <i>anything here</i> so the button is enabled.<br>"
+		                               + "<br>"
+		                               + "Note 1: To use 'publickey' authentication the file '"+SshConnection.getRsaKeyFilename()+"' is used.<br>"
+		                               + "Note 2: The above file needs to contain a key in the OpenSSH format.<br>"
+		                               + "(If you have a PUTTY generated it needs to be converted using <i>puttygen</i>, load the file, then: Menu -&gt; Convertion -&gt; Export OpenSSH Key)<br>"
+		                               + "<br>"
+		                               + "If 'publickey' authentication does <b>not</b> work, it can be disabled, by inserting:.<br>"
+		                               + "<code>"+SshConnection.PROPKEY_sshAuthenticateEnableRSA+" = false</code>.<br>"
+		                               + "<code>"+SshConnection.PROPKEY_sshAuthenticateEnableDSA+" = false</code>.<br>"
+		                               + "In the file: <code>"+Configuration.getInstance(Configuration.USER_TEMP).getFilename()+"</code><br>"
+		                               + "</html>");
+		_sshPasswd_txt.setToolTipText(_sshPasswd_lbl.getToolTipText());
 		_sshOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
 		
 		_sshHost_lbl      .setToolTipText("<html>Hostname or IP address of the intermediate Host you are connecting to</html>");
@@ -589,10 +603,10 @@ implements ActionListener, KeyListener, FocusListener
 		//------------------
 		// WINDOW
 		//------------------
-		conf.setProperty(PROP_PREFIX + "window.width",  this.getSize().width);
-		conf.setProperty(PROP_PREFIX + "window.height", this.getSize().height);
-		conf.setProperty(PROP_PREFIX + "window.pos.x",  this.getLocationOnScreen().x);
-		conf.setProperty(PROP_PREFIX + "window.pos.y",  this.getLocationOnScreen().y);
+		conf.setLayoutProperty(PROP_PREFIX + "window.width",  this.getSize().width);
+		conf.setLayoutProperty(PROP_PREFIX + "window.height", this.getSize().height);
+		conf.setLayoutProperty(PROP_PREFIX + "window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty(PROP_PREFIX + "window.pos.y",  this.getLocationOnScreen().y);
 
 		conf.save();
 	}
@@ -629,10 +643,10 @@ implements ActionListener, KeyListener, FocusListener
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
-		int width  = conf.getIntProperty(PROP_PREFIX + "window.width",  -1);
-		int height = conf.getIntProperty(PROP_PREFIX + "window.height", -1);
-		int x      = conf.getIntProperty(PROP_PREFIX + "window.pos.x",  -1);
-		int y      = conf.getIntProperty(PROP_PREFIX + "window.pos.y",  -1);
+		int width  = conf.getLayoutProperty(PROP_PREFIX + "window.width",  -1);
+		int height = conf.getLayoutProperty(PROP_PREFIX + "window.height", -1);
+		int x      = conf.getLayoutProperty(PROP_PREFIX + "window.pos.x",  -1);
+		int y      = conf.getLayoutProperty(PROP_PREFIX + "window.pos.y",  -1);
 		if (width != -1 && height != -1)
 			this.setSize(width, height);
 

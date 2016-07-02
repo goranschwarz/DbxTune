@@ -140,6 +140,7 @@ extends TabularCntrPanel
 	private JCheckBox       _sampleAfterPrevSample_chk;
 	private RSyntaxTextArea _sampleExtraWhereClause_txt;
 	private JButton         _sampleExtraWhereClause_but;
+	private JButton         _sampleExtraWhereToDef_but;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
@@ -160,6 +161,7 @@ extends TabularCntrPanel
 		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmExecQueryStats.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample, CmExecQueryStats.DEFAULT_sample_afterPrevSample));
 		_sampleExtraWhereClause_txt = new RSyntaxTextArea();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
+		_sampleExtraWhereToDef_but  = new JButton("To Default");
 
 		_sampleLastXminutes_chk    .setToolTipText(TOOLTIP_sample_lastXminutes);
 		_sampleAfterPrevSample_chk .setToolTipText(TOOLTIP_sample_afterPrevSample);
@@ -178,7 +180,8 @@ extends TabularCntrPanel
 		panel.add(_sampleAfterPrevSample_chk,  "wrap");
 
 		panel.add(_sampleExtraWhereClause_txt, "grow, push, wrap");
-		panel.add(_sampleExtraWhereClause_but, "wrap");
+		panel.add(_sampleExtraWhereClause_but, "split");
+		panel.add(_sampleExtraWhereToDef_but,  "wrap");
 
 		
 		_sampleLastXminutes_chk.addActionListener(new ActionListener()
@@ -226,6 +229,16 @@ extends TabularCntrPanel
 				
 				// ReInitialize the SQL
 				getCm().setSql(null);
+			}
+		});
+
+		_sampleExtraWhereToDef_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_sampleExtraWhereClause_txt.setText(CmExecQueryStats.DEFAULT_sample_extraWhereClause);
+				_sampleExtraWhereClause_but.doClick(); // click APPLY button
 			}
 		});
 

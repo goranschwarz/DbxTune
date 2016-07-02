@@ -51,9 +51,12 @@ public class GTabbedPaneViewDialog
 //	private static Logger _logger = Logger.getLogger(GTabbedPaneViewDialog.class);
 	private static final long serialVersionUID = 1L;
 
-	private ImageIcon               _iconTab        = new ImageIcon(GTabbedPaneViewDialog.class.getResource("images/tab.gif"));
-	private ImageIcon               _iconUp         = new ImageIcon(GTabbedPaneViewDialog.class.getResource("images/up.png"));
-	private ImageIcon               _iconDown       = new ImageIcon(GTabbedPaneViewDialog.class.getResource("images/down.png"));
+//	private ImageIcon               _iconTab        = new ImageIcon(GTabbedPaneViewDialog.class.getResource("images/tab.gif"));
+//	private ImageIcon               _iconUp         = new ImageIcon(GTabbedPaneViewDialog.class.getResource("images/up.png"));
+//	private ImageIcon               _iconDown       = new ImageIcon(GTabbedPaneViewDialog.class.getResource("images/down.png"));
+	private ImageIcon               _iconTab        = SwingUtils.readImageIcon(GTabbedPaneViewDialog.class, "images/tab.gif");
+	private ImageIcon               _iconUp         = SwingUtils.readImageIcon(GTabbedPaneViewDialog.class, "images/up.png");
+	private ImageIcon               _iconDown       = SwingUtils.readImageIcon(GTabbedPaneViewDialog.class, "images/down.png");
 
 	private MultiLineLabel          _description1   = new MultiLineLabel("Choose in what order the Tabs 'Title names' will be arranged on the Tab Pane.");
 	private MultiLineLabel          _description2   = new MultiLineLabel("You can also hide some Tabs, which you think you may never use.");
@@ -525,7 +528,7 @@ public class GTabbedPaneViewDialog
 //System.out.println("GTabbedPane:populateTable() parentTabPane="+(parentTabPane==null?"null":parentTabPane.getTitleAtModel(parentPos))+", parentPos="+parentPos);
 		for (int t=0; t<tabPane.getModelTabCount(); t++)
 		{
-			Component comp = tabPane.getComponentAt(t);
+			Component comp = tabPane.getComponentAtModel(t);
 			if (comp instanceof GTabbedPane)
 				populateTable(tabPane, t, (GTabbedPane)comp, table);
 			else

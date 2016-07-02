@@ -82,7 +82,8 @@ public class ConnectionProfileManager
 	private static ConnectionProfileManager _instance = null;
 
 	/** Filename holding the configuration */
-	private String _filename = null;
+	private String _filename         = null;
+	private long   _fileLastModified = 0;
 
 	/** default file name where the connection profiles are stored */
 	public  final static String  PROPKEY_STORAGE_FILE = "ConnectionProfileManager.storage.filename";
@@ -133,6 +134,8 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_POSTGRES         = SwingUtils.readImageIcon(Version.class, "images/conn_profile_postgres_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_APACHE_HIVE      = SwingUtils.readImageIcon(Version.class, "images/conn_profile_apache_hive_16.png");
 
 	public static final ImageIcon ICON_DB_PROD_NAME_16_OTHER            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_unknown_vendor_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_UNDEFINED        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_jdbc_undefined_16.png");
@@ -163,6 +166,8 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_POSTGRES         = SwingUtils.readImageIcon(Version.class, "images/conn_profile_postgres_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_APACHE_HIVE      = SwingUtils.readImageIcon(Version.class, "images/conn_profile_apache_hive_32.png");
 
 	public static final ImageIcon ICON_DB_PROD_NAME_32_OTHER            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_unknown_vendor_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_UNDEFINED        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_jdbc_undefined_32.png");
@@ -200,6 +205,7 @@ public class ConnectionProfileManager
 			_logger.debug("No Connection Profile has yet been initiated, creating one now using file '"+filename+"'.");
 			_instance = new ConnectionProfileManager(filename);
 		}
+
 		return _instance;
 	}
 
@@ -276,9 +282,39 @@ public class ConnectionProfileManager
 //		if ( ! filename.equals(_filename) )
 		if ( true )
 		{
-			_filename = filename;
+			_filename         = filename;
+			_fileLastModified = f.lastModified();
 			parseXmlFile(filename);
 		}
+	}
+
+	/**
+	 * Reload from current file or storage
+	 */
+	public void reload()
+	{
+		String filename = getFilename();
+		_logger.info("Re-loading Connection Profile Manage using filename='"+filename+"'.");
+		setFilename(filename);
+		_profileTreeModel.reload(); // this will call: fireTreeStructureChanged(...)
+	}
+
+	/**
+	 * Check if the storage has changed
+	 */
+	public boolean hasStorageChanged()
+	{
+		File f = new File(getFilename());
+		if (f.lastModified() > _fileLastModified)
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			String prevDateStr = sdf.format(new Date(_fileLastModified));
+			String newDateStr  = sdf.format(new Date(f.lastModified()));
+
+			_logger.info("The underlying Connection Profile Manage storage was has been changed. prevDate='"+prevDateStr+"', newDate='"+newDateStr+"', filename='"+f+"'.");
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -556,6 +592,9 @@ public class ConnectionProfileManager
 
 	public FilteredTreeModel getConnectionProfileTreeModel(String filterOnProductName)
 	{
+		if (hasStorageChanged())
+			reload();
+
 		_profileTreeModel.setFilterOnProductName(filterOnProductName);
 		return _profileTreeModel;
 	}
@@ -594,6 +633,8 @@ public class ConnectionProfileManager
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL       )) return ICON_DB_PROD_NAME_16_MSSQL;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL       )) return ICON_DB_PROD_NAME_16_MYSQL;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE      )) return ICON_DB_PROD_NAME_16_ORACLE;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES    )) return ICON_DB_PROD_NAME_16_POSTGRES;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE )) return ICON_DB_PROD_NAME_16_APACHE_HIVE;
 		
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return ICON_DB_PROD_NAME_16_SYBASE_ASA;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return ICON_DB_PROD_NAME_16_SYBASE_ASE;
@@ -616,6 +657,8 @@ public class ConnectionProfileManager
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL       )) return ICON_DB_PROD_NAME_32_MSSQL;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL       )) return ICON_DB_PROD_NAME_32_MYSQL;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE      )) return ICON_DB_PROD_NAME_32_ORACLE;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES    )) return ICON_DB_PROD_NAME_32_POSTGRES;
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE )) return ICON_DB_PROD_NAME_32_APACHE_HIVE;
 		                                                                             
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return ICON_DB_PROD_NAME_32_SYBASE_ASA;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return ICON_DB_PROD_NAME_32_SYBASE_ASE;
@@ -628,54 +671,58 @@ public class ConnectionProfileManager
 	}
 	public static ImageIcon getIcon16(SrvType srvType)
 	{
-		if      (SrvType.JDBC_DB2_UX   .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_UX;
-		else if (SrvType.JDBC_DB2_ZOS  .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_ZOS;
-		else if (SrvType.JDBC_DERBY    .equals(srvType)) return ICON_DB_PROD_NAME_16_DERBY;
-		else if (SrvType.JDBC_H2       .equals(srvType)) return ICON_DB_PROD_NAME_16_H2;
-		else if (SrvType.JDBC_HANA     .equals(srvType)) return ICON_DB_PROD_NAME_16_HANA;
-		else if (SrvType.JDBC_MAXDB    .equals(srvType)) return ICON_DB_PROD_NAME_16_MAXDB;
-		else if (SrvType.JDBC_HSQL     .equals(srvType)) return ICON_DB_PROD_NAME_16_HSQL;
-		else if (SrvType.JDBC_MSSQL    .equals(srvType)) return ICON_DB_PROD_NAME_16_MSSQL;
-		else if (SrvType.JDBC_MYSQL    .equals(srvType)) return ICON_DB_PROD_NAME_16_MYSQL;
-		else if (SrvType.JDBC_ORACLE   .equals(srvType)) return ICON_DB_PROD_NAME_16_ORACLE;
-		else if (SrvType.JDBC_OTHER    .equals(srvType)) return ICON_DB_PROD_NAME_16_OTHER;
-		else if (SrvType.JDBC_UNDEFINED.equals(srvType)) return ICON_DB_PROD_NAME_16_UNDEFINED;
-
-		else if (SrvType.TDS_ASA       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_ASA;
-		else if (SrvType.TDS_ASE       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_ASE;
-		else if (SrvType.TDS_IQ        .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_IQ;
-		else if (SrvType.TDS_RS        .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RS;
-		else if (SrvType.TDS_RAX       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RAX;
-		else if (SrvType.TDS_RSDRA     .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RSDRA;
-		else if (SrvType.TDS_OTHER     .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_OTHER;
-		else if (SrvType.TDS_UNDEFINED .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_UNDEFINED;
+		if      (SrvType.JDBC_DB2_UX     .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_UX;
+		else if (SrvType.JDBC_DB2_ZOS    .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_ZOS;
+		else if (SrvType.JDBC_DERBY      .equals(srvType)) return ICON_DB_PROD_NAME_16_DERBY;
+		else if (SrvType.JDBC_H2         .equals(srvType)) return ICON_DB_PROD_NAME_16_H2;
+		else if (SrvType.JDBC_HANA       .equals(srvType)) return ICON_DB_PROD_NAME_16_HANA;
+		else if (SrvType.JDBC_MAXDB      .equals(srvType)) return ICON_DB_PROD_NAME_16_MAXDB;
+		else if (SrvType.JDBC_HSQL       .equals(srvType)) return ICON_DB_PROD_NAME_16_HSQL;
+		else if (SrvType.JDBC_MSSQL      .equals(srvType)) return ICON_DB_PROD_NAME_16_MSSQL;
+		else if (SrvType.JDBC_MYSQL      .equals(srvType)) return ICON_DB_PROD_NAME_16_MYSQL;
+		else if (SrvType.JDBC_ORACLE     .equals(srvType)) return ICON_DB_PROD_NAME_16_ORACLE;
+		else if (SrvType.JDBC_POSTGRES   .equals(srvType)) return ICON_DB_PROD_NAME_16_POSTGRES;
+		else if (SrvType.JDBC_APACHE_HIVE.equals(srvType)) return ICON_DB_PROD_NAME_16_APACHE_HIVE;
+		else if (SrvType.JDBC_OTHER      .equals(srvType)) return ICON_DB_PROD_NAME_16_OTHER;
+		else if (SrvType.JDBC_UNDEFINED  .equals(srvType)) return ICON_DB_PROD_NAME_16_UNDEFINED;
+                                         
+		else if (SrvType.TDS_ASA         .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_ASA;
+		else if (SrvType.TDS_ASE         .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_ASE;
+		else if (SrvType.TDS_IQ          .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_IQ;
+		else if (SrvType.TDS_RS          .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RS;
+		else if (SrvType.TDS_RAX         .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RAX;
+		else if (SrvType.TDS_RSDRA       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_RSDRA;
+		else if (SrvType.TDS_OTHER       .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_OTHER;
+		else if (SrvType.TDS_UNDEFINED   .equals(srvType)) return ICON_DB_PROD_NAME_16_SYBASE_UNDEFINED;
 
 		return ICON_DB_PROD_NAME_16_OTHER;
 	}
 
 	public static ImageIcon getIcon32(SrvType srvType)
 	{
-		if      (SrvType.JDBC_DB2_UX   .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_UX;
-		else if (SrvType.JDBC_DB2_ZOS  .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_ZOS;
-		else if (SrvType.JDBC_DERBY    .equals(srvType)) return ICON_DB_PROD_NAME_32_DERBY;
-		else if (SrvType.JDBC_H2       .equals(srvType)) return ICON_DB_PROD_NAME_32_H2;
-		else if (SrvType.JDBC_HANA     .equals(srvType)) return ICON_DB_PROD_NAME_32_HANA;
-		else if (SrvType.JDBC_MAXDB    .equals(srvType)) return ICON_DB_PROD_NAME_32_MAXDB;
-		else if (SrvType.JDBC_HSQL     .equals(srvType)) return ICON_DB_PROD_NAME_32_HSQL;
-		else if (SrvType.JDBC_MSSQL    .equals(srvType)) return ICON_DB_PROD_NAME_32_MSSQL;
-		else if (SrvType.JDBC_MYSQL    .equals(srvType)) return ICON_DB_PROD_NAME_32_MYSQL;
-		else if (SrvType.JDBC_ORACLE   .equals(srvType)) return ICON_DB_PROD_NAME_32_ORACLE;
-		else if (SrvType.JDBC_OTHER    .equals(srvType)) return ICON_DB_PROD_NAME_32_OTHER;
-		else if (SrvType.JDBC_UNDEFINED.equals(srvType)) return ICON_DB_PROD_NAME_32_UNDEFINED;
-
-		else if (SrvType.TDS_ASA       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_ASA;
-		else if (SrvType.TDS_ASE       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_ASE;
-		else if (SrvType.TDS_IQ        .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_IQ;
-		else if (SrvType.TDS_RS        .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RS;
-		else if (SrvType.TDS_RAX       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RAX;
-		else if (SrvType.TDS_RSDRA     .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RSDRA;
-		else if (SrvType.TDS_OTHER     .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_OTHER;
-		else if (SrvType.TDS_UNDEFINED .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_UNDEFINED;
+		if      (SrvType.JDBC_DB2_UX     .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_UX;
+		else if (SrvType.JDBC_DB2_ZOS    .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_ZOS;
+		else if (SrvType.JDBC_DERBY      .equals(srvType)) return ICON_DB_PROD_NAME_32_DERBY;
+		else if (SrvType.JDBC_H2         .equals(srvType)) return ICON_DB_PROD_NAME_32_H2;
+		else if (SrvType.JDBC_HANA       .equals(srvType)) return ICON_DB_PROD_NAME_32_HANA;
+		else if (SrvType.JDBC_MAXDB      .equals(srvType)) return ICON_DB_PROD_NAME_32_MAXDB;
+		else if (SrvType.JDBC_HSQL       .equals(srvType)) return ICON_DB_PROD_NAME_32_HSQL;
+		else if (SrvType.JDBC_MSSQL      .equals(srvType)) return ICON_DB_PROD_NAME_32_MSSQL;
+		else if (SrvType.JDBC_MYSQL      .equals(srvType)) return ICON_DB_PROD_NAME_32_MYSQL;
+		else if (SrvType.JDBC_ORACLE     .equals(srvType)) return ICON_DB_PROD_NAME_32_ORACLE;
+		else if (SrvType.JDBC_POSTGRES   .equals(srvType)) return ICON_DB_PROD_NAME_32_POSTGRES;
+		else if (SrvType.JDBC_APACHE_HIVE.equals(srvType)) return ICON_DB_PROD_NAME_32_APACHE_HIVE;
+		else if (SrvType.JDBC_OTHER      .equals(srvType)) return ICON_DB_PROD_NAME_32_OTHER;
+		else if (SrvType.JDBC_UNDEFINED  .equals(srvType)) return ICON_DB_PROD_NAME_32_UNDEFINED;
+                                         
+		else if (SrvType.TDS_ASA         .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_ASA;
+		else if (SrvType.TDS_ASE         .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_ASE;
+		else if (SrvType.TDS_IQ          .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_IQ;
+		else if (SrvType.TDS_RS          .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RS;
+		else if (SrvType.TDS_RAX         .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RAX;
+		else if (SrvType.TDS_RSDRA       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_RSDRA;
+		else if (SrvType.TDS_OTHER       .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_OTHER;
+		else if (SrvType.TDS_UNDEFINED   .equals(srvType)) return ICON_DB_PROD_NAME_32_SYBASE_UNDEFINED;
 
 		return ICON_DB_PROD_NAME_32_OTHER;
 	}
@@ -695,7 +742,8 @@ public class ConnectionProfileManager
 		else if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return ICON_DB_PROD_NAME_16_MSSQL;
 		else if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return ICON_DB_PROD_NAME_16_MSSQL;
 		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_16_DB2_UX;
-//		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_16_POSTGRES;
+		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_16_POSTGRES;
+		else if (jdbcUrl.startsWith("jdbc:hive2:"))               return ICON_DB_PROD_NAME_16_APACHE_HIVE;
 		else if (jdbcUrl.startsWith("jdbc:mysql:"))               return ICON_DB_PROD_NAME_16_MYSQL;
 		else if (jdbcUrl.startsWith("jdbc:derby:"))               return ICON_DB_PROD_NAME_16_DERBY;
 
@@ -717,7 +765,8 @@ public class ConnectionProfileManager
 		else if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return ICON_DB_PROD_NAME_32_MSSQL;
 		else if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return ICON_DB_PROD_NAME_32_MSSQL;
 		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_32_DB2_UX;
-//		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_32_POSTGRES;
+		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_32_POSTGRES;
+		else if (jdbcUrl.startsWith("jdbc:hive2:"))               return ICON_DB_PROD_NAME_32_APACHE_HIVE;
 		else if (jdbcUrl.startsWith("jdbc:mysql:"))               return ICON_DB_PROD_NAME_32_MYSQL;
 		else if (jdbcUrl.startsWith("jdbc:derby:"))               return ICON_DB_PROD_NAME_32_DERBY;
 
@@ -807,29 +856,29 @@ public class ConnectionProfileManager
 		@SuppressWarnings("unused")
 		private boolean           _afterSuccessfulConnect = false;
 
-		Vector<String>       _interfacesSuggestions = new Vector<String>();
-		private JPanel       _interfacesName_pan    = null;
-		private JLabel       _interfacesName_head   = new JLabel();
-		private JLabel       _interfacesName_lbl    = new JLabel("As Server Name");
-		private JComboBox    _interfacesName_cbx    = new JComboBox(_interfacesSuggestions);
-		private JRadioButton _interfacesQ1_rbt      = new JRadioButton("Add Server", true);
-		private JRadioButton _interfacesQ2_rbt      = new JRadioButton("Not this time");
-		private JRadioButton _interfacesQ3_rbt      = new JRadioButton("Never ask this question again");
-		private JLabel       _interfacesName_bussy  = new JLabel("The selected servername already exists in the sql.ini or interfaces file.");
-		private String       _sqlIniFileName        = "";
-
-		Vector<String>       _profileSuggestions = new Vector<String>();
-		private JPanel       _profileName_pan    = null;
-		private JLabel       _profileName_head   = new JLabel();
-		private JLabel       _profileName_lbl    = new JLabel("As Profile Name");
-		private JComboBox    _profileName_cbx    = new JComboBox(_profileSuggestions);
-		private JRadioButton _profileNameQ1_rbt  = new JRadioButton("Add Profile", true);
-		private JRadioButton _profileNameQ2_rbt  = new JRadioButton("Not this time");
-		private JRadioButton _profileNameQ3_rbt  = new JRadioButton("Never ask this question again");
-		private JLabel       _profileName_bussy  = new JLabel("The selected Profile Name already exists, choose another one.");
-
-		private JButton      _ok_but     = new JButton("OK");
-		private JButton      _cancel_but = new JButton("Cancel");
+		Vector<String>            _interfacesSuggestions = new Vector<String>();
+		private JPanel            _interfacesName_pan    = null;
+		private JLabel            _interfacesName_head   = new JLabel();
+		private JLabel            _interfacesName_lbl    = new JLabel("As Server Name");
+		private JComboBox<String> _interfacesName_cbx    = new JComboBox<String>(_interfacesSuggestions);
+		private JRadioButton      _interfacesQ1_rbt      = new JRadioButton("Add Server", true);
+		private JRadioButton      _interfacesQ2_rbt      = new JRadioButton("Not this time");
+		private JRadioButton      _interfacesQ3_rbt      = new JRadioButton("Never ask this question again");
+		private JLabel            _interfacesName_bussy  = new JLabel("The selected servername already exists in the sql.ini or interfaces file.");
+		private String            _sqlIniFileName        = "";
+                                  
+		Vector<String>            _profileSuggestions = new Vector<String>();
+		private JPanel            _profileName_pan    = null;
+		private JLabel            _profileName_head   = new JLabel();
+		private JLabel            _profileName_lbl    = new JLabel("As Profile Name");
+		private JComboBox<String> _profileName_cbx    = new JComboBox<String>(_profileSuggestions);
+		private JRadioButton      _profileNameQ1_rbt  = new JRadioButton("Add Profile", true);
+		private JRadioButton      _profileNameQ2_rbt  = new JRadioButton("Not this time");
+		private JRadioButton      _profileNameQ3_rbt  = new JRadioButton("Never ask this question again");
+		private JLabel            _profileName_bussy  = new JLabel("The selected Profile Name already exists, choose another one.");
+                                  
+		private JButton           _ok_but     = new JButton("OK");
+		private JButton           _cancel_but = new JButton("Cancel");
 
 		public SaveAsDialog(JDialog owner, String dbServerName, ConnectionProfile connProfile, boolean afterSuccessfulConnect)
 		{
@@ -1673,7 +1722,66 @@ public class ConnectionProfileManager
 		save(getFilename(), false);
 	}
 
-	private void save(String filename, boolean writeTemplateFile)
+	/** Increment this on every save */
+	private int _saveCount = 0;
+	/** true if a save is done by a background thread, and while the thread is active, other save requests will be queued... */
+	private boolean _hasActiveSaveThread = false;
+
+	/** internal save wrapper */
+	private void save(final String filename, final boolean writeTemplateFile)
+	{
+		_saveCount++;
+//System.out.println("ConnectionProfileManager.save(filename='"+filename+"', writeTemplateFile="+writeTemplateFile+") _saveCount="+_saveCount+".");
+
+		boolean doBackgroundSave = true;
+		if ( ! doBackgroundSave )
+		{
+			// DO THE SAVE
+			saveInternal(filename, writeTemplateFile);
+		}
+		else
+		{
+			final int currentSaveCount = _saveCount;
+			Runnable saveJob = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					try
+					{
+						while (_hasActiveSaveThread)
+						{
+//System.out.println("ConnectionProfileManager.save() currentSaveCount="+currentSaveCount+". ------ WARNING: Waiting for previous thread to complete save...");
+							Thread.sleep(250);
+						}
+
+						_hasActiveSaveThread = true;
+						long startTime = System.currentTimeMillis();
+
+						// DO THE SAVE
+						saveInternal(filename, writeTemplateFile);
+						
+						long saveTime = System.currentTimeMillis() - startTime;
+						if (saveTime > 1000)
+							_logger.warn("ConnectionProfileManager.save() took "+saveTime+" ms... File name ='"+filename+"'. Do you have a slow IO subsystem?");
+//System.out.println("Configuration.save() currentSaveCount="+currentSaveCount+". TIME = "+saveTime+ (saveTime < 1000 ? "" : " ------- WARNING ------ WARNING ----- WARNING ---- SAVE Took to long time..."));
+					}
+					catch (Exception e)
+					{
+						_logger.error("Problems saving Connection Profile to the file='"+filename+"', currentSaveCount="+currentSaveCount+". Caught: "+e, e);
+					}
+					finally 
+					{
+						_hasActiveSaveThread = false;
+					}
+				}
+			};
+			Thread saveThread = new Thread(saveJob, "SaveConnProfile-" + currentSaveCount);
+			saveThread.start();
+		}
+	}
+	
+	private void saveInternal(String filename, boolean writeTemplateFile)
 	{
 		if (StringUtil.isNullOrBlank(filename))
 			filename = getFilename();

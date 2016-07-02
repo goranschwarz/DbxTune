@@ -5,10 +5,14 @@ import org.apache.commons.cli.CommandLine;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesSqlServer;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.SqlServerConfig;
 import com.asetune.config.dict.MonTablesDictionary;
-import com.asetune.config.dict.MonTablesDictionaryDefault;
+import com.asetune.config.dict.MonTablesDictionarySqlServer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameSqlServer;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.inspection.ObjectLookupInspectorSqlServer;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.utils.DbUtils;
 
 public class SqlServerTune
@@ -84,6 +88,18 @@ extends DbxTune
 	}
 
 	@Override
+	public IObjectLookupInspector createPcsObjectLookupInspector()
+	{
+		return new ObjectLookupInspectorSqlServer();
+	}
+
+	@Override
+	public ISqlCaptureBroker createPcsSqlCaptureBroker() 
+	{
+		return null;
+	}
+	
+	@Override
 	public CheckForUpdates createCheckForUpdates()
 	{
 		return new CheckForUpdatesSqlServer(); 
@@ -92,13 +108,14 @@ extends DbxTune
 	@Override
 	public IDbmsConfig createDbmsConfig()
 	{
-		return null; // null means it's not supported
+//		return null; // null means it's not supported
+		return new SqlServerConfig();
 	}
 
 	@Override
 	public MonTablesDictionary createMonTablesDictionary()
 	{
-		return new MonTablesDictionaryDefault();
+		return new MonTablesDictionarySqlServer();
 	}
 
 	public static void main(String[] args)

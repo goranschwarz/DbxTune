@@ -1,5 +1,6 @@
 package com.asetune.config.dbms;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -39,8 +40,18 @@ public interface IDbmsConfigText
 	/**
 	 * Initialize 
 	 * @param conn
+	 * @throws Exception when severe errors like Not Connected anymore, so we can stop initializing...
 	 */
-	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts);
+	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts) 
+	throws SQLException;
+
+	/**
+	 * refresh 
+	 * @param conn
+	 * @throws Exception when severe errors like Not Connected anymore, so we can stop refreshing...
+	 */
+	public void refresh(DbxConnection conn, Timestamp ts) 
+	throws SQLException;
 
 	/**
 	 * Reset ALL configurations, this so we can get new ones later<br>
@@ -72,12 +83,6 @@ public interface IDbmsConfigText
 	 * @return List<String> of configurations(s) that must be true.
 	 */
 	public List<String> needConfig();
-
-	/**
-	 * refresh 
-	 * @param conn
-	 */
-	public void refresh(DbxConnection conn, Timestamp ts);
 
 	/**
 	 * Get the name of the class the implements the IDmbsConfigText

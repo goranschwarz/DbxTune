@@ -10,6 +10,8 @@ import javax.swing.JTextArea;
 import net.miginfocom.swing.MigLayout;
 
 import com.asetune.gui.swing.GLabel;
+import com.asetune.gui.swing.GMemoryIndicator;
+import com.asetune.gui.swing.JMemoryMonitor;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
@@ -108,7 +110,7 @@ public class StatusBar extends JPanel
 	private static final String MSG_LINE_TOOLTIP_BASE = "Various status information from the tool.";  
 	private void init()
 	{
-		setLayout(new MigLayout("insets 2 5 2 5")); // top left bottom right
+		setLayout(new MigLayout("insets 1 5 1 5")); // top left bottom right
 
 		// msg
 		_msgline.setToolTipText(MSG_LINE_TOOLTIP_BASE);
@@ -172,7 +174,13 @@ public class StatusBar extends JPanel
 
 		add(_productStringShort,     "growx");
 		add(new JSeparator(JSeparator.VERTICAL), "grow");
+
 		
+		add(new GMemoryIndicator(1000),  "growx, hidemode 3");
+		add(new JSeparator(JSeparator.VERTICAL), "grow");
+//		add(new JMemoryMonitor(),    "growx, hidemode 3");
+//		add(new JSeparator(JSeparator.VERTICAL), "grow");
+
 		add(_editorAtLineCol,        "growx, hidemode 3");
 
 		// encode name seems to be slightly off, lets hide it until we have a better implementation
@@ -542,6 +550,8 @@ public class StatusBar extends JPanel
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      productNameShort = "DB2-MF";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))        productNameShort = "MySQL";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        productNameShort = "DERBY";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))     productNameShort = "PG";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  productNameShort = "HIVE";
 			else productNameShort = "UNKNOWN";
 			
 			return productNameShort;

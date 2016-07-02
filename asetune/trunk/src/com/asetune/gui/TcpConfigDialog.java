@@ -66,18 +66,18 @@ implements ActionListener, TableModelListener
 
 //	private Frame                  _owner           = null;
 
-	private JLabel    _templateLoad_lbl = new JLabel("Available Templates");
-	private JComboBox _templateLoad_cbx = new JComboBox();
-	private JButton   _templateSave_but = new JButton("Save...");
-	private JButton   _templateRm_but   = new JButton("Remove...");
+	private JLabel                 _templateLoad_lbl = new JLabel("Available Templates");
+	private JComboBox<String>      _templateLoad_cbx = new JComboBox<String>();
+	private JButton                _templateSave_but = new JButton("Save...");
+	private JButton                _templateRm_but   = new JButton("Remove...");
 
-	private LocalTable             _table           = null;
+	private LocalTable             _table            = null;
 
 	// PANEL: OK-CANCEL
-	private JButton                _ok              = new JButton("OK");
-	private JButton                _cancel          = new JButton("Cancel");
-	private JButton                _apply           = new JButton("Apply");
-	private boolean                _madeChanges     = false;
+	private JButton                _ok               = new JButton("OK");
+	private JButton                _cancel           = new JButton("Cancel");
+	private JButton                _apply            = new JButton("Apply");
+	private boolean                _madeChanges      = false;
 	
 	private static final String DIALOG_TITLE = "Settings for All Collector Tabs";
 
@@ -568,10 +568,10 @@ implements ActionListener, TableModelListener
 
 		if (tmpConf != null)
 		{
-			tmpConf.setProperty(base + "window.width", this.getSize().width);
-			tmpConf.setProperty(base + "window.height", this.getSize().height);
-			tmpConf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
-			tmpConf.setProperty(base + "window.pos.y", this.getLocationOnScreen().y);
+			tmpConf.setLayoutProperty(base + "window.width",  this.getSize().width);
+			tmpConf.setLayoutProperty(base + "window.height", this.getSize().height);
+			tmpConf.setLayoutProperty(base + "window.pos.x",  this.getLocationOnScreen().x);
+			tmpConf.setLayoutProperty(base + "window.pos.y",  this.getLocationOnScreen().y);
 
 			tmpConf.save();
 		}
@@ -593,10 +593,10 @@ implements ActionListener, TableModelListener
 		if (tmpConf == null)
 			return;
 
-		width  = tmpConf.getIntProperty(base + "window.width",  width);
-		height = tmpConf.getIntProperty(base + "window.height", height);
-		x      = tmpConf.getIntProperty(base + "window.pos.x",  -1);
-		y      = tmpConf.getIntProperty(base + "window.pos.y",  -1);
+		width  = tmpConf.getLayoutProperty(base + "window.width",  width);
+		height = tmpConf.getLayoutProperty(base + "window.height", height);
+		x      = tmpConf.getLayoutProperty(base + "window.pos.x",  -1);
+		y      = tmpConf.getLayoutProperty(base + "window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 		{
@@ -1031,15 +1031,15 @@ implements ActionListener, TableModelListener
 		public static int  SAVE_AS_DIALOG  = 1;
 		public static int  REMOVE_DIALOG   = 2;
 
-		private JLabel     _templates_lbl  = new JLabel();
-		private JComboBox  _templates_cbx  = new JComboBox();
+		private JLabel            _templates_lbl  = new JLabel();
+		private JComboBox<String> _templates_cbx  = new JComboBox<String>();
 
-		private JButton    _ok             = new JButton("OK");
-		private JButton    _cancel         = new JButton("Cancel");
-		private String     _return         = null;
+		private JButton           _ok             = new JButton("OK");
+		private JButton           _cancel         = new JButton("Cancel");
+		private String            _return         = null;
 		
-		private List<String> _templateList = null;
-		private String       _saveAs       = null;
+		private List<String>      _templateList   = null;
+		private String            _saveAs         = null;
 
 		private SaveOrRemoveTemplateDialog(JDialog owner, int dialogType, String saveAs, List<String> templateList)
 		{

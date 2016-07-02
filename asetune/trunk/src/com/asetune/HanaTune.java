@@ -9,6 +9,8 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryHana;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameHana;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.utils.DbUtils;
 
 public class HanaTune
@@ -83,6 +85,18 @@ extends DbxTune
 		return new CounterControllerHana(hasGui);
 	}
 
+	@Override
+	public IObjectLookupInspector createPcsObjectLookupInspector()
+	{
+		return null;
+	}
+
+	@Override
+	public ISqlCaptureBroker createPcsSqlCaptureBroker() 
+	{
+		return null;
+	}
+	
 	@Override
 	public CheckForUpdates createCheckForUpdates()
 	{

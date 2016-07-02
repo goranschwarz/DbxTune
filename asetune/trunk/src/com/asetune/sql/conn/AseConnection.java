@@ -2,10 +2,12 @@ package com.asetune.sql.conn;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 public class AseConnection 
 extends TdsConnection
@@ -14,6 +16,7 @@ extends TdsConnection
 	public AseConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::AseConnection(conn): conn="+conn);
 	}
 
@@ -51,5 +54,11 @@ extends TdsConnection
 	public boolean isDbmsClusterEnabled()
 	{
 		return AseConnectionUtils.isClusterEnabled(this);
+	}
+
+	@Override
+	public List<String> getActiveServerRolesOrPermissions()
+	{
+		return AseConnectionUtils.getActiveRoles(this);
 	}
 }

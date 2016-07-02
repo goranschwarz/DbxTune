@@ -8,6 +8,8 @@
 <style type="text/css">
 body {font-family: Arial, Verdana, Helvetica, sans-serif; background-color: #FFFFFF; color:#000000}
 li   {margin-bottom: 6px}
+h2 { border-bottom: 3px solid black; border-top: 3px solid black; }
+h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:3px; }
 </style>
 
 </HEAD>
@@ -20,6 +22,170 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <br>
 
 <H1>History of what has been done so far</H1>
+
+<!-- ========================================================================== -->
+<H2>2015-xx-xx</H2>
+<UL>
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3> 
+	<!-- ---------------------------------------------------------------------- -->
+
+	<LI>
+	<b>Enhancement: To all Counters</b><br>
+	xxx<br>
+	</LI>
+
+	<LI>
+	<b>Enhancement: Xxx - CmXxx</b><br>
+	xxx<br>
+	</LI>
+
+	<LI>
+	<b>New: Xxx - CmXxx</b><br>
+	xxx<br>
+	</LI>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3> 
+	<!-- ---------------------------------------------------------------------- -->
+
+	<LI>
+	<b>New: Xxx - CmXxx</b><br>
+	xxx<br>
+	</LI>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ---------------------------------------------------------------------- -->
+	No changes
+	
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	No changes
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	No changes
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	No changes
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	No changes
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	No changes
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	This is a new tool, for PostgreSQL<br>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	Not yet created<br>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	Not yet created<br>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SQL Window</H3>
+	<LI>
+	<b>SQL Window: Enhancements</b><br>
+	<ul>
+       <li>Get sort order and character set when connection to a RepServer</li>
+       <li>\rpc \exec \call commands handles return codes/parameters in a better way</li>
+       <li>\rpc \exec \call \prep commands handles more types (bigint|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob)</li>
+       <li>\rpc \exec \call \prep with type string accepts environment variables in the form ${ENV_NAME}</li>
+       <li>go | bcp ...: return how many rows was actually transferred by the BCP, and some other enhancements</li>
+       <li>Command History: you can now copy the file name from the status bar</li>
+       <li>Insert/Get last history commands with Crtl-Shift+H</li>
+       <li>Favorite commands, can be bound to a specific Vendor</li>
+       <li>Save/Restore "untitled" file</li>
+       <li>AutoCommit enable/disable functionality, if you are in AutoCommit=false, two extra buttons will be visible "Commit" and "Rollback"<br>
+	       in ASE and in AutoCommit=false (chained mode) a Watermark warning will only appear if you holding locks in the server (syslocks)</li>
+       <li>Better error handling for Oracle, if a 'create procedure' failed, get the reasons from Oracle system tables 'ALL_ERROR'</li>
+       <li>Moved Completion properties into a separate dialog</li>
+       <li>Various enhancements to the Code Completion subsystem</li>
+       <li>If it's a BLOB or Text column value AND the content seems to be a picture, lets show the picture if you hover/tooltip over the value</li>
+       <li>Oracle show stored procedure source code (using a tooltip at error message), in case of non-handled server side exceptions</li>
+       <li>New File: has been implemented.</li>
+       <li>Dialog to view all JDBC MetaData on the Connection Level. This is under: Menu -&gt; View -&gt; 'View JDBC Meta Data info...'</li>
+       <li>Dialog to view error log information and change log level. This is under: Menu -&gt; View -&gt; 'Open Log Window...'</li>
+       <li>About Dialog to view application version. This is under: Menu -&gt; Help -&gt; 'About'</li>
+
+       <li>More options in the "Options" button (to the right of "exec" button)</li>
+       <ul>
+           <li>Show Row Number    - Add a Row Number as first column 'row#' when displaying data</li>
+           <li>Trim String values - Do you want to remove leading/trailing blanks from "strings"</li>
+           <li>Enable dbms_output.get_line, extended to support DB2 (loop: dbms_output.get_line(...) after each send batch).</li>
+       </ul>
+
+       <li>Bug fix: in Code Completions with respect to SCHEMA prefixes and stored procedures</li>
+       <li>Bug fix: better handling of getting the correct object CLOB=getString(), BLOB=convertToHex(), etc...</li>
+       <li>Bug fix: Command line switched wasn't working to 100% (-U -P -S) to make initial connection on startup</li>
+       <li>Bug fix: ResultSetTableModel sometimes generated wrong data type</li>
+
+       <li>Probably a bunch of more stuff that I have forgot</li>
+	</ul>
+	</LI>
+
+	<LI>
+	<b>Bug fix: freeze</b><br>
+	The GUI seems to freeze in some cases. Hopefully this is fixed...<br>
+	The major change made was: WaitForExec dialog now always gets executed on the EDT - Event Dispatch Thread<br>
+	The above dialog was used during Java Garbage Collections<br>  
+	</LI>
+
+	<LI>
+	<b>Bug fix: Rep Senders - CmRaSenders, Log Scanners - CmRaScanners</b><br>
+	Both of them had wrong PK for delta calculation. It now uses ScannerSPID in CmRaScanners and SenderSPID for CmRaSenders<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Devices - CmDeviceIO</b><br>
+	For ASE 12.5.x TotalIOs: convert to numeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Databases - CmOpenDatabases</b><br>
+	Check if user are authorized to select on master..syslogshold, if not columns OldestTran* to static values<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Procedure Call Stack - CmProcCallStack</b><br>
+	Class cast exception in rare cases for ASE 12.5.x (Short -> Integer): use Number.intValue() instead<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: sp_monitorconfig - CmSpMonitorConfig, and 'View ASE Configuration'</b><br>
+	now checks for SA_ROLE before calling sp_monitorconfig<br> 
+	</LI>
+
+	<LI>
+	<b>Bug fix: Memory check</b><br>
+	If environment ASETUNE_JVM_MEMORY_PARAMS is set to -Xmx4096m AseTune wont start... fixed memory check for above/near 4GB<br> 
+	</LI>
+
+
+	<LI>
+	<b>Bug fix: Mac OSX, java 8 wont start.</b><br>
+	On Mac it sometimes throw Null Pointer Exceptions due to 'awt.multiClickInterval' wasn't present, now using a default value for this<br> 
+	</LI>
+
+</UL>
+
 
 <!-- ========================================================================== -->
 <H2>2015-06-24</H2>

@@ -106,16 +106,22 @@ public class CollectionUtils
 
 	public static boolean containsIgnoreCase(List<String> list, String searchFor)
 	{
+		if (list == null || searchFor == null)
+			return false;
+
 		for (String current : list)
-			if ( current.equalsIgnoreCase(searchFor) )
+			if ( current != null && current.equalsIgnoreCase(searchFor) )
 				return true;
 		return false;
 	}
 
 	public static boolean containsIgnoreCase(Set<String> set, String searchFor)
 	{
+		if (set == null || searchFor == null)
+			return false;
+
 		for (String current : set)
-			if ( current.equalsIgnoreCase(searchFor) )
+			if ( current != null && current.equalsIgnoreCase(searchFor) )
 				return true;
 		return false;
 	}

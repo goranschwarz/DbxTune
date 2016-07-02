@@ -140,6 +140,9 @@
 	$clientHostAddress       = getUrlParam('clientHostAddress');
 	$clientCanonicalHostName = getUrlParam('clientCanonicalHostName');
 
+	$screenResolution        = getUrlParam('screenResolution');
+	$hiDpiScale              = getUrlParam('hiDpiScale');
+
 	$user_name               = getUrlParam('user_name');
 	$user_home               = getUrlParam('user_home');
 	$user_dir                = getUrlParam('user_dir');
@@ -215,6 +218,9 @@
 		clientCanonicalHostName,
 		callerIpAddress,
 
+		screenResolution,
+		hiDpiScale,
+
 		user_name,
 		user_home,
 		user_dir,
@@ -254,6 +260,9 @@
 		'$clientHostAddress',
 		'$clientCanonicalHostName',
 		'$caller_ip',
+
+		'$screenResolution',
+		'$hiDpiScale',
 
 		'$user_name',
 		'$user_home',

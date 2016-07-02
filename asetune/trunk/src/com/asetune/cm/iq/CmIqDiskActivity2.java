@@ -76,7 +76,8 @@ extends CountersModel
 
 	public CmIqDiskActivity2(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -154,10 +155,20 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "select stat_num, stat_name, stat_desc, stat_value, stat_unit from sp_iqstatistics()" 
-					+ "where stat_name in ("
-					+ "'MainStoreDiskReads','MainStoreDiskWrites','TempStoreDiskReads','TempStoreDiskWrites','CacheDbspaceDiskReads','CacheDbspaceDiskWrites'"
-					+ ")";
+		String sql = 
+			"select \n"
+			+ "    stat_num, \n"
+			+ "    stat_name, \n"
+			+ "    stat_desc, \n"
+//			+ "    stat_value, \n" // This is data type "text", so lets try to convert it
+			+ "    stat_value=convert(bigint,stat_value), \n"
+			+ "    stat_unit \n"
+			+ "from sp_iqstatistics() \n" 
+			+ "where stat_name in ( \n"
+			+ "          'MainStoreDiskReads','MainStoreDiskWrites','TempStoreDiskReads','TempStoreDiskWrites','CacheDbspaceDiskReads','CacheDbspaceDiskWrites' \n"
+			+ "      ) \n"
+//			+ "  and IsNumeric(stat_value) = 1 \n"
+			+ "";
 
 		return sql;
 	}

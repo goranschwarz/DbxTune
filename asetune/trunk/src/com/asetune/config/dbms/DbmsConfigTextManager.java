@@ -1,5 +1,6 @@
 package com.asetune.config.dbms;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -69,6 +70,7 @@ public abstract class DbmsConfigTextManager
 	 * @param conn
 	 */
 	public static void initializeAll(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts)
+	throws SQLException
 	{
 		for (IDbmsConfigText entry : _instances.values())
 		{

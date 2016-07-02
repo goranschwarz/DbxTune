@@ -212,7 +212,7 @@ implements IDbmsConfigText
 	@Override
 	public void reset()
 	{
-		_configStr = null;
+		setConfig(null);
 	}
 
 	/** get the Config String */
@@ -231,7 +231,7 @@ implements IDbmsConfigText
 	@Override
 	public boolean isInitialized()
 	{
-		return (_configStr != null ? true : false);
+		return (getConfig() != null ? true : false);
 	}
 
 	/**
@@ -240,6 +240,7 @@ implements IDbmsConfigText
 	 */
 	@Override
 	public void initialize(DbxConnection conn, boolean hasGui, boolean offline, Timestamp ts)
+	throws SQLException
 	{
 		_hasGui  = hasGui;
 		_offline = offline;
@@ -326,11 +327,12 @@ implements IDbmsConfigText
 	 */
 	@Override
 	public void refresh(DbxConnection conn, Timestamp ts)
+	throws SQLException
 	{
 		if (conn == null)
 			return;
 
-		_configStr = null;
+		setConfig(null);
 
 		if ( ! _offline )
 		{
@@ -347,14 +349,14 @@ implements IDbmsConfigText
 			// Check if we can get the configuration, due to compatible version.
 			if (needVersion > 0 && srvVersion < needVersion)
 			{
-				_configStr = "This info is only available if the Server Version is above " + Ver.versionIntToStr(needVersion);
+				setConfig("This info is only available if the Server Version is above " + Ver.versionIntToStr(needVersion));
 				return;
 			}
 
 			// Check if we can get the configuration, due to cluster.
 			if (needCluster && ! isCluster)
 			{
-				_configStr = "This info is only available if the Server is Cluster Enabled.";
+				setConfig("This info is only available if the Server is Cluster Enabled.");
 				return;
 			}
 
@@ -371,7 +373,7 @@ implements IDbmsConfigText
 				}
 				if ( ! haveRole )
 				{
-					_configStr = "This info is only available if you have been granted any of the following role(s) '"+needRole+"'.";
+					setConfig("This info is only available if you have been granted any of the following role(s) '"+needRole+"'.");
 					return;
 				}
 			}
@@ -390,11 +392,13 @@ implements IDbmsConfigText
 				
 				if (missingConfigs.size() > 0)
 				{
-					_configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
-					_configStr += "\n";
-					_configStr += "The following configuration(s) is missing:\n";
+					String configStr;
+					configStr  = "This info is only available if the following configuration(s) has been enabled '"+needConfig+"'.\n";
+					configStr += "\n";
+					configStr += "The following configuration(s) is missing:\n";
 					for (String str : missingConfigs)
-						_configStr += "     exec sp_configure '" + str + "', 1\n";
+						configStr += "     exec sp_configure '" + str + "', 1\n";
+					setConfig(configStr);
 					return;
 				}
 			}
@@ -407,14 +411,19 @@ implements IDbmsConfigText
 			{
 				 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
 				script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
-				_configStr = script.executeSqlStr(sql, true);
+				setConfig(script.executeSqlStr(sql, true));
 			}
 			catch (SQLException ex)
 			{
 				_logger.error("AseConfigText:initialize:sql='"+sql+"'", ex);
 				if (_hasGui)
 					SwingUtils.showErrorMessage("AseConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
-				_configStr = null;
+				setConfig(null);
+
+				// JZ0C0: Connection is already closed.
+				if ("JZ0C0".equals(ex.getSQLState()))
+					throw ex;
+
 				return;
 			}
 			finally
@@ -426,7 +435,7 @@ implements IDbmsConfigText
 		else 
 		{
 			String sql = getSqlOffline(conn, ts);
-			_configStr = "The saved value for '"+getConfigType().toString()+"' wasn't available in the offline database, sorry.";
+			setConfig("The saved value for '"+getConfigType().toString()+"' wasn't available in the offline database, sorry.");
 			
 			try
 			{
@@ -435,7 +444,7 @@ implements IDbmsConfigText
 				ResultSet rs = stmt.executeQuery(sql);
 				while ( rs.next() )
 				{
-					_configStr = rs.getString(1);
+					setConfig(rs.getString(1));
 				}
 				rs.close();
 				stmt.close();
@@ -450,7 +459,12 @@ implements IDbmsConfigText
 				_logger.error("AseConfigText:initialize:sql='"+sql+"'", ex);
 				if (_hasGui)
 					SwingUtils.showErrorMessage("AseConfigText - Initialize", "SQL Exception: "+ex.getMessage()+"\n\nThis was found when executing SQL statement:\n\n"+sql, ex);
-				_configStr = null;
+				setConfig(null);
+
+				// JZ0C0: Connection is already closed.
+				if ("JZ0C0".equals(ex.getSQLState()))
+					throw ex;
+
 				return;
 			}
 		}

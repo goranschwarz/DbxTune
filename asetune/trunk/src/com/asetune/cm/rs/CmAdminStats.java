@@ -84,7 +84,8 @@ extends CountersModel
 
 	public CmAdminStats(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -211,10 +212,51 @@ extends CountersModel
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("Instance");
+		pkCols.add("InstanceId"); // We might need to add this as well... dsi_workload... might return not return unique enough values in 'Instance'
 		pkCols.add("Type");
 		pkCols.add("Name");
 
 		return pkCols;
+		
+		//------------------------------------------------------------------------
+		// Below is some examples (from web error log) where it looks strange
+		//------------------------------------------------------------------------
+		// NEW	53491	53491	53491	3	2015-11-18 08:48:44	2015-11-18 09:47:32	RsTune	pszyndela	not-conne	3.5.0	WARN	CounterCollectorThreadGui	com.asetune.cm.CounterSample	com.asetune.cm.CounterSample.addRow(CounterSample.java:1411)	Internal Counter Duplicate key in ResultSet for CM 'CmAdminStats', 
+		// pk='[Instance, Type, Name]', a row with the key values 'AOBJ, dbo.ImageHist|MONITOR|AOBJEstRowSize|' already exists. 
+		// CurrentRow='[AOBJ, dbo.ImageHist, 11705, 11, MONITOR, AOBJEstRowSize, 1, null, 204, 204, 204, null, AOBJ, 65015, 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x400='monitor', , In terms of bytes, this is the estimated size of a row associated with this object.]'. 
+		//     NewRow='[AOBJ, dbo.ImageHist, 11605, 11, MONITOR, AOBJEstRowSize, 1, null, 204, 204, 204, null, AOBJ, 65015, 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x400='monitor', , In terms of bytes, this is the estimated size of a row associated with this object.]'.	53491	53491	
+		//                                   ^^^^^
+		// 
+		// NEW	53491	53491	53491	4	2015-11-18 08:48:45	2015-11-18 09:47:32	RsTune	pszyndela	not-conne	3.5.0	WARN	CounterCollectorThreadGui	com.asetune.cm.CounterSample	com.asetune.cm.CounterSample.addRow(CounterSample.java:1411)	Internal Counter Duplicate key in ResultSet for CM 'CmAdminStats', 
+		// pk='[Instance, Type, Name]', a row with the key values 'AOBJ, dbo.ImageHist|OBSERVER|AOBJInsertCommand2|' already exists. 
+		// CurrentRow='[AOBJ, dbo.ImageHist, 11705, 11, OBSERVER, AOBJInsertCommand2, 1, null, null, null, null, 0, AOBJ, 65005, 0x04='sysmon (counter flushed as output of admin statistics, sysmon)', 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x200='observer', , Insert command on active object.]'. 
+		//     NewRow='[AOBJ, dbo.ImageHist, 11605, 11, OBSERVER, AOBJInsertCommand2, 1, null, null, null, null, 0, AOBJ, 65005, 0x04='sysmon (counter flushed as output of admin statistics, sysmon)', 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x200='observer', , Insert command on active object.]'.	53491	53491	
+		//                                   ^^^^^
+		// 
+		// NEW	53491	53491	53491	5	2015-11-18 08:48:51	2015-11-18 09:47:32	RsTune	pszyndela	not-conne	3.5.0	WARN	CounterCollectorThreadGui	com.asetune.cm.CounterSample	com.asetune.cm.CounterSample.addRow(CounterSample.java:1411)	Internal Counter Duplicate key in ResultSet for CM 'CmAdminStats', 
+		// pk='[Instance, Type, Name]', a row with the key values 'AOBJ, dbo.Image|MONITOR|AOBJEstRowSize|' already exists. 
+		// CurrentRow='[AOBJ, dbo.Image, 11705, 21, MONITOR, AOBJEstRowSize, 1, null, 249, 249, 249, null, AOBJ, 65015, 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x400='monitor', , In terms of bytes, this is the estimated size of a row associated with this object.]'. 
+		//     NewRow='[AOBJ, dbo.Image, 11605, 21, MONITOR, AOBJEstRowSize, 1, null, 249, 249, 249, null, AOBJ, 65015, 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x400='monitor', , In terms of bytes, this is the estimated size of a row associated with this object.]'.	53491	53491	
+		//                               ^^^^^
+		//
+		// NEW	53491	53491	53491	6	2015-11-18 08:48:52	2015-11-18 09:47:32	RsTune	pszyndela	not-conne	3.5.0	WARN	CounterCollectorThreadGui	com.asetune.cm.CounterSample	com.asetune.cm.CounterSample.addRow(CounterSample.java:1411)	Internal Counter Duplicate key in ResultSet for CM 'CmAdminStats', 
+		// pk='[Instance, Type, Name]', a row with the key values 'AOBJ, dbo.Image|OBSERVER|AOBJDeleteCommand2|' already exists. 
+		// CurrentRow='[AOBJ, dbo.Image, 11705, 21, OBSERVER, AOBJDeleteCommand2, 1, null, null, null, null, 0, AOBJ, 65009, 0x04='sysmon (counter flushed as output of admin statistics, sysmon)', 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x200='observer', , Delete command on active object.]'. 
+		//     NewRow='[AOBJ, dbo.Image, 11605, 21, OBSERVER, AOBJDeleteCommand2, 1, null, null, null, null, 0, AOBJ, 65009, 0x04='sysmon (counter flushed as output of admin statistics, sysmon)', 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x200='observer', , Delete command on active object.]'.	53491	53491	
+		//                               ^^^^^
+		// 
+		// NEW	53491	53491	53491	7	2015-11-18 08:48:45	2015-11-18 09:47:32	RsTune	pszyndela	not-conne	3.5.0	WARN	CounterCollectorThreadGui	com.asetune.cm.CounterSample	com.asetune.cm.CounterSample.addRow(CounterSample.java:1411)	Internal Counter Duplicate key in ResultSet for CM 'CmAdminStats', 
+		// pk='[Instance, Type, Name]', a row with the key values 'AOBJ, dbo.NewImageRef|MONITOR|AOBJEstRowSize|' already exists. 
+		// CurrentRow='[AOBJ, dbo.NewImageRef, 11705, 31, MONITOR, AOBJEstRowSize, 1, null, 30, 30, 30, null, AOBJ, 65015, 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x400='monitor', , In terms of bytes, this is the estimated size of a row associated with this object.]'. 
+		//     NewRow='[AOBJ, dbo.NewImageRef, 11605, 31, MONITOR, AOBJEstRowSize, 1, null, 30, 30, 30, null, AOBJ, 65015, 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x400='monitor', , In terms of bytes, this is the estimated size of a row associated with this object.]'.	53491	53491	
+		//                                     ^^^^^
+		// 
+		// NEW	53491	53491	53491	8	2015-11-18 08:48:45	2015-11-18 09:47:32	RsTune	pszyndela	not-conne	3.5.0	WARN	CounterCollectorThreadGui	com.asetune.cm.CounterSample	com.asetune.cm.CounterSample.addRow(CounterSample.java:1411)	Internal Counter Duplicate key in ResultSet for CM 'CmAdminStats', 
+		// pk='[Instance, Type, Name]', a row with the key values 'AOBJ, dbo.NewImageRef|OBSERVER|AOBJDeleteCommand2|' already exists. 
+		// CurrentRow='[AOBJ, dbo.NewImageRef, 11705, 31, OBSERVER, AOBJDeleteCommand2, 1, null, null, null, null, 0, AOBJ, 65009, 0x04='sysmon (counter flushed as output of admin statistics, sysmon)', 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x200='observer', , Delete command on active object.]'. 
+		//     NewRow='[AOBJ, dbo.NewImageRef, 11605, 31, OBSERVER, AOBJDeleteCommand2, 1, null, null, null, null, 0, AOBJ, 65009, 0x04='sysmon (counter flushed as output of admin statistics, sysmon)', 0x80='keep old (previous value of counter retained, usually to aid calculation during next observation period)', 0x200='observer', , Delete command on active object.]'.	53491	53491	
+		//                                     ^^^^^
+
 	}
 
 	@Override

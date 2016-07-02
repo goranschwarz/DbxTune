@@ -324,6 +324,11 @@ public class AseUrlHelper
 //		URL="jdbc:sybase:Tds:server1:port1,server2:port2,...,serverN:portN/mydb?&PACKETSIZE=1024&DYNAMIC_PREPARE=true&REQUEST_HA_SESSION=true"
 //		URL="jdbc:sybase:Tds:server1:port1[,server2:port2,...,serverN:portN][/mydb]?&PACKETSIZE=1024&DYNAMIC_PREPARE=true&REQUEST_HA_SESSION=true"
 
+		if (urlStr == null)
+		{
+			new Exception("DUMMY PRINT EXCEPTION to grab from where it was called").printStackTrace();
+		}
+		
 		String urlStart = "jdbc:sybase:Tds:";
 		
 		if ( ! urlStr.startsWith(urlStart) )

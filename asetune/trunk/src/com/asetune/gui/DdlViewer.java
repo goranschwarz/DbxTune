@@ -698,13 +698,13 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		// WINDOW
 		//------------------
 		if (_splitPane != null)
-			conf.setProperty("ddlview.dialog.splitPane.dividerLocation",  _splitPane.getDividerLocation());
+			conf.setLayoutProperty("ddlview.dialog.splitPane.dividerLocation",  _splitPane.getDividerLocation());
 
 
-		conf.setProperty("ddlview.dialog.window.width",  this.getSize().width);
-		conf.setProperty("ddlview.dialog.window.height", this.getSize().height);
-		conf.setProperty("ddlview.dialog.window.pos.x",  this.getLocationOnScreen().x);
-		conf.setProperty("ddlview.dialog.window.pos.y",  this.getLocationOnScreen().y);
+		conf.setLayoutProperty("ddlview.dialog.window.width",  this.getSize().width);
+		conf.setLayoutProperty("ddlview.dialog.window.height", this.getSize().height);
+		conf.setLayoutProperty("ddlview.dialog.window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty("ddlview.dialog.window.pos.y",  this.getLocationOnScreen().y);
 
 		conf.save();
 	}
@@ -729,10 +729,10 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		//----------------------------------
 		// TAB: s
 		//----------------------------------
-		int width  = conf.getIntProperty("ddlview.dialog.window.width",  900);
-		int height = conf.getIntProperty("ddlview.dialog.window.height", 740);
-		int x      = conf.getIntProperty("ddlview.dialog.window.pos.x",  -1);
-		int y      = conf.getIntProperty("ddlview.dialog.window.pos.y",  -1);
+		int width  = conf.getLayoutProperty("ddlview.dialog.window.width",  SwingUtils.hiDpiScale(900));
+		int height = conf.getLayoutProperty("ddlview.dialog.window.height", SwingUtils.hiDpiScale(740));
+		int x      = conf.getLayoutProperty("ddlview.dialog.window.pos.x",  -1);
+		int y      = conf.getLayoutProperty("ddlview.dialog.window.pos.y",  -1);
 		if (width != -1 && height != -1)
 		{
 			this.setSize(width, height);
@@ -743,7 +743,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 				this.setLocation(x, y);
 		}
 		
-		int divLoc = conf.getIntProperty("ddlview.dialog.splitPane.dividerLocation",  -1);
+		int divLoc = conf.getLayoutProperty("ddlview.dialog.splitPane.dividerLocation",  -1);
 		if (divLoc < 0)
 			divLoc = width / 3;
 		_splitPane.setDividerLocation(divLoc);

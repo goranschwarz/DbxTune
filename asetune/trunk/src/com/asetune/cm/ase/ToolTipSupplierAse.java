@@ -1,11 +1,15 @@
 package com.asetune.cm.ase;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+
+import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
 
@@ -14,6 +18,7 @@ import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonWaitEventIdDictionary;
 import com.asetune.config.dict.RemarkDictionary;
+import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
@@ -24,9 +29,26 @@ extends CmToolTipSupplierDefault
 {
 	private static Logger _logger = Logger.getLogger(ToolTipSupplierAse.class);
 
+//	private long   _lastCalled = 0;
+//	private String _currentObjectName = "";
+//	Timer          _aseShowplanTimer;
+
 	public ToolTipSupplierAse(CountersModel cm)
 	{
 		super(cm);
+		
+//		// Setup timer for not overloading the AseShowplan component
+//		_aseShowplanTimer = new Timer(500, new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent paramActionEvent)
+//			{
+//				_aseShowplanTimer.stop();
+//
+//System.out.println(">>>>>>>>>>SHOW XML PLAN: objectName='"+_currentObjectName+"'");
+//				AsePlanViewer.getInstance().loadXmlFromCache(_currentObjectName);
+//			}
+//		});
 	}
 
 	@Override
@@ -38,6 +60,8 @@ extends CmToolTipSupplierDefault
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{
+//		_lastCalled = System.currentTimeMillis();
+
 		if (_cm == null)
 			return null;
 		
@@ -62,6 +86,36 @@ extends CmToolTipSupplierDefault
 				String key = (String)cellValue;
 				if ( ! StringUtil.isNullOrBlank(key) )
 					return RemarkDictionary.getInstance().getToolTipText(key);
+			}
+		}
+
+		// XML ShowPlan
+		if ( _cm.isConnected() && ("ObjectName".equalsIgnoreCase(colName) || "procName".equalsIgnoreCase(colName)) )
+		{
+			//Object cellVal = getValueAt(modelRow, modelCol);
+			if (cellValue != null && cellValue instanceof String)
+			{
+				String objectName = (String)cellValue;
+				if (objectName.startsWith("*ss") || objectName.startsWith("*sq"))
+				{
+					AsePlanViewer.getInstance().loadXmlFromCacheDeferred(objectName);
+				}
+//System.out.println("colName='"+colName+"', cellValue='"+cellValue+"'");
+//				if (objectName.startsWith("*ss") || objectName.startsWith("*sq"))
+//				{
+//					// No need to show same object again
+//					if (objectName.equals(_currentObjectName))
+//						return null;
+//
+//					// Set the new object to show, but show it after 500ms if you move the mouse into a new object the timer restarts
+//					_currentObjectName = objectName;
+//					if ( ! _aseShowplanTimer.isRunning() )
+//						_aseShowplanTimer.start();
+//					else
+//						_aseShowplanTimer.restart();
+//
+//System.out.println("SHOW XML PLAN: colName='"+colName+"', objectName='"+objectName+"'");
+//				}
 			}
 		}
 

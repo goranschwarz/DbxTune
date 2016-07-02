@@ -5,6 +5,15 @@ import com.asetune.utils.Configuration;
 public class MonitorVmstatLinux
 extends MonitorVmstat
 {
+	public MonitorVmstatLinux()
+	{
+		this(-1);
+	}
+	public MonitorVmstatLinux(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	@Override
 	public String getModuleName()
 	{
@@ -19,35 +28,42 @@ extends MonitorVmstat
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData()
+	public HostMonitorMetaData createMetaData(int utilVersion)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
-		md.addDatetimeColumn("sampleTime", 1,  0, true, "Approximately when this record was samples");
+//		if ( utilVersion >= VersionShort.toInt(99,99,99) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
+//		{
+//			// Latest version should be in here...
+//		}
+//		else
+//		{
+			md.addDatetimeColumn("sampleTime", 1,  0, true, "Approximately when this record was samples");
 
-		md.addIntColumn("procs_r",      2,  1, true, "The number of processes waiting for run time.");
-		md.addIntColumn("procs_b",      3,  2, true, "The number of processes in uninterruptible sleep.");
+			md.addIntColumn("procs_r",      2,  1, true, "The number of processes waiting for run time.");
+			md.addIntColumn("procs_b",      3,  2, true, "The number of processes in uninterruptible sleep.");
 
-		md.addIntColumn("memory_swpd",  4,  3, true, "the amount of virtual memory used.");
-		md.addIntColumn("memory_free",  5,  4, true, "the amount of idle memory.");
-		md.addIntColumn("memory_buff",  6,  5, true, "the amount of memory used as buffers.");
-		md.addIntColumn("memory_cache", 7,  6, true, "the amount of memory used as cache.");
+			md.addIntColumn("memory_swpd",  4,  3, true, "the amount of virtual memory used.");
+			md.addIntColumn("memory_free",  5,  4, true, "the amount of idle memory.");
+			md.addIntColumn("memory_buff",  6,  5, true, "the amount of memory used as buffers.");
+			md.addIntColumn("memory_cache", 7,  6, true, "the amount of memory used as cache.");
 
-		md.addIntColumn("swap_si",      8,  7, true, "Amount of memory swapped in from disk (/s).");
-		md.addIntColumn("swap_so",      9,  8, true, "Amount of memory swapped to disk (/s).");
+			md.addIntColumn("swap_si",      8,  7, true, "Amount of memory swapped in from disk (/s).");
+			md.addIntColumn("swap_so",      9,  8, true, "Amount of memory swapped to disk (/s).");
 
-		md.addIntColumn("io_bi",       10,  9, true, "Blocks received from a block device (blocks/s).");
-		md.addIntColumn("io_bo",       11, 10, true, "Blocks sent to a block device (blocks/s).");
+			md.addIntColumn("io_bi",       10,  9, true, "Blocks received from a block device (blocks/s).");
+			md.addIntColumn("io_bo",       11, 10, true, "Blocks sent to a block device (blocks/s).");
 
-		md.addIntColumn("system_in",   12, 11, true, "The number of interrupts per second, including the clock.");
-		md.addIntColumn("system_cs",   13, 12, true, "The number of context switches per second.");
+			md.addIntColumn("system_in",   12, 11, true, "The number of interrupts per second, including the clock.");
+			md.addIntColumn("system_cs",   13, 12, true, "The number of context switches per second.");
 
-		md.addIntColumn("cpu_us",      14, 13, true, "Time spent running non-kernel code. (user time, including nice time)");
-		md.addIntColumn("cpu_sy",      15, 14, true, "Time spent running kernel code. (system time)");
-		md.addIntColumn("cpu_id",      16, 15, true, "Time spent idle. Prior to Linux 2.5.41, this includes IO-wait time.");
-		md.addIntColumn("cpu_wa",      17, 16, true, "Time spent waiting for IO. Prior to Linux 2.5.41, included in idle.");
-		md.addIntColumn("cpu_st",      18, 17, true, "Time stolen from a virtual machine. Prior to Linux 2.6.11, unknown.");
+			md.addIntColumn("cpu_us",      14, 13, true, "Time spent running non-kernel code. (user time, including nice time)");
+			md.addIntColumn("cpu_sy",      15, 14, true, "Time spent running kernel code. (system time)");
+			md.addIntColumn("cpu_id",      16, 15, true, "Time spent idle. Prior to Linux 2.5.41, this includes IO-wait time.");
+			md.addIntColumn("cpu_wa",      17, 16, true, "Time spent waiting for IO. Prior to Linux 2.5.41, included in idle.");
+			md.addIntColumn("cpu_st",      18, 17, true, "Time stolen from a virtual machine. Prior to Linux 2.6.11, unknown.");
+//		}
 
 		// Set Percent columns
 		md.setPercentCol("cpu_us");

@@ -112,7 +112,9 @@ implements ActionListener, FocusListener //, ChangeListener
 		H2, 
 		HSQL, 
 		MYSQL, 
-		DERBY
+		DERBY,
+		POSTGRES,
+		APACHE_HIVE
 	};
 	
 	private JSplitPane           _splitPane              = new JSplitPane();
@@ -161,7 +163,7 @@ implements ActionListener, FocusListener //, ChangeListener
 	private String               _favoriteFileName       = null;
 
 	private static final String  PROPKEY_SPLITPANE_DIV_LOC        = "FavoriteCommandDialog.splitpane.divider.location";
-	private static final int     DEFAULT_SPLITPANE_DIV_LOC        = 300;
+	private static final int     DEFAULT_SPLITPANE_DIV_LOC        = SwingUtils.hiDpiScale(300);
 
 	private static final String  SEPARATOR = "SEPARATOR";
 
@@ -934,16 +936,16 @@ implements ActionListener, FocusListener //, ChangeListener
 		//------------------
 		// SPLIT PANE
 		//------------------
-		conf.setProperty(PROPKEY_SPLITPANE_DIV_LOC, _splitPane.getDividerLocation());
+		conf.setLayoutProperty(PROPKEY_SPLITPANE_DIV_LOC, _splitPane.getDividerLocation());
 
 		
 		//------------------
 		// WINDOW
 		//------------------
-		conf.setProperty("FavoriteCommandDialog.window.width",  this.getSize().width);
-		conf.setProperty("FavoriteCommandDialog.window.height", this.getSize().height);
-		conf.setProperty("FavoriteCommandDialog.window.pos.x",  this.getLocationOnScreen().x);
-		conf.setProperty("FavoriteCommandDialog.window.pos.y",  this.getLocationOnScreen().y);
+		conf.setLayoutProperty("FavoriteCommandDialog.window.width",  this.getSize().width);
+		conf.setLayoutProperty("FavoriteCommandDialog.window.height", this.getSize().height);
+		conf.setLayoutProperty("FavoriteCommandDialog.window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty("FavoriteCommandDialog.window.pos.y",  this.getLocationOnScreen().y);
 
 		conf.save();
 	}
@@ -978,10 +980,10 @@ implements ActionListener, FocusListener //, ChangeListener
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("FavoriteCommandDialog.window.width",  900);
-		int height = conf.getIntProperty("FavoriteCommandDialog.window.height", 740);
-		int x      = conf.getIntProperty("FavoriteCommandDialog.window.pos.x",  -1);
-		int y      = conf.getIntProperty("FavoriteCommandDialog.window.pos.y",  -1);
+		int width  = conf.getLayoutProperty("FavoriteCommandDialog.window.width",  SwingUtils.hiDpiScale(900));
+		int height = conf.getLayoutProperty("FavoriteCommandDialog.window.height", SwingUtils.hiDpiScale(740));
+		int x      = conf.getLayoutProperty("FavoriteCommandDialog.window.pos.x",  -1);
+		int y      = conf.getLayoutProperty("FavoriteCommandDialog.window.pos.y",  -1);
 
 		if (width != -1 && height != -1)
 			this.setSize(width, height);
@@ -993,7 +995,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		//------------------
 		// SPLIT PANE
 		//------------------
-		int dividerLocation = conf.getIntProperty(PROPKEY_SPLITPANE_DIV_LOC, DEFAULT_SPLITPANE_DIV_LOC);
+		int dividerLocation = conf.getLayoutProperty(PROPKEY_SPLITPANE_DIV_LOC, DEFAULT_SPLITPANE_DIV_LOC);
 		_splitPane.setDividerLocation(dividerLocation);
 
 	}
@@ -2303,20 +2305,22 @@ implements ActionListener, FocusListener //, ChangeListener
 		if (VendorType.GENERIC.equals(vendorType)) 
 			return true;
 		
-		if      (VendorType.ASE   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return true;
-		else if (VendorType.ASA   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return true;
-		else if (VendorType.IQ    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ   )) return true;
-		else if (VendorType.RS    .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS   )) return true;
-		else if (VendorType.RAX   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RAX  )) return true;
-		else if (VendorType.RSDRA .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return true;
-		else if (VendorType.HANA  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HANA        )) return true;
-		else if (VendorType.MAXDB .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB       )) return true;
-		else if (VendorType.ORACLE.equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE      )) return true;
-		else if (VendorType.MSSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL       )) return true;
-		else if (VendorType.DB2   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX      )) return true;
-		else if (VendorType.HSQL  .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HSQL        )) return true;
-		else if (VendorType.MYSQL .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL       )) return true;
-		else if (VendorType.DERBY .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DERBY       )) return true;
+		if      (VendorType.ASE        .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return true;
+		else if (VendorType.ASA        .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return true;
+		else if (VendorType.IQ         .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ   )) return true;
+		else if (VendorType.RS         .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RS   )) return true;
+		else if (VendorType.RAX        .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RAX  )) return true;
+		else if (VendorType.RSDRA      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return true;
+		else if (VendorType.HANA       .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HANA        )) return true;
+		else if (VendorType.MAXDB      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB       )) return true;
+		else if (VendorType.ORACLE     .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE      )) return true;
+		else if (VendorType.MSSQL      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL       )) return true;
+		else if (VendorType.DB2        .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX      )) return true;
+		else if (VendorType.HSQL       .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HSQL        )) return true;
+		else if (VendorType.MYSQL      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL       )) return true;
+		else if (VendorType.DERBY      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DERBY       )) return true;
+		else if (VendorType.POSTGRES   .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES    )) return true;
+		else if (VendorType.APACHE_HIVE.equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_APACHE_HIVE )) return true;
 		
 		return false;
 	}

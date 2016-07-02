@@ -54,6 +54,15 @@ extends MonTablesDictionary
 //	private static String SQL_SP_VERSION            = "sp_version 'installmontables'";
 	private static String SQL_SP_VERSION            = "sybsystemprocs..sp_version";
 
+	/**
+	 * yes, save MonTableDictionary in PCS
+	 */
+	@Override
+	public boolean isSaveMonTablesDictionaryInPcsEnabled()
+	{
+		return true;
+	}
+	
 	/** 
 	 * if version is above 15.0.x, then use installmaster as the monTable version, since installmaster 
 	 * installs the monTables and sp_version 'montables' doesn't include the ESD level
@@ -890,5 +899,5 @@ extends MonTablesDictionary
 			/* ignore */
 		}
 	}
-	
+
 }

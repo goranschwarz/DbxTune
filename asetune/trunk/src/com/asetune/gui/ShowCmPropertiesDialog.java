@@ -551,7 +551,8 @@ extends JDialog implements ActionListener, ChangeListener
 	private void loadFieldsUsingVersion(int aseVersion, boolean isCeEnabled)
 	{
 //		Connection conn = AseTune.getCounterCollector().getMonConnection();
-		Connection conn = CounterController.getInstance().getMonConnection();
+//		Connection conn = CounterController.getInstance().getMonConnection();
+		Connection conn = _cm.getCounterController().getMonConnection();
 
 		String sqlInit  = _cm.getSqlInitForVersion (conn, aseVersion, isCeEnabled);
 		String sqlExec  = _cm.getSqlForVersion     (conn, aseVersion, isCeEnabled);

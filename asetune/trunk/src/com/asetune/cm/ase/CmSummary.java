@@ -24,6 +24,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
 /**
@@ -54,7 +55,7 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"LockWaits", "CheckPoints", "NumDeadlocks", "Connections", "Transactions", 
+		"LockCount", "LockWaits", "CheckPoints", "NumDeadlocks", "Connections", "Transactions", 
 		"Rollbacks", "Selects", "Updates", "Inserts", "Deletes", "Merges",              // new in 15.7 SP100
 		"TableAccesses", "IndexAccesses", "TempDbObjects", "WorkTables",                // new in 15.7 SP100
 		"ULCFlushes", "ULCFlushFull", "ULCKBWritten",                                   // new in 15.7 SP100
@@ -86,7 +87,8 @@ extends CountersModel
 
 	public CmSummary(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -111,6 +113,11 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX = CM_NAME;
+
+	public static final String  PROPKEY_sample_lockCount     = PROP_PREFIX + ".sample.lockCount";
+	public static final boolean DEFAULT_sample_lockCount     = false;
+	
 	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
 	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
@@ -118,6 +125,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
 	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
+	public static final String GRAPH_NAME_LOCK_COUNT         = "LockCountGraph";           // LockCount
 
 	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";               // Transactions, Rollbacks
 	public static final String GRAPH_NAME_SELECT_OPERATIONS  = "SelectOperationsGraph";    // Selects
@@ -137,6 +145,7 @@ extends CountersModel
 		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
 		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
 		String[] labels_openTran         = new String[] { "Seconds" };
+		String[] labels_lockCount        = new String[] { "Lock Count" };
 
 		String[] labels_transaction      = new String[] { "Transactions", "Rollbacks" };
 		String[] labels_selectOperations = new String[] { "Selects" };
@@ -162,6 +171,7 @@ extends CountersModel
 		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW));
 		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
 		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran));
+		addTrendGraphData(GRAPH_NAME_LOCK_COUNT,         new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT,         labels_lockCount));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -298,15 +308,15 @@ extends CountersModel
 			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
-					"Connection Rate in ASE", 	          // Menu CheckBox text
-					"Connection Attemtps per Second (source @@connections)", // Label 
-					labels_connRate, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-				addTrendGraph(tg.getName(), tg, true);
+				"Connection Rate in ASE", 	          // Menu CheckBox text
+				"Connection Attemtps per Second (source @@connections)", // Label 
+				labels_connRate, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
 
 			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
@@ -340,6 +350,18 @@ extends CountersModel
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
+				"Lock Count", 	                   // Menu CheckBox text
+				"Lock Count, number of concurrent locks (from syslocks)", // Label 
+				labels_lockCount, 
+				false,   // is Percent Graph
+				this, 
+				false,   // visible at start
+				0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);     // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
 		}
 	}
 
@@ -389,13 +411,13 @@ extends CountersModel
 
 		if (isRuntimeInitialized())
 		{
-			if (isRoleActive(AseConnectionUtils.SA_ROLE))
+			if (isServerRoleOrPermissionActive(AseConnectionUtils.SA_ROLE))
 			{
 				Component guiOwner = DbxTune.hasGui() ? MainFrame.getInstance() : null;
 //				nwAddrInfo = "(select min(convert(varchar(255),address_info)) from syslisteners where address_info not like 'localhost%')";
 				nwAddrInfo = "'" + AseConnectionUtils.getListeners(conn, false, true, guiOwner) + "'";
 			}
-			hasMonRole = isRoleActive(AseConnectionUtils.MON_ROLE);
+			hasMonRole = isServerRoleOrPermissionActive(AseConnectionUtils.MON_ROLE);
 			isMonitoringEnabled = getMonitorConfig("enable monitoring") > 0;
 
 			// Check if we can do select on syslogshold
@@ -518,7 +540,11 @@ extends CountersModel
 			}
 		}
 
-		
+		String LockCount = ", LockCount          = convert(int, -1) \n";
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_lockCount, DEFAULT_sample_lockCount))
+		{
+			LockCount = ", LockCount          = (select count(*) from master..syslocks) \n";
+		}
 		
 		cols2 = ", aseVersion         = @@version \n" +
 				", atAtServerName     = @@servername \n" +
@@ -542,6 +568,7 @@ extends CountersModel
 
 				", aaConnections      = @@connections \n" +
 				", distinctLogins     = (select count(distinct suid) from master..sysprocesses) \n" +
+				LockCount +
 
 				// ------ column 'stat'
 				// 32   - Database created with for load option, or crashed while loading database, instructs recovery not to proceed
@@ -586,7 +613,7 @@ extends CountersModel
 		// if NOT MON_ROLE, revrite the query a bit
 		if (isRuntimeInitialized())
 		{
-			if ( ! isRoleActive(AseConnectionUtils.MON_ROLE))
+			if ( ! isServerRoleOrPermissionActive(AseConnectionUtils.MON_ROLE))
 			{
 				cols1     = "dummyColumn = 1 \n";
 				fromTable = "";
@@ -1015,6 +1042,21 @@ extends CountersModel
 				tgdp.setDate(this.getTimestamp());
 				tgdp.setData(arr);
 			}
+		}
+
+		//---------------------------------
+		// GRAPH:
+		//---------------------------------
+		if (GRAPH_NAME_LOCK_COUNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueAsDouble (0, "LockCount");
+			_logger.debug("updateGraphData("+tgdp.getName()+"): LockCount='"+arr[0]+"'.");
+
+			// Set the values
+			tgdp.setDate(this.getTimestamp());
+			tgdp.setData(arr);
 		}
 
 		//---------------------------------

@@ -186,6 +186,7 @@ begin
 				status,
 				loginame=suser_name(suid),
 				hostname,
+				hostprocess,
 				program_name,
 				blk=convert(char(5),blocked),
 				time_blocked,

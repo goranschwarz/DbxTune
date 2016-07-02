@@ -1,6 +1,7 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
+import java.sql.SQLException;
 import java.util.List;
 
 import javax.swing.Icon;
@@ -80,7 +81,7 @@ extends MainFrame
 			}
 			
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
-			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
+			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws SQLException
 			{
 				if (DbmsConfigManager.hasInstance())
 				{

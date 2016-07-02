@@ -19,6 +19,8 @@ import org.jdesktop.swingx.JXTable;
 
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.tools.sqlw.msg.JAseProcRetCode;
 import com.asetune.tools.sqlw.msg.JAseProcRetParam;
@@ -32,6 +34,7 @@ import com.sybase.jdbcx.SybPreparedStatement;
 ** BEGIN: class SqlStatementInfo, SqlParam
 **----------------------------------------------------------------------*/ 
 public class SqlStatementInfo
+implements SqlStatement
 {
 	private static Logger _logger = Logger.getLogger(SqlStatementInfo.class);
 
@@ -49,12 +52,14 @@ public class SqlStatementInfo
 	// Used when SQL String starts with "exec "
 	private CallableStatement _cstmnt = null;
 
+	@Override
 	public Statement getStatement()
 	{
 //System.out.println("SqlStatementInfo.getStatement():" + ((_useCallableStatement) ? "CALLABLE" : "LANGUAGE"));
 		return (_callableStatement||_preparedStatement) ? _cstmnt : _stmnt;  
 	}
 	
+	@Override
 	public boolean execute() 
 	throws SQLException
 	{
@@ -62,7 +67,7 @@ public class SqlStatementInfo
 		return (_callableStatement||_preparedStatement) ? _cstmnt.execute() : _stmnt.execute(_sqlOrigin);
 	}
 	
-	public SqlStatementInfo(Connection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList)
+	public SqlStatementInfo(DbxConnection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList)
 	throws SQLException
 	{
 		_sqlOrigin = sql;
@@ -405,6 +410,7 @@ public class SqlStatementInfo
 	 * @param asPlainText
 	 * @throws SQLException
 	 */
+	@Override
 	public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList, boolean asPlainText) 
 	throws SQLException
 	{
@@ -484,7 +490,7 @@ public class SqlStatementInfo
 	// Some test code
 	//###########################################################################################
 	//###########################################################################################
-	private static void test(int testnum, boolean shouldWork, Connection conn, String sql, String product, ArrayList<JComponent> resultCompList)
+	private static void test(int testnum, boolean shouldWork, DbxConnection conn, String sql, String product, ArrayList<JComponent> resultCompList)
 	{
 		System.out.println(">>>>>>>>> Test number '"+testnum+"'.");
 		try
@@ -516,7 +522,8 @@ public class SqlStatementInfo
 	{
 		try
 		{
-			Connection conn = AseConnectionFactory.getConnection("GORAN_15702_DS", null, "sa", "sybase", "dummy");
+			Connection c = AseConnectionFactory.getConnection("GORAN_15702_DS", null, "sa", "sybase", "dummy");
+			DbxConnection conn = DbxConnection.createDbxConnection(c);
 
 			test(1,  true, conn, "select * from xxx", "dbProductName", null);
 

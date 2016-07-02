@@ -23,7 +23,6 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.ase.CmCachedObjects;
 import com.asetune.cm.ase.CmObjectActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PersistentCounterHandler;
@@ -39,6 +38,7 @@ extends TabularCntrPanel
 //	private static final String  PROP_PREFIX           = CmObjectActivity.CM_NAME;
 
 	private JCheckBox l_sampleSystemTables_chk;
+	private JCheckBox l_sampleRowCount_chk;
 
 	public CmObjectActivityPanel(CountersModel cm)
 	{
@@ -83,17 +83,19 @@ extends TabularCntrPanel
 		// RowCount
 		//-----------------------------------------
 		defaultOpt = conf == null ? CmObjectActivity.DEFAULT_sample_tabRowCount : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_tabRowCount, CmObjectActivity.DEFAULT_sample_tabRowCount);
-		JCheckBox sampleRowCount_chk = new JCheckBox("Sample Table Row Count", defaultOpt);
+//		JCheckBox sampleRowCount_chk = new JCheckBox("Sample Table Row Count", defaultOpt);
+		l_sampleRowCount_chk = new JCheckBox("Sample Table Row Count", defaultOpt);
 
-		sampleRowCount_chk.setName(CmObjectActivity.PROPKEY_sample_tabRowCount);
-		sampleRowCount_chk.setToolTipText("<html>" +
+		l_sampleRowCount_chk.setName(CmObjectActivity.PROPKEY_sample_tabRowCount);
+		l_sampleRowCount_chk.setToolTipText("<html>" +
 				"Sample Table Row Count using ASE functions <code>row_count()</code> and <code>data_pages()</code>.<br>" +
 				"<b>Note 1</b>: Only in ASE 15.0.2 or higher.<br>" +
 				"<b>Note 2</b>: You can also set the property '"+CmObjectActivity.PROPKEY_sample_tabRowCount+"'=true|false' in the configuration file.<br>" +
 				"<b>Note 3</b>: To check if this is enabled or not, use the Properties dialog in this tab pane, right click + properties...<br>" +
+				"<b>Note 4</b>: Warning this may <b>block</b> collection if anyone holds <b>exclusive table locks</b>. In ASE 15.7 SP130 or above function row_count() has option 'noblock', which will be used.<br>" +
 				"</html>");
 
-		sampleRowCount_chk.addActionListener(new ActionListener()
+		l_sampleRowCount_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -120,10 +122,10 @@ extends TabularCntrPanel
 		final JTextField sampleTopRowsCount_txt = new JTextField(Integer.toString(defaultIntOpt), 5);
 
 		sampleTopRows_chk.setName(CmObjectActivity.PROPKEY_sample_topRows);
-		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		sampleTopRows_chk.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmObjectActivity.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
 		sampleTopRowsCount_txt.setName(CmObjectActivity.PROPKEY_sample_topRowsCount);
-		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmCachedObjects.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
+		sampleTopRowsCount_txt.setToolTipText("<html>Restrict number of rows fetch from the server<br>Uses: <code>select <b>top "+CmObjectActivity.DEFAULT_sample_topRowsCount+"</b> c1, c2, c3 from tablename where...</code></html>");
 
 		sampleTopRows_chk.addActionListener(new ActionListener()
 		{
@@ -262,7 +264,7 @@ extends TabularCntrPanel
 		});
 		
 		// LAYOUT
-		panel.add(sampleRowCount_chk,     "wrap");
+		panel.add(l_sampleRowCount_chk,     "wrap");
 		
 		panel.add(sampleTopRows_chk,      "split");
 		panel.add(sampleTopRowsCount_txt, "wrap");
@@ -276,11 +278,20 @@ extends TabularCntrPanel
 	public void checkLocalComponents()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// PROPKEY_sample_systemTables
 		boolean confProp = conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_systemTables, CmObjectActivity.DEFAULT_sample_systemTables);
 		boolean guiProp  = l_sampleSystemTables_chk.isSelected();
 
 		if (confProp != guiProp)
 			l_sampleSystemTables_chk.setSelected(confProp);
+
+		
+		confProp = conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_tabRowCount, CmObjectActivity.DEFAULT_sample_tabRowCount);
+		guiProp  = l_sampleRowCount_chk.isSelected();
+
+		if (confProp != guiProp)
+			l_sampleRowCount_chk.setSelected(confProp);
 	}
 
 	@Override

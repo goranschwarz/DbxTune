@@ -87,6 +87,10 @@ Sourceforge
 - ftp history.html           (from: cd c:\tmpsvn\release\src\com\asetune)
 - ftp asetune_YYYY-MM-DD.zip (from: cd c:\tmpsvn\release)
 
+Also to 'gorans.org' just in case...
+- gorans.org/www/asetune/asetune_YYYY-MM-DD.zip
+- gorans.org/www/asetune/tmp/asetune_YYYY-MM-DD.zip
+
 -----------------------------------------------------------
 done at asemon.se
 

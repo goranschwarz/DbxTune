@@ -133,6 +133,10 @@ public class SshTunnelManager
 		String connKey  = sshTunnelInfo.getSshHost() + ":" + sshTunnelInfo.getSshPort() + ":" + sshTunnelInfo.getSshUsername();
 		String connInfo = "Host " + sshTunnelInfo.getSshHost() + ":" + sshTunnelInfo.getSshPort() + ", User " + sshTunnelInfo.getSshUsername();
 
+		// If it's a *hard-coded* port number, append the port to the "key" for the TunnelCache
+		if (sshTunnelInfo.isLocalPortGenerated())
+			hostPortStr += "#" + sshTunnelInfo.getDestPort();
+
 		// Get SSH Tunnel if we already has a valid tunnel
 		LocalPortForwarderWrapper lpfw =  _tunnelCache.get(hostPortStr);
 		if ( lpfw != null )
@@ -180,6 +184,8 @@ public class SshTunnelManager
 				sshTunnelInfo.getSshUsername(), 
 				sshTunnelInfo.getSshPassword());
 
+//System.out.println("SshTunnelManager.setupTunnel(): hostPortStr='"+hostPortStr+"', sshHost='"+sshTunnelInfo.getSshHost()+", sshPort='"+sshTunnelInfo.getSshPort()+"', sshUser='"+sshTunnelInfo.getSshUsername()+"', sshPasswd='"+sshTunnelInfo.getSshPassword()+"'.");
+//System.out.println("SshTunnelManager.setupTunnel(): hostPortStr='"+hostPortStr+"', sshTunnelInfo='"+sshTunnelInfo.getConfigString(false, true)+"'.");
 			sshConn.connect();
 			
 			// execute OS Init String if there is one

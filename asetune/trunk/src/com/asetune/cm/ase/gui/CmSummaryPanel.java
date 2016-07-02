@@ -22,6 +22,7 @@ import java.util.HashMap;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -29,11 +30,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
@@ -56,6 +56,8 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSummaryPanel
 //extends TabularCntrPanel
@@ -97,7 +99,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JLabel           _clusterCoordinator_lbl       = new JLabel();
 	private JTextField       _clusterCoordinatorName_txt   = new JTextField();
 	private JTextField       _clusterCoordinatorId_txt     = new JTextField();
-	private JComboBox        _clusterView_cbx              = new JComboBox(new String[] {"cluster", "instance"});
+	private JComboBox<String>_clusterView_cbx              = new JComboBox<String>(new String[] {"cluster", "instance"});
 	private JLabel           _clusterView_lbl              = new JLabel();
 
 	// SERVER INFO PANEL
@@ -135,6 +137,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _distinctLoginsDiff_txt       = new JTextField();
 	private JTextField       _distinctLoginsAbs_txt        = new JTextField();
 	private JLabel           _distinctLogins_lbl           = new JLabel();
+	private JTextField       _lockCount_txt                = new JTextField();
+	private JTextField       _lockCountDiff_txt            = new JTextField();
+	private JCheckBox        _lockCount_chk                = new JCheckBox();
+	private JLabel           _lockCount_lbl                = new JLabel();
 	private JTextField       _lockWaitThreshold_txt        = new JTextField();
 	private JLabel           _lockWaitThreshold_lbl        = new JLabel();
 	private JTextField       _lockWaits_txt                = new JTextField();
@@ -449,7 +455,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		JPanel panel = SwingUtils.createPanel("title", false);
 		panel.setLayout(new MigLayout("", "5[grow]5", ""));
 
-		_title_lbl.setFont(new java.awt.Font("Dialog", 1, 16));
+		_title_lbl.setFont(new java.awt.Font("Dialog", 1, SwingUtils.hiDpiScale(16)));
 		_title_lbl.setText("Summary panel");
 
 		// create new panel
@@ -683,6 +689,45 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_distinctLoginsDiff_txt.setEditable(false);
 		_distinctLoginsDiff_txt.setToolTipText("The difference since previous sample.");
 		_distinctLoginsDiff_txt.setForeground(Color.BLUE);
+
+		tooltip = "<html>"
+				+ "Number of concurrent locks held by the server<br>"
+				+ "<br>"
+				+ "The following SQL Statement is executed when:"
+				+ "<ul>"
+				+ "<li>Enabled: <code>select count(*) from master.dbo.syslocks<code></li>"
+				+ "<li>disabled: <code>select -1<code></li>"
+				+ "</ul>"
+				+ "<html>";
+//		_lockCount_chk        .setHorizontalTextPosition(SwingConstants.LEFT);
+//		_lockCount_chk        .setText("Lock Count");
+		_lockCount_chk        .setToolTipText(tooltip);
+		_lockCount_lbl        .setText("Lock Count");
+		_lockCount_lbl        .setToolTipText(tooltip);
+		_lockCount_txt        .setToolTipText(tooltip);
+		_lockCount_txt        .setEditable(false);
+		_lockCountDiff_txt    .setEditable(false);
+		_lockCountDiff_txt    .setToolTipText("The difference since previous sample.");
+		_lockCountDiff_txt    .setForeground(Color.BLUE);
+
+		_lockCount_chk.setSelected(Configuration.getCombinedConfiguration().getBooleanProperty(CmSummary.PROPKEY_sample_lockCount, CmSummary.DEFAULT_sample_lockCount));
+		_lockCount_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmSummary.PROPKEY_sample_lockCount, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+			}
+		});
 
 		tooltip = "Time (in seconds) that processes must have waited for locks in order to be reported.";
 		_lockWaitThreshold_lbl.setText("Lock wait threshold");
@@ -1196,6 +1241,11 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_distinctLoginsAbs_txt,   "growx, split");
 		panel.add(_distinctLoginsDiff_txt,  "growx, wrap");
 		
+		panel.add(_lockCount_lbl,           "split 2");
+		panel.add(_lockCount_chk,           "");
+		panel.add(_lockCount_txt,           "growx, split");
+		panel.add(_lockCountDiff_txt,       "growx, wrap");
+		
 		panel.add(_lockWaitThreshold_lbl,   "");
 		panel.add(_lockWaitThreshold_txt,   "growx, wrap");
 		
@@ -1687,6 +1737,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_connectionsDiff_txt   .setText(cm.getDiffString(0, "Connections"));
 		_distinctLoginsAbs_txt .setText(cm.getAbsString (0, "distinctLogins"));
 		_distinctLoginsDiff_txt.setText(cm.getDiffString(0, "distinctLogins"));
+		_lockCount_txt         .setText(cm.getAbsString (0, "LockCount"));
+		_lockCountDiff_txt     .setText(cm.getDiffString(0, "LockCount"));
 		_lockWaitThreshold_txt .setText(cm.getAbsString (0, "LockWaitThreshold"));
 		_lockWaits_txt         .setText(cm.getAbsString (0, "LockWaits"));
 		_lockWaitsDiff_txt     .setText(cm.getDiffString(0, "LockWaits"));
@@ -1926,6 +1978,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_connectionsDiff_txt    .setText("");
 		_distinctLoginsAbs_txt  .setText("");
 		_distinctLoginsDiff_txt .setText("");
+		_lockCount_txt          .setText("");
+		_lockCountDiff_txt      .setText("");
 		_lockWaitThreshold_txt  .setText("");
 		_lockWaits_txt          .setText("");
 		_lockWaitsDiff_txt      .setText("");
@@ -2051,8 +2105,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
-		conf.setProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
-		conf.setProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
+		conf.setLayoutProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
+		conf.setLayoutProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
 
 		conf.save();
 	}
@@ -2080,8 +2134,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_clusterView_cbx.setSelectedItem(clusterView);
 				
 
-		int width   = conf.getIntProperty("summaryPanel.serverInfo.width",  -1);
-		int height  = conf.getIntProperty("summaryPanel.serverInfo.height",  -1);
+		int width   = conf.getLayoutProperty("summaryPanel.serverInfo.width",  SwingUtils.hiDpiScale(300));
+		int height  = conf.getLayoutProperty("summaryPanel.serverInfo.height", SwingUtils.hiDpiScale(5000));
 		if (width != -1 && height != -1)
 		{
 			_dataPanelScroll.setPreferredSize(new Dimension(width, height));
@@ -2162,7 +2216,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();

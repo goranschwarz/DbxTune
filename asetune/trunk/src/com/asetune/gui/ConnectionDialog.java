@@ -23,7 +23,6 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -92,8 +91,6 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
@@ -101,6 +98,7 @@ import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
 import com.asetune.CounterController;
+import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionProfile.DbxTuneParams;
@@ -113,11 +111,13 @@ import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.gui.swing.TreeTransferHandler;
 import com.asetune.gui.swing.VerticalScrollPane;
 import com.asetune.gui.swing.WaitForExecDialog;
-import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
@@ -136,6 +136,8 @@ import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
+import net.miginfocom.swing.MigLayout;
+
 
 public class ConnectionDialog
 	extends JDialog
@@ -143,12 +145,18 @@ public class ConnectionDialog
 {
 	private static Logger _logger = Logger.getLogger(ConnectionDialog.class);
 	private static final long serialVersionUID = -7782953767666701933L;
+	
+	public static final String   PROPKEY_RECONNECT_ON_FAILURE        = "conn.reconnectOnFailure";
+	public static final boolean  DEFAULT_RECONNECT_ON_FAILURE        = false;
 
-	public static final String CONF_OPTION_RECONNECT_ON_FAILURE = "conn.reconnectOnFailure";
-	public static final String CONF_OPTION_CONNECT_ON_STARTUP   = "conn.onStartup";
+	public static final String   PROPKEY_CONNECT_ON_STARTUP          = "conn.onStartup";
+	public static final boolean  DEFAULT_CONNECT_ON_STARTUP          = false;
 
-	public  static final String  PROPKEY_CONN_SSH_TUNNEL        = "conn.ssh.tunnel";
-	public  static final boolean DEFAULT_CONN_SSH_TUNNEL        = false;
+	public  static final String  PROPKEY_CONN_SSH_TUNNEL             = "conn.ssh.tunnel";
+	public  static final boolean DEFAULT_CONN_SSH_TUNNEL             = false;
+
+	public  static final String  PROPKEY_CONN_JDBC_SSH_TUNNEL        = "conn.jdbc.ssh.tunnel";
+	public  static final boolean DEFAULT_CONN_JDBC_SSH_TUNNEL        = false;
 
 	public static final String   PROPKEY_showDialogOnNoLocalPcsDrive = "ConnectionDialog.showDialog.pcs.noLocalDrive";
 	public static final boolean  DEFAULT_showDialogOnNoLocalPcsDrive = true;
@@ -160,9 +168,10 @@ public class ConnectionDialog
 
 	static
 	{
-//		Configuration.registerDefaultValue(CONF_OPTION_RECONNECT_ON_FAILURE,   DEFAULT_xxx); // FIXME
-//		Configuration.registerDefaultValue(CONF_OPTION_CONNECT_ON_STARTUP,     DEFAULT_xxx); // FIXME
+		Configuration.registerDefaultValue(PROPKEY_RECONNECT_ON_FAILURE,       DEFAULT_RECONNECT_ON_FAILURE);
+		Configuration.registerDefaultValue(PROPKEY_CONNECT_ON_STARTUP,         DEFAULT_CONNECT_ON_STARTUP);
 		Configuration.registerDefaultValue(PROPKEY_CONN_SSH_TUNNEL,            DEFAULT_CONN_SSH_TUNNEL);
+		Configuration.registerDefaultValue(PROPKEY_CONN_JDBC_SSH_TUNNEL,       DEFAULT_CONN_JDBC_SSH_TUNNEL);
 
 		Configuration.registerDefaultValue(PROPKEY_CONN_PROFILE_PANEL_VISIBLE, DEFAULT_CONN_PROFILE_PANEL_VISIBLE);
 		Configuration.registerDefaultValue(PROPKEY_CONN_TABED_PANEL_VISIBLE,   DEFAULT_CONN_TABED_PANEL_VISIBLE);
@@ -202,7 +211,7 @@ public class ConnectionDialog
 	private static final String TAB_TITLE_OFFLINE  = "Load Recorded Sessions";
 	private static final String TAB_TITLE_JDBC     = "JDBC";
 
-	private static final int    DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION = 150;
+	private static final int    DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION = SwingUtils.hiDpiScale(150);
 	
 	private static final String NO_TEMPLATE_IS_SELECTED = "<choose a template>";
 	private static final String NO_PROFILE_IS_SELECTED  = "<choose a profile>";
@@ -229,7 +238,7 @@ public class ConnectionDialog
 	//---- ASE panel
 	private JLabel               _aseProfile_lbl     = new JLabel("Use Profile");
 	private ProfileComboBoxModel _aseProfile_mod     = new ProfileComboBoxModel(ConnectionProfile.Type.TDS);
-	private JComboBox            _aseProfile_cbx     = new JComboBox(_aseProfile_mod);
+	private JComboBox<String>    _aseProfile_cbx     = new JComboBox<String>(_aseProfile_mod);
 	private JButton              _aseProfileSave_but = new JButton("Save Profile...");
 	private ImageIcon            _aseLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
 	private JLabel               _aseLoginIcon       = new JLabel(_aseLoginImageIcon);
@@ -276,7 +285,7 @@ public class ConnectionDialog
 	private JButton              _aseSshTunnel_but       = new JButton("SSH Settings...");
 
 	private JLabel               _aseClientCharset_lbl   = new JLabel("Client Charset");
-	private JComboBox            _aseClientCharset_cbx   = new JComboBox();
+	private JComboBox<String>    _aseClientCharset_cbx   = new JComboBox<String>();
 
 	private JLabel               _aseSqlInit_lbl         = new JLabel("SQL Init");
 	private JTextField           _aseSqlInit_txt         = new JTextField("");
@@ -284,12 +293,12 @@ public class ConnectionDialog
 	private JPanel               _dbxTuneOptionsPanel             = null;
 	private TemplateComboBoxModel _aseOptionUseTemplate_mod       = new TemplateComboBoxModel();
 	private JCheckBox            _aseOptionUseTemplate_chk        = new JCheckBox("Use Counter Template", false);
-	private JComboBox            _aseOptionUseTemplate_cbx        = new JComboBox(_aseOptionUseTemplate_mod);
+	private JComboBox<String>    _aseOptionUseTemplate_cbx        = new JComboBox<String>(_aseOptionUseTemplate_mod);
 	private JButton              _aseOptionUseTemplate_but        = new JButton("Template Dialog...");
 	private JCheckBox            _aseOptionSavePwd_chk            = new JCheckBox("Save password", true);
 	private JCheckBox            _aseOptionPwdEncryption_chk      = new JCheckBox("Encrypt password over the Network", true);
-	private JCheckBox            _aseOptionConnOnStart_chk        = new JCheckBox("Connect to this server on startup", false);
-	private JCheckBox            _aseOptionReConnOnFailure_chk    = new JCheckBox("Reconnect to server if connection is lost", true);
+	private JCheckBox            _aseOptionConnOnStart_chk        = new JCheckBox("Connect to this server on startup",         DEFAULT_CONNECT_ON_STARTUP);
+	private JCheckBox            _aseOptionReConnOnFailure_chk    = new JCheckBox("Reconnect to server if connection is lost", DEFAULT_RECONNECT_ON_FAILURE);
 //	private JCheckBox            _aseOptionUsedForNoGui_chk       = new JCheckBox("Use connection info above for no-gui mode", false);
 	private JCheckBox            _aseHostMonitor_chk              = new JCheckBox("<html>Monitor the OS Host for IO and CPU... <i>Set parameters in tab '<b>Host Monitor</b>'</i></html>", false);
 //	private JCheckBox            _aseOptionStore_chk              = new JCheckBox("Save counter data in a Persistent Counter Storage...", false);
@@ -339,11 +348,11 @@ public class ConnectionDialog
 	private JLabel               _pcsIcon                    = new JLabel(_pcsImageIcon);
 	private MultiLineLabel       _pcsHelp                    = new MultiLineLabel();
 	private JLabel               _pcsWriter_lbl              = new JLabel("PCS Writer");
-	private JComboBox            _pcsWriter_cbx              = new JComboBox();
+	private JComboBox<String>    _pcsWriter_cbx              = new JComboBox<String>();
 	private JLabel               _pcsJdbcDriver_lbl          = new JLabel("JDBC Driver");
-	private JComboBox            _pcsJdbcDriver_cbx          = new JComboBox();
+	private JComboBox<String>    _pcsJdbcDriver_cbx          = new JComboBox<String>();
 	private JLabel               _pcsJdbcUrl_lbl             = new GLabel("JDBC Url"); 
-	private JComboBox            _pcsJdbcUrl_cbx             = new JComboBox();
+	private JComboBox<String>    _pcsJdbcUrl_cbx             = new JComboBox<String>();
 	private JButton              _pcsJdbcUrl_but             = new JButton("...");
 	private JLabel               _pcsJdbcUsername_lbl        = new JLabel("Username");
 	private JTextField           _pcsJdbcUsername_txt        = new JTextField("sa");
@@ -366,6 +375,21 @@ public class ConnectionDialog
 	private JTextField           _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 	private JCheckBox            _pcsDdl_addDependantObjectsToDdlInQueue_chk = new JCheckBox("Store Dependent Objects", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 
+	//---- PCS: Capture SQL Statements
+	private JCheckBox            _pcsCapSql_doSqlCaptureAndStore_chk          = new JCheckBox("Do SQL Capture and Store", PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore);
+	private JLabel               _pcsCapSql_sleepTimeInMs_lbl                 = new JLabel("Sleep Time");
+	private JTextField           _pcsCapSql_sleepTimeInMs_txt                 = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs);
+	private JCheckBox            _pcsCapSql_doSqlText_chk                     = new JCheckBox("SQL Text",       PersistentCounterHandler.DEFAULT_sqlCap_doSqlText);
+	private JCheckBox            _pcsCapSql_doStatementInfo_chk               = new JCheckBox("Statement Info", PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo);
+	private JCheckBox            _pcsCapSql_doPlanText_chk                    = new JCheckBox("Plan Text",      PersistentCounterHandler.DEFAULT_sqlCap_doPlanText);
+	private JCheckBox            _pcsCapSql_sendDdlForLookup_chk              = new JCheckBox("Send Statements for DDL Lookup if:", PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup);
+	private JLabel               _pcsCapSql_sendDdlForLookup_execTime_lbl     = new JLabel("Exec Time is above (ms)");
+	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime);
+	private JLabel               _pcsCapSql_sendDdlForLookup_logicalRead_lbl  = new JLabel("Logical Reads");
+	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads);
+	private JLabel               _pcsCapSql_sendDdlForLookup_physicalRead_lbl = new JLabel("Physical Reads");
+	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads);
+
 	//---- OFFLINE panel
 	@SuppressWarnings("unused")
 	private JPanel               _offlinePanel                     = null;
@@ -374,12 +398,12 @@ public class ConnectionDialog
 	private MultiLineLabel       _offlineHelp                      = new MultiLineLabel();
 	private JLabel               _offlineProfile_lbl               = new JLabel("Use Profile");
 	private ProfileComboBoxModel _offlineProfile_mod               = new ProfileComboBoxModel(ConnectionProfile.Type.OFFLINE);
-	private JComboBox            _offlineProfile_cbx               = new JComboBox(_offlineProfile_mod);
+	private JComboBox<String>    _offlineProfile_cbx               = new JComboBox<String>(_offlineProfile_mod);
 	private JButton              _offlineProfileSave_but           = new JButton("Save Profile...");
 	private JLabel               _offlineJdbcDriver_lbl            = new JLabel("JDBC Driver");
-	private JComboBox            _offlineJdbcDriver_cbx            = new JComboBox();
+	private JComboBox<String>    _offlineJdbcDriver_cbx            = new JComboBox<String>();
 	private JLabel               _offlineJdbcUrl_lbl               = new JLabel("JDBC Url"); 
-	private JComboBox            _offlineJdbcUrl_cbx               = new JComboBox();
+	private JComboBox<String>    _offlineJdbcUrl_cbx               = new JComboBox<String>();
 	private JButton              _offlineJdbcUrl_but               = new JButton("...");
 	private JLabel               _offlineJdbcUsername_lbl          = new JLabel("Username");
 	private JTextField           _offlineJdbcUsername_txt          = new JTextField("sa");
@@ -414,12 +438,12 @@ public class ConnectionDialog
 	private MultiLineLabel       _jdbcHelp             = new MultiLineLabel();
 	private JLabel               _jdbcProfile_lbl      = new JLabel("Use Profile");
 	private ProfileComboBoxModel _jdbcProfile_mod      = new ProfileComboBoxModel(ConnectionProfile.Type.JDBC);
-	private JComboBox            _jdbcProfile_cbx      = new JComboBox(_jdbcProfile_mod);
+	private JComboBox<String>    _jdbcProfile_cbx      = new JComboBox<String>(_jdbcProfile_mod);
 	private JButton              _jdbcProfileSave_but  = new JButton("Save Profile...");
 	private JLabel               _jdbcDriver_lbl       = new JLabel("JDBC Driver");
-	private JComboBox            _jdbcDriver_cbx       = new JComboBox();
+	private JComboBox<String>    _jdbcDriver_cbx       = new JComboBox<String>();
 	private JLabel               _jdbcUrl_lbl          = new JLabel("JDBC Url"); 
-	private JComboBox            _jdbcUrl_cbx          = new JComboBox();
+	private JComboBox<String>    _jdbcUrl_cbx          = new JComboBox<String>();
 	private JButton              _jdbcUrl_but          = new JButton("...");
 	private JLabel               _jdbcUsername_lbl     = new JLabel("Username");
 	private JTextField           _jdbcUsername_txt     = new JTextField("sa");
@@ -435,6 +459,10 @@ public class ConnectionDialog
 	private JTextField           _jdbcUrlOptions_txt   = new JTextField("");
 	private JButton              _jdbcUrlOptions_but   = new JButton("...");	
 	private SshTunnelInfo        _jdbcSshTunnelInfo       = null; // always NULL for the moment, since this isn't supported for the moment
+	private JCheckBox            _jdbcSshTunnel_chk       = new JCheckBox("Use SSH (Secure Shell) Tunnel to connect to DBMS", DEFAULT_CONN_SSH_TUNNEL);
+	private JLabel               _jdbcSshTunnelDesc_lbl   = new JLabel();
+	private JButton              _jdbcSshTunnel_but       = new JButton("SSH Settings...");
+
 
 	//---- JDBC Driver Info panel
 	private JPanel               _jdbcDriverInfoPanel      = null;
@@ -557,7 +585,8 @@ public class ConnectionDialog
 		
 		Dimension size = getPreferredSize();
 //		size.width += 100;
-		size.width = 530; // if not set the window will grow to wide...
+//		size.width = 600; // if not set the window will grow to wide...
+		size.width = SwingUtils.hiDpiScale(600); // if not set the window will grow to wide...
 
 //		setPreferredSize(size);
 //		setMinimumSize(size);
@@ -571,9 +600,9 @@ public class ConnectionDialog
 		getSavedWindowProps();
 		// Check size, if below minimum after "upgrade" using ConnectionProfile, make it approximate 150px bigger
 		size = getSize();
-		if (_connProfileVisible_chk.isSelected() && size.width < 675)
+		if (_connProfileVisible_chk.isSelected() && size.width < SwingUtils.hiDpiScale(675))
 		{
-			size.width += 150;
+			size.width += SwingUtils.hiDpiScale(150);
 			setSize(size);
 		}
 
@@ -1183,7 +1212,7 @@ public class ConnectionDialog
 	public void setJdbcUsername(String username) { _jdbcUsername_txt.setText(username); }
 	public void setJdbcPassword(String password) { _jdbcPassword_txt.setText(password); }
 
-	private void addAndSelectItem(JComboBox cbx, String item)
+	private void addAndSelectItem(JComboBox<String> cbx, String item)
 	{
 		boolean exists = false;
 		for (int i=0; i<cbx.getItemCount(); i++)
@@ -1334,6 +1363,7 @@ public class ConnectionDialog
 		final AbstractAction connProfileDeleteAction           = new ConnProfileDeleteAction();
 		final AbstractAction connProfileRenameAction           = new ConnProfileRenameAction();
 		final AbstractAction connProfileMoveAction             = new ConnProfileMoveAction();
+		final AbstractAction connProfileReLoadAction           = new ConnProfileReloadAction();
 		final AbstractAction connProfileChangeFile             = new ConnProfileChangeFileAction();
 		final AbstractAction connProfileShowAddProfile         = new ConnProfileShowAddProfileAction();
 		final AbstractAction connProfileShowAddIFile           = new ConnProfileShowAddIFileAction();
@@ -1356,6 +1386,7 @@ public class ConnectionDialog
 		popup.add(new JMenuItem(connProfileRenameAction));
 		popup.add(new JMenuItem(connProfileMoveAction));
 		popup.add(new JSeparator());
+		popup.add(new JMenuItem(connProfileReLoadAction));
 		popup.add(new JMenuItem(connProfileChangeFile));
 		popup.add(connProfileShowAddProfile_mi);
 		popup.add(connProfileShowAddIFile_mi);
@@ -1476,6 +1507,7 @@ public class ConnectionDialog
 		});
 		
 		// Render object in the Tree
+		_connProfileTree.setRowHeight(0);
 		_connProfileTree.setCellRenderer(new DefaultTreeCellRenderer()
 		{
 			private static final long serialVersionUID = 1L;
@@ -1660,7 +1692,8 @@ public class ConnectionDialog
 		});
 
 		JLabel heading = new JLabel(" Connection Profiles ");
-		heading.setFont(new java.awt.Font("Dialog", Font.BOLD, 14));
+//		heading.setFont(new java.awt.Font("Dialog", Font.BOLD, 14));
+		heading.setFont(new java.awt.Font("Dialog", Font.BOLD, SwingUtils.hiDpiScale(14)));
 
 		final JLabel     filter_lbl = new JLabel(" Filter");
 		final JTextField filter_txt = new JTextField();
@@ -1805,9 +1838,10 @@ public class ConnectionDialog
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("wrap 1", "", ""));   // insets Top Left Bottom Right
 		
-		panel.add(createPcsJdbcPanel(),              "growx, hidemode 3");
-		panel.add(createPcsDdlLookupAndStorePanel(), "growx");
-		panel.add(createPcsTablePanel(),             "grow, push");
+		panel.add(createPcsJdbcPanel(),               "growx, hidemode 3");
+		panel.add(createPcsDdlLookupAndStorePanel(),  "growx");
+		panel.add(createPcsSqlCaptureAndStorePanel(), "growx");
+		panel.add(createPcsTablePanel(),              "grow, push");
 		
 		return panel;
 	}
@@ -2117,8 +2151,8 @@ public class ConnectionDialog
 		_aseOptionUseTemplate_cbx      .setToolTipText("Choose a specific 'Performance Counter' template, which will be enabled/set when connecting to the above server.");
 		_aseOptionUseTemplate_but      .setToolTipText("Open the Template Dialog (same as menu->View->Change 'Performance Counter' Options...");
 		
-		_aseDeferredConnect_chk        .setToolTipText("If you want to connect at a specific time, and start to collect data");
-		_aseDeferredConnectHour_sp     .setToolTipText("What Hour do you want to connect");
+		_aseDeferredConnect_chk        .setToolTipText("<html>If you want to connect at a specific time, and start to collect data.<br><br><b>Note:</b> 00 is midnight. If you want to start at 23:15 later today, simply say 23:15 </html>");
+		_aseDeferredConnectHour_sp     .setToolTipText("What Hour do you want to connect, Note that this is an exact hour in time. 00 means midnight.");
 		_aseDeferredConnectMinute_sp   .setToolTipText("What Minute do you want to connect");
 		_aseDeferredDisConnect_chk     .setToolTipText("If you want to disconnect after a certain elapsed time frame");
 		_aseDeferredDisConnectHour_sp  .setToolTipText("After how many hours of sampling do you want to disconnect");
@@ -2574,7 +2608,7 @@ public class ConnectionDialog
 		panel.add(_pcsDdl_addDependantObjectsToDdlInQueue_chk, "");
 
 		panel.add(_pcsDdl_afterDdlLookupSleepTimeInMs_lbl,     "gap 50");
-		panel.add(_pcsDdl_afterDdlLookupSleepTimeInMs_txt,     "push, grow, wrap");
+		panel.add(_pcsDdl_afterDdlLookupSleepTimeInMs_txt,     "pushx, growx, wrap");
 		
 
 		// ACTIONS
@@ -2585,6 +2619,67 @@ public class ConnectionDialog
 		// ADD FOCUS LISTENERS
 //		xxx_txt.addFocusListener(this);
 //		xxx_txt.addFocusListener(this);
+
+		return panel;
+	}
+
+	private JPanel createPcsSqlCaptureAndStorePanel()
+	{
+		JPanel panel = SwingUtils.createPanel("Capture SQL and Store", true);
+		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
+
+		_pcsCapSql_doSqlCaptureAndStore_chk.setToolTipText("<html>Store executed SQL Statements and it's SQL Text when recording a session.<html>");
+//		_pcsCapSql_xxx_chk                 .setToolTipText("<html>xxx</html>");
+		_pcsCapSql_doSqlText_chk           .setToolTipText("<html>Collect SQL Text                   <br>NOTE requires: sp_configure 'sql text pipe active'  and 'sql text pipe max messages'.</html>");
+		_pcsCapSql_doStatementInfo_chk     .setToolTipText("<html>Collect SQL Statements information <br>NOTE requires: sp_configure 'statement pipe active' and 'statement pipe max messages'.</html>");
+		_pcsCapSql_doPlanText_chk          .setToolTipText("<html>Collect SQL Plans                  <br>NOTE requires: sp_configure 'plan text pipe active' and 'plan text pipe max messages'.</html>");
+		_pcsCapSql_sleepTimeInMs_lbl       .setToolTipText("<html>How many milliseconds should we wait between SQL Capture Lookups.</html>");
+		_pcsCapSql_sleepTimeInMs_txt       .setToolTipText("<html>How many milliseconds should we wait between SQL Capture Lookups.</html>");
+
+		_pcsCapSql_sendDdlForLookup_chk             .setToolTipText("<html>When a procedure name is found in monSysStatement send it of for DDL Lookup</html>");
+		_pcsCapSql_sendDdlForLookup_execTime_lbl    .setToolTipText("<html>Send DDL only if the execution time for this statement is above this value in milliseconds. <br>Note: -1 means send all statements</html>");
+		_pcsCapSql_sendDdlForLookup_execTime_txt    .setToolTipText("<html>Send DDL only if the execution time for this statement is above this value in milliseconds. <br>Note: -1 means send all statements</html>");
+		_pcsCapSql_sendDdlForLookup_logicalRead_lbl .setToolTipText("<html>Send DDL only if the number of LogicalReads for this statement is above this value.         <br>Note: -1 means send all statements</html>");
+		_pcsCapSql_sendDdlForLookup_logicalRead_txt .setToolTipText("<html>Send DDL only if the number of LogicalReads for this statement is above this value.         <br>Note: -1 means send all statements</html>");
+		_pcsCapSql_sendDdlForLookup_physicalRead_lbl.setToolTipText("<html>Send DDL only if the number of PhysicalReads for this statement is above this value.        <br>Note: -1 means send all statements</html>");
+		_pcsCapSql_sendDdlForLookup_physicalRead_txt.setToolTipText("<html>Send DDL only if the number of PhysicalReads for this statement is above this value.        <br>Note: -1 means send all statements</html>");
+
+		// LAYOUT
+		panel.add(_pcsCapSql_doSqlCaptureAndStore_chk, "split");
+		panel.add(_pcsCapSql_doSqlText_chk,            "");
+		panel.add(_pcsCapSql_doStatementInfo_chk,      "");
+		panel.add(_pcsCapSql_doPlanText_chk,           "");
+//		panel.add(_pcsCapSql_xxx_chk,                  "");
+		panel.add(_pcsCapSql_sleepTimeInMs_lbl,        "gap 50");
+		panel.add(_pcsCapSql_sleepTimeInMs_txt,        "pushx, growx, wrap");
+		
+		panel.add(_pcsCapSql_sendDdlForLookup_chk,              "split");
+		panel.add(_pcsCapSql_sendDdlForLookup_execTime_lbl,     "");
+		panel.add(_pcsCapSql_sendDdlForLookup_execTime_txt,     "wmin 10lp, pushx, growx");
+		panel.add(_pcsCapSql_sendDdlForLookup_logicalRead_lbl,  "");
+		panel.add(_pcsCapSql_sendDdlForLookup_logicalRead_txt,  "wmin 10lp, pushx, growx");
+		panel.add(_pcsCapSql_sendDdlForLookup_physicalRead_lbl, "");
+		panel.add(_pcsCapSql_sendDdlForLookup_physicalRead_txt, "wmin 10lp, pushx, growx, wrap");
+
+		// ACTIONS
+		_pcsCapSql_doSqlCaptureAndStore_chk.addActionListener(this);
+		_pcsCapSql_doSqlText_chk           .addActionListener(this);
+		_pcsCapSql_doStatementInfo_chk     .addActionListener(this);
+		_pcsCapSql_doPlanText_chk          .addActionListener(this);
+//		_pcsCapSql_xxx_chk                 .addActionListener(this);
+		_pcsCapSql_sleepTimeInMs_txt       .addActionListener(this);
+
+		_pcsCapSql_sendDdlForLookup_chk             .addActionListener(this);
+		_pcsCapSql_sendDdlForLookup_execTime_txt    .addActionListener(this);
+		_pcsCapSql_sendDdlForLookup_logicalRead_txt .addActionListener(this);
+		_pcsCapSql_sendDdlForLookup_physicalRead_txt.addActionListener(this);
+		
+		// ADD FOCUS LISTENERS
+//		xxx_txt.addFocusListener(this);
+		_pcsCapSql_sleepTimeInMs_txt                .addFocusListener(this);
+		_pcsCapSql_sendDdlForLookup_execTime_txt    .addFocusListener(this);
+		_pcsCapSql_sendDdlForLookup_logicalRead_txt .addFocusListener(this);
+		_pcsCapSql_sendDdlForLookup_physicalRead_txt.addFocusListener(this);
 
 		return panel;
 	}
@@ -2796,6 +2891,23 @@ public class ConnectionDialog
 		_jdbcUrlOptions_but.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
 		_jdbcTestConn_but  .setToolTipText("Make a test connection to the above JDBC datastore");
 		_jdbcDriverInfo_but.setToolTipText("Show a dialog with all available JDBC Drivers that are in the java classpath");
+		_jdbcSshTunnel_chk .setToolTipText(
+				"<html>" +
+				    "Use a SSH (Secure Shell) connection as a tunnel or intermediate hop, when you can't connect " +
+				    "directly to the destination machine where the DB Server is hosted. This due to firewall restrictions or port blocking.<br>" +
+				    "When you use a SSH Tunnel all data traffic will be encrypted.<br>" +
+				    "<br> " +
+				    "The intermediate unix/linux host needs to have a SSH Server, which normally runs on port 22. " +
+				    "It should also allow port forwarding, which is enabled by default.<br>" +
+				    "You will need an account on the machine where the SSH Server is hosted.<br>" +
+				    "<br> " +
+				    "Read more about SSH Tunnels on: <br>" +
+				    "<ul>" +
+				    "   <li>http://en.wikipedia.org/wiki/Port_forwarding </li>" +
+				    "   <li>http://chamibuddhika.wordpress.com/2012/03/21/ssh-tunnelling-explained/ </li>" +
+				    "</ul>" +
+				    "Or just Google: 'ssh tunnel' or 'ssh port forwarding'.<br>" +
+				"</html>");
 
 		panel.add(_jdbcIcon,  "");
 		panel.add(_jdbcHelp,  "wmin 100, push, grow, wrap 15");
@@ -2818,6 +2930,11 @@ public class ConnectionDialog
 		panel.add(_jdbcPassword_txt,     "push, grow, split");
 		panel.add(_jdbcSavePassword_chk, "wrap");
 		
+		panel.add(_jdbcSshTunnel_chk,    "skip, push, grow, split");
+		panel.add(_jdbcSshTunnel_but,    "wrap");
+		
+		panel.add(_jdbcSshTunnelDesc_lbl,"skip, wrap, hidemode 3");
+
 		panel.add(_jdbcSqlInit_lbl,      "");
 		panel.add(_jdbcSqlInit_txt,      "push, grow, wrap");
 		
@@ -2872,6 +2989,8 @@ public class ConnectionDialog
 		_jdbcPassword_txt   .addActionListener(this);
 		_jdbcUrl_but        .addActionListener(this);
 		_jdbcUrlOptions_but .addActionListener(this);
+		_jdbcSshTunnel_chk  .addActionListener(this);
+		_jdbcSshTunnel_but  .addActionListener(this);
 
 		_jdbcDriverInfo_but .addActionListener(this);
 
@@ -3397,7 +3516,7 @@ public class ConnectionDialog
 			if (_aseSshTunnel_chk.isSelected() && _aseSshTunnelInfo != null && ! _aseSshTunnelInfo.isValid() )
 			{
 				String problem = _aseSshTunnelInfo.getInvalidReason();
-				aseProblem = "SSH Tunnel is incomplete: " + problem;
+				aseProblem = "SSH Tunnel is incomplete (TDS): " + problem;
 			}
 		}
 
@@ -3427,6 +3546,12 @@ public class ConnectionDialog
 //
 //			if ( url.matches(".*\\[.*\\].*"))
 //				jdbcProblem = "Replace the [template] with something or delete it.";
+
+			if (_jdbcSshTunnel_chk.isSelected() && _jdbcSshTunnelInfo != null && ! _jdbcSshTunnelInfo.isValid() )
+			{
+				String problem = _jdbcSshTunnelInfo.getInvalidReason();
+				jdbcProblem = "SSH Tunnel is incomplete (JDBC): " + problem;
+			}
 		}
 
 		if (checkMoreStuff)
@@ -3567,14 +3692,25 @@ public class ConnectionDialog
 				if (PlatformUtils.getCurrentPlattform() != PlatformUtils.Platform_WIN)
 					interfacesFileName = "$SYBASE/interfaces";
 
-				SwingUtils.showWarnMessage(this, 
-						"Name Service file dosn't exists", 
-						"The Name Service file '"+file+"' doesn't exists.\n" +
-						    "\n" +
-						    "Name Service file is used to lookup a Sybase Server into a hostname and port number.\n" +
-						    "The Name Service file is normally named '"+interfacesFileName+"'.", 
-						null);
-				return;
+				String privateInterfacesFile = AseConnectionFactory.getPrivateInterfacesFile(true);
+				_logger.info("Trying to open the local "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
+				AseConnectionFactory.createPrivateInterfacesFile(privateInterfacesFile); // if it exists, this does nothing...
+				System.setProperty("interfaces.file", privateInterfacesFile);
+
+				String htmlMsg = "<html>" + 
+						"The Name Service file '"+file+"' doesn't exists.<br>" +
+						"<br>" +
+						"Instead, lets try to use the default <i>private</i> Name Service file: " + privateInterfacesFile + "<br>" +
+						"<br>" +
+						"<b>Note</b>: If the faulty file was restored from a Connection Profile, <b>you need save the profile</b> to get rid of this message in the future</b><br>" +
+						"<br>" +
+						"Name Service file is used to lookup a Sybase Server into a hostname and port number.<br>" +
+						"The default Sybase Name Service file is normally named '"+interfacesFileName+"'.<br>" + 
+						"</html>";
+				SwingUtils.showWarnMessage(this, "Name Service file dosn't exists", htmlMsg, null);
+				file = privateInterfacesFile;
+				_aseIfile_txt.setText(file);
+//				return;
 			}
 
 			// Can we READ the file
@@ -3790,20 +3926,20 @@ public class ConnectionDialog
 //				_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 //				_aseConn = AseConnectionFactory.getConnection(AseConnectionFactory.getDriver(), rawUrl, props, null);
 
-				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
-				_aseConn = DbxConnection.createDbxConnection(conn);
-
 				// Set DBX Connection Defaults
 				ConnectionProp cp = new ConnectionProp();
 				cp.setLoginTimeout ( loginTimeoutStr );
 				cp.setDriverClass  ( AseConnectionFactory.getDriver() );
 				cp.setUrl          ( tdsUseUrlStr );
-				cp.setUrlOptions   ( null );
+				cp.setUrlOptions   ( tdsUrlOptions );
 				cp.setUsername     ( username );
 				cp.setPassword     ( password );
 				cp.setAppName      ( Version.getAppName() );
 				cp.setAppVersion   ( Version.getVersionStr() );
 				cp.setSshTunnelInfo( sshTunnelInfo );
+
+				Connection conn = ConnectionProgressDialog.connectWithProgressDialog(this, AseConnectionFactory.getDriver(), tdsUseUrlStr, props, cp, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
+				_aseConn = DbxConnection.createDbxConnection(conn);
 
 				DbxConnection.setDefaultConnProp(cp);
 				
@@ -3890,7 +4026,7 @@ public class ConnectionDialog
 		cp.setLoginTimeout ( loginTimeoutStr );
 		cp.setDriverClass  ( AseConnectionFactory.getDriver() );
 		cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
-		cp.setUrlOptions   ( null );
+		cp.setUrlOptions   ( tdsUrlOptions );
 		cp.setUsername     ( username );
 		cp.setPassword     ( password );
 		cp.setAppName      ( Version.getAppName() );
@@ -3907,7 +4043,7 @@ public class ConnectionDialog
 
 			String urlStr = AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr();
 //			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
-			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
+			_aseConn = ConnectionProgressDialog.connectWithProgressDialog(this, urlStr, cp, _options._srvExtraChecks, _sshConn, sshTunnelInfo, _desiredProductName, sqlInit, srvIcon);
 //			_aseConn = DbxConnection.createDbxConnection(conn);
 //String TDS_SSH_TUNNEL_CONNECTION  = _aseConn.getClientInfo("TDS_SSH_TUNNEL_CONNECTION");
 //String TDS_SSH_TUNNEL_INFORMATION = _aseConn.getClientInfo("TDS_SSH_TUNNEL_INFORMATION");
@@ -4021,7 +4157,6 @@ public class ConnectionDialog
 		//---------------------------
 		// START the Persistent Storage thread
 		//---------------------------
-		PersistentCounterHandler pch = null;
 		try
 		{
 			checkForH2LocalDrive(null);
@@ -4049,12 +4184,12 @@ public class ConnectionDialog
 //						ConnectionProfile.TdsEntry tdsEntry = connProfile.getTdsEntry();
 						ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcDriver,   entry._pcsWriterDriver);
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcUrl,      entry._pcsWriterUrl);
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcUsername, entry._pcsWriterUsername);
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcPassword, entry._pcsWriterPassword == null ? "" : entry._pcsWriterPassword); // do not write NULL objects to the HashTable, then it's NullPointerException 
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcDriver,   entry._pcsWriterDriver);
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUrl,      entry._pcsWriterUrl);
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUsername, entry._pcsWriterUsername);
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcPassword, entry._pcsWriterPassword == null ? "" : entry._pcsWriterPassword); // do not write NULL objects to the HashTable, then it's NullPointerException 
 	
-						pcsProps.put(PersistWriterJdbc.PROP_startH2NetworkServer, entry._pcsWriterStartH2asNwServer);
+						pcsProps.put(PersistWriterJdbc.PROPKEY_startH2NetworkServer, entry._pcsWriterStartH2asNwServer);
 	
 						// DDL
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             entry._pcsWriterDdlLookup);
@@ -4063,12 +4198,12 @@ public class ConnectionDialog
 					}
 					else
 					{
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcDriver,   _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcUrl,      _pcsJdbcUrl_cbx     .getEditor().getItem().toString());
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcUsername, _pcsJdbcUsername_txt.getText());
-						pcsProps.put(PersistWriterJdbc.PROP_jdbcPassword, _pcsJdbcPassword_txt.getText());
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcDriver,   _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUrl,      _pcsJdbcUrl_cbx     .getEditor().getItem().toString());
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUsername, _pcsJdbcUsername_txt.getText());
+						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcPassword, _pcsJdbcPassword_txt.getText());
 	
-						pcsProps.put(PersistWriterJdbc.PROP_startH2NetworkServer, _pcsH2Option_startH2NetworkServer_chk.isSelected() + "");
+						pcsProps.put(PersistWriterJdbc.PROPKEY_startH2NetworkServer, _pcsH2Option_startH2NetworkServer_chk.isSelected() + "");
 	
 						// DDL
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             _pcsDdl_doDdlLookupAndStore_chk            .isSelected() + "");
@@ -4078,7 +4213,11 @@ public class ConnectionDialog
 				}
 			}
 			
-			pch = new PersistentCounterHandler();
+			IObjectLookupInspector oli = DbxTune.getInstance().createPcsObjectLookupInspector();
+			ISqlCaptureBroker      scb = DbxTune.getInstance().createPcsSqlCaptureBroker();
+			
+			PersistentCounterHandler pch = new PersistentCounterHandler(oli, scb);
+			
 			pch.init( pcsProps );
 			
 			if (pch.hasWriters())
@@ -4279,6 +4418,8 @@ public class ConnectionDialog
 		cp.setAppName      ( Version.getAppName() );
 		cp.setAppVersion   ( Version.getVersionStr() );
 		cp.setSshTunnelInfo( null );
+
+		DbxConnection.setDefaultConnProp(cp);
 
 		if (_offlineConn != null)
 			_offlineConn.setConnProp(cp);
@@ -4491,13 +4632,14 @@ public class ConnectionDialog
 	 */
 	private boolean jdbcConnect(ConnectionProfile connProfile)
 	{
-		String jdbcDriver        = StringUtil.getSelectedItemString(_jdbcDriver_cbx);
-		String jdbcUrl           = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
-		String jdbcUser          = _jdbcUsername_txt.getText();
-		String jdbcPasswd        = _jdbcPassword_txt.getText();
-		String sqlInit           = _jdbcSqlInit_txt.getText();
-		String jdbcUrlOptions    = _jdbcUrlOptions_txt.getText();
-		SshTunnelInfo tunnelInfo = null;
+		String jdbcDriver           = StringUtil.getSelectedItemString(_jdbcDriver_cbx);
+		String jdbcUrl              = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
+		String jdbcUser             = _jdbcUsername_txt.getText();
+		String jdbcPasswd           = _jdbcPassword_txt.getText();
+		String sqlInit              = _jdbcSqlInit_txt.getText();
+		String jdbcUrlOptions       = _jdbcUrlOptions_txt.getText();
+		boolean jdbcSshTunnelUse    = _jdbcSshTunnel_chk.isSelected();
+		SshTunnelInfo sshTunnelInfo = _jdbcSshTunnelInfo;
 
 		if (connProfile != null)
 		{
@@ -4509,9 +4651,13 @@ public class ConnectionDialog
 			jdbcPasswd     = entry._jdbcPassword;
 			sqlInit        = entry._jdbcSqlInit;
 			jdbcUrlOptions = entry._jdbcUrlOptions;
-			tunnelInfo     = entry._jdbcShhTunnelInfo;
+			sshTunnelInfo  = entry._jdbcShhTunnelInfo;
+			jdbcSshTunnelUse = entry._jdbcShhTunnelUse;
 		}
-		
+//System.out.println("jdbcConnect(): connProfile="+connProfile+", jdbcSshTunnelUse="+jdbcSshTunnelUse+", sshTunnelInfo="+sshTunnelInfo+"("+(sshTunnelInfo == null ? "-NULL-" : sshTunnelInfo.getConfigString(false, true))+")");
+if ( ! jdbcSshTunnelUse )
+	sshTunnelInfo = null;
+
 //		_jdbcConn = jdbcConnect(Version.getAppName(), 
 //				jdbcDriver, 
 //				jdbcUrl,
@@ -4532,7 +4678,7 @@ public class ConnectionDialog
 		cp.setPassword     ( jdbcPasswd );
 		cp.setAppName      ( Version.getAppName() );
 		cp.setAppVersion   ( Version.getVersionStr() );
-		cp.setSshTunnelInfo( tunnelInfo );
+		cp.setSshTunnelInfo( sshTunnelInfo );
 
 		DbxConnection.setDefaultConnProp(cp);
 
@@ -4546,7 +4692,7 @@ public class ConnectionDialog
 				jdbcPasswd,
 				jdbcUrlOptions,
 				sqlInit,
-				tunnelInfo);
+				sshTunnelInfo);
 		
 		if (_jdbcConn != null)
 			_jdbcConn.setConnProp(cp);
@@ -4632,9 +4778,16 @@ public class ConnectionDialog
 				desiredProductName = null;
 				connExtraActions   = null;
 			}
+			
+			ConnectionProp connProp = null;
 
 			ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
-			return ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, connExtraActions, _sshConn, tunnelInfo, desiredProductName, sqlInit, srvIcon);
+//System.out.println("jdbcConnect2(): tunnelInfo="+tunnelInfo);
+//System.out.println("jdbcConnect2(): sshTunnelInfo="+tunnelInfo+"("+(tunnelInfo == null ? "-NULL-" : tunnelInfo.getConfigString(false, true))+")");
+
+			DbxConnection dbxConn = ConnectionProgressDialog.connectWithProgressDialog(this, driver, url, props, connProp, connExtraActions, _sshConn, tunnelInfo, desiredProductName, sqlInit, srvIcon); 
+//System.out.println("jdbcConnect2(): AFTER ConnectionProgressDialog.connectWithProgressDialog(): dbxConn ="+dbxConn);
+			return dbxConn;
 		}
 		catch (Exception ex)
 		{
@@ -4644,198 +4797,198 @@ public class ConnectionDialog
 		}
 	}
 
-	private Connection jdbcConnect(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo)
-	{
-		final Properties props2 = new Properties(); // only used when displaying what properties we connect with
-
-		WaitForExecDialog wait = new WaitForExecDialog(this, "JDBC Connect...");
-		BgExecutor doWork = new BgExecutor(wait)
-		{
-			@Override
-			public Object doWork()
-			{
-				try
-				{
-					// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
-					try
-					{
-						Driver jdbcDriver = DriverManager.getDriver(url);
-						if (jdbcDriver == null)
-							Class.forName(driver).newInstance();
-					}
-					catch (Exception ex)
-					{
-						_logger.warn("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex);
-						_logger.debug("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex, ex);
-					}
-
-//					Class.forName(driver).newInstance();
-//					JdbcDriverHelper.newDriverInstance(driver);
-
-					Properties props  = new Properties();
-				//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
-					props.put("user", user);
-					props.put("password", passwd);
-					
-					if (StringUtil.hasValue(urlOptions))
-					{
-						Map<String, String> urlMap = StringUtil.parseCommaStrToMap(urlOptions);
-						for (String key : urlMap.keySet())
-						{
-							String val = urlMap.get(key);
-							
-							props .put(key, val);
-							props2.put(key, val);
-						}
-					}
-					
-					// Add specific JDBC Properties, for specific URL's, if not already specified
-					if (url.startsWith("jdbc:db2:"))
-					{
-						if ( ! props.containsKey("retrieveMessagesFromServerOnGetMessage") )
-						{
-							props .put("retrieveMessagesFromServerOnGetMessage", "true");
-							props2.put("retrieveMessagesFromServerOnGetMessage", "true");
-						}
-					}
-
-					_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
-
-					StringBuilder sb = new StringBuilder();
-					sb.append( "<html>" );
-					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
-					sb.append( "<tr> <td nowrap><b>User:  </b></td> <td nowrap>").append( user   ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>Url:   </b></td> <td nowrap>").append( url    ).append("</td> </tr>");
-					if (props2.size() > 0)
-						sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>Driver:</b></td> <td nowrap>").append( driver ).append("</td> </tr>");
-					sb.append( "</table>" );
-					sb.append( "</html>" );
-
-					getWaitDialog().setState(sb.toString());
-					SwingUtils.setWindowMinSize(getWaitDialog());
-
-					Connection conn = DriverManager.getConnection(url, props);
-					
-					// Execute any SQL Init 
-					if (StringUtil.hasValue(sqlInit))
-					{
-						try
-						{
-							String[] sa =  sqlInit.split(";");
-							for (String sql : sa)
-							{
-								sql = sql.trim();
-								if ("".equals(sql))
-									continue;
-								getWaitDialog().setState(
-										"<html>" +
-										"SQL Init: "+ sql + "<br>" +
-										"</html>");
-								DbUtils.exec(conn, sql);
-							}
-						}
-						catch (SQLException ex)
-						{
-							SwingUtils.showErrorMessage(ConnectionDialog.this, "SQL Initialization Failed", 
-									"<html>" +
-									"<h2>SQL Initialization Failed</h2>" +
-									"Full SQL Init String '"+ sqlInit + "'<br>" +
-									"<br>" +
-									"<b>SQL State:     </b>" + ex.getSQLState()  + "<br>" +
-									"<b>Error number:  </b>" + ex.getErrorCode() + "<br>" +
-									"<b>Error Message: </b>" + ex.getMessage()   + "<br>" +
-									"</html>",
-									ex);
-							throw ex;
-						}
-					}
-
-					return conn;
-				}
-				catch (SQLException ex)
-				{
-					SQLException eTmp = ex;
-					StringBuffer sb = new StringBuffer();
-					while (eTmp != null)
-					{
-						sb.append( "\n" );
-						sb.append( "ex.toString='").append( ex.toString()       ).append("', ");
-						sb.append( "Driver='"     ).append( driver              ).append("', ");
-						sb.append( "URL='"        ).append( url                 ).append("', ");
-						sb.append( "User='"       ).append( user                ).append("', ");
-						sb.append( "SQLState='"   ).append( eTmp.getSQLState()  ).append("', ");
-						sb.append( "ErrorCode="   ).append( eTmp.getErrorCode() ).append(", ");
-						sb.append( "Message='"    ).append( eTmp.getMessage()   ).append("', ");
-						sb.append( "classpath='"  ).append( System.getProperty("java.class.path") ).append("'.");
-						eTmp = eTmp.getNextException();
-					}
-					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch SQLException) Caught: "+sb.toString());
-					setException(ex);
-				}
-				catch (Exception ex)
-				{
-					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch Exception) Caught: "+ex);
-					setException(ex);
-				}
-				return null;
-			}
-		};
-		Connection conn = (Connection) wait.execAndWait(doWork, 100);
-
-		if (doWork.hasException())
-		{
-			Throwable t = doWork.getException();
-			if (t instanceof SQLException)
-			{
-				SQLException e = (SQLException) t;
-				StringBuffer sb = new StringBuffer();
-				sb.append("<html>");
-				sb.append("<h2>Problems During Connect (SQLException)</h2>");
-				sb.append( "<hr>" );
-				boolean loadDriverProblem = false;
-				while (e != null)
-				{
-					if (e.getMessage().indexOf("No suitable driver") >= 0)
-						loadDriverProblem = true;
-
-					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
-					sb.append( "<tr> <td nowrap><b>Message    </b></td> <td nowrap>").append( e.getMessage()   ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>SQLState   </b></td> <td nowrap>").append( e.getSQLState()  ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>ErrorCode  </b></td> <td nowrap>").append( e.getErrorCode() ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>Driver     </b></td> <td nowrap>").append( driver           ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>URL        </b></td> <td nowrap>").append( url              ).append("</td> </tr>");
-					if (props2.size() > 0)
-						sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
-					sb.append( "<tr> <td nowrap><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
-					sb.append( "</table>" );
-					sb.append( "<hr>" );
-					e = e.getNextException();
-				}
-				if (loadDriverProblem)
-				{
-						sb.append("<h2>An error occurred while establishing the connection: </h2>");
-						sb.append("The selected Driver cannot handle the specified Database URL. <br>");
-						sb.append("The most common reason for this error is that the database <b>URL contains a syntax error</b> preventing the driver from accepting it. <br>");
-						sb.append("The error also occurs when trying to connect to a database with the wrong driver. Correct this and try again.");
-				}
-				sb.append("</html>");
-//				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (SQLException) FAILED.\n\n"+sb.toString(), e);
-				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", sb.toString(), e);
-			}
-			else if (t instanceof Exception)
-			{
-				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (Exception) FAILED.\n\n"+t.toString(), t);
-			}
-			else
-			{
-				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (other) FAILED.\n\n"+t.toString(), t);
-			}
-		}
-
-		return conn;
-	}
+//	private Connection jdbcConnect(final String appname, final String driver, final String url, final String user, final String passwd, final String urlOptions, final String sqlInit, final SshTunnelInfo tunnelInfo)
+//	{
+//		final Properties props2 = new Properties(); // only used when displaying what properties we connect with
+//
+//		WaitForExecDialog wait = new WaitForExecDialog(this, "JDBC Connect...");
+//		BgExecutor doWork = new BgExecutor(wait)
+//		{
+//			@Override
+//			public Object doWork()
+//			{
+//				try
+//				{
+//					// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
+//					try
+//					{
+//						Driver jdbcDriver = DriverManager.getDriver(url);
+//						if (jdbcDriver == null)
+//							Class.forName(driver).newInstance();
+//					}
+//					catch (Exception ex)
+//					{
+//						_logger.warn("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex);
+//						_logger.debug("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex, ex);
+//					}
+//
+////					Class.forName(driver).newInstance();
+////					JdbcDriverHelper.newDriverInstance(driver);
+//
+//					Properties props  = new Properties();
+//				//	Properties props2 = new Properties(); // NOTE declared at the TOP: only used when displaying what properties we connect with
+//					props.put("user", user);
+//					props.put("password", passwd);
+//					
+//					if (StringUtil.hasValue(urlOptions))
+//					{
+//						Map<String, String> urlMap = StringUtil.parseCommaStrToMap(urlOptions);
+//						for (String key : urlMap.keySet())
+//						{
+//							String val = urlMap.get(key);
+//							
+//							props .put(key, val);
+//							props2.put(key, val);
+//						}
+//					}
+//					
+//					// Add specific JDBC Properties, for specific URL's, if not already specified
+//					if (url.startsWith("jdbc:db2:"))
+//					{
+//						if ( ! props.containsKey("retrieveMessagesFromServerOnGetMessage") )
+//						{
+//							props .put("retrieveMessagesFromServerOnGetMessage", "true");
+//							props2.put("retrieveMessagesFromServerOnGetMessage", "true");
+//						}
+//					}
+//
+//					_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', user='"+user+"'.");
+//
+//					StringBuilder sb = new StringBuilder();
+//					sb.append( "<html>" );
+//					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
+//					sb.append( "<tr> <td nowrap><b>User:  </b></td> <td nowrap>").append( user   ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>Url:   </b></td> <td nowrap>").append( url    ).append("</td> </tr>");
+//					if (props2.size() > 0)
+//						sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>Driver:</b></td> <td nowrap>").append( driver ).append("</td> </tr>");
+//					sb.append( "</table>" );
+//					sb.append( "</html>" );
+//
+//					getWaitDialog().setState(sb.toString());
+//					SwingUtils.setWindowMinSize(getWaitDialog());
+//
+//					Connection conn = DriverManager.getConnection(url, props);
+//					
+//					// Execute any SQL Init 
+//					if (StringUtil.hasValue(sqlInit))
+//					{
+//						try
+//						{
+//							String[] sa =  sqlInit.split(";");
+//							for (String sql : sa)
+//							{
+//								sql = sql.trim();
+//								if ("".equals(sql))
+//									continue;
+//								getWaitDialog().setState(
+//										"<html>" +
+//										"SQL Init: "+ sql + "<br>" +
+//										"</html>");
+//								DbUtils.exec(conn, sql);
+//							}
+//						}
+//						catch (SQLException ex)
+//						{
+//							SwingUtils.showErrorMessage(ConnectionDialog.this, "SQL Initialization Failed", 
+//									"<html>" +
+//									"<h2>SQL Initialization Failed</h2>" +
+//									"Full SQL Init String '"+ sqlInit + "'<br>" +
+//									"<br>" +
+//									"<b>SQL State:     </b>" + ex.getSQLState()  + "<br>" +
+//									"<b>Error number:  </b>" + ex.getErrorCode() + "<br>" +
+//									"<b>Error Message: </b>" + ex.getMessage()   + "<br>" +
+//									"</html>",
+//									ex);
+//							throw ex;
+//						}
+//					}
+//
+//					return conn;
+//				}
+//				catch (SQLException ex)
+//				{
+//					SQLException eTmp = ex;
+//					StringBuffer sb = new StringBuffer();
+//					while (eTmp != null)
+//					{
+//						sb.append( "\n" );
+//						sb.append( "ex.toString='").append( ex.toString()       ).append("', ");
+//						sb.append( "Driver='"     ).append( driver              ).append("', ");
+//						sb.append( "URL='"        ).append( url                 ).append("', ");
+//						sb.append( "User='"       ).append( user                ).append("', ");
+//						sb.append( "SQLState='"   ).append( eTmp.getSQLState()  ).append("', ");
+//						sb.append( "ErrorCode="   ).append( eTmp.getErrorCode() ).append(", ");
+//						sb.append( "Message='"    ).append( eTmp.getMessage()   ).append("', ");
+//						sb.append( "classpath='"  ).append( System.getProperty("java.class.path") ).append("'.");
+//						eTmp = eTmp.getNextException();
+//					}
+//					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch SQLException) Caught: "+sb.toString());
+//					setException(ex);
+//				}
+//				catch (Exception ex)
+//				{
+//					_logger.info(Version.getAppName()+" - JDBC connect FAILED (catch Exception) Caught: "+ex);
+//					setException(ex);
+//				}
+//				return null;
+//			}
+//		};
+//		Connection conn = (Connection) wait.execAndWait(doWork, 100);
+//
+//		if (doWork.hasException())
+//		{
+//			Throwable t = doWork.getException();
+//			if (t instanceof SQLException)
+//			{
+//				SQLException e = (SQLException) t;
+//				StringBuffer sb = new StringBuffer();
+//				sb.append("<html>");
+//				sb.append("<h2>Problems During Connect (SQLException)</h2>");
+//				sb.append( "<hr>" );
+//				boolean loadDriverProblem = false;
+//				while (e != null)
+//				{
+//					if (e.getMessage().indexOf("No suitable driver") >= 0)
+//						loadDriverProblem = true;
+//
+//					sb.append( "<table border=0 cellspacing=1 cellpadding=1>" );
+//					sb.append( "<tr> <td nowrap><b>Message    </b></td> <td nowrap>").append( e.getMessage()   ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>SQLState   </b></td> <td nowrap>").append( e.getSQLState()  ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>ErrorCode  </b></td> <td nowrap>").append( e.getErrorCode() ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>Driver     </b></td> <td nowrap>").append( driver           ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>URL        </b></td> <td nowrap>").append( url              ).append("</td> </tr>");
+//					if (props2.size() > 0)
+//						sb.append( "<tr> <td nowrap><b>Url Options: </b></td> <td nowrap>").append( StringUtil.toCommaStr(props2) ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>User       </b></td> <td nowrap>").append( user             ).append("</td> </tr>");
+//					sb.append( "<tr> <td nowrap><b>classpath  </b></td> <td nowrap>").append( System.getProperty("java.class.path") ).append("</td> </tr>");
+//					sb.append( "</table>" );
+//					sb.append( "<hr>" );
+//					e = e.getNextException();
+//				}
+//				if (loadDriverProblem)
+//				{
+//						sb.append("<h2>An error occurred while establishing the connection: </h2>");
+//						sb.append("The selected Driver cannot handle the specified Database URL. <br>");
+//						sb.append("The most common reason for this error is that the database <b>URL contains a syntax error</b> preventing the driver from accepting it. <br>");
+//						sb.append("The error also occurs when trying to connect to a database with the wrong driver. Correct this and try again.");
+//				}
+//				sb.append("</html>");
+////				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (SQLException) FAILED.\n\n"+sb.toString(), e);
+//				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", sb.toString(), e);
+//			}
+//			else if (t instanceof Exception)
+//			{
+//				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (Exception) FAILED.\n\n"+t.toString(), t);
+//			}
+//			else
+//			{
+//				SwingUtils.showErrorMessage(Version.getAppName()+" - jdbc connect", "Connection (other) FAILED.\n\n"+t.toString(), t);
+//			}
+//		}
+//
+//		return conn;
+//	}
 
 	/**
 	 * Test to connect
@@ -5097,7 +5250,7 @@ public class ConnectionDialog
 			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 			if (conf != null)
 			{
-				conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP, _aseOptionConnOnStart_chk.isSelected());
+				conf.setProperty(PROPKEY_CONNECT_ON_STARTUP, _aseOptionConnOnStart_chk.isSelected());
 				conf.save();
 			}
 		}
@@ -5389,6 +5542,30 @@ public class ConnectionDialog
 				setFocus();
 			else
 				_ok.doClick();
+		}
+		
+		// --- JDBC: CHECKBOX: USE SSH TUNNEL
+		if (_jdbcSshTunnel_chk.equals(source))
+		{
+			String urlHostPortStr = JdbcUrlParser.parse(_jdbcUrl_cbx.getSelectedItem()+"").getHostPortStr();
+			_jdbcSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(urlHostPortStr);
+			updateSshTunnelDescription();
+
+			validateContents(); // the ok_lable, seems to be fuckedup if not do this
+			SwingUtils.setWindowMinSize(this);
+		}
+		
+		// --- JDBC: BUTTON: "SSH Tunnel"
+		if (_jdbcSshTunnel_but.equals(source))
+		{
+			String hostPortStr = JdbcUrlParser.parse(_jdbcUrl_cbx.getSelectedItem()+"").getHostPortStr();
+
+			SshTunnelDialog dialog = new SshTunnelDialog(this, hostPortStr);
+			dialog.setVisible(true);
+
+//			_jdbcSshTunnelInfo = dialog.getSshTunnelInfo();
+			_jdbcSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(hostPortStr);
+			updateSshTunnelDescription();
 		}
 		
 		// --- JDBC: BUTTON: JDBC TEST CONNECTION ---
@@ -6316,12 +6493,14 @@ public class ConnectionDialog
 			jdbc._jdbcUrlOptions         = _jdbcUrlOptions_txt.getText(); // should the be in here???
 			jdbc._jdbcSavePassword       = _jdbcSavePassword_chk.isSelected();
 //			jdbc._jdbcShhTunnelInfo      = _jdbcSshTunnelInfo;            // NOT YET IMPLEMENTED
+			jdbc._jdbcShhTunnelUse       = _jdbcSshTunnel_chk.isSelected();
+			jdbc._jdbcShhTunnelInfo      = _jdbcSshTunnelInfo;
 
 			jdbc._isDbxTuneParamsValid   = _options._showDbxTuneOptionsInJdbc;
 			if (jdbc._isDbxTuneParamsValid)
 			{
 				jdbc._dbxtuneParams = createDbxTuneParams();
-System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
+//System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 			}
 			
 			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, jdbc, selectedProfileName, ConnectionDialog.this);
@@ -6537,6 +6716,8 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 				_jdbcUrlOptions_txt   .setText(        entry._jdbcUrlOptions);
 				_jdbcSavePassword_chk .setSelected(    entry._jdbcSavePassword);
 //				_jdbcSshTunnelInfo = entry._jdbcShhTunnelInfo;            // NOT YET IMPLEMENTED
+				_jdbcSshTunnel_chk    .setSelected(    entry._jdbcShhTunnelUse);
+				_jdbcSshTunnelInfo    =                entry._jdbcShhTunnelInfo;
 
 				boolean isDbxTuneParamsValid = entry._isDbxTuneParamsValid;
 				if (isDbxTuneParamsValid)
@@ -6673,6 +6854,47 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
 
 			_aseSshTunnelDesc_lbl.setText(
+				"<html>" +
+					"Local Port '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
+					"Dest Host  '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
+					"SSH Host   '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
+					"SSH User   '<b>" + sshUser   + "</b>'"+initOsCmdDesc+". " +
+					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + sshPass + "</b>' " : "") +
+				"</html>");
+		}
+
+		// JDBC
+		_jdbcSshTunnelDesc_lbl.setVisible(_jdbcSshTunnel_chk.isSelected());
+		if (_jdbcSshTunnel_chk.isSelected())
+		{
+			boolean generateLocalPort = true;
+			int    localPort    = 7487;
+			String destHost     = "jdbchostname";
+			int    destPort     = 5000;
+			String sshHost      = "sshHost";
+			int    sshPort      = 22;
+			String sshUser      = "sshUser";
+			String sshPass      = "*secret*";
+			String sshInitOsCmd = "";
+			
+			if (_jdbcSshTunnelInfo != null)
+			{
+				generateLocalPort = _jdbcSshTunnelInfo.isLocalPortGenerated();
+				localPort    = _jdbcSshTunnelInfo.getLocalPort();
+				destHost     = _jdbcSshTunnelInfo.getDestHost();
+				destPort     = _jdbcSshTunnelInfo.getDestPort();
+				sshHost      = _jdbcSshTunnelInfo.getSshHost();
+				sshPort      = _jdbcSshTunnelInfo.getSshPort();
+				sshUser      = _jdbcSshTunnelInfo.getSshUsername();
+				sshPass      = _jdbcSshTunnelInfo.getSshPassword();
+				sshInitOsCmd = _jdbcSshTunnelInfo.getSshInitOsCmd();
+			}
+			
+			String initOsCmdDesc = "";
+			if (StringUtil.hasValue(sshInitOsCmd))
+				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
+
+			_jdbcSshTunnelDesc_lbl.setText(
 				"<html>" +
 					"Local Port '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
 					"Dest Host  '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
@@ -6974,7 +7196,8 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		}
 
 		if (_connProfileVisible_chk.isSelected() && _connTabbedVisible_chk .isSelected())
-			conf.setProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
+			conf.setLayoutProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
+//			conf.setProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
 		conf.setProperty(PROPKEY_CONN_PROFILE_PANEL_VISIBLE,    _connProfileVisible_chk.isSelected());
 		conf.setProperty(PROPKEY_CONN_TABED_PANEL_VISIBLE,      _connTabbedVisible_chk .isSelected());
 
@@ -7023,8 +7246,8 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		conf.setProperty("conn.savePassword."+hostPort,                   _aseOptionSavePwd_chk.isSelected() );
 		conf.setProperty("conn.passwordEncryptionOverNetwork",            _aseOptionPwdEncryption_chk.isSelected() );
 		conf.setProperty("conn.passwordEncryptionOverNetwork."+hostPort,  _aseOptionPwdEncryption_chk.isSelected() );
-		conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP,                  _aseOptionConnOnStart_chk.isSelected() );
-		conf.setProperty(CONF_OPTION_RECONNECT_ON_FAILURE,                _aseOptionReConnOnFailure_chk.isSelected());
+		conf.setProperty(PROPKEY_CONNECT_ON_STARTUP,                      _aseOptionConnOnStart_chk.isSelected() );
+		conf.setProperty(PROPKEY_RECONNECT_ON_FAILURE,                    _aseOptionReConnOnFailure_chk.isSelected());
 
 		conf.setProperty("conn.counter.use.template",                _aseOptionUseTemplate_chk.isSelected() );
 		conf.setProperty("conn.counter.use.template."+hostPort,      _aseOptionUseTemplate_chk.isSelected() );
@@ -7114,15 +7337,18 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 
 			conf.setProperty("jdbc.login.sql.init",         _jdbcSqlInit_txt.getText() );
 			conf.setProperty("jdbc.login.sql.init."+urlStr, _jdbcSqlInit_txt.getText() );
+
+//			conf.setProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL,               _jdbcSshTunnel_chk.isSelected() );
+//			conf.setProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL+"."+hostPort,  _jdbcSshTunnel_chk.isSelected() );
 		}
 
 		//------------------
 		// WINDOW
 		//------------------
-		conf.setProperty("conn.dialog.window.width",  this.getSize().width);
-		conf.setProperty("conn.dialog.window.height", this.getSize().height);
-		conf.setProperty("conn.dialog.window.pos.x",  this.getLocationOnScreen().x);
-		conf.setProperty("conn.dialog.window.pos.y",  this.getLocationOnScreen().y);
+		conf.setLayoutProperty("conn.dialog.window.width",  this.getSize().width);
+		conf.setLayoutProperty("conn.dialog.window.height", this.getSize().height);
+		conf.setLayoutProperty("conn.dialog.window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty("conn.dialog.window.pos.y",  this.getLocationOnScreen().y);
 
 		// last TAB and PROFILE
 		conf.setProperty("conn.dialog.last.tab.name",              _tab.getSelectedTitle(false));
@@ -7143,7 +7369,8 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 			return;
 		}
 
-		_lastKnownConnSplitPaneDividerLocation = conf.getIntProperty("conn.splitpane.dividerLocation", DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
+//		_lastKnownConnSplitPaneDividerLocation = conf.getIntProperty("conn.splitpane.dividerLocation", DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
+		_lastKnownConnSplitPaneDividerLocation = conf.getLayoutProperty("conn.splitpane.dividerLocation", DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
 		if (_lastKnownConnSplitPaneDividerLocation < 10)
 			_lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
 		_connSplitPane.setDividerLocation(_lastKnownConnSplitPaneDividerLocation);
@@ -7253,10 +7480,10 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		_aseOptionPwdEncryption_chk.setSelected(bol);
 
 		
-		bol = conf.getBooleanProperty(CONF_OPTION_CONNECT_ON_STARTUP, false);
+		bol = conf.getBooleanProperty(PROPKEY_CONNECT_ON_STARTUP, false);
 		_aseOptionConnOnStart_chk.setSelected(bol); 
 
-		bol = conf.getBooleanProperty(CONF_OPTION_RECONNECT_ON_FAILURE, true);
+		bol = conf.getBooleanProperty(PROPKEY_RECONNECT_ON_FAILURE, true);
 		_aseOptionReConnOnFailure_chk.setSelected(bol); 
 
 		bol = conf.getBooleanProperty("conn.counter.use.template", false);
@@ -7376,6 +7603,9 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		_jdbcSqlInit_txt.setText(conf.getProperty("jdbc.login.sql.init", "" ));
 //		conf.getProperty("jdbc.login.sql.init."+urlStr, "" );
 
+		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
+		_jdbcSshTunnel_chk.setSelected(bol);
+
 		//----------------------------------
 		// last PROFILE
 		//----------------------------------
@@ -7397,10 +7627,10 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
-		int width  = conf.getIntProperty("conn.dialog.window.width",  -1);
-		int height = conf.getIntProperty("conn.dialog.window.height", -1);
-		int x      = conf.getIntProperty("conn.dialog.window.pos.x",  -1);
-		int y      = conf.getIntProperty("conn.dialog.window.pos.y",  -1);
+		int width  = conf.getLayoutProperty("conn.dialog.window.width",  -1);
+		int height = conf.getLayoutProperty("conn.dialog.window.height", -1);
+		int x      = conf.getLayoutProperty("conn.dialog.window.pos.x",  -1);
+		int y      = conf.getLayoutProperty("conn.dialog.window.pos.y",  -1);
 		if (width != -1 && height != -1)
 			this.setSize(width, height);
 
@@ -7592,6 +7822,15 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		// PORT
 		str = conf.getProperty("ssh.conn.port."+hostPortStr, "22");
 		_hostmonPort_txt.setText(str);
+
+		
+		//----------------------------------------
+		// JDBC ??? should this be in here ???
+		//----------------------------------------
+//		_jdbcSshTunnel_chk.setSelected( conf.getBooleanProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL+"."+hostPortStr, DEFAULT_CONN_JDBC_SSH_TUNNEL) );
+//		if (_jdbcSshTunnel_chk.isSelected())
+//			_jdbcSshTunnelInfo = SshTunnelDialog.getSshTunnelInfo(hostPortStr);
+//		updateSshTunnelDescription();
 	}
 
 	/*---------------------------------------------------
@@ -7603,8 +7842,8 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 	{
 		Configuration conf = new Configuration();
 
-		conf.setProperty(CONF_OPTION_CONNECT_ON_STARTUP,   _aseOptionConnOnStart_chk.isSelected());
-		conf.setProperty(CONF_OPTION_RECONNECT_ON_FAILURE, _aseOptionReConnOnFailure_chk.isSelected());
+		conf.setProperty(PROPKEY_CONNECT_ON_STARTUP,   _aseOptionConnOnStart_chk.isSelected());
+		conf.setProperty(PROPKEY_RECONNECT_ON_FAILURE, _aseOptionReConnOnFailure_chk.isSelected());
 		
 		return conf;
 	}
@@ -8087,6 +8326,35 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		}
 	}
 	
+	private class ConnProfileReloadAction
+	extends AbstractAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static final String NAME = "Reload 'Connection Profiles' from current file";
+		private static final String ICON = "images/refresh_now_1.png";
+
+		public ConnProfileReloadAction()
+		{
+			super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+
+			putValue(SHORT_DESCRIPTION,	
+					"<html>"
+					+ "Reload the connection profile content from the current storage file...<br>"
+					+ "this is most usable if you have two windows open, and you change the profile in any way.<br>"
+					+ "For example if you add/change/delete profiles or catalogs.<br>"
+					+ "</html>");
+			//putValue(MNEMONIC_KEY, mnemonic);
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			ConnectionProfileManager.getInstance().reload();
+			expandTree(_connProfileTree);
+		}
+	}
+
 	private class ConnProfileChangeFileAction
 	extends AbstractAction
 	{
@@ -8406,7 +8674,7 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 	}
 
 	protected class LocalSrvComboBox
-	extends JComboBox
+	extends JComboBox<String>
 	{
 		private static final long   serialVersionUID   = 7884363654457237606L;
 		private static final String SERVER_FIRST_ENTRY = "-CHOOSE A SERVER-";
@@ -8414,7 +8682,7 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 		private LocalSrvComboBoxModel  _model = null;
 
 		private class LocalSrvComboBoxModel 
-		extends DefaultComboBoxModel
+		extends DefaultComboBoxModel<String>
 		{
 			static final long serialVersionUID = -318689353529705207L;
 			private Vector<String> _data;
@@ -8514,7 +8782,7 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 	}	
 
 	protected class TemplateComboBoxModel
-	extends DefaultComboBoxModel
+	extends DefaultComboBoxModel<String>
 	{
 		private static final long serialVersionUID = 1L;
 
@@ -8544,7 +8812,7 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 	}
 
 	protected static class ProfileComboBoxModel
-	extends DefaultComboBoxModel
+	extends DefaultComboBoxModel<String>
 	{
 		private static final long serialVersionUID = 1L;
 		ConnectionProfile.Type _type;
@@ -8556,6 +8824,7 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 			refresh();
 		}
 
+		@SuppressWarnings("rawtypes")
 		public void refresh()
 		{
 			// NOTE: the save and restore wont work if there are more than 1 listener
@@ -8591,8 +8860,6 @@ System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 			return value;
 		}
 	}
-
-
 
 	//--------------------------------------------------
 	// TEST-CODE

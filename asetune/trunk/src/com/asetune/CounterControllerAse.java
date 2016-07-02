@@ -36,6 +36,7 @@ import com.asetune.cm.ase.CmIoControllers;
 import com.asetune.cm.ase.CmIoQueue;
 import com.asetune.cm.ase.CmIoQueueSum;
 import com.asetune.cm.ase.CmLockTimeout;
+import com.asetune.cm.ase.CmLocks;
 import com.asetune.cm.ase.CmMemoryUsage;
 import com.asetune.cm.ase.CmMissingStats;
 import com.asetune.cm.ase.CmObjectActivity;
@@ -67,10 +68,12 @@ import com.asetune.cm.ase.CmSysLoad;
 import com.asetune.cm.ase.CmSysWaits;
 import com.asetune.cm.ase.CmSysmon;
 import com.asetune.cm.ase.CmTableCompression;
+import com.asetune.cm.ase.CmTableStatistics;
 import com.asetune.cm.ase.CmTempdbActivity;
 import com.asetune.cm.ase.CmThreads;
 import com.asetune.cm.ase.CmThresholdEvent;
 import com.asetune.cm.ase.CmWorkQueues;
+import com.asetune.cm.ase.CmWorkerThread;
 import com.asetune.cm.ase.ToolTipSupplierAse;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMpstat;
@@ -230,7 +233,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 			cm.setClusterEnabled(isClusterEnabled);
 			
 			// set the active roles, so it can be used in initSql()
-			cm.setActiveRoles(_activeRoleList);
+			cm.setActiveServerRolesOrPermissions(_activeRoleList);
 
 			// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
 			cm.setMonitorConfigs(monitorConfigMap);
@@ -309,7 +312,7 @@ public class CounterControllerAse extends CounterControllerAbstract
                            
 		CmSummary          .create(counterController, guiController);
                            
-		CmObjectActivity   .create(counterController, guiController);
+		// tab: Server
 		CmProcessActivity  .create(counterController, guiController);
 		CmSpidWait         .create(counterController, guiController);
 		CmSpidCpuWait      .create(counterController, guiController);
@@ -320,18 +323,51 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmEngines          .create(counterController, guiController);
 		CmThreads          .create(counterController, guiController);
 		CmSysLoad          .create(counterController, guiController);
+		CmSpinlockActivity .create(counterController, guiController);
+		CmSpinlockSum      .create(counterController, guiController);
+		CmSysmon           .create(counterController, guiController);
+		CmWorkerThread     .create(counterController, guiController);
+		CmMemoryUsage      .create(counterController, guiController);
+		CmErrolog          .create(counterController, guiController);
+		CmDeadlock         .create(counterController, guiController);
+		CmLockTimeout      .create(counterController, guiController);
+		CmThresholdEvent   .create(counterController, guiController);
+		CmSpMonitorConfig  .create(counterController, guiController);
+		CmWorkQueues       .create(counterController, guiController);
+
+		// tab: Object/Access
+		CmActiveStatements .create(counterController, guiController);
+		CmObjectActivity   .create(counterController, guiController);
+		CmActiveObjects    .create(counterController, guiController);
+		CmProcCallStack    .create(counterController, guiController);
+		CmLocks            .create(counterController, guiController);
+		CmBlocking         .create(counterController, guiController);
+		CmTableCompression .create(counterController, guiController);
+		CmTableStatistics  .create(counterController, guiController);
+		CmMissingStats     .create(counterController, guiController);
+		CmQpMetrics        .create(counterController, guiController);
+
+		// tab: Cache
 		CmDataCaches       .create(counterController, guiController);
 		CmCachePools       .create(counterController, guiController);
+		CmCachedProcs      .create(counterController, guiController);
+		CmCachedProcsSum   .create(counterController, guiController);
+		CmProcCacheLoad    .create(counterController, guiController);
+		CmCachedObjects    .create(counterController, guiController);
+		CmPCacheModuleUsage.create(counterController, guiController);
+		CmPCacheMemoryUsage.create(counterController, guiController);
+		CmStatementCache   .create(counterController, guiController);
+		CmStmntCacheDetails.create(counterController, guiController);
+
+		// tab: Disk
 		CmDeviceIo         .create(counterController, guiController);
 		CmIoQueueSum       .create(counterController, guiController);
 		CmIoQueue          .create(counterController, guiController);
 		CmIoControllers    .create(counterController, guiController);
 		CmDeviceSegIO      .create(counterController, guiController);
 		CmDeviceSegUsage   .create(counterController, guiController);
-		CmSpinlockActivity .create(counterController, guiController);
-		CmSpinlockSum      .create(counterController, guiController);
-		CmSysmon           .create(counterController, guiController);
-		CmMemoryUsage      .create(counterController, guiController);
+
+		// tab: RepAgent
 		CmRaSenders        .create(counterController, guiController);
 		CmRaLogActivity    .create(counterController, guiController);
 		CmRaScanners       .create(counterController, guiController);
@@ -343,27 +379,6 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmRaTruncPoint     .create(counterController, guiController);
 		CmRaMemoryStat     .create(counterController, guiController);
 		CmRaSysmon         .create(counterController, guiController);
-		CmCachedProcs      .create(counterController, guiController);
-		CmCachedProcsSum   .create(counterController, guiController);
-		CmProcCacheLoad    .create(counterController, guiController);
-		CmProcCallStack    .create(counterController, guiController);
-		CmCachedObjects    .create(counterController, guiController);
-		CmErrolog          .create(counterController, guiController);
-		CmDeadlock         .create(counterController, guiController);
-		CmLockTimeout      .create(counterController, guiController);
-		CmThresholdEvent   .create(counterController, guiController);
-		CmPCacheModuleUsage.create(counterController, guiController);
-		CmPCacheMemoryUsage.create(counterController, guiController);
-		CmStatementCache   .create(counterController, guiController);
-		CmStmntCacheDetails.create(counterController, guiController);
-		CmActiveObjects    .create(counterController, guiController);
-		CmActiveStatements .create(counterController, guiController);
-		CmBlocking         .create(counterController, guiController);
-		CmTableCompression .create(counterController, guiController);
-		CmMissingStats     .create(counterController, guiController);
-		CmQpMetrics        .create(counterController, guiController);
-		CmSpMonitorConfig  .create(counterController, guiController);
-		CmWorkQueues       .create(counterController, guiController);
 
 		// OS HOST Monitoring
 		CmOsIostat         .create(counterController, guiController);

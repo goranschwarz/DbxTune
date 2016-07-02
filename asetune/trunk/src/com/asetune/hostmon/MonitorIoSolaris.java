@@ -5,6 +5,15 @@ import com.asetune.utils.Configuration;
 public class MonitorIoSolaris
 extends MonitorIo
 {
+	public MonitorIoSolaris()
+	{
+		this(-1);
+	}
+	public MonitorIoSolaris(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	@Override
 	public String getModuleName()
 	{
@@ -19,7 +28,7 @@ extends MonitorIo
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData()
+	public HostMonitorMetaData createMetaData(int utilVersion)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

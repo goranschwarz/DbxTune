@@ -253,7 +253,8 @@
 
 	//------------------------------------------
 	// Send a responce id
-	printf("CHECK_ID_SQLW: %d\n", mysql_insert_id());
+//	printf("CHECK_ID_SQLW: %d\n", mysql_insert_id());
+	printf("CHECK_ID: %d\n", mysql_insert_id());
 
 	//------------------------------------------
 	// Close connection to the database

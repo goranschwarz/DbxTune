@@ -48,18 +48,18 @@ implements ActionListener
 	private static final String WIZ_DESC = "ASE information";
 	private static final String WIZ_HELP = "Connection information about the ASE server to sample statistics from.";
 	
-	private JCheckBox  _cmdLine_chk = new JCheckBox("Use Command Line Switches for the below information", false);
-	private JComboBox  _aseName	    = new JComboBox();
-//	private JTextField _aseName     = new JTextField("");
-	private JTextField _aseHost     = new JTextField("");
-	private JTextField _asePort     = new JTextField("");
-	private JTextField _aseUsername = new JTextField("");
-	private JTextField _asePassword = new JPasswordField();
+	private JCheckBox         _cmdLine_chk = new JCheckBox("Use Command Line Switches for the below information", false);
+	private JComboBox<String> _aseName	    = new JComboBox<String>();
+//	private JTextField        _aseName     = new JTextField("");
+	private JTextField        _aseHost     = new JTextField("");
+	private JTextField        _asePort     = new JTextField("");
+	private JTextField        _aseUsername = new JTextField("");
+	private JTextField        _asePassword = new JPasswordField();
 
 	private SyInterfacesDriver _interfacesDriver = null;
 
 	public static String getDescription() { return WIZ_DESC; }
-	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
+	@Override public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	public WizardOfflinePage1()
 	{
@@ -242,6 +242,7 @@ implements ActionListener
 		return problem.length() == 0 ? null : "Following fields can't be empty: "+problem;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();

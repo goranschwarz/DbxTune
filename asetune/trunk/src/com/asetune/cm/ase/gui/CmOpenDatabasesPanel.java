@@ -337,8 +337,8 @@ extends TabularCntrPanel
 		final JButton dblist_but         = new JButton("Set 'Graph' databases");
 
 		String[] graphTypeArr = {"Auto", "Vertical", "Horizontal"};
-		final JLabel    graphType_lbl    = new JLabel("Graph Orientation");
-		final JComboBox graphType_cbx    = new JComboBox(graphTypeArr);
+		final JLabel            graphType_lbl    = new JLabel("Graph Orientation");
+		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
 		String tooltip =
 			"<html>" +

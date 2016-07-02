@@ -68,6 +68,13 @@ extends Properties
 
 //	private List _writers = new ArrayList();
 
+	/** Increment this on every save */
+	private int _saveCount = 0;
+
+	/** true if a save is done by a background thread, and while the thread is active, other save requests will be queued... */
+	private boolean _hasActiveSaveThread = false;
+
+	
 	// original serialVersionUID = 5707562050158600080L
 	private static String encrypterBaseKey = "qazZSE44wsxXDR55"+serialVersionUID+"edcCFT66rfvVGY77";
 //	private static Encrypter baseEncrypter = new Encrypter(encrypterBaseKey);
@@ -219,17 +226,65 @@ extends Properties
 			return;
 		}
 
-		try
+		_saveCount++;
+		//System.out.println("Configuration.save(withOverride="+withOverride+") _saveCount="+_saveCount+", name='"+this._confName+"'.");
+
+//		try
+//		{
+//			long startTime = System.currentTimeMillis();
+//			
+//			FileOutputStream os = new FileOutputStream(new File(_propFileName));
+//			store(os, getEmbeddedMessage());
+//			//super.storeToXML(os, "This file will be overwritten and maintained by "+Version.getAppName();
+//			os.close();
+//			
+//			long saveTime = System.currentTimeMillis() - startTime;
+//			if (saveTime > 1000)
+//				_logger.warn("Configuration.save() took "+saveTime+" ms... Config file name ='"+_propFileName+"'. Do you have a slow IO subsystem?");
+//		}
+//		catch (Exception e)
+//		{
+//			e.printStackTrace();
+//		}
+		final int currentSaveCount = _saveCount;
+		Runnable saveJob = new Runnable()
 		{
-			FileOutputStream os = new FileOutputStream(new File(_propFileName));
-			store(os, getEmbeddedMessage());
-			//super.storeToXML(os, "This file will be overwritten and maintained by "+Version.getAppName();
-			os.close();
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
+			@Override
+			public void run()
+			{
+				try
+				{
+					while (_hasActiveSaveThread)
+					{
+//System.out.println("Configuration.save() currentSaveCount="+currentSaveCount+", name='"+_confName+"'. ------ WARNING: Waiting for previous thread to complete save...");
+						Thread.sleep(250);
+					}
+
+					_hasActiveSaveThread = true;
+					long startTime = System.currentTimeMillis();
+					
+					FileOutputStream os = new FileOutputStream(new File(_propFileName));
+					store(os, getEmbeddedMessage());
+					//super.storeToXML(os, "This file will be overwritten and maintained by "+Version.getAppName();
+					os.close();
+					
+					long saveTime = System.currentTimeMillis() - startTime;
+					if (saveTime > 1000)
+						_logger.warn("Configuration.save() took "+saveTime+" ms... Config file name ='"+_propFileName+"'. Do you have a slow IO subsystem?");
+//System.out.println("Configuration.save() currentSaveCount="+currentSaveCount+", name='"+_confName+"'. TIME = "+saveTime+ (saveTime < 1000 ? "" : " ------- WARNING ------ WARNING ----- WARNING ---- SAVE Took to long time..."));
+				}
+				catch (Exception e)
+				{
+					_logger.error("Problems saving Configuration name='"+_confName+"', file='"+_propFileName+"', currentSaveCount="+currentSaveCount+". Caught: "+e, e);
+				}
+				finally 
+				{
+					_hasActiveSaveThread = false;
+				}
+			}
+		};
+		Thread saveThread = new Thread(saveJob, "SaveCfgFile-" + currentSaveCount + "-" + _confName);
+		saveThread.start();
 	}
 
 	public void reload()
@@ -414,6 +469,38 @@ extends Properties
 	public boolean hasProperty(String propName)
 	{
 		return getProperty(propName) != null;
+	}
+
+	/**
+	 * Get a Integer property that has to do with layout things.<br>
+	 * This simply means that the key will also contain some screen information.<br>
+	 * The altered key might look something like: your.key.[2560x1440;1920x1200] if you are having 2 screens
+	 * @param key
+	 * @param defaultVal
+	 * @return integer value, if the key can't be found the defaulVal is returned.
+	 */
+	public int getLayoutProperty(String key, int defaultVal)
+	{
+		String monitorProp = SwingUtils.getScreenResulutionAsString();
+		String newKey = key + ".[" + monitorProp + "]";
+		
+		return getIntProperty(newKey, defaultVal);
+	}
+
+	/**
+	 * Set a Integer property that has to do with layout things.<br>
+	 * This simply means that the key will also contain some screen information.<br>
+	 * The altered key might look something like: your.key.[2560x1440;1920x1200} if you are having 2 screens
+	 * @param key
+	 * @param val
+	 * @return Previous value, if anything was set.
+	 */
+	public int setLayoutProperty(String key, int val)
+	{
+		String monitorProp = SwingUtils.getScreenResulutionAsString();
+		String newKey = key + ".[" + monitorProp + "]";
+		
+		return setProperty(newKey, val);
 	}
 
 	/** Get a int value for property */
@@ -1005,7 +1092,6 @@ extends Properties
 	/////////////////////////////////////////////////////////////
 	// code stolen from Properties
 	/////////////////////////////////////////////////////////////
-
 	/** code stolen from Properties */
 	@Override
 	public synchronized void store(OutputStream outputstream, String s)

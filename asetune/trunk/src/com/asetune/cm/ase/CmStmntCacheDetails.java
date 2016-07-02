@@ -7,17 +7,23 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CmSybMessageHandler;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmStmntCacheDetailsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -28,7 +34,7 @@ import com.asetune.utils.Ver;
 public class CmStmntCacheDetails
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmStmntCacheDetails.class);
+	private static Logger        _logger          = Logger.getLogger(CmStmntCacheDetails.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmStmntCacheDetails.class.getSimpleName();
@@ -82,7 +88,8 @@ extends CountersModel
 
 	public CmStmntCacheDetails(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -121,6 +128,10 @@ extends CountersModel
 	public static final String  PROPKEY_sample_metricsCountGtZero    = PROP_PREFIX + ".sample.metricsCountGtZero";
 	public static final boolean DEFAULT_sample_metricsCountGtZero    = true;
 
+
+	public static final String  PROPKEY_xmlPlan_bulkThreshold        = PROP_PREFIX + ".xmlPlan.bulkThreshold";
+	public static final int     DEFAULT_xmlPlan_bulkThreshold        = 200;
+
 	@Override
 	protected void registerDefaultValues()
 	{
@@ -131,6 +142,8 @@ extends CountersModel
 		Configuration.registerDefaultValue(PROPKEY_sample_xmlPlan,               DEFAULT_sample_xmlPlan);
 		Configuration.registerDefaultValue(PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail);
 		Configuration.registerDefaultValue(PROPKEY_sample_metricsCountGtZero,    DEFAULT_sample_metricsCountGtZero);
+		
+		Configuration.registerDefaultValue(PROPKEY_xmlPlan_bulkThreshold,        DEFAULT_xmlPlan_bulkThreshold);
 	}
 
 
@@ -214,7 +227,7 @@ extends CountersModel
 		boolean sampleSqlText            = (conf == null) ? DEFAULT_sample_sqlText                 : conf.getBooleanProperty(PROPKEY_sample_sqlText,               DEFAULT_sample_sqlText);
 		boolean sampleShowplan           = (conf == null) ? DEFAULT_sample_showplan                : conf.getBooleanProperty(PROPKEY_sample_showplan,              DEFAULT_sample_showplan);
 		boolean sampleXmlPlan            = (conf == null) ? DEFAULT_sample_xmlPlan                 : conf.getBooleanProperty(PROPKEY_sample_xmlPlan,               DEFAULT_sample_xmlPlan);
-		int     xmlPlan_levelOfDetail    = (conf == null) ? DEFAULT_sample_xmlPlan_levelOfDetail   : conf.getIntProperty(    PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail);
+//		int     xmlPlan_levelOfDetail    = (conf == null) ? DEFAULT_sample_xmlPlan_levelOfDetail   : conf.getIntProperty(    PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail);
 		boolean sampleMetricsCountGtZero = (conf == null) ? DEFAULT_sample_metricsCountGtZero      : conf.getBooleanProperty(PROPKEY_sample_metricsCountGtZero,    DEFAULT_sample_metricsCountGtZero);
 
 		String comment = "";
@@ -244,21 +257,20 @@ extends CountersModel
 		comment = "Property: "+PROPKEY_sample_xmlPlan+" is "+sampleXmlPlan+".";
 		String sql_hasXmlPlan  = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
 		String sql_doXmlPlan   = " xmlPlan       = convert(text, '"+comment+"'), \n";
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
 		if (aseVersion >= Ver.ver(15,7))
 		{
 			if ( sampleXmlPlan )
 			{
 				sql_hasXmlPlan = " HasXmlPlan    = convert(bit,1), \n";
-				sql_doXmlPlan  = " xmlPlan       = show_cached_plan_in_xml(SSQLID, 0, "+xmlPlan_levelOfDetail+"), \n";
+//				sql_doXmlPlan  = " xmlPlan       = show_cached_plan_in_xml(SSQLID, 0, "+xmlPlan_levelOfDetail+"), \n";
+				sql_doXmlPlan  = " xmlPlan       = convert(text, 'use:XmlPlanCache'), \n";
 			}
 		}
 		else
 		{
 			comment = "XML Plan is only available from ASE 15.7.0 or above.";
-			sql_hasXmlPlan     = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
-			sql_doXmlPlan      = " xmlPlan       = convert(text, '"+comment+"'), \n";
+			sql_hasXmlPlan = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
+			sql_doXmlPlan  = " xmlPlan       = convert(text, '"+comment+"'), \n";
 		}
 		
 		//----- SHOWPLAN
@@ -338,6 +350,7 @@ extends CountersModel
 //			(aseVersion >= 1570000 ? " StmtType, " : "") + // The type of the cached statement.
 			(aseVersion >= Ver.ver(15,7) ? " StmtType, " : "") + // The type of the cached statement.
 			" UserID, SUserID, SUserName = suser_name(SUserID), \n" +
+			" ObjectName = object_name(SSQLID, 2), \n" +
 			" SSQLID, \n" +                     // The unique identifier for a statement.
 			" Hashkey, \n" +                    // The hashkey over the statement's text.
 //			" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
@@ -376,8 +389,6 @@ extends CountersModel
 			" ParallelDegree, \n" +               // The parallel-degree session setting.
 			ParallelDegreeReduced + ParallelPlanRanSerial + WorkerThreadDeficit + nl_15702 + 
 			" QuotedIdentifier    = convert(bit,QuotedIdentifier), \n" + // The quoted identifier session setting.
-//			(aseVersion < 15026 ? " TableCount, \n" : "") + // describeme
-//			(aseVersion < 1502060 ? " TableCount, \n" : "") + // describeme
 			(aseVersion < Ver.ver(15,0,2,6) ? " TableCount, \n" : "") + // describeme
 			" TransactionIsolationLevel, \n" +  // The transaction isolation level session setting.
 			" TransactionMode, \n" +            // The transaction mode session setting.
@@ -399,6 +410,110 @@ extends CountersModel
 			sql_metricsCountGtZero;
 
 		return sql;
+	}
+
+	/**
+	 * Get the XML Plan for each row, but it's using the cache so that we don't have to issue so many show_cached_plan_in_xml()
+	 */
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean sampleXmlPlan         = (conf == null) ? DEFAULT_sample_xmlPlan        : conf.getBooleanProperty(PROPKEY_sample_xmlPlan,        DEFAULT_sample_xmlPlan);
+		int     xmlPlan_bulkThreshold = (conf == null) ? DEFAULT_xmlPlan_bulkThreshold : conf.getIntProperty    (PROPKEY_xmlPlan_bulkThreshold, DEFAULT_xmlPlan_bulkThreshold);
+
+		if ( ! sampleXmlPlan )
+			return;
+
+		if (getServerVersion() < Ver.ver(15,7))
+			return;
+
+		CounterSample counters = newSample;
+		if (counters == null)
+			return;
+
+		// Where are various columns located in the Vector 
+		int pos_xmlPlan    = -1;
+		int pos_HasXmlPlan = -1;
+		int pos_ObjectName = -1;
+
+		// Find column Id's
+		List<String> colNames = counters.getColNames();
+		if (colNames==null) 
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+			if (colName.equals("xmlPlan")   ) pos_xmlPlan    = colId;
+			if (colName.equals("HasXmlPlan")) pos_HasXmlPlan = colId;
+			if (colName.equals("ObjectName")) pos_ObjectName = colId;
+
+			// No need to continue, we got all our columns
+			if ( pos_xmlPlan >= 0 && pos_HasXmlPlan >= 0 && pos_ObjectName >= 0)
+				break;
+		}
+
+		if (pos_xmlPlan < 0 || pos_HasXmlPlan < 0 || pos_ObjectName < 0)
+		{
+			_logger.debug("Can't find the position for columns (xmlPlan="+pos_xmlPlan+", HasXmlPlan="+pos_HasXmlPlan+", ObjectName="+pos_ObjectName+")");
+			return;
+		}
+
+		// Get the XmlPlanCache
+		XmlPlanCache xmlPlanCache = XmlPlanCache.getInstance();
+		
+		// Count how many records we need to do Physical Reads for
+		int cacheMissCount = 0;
+		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+		{
+			Object o_ObjectName = counters.getValueAt(rowId, pos_ObjectName);
+
+			if (o_ObjectName instanceof String)
+			{
+				String ObjectName = (String)o_ObjectName;
+				if ( ! xmlPlanCache.isPlanCached(ObjectName) )
+					cacheMissCount++;
+			}
+		}
+		
+		// If number of misses is more that X number (default DEFAULT_xmlPlan_bulkThreshold = 200)
+		// Then it's probably more efficient to get all records in a more efficient way and store the records in the cache 
+		// Next loop will the read everything cached (so this is just a Efficient PreFetch of data) 
+		if (cacheMissCount > xmlPlan_bulkThreshold)
+		{
+			if (isServerRoleOrPermissionActive(AseConnectionUtils.MON_ROLE))
+				xmlPlanCache.getPlanBulk(null); // null means everything
+		}
+
+		// Loop on all diffData rows and update 
+		for (int rowId=0; rowId < counters.getRowCount(); rowId++) 
+		{
+			Object o_ObjectName = counters.getValueAt(rowId, pos_ObjectName);
+
+			if (o_ObjectName instanceof String)
+			{
+				String ObjectName = (String)o_ObjectName;
+
+				String cachedPlanInXml = "User does not have: mon_role";
+
+				if (isServerRoleOrPermissionActive(AseConnectionUtils.MON_ROLE))
+				{
+					if (sampleXmlPlan)
+//						cachedPlanInXml = AseConnectionUtils.cachedPlanInXml(getCounterController().getMonConnection(), procname, false);
+						cachedPlanInXml = xmlPlanCache.getPlan(ObjectName);
+					else
+						cachedPlanInXml = "This was disabled";
+					if (cachedPlanInXml == null)
+						cachedPlanInXml = "Not Available";
+				}
+
+				boolean b = true;
+				b = !"This was disabled".equals(cachedPlanInXml) && !"Not Available".equals(cachedPlanInXml) && !cachedPlanInXml.startsWith("User does not have");
+				counters.setValueAt(cachedPlanInXml, rowId, pos_xmlPlan);
+				counters.setValueAt(new Boolean(b),  rowId, pos_HasXmlPlan);
+			}
+		}
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
@@ -461,7 +576,11 @@ extends CountersModel
 			{
 				Object cellVal = getValueAt(modelRow, pos_xmlPlanText);
 				if (cellVal instanceof String)
-					return toHtmlString((String) cellVal, false);
+				{
+//					return toHtmlString((String) cellVal, false);
+					AsePlanViewer.getInstance().loadXmlDeferred((String) cellVal);
+					return null;
+				}
 			}
 		}
 

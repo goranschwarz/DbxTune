@@ -78,8 +78,6 @@ import javax.swing.table.TableModel;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXEditorPane;
 import org.jdesktop.swingx.JXErrorPane;
@@ -87,9 +85,51 @@ import org.jdesktop.swingx.error.ErrorInfo;
 
 import com.asetune.gui.swing.GPanel;
 
+import net.miginfocom.swing.MigLayout;
+
 public class SwingUtils
 {
 	private static Logger _logger = Logger.getLogger(SwingUtils.class);
+
+	public static boolean isHiDpi()
+	{
+		float scale = getHiDpiScale();
+		return scale >= 1.5f;
+	}
+
+	public static float getHiDpiScale()
+	{
+		String hiDpiScale = System.getProperty("SwingUtils.hiDpiScale");
+		if (hiDpiScale != null)
+		{
+			try { return Float.parseFloat(hiDpiScale); }
+			catch(NumberFormatException e) { _logger.error("Problems parsing the property 'SwingUtils.hiDpiScale', allowed values is any float value (like 2.0 for 200% scaling). Continuing with normal processing inside SwingUtils.getHiDpiScale()"); }
+		}
+//		Font labelFont = UIManager.getFont("TextArea.font");   // Default is 13, on HiDPI it doesn't seems to be scaled???
+//		Font labelFont = UIManager.getFont("TextField.font");  // Default is 11, on HiDPI xx
+		Font labelFont = UIManager.getFont("Label.font");      // Default is 11, on HiDPI xx
+		float scale = labelFont.getSize() / 11.0f;  
+		if (scale < 1.0f)
+			scale = 1.0f;
+
+		return scale;
+	}
+	/**
+	 *  convert a "pixel" size into something smaller/bigger by multiplying it with the scaling factor.<br>
+	 *  Currently the scaling factor is used based on the Font size of <code>UIManager.getFont("Label.font")</code>
+	 */
+	public static int hiDpiScale(int val)
+	{
+		return Math.round( (val*1.0f) * getHiDpiScale() );
+	}
+	/**
+	 *  convert a "pixel" size into something smaller/bigger by multiplying it with the scaling factor.<br>
+	 *  Currently the scaling factor is used based on the Font size of <code>UIManager.getFont("Label.font")</code>
+	 */
+	public static Dimension hiDpiScale(Dimension dim)
+	{
+		return new Dimension( hiDpiScale(dim.width), hiDpiScale(dim.height) );
+	}
 
 	public static void printComponents(JComponent c, String text)
 	{
@@ -630,9 +670,11 @@ public class SwingUtils
 
 	public static JButton makeToolbarButton(Class<?> clazz, String imageName, String actionCommand, ActionListener al, String toolTipText, String altText)
 	{
+		// Get the image
+		ImageIcon imageIcon = readImageIcon(clazz, imageName);
 		// Look for the image.
-		String imgLocation = "images/" + imageName;
-		URL imageURL = clazz.getResource(imgLocation);
+//		String imgLocation = "images/" + imageName;
+//		URL imageURL = clazz.getResource(imgLocation);
 
 		// Create and initialize the button.
 		JButton button = new JButton();
@@ -643,14 +685,19 @@ public class SwingUtils
 		if (al != null)
 			button.addActionListener(al);
 
-		if (imageURL != null)
+//		if (imageURL != null)
+//		{ // image found
+//			button.setIcon(new ImageIcon(imageURL, altText));
+//		}
+		if (imageIcon != null)
 		{ // image found
-			button.setIcon(new ImageIcon(imageURL, altText));
+			imageIcon.setDescription(altText);
+			button.setIcon(imageIcon);
 		}
 		else
 		{ // no image found
 			button.setText(altText);
-			_logger.error("Toolbar Resource not found '"+imgLocation+"', url='"+imageURL+"'.");
+//			_logger.error("Toolbar Resource not found '"+imgLocation+"', url='"+imageURL+"'.");
 		}
 
 		return button;
@@ -670,9 +717,66 @@ public class SwingUtils
 			return null;
 		}
 
-		return new ImageIcon(Toolkit.getDefaultToolkit().getImage(url));
+//		return new ImageIcon(Toolkit.getDefaultToolkit().getImage(url));
+
+		ImageIcon iconImage = new ImageIcon(Toolkit.getDefaultToolkit().getImage(url));
+
+		int scaleFactor = 1;
+		if (SwingUtils.isHiDpi())
+		{
+			scaleFactor = 2;
+			
+			int newWidth  = iconImage.getIconWidth()  * scaleFactor;
+			int newHeight = iconImage.getIconHeight() * scaleFactor;
+			
+			Image image = iconImage.getImage().getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+			iconImage = new ImageIcon(image);
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("readImageIcon(): isHiDpi()="+isHiDpi()+", getHiDpiScale()="+getHiDpiScale()+", scaleFactor="+scaleFactor+", newWidth="+newWidth+", newHeight="+newHeight+", newWidthAfter="+iconImage.getIconWidth()+", newHeightAfter="+iconImage.getIconHeight()+".");
+		}
+		return iconImage;
+
+//		Image image = Toolkit.getDefaultToolkit().getImage(url);
+////		BufferedImage buffered = ((ToolkitImage) image).getBufferedImage();
+//		BufferedImage bigImage = enlarge(toBufferedImage(image), 2);
+//		ImageIcon ii = new ImageIcon(bigImage);
+////		return new ImageIcon(bigImage);
+
+//		try
+//		{
+//			return new ImageIcon(enlarge(ImageIO.read(url), 2));
+//		}
+//		catch (IOException e)
+//		{
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//			return null;
+//		}
+
+//		return new HiDpiIcon(Toolkit.getDefaultToolkit().getImage(url), Toolkit.getDefaultToolkit().getImage(url));
 	}
 
+//	public static BufferedImage enlarge(BufferedImage image, int n)
+////	public static BufferedImage enlarge(Image image, int n)
+//	{
+//
+//		int w = n * image.getWidth();
+//		int h = n * image.getHeight();
+////		int w = n * image.getWidth(null);
+////		int h = n * image.getHeight(null);
+//
+//		BufferedImage enlargedImage = new BufferedImage(w, h, image.getType());
+//
+//		for (int y = 0; y < h; ++y)
+//		{
+//			for (int x = 0; x < w; ++x)
+//			{
+//				enlargedImage.setRGB(x, y, image.getRGB(x / n, y / n));
+//			}
+//		}
+//		return enlargedImage;
+//	}
 	
 	/** helper method to create a JPanel */
 	public static JPanel createPanel(String title, boolean createBorder) 
@@ -1325,7 +1429,7 @@ public class SwingUtils
 
 		return sb.toString();
 	}
-	public static String tableToCsvString(JTable table, boolean headers, String colSep, String rowSep, String tabNullValue, String outNullvalue)
+	public static String tableToCsvString(JTable table, boolean headers, String colSep, String rowSep, String tabNullValue, String outNullvalue, boolean useRfc4180)
 	{
 		StringBuilder sb = new StringBuilder();
 		int rows = table.getRowCount();
@@ -1363,8 +1467,12 @@ public class SwingUtils
 					if (obj.equals(tabNullValue))
 						obj = outNullvalue;
 				}
-				sb.append(obj);
-				
+				// Write columns data
+				if ( obj instanceof String && useRfc4180 )
+					sb.append(StringUtil.toRfc4180String( (String)obj ));
+				else
+					sb.append(obj);
+
 				// Add column separator, but not for last column
 				if (c+1 < cols)
 					sb.append(colSep);

@@ -75,12 +75,25 @@ go [#1 [wait #2]] [ | {grep | egrep | bcp} ]
     <Syntax>
 <![CDATA[
 <pre>
-\prep FIXME
+\prep insert into t1 values(?) :(int=98)
 </pre>
 ]]></Syntax>
     <Example>
 <![CDATA[
-FIXME
+<UL>
+   <LI>
+       <B>Example 1</B>: Insert some values.<BR>
+       <CODE>\prep insert into t1 values(?,?) :(int=98, string='Test value')</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Insert a picture into a table with a BLOB column.<BR>
+       <CODE>\prep insert into t1 values(?,?,?) :(int=98, string=null, blob='c:\some\path\picture.gif')</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Insert a picture into a table with a BLOB column, fetch the image from the Network.<BR>
+       <CODE>\prep insert into t1 values(?,?,?) :(int=98, string='some str', blob='http://www.asemon.se/images/sample3.png')</CODE><br><br>
+   </LI>
+</UL>
 ]]>
     </Example>
     <SeeAlso>\rpc</SeeAlso>
@@ -96,12 +109,25 @@ FIXME
     <Syntax>
 <![CDATA[
 <pre>
-\call FIXME
+\call procName(?) :(int=99)
 </pre>
 ]]></Syntax>
     <Example>
 <![CDATA[
-FIXME
+<UL>
+   <LI>
+       <B>Example 1</B>: Simple call of a proceedure, with 3 input parameters<BR>
+       <CODE>\call procName1(?,?,?) :(string='a string', int=99, string=null)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Calls a procedure where last parameter is an output variable<BR>
+       <CODE>\call procName2(?,?) :(int=99, string=null out)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Call an Oracle procedure which has a SYS_REFCURSOR (a ResultSet) as output parameter<BR>
+       <CODE>\call oracleProc(?) :(ora_rs)</CODE><br><br>
+   </LI>
+</UL>
 ]]>
     </Example>
     <SeeAlso>\rpc</SeeAlso>
@@ -117,12 +143,25 @@ FIXME
     <Syntax>
 <![CDATA[
 <pre>
-\exec FIXME
+\exec procName(?) :(int=99)
 </pre>
 ]]></Syntax>
     <Example>
 <![CDATA[
-FIXME
+<UL>
+   <LI>
+       <B>Example 1</B>: Simple execute a proceedure, with 3 input parameters<BR>
+       <CODE>\exec procName1(?,?,?) :(string='a string', int=99, string=null)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute a procedure where last parameter is an output variable<BR>
+       <CODE>\exec procName2(?,?) :(int=99, string=null out)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute an Oracle procedure which has a SYS_REFCURSOR (a ResultSet) as output parameter<BR>
+       <CODE>\exec oracleProc(?) :(ora_rs)</CODE><br><br>
+   </LI>
+</UL>
 ]]>
     </Example>
     <SeeAlso>\rpc</SeeAlso>
@@ -138,12 +177,25 @@ FIXME
     <Syntax>
 <![CDATA[
 <pre>
-\rpc FIXME
+\rpc procName(?) :(int=99)
 </pre>
 ]]></Syntax>
     <Example>
 <![CDATA[
-FIXME
+<UL>
+   <LI>
+       <B>Example 1</B>: Simple execute a proceedure, with 3 input parameters<BR>
+       <CODE>\rpc procName1(?,?,?) :(string='a string', int=99, string=null)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute a procedure where last parameter is an output variable<BR>
+       <CODE>\rpc procName2(?,?) :(int=99, string=null out)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute an Oracle procedure which has a SYS_REFCURSOR (a ResultSet) as output parameter<BR>
+       <CODE>\rpc oracleProc(?) :(ora_rs)</CODE><br><br>
+   </LI>
+</UL>
 ]]>
     </Example>
     <SeeAlso>\exec</SeeAlso>
@@ -211,6 +263,74 @@ FIXME
     </Example>
     <SeeAlso>grep, egrep</SeeAlso>
 </Entry>
+
+
+<!-- == tofile =================================== -->
+<Entry>
+    <CmdName>tofile</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Write the resultset into a file instead of display it on the screen. This is good for big resultsets</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+select * from tab1
+go | tofile [-a] [-o] [-h] [-f <str>] [-r <str>] [-c <charset>] [-q] [-i] [-n] filename
+
+/*
+Options:
+  -a,--append                  Append to file.
+  -o,--overwrite               If file already exists overwrite it.
+  -h,--header                  Write header/column names       DEFAULT=false
+  -f,--field_terminator <str>  Character(s) between fields     DEFAULT=\t
+  -r,--row_terminator <str>    Character(s) to terminate a row DEFAULT=\n
+  -c,--charset <name>          Java Characterset name          DEFAULT=UTF8
+  -q,--query                   Print Query at the top of the file
+  -i,--rsinfo                  Print JDBC ResultSet info in the file
+  -n,--noguiquestion           Do not show GUI questions for file overwrite
+*/
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>grep, egrep</SeeAlso>
+</Entry>
+
+
+<!-- == \loadfile =================================== -->
+<Entry>
+    <CmdName>loadfile</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Load a file (maybe a CSV, Comma Separated Value) file into a table</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\loadfile -T tablename filename
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: simple.<BR>
+       <CODE>\loadfile -T t1 c:\tmp\t1.csv</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: xxxxxx.<BR>
+       <CODE>\loadfile -T t1 c:\tmp\t1.csv</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: xxxxxx.<BR>
+       <CODE>\loadfile -T t1 c:\tmp\t1.csv</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\loadfile</SeeAlso>
+</Entry>
+
 
 
 

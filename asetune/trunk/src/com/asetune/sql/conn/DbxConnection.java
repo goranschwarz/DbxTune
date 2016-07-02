@@ -22,8 +22,10 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 
 import javax.swing.ImageIcon;
 
@@ -31,7 +33,9 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
+import com.asetune.gui.ConnectionProgressExtraActions;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
+import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.DbUtils;
@@ -106,13 +110,13 @@ implements Connection
 			throw new IllegalAccessException("No default Connection Properties has ben set yet.");
 
 		// Take a copy of the current default connection props
-		defConnProp = defConnProp.clone();
+		ConnectionProp connProp = defConnProp.clone();
 
 		// Now set the desired options
-		defConnProp.setAppName(appName);
+		connProp.setAppName(appName);
 
 		// Adn finally make a connection attempt
-		return connect(guiOwner, defConnProp);
+		return connect(guiOwner, connProp);
 	}
 
 	/**
@@ -181,11 +185,20 @@ implements Connection
 //			}
 			
 			// Add specific JDBC Properties, for specific URL's, if not already specified
+			// DB2
 			if (url.startsWith("jdbc:db2:"))
 			{
 				if ( ! props.containsKey("retrieveMessagesFromServerOnGetMessage") )
 				{
 					props .put("retrieveMessagesFromServerOnGetMessage", "true");
+				}
+			}
+			// Sybase/jConnect
+			if (url.startsWith("jdbc:sybase:Tds:"))
+			{
+				if (StringUtil.hasValue(appname) &&  ! props.containsKey("APPLICATIONNAME") )
+				{
+					props .put("APPLICATIONNAME", appname);
 				}
 			}
 
@@ -224,8 +237,40 @@ implements Connection
 			}
 			else
 			{
+//				public static DbxConnection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
+//				public static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 				ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
-				conn = ConnectionProgressDialog.connectWithProgressDialog(guiOwner, driverClass, url, props, null, null, sshTunnelInfo, null, null, srvIcon);
+				if (url.startsWith("jdbc:sybase:Tds:"))
+				{
+					// Note: ASE is taking a special code path... this is especially because of SSH Tunnel...
+					//       But I need to recode all this stuff to make it more "clean"
+					//       Meaning NOT using the AseConnectionFactory (and multiple HostPorts 'host1:port,host2:port') stuff
+					conn = ConnectionProgressDialog.connectWithProgressDialog(
+							guiOwner,      // Window owner
+							url,           // String urlStr
+							connProp,      // ConnectionProp
+							null,          // ConnectionProgressExtraActions extraTasks
+							null,          // SshConnection sshConn
+							sshTunnelInfo, // SshTunnelInfo sshTunnelInfo
+							null,          // String desiredDbProductName
+							null,          // String sqlInit
+							srvIcon);      // ImageIcon srvIcon
+				}
+				else
+				{
+					conn = ConnectionProgressDialog.connectWithProgressDialog(
+							guiOwner,      // Window owner
+							driverClass,   // String rawJdbcDriver
+							url,           // String rawJdbcUrl
+							props,         // Properties rawJdbcProps
+							connProp,      // ConnectionProp
+							null,          // ConnectionProgressExtraActions extraTasks
+							null,          // SshConnection sshConn
+							sshTunnelInfo, // SshTunnelInfo sshTunnelInfo
+							null,          // String desiredDbProductName
+							null,          // String sqlInit
+							srvIcon);      // ImageIcon srvIcon
+				}
 			}
 
 			
@@ -271,7 +316,7 @@ implements Connection
 				dbxConn = createDbxConnection(conn);
 			
 			// Set the connection properties used, so we can reconnect if we lost the connection.
-System.out.println("DbxConnection.connect(): setConnProp: "+connProp);
+//System.out.println("DbxConnection.connect(): setConnProp: "+connProp);
 			dbxConn.setConnProp(connProp);
 
 			return dbxConn;
@@ -437,6 +482,8 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))        return new SqlServerConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))        return new MySqlConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))       return new OracleConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))     return new PostgresConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  return new ApacheHiveConnection(conn);
 		else return new UnknownConnection(conn);
 	}
 
@@ -1209,8 +1256,8 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	@Override
 	public void close() throws SQLException
 	{
-		_conn.close();
 		clearCachedValues();
+		_conn.close();
 	}
 
 	@Override
@@ -1442,6 +1489,41 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		return _conn.createStruct(typeName, attributes);
 	}
 
+	//#######################################################
+	//############################# JDBC 4.1
+	//#######################################################
+	
+	@Override
+	public void abort(Executor executor) throws SQLException
+	{
+		_conn.abort(executor);
+	}
+
+	@Override
+	public int getNetworkTimeout() throws SQLException
+	{
+		return _conn.getNetworkTimeout();
+	}
+
+	@Override
+	public String getSchema() throws SQLException
+	{
+		return _conn.getSchema();
+	}
+
+	@Override
+	public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException
+	{
+		_conn.setNetworkTimeout(executor, milliseconds);
+	}
+
+	@Override
+	public void setSchema(String schema) throws SQLException
+	{
+		_conn.setSchema(schema);
+	}
+	
+
 	//#################################################################################
 	//#################################################################################
 	//### END: delegated methods for Connection
@@ -1641,6 +1723,16 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	public boolean isDbmsClusterEnabled()
 	{
 		return false;
+	}
+
+	/**
+	 * Get active server roles or Permissions that the current user has in the current DBMS
+	 * @param conn
+	 * @return null if not known, otherwise a list of strings.
+	 */
+	public List<String> getActiveServerRolesOrPermissions()
+	{
+		return null;
 	}
 
 	

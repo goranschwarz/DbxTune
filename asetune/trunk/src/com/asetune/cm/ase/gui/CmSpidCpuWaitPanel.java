@@ -345,7 +345,7 @@ extends TabularCntrPanel
 			if (cm.isRuntimeInitialized())
 			{
 				// disable some options if we do not have 'sybase_ts_role'
-				if ( cm.isRoleActive(AseConnectionUtils.SYBASE_TS_ROLE) )
+				if ( cm.isServerRoleOrPermissionActive(AseConnectionUtils.SYBASE_TS_ROLE) )
 				{
 					_sampleDbccSqltext_chk   .setEnabled(true);
 					_sampleDbccStacktrace_chk.setEnabled(true);
@@ -368,7 +368,7 @@ extends TabularCntrPanel
 
 				// disable some options if we do not have ASE RELEASE 12.5.4 and 'sa_role'
 				if ( cm.getServerVersion() >= CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda 
-				     && cm.isRoleActive(AseConnectionUtils.SA_ROLE) )
+				     && cm.isServerRoleOrPermissionActive(AseConnectionUtils.SA_ROLE) )
 				{
 					_sampleFreezeMda_chk.setEnabled(true);
 				}

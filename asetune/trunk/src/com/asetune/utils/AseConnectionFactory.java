@@ -30,6 +30,8 @@ import org.apache.log4j.Logger;
 
 import com.asetune.Version;
 import com.asetune.gui.ConnectionProgressCallback;
+import com.asetune.gui.ConnectionProgressDialog;
+import com.asetune.sql.conn.ConnectionProp;
 import com.sybase.util.ds.interfaces.Service;
 import com.sybase.util.ds.interfaces.SyInterfacesDriver;
 import com.sybase.util.ds.interfaces.SyInterfacesEntry;
@@ -163,7 +165,7 @@ public class AseConnectionFactory
 			catch(Exception ex2)
 			{
 				_logger.warn("Even Problems reading LOCAL "+Version.getAppName()+" Name/Directory Service file '"+privateInterfacesFile+"'.");
-				_logger.warn("LOCAL FILE SyInterfacesDriver Problem: "+ex);
+				_logger.warn("LOCAL FILE SyInterfacesDriver Problem: "+ex2);
 			}
 		}
 
@@ -205,7 +207,7 @@ public class AseConnectionFactory
 	}
 
 	/** check/create the local/private interfaces file */
-	private static String createPrivateInterfacesFile(String file)
+	public static String createPrivateInterfacesFile(String file)
 	{
 		// set a local filename if one wasn't passed
 		if (file == null)
@@ -1205,11 +1207,24 @@ public class AseConnectionFactory
 		return getConnection(getHostPortStr(), dbname, _username, _password, _appname, _hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 
-	/** get a connection using the static settings priviously made, but override the input parameters for this method */
-	public static Connection getConnection() 
+	/** get a connection using the static settings priviously made, but override the input parameters for this method 
+	 * @param _connProp 
+	 * @param connectionProgressDialog */
+	public static Connection getConnection(ConnectionProgressDialog connectionProgressDialog, ConnectionProp connProp) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(getHostPortStr(), null, _username, _password, _appname, _hostname, (Properties)null, (ConnectionProgressCallback)null);
+		String username = _username;
+		String password = _password;
+		String appname  = _appname;
+		String hostname = _hostname;
+		if (connProp != null)
+		{
+			username = connProp.getUsername();
+			password = connProp.getPassword();
+			appname  = connProp.getAppName();
+			hostname = _hostname;
+		}
+		return getConnection(getHostPortStr(), null, username, password, appname, hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 	public static Connection getConnection(ConnectionProgressCallback cpd) 
 	throws ClassNotFoundException, SQLException

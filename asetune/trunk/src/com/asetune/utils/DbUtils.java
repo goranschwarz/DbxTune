@@ -32,7 +32,7 @@ public class DbUtils
 	public static final String DB_PROD_NAME_H2           = "H2";
 	public static final String DB_PROD_NAME_HANA         = "HDB";
 	public static final String DB_PROD_NAME_MAXDB        = "SAP DB";
-                                                         
+
 	public static final String DB_PROD_NAME_HSQL         = "HSQL Database Engine"; // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_MSSQL        = "Microsoft SQL Server"; // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_ORACLE       = "Oracle";               // got this from web, so might not be correct
@@ -40,6 +40,8 @@ public class DbUtils
 	public static final String DB_PROD_NAME_DB2_ZOS      = "DB2";                  // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_MYSQL        = "MySQL";                // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_DERBY        = "Apache Derby";         // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_POSTGRES     = "PostgreSQL";
+	public static final String DB_PROD_NAME_APACHE_HIVE  = "Apache Hive";
 
 
 	/**
@@ -414,6 +416,17 @@ public class DbUtils
 		{
 			sql = "select convert(varchar(1024),serverproperty('ErrorLogFileName'))";
 		}
+		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_MYSQL))
+		{
+			sql = "SHOW VARIABLES LIKE 'log_error'";
+		}
+//		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
+//		{
+//			sql = "show log_filename"; // this just takes the filename not the full path
+//		}
+//		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_APACHE_HIVE))
+//		{
+//		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_HANA))
 		{
 			// into: /usr/sap/<SID>/HDB<system number>/<hostname>/trace

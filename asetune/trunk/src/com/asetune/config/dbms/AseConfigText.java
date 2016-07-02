@@ -3,10 +3,12 @@ package com.asetune.config.dbms;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -20,7 +22,25 @@ import com.asetune.utils.Ver;
 public abstract class AseConfigText
 {
 	/** What sub types exists */
-	public enum ConfigType {AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseHelpSort, AseLicenseInfo, AseClusterInfo, AseConfigFile};
+	public enum ConfigType
+	{
+		AseCacheConfig
+		,AseThreadPool
+		,AseHelpDb
+		,AseTempdb
+		,AseHelpDevice
+		,AseDeviceFsSpaceUsage
+		,AseHelpServer
+		,AseTraceflags
+		,AseSpVersion
+		,AseShmDumpConfig
+		,AseMonitorConfig
+		,AseHelpSort
+		,AseLicenseInfo
+		,AseClusterInfo
+		,AseConfigFile
+		//,AseConfigMonitoring
+		};
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfigText.class);
@@ -58,21 +78,22 @@ public abstract class AseConfigText
 
 	public static void createAndRegisterAllInstances()
 	{
-        DbmsConfigTextManager.addInstance(new AseConfigText.Cache());              // ConfigType.AseCacheConfig);
-        DbmsConfigTextManager.addInstance(new AseConfigText.ThreadPool());         // ConfigType.AseThreadPool);
-        DbmsConfigTextManager.addInstance(new AseConfigText.HelpDb());             // ConfigType.AseHelpDb);
-        DbmsConfigTextManager.addInstance(new AseConfigText.Tempdb());             // ConfigType.AseTempdb);
-        DbmsConfigTextManager.addInstance(new AseConfigText.HelpDevice());         // ConfigType.AseHelpDevice);
-        DbmsConfigTextManager.addInstance(new AseConfigText.DeviceFsSpaceUsage()); // ConfigType.AseDeviceFsSpaceUsage);
-        DbmsConfigTextManager.addInstance(new AseConfigText.HelpServer());         // ConfigType.AseHelpServer);
-        DbmsConfigTextManager.addInstance(new AseConfigText.Traceflags());         // ConfigType.AseTraceflags);
-        DbmsConfigTextManager.addInstance(new AseConfigText.SpVersion());          // ConfigType.AseSpVersion);
-        DbmsConfigTextManager.addInstance(new AseConfigText.ShmDumpConfig());      // ConfigType.AseShmDumpConfig);
-        DbmsConfigTextManager.addInstance(new AseConfigText.MonitorConfig());      // ConfigType.AseMonitorConfig);
-        DbmsConfigTextManager.addInstance(new AseConfigText.HelpSort());           // ConfigType.AseHelpSort);
-        DbmsConfigTextManager.addInstance(new AseConfigText.LicenceInfo());        // ConfigType.AseLicenseInfo);
-        DbmsConfigTextManager.addInstance(new AseConfigText.ClusterInfo());        // ConfigType.AseClusterInfo);
-        DbmsConfigTextManager.addInstance(new AseConfigText.ConfigFile());         // ConfigType.AseConfigFile);
+		DbmsConfigTextManager.addInstance(new AseConfigText.Cache());              // ConfigType.AseCacheConfig);
+		DbmsConfigTextManager.addInstance(new AseConfigText.ThreadPool());         // ConfigType.AseThreadPool);
+		DbmsConfigTextManager.addInstance(new AseConfigText.HelpDb());             // ConfigType.AseHelpDb);
+		DbmsConfigTextManager.addInstance(new AseConfigText.Tempdb());             // ConfigType.AseTempdb);
+		DbmsConfigTextManager.addInstance(new AseConfigText.HelpDevice());         // ConfigType.AseHelpDevice);
+		DbmsConfigTextManager.addInstance(new AseConfigText.DeviceFsSpaceUsage()); // ConfigType.AseDeviceFsSpaceUsage);
+		DbmsConfigTextManager.addInstance(new AseConfigText.HelpServer());         // ConfigType.AseHelpServer);
+		DbmsConfigTextManager.addInstance(new AseConfigText.Traceflags());         // ConfigType.AseTraceflags);
+		DbmsConfigTextManager.addInstance(new AseConfigText.SpVersion());          // ConfigType.AseSpVersion);
+		DbmsConfigTextManager.addInstance(new AseConfigText.ShmDumpConfig());      // ConfigType.AseShmDumpConfig);
+		DbmsConfigTextManager.addInstance(new AseConfigText.MonitorConfig());      // ConfigType.AseMonitorConfig);
+		DbmsConfigTextManager.addInstance(new AseConfigText.HelpSort());           // ConfigType.AseHelpSort);
+		DbmsConfigTextManager.addInstance(new AseConfigText.LicenceInfo());        // ConfigType.AseLicenseInfo);
+		DbmsConfigTextManager.addInstance(new AseConfigText.ClusterInfo());        // ConfigType.AseClusterInfo);
+		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigFile());         // ConfigType.AseConfigFile);
+//		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigMonitoring());   // ConfigType.AseConfigMonitoring);
 	}
 
 //	private static void createInstance(ConfigType type)
@@ -455,6 +476,7 @@ public abstract class AseConfigText
 
 		@Override
 		public void refresh(DbxConnection conn, Timestamp ts)
+		throws SQLException
 		{
 			super.refresh(conn, ts);
 
@@ -669,6 +691,7 @@ public abstract class AseConfigText
 		
 		@Override
 		public void refresh(DbxConnection conn, Timestamp ts)
+		throws SQLException
 		{
 			super.refresh(conn, ts);
 
@@ -878,8 +901,33 @@ public abstract class AseConfigText
 			"go \n" +
 			""; 
 		}
+		@Override
+		protected void setConfig(String configStr)
+		{
+			// Trim all lines to get rid of all spaces at the end (since it's only 1 column)
+			if (configStr != null)
+			{
+				StringBuilder sb = new StringBuilder();
+
+				Scanner scanner = new Scanner(configStr);
+				while (scanner.hasNextLine()) 
+					sb.append( scanner.nextLine().trim() ).append("\n");
+				scanner.close();
+				
+				configStr = sb.toString();
+			}
+			super.setConfig(configStr);
+		}
 	}
 	
+//	public static class ConfigMonitoring extends DbmsConfigTextAbstract
+//	{
+//		@Override public    String     getTabLabel()                       { return "Monitoring"; }
+//		@Override public    String     getName()                           { return ConfigType.AseConfigMonitoring.toString(); }
+//		@Override public    String     getConfigType()                     { return getName(); }
+//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_configure 'Monitoring'"; }
+//	}
+
 	
 	/*---------------------------------------------------
 	**---------------------------------------------------

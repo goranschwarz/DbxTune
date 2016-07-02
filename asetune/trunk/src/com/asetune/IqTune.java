@@ -9,6 +9,8 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryDefault;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameIq;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.utils.DbUtils;
 
 public class IqTune
@@ -83,6 +85,18 @@ extends DbxTune
 		return new CounterControllerIq(hasGui);
 	}
 
+	@Override
+	public IObjectLookupInspector createPcsObjectLookupInspector()
+	{
+		return null;
+	}
+
+	@Override
+	public ISqlCaptureBroker createPcsSqlCaptureBroker() 
+	{
+		return null;
+	}
+	
 	@Override
 	public CheckForUpdates createCheckForUpdates()
 	{

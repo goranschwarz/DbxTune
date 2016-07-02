@@ -1,5 +1,6 @@
 package com.asetune;
 
+import java.awt.Font;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -34,6 +35,8 @@ import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
@@ -118,6 +121,8 @@ public abstract class DbxTune
 	public abstract String getSupportedProductName();
 	public abstract MainFrame createGuiMainFrame();
 	public abstract ICounterController createCounterController(boolean hasGui);
+	public abstract IObjectLookupInspector createPcsObjectLookupInspector();
+	public abstract ISqlCaptureBroker createPcsSqlCaptureBroker();
 
 	public abstract CheckForUpdates createCheckForUpdates();
 	public abstract IDbmsConfig createDbmsConfig();
@@ -198,17 +203,17 @@ public abstract class DbxTune
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND
-		    && javaVersionInt <  JavaVersion.VERSION_1_6
+		    && javaVersionInt <  JavaVersion.VERSION_1_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.6 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -467,11 +472,11 @@ public abstract class DbxTune
 					if ("default".equalsIgnoreCase(opt))
 						jdbcUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}";
 
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,           jdbcDriver);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,              jdbcUrl);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername,         jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword,         jdbcPasswd, true);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_startH2NetworkServer, true);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,           jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,              jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername,         jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword,         jdbcPasswd, true);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_startH2NetworkServer, true);
 
 					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
@@ -504,10 +509,10 @@ public abstract class DbxTune
 					String jdbcUser   = aseUser;
 					String jdbcPasswd = asePasswd;
 
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,   jdbcDriver);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,      jdbcUrl);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername, jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd, true);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, jdbcPasswd, true);
 
 					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
@@ -536,10 +541,10 @@ public abstract class DbxTune
 					String jdbcUser   = asaUser;
 					String jdbcPasswd = asaPasswd;
 
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcDriver,   jdbcDriver);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUrl,      jdbcUrl);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcUsername, jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROP_jdbcPassword, jdbcPasswd, true);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, jdbcPasswd, true);
 
 					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
 
@@ -689,6 +694,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
 		_logger.info("The application was started by the username:  "+System.getProperty("user.name"));
 		_logger.info("The application was started in the directory:   "+System.getProperty("user.dir"));
+		_logger.info("The user '"+System.getProperty("user.name")+"' home directory:   "+System.getProperty("user.home"));
 
 		_logger.info("System configuration file is '"+propFile+"'.");
 		_logger.info("User configuration file is '"+userPropFile+"'.");
@@ -738,10 +744,11 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 							"<br>" +
 							"A new version can be downloaded at <A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
 							"<br>" +
-							"The application will still be started, in <b>restricted mode</b><br>" +
+							Version.getAppName() + " will still be started, but in <b>restricted mode</b><br>" +
 							"It can only read data from <i>Persistent Counter Storage</i>, also called <i>'offline databases'</i>.<br>" +
 							"<br>" +
-							"But I strongly encourage you to download the latest release, " +
+							"But I strongly encourage you to download the latest release!<br>" +
+							"<br>" +
 							"This 'start' option was implemented as a fail-safe mechanism, and " +
 							"should only be used if the new "+Version.getAppName()+" version is not capable of reading the " +
 							"old database. In 99.9% the new "+Version.getAppName()+" version will be able to read " +
@@ -857,6 +864,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 					// Install our own EventQueue handler, to handle/log strange exceptions in the event dispatch thread
 					// More or less the same thing as the above, we will have to see what handler we will use at-the-end-of-the-day
 					EventQueueProxy.install();
+
+//					if (SwingUtils.getHiDpiScale() > 1.0)
+//					{
+//						Font labelFont = UIManager.getFont("Label.font");
+//						//Font textareaFont = UIManager.getFont("TextArea.font");
+//						UIManager.put("TextArea.font", labelFont);
+//					}
 
 					// Create the GUI
 					SplashWindow.drawProgress("Loading: Main Frame...");
@@ -1001,7 +1015,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 		pw.println("usage: "+getAppNameCmd()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] ");
 		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>]");
-		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>]");
+		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] [-H <dirname>] ");
 		pw.println("              [-n <cfgFile|cmNames>] [-r] [-l] [-i <seconds>] [-f <hours>]");
 		pw.println("              [-d <dbname>] [-D <H2|ASE|ASE>] ");
 		pw.println("  ");
@@ -1021,6 +1035,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		pw.println("  -u,--sshUser <user>       SSH Username, used by Host Monitoring subsystem.");
 		pw.println("  -p,--sshPasswd <passwd>   SSH Password, used by Host Monitoring subsystem.");
 		pw.println("  -s,--sshServer <host>     SSH Hostname, used by Host Monitoring subsystem.");
+		pw.println("  -H,--homedir <dirname>    HOME Directory, where all personal files are stored.");
 		pw.println("  ");
 		pw.println("  Switches for offline mode:");
 		pw.println("  -n,--noGui <cfgFile|cmNames> Do not start with GUI.");
@@ -1080,6 +1095,8 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		options.addOption( "u", "sshUser",     true, "SSH Username when connecting to server for Host Monitoring." );
 		options.addOption( "p", "sshPasswd",   true, "SSH Password when connecting to server for Host Monitoring." );
 		options.addOption( "s", "sshServer",   true, "SSH Hostname to connect to." );
+
+		options.addOption( "H", "homedir",     true, "HOME Directory, where all personal files are stored." );
 
 		options.addOption( "n", "noGui",       true, "Do not start with GUI, instead collect counters to a database <a config file for offline sample>." );
 		options.addOption( "r", "reconfigure", false,"Offline: if monitored ASE is not properly configured, try to configure it." );
@@ -1208,6 +1225,9 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			//-------------------------------
 			else
 			{
+				if ( cmd.hasOption("homedir") )
+					System.setProperty("user.home", cmd.getOptionValue("homedir"));
+
 				if      ("AseTune"      .equalsIgnoreCase(_mainClassName)) _instance = new AseTune      (cmd);
 				else if ("IqTune"       .equalsIgnoreCase(_mainClassName)) _instance = new IqTune       (cmd);
 				else if ("RsTune"       .equalsIgnoreCase(_mainClassName)) _instance = new RsTune       (cmd);
@@ -1215,6 +1235,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				else if ("HanaTune"     .equalsIgnoreCase(_mainClassName)) _instance = new HanaTune     (cmd);
 				else if ("SqlServerTune".equalsIgnoreCase(_mainClassName)) _instance = new SqlServerTune(cmd);
 				else if ("OracleTune"   .equalsIgnoreCase(_mainClassName)) _instance = new OracleTune   (cmd);
+				else if ("PostgresTune" .equalsIgnoreCase(_mainClassName)) _instance = new PostgresTune (cmd);
 				else
 				{
 					throw new Exception("Unknown Implementor of type '"+_mainClassName+"'.");

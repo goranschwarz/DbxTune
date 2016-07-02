@@ -21,6 +21,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProgressCallback;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.SqlProgressDialog;
 import com.asetune.ui.autocomplete.SqlObjectName;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -34,7 +35,7 @@ extends PipeCommandAbstract
 
 	private String[] _args = null;
 
-	private static class BcpParams
+	private static class CmdParams
 	{
 		//-----------------------
 		// PARAMS for OUT
@@ -60,10 +61,10 @@ extends PipeCommandAbstract
 		String  _initStr   = null;
 	}
 	
-	private BcpParams _params = null;
+	private CmdParams _params = null;
 	
 	//-----------------------
-	// Paremeter type to getEndPointResult
+	// Parameter type to getEndPointResult
 	//-----------------------
 	public static final String rowsSelected = "rowsSelected";
 	public static final String rowsInserted = "rowsInserted";
@@ -74,10 +75,10 @@ extends PipeCommandAbstract
 	private int        _rowsInserted  = 0;
 	private SQLWarning _sqlWarnings   = null;
 	
-	public PipeCommandBcp(String input)
+	public PipeCommandBcp(String input, String sqlString)
 	throws PipeCommandException
 	{
-		super(input);
+		super(input, sqlString);
 		parse(input);
 	}
 
@@ -108,7 +109,7 @@ extends PipeCommandAbstract
 
 			if (_args.length > 1)
 			{
-				_params = new BcpParams();
+				_params = new CmdParams();
 
 				if ("out".equals(_args[0])) // OUTPUT FILE
 				{
@@ -170,12 +171,12 @@ extends PipeCommandAbstract
 	}
 	
 	@Override
-	public void doEndPoint(Object input) 
+	public void doEndPoint(Object input, SqlProgressDialog progress) 
 	throws Exception 
 	{
 		if ( ! (input instanceof ResultSet) )
 			throw new Exception("Expected ResultSet as input parameter");
-		TransferTable tt = new TransferTable(_params);
+		TransferTable tt = new TransferTable(_params, progress);
 
 		tt.open();
 		tt.doTransfer( (ResultSet) input, this );
@@ -299,7 +300,8 @@ extends PipeCommandAbstract
 	private static class TransferTable
 	{
 		private Connection _conn      = null;
-		private BcpParams  _bcpParams = null;
+		private CmdParams  _cmdParams = null;
+		private SqlProgressDialog _progressDialog = null;
 //		int	_numcols;
 //
 //		private ArrayList<String>            _type        = new ArrayList<String>();
@@ -310,19 +312,20 @@ extends PipeCommandAbstract
 //		private ArrayList<ArrayList<Object>> _rows        = new ArrayList<ArrayList<Object>>();
 //		private String                       _name        = null;
 
-		public TransferTable(BcpParams params)
+		public TransferTable(CmdParams params, SqlProgressDialog progressDialog)
 		{
-			_bcpParams = params;
+			_cmdParams = params;
+			_progressDialog = progressDialog;
 		}
 		
 		public void open()
 		throws Exception
 		{
-			if (StringUtil.hasValue(_bcpParams._server))
+			if (StringUtil.hasValue(_cmdParams._server))
 			{
     			Properties props = new Properties();
     			
-    			if (_bcpParams._slowBcp )
+    			if (_cmdParams._slowBcp )
     			{
     				boolean slowBcpDoDynamicPrepare = Configuration.getCombinedConfiguration().getBooleanProperty("PipeCommandBcp.slowBcp.DYNAMIC_PREPARE", true);
     				if (slowBcpDoDynamicPrepare)
@@ -337,35 +340,35 @@ extends PipeCommandAbstract
     			}
 
     			String hostPortStr = null;
-    			if ( _bcpParams._server.contains(":") )
-    				hostPortStr = _bcpParams._server;
+    			if ( _cmdParams._server.contains(":") )
+    				hostPortStr = _cmdParams._server;
     			else
-    				hostPortStr = AseConnectionFactory.getIHostPortStr(_bcpParams._server);
+    				hostPortStr = AseConnectionFactory.getIHostPortStr(_cmdParams._server);
     			
     			if (StringUtil.isNullOrBlank(hostPortStr))
-    				throw new Exception("Can't find server name information about '"+_bcpParams._server+"', hostPortStr=null. Please try with -S hostname:port");
+    				throw new Exception("Can't find server name information about '"+_cmdParams._server+"', hostPortStr=null. Please try with -S hostname:port");
 
-    			_conn = AseConnectionFactory.getConnection(hostPortStr, _bcpParams._db, _bcpParams._user, _bcpParams._passwd, "sqlw-bcp", null, props, (ConnectionProgressCallback)null);
+    			_conn = AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", null, props, (ConnectionProgressCallback)null);
 
-    			if ( ! StringUtil.isNullOrBlank(_bcpParams._db) )
-    				AseConnectionUtils.useDbname(_conn, _bcpParams._db);
+    			if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
+    				AseConnectionUtils.useDbname(_conn, _cmdParams._db);
 System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'");
 			}
 			else
 			{
 //				throw new Exception("-u|--url option has not yet been implemented.");
 				
-				if (StringUtil.hasValue(_bcpParams._driver))
+				if (StringUtil.hasValue(_cmdParams._driver))
 				{
-					try { Class.forName(_bcpParams._driver).newInstance(); }
+					try { Class.forName(_cmdParams._driver).newInstance(); }
 					catch (Exception ignore) {}
 				}
 				Properties props = new Properties();
-				props.put("user", _bcpParams._user);
-				props.put("password", _bcpParams._passwd);
+				props.put("user", _cmdParams._user);
+				props.put("password", _cmdParams._passwd);
 		
-				_logger.debug("Try getConnection to driver='"+_bcpParams._driver+"', url='"+_bcpParams._url+"', user='"+_bcpParams._user+"'.");
-				_conn = DriverManager.getConnection(_bcpParams._url, props);
+				_logger.debug("Try getConnection to driver='"+_cmdParams._driver+"', url='"+_cmdParams._url+"', user='"+_cmdParams._user+"'.");
+				_conn = DriverManager.getConnection(_cmdParams._url, props);
 			}
 
 			// Print out some destination information
@@ -380,11 +383,11 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			catch (SQLException ignore) {}
 
 			// Execute the SQL InitString
-			if (StringUtil.hasValue(_bcpParams._initStr))
+			if (StringUtil.hasValue(_cmdParams._initStr))
 			{
-				_logger.info("BCP: executing initialization SQL Stement '"+_bcpParams._initStr+"'.");
+				_logger.info("BCP: executing initialization SQL Stement '"+_cmdParams._initStr+"'.");
 				Statement stmnt = _conn.createStatement();
-				stmnt.executeUpdate(_bcpParams._initStr);
+				stmnt.executeUpdate(_cmdParams._initStr);
 				stmnt.close();
 			}
 		}
@@ -414,10 +417,10 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			}
 
 			// Check if the table exists in the destination database
-			// If it doesnt exist, try to create it
-			if (_bcpParams._createTab)
+			// If it doesn't exist, try to create it
+			if (_cmdParams._createTab)
 			{
-				SqlObjectName sqlObj = new SqlObjectName(_bcpParams._table, null, null, false);
+				SqlObjectName sqlObj = new SqlObjectName(_cmdParams._table, null, null, false);
 				DatabaseMetaData md = _conn.getMetaData();
 				ResultSet rs = md.getTables(sqlObj.getCatalogNameN(), sqlObj.getSchemaNameN(), sqlObj.getObjectNameN(), null);
 				int count = 0;
@@ -434,8 +437,11 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			}
 			
 			// Do dummy SQL to get RSMD from DEST
-			String destSql    = "select * from "+_bcpParams._table+" where 1=2";
+			String destSql    = "select * from "+_cmdParams._table+" where 1=2";
 			_logger.info("Investigating destination table, executing SQL Statement: "+destSql);
+			if (_progressDialog != null)
+				_progressDialog.setState("Checking dest table, SQL: "+destSql);
+
 			Statement destStmt = _conn.createStatement();
 			ResultSet destRs = destStmt.executeQuery(destSql);
 
@@ -506,7 +512,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			valuesStr += ")";
 			
 			// Build insert SQL
-			String insertSql = "insert into " + _bcpParams._table + columnStr + valuesStr;
+			String insertSql = "insert into " + _cmdParams._table + columnStr + valuesStr;
 System.out.println("INSERT SQL: "+insertSql);
 			_logger.info("BCP INSERT SQL Statement: "+insertSql);
 
@@ -546,16 +552,27 @@ System.out.println("ROW: "+totalCount+" - Problems setting column c="+c+", sourc
 				pstmt.addBatch();
 				pipeCmd._rowsInserted++;
 
-				if (_bcpParams._batchSize > 0 && batchCount >= _bcpParams._batchSize )
+				if (_cmdParams._batchSize > 0 && batchCount >= _cmdParams._batchSize )
 				{
-System.out.println("BATCH SIZE: Executing batch: _batchSize="+_bcpParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
+System.out.println("BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
+					if (_progressDialog != null)
+						_progressDialog.setState("Executing batch insert, at row count "+totalCount);
+
 					batchCount = 0;
 					
 					pstmt.executeBatch();
 				}
+				else
+				{
+					if (_progressDialog != null && ((totalCount % 100) == 0) )
+						_progressDialog.setState("Adding row "+totalCount+" to the transfer.");
+				}
 			}
-System.out.println("END OF TRANSFER: Executing batch: _batchSize="+_bcpParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
-			pstmt.executeBatch();
+System.out.println("END OF TRANSFER: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
+            if (_progressDialog != null)
+            	_progressDialog.setState("Executing final batch insert, at row count "+totalCount);
+
+            pstmt.executeBatch();
 			pstmt.close();
 
 //			sourceRs.close();

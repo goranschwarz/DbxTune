@@ -20,6 +20,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
+import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.OSCommand;
@@ -614,5 +615,12 @@ public class PersistWriterToBcpFiles
 			}
 		}
 		return true;
+	}
+
+
+	@Override
+	public void saveSqlCaptureDetails(SqlCaptureDetails sqlCaptureDetails)
+	{
+		_logger.warn("saveSqlCaptureDetails(): NOT YET IMPLEMETED, skipping this...");
 	}
 }

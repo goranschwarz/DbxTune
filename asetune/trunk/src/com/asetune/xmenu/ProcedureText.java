@@ -147,7 +147,7 @@ extends XmenuActionBase
 //		{
 //			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
 //		}
-		String objText = AseConnectionUtils.getObjectText(conn, dbname, procName, null, 0);
+		String objText = AseConnectionUtils.getObjectText(conn, dbname, procName, null, -1, 0);
 		if (objText != null)
 			procText.setText(objText);
 

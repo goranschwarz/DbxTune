@@ -7,6 +7,7 @@ import com.asetune.utils.StringUtil;
 
 public class DdlDetails
 {
+	private String    _searchDbname  = null;
 	private String    _dbname        = null;
 	private String    _owner         = null;
 	private String    _objectName    = null;
@@ -22,15 +23,19 @@ public class DdlDetails
 	private String    _optdiagText   = null;
 	private String    _extraInfoText = null;
 
+	private boolean   _doSleepOption = true;
+
 	public DdlDetails()
 	{
 	}
 	public DdlDetails(String dbname, String objectName)
 	{
-		_dbname      = dbname;
-		_objectName  = objectName;
+		_searchDbname = dbname;
+		_dbname       = dbname;
+		_objectName   = objectName;
 	}
 
+	public String    getSearchDbname()  { return _searchDbname != null ? _searchDbname : _dbname; }
 	public String    getDbname()        { return _dbname; }
 	public String    getOwner()         { return _owner; }
 	public String    getObjectName()    { return _objectName; }
@@ -46,10 +51,17 @@ public class DdlDetails
 	public String    getOptdiagText()   { return _optdiagText; }
 	public String    getExtraInfoText() { return _extraInfoText; }
 
-	public void setDbname       (String    dbname)      { _dbname        = dbname     == null ? null : dbname    .trim(); }
-	public void setOwner        (String    owner)       { _owner         = owner      == null ? null : owner     .trim(); }
-	public void setObjectName   (String    objectName)  { _objectName    = objectName == null ? null : objectName.trim(); }
-	public void setType         (String    type)        { _type          = type       == null ? null : type      .trim(); }
+	public boolean   hasObjectText()    { return _objectText    != null; }
+	public boolean   hasDependsText()   { return _dependsText   != null; }
+	public boolean   hasOptdiagText()   { return _optdiagText   != null; }
+	public boolean   hasExtraInfoText() { return _extraInfoText != null; }
+	public boolean   isSleepOptionSet() { return _doSleepOption; }
+
+	public void setSearchDbname (String    searchDbname){ _searchDbname  = searchDbname == null ? null : searchDbname.trim(); }
+	public void setDbname       (String    dbname)      { _dbname        = dbname       == null ? null : dbname      .trim(); }
+	public void setOwner        (String    owner)       { _owner         = owner        == null ? null : owner       .trim(); }
+	public void setObjectName   (String    objectName)  { _objectName    = objectName   == null ? null : objectName  .trim(); }
+	public void setType         (String    type)        { _type          = type         == null ? null : type        .trim(); }
 	public void setCrdate       (Timestamp crdate)      { _crdate        = crdate; }
 	public void setSampleTime   (Timestamp sampleTime)  { _sampleTime    = sampleTime; }
 	public void setSource       (String    source)      { _source        = source; }
@@ -60,12 +72,32 @@ public class DdlDetails
 	public void setDependsText  (String    dependsText) { _dependsText   = dependsText; }
 	public void setOptdiagText  (String    optdiagText) { _optdiagText   = optdiagText; }
 	public void setExtraInfoText(String  extraInfoText) { _extraInfoText = extraInfoText; }
+	public void setSleepOption  (boolean doSleepOption) { _doSleepOption = doSleepOption; }
 
 	public String getFullObjectName()
 	{
 		return getDbname() + "." + getOwner() + "." + getObjectName();
 	}
 
+	@Override
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+
+		sb.append(super.toString()).append(": ")
+			.append("dbname='")         .append(getDbname())       .append("', ")
+			.append("owner='")          .append(getOwner())        .append("', ")
+			.append("object='")         .append(getObjectName())   .append("', ")
+			.append("hasObjectText=")   .append(hasObjectText())   .append(", ")
+			.append("hasDependsText=")  .append(hasDependsText())  .append(", ")
+			.append("hasOptdiagText=")  .append(hasOptdiagText())  .append(", ")
+			.append("hasExtraInfoText=").append(hasExtraInfoText()).append(", ")
+			.append("isSleepOptionSet=").append(isSleepOptionSet()).append(".")
+			;
+
+		return sb.toString();
+	}
+	
 	public String toStringDebug()
 	{
 		StringBuilder sb = new StringBuilder();

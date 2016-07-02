@@ -34,6 +34,7 @@ import org.fife.ui.rtextarea.SearchEngine;
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.sybase.jdbcx.SybConnection;
 
 /**
@@ -116,7 +117,7 @@ implements PropertyChangeListener, ActionListener
 
 		if (waitForLabel != null)
 			_label.setText(waitForLabel);
-		_label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+		_label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, SwingUtils.hiDpiScale(16)));
 
 		_cancel_but.setToolTipText("CANCEL current operation.");
 

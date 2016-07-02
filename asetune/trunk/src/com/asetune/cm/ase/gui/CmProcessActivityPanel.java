@@ -15,9 +15,11 @@ import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 
+import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmProcessActivity;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.ColorUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -29,7 +31,8 @@ extends TabularCntrPanel
 
 //	private static final String  PROP_PREFIX           = CmProcessActivity.CM_NAME;
 
-	public static final String  TOOLTIP_sample_systemThreads = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
+	public static final String  TOOLTIP_sample_systemThreads        = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
+	public static final String  TOOLTIP_summaryGraph_discardDbxTune = "<html>Do <b>not</b> include values where Application name starts with '"+Version.getAppName()+"' in the Summary Graphs.</html>";
 
 	public CmProcessActivityPanel(CountersModel cm)
 	{
@@ -60,6 +63,20 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.YELLOW), null));
 
+		// EXTREME_LIGHT_GREEN = Has Statement that is currently executing
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.runningStatement");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Number StatementExecInMs = (Number) adapter.getValue(adapter.getColumnIndex("StatementExecInMs"));
+				if ( StatementExecInMs != null && StatementExecInMs.intValue() > 0 )
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, new Color(212, 255, 163)), null)); // Extreme light green
+
 		// GREEN = RUNNING or RUNNABLE process
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.running");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -73,6 +90,20 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.GREEN), null));
+
+		// VERY_LIGHT_GREEN = SEND SLEEP
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.sendSleep");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String status = (String) adapter.getValue(adapter.getColumnIndex("status"));
+				if ( status != null && status.startsWith("send sleep") )
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, ColorUtils.VERY_LIGHT_GREEN), null));
 
 		// PINK = spid is BLOCKED by some other user
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.blocked");
@@ -122,11 +153,17 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleSystemThreads_chk = new JCheckBox("Show system processes", conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads, CmProcessActivity.DEFAULT_sample_systemThreads));
+		JCheckBox sampleSystemThreads_chk   = new JCheckBox("Show system processes", conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads, CmProcessActivity.DEFAULT_sample_systemThreads));
+		JCheckBox discardAppnameDbxTune_chk = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
 
 		sampleSystemThreads_chk.setName(CmProcessActivity.PROPKEY_sample_systemThreads);
 		sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
-		panel.add(sampleSystemThreads_chk, "wrap");
+
+		discardAppnameDbxTune_chk.setName(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune);
+		discardAppnameDbxTune_chk.setToolTipText(TOOLTIP_summaryGraph_discardDbxTune);
+
+		panel.add(sampleSystemThreads_chk,   "wrap");
+		panel.add(discardAppnameDbxTune_chk, "wrap");
 
 		sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
@@ -141,6 +178,22 @@ extends TabularCntrPanel
 				
 				// ReInitialize the SQL
 				getCm().setSql(null);
+			}
+		});
+		
+		discardAppnameDbxTune_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				//getCm().setSql(null);
 			}
 		});
 		

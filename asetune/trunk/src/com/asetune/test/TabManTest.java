@@ -17,6 +17,7 @@ public class TabManTest implements ActionListener
 {
 	TabManager	tabManager;
 
+	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		JComboBox combo = (JComboBox) e.getSource();
@@ -28,7 +29,7 @@ public class TabManTest implements ActionListener
 	private JPanel getSourceComponent()
 	{
 		String[] items = { "two, four, three", "five, two, one, three", "two, one, five, four", "one, five, three" };
-		JComboBox comboBox = new JComboBox(items);
+		JComboBox<String> comboBox = new JComboBox<String>(items);
 		comboBox.addActionListener(this);
 		JPanel panel = new JPanel();
 		panel.add(comboBox);

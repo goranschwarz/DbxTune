@@ -6,15 +6,24 @@ package com.asetune.tools.sqlcapture;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
+import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
@@ -22,118 +31,142 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.TitledBorder;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableCellRenderer;
-
-import net.miginfocom.swing.MigLayout;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.LineNumberedPaper;
-import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTable;
+import com.asetune.gui.swing.ListSelectionListenerDeferred;
+import com.asetune.sql.JdbcUrlParser;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
+import net.miginfocom.swing.MigLayout;
 
 
 
-public class ProcessDetailFrame extends JFrame
+
+public class ProcessDetailFrame 
+	extends JFrame 
+	implements IGuiController, Memory.MemoryListener
 {
+	public final static String DISCARD_APP_NAME = "AseTune";
+
 	/** */
     private static final long serialVersionUID = -5013813797380259896L;
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(ProcessDetailFrame.class);
 
-//	private   JFrame           pdf                          = null;
-	private   JLabel           _currentStmntSqlWhereClause_lbl = new JLabel("Where: ");
-//	private   JTextField       _currentStmntSqlWhereClause_txt = new JTextField();
-	protected JComboBox        _currentStmntSqlWhereClause_cbx = new JComboBox();
-	protected JButton          _currentStmntSqlWhereClause_but = new JButton("Remove from template");
-	private   JLabel           _currentStmntSqlOrderBy_lbl     = new JLabel("Order By: ");
-//	private   JTextField       _currentStmntSqlOrderBy_txt     = new JTextField();
-	protected JComboBox        _currentStmntSqlOrderBy_cbx     = new JComboBox();
-	protected JButton          _currentStmntSqlOrderBy_but     = new JButton("Remove from template");
-
-	private   int              spid;
-	private   int              kpid;
-	public    int              processRefreshInterv         = 1;
-	private   BorderLayout     borderLayout1                = new BorderLayout();
-	private   JPanel           infoPanel                    = new JPanel();
-	private   JPanel           statusPanel                  = new JPanel();
-	private   GTabbedPane      mainTabbedPanel              = new GTabbedPane();
-	private   JScrollPane      processDetailScroll          = new JScrollPane();
-	private   JPanel           statementsPan                = new JPanel();
-//private   JFrame           statementsFrame              = new JFrame("Statements");
-	private   BorderLayout     borderLayout2                = new BorderLayout();
-	public    TabularCntrPanel processObjectsPanel          = new TabularCntrPanel("Objects");
-	public    TabularCntrPanel processWaitsPanel            = new TabularCntrPanel("Waits");
-	public    TabularCntrPanel processLocksPanel            = new TabularCntrPanel("Locks");
-//public    JFrame           processObjectsFrame          = null;
-//public    JFrame           processWaitsFrame            = null;
-//public    JFrame           processLocksFrame            = null;
-//public    JDialog          processObjectsFrame          = null;
-//public    JDialog          processWaitsFrame            = null;
-//public    JDialog          processLocksFrame            = null;
-	private   JPanel           northPan                     = new JPanel();
-	private   JSplitPane       activeSqlCapturedSqlSplitPan = new JSplitPane();
-	private   JSplitPane       stmtBatchplanSplitPan        = new JSplitPane();
-	private   JScrollPane      capturedStatementScrollPan   = new JScrollPane();
-	private   JSplitPane       batchPlanSplitPan            = new JSplitPane();
-	protected JScrollPane      batchScrollPan               = new JScrollPane();
-	protected JScrollPane      planScrollPan                = new JScrollPane();
-	//protected JTextArea        batchTextArea                = new JTextArea();
-	protected JTextArea        batchTextArea                = new LineNumberedPaper(0,0);
-	public    JTextArea        planTextArea                 = new JTextArea();
-	private   JLabel           kpidLbl                      = new JLabel();
-	private   XYLayout         xYLayout2                    = new XYLayout();
-	private   GPanel           capturedStatementPan         = new GPanel();
-	private   GPanel           captureWhereSqlPanel         = new GPanel();
-	private   JLabel           label_captureWhereSql        = new JLabel(" Restrict to: WHERE");
-	protected JComboBox        comboBox_captureWhereSql     = new JComboBox();
-	private   JButton          buttom_captureWhereSql       = new JButton("Remove from template");
-	private   JCheckBox        discardPreOpenStmntsCheckbox = new JCheckBox("Discard captured statements that happened before the dialogue was opened.", true);
-
-	private   JPanel           planPanel                    = new JPanel();
-	private   JPanel           batchPanel                   = new JPanel();
-	private   JCheckBox        planShowEnableCheckbox       = new JCheckBox("Sample showplan text", false);
-	private   JCheckBox        doExecSpShowplanfull_cbx     = new JCheckBox("<html>Exec: sp_showplanfull <i>SPID</i>, on <i>first</i> row of <b>active</b> statements, in the table below.</html>", true);
-	private   JCheckBox        batchShowEnableCheckbox      = new JCheckBox("Sample SQL batch text", true);
-	protected JCheckBox        sqlTextShowProcSrcCheckbox   = new JCheckBox("Show Stored Procedure source code in Batch text window", true);
-
-	private   TitledBorder     titledBorderCurrent;
-	private   TitledBorder     titledBorderPlan;
-	private   TitledBorder     titledBorderCapture;
-	public    TitledBorder     titledBorderBatch;
-//	private   JScrollPane      currentStatementsPan         = new JScrollPane();
-	private   GPanel           currentStatementsPan         = new GPanel();
-	private   BorderLayout     borderLayout3                = new BorderLayout();
-	protected JTextField       kpidFld                      = new JTextField();
-	protected JTextField       spidFld                      = new JTextField();
-	private   JLabel           spidLbl                      = new JLabel();
-	//private   TitledBorder     titledBorder1;
+//	private   JFrame            pdf                          = null;
+	private   JLabel            _activeStmntTableCount_lbl     = new JLabel("0 Rows");
+	private   JLabel            _activeStmntSqlWhereClause_lbl = new JLabel("Where: ");
+//	private   JTextField        _activeStmntSqlWhereClause_txt = new JTextField();
+	protected JComboBox<String> _activeStmntSqlWhereClause_cbx = new JComboBox<String>();
+	protected JButton           _activeStmntSqlWhereClause_but = new JButton("Remove from template");
+	private   JLabel            _activeStmntSqlOrderBy_lbl     = new JLabel("Order By: ");
+//	private   JTextField        _activeStmntSqlOrderBy_txt     = new JTextField();
+	protected JComboBox<String> _activeStmntSqlOrderBy_cbx     = new JComboBox<String>();
+	protected JButton           _activeStmntSqlOrderBy_but     = new JButton("Remove from template");
+                                
+	protected JButton           _viewXmlPlanInGui_but          = new JButton("XML Plan in GUI");
+	protected JCheckBox         _viewXmlPlanInGui_chk          = new JCheckBox("Automatically load XML Plan in GUI", true);
+                                
+	private   int               spid;
+	private   int               kpid;
+	public    int               processRefreshInterv         = 1;
+	private   BorderLayout      borderLayout1                = new BorderLayout();
+	private   JPanel            infoPanel                    = new JPanel();
+	private   JPanel            statusPanel                  = new JPanel();
+	protected GTabbedPane       mainTabbedPanel              = new GTabbedPane();
+	private   JScrollPane       processDetailScroll          = new JScrollPane();
+	private   JPanel            statementsPan                = new JPanel();
+//private   JFrame            statementsFrame              = new JFrame("Statements");
+	private   BorderLayout      borderLayout2                = new BorderLayout();
+//	public    TabularCntrPanel  processObjectsPanel          = new TabularCntrPanel("Objects");
+//	public    TabularCntrPanel  processWaitsPanel            = new TabularCntrPanel("Waits");
+//	public    TabularCntrPanel  processLocksPanel            = new TabularCntrPanel("Locks");
+//public    JFrame            processObjectsFrame          = null;
+//public    JFrame            processWaitsFrame            = null;
+//public    JFrame            processLocksFrame            = null;
+//public    JDialog           processObjectsFrame          = null;
+//public    JDialog           processWaitsFrame            = null;
+//public    JDialog           processLocksFrame            = null;
+	private   JPanel            northPan                     = new JPanel();
+	private   JScrollPane       activeStatementScrollPan     = new JScrollPane();
+	private   JSplitPane        activeSqlCapturedSqlSplitPan = new JSplitPane();
+	private   JSplitPane        stmtBatchplanSplitPan        = new JSplitPane();
+	private   JScrollPane       historyStatementScrollPan    = new JScrollPane();
+	private   JSplitPane        batchPlanSplitPan            = new JSplitPane();
+	protected JScrollPane       batchScrollPan               = new JScrollPane();
+	protected JScrollPane       planScrollPan                = new JScrollPane();
+	//protected JTextArea         batchTextArea                = new JTextArea();
+	protected JTextArea         batchTextArea                = new LineNumberedPaper(0,0);
+	public    JTextArea         planTextArea                 = new JTextArea();
+	private   JLabel            kpidLbl                      = new JLabel();
+	private   XYLayout          xYLayout2                    = new XYLayout();
+	private   GPanel            historyStatementPan          = new GPanel();
+	private   GPanel            historyWhereSqlPanel         = new GPanel();
+	private   JLabel            _historyStmntTableCount_lbl  = new JLabel("0 Rows");
+	private   int               _historyStmntTableCount_prev = 0;
+	private   JLabel            label_historyWhereSql        = new JLabel(" Restrict to: WHERE");
+	protected JComboBox<String> comboBox_historyWhereSql     = new JComboBox<String>();
+	private   JButton           button_historyWhereSql       = new JButton("Remove from template");
+	private   JCheckBox         discardPreOpenStmntsCheckbox = new JCheckBox("Discard historical/captured statements that happened before the dialogue was opened.", true);
+	private   JCheckBox         discardAseTuneApp_chk        = new JCheckBox("Discard Statements from application '"+DISCARD_APP_NAME+"'.", true);
+                                
+	private   JPanel            planPanel                    = new JPanel();
+	private   JPanel            batchPanel                   = new JPanel();
+	private   JCheckBox         planShowEnableCheckbox       = new JCheckBox("Sample showplan text", false);
+	private   JCheckBox         _doExecSpShowplanfull_cbx     = new JCheckBox("<html>Exec: sp_showplanfull <i>SPID</i>, on <i>first</i> row of <b>active</b> statements, in the table below.</html>", true);
+	private   JCheckBox         _hideActiveSqlWaitId250_cbx   = new JCheckBox("<html>Hide active SQL Statements with WaitEventID=250 (<i>waiting for incoming network data</i>)</html>", true);
+	private   JCheckBox         batchShowEnableCheckbox      = new JCheckBox("Sample SQL batch text", true);
+	protected JCheckBox         sqlTextShowProcSrcCheckbox   = new JCheckBox("Show Stored Procedure source code in Batch text window", true);
+                                
+	private   TitledBorder      titledBorderActive;
+	private   TitledBorder      titledBorderPlan;
+	private   TitledBorder      titledBorderHistory;
+	public    TitledBorder      titledBorderBatch;
+//	private   JScrollPane       activeStatementsPan         = new JScrollPane();
+	private   GPanel            activeStatementsPan         = new GPanel();
+	private   BorderLayout      borderLayout3                = new BorderLayout();
+	protected JTextField        kpidFld                      = new JTextField();
+	protected JTextField        spidFld                      = new JTextField();
+	private   JLabel            spidLbl                      = new JLabel();
+	//private   TitledBorder      titledBorder1;
 
 	private RefreshProcess refressProcess;
 //	private Connection cnx;
@@ -142,139 +175,131 @@ public class ProcessDetailFrame extends JFrame
 
 
 	//
-	TableCellRenderer currentStmtRenderer = new DefaultTableCellRenderer()
-	{
-        private static final long serialVersionUID = 5947221518946711279L;
-
-		@Override
-		public Component getTableCellRendererComponent(JTable table,
-		    Object value,boolean isSelected,boolean hasFocus,
-		    int row, int column)
-		{
-
-			Component comp;
-			if (isSelected)
-			{
-				_logger.debug("CURRENT statement table selected.");
-
-				refressProcess.setSelectedStatement(-1);
-				capturedStatementsTable.clearSelection();
-			}
-
-			comp = super.getTableCellRendererComponent(table,
-					value,isSelected,hasFocus,
-					row, column);//get the component(JLabel?)
-
-			if (value==null)
-				return comp;
-
-			return comp;
-		}
-	};
+//	TableCellRenderer activeStmtRenderer = new DefaultTableCellRenderer()
+//	{
+//        private static final long serialVersionUID = 5947221518946711279L;
+//
+//		@Override
+//		public Component getTableCellRendererComponent(JTable table,
+//		    Object value,boolean isSelected,boolean hasFocus,
+//		    int row, int column)
+//		{
+//
+//			Component comp;
+//			if (isSelected)
+//			{
+//				_logger.debug("ACTIVE/CURRENT statement table selected.");
+//
+//				refressProcess.setSelectedStatement(-1);
+//				_historyStatementsTable.clearSelection();
+//			}
+//
+//			comp = super.getTableCellRendererComponent(table,
+//					value,isSelected,hasFocus,
+//					row, column);//get the component(JLabel?)
+//
+//			if (value==null)
+//				return comp;
+//
+//			return comp;
+//		}
+//	};
 
 	//
-//	public JXTable currentStatementTable = new JXTable()
-	public JTable currentStatementTable = new JTable()
-	{
-        private static final long serialVersionUID = 1L;
-
-		@Override
-		public TableCellRenderer getCellRenderer(int row, int column)
-		{
-			return currentStmtRenderer;
-		}
-
-		/**
-		 * To be able select/UN-SELECT rows in a table
-		 * Called when a row/cell is about to change.
-		 * getSelectedRow(), still shows what the *current* selection is
-		 */
-		@Override
-		public void changeSelection(int row, int column, boolean toggle, boolean extend) 
-		{
-			_logger.debug("changeSelection(row="+row+", column="+column+", toggle="+toggle+", extend="+extend+"), getSelectedRow()="+getSelectedRow()+", getSelectedColumn()="+getSelectedColumn());
-
-			// if "row we clicked on" is equal to "currently selected row"
-			// and also check that we do not do "left/right on keyboard"
-			if (row == getSelectedRow() && (column == getSelectedColumn() || getSelectedColumn() < 0) )
-			{
-				toggle = true;
-				_logger.debug("changeSelection(): change toggle to "+toggle+".");
-			}
-			
-			super.changeSelection(row, column, toggle, extend);
-		}
-	};
+//	public JXTable activeStatementTable = new JXTable()
+	public GTable activeStatementTable = new GTable();
+//	public JTable activeStatementTable = new JTable()
+//	{
+//        private static final long serialVersionUID = 1L;
+//
+////		@Override
+////		public TableCellRenderer getCellRenderer(int row, int column)
+////		{
+////			return activeStmtRenderer;
+////		}
+//
+//		/**
+//		 * To Select/UnSelect rows in a table
+//		 * Called when a row/cell is about to change.
+//		 * getSelectedRow(), still shows what the *current* selection is
+//		 */
+//		@Override
+//		public void changeSelection(int row, int column, boolean toggle, boolean extend) 
+//		{
+//			// Toggle rowIsSelected on single selection
+//			// if "row we clicked on" is equal to "currently selected row" and also check that we do not do "left/right on keyboard"
+//			if (row == getSelectedRow() && (column == getSelectedColumn() || getSelectedColumn() < 0) )
+//				toggle = true;
+//			
+//			super.changeSelection(row, column, toggle, extend);
+//		}
+//	};
 
 
 	//
-	TableCellRenderer capturedStmtRenderer = new DefaultTableCellRenderer()
-	{
-        private static final long serialVersionUID = -1766679067814631283L;
-
-		@Override
-		public Component getTableCellRendererComponent(JTable table,
-		    Object value,boolean isSelected,boolean hasFocus,
-		    int row, int column)
-		{
-			Component comp;
-			if (isSelected)
-			{
-				_logger.debug("CAPTURED statement table selected at row = "+row);
-
-				refressProcess.setSelectedStatement(row);
-				currentStatementTable.clearSelection();
-			}
-
-			comp = super.getTableCellRendererComponent(table,
-					value,isSelected,hasFocus,
-					row, column);//get the component(JLabel?)
-
-			if (value==null)
-				return comp;
-
-			return comp;
-		}
-	};
+//	TableCellRenderer historyStmtRenderer = new DefaultTableCellRenderer()
+//	{
+//        private static final long serialVersionUID = -1766679067814631283L;
+//
+//		@Override
+//		public Component getTableCellRendererComponent(JTable table,
+//		    Object value,boolean isSelected,boolean hasFocus,
+//		    int row, int column)
+//		{
+//			Component comp;
+//			if (isSelected)
+//			{
+//				_logger.debug("HISTORY statement table selected at row = "+row);
+//
+//				refressProcess.setSelectedStatement(row);
+//				activeStatementTable.clearSelection();
+//			}
+//
+//			comp = super.getTableCellRendererComponent(table,
+//					value,isSelected,hasFocus,
+//					row, column);//get the component(JLabel?)
+//
+//			if (value==null)
+//				return comp;
+//
+//			return comp;
+//		}
+//	};
 
 	//
-	public JTable capturedStatementsTable = new JTable()
-	{
-        private static final long serialVersionUID = 5214078163042572369L;
-
-		@Override
-		public TableCellRenderer getCellRenderer(int row, int column)
-		{
-			return capturedStmtRenderer;
-		}
-
-		/**
-		 * To be able select/UN-SELECT rows in a table
-		 * Called when a row/cell is about to change.
-		 * getSelectedRow(), still shows what the *current* selection is
-		 */
-		@Override
-		public void changeSelection(int row, int column, boolean toggle, boolean extend) 
-		{
-			_logger.debug("changeSelection(row="+row+", column="+column+", toggle="+toggle+", extend="+extend+"), getSelectedRow()="+getSelectedRow()+", getSelectedColumn()="+getSelectedColumn());
-
-			// if "row we clicked on" is equal to "currently selected row"
-			// and also check that we do not do "left/right on keyboard"
-			if (row == getSelectedRow() && (column == getSelectedColumn() || getSelectedColumn() < 0) )
-			{
-				toggle = true;
-				_logger.debug("changeSelection(): change toggle to "+toggle+".");
-			}
-			
-			super.changeSelection(row, column, toggle, extend);
-		}
-	};
+	public GTable _historyStatementsTable = new GTable();
+//	public JTable _historyStatementsTable = new JTable()
+//	{
+//        private static final long serialVersionUID = 5214078163042572369L;
+//
+////		@Override
+////		public TableCellRenderer getCellRenderer(int row, int column)
+////		{
+////			return historyStmtRenderer;
+////		}
+//
+//		/**
+//		 * To Select/UnSelect rows in a table
+//		 * Called when a row/cell is about to change.
+//		 * getSelectedRow(), still shows what the *current* selection is
+//		 */
+//		@Override
+//		public void changeSelection(int row, int column, boolean toggle, boolean extend) 
+//		{
+//			// Toggle rowIsSelected on single selection
+//			// if "row we clicked on" is equal to "currently selected row" and also check that we do not do "left/right on keyboard"
+//			if (row == getSelectedRow() && (column == getSelectedColumn() || getSelectedColumn() < 0) )
+//				toggle = true;
+//			
+//			super.changeSelection(row, column, toggle, extend);
+//		}
+//	};
 
 	private BorderLayout borderLayout4           = new BorderLayout();
 	private JPanel       middleStatusPan         = new JPanel();
 	private BorderLayout borderLayout5           = new BorderLayout();
 	private JLabel       serverLbl               = new JLabel();
-	public  JLabel       statusBarLbl            = new JLabel();
+	private JLabel       statusBarLbl            = new JLabel();
 	private JLabel       space                   = new JLabel();
 	private JPanel       processDetailPan        = new JPanel();
 	private XYLayout     xYLayout3               = new XYLayout();
@@ -416,7 +441,7 @@ public class ProcessDetailFrame extends JFrame
 	private JPanel       procStatusPan           = new JPanel();
 	private XYLayout     xYLayout9               = new XYLayout();
 	private TitledBorder titledBorder8;
-	private JComboBox    refreshIntFld           = new JComboBox();
+	private JComboBox<String> refreshIntFld     = new JComboBox<String>();
 	private JCheckBox    paused_chk              = new JCheckBox("Paused");
 	private JLabel       refreshIntLbl           = new JLabel();
 //	private JButton      pauseButton             = new JButton();
@@ -467,9 +492,9 @@ public class ProcessDetailFrame extends JFrame
 //		if (icon != null)
 //			setIconImage(icon.getImage());
 
-		titledBorderCurrent = new TitledBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.white, Color.white, new Color(103, 101, 98), new Color(148, 145, 140)), "Current Statement");
+		titledBorderActive = new TitledBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.white, Color.white, new Color(103, 101, 98), new Color(148, 145, 140)), "Active Statement");
 		titledBorderPlan    = new TitledBorder(BorderFactory.createEtchedBorder(Color.white, new Color(148, 145, 140)), "Plan text");
-		titledBorderCapture = new TitledBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.white, Color.white, new Color(103, 101, 98), new Color(148, 145, 140)), "Captured Statements");
+		titledBorderHistory = new TitledBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.white, Color.white, new Color(103, 101, 98), new Color(148, 145, 140)), "Historical Statements");
 		titledBorderBatch   = new TitledBorder(BorderFactory.createEtchedBorder(Color.white, new Color(148, 145, 140)), "Batch text");
 
 		// titledBorder1 = new TitledBorder("");
@@ -488,6 +513,8 @@ public class ProcessDetailFrame extends JFrame
 				this_windowClosing(e);
 			}
 		});
+		Memory.addMemoryListener(this);
+
 		this.getContentPane().setLayout(borderLayout1);
 		infoPanel.setBorder(BorderFactory.createRaisedBevelBorder());
 		infoPanel.setPreferredSize(new Dimension(10, 40));
@@ -512,30 +539,51 @@ public class ProcessDetailFrame extends JFrame
 		planTextArea.setBorder(BorderFactory.createLoweredBevelBorder());
 		planTextArea.setMinimumSize(new Dimension(10, 10));
 		mainTabbedPanel.setPreferredSize(new Dimension(1024, 520));
-		capturedStatementScrollPan.getViewport().setBackground(new Color(230, 230, 230));
-		capturedStatementScrollPan.setBorder(titledBorderCapture);
-		capturedStatementScrollPan.setPreferredSize(new Dimension(454, 500));
+		historyStatementScrollPan.getViewport().setBackground(new Color(230, 230, 230));
+		historyStatementScrollPan.setBorder(titledBorderHistory);
+		historyStatementScrollPan.setPreferredSize(new Dimension(454, 500));
 		processDetailScroll.setBorder(BorderFactory.createLoweredBevelBorder());
 		kpidLbl.setText("KPID :");
 		northPan.setPreferredSize(new Dimension(10, 90));
 		northPan.setLayout(borderLayout3);
-//		currentStatementsPan.getViewport().setBackground(new Color(230, 230, 230));
-		currentStatementsPan.setBorder(titledBorderCurrent);
+//		activeStatementsPan.getViewport().setBackground(new Color(230, 230, 230));
+		activeStatementsPan.setBorder(titledBorderActive);
 
-		capturedStatementsTable.setBackground(new Color(230, 230, 230));
-		capturedStatementsTable.setShowHorizontalLines(false);
-		capturedStatementsTable.setShowVerticalLines(false);
-		capturedStatementsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		capturedStatementsTable.setGridColor(new Color(230, 230, 230));
-		capturedStatementsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		capturedStatementsTable.addMouseListener(new java.awt.event.MouseAdapter()
+		_historyStatementsTable.setBackground(new Color(230, 230, 230));
+		_historyStatementsTable.setShowHorizontalLines(false);
+		_historyStatementsTable.setShowVerticalLines(false);
+		_historyStatementsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		_historyStatementsTable.setGridColor(new Color(230, 230, 230));
+		_historyStatementsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		_historyStatementsTable.addMouseListener(new java.awt.event.MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(MouseEvent e)
 			{
-				capturedStatementsTable_mouseClicked(e);
+				historyStatementsTable_mouseClicked(e);
 			}
 		});
+		// Selection listener
+		_historyStatementsTable.getSelectionModel().addListSelectionListener(new ListSelectionListenerDeferred()
+		{
+			
+			@Override
+			public void deferredValueChanged(ListSelectionEvent event)
+			{
+				int vrow = _historyStatementsTable.getSelectedRow();
+//System.out.println("_historyStatementsTable.valueChanged(): vrow="+vrow);
+	
+				refressProcess.setSelectedStatement(vrow);
+				activeStatementTable.clearSelection();
+
+//				if (vrow >= 0)
+//				{
+//					int mrow = _historyStatementsTable.convertRowIndexToModel(vrow);
+//					TableModel tm = _historyStatementsTable.getModel();
+//				}
+			}
+		});
+		
 		// Fixing/setting background selection color... on some platforms it seems to be a strange color
 		// on XP a gray color of "r=178,g=180,b=191" is the default, which looks good on the screen
 //		Configuration conf = Configuration.getInstance(Configuration.CONF);
@@ -550,17 +598,17 @@ public class ProcessDetailFrame extends JFrame
 					conf.getIntProperty("table.setSelectionBackground.b", 191));
 
 				_logger.debug("table.setSelectionBackground("+newBg+").");
-				capturedStatementsTable.setSelectionBackground(newBg);
+				_historyStatementsTable.setSelectionBackground(newBg);
 			}
 		}
 		else
 		{
-			Color bgc = capturedStatementsTable.getSelectionBackground();
+			Color bgc = _historyStatementsTable.getSelectionBackground();
 			if ( ! (bgc.getRed()==178 && bgc.getGreen()==180 && bgc.getBlue()==191) )
 			{
 				Color newBg = new Color(178, 180, 191);
 				_logger.debug("table.setSelectionBackground("+newBg+"). Config could not be read, trusting defaults...");
-				capturedStatementsTable.setSelectionBackground(newBg);
+				_historyStatementsTable.setSelectionBackground(newBg);
 			}
 		}
 
@@ -576,29 +624,50 @@ public class ProcessDetailFrame extends JFrame
 		planScrollPan.setBorder(titledBorderPlan);
 		planScrollPan.setPreferredSize(new Dimension(204, 40));
 		batchPlanSplitPan.setBorder(null);
-		currentStatementTable.addMouseListener(new java.awt.event.MouseAdapter()
+		activeStatementTable.addMouseListener(new java.awt.event.MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(MouseEvent e)
 			{
-				currentSstatementTable_mouseClicked(e);
+				activeStatementTable_mouseClicked(e);
 			}
 		});
-		currentStatementTable.setGridColor(new Color(230, 230, 230));
-		currentStatementTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		currentStatementTable.setShowVerticalLines(false);
-		currentStatementTable.setShowHorizontalLines(false);
-		currentStatementTable.setBackground(new Color(230, 230, 230));
-		currentStatementTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-//		currentStatementTable.setSortable(true);
+		activeStatementTable.setGridColor(new Color(230, 230, 230));
+		activeStatementTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		activeStatementTable.setShowVerticalLines(false);
+		activeStatementTable.setShowHorizontalLines(false);
+		activeStatementTable.setBackground(new Color(230, 230, 230));
+		activeStatementTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		
+		// Selection listener
+		activeStatementTable.getSelectionModel().addListSelectionListener(new ListSelectionListener()
+		{
+			@Override
+			public void valueChanged(ListSelectionEvent e)
+			{
+//				JTable tab = (JTable)e.getSource();
+				int vrow = activeStatementTable.getSelectedRow();
+	
+				refressProcess.setSelectedStatement(-1);
+				_historyStatementsTable.clearSelection();
+
+//				if (vrow >= 0)
+//				{
+//					int mrow = activeStatementTable.convertRowIndexToModel(vrow);
+//					TableModel tm = activeStatementTable.getModel();
+//				}
+			}
+		});
+		
+//		activeStatementTable.setSortable(true);
 //
 //		// Set special Render to print multiple columns sorts
-//		currentStatementTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
+//		activeStatementTable.getTableHeader().setDefaultRenderer(new MultiSortTableCellHeaderRenderer());
 //
 //		//--------------------------------------------------------------------
 //		// New SORTER that toggles from DESCENDING -> ASCENDING -> UNSORTED
 //		//--------------------------------------------------------------------
-//		currentStatementTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
+//		activeStatementTable.setSortOrderCycle(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.UNSORTED);
 
 		
 
@@ -615,17 +684,17 @@ public class ProcessDetailFrame extends JFrame
 					conf.getIntProperty("table.setSelectionBackground.b", 191));
 
 				_logger.debug("table.setSelectionBackground("+newBg+").");
-				currentStatementTable.setSelectionBackground(newBg);
+				activeStatementTable.setSelectionBackground(newBg);
 			}
 		}
 		else
 		{
-			Color bgc = currentStatementTable.getSelectionBackground();
+			Color bgc = activeStatementTable.getSelectionBackground();
 			if ( ! (bgc.getRed()==178 && bgc.getGreen()==180 && bgc.getBlue()==191) )
 			{
 				Color newBg = new Color(178, 180, 191);
 				_logger.debug("table.setSelectionBackground("+newBg+"). Config could not be read, trusting defaults...");
-				currentStatementTable.setSelectionBackground(newBg);
+				activeStatementTable.setSelectionBackground(newBg);
 			}
 		}
 		
@@ -636,7 +705,7 @@ public class ProcessDetailFrame extends JFrame
 		statusPanel.setPreferredSize(new Dimension(10, 21));
 		middleStatusPan.setLayout(borderLayout5);
 		serverLbl.setBorder(BorderFactory.createLoweredBevelBorder());
-		serverLbl.setPreferredSize(new Dimension(200, 17));
+		serverLbl.setPreferredSize(new Dimension(300, 17));
 		statusBarLbl.setBorder(BorderFactory.createLoweredBevelBorder());
 		statusBarLbl.setPreferredSize(new Dimension(7, 17));
 		statusBarLbl.setText(" ");
@@ -998,11 +1067,11 @@ public class ProcessDetailFrame extends JFrame
 		saveButton.setText("Save & Clear");
 		saveButton.setToolTipText(
 			"<html>" +
-				"Save Captured Statements Table to files<br>" +
+				"Save Captured/Historical Statements Table to files<br>" +
 				"<ul>" +
-				" <li> capStmts.YYYY-MM-DD.bcp     </li>" +
-				" <li> capStmts.YYYY-MM-DD.txt     </li>" +
-				" <li> capStmts.YYYY-MM-DD.ddl.sql </li>" +
+				" <li> historyStmts.YYYY-MM-DD.bcp     </li>" +
+				" <li> historyStmts.YYYY-MM-DD.txt     </li>" +
+				" <li> historyStmts.YYYY-MM-DD.ddl.sql </li>" +
 				"</ul>" +
 				"in Directory "+envNameSaveDir+" or "+envNameHomeDir+"<br>" +
 				envNameSaveDir + " = " + StringUtil.getEnvVariableValue(envNameSaveDir) + "<br>" +
@@ -1013,7 +1082,7 @@ public class ProcessDetailFrame extends JFrame
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				saveCapturedStatements();
+				saveHistoryStatements();
 			}
 		});
 		
@@ -1023,18 +1092,26 @@ public class ProcessDetailFrame extends JFrame
 
 		if (spid > 0 || kpid > 0)
 		{
-			mainTabbedPanel.add(processDetailScroll, "Summary");
-			mainTabbedPanel.add(statementsPan,       "Statements");
-			mainTabbedPanel.add(processObjectsPanel, processObjectsPanel.getPanelName());
-			mainTabbedPanel.add(processWaitsPanel,   processWaitsPanel.getPanelName());
-			mainTabbedPanel.add(processLocksPanel,   processLocksPanel.getPanelName());
+			ImageIcon sumTabIcon   = SwingUtils.readImageIcon(Version.class, "images/sum.png");
+			ImageIcon stmntTabIcon = SwingUtils.readImageIcon(Version.class, "images/sqlStatements.png");
+			
+			mainTabbedPanel.addTab("Summary",    sumTabIcon,   processDetailScroll, "Counters for a specififc SPID");
+			mainTabbedPanel.addTab("Statements", stmntTabIcon, statementsPan,       "Active SQL Statements that are executing right now, Historical SQL Stataments that has been executed previously");
+//			mainTabbedPanel.add(processDetailScroll, "Summary");
+//			mainTabbedPanel.add(statementsPan,       "Statements");
+//			mainTabbedPanel.add(processObjectsPanel, processObjectsPanel.getPanelName());
+//			mainTabbedPanel.add(processWaitsPanel,   processWaitsPanel.getPanelName());
+//			mainTabbedPanel.add(processLocksPanel,   processLocksPanel.getPanelName());
 		}
 		else
 		{
-			mainTabbedPanel.add(statementsPan,       "Statements");
-			mainTabbedPanel.add(processObjectsPanel, processObjectsPanel.getPanelName());
-			mainTabbedPanel.add(processWaitsPanel,   processWaitsPanel.getPanelName());
-			mainTabbedPanel.add(processLocksPanel,   processLocksPanel.getPanelName());
+			ImageIcon stmntTabIcon = SwingUtils.readImageIcon(Version.class, "images/sqlStatements.png");
+
+			mainTabbedPanel.addTab("Statements", stmntTabIcon, statementsPan, "Active SQL Statements that are executing right now, Historical SQL Stataments that has been executed previously");
+//			mainTabbedPanel.add(statementsPan,       "Statements");
+//			mainTabbedPanel.add(processObjectsPanel, processObjectsPanel.getPanelName());
+//			mainTabbedPanel.add(processWaitsPanel,   processWaitsPanel.getPanelName());
+//			mainTabbedPanel.add(processLocksPanel,   processLocksPanel.getPanelName());
 		}
 
 //		mainTabbedPanel.addMouseListener(new MouseAdapter()
@@ -1088,10 +1165,12 @@ public class ProcessDetailFrame extends JFrame
 		stmtBatchplanSplitPan.add(activeSqlCapturedSqlSplitPan, JSplitPane.TOP);
 		stmtBatchplanSplitPan.add(batchPlanSplitPan, JSplitPane.BOTTOM);
 
-//		activeSqlCapturedSqlSplitPan.add(currentStatementsPan, JSplitPane.TOP);
-		activeSqlCapturedSqlSplitPan.add(capturedStatementPan, JSplitPane.BOTTOM);
+//		activeSqlCapturedSqlSplitPan.add(activeStatementsPan, JSplitPane.TOP);
+		activeSqlCapturedSqlSplitPan.add(historyStatementPan, JSplitPane.BOTTOM);
 
 		// SQL BATCH
+		batchShowEnableCheckbox.setToolTipText("<html>Get SQL Statements from monSysSQLText<br>Note: Even if sp_configure 'sql text pipe active' is not configured. SQL from an ACTIVE SQL Statement might be visible.</html>");
+		sqlTextShowProcSrcCheckbox.setToolTipText("Get the Stored Procedure text and display that (if it was a procedure that was executed)");
 		batchPlanSplitPan.add(batchPanel, JSplitPane.LEFT);
 //		batchPanel.setLayout(new BorderLayout());
 //		batchPanel.add(batchShowEnableCheckbox, BorderLayout.NORTH);
@@ -1122,13 +1201,20 @@ public class ProcessDetailFrame extends JFrame
 		});
 
 		// PLAN
+		_viewXmlPlanInGui_but      .setToolTipText("Opens a GUI window and load the current/below XML plan in that tool");
+		_viewXmlPlanInGui_chk      .setToolTipText("Automatically Load the XML Plan in the ASE Plan Viewer GUI when the row is selected and it has an XML Plan attached to it.");
+		_doExecSpShowplanfull_cbx  .setToolTipText("<html>Execute the procedure sp_showplanfull <i>SPID</i> on the first row in the <i>active</i> SQL Table.<br>This will enable you to see Showplan of the current running SQL Statement even if sp_configure 'plan text pipe active' and 'plan text pipe max messages' is turned off.</html>");
+		_hideActiveSqlWaitId250_cbx.setToolTipText("<html>In case the Active SQL table contains WaitEventId=250 and has been waiting for more than 60 seconds... <br>Hide those statements... This is a workaround for some bug in some ASE Versions</html>");
+		planShowEnableCheckbox.setToolTipText("<html>Get SQL Showplans from monSysPlanText<br>Note: Even if sp_configure 'plan text pipe active' is not configured. Showplans from an ACTIVE SQL Statement might be visible.</html>");
 		batchPlanSplitPan.add(planPanel, JSplitPane.RIGHT);
 //		planPanel.setLayout(new BorderLayout());
 //		planPanel.add(planShowEnableCheckbox, BorderLayout.NORTH);
 //		planPanel.add(planScrollPan, BorderLayout.CENTER);
 		planPanel.setLayout(new MigLayout("insets 0 0 0 0"));
-		planPanel.add(planShowEnableCheckbox,   "wrap");
-//		planPanel.add(doExecSpShowplanfull_cbx, "wrap");
+		planPanel.add(planShowEnableCheckbox,   "");
+		planPanel.add(_viewXmlPlanInGui_chk,    "");
+		planPanel.add(_viewXmlPlanInGui_but,    "tag right, hidemode 0, wrap");
+//		planPanel.add(_doExecSpShowplanfull_cbx, "wrap");
 		planPanel.add(planScrollPan, "span, push, grow");
 		planScrollPan.getViewport().add(planTextArea, null);
 		planShowEnableCheckbox.addActionListener(new java.awt.event.ActionListener()
@@ -1141,7 +1227,7 @@ public class ProcessDetailFrame extends JFrame
 				saveProps();
 			}
 		});
-		doExecSpShowplanfull_cbx.addActionListener(new ActionListener()
+		_doExecSpShowplanfull_cbx.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -1149,9 +1235,54 @@ public class ProcessDetailFrame extends JFrame
 				saveProps();
 			}
 		});
+		_hideActiveSqlWaitId250_cbx.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
+			}
+		});
+		_viewXmlPlanInGui_but.setVisible(false);
+		_viewXmlPlanInGui_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String xmlPlan = planTextArea.getText();
+
+				// Remove "extra" stuff before the XML Plan
+				int xmlPlanStartPos = xmlPlan.indexOf("<?xml version");
+				if (xmlPlanStartPos > 0)
+				{
+					xmlPlan = xmlPlan.substring(xmlPlanStartPos);
+				}
+
+				// Do we still have a plan
+				if (xmlPlan.startsWith("<?xml version"))
+				{
+					AsePlanViewer.getInstance().loadXml(xmlPlan);
+//					AsePlanViewer pv = new AsePlanViewer(xmlPlan);
+//					pv.setVisible(true);
+				}
+				else
+				{
+					int len = Math.min(50, xmlPlan.length());
+					String startOf = xmlPlan.substring(0, len);
+					String htmlMsg = 
+						"<html>" +
+						"<b>This doesn't seem to be a XML string.<b>" +
+						"<pre>" +
+						startOf +
+						"</pre>" +
+						"</html>";
+					SwingUtils.showErrorMessage("No XML input found", htmlMsg, null);
+				}
+			}
+		});
 
 
-//		_currentStmntSqlWhereClause_txt.addActionListener(new ActionListener()
+//		_activeStmntSqlWhereClause_txt.addActionListener(new ActionListener()
 //		{
 //			@Override
 //			public void actionPerformed(ActionEvent e)
@@ -1159,7 +1290,7 @@ public class ProcessDetailFrame extends JFrame
 //				saveProps();
 //			}
 //		});
-//		_currentStmntSqlOrderBy_txt.addActionListener(new ActionListener()
+//		_activeStmntSqlOrderBy_txt.addActionListener(new ActionListener()
 //		{
 //			@Override
 //			public void actionPerformed(ActionEvent e)
@@ -1168,112 +1299,125 @@ public class ProcessDetailFrame extends JFrame
 //			}
 //		});
 		
-		_currentStmntSqlWhereClause_cbx.setToolTipText("Add your extra where clauses on the monXXX table. make sure that only columns in that table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
-		_currentStmntSqlWhereClause_cbx.setEditable(true);
-		_currentStmntSqlWhereClause_cbx.addItem("");
-		_currentStmntSqlWhereClause_cbx.addActionListener(new ActionListener()
+		_activeStmntSqlWhereClause_cbx.setToolTipText("Add your extra where clauses on the monXXX table. make sure that only columns in that table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		_activeStmntSqlWhereClause_cbx.setEditable(true);
+		_activeStmntSqlWhereClause_cbx.addItem("");
+		_activeStmntSqlWhereClause_cbx.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				action_currentStmntSqlWhereClause_cbx(e);
+				action_activeStmntSqlWhereClause_cbx(e);
 			}
 		});
-		_currentStmntSqlWhereClause_but.setToolTipText("Remove the 'extra where' from the template.");
-		_currentStmntSqlWhereClause_but.addActionListener(new ActionListener()
+		_activeStmntSqlWhereClause_but.setToolTipText("Remove the 'extra where' from the template.");
+		_activeStmntSqlWhereClause_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				action_currentStmntSqlWhereClause_but(e);
+				action_activeStmntSqlWhereClause_but(e);
 			}
 		});
 
-		_currentStmntSqlOrderBy_cbx.setToolTipText("Change 'order by' clauses on the monXXX table. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
-		_currentStmntSqlOrderBy_cbx.setEditable(true);
-		_currentStmntSqlOrderBy_cbx.addItem("");
-		_currentStmntSqlOrderBy_cbx.addActionListener(new ActionListener()
+		_activeStmntSqlOrderBy_cbx.setToolTipText("Change 'order by' clauses on the monXXX table. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		_activeStmntSqlOrderBy_cbx.setEditable(true);
+		_activeStmntSqlOrderBy_cbx.addItem("");
+		_activeStmntSqlOrderBy_cbx.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				action_currentStmntSqlOrderBy_cbx(e);
+				action_activeStmntSqlOrderBy_cbx(e);
 			}
 		});
-		_currentStmntSqlOrderBy_but.setToolTipText("Remove the 'order by' from the template.");
-		_currentStmntSqlOrderBy_but.addActionListener(new ActionListener()
+		_activeStmntSqlOrderBy_but.setToolTipText("Remove the 'order by' from the template.");
+		_activeStmntSqlOrderBy_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				action__currentStmntSqlOrderBy_but(e);
+				action_activeStmntSqlOrderBy_but(e);
 			}
 		});
 
 		JPanel xxx = new JPanel(new MigLayout("insets 0 0 0 0"));
-		xxx.add(doExecSpShowplanfull_cbx,         "gap 5, span 3, wrap");
+		xxx.add(_doExecSpShowplanfull_cbx,        "gap 5, split, span");
+//		xxx.add(new JLabel(),                     "pushx, growx");
+		xxx.add(_hideActiveSqlWaitId250_cbx,      "");
+		xxx.add(_activeStmntTableCount_lbl,       "tag right, wrap");
 		
-		xxx.add(_currentStmntSqlWhereClause_lbl,  "gap 5 5 0 0");
-		xxx.add(_currentStmntSqlWhereClause_cbx,  "growx, pushx");
-		xxx.add(_currentStmntSqlWhereClause_but,  "gap 5 5 0 0, wrap");
+		xxx.add(_activeStmntSqlWhereClause_lbl,  "gap 5 5 0 0");
+		xxx.add(_activeStmntSqlWhereClause_cbx,  "growx, pushx");
+		xxx.add(_activeStmntSqlWhereClause_but,  "gap 5 5 0 0, wrap");
 
-		xxx.add(_currentStmntSqlOrderBy_lbl,      "gap 5 5 0 0");
-		xxx.add(_currentStmntSqlOrderBy_cbx,      "growx, pushx");
-		xxx.add(_currentStmntSqlOrderBy_but,      "gap 5 5 0 0, wrap");
+		xxx.add(_activeStmntSqlOrderBy_lbl,      "gap 5 5 0 0");
+		xxx.add(_activeStmntSqlOrderBy_cbx,      "growx, pushx");
+		xxx.add(_activeStmntSqlOrderBy_but,      "gap 5 5 0 0, wrap");
 
-//		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, wrap");
-//		xxx.add(new JScrollPane(currentStatementTable), "span, grow, push, width 100%, height 100%, wrap");
+//		xxx.add(new JScrollPane(activeStatementTable), "span, grow, push, wrap");
+//		xxx.add(new JScrollPane(activeStatementTable), "span, grow, push, width 100%, height 100%, wrap");
 		
-		currentStatementsPan.setLayout(new BorderLayout());
-		currentStatementsPan.add(xxx, BorderLayout.NORTH);
-		currentStatementsPan.add(new JScrollPane(currentStatementTable), BorderLayout.CENTER);
-//		currentStatementsPan.getViewport().add(xxx, null);
-//		currentStatementsPan.getViewport().add(currentStatementTable, null);
-		capturedStatementScrollPan.getViewport().add(capturedStatementsTable, null);
+		activeStatementsPan.setUseFocusableTips(true);
+		activeStatementsPan.setUseFocusableTipsSize(100);
+		activeStatementsPan.setLayout(new BorderLayout());
+		activeStatementsPan.add(xxx, BorderLayout.NORTH);
+		activeStatementScrollPan = new JScrollPane(activeStatementTable);
+		activeStatementsPan.add(activeStatementScrollPan, BorderLayout.CENTER);
+//		activeStatementsPan.getViewport().add(xxx, null);
+//		activeStatementsPan.getViewport().add(activeStatementTable, null);
+		historyStatementScrollPan.getViewport().add(_historyStatementsTable, null);
 
-		activeSqlCapturedSqlSplitPan.add(currentStatementsPan, JSplitPane.TOP);
+		activeSqlCapturedSqlSplitPan.add(activeStatementsPan, JSplitPane.TOP);
 
 		spidFld.setText(Integer.toString(spid));
 		kpidFld.setText(Integer.toString(kpid));
 
 		// statementsPan.add(northPan, BorderLayout.NORTH);
-		// northPan.add(currentStatementsPan, BorderLayout.CENTER);
+		// northPan.add(activeStatementsPan, BorderLayout.CENTER);
 
-		capturedStatementPan.setLayout(new BorderLayout());
-		capturedStatementPan.add(captureWhereSqlPanel, BorderLayout.NORTH);
-		capturedStatementPan.add(capturedStatementScrollPan, BorderLayout.CENTER);
+		historyWhereSqlPanel.setUseFocusableTips(true);
+		historyWhereSqlPanel.setUseFocusableTipsSize(100);
+		historyStatementPan.setUseFocusableTips(true);
+		historyStatementPan.setUseFocusableTipsSize(100);
+		historyStatementPan.setLayout(new BorderLayout());
+		historyStatementPan.add(historyWhereSqlPanel, BorderLayout.NORTH);
+		historyStatementPan.add(historyStatementScrollPan, BorderLayout.CENTER);
 
-//		captureWhereSqlPanel.setLayout(new BorderLayout());
-//		captureWhereSqlPanel.add(label_captureWhereSql,        BorderLayout.WEST);
-//		captureWhereSqlPanel.add(comboBox_captureWhereSql,     BorderLayout.CENTER);
-//		captureWhereSqlPanel.add(buttom_captureWhereSql,       BorderLayout.EAST);
-//		captureWhereSqlPanel.add(discardPreOpenStmntsCheckbox, BorderLayout.SOUTH);
-		captureWhereSqlPanel.setLayout(new MigLayout("insets 0 0 0 0"));
-		captureWhereSqlPanel.add(discardPreOpenStmntsCheckbox, "gap 5, span 3, wrap");
-		captureWhereSqlPanel.add(label_captureWhereSql,        "gap 5 5 0 0");
-		captureWhereSqlPanel.add(comboBox_captureWhereSql,     "pushx, growx");
-		captureWhereSqlPanel.add(buttom_captureWhereSql,       "gap 5 5 0 0");
-		captureWhereSqlPanel.setToolTipText("SQL Text for 'historical' SQL Statements will be showed here.");
+//		historyWhereSqlPanel.setLayout(new BorderLayout());
+//		historyWhereSqlPanel.add(label_historyWhereSql,        BorderLayout.WEST);
+//		historyWhereSqlPanel.add(comboBox_historyWhereSql,     BorderLayout.CENTER);
+//		historyWhereSqlPanel.add(button_historyWhereSql,       BorderLayout.EAST);
+//		historyWhereSqlPanel.add(discardPreOpenStmntsCheckbox, BorderLayout.SOUTH);
+		historyWhereSqlPanel.setLayout(new MigLayout("insets 0 0 0 0"));
+		historyWhereSqlPanel.add(discardPreOpenStmntsCheckbox, "gap 5, split, span");
+		historyWhereSqlPanel.add(discardAseTuneApp_chk,        "");
+//		historyWhereSqlPanel.add(new JLabel(),                 "pushx, growx");
+		historyWhereSqlPanel.add(_historyStmntTableCount_lbl,  "tag right, wrap");
+		historyWhereSqlPanel.add(label_historyWhereSql,        "gap 5 5 0 0");
+		historyWhereSqlPanel.add(comboBox_historyWhereSql,     "pushx, growx");
+		historyWhereSqlPanel.add(button_historyWhereSql,       "gap 5 5 0 0");
+		historyWhereSqlPanel.setToolTipText("SQL Text for 'historical' SQL Statements will be showed here.");
 		
 
-		comboBox_captureWhereSql.setToolTipText("Add your extra where clauses on the monSysStatement table. make sure that only columns in theat table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
-		comboBox_captureWhereSql.setEditable(true);
-		comboBox_captureWhereSql.addItem("");
-		comboBox_captureWhereSql.addActionListener(new java.awt.event.ActionListener()
+		comboBox_historyWhereSql.setToolTipText("Add your extra where clauses on the monSysStatement table. make sure that only columns in theat table are used. "+Version.getAppName()+"'s errorlog will show faulty SQL statements.");
+		comboBox_historyWhereSql.setEditable(true);
+		comboBox_historyWhereSql.addItem("");
+		comboBox_historyWhereSql.addActionListener(new java.awt.event.ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				comboBox_captureWhereSql_actionPerformed(e);
+				comboBox_activeWhereSql_actionPerformed(e);
 			}
 		});
-		buttom_captureWhereSql.setToolTipText("Remove the current restriction from the template.");
-		buttom_captureWhereSql.addActionListener(new java.awt.event.ActionListener()
+		button_historyWhereSql.setToolTipText("Remove the current restriction from the template.");
+		button_historyWhereSql.addActionListener(new java.awt.event.ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				buttom_captureWhereSql_actionPerformed(e);
+				button_historyWhereSql_actionPerformed(e);
 			}
 		});
 		discardPreOpenStmntsCheckbox.setToolTipText("If you want to discard or show events from monSysStatements that happened prior to the window was open.");
@@ -1284,6 +1428,17 @@ public class ProcessDetailFrame extends JFrame
 			{
 				if (refressProcess != null)
 					refressProcess.setDiscardPreOpenStmnts( discardPreOpenStmntsCheckbox.isSelected() );
+				saveProps();
+			}
+		});
+		discardAseTuneApp_chk.setToolTipText("If you want to discard or show events from monSysStatements that was generated by application '"+DISCARD_APP_NAME+"'.");
+		discardAseTuneApp_chk.addActionListener(new java.awt.event.ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				if (refressProcess != null)
+					refressProcess.setDiscardAseTuneAppname( discardAseTuneApp_chk.isSelected() );
 				saveProps();
 			}
 		});
@@ -1317,10 +1472,10 @@ public class ProcessDetailFrame extends JFrame
 		infoPanel.add(refreshButton,           "");
 		infoPanel.add(clearButton,             "");
 		infoPanel.add(saveButton,              "wrap");
-//		infoPanel.add(_currentStmntSqlWhereClause_lbl,  "w 60px, span, split");
-//		infoPanel.add(_currentStmntSqlWhereClause_txt,  "growx, wrap");
-//		infoPanel.add(_currentStmntSqlOrderBy_lbl,      "w 60px, span, split");
-//		infoPanel.add(_currentStmntSqlOrderBy_txt,      "growx, wrap");
+//		infoPanel.add(_activeStmntSqlWhereClause_lbl,  "w 60px, span, split");
+//		infoPanel.add(_activeStmntSqlWhereClause_txt,  "growx, wrap");
+//		infoPanel.add(_activeStmntSqlOrderBy_lbl,      "w 60px, span, split");
+//		infoPanel.add(_activeStmntSqlOrderBy_txt,      "growx, wrap");
 		
 		statusPanel.add(middleStatusPan,   BorderLayout.CENTER);
 		statusPanel.add(serverLbl,         BorderLayout.EAST);
@@ -1435,7 +1590,7 @@ public class ProcessDetailFrame extends JFrame
 		processDetailPan.add(transactionsPan,  new XYConstraints(759, 171, 253, 203));
 		processDetailPan.add(identPan,         new XYConstraints(7,   10,  487, 280));
 
-		currentStatementTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		activeStatementTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		procStatusPan.add(statusLbl,           new XYConstraints(2,   0,   77,  19));
 		procStatusPan.add(blockedLbl,          new XYConstraints(2,   113, 77,  19));
 		procStatusPan.add(affinityLbl,         new XYConstraints(2,   74,  77,  19));
@@ -1464,17 +1619,43 @@ public class ProcessDetailFrame extends JFrame
 		refreshIntFld.addItem("30");
 		refreshIntFld.addItem("60");
 
+		// Refresh: F5
+		JPanel contentPane = (JPanel) this.getContentPane();
+		KeyStroke refreshNow = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F5, 0);
+		ActionListener refreshListener = new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				refreshButton.doClick();
+			}
+		};
+		contentPane.registerKeyboardAction(refreshListener, "ACTION_REFRESH_NOW", refreshNow, JComponent.WHEN_IN_FOCUSED_WINDOW);
+		
 		// Open the connection
 //		cnx = OpenConnectionDlg.getAnotherConnection(Version.getAppName()+"-spid", true);
 //		cnx = AseConnectionFactory.getConnection(null, Version.getAppName()+"-spid", null);
 		cnx = _connectionProvider.getNewConnection(Version.getAppName()+"-spid");
+		if (cnx == null)
+		{
+			throw new RuntimeException("Sorry could not get a connection. conn=null");
+		}
 		if ( ! AseConnectionUtils.checkForMonitorOptions(cnx, AseConnectionFactory.getUser(), true, this) )
 		{
 			// FIXME: should we continue here or not...
 		}
 
 		// Display servername on status bar
-		serverLbl.setText(MainFrame.getStatus(MainFrame.ST_CONNECT));
+//		serverLbl.setText(MainFrame.getStatus(MainFrame.ST_CONNECT));
+		String srvInfo = "";
+		ConnectionProp connProp = cnx.getConnProp();
+		String hostPortStr = connProp == null ? "" : " (" + JdbcUrlParser.parse(connProp.getUrl()).getHostPortStr() + ")";
+		srvInfo = 
+			(connProp == null ? "user" : connProp.getUsername()) 
+			+ " - " 
+			+ cnx.getDbmsServerName()
+			+ hostPortStr;
+		serverLbl.setText(srvInfo);
 
 		loadProps();
 
@@ -1486,20 +1667,22 @@ public class ProcessDetailFrame extends JFrame
 			refressProcess.setSqlTextSample( batchShowEnableCheckbox.isSelected() );
 			refressProcess.setPlanTextSample( planShowEnableCheckbox.isSelected() );
 			refressProcess.setDiscardPreOpenStmnts( discardPreOpenStmntsCheckbox.isSelected() );
+			refressProcess.setDiscardAseTuneAppname( discardAseTuneApp_chk.isSelected() );
 
 			// use the selected where clause...
-			String sql = (String) comboBox_captureWhereSql.getSelectedItem();
-			refressProcess.setCaptureRestriction(sql);
+			String sql = (String) comboBox_historyWhereSql.getSelectedItem();
+			refressProcess.setHistoryRestriction(sql);
 
 			refressProcess.start();
 		}
 
 		pack();
+		initWaterMarks();
 		_guiInitialized = true;
 		setVisible(true);
 	}
 
-	private void capturedStatementsTable_mouseClicked(MouseEvent e)
+	private void historyStatementsTable_mouseClicked(MouseEvent e)
 	{
 		if (e.getClickCount() == 1)
 		{
@@ -1515,12 +1698,15 @@ public class ProcessDetailFrame extends JFrame
 			saveProps();
 		}
 
+		// Remove this component from the memory listener
+		Memory.removeMemoryListener(this);
+
 //		if (processObjectsFrame != null) processObjectsFrame.dispose();
 //		if (processWaitsFrame   != null) processWaitsFrame  .dispose();
 //		if (processLocksFrame   != null) processLocksFrame  .dispose();
 	}
 
-	private void currentSstatementTable_mouseClicked(MouseEvent e)
+	private void activeStatementTable_mouseClicked(MouseEvent e)
 	{
 	}
 
@@ -1566,44 +1752,25 @@ public class ProcessDetailFrame extends JFrame
 			refressProcess.refreshProcess();
 	}
 
-	/**
-	 * Called from the Refresh Process, at the top<br>
-	 * Sp here we can check various stuff and set statuses etc.
-	 */
-	public void updateGuiStatus()
-	{
-		if (refressProcess != null)
-		{
-			boolean isPaused = refressProcess.isPaused();
-			paused_chk.setSelected(isPaused);
-//			pauseButton .setVisible(!isPaused);
-//			resumeButton.setVisible( isPaused);
-
-			currentStatementsPan.setToolTipText("<html><b>Last SQL Used To get ACTIVE SQL Statements </b><br><code><pre>"+refressProcess.getActiveStatementsSql() +"</pre></code></html>");
-			captureWhereSqlPanel.setToolTipText("<html><b>Last SQL Used To get HISTORY SQL Statements</b><br><code><pre>"+refressProcess.getHistoryStatementsSql()+"</pre></code></html>");
-
-		}
-	}
-
 	/** REMOVE from template */
-	private void buttom_captureWhereSql_actionPerformed(ActionEvent e)
+	private void button_historyWhereSql_actionPerformed(ActionEvent e)
 	{
-		String sql = (String) comboBox_captureWhereSql.getSelectedItem();
+		String sql = (String) comboBox_historyWhereSql.getSelectedItem();
 		if (sql != null)
 		{
 			sql = sql.trim();
 
 			// Check if the string is in the template list
-			Object model = comboBox_captureWhereSql.getModel();
+			Object model = comboBox_historyWhereSql.getModel();
 			if (model instanceof DefaultComboBoxModel)
 			{
-				int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+				int index = ((DefaultComboBoxModel<?>) model).getIndexOf(sql);
 
 				// If it does not exist in the list save it
 				if (index > 0)
 				{
-					comboBox_captureWhereSql.removeItem(sql);
-					//comboBox_captureWhereSql.setSelectedIndex(0);
+					comboBox_historyWhereSql.removeItem(sql);
+					//comboBox_historyWhereSql.setSelectedIndex(0);
 				}
 			}
 		}
@@ -1612,23 +1779,23 @@ public class ProcessDetailFrame extends JFrame
 	}
 
 	/** REMOVE from template */
-	private void action_currentStmntSqlWhereClause_but(ActionEvent e)
+	private void action_activeStmntSqlWhereClause_but(ActionEvent e)
 	{
-		String sql = (String) _currentStmntSqlWhereClause_cbx.getSelectedItem();
+		String sql = (String) _activeStmntSqlWhereClause_cbx.getSelectedItem();
 		if (sql != null)
 		{
 			sql = sql.trim();
 
 			// Check if the string is in the template list
-			Object model = _currentStmntSqlWhereClause_cbx.getModel();
+			Object model = _activeStmntSqlWhereClause_cbx.getModel();
 			if (model instanceof DefaultComboBoxModel)
 			{
-				int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+				int index = ((DefaultComboBoxModel<?>) model).getIndexOf(sql);
 
 				// If it does not exist in the list save it
 				if (index > 0)
 				{
-					_currentStmntSqlWhereClause_cbx.removeItem(sql);
+					_activeStmntSqlWhereClause_cbx.removeItem(sql);
 				}
 			}
 		}
@@ -1637,23 +1804,23 @@ public class ProcessDetailFrame extends JFrame
 	}
 
 	/** REMOVE from template */
-	private void action__currentStmntSqlOrderBy_but(ActionEvent e)
+	private void action_activeStmntSqlOrderBy_but(ActionEvent e)
 	{
-		String sql = (String) _currentStmntSqlOrderBy_cbx.getSelectedItem();
+		String sql = (String) _activeStmntSqlOrderBy_cbx.getSelectedItem();
 		if (sql != null)
 		{
 			sql = sql.trim();
 
 			// Check if the string is in the template list
-			Object model = _currentStmntSqlOrderBy_cbx.getModel();
+			Object model = _activeStmntSqlOrderBy_cbx.getModel();
 			if (model instanceof DefaultComboBoxModel)
 			{
-				int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+				int index = ((DefaultComboBoxModel<?>) model).getIndexOf(sql);
 
 				// If it does not exist in the list save it
 				if (index > 0)
 				{
-					_currentStmntSqlOrderBy_cbx.removeItem(sql);
+					_activeStmntSqlOrderBy_cbx.removeItem(sql);
 				}
 			}
 		}
@@ -1663,44 +1830,44 @@ public class ProcessDetailFrame extends JFrame
 
 
 	/** ACTION on combobox */
-	private void comboBox_captureWhereSql_actionPerformed(ActionEvent e)
+	private void comboBox_activeWhereSql_actionPerformed(ActionEvent e)
 	{
-		//_logger.debug("comboBox_captureWhereSql.actionPerformed(): e.getActionCommand()='" + e.getActionCommand() + "', ActionEvent=" + e);
+		//_logger.debug("comboBox_historyWhereSql.actionPerformed(): e.getActionCommand()='" + e.getActionCommand() + "', ActionEvent=" + e);
 
-		String sql = (String) comboBox_captureWhereSql.getSelectedItem();
+		String sql = (String) comboBox_historyWhereSql.getSelectedItem();
 		sql = sql.trim();
 
 		// Check if the select text is in the template list
 		// If so, name the buttom "remove", otherwisse "save"
-		Object model = comboBox_captureWhereSql.getModel();
+		Object model = comboBox_historyWhereSql.getModel();
 		if (model instanceof DefaultComboBoxModel)
 		{
-			int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+			int index = ((DefaultComboBoxModel<?>) model).getIndexOf(sql);
 			if ( index == -1 )
-				comboBox_captureWhereSql.addItem(sql);
+				comboBox_historyWhereSql.addItem(sql);
 		}
 
 		// set the restrictor in refressProcess
 		if (refressProcess != null)
-			refressProcess.setCaptureRestriction(sql);
+			refressProcess.setHistoryRestriction(sql);
 		saveProps();
 	}
 
 
 	/** ACTION on combobox */
-	private void action_currentStmntSqlWhereClause_cbx(ActionEvent e)
+	private void action_activeStmntSqlWhereClause_cbx(ActionEvent e)
 	{
-		String sql = (String) _currentStmntSqlWhereClause_cbx.getSelectedItem();
+		String sql = (String) _activeStmntSqlWhereClause_cbx.getSelectedItem();
 		sql = sql.trim();
 
 		// Check if the select text is in the template list
 		// If so, name the buttom "remove", otherwisse "save"
-		Object model = _currentStmntSqlWhereClause_cbx.getModel();
+		Object model = _activeStmntSqlWhereClause_cbx.getModel();
 		if (model instanceof DefaultComboBoxModel)
 		{
-			int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+			int index = ((DefaultComboBoxModel<?>) model).getIndexOf(sql);
 			if ( index == -1 )
-				_currentStmntSqlWhereClause_cbx.addItem(sql);
+				_activeStmntSqlWhereClause_cbx.addItem(sql);
 		}
 
 //		// set the restrictor in refressProcess
@@ -1710,19 +1877,19 @@ public class ProcessDetailFrame extends JFrame
 	}
 
 	/** ACTION on combobox */
-	private void action_currentStmntSqlOrderBy_cbx(ActionEvent e)
+	private void action_activeStmntSqlOrderBy_cbx(ActionEvent e)
 	{
-		String sql = (String) _currentStmntSqlOrderBy_cbx.getSelectedItem();
+		String sql = (String) _activeStmntSqlOrderBy_cbx.getSelectedItem();
 		sql = sql.trim();
 
 		// Check if the select text is in the template list
 		// If so, name the buttom "remove", otherwisse "save"
-		Object model = _currentStmntSqlOrderBy_cbx.getModel();
+		Object model = _activeStmntSqlOrderBy_cbx.getModel();
 		if (model instanceof DefaultComboBoxModel)
 		{
-			int index = ((DefaultComboBoxModel) model).getIndexOf(sql);
+			int index = ((DefaultComboBoxModel<?>) model).getIndexOf(sql);
 			if ( index == -1 )
-				_currentStmntSqlOrderBy_cbx.addItem(sql);
+				_activeStmntSqlOrderBy_cbx.addItem(sql);
 		}
 
 //		// set the restrictor in refressProcess
@@ -1735,6 +1902,10 @@ public class ProcessDetailFrame extends JFrame
 	public static final String  PROPKEY_sample_spShowplanfull = "processDetailFrame.spid.sample.SpShowplanfull";
 	public static final boolean DEFAULT_sample_spShowplanfull = true;
 
+	public static final String  PROPKEY_hide_activeSqlWaitEventId250 = "processDetailFrame.spid.hide.ActiveSqlWaitEventId250";
+	public static final boolean DEFAULT_hide_activeSqlWaitEventId250 = false;
+	
+	
 	private void saveProps()
   	{
 		// this is really ugly, do this in another way...
@@ -1749,27 +1920,28 @@ public class ProcessDetailFrame extends JFrame
 			// Get rid of all fields first
 			//tmpConf.removeAll(base);
 
-			tmpConf.setProperty(base + "window.width", this.getSize().width);
-			tmpConf.setProperty(base + "window.height", this.getSize().height);
-			tmpConf.setProperty(base + "window.pos.x", this.getLocationOnScreen().x);
-			tmpConf.setProperty(base + "window.pos.y", this.getLocationOnScreen().y);
+			tmpConf.setLayoutProperty(base + "window.width", this.getSize().width);
+			tmpConf.setLayoutProperty(base + "window.height", this.getSize().height);
+			tmpConf.setLayoutProperty(base + "window.pos.x", this.getLocationOnScreen().x);
+			tmpConf.setLayoutProperty(base + "window.pos.y", this.getLocationOnScreen().y);
 
-			tmpConf.setProperty(base + "currentStatements.width", currentStatementsPan.getSize().width);
-			tmpConf.setProperty(base + "currentStatements.height", currentStatementsPan.getSize().height);
+			tmpConf.setLayoutProperty(base + "activeStatements.width", activeStatementsPan.getSize().width);
+			tmpConf.setLayoutProperty(base + "activeStatements.height", activeStatementsPan.getSize().height);
 
-			tmpConf.setProperty(base + "capturedStatements.width", capturedStatementScrollPan.getSize().width);
-			tmpConf.setProperty(base + "capturedStatements.height", capturedStatementScrollPan.getSize().height);
+			tmpConf.setLayoutProperty(base + "historyStatements.width", historyStatementScrollPan.getSize().width);
+			tmpConf.setLayoutProperty(base + "historyStatements.height", historyStatementScrollPan.getSize().height);
 
-			tmpConf.setProperty(base + "batch.width", batchScrollPan.getSize().width);
-			tmpConf.setProperty(base + "batch.height", batchScrollPan.getSize().height);
-			tmpConf.setProperty(base + "batch.sample", batchShowEnableCheckbox.isSelected());
-			tmpConf.setProperty(base + "batch.spSrcInBatch", sqlTextShowProcSrcCheckbox.isSelected());
+			tmpConf.setLayoutProperty(base + "batch.width", batchScrollPan.getSize().width);
+			tmpConf.setLayoutProperty(base + "batch.height", batchScrollPan.getSize().height);
+			tmpConf.setProperty      (base + "batch.sample", batchShowEnableCheckbox.isSelected());
+			tmpConf.setProperty      (base + "batch.spSrcInBatch", sqlTextShowProcSrcCheckbox.isSelected());
 
-			tmpConf.setProperty(base + "plan.width", planScrollPan.getSize().width);
-			tmpConf.setProperty(base + "plan.height", planScrollPan.getSize().height);
-			tmpConf.setProperty(base + "plan.sample", planShowEnableCheckbox.isSelected());
+			tmpConf.setLayoutProperty(base + "plan.width", planScrollPan.getSize().width);
+			tmpConf.setLayoutProperty(base + "plan.height", planScrollPan.getSize().height);
+			tmpConf.setProperty      (base + "plan.sample", planShowEnableCheckbox.isSelected());
 			
-			tmpConf.setProperty(PROPKEY_sample_spShowplanfull, doExecSpShowplanfull_cbx.isSelected());
+			tmpConf.setProperty(PROPKEY_sample_spShowplanfull,        _doExecSpShowplanfull_cbx  .isSelected());
+			tmpConf.setProperty(PROPKEY_hide_activeSqlWaitEventId250, _hideActiveSqlWaitId250_cbx.isSelected());
 
 //			tmpConf.setProperty(base + "objects.window.active", processObjectsFrame.isVisible());
 //			tmpConf.setProperty(base + "objects.window.width",  processObjectsFrame.getSize().width);
@@ -1798,66 +1970,66 @@ public class ProcessDetailFrame extends JFrame
 //			tmpConf.setProperty(base + "locks.window.pos.y",  processLocksFrame.getLocationOnScreen().y);
 //			}
 
-//			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_txt.getText());
-//			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    _currentStmntSqlOrderBy_txt    .getText());
+//			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_txt.getText());
+//			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY,    _activeStmntSqlOrderBy_txt    .getText());
 
 			int saveCount = 0;
 			// ACTIVE Statements WHERE
 			//---------------------------------------
 			// Get rid of all fields first
-			tmpConf.removeAll(base + "current.statement.extraWhere.");
+			tmpConf.removeAll(base + "active.statement.extraWhere.");
 			saveCount = 0;
-			for (int i=1; i<_currentStmntSqlWhereClause_cbx.getItemCount(); i++)
+			for (int i=1; i<_activeStmntSqlWhereClause_cbx.getItemCount(); i++)
 			{
-				Object o = _currentStmntSqlWhereClause_cbx.getItemAt(i);
+				Object o = _activeStmntSqlWhereClause_cbx.getItemAt(i);
 				if (o != null)
 				{
 					saveCount++;
-					tmpConf.setProperty(base + "current.statement.extraWhere."+saveCount, o.toString());
+					tmpConf.setProperty(base + "active.statement.extraWhere."+saveCount, o.toString());
 
-					_logger.debug("saveProps(): processDetailFrame.spid.current.statement.extraWhere."+saveCount+"='"+o.toString()+"'.");
+					_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere."+saveCount+"='"+o.toString()+"'.");
 				}
 			}
-			tmpConf.setProperty(   base + "current.statement.extraWhere.count", saveCount);
-			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.extraWhere.count='"+saveCount+"'.");
+			tmpConf.setProperty(   base + "active.statement.extraWhere.count", saveCount);
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere.count='"+saveCount+"'.");
 
-			tmpConf.setProperty(   base + "current.statement.extraWhere.active", Math.max(0, _currentStmntSqlWhereClause_cbx.getSelectedIndex()));
-			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.extraWhere.active='"+Math.max(0, _currentStmntSqlWhereClause_cbx.getSelectedIndex())+"'.");
+			tmpConf.setProperty(   base + "active.statement.extraWhere.active", Math.max(0, _activeStmntSqlWhereClause_cbx.getSelectedIndex()));
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.extraWhere.active='"+Math.max(0, _activeStmntSqlWhereClause_cbx.getSelectedIndex())+"'.");
 
-			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_cbx.getSelectedItem()+"");
 			
 			// ACTIVE Statements ORDER BY
 			//---------------------------------------
 			// Get rid of all fields first
-			tmpConf.removeAll(base + "current.statement.orderBy.");
+			tmpConf.removeAll(base + "active.statement.orderBy.");
 			saveCount = 0;
-			for (int i=1; i<_currentStmntSqlOrderBy_cbx.getItemCount(); i++)
+			for (int i=1; i<_activeStmntSqlOrderBy_cbx.getItemCount(); i++)
 			{
-				Object o = _currentStmntSqlOrderBy_cbx.getItemAt(i);
+				Object o = _activeStmntSqlOrderBy_cbx.getItemAt(i);
 				if (o != null)
 				{
 					saveCount++;
-					tmpConf.setProperty(base + "current.statement.orderBy."+saveCount, o.toString());
+					tmpConf.setProperty(base + "active.statement.orderBy."+saveCount, o.toString());
 
-					_logger.debug("saveProps(): processDetailFrame.spid.current.statement.orderBy."+saveCount+"='"+o.toString()+"'.");
+					_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy."+saveCount+"='"+o.toString()+"'.");
 				}
 			}
-			tmpConf.setProperty(   base + "current.statement.orderBy.count", saveCount);
-			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.orderBy.count='"+saveCount+"'.");
+			tmpConf.setProperty(   base + "active.statement.orderBy.count", saveCount);
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy.count='"+saveCount+"'.");
 
-			tmpConf.setProperty(   base + "current.statement.orderBy.active", Math.max(0, _currentStmntSqlOrderBy_cbx.getSelectedIndex()));
-			_logger.debug("saveProps(): processDetailFrame.spid.current.statement.orderBy.active='"+Math.max(0, _currentStmntSqlOrderBy_cbx.getSelectedIndex())+"'.");
+			tmpConf.setProperty(   base + "active.statement.orderBy.active", Math.max(0, _activeStmntSqlOrderBy_cbx.getSelectedIndex()));
+			_logger.debug("saveProps(): processDetailFrame.spid.active.statement.orderBy.active='"+Math.max(0, _activeStmntSqlOrderBy_cbx.getSelectedIndex())+"'.");
 
-			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY, _currentStmntSqlOrderBy_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY, _activeStmntSqlOrderBy_cbx.getSelectedItem()+"");
 
 			// HISTORY Statements WHERE
 			//---------------------------------------
 			// Get rid of all fields first
 			tmpConf.removeAll(base + "plan.extraWhere.");
 			saveCount = 0;
-			for (int i=1; i<comboBox_captureWhereSql.getItemCount(); i++)
+			for (int i=1; i<comboBox_historyWhereSql.getItemCount(); i++)
 			{
-				Object o = comboBox_captureWhereSql.getItemAt(i);
+				Object o = comboBox_historyWhereSql.getItemAt(i);
 				if (o != null)
 				{
 					saveCount++;
@@ -1869,11 +2041,12 @@ public class ProcessDetailFrame extends JFrame
 			tmpConf.setProperty(   base + "plan.extraWhere.count", saveCount);
 			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.count='"+saveCount+"'.");
 
-			tmpConf.setProperty(   base + "plan.extraWhere.active", Math.max(0, comboBox_captureWhereSql.getSelectedIndex()));
-			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.active='"+Math.max(0, comboBox_captureWhereSql.getSelectedIndex())+"'.");
+			tmpConf.setProperty(   base + "plan.extraWhere.active", Math.max(0, comboBox_historyWhereSql.getSelectedIndex()));
+			_logger.debug("saveProps(): processDetailFrame.spid.plan.extraWhere.active='"+Math.max(0, comboBox_historyWhereSql.getSelectedIndex())+"'.");
 
 
 			tmpConf.setProperty(base + "plan.discardPreOpenStmnts", discardPreOpenStmntsCheckbox.isSelected());
+			tmpConf.setProperty(base + "plan.discardAseTuneStmnts", discardAseTuneApp_chk.isSelected());
 
 			tmpConf.save();
 		}
@@ -1885,7 +2058,7 @@ public class ProcessDetailFrame extends JFrame
 		int     height    = -1;
 		int     x         = -1;
 		int     y         = -1;
-		boolean winActive = false;
+//		boolean winActive = false;
 		boolean checkBox1 = false;
 		boolean checkBox2 = false;
 
@@ -1896,10 +2069,10 @@ public class ProcessDetailFrame extends JFrame
 		if (props == null)
 			return;
 
-		width  = props.getIntProperty(base + "window.width",  1000);
-		height = props.getIntProperty(base + "window.height", 700);
-		x      = props.getIntProperty(base + "window.pos.x",  -1);
-		y      = props.getIntProperty(base + "window.pos.y",  -1);
+		width  = props.getLayoutProperty(base + "window.width",  SwingUtils.hiDpiScale(1000));
+		height = props.getLayoutProperty(base + "window.height", SwingUtils.hiDpiScale(700));
+		x      = props.getLayoutProperty(base + "window.pos.x",  -1);
+		y      = props.getLayoutProperty(base + "window.pos.y",  -1);
 		if (width != -1 && height != -1)
 		{
 			this.setPreferredSize(new Dimension(width, height));
@@ -1926,24 +2099,24 @@ public class ProcessDetailFrame extends JFrame
 			setLocation((screenSize.width - frameSize.width) / 2, (screenSize.height - frameSize.height) / 2);
 		}
 
-		width  = props.getIntProperty(base + "currentStatements.width",  1000);
-		height = props.getIntProperty(base + "currentStatements.height", 160);
+		width  = props.getLayoutProperty(base + "activeStatements.width",  SwingUtils.hiDpiScale(1000));
+		height = props.getLayoutProperty(base + "activeStatements.height", SwingUtils.hiDpiScale(160));
 		if (width != -1 && height != -1)
 		{
-			currentStatementsPan.setPreferredSize(new Dimension(width, height));
+			activeStatementsPan.setPreferredSize(new Dimension(width, height));
 		}
 
-		width  = props.getIntProperty(base + "capturedStatements.width",  1000);
-		height = props.getIntProperty(base + "capturedStatements.height", 130);
+		width  = props.getLayoutProperty(base + "historyStatements.width",  SwingUtils.hiDpiScale(1000));
+		height = props.getLayoutProperty(base + "historyStatements.height", SwingUtils.hiDpiScale(130));
 		if (width != -1 && height != -1)
 		{
-			capturedStatementScrollPan.setPreferredSize(new Dimension(width, height));
+			historyStatementScrollPan.setPreferredSize(new Dimension(width, height));
 		}
 
 		checkBox1 = props.getBooleanProperty(base + "batch.sample",       true);
 		checkBox2 = props.getBooleanProperty(base + "batch.spSrcInBatch", true);
-		width  = props.getIntProperty(base + "batch.width",  -1);
-		height = props.getIntProperty(base + "batch.height", -1);
+		width  = props.getLayoutProperty(base + "batch.width",  -1);
+		height = props.getLayoutProperty(base + "batch.height", -1);
 		if (width != -1 && height != -1)
 		{
 			batchScrollPan.setPreferredSize(new Dimension(width, height));
@@ -1951,24 +2124,25 @@ public class ProcessDetailFrame extends JFrame
 		batchShowEnableCheckbox.setSelected(checkBox1);
 		sqlTextShowProcSrcCheckbox.setSelected(checkBox2);
 
-		checkBox1 = props.getBooleanProperty(base + "plan.sample", true);
-		width  = props.getIntProperty(base + "plan.width",  -1);
-		height = props.getIntProperty(base + "plan.height", -1);
+		checkBox1 = props.getBooleanProperty(base + "plan.sample", false);
+		width  = props.getLayoutProperty(base + "plan.width",  -1);
+		height = props.getLayoutProperty(base + "plan.height", -1);
 		if (width != -1 && height != -1)
 		{
 			planScrollPan.setPreferredSize(new Dimension(width, height));
 		}
 		planShowEnableCheckbox.setSelected(checkBox1);
 		
-		doExecSpShowplanfull_cbx.setSelected(props.getBooleanProperty(PROPKEY_sample_spShowplanfull, DEFAULT_sample_spShowplanfull));
+		_doExecSpShowplanfull_cbx  .setSelected(props.getBooleanProperty(PROPKEY_sample_spShowplanfull,        DEFAULT_sample_spShowplanfull));
+		_hideActiveSqlWaitId250_cbx.setSelected(props.getBooleanProperty(PROPKEY_hide_activeSqlWaitEventId250, DEFAULT_hide_activeSqlWaitEventId250));
 
 
 		// processObjects
-		winActive = props.getBooleanProperty(base + "objects.window.active", false);
-		width  = props.getIntProperty(base + "objects.window.width",  -1);
-		height = props.getIntProperty(base + "objects.window.height", -1);
-		x      = props.getIntProperty(base + "objects.window.pos.x",  -1);
-		y      = props.getIntProperty(base + "objects.window.pos.y",  -1);
+//		winActive = props.getBooleanProperty(base + "objects.window.active", false);
+		width  = props.getLayoutProperty(base + "objects.window.width",  -1);
+		height = props.getLayoutProperty(base + "objects.window.height", -1);
+		x      = props.getLayoutProperty(base + "objects.window.pos.x",  -1);
+		y      = props.getLayoutProperty(base + "objects.window.pos.y",  -1);
 //		if (width != -1 && height != -1 && x != -1 && y != -1)
 //		{
 //			processObjectsFrame.setSize(width, height);
@@ -1981,11 +2155,11 @@ public class ProcessDetailFrame extends JFrame
 //		}
 
 		// processWaits
-		winActive = props.getBooleanProperty(base + "waits.window.active", "false");
-		width  = props.getIntProperty(base + "waits.window.width",  -1);
-		height = props.getIntProperty(base + "waits.window.height", -1);
-		x      = props.getIntProperty(base + "waits.window.pos.x",  -1);
-		y      = props.getIntProperty(base + "waits.window.pos.y",  -1);
+//		winActive = props.getBooleanProperty(base + "waits.window.active", "false");
+		width  = props.getLayoutProperty(base + "waits.window.width",  -1);
+		height = props.getLayoutProperty(base + "waits.window.height", -1);
+		x      = props.getLayoutProperty(base + "waits.window.pos.x",  -1);
+		y      = props.getLayoutProperty(base + "waits.window.pos.y",  -1);
 //		if (width != -1 && height != -1 && x != -1 && y != -1)
 //		{
 //			processWaitsFrame.setSize(width, height);
@@ -1998,11 +2172,11 @@ public class ProcessDetailFrame extends JFrame
 //		}
 
 		// processLocks
-		winActive = props.getBooleanProperty(base + "locks.window.active", "false");
-		width  = props.getIntProperty(base + "locks.window.width",  -1);
-		height = props.getIntProperty(base + "locks.window.height", -1);
-		x      = props.getIntProperty(base + "locks.window.pos.x",  -1);
-		y      = props.getIntProperty(base + "locks.window.pos.y",  -1);
+//		winActive = props.getBooleanProperty(base + "locks.window.active", "false");
+		width  = props.getLayoutProperty(base + "locks.window.width",  -1);
+		height = props.getLayoutProperty(base + "locks.window.height", -1);
+		x      = props.getLayoutProperty(base + "locks.window.pos.x",  -1);
+		y      = props.getLayoutProperty(base + "locks.window.pos.y",  -1);
 //		if (width != -1 && height != -1 && x != -1 && y != -1)
 //		{
 //			processLocksFrame.setSize(width, height);
@@ -2016,70 +2190,70 @@ public class ProcessDetailFrame extends JFrame
 
 		int count;
 		int active;
-		// ACTIVE STATEMENT: WHERE           //current.statement.
-		count   = props.getIntProperty(base + "current.statement.extraWhere.count", -1);
-		active  = props.getIntProperty(base + "current.statement.extraWhere.active", -1);
+		// ACTIVE STATEMENT: WHERE           //active.statement.
+		count   = props.getIntProperty(base + "active.statement.extraWhere.count", -1);
+		active  = props.getIntProperty(base + "active.statement.extraWhere.active", -1);
 		if ( count != -1  && active != -1 )
 		{
-			_logger.debug("loadProps(): processDetailFrame.spid.current.statement.extraWhere.active='"+active+"'.");
+			_logger.debug("loadProps(): processDetailFrame.spid.active.statement.extraWhere.active='"+active+"'.");
 
 			active = Math.max(0, active);
 			for (int i=1; i<=count; i++)
 			{
-				String str = props.getProperty(base + "current.statement.extraWhere."+i).trim();
-				_currentStmntSqlWhereClause_cbx.insertItemAt(str, i);
-				_logger.debug("loadProps(): processDetailFrame.current.statement.plan.extraWhere."+i+"='"+str+"'.");
+				String str = props.getProperty(base + "active.statement.extraWhere."+i).trim();
+				_activeStmntSqlWhereClause_cbx.insertItemAt(str, i);
+				_logger.debug("loadProps(): processDetailFrame.active.statement.plan.extraWhere."+i+"='"+str+"'.");
 			}
 			_logger.debug("loadProps(): Set active template to index="+active+".");
-			_currentStmntSqlWhereClause_cbx.setSelectedIndex(active);
+			_activeStmntSqlWhereClause_cbx.setSelectedIndex(active);
 		}
 		else
 		{
 			// if we cant find anything in the configuration file, add some defaults
 			// which will be written to the config file on next save...
-			_currentStmntSqlWhereClause_cbx.addItem("WaitTime > 1000");
-			_currentStmntSqlWhereClause_cbx.addItem("LogicalReads > 100");
-			_currentStmntSqlWhereClause_cbx.addItem("PhysicalReads > 10");
-			_currentStmntSqlWhereClause_cbx.addItem("P.SPID in (select blocked from master..sysprocesses where blocked > 0) -- SPID's that blocks others");
-			_currentStmntSqlWhereClause_cbx.addItem("P.BlockingSPID > 0 -- Blocked SPID's");
-			_currentStmntSqlWhereClause_cbx.addItem("object_name(S.ProcedureID,S.DBID) = 'any_proc_name'");
-			_currentStmntSqlWhereClause_cbx.addItem("db_name(S.DBID) = 'any_db_name'");
+			_activeStmntSqlWhereClause_cbx.addItem("WaitTime > 1000");
+			_activeStmntSqlWhereClause_cbx.addItem("LogicalReads > 100");
+			_activeStmntSqlWhereClause_cbx.addItem("PhysicalReads > 10");
+			_activeStmntSqlWhereClause_cbx.addItem("P.SPID in (select blocked from master..sysprocesses where blocked > 0) -- SPID's that blocks others");
+			_activeStmntSqlWhereClause_cbx.addItem("P.BlockingSPID > 0 -- Blocked SPID's");
+			_activeStmntSqlWhereClause_cbx.addItem("object_name(S.ProcedureID,S.DBID) = 'any_proc_name'");
+			_activeStmntSqlWhereClause_cbx.addItem("db_name(S.DBID) = 'any_db_name'");
 		}
 		// this entry is the one used by RefreshProcess
 		if (tmpConf != null)
-			tmpConf.setProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, _currentStmntSqlWhereClause_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, _activeStmntSqlWhereClause_cbx.getSelectedItem()+"");
 
 		// ACTIVE STATEMENT: ORDER BY
-		count   = props.getIntProperty(base + "current.statement.orderBy.count", -1);
-		active  = props.getIntProperty(base + "current.statement.orderBy.active", -1);
+		count   = props.getIntProperty(base + "active.statement.orderBy.count", -1);
+		active  = props.getIntProperty(base + "active.statement.orderBy.active", -1);
 		if ( count != -1  && active != -1 )
 		{
-			_logger.debug("loadProps(): processDetailFrame.spid.current.statement.orderBy.active='"+active+"'.");
+			_logger.debug("loadProps(): processDetailFrame.spid.active.statement.orderBy.active='"+active+"'.");
 
 			active = Math.max(0, active);
 			for (int i=1; i<=count; i++)
 			{
-				String str = props.getProperty(base + "current.statement.orderBy."+i).trim();
-				_currentStmntSqlOrderBy_cbx.insertItemAt(str, i);
-				_logger.debug("loadProps(): processDetailFrame.current.statement.plan.orderBy."+i+"='"+str+"'.");
+				String str = props.getProperty(base + "active.statement.orderBy."+i).trim();
+				_activeStmntSqlOrderBy_cbx.insertItemAt(str, i);
+				_logger.debug("loadProps(): processDetailFrame.active.statement.plan.orderBy."+i+"='"+str+"'.");
 			}
 			_logger.debug("loadProps(): Set active template to index="+active+".");
-			_currentStmntSqlOrderBy_cbx.setSelectedIndex(active);
+			_activeStmntSqlOrderBy_cbx.setSelectedIndex(active);
 		}
 		else
 		{
 			// if we cant find anything in the configuration file, add some defaults
 			// which will be written to the config file on next save...
-			_currentStmntSqlOrderBy_cbx.addItem("SPID");
-			_currentStmntSqlOrderBy_cbx.addItem("LogicalReads desc");
-			_currentStmntSqlOrderBy_cbx.addItem("PhysicalReads desc");
+			_activeStmntSqlOrderBy_cbx.addItem("SPID");
+			_activeStmntSqlOrderBy_cbx.addItem("LogicalReads desc");
+			_activeStmntSqlOrderBy_cbx.addItem("PhysicalReads desc");
 		}
 		// this entry is the one used by RefreshProcess
 		if (tmpConf != null)
-			tmpConf.setProperty(PROP_CURRENT_STATEMENT_ORDER_BY, _currentStmntSqlOrderBy_cbx.getSelectedItem()+"");
+			tmpConf.setProperty(PROP_ACTIVE_STATEMENT_ORDER_BY, _activeStmntSqlOrderBy_cbx.getSelectedItem()+"");
 
-//		_currentStmntSqlWhereClause_txt.setText(props.getProperty(PROP_CURRENT_STATEMENT_EXTRA_WHERE, ""));
-//		_currentStmntSqlOrderBy_txt    .setText(props.getProperty(PROP_CURRENT_STATEMENT_ORDER_BY,    ""));
+//		_activeStmntSqlWhereClause_txt.setText(props.getProperty(PROP_ACTIVE_STATEMENT_EXTRA_WHERE, ""));
+//		_activeStmntSqlOrderBy_txt    .setText(props.getProperty(PROP_ACTIVE_STATEMENT_ORDER_BY,    ""));
 
 		// HISTORY Statements WHERE
 		count   = props.getIntProperty(base + "plan.extraWhere.count", -1);
@@ -2092,31 +2266,32 @@ public class ProcessDetailFrame extends JFrame
 			for (int i=1; i<=count; i++)
 			{
 				String str = props.getProperty(base + "plan.extraWhere."+i).trim();
-				comboBox_captureWhereSql.insertItemAt(str, i);
+				comboBox_historyWhereSql.insertItemAt(str, i);
 				_logger.debug("loadProps(): processDetailFrame.spid.plan.extraWhere."+i+"='"+str+"'.");
 			}
 			_logger.debug("loadProps(): Set active template to index="+active+".");
-			comboBox_captureWhereSql.setSelectedIndex(active);
+			comboBox_historyWhereSql.setSelectedIndex(active);
 		}
 		else
 		{
 			// if we cant find anything in the configuration file, add some defaults
 			// which will be written to the config file on next save...
-		    comboBox_captureWhereSql.addItem("WaitTime > 1000");
-		    comboBox_captureWhereSql.addItem("LogicalReads > 100");
-		    comboBox_captureWhereSql.addItem("LogicalReads > 1000");
-		    comboBox_captureWhereSql.addItem("LogicalReads > 5000");
-		    comboBox_captureWhereSql.addItem("LogicalReads > 10000");
-		    comboBox_captureWhereSql.addItem("(LogicalReads > 10000 or PhysicalReads > 300)");
-		    comboBox_captureWhereSql.addItem("datediff(ms, StartTime, EndTime) > 1000");
-		    comboBox_captureWhereSql.addItem("datediff(ms, StartTime, EndTime) > 5000");
+			comboBox_historyWhereSql.addItem("WaitTime > 1000");
+			comboBox_historyWhereSql.addItem("LogicalReads > 100");
+			comboBox_historyWhereSql.addItem("LogicalReads > 1000");
+			comboBox_historyWhereSql.addItem("LogicalReads > 5000");
+			comboBox_historyWhereSql.addItem("LogicalReads > 10000");
+			comboBox_historyWhereSql.addItem("(LogicalReads > 10000 or PhysicalReads > 300)");
+			comboBox_historyWhereSql.addItem("datediff(ms, StartTime, EndTime) > 1000");
+			comboBox_historyWhereSql.addItem("datediff(ms, StartTime, EndTime) > 5000");
+			comboBox_historyWhereSql.addItem("SPID in (select spid from master.dbo.sysprocesses where program_name = 'isql')");
 		}
 
-		checkBox1  = props.getBooleanProperty(base + "plan.discardPreOpenStmnts", true);
-		discardPreOpenStmntsCheckbox.setSelected(checkBox1);
+		discardPreOpenStmntsCheckbox.setSelected( props.getBooleanProperty(base + "plan.discardPreOpenStmnts", true) );
+		discardAseTuneApp_chk       .setSelected( props.getBooleanProperty(base + "plan.discardAseTuneStmnts", true) );
 	}
-  	public static final String PROP_CURRENT_STATEMENT_EXTRA_WHERE = "processDetailFrame.spid.current.statement.extraWhere";
-  	public static final String PROP_CURRENT_STATEMENT_ORDER_BY    = "processDetailFrame.spid.current.statement.orderBy";
+  	public static final String PROP_ACTIVE_STATEMENT_EXTRA_WHERE = "processDetailFrame.spid.active.statement.extraWhere";
+  	public static final String PROP_ACTIVE_STATEMENT_ORDER_BY    = "processDetailFrame.spid.active.statement.orderBy";
 
   	public void setRefreshError(Exception e)
 	{
@@ -2128,10 +2303,10 @@ public class ProcessDetailFrame extends JFrame
 			refressProcess.clear();
 	}
 
-	public void saveCapturedStatements()
+	public void saveHistoryStatements()
 	{
 		if (refressProcess != null)
-			refressProcess.saveCapturedStatementsToFile();
+			refressProcess.saveHistoryStatementsToFile();
 
 		clear();
 	}
@@ -2235,15 +2410,479 @@ public class ProcessDetailFrame extends JFrame
 //	}
 
 
+	//-----------------------------------------------------------------------
+	// BEGIN: implement IGuiController
+	//-----------------------------------------------------------------------
+	@Override
+	public boolean hasGUI()
+	{
+		return true;
+	}
 
-	public JTabbedPane getTabbedPane()
+	@Override
+	public void addPanel(JPanel panel)
+	{
+		if (panel instanceof TabularCntrPanel)
+		{
+			TabularCntrPanel tcp = (TabularCntrPanel) panel;
+			mainTabbedPanel.addTab(tcp.getPanelName(), tcp.getIcon(), tcp, tcp.getCm().getDescription());
+		}
+//		else if (panel instanceof ISummaryPanel)
+//		{
+//			setSummaryPanel( (ISummaryPanel)panel );
+//		}
+		else
+		{
+			mainTabbedPanel.addTab(panel.getName(), null, panel, null);
+		}
+	}
+
+	@Override
+	public GTabbedPane getTabbedPane()
 	{
 		return mainTabbedPanel;
 	}
 
+	@Override
+	public void splashWindowProgress(String msg)
+	{
+	}
+
+	@Override
 	public Component getActiveTab()
 	{
 		return mainTabbedPanel.getSelectedComponent();
 	}
 
+	@Override
+	public void setStatus(int type)
+	{
+	}
+
+	@Override
+	public void setStatus(int type, String param)
+	{
+	}
+	
+	@Override
+	public Component getGuiHandle()
+	{
+		return this;
+	}
+	//-----------------------------------------------------------------------
+	// END: implement IGuiController
+	//-----------------------------------------------------------------------
+
+	public void setStatusBar(String status, boolean error)
+	{
+		if ( "".equals(status) && statusBarLbl.getText().startsWith("Error") )
+			return;
+
+		statusBarLbl.setText(status);
+		statusBarLbl.setForeground( error ? Color.RED : Color.BLACK);
+	}
+	public void refreshBegin()
+	{
+		setStatusBar("Refreshing", false);
+	}
+
+	public void refreshEnd()
+	{
+		setStatusBar("", false);
+		
+		NumberFormat numberFormat = NumberFormat.getInstance();
+		
+		int activeTotal  = activeStatementTable.getRowCount();
+		int historyTotal = _historyStatementsTable.getRowCount();
+		int historyDiff  = historyTotal - _historyStmntTableCount_prev;
+
+		_historyStmntTableCount_prev = historyTotal;
+		
+		_historyStmntTableCount_lbl.setText(numberFormat.format(historyTotal) + " Rows, " + numberFormat.format(historyDiff) + " New rows");
+		_activeStmntTableCount_lbl .setText(activeTotal + " Rows");
+	}
+	
+	/**
+	 * Called from the Refresh Process, at the top<br>
+	 * Sp here we can check various stuff and set statuses etc.
+	 */
+	public void updateGuiStatus()
+	{
+		setWatermark();
+		if (refressProcess != null)
+		{
+			boolean isPaused = refressProcess.isPaused();
+			paused_chk.setSelected(isPaused);
+//			pauseButton .setVisible(!isPaused);
+//			resumeButton.setVisible( isPaused);
+
+			activeStatementsPan.setToolTipText("<html><b>Last SQL Used To get ACTIVE SQL Statements </b><br><code><pre>"+refressProcess.getActiveStatementsSql() +"</pre></code></html>");
+			historyWhereSqlPanel.setToolTipText("<html><b>Last SQL Used To get HISTORY SQL Statements</b><br><code><pre>"+refressProcess.getHistoryStatementsSql()+"</pre></code></html>");
+
+		}
+	}
+
+
+	/*---------------------------------------------------
+	** BEGIN: Watermark stuff
+	**---------------------------------------------------
+	*/
+	/**
+	 * Set water mark for Active SQL Table panel 
+	 * @param msg
+	 */
+	public void setWatermarkActiveTable(String str)
+	{
+		_watermarkActiveStmnts.setWatermarkText(str);
+	}
+
+	/**
+	 * Set water mark for Historical SQL Table panel 
+	 * @param msg
+	 */
+	public void setWatermarkHistoryTable(String str)
+	{
+		_watermarkHistoryStmnts.setWatermarkText(str);
+	}
+
+	/**
+	 * Set water mark for SQL Text panel 
+	 * @param msg
+	 */
+	public void setWatermarkSqlText(String str)
+	{
+		_watermarkSqlText.setWatermarkText(str);
+	}
+
+	/**
+	 * Set water mark for ShowPlan panel 
+	 * @param msg
+	 */
+	public void setWatermarkPlanText(String str)
+	{
+		_watermarkPlanText.setWatermarkText(str);
+	}
+
+	private Watermark              _watermarkActiveStmnts  = null;
+	private Watermark              _watermarkHistoryStmnts = null;
+	private Watermark              _watermarkSqlText       = null;
+	private Watermark              _watermarkPlanText      = null;
+
+	private void initWaterMarks()
+	{
+		_watermarkBig           = new WatermarkBig((JPanel)getContentPane(), "");
+		_watermarkActiveStmnts  = new Watermark(activeStatementScrollPan,  "");
+		_watermarkHistoryStmnts = new Watermark(historyStatementScrollPan, "");
+		_watermarkSqlText       = new Watermark(batchScrollPan,            "");
+		_watermarkPlanText      = new Watermark(planScrollPan,             "");
+	}
+
+//	public void setWatermarkText(String str)
+//	{
+//		_watermark.setWatermarkText(str);
+//	}
+//	public void setWatermark()
+//	{
+//		// Find out in what state we are and set the water mark to something good.
+//		setWatermarkText(null);
+//	}
+
+
+	private class Watermark
+    extends AbstractComponentDecorator
+    {
+		public Watermark(JComponent target, String text)
+		{
+			super(target);
+			if (text == null)
+				text = "";
+			_textSave = text;
+			_textBr   = text.split("\n");
+		}
+		private String[]    _textBr = null; // Break Lines by '\n'
+		private Graphics2D  g       = null;
+		private Rectangle   r       = null;
+		private String      _textSave       = null; // Save last text so we don't need to do repaint if no changes.
+
+		@Override
+		public void paint(Graphics graphics)
+		{
+			if (_textBr == null || _textBr != null && _textBr.length < 0)
+				return;
+	
+			r = getDecorationBounds();
+			g = (Graphics2D) graphics;
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			Font f = g.getFont();
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 1.2f * SwingUtils.getHiDpiScale() ));
+			g.setColor(new Color(128, 128, 128, 128));
+
+			FontMetrics fm = g.getFontMetrics();
+			int maxStrWidth  = 0;
+			int maxStrHeight = fm.getHeight();
+
+			// get max with for all of the lines
+			for (int i=0; i<_textBr.length; i++)
+			{
+				int CurLineStrWidth  = fm.stringWidth(_textBr[i]);
+				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
+			}
+//			int textBlockHeight = (maxStrHeight + 2) * _textBr.length;
+			int xPos = (r.width - maxStrWidth) / 2;
+//			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2) * 0.6);
+//			int yPos = (int) (r.height - ((r.height - textBlockHeight) / 2));
+
+			int yPos = maxStrHeight * 3;
+
+			if (xPos < 0)
+				xPos = 0;
+
+			// Print all the lines
+			for (int i=0; i<_textBr.length; i++)
+			{
+				g.drawString(_textBr[i], xPos, (yPos+(maxStrHeight*i)) );
+			}
+		}
+	
+		public void setWatermarkText(String text)
+		{
+			if (text == null)
+				text = "";
+
+			// If text has NOT changed, no need to continue
+			if (text.equals(_textSave))
+				return;
+
+			_textSave = text;
+
+			_textBr = text.split("\n");
+			_logger.debug("setWatermarkText: to '" + text + "'.");
+
+			repaint();
+		}
+    }
+
+	//---------------------------------------------------
+	// WaterMark "big" used for pause etc... 
+	//---------------------------------------------------
+	private WatermarkBig _watermarkBig  = null;
+
+	public void setWatermark()
+	{
+		if ( paused_chk.isSelected() )
+		{
+			setWatermarkText("Paused");
+		}
+		else
+		{
+			setWatermarkText(null);
+		}
+	}
+
+	public void setWatermarkText(String str)
+	{
+		_watermarkBig.setWatermarkText(str);
+	}
+
+	class WatermarkBig
+	extends AbstractComponentDecorator
+	{
+		public WatermarkBig(JComponent target, String text)
+		{
+			super(target);
+			if (text == null)
+				text = "";
+			_textBr = text.split("\n");
+		}
+
+		private String[]    _textBr = null; // Break Lines by '\n'
+		private Graphics2D	g		= null;
+		private Rectangle	r		= null;
+	
+		@Override
+		public void paint(Graphics graphics)
+		{
+			if (_textBr == null || _textBr != null && _textBr.length < 0)
+				return;
+	
+			r = getDecorationBounds();
+			g = (Graphics2D) graphics;
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			Font f = g.getFont();
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f * SwingUtils.getHiDpiScale() ));
+			g.setColor(new Color(128, 128, 128, 128));
+
+			FontMetrics fm = g.getFontMetrics();
+			int maxStrWidth  = 0;
+			int maxStrHeight = fm.getHeight();
+
+			// get max with for all of the lines
+			for (int i=0; i<_textBr.length; i++)
+			{
+				int CurLineStrWidth  = fm.stringWidth(_textBr[i]);
+				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
+			}
+			int sumTextHeight = maxStrHeight * _textBr.length;
+			int xPos = (r.width - maxStrWidth) / 2;
+			int yPos = (int) (r.height - ((r.height - sumTextHeight) / 2.0f));
+			
+
+			g.translate(xPos, yPos);
+			double theta = -Math.PI / 6;
+			g.rotate(theta);
+			g.translate(-xPos, -yPos);
+	
+			// Print all the lines
+			for (int i=0; i<_textBr.length; i++)
+			{
+				g.drawString(_textBr[i], xPos, (yPos+(maxStrHeight*i)) );
+			}
+		}
+	
+		public void setWatermarkText(String text)
+		{
+			if (text == null)
+				text = "";
+
+			_textBr = text.split("\n");
+			_logger.debug("setWatermarkText: to '" + text + "'.");
+
+			repaint();
+		}
+	}
+	/*---------------------------------------------------
+	** END: Watermark stuff
+	**---------------------------------------------------
+	*/
+
+	public void setPlanText(String planStr, int sqlLine)
+	{
+		if (planStr == null)
+			planStr = "";
+
+		planTextArea.setText(planStr);
+
+		if (sqlLine >= 0)
+			setCaretToPlanLine(planTextArea, sqlLine);
+
+		_viewXmlPlanInGui_but.setVisible(false);
+		if (planStr.indexOf("<?xml version=") >= 0)
+		{
+			if (_viewXmlPlanInGui_chk.isSelected())
+			{
+				String xmlPlan = planTextArea.getText();
+
+				// Remove "extra" stuff before the XML Plan
+				int xmlPlanStartPos = xmlPlan.indexOf("<?xml version");
+				if (xmlPlanStartPos > 0)
+				{
+					xmlPlan = xmlPlan.substring(xmlPlanStartPos);
+				}
+
+				// Do we still have a plan
+				if (xmlPlan.startsWith("<?xml version"))
+				{
+					// FIXME: remember which component we are at... and resore focus to that component, with SwingUtils doLater
+					final Component currentComponent = _historyStatementsTable; // Is this correct all the time ???
+					AsePlanViewer.getInstance().loadXml(xmlPlan);
+					
+					SwingUtilities.invokeLater(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							ProcessDetailFrame.this.requestFocus();
+							currentComponent.requestFocusInWindow();
+						}
+					});
+				}
+			}
+			else
+			{
+				_viewXmlPlanInGui_but.setVisible(true);
+			}
+		}
+	}
+
+	public void setPlanText(String planStr)
+	{
+		setPlanText(planStr, -1);
+	}
+
+	public static void setCaretToPlanLine(JTextArea text, int sqlLine) 
+	{
+//		text.setCaretPosition(0);
+
+		int start = text.getText().indexOf("(at line "+sqlLine+")");
+		int end = text.getText().indexOf("\n", start);
+		end += 1;
+
+		setSelectionAndMoveToTop(text, start, end);
+	}
+
+	public static void setSelectionAndMoveToTop(JTextArea text, int start, int end) 
+	{
+		if (start > 0  && end > 0)
+		{
+			// MARK the text as "selected" with the text colour red
+			text.setSelectedTextColor(Color.RED);
+			text.setCaretPosition(start);
+			text.setSelectionStart(start);
+			text.setSelectionEnd(end);
+			// workaround to get the selection visible
+			text.getCaret().setSelectionVisible(true);
+
+			// Move the marked text to "top of the text field"
+			try
+			{
+				//Rectangle rectAtPos = text.modelToView(start);
+				Point pointAtPos = text.modelToView(start).getLocation();
+				pointAtPos.x = 0; // Always point to LEFT in the viewport/scrollbar
+				
+				_logger.debug("text.modelToView(start): "+ pointAtPos);
+				Container parent = text.getParent();
+				while ( parent != null )
+				{
+					// if viewport, move the position to "top of viewport"
+					if (parent instanceof JViewport)
+					{
+						((JViewport)parent).setViewPosition(pointAtPos);
+						break;
+					}
+					// if scrollpane, move the position to "top of viewport"
+					if (parent instanceof JScrollPane)
+					{
+						((JScrollPane)parent).getViewport().setViewPosition(pointAtPos);
+						break;
+					}
+					// Get next parent if it's NOT a JViewport or JScrollPane
+					parent = parent.getParent();
+				}
+			}
+			catch (BadLocationException e)
+			{
+				_logger.debug("text.modelToView(): " + e);
+			}
+		}
+	}
+
+	@Override
+	public void outOfMemoryHandler()
+	{
+		if (refressProcess != null)
+		{
+			refressProcess.outOfMemoryHandler();
+		}
+	}
+
+	@Override
+	public void memoryConsumption(int memoryLeftInMB)
+	{
+		if (refressProcess != null)
+		{
+			refressProcess.memoryConsumption(memoryLeftInMB);
+		}
+	}
 }

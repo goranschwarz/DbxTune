@@ -1,5 +1,6 @@
 package com.asetune.cm.iq;
 
+import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrameIq;
+import com.asetune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -74,7 +76,8 @@ extends CountersModel
 
 	public CmSaConnActivity(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
 				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
 				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
 				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
@@ -124,21 +127,16 @@ extends CountersModel
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
 			mtd.addTable("sa_conn_activity",  "The sp_iqstatus stored procedure provides a variety of IQ status information.");
 
-			mtd.addColumn("sa_conn_activity", "Number",  
-					"<html>Returns the connection ID (a number) for the current connection.</html>");
-			mtd.addColumn("sa_conn_activity", "Name",  
-					"<html>Returns the name of the current connection."
-					+ "<br/>Temporary connection names have INT: prepended to the connection name"
-					+ "</html>");
-			mtd.addColumn("sa_conn_activity", "Userid",  
-					"<html>Returns the user ID for the connection.</html>");
-			mtd.addColumn("sa_conn_activity", "DBNumber",  
-					"<html>Returns the ID number of the database.</html>");
-			mtd.addColumn("sa_conn_activity", "LastReqTime",  
-					"<html>Returns the time at which the last request for the specified connection started. "
-					+ "<br/>This property can return an empty string for internal connections, such as events.</html>");
-			mtd.addColumn("sa_conn_activity", "LastStatement",  
-					"<html>Returns the most recently prepared SQL statement for the current connection.</html>");
+			mtd.addColumn("sa_conn_activity", "Number",        "<html>Returns the connection ID (a number) for the current connection.</html>");
+			mtd.addColumn("sa_conn_activity", "Name",          "<html>Returns the name of the current connection." + 
+					                                              "<br/>Temporary connection names have INT: prepended to the connection name" +
+					                                              "</html>");
+			mtd.addColumn("sa_conn_activity", "Userid",        "<html>Returns the user ID for the connection.</html>");
+			mtd.addColumn("sa_conn_activity", "DBNumber",      "<html>Returns the ID number of the database.</html>");
+			mtd.addColumn("sa_conn_activity", "LastReqTime",   "<html>Returns the time at which the last request for the specified connection started. <br>" +
+					                                              "This property can return an empty string for internal connections, such as events." + 
+					                                              "</html>");
+			mtd.addColumn("sa_conn_activity", "LastStatement", "<html>Returns the most recently prepared SQL statement for the current connection.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -158,5 +156,27 @@ extends CountersModel
 		String sql = "select * from sa_conn_activity()";
 
 		return sql;
+	}
+
+
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		// query
+		if ("LastStatement".equals(colName))
+		{
+			return cellValue == null ? null : toHtmlString(cellValue.toString());
+		}
+		
+		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+	}
+	/** add HTML around the string, and translate line breaks into <br> */
+	private String toHtmlString(String in)
+	{
+		String str = StringUtil.makeApproxLineBreak(in, 150, 10, "\n");
+		str = str.replaceAll("\\n", "<br>");
+		if (in.indexOf("<html>")>=0 || in.indexOf("<HTML>")>=0)
+			return str;
+		return "<html><pre>" + str + "</pre></html>";
 	}
 }

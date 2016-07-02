@@ -11,6 +11,7 @@ import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.ProcedureInfo;
+import com.asetune.utils.Ver;
 
 public class OracleConnection 
 extends DbxConnection
@@ -19,6 +20,7 @@ extends DbxConnection
 	public OracleConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::OracleConnection(conn): conn="+conn);
 	}
 

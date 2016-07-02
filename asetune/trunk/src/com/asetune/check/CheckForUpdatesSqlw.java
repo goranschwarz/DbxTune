@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Date;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -13,11 +14,12 @@ import com.asetune.gui.ConnectionDialog;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 public class CheckForUpdatesSqlw extends CheckForUpdates
 {
-	private static Logger _logger = Logger.getLogger(CheckForUpdatesAse.class);
+	private static Logger _logger = Logger.getLogger(CheckForUpdatesSqlw.class);
 
 	@Override protected String getHomeUrl()            { return SQLWIN_HOME_URL; };
 	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
@@ -71,6 +73,9 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		catch (UnknownHostException e)
 		{
 		}
+
+		urlParams.add("screenResolution",   SwingUtils.getScreenResulutionAsString());
+		urlParams.add("hiDpiScale",         SwingUtils.getHiDpiScale()+"");
 
 		urlParams.add("user_name",          System.getProperty("user.name"));
 		urlParams.add("user_home",          System.getProperty("user.home"));
@@ -224,7 +229,10 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		urlParams.add("sqlWarningCount",     sqlwUsageInfo.getSqlWarningCount());
 		urlParams.add("sqlExceptionCount",   sqlwUsageInfo.getSqlExceptionCount());
 
-		return null;
+		List<QueryString> sendQueryList = new ArrayList<QueryString>();
+		sendQueryList.add(urlParams);
+//		return urlParams;
+		return sendQueryList;
 	}
 
 	

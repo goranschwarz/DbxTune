@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -11,15 +12,22 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
+import com.asetune.cm.sqlserver.CmExecCursors;
+import com.asetune.cm.sqlserver.CmExecProcedureStats;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
+import com.asetune.cm.sqlserver.CmExecRequests;
+import com.asetune.cm.sqlserver.CmExecSessions;
+import com.asetune.cm.sqlserver.CmExecTriggerStats;
 import com.asetune.cm.sqlserver.CmIndexOpStat;
 import com.asetune.cm.sqlserver.CmIndexUsage;
 import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmPerfCounters;
 import com.asetune.cm.sqlserver.CmProcedureStats;
 import com.asetune.cm.sqlserver.CmSchedulers;
+import com.asetune.cm.sqlserver.CmSpinlocks;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.cm.sqlserver.CmWaitStats;
+import com.asetune.cm.sqlserver.CmWaitingTasks;
 import com.asetune.cm.sqlserver.CmWho;
 import com.asetune.cm.sqlserver.ToolTipSupplierSqlServer;
 import com.asetune.gui.MainFrame;
@@ -69,23 +77,30 @@ extends CounterControllerAbstract
 		ICounterController counterController = this;
 		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
 
-		CmSummary          .create(counterController, guiController);
+		CmSummary           .create(counterController, guiController);
+                            
+		CmWho               .create(counterController, guiController);
+		CmExecSessions      .create(counterController, guiController);
+		CmExecRequests      .create(counterController, guiController);
+		CmSchedulers        .create(counterController, guiController);
+		CmWaitStats         .create(counterController, guiController);
+		CmWaitingTasks      .create(counterController, guiController);
+		CmPerfCounters      .create(counterController, guiController);
+		CmOptimizer         .create(counterController, guiController);
+		CmSpinlocks         .create(counterController, guiController);
+                            
+		CmActiveStatements  .create(counterController, guiController);
+		CmIndexUsage        .create(counterController, guiController);
+		CmIndexOpStat       .create(counterController, guiController);
+		CmExecQueryStats    .create(counterController, guiController);
+		CmExecProcedureStats.create(counterController, guiController);
+		CmExecTriggerStats  .create(counterController, guiController);
+		CmExecCursors       .create(counterController, guiController);
 
-		CmWho              .create(counterController, guiController);
-		CmSchedulers       .create(counterController, guiController);
-		CmWaitStats        .create(counterController, guiController);
-		CmPerfCounters     .create(counterController, guiController);
-		CmOptimizer        .create(counterController, guiController);
+		CmProcedureStats    .create(counterController, guiController);
 
-		CmActiveStatements .create(counterController, guiController);
-		CmIndexUsage       .create(counterController, guiController);
-		CmIndexOpStat      .create(counterController, guiController);
-		CmExecQueryStats   .create(counterController, guiController);
-
-		CmProcedureStats   .create(counterController, guiController);
-
-		CmDeviceIo         .create(counterController, guiController);
-		CmDbIo             .create(counterController, guiController);
+		CmDeviceIo          .create(counterController, guiController);
+		CmDbIo              .create(counterController, guiController);
 
 
 		// OS HOST Monitoring
@@ -129,6 +144,9 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
+		// Get active SQL Server Roles/Permissions
+		List<String> activeServerPermissionList = conn.getActiveServerRolesOrPermissions();
+
 		_logger.info("Initializing all CM objects, using MS SQL-Server version number "+srvVersion+".");
 
 		// initialize all the CM's
@@ -141,7 +159,7 @@ extends CounterControllerAbstract
 			cm.setClusterEnabled(isClusterEnabled);
 
 			// set the active roles, so it can be used in initSql()
-//			cm.setActiveRoles(_activeRoleList);
+			cm.setActiveServerRolesOrPermissions(activeServerPermissionList);
 
 			// set the ASE Monitor Configuration, so it can be used in initSql() and elsewhere
 //			cm.setMonitorConfigs(monitorConfigMap);

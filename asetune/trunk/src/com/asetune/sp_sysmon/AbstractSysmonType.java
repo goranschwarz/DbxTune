@@ -10,6 +10,7 @@ import com.asetune.utils.Ver;
 
 public abstract class AbstractSysmonType
 {
+	public final static String ONLY_IN_ASETUNE_SYSMON_REPORT = " Note: Row added by AseTune";
 	protected StringBuilder _reportText = new StringBuilder();
 
 	protected SpSysmon _sysmon      = null;
@@ -36,6 +37,7 @@ public abstract class AbstractSysmonType
 	protected int _description_pos = -1;
 
 	private List<List<Object>> _data;
+	private List<List<Object>> _absData;
 
 	                                       //|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
 	private static final String cntLine    = "  -------------------------  ------------  ------------  ----------  ----------";
@@ -61,6 +63,15 @@ public abstract class AbstractSysmonType
 	public List<List<Object>> getData()
 	{
 		return _data;
+	}
+
+	public void setAbsData(List<List<Object>> data)
+	{
+		_absData = data;
+	}
+	public List<List<Object>> getAbsData()
+	{
+		return _absData;
 	}
 
 	public AbstractSysmonType(SpSysmon sysmon, CountersModel cm)
@@ -102,6 +113,7 @@ public abstract class AbstractSysmonType
 			_aseVersion = cm.getServerVersion();
 
 		setData( cm.getDataCollection(CountersModel.DATA_DIFF) );
+		setAbsData( cm.getDataCollection(CountersModel.DATA_ABS) );
 	}
 
 	public AbstractSysmonType(SpSysmon sysmon, int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
@@ -216,7 +228,11 @@ public abstract class AbstractSysmonType
 	 */
 	protected void addReportLnCnt(String name, int counter)
 	{
-		addReportLnCnt(name, counter, true);
+		addReportLnCnt(name, counter, true, null);
+	}
+	protected void addReportLnCnt(String name, int counter, String comment)
+	{
+		addReportLnCnt(name, counter, true, comment);
 	}
 
 	/**
@@ -227,7 +243,7 @@ public abstract class AbstractSysmonType
 	 */
 	protected void addReportLnCntSum(String name, int counter)
 	{
-		addReportLnCnt(name, counter, false);
+		addReportLnCnt(name, counter, false, null);
 	}
 
 	/**
@@ -238,6 +254,19 @@ public abstract class AbstractSysmonType
 	 */
 	private void addReportLnCnt(String name, int counter, boolean printNA)
 	{
+		addReportLnCnt(name, counter, printNA, null);
+	}
+	/**
+	 * Write COUNTER (printNA==true: 'n/a' as the last col)
+	 * <pre>
+	 *    input param goes here             ###           ###         ###       n/a
+	 * </pre>
+	 */
+	private void addReportLnCnt(String name, int counter, boolean printNA, String comment)
+	{
+		if (comment == null)
+			comment = "";
+
 		int NumElapsedMs = _sysmon.getNumElapsedMs();
 		if (NumElapsedMs == 0)
 			NumElapsedMs = 1;
@@ -264,7 +293,7 @@ public abstract class AbstractSysmonType
 			StringUtil.right(perSec +"", 11) + " " +
 			StringUtil.right(perTran+"", 11) + " " +
 			StringUtil.right(counter+"", 11) + " " +
-			StringUtil.right(na        , 11);
+			StringUtil.right(na        , 11) + comment;
 
 		_reportText.append(line).append("\n");
 	}
@@ -277,6 +306,20 @@ public abstract class AbstractSysmonType
 	 */
 	protected void addReportLnPct(String name, int counter, int divideBy)
 	{
+		addReportLnPct(name, counter, divideBy, null);
+	}
+	/**
+	 * Write COUNTER with PERCENT Values<br>
+	 * But with a comment to the right...
+	 * <pre>
+	 *    input param goes here             ###           ###         ###      ###.# %
+	 * </pre>
+	 */
+	protected void addReportLnPct(String name, int counter, int divideBy, String comment)
+	{
+		if (comment == null)
+			comment = "";
+
 		int NumElapsedMs = _sysmon.getNumElapsedMs();
 		if (NumElapsedMs == 0)
 			NumElapsedMs = 1;
@@ -301,6 +344,33 @@ public abstract class AbstractSysmonType
 			StringUtil.right(perSec +"", 11) + " " +
 			StringUtil.right(perTran+"", 11) + " " +
 			StringUtil.right(counter+"", 11) + " " +
+			StringUtil.right(pct +" %" , 11) + comment;
+
+		_reportText.append(line).append("\n");
+	}
+
+	/**
+	 * Write COUNTER with PERCENT Value, but only at the end column
+	 * <pre>
+	 *    input param goes here             n/a           n/a         n/a      ###.# %
+	 * </pre>
+	 */
+	protected void addReportLnPc1(String name, int counter, int divideBy)
+	{
+		if (divideBy == 0)
+			divideBy = 1;
+
+//System.out.println(getReportHead()+":pct.NumElapsedMs  = "+NumElapsedMs);
+		double dPct     = 100.0 * (counter / (divideBy * 1.0));
+		BigDecimal pct  = new BigDecimal(dPct)    .setScale(1, BigDecimal.ROUND_HALF_EVEN);
+		
+		//|  Xxxxxx xxxxxxxxxxxx             per sec      per xact       count  % of total
+		//|  -------------------------  ------------  ------------  ----------  ----------
+		String line = //"  " +
+			StringUtil.left(name       , 32, false) +
+			StringUtil.right("n/a", 11) + " " +
+			StringUtil.right("n/a", 11) + " " +
+			StringUtil.right("n/a", 11) + " " +
 			StringUtil.right(pct +" %" , 11);
 
 		_reportText.append(line).append("\n");

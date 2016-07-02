@@ -30,6 +30,7 @@ import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -157,9 +158,9 @@ implements
 
 	private JPanel					_filterPanel;
 	private JLabel					_filterColumn_lbl					= new JLabel("Column");
-	private JComboBox				_filterColumn_cb					= new JComboBox();
+	private JComboBox<String>		_filterColumn_cb					= new JComboBox<String>();
 	private JLabel					_filterOperation_lbl				= new JLabel("Operation");
-	private JComboBox				_filterOperation_cb					= new JComboBox();
+	private JComboBox<String>		_filterOperation_cb					= new JComboBox<String>();
 	private JLabel					_filterValue_lbl					= new JLabel("Value");
 	private JTextField				_filterValue_tf						= new JTextField();
 	private JButton                 _filterValue_but                    = new JButton("X");
@@ -461,10 +462,13 @@ implements
 			// if Summary has attached, graphs, go and set the time line marker
 			// I know, wee should do this a bit further out (but I was lazy)
 //			CountersModel summaryCm = GetCounters.getInstance().getCmByName(SummaryPanel.CM_NAME);
-			CountersModel summaryCm = CounterController.getSummaryCm();
-			if (summaryCm != null && summaryCm.hasTrendGraph() )
-				for (TrendGraph tg : summaryCm.getTrendGraphs().values())
-					tg.setTimeLineMarker(null);
+			if (CounterController.hasInstance())
+			{
+    			CountersModel summaryCm = CounterController.getSummaryCm();
+    			if (summaryCm != null && summaryCm.hasTrendGraph() )
+    				for (TrendGraph tg : summaryCm.getTrendGraphs().values())
+    					tg.setTimeLineMarker(null);
+			}
 		}
 		else
 		{
@@ -920,7 +924,8 @@ implements
 		String timeSample = (sampleTime == null) ? _timeEmptyConstant : sampleTime.toString();
 		_timeSample_txt.setText(timeSample);
 
-		String timeIntervall = (intervall == 0) ? "" : Long.toString(intervall);
+//		String timeIntervall = (intervall == 0) ? "" : Long.toString(intervall);
+		String timeIntervall = (intervall == 0) ? "" : NumberFormat.getInstance().format(intervall);
 		_timeIntervall_txt.setText(timeIntervall);
 	}
 
@@ -1016,7 +1021,8 @@ implements
 				"[] [] [] []", ""));
 
 		JLabel title = new JLabel(_displayName);
-		title.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+//		title.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+		title.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, SwingUtils.hiDpiScale(16)));
 
 		_filterPanel       = createFilterPanel();
 		_counterPanel      = createCounterTypePanel();
@@ -1741,13 +1747,13 @@ implements
 		conf.setProperty(base + "window.active", wp.undocked);
 
 		if ( wp.width > 0 )
-			conf.setProperty(base + "window.width", wp.width);
+			conf.setLayoutProperty(base + "window.width", wp.width);
 		if ( wp.height > 0 )
-			conf.setProperty(base + "window.height", wp.height);
+			conf.setLayoutProperty(base + "window.height", wp.height);
 		if ( wp.posX > 0 )
-			conf.setProperty(base + "window.pos.x", wp.posX);
+			conf.setLayoutProperty(base + "window.pos.x", wp.posX);
 		if ( wp.posY > 0 )
-			conf.setProperty(base + "window.pos.y", wp.posY);
+			conf.setLayoutProperty(base + "window.pos.y", wp.posY);
 
 		conf.save();
 	}
@@ -1763,10 +1769,10 @@ implements
 		GTabbedPaneWindowProps wp = new GTabbedPaneWindowProps();
 		String base = _displayName + ".";
 		wp.undocked = conf.getBooleanProperty(base + "window.active", false);
-		wp.width = conf.getIntProperty(base + "window.width", -1);
-		wp.height = conf.getIntProperty(base + "window.height", -1);
-		wp.posX = conf.getIntProperty(base + "window.pos.x", -1);
-		wp.posY = conf.getIntProperty(base + "window.pos.y", -1);
+		wp.width  = conf.getLayoutProperty(base + "window.width", -1);
+		wp.height = conf.getLayoutProperty(base + "window.height", -1);
+		wp.posX   = conf.getLayoutProperty(base + "window.pos.x", -1);
+		wp.posY   = conf.getLayoutProperty(base + "window.pos.y", -1);
 
 		_logger.trace(_displayName + ": getWindowProps(): return " + wp);
 
@@ -2833,7 +2839,7 @@ implements
 		String headerProps = null;
 		if (cm != null)
 			if (cm.isRuntimeInitialized())
-				headerProps = conf.getProperty(getName() + ".gui.column.header.props." + cm.getServerVersion());
+				headerProps = conf.getProperty(getName() + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + cm.getServerVersion());
 		if (headerProps == null)
 			doAdjust = true;
 
@@ -4575,7 +4581,7 @@ implements
 		};
 		JDialog dialog = new JDialog((Frame)null, "Waiting for offline read...", true);
 		JLabel label = new JLabel("Reading data from offline storage", JLabel.CENTER);
-		label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
+		label.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, SwingUtils.hiDpiScale(16)));
 		dialog.add(label);
 		dialog.pack();
 		dialog.setSize( dialog.getSize().width + 100, dialog.getSize().height + 70);
@@ -4803,19 +4809,20 @@ implements
 
 			if ( _indicatorIcon == null )
 			{
-				im = new BufferedImage(_icon.getIconWidth() + 2, _icon.getIconHeight(), BufferedImage.TRANSLUCENT);
+				int stipeSize = SwingUtils.hiDpiScale(2);
+				im = new BufferedImage(_icon.getIconWidth() + stipeSize, _icon.getIconHeight(), BufferedImage.TRANSLUCENT);
 				img = im.createGraphics();
 				img.setColor(Color.GREEN);
 
 				if ( _indicatorToLeft )
 				{
-					_icon.paintIcon(null, img, 2, 0);
-					img.fillRect(0, 0, 2, _icon.getIconHeight());
+					_icon.paintIcon(null, img, stipeSize, 0);
+					img.fillRect(0, 0, stipeSize, _icon.getIconHeight());
 				}
 				else
 				{
 					_icon.paintIcon(null, img, 0, 0);
-					img.fillRect(_icon.getIconWidth(), 0, 2, _icon.getIconHeight());
+					img.fillRect(_icon.getIconWidth(), 0, stipeSize, _icon.getIconHeight());
 				}
 
 				_indicatorIcon = new ImageIcon(im);

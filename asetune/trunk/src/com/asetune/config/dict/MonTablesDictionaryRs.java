@@ -83,10 +83,10 @@ extends MonTablesDictionary
 				int versionNum = Ver.sybVersionStringToNumber(versionStr);
 				setDbmsExecutableVersionNum( versionNum );
 
-System.out.println("Setting RS VersionNum = "+versionNum);
-System.out.println("Setting RS VersionStr = '"+versionStr+"'.");
-System.out.println("getDbmsExecutableVersionNum = "+getDbmsExecutableVersionNum());
-System.out.println("getDbmsExecutableVersionStr = '"+getDbmsExecutableVersionStr()+"'.");
+//System.out.println("Setting RS VersionNum = "+versionNum);
+//System.out.println("Setting RS VersionStr = '"+versionStr+"'.");
+//System.out.println("getDbmsExecutableVersionNum = "+getDbmsExecutableVersionNum());
+//System.out.println("getDbmsExecutableVersionStr = '"+getDbmsExecutableVersionStr()+"'.");
 			}
 			rs.close();
 		}
@@ -110,6 +110,15 @@ System.out.println("getDbmsExecutableVersionStr = '"+getDbmsExecutableVersionStr
 		setVersionInfoInitialized(true);
 	}
 
+
+	/**
+	 * NO, save MonTableDictionary in PCS
+	 */
+	@Override
+	public boolean isSaveMonTablesDictionaryInPcsEnabled()
+	{
+		return false;
+	}
 
 	@Override
 	public void initializeMonTabColHelper(DbxConnection conn, boolean offline)

@@ -2,6 +2,7 @@ package com.asetune.cm.iq.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -25,8 +26,6 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -43,6 +42,8 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSummaryPanel
 //extends TabularCntrPanel
@@ -509,7 +510,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		JPanel panel = SwingUtils.createPanel("title", false);
 		panel.setLayout(new MigLayout("", "5[grow]5", ""));
 
-		_title_lbl.setFont(new java.awt.Font("Dialog", 1, 16));
+		_title_lbl.setFont(new java.awt.Font("Dialog", 1, SwingUtils.hiDpiScale(16)));
 		_title_lbl.setText("Summary panel");
 
 		// create new panel
@@ -2596,8 +2597,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
-		conf.setProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
-		conf.setProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
+		conf.setLayoutProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
+		conf.setLayoutProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
 
 		conf.save();
 	}
@@ -2623,14 +2624,13 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		// ASE Cluser Edition: system_view
 //		String clusterView = conf.getProperty("cluster.system_view", "cluster");
 //		_clusterView_cbx.setSelectedItem(clusterView);
-//				
-//
-//		int width   = conf.getIntProperty("summaryPanel.serverInfo.width",  -1);
-//		int height  = conf.getIntProperty("summaryPanel.serverInfo.height",  -1);
-//		if (width != -1 && height != -1)
-//		{
-//			_dataPanelScroll.setPreferredSize(new Dimension(width, height));
-//		}
+
+		int width   = conf.getLayoutProperty("summaryPanel.serverInfo.width",  SwingUtils.hiDpiScale(300));
+		int height  = conf.getLayoutProperty("summaryPanel.serverInfo.height", SwingUtils.hiDpiScale(5000));
+		if (width != -1 && height != -1)
+		{
+			_dataPanelScroll.setPreferredSize(new Dimension(width, height));
+		}
 	}
 
 	@Override
@@ -2706,7 +2706,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();

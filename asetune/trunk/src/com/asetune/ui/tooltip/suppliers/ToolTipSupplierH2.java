@@ -11,6 +11,7 @@ import java.util.List;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.StringUtil;
 
 public class ToolTipSupplierH2
 extends ToolTipSupplierAbstractSql
@@ -29,7 +30,8 @@ extends ToolTipSupplierAbstractSql
 	@Override
 	public String getToolTipProviderFile() 
 	{
-		return null;
+//		return null;
+		return StringUtil.envVariableSubstitution("${APPL_HOME}/resources/EMPTY_tooltip_provider.xml");
 	}
 
 	@Override
@@ -42,6 +44,12 @@ extends ToolTipSupplierAbstractSql
 	public List<TtpEntry> load()
 	throws Exception
 	{
+		// Get parent entries
+		List<TtpEntry> list = super.load();
+
+		if (list == null)
+			list = new ArrayList<TtpEntry>();
+		
 		Connection conn = _connectionProvider.getConnection();
 		if (conn == null)
 			throw new Exception("Connection provider, returned a null connection. Can't continue.");
@@ -56,7 +64,6 @@ extends ToolTipSupplierAbstractSql
 			Statement stmnt   = conn.createStatement();
 			ResultSet rs      = stmnt.executeQuery(sql);
 
-			ArrayList<TtpEntry> list = new ArrayList<TtpEntry>();
 			while (rs.next())
 			{
 				TtpEntry e = new TtpEntry();

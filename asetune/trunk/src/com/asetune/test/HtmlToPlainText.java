@@ -14,6 +14,10 @@ package com.asetune.test;
 //java -cp .\classes;"C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/jsoup/jsoup-1.7.3.jar" com.asetune.test.HtmlToPlainText http://help.sap.com/hana/html/_asql_functions_data_type_conversion.html
 //java -cp .\classes;"C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/jsoup/jsoup-1.7.3.jar" com.asetune.test.HtmlToPlainText http://help.sap.com/hana/html/sql_function_to_integer.html
 
+// try some SQL-Server DMV's
+// https://msdn.microsoft.com/en-us/library/ms173786.aspx
+// java -cp .\classes;"C:/Documents and Settings/gorans/My Documents/Downloads/java/html_parser/jsoup/jsoup-1.7.3.jar" com.asetune.test.HtmlToPlainText https://msdn.microsoft.com/en-us/library/ms173786.aspx
+
 /**
  * HTML to plain-text. This example program demonstrates the use of jsoup to convert HTML input to lightly-formatted
  * plain-text. That is divergent from the general goal of jsoup's .text() methods, which is to get clean data from a

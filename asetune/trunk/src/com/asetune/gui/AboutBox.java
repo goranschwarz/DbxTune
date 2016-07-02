@@ -74,7 +74,7 @@ public class AboutBox
 		pack();
 
 		Dimension size = getPreferredSize();
-		size.width = 500;
+		size.width = SwingUtils.hiDpiScale(500);
 
 		setPreferredSize(size);
 //		setMinimumSize(size);
@@ -212,14 +212,18 @@ public class AboutBox
 
 		JLabel appName_lbl     = new JLabel();
 		appName_lbl.setText(Version.getAppName());
-		appName_lbl.setFont(new java.awt.Font("Dialog", Font.BOLD, 20));
+		appName_lbl.setFont(new java.awt.Font("Dialog", Font.BOLD, SwingUtils.hiDpiScale(20)));
+
+		String fontSize = "";
+		if (SwingUtils.isHiDpi())
+			fontSize = "font-size: " + UIManager.getFont("Label.font").getSize() + "px";
 
 		String str =
 			"<html>" +
 			"<HEAD> " +
 			"<style type=\"text/css\"> " +
 			"<!-- " +
-			"body {font-family: Arial, Helvetica, sans-serif;} " +
+			"body {font-family: Arial, Helvetica, sans-serif; " + fontSize + "} " +
 			"--> " +
 			"</style> " +
 			"</HEAD> " +
@@ -319,6 +323,9 @@ public class AboutBox
 		htmlPane.addHyperlinkListener(this);
 		htmlPane.setEditable(false);
 		htmlPane.setOpaque(false);
+//		htmlPane.setFont(UIManager.getFont("Label.font"));
+		htmlPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+		htmlPane.setFont(UIManager.getFont("Label.font"));
 
 		URL url = Version.class.getResource("history.html");
 		if (url != null)

@@ -2,9 +2,9 @@ package com.asetune.sql.pipe;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 
 import com.asetune.utils.StringUtil;
 
@@ -41,10 +41,10 @@ extends PipeCommandAbstract
 	private int     _type    = 0;
 	public boolean	_optX    = false;
 
-	public PipeCommandGrep(String input)
+	public PipeCommandGrep(String input, String sqlString)
 	throws PipeCommandException
 	{
-		super(input);
+		super(input, sqlString);
 		parse(input);
 	}
 
@@ -166,7 +166,29 @@ extends PipeCommandAbstract
 	}
 
 
+	/**
+	 * Called to check if this "grep" is a valid item<br>
+	 *  
+	 * @param obj Value to check
+	 * @return true if the item/record should be accepted (or sent to next step/pipe)
+	 */
+	public boolean acceptItem(Object obj)
+	{
+		// NOTE: this is not yet implemented... 
+		//       but it could/should be used instead of grabbing _grepRegexp by getConfig()
+		//       This means we can
+		//         * Compile a regexp  and then use find() instead of String.match() , since the match() "adds" ^regExpStr$ ... match() must match the entire row, while find() is more like a normal "grep"
+		//         * implement the -e flag and have several regexp's in a linked list...
+		//         * the -v flag and isOptV() do not have to be exposed...
+		//         * etc, etc...
+		// But on the other hand, I have to rethinks the "pipe" strategy totally, right now it's not working as intended!
+		if (obj instanceof String)
+		{
+		}
+		return true;
+	}
 
+	
 	private CommandLine parseCmdLine(String args)
 	throws PipeCommandException
 	{
@@ -179,17 +201,17 @@ extends PipeCommandAbstract
 		Options options = new Options();
 
 		// create the Options
-		options.addOption( "v", null,     false, "Same as -v to grep" );
-		options.addOption( "x", null,     false, "Dummy to strip Multi Line Message" );
-		options.addOption( "r", "rs",     false, "grep ResultSet (default)" );
-		options.addOption( "m", "msg",    false, "grep Messages" );
-//		options.addOption( "c", "col",    true,  "Column name in ResultSet" );
-//		options.addOption( "e", "regexp", true,  "regexp to search" );
+		options.addOption( "v", "invert-match",  false, "Same as -v to grep" );
+		options.addOption( "x", null,            false, "Dummy to strip Multi Line Message" );
+		options.addOption( "r", "rs",            false, "grep ResultSet (default)" );
+		options.addOption( "m", "msg",           false, "grep Messages" );
+//		options.addOption( "c", "col",           true,  "Column name in ResultSet" );
+//		options.addOption( "e", "regexp",        true,  "regexp to search" );
 
 		try
 		{
 			// create the command line com.asetune.parser
-			CommandLineParser parser = new PosixParser();
+			CommandLineParser parser = new DefaultParser();
 
 			// parse the command line arguments
 			CommandLine cmd = parser.parse( options, args );
@@ -239,7 +261,7 @@ extends PipeCommandAbstract
 		sb.append("usage: grep [-v] [-r] [-m] [-x] str \n");
 		sb.append("\n");
 		sb.append("options: \n");
-		sb.append("  -v                Username when connecting to server. \n");
+		sb.append("  -v                Same as -v to grep. or invert match \n");
 		sb.append("  -r,--rs           grep in ResultSet \n");
 //		sb.append("  -c,--col <name>   grep in ResultSet, but only in column named. \n");
 		sb.append("  -m,--msg          grep in Messages. \n");

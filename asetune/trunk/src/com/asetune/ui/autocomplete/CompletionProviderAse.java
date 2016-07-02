@@ -28,6 +28,7 @@ import com.asetune.ui.autocomplete.completions.TableInfo;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.CollectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.Ver;
 
@@ -50,8 +51,12 @@ extends CompletionProviderAbstractSql
 		ac.addCompletionProvider(acProvider.createTemplateProvider());
 		ac.install(textPane);
 		ac.setShowDescWindow(true); // enable the "extra" descriptive window to the right of completion.
-//		ac.setChoicesWindowSize(600, 600);
-		ac.setDescriptionWindowSize(600, 600);
+		ac.setChoicesWindowSize(
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setChoicesWindowSize.width", 600), 
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setChoicesWindowSize.height", 600));
+		ac.setDescriptionWindowSize(
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setDescriptionWindowSize.width", 600), 
+				Configuration.getCombinedConfiguration().getIntProperty("completionProvider.setDescriptionWindowSize.height", 600));
 
 		textPane.addParser(new QueryWindowMessageParser(scroll));
 		
@@ -284,12 +289,14 @@ extends CompletionProviderAbstractSql
 	@Override
 	public List<CompletionTemplate> createCompletionTemplates()
 	{
-		ArrayList<CompletionTemplate> list = new ArrayList<CompletionTemplate>();
+//		List<CompletionTemplate> list = new ArrayList<CompletionTemplate>();
+
+		List<CompletionTemplate> list = CompletionProviderStaticTemplates.createCompletionTemplates();
 		
 		// Add completions for all SQL keywords. A BasicCompletion is just a straightforward word completion.
-		list.add( new CompletionTemplate("SELECT * FROM "));
+//		list.add( new CompletionTemplate("SELECT * FROM "));
 		list.add( new CompletionTemplate("SELECT row_count(db_id()), object_id('') "));
-		list.add( new CompletionTemplate("CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
+//		list.add( new CompletionTemplate("CASE WHEN x=1 THEN 'x=1' WHEN x=2 THEN 'x=2' ELSE 'not' END"));
 		list.add( new CompletionTemplate("SELECT * FROM master..monTables ORDER BY TableName"));
 		list.add( new CompletionTemplate("SELECT * FROM master..monTableColumns WHERE TableName = 'monXXX' ORDER BY ColumnID"));
 
@@ -323,17 +330,37 @@ extends CompletionProviderAbstractSql
 				"sp_poolconfig 'log_cache', '495M', '4K', '2K' -- size the 4K pool to #MB, grab memory from the 2K pool \n" +
 				" \n" +
 				"-- and maybe some in the 16K (8 pages) pool \n" +
-				"-- sp_poolconfig 'log_cache', '#M', '16K', '2K'  \n" +
+				"-- exec sp_poolconfig 'log_cache', '#M', '16K', '2K'  \n" +
 				" \n" +
 				"-- To bind a database transaction log to a Named Cache, it has to be in single user mode \n" +
 				"exec sp_dboption  'dbname', 'single', 'true' \n" +
-				"exec sp_bindcache 'log_cache', 'dbname', 'syslogs' \n" +
+				"exec dbname..sp_bindcache 'log_cache', 'dbname', 'syslogs' \n" +
 				"exec sp_dboption  'dbname', 'single', 'false' \n" +
 				" \n" +
 				"-- Change the LOG IO SIZE (default is 4K or: 2 pages per IO) \n" +
-				"--dbname..sp_logiosize '8' -- to use the 8K memory pool (4 pages per IO) \n" +
+				"--exec dbname..sp_logiosize '8' -- to use the 8K memory pool (4 pages per IO) \n" +
 				"",
 				"Create a 'log cache' and bind database(s) to it."));
+
+		list.add( new CompletionTemplate( "sp_cacheconfig",
+				"/*  \n" +
+				"** Below is commands/instructions to setup a tempdb cache on a 2K server \n" +
+				"** If you have another server page size, values needs to be changed \n" +
+				"** select @@maxpagesize/1024 to get the servers page size \n" +
+				"*/ \n" +
+				"-- Create a cache that holds tempdb \n" +
+				"exec sp_cacheconfig 'tempdb_cache', '500M', 'mixed', 'relaxed', 'cache_partition=#' \n" +
+				" \n" +
+				"-- and maybe some in the 16K (8 pages) pool \n" +
+				"-- exec sp_poolconfig 'tempdb_cache', '#M', '16K' \n" +
+				" \n" +
+				"-- Bind the tempdb to the cache \n" +
+				"exec sp_bindcache 'tempdb_cache', 'tempdb' \n" +
+				"---------------------------------------------------------------------------\n" +
+				"-- NOTE: ASE needs to be rebooted for the tempdb binding to take effect... \n" +
+				"---------------------------------------------------------------------------\n" +
+				"",
+				"Create a 'tempdb_cache' and bind database(s) to it."));
 
 		list.add( new CompletionTemplate( "alter",   "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
 		list.add( new CompletionTemplate( "engines", "alter thread pool syb_default_pool with thread count = #", "Alter number of threads in 15.7"));
@@ -350,15 +377,168 @@ extends CompletionProviderAbstractSql
 				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
 				"Get monitor tables and columns in this system."));
 		
-		// \exec  and \rpc templates
-		list.add( new CompletionTemplate( "exec",    "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "\\exec",  "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "rpc",     "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "\\rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "call",    "\\call procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "\\call",  "\\call procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
-		list.add( new CompletionTemplate( "prep",    "\\prep insert into t1 values(?, ?) :( string = '1', int = 99 ) -- Prepared SQL with 2 parameters", "Execute a SQL Statement using java PreparedStatement method"));
-		list.add( new CompletionTemplate( "\\prep",  "\\prep insert into t1 values(?, ?) :( string = '1', int = 99 ) -- Prepared SQL with 2 parameters", "Execute a SQL Statement using java PreparedStatement method"));
+//		// \exec  and \rpc templates
+//		list.add( new CompletionTemplate( "exec",    "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		list.add( new CompletionTemplate( "\\exec",  "\\exec procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		list.add( new CompletionTemplate( "rpc",     "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		list.add( new CompletionTemplate( "\\rpc",   "\\rpc procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		list.add( new CompletionTemplate( "call",    "\\call procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		list.add( new CompletionTemplate( "\\call",  "\\call procName ?, ? :( string = '1', int = 99 ) -- make RPC call with 2 parameters", "Execute a Stored Proc using RPC method"));
+//		list.add( new CompletionTemplate( "prep",    "\\prep insert into t1 values(?, ?) :( string = '1', int = 99 ) -- Prepared SQL with 2 parameters", "Execute a SQL Statement using java PreparedStatement method"));
+//		list.add( new CompletionTemplate( "\\prep",  "\\prep insert into t1 values(?, ?) :( string = '1', int = 99 ) -- Prepared SQL with 2 parameters", "Execute a SQL Statement using java PreparedStatement method"));
+//
+		
+		list.add( new CompletionTemplate( "procedure",
+				"------------------------------------------------------------- \n" +
+				"-- Procedure: <PROCNAME> \n" +
+				"------------------------------------------------------------- \n" +
+				"declare @dbname varchar(255) \n" +
+				"select @dbname = db_name() \n" +
+				"if ((select object_id('<PROCNAME>')) is not null) \n" +
+				"begin \n" +
+				"	print 'drop   procedure ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', '<TABNAME>' \n" +
+				"	drop procedure <TABNAME> \n" +
+				"end \n" +
+				"go \n" +
+				"declare @dbname varchar(255) \n" +
+				"select @dbname = db_name() \n" +
+				"print 'create procedure ''%1!.%2!.%3!''.', @dbname, 'dbo', '<PROCNAME>' \n" +
+				"go \n" +
+				" \n" +
+				"/*=====================================================================** \n" +
+				"** PROCEDURE: <PROCNAME> \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** Description: \n" +
+				"** \n" +
+				"** FIXME \n" +
+				"** \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** Input parameters: \n" +
+				"** \n" +
+				"** @p1   fixme \n" +
+				"** @p2   fixme \n" +
+				"** \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** output parameters: \n" +
+				"** \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** output select: \n" +
+				"** \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** Return codes: \n" +
+				"** \n" +
+				"** 0	- ok. \n" +
+				"** 1 	- error \n" +
+				"** \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** Error codes: \n" +
+				"** \n" +
+				"**---------------------------------------------------------------------** \n" +
+				"** History: \n" +
+				"** \n" +
+				"** YYYY-mm-dd  x.y.z  Firstname Lastname \n" +
+				"**                    Created \n" +
+				"**---------------------------------------------------------------------*/ \n" +
+				" \n" +
+				"create proc <PROCNAME> \n" +
+				"( \n" +
+				"	@p1 int = _defaultValue1_, \n" +
+				"	@p2 int = _defaultValue2_ \n" +
+				") \n" +
+				"as \n" +
+				"begin \n" +
+				"	-- code \n" +
+				"end \n" +
+				"go \n" +
+				" \n" +
+				"-- Who should be able to execute this proc \n" +
+				"grant exec on <PROCNAME> to public|user_name|group_name|role_name \n" +
+				"go \n" +
+				" \n" +
+				"-- Check if we succeeded creating it \n" +
+				"declare @dbname varchar(255) \n" +
+				"select @dbname = db_name() \n" +
+				"if ((select object_id('<PROCNAME>')) is not null) \n" +
+				"	print 'create procedure ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', '<PROCNAME>' \n" +
+				"else \n" +
+				"	print 'create procedure ''%1!.%2!.%3!''. FAILED', @dbname, 'dbo', '<PROCNAME>' \n" +
+				"go \n" +
+				"",
+				"Create stored procedure with a head."));
+
+		list.add( new CompletionTemplate( "cursor",
+				"declare @c_c1 varchar(255) \n" +
+				"declare @c_c2 varchar(20) \n" +
+				" \n" +
+				"DECLARE <CURSOR_NAME> cursor for \n" +
+				"	SELECT c1, c2 \n" +
+				"	FROM tabname \n" +
+				"	WHERE c3 = 'val' \n" +
+				"FOR READ ONLY \n" +
+				" \n" +
+				"OPEN <CURSOR_NAME> \n" +
+				"FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+				" \n" +
+				"while (@@sqlstatus = 0)  \n" +
+				"begin \n" +
+				"	-- Do something... \n" +
+				"	FETCH <CURSOR_NAME> into @c_c1, @c_c2 \n" +
+				"end \n" +
+				"CLOSE <CURSOR_NAME> \n" +
+				"DEALLOCATE cursor <CURSOR_NAME> \n" +
+				"",
+				"Add cursor"));
+				
+		list.add( new CompletionTemplate( "table",
+				"------------------------------------------------------------- \n" +
+				"-- Table: <TABNAME> \n" +
+				"------------------------------------------------------------- \n" +
+				"declare @dbname varchar(255) \n" +
+				"select @dbname = db_name() \n" +
+				"if ((select object_id('<TABNAME>')) is not null) \n" +
+				"begin \n" +
+				"	print 'drop   table ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', '<TABNAME>' \n" +
+				"	drop table <TABNAME> \n" +
+				"end \n" +
+				"go \n" +
+				"declare @dbname varchar(255) \n" +
+				"select @dbname = db_name() \n" +
+				"print 'create table ''%1!.%2!.%3!''.', @dbname, 'dbo', '<TABNAME>' \n" +
+				"go \n" +
+				" \n" +
+				"create table <TABNAME> \n" +
+				"( \n" +
+				"	id      int             not null,\n" +
+				"	c1      varchar(30)     not null,\n" +
+				"	c2      varchar(30)     not null,\n" +
+				"	c3      varchar(30)     not null,\n" +
+				"	c4      varchar(30)     not null,\n" +
+				"	c5      varchar(30)     not null,\n" +
+				"	primary key(id) \n" +
+				") \n" +
+				"--lock datarows|datapages|allpages\n" +
+				" \n" +
+				"-- Who should be able to access the table \n" +
+				"grant select, insert, update, delete on <TABNAME> to public|user_name|group_name|role_name \n" +
+				"go \n" +
+				" \n" +
+				"-- Check if we succeeded creating it \n" +
+				"declare @dbname varchar(255) \n" +
+				"select @dbname = db_name() \n" +
+				"if ((select object_id('<TABNAME>')) is not null) \n" +
+				"	print 'create table ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', '<TABNAME>' \n" +
+				"else \n" +
+				"	print 'create table ''%1!.%2!.%3!''. FAILED', @dbname, 'dbo', '<TABNAME>' \n" +
+				"go \n" +
+				"",
+				"Create table"));
+
+		list.add( new CompletionTemplate( "index",
+				"create index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
+				"create unique index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
+				"create unique clustered index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
+				"",
+				"Create index"));
 
 		return list;
 	}
@@ -610,8 +790,8 @@ extends CompletionProviderAbstractSql
 		}
 
 		// Get column description for MDA Tables (even if the Column check is disabled), it's not "that" many rows...
-		if (mdaTableInfoList != null)
-			refreshCompletionForTableColumns(conn, waitDialog, mdaTableInfoList, true);
+		if (mdaTableInfoList != null && mdaTableInfoList.size() > 0)
+			refreshCompletionForTableColumns(conn, waitDialog, mdaTableInfoList, false);
 	}
 
 	//##############################################################################

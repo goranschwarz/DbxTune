@@ -44,7 +44,7 @@ extends CounterTableModel
 	private   boolean            _negativeDiffCountersToZero = true;
 	protected String             _name           = null; // Used for debuging
 	private   String[]           _diffColNames   = null; // if we need to do PK merging...
-	protected CounterSample        _prevSample     = null; // used to calculate sample interval etc
+	protected CounterSample      _prevSample     = null; // used to calculate sample interval etc
 	private   List<String>       _colNames       = null;
 	private   List<Integer>      _colSqlType     = null;
 	private   List<String>       _colSqlTypeName = null;
@@ -105,39 +105,39 @@ extends CounterTableModel
 	}
 	/**
 	 * Used internally to clone the object with a new name...
-	 * @param sc the object to clone
+	 * @param cs the object to clone
 	 * @param cloneRows Should we clear or copy the data rows
 	 * @param name Set a new name to the created object 
 	 */
-	protected CounterSample(CounterSample sc, boolean cloneRows, String name)
+	protected CounterSample(CounterSample cs, boolean cloneRows, String name)
 	{
 		_name                       = name;
-		_keysToRowid                = sc._keysToRowid;
-		_colNames                   = sc._colNames;
-		_colSqlType                 = sc._colSqlType;
-		_colSqlTypeName             = sc._colSqlTypeName;
-		_colClassName               = sc._colClassName;
-		_colIsPk                    = sc._colIsPk;
-		_pkPosArray                 = sc._pkPosArray;
-		_rowidToKey                 = sc._rowidToKey;
-		_samplingTime               = sc._samplingTime;
-		_interval                   = sc._interval;
-		_negativeDiffCountersToZero = sc._negativeDiffCountersToZero;
-		_diffColNames               = sc._diffColNames;
+		_keysToRowid                = cs._keysToRowid;
+		_colNames                   = cs._colNames;
+		_colSqlType                 = cs._colSqlType;
+		_colSqlTypeName             = cs._colSqlTypeName;
+		_colClassName               = cs._colClassName;
+		_colIsPk                    = cs._colIsPk;
+		_pkPosArray                 = cs._pkPosArray;
+		_rowidToKey                 = cs._rowidToKey;
+		_samplingTime               = cs._samplingTime;
+		_interval                   = cs._interval;
+		_negativeDiffCountersToZero = cs._negativeDiffCountersToZero;
+		_diffColNames               = cs._diffColNames;
 //		_prevSample                 = sc._prevSample;     // should we really copy this one...
 		_prevSample                 = null;               // copy this causes memory leaks...
 
 		if (cloneRows)
 		{
-			_rows        = new ArrayList<List<Object>>(sc._rows);
-			_keysToRowid = new HashMap<String,Integer>(sc._keysToRowid);
-			_rowidToKey  = new ArrayList<String>      (sc._rowidToKey);
+			_rows        = cs._rows        == null ? null : new ArrayList<List<Object>>(cs._rows);
+			_keysToRowid = cs._keysToRowid == null ? null : new HashMap<String,Integer>(cs._keysToRowid);
+			_rowidToKey  = cs._rowidToKey  == null ? null : new ArrayList<String>      (cs._rowidToKey);
 		}
 		else
 		{
-			_rows        = new ArrayList<List<Object>>();
-			_keysToRowid = new HashMap<String,Integer>();
-			_rowidToKey  = new ArrayList<String>();
+			_rows        = cs._rows        == null ? null : new ArrayList<List<Object>>();
+			_keysToRowid = cs._keysToRowid == null ? null : new HashMap<String,Integer>();
+			_rowidToKey  = cs._rowidToKey  == null ? null : new ArrayList<String>();
 		}
 	}
 
@@ -808,7 +808,7 @@ extends CounterTableModel
 	// Rs row 2:          0   954699569           0   286605408           1           1      1
 	// Rs row 2:         select max(WaitEventID) from monWaitEventInfo
 
-	private Timestamp getNewSampleTime()
+	protected Timestamp getNewSampleTime()
 	{
 		// FIXME: this should really be doing
 		// 1: get server and client time difference (and "cache" that)
@@ -817,6 +817,49 @@ extends CounterTableModel
 	}
 
 	/**
+	 * Update the Sample time and interval.<br>
+	 * This can/should be used if SQL Batching isn't supported, or we we shouldn't use SQL to determine the time.
+	 * @param conn
+	 * @param cm
+	 * @throws SQLException
+	 */
+	protected void updateSampleTime(Connection conn, CountersModel cm)
+	throws SQLException
+	{
+		int queryTimeout = cm.getQueryTimeout();
+
+		// Get SQL Command for how to get current time
+		String srvTimeCmd = cm.getServerTimeCmd();
+
+		// get the sample time
+		if (StringUtil.hasValue(srvTimeCmd))
+		{
+			Statement stmnt = conn.createStatement();
+			stmnt.setQueryTimeout(queryTimeout);
+
+			ResultSet rs = stmnt.executeQuery(srvTimeCmd);
+			while(rs.next())
+				setSampleTime(rs.getTimestamp(1));
+		}
+		else
+		{
+			setSampleTime(getNewSampleTime());
+		}
+
+		setSampleInterval(0);
+		if (_prevSample != null)
+		{
+			setSampleInterval( getSampleTimeAsLong() - _prevSample.getSampleTimeAsLong() );
+			
+			// if _prevSample is not used any further, reset this pointer here
+			// If this is NOT done we will have a memory leek...
+			// If _prevSample is used somewhere else, please reset this pointer later
+			//    and check memory consumption under 24 hours sampling...
+			_prevSample = null;
+		}
+	}
+	
+	/**
 	 * Get counters...
 	 */
 	public boolean getSample(CountersModel cm, Connection conn, String sql, List<String> pkList)
@@ -824,7 +867,7 @@ extends CounterTableModel
 	{
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
-			_logger.debug(_name+": queryTimeout="+queryTimeout);
+			_logger.debug(getName()+": queryTimeout="+queryTimeout);
 
 		try
 		{
@@ -839,33 +882,7 @@ extends CounterTableModel
 			}
 			else
 			{
-				// get the sample time
-				if (StringUtil.hasValue(srvTimeCmd))
-				{
-					Statement stmnt = conn.createStatement();
-					stmnt.setQueryTimeout(queryTimeout);
-
-					ResultSet rs = stmnt.executeQuery(srvTimeCmd);
-					while(rs.next())
-						_samplingTime = rs.getTimestamp(1);
-				}
-				else
-				{
-					_samplingTime = getNewSampleTime();
-				}
-
-				_interval = 0;
-				if (_prevSample != null)
-				{
-					_interval = _samplingTime.getTime() - _prevSample._samplingTime.getTime();
-					
-					// if _prevSample is not used any further, reset this pointer here
-					// If this is NOT done we will have a memory leek...
-					// If _prevSample is used somewhere else, please reset this pointer later
-					//    and check memory consumption under 24 hours sampling...
-					_prevSample = null;
-				}
-
+				updateSampleTime(conn, cm);
 			}
 
 			Statement stmnt = conn.createStatement();
@@ -873,7 +890,7 @@ extends CounterTableModel
 
 			stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 			if (_logger.isDebugEnabled())
-				_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+_name+"'.");
+				_logger.debug("QUERY_TIMEOUT="+queryTimeout+", for SampleCnt='"+getName()+"'.");
 
 			_rows   = new ArrayList<List<Object>>();
 
@@ -928,12 +945,12 @@ extends CounterTableModel
 						if (rsNum == 0 && batchCounter == 0 && cm.isSqlBatchingSupported() && StringUtil.hasValue(srvTimeCmd))
 						{
 							while(rs.next())
-								_samplingTime = rs.getTimestamp(1);
+								setSampleTime(rs.getTimestamp(1));
 							
-							_interval = 0;
+							setSampleInterval(0);
 							if (_prevSample != null)
 							{
-								_interval = _samplingTime.getTime() - _prevSample._samplingTime.getTime();
+								setSampleInterval( getSampleTimeAsLong() - _prevSample.getSampleTimeAsLong() );
 								
 								// if _prevSample is not used any further, reset this pointer here
 								// If this is NOT done we will have a memory leek...
@@ -990,10 +1007,10 @@ extends CounterTableModel
 		}
 		catch (SQLException sqlEx)
 		{
-			_logger.warn("CounterSample("+_name+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
+			_logger.warn("CounterSample("+getName()+").getCnt : " + sqlEx.getErrorCode() + " " + sqlEx.getMessage() + ". SQL: "+sql, sqlEx);
 			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
 			{
-				_logger.info("QueryTimeout in '"+_name+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+_name+".queryTimeout=seconds' in the config file.");
+				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
 			}
 
 			//return false;
@@ -1169,7 +1186,7 @@ extends CounterTableModel
 
 				// Set the "sampleTimeInMs" in the resultset.
 				if (_pos_sampleTimeInMs == i)
-					val = new Integer( (int) _interval );
+					val = new Integer( getSampleInterval() );
 
 				row.add(val);
 
@@ -1187,7 +1204,7 @@ extends CounterTableModel
 				for (int c=0; c<colCount; c++)
 					_logger.trace("   > rsNum="+rsNum+", rsRowNum="+rsRowNum+", getRowCount()="+getRowCount()+", c="+c+", className='"+row.get(c).getClass().getName()+"', value="+row.get(c));
 			}
-//			if (_name.startsWith(SummaryPanel.CM_NAME))
+//			if (getName().startsWith(SummaryPanel.CM_NAME))
 //			{
 //				for (int c=0; c<colCount; c++)
 //				System.out.println(SummaryPanel.CM_NAME+":   > rsNum="+rsNum+", rsRowNum="+rsRowNum+", getRowCount()="+getRowCount()+", c="+c+", className='"+row.get(c).getClass().getName()+"', colName="+StringUtil.left(getColumnName(c),20)+", value="+row.get(c));
@@ -1214,14 +1231,14 @@ extends CounterTableModel
 
 					if (pkDuplicateAction != 0 && _diffColNames == null)
 					{
-						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+pkList+"', pkDuplicateAction="+pkDuplicateAction+", BUT _diffColNames is null, this should never happen.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', pkDuplicateAction="+pkDuplicateAction+", BUT _diffColNames is null, this should never happen.");
 
 						// Read next row
 						continue;
 					}
 					if (pkDuplicateAction == 0)
 					{
-						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+pkList+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
 
 						// Read next row
 						continue;
@@ -1274,7 +1291,7 @@ extends CounterTableModel
 					// NOT IMPLEMENTED
 					if (pkDuplicateAction == 2)
 					{
-						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+pkList+"', pkDuplicateAction=2 IS NOT IMPLEMENTED.");
+						_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+pkList+"', pkDuplicateAction=2 IS NOT IMPLEMENTED.");
 
 						// Read next row
 						continue;
@@ -1408,7 +1425,7 @@ extends CounterTableModel
 				//if (allowRowMerge)
 				//	doRowMerge(curRow, row);
 
-				_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+_name+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
+				_logger.warn("Internal Counter Duplicate key in ResultSet for CM '"+getName()+"', pk='"+getPkCols(_colIsPk)+"', a row with the key values '"+key+"' already exists. CurrentRow='"+curRow+"'. NewRow='"+row+"'.");
 				return false;
 				//throw new DuplicateKeyException(key, curRow, row);
 			}
@@ -1421,7 +1438,7 @@ extends CounterTableModel
 		int rowId = _rows.size()-1;
 
 		if (_logger.isDebugEnabled())
-			_logger.debug(_name+": addRow(): rowId="+rowId+", key="+key+", row="+row);
+			_logger.debug(getName()+": addRow(): rowId="+rowId+", key="+key+", row="+row);
 
 		// save PKEY with corresponding row
 		if (_colIsPk != null)
@@ -1466,7 +1483,7 @@ extends CounterTableModel
 		String key = _rowidToKey.get(rowId);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug(_name+": removeRow(rowId="+rowId+"): key="+key);
+			_logger.debug(getName()+": removeRow(rowId="+rowId+"): key="+key);
 
 		// Removes the row from listOfRows
 		_rows.remove(rowId);
@@ -1976,7 +1993,7 @@ extends CounterTableModel
 		}
 		else
 		{
-			_logger.warn(_name+": failure in mergeColumnValue(prevColVal='"+prevColVal+"', thisColVal='"+thisColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', thisColVal='"+thisColVal.getClass().getName()+"'. Returning the origin value instead.");
+			_logger.warn(getName()+": failure in mergeColumnValue(prevColVal='"+prevColVal+"', thisColVal='"+thisColVal+"'), with prevColVal='"+prevColVal.getClass().getName()+"', thisColVal='"+thisColVal.getClass().getName()+"'. Returning the origin value instead.");
 			return prevColVal;
 		}
 		return mergeColVal;

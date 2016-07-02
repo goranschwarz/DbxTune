@@ -44,6 +44,15 @@ extends MonitorUpTime
  	LINUX 2: 19:48:46  up 218 days,   7 min,  7 users,   load average: 23.16, 23.05, 23.06   <<<<note does not work due to '7 min', not one word
 	*/
 	
+	public MonitorUpTimeAllOs()
+	{
+		this(-1);
+	}
+	public MonitorUpTimeAllOs(int utilVersion)
+	{
+		super(utilVersion);
+	}
+
 	@Override
 	public String getModuleName()
 	{
@@ -58,7 +67,7 @@ extends MonitorUpTime
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData()
+	public HostMonitorMetaData createMetaData(int utilVersion)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

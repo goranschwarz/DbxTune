@@ -8,6 +8,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ParameterDialog;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class WaitCounterSummary
@@ -98,7 +99,7 @@ public class WaitCounterSummary
 			{
 				UserName = (String)row.get(UserName_pos);
 
-				if ( "".equals(UserName) )
+				if ( StringUtil.isNullOrBlank(UserName) )
 					continue;
 			}
 

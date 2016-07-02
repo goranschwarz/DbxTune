@@ -22,6 +22,7 @@ import com.asetune.hostmon.MonitorUpTime;
 import com.asetune.hostmon.MonitorUserDefined;
 import com.asetune.hostmon.MonitorVmstat;
 import com.asetune.hostmon.OsTable;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
 
@@ -368,7 +369,7 @@ extends CountersModel
 	@Override public synchronized Timestamp getTimestamp() { return _thisSamplingTime; }
 
 	@Override
-	protected int refreshGetData(Connection conn) 
+	protected int refreshGetData(DbxConnection conn) 
 	throws Exception
 	{
 		if (_logger.isDebugEnabled())

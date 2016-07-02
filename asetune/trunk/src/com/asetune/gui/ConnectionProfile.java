@@ -45,6 +45,8 @@ public class ConnectionProfile
 		JDBC_DB2_ZOS,
 		JDBC_MYSQL,
 		JDBC_DERBY,
+		JDBC_POSTGRES,
+		JDBC_APACHE_HIVE,
 		JDBC_OTHER,
 		JDBC_UNDEFINED; // if profile was saved without ever have been connected to
 
@@ -81,6 +83,8 @@ public class ConnectionProfile
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL       )) return SrvType.JDBC_MSSQL;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL       )) return SrvType.JDBC_MYSQL;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE      )) return SrvType.JDBC_ORACLE;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES    )) return SrvType.JDBC_POSTGRES;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE )) return SrvType.JDBC_APACHE_HIVE;
 		
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return SrvType.TDS_ASA;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return SrvType.TDS_ASE;
@@ -371,6 +375,7 @@ public class ConnectionProfile
 	public static final String       XML_JDBC_SqlInit                             = "SqlInit";
 	public static final String       XML_JDBC_UrlOptions                          = "UrlOptions";
 	public static final String       XML_JDBC_ShhTunnelInfo                       = "ShhTunnelInfo";
+	public static final String       XML_JDBC_ShhTunnelUse                        = "ShhTunnelUse";
 
 	
 	//-------------------------------------------------------------------------------------------------------------------
@@ -1212,6 +1217,7 @@ public class ConnectionProfile
 		public boolean       _jdbcSavePassword       = true;
 		public String        _jdbcSqlInit            = null;
 		public String        _jdbcUrlOptions         = null; // should the be in here???
+		public boolean       _jdbcShhTunnelUse       = false;
 		public SshTunnelInfo _jdbcShhTunnelInfo      = null; // NOT YET IMPLEMENTED
 
 		public boolean       _isDbxTuneParamsValid   = false; 
@@ -1268,7 +1274,9 @@ public class ConnectionProfile
 			htmlTabRowIfChanged(sb, XML_JDBC_SAVE_PASSWORD  , _jdbcSavePassword,  entry._jdbcSavePassword);
 			htmlTabRowIfChanged(sb, XML_JDBC_SqlInit        , _jdbcSqlInit,       entry._jdbcSqlInit);
 			htmlTabRowIfChanged(sb, XML_JDBC_UrlOptions     , _jdbcUrlOptions,    entry._jdbcUrlOptions);
-			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo  , _jdbcShhTunnelInfo, entry._jdbcShhTunnelInfo);
+//			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo  , _jdbcShhTunnelInfo, entry._jdbcShhTunnelInfo);
+			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelUse   , _jdbcShhTunnelUse,  entry._jdbcShhTunnelUse);
+			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo  , _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false),  entry._jdbcShhTunnelInfo == null ? "" : entry._jdbcShhTunnelInfo.getConfigString(false));
 
 			if (_isDbxTuneParamsValid || entry._isDbxTuneParamsValid)
 			{
@@ -1313,7 +1321,9 @@ public class ConnectionProfile
 			htmlTabRow(sb, XML_JDBC_SAVE_PASSWORD, _jdbcSavePassword);
 			htmlTabRow(sb, XML_JDBC_SqlInit      , _jdbcSqlInit);
 			htmlTabRow(sb, XML_JDBC_UrlOptions   , _jdbcUrlOptions);
-			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo, _jdbcShhTunnelInfo);
+//			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo, _jdbcShhTunnelInfo);
+			htmlTabRow(sb, XML_JDBC_ShhTunnelUse , _jdbcShhTunnelUse);
+			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo, _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(true));
 			sb.append("</table>");
 
 			if (_isDbxTuneParamsValid)
@@ -1347,6 +1357,8 @@ public class ConnectionProfile
 
 			StringUtil.xmlTag(sb, 8, XML_JDBC_SqlInit,         _jdbcSqlInit);
 			StringUtil.xmlTag(sb, 8, XML_JDBC_UrlOptions,      _jdbcUrlOptions);
+//			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,   _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
+			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelUse,    _jdbcShhTunnelUse);
 			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,   _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
 			
 			StringUtil.xmlTag(sb, 8, XML_TDS_IsDbxTuneParamsValid, _isDbxTuneParamsValid);
@@ -1377,6 +1389,8 @@ public class ConnectionProfile
 				entry._jdbcPassword  = getValue(element, XML_JDBC_PASSWORD,      entry._jdbcPassword);
 			entry._jdbcSqlInit       = getValue(element, XML_JDBC_SqlInit,       entry._jdbcSqlInit);
 			entry._jdbcUrlOptions    = getValue(element, XML_JDBC_UrlOptions,    entry._jdbcUrlOptions);
+//			entry._jdbcShhTunnelInfo = SshTunnelInfo.parseConfigString(getValue(element, XML_JDBC_ShhTunnelInfo));
+			entry._jdbcShhTunnelUse  = getValue(element, XML_JDBC_ShhTunnelUse,  entry._jdbcShhTunnelUse);
 			entry._jdbcShhTunnelInfo = SshTunnelInfo.parseConfigString(getValue(element, XML_JDBC_ShhTunnelInfo));
 
 			entry._isDbxTuneParamsValid = getValue(element, XML_TDS_IsDbxTuneParamsValid, entry._isDbxTuneParamsValid);

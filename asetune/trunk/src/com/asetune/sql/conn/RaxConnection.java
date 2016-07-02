@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoRax;
+import com.asetune.utils.Ver;
 
 public class RaxConnection
 extends TdsConnection
@@ -18,6 +19,7 @@ extends TdsConnection
 	public RaxConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::RaxConnection(conn): conn="+conn);
 	}
 

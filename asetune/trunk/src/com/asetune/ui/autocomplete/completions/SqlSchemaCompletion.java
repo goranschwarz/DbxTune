@@ -43,7 +43,7 @@ extends SqlCompletion
 
 		String shortDesc = 
 			"<font color=\"blue\">"+si._name+"</font>" +
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(si._remark) ? "" : si._remark) + "</font></i>";
+			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(si._remark) ? "" : stripMultiLineHtml(si._remark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_schemaInfo.toHtmlString());
 	}

@@ -1,9 +1,9 @@
 -------------------------------------------------------------------------
 --- NOT YET READY -- NOT YET READY -- NOT YET READY -- NOT YET READY ---- 
 -------------------------------------------------------------------------
-print "PLEASE DO NOT USE THIS PRC YET, IT'S UNDER DEVELOPMENT"
+--print "PLEASE DO NOT USE THIS PROC YET, IT'S UNDER DEVELOPMENT"
 go
-exit
+--exit
 go
 
 
@@ -147,17 +147,31 @@ begin
 	declare @maxRows numeric(12)
 	declare @datachange int
 
+	declare @tableCount int
+	declare @execCount  int
+
+	set @tableCount = 0  -- How many tables did we check
+	set @execCount  = 0  -- How many did we want to do update index statistics on
+	
 	if (@makeScript > 0)
 	begin
 		declare @dbname varchar(30)
 		select @dbname = db_name()
 		print '------------------------------------------------------'
+		print '-- WARNING: Check the below statements before executing'
+		print '--          This procedure is still "work in progress"...'
+		print '-- NOTE:    to execute this for ALL Databases except: master, sybsecurity, sybsystemdb, sybsystemprocs, model, tempdb'
+		print '--          exec sp__updateIndexStatAllDB [@limit=5 [,@makeScript=1]]'
+		print '------------------------------------------------------'
+		print '-- Executed with Input parameters'
+		print '-- @limit      = %1!   -- Only for tables that has been changed more than @limit in percent. if (@limit >= datachange(table, NULL, col)) DO: generate or execute', @limit
+		print '-- @makeScript = %1!   -- 1 = Generate SQL,  0 = Execute "update index statistics" immediately.', @makeScript
+		print '------------------------------------------------------'
 		print 'set flushmessage on'
 		print 'set nocount on'
 		print 'go'
-		print 'use %1!', @dbname
-		print 'go'
 		print '------------------------------------------------------'
+		print 'use %1!', @dbname
 		print 'go'
 	end
 
@@ -176,6 +190,8 @@ begin
 		set @mustRun = 0
 		set @i = 1
 		set @table = object_name(@Id)
+		
+		set @tableCount = @tableCount + 1
  
 		while (@mustRun = 0 AND @i <= 126)  -- way over max(31), but should be future proof
 		begin
@@ -194,6 +210,7 @@ begin
 
 		if (@mustRun = 1) 
 		begin
+			set @execCount = @execCount + 1
 			set @tsStamp = convert(varchar(20), getdate(), 117)
 			set @cmd = 'update index statistics '+@table +' '+@index
 
@@ -247,7 +264,7 @@ begin
 			end
 			else
 			begin
-				print '%1! : ** Runs : %2!',@tsStamp, @cmd
+				print '%1! : ***** Executing: %2!',@tsStamp, @cmd
 				exec(@cmd)
 			end
 		end
@@ -257,6 +274,14 @@ begin
 
 	close inxColCursor
 	deallocate cursor inxColCursor
+
+	print '------------------------------------------------------'
+	print '-- Summary for database: %1!', @dbname
+	print '-- Checked %1! tables', @tableCount
+	print '-- Action  %1! tables', @execCount
+	print '------------------------------------------------------'
+	print 'go'
+	print ''
 end
 go
 grant exec on sp__updateIndexStat to oper_role
@@ -346,7 +371,9 @@ begin
 	while (@@sqlstatus = 0) 
 	begin
 		set @tsStamp = convert(varchar(20), getdate(), 117)
-		print '------------- >>> %1! : in database : %2! <<< -------------',@tsStamp, @dbName
+		print '-- ########################################################################'
+		print '-- ### %1! : in database : %2! ',@tsStamp, @dbName
+		print '-- ########################################################################'
 		exec @dbName @limit, @makeScript
 		fetch dbCursor into @dbName
 	end

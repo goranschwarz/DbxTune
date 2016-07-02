@@ -13,10 +13,10 @@ public class H2UrlHelper
 
 	private String _urlType   = "file";
 
-	private String _originUrl   = null;
-	private String _urlOptions  = null;
-	private String _rawFileName = null;
-	private String _extFileName = null;
+	private String _originUrl         = null;
+	private String _urlOptions        = null;
+	private String _rawFileName       = null;
+	private String _extractedFileName = null;
 
 	private Map<String, String> _urlOptionsMap = new LinkedHashMap<String, String>();
 	
@@ -92,7 +92,7 @@ public class H2UrlHelper
 			urlVal = homeDir + SysProperties.FILE_SEPARATOR + urlVal.substring(1);
 		}
 
-		_extFileName = urlVal.trim();
+		_extractedFileName = urlVal.trim();
 
 //		if (urlVal.trim().equals(""))
 //		{
@@ -124,6 +124,24 @@ public class H2UrlHelper
 			urlOptions = "";
 
 		return _h2UrlStart + _urlType + ":" + _rawFileName + urlOptions;
+	}
+
+	/**
+	 * returns true if the URL is of type "file"
+	 * @return
+	 */
+	public boolean isUrlTypeFile()
+	{
+		return "file".equals(_urlType);
+	}
+
+	/**
+	 * returns true if the URL is of type "file"
+	 * @return
+	 */
+	public String getUrlType()
+	{
+		return _urlType;
 	}
 
 	/**
@@ -185,18 +203,28 @@ public class H2UrlHelper
 	 */
 	public File getFile()
 	{
-		return (_extFileName == null) ? null : new File(_extFileName);
+		return (_extractedFileName == null) ? null : new File(_extractedFileName);
 	}
 
 	/**
 	 * Get name of the parsed file part of the URL<br>
+	 * This is the full path, if a full path was specified in the url
 	 * null if no file was passed.
 	 * @return
 	 */
 	public String getFilename()
 	{
-		return _extFileName;
+		return _extractedFileName;
 	}
+
+//	/**
+//	 * Set file name part of the URL<br>
+//	 * This is the full path (or simply the filename, but then it will use the relative path)
+//	 */
+//	public void setFilename(String filename)
+//	{
+//		_extractedFileName = filename;
+//	}
 
 	/**
 	 * Get a File object of what directory the parsed database file exists in 
@@ -214,15 +242,15 @@ public class H2UrlHelper
 	 */
 	public File getDir(String defaultDir)
 	{
-//		if ("".equals(_extFileName))
-		if (StringUtil.isNullOrBlank(_extFileName))
+//		if ("".equals(_extractedFileName))
+		if (StringUtil.isNullOrBlank(_extractedFileName))
 		{
 			if (defaultDir != null)
 				return new File(defaultDir);
 			return null;
 		}
 		
-		File f = new File(_extFileName);
+		File f = new File(_extractedFileName);
 		if ( ! f.isDirectory() )
 			f = f.getParentFile();
 		return f;
@@ -244,6 +272,10 @@ public class H2UrlHelper
 		// Take away db suffix. ".h2.db"
 		if (newDbFile.indexOf(".h2.db") >= 0)
 			newDbFile = newDbFile.replace(".h2.db", "");
+
+		// Take away db suffix. ".mv.db"
+		if (newDbFile.indexOf(".mv.db") >= 0)
+			newDbFile = newDbFile.replace(".mv.db", "");
 
 		// Take away db suffix. ".trace.db"
 		if (newDbFile.indexOf(".trace.db") >= 0)

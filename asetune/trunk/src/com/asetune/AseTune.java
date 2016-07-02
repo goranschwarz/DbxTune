@@ -10,6 +10,10 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryAse;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameAse;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.inspection.ObjectLookupInspectorAse;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
 import com.asetune.utils.DbUtils;
 
 public class AseTune
@@ -85,11 +89,18 @@ extends DbxTune
 		return new CounterControllerAse(hasGui);
 	}
 
-	public static void main(String[] args)
+	@Override
+	public IObjectLookupInspector createPcsObjectLookupInspector()
 	{
-		DbxTune.main(args);
+		return new ObjectLookupInspectorAse();
 	}
 
+	@Override
+	public ISqlCaptureBroker createPcsSqlCaptureBroker() 
+	{
+		return new SqlCaptureBrokerAse();
+	}
+	
 	@Override
 	public CheckForUpdates createCheckForUpdates()
 	{
@@ -106,5 +117,14 @@ extends DbxTune
 	public MonTablesDictionary createMonTablesDictionary()
 	{
 		return new MonTablesDictionaryAse();
+	}
+
+	
+	
+	
+	
+	public static void main(String[] args)
+	{
+		DbxTune.main(args);
 	}
 }

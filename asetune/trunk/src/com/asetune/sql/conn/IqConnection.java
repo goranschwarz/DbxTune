@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 
 public class IqConnection 
@@ -21,6 +22,7 @@ extends TdsConnection
 	public IqConnection(Connection conn)
 	{
 		super(conn);
+		Ver.majorVersion_mustBeTenOrAbove = true;
 //System.out.println("constructor::IqConnection(conn): conn="+conn);
 	}
 
@@ -42,7 +44,8 @@ extends TdsConnection
 	@Override
 	public int getDbmsVersionNumber()
 	{
-		return AseConnectionUtils.getAseVersionNumber(this);
+//		return AseConnectionUtils.getAseVersionNumber(this);
+		return AseConnectionUtils.getIqVersionNumber(this);
 	}
 
 	@Override

@@ -51,9 +51,14 @@ public class SwingShell
 	 * at least my JVM does not understand it. Need to check the specs.
 	 */
 
-	static final String knownHostPath = "~/.ssh/known_hosts";
-	static final String idDSAPath = "~/.ssh/id_dsa";
-	static final String idRSAPath = "~/.ssh/id_rsa";
+	static final String home = System.getProperty("user.home", "");
+
+	static final String knownHostPath = home + "/.ssh/known_hosts";
+	static final String idDSAPath     = home + "/.ssh/id_dsa";
+	static final String idRSAPath     = home + "/.ssh/id_rsa";
+//	static final String knownHostPath = "~/.ssh/known_hosts";
+//	static final String idDSAPath = "~/.ssh/id_dsa";
+//	static final String idRSAPath = "~/.ssh/id_rsa";
 
 	JFrame loginFrame = null;
 	JLabel hostLabel;
@@ -147,6 +152,14 @@ public class SwingShell
 
 		private void finish()
 		{
+//			if (isPassword)
+//			{
+//				answer = new String(passwordField.getPassword());
+//				if (answer != null && answer.equals(""))
+//					answer = null;
+//			}
+//			else
+//				answer = answerField.getText();
 			if (isPassword)
 				answer = new String(passwordField.getPassword());
 			else

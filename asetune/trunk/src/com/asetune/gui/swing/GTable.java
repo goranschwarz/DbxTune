@@ -877,12 +877,12 @@ extends JXTable
 				srvVersion = cm.getServerVersion();
 		}
 		// get the values from configuration
-		String confKey = cmName + ".gui.column.header.props." + srvVersion;
+		String confKey = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + srvVersion;
 		String confVal = conf.getProperty(confKey);
 		if (confVal == null)
 		{
 			// Revert back to "previous" version
-			confKey = cmName + ".gui.column.header.props";
+			confKey = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]";
 			confVal = conf.getProperty(confKey);
 		}
 		if (confVal == null)
@@ -1078,8 +1078,8 @@ extends JXTable
 			if (cm.isRuntimeInitialized())
 				srvVersion = cm.getServerVersion();
 		}
-		String confKeyBase    = cmName + ".gui.column.header.props";
-		String confKeyVersion = cmName + ".gui.column.header.props." + srvVersion;
+		String confKeyBase    = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]";
+		String confKeyVersion = cmName + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + srvVersion;
 		String confVal = "";
 
 		TableColumnModel tcm = getColumnModel();
@@ -2064,7 +2064,8 @@ extends JXTable
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 2.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();

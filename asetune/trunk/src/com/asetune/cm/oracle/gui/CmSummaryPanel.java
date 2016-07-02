@@ -32,7 +32,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.oracle.CmSummary;
+import com.asetune.cm.postgres.CmSummary;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ShowCmPropertiesDialog;
@@ -394,7 +394,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		JPanel panel = SwingUtils.createPanel("title", false);
 		panel.setLayout(new MigLayout("", "5[grow]5", ""));
 
-		_title_lbl.setFont(new java.awt.Font("Dialog", 1, 16));
+		_title_lbl.setFont(new java.awt.Font("Dialog", 1, SwingUtils.hiDpiScale(16)));
 		_title_lbl.setText("Summary panel");
 
 		// create new panel
@@ -1543,28 +1543,31 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		setWatermark();
 
-		_dbmsServerName_txt         .setText(cm.getAbsString (0, "INSTANCE_NAME"));
-		_dbmsListeners_txt          .setText(cm.getAbsString (0, "HOST_NAME"));
-		_dbmsVersion_txt            .setText(cm.getAbsString (0, "VERSION"));
-		_lastSampleTime_txt         .setText(cm.getAbsString (0, "TIME_NOW"));
-		_utcTimeDiff_txt            .setText(cm.getAbsString (0, "UTC_MINUTE_DIFF"));
-		_startDate_txt              .setText(cm.getAbsString (0, "STARTUP_TIME"));
-		_daysRunning_txt            .setText(cm.getAbsString (0, "DAYS_RUNNING"));
-		_connectionsAbs_txt         .setText(cm.getAbsString (0, "CONNECTED_USERS"));
-		_connectionsDiff_txt        .setText(cm.getDiffString(0, "CONNECTED_USERS"));
-		_distinctLoginsAbs_txt      .setText(cm.getAbsString (0, "DISTINCT_LOGINS"));
-		_distinctLoginsDiff_txt     .setText(cm.getDiffString(0, "DISTINCT_LOGINS"));
-		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC_TH"));
-		_oldestOpenTranSec_txt      .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC"));
-		_oldestOpenTranTime_txt     .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_TIME"));
-		_blockingWaitThreshold_txt  .setText(cm.getAbsString (0, "BLOCKING_WAIT_IN_SEC_TH"));
-		_blockingWaitCount_txt      .setText(cm.getAbsString (0, "COUNT_BLOCKING_WAIT"));
-		_blockingWaitCountDiff_txt  .setText(cm.getDiffString(0, "COUNT_BLOCKING_WAIT"));
-		_blockingWaitMaxSec_txt     .setText(cm.getAbsString (0, "MAX_BLOCKING_WAIT_IN_SEC"));
-		_blockingWaitMaxSecDiff_txt .setText(cm.getDiffString(0, "MAX_BLOCKING_WAIT_IN_SEC"));
+//		_dbmsServerName_txt         .setText(cm.getAbsString (0, "INSTANCE_NAME"));
+//		_dbmsListeners_txt          .setText(cm.getAbsString (0, "HOST_NAME"));
+//		_dbmsVersion_txt            .setText(cm.getAbsString (0, "VERSION"));
+//		_lastSampleTime_txt         .setText(cm.getAbsString (0, "TIME_NOW"));
+//		_utcTimeDiff_txt            .setText(cm.getAbsString (0, "UTC_MINUTE_DIFF"));
+//		_startDate_txt              .setText(cm.getAbsString (0, "STARTUP_TIME"));
+//		_daysRunning_txt            .setText(cm.getAbsString (0, "DAYS_RUNNING"));
+//		_connectionsAbs_txt         .setText(cm.getAbsString (0, "CONNECTED_USERS"));
+//		_connectionsDiff_txt        .setText(cm.getDiffString(0, "CONNECTED_USERS"));
+//		_distinctLoginsAbs_txt      .setText(cm.getAbsString (0, "DISTINCT_LOGINS"));
+//		_distinctLoginsDiff_txt     .setText(cm.getDiffString(0, "DISTINCT_LOGINS"));
+//		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC_TH"));
+//		_oldestOpenTranSec_txt      .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC"));
+//		_oldestOpenTranTime_txt     .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_TIME"));
+//		_blockingWaitThreshold_txt  .setText(cm.getAbsString (0, "BLOCKING_WAIT_IN_SEC_TH"));
+//		_blockingWaitCount_txt      .setText(cm.getAbsString (0, "COUNT_BLOCKING_WAIT"));
+//		_blockingWaitCountDiff_txt  .setText(cm.getDiffString(0, "COUNT_BLOCKING_WAIT"));
+//		_blockingWaitMaxSec_txt     .setText(cm.getAbsString (0, "MAX_BLOCKING_WAIT_IN_SEC"));
+//		_blockingWaitMaxSecDiff_txt .setText(cm.getDiffString(0, "MAX_BLOCKING_WAIT_IN_SEC"));
+//
+//		setFieldAbsDiffRate(cm, "TRANSACTIONS",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
+//		setFieldAbsDiffRate(cm, "ROLLBACKS",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
 
-		setFieldAbsDiffRate(cm, "TRANSACTIONS",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
-		setFieldAbsDiffRate(cm, "ROLLBACKS",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
+		
+		
 		
 //		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
 //		_aseVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  _aseVersion_txt.setCaretPosition(0);
@@ -1993,8 +1996,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
-		conf.setProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
-		conf.setProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
+		conf.setLayoutProperty("summaryPanel.serverInfo.width",  _dataPanelScroll.getSize().width);
+		conf.setLayoutProperty("summaryPanel.serverInfo.height", _dataPanelScroll.getSize().height);
 
 		conf.save();
 	}
@@ -2010,8 +2013,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		int width   = conf.getIntProperty("summaryPanel.serverInfo.width",  -1);
-		int height  = conf.getIntProperty("summaryPanel.serverInfo.height",  -1);
+		int width   = conf.getLayoutProperty("summaryPanel.serverInfo.width",  SwingUtils.hiDpiScale(300));
+		int height  = conf.getLayoutProperty("summaryPanel.serverInfo.height", SwingUtils.hiDpiScale(5000));
 		if (width != -1 && height != -1)
 		{
 			_dataPanelScroll.setPreferredSize(new Dimension(width, height));
@@ -2075,7 +2078,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			g = (Graphics2D) graphics;
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font f = g.getFont();
-			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+//			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f));
+			g.setFont(f.deriveFont(Font.BOLD, f.getSize() * 4.0f * SwingUtils.getHiDpiScale() ));
 			g.setColor(new Color(128, 128, 128, 128));
 
 			FontMetrics fm = g.getFontMetrics();

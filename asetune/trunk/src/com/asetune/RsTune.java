@@ -10,6 +10,9 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryRs;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameRs;
+import com.asetune.pcs.inspection.IObjectLookupInspector;
+import com.asetune.pcs.inspection.ObjectLookupInspectorAse;
+import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.utils.DbUtils;
 
 public class RsTune
@@ -84,6 +87,18 @@ extends DbxTune
 		return new CounterControllerRs(hasGui);
 	}
 
+	@Override
+	public IObjectLookupInspector createPcsObjectLookupInspector()
+	{
+		return null;
+	}
+
+	@Override
+	public ISqlCaptureBroker createPcsSqlCaptureBroker() 
+	{
+		return null;
+	}
+	
 	@Override
 	public CheckForUpdates createCheckForUpdates()
 	{

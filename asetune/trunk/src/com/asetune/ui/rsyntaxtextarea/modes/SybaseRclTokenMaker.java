@@ -1166,7 +1166,8 @@ public class SybaseRclTokenMaker extends AbstractJFlexTokenMaker {
 	 *         it out.
 	 */
 	@Override
-	public String[] getLineCommentStartAndEnd() {
+	public String[] getLineCommentStartAndEnd(int languageIndex) {
+//	public String[] getLineCommentStartAndEnd() {
 		return new String[] { "--", null };
 	}
 

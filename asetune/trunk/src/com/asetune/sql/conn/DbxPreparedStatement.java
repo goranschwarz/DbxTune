@@ -651,5 +651,21 @@ public class DbxPreparedStatement implements PreparedStatement
 		_pstmnt.setNClob(parameterIndex, reader);
 	}
 
+	//#######################################################
+	//############################# JDBC 4.1
+	//#######################################################
+
+	@Override
+	public void closeOnCompletion() throws SQLException
+	{
+		_pstmnt.closeOnCompletion();
+	}
+
+	@Override
+	public boolean isCloseOnCompletion() throws SQLException
+	{
+		return _pstmnt.isCloseOnCompletion();
+	}
+
 
 }

@@ -11,9 +11,9 @@ import java.util.Date;
 public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune";      // Do not have spaces etc in this one
-	public static final String VERSION_STRING     = "3.5.0";        // Use this for public releases
-//	public static final String VERSION_STRING     = "3.4.0.18.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2015-06-24/build 179";
+//	public static final String VERSION_STRING     = "3.5.0";        // Use this for public releases
+	public static final String VERSION_STRING     = "3.5.0.11.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2016-07-01/build 191";
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2016-11-30";  // "YYYY-MM-DD" 

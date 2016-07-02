@@ -5,6 +5,7 @@ import java.awt.Font;
 import javax.swing.JTextArea;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.utils.SwingUtils;
 
 public class JPlainResultSet
 extends JTextArea
@@ -44,7 +45,7 @@ extends JTextArea
 		super.setEditable(false);
 
 		if (_aseMsgFont == null)
-			_aseMsgFont = new Font("Courier", Font.PLAIN, 12);
+			_aseMsgFont = new Font("Courier", Font.PLAIN, SwingUtils.hiDpiScale(12));
 		setFont(_aseMsgFont);
 
 		setLineWrap(true);
