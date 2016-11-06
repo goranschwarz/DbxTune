@@ -1,12 +1,16 @@
 package com.asetune.hostmon;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.utils.Configuration;
 import com.asetune.utils.VersionShort;
 
 
 public class MonitorMpstatLinux
-extends MonitorVmstat
+extends MonitorMpstat
 {
+	private static Logger _logger = Logger.getLogger(MonitorMpstatLinux.class);
+	
 	public MonitorMpstatLinux()
 	{
 		this(-1);
@@ -34,6 +38,8 @@ extends MonitorVmstat
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
+
+		_logger.info("When creating meta data for Linux 'mpstat', initializing it using utility version "+VersionShort.toStr(utilVersion));
 
 		// gorans@gorans-ub:~$ mpstat -V
 		// sysstat version 10.2.0

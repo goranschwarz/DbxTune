@@ -10,16 +10,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
-import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
-import com.asetune.utils.AseSqlScript;
+import com.asetune.sql.conn.info.DbxConnectionStateInfoSqlServer;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 import com.asetune.utils.VersionSqlServer;
-import com.sybase.jdbcx.SybConnection;
-import com.sybase.jdbcx.SybMessageHandler;
-
-import net.sourceforge.jtds.jdbc.JtdsConnection;
-//import net.sourceforge.jtds.jdbc.JtdsMessageHandler;
 
 public class SqlServerConnection 
 extends DbxConnection
@@ -46,7 +40,7 @@ extends DbxConnection
 	@Override
 	public DbxConnectionStateInfo refreshConnectionStateInfo()
 	{
-		DbxConnectionStateInfo csi = new DbxConnectionStateInfoAse(this, false);
+		DbxConnectionStateInfo csi = new DbxConnectionStateInfoSqlServer(this);
 		setConnectionStateInfo(csi);
 		return csi;
 	}

@@ -36,11 +36,8 @@ import javax.swing.UIManager;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTreeTable;
 import org.jdesktop.swingx.treetable.AbstractMutableTreeTableNode;
@@ -60,9 +57,12 @@ import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class DdlViewer
 extends JDialog
@@ -88,17 +88,17 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 	private JLabel          _source_lbl        = new JLabel("Source");
 	private JTextField      _source_txt        = new JTextField();
 
-	private RSyntaxTextArea _object_txt        = new RSyntaxTextArea();
-	private RTextScrollPane _object_scroll     = new RTextScrollPane(_object_txt);
+	private RSyntaxTextAreaX _object_txt       = new RSyntaxTextAreaX();
+	private RTextScrollPane  _object_scroll    = new RTextScrollPane(_object_txt);
 
-	private RSyntaxTextArea _optDiag_txt       = new RSyntaxTextArea();
-	private RTextScrollPane _optDiag_scroll    = new RTextScrollPane(_optDiag_txt);
+	private RSyntaxTextAreaX _optDiag_txt      = new RSyntaxTextAreaX();
+	private RTextScrollPane  _optDiag_scroll   = new RTextScrollPane(_optDiag_txt);
 
-	private RSyntaxTextArea _depends_txt       = new RSyntaxTextArea();
-	private RTextScrollPane _depends_scroll    = new RTextScrollPane(_depends_txt);
+	private RSyntaxTextAreaX _depends_txt      = new RSyntaxTextAreaX();
+	private RTextScrollPane  _depends_scroll   = new RTextScrollPane(_depends_txt);
 
-	private RSyntaxTextArea _extraInfo_txt     = new RSyntaxTextArea();
-	private RTextScrollPane _extraInfo_scroll  = new RTextScrollPane(_extraInfo_txt);
+	private RSyntaxTextAreaX _extraInfo_txt    = new RSyntaxTextAreaX();
+	private RTextScrollPane  _extraInfo_scroll = new RTextScrollPane(_extraInfo_txt);
 
 	private JXTreeTable     _treeTable         = null;
 	private JPopupMenu      _tablePopupMenu    = null;

@@ -12,13 +12,13 @@ import javax.swing.JLabel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
+
+import net.miginfocom.swing.MigLayout;
 
 
 

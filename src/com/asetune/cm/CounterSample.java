@@ -66,6 +66,9 @@ extends CounterTableModel
 	protected Timestamp     _samplingTime  = null;
 	protected long          _interval      = 0;
 
+	/** every time the CounterSample is refreshed set this to System.currentTimeMillis() */
+	protected long          _lastLocalSampleTime = 0;
+
 	// If messages inside a ResultSet should be treated and appended to a column
 	// this is used for the StatementCache query: 
 	//     select show_plan(-1,SSQLID,-1,-1) as Showplan, * from monCachedStatement
@@ -122,6 +125,7 @@ extends CounterTableModel
 		_rowidToKey                 = cs._rowidToKey;
 		_samplingTime               = cs._samplingTime;
 		_interval                   = cs._interval;
+		_lastLocalSampleTime        = cs._lastLocalSampleTime;
 		_negativeDiffCountersToZero = cs._negativeDiffCountersToZero;
 		_diffColNames               = cs._diffColNames;
 //		_prevSample                 = sc._prevSample;     // should we really copy this one...
@@ -320,6 +324,11 @@ extends CounterTableModel
 	public void setSampleInterval(long interval)
 	{
 		_interval = interval;
+	}
+
+	public long getLastLocalSampleTime()
+	{ 
+		return _lastLocalSampleTime; 
 	}
 
 	public boolean getNegativeDiffCountersToZero()
@@ -1002,6 +1011,9 @@ extends CounterTableModel
 
 			// Close the statement
 			stmnt.close();
+
+			// Set last refresh time
+			_lastLocalSampleTime = System.currentTimeMillis();
 
 			return true;
 		}

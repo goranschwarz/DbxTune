@@ -5,13 +5,13 @@ import java.sql.Timestamp;
 
 import javax.swing.JPanel;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.DbxTune;
 import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.ConnectionProvider;
 
 
@@ -26,7 +26,8 @@ extends JPanel
 //	private JTextArea	_textConfig           = new JTextArea();
 //	private JScrollPane _textConfigScroll     = new JScrollPane(_textConfig);
 
-	private RSyntaxTextArea _textConfig       = new RSyntaxTextArea();
+//	private RSyntaxTextArea _textConfig       = new RSyntaxTextArea();
+	private RSyntaxTextAreaX _textConfig      = new RSyntaxTextAreaX();
 	private RTextScrollPane _textConfigScroll = new RTextScrollPane(_textConfig, true);
 
 	private ConnectionProvider     _connProvider    = null;

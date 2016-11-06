@@ -47,7 +47,8 @@ extends CountersModel
 		"<br><br>" +
 		"Table Background colors:" +
 		"<ul>" +
-		"    <li>ORANGE - An Index.</li>" +
+		"    <li>ORANGE - An Index (IndID > 0)</li>" +
+		"    <li>VERY_LIGHT_BLUE - BLOB Text/Image Column (IndID = 255).</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -185,6 +186,7 @@ extends CountersModel
 
 			mtd.addColumn("monOpenObjectActivity", "LockContPct"                    ,"<html>How many Lock Requests in percent was Blocked by another concurrent SPID's due to incompatible locking issues.<br><b>Note</b>: Do also considder number of LockWaits and not only the percentage.<br><b>Formula</b>: LockWaits / LockRequests * 100.0<br></html>");
 			mtd.addColumn("monOpenObjectActivity", "TabRowCount"                    ,"<html>Table rowcount, using row_count(DBID, ObjectID) to get the count, so it can be a bit off from the actual number of rows.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
+			mtd.addColumn("monOpenObjectActivity", "UsageInMb"                      ,"<html>Number of MB used by this table/index, using data_pages(DBID, ObjectID, IndexID)/(1024*1024/@@maxpagesize) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
 			mtd.addColumn("monOpenObjectActivity", "NumUsedPages"                   ,"<html>Number of Pages used by this table/index, using data_pages(DBID, ObjectID, IndexID) to get the value.<br><b>Note</b>: If this takes to much resources, it can be disable in any of the configuration files using <code>"+getName()+PROPKEY_sample_tabRowCount+"=false</code>.</html>");
 			mtd.addColumn("monOpenObjectActivity", "RowsPerPage"                    ,"<html>Number of rows per page.<br><b>Formula</b>: TabRowCount/NumUsedPages</html>");
 			mtd.addColumn("monOpenObjectActivity", "RowsInsUpdDel"                  ,"<html>RowsInsUpdDel = RowsInserted + RowsDeleted + RowsUpdated<br>So this is simply a summary of all DML changes on this table.</html>");
@@ -298,6 +300,7 @@ extends CountersModel
 		String topRows      = ""; // 'top 500' if only first 500 rows should be displayed
 		
 		String TabRowCount  = "";
+		String UsageInMb    = "";
 		String NumUsedPages = "";
 		String RowsPerPage  = "";
 		String DBName       = "DBName=db_name(A.DBID), \n";
@@ -326,6 +329,7 @@ extends CountersModel
 				rowCountOption = ",'noblock'";
 
 			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID"+rowCountOption+")),   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			UsageInMb    = "UsageInMb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) / (1024*1024/@@maxpagesize)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			DBName       = "A.DBName, \n";
@@ -346,9 +350,10 @@ extends CountersModel
 			if (conf.getBooleanProperty(PROPKEY_sample_tabRowCount, DEFAULT_sample_tabRowCount) == false)
 			{
 				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
+				UsageInMb    = "UsageInMb    = convert(int,   -1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
 				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
 				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage'.");
+				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'UsageInMb', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}
 //		if (aseVersion >= 15700)
@@ -430,18 +435,27 @@ extends CountersModel
 //		if (aseVersion >= 1600000)
 		if (aseVersion >= Ver.ver(16,0))
 		{
+			// note: protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days, 20 hours, 31 minutes and 23.647 seconds, the MS difference is overflowned
+			
 			Scans              = "Scans, ";              // DO DIFF CALC
 			LastScanDate       = "LastScanDate, ";
-			LastScanDateDiff   = "LastScanDateDiff = datediff(ms, LastScanDate, getdate()), ";
+//			LastScanDateDiff   = "LastScanDateDiff = datediff(ms, LastScanDate, getdate()), ";
+			LastScanDateDiff   = "LastScanDateDiff = CASE WHEN datediff(day, LastScanDate, getdate()) >= 24 THEN -1 ELSE  datediff(ms, LastScanDate, getdate()) END, ";
+
 			Updates            = "Updates, ";            // DO DIFF CALC
 			LastUpdateDate     = "LastUpdateDate, ";
-			LastUpdateDateDiff = "LastUpdateDateDiff = datediff(ms, LastUpdateDate, getdate()), ";
+//			LastUpdateDateDiff = "LastUpdateDateDiff = datediff(ms, LastUpdateDate, getdate()), ";
+			LastUpdateDateDiff = "LastUpdateDateDiff = CASE WHEN datediff(day, LastUpdateDate, getdate()) >= 24 THEN -1 ELSE  datediff(ms, LastUpdateDate, getdate()) END, ";
+	
 			Inserts            = "Inserts, ";            // DO DIFF CALC
 			LastInsertDate     = "LastInsertDate, ";
-			LastInsertDateDiff = "LastInsertDateDiff = datediff(ms, LastInsertDate, getdate()), ";
+//			LastInsertDateDiff = "LastInsertDateDiff = datediff(ms, LastInsertDate, getdate()), ";
+			LastInsertDateDiff = "LastInsertDateDiff = CASE WHEN datediff(day, LastInsertDate, getdate()) >= 24 THEN -1 ELSE  datediff(ms, LastInsertDate, getdate()) END, ";
+
 			Deletes            = "Deletes, ";            // DO DIFF CALC
 			LastDeleteDate     = "LastDeleteDate, ";
-			LastDeleteDateDiff = "LastDeleteDateDiff = datediff(ms, LastDeleteDate, getdate()), ";
+//			LastDeleteDateDiff = "LastDeleteDateDiff = datediff(ms, LastDeleteDate, getdate()), ";
+			LastDeleteDateDiff = "LastDeleteDateDiff = CASE WHEN datediff(day, LastDeleteDate, getdate()) >= 24 THEN -1 ELSE  datediff(ms, LastDeleteDate, getdate()) END, ";
 
 			nl_16000           = "\n";
 		}
@@ -469,7 +483,8 @@ extends CountersModel
 		         IndexName +
 		         "LockScheme = lockscheme(A.ObjectID, A.DBID), \n" +
 		         "Remark = convert(varchar(60), ''), \n" + // this would be a good position after X tests has been done, but put it at the end right now
-		         Scans + LastScanDate + LastScanDateDiff + nl_16000 +
+		         Scans + LastScanDate + nl_16000 + 
+		         LastScanDateDiff + nl_16000 +
 		         "LockRequests=isnull(LockRequests,0), LockWaits=isnull(LockWaits,0), \n" +
 		         "LockContPct = CASE WHEN isnull(LockRequests,0) > 0 \n" +
 		         "                   THEN convert(numeric(10,1), ((LockWaits+0.0)/(LockRequests+0.0)) * 100.0) \n" +
@@ -481,14 +496,15 @@ extends CountersModel
 		         IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 		         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
 		         TabRowCount +
+		         UsageInMb + 
 		         NumUsedPages +
 		         RowsPerPage +
 		         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
 		         "RowsInsUpdDel=convert("+bigint+",RowsInserted) + convert("+bigint+",RowsDeleted) + convert("+bigint+",RowsUpdated), \n" +
 		         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n" +
-		         Inserts            + Updates            + Deletes            + nl_16000 +
-		         LastInsertDateDiff + LastUpdateDateDiff + LastDeleteDateDiff + nl_16000 +
-		         LastInsertDate     + LastUpdateDate     + LastDeleteDate     + nl_16000 +
+		         Inserts                       + Updates                       + Deletes            + nl_16000 +
+		         LastInsertDateDiff + nl_16000 + LastUpdateDateDiff + nl_16000 + LastDeleteDateDiff + nl_16000 +
+		         LastInsertDate                + LastUpdateDate                + LastDeleteDate     + nl_16000 +
 		         ""; // end of cols1
 		cols2 += "";
 		cols3 += ObjectCacheDate + "LastOptSelectDate, LastUsedDate";

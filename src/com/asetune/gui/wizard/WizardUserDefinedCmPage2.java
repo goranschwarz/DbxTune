@@ -21,9 +21,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
-import net.miginfocom.swing.MigLayout;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
@@ -38,9 +35,12 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 
 
@@ -97,9 +97,9 @@ implements ActionListener, FocusListener, CaretListener
 //	private JTextArea   _sqlInit_txt          = new JTextArea();        // A field to enter a query in
 //	private JTextArea   _sql_txt              = new JTextArea();        // A field to enter a query in
 //	private JTextArea   _sqlClose_txt         = new JTextArea();        // A field to enter a query in
-	private RSyntaxTextArea _sqlInit_txt      = new RSyntaxTextArea();  // A field to enter a query in
-	private RSyntaxTextArea _sql_txt          = new RSyntaxTextArea();  // A field to enter a query in
-	private RSyntaxTextArea _sqlClose_txt     = new RSyntaxTextArea();  // A field to enter a query in
+	private RSyntaxTextAreaX _sqlInit_txt      = new RSyntaxTextAreaX();  // A field to enter a query in
+	private RSyntaxTextAreaX _sql_txt          = new RSyntaxTextAreaX();  // A field to enter a query in
+	private RSyntaxTextAreaX _sqlClose_txt     = new RSyntaxTextAreaX();  // A field to enter a query in
 	private JLabel      _needVersion_lbl      = new JLabel("Min DB Version");
 	private JTextField  _needVersion_txt      = new JTextField(NEED_VERSION_DEFAULT);
 	private JLabel      _needRole_lbl         = new JLabel("Needs Role");

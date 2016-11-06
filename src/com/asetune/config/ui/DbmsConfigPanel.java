@@ -23,7 +23,9 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
@@ -33,8 +35,6 @@ import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
@@ -49,12 +49,14 @@ import com.asetune.config.dbms.AseConfig;
 import com.asetune.config.dbms.DbmsConfigManager;
 //import com.asetune.config.dbms.AseConfig;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.gui.SqlTextDialog;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.ConnectionProvider;
-import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class DbmsConfigPanel
@@ -276,6 +278,12 @@ implements ActionListener
 //		_table.setModel(AseConfig.getInstance());
 		_table.setModel(_dbmsConfig);
 
+		// Create a rightClickMenuPopup if "Reverse Engineering is Possible"
+		if (_dbmsConfig.isReverseEngineeringPossible())
+		{
+			_table.setComponentPopupMenu(createRightClickTablePopupMenu());
+		}
+
 		_table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		_table.packAll(); // set size so that all content in all cells are
@@ -346,11 +354,33 @@ implements ActionListener
 		return panel;
 	}
 
+	private final static String ACTION_REVERSE_ENGINEER_SELECTED_ROW = "ACTION_REVERSE_ENGINEER_SELECTED_ROW";
+	private final static String ACTION_REVERSE_ENGINEER_VISIBLE_ROWS = "ACTION_REVERSE_ENGINEER_VISIBLE_ROWS";
+
+	private JPopupMenu createRightClickTablePopupMenu()
+	{
+		JPopupMenu popupMenu = new JPopupMenu();
+		
+		JMenuItem singleRow   = new JMenuItem("Reverse Engineer Selected row");
+		JMenuItem visibleRows = new JMenuItem("Reverse Engineer All visible rows in the table");
+
+		singleRow  .addActionListener(this);
+		visibleRows.addActionListener(this);
+
+		singleRow  .setActionCommand(ACTION_REVERSE_ENGINEER_SELECTED_ROW);
+		visibleRows.setActionCommand(ACTION_REVERSE_ENGINEER_VISIBLE_ROWS);
+		
+		popupMenu.add(singleRow);
+		popupMenu.add(visibleRows);
+
+		return popupMenu;
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
 		Object source = e.getSource();
+		String actionCmd = e.getActionCommand();
 
 		// --- COMBOBOX: SECTION ---
 		if (_section_cbx.equals(source))
@@ -387,6 +417,55 @@ implements ActionListener
 				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
 				clipboard.setContents(data, data);
 			}
+		}
+
+		// --- TABLE RIGHT CLICK MENU: ACTIONS ---
+		if (   ACTION_REVERSE_ENGINEER_SELECTED_ROW.equals(actionCmd)
+		    || ACTION_REVERSE_ENGINEER_VISIBLE_ROWS.equals(actionCmd) 
+		   )
+		{
+			int[] modelRows = null;
+
+			if (ACTION_REVERSE_ENGINEER_SELECTED_ROW.equals(actionCmd))
+			{
+				modelRows = new int[1];
+				int selectedRow = _table.getSelectedRow();
+				if (selectedRow == -1)
+				{
+					SwingUtils.showInfoMessage(this, "No row selected", "No row was selected, please select a row...");
+					return;
+				}
+				modelRows[0] = _table.convertRowIndexToModel(selectedRow);
+			}
+			else if (ACTION_REVERSE_ENGINEER_VISIBLE_ROWS.equals(actionCmd))
+			{
+				int visibleRows = _table.getRowCount();
+				if (visibleRows == 0)
+				{
+					SwingUtils.showInfoMessage(this, "No visible row(s)", "No visible row(s) in the table, please remove some filters");
+					return;
+				}
+
+				modelRows = new int[visibleRows];
+				for (int r=0; r<modelRows.length; r++)
+				{
+					modelRows[r] = _table.convertRowIndexToModel(r);
+				}
+			}
+			
+			String reverseEngineerStr = _dbmsConfig.reverseEngineer(modelRows);
+			if (reverseEngineerStr != null && reverseEngineerStr.length() > 0)
+			{
+//				SqlTextDialog dialog = new SqlTextDialog(this, reverseEngineerStr);
+				SqlTextDialog dialog = new SqlTextDialog(null, reverseEngineerStr);
+				dialog.setVisible(true);
+			}
+			else
+			{
+				SwingUtils.showInfoMessage(this, "No output", "Sorry no DDL/SQL was generated.");
+			}
+
+			System.out.println("SHOW THIS IN A SMALL EDITOR='"+reverseEngineerStr+"'.");
 		}
 	}
 

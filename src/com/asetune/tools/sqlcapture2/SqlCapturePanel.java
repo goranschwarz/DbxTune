@@ -15,7 +15,6 @@ import javax.swing.border.TitledBorder;
 import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -23,6 +22,7 @@ import com.asetune.Version;
 import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTable;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -134,7 +134,7 @@ extends JPanel
 	private   JPanel            _sqlText_pan;
 	private   JCheckBox         _sqlTextSample_chk                 = new JCheckBox("Sample SQL batch text", true);
 	protected JCheckBox         _sqlTextShowProcSrc_chk            = new JCheckBox("Show Stored Procedure source code in Batch text window", true);
-	private   RSyntaxTextArea   _sqlText_txt                       = new RSyntaxTextArea();
+	private   RSyntaxTextAreaX  _sqlText_txt                       = new RSyntaxTextAreaX();
 	private   RTextScrollPane   _sqlText_scroll                    = new RTextScrollPane(_sqlText_txt);
 
 	// SQL Plan
@@ -142,7 +142,7 @@ extends JPanel
 	private   JCheckBox         _sqlPlanSample_chk                 = new JCheckBox("Sample showplan text", false);
 	protected JCheckBox         _sqlPlanAutoLoadXmlGui_chk         = new JCheckBox("Automatically load XML Plan in GUI", true);
 	protected JButton           _sqlPlanOpenXmlPlanInGui_but       = new JButton("XML Plan in GUI");
-	private   RSyntaxTextArea   _sqlPlan_txt                       = new RSyntaxTextArea();
+	private   RSyntaxTextAreaX  _sqlPlan_txt                       = new RSyntaxTextAreaX();
 	private   RTextScrollPane   _sqlPlan_scroll                    = new RTextScrollPane(_sqlPlan_txt);
 
 
@@ -311,7 +311,7 @@ extends JPanel
 
 	public void setSqlText(String text, String procname, int line)
 	{
-		RSyntaxTextArea rsta = _sqlText_txt;
+		RSyntaxTextAreaX rsta = _sqlText_txt;
 
 		// Set border title
 		((TitledBorder)_sqlText_pan.getBorder()).setTitle( StringUtil.hasValue(procname) ? procname : "SQL Text" );
@@ -335,7 +335,7 @@ extends JPanel
 
 	public void setPlanText(String text, int line)
 	{
-		RSyntaxTextArea rsta = _sqlPlan_txt;
+		RSyntaxTextAreaX rsta = _sqlPlan_txt;
 
 		// Set the text
 		rsta.setText(text);

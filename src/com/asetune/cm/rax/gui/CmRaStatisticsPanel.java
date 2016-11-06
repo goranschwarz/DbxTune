@@ -10,8 +10,6 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
@@ -19,6 +17,8 @@ import com.asetune.cm.rax.CmRaStatistics;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmRaStatisticsPanel
 extends TabularCntrPanel

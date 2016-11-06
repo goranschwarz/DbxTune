@@ -212,11 +212,11 @@ implements PropertyChangeListener, ActionListener
 //			setVisible(true);
 
 //		_execSqlTimer.stop();
-		_totalExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _totalExecStartTime) );
+		_totalExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _totalExecStartTime) );
 		if (_totalExecCount > 1)
-			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) + " (go # "+(_currentExecCounter+1)+" of "+_totalExecCount+")");
+			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) + " (go # "+(_currentExecCounter+1)+" of "+_totalExecCount+")");
 		else
-			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
+			_batchExecTimeVal_lbl.setText( TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", System.currentTimeMillis() - _batchExecStartTime) );
 
 //		System.out.println("XXXXXX: deferredTimerAction(): sql = " + sql);
 //		System.out.println("XXXXXX: deferredTimerAction(): _msgList.size() = " + _msgList.size());

@@ -17,10 +17,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -54,8 +51,11 @@ import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GTable;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSpidWaitPanel
 extends TabularCntrPanel
@@ -717,8 +717,8 @@ extends TabularCntrPanel
 		final JLabel            graphType_lbl    = new JLabel("Type");
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
-		final RSyntaxTextArea extraWhereClause_txt = new RSyntaxTextArea();
-		final JButton         extraWhereClause_but = new JButton("Apply Extra Where Clause");
+		final RSyntaxTextAreaX extraWhereClause_txt = new RSyntaxTextAreaX();
+		final JButton          extraWhereClause_but = new JButton("Apply Extra Where Clause");
 
 		final JButton         trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
 

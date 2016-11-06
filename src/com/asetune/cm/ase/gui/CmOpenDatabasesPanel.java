@@ -1,6 +1,5 @@
 package com.asetune.cm.ase.gui;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
@@ -10,13 +9,12 @@ import java.text.NumberFormat;
 import java.util.Map;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
@@ -42,6 +40,7 @@ import org.jfree.ui.TextAnchor;
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmOpenDatabases;
+import com.asetune.graph.TrendGraphColors;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
@@ -49,6 +48,9 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmOpenDatabasesPanel
 extends TabularCntrPanel
@@ -67,12 +69,32 @@ extends TabularCntrPanel
 	private static final String  VALUE_plotOrientation_HORIZONTAL = "HORIZONTAL";
 	private static final String  DEFAULT_plotOrientation          = VALUE_plotOrientation_AUTO;
 
+	private static final String  PROPKEY_enableLogGraph   = PROP_PREFIX + ".graph.log.enable";
+	private static final boolean DEFAULT_enableLogGraph   = true;
+
+	private static final String  PROPKEY_enableDataGraph   = PROP_PREFIX + ".graph.data.enable";
+	private static final boolean DEFAULT_enableDataGraph   = true;
+
+	private static final String CHART_TITLE_LOG  = "Transaction Log Space Usage in Percent";
+	private static final String CHART_TITLE_DATA = "Data Space Usage in Percent";
+
+	private JCheckBox sampleSpaceusage_chk;
+	private JCheckBox spaceusageInMb_chk;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_generateDummy,      DEFAULT_generateDummy);
 		Configuration.registerDefaultValue(PROPKEY_plotOrientation,    DEFAULT_plotOrientation);
 	}
 
+
+	static
+	{
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,   DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_plotOrientation, DEFAULT_plotOrientation);
+		Configuration.registerDefaultValue(PROPKEY_enableLogGraph,  DEFAULT_enableLogGraph);
+		Configuration.registerDefaultValue(PROPKEY_enableDataGraph, DEFAULT_enableDataGraph);
+	}
 
 	public CmOpenDatabasesPanel(CountersModel cm)
 	{
@@ -89,7 +111,7 @@ extends TabularCntrPanel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
 
-		// BLUE = in 'DUMP DATABASE'
+		// LIGHT_BLUE = in 'DUMP DATABASE'
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.dumpdb");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
@@ -99,7 +121,7 @@ extends TabularCntrPanel
 				Number backupInProg = (Number) adapter.getValue(adapter.getColumnIndex("BackupInProgress"));
 				return backupInProg != null && backupInProg.intValue() > 0;
 			}
-		}, SwingUtils.parseColor(colorStr, Color.BLUE), null));
+		}, SwingUtils.parseColor(colorStr, TrendGraphColors.VERY_LIGHT_BLUE), null));
 
 		// YELLOW = OLDEST OPEN TRANSACTION above 0
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.oldestOpenTranInSeconds");
@@ -138,7 +160,7 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
-	private CategoryDataset createDataset(GTable dataTable)
+	private CategoryDataset createDatasetForLog(GTable dataTable)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean generateDummy = conf.getBooleanProperty(PROPKEY_generateDummy, DEFAULT_generateDummy);
@@ -147,9 +169,11 @@ extends TabularCntrPanel
 
 		if (dataTable != null)
 		{
-			int DBName_pos          = dataTable.findViewColumn("DBName");
-			int LogSizeFreeInMb_pos = dataTable.findViewColumn("LogSizeFreeInMb"); // numeric(10,1)
-			int LogSizeUsedPct_pos  = dataTable.findViewColumn("LogSizeUsedPct");  // numeric(10,1)
+			int DBName_pos           = dataTable.findViewColumn("DBName");
+			int LogSizeFreeInMb_pos  = dataTable.findViewColumn("LogSizeFreeInMb"); // numeric(10,1)
+			int LogSizeUsedPct_pos   = dataTable.findViewColumn("LogSizeUsedPct");  // numeric(10,1)
+//			int DataSizeFreeInMb_pos = dataTable.findViewColumn("DataSizeFreeInMb"); // numeric(10,1)
+//			int DataSizeUsedPct_pos  = dataTable.findViewColumn("DataSizeUsedPct");  // numeric(10,1)
 
 			CountersModel cm = getDisplayCm();
 			if (cm == null)
@@ -160,15 +184,21 @@ extends TabularCntrPanel
 				Map<String, Integer> dbList = DbSelectionForGraphsDialog.getDbsInGraphList(cm);
 				for(int r=0; r<dataTable.getRowCount(); r++)
 				{
-					String DBName          = (String)dataTable.getValueAt(r, DBName_pos);
-					Number LogSizeFreeInMb = (Number)dataTable.getValueAt(r, LogSizeFreeInMb_pos);
-					Number LogSizeUsedPct  = (Number)dataTable.getValueAt(r, LogSizeUsedPct_pos);
+					String DBName           = (String)dataTable.getValueAt(r, DBName_pos);
+					Number LogSizeFreeInMb  = (Number)dataTable.getValueAt(r, LogSizeFreeInMb_pos);
+					Number LogSizeUsedPct   = (Number)dataTable.getValueAt(r, LogSizeUsedPct_pos);
+//					Number DataSizeFreeInMb = (Number)dataTable.getValueAt(r, DataSizeFreeInMb_pos);
+//					Number DataSizeUsedPct  = (Number)dataTable.getValueAt(r, DataSizeUsedPct_pos);
 
 					if (_logger.isDebugEnabled())
 						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
 
 					if (dbList.keySet().contains(DBName))
-						categoryDataset.addValue(LogSizeUsedPct, LogSizeFreeInMb+" MB FREE", DBName);
+					{
+						categoryDataset.addValue(LogSizeUsedPct,  "FREE MB: " + LogSizeFreeInMb,  DBName);
+//						categoryDataset.addValue(LogSizeUsedPct,  LogSizeFreeInMb +" MB FREE Log",  DBName);
+//						categoryDataset.addValue(DataSizeUsedPct, DataSizeFreeInMb+" MB FREE Data", DBName);
+					}
 				}
 			}
 		}
@@ -182,7 +212,7 @@ extends TabularCntrPanel
 					double usedPct = 100.0 - freePct;
 					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
-					categoryDataset.addValue(usedPct, freeMb+" MB FREE", "dummy_db_"+i);
+					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
 				}
 			}
 		}
@@ -190,7 +220,68 @@ extends TabularCntrPanel
 		return categoryDataset;
 	}
 
-	private JFreeChart createChart(CategoryDataset dataset)
+	private CategoryDataset createDatasetForData(GTable dataTable)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean generateDummy = conf.getBooleanProperty(PROPKEY_generateDummy, DEFAULT_generateDummy);
+
+		DefaultCategoryDataset categoryDataset = new DefaultCategoryDataset();
+
+		if (dataTable != null)
+		{
+			int DBName_pos           = dataTable.findViewColumn("DBName");
+//			int LogSizeFreeInMb_pos  = dataTable.findViewColumn("LogSizeFreeInMb"); // numeric(10,1)
+//			int LogSizeUsedPct_pos   = dataTable.findViewColumn("LogSizeUsedPct");  // numeric(10,1)
+			int DataSizeFreeInMb_pos = dataTable.findViewColumn("DataSizeFreeInMb"); // numeric(10,1)
+			int DataSizeUsedPct_pos  = dataTable.findViewColumn("DataSizeUsedPct");  // numeric(10,1)
+
+			CountersModel cm = getDisplayCm();
+			if (cm == null)
+				cm = getCm();
+
+			if (cm != null)
+			{
+				Map<String, Integer> dbList = DbSelectionForGraphsDialog.getDbsInGraphList(cm);
+				for(int r=0; r<dataTable.getRowCount(); r++)
+				{
+					String DBName           = (String)dataTable.getValueAt(r, DBName_pos);
+//					Number LogSizeFreeInMb  = (Number)dataTable.getValueAt(r, LogSizeFreeInMb_pos);
+//					Number LogSizeUsedPct   = (Number)dataTable.getValueAt(r, LogSizeUsedPct_pos);
+					Number DataSizeFreeInMb = (Number)dataTable.getValueAt(r, DataSizeFreeInMb_pos);
+					Number DataSizeUsedPct  = (Number)dataTable.getValueAt(r, DataSizeUsedPct_pos);
+
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
+					if (_logger.isDebugEnabled())
+					_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', DataSizeFreeInMb("+DataSizeFreeInMb_pos+")='"+DataSizeFreeInMb+"', DataSizeUsedPct("+DataSizeUsedPct_pos+")='"+DataSizeUsedPct+"'.");
+
+					if (dbList.keySet().contains(DBName))
+					{
+//						categoryDataset.addValue(LogSizeUsedPct,  LogSizeFreeInMb +" MB FREE",  DBName);
+						categoryDataset.addValue(DataSizeUsedPct, "FREE MB: " + DataSizeFreeInMb, DBName);
+					}
+				}
+			}
+		}
+		else
+		{
+			if (generateDummy)
+			{
+				for(int i=1; i<=30; i++)
+				{
+					double freePct = Math.random() * 100.0;
+					double usedPct = 100.0 - freePct;
+					BigDecimal freeMb = new BigDecimal(Math.random() * 1000.0).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+					categoryDataset.addValue(usedPct, "FREE MB: "+freeMb, "dummy_db_"+i);
+				}
+			}
+		}
+
+		return categoryDataset;
+	}
+
+	private JFreeChart createChart(CategoryDataset dataset, String title)
 	{
 		// Get Graph Orientation: VERTICAL or HORIZONTAL
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -216,7 +307,8 @@ extends TabularCntrPanel
 				false);                   // urls
 
 		chart.setBackgroundPaint(getBackground());
-		chart.setTitle(new TextTitle("Transaction Log Space Usage in Percent", TextTitle.DEFAULT_FONT));
+//		chart.setTitle(new TextTitle("Transaction Log Space Usage in Percent", TextTitle.DEFAULT_FONT));
+		chart.setTitle(new TextTitle(title, TextTitle.DEFAULT_FONT));
 
 		//------------------------------------------------
 		// code from TabularCntrlPanel
@@ -287,11 +379,38 @@ extends TabularCntrPanel
 	protected JPanel createExtendedInfoPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Extended Information", false);
-		panel.setLayout(new BorderLayout());
+//		panel.setLayout(new BorderLayout());
+		panel.setLayout(new MigLayout("ins 0"));
+
+//		// Create Graph
+//		JFreeChart chartLog = createChart(createDatasetForLog(null), CHART_TITLE_LOG);
+//		panel.add( new ChartPanel(chartLog) );
+//
+//		JFreeChart chartData = createChart(createDatasetForData(null), CHART_TITLE_DATA);
+//		panel.add( new ChartPanel(chartData) );
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean enableLogGraph  = conf.getBooleanProperty(PROPKEY_enableLogGraph,  DEFAULT_enableLogGraph);
+		boolean enableDataGraph = conf.getBooleanProperty(PROPKEY_enableDataGraph, DEFAULT_enableDataGraph);
+
+		// Remove and add components to panel
+		panel.removeAll();
 
 		// Create Graph
-		JFreeChart chart = createChart(createDataset(null));
-		panel.add( new ChartPanel(chart) );
+		if (enableLogGraph)
+		{
+			JFreeChart chartLog = createChart(createDatasetForLog(null), CHART_TITLE_LOG);
+			panel.add( new ChartPanel(chartLog), "grow, push" );
+		}
+
+		if (enableDataGraph)
+		{
+    		JFreeChart chartData = createChart(createDatasetForData(null), CHART_TITLE_DATA);
+    		panel.add( new ChartPanel(chartData), "grow, push" );
+		}
+		
+		if (enableLogGraph == false && enableDataGraph == false)
+			panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER), "grow, push" );
 
 		// Size of the panel
 		JSplitPane mainSplitPane = getMainSplitPane();
@@ -320,11 +439,40 @@ extends TabularCntrPanel
 //		if ( ! isMonConnected() )
 //			dataTable = null;
 
+		Configuration conf = Configuration.getCombinedConfiguration();
+		boolean enableLogGraph  = conf.getBooleanProperty(PROPKEY_enableLogGraph,  DEFAULT_enableLogGraph);
+		boolean enableDataGraph = conf.getBooleanProperty(PROPKEY_enableDataGraph, DEFAULT_enableDataGraph);
+
+		// Remove and add components to panel
 		panel.removeAll();
 
 		// Create Graph
-		JFreeChart chart = createChart(createDataset(dataTable));
-		panel.add( new ChartPanel(chart) );
+		if (enableLogGraph)
+		{
+			JFreeChart chartLog = createChart(createDatasetForLog(dataTable), CHART_TITLE_LOG);
+			panel.add( new ChartPanel(chartLog), "grow, push" );
+		}
+
+		if (enableDataGraph)
+		{
+    		JFreeChart chartData = createChart(createDatasetForData(dataTable), CHART_TITLE_DATA);
+    		panel.add( new ChartPanel(chartData), "grow, push" );
+		}
+		
+		if (enableLogGraph == false && enableDataGraph == false)
+			panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER), "grow, push" );
+	}
+
+	private void helperActionSave(String key, boolean b)
+	{
+		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+		if (conf == null)
+			return;
+		
+		conf.setProperty(key, b);
+		conf.save();
+		
+		updateExtendedInfoPanel();
 	}
 
 	@Override
@@ -333,13 +481,20 @@ extends TabularCntrPanel
 		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
-		final JButton resetMoveToTab_but = new JButton("Reset 'Move to Tab' settings");
-		final JButton dblist_but         = new JButton("Set 'Graph' databases");
+//		final JCheckBox sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");;
+		sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");
+		spaceusageInMb_chk   = new JCheckBox("Spaceusage in MB");
+		final JCheckBox enableLogGraph_chk   = new JCheckBox("Tran Log Graph");
+		final JCheckBox enableDataGraph_chk  = new JCheckBox("Data Graph");
+		final JButton resetMoveToTab_but     = new JButton("Reset 'Move to Tab' settings");
+		final JButton dblist_but             = new JButton("Set 'Graph' databases");
 
 		String[] graphTypeArr = {"Auto", "Vertical", "Horizontal"};
 		final JLabel            graphType_lbl    = new JLabel("Graph Orientation");
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
+		enableLogGraph_chk .setToolTipText("Show the graph for '"+CHART_TITLE_LOG+"'.");
+		enableDataGraph_chk.setToolTipText("Show the graph for '"+CHART_TITLE_DATA+"'.");
 		String tooltip =
 			"<html>" +
 			"Reset the option: To automatically switch to this tab when any Database(s) Transaction log is <b>full</b>.<br>" +
@@ -360,8 +515,17 @@ extends TabularCntrPanel
 		graphType_lbl.setToolTipText(tooltip);
 		graphType_cbx.setToolTipText(tooltip);
 
-		// Set initial value for Graph Orientation
+		sampleSpaceusage_chk.setToolTipText("Execute spaceusage(dbid) on every sample. Note this may take some extra recources. Only available in ASE 16.0 and above.");
+		spaceusageInMb_chk  .setToolTipText("Calculate spaceusage in MB instead of pages.");
+
 		Configuration conf = Configuration.getCombinedConfiguration();
+
+		enableLogGraph_chk .setSelected(conf.getBooleanProperty(PROPKEY_enableLogGraph,  DEFAULT_enableLogGraph));
+		enableDataGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableDataGraph, DEFAULT_enableDataGraph));
+		sampleSpaceusage_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_spaceusage, CmOpenDatabases.DEFAULT_sample_spaceusage));
+		spaceusageInMb_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_spaceusageInMb, CmOpenDatabases.DEFAULT_spaceusageInMb));
+		
+		// Set initial value for Graph Orientation
 		String orientationStr = conf.getProperty(PROPKEY_plotOrientation, DEFAULT_plotOrientation);
 		String orientation = graphTypeArr[0]; // set as default
 		if (orientationStr.equals(VALUE_plotOrientation_AUTO))       orientation = graphTypeArr[0];
@@ -370,6 +534,39 @@ extends TabularCntrPanel
 		graphType_cbx.setSelectedItem(orientation);
 		
 		// ACTION events
+		sampleSpaceusage_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(CmOpenDatabases.PROPKEY_sample_spaceusage, ((JCheckBox)e.getSource()).isSelected());
+				getCm().setSql(null); // Causes SQL Statement to be recreated
+			}
+		});
+		spaceusageInMb_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(CmOpenDatabases.PROPKEY_spaceusageInMb, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
+		enableLogGraph_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_enableLogGraph, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
+		enableDataGraph_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_enableDataGraph, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
 		resetMoveToTab_but.addActionListener(new ActionListener()
 		{
 			@Override
@@ -414,11 +611,55 @@ extends TabularCntrPanel
 		});
 
 		// ADD to panel
-		panel.add(resetMoveToTab_but, "wrap 5");
-		panel.add(dblist_but,         "wrap 5");
-		panel.add(graphType_lbl,      "split");
-		panel.add(graphType_cbx,      "wrap 5");
+		panel.add(resetMoveToTab_but,   "wrap");
+		panel.add(dblist_but,           "wrap");
+		panel.add(graphType_lbl,        "split");
+		panel.add(graphType_cbx,        "wrap");
+		panel.add(enableLogGraph_chk,   "span, split");
+		panel.add(enableDataGraph_chk,  "wrap");
+		panel.add(sampleSpaceusage_chk, "span, split");
+		panel.add(spaceusageInMb_chk,   "wrap");
 
 		return panel;
+	}
+
+	@Override
+	public void checkLocalComponents()
+	{
+		CountersModel cm = getCm();
+		if (cm != null)
+		{
+			if (cm.isRuntimeInitialized())
+			{
+				// disable if not 16.0
+				if ( cm.getServerVersion() > Ver.ver(16,0))
+				{
+					sampleSpaceusage_chk.setEnabled(true);
+					spaceusageInMb_chk  .setEnabled(true);
+				}
+				else
+				{
+					sampleSpaceusage_chk.setEnabled(false);
+					spaceusageInMb_chk  .setEnabled(false);
+
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmOpenDatabases.PROPKEY_sample_spaceusage, false);
+					}
+				}
+			} // end isRuntimeInitialized
+		} // end (cm != null)
+
+		
+		// CHeck if PROPS has changed by timeouts, and set the GUI acording to that
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// PROPKEY_sample_systemTables
+		boolean confProp = conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_spaceusage, CmOpenDatabases.DEFAULT_sample_spaceusage);
+		boolean guiProp  = sampleSpaceusage_chk.isSelected();
+
+		if (confProp != guiProp)
+			sampleSpaceusage_chk.setSelected(confProp);
 	}
 }

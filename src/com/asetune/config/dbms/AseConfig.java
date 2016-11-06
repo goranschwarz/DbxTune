@@ -22,6 +22,7 @@ import com.asetune.config.dbms.AseConfigText.ConfigType;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.NumberUtils;
 import com.asetune.utils.SwingUtils;
 
 
@@ -171,6 +172,9 @@ implements IDbmsConfig
 
 	private ArrayList<String>              _configSectionList = null;
 
+	private String _aseName = "";
+	private String _aseVersion = "";
+	
 	public class AseConfigEntry
 	{
 		/** configuration has been changed by any user (same as sp_configure 'nondefault')*/
@@ -314,7 +318,10 @@ implements IDbmsConfig
 		_configList        = new ArrayList<AseConfigEntry>();
 		_configSectionList = new ArrayList<String>();
 		
-		// version
+		_aseName    = conn.getDbmsServerName();
+		_aseVersion = conn.getDbmsVersionStr();
+
+// version
 //		try
 //		{
 //			String aseVersionStr = null;
@@ -441,8 +448,21 @@ implements IDbmsConfig
 			_configSectionList = null;
 
 			// JZ0C0: Connection is already closed.
-			if ("JZ0C0".equals(ex.getSQLState()))
-				throw ex;
+			// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
+			if ( "JZ0C0".equals(ex.getSQLState()) || "JZ006".equals(ex.getSQLState()) )
+			{
+				try
+				{
+					_logger.info("AseConfig:initialize(): lost connection... try to reconnect...");
+					conn.reConnect(null);
+					_logger.info("AseConfig:initialize(): Reconnect succeeded, but the configuration will not be visible");
+				}
+				catch(Exception reconnectEx)
+				{
+					_logger.warn("AseConfig:initialize(): reconnect failed due to: "+reconnectEx);
+					throw ex; // Note throw the original exception and not reconnectEx
+				}
+			}
 
 			return;
 		}
@@ -683,5 +703,65 @@ implements IDbmsConfig
 	{
 //		return "";
 		return ((Cache) DbmsConfigTextManager.getInstance(ConfigType.AseCacheConfig.toString())).getFreeMemoryStr();
+	}
+
+	@Override
+	public boolean isReverseEngineeringPossible()
+	{
+		return true;
+	}
+
+	@Override
+	public String reverseEngineer(int[] modelRows)
+	{
+		if (modelRows == null)     return null;
+		if (modelRows.length == 0) return null;
+
+		StringBuilder sb = new StringBuilder();
+		
+		// Build a header...
+		sb.append("/* \n");
+		sb.append("** Reverse engineering ").append(modelRows.length).append(" entries. \n");
+		sb.append("** At Date:         ").append(new Timestamp(System.currentTimeMillis())).append("\n");
+		sb.append("** ASE Server name: ").append(_aseName).append("\n");
+		sb.append("** ASE Version:     ").append(_aseVersion).append("\n");
+		sb.append("*/ \n");
+		sb.append("\n");
+		for (int r=0; r<modelRows.length; r++)
+		{
+			int mrow = modelRows[r];
+
+			// SKIP: If it's a read only configuration 
+			if ("read-only".equals(getValueAt(mrow, findColumn(AseConfig.TYPE))))
+				continue;
+
+			sb.append("---------------------------------------------------------------------------\n");
+			sb.append("-- Config Name:   ").append(getValueAt(mrow, findColumn(AseConfig.CONFIG_NAME))) .append("\n");
+			sb.append("-- Description:   ").append(getValueAt(mrow, findColumn(AseConfig.DESCRIPTION))) .append("\n");
+			sb.append("-- Section Name:  ").append(getValueAt(mrow, findColumn(AseConfig.SECTION_NAME))).append("\n");
+			sb.append("-- Type:          ").append(getValueAt(mrow, findColumn(AseConfig.TYPE))).append("\n");
+
+			String cfgValStr = getValueAt(mrow, findColumn(AseConfig.CFG_VAL_STR)) + "";
+			if (NumberUtils.isNumber(cfgValStr))
+			{
+				sb.append("-- Default Value: ").append(getValueAt(mrow, findColumn(AseConfig.DEFAULT_VALUE))).append("\n");
+				sb.append("-- Min Value:     ").append(getValueAt(mrow, findColumn(AseConfig.MIN_VALUE))).append("\n");
+				sb.append("-- Max Value:     ").append(getValueAt(mrow, findColumn(AseConfig.MAX_VALUE))).append("\n");
+				
+    			sb.append("exec sp_configure '").append(getValueAt(mrow, findColumn(AseConfig.CONFIG_NAME))).append("', ");
+    			sb.append(getValueAt(mrow, findColumn(AseConfig.CONFIG_VALUE))).append("");
+    			sb.append("\n");
+    			sb.append("go\n");
+			}
+			else
+			{
+    			sb.append("exec sp_configure '").append(getValueAt(mrow, findColumn(AseConfig.CONFIG_NAME))).append("', 0, '").append(cfgValStr).append("'");
+    			sb.append("\n");
+    			sb.append("go\n");
+			}
+			sb.append("\n");
+		}
+		
+		return sb.toString();
 	}
 }

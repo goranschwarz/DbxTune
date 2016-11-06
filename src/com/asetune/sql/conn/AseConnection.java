@@ -23,7 +23,7 @@ extends TdsConnection
 	@Override
 	public DbxConnectionStateInfo refreshConnectionStateInfo()
 	{
-		DbxConnectionStateInfo csi = new DbxConnectionStateInfoAse(this, true);
+		DbxConnectionStateInfo csi = new DbxConnectionStateInfoAse(this);
 		setConnectionStateInfo(csi);
 		return csi;
 	}

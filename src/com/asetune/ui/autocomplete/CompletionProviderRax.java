@@ -11,6 +11,7 @@ import java.util.List;
 import javax.swing.ListCellRenderer;
 import javax.swing.text.JTextComponent;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.autocomplete.CompletionProvider;
@@ -476,9 +477,9 @@ extends CompletionProviderAbstract
 					rs = stmnt.executeQuery(sql);
 					while(rs.next())
 					{
-						String cmd    = rs.getString(1).trim();
-						String params = rs.getString(2).trim();
-						String desc   = rs.getString(3).trim();
+						String cmd    = StringUtils.trim(rs.getString(1));
+						String params = StringUtils.trim(rs.getString(2));
+						String desc   = StringUtils.trim(rs.getString(3));
 						
 						if (params.equals("(none)"))
 							params = "";

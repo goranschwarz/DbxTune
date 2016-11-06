@@ -30,12 +30,12 @@ import javax.swing.UIManager;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.PropertyConfigurator;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.sybase.ase.planviewer.ASEPlanViewer;
@@ -64,7 +64,7 @@ implements ActionListener
 	private JButton           _loadFile_but      = new JButton("Load File");
 	private JButton           _close_but         = new JButton("Close");
 
-	private RSyntaxTextArea   _sqlText = new RSyntaxTextArea(7, 30);
+	private RSyntaxTextAreaX   _sqlText = new RSyntaxTextAreaX(7, 30);
 	private RTextScrollPane   _sqlScroll = new RTextScrollPane(_sqlText);
 
 	private AseMessageHandler _aseMsg  = new AseMessageHandler();

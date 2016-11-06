@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.RoundRobinAutoCompletion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
@@ -580,8 +581,8 @@ extends CompletionProviderAbstractSql
 				ResultSet rs = stmnt.executeQuery(sql);
 				while(rs.next())
 				{
-					String tabName = rs.getString(1);
-					String tabDesc = rs.getString(2);
+					String tabName = StringUtils.trim(rs.getString(1));
+					String tabDesc = StringUtils.trim(rs.getString(2));
 //						System.out.println("_aseMonTableDesc.put('"+tabName+"', '"+tabDesc+"')");
 					_aseMonTableDesc.put(tabName, tabDesc);
 
@@ -653,13 +654,13 @@ extends CompletionProviderAbstractSql
     		{
     			DbInfo di = new DbInfo();
     
-    			di._dbName     = rs.getString("name");
-    			di._dbSize     = rs.getString("db_size");
-    			di._dbId       = rs.getInt   ("dbid");
-    			di._dbOwner    = rs.getString("owner");
-    			di._dbCrDate   = rs.getString("created");
+    			di._dbName     = StringUtils.trim(rs.getString("name"));
+    			di._dbSize     = StringUtils.trim(rs.getString("db_size"));
+    			di._dbId       =                  rs.getInt   ("dbid");
+    			di._dbOwner    = StringUtils.trim(rs.getString("owner"));
+    			di._dbCrDate   = StringUtils.trim(rs.getString("created"));
     			di._dbType     = "User Database";
-    			di._dbRemark   = rs.getString("status");;
+    			di._dbRemark   = StringUtils.trim(rs.getString("status"));
     
     			if      (di._dbName.startsWith("sybsystem")) di._dbType = "System Database";
     			else if (di._dbName.equals("master"))        di._dbType = "System Database";
@@ -847,18 +848,18 @@ extends CompletionProviderAbstractSql
 			while(rs.next())
 			{
 				int c=1;
-				String tabName = rs.getString(c++);
+				String tabName = StringUtils.trim(rs.getString(c++));
 	
 				TableColumnInfo ci = new TableColumnInfo();
-				ci._colName       = rs.getString(c++);
-				ci._colPos        = rs.getInt   (c++);
-				ci._colType       = rs.getString(c++);
-//				ci._colType2      = rs.getString(c++);
-				ci._colLength     = rs.getInt   (c++);
-				ci._colScale      = rs.getInt   (c++);
-				ci._colIsNullable = rs.getInt   (c++);
-	//			ci._colRemark     = rs.getString();
-	//			ci._colDefault    = rs.getString();
+				ci._colName       = StringUtils.trim(rs.getString(c++));
+				ci._colPos        =                  rs.getInt   (c++);
+				ci._colType       = StringUtils.trim(rs.getString(c++));
+//				ci._colType2      = StringUtils.trim(rs.getString(c++);
+				ci._colLength     =                  rs.getInt   (c++);
+				ci._colScale      =                  rs.getInt   (c++);
+				ci._colIsNullable =                  rs.getInt   (c++);
+	//			ci._colRemark     = StringUtils.trim(rs.getString());
+	//			ci._colDefault    = StringUtils.trim(rs.getString());
 
 //				// Get "real" datatype (if it was a user defined type)
 //				if ( ! ci._colType.equals(ci._colType2) )
@@ -921,9 +922,9 @@ extends CompletionProviderAbstractSql
 					ResultSet rs = stmnt.executeQuery(sql);
 					while(rs.next())
 					{
-						String tabName = rs.getString(1);
-						String colName = rs.getString(2);
-						String colDesc = rs.getString(3);
+						String tabName = StringUtils.trim(rs.getString(1));
+						String colName = StringUtils.trim(rs.getString(2));
+						String colDesc = StringUtils.trim(rs.getString(3));
 
 						if ( ! prevTabName.equals(tabName) )
 						{
@@ -1010,9 +1011,9 @@ extends CompletionProviderAbstractSql
 		while(rs.next())
 		{
 			ProcedureInfo pi = new ProcedureInfo();
-			pi._procCat     = rs.getString(1);
-			pi._procSchema  = rs.getString(2);
-			pi._procName    = rs.getString(3);
+			pi._procCat     = StringUtils.trim(rs.getString(1));
+			pi._procSchema  = StringUtils.trim(rs.getString(2));
+			pi._procName    = StringUtils.trim(rs.getString(3));
 			pi._procType    = "Procedure";
 			pi._procRemark  = "";
 
@@ -1080,18 +1081,18 @@ extends CompletionProviderAbstractSql
 			while(rs.next())
 			{
 				int c=1;
-				String procName = rs.getString(c++);
+				String procName = StringUtils.trim(rs.getString(c++));
 	
 				ProcedureParameterInfo pi = new ProcedureParameterInfo();
-				pi._paramName       = rs.getString(c++);
+				pi._paramName       = StringUtils.trim(rs.getString(c++));
 				pi._paramPos        = rs.getInt   (c++);
-				pi._paramType       = rs.getString(c++);
-//				pi._paramType2      = rs.getString(c++);
+				pi._paramType       = StringUtils.trim(rs.getString(c++));
+//				pi._paramType2      = StringUtils.trim(rs.getString(c++));
 				pi._paramLength     = rs.getInt   (c++);
 				pi._paramScale      = rs.getInt   (c++);
 				pi._paramIsNullable = rs.getInt   (c++);
-//				pi._paramRemark     = rs.getString();
-//				pi._paramDefault    = rs.getString();
+//				pi._paramRemark     = StringUtils.trim(rs.getString());
+//				pi._paramDefault    = StringUtils.trim(rs.getString());
 	
 //				// Get "real" datatype (if it was a user defined type)
 //				if ( ! pi._paramType.equals(pi._paramType2) )
@@ -1151,9 +1152,9 @@ extends CompletionProviderAbstractSql
 		while(rs.next())
 		{
 			ProcedureInfo pi = new ProcedureInfo();
-			pi._procCat     = rs.getString(1);
-			pi._procSchema  = rs.getString(2);
-			pi._procName    = rs.getString(3);
+			pi._procCat     = StringUtils.trim(rs.getString(1));
+			pi._procSchema  = StringUtils.trim(rs.getString(2));
+			pi._procName    = StringUtils.trim(rs.getString(3));
 			pi._procType    = "System Procedure";
 			pi._procRemark  = getSpDescription(pi._procName);
 
@@ -1210,18 +1211,18 @@ extends CompletionProviderAbstractSql
 		while(rs.next())
 		{
 			int c=1;
-			String procName = rs.getString(c++);
+			String procName = StringUtils.trim(rs.getString(c++));
 
 			ProcedureParameterInfo pi = new ProcedureParameterInfo();
-			pi._paramName       = rs.getString(c++);
-			pi._paramPos        = rs.getInt   (c++);
-			pi._paramType       = rs.getString(c++);
-//			pi._paramType2      = rs.getString(c++);
-			pi._paramLength     = rs.getInt   (c++);
-			pi._paramScale      = rs.getInt   (c++);
-			pi._paramIsNullable = rs.getInt   (c++);
-//			pi._paramRemark     = rs.getString();
-//			pi._paramDefault    = rs.getString();
+			pi._paramName       = StringUtils.trim(rs.getString(c++));
+			pi._paramPos        =                  rs.getInt   (c++);
+			pi._paramType       = StringUtils.trim(rs.getString(c++));
+//			pi._paramType2      = StringUtils.trim(rs.getString(c++);
+			pi._paramLength     =                  rs.getInt   (c++);
+			pi._paramScale      =                  rs.getInt   (c++);
+			pi._paramIsNullable =                  rs.getInt   (c++);
+//			pi._paramRemark     = StringUtils.trim(rs.getString());
+//			pi._paramDefault    = StringUtils.trim(rs.getString());
 
 //			// Get "real" datatype (if it was a user defined type)
 //			if ( ! pi._paramType.equals(pi._paramType2) )

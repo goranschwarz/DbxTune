@@ -70,10 +70,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTableHeader;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
@@ -86,6 +83,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import com.asetune.Version;
 import com.asetune.gui.swing.GTable;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.ArrayUtils;
 import com.asetune.utils.AseSqlScriptReader;
@@ -94,6 +92,8 @@ import com.asetune.utils.FileTail;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CommandHistoryDialog
 extends JFrame
@@ -108,7 +108,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	private JPanel               _topPanel               = null;
 
 	private JPanel               _cmdPanel               = null;
-	private RSyntaxTextArea      _cmd_txt                = new RSyntaxTextArea();
+	private RSyntaxTextAreaX     _cmd_txt                = new RSyntaxTextAreaX();
 	private RTextScrollPane      _cmd_scroll             = new RTextScrollPane(_cmd_txt);
 
 	private JPanel               _statusBarPanel         = null;

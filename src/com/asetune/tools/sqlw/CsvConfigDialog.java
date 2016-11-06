@@ -9,7 +9,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.swing.JButton;
@@ -18,16 +17,14 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.UIManager;
 
-import net.miginfocom.swing.MigLayout;
-
-import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.swing.GCheckBox;
 import com.asetune.gui.swing.GLabel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CsvConfigDialog
 	extends JDialog

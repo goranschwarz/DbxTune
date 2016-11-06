@@ -24,8 +24,6 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
@@ -41,6 +39,8 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class WizardUserDefinedCmPage4

@@ -6,6 +6,7 @@ package com.asetune.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractAction;
+import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -57,6 +59,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JSeparator;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
@@ -374,7 +377,10 @@ public abstract class MainFrame
 	private JMenuItem           _offlineSessionsView_mi;
 	private JMenu               _preferences_m;
 	private JMenuItem           _refreshRate_mi;
-	private JCheckBoxMenuItem   _autoResizePcTable_mi;
+	private JMenu               _autoResizePcTable_m;
+	private JRadioButtonMenuItem _autoResizePcTableShrinkGrow_mi;
+	private JRadioButtonMenuItem _autoResizePcTableGrow_mi;
+	private JRadioButtonMenuItem _autoResizePcTableNoResize_mi;
 	private JCheckBoxMenuItem   _autoRefreshOnTabChange_mi;
 	private JCheckBoxMenuItem   _groupTcpInTabPane_mi;
 	private JMenu               _optDoGc_m;
@@ -598,6 +604,16 @@ public abstract class MainFrame
 	public void splashWindowProgress(String msg)
 	{
 		SplashWindow.drawProgress(msg);
+	}
+
+	/**
+	 * Set the color and size of the main border around the window
+	 * @param profileType
+	 */
+	public void setBorderForConnectionProfileType(ConnectionProfileManager.ProfileType profileType)
+	{
+		Container contContentPane = getContentPane();
+		ConnectionProfileManager.setBorderForConnectionProfileType(contContentPane, profileType);
 	}
 
 	
@@ -1544,7 +1560,8 @@ public abstract class MainFrame
 //		_optDoGc_m                    .setIcon(SwingUtils.readImageIcon(Version.class, "images/do_gc_after_refresh.png"));gc_now
 		_optDoGc_m                    .setIcon(SwingUtils.readImageIcon(Version.class, "images/gc_now.png"));
 
-		_autoResizePcTable_mi          = new JCheckBoxMenuItem("Auto Resize Column Width in Performance Counter Tables", false);
+		_autoResizePcTable_m           = createPctAutoResizeColumnWidthMenu();
+		
 		_autoRefreshOnTabChange_mi     = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
 		_refreshRate_mi                = new JMenuItem("Refresh Rate...");
 		_groupTcpInTabPane_mi          = new JCheckBoxMenuItem("Group Performance Counters in Tabular Panels", useTcpGroups());
@@ -1552,12 +1569,10 @@ public abstract class MainFrame
 		_optSummaryOperShowDiff_mi     = new JCheckBoxMenuItem("Show Difference Counters for Summary Operations", DEFAULT_summaryOperations_showDiff);
 		_optSummaryOperShowRate_mi     = new JCheckBoxMenuItem("Show Rate Counters for Summary Operations",       DEFAULT_summaryOperations_showRate);
 
-		_autoResizePcTable_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
 		_autoRefreshOnTabChange_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_on_tab_change.png"));
 		_refreshRate_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
 		_groupTcpInTabPane_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/group_tcp_in_tab_pane.png"));
 
-		_autoResizePcTable_mi         .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
 		_autoRefreshOnTabChange_mi    .setActionCommand(ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE);
 		_refreshRate_mi               .setActionCommand(ACTION_OPEN_REFRESH_RATE);
 		_groupTcpInTabPane_mi         .setActionCommand(ACTION_GROUP_TCP_IN_TAB_PANE);
@@ -1565,7 +1580,6 @@ public abstract class MainFrame
 		_optSummaryOperShowDiff_mi    .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
 		_optSummaryOperShowRate_mi    .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
 
-		_autoResizePcTable_mi         .addActionListener(this);
 		_autoRefreshOnTabChange_mi    .addActionListener(this);
 		_refreshRate_mi               .addActionListener(this);
 		_groupTcpInTabPane_mi         .addActionListener(this);
@@ -1573,7 +1587,7 @@ public abstract class MainFrame
 		_optSummaryOperShowDiff_mi    .addActionListener(this);
 		_optSummaryOperShowRate_mi    .addActionListener(this);
 
-		menu.add(_autoResizePcTable_mi);
+		menu.add(_autoResizePcTable_m);
 		menu.add(_autoRefreshOnTabChange_mi);
 		menu.add(_refreshRate_mi);
 		menu.add(_groupTcpInTabPane_mi);
@@ -1583,6 +1597,37 @@ public abstract class MainFrame
 		menu.add(_optSummaryOperShowAbs_mi);
 		menu.add(_optSummaryOperShowDiff_mi);
 		menu.add(_optSummaryOperShowRate_mi);
+
+		return menu;
+	}
+
+	protected JMenu createPctAutoResizeColumnWidthMenu()
+	{
+		JMenu menu = new JMenu("Performance Counter Tables, Auto Resize Column Width");
+		
+		menu.setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_table_columns.png"));
+//		menu.setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
+
+		_autoResizePcTableShrinkGrow_mi= new JRadioButtonMenuItem("Both Grow and Shrink", false);
+		_autoResizePcTableGrow_mi      = new JRadioButtonMenuItem("Grow Only",            false);
+		_autoResizePcTableNoResize_mi  = new JRadioButtonMenuItem("Do NOT resize",        false);
+
+		ButtonGroup group = new ButtonGroup();
+		group.add(_autoResizePcTableShrinkGrow_mi);
+		group.add(_autoResizePcTableGrow_mi);
+		group.add(_autoResizePcTableNoResize_mi);
+
+		_autoResizePcTableShrinkGrow_mi.setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
+		_autoResizePcTableGrow_mi      .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
+		_autoResizePcTableNoResize_mi  .setActionCommand(ACTION_TOGGLE_AUTO_RESIZE_PC_TABLES);
+
+		_autoResizePcTableShrinkGrow_mi.addActionListener(this);
+		_autoResizePcTableGrow_mi      .addActionListener(this);
+		_autoResizePcTableNoResize_mi  .addActionListener(this);
+
+		menu.add(_autoResizePcTableShrinkGrow_mi);
+		menu.add(_autoResizePcTableGrow_mi);
+		menu.add(_autoResizePcTableNoResize_mi);
 
 		return menu;
 	}
@@ -2934,11 +2979,12 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				}
 
 				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getAseConn(), true);
-				ci.setSshTunnelInfo(connDialog.getAseSshTunnelInfo());
+				if (connDialog.isAseSshTunnelSelected())
+					ci.setSshTunnelInfo(connDialog.getAseSshTunnelInfo());
 				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 //				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
-
 			}
+			
 		} // end: TDS_CONN
 
 		if ( connType == ConnectionDialog.JDBC_CONN)
@@ -2968,7 +3014,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				}
 
 				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getJdbcConn(), true);
-				ci.setSshTunnelInfo(connDialog.getJdbcSshTunnelInfo());
+				if (connDialog.isJdbcSshTunnelSelected())
+					ci.setSshTunnelInfo(connDialog.getJdbcSshTunnelInfo());
 				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 //				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getJdbcSshTunnelInfo());
 			}
@@ -3031,11 +3078,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //				sendConnectInfoNoBlock(connType, null);
 
 				DbxConnectInfo ci = new DbxConnectInfo(connDialog.getOfflineConn(), false);
-//				ci.setSshTunnelInfo(connDialog.getOfflineSshTunnelInfo());
+//				if (connDialog.isOfflineSshTunnelSelected())
+//					ci.setSshTunnelInfo(connDialog.getOfflineSshTunnelInfo());
 				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 //				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, null);
 			}
 		} // end: OFFLINE_CONN
+
+		// Set the window border for THIS Window
+		setBorderForConnectionProfileType(connDialog.getSelectedConnectionProfileType(connType));
 	}
 
 	public abstract Options getConnectionDialogOptions();
@@ -3277,6 +3328,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				getWaitDialog().setState("Disconnected.");
 
 				_connectedToProductName = null;
+				setBorderForConnectionProfileType(null);
 
 				_logger.info("The disconnect thread is ending.");
 				
@@ -4456,7 +4508,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._offlineSessionsView_mi       .setEnabled(false);
 			mf._preferences_m                .setEnabled(true); // always TRUE
 			mf._refreshRate_mi               .setEnabled(true);
-			mf._autoResizePcTable_mi         .setEnabled(true); // always TRUE
+			mf._autoResizePcTable_m          .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
 			mf._optDoGc_m                    .setEnabled(true); // always TRUE
@@ -4511,7 +4563,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._offlineSessionsView_mi       .setEnabled(true);
 			mf._preferences_m                .setEnabled(true); // always TRUE
 			mf._refreshRate_mi               .setEnabled(false);
-			mf._autoResizePcTable_mi         .setEnabled(true); // always TRUE
+			mf._autoResizePcTable_m          .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
 			mf._optDoGc_m                    .setEnabled(true); // always TRUE
@@ -4566,7 +4618,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._offlineSessionsView_mi       .setEnabled(false);
 			mf._preferences_m                .setEnabled(true); // always TRUE
 			mf._refreshRate_mi               .setEnabled(false);
-			mf._autoResizePcTable_mi         .setEnabled(true); // always TRUE
+			mf._autoResizePcTable_m          .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
 			mf._optDoGc_m                    .setEnabled(true); // always TRUE
@@ -5247,6 +5299,35 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 	}
 
+	public TabularCntrPanel.AutoAdjustTableColumnWidth getTcpAutoAdjustTableColumnWidthType()
+	{
+		if (_autoResizePcTableShrinkGrow_mi.isSelected()) return TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON;
+		if (_autoResizePcTableGrow_mi      .isSelected()) return TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+		if (_autoResizePcTableNoResize_mi  .isSelected()) return TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_OFF;
+		return TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+	}
+	private void setTcpAutoAdjustTableColumnWidthType(String type)
+	{
+		if      (TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON.name().equals(type)) _autoResizePcTableShrinkGrow_mi.setSelected(true);
+		else if (TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_GROW_ON       .name().equals(type)) _autoResizePcTableGrow_mi      .setSelected(true);
+		else if (TabularCntrPanel.AutoAdjustTableColumnWidth.AUTO_OFF           .name().equals(type)) _autoResizePcTableNoResize_mi  .setSelected(true);
+		else _autoResizePcTableGrow_mi.setSelected(true);
+	}
+//	public String getTcpAutoAdjustTableColumnWidthType()
+//	{
+//		if (_autoResizePcTableShrinkGrow_mi.isSelected()) return "GROW_SHRINK";
+//		if (_autoResizePcTableGrow_mi      .isSelected()) return "GROW";
+//		if (_autoResizePcTableNoResize_mi  .isSelected()) return "NO_RESIZE";
+//		return "UNKNOWN";
+//	}
+//	private void setTcpAutoAdjustTableColumnWidthType(String type)
+//	{
+//		if      ("GROW_SHRINK".equals(type)) _autoResizePcTableShrinkGrow_mi.setSelected(true);
+//		else if ("GROW"       .equals(type)) _autoResizePcTableGrow_mi      .setSelected(true);
+//		else if ("NO_RESIZE"  .equals(type)) _autoResizePcTableNoResize_mi  .setSelected(true);
+//		else _autoResizePcTableGrow_mi.setSelected(true);
+//	}
+	
 	private void saveProps()
 	{
 		// do not save stuff during initialization
@@ -5261,7 +5342,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		tmpConf.setProperty("main.refresh.interval", _refreshInterval);
 		tmpConf.setProperty("nogui.sleepTime",       _refreshNoGuiInterval);
 
-		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
+		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", getTcpAutoAdjustTableColumnWidthType().name());
 		tmpConf.setProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_useTcpGroups,                          _groupTcpInTabPane_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterXMinutes,                 _optDoGcAfterXMinutes_mi.isSelected());
@@ -5350,9 +5431,11 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //		int tabLayoutPolicy = tmpConf.getIntProperty("mainTabbedPane.tabLayoutPolicy", JTabbedPane.WRAP_TAB_LAYOUT);
 //		_mainTabbedPane.setTabLayoutPolicy(tabLayoutPolicy);
 
+		
 		boolean bool; 
-		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
-		_autoResizePcTable_mi.setSelected(bool);
+//		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", _autoResizePcTable_mi.isSelected());
+//		_autoResizePcTable_mi.setSelected(bool);
+		setTcpAutoAdjustTableColumnWidthType(tmpConf.getProperty("TabularCntrPanel.autoAdjustTableColumnWidth", "GROW"));
 
 		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 		_autoRefreshOnTabChange_mi.setSelected(bool);

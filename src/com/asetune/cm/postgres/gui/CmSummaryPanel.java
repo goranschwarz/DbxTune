@@ -25,14 +25,12 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.hana.CmSummary;
+import com.asetune.cm.postgres.CmSummary;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ShowCmPropertiesDialog;
@@ -43,6 +41,8 @@ import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSummaryPanel
 //extends TabularCntrPanel
@@ -410,19 +410,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_localServerName_txt  .setToolTipText(tooltip);
 		_localServerName_txt  .setEditable(false);
 
-		tooltip = "This is the HANA internal instance/server name.";
+		tooltip = "This is the Postgres internal instance/server name.";
 		_dbmsServerName_lbl   .setText("Instance name");
 		_dbmsServerName_lbl   .setToolTipText(tooltip);
 		_dbmsServerName_txt   .setToolTipText(tooltip);
 		_dbmsServerName_txt   .setEditable(false);
 
-		tooltip = "This is the hostname where HANA is running";
+		tooltip = "This is the hostname where Postgres is running";
 		_dbmsListeners_lbl    .setText("Hostname");
 		_dbmsListeners_lbl    .setToolTipText(tooltip);
 		_dbmsListeners_txt    .setToolTipText(tooltip);
 		_dbmsListeners_txt    .setEditable(false);
 
-		tooltip = "This is the HANA version.";
+		tooltip = "This is the Postgres version.";
 		_dbmsVersion_lbl      .setText("Version");
 		_dbmsVersion_lbl      .setToolTipText(tooltip);
 		_dbmsVersion_txt      .setToolTipText(tooltip);
@@ -440,7 +440,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_utcTimeDiff_txt      .setToolTipText(tooltip);
 		_utcTimeDiff_txt      .setEditable(false);
 
-		tooltip = "Date and time that the HANA was started.";
+		tooltip = "Date and time that the Postgres was started.";
 		_startDate_lbl        .setText("Start date");
 		_startDate_lbl        .setToolTipText(tooltip);
 		_startDate_txt        .setToolTipText(tooltip);
@@ -1351,17 +1351,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	public void setSummaryData(CountersModel cm, boolean postProcessing)
 	{
 		setWatermark();
+//System.out.println("getColNames="+cm.getCounterSampleAbs().getColNames());
+//System.out.println("getColNames="+cm.getCounterSampleAbs().getDataCollection());
 
-		_dbmsServerName_txt         .setText(cm.getAbsString (0, "DATABASE_NAME"));
-		_dbmsListeners_txt          .setText(cm.getAbsString (0, "HOST"));
-		_dbmsVersion_txt            .setText(cm.getAbsString (0, "VERSION"));
-		_lastSampleTime_txt         .setText(cm.getAbsString (0, "TIME_NOW"));
-		_utcTimeDiff_txt            .setText(cm.getAbsString (0, "UTC_MINUTE_DIFF"));
-		_startDate_txt              .setText(cm.getAbsString (0, "START_TIME"));
+		_dbmsServerName_txt         .setText(cm.getAbsString (0, "database_name"));
+		_dbmsListeners_txt          .setText(cm.getAbsString (0, "host"));
+		_dbmsVersion_txt            .setText(cm.getAbsString (0, "version"));           _dbmsVersion_txt.setCaretPosition(0);
+		_lastSampleTime_txt         .setText(cm.getAbsString (0, "time_now"));
+		_utcTimeDiff_txt            .setText(cm.getAbsString (0, "utc_minute_diff"));
+		_startDate_txt              .setText(cm.getAbsString (0, "start_time"));
 		
 		
 //		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
-//		_aseVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  _aseVersion_txt.setCaretPosition(0);
+//		_aseVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  
 //		_asePageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 //		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
 //		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");

@@ -31,7 +31,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 import org.apache.log4j.Logger;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.netbeans.api.wizard.WizardDisplayer;
@@ -41,6 +40,7 @@ import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -327,7 +327,7 @@ public class WizardOffline
 		private static final long serialVersionUID = 1L;
 
 		private String _filename = null;
-		private RSyntaxTextArea _textArea = new RSyntaxTextArea();
+		private RSyntaxTextAreaX _textArea = new RSyntaxTextAreaX();
 
 		public SimpleFileEditor(String filename)
 		{

@@ -556,13 +556,20 @@ public class SshConnection
 				try
 				{
 					File hostKeyFile = new File(_knownHostPath);
+					
+					// Create directory/directories to hold the 'known_hosts' if the file dosn't exists
+					File sshDir = hostKeyFile.getParentFile();
+					if ( sshDir != null && !sshDir.exists() )
+						sshDir.mkdirs();
+
+					// Add the key to the file.
 					KnownHosts.addHostkeyToFile(hostKeyFile, new String[] { hashedHostname }, serverHostKeyAlgorithm, serverHostKey);
 
 					logInfoMsg("SSH Added '"+hostname+"' to the HostKey file '"+hostKeyFile+"'.");
 				}
-				catch (IOException ignore)
+				catch (IOException ex)
 				{
-					logInfoMsg("SSH Problems Adding '"+hostname+"' to the HostKey file '"+_knownHostPath+"'.");
+					logInfoMsg("SSH Problems Adding '"+hostname+"' to the HostKey file '"+_knownHostPath+"'. Exception: "+ex);
 				}
 
 				return true;
@@ -1162,14 +1169,15 @@ public class SshConnection
 				intVersion = i;
 		}
 
-		Integer exitCode = sess.getExitStatus();
+		_logger.info("When issuing command '"+cmd+"' the version "+intVersion+" was parsed.");
+//		Integer exitCode = sess.getExitStatus();
 
 		stdout_br.close();
 		stderr_br.close();
 		sess.close();
 
-		if ( exitCode == null || exitCode != null && exitCode != 0 )
-			return -1;
+//		if ( exitCode == null || exitCode != null && exitCode != 0 )
+//			return -1;
 
 		_logger.debug("getLinuxUtilVersion(): returned " + intVersion );
 //System.out.println("getLinuxUtilVersion(): returned " + intVersion );

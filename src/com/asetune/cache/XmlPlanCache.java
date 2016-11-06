@@ -1,12 +1,9 @@
 package com.asetune.cache;
 
-import java.sql.SQLException;
 import java.util.ConcurrentModificationException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 

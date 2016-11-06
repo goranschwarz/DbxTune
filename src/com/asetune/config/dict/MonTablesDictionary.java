@@ -10,7 +10,6 @@ import java.util.Map;
 import javax.naming.NameNotFoundException;
 
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.utils.StringUtil;
 
 
 public abstract class MonTablesDictionary

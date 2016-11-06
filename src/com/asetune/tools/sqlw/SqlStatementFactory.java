@@ -25,7 +25,8 @@ public class SqlStatementFactory
 		if (sql.startsWith("\\"))
 		{
 			// A set of known commands
-			String[] knownCommands = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile"};
+			String[] knownCommands  = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile", "\\ddlgen"};
+			String[] mustHaveParams = {"\\exec", "\\rpc", "\\call", "\\prep"};
 
 			// Get first and seconds word
 			StringTokenizer st = new StringTokenizer(sql);
@@ -39,7 +40,7 @@ public class SqlStatementFactory
 			}
 
 			// UNKNOWN command, give a list of available commands.
-			if ( ! StringUtil.arrayContains(knownCommands, w1) || w2.equals(""))
+			if ( ! StringUtil.arrayContains(knownCommands, w1) || (StringUtil.arrayContains(mustHaveParams, w1) && w2.equals("")) )
 			{
 				String msg = 
 					  "Unknown Local Command (or no parameters to it): " + w1 + "\n"
@@ -49,7 +50,8 @@ public class SqlStatementFactory
 					+ "    \\rpc  procName ? ? :(params)               -- exec using Callable Statement\n"
 					+ "    \\call procName ? ? :(params)               -- exec using Callable Statement\n"
 					+ "    \\prep insert inti t1 values(? ?) :(params) -- exec using Prepared Statement\n"
-					+ "    \\loadfile -T tabname filename                  -- load a (CSV) file into a table\n"
+					+ "    \\loadfile -T tabname filename              -- load a (CSV) file into a table\n"
+					+ "    \\ddlgen -h | -t tabname                    -- generate DDL and open editor\n"
 					+ "\n"
 					+ "param description: \n"
 					+ "    Type        Value               java.sql.Types  Example: replace question mark(?) with value\n"
@@ -79,6 +81,7 @@ public class SqlStatementFactory
 
 		// Decide what to create
 		if      (w1.equals("\\loadfile")) return new SqlStatementCmdLoadFile(conn, sqlOrigin, dbProductName, resultCompList, progress);
+		if      (w1.equals("\\ddlgen"))   return new SqlStatementCmdDdlGen  (conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\exec"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\rpc" ))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\call"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);

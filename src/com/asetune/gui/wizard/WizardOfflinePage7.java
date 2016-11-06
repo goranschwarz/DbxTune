@@ -12,12 +12,12 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.pcs.PersistWriterBase;
+
+import net.miginfocom.swing.MigLayout;
 
 
 //PAGE 4

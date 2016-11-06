@@ -26,6 +26,7 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.StringValue;
+import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
@@ -180,6 +181,45 @@ extends JXTable
 				return false;
 			}
 		}, NULL_VALUE_COLOR, null));
+	}
+
+	@Override
+	public void packAll()
+	{
+//		super.packAll();
+		packAllGrowOnly();
+	}
+	
+	private int _packMaxColWidth = SwingUtils.hiDpiScale(1000);
+	public int getPackMaxColWidth() { return _packMaxColWidth; }
+	public void setPackMaxColWidth(int maxWidth) { _packMaxColWidth = maxWidth; }
+
+	public void packAllGrowOnly()
+	{
+		int margin = -1;
+		boolean onlyGrowWidth = true;
+
+		for (int c = 0; c < getColumnCount(); c++)
+		{
+			TableColumnExt ce = getColumnExt(c);
+
+//			int maxWidth = -1;
+			int maxWidth = getPackMaxColWidth();
+			int beforePackWidth = ce.getPreferredWidth();
+			
+			packColumn(c, margin, maxWidth);
+
+			if (onlyGrowWidth)
+			{
+				int afterPackWidth = ce.getPreferredWidth();
+				if (afterPackWidth < beforePackWidth)
+					ce.setPreferredWidth(beforePackWidth);
+
+				/* Check if the width exceeds the max */
+				if (maxWidth != -1 && afterPackWidth > maxWidth)
+					ce.setPreferredWidth(maxWidth);
+			}
+		}
 	}
 
 	// 
@@ -361,11 +401,11 @@ extends JXTable
 		{
 			StringBuilder sb = new StringBuilder();
 			sb.append("<html>");
-			sb.append("Cell content is <i>unknown</i>, so displaying it as raw text.<br>");
+			sb.append("Cell content is <i>unknown</i>, so displaying it as raw text. Length="+cellStr.length()+"<br>");
 			sb.append("<hr>");
-			sb.append("<pre>");
-			sb.append(cellStr);
-			sb.append("</pre>");
+			sb.append("<pre><code>");
+			sb.append(cellStr.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"));
+			sb.append("</code></pre>");
 			sb.append("</html>");
 
 			return sb.toString();

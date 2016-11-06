@@ -5,13 +5,13 @@ import java.awt.BorderLayout;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sp_sysmon.SpSysmon;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.SwingUtils;
 
@@ -103,7 +103,7 @@ extends TabularCntrPanel
 		panel.setLayout(new BorderLayout());
 //		panel.add(new JScrollPane(createTreeSpSysmon()), BorderLayout.CENTER);
 
-		RSyntaxTextArea textArea = new RSyntaxTextArea();
+		RSyntaxTextAreaX textArea = new RSyntaxTextAreaX();
 		RTextScrollPane textScroll = new RTextScrollPane(textArea, true);
 
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(textScroll, this);

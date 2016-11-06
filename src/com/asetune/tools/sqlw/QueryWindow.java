@@ -141,6 +141,7 @@ import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dbms.PostgresConfig;
 import com.asetune.config.dbms.RaxConfig;
 import com.asetune.config.dbms.RsConfig;
 import com.asetune.config.dbms.SqlServerConfig;
@@ -148,11 +149,13 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryAse;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.dict.MonTablesDictionarySqlServer;
+import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.AboutBox;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
 import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.FavoriteCommandDialog;
 import com.asetune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
 import com.asetune.gui.FavoriteCommandDialog.VendorType;
@@ -166,13 +169,14 @@ import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
 import com.asetune.parser.ParserProperties;
 import com.asetune.sql.CommonEedInfo;
-import com.asetune.sql.JdbcUrlParser;
+import com.asetune.sql.SqlPickList;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
@@ -183,10 +187,11 @@ import com.asetune.sql.pipe.PipeCommandBcp;
 import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.pipe.PipeCommandToFile;
-import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
+import com.asetune.tools.ddlgen.DdlGen;
+import com.asetune.tools.ddlgen.DdlGen.Type;
 import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.StatusBar.ServerInfo;
 import com.asetune.tools.sqlw.msg.JAseCancelledResultSet;
@@ -254,7 +259,6 @@ import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 import com.asetune.utils.WatchdogIsFileChanged;
 import com.asetune.xmenu.TablePopupFactory;
-import com.sybase.ddlgen.DDLGenerator;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
@@ -377,9 +381,12 @@ public class QueryWindow
 	public final static String  PROPKEY_sqlBatchTerminator     = AseSqlScriptReader.PROPKEY_sqlBatchTerminator;
 	public final static String  DEFAULT_sqlBatchTerminator     = AseSqlScriptReader.DEFAULT_sqlBatchTerminator;
 
-	public final static String  PROPKEY_untitledFileName        = PROPKEY_APP_PREFIX + "editor.untitled.filename";
-	public final static String  DEFAULT_untitledFileName        = Version.APP_STORE_DIR + File.separator + APP_NAME + ".editor.untitled.txt";
+	public final static String  PROPKEY_untitledFileName       = PROPKEY_APP_PREFIX + "editor.untitled.filename";
+	public final static String  DEFAULT_untitledFileName       = Version.APP_STORE_DIR + File.separator + APP_NAME + ".editor.untitled.txt";
 
+	public final static String  PROPKEY_rsFilterRowThresh      = PROPKEY_APP_PREFIX + "resultset.filter.threshold.rowcount";
+	public final static int     DEFAULT_rsFilterRowThresh      = 20;
+	
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_asPlainText,         DEFAULT_asPlainText);
@@ -420,10 +427,12 @@ public class QueryWindow
 	public static final String ACTION_LOAD_LAST_HISTORY_ENTRY   = "LOAD_LAST_HISTORY_ENTRY";
 	public static final String ACTION_VIEW_LOG_TAIL             = "VIEW_LOG_TAIL";
 	public static final String ACTION_VIEW_DBMS_CONFIG          = "VIEW_DBMS_CONFIG";
+	public static final String ACTION_VIEW_ASE_HADR_MEMBERS     = "VIEW_ASE_HADR_MEMBERS";
 	public static final String ACTION_RS_GENERATE_CHANGED_DDL   = "RS_GENERATE_CHANGED_DDL";
 	public static final String ACTION_RS_GENERATE_ALL_DDL       = "RS_GENERATE_ALL_DDL";
 	public static final String ACTION_RS_DUMP_QUEUE             = "RS_DUMP_QUEUE";
 	public static final String ACTION_RS_WHO_IS_DOWN            = "RS_WHO_IS_DOWN";
+	public static final String ACTION_ASE_MDA_CONFIG            = "ASE_MDA_CONFIG";
 	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
 	public static final String ACTION_ASE_APP_TRACE             = "ASE_APP_TRACE";
 	public static final String ACTION_ASE_PLAN_VIEWER           = "ASE_PLAN_VIEWER";
@@ -607,16 +616,17 @@ public class QueryWindow
 	private JMenuItem            _exit_mi                     = new JMenuItem("Exit");
                                  
 	// View                      
-	private JMenu                _view_m                 = new JMenu("View");
-	private JMenuItem            _logView_mi             = new JMenuItem("Open Log Window...");
-	private JMenuItem            _viewCmdHistory_mi      = new JMenuItem("Command History");
-	private JMenuItem            _viewLogFile_mi         = new JMenuItem("Tail on Server Log File");
-	private JMenuItem            _dbms_viewConfig_mi     = new JMenuItem("View DBMS Configuration...");
-	private JMenuItem            _rs_configChangedDdl_mi = new JMenuItem("View RCL for changed configurations...");
-	private JMenuItem            _rs_configAllDdl_mi     = new JMenuItem("View RCL for ALL configurations...");
-	private JMenuItem            _rs_dumpQueue_mi        = new JMenuItem("View Stable Queue Content...");
-	private JMenuItem            _rsWhoIsDown_mi         = new JMenuItem("Admin who_is_down");
-	private JMenuItem            _jdbcMetaDataInfo_mi    = new JMenuItem("View JDBC Meta Data Info...");
+	private JMenu                _view_m                     = new JMenu("View");
+	private JMenuItem            _logView_mi                 = new JMenuItem("Open Log Window...");
+	private JMenuItem            _viewCmdHistory_mi          = new JMenuItem("Command History");
+	private JMenuItem            _viewLogFile_mi             = new JMenuItem("Tail on Server Log File");
+	private JMenuItem            _dbms_viewConfig_mi         = new JMenuItem("View DBMS Configuration...");
+	private JMenuItem            _viewAseHadrMembers_mi      = new JMenuItem("View HADR Members...");
+	private JMenuItem            _rs_configChangedDdl_mi     = new JMenuItem("View RCL for changed configurations...");
+	private JMenuItem            _rs_configAllDdl_mi         = new JMenuItem("View RCL for ALL configurations...");
+	private JMenuItem            _rs_dumpQueue_mi            = new JMenuItem("View Stable Queue Content...");
+	private JMenuItem            _rsWhoIsDown_mi             = new JMenuItem("Admin who_is_down");
+	private JMenuItem            _jdbcMetaDataInfo_mi        = new JMenuItem("View JDBC Meta Data Info...");
                                  
 	private JMenu                _preferences_m              = new JMenu("Preferences");
 	private JCheckBoxMenuItem    _prefWinOnConnect_mi        = new JCheckBoxMenuItem("Restore Window Position, based on Connection", DEFAULT_restoreWinSizeForConn);
@@ -628,6 +638,7 @@ public class QueryWindow
 	// Tools
 	private JMenu                _tools_m                = new JMenu("Tools");
 	private JMenuItem            _toolDummy_mi           = new JMenuItem("Dummy entry");
+	private JMenuItem            _aseMdaConfig_mi        = new JMenuItem("Monitor/MDA Configuration...");
 	private JMenuItem            _aseCaptureSql_mi       = new JMenuItem("Capture SQL...");
 	private JMenuItem            _aseAppTrace_mi         = new JMenuItem("ASE Application Tracing...");
 	private JMenuItem            _asePlanViewer_mi       = new JMenuItem("ASE Showplan Viewer...");
@@ -959,10 +970,12 @@ public class QueryWindow
 		// Install a "special" EventQueue, which monitors deadlocks, and other "long" and time
 		// consuming operations on the EDT (Event Dispatch Thread)
 		// A WARN message will be written to the error log starting with 'Swing EDT-DEBUG - Hang: '
-		if (Debug.hasDebug(DebugOptions.EDT_HANG))
+		boolean useEdtHang = Version.getVersionStr().endsWith(".dev");
+		if (Debug.hasDebug(DebugOptions.EDT_HANG) || useEdtHang)
 		{
 			_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the "+Version.getAppName()+" log.");
 			EventDispatchThreadHangMonitor.initMonitoring();
+//			RepaintManager.setCurrentManager(new CheckThreadViolationRepaintManager());
 		}
 		
 		// Now open the window
@@ -1096,6 +1109,7 @@ public class QueryWindow
 			_view_m.add(_viewCmdHistory_mi);
 			_view_m.add(_viewLogFile_mi);
 			_view_m.add(_dbms_viewConfig_mi);
+			_view_m.add(_viewAseHadrMembers_mi);
 			_view_m.add(_rs_configChangedDdl_mi);   
 			_view_m.add(_rs_configAllDdl_mi);   
 			_view_m.add(_rs_dumpQueue_mi);
@@ -1146,6 +1160,7 @@ public class QueryWindow
 
 			
 			_dbms_viewConfig_mi    .setVisible(false);
+			_viewAseHadrMembers_mi .setVisible(false);
 			_rs_configChangedDdl_mi.setVisible(false);
 			_rs_configAllDdl_mi    .setVisible(false);
 			_rs_dumpQueue_mi       .setVisible(false);
@@ -1153,12 +1168,14 @@ public class QueryWindow
 	
 			// TOOLS
 			_tools_m.add(_toolDummy_mi);
+			_tools_m.add(_aseMdaConfig_mi);
 			_tools_m.add(_aseCaptureSql_mi);
 			_tools_m.add(_aseAppTrace_mi);
 			_tools_m.add(_asePlanViewer_mi);
 			_tools_m.add(_aseDdlGen_mi);
 
 			_toolDummy_mi    .setVisible(false);
+			_aseMdaConfig_mi .setVisible(false);
 			_aseCaptureSql_mi.setVisible(false);
 			_aseAppTrace_mi  .setVisible(false);
 			_asePlanViewer_mi.setVisible(false);
@@ -1254,10 +1271,12 @@ public class QueryWindow
 			_viewLogFile_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/tail_logfile.png"));
 			_viewCmdHistory_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/command_history.png"));
 			_dbms_viewConfig_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_dbms_view_16.png"));
+//			_viewAseHadrMembers_mi .setIcon(SwingUtils.readImageIcon(Version.class, "images/view_ase_hadr_members_16.png"));
 			_rs_configAllDdl_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_configChangedDdl_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_dumpQueue_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/view_rs_queue.png"));
 			_rsWhoIsDown_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/rs_admin_who_is_down.png"));
+			_aseMdaConfig_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 			_aseCaptureSql_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 			_aseAppTrace_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
 			_asePlanViewer_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_plan_viewer_16.png"));
@@ -1287,10 +1306,12 @@ public class QueryWindow
 			_viewCmdHistory_mi          .setActionCommand(ACTION_VIEW_CMD_HISTORY);
 			_viewLogFile_mi             .setActionCommand(ACTION_VIEW_LOG_TAIL);
 			_dbms_viewConfig_mi         .setActionCommand(ACTION_VIEW_DBMS_CONFIG);
+			_viewAseHadrMembers_mi      .setActionCommand(ACTION_VIEW_ASE_HADR_MEMBERS);
 			_rs_configChangedDdl_mi     .setActionCommand(ACTION_RS_GENERATE_CHANGED_DDL);
 			_rs_configAllDdl_mi         .setActionCommand(ACTION_RS_GENERATE_ALL_DDL);
 			_rs_dumpQueue_mi            .setActionCommand(ACTION_RS_DUMP_QUEUE);
 			_rsWhoIsDown_mi             .setActionCommand(ACTION_RS_WHO_IS_DOWN);
+			_aseMdaConfig_mi            .setActionCommand(ACTION_ASE_MDA_CONFIG);
 			_aseCaptureSql_mi           .setActionCommand(ACTION_ASE_CAPTURE_SQL);
 			_aseAppTrace_mi             .setActionCommand(ACTION_ASE_APP_TRACE);
 			_asePlanViewer_mi           .setActionCommand(ACTION_ASE_PLAN_VIEWER);
@@ -1320,10 +1341,12 @@ public class QueryWindow
 			_viewCmdHistory_mi       .addActionListener(this);
 			_viewLogFile_mi          .addActionListener(this);
 			_dbms_viewConfig_mi      .addActionListener(this);
+			_viewAseHadrMembers_mi   .addActionListener(this);
 			_rs_configChangedDdl_mi  .addActionListener(this);
 			_rs_configAllDdl_mi      .addActionListener(this);
 			_rs_dumpQueue_mi         .addActionListener(this);
 			_rsWhoIsDown_mi          .addActionListener(this);
+			_aseMdaConfig_mi         .addActionListener(this);
 			_aseCaptureSql_mi        .addActionListener(this);
 			_aseAppTrace_mi          .addActionListener(this);
 			_asePlanViewer_mi        .addActionListener(this);
@@ -1792,6 +1815,30 @@ public class QueryWindow
 		// Place the components within this window
 		Container contentPane = _jframe != null ? _jframe.getContentPane() : _jdialog.getContentPane();
 		contentPane.setLayout(new BorderLayout());
+//System.out.println("contentPane: "+contentPane);
+//System.out.println("contentPane.classname: "+contentPane.getClass().getName());
+//if (contentPane instanceof JPanel)
+//{
+//	final JPanel finalContentPane = (JPanel)contentPane;
+//	final Border originBorder = finalContentPane.getBorder();
+//System.out.println("originBorder: "+originBorder);
+//	Timer timer = new Timer(2000, new ActionListener()
+//	{
+//		@Override
+//		public void actionPerformed(ActionEvent e)
+//		{
+//			long now = System.currentTimeMillis() % 5;
+//			System.out.println("NOW="+now);
+//			if (now == 0) finalContentPane.setBorder(BorderFactory.createEmptyBorder());
+//			if (now == 1) finalContentPane.setBorder(BorderFactory.createMatteBorder(2, 3, 2, 3, Color.RED));
+//			if (now == 2) finalContentPane.setBorder(BorderFactory.createMatteBorder(2, 3, 2, 3, Color.BLUE));
+//			if (now == 3) finalContentPane.setBorder(BorderFactory.createMatteBorder(2, 3, 2, 3, Color.GREEN));
+//			if (now == 4) finalContentPane.setBorder(BorderFactory.createMatteBorder(2, 3, 2, 3, Color.YELLOW));
+//			if (now == 5) finalContentPane.setBorder(BorderFactory.createMatteBorder(2, 3, 2, 3, Color.CYAN));
+//		}
+//	});
+//	timer.start();
+//}
 		
 		setWatermarkAnchor(_topPane);
 		setWatermark();
@@ -2408,7 +2455,17 @@ public class QueryWindow
 		_window.setVisible(b);
 	}
 
+	/**
+	 * Set the color and size of the main border around the window
+	 * @param profileType
+	 */
+	public void setBorderForConnectionProfileType(ConnectionProfileManager.ProfileType profileType)
+	{
+		Container contContentPane = _jframe != null ? _jframe.getContentPane() : _jdialog.getContentPane();
+		ConnectionProfileManager.setBorderForConnectionProfileType(contContentPane, profileType);
+	}
 
+	
 	/*---------------------------------------------------
 	** BEGIN: implementing ActionListener
 	**--------------------------------------------------*/
@@ -2462,6 +2519,9 @@ public class QueryWindow
 		if (ACTION_VIEW_DBMS_CONFIG.equals(actionCmd))
 			action_viewDbmsConfig(e);
 
+		if (ACTION_VIEW_ASE_HADR_MEMBERS.equals(actionCmd))
+			action_viewAseHadrMembers(e);
+
 		if (ACTION_RS_GENERATE_CHANGED_DDL.equals(actionCmd))
 			action_rsGenerateDdl(e, ACTION_RS_GENERATE_CHANGED_DDL);
 
@@ -2479,6 +2539,9 @@ public class QueryWindow
 
 		if (ACTION_RS_WHO_IS_DOWN.equals(actionCmd))
 			action_rsWhoIsDown(e);
+
+		if (ACTION_ASE_MDA_CONFIG.equals(actionCmd))
+			action_aseMdaConfig(e);
 
 		if (ACTION_ASE_CAPTURE_SQL.equals(actionCmd))
 			action_aseCaptureSql(e);
@@ -3170,7 +3233,6 @@ public class QueryWindow
 			}, "checkForUpdatesThread");
 			checkForUpdatesThread.setDaemon(true);
 			checkForUpdatesThread.start();
-
 		}
 		else if ( connType == ConnectionDialog.JDBC_CONN)
 		{
@@ -3283,6 +3345,19 @@ public class QueryWindow
 				_tooltipProviderAbstract = new ToolTipSupplierMySql(_window, _compleationProviderAbstract, this);
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 			}
+			// Postgres SQL
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES))
+			{
+				// Code Completion 
+				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+
+				// Tooltip supplier
+				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
+				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+				// DBMS Configuration
+				DbmsConfigManager.setInstance( new PostgresConfig() );
+			}
 			else
 			{
 				// Code Completion 
@@ -3368,6 +3443,9 @@ public class QueryWindow
 		// What Components should be enabled/visible
 		setComponentVisibility();
 
+		// Set the window border for THIS Window
+		setBorderForConnectionProfileType(connDialog.getSelectedConnectionProfileType(connType));
+
 		// Finally update the WaterMark
 		setWatermark();
 	}
@@ -3378,12 +3456,14 @@ public class QueryWindow
 
 		// Set all to invisible, later set the ones that should be visible to true
 		_dbms_viewConfig_mi    .setVisible(false);
+		_viewAseHadrMembers_mi .setVisible(false);
 		_rs_configChangedDdl_mi.setVisible(false);
 		_rs_configAllDdl_mi    .setVisible(false);
 		_cmdSql_but            .setVisible(false);
 		_cmdRcl_but            .setVisible(false);
 		_rs_dumpQueue_mi       .setVisible(false);
 		_rsWhoIsDown_mi        .setVisible(false);
+		_aseMdaConfig_mi       .setVisible(false);
 		_aseCaptureSql_mi      .setVisible(false);
 		_aseAppTrace_mi        .setVisible(false);
 		_asePlanViewer_mi      .setVisible(false);
@@ -3468,7 +3548,9 @@ public class QueryWindow
 			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))
 			{
 				_dbms_viewConfig_mi        .setVisible(DbmsConfigManager.hasInstance());
+				_viewAseHadrMembers_mi     .setVisible( (_srvVersion >= Ver.ver(16,0,0, 2)) ); // 16.0 SP2
 				_cmdSql_but                .setVisible(true);
+				_aseMdaConfig_mi           .setVisible(true);
 				_aseCaptureSql_mi          .setVisible(true);
 				_aseAppTrace_mi            .setVisible(true);
 				_asePlanViewer_mi          .setVisible(true);
@@ -3766,6 +3848,7 @@ public class QueryWindow
 				_logger.error("Problems closing database connection.", ex);
 			}
 		}
+		setBorderForConnectionProfileType(null);
 	}
 
 	private void action_commit(ActionEvent e)
@@ -4704,6 +4787,25 @@ public class QueryWindow
 		DbmsConfigViewDialog.showDialog(_window, this);
 	}
 
+	private void action_viewAseHadrMembers(ActionEvent e)
+	{
+		try
+		{
+			// Execute and read the ResultSet
+			Statement stmnt = _conn.createStatement();
+			ResultSet rs = stmnt.executeQuery("select * from master.dbo.monHADRMembers");
+			//ResultSet rs = stmnt.executeQuery("select * from master.dbo.sysobjects"); // If we want to simulate a ResultSet and display that... 
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "monHADRMembers");
+
+			// Show a list
+			SqlPickList pickList = new SqlPickList(_window, rstm, "HADR Members (select * from monHADRMembers)", false);
+			pickList.setVisible(true);
+		}
+		catch(Exception ex)
+		{
+			SwingUtils.showErrorMessage("HADR Members", "Problems retriving HADR Members", ex);
+		}
+	}
 
 	private void action_rsGenerateDdl(ActionEvent e, String cmdStr)
 	{
@@ -4765,6 +4867,12 @@ public class QueryWindow
 			0, false);
 	}
 
+	private void action_aseMdaConfig(ActionEvent e)
+	{
+//		boolean hasSaRole           = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
+		AseConfigMonitoringDialog.showDialog(_window, _conn, -1, false);
+	}
+
 	private void action_aseCaptureSql(ActionEvent e)
 	{
 		new ProcessDetailFrame(this, -1, -1);
@@ -4812,59 +4920,90 @@ public class QueryWindow
 		// Kick this of as it's own thread, otherwise the sleep below, might block the Swing Event Dispatcher Thread
 		BgExecutor bgExec = new BgExecutor(wait)
 		{
+//			@Override
+//			public Object doWork()
+//			{
+//				// ddlgen -Usa -Psybase -S127.0.0.1:15702 -Dpubs2
+////				String[] args = {"-Usa", "-Psybase", "-S127.0.0.1:15702", "-TU", "-Ntitles", "-Dpubs2", "-F%"};
+////				String[] args = {"-Usa", "-Psybase", "-S127.0.0.1:15702", "-TU", "-Ntitles", "-D"+_currentDbName, "-F%"};
+//
+//				DbxConnection conn = getConnection();
+//				if (conn == null)
+//					return null;
+//				String curDb = getCurrentDb();
+//				ConnectionProp cp = conn.getConnProp();
+//				JdbcUrlParser p = JdbcUrlParser.parse(cp.getUrl());
+//				String hostPort = p.getHost() + ":" + p.getPort();
+//				
+//				// If we have a SSH Tunnel enabled, then use the local host/port
+//				SshTunnelInfo ti = cp.getSshTunnelInfo();
+//				if (ti != null)
+//					hostPort = ti.getLocalHost() + ":" + ti.getLocalPort();
+//
+//				String[] args = {
+//						"-U" + cp.getUsername(), 
+//						"-P" + cp.getPassword(), 
+//						"-S" + hostPort, 
+////						"-TU", 
+////						"-Ntitles", 
+//						"-D" + curDb
+////						"-F%"
+////						"-CENCRYPT_PASSWORD=true"
+//						};
+//
+//				String[] args2 = new String[args.length];
+//				for(int i=0; i<args.length; i++)
+//				{
+//					args2[i] = args[i];
+//					if (args2[i].startsWith("-P"))
+//						args2[i] = "-P*secret*";
+//				}
+//
+////System.out.println("ARGS2: "+StringUtil.toCommaStr(args2, "|"));
+//				try
+//				{
+//					getWaitDialog().setState("Creating DDL Object");
+////					DDLGeneratorWrapper ddlGen = new DDLGeneratorWrapper(conn, args);
+////					ddlGen.setParams(args);
+////ddlGen.getVersion();
+////					getWaitDialog().setState("<html>Generating DDL Objects...: <br><code>ddlgen "+StringUtil.toCommaStr(args2, " ")+"</code></html>");
+////					return ddlGen.generateDDL();
+//
+//					DDLGenerator ddlGen = new DDLGenerator(args);
+//					ddlGen.setParams(args);
+//System.out.println("DDLGenerator Version: " + DDLGenerator.getVersion());
+//					getWaitDialog().setState("<html>Generating DDL Objects...: <br><code>ddlgen "+StringUtil.toCommaStr(args2, " ")+"</code></html>");
+//					return ddlGen.generateDDL();
+//				}
+////				catch (Exception ex)
+//				catch (Throwable ex)
+//				{
+//					_logger.warn("Problems when generating DDL Statements for dbname "+curDb+", args="+StringUtil.toCommaStr(args2), ex);
+//					SwingUtils.showErrorMessage(_window, "Problems generating DDL", "Problems when generating DDL Statements for dbname "+curDb+"\nargs="+StringUtil.toCommaStr(args2), ex);
+//				}
+//
+//				getWaitDialog().setState("Done");
+//				return null;
+//			}
 			@Override
 			public Object doWork()
 			{
-				// ddlgen -Usa -Psybase -S127.0.0.1:15702 -Dpubs2
-//				String[] args = {"-Usa", "-Psybase", "-S127.0.0.1:15702", "-TU", "-Ntitles", "-Dpubs2", "-F%"};
-//				String[] args = {"-Usa", "-Psybase", "-S127.0.0.1:15702", "-TU", "-Ntitles", "-D"+_currentDbName, "-F%"};
-
-				DbxConnection conn = getConnection();
-				if (conn == null)
-					return null;
-				String curDb = getCurrentDb();
-				ConnectionProp cp = conn.getConnProp();
-				JdbcUrlParser p = JdbcUrlParser.parse(cp.getUrl());				
-				String hostPort = p.getHost() + ":" + p.getPort();
+				String dbname = getCurrentDb();
+				DdlGen ddlgen = null;
 				
-				// If we have a SSH Tunnel enabled, then use the local host/port
-				SshTunnelInfo ti = cp.getSshTunnelInfo();
-				if (ti != null)
-					hostPort = ti.getLocalHost() + ":" + ti.getLocalPort();
-
-				String[] args = {
-						"-U" + cp.getUsername(), 
-						"-P" + cp.getPassword(), 
-						"-S" + hostPort, 
-//						"-TU", 
-//						"-Ntitles", 
-						"-D" + curDb
-//						"-F%"
-//						"-CENCRYPT_PASSWORD=true"
-						};
-
-				String[] args2 = new String[args.length];
-				for(int i=0; i<args.length; i++)
-				{
-					args2[i] = args[i];
-					if (args2[i].startsWith("-P"))
-						args2[i] = "-P*secret*";
-				}
-
-//System.out.println("ARGS2: "+StringUtil.toCommaStr(args2, "|"));
+				getWaitDialog().setState("Creating DDL Object");
 				try
 				{
-					getWaitDialog().setState("Creating DDL Object");
-					DDLGenerator ddlGen = new DDLGenerator(args);
-					ddlGen.setParams(args);
+					ddlgen = DdlGen.create(getConnection());
+					ddlgen.setDefaultDbname(dbname);
 
-					getWaitDialog().setState("<html>Generating DDL Objects...: <br><code>ddlgen "+StringUtil.toCommaStr(args2, " ")+"</code></html>");
-					return ddlGen.generateDDL();
+					getWaitDialog().setState("<html>Generating DDL Objects...: <br><code>"+(ddlgen==null?"null":ddlgen.getCommandForType(Type.DB, dbname))+"</code></html>");
+					return ddlgen.getDdlForDb(dbname);
 				}
-				catch (Exception ex)
+				catch (Throwable ex)
 				{
-					_logger.warn("Problems when generating DDL Statements for dbname "+curDb+", args="+StringUtil.toCommaStr(args2), ex);
-					SwingUtils.showErrorMessage(_window, "Problems generating DDL", "Problems when generating DDL Statements for dbname "+curDb+"\nargs="+StringUtil.toCommaStr(args2), ex);
+					_logger.warn("Problems when generating DDL Statements for dbname "+dbname+", args="+(ddlgen==null?"null":ddlgen.getUsedCommand()), ex);
+					SwingUtils.showErrorMessage(_window, "Problems generating DDL", "Problems when generating DDL Statements for dbname "+dbname+"\nargs="+(ddlgen==null?"null":ddlgen.getUsedCommand()), ex);
 				}
 
 				getWaitDialog().setState("Done");
@@ -6910,6 +7049,15 @@ ex.printStackTrace();
 
 			// Finally, add all the results to the output
 			addToResultsetPanel(_resultCompList, (_appendResults_chk.isSelected() || _appendResults_scriptReader), _asPlainText_chk.isSelected());
+//			Runnable doRun = new Runnable()
+//			{
+//				@Override
+//				public void run()
+//				{
+//					addToResultsetPanel(_resultCompList, (_appendResults_chk.isSelected() || _appendResults_scriptReader), _asPlainText_chk.isSelected());
+//				}
+//			};
+//			SwingUtilities.invokeLater(doRun);
 
 
 			//---------------------------------------
@@ -8122,7 +8270,12 @@ checkPanelSize(_resPanel, comp);
 			}
 			else
 			{
-    			// JScrollPane is on _resPanel
+				// Add a filter field if "number of records in table" is above the threshold
+				int rowcountForFilterActivation = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_rsFilterRowThresh, DEFAULT_rsFilterRowThresh);
+				if (tab.getRowCount() >= rowcountForFilterActivation)
+					p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT), "growx, pushx, span, wrap");
+
+				// JScrollPane is on _resPanel
     			// So we need to display the table header ourself
     			p.add(tab.getTableHeader(), "wrap");
     			p.add(tab,                  "wrap");
@@ -8789,8 +8942,6 @@ checkPanelSize(_resPanel, comp);
 	{
 		ArrayList<AseOptionOrSwitch> options = new ArrayList<AseOptionOrSwitch>();
 
-//		if (aseVersion >= 15020) 
-//		if (aseVersion >= 1502000) 
 		if (aseVersion >= Ver.ver(15,0,2)) 
 		{
 			boolean statementCache   = false;
@@ -8806,20 +8957,15 @@ checkPanelSize(_resPanel, comp);
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set literal_autoparam ON-OFF", null, "literal_autoparam", literalAutoParam, "Enable/Disable literal parameterization for current session."));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 		}
+		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF set statistics io ON-OFF", null, "showplan & statistics io", false, "Displays the query plan and statistics io"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF", null, "showplan", false, "Displays the query plan"));
-//		if (aseVersion >= 15030) 
-//		if (aseVersion >= 1503000) 
 		if (aseVersion >= Ver.ver(15,0,3)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch on 3604,9529 with override", "set switch off 3604,9529", "switch 3604,9529", false, "Traceflag 3604,9529: Include Lava operator execution statistics and resource use in a showplan format at most detailed level."));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics io ON-OFF",            null, "statistics io",            false, "Number of logical and physical IO's per table"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics time ON-OFF",          null, "statistics time",          false, "Compile time and elapsed time"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics subquerycache ON-OFF", null, "statistics subquerycache", false, "Statistics about internal subquery optimizations"));
-//		if (aseVersion >= 15000) 
-//		if (aseVersion >= 1500000) 
 		if (aseVersion >= Ver.ver(15,0)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plancost ON-OFF",      null, "statistics plancost",      false, "Query plan in tree format, includes estimated/actual rows and IO's"));
-//		if (aseVersion >= 15020) 
-//		if (aseVersion >= 1502000) 
 		if (aseVersion >= Ver.ver(15,0,2)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics resource ON-OFF",      null, "statistics resource",      false, "Resource usage, includes procedure cache and tempdb"));
 
@@ -8871,8 +9017,6 @@ checkPanelSize(_resPanel, comp);
 //			previously indicated is resumed. No output is generated if a directory name was not previously provided.
 		}
 		
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
 		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
@@ -8944,7 +9088,32 @@ checkPanelSize(_resPanel, comp);
 		// Do PopupMenu
 		final JPopupMenu popupMenu = new JPopupMenu();
 //		button.setComponentPopupMenu(popupMenu);
+
+		// Add entry that will disable all selected options
+		final JMenuItem allOff = new JMenuItem();
+		allOff.setText("<html>Reset <b>all selected</b> options<html>");
+		allOff.setToolTipText("<html>Simply execute SQL Statements that are bound to each <b>selected</b> Menu Item</html>");
+		allOff.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				for (Component comp : popupMenu.getComponents())
+				{
+					if (comp instanceof JCheckBoxMenuItem)
+					{
+						JCheckBoxMenuItem mi = (JCheckBoxMenuItem) comp;
+						Object clientProp = mi.getClientProperty(AseOptionOrSwitch.class.getName());
+						if (clientProp != null && clientProp instanceof AseOptionOrSwitch && mi.isSelected())
+							mi.doClick();
+					}
+				}
+			}
+		});
+		popupMenu.add(allOff);
+		popupMenu.add(new JSeparator());
 		
+		// Add a Menu item for each option
 		for (AseOptionOrSwitch opt : options)
 		{
 			// Add Separator
@@ -9331,7 +9500,7 @@ checkPanelSize(_resPanel, comp);
 //				JMenuItem cc_tn_mi    = new JCheckBoxMenuItem("<html><b>Table Name Info x</b>                 - <i><font color=\"green\">Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
 //				JMenuItem cc_tc_mi    = new JCheckBoxMenuItem("<html><b>Table Column Info x</b>               - <i><font color=\"green\">Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
 //				JMenuItem cc_pn_mi    = new JCheckBoxMenuItem("<html><b>Procedure Info x</b>                  - <i><font color=\"green\">Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
-//				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
+//				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _ationProviderAbstract.isLookupProcedureColumns());
 //				JMenuItem cc_spn_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Info x</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
 //				JMenuItem cc_spp_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info x</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
 //
@@ -11365,7 +11534,7 @@ checkPanelSize(_resPanel, comp);
 		Options options = buildCommandLineOptions();
 		try
 		{
-			CommandLine cmd = parseCommandLine(args, options);
+			final CommandLine cmd = parseCommandLine(args, options);
 
 			//-------------------------------
 			// HELP
@@ -11400,6 +11569,14 @@ checkPanelSize(_resPanel, comp);
 					System.setProperty("user.home", cmd.getOptionValue("homedir"));
 
 				new QueryWindow(cmd);
+//				SwingUtilities.invokeLater(new Runnable() 
+//				{
+//					@Override
+//					public void run() 
+//					{
+//						new QueryWindow(cmd);
+//					}
+//				});
 			}
 		}
 		catch (ParseException pe)

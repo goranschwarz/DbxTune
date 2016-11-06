@@ -25,8 +25,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
@@ -39,6 +37,8 @@ import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.JdbcDriverHelper;
+
+import net.miginfocom.swing.MigLayout;
 
 
 

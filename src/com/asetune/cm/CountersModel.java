@@ -22,11 +22,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -51,6 +53,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
@@ -158,6 +161,9 @@ implements Cloneable, ITableTooltip
 	/** every time the CM is refreshed set this to System.currentTimeMillis() */
 	private long               _lastLocalRefreshTime = 0;
 
+	/** When was the previous data sample captured... System.currentTimeMillis() */
+	private long               _prevLocalRefreshTime = 0;
+
 	private ResultSetMetaData  _rsmd;
 
 	// Structure for storing list of columns to compute difference between two samples
@@ -205,6 +211,12 @@ implements Cloneable, ITableTooltip
 	private boolean            _persistCountersDiff       = true;
 	private boolean            _persistCountersRate       = true;
 
+	// "List" of tables to be dropped if we get Exceptions in refreshGetData()
+	Set<String> _dropTempTableList = new HashSet<String>();
+
+	// "List" of tables to be droped if we get Exceptions in refreshGetData()
+	Set<String> _cleanupCmdsOnExceptionList = new HashSet<String>();
+
 	// 
 	private int clearCmLevel;
 
@@ -227,6 +239,10 @@ implements Cloneable, ITableTooltip
 	private GTable.ITableTooltip _cmToolTipSupplier = null;
 	private Map<String, String> _cmLocalToolTipColumnDescriptions = new HashMap<String, String>();
 	
+	// Columns that should be first in the output table
+//	private Set<String> _preferredColumnOrder = new LinkedHashSet<String>();
+	private HashMap<String, ColumnHeaderPropsEntry> _preferredColumnProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
+
 	//-------------------------------------------------------
 	// BEGIN: Graph members
 	//-------------------------------------------------------
@@ -586,6 +602,7 @@ implements Cloneable, ITableTooltip
 
 		c._postponeTime               = this._postponeTime;
 		c._lastLocalRefreshTime       = this._lastLocalRefreshTime;
+		c._prevLocalRefreshTime       = this._prevLocalRefreshTime;
 
 		// Do we need to clone this, I think it's safe not to...
 		// in SampleCnt we do: cm.setResultSetMetaData(rs.getMetaData());  so a new one will be created
@@ -1134,6 +1151,11 @@ implements Cloneable, ITableTooltip
 //			if ( getName().equals(SummaryPanel.CM_NAME) )
 //				refresh = true;
 
+			// The Summary CM (or the Controller) demands that we refresh this CM
+			// This could be that the Summary CM has found a "long running transaction" or a "blocking lock" or something simular
+			if ( getCounterController().isCmInDemandRefreshList(this.getName()) )
+				refresh = true;
+			
 			// Current TAB is visible
 //			if ( equalsTabPanel(MainFrame.getActiveTab()) )
 			if ( getGuiController() != null && equalsTabPanel(getGuiController().getActiveTab()) )
@@ -1146,6 +1168,7 @@ implements Cloneable, ITableTooltip
 				if (tp.isTabUnDocked(getDisplayName()))
 						refresh = true;
 			}
+//System.out.println(getName()+".isRefreshable(): After isTabUndocked(): refresh="+refresh);
 
 			// Current CM has active graphs
 			if ( hasActiveGraphs() )
@@ -1178,6 +1201,7 @@ implements Cloneable, ITableTooltip
 			if ( ! refresh)
 				setValidSampleData(false);
 
+//System.out.println(getName()+".isRefreshable(): <<< refresh="+refresh);
 			return refresh;
 		}
 		//---------------------------
@@ -1192,6 +1216,11 @@ implements Cloneable, ITableTooltip
 			if ( isPersistCountersEnabled() )
 				refresh = true;
 
+			// The Summary CM (or the Controller) demands that we refresh this CM
+			// This could be that the Summary CM has found a "long running transaction" or a "blocking lock" or something simular
+			if ( getCounterController().isCmInDemandRefreshList(this.getName()) )
+				refresh = true;
+			
 			// Check postpone
 			if ( getTimeToNextPostponedRefresh() > 0 )
 			{
@@ -3241,6 +3270,73 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Get the preferred column order and properties<br>
+	 * 
+	 * @return Column names <b>not</b> in the Map should be put at the end
+	 */
+	public HashMap<String, ColumnHeaderPropsEntry> getPreferredColumnProps()
+	{
+		return _preferredColumnProps;
+	}
+
+	/**
+	 * Set the preferred column properties<br>
+	 * Column names <b>not</b> in the Map should be put at the end
+	 * @param columns
+	 */
+	public void setPreferredColumnProps(HashMap<String, ColumnHeaderPropsEntry> columns)
+	{
+		_preferredColumnProps = columns;
+	}
+
+	/**
+	 * Add a column properties<br>
+	 * @param colname
+	 */
+	public void addPreferredColumnOrder(ColumnHeaderPropsEntry colProps)
+	{
+		HashMap<String, ColumnHeaderPropsEntry> columns = getPreferredColumnProps();
+		if (columns != null && colProps != null)
+		{
+			columns.put(colProps.getColumnName(), colProps);
+		}
+	}
+
+//	/**
+//	 * Get the preferred column order<br>
+//	 * Meaning columns that should be first in the output table
+//	 * 
+//	 * @return a Set that contains the preferred columns order. Column names <b>not</b> in the set should be put at the end
+//	 */
+//	public Set<String> getPreferredColumnOrder()
+//	{
+//		return _preferredColumnOrder;
+//	}
+//
+//	/**
+//	 * Add a column to the preferred order<br>
+//	 * Column names <b>not</b> in the set should be put at the end
+//	 * 
+//	 * @param colname
+//	 */
+//	public void addPreferredColumnOrder(String colname)
+//	{
+//		Set<String> columns = getPreferredColumnOrder();
+//		if (columns != null && colname != null)
+//			columns.add(colname);
+//	}
+//
+//	/**
+//	 * Set the preferred column order<br>
+//	 * Column names <b>not</b> in the set should be put at the end
+//	 * @param columns
+//	 */
+//	public void setPreferredColumnOrder(Set<String> columns)
+//	{
+//		_preferredColumnOrder = columns;
+//	}
+
+	/**
 	 * do local calculation, this should be overridden for local calculations...
 	 * <p>
 	 * This only allow changing Absolute values, and it's called before the localCalculation(prevSample, newSample, diffData)
@@ -3388,6 +3484,16 @@ implements Cloneable, ITableTooltip
 	public long getLastLocalRefreshTime()
 	{ 
 		return _lastLocalRefreshTime; 
+	}
+
+	/**
+	 * Get time when we did the PREVIOUS data refresh, NOTE this is grabbed by System.currentTimeMillis() 
+	 * If no previous sample has been done, it will return 0
+	 */
+	public long getPrevLocalRefreshTime()
+	{
+//		return _prevSample == null ? 0 : _prevSample.getLastLocalSampleTime();
+		return _prevLocalRefreshTime;
 	}
 
 	/** If this CM has a "delay" option set */
@@ -3944,11 +4050,19 @@ implements Cloneable, ITableTooltip
 				handleTimeoutException();
 			}
 
+			// Do cleanup...
+			// If we got an exception, go and check if we are still connected
+			if ( getCounterController().isMonConnected(false, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+			{
+				dropTempTables(conn);
+				execCleanupCmdsOnException(conn);
+			}
+
 			// throw the exception to caller
 			// Think more about this...
 			//throw e;
 
-			return -1;
+			return -1; // NOTE: <<<<<<----------- get-out-of-here <<<<<<<<----------------
 		} // end: SQLException
 		finally
 		{
@@ -3957,6 +4071,12 @@ implements Cloneable, ITableTooltip
 			endSqlRefresh();
 		}
 
+		// Grab some stuff from the PREVIOUS Sample before it's overwritten
+		if (_prevSample != null)
+			_prevLocalRefreshTime = _prevSample.getLastLocalSampleTime();
+
+//System.out.println("_prevLocalRefreshTime="+_prevLocalRefreshTime+", age="+(System.currentTimeMillis()-_prevLocalRefreshTime)+", cmName='"+getName()+"'.");
+		
 		// translate some fields in the Absolute Counters
 		beginLcRefresh();
 		localCalculation(tmpNewSample);
@@ -4213,6 +4333,62 @@ implements Cloneable, ITableTooltip
 	{
 	}
 
+
+	public void dropTempTables(DbxConnection conn) // also implement addTempTable("")
+	{
+		for (String tabname : _dropTempTableList)
+		{
+			_logger.info("Trying to drop temporary table '"+tabname+"' after we have received an SQLException in refreshGetData()");
+
+			try
+			{
+				Statement stmnt = conn.createStatement();
+				stmnt.executeUpdate("drop table "+tabname);
+				stmnt.close();
+			}
+			catch(SQLException e)
+			{
+				_logger.warn("Problems drop temporary table '"+tabname+"'. Msg="+e.getErrorCode()+", "+e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * Add a tablename to be droped in case of we have any exceptions during refreshGetData()
+	 * @param tabname
+	 */
+	public void addDropTempTable(String tabname)
+	{
+		_dropTempTableList.add(tabname);
+	}
+
+	/**
+	 * Add a SQL Statement (for now just cmd's that do not return a ResultSet) to be executed in case of we have any exceptions during refreshGetData()
+	 * @param tabname
+	 */
+	public void addCleanupCmdOnException(String cmd)
+	{
+		_cleanupCmdsOnExceptionList.add(cmd);
+	}
+
+	public void execCleanupCmdsOnException(DbxConnection conn) // also implement addTempTable("")
+	{
+		for (String cmd : _cleanupCmdsOnExceptionList)
+		{
+			_logger.info("Trying execute cmd '"+cmd+"' after we have received an SQLException in refreshGetData()");
+
+			try
+			{
+				Statement stmnt = conn.createStatement();
+				stmnt.executeUpdate(cmd);
+				stmnt.close();
+			}
+			catch(SQLException e)
+			{
+				_logger.warn("Problems executing '"+cmd+"'. Msg="+e.getErrorCode()+", "+e.getMessage());
+			}
+		}
+	}
 
 	/**
 	 * Compute the difference between two samples

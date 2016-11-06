@@ -23,19 +23,19 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
 import com.asetune.sql.conn.TdsConnection;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.sybase.jdbcx.SybConnection;
+
+import net.miginfocom.swing.MigLayout;
 
 /**
  * This needs a lot more work
@@ -90,7 +90,7 @@ implements PropertyChangeListener, ActionListener
 	private JLabel          _label           = new JLabel("Waiting...", JLabel.CENTER);
 
 	private JLabel          _state_lbl       = new JLabel();
-	private RSyntaxTextArea _extraText_txt   = null;
+	private RSyntaxTextAreaX _extraText_txt   = null;
 	private RTextScrollPane _extraText_sroll = null;
 	private JButton         _cancel_but      = new JButton("Cancel");
 	private boolean         _cancelWasPressed= false;
@@ -125,7 +125,7 @@ implements PropertyChangeListener, ActionListener
 
 		if (extraString != null)
 		{
-			_extraText_txt   = new RSyntaxTextArea();
+			_extraText_txt   = new RSyntaxTextAreaX();
 			_extraText_sroll = null;new RTextScrollPane(_extraText_txt);
 
 			RSyntaxUtilitiesX.installRightClickMenuExtentions(_extraText_txt, _extraText_sroll, this);

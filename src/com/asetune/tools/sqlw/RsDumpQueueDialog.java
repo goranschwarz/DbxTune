@@ -58,15 +58,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.table.DefaultTableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -84,6 +81,7 @@ import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.RsLastcommit.OriginNotFoundException;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -98,6 +96,8 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
+
+import net.miginfocom.swing.MigLayout;
 
 public class RsDumpQueueDialog
 implements ActionListener
@@ -204,7 +204,7 @@ implements ActionListener
 	// Queue Content
 	private JXTable           _dumpQueueTab          = new JXTable();
 	private JScrollPane       _dumpQueueTabScroll    = new JScrollPane(_dumpQueueTab);
-	private RSyntaxTextArea   _dumpQueueTxt          = new RSyntaxTextArea();
+	private RSyntaxTextAreaX  _dumpQueueTxt          = new RSyntaxTextAreaX();
 	private RTextScrollPane   _dumpQueueTxtScroll    = new RTextScrollPane(_dumpQueueTxt);
 
 	

@@ -66,7 +66,7 @@ extends CountersModel
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"MemUsageKB", "PhysicalReads", "LogicalReads", 
 		"PagesModified", "PacketsSent", "PacketsReceived", 
-		"pssinfo_tempdb_pages"};
+		"RowsAffectedDiff", "pssinfo_tempdb_pages"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -146,6 +146,7 @@ extends CountersModel
 			                                                       "The StartTime is the columns, which tells the start time for current SQL statement, or the individual statement inside a Stored Procedure." +
 			                                                   "</html>");
 
+			mtd.addColumn("monProcess",  "RowsAffectedDiff",   "Same as 'RowsAffected' but diff calculated");
 			mtd.addColumn("monProcess",  "HasMonSqlText",      "Has values for: select SQLText from master.dbo.monProcessSQLText where SPID = <SPID>");
 			mtd.addColumn("monProcess",  "MonSqlText",                         "select SQLText from master.dbo.monProcessSQLText where SPID = <SPID>");
 			mtd.addColumn("monProcess",  "HasDbccSqlText",     "Has values for: DBCC sqltext(<SPID>)");
@@ -277,7 +278,7 @@ extends CountersModel
 
 		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
-			cols2 += "S.RowsAffected, " +
+			cols2 += "RowsAffectedDiff = S.RowsAffected, S.RowsAffected, \n" +
 			         "tempdb_name = db_name(tempdb_id(S.SPID)), \n" +
 			         "pssinfo_tempdb_pages = convert(int, pssinfo(S.SPID, 'tempdb_pages')), \n";
 		}
@@ -295,13 +296,14 @@ extends CountersModel
 			"select " + cols1 + cols2 + cols3 + "\n" +
 			"from master.dbo.monProcessStatement S, master.dbo.monProcess P \n" +
 			"where S.KPID = P.KPID \n" +
+			"  and P.WaitEventID != 250 -- WaitEventID(250) = 'waiting for input from the network' \n" + // Sometimes the SPID is still in monProcessStatement even if the WaitEventID is 250
 			(isClusterEnabled ? "  and S.InstanceID = P.InstanceID \n" : "") +
 			"  and "+whereSpidNotMe+"\n" +
 			"order by S.LogicalReads desc \n" +
 			optGoalPlan;
 
 		//-------------------------------------------
-		// Build SECOND SQL, which gets SPID's that blocks other, and might not be within the ABOVE ststement
+		// Build SECOND SQL, which gets SPID's that blocks other, and might not be within the ABOVE statement
 		//-------------------------------------------
 		cols1 = cols2 = cols3 = "";
 
@@ -348,7 +350,7 @@ extends CountersModel
 		         "";
 		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
-			cols2 += "RowsAffected=-1, " +
+			cols2 += "RowsAffectedDiff = convert(int,-1), RowsAffected = convert(int,-1), \n" +
 			         "tempdb_name = db_name(tempdb_id(P.SPID)), \n" +
 			         "pssinfo_tempdb_pages = convert(int, pssinfo(P.SPID, 'tempdb_pages')), \n";
 		}
@@ -767,27 +769,42 @@ extends CountersModel
 				Object o_this_StartTime = counters  .getValueAt(rowId,       pos_StartTime);
 				Object o_prev_StartTime = prevSample.getValueAt(prevPkRowId, pos_StartTime);
 
-				Object o_this_BatchID = counters  .getValueAt(rowId,       pos_BatchID);
-				Object o_prev_BatchID = prevSample.getValueAt(prevPkRowId, pos_BatchID);
+				// Check StartTime, but at a SECOND level instead of MS (since MS isn't 100% accurate)
+				// If it's a SQL Batch, we might run several things in a loop... which means it's more or less like a "a here" stored procedure
+				if (o_this_StartTime instanceof Timestamp && o_prev_StartTime instanceof Timestamp)
+				{
+//					long l_this_StartTime = ((Timestamp)o_this_StartTime).getTime() / 1000;
+//					long l_prev_StartTime = ((Timestamp)o_prev_StartTime).getTime() / 1000;
+//					if (l_this_StartTime == l_prev_StartTime)
+//						counters.setValueAt("YES", rowId, pos_multiSampled);
+					long l_this_StartTime = ((Timestamp)o_this_StartTime).getTime();
+					long l_prev_StartTime = ((Timestamp)o_prev_StartTime).getTime();
+					long l_diff = Math.abs(l_this_StartTime - l_prev_StartTime); // turn negative numbers positive
+					if (l_diff < 100) // 100ms diff, is treated as "multiSampled" or "sameStartTime" as previously
+						counters.setValueAt("YES", rowId, pos_multiSampled);
+				}
 
-				// If it's a Stored Procedure executing, trust 'StartTime' 
-				// Else: ordinary SQL Statements (including StatementCache LWP) trust 'BatchID'
-				if (o_procname != null && !o_procname.equals("") && !((String)o_procname).startsWith("*s"))
-				{
-					if (o_this_StartTime instanceof Timestamp && o_prev_StartTime instanceof Timestamp)
-					{
-						if (o_this_StartTime.equals(o_prev_StartTime))
-							counters.setValueAt("YES", rowId, pos_multiSampled);
-					}
-				}
-				else
-				{
-    				if (o_this_BatchID instanceof Number && o_prev_BatchID instanceof Number)
-    				{
-    					if (o_this_BatchID.equals(o_prev_BatchID))
-    						counters.setValueAt("YES", rowId, pos_multiSampled);
-    				}
-				}
+//				Object o_this_BatchID = counters  .getValueAt(rowId,       pos_BatchID);
+//				Object o_prev_BatchID = prevSample.getValueAt(prevPkRowId, pos_BatchID);
+//
+//				// If it's a Stored Procedure executing, trust 'StartTime' 
+//				// Else: ordinary SQL Statements (including StatementCache LWP) trust 'BatchID'
+//				if (o_procname != null && !o_procname.equals("") && !((String)o_procname).startsWith("*s"))
+//				{
+//					if (o_this_StartTime instanceof Timestamp && o_prev_StartTime instanceof Timestamp)
+//					{
+//						if (o_this_StartTime.equals(o_prev_StartTime))
+//							counters.setValueAt("YES", rowId, pos_multiSampled);
+//					}
+//				}
+//				else
+//				{
+//    				if (o_this_BatchID instanceof Number && o_prev_BatchID instanceof Number)
+//    				{
+//    					if (o_this_BatchID.equals(o_prev_BatchID))
+//    						counters.setValueAt("YES", rowId, pos_multiSampled);
+//    				}
+//				}
 			}
 
 			if (o_waitEventId instanceof Number)

@@ -3,11 +3,8 @@ package com.asetune.xmenu;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.swing.JButton;
@@ -15,15 +12,12 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.gui.AsePlanViewer;
-import com.asetune.sql.showplan.ShowplanHtmlView;
-import com.asetune.sql.showplan.ShowplanHtmlView.Type;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
 
 public class AseGuiShowplan
@@ -92,8 +86,8 @@ extends XmenuActionBase
 	public void showText(String queryPlan)
 	{
 		JPanel textPanel = new JPanel();
-		final RSyntaxTextArea textarea      = new RSyntaxTextArea();
-		final RTextScrollPane textareaSroll = new RTextScrollPane(textarea);
+		final RSyntaxTextAreaX textarea      = new RSyntaxTextAreaX();
+		final RTextScrollPane  textareaSroll = new RTextScrollPane(textarea);
 		final JFrame textFrame = new JFrame("XML Plan for SSQLID "+_SSQLID);
 
 		queryPlan = 

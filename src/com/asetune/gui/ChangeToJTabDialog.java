@@ -17,11 +17,11 @@ import javax.swing.JRadioButton;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class ChangeToJTabDialog extends JDialog implements ActionListener
 {

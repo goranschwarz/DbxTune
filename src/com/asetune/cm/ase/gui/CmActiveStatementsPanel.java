@@ -8,8 +8,6 @@ import java.awt.event.ActionListener;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -20,6 +18,8 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmActiveStatementsPanel 
 extends TabularCntrPanel

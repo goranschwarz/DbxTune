@@ -129,11 +129,11 @@ set classpath=%classpath%;%DBXTUNE_HOME%\lib\asetune.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\jconn4.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\jtds-1.3.1.jar
-set classpath=%classpath%;%DBXTUNE_HOME%\lib\sqljdbc4.jar
+rem ----set classpath=%classpath%;%DBXTUNE_HOME%\lib\sqljdbc4.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%DBXTUNE_HOME%\lib\h2-1.4.192.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\h2-1.4.193.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\wizard.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\miglayout-core-4.2.jar
@@ -155,8 +155,10 @@ set classpath=%classpath%;%DBXTUNE_HOME%\lib\antlr-4.0-complete.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\juniversalchardet-1.0.3.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\DDLGen.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\simplemagic-1.6.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\jsqlparser-0.9.6.jar
 
 set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\jdbc_drivers\*
 set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%
 
 rem --- echo %CLASSPATH%
@@ -194,6 +196,19 @@ if %JavaBitness% == 64 (
 )
 echo JVM_MEMORY_PARAMS=%JVM_MEMORY_PARAMS%
 echo JVM_GC_PARAMS=%JVM_GC_PARAMS%
+
+
+
+rem ------------------------------------------------------------------------
+rem --- Include 32/64-bit MS SQL-Server Windows Authentication Login DLL in the PATH
+rem ------------------------------------------------------------------------
+set MSSQL_AUTH_PATH=
+if %JavaBitness% == 64 (
+	set MSSQL_AUTH_PATH=%DBXTUNE_HOME%\lib\jdbc_drivers\sqlserver_auth\x64
+) else (
+	set MSSQL_AUTH_PATH=%DBXTUNE_HOME%\lib\jdbc_drivers\sqlserver_auth\x86
+)
+set PATH=%MSSQL_AUTH_PATH%;%PATH%
 
 
 

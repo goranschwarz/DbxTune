@@ -23,14 +23,14 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.Version;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class GTableHeaderPropertiesDialog
 extends JDialog
@@ -55,6 +55,7 @@ implements ActionListener, TableModelListener
 	private JButton                  _rmOrderAndVis   = new JButton("Clear saved info");
 	private DefaultTableModel        _tableModel      = null;
 	private JXTable                  _table           = null;
+	private GTableFilter             _tableFilter     = null;
 	
 	private GTable                   _originTable     = null;
 	private List<String>             _originOrder     = new ArrayList<String>(); // The way the Model looks like
@@ -128,6 +129,9 @@ implements ActionListener, TableModelListener
 		_table = createTable();
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_table);
+		_tableFilter = new GTableFilter(_table);
+
+		panel.add(_tableFilter, "growx, pushx, wrap");
 		panel.add(jScrollPane, "span, grow, height 100%, push, wrap");
 
 
@@ -200,13 +204,22 @@ implements ActionListener, TableModelListener
 		LinkedHashMap<String, ColumnHeaderPropsEntry> newOrder = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
 
 		// Loop all the rows in the table and make changes
-		for (int r=0; r<_table.getRowCount(); r++)
+		// NOTE: we might want to use the model instead, then we don't have to reset the filter before apply...
+		for (int r=0; r<_tableModel.getRowCount(); r++)
 		{
-			String  colName = (String) _table.getValueAt(r, TabPos.ColumnName.ordinal());
-			Boolean visible = (Boolean)_table.getValueAt(r, TabPos.isVisible.ordinal());
+			String  colName = (String) _tableModel.getValueAt(r, TabPos.ColumnName.ordinal());
+			Boolean visible = (Boolean)_tableModel.getValueAt(r, TabPos.isVisible.ordinal());
 
 			newOrder.put(colName, new ColumnHeaderPropsEntry(colName, -1, r, visible, SortOrder.UNSORTED, -1, -1));
 		}
+//		// Loop all the rows in the table and make changes
+//		for (int r=0; r<_table.getRowCount(); r++)
+//		{
+//			String  colName = (String) _table.getValueAt(r, TabPos.ColumnName.ordinal());
+//			Boolean visible = (Boolean)_table.getValueAt(r, TabPos.isVisible.ordinal());
+//
+//			newOrder.put(colName, new ColumnHeaderPropsEntry(colName, -1, r, visible, SortOrder.UNSORTED, -1, -1));
+//		}
 
 		// make the new order
 		_originTable.loadColumnLayout(newOrder);

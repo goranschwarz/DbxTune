@@ -24,8 +24,6 @@ import javax.swing.SwingConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -36,6 +34,8 @@ import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class TrendGraphDashboardPanel
@@ -56,7 +56,7 @@ extends JPanel
 	private final static boolean DEFAULT_inMemoryHistoryEnabled     = false; 
 
 	private final static String  PROPKEY_graphLayoutColumns         = "TrendGraphDashboardPanel.graphLayoutColumns"; 
-	private final static int     DEFAULT_graphLayoutColumns         = 1; 
+	private final static int     DEFAULT_graphLayoutColumns         = 2; 
 
 	static
 	{

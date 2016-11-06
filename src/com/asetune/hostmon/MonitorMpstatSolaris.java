@@ -4,7 +4,7 @@ import com.asetune.utils.Configuration;
 
 
 public class MonitorMpstatSolaris
-extends MonitorVmstat
+extends MonitorMpstat
 {
 	public MonitorMpstatSolaris()
 	{

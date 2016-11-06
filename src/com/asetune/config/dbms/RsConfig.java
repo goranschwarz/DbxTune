@@ -676,4 +676,16 @@ implements IDbmsConfig
 	{
 		return "";
 	}
+
+	@Override
+	public boolean isReverseEngineeringPossible()
+	{
+		return false;
+	}
+
+	@Override
+	public String reverseEngineer(int[] modelRows)
+	{
+		return null;
+	}
 }

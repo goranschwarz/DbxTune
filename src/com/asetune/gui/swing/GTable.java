@@ -114,6 +114,10 @@ extends JXTable
 
 	private Color _nullValueBgColor = null;
 
+	private int _packMaxColWidth = SwingUtils.hiDpiScale(1000);
+	public int getPackMaxColWidth() { return _packMaxColWidth; }
+	public void setPackMaxColWidth(int maxWidth) { _packMaxColWidth = maxWidth; }
+
 	public GTable()
 	{
 		this(null, null);
@@ -133,6 +137,42 @@ extends JXTable
 		setNullValueDisplayBgColor(null);
 		init();
 	}
+	
+	@Override
+	public void packAll()
+	{
+		super.packAll();
+		//packAllGrowOnly();
+	}
+	
+	public void packAllGrowOnly()
+	{
+		int margin = -1;
+		boolean onlyGrowWidth = true;
+
+		for (int c = 0; c < getColumnCount(); c++)
+		{
+			TableColumnExt ce = getColumnExt(c);
+
+//			int maxWidth = -1;
+			int maxWidth = getPackMaxColWidth();
+			int beforePackWidth = ce.getPreferredWidth();
+			
+			packColumn(c, margin, maxWidth);
+
+			if (onlyGrowWidth)
+			{
+				int afterPackWidth = ce.getPreferredWidth();
+				if (afterPackWidth < beforePackWidth)
+					ce.setPreferredWidth(beforePackWidth);
+
+				/* Check if the width exceeds the max */
+				if (maxWidth != -1 && afterPackWidth > maxWidth)
+					ce.setPreferredWidth(maxWidth);
+			}
+		}
+	}
+
 	
 	public void setNullValueDisplay(String nullReplaceStr)
 	{
@@ -639,7 +679,7 @@ extends JXTable
 					});
 
 					// ADJUST COLUMN WIDTH
-					mi = new JMenuItem("Adjust Column Width"); // Resizes all columns to fit their content
+					mi = new JMenuItem("Adjust Column Width, both shrink and grow."); // Resizes all columns to fit their content
 					p.add(mi);
 					mi.addActionListener(new ActionListener()
 					{
@@ -647,6 +687,18 @@ extends JXTable
 						public void actionPerformed(ActionEvent e)
 						{
 							GTable.this.packAll();
+						}
+					});
+
+					// ADJUST COLUMN WIDTH
+					mi = new JMenuItem("Adjust Column Width, grow only."); // Resizes all columns to fit their content
+					p.add(mi);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							GTable.this.packAllGrowOnly();
 						}
 					});
 
@@ -886,7 +938,10 @@ extends JXTable
 			confVal = conf.getProperty(confKey);
 		}
 		if (confVal == null)
+		{
+			loadColumnLayout(getPreferredColumnLayout());
 			return;
+		}
 
 		// split on '; ' and stuff the entries in a Map object
 		LinkedHashMap<String, ColumnHeaderPropsEntry> colProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
@@ -907,10 +962,11 @@ extends JXTable
 			}
 		}
 
-		// If cable model and config are "out of sync", do not load
+		// If table model and config are "out of sync", do not load
 		if (colProps.size() != getModel().getColumnCount())
 		{
 			_logger.info(confKey + " has '"+colProps.size()+"' values and the table model has '"+getModel().getColumnCount()+"' columns. I will skip moving columns around, the original column layout will be used.");
+			loadColumnLayout(getPreferredColumnLayout());
 			return;
 		}
 
@@ -949,8 +1005,25 @@ extends JXTable
 		}
 		
 	}
+
+	/**
+	 * Override this to fetch the preferred Column Layout properties
+	 * @return The desired layout. null or and empty HashMap simply does nothing 
+	 */
+	public Map<String, ColumnHeaderPropsEntry> getPreferredColumnLayout()
+	{
+		return null;
+	}
+
 	protected int loadColumnLayout(Map<String, ColumnHeaderPropsEntry> colProps)
 	{
+//System.out.println("GTable("+getName()+"): loadColumnLayout: " + (colProps == null ? "-NULL-" : colProps.keySet()) );
+//new Exception("DUMMY_EXCEPTION").printStackTrace();
+		if (colProps == null)
+			return 0;
+		if (colProps.isEmpty())
+			return 0;
+
 		int fixCount = 0;
 		TableColumnModelExt tcmx = (TableColumnModelExt)getColumnModel();
 		for (Map.Entry<String,ColumnHeaderPropsEntry> entry : colProps.entrySet()) 
@@ -1117,6 +1190,21 @@ extends JXTable
 				chpe._sortOrder    = SortOrder.UNSORTED;
 				chpe._sortOrderPos = 0;
 				chpe._width        = -1;
+
+				// If we got any preferred layout, lets override the MODEL values with the PREFERRED layout
+				Map<String, ColumnHeaderPropsEntry> prefMap = getPreferredColumnLayout();
+				if (prefMap != null && !prefMap.isEmpty() )
+				{
+					ColumnHeaderPropsEntry prefEntry = prefMap.get(colName);
+					if (prefEntry != null)
+					{
+						chpe._viewPos      = prefEntry._viewPos >= 0 ? prefEntry._viewPos : colModelPos; // viewPos can't be less than zero; then use the model...
+						chpe._isVisible    = prefEntry._isVisible;
+						chpe._sortOrder    = prefEntry._sortOrder;
+						chpe._sortOrderPos = prefEntry._sortOrderPos;
+						chpe._width        = prefEntry._width;
+					}
+				}
 			}
 
 			// Append to the Config Value

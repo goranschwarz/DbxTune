@@ -1,5 +1,6 @@
 package com.asetune.cm.ase;
 
+import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -25,6 +26,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 /**
@@ -136,6 +138,9 @@ extends CountersModel
 
 	public static final String  PROPKEY_summaryGraph_discardDbxTune = PROP_PREFIX + ".summaryGraph.discardDbxTune";
 	public static final boolean DEFAULT_summaryGraph_discardDbxTune = true;
+
+	public static final String  PROPKEY_sample_sqlText              = PROP_PREFIX + ".sample.sqlText";
+	public static final boolean DEFAULT_sample_sqlText              = false;
 
 	@Override
 	protected void registerDefaultValues()
@@ -253,11 +258,16 @@ extends CountersModel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_systemThreads  = conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
+		boolean sample_sqlText        = conf.getBooleanProperty(PROPKEY_sample_sqlText,       DEFAULT_sample_sqlText);
 
 		// Should we sample SYSTEM SPID's
 		String sql_sample_systemThreads = "--and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
 		if ( ! sample_systemThreads )
 			sql_sample_systemThreads = "  and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
+
+		// If not ASE 16, do not sample SQL Text
+		if (aseVersion < Ver.ver(16,0))
+			sample_sqlText = false;
 
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -302,6 +312,11 @@ extends CountersModel
 			"drop table #monProcessStatement \n" +
 			"\n";
 
+		addDropTempTable("#monProcessActivity");
+		addDropTempTable("#monProcess");
+		addDropTempTable("#monProcessNetIO");
+		addDropTempTable("#monProcessStatement");
+
 		
 		// ASE 15.7.0 ESD#2
 		String IOSize1Page        = ""; // Number of 1 page physical reads performed by the process
@@ -323,12 +338,24 @@ extends CountersModel
 		}
 
 		// ASE 16.0
+		String SqlText             = "";
+		String HasSqlText          = "";
 		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
 		String nl_16000           = ""; // NL for this section
 		String sp_16000           = ""; // column Space padding for this section
 //		if (aseVersion >= 1600000)
 		if (aseVersion >= Ver.ver(16,0))
 		{
+			if (sample_sqlText)
+			{
+    			HasSqlText      = "HasSqlText = convert(bit, 0), ";
+    			SqlText         = "SqlText = CASE WHEN (SP.suid > 0 AND MP.WaitEventID != 250) THEN query_text(MP.SPID) ELSE null END, ";
+			}
+			else
+			{
+    			HasSqlText      = "HasSqlText = convert(bit, 0), ";
+    			SqlText         = "SqlText = convert(text, null), ";
+			}
 			ClientDriverVersion = "MP.ClientDriverVersion, ";
 			nl_16000            = "\n";
 			sp_16000            = "  ";
@@ -341,7 +368,7 @@ extends CountersModel
 			+ "  MP.SecondsWaiting, MP.BlockingSPID, \n"
 			+ "  StatementStartTime = ST.StartTime, \n"
 			+ "  StatementExecInMs = datediff(ms, ST.StartTime, getdate()), \n"
-			+ "  MP.Command, \n"
+			+ "  MP.Command, SP.tran_name, "+HasSqlText+"\n"
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
 			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
 			+ "  SP.stmtnum, SP.linenum, \n"
@@ -349,7 +376,7 @@ extends CountersModel
 			+ "  MP.Application, SP.clientname, SP.clienthostname, SP.clientapplname, "
 			+ "  SP.hostname, SP.ipaddr, SP.hostprocess, \n"
 			+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"
-			+ "  SP.tran_name, SP.cpu, SP.physical_io, \n"
+			+ "  SP.loggedindatetime, SP.cpu, SP.physical_io, \n"
 			+ "  A.CPUTime, A.WaitTime, A.LogicalReads, \n"
 			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n"
 			+ sp_15702 + IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
@@ -379,8 +406,10 @@ extends CountersModel
 			+ "  A.Transactions, A.Commits, A.Rollbacks, \n"
 			+ "  MP.EngineNumber, MP.Priority, \n"
 			+ "  N.PacketsSent, N.PacketsReceived, N.BytesSent, N.BytesReceived, \n"
-			+ "  MP.ExecutionClass, MP.EngineGroupName";
-		
+			+ "  MP.ExecutionClass, MP.EngineGroupName, "
+			+ nl_16000 + SqlText;
+		cols3 = StringUtil.removeLastComma(cols3);
+
 		String sql = 
 			"/*------ SQL to get data -------*/ \n" +
 			"select " + cols1 + cols2 + cols3 + "\n" +
@@ -397,7 +426,7 @@ extends CountersModel
 				"  and MP.InstanceID = A.InstanceID \n" +
 				"  and MP.InstanceID = N.InstanceID \n";
 
-		sql += "order by MP.SPID \n" + 
+		sql += "order by MP.FamilyID, MP.SPID \n" + 
 		       optGoalPlan;
 
 		return preDropTempTables + createTempTables + sql + dropTempTables;
@@ -412,6 +441,7 @@ extends CountersModel
 
 		lc.setProperty(PROPKEY_sample_systemThreads,        conf.getBooleanProperty(PROPKEY_sample_systemThreads,        DEFAULT_sample_systemThreads));
 		lc.setProperty(PROPKEY_summaryGraph_discardDbxTune, conf.getBooleanProperty(PROPKEY_summaryGraph_discardDbxTune, DEFAULT_summaryGraph_discardDbxTune));
+		lc.setProperty(PROPKEY_sample_sqlText,              conf.getBooleanProperty(PROPKEY_sample_sqlText,              DEFAULT_sample_sqlText));
 
 		return lc;
 	}
@@ -423,6 +453,7 @@ extends CountersModel
 //		if (propName.equals(PROPKEY_sample_systemThreads))        return "Sample System SPID's that executes in the ASE Server";
 		if (propName.equals(PROPKEY_sample_systemThreads))        return CmProcessActivityPanel.TOOLTIP_sample_systemThreads;
 		if (propName.equals(PROPKEY_summaryGraph_discardDbxTune)) return CmProcessActivityPanel.TOOLTIP_summaryGraph_discardDbxTune;
+		if (propName.equals(PROPKEY_sample_sqlText))              return CmProcessActivityPanel.TOOLTIP_sample_sqlText;
 		return "";
 	}
 	@Override
@@ -430,6 +461,7 @@ extends CountersModel
 	{
 		if (propName.equals(PROPKEY_sample_systemThreads))        return Boolean.class.getSimpleName();
 		if (propName.equals(PROPKEY_summaryGraph_discardDbxTune)) return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_sample_sqlText))              return Boolean.class.getSimpleName();
 		return "";
 	}
 
@@ -458,6 +490,21 @@ extends CountersModel
 			                                                   "This is usable to determine how many SQL Statements this SPID has been issued.<br>" +
 			                                                   "<b>Formula</b>: column 'BatchId' from table 'monProcess'.<br>" +
 			                                              "</html>");
+			mtd.addColumn("monProcess", "SqlText", 
+			                                              "<html>" +
+			                                                   "SQL Text that is executing for this SPID.<br>" +
+			                                                   "<b>Formula</b>: select query_text(MP.SPID).<br>" +
+			                                              "</html>");
+			mtd.addColumn("monProcess", "HasSqlText", 
+			                                              "<html>" +
+			                                                   "SQL Text that is executing for this SPID.<br>" +
+			                                                   "<b>Formula</b>: select query_text(MP.SPID).<br>" +
+			                                              "</html>");
+			mtd.addColumn("sysprocesses", "loggedindatetime", 
+			                                              "<html>" +
+			                                                   "Date when this SPID connect/login to the ASE..<br>" +
+			                                                   "<b>Formula</b>: column 'loggedindatetime' from table 'sysprocesses'.<br>" +
+			                                              "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -472,6 +519,7 @@ extends CountersModel
 	{
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1, pos_BlockingSPID = -1;
+		int pos_SqlText = -1, pos_HasSqlText = -1;
 		int waitEventID = 0;
 		String waitEventDesc = "";
 		String waitClassDesc = "";
@@ -503,10 +551,8 @@ extends CountersModel
 			else if (colName.equals("WaitEventDesc")) pos_WaitEventDesc = colId;
 			else if (colName.equals("WaitClassDesc")) pos_WaitClassDesc = colId;
 			else if (colName.equals("BlockingSPID"))  pos_BlockingSPID  = colId;
-
-			// Noo need to continue, we got all our columns
-			if (pos_WaitEventID >= 0 && pos_WaitEventDesc >= 0 && pos_WaitClassDesc >= 0 && pos_BlockingSPID >= 0)
-				break;
+			else if (colName.equals("SqlText"))       pos_SqlText       = colId;
+			else if (colName.equals("HasSqlText"))    pos_HasSqlText    = colId;
 		}
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
@@ -549,6 +595,16 @@ extends CountersModel
 				counters.setValueAt(waitClassDesc, rowId, pos_WaitClassDesc);
 			}
 
+			// SQL Text
+			if (pos_SqlText >= 0 && pos_HasSqlText >= 0)
+			{
+				Object o_sqlText = counters.getValueAt(rowId, pos_SqlText);
+				if (o_sqlText != null && !o_sqlText.equals(""))
+				{
+					counters.setValueAt(new Boolean(true), rowId, pos_HasSqlText);
+				}
+			}
+
 			// Add any blocking SPIDs to the MAP
 			if (o_blockingSpid instanceof Number)
 			{
@@ -556,6 +612,44 @@ extends CountersModel
 					_blockingSpids.put((Number)o_blockingSpid, null);
 			}
 		}
+	}
+
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		// MON SQL TEXT
+		if ("HasSqlText".equals(colName))
+		{
+			// Find 'MonSqlText' column, is so get it and set it as the tool tip
+			int pos_SqlText = findColumn("SqlText");
+			if (pos_SqlText > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_SqlText);
+				if (cellVal instanceof String)
+				{
+					return toHtmlString((String) cellVal, true);
+					//return (String) cellVal;
+				}
+			}
+		}
+		if ("SqlText".equals(colName))
+		{
+			return cellValue == null ? null : cellValue.toString();
+		}
+		
+		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+	}
+	/** add HTML around the string, and translate linebreaks into <br> */
+	private String toHtmlString(String in, boolean breakLines)
+	{
+		String str = in;
+		str = str.replace("<", "&lt;");
+		str = str.replace(">", "&gt;");
+		if (breakLines)
+			str = StringUtil.makeApproxLineBreak(in, 150, 5, "\n");
+		str = str.replaceAll("\\n", "<br>");
+
+		return "<html><pre>" + str + "</pre></html>";
 	}
 
 	@Override

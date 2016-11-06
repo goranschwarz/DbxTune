@@ -3,6 +3,7 @@ package com.asetune;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
@@ -166,4 +167,15 @@ public interface ICounterController
 	boolean isSqlBatchingSupported();
 
 	ITableTooltip createCmToolTipSupplier(CountersModel cm);
+
+	boolean     isCmInDemandRefreshList(String name);
+	void        addCmToDemandRefreshList(String name);
+	void        removeCmFromDemandRefreshList(String name);
+	void        clearCmDemandRefreshList();
+	Set<String> getCmDemandRefreshList();
+	int         getCmDemandRefreshListCount();
+	int         getCmDemandRefreshSleepTime(int suggestedSleepTime, long lastRefreshTimeInMs);
+
+	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
+	public long getLastRefreshTimeInMs();
 }

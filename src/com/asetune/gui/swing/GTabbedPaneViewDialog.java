@@ -32,8 +32,6 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.PropertyConfigurator;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnModelExt;
@@ -42,6 +40,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class GTabbedPaneViewDialog
@@ -67,6 +67,7 @@ public class GTabbedPaneViewDialog
 	private JButton                 _rmTabOrderVis  = new JButton("Clear saved info");
 	private DefaultTableModel       _tableModel     = null;
 	private JXTable                 _table          = null;
+	private GTableFilter            _tableFilter    = null;
 	
 	private GTabbedPane             _gTabbedPane    = null;
 	private List<String>            _modelOrder     = new ArrayList<String>(); // The way the Model looks like
@@ -134,8 +135,11 @@ public class GTabbedPaneViewDialog
 
 //		panel.add(_table,          "grow, wrap");
 		_table = createTable();
+		_tableFilter = new GTableFilter(_table);
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_table);
+
+		panel.add(_tableFilter, "growx, pushx, wrap");
 		panel.add(jScrollPane, "span, grow, height 100%, push, wrap");
 
 

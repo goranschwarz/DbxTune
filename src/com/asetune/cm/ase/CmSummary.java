@@ -118,6 +118,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_lockCount     = PROP_PREFIX + ".sample.lockCount";
 	public static final boolean DEFAULT_sample_lockCount     = false;
 	
+	public static final String  PROPKEY_oldestOpenTranInSecThreshold     = PROP_PREFIX + ".oldestOpenTranInSecThreshold";
+	public static final int     DEFAULT_oldestOpenTranInSecThreshold     = 10;
+	
 	public static final String GRAPH_NAME_AA_CPU             = "aaCpuGraph";         // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_CPU;
 	public static final String GRAPH_NAME_BLOCKING_LOCKS     = "BlockingLocksGraph";
 	public static final String GRAPH_NAME_CONNECTION         = "ConnectionsGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__CONNECTION;
@@ -125,7 +128,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_AA_DISK_READ_WRITE = "aaReadWriteGraph";   // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_DISK_READ_WRITE;
 	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
-	public static final String GRAPH_NAME_LOCK_COUNT         = "LockCountGraph";           // LockCount
+	public static final String GRAPH_NAME_LOCK_COUNT         = "SumLockCountGraph";           // LockCount
 
 	public static final String GRAPH_NAME_TRANSACTION        = "TransGraph";               // Transactions, Rollbacks
 	public static final String GRAPH_NAME_SELECT_OPERATIONS  = "SelectOperationsGraph";    // Selects
@@ -409,6 +412,10 @@ extends CountersModel
 		boolean canDoSelectOnSyslogshold = true;
 		String nwAddrInfo = "'no sa_role'";
 
+		boolean isHaDrSupported = false;
+		if (aseVersion >= Ver.ver(16,0,0, 2))
+			isHaDrSupported = true;
+
 		if (isRuntimeInitialized())
 		{
 			if (isServerRoleOrPermissionActive(AseConnectionUtils.SA_ROLE))
@@ -468,7 +475,9 @@ extends CountersModel
 		//
 		//
 		//
-		String oldestOpenTranInSecThreshold = ", oldestOpenTranInSecThreshold = convert(int, 10) \n";
+//		int default_oldestOpenTranInSecThreshold = 10;
+		int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_oldestOpenTranInSecThreshold, DEFAULT_oldestOpenTranInSecThreshold);
+		String oldestOpenTranInSecThreshold = ", oldestOpenTranInSecThreshold = convert(int, "+default_oldestOpenTranInSecThreshold+") \n";
 
 		String oldestOpenTranInSec = 
 			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
@@ -550,6 +559,11 @@ extends CountersModel
 				", atAtServerName     = @@servername \n" +
 				", clusterInstanceId  = " + (isClusterEnabled ? "convert(varchar(15),@@instanceid)"     : "'Not Enabled'") + " \n" + 
 				", clusterCoordId     = " + (isClusterEnabled ? "convert(varchar(3), @@clustercoordid)" : "'Not Enabled'") + " \n" +
+//				", hadrModeInt        = 0 \n" + // Just if we want to test, we can set/simulate the @@hadr_mode to 0
+				", hadrModeInt        = " + (isHaDrSupported  ? "@@hadr_mode"                           : "-1") + " \n" +
+				", hadrStateInt       = " + (isHaDrSupported  ? "@@hadr_state"                          : "0" ) + " \n" +
+				", hadrModeStr        = " + (isHaDrSupported  ? "hadr_mode()"                           : "'Not Supported'") + " \n" +
+				", hadrStateStr       = " + (isHaDrSupported  ? "hadr_state()"                          : "'Not Supported'") + " \n" +
 				", timeIsNow          = getdate() \n" +
 				utcTimeDiff +
 				", NetworkAddressInfo = " + nwAddrInfo + " \n" +
@@ -669,6 +683,33 @@ extends CountersModel
 			checkAndSetNc20(counters, rowId, "pack_sent");
 			checkAndSetNc20(counters, rowId, "packet_errors");
 		}
+		
+		if (newSample == null)
+			return;
+
+		// Should we DEMAND a refresh of some CM's in this sample (since the Summary CM is first in the list)
+		for (int rowId=0; rowId < newSample.getRowCount(); rowId++) 
+		{
+			int LockWaits                    = getIntValue(newSample, rowId, "LockWaits",                    0);
+			int fullTranslogCount            = getIntValue(newSample, rowId, "fullTranslogCount",            0);
+			int oldestOpenTranInSec          = getIntValue(newSample, rowId, "oldestOpenTranInSec",          0);
+			int oldestOpenTranInSecThreshold = getIntValue(newSample, rowId, "oldestOpenTranInSecThreshold", 10);
+
+			// Check LOCK WAITS and: request refresh of CmBlocking, CmActiveStatements
+			if (LockWaits > 0)
+			{
+				getCounterController().addCmToDemandRefreshList(CmBlocking.CM_NAME);
+				getCounterController().addCmToDemandRefreshList(CmActiveStatements.CM_NAME);
+			}
+
+			// Check FULL LOGS and: request refresh of CmOpenDatabases
+			if (fullTranslogCount > 0)
+				getCounterController().addCmToDemandRefreshList(CmOpenDatabases.CM_NAME);
+
+			// Check OLDEST OPEN TRANSACTION and: request refresh of CmOpenDatabases
+			if (oldestOpenTranInSec > oldestOpenTranInSecThreshold)
+				getCounterController().addCmToDemandRefreshList(CmOpenDatabases.CM_NAME);
+		}
 	}
 	private void checkAndSetNc20(CounterSample counters, int rowId, String columnName)
 	{
@@ -676,7 +717,7 @@ extends CountersModel
 		if (colId >= 0)
 		{
 			Object obj  = counters.getValueAt(rowId, colId);
-			if (obj instanceof Number)
+			if (obj != null && obj instanceof Number)
 			{
 				//System.out.println("colId="+colId+", name='"+columnName+"', o="+obj);
 				if (((Number)obj).intValue() < 0)
@@ -686,6 +727,17 @@ extends CountersModel
 				}
 			}
 		}
+	}
+	private int getIntValue(CounterSample counters, int rowId, String columnName, int defaultValue)
+	{
+		int colId = counters.findColumn(columnName);
+		if (colId >= 0)
+		{
+			Object obj  = counters.getValueAt(rowId, colId);
+			if (obj != null && obj instanceof Number)
+				return ((Number)obj).intValue();
+		}
+		return defaultValue;
 	}
 
 	@Override

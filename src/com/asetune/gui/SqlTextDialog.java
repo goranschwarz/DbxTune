@@ -1,6 +1,5 @@
 package com.asetune.gui;
 
-import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.Image;
 import java.awt.Window;
@@ -18,11 +17,11 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 
 import org.apache.log4j.Logger;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -42,8 +41,8 @@ implements ActionListener
 
 	private JButton         _close_but         = new JButton("Close");
 
-	private RSyntaxTextArea _object_txt        = new RSyntaxTextArea();
-	private RTextScrollPane _object_scroll     = new RTextScrollPane(_object_txt);
+	private RSyntaxTextAreaX _object_txt       = new RSyntaxTextAreaX();
+	private RTextScrollPane  _object_scroll    = new RTextScrollPane(_object_txt);
 
 	private JPopupMenu      _tablePopupMenu    = null;
 

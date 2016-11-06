@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -22,8 +21,7 @@ import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
-import net.miginfocom.swing.MigLayout;
-
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
@@ -33,7 +31,6 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rsyntaxtextarea.Token;
 import org.fife.ui.rsyntaxtextarea.TokenTypes;
-import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.config.dict.MonTablesDictionary;
@@ -64,6 +61,8 @@ import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public abstract class CompletionProviderAbstractSql
 extends CompletionProviderAbstract
@@ -739,7 +738,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				if (isSaveCacheQuestionEnabled())
 				{
 					// POPUP question if user want's to save the result for later
-					String refreshTimeStr = TimeUtils.msToTimeStr("%MM:%SS.%ms", refreshTimeInMs);
+					String refreshTimeStr = TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", refreshTimeInMs);
 					
 					String htmlMsg = 
 						"<html>"
@@ -1641,7 +1640,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (str.endsWith(";0") || str.endsWith(";1"))
 			return str.substring(0, str.length()-2);
 		
-		return str;
+		return StringUtils.trim(str);
 	}
 
 	/**
@@ -1725,7 +1724,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				ResultSet rs = stmnt.executeQuery(sql);
 				while(rs.next())
 				{
-					String value = rs.getString(1);
+					String value = StringUtils.trim(rs.getString(1));
 					
 					_quoteTableNames = value.trim().equalsIgnoreCase("true");
 				}
@@ -1778,7 +1777,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		{
 			DbInfo di = new DbInfo();
 
-			di._dbName = rs.getString("TABLE_CAT");
+			di._dbName = StringUtils.trim(rs.getString("TABLE_CAT"));
 
 			dbInfoList.add(di);
 		}
@@ -1823,8 +1822,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			// Oracle dosn't seem to support TABLE_CATALOG so do workaround
 			boolean getTabCatalog = true;
 
-			if (getTabCatalog) { try { si._cat  = rs.getString("TABLE_CATALOG"); } catch(SQLException ex) { getTabCatalog = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'TABLE_CATALOG' in refreshCompletionForSchemas() "); }	}
-			si._name = rs.getString("TABLE_SCHEM");
+			if (getTabCatalog) { try { si._cat  = StringUtils.trim(rs.getString("TABLE_CATALOG")); } catch(SQLException ex) { getTabCatalog = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'TABLE_CATALOG' in refreshCompletionForSchemas() "); }	}
+			si._name = StringUtils.trim(rs.getString("TABLE_SCHEM"));
 
 			// On some databases, do not show all the ***_role things, they are not schema or users...
 			if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_dbProductName) && si._name != null && si._name.endsWith("_role"))
@@ -1876,7 +1875,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			ResultSet rs = dbmd.getTableTypes();
 			while (rs.next())
 			{
-				String type = rs.getString(1).trim();
+				String type = StringUtils.trim(rs.getString(1));
 				
 				 // If the configTypesList is empty, then ALL should be set to true, otherwise just set the ones that are in the list
 				boolean include = configTypesList.isEmpty();
@@ -1933,7 +1932,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			ResultSet rs = dbmd.getTableTypes();
 			while (rs.next())
 			{
-				String type = rs.getString(1).trim();
+				String type = StringUtils.trim(rs.getString(1));
 				if (configTypesList.contains(type))
 					addTypesList.add(type);
 				else
@@ -2022,11 +2021,11 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
 			TableInfo ti = new TableInfo();
-			ti._tabCat     = rs.getString(1);
-			ti._tabSchema  = rs.getString(2);
-			ti._tabName    = rs.getString(3);
-			ti._tabType    = rs.getString(4);
-			ti._tabRemark  = rs.getString(5);
+			ti._tabCat     = StringUtils.trim(rs.getString(1));
+			ti._tabSchema  = StringUtils.trim(rs.getString(2));
+			ti._tabName    = StringUtils.trim(rs.getString(3));
+			ti._tabType    = StringUtils.trim(rs.getString(4));
+			ti._tabRemark  = StringUtils.trim(rs.getString(5));
 
 			// Check with the MonTable dictionary for Descriptions
 			if (mtd != null && StringUtil.isNullOrBlank(ti._tabRemark))
@@ -2103,19 +2102,19 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			if ( (counter % 100) == 0 )
 				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
-			String tabCatalog = rs.getString("TABLE_CAT");
-			String tabSchema  = rs.getString("TABLE_SCHEM");
-			String tabName    = rs.getString("TABLE_NAME");
+			String tabCatalog = StringUtils.trim(rs.getString("TABLE_CAT"));
+			String tabSchema  = StringUtils.trim(rs.getString("TABLE_SCHEM"));
+			String tabName    = StringUtils.trim(rs.getString("TABLE_NAME"));
 			
 			TableColumnInfo ci = new TableColumnInfo();
-			ci._colName       = rs.getString("COLUMN_NAME");
-			ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-			ci._colType       = rs.getString("TYPE_NAME");
-			ci._colLength     = rs.getInt   ("COLUMN_SIZE");
-			ci._colIsNullable = rs.getInt   ("NULLABLE");
-			ci._colRemark     = rs.getString("REMARKS");
-			ci._colDefault    = rs.getString("COLUMN_DEF");
-			ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+			ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+			ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+			ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+			ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+			ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+			ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+			ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+			ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 
 			// Check with the MonTable dictionary for Descriptions
 			if (mtd != null && StringUtil.isNullOrBlank(ci._colRemark))
@@ -2212,19 +2211,19 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				if ( (counter % 100) == 0 )
 					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
-	//			String tabCatalog = rs.getString("TABLE_CAT");
-	//			String tabSchema  = rs.getString("TABLE_SCHEM");
-				String tabName    = rs.getString("TABLE_NAME");
+	//			String tabCatalog = StringUtils.trim(rs.getString("TABLE_CAT"));
+	//			String tabSchema  = StringUtils.trim(rs.getString("TABLE_SCHEM"));
+				String tabName    = StringUtils.trim(rs.getString("TABLE_NAME"));
 				
 				TableColumnInfo ci = new TableColumnInfo();
-				ci._colName       = rs.getString("COLUMN_NAME");
-				ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-				ci._colType       = rs.getString("TYPE_NAME");
-				ci._colLength     = rs.getInt   ("COLUMN_SIZE");
-				ci._colIsNullable = rs.getInt   ("NULLABLE");
-				ci._colRemark     = rs.getString("REMARKS");
-				ci._colDefault    = rs.getString("COLUMN_DEF");
-				ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+				ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+				ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+				ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+				ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+				ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+				ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+				ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+				ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 	
 				if ( ! prevTabName.equals(tabName) )
 				{
@@ -2263,14 +2262,14 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				while(rs.next())
 				{
 					TableColumnInfo ci = new TableColumnInfo();
-					ci._colName       = rs.getString("COLUMN_NAME");
-					ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-					ci._colType       = rs.getString("TYPE_NAME");
-					ci._colLength     = rs.getInt   ("COLUMN_SIZE");
-					ci._colIsNullable = rs.getInt   ("NULLABLE");
-					ci._colRemark     = rs.getString("REMARKS");
-					ci._colDefault    = rs.getString("COLUMN_DEF");
-					ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+					ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+					ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+					ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+					ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+					ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+					ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+					ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+					ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 					
 //System.out.println("refreshCompletionForTableColumns(): bulkGetColumns="+bulkGetColumns+", ROW="+ci);
 					// Check with the MonTable dictionary for Descriptions
@@ -2288,7 +2287,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //				while(rs.next())
 //				{
 //					TablePkInfo pk = new TablePkInfo();
-//					pk._colName       = rs.getString("COLUMN_NAME");
+//					pk._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
 //					
 //					ti.addPk(pk);
 //				}
@@ -2301,7 +2300,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //				while(rs.next())
 //				{
 //					TableIndexInfo index = new TableIndexInfo();
-//					index._colName       = rs.getString("COLUMN_NAME");
+//					index._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
 //					
 //					ti.addIndex(index);
 //				}
@@ -2399,12 +2398,12 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			boolean getTypeInt = true;
 
 			FunctionInfo fi = new FunctionInfo();
-			                        fi._funcCat     = rs.getString("FUNCTION_CAT");
-			                        fi._funcSchema  = rs.getString("FUNCTION_SCHEM");
+			                        fi._funcCat     = StringUtils.trim( rs.getString("FUNCTION_CAT"));
+			                        fi._funcSchema  = StringUtils.trim( rs.getString("FUNCTION_SCHEM"));
 			                        fi._funcName    = removeSystemChars(rs.getString("FUNCTION_NAME"));
-			if (getTypeInt) { try { fi._funcTypeInt = rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions() "); }	}
-			                        fi._funcRemark  = rs.getString("REMARKS");
-//			                        fi._specificName= rs.getString("SPECIFIC_NAME");
+			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions() "); }	}
+			                        fi._funcRemark  = StringUtils.trim( rs.getString("REMARKS"));
+//			                        fi._specificName= StringUtils.trim( rs.getString("SPECIFIC_NAME"));
 
 			fi._funcType = decodeFunctionType(fi._funcTypeInt);
 			fi._isTableValuedFunction = (fi._funcTypeInt == DatabaseMetaData.functionReturnsTable);
@@ -2516,19 +2515,19 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			if ( (counter % 100) == 0 )
 				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
-			String funcCatalog = rs.getString("FUNCTION_CAT");
-			String funcSchema  = rs.getString("FUNCTION_SCHEM");
+			String funcCatalog = StringUtils.trim( rs.getString("FUNCTION_CAT"));
+			String funcSchema  = StringUtils.trim( rs.getString("FUNCTION_SCHEM"));
 			String funcName    = removeSystemChars(rs.getString("FUNCTION_NAME"));
 			
 			FunctionColumnInfo ci = new FunctionColumnInfo();
-			ci._colName       = rs.getString("COLUMN_NAME");
-			ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-			ci._colType       = rs.getString("TYPE_NAME");
-			ci._colLength     = rs.getInt   ("LENGTH");
-			ci._colIsNullable = rs.getInt   ("NULLABLE");
-			ci._colRemark     = rs.getString("REMARKS");
-//			ci._colDefault    = rs.getString("COLUMN_DEF");
-//			ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+			ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+			ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+			ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+			ci._colLength     =                  rs.getInt   ("LENGTH");
+			ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+			ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+//			ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+//			ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 
 			// Check with the MonTable dictionary for Descriptions
 			if (mtd != null && StringUtil.isNullOrBlank(ci._colRemark))
@@ -2625,19 +2624,19 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				if ( (counter % 100) == 0 )
 					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
-	//			String tabCatalog = rs.getString("TABLE_CAT");
-	//			String tabSchema  = rs.getString("TABLE_SCHEM");
-				String funcName    = removeSystemChars(rs.getString("TABLE_NAME"));
+	//			String tabCatalog = StringUtils.trim( rs.getString("TABLE_CAT"));
+	//			String tabSchema  = StringUtils.trim( rs.getString("TABLE_SCHEM"));
+				String funcName   = removeSystemChars(rs.getString("TABLE_NAME"));
 				
 				FunctionColumnInfo ci = new FunctionColumnInfo();
-				ci._colName       = rs.getString("COLUMN_NAME");
-				ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-				ci._colType       = rs.getString("TYPE_NAME");
-				ci._colLength     = rs.getInt   ("COLUMN_SIZE");
-				ci._colIsNullable = rs.getInt   ("NULLABLE");
-				ci._colRemark     = rs.getString("REMARKS");
-				ci._colDefault    = rs.getString("COLUMN_DEF");
-				ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+				ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+				ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+				ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+				ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+				ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+				ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+				ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+				ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 	
 				if ( ! prevFuncName.equals(funcName) )
 				{
@@ -2676,14 +2675,14 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				while(rs.next())
 				{
 					FunctionColumnInfo ci = new FunctionColumnInfo();
-					ci._colName       = rs.getString("COLUMN_NAME");
-					ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-					ci._colType       = rs.getString("TYPE_NAME");
-					ci._colLength     = rs.getInt   ("COLUMN_SIZE");
-					ci._colIsNullable = rs.getInt   ("NULLABLE");
-					ci._colRemark     = rs.getString("REMARKS");
-					ci._colDefault    = rs.getString("COLUMN_DEF");
-					ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+					ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+					ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+					ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+					ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+					ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+					ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+					ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+					ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 					
 //System.out.println("refreshCompletionForFunctionColumns(): bulkGetColumns="+bulkGetColumns+", ROW="+ci);
 
@@ -2772,12 +2771,12 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
 			ProcedureInfo pi = new ProcedureInfo();
-			pi._procCat          = rs.getString("PROCEDURE_CAT");
-			pi._procSchema       = rs.getString("PROCEDURE_SCHEM");
-			pi._procName         = removeSystemChars(rs.getString("PROCEDURE_NAME"));
-			pi._procType         = decodeProcedureType(rs.getInt("PROCEDURE_TYPE"));
-			pi._procRemark       = rs.getString("REMARKS");
-//			pi._procSpecificName = rs.getString("SPECIFIC_NAME"); //in HANA = not there...
+			pi._procCat          = StringUtils.trim(   rs.getString("PROCEDURE_CAT"));
+			pi._procSchema       = StringUtils.trim(   rs.getString("PROCEDURE_SCHEM"));
+			pi._procName         = removeSystemChars(  rs.getString("PROCEDURE_NAME"));
+			pi._procType         = decodeProcedureType(rs.getInt(   "PROCEDURE_TYPE"));
+			pi._procRemark       = StringUtils.trim(   rs.getString("REMARKS"));
+//			pi._procSpecificName = StringUtils.trim(   rs.getString("SPECIFIC_NAME")); //in HANA = not there...
 
 //System.out.println("refreshCompletionForProcedures() ADD: pi="+pi);
 			// add schemas... this is a Set so duplicates is ignored
@@ -2904,20 +2903,20 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 					waitDialog.setState(stateMsg + " (Fetch count "+counter+")");
 
 				colId++;
-	//			String procCatalog = rs.getString("PROCEDURE_CAT");
-	//			String procSchema  = rs.getString("PROCEDURE_SCHEM");
+	//			String procCatalog = StringUtils.trim( rs.getString("PROCEDURE_CAT"));
+	//			String procSchema  = StringUtils.trim( rs.getString("PROCEDURE_SCHEM"));
 				String procName    = removeSystemChars(rs.getString("PROCEDURE_NAME"));
 				
 				ProcedureParameterInfo pi = new ProcedureParameterInfo();
-				pi._paramName       = rs.getString("COLUMN_NAME");
+				pi._paramName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
 				pi._paramPos        = colId;
-				pi._paramInOutType  = procInOutDecode(rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
-				pi._paramType       = rs.getString("TYPE_NAME");
-				pi._paramLength     = rs.getInt   ("LENGTH");
-				pi._paramIsNullable = rs.getInt   ("NULLABLE");
-				pi._paramRemark     = rs.getString("REMARKS");
-				pi._paramDefault    = rs.getString("COLUMN_DEF");
-				pi._paramScale      = rs.getInt   ("SCALE");
+				pi._paramInOutType  = procInOutDecode( rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
+				pi._paramType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+				pi._paramLength     =                  rs.getInt   ("LENGTH");
+				pi._paramIsNullable =                  rs.getInt   ("NULLABLE");
+				pi._paramRemark     = StringUtils.trim(rs.getString("REMARKS"));
+				pi._paramDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+				pi._paramScale      =                  rs.getInt   ("SCALE");
 	
 				if ( ! prevProcName.equals(procName) )
 				{
@@ -2959,15 +2958,15 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 					colId++;
 
 					ProcedureParameterInfo ppi = new ProcedureParameterInfo();
-					ppi._paramName       = rs.getString("COLUMN_NAME");
+					ppi._paramName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
 					ppi._paramPos        = colId;
-					ppi._paramInOutType  = procInOutDecode(rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
-					ppi._paramType       = rs.getString("TYPE_NAME");
-					ppi._paramLength     = rs.getInt   ("LENGTH");
-					ppi._paramIsNullable = rs.getInt   ("NULLABLE");
-					ppi._paramRemark     = rs.getString("REMARKS");
-					ppi._paramDefault    = rs.getString("COLUMN_DEF");
-					ppi._paramScale      = rs.getInt   ("SCALE");
+					ppi._paramInOutType  = procInOutDecode( rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
+					ppi._paramType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+					ppi._paramLength     =                  rs.getInt   ("LENGTH");
+					ppi._paramIsNullable =                  rs.getInt   ("NULLABLE");
+					ppi._paramRemark     = StringUtils.trim(rs.getString("REMARKS"));
+					ppi._paramDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+					ppi._paramScale      =                  rs.getInt   ("SCALE");
 					
 //System.out.println("refreshCompletionForProcedureParameters(): bulkMode="+bulkMode+", ROW="+ppi);
 					// Check with the MonTable dictionary for Descriptions
@@ -4307,14 +4306,14 @@ if (_guiOwner == null)
 //				while(rs.next())
 //				{
 //					TableColumnInfo ci = new TableColumnInfo();
-//					ci._colName       = rs.getString("COLUMN_NAME");
-//					ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
-//					ci._colType       = rs.getString("TYPE_NAME");
-//					ci._colLength     = rs.getInt   ("COLUMN_SIZE");
-//					ci._colIsNullable = rs.getInt   ("NULLABLE");
-//					ci._colRemark     = rs.getString("REMARKS");
-//					ci._colDefault    = rs.getString("COLUMN_DEF");
-//					ci._colScale      = rs.getInt   ("DECIMAL_DIGITS");
+//					ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+//					ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+//					ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+//					ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+//					ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+//					ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+//					ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+//					ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
 //					
 //					addColumn(ci);
 //				}
@@ -4568,15 +4567,15 @@ if (_guiOwner == null)
 //					colId++;
 //
 //					ProcedureParameterInfo ppi = new ProcedureParameterInfo();
-//					ppi._paramName       = rs.getString("COLUMN_NAME");
+//					ppi._paramName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
 //					ppi._paramPos        = colId;
-//					ppi._paramInOutType  = procInOutDecode(rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
-//					ppi._paramType       = rs.getString("TYPE_NAME");
-//					ppi._paramLength     = rs.getInt   ("LENGTH");
-//					ppi._paramIsNullable = rs.getInt   ("NULLABLE");
-//					ppi._paramRemark     = rs.getString("REMARKS");
-//					ppi._paramDefault    = rs.getString("COLUMN_DEF");
-//					ppi._paramScale      = rs.getInt   ("SCALE");
+//					ppi._paramInOutType  = procInOutDecode( rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
+//					ppi._paramType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+//					ppi._paramLength     =                  rs.getInt   ("LENGTH");
+//					ppi._paramIsNullable =                  rs.getInt   ("NULLABLE");
+//					ppi._paramRemark     = StringUtils.trim(rs.getString("REMARKS"));
+//					ppi._paramDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+//					ppi._paramScale      =                  rs.getInt   ("SCALE");
 //					
 //					addParameter(ppi);
 //				}

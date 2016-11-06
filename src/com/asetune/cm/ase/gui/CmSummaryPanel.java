@@ -30,7 +30,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
-import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -47,11 +47,14 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.ShowCmPropertiesDialog;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.TrendGraphDashboardPanel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
+import com.asetune.sql.SqlPickList;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -79,6 +82,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private Icon             _icon = null;//SwingUtils.readImageIcon(Version.class, "images/summary_tab.png");
 
 	private JPanel           _clusterInfoPanel;
+	private JPanel           _hadrInfoPanel;
 	private JPanel           _serverInfoPanel;
 	private JPanel           _dataPanel;
 	private JScrollPane      _dataPanelScroll;
@@ -101,6 +105,15 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _clusterCoordinatorId_txt     = new JTextField();
 	private JComboBox<String>_clusterView_cbx              = new JComboBox<String>(new String[] {"cluster", "instance"});
 	private JLabel           _clusterView_lbl              = new JLabel();
+
+	// HADR INFO PANEL
+	private JLabel           _hadrMode_lbl                 = new JLabel();
+	private JTextField       _hadrModeInt_txt              = new JTextField();
+	private JTextField       _hadrModeStr_txt              = new JTextField();
+	private JLabel           _hadrState_lbl                = new JLabel();
+	private JTextField       _hadrStateInt_txt             = new JTextField();
+	private JTextField       _hadrStateStr_txt             = new JTextField();
+	private JButton          _hadrMembers_but              = new JButton("HADR Members");
 
 	// SERVER INFO PANEL
 	private JTextField       _localServerName_txt          = new JTextField();
@@ -460,6 +473,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		// create new panel
 		_clusterInfoPanel = createClusterInfoPanel();
+		_hadrInfoPanel    = createHadrInfoPanel();
 		_serverInfoPanel  = createServerInfoPanel();
 
 		// Fix up the _optionTrendGraphs_but
@@ -469,6 +483,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_trendGraphs_but,     "top, wrap");
 
 		panel.add(_clusterInfoPanel,    "growx, width 275lp, hidemode 3, wrap"); //275 logical pixels
+		panel.add(_hadrInfoPanel,       "growx, width 275lp, hidemode 3, wrap"); //275 logical pixels
 		panel.add(_serverInfoPanel,     "growx, width 275lp,             wrap"); //275 logical pixels
 
 //		panel.setMinimumSize(new Dimension(50, 50));
@@ -546,6 +561,87 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_clusterView_cbx,           "growx, wrap");
 
 		// this panel will only be visible when you connect to a Cluster Enabled Server
+		panel.setVisible(false);
+
+		return panel;
+	}
+
+
+	private JPanel createHadrInfoPanel() 
+	{
+		JPanel panel = SwingUtils.createPanel("HADR Information", true);
+		panel.setLayout(new MigLayout("", "[] [grow]", ""));
+
+		String tooltip = "";
+
+//		private JLabel           _hadrMode_lbl                 = new JLabel();
+//		private JTextField       _hadrModeInt_txt              = new JTextField();
+//		private JTextField       _hadrModeStr_txt              = new JTextField();
+//		private JLabel           _hadrState_lbl                = new JLabel();
+//		private JTextField       _hadrStateInt_txt             = new JTextField();
+//		private JTextField       _hadrStateStr_txt             = new JTextField();
+//		private JButton          _hadrInfo_but                 = new JButton("HADR Member Info");
+
+		tooltip = "HADR Mode. (select @@hadr_mode, hadr_mode())";
+		_hadrMode_lbl      .setText("HADR Mode");
+		_hadrMode_lbl      .setToolTipText(tooltip);
+		_hadrModeInt_txt   .setToolTipText(tooltip);
+		_hadrModeInt_txt   .setEditable(false);
+		_hadrModeStr_txt   .setToolTipText(tooltip);
+		_hadrModeStr_txt   .setEditable(false);
+
+		tooltip = "HADR State. (select instance_name(@@hadr_state), hadr_state())";
+		_hadrState_lbl     .setText("HADR State");
+		_hadrState_lbl     .setToolTipText(tooltip);
+		_hadrStateInt_txt  .setToolTipText(tooltip);
+		_hadrStateInt_txt  .setEditable(false);
+		_hadrStateStr_txt  .setToolTipText(tooltip);
+		_hadrStateStr_txt  .setEditable(false);
+		
+		tooltip = "Open a dialog that get records from monHADRMembers";
+		_hadrMembers_but   .setToolTipText(tooltip);
+		
+		_hadrMembers_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				try
+				{
+					// Execute and read the ResultSet
+					DbxConnection conn = getCm().getCounterController().getMonConnection();
+					Statement stmnt = conn.createStatement();
+					ResultSet rs = stmnt.executeQuery("select * from master.dbo.monHADRMembers");
+					//ResultSet rs = stmnt.executeQuery("select * from master.dbo.sysobjects"); // If we want to simulate a ResultSet and display that... 
+					ResultSetTableModel rstm = new ResultSetTableModel(rs, "monHADRMembers");
+
+					// Show a list
+					SqlPickList pickList = new SqlPickList(SwingUtilities.getWindowAncestor(CmSummaryPanel.this), rstm, "HADR Members (select * from monHADRMembers)", false);
+					pickList.setVisible(true);
+				}
+				catch(Exception ex)
+				{
+					SwingUtils.showErrorMessage("HADR Members", "Problems retriving HADR Members", ex);
+				}
+			}
+		});
+
+
+		
+		//--------------------------
+		// DO the LAYOUT
+		//--------------------------
+		panel.add(_hadrMode_lbl,      "");
+		panel.add(_hadrModeInt_txt,   "growx, split");
+		panel.add(_hadrModeStr_txt,   "growx, wrap");
+		
+		panel.add(_hadrState_lbl,     "");
+		panel.add(_hadrStateInt_txt,  "growx, split");
+		panel.add(_hadrStateStr_txt,  "growx, wrap");
+
+		panel.add(_hadrMembers_but,   "span, wrap");
+
+		// this panel will only be visible when you connect to a HADR Enabled Server
 		panel.setVisible(false);
 
 		return panel;
@@ -1077,7 +1173,32 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_oldestOpenTranThreshold_lbl.setText("Open Tran Threshold");
 		_oldestOpenTranThreshold_lbl.setToolTipText(tooltip);
 		_oldestOpenTranThreshold_txt.setToolTipText(tooltip);
-		_oldestOpenTranThreshold_txt.setEditable(false);
+//		_oldestOpenTranThreshold_txt.setEditable(false);
+		_oldestOpenTranThreshold_txt.setEditable(true);
+		_oldestOpenTranThreshold_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				try 
+				{
+					int oldestOpenTranThreshold = Integer.parseInt(_oldestOpenTranThreshold_txt.getText());
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmSummary.PROPKEY_oldestOpenTranInSecThreshold, oldestOpenTranThreshold);
+						conf.save();
+						getCm().setSql(null); // This will reinitialize the SQL String
+					}
+				}
+				catch (NumberFormatException nfe)
+				{
+					int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(CmSummary.PROPKEY_oldestOpenTranInSecThreshold, CmSummary.DEFAULT_oldestOpenTranInSecThreshold);
+					SwingUtils.showErrorMessage(CmSummaryPanel.this, "Must be a number", "The value '"+_oldestOpenTranThreshold_txt.getText()+"' is not a number. Resetting this to last known value '"+default_oldestOpenTranInSecThreshold+"'.", nfe);
+					_oldestOpenTranThreshold_txt.setText(default_oldestOpenTranInSecThreshold + "");
+				}
+			}
+		});
 		
 		
 		tooltip = "How many times has this ASE been rebooted.";
@@ -1706,6 +1827,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		setWatermark();
 
+		// Cluster Information
 		String clusterId       = cm.getAbsString (0, "clusterInstanceId");
 		String currClusterName = _clusterInstanceName_txt.getText();
 		if (clusterId != null && currClusterName.equals(""))
@@ -1715,6 +1837,19 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				refreshClusterInfo();
 			}
 		}
+
+		// HADR Information
+		_hadrModeInt_txt .setText(cm.getAbsString (0, "hadrModeInt"));
+		_hadrModeStr_txt .setText(cm.getAbsString (0, "hadrModeStr"));
+		_hadrStateInt_txt.setText(cm.getAbsString (0, "hadrStateInt"));
+		_hadrStateStr_txt.setText(cm.getAbsString (0, "hadrStateStr"));
+
+		int hadrModeInt = StringUtil.parseInt(cm.getAbsString (0, "hadrModeInt"), -1);
+		if (hadrModeInt >= 0)
+		{
+			_hadrInfoPanel.setVisible(true);
+		}
+
 
 //		_localServerName_txt  .setText();
 		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
@@ -1956,6 +2091,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_clusterCoordinatorId_txt  .setText("");
 //		_clusterView_cbx           .setSelectedItem("cluster"); // do not set this, it will kick off the action event and thus: save the info in the properties file.
 		_clusterInfoPanel          .setVisible(false);
+		_hadrInfoPanel             .setVisible(false);
 
 		// Server info
 		_localServerName_txt    .setText("");

@@ -123,12 +123,15 @@ public class TimeUtils
 	/**
 	 * Convert a long into a time string 
 	 * 
-	 * @param format %HH:%MM:%SS.%ms
+	 * @param format %HH:%MM:%SS.%ms  or %?HH[:]%MM:%SS.%ms where the HH is optional and only filled in if hour is above 0
 	 * @param execTime
 	 * @return a string of the format description
 	 */
 	public static String msToTimeStr(String format, long execTime)
 	{
+		if (format == null) throw new RuntimeException("msToTimeStr(): format can't be null");
+		if (format.trim().length() == 0) throw new RuntimeException("msToTimeStr(): format can't be empty");
+
 		String execTimeHH = "00";
 		String execTimeMM = "00";
 		String execTimeSS = "00";
@@ -155,12 +158,35 @@ public class TimeUtils
 //		execTime = execTime / 60;
 		execTimeHH = "00" + execTime;
 		execTimeHH = (execTime < 100) ? execTimeHH.substring(execTimeHH.length()-2) : "" + execTime;
-		
 
-		format = format.replaceAll("%HH", execTimeHH);
-		format = format.replaceAll("%MM", execTimeMM);
-		format = format.replaceAll("%SS", execTimeSS);
-		format = format.replaceAll("%ms", execTimeMs);
+		// Handle optional TAGS
+		// hour is above or below 00
+		String tagStr = "%?HH";
+		if (format.indexOf(tagStr) >= 0)
+		{
+			String withinSquareBrakets = "";
+			int tagStartPos = format.indexOf(tagStr+"[");
+			if (tagStartPos >= 0)
+			{
+				int tagEndPos = format.indexOf("]", tagStartPos); // we should possible check for new tags... %MM
+				if (tagEndPos >= 0)
+				{
+					withinSquareBrakets = format.substring(tagStartPos + (tagStr+"[").length(), tagEndPos);
+				}
+
+				tagStr = tagStr + "[" + withinSquareBrakets + "]";
+			}
+			if ( "00".equals(execTimeHH))
+				format = format.replace(tagStr, ""); // if 00: remove the TAG from the format string
+			else
+				format = format.replace(tagStr, execTimeHH + withinSquareBrakets); 
+		}
+
+
+		format = format.replace("%HH", execTimeHH);
+		format = format.replace("%MM", execTimeMM);
+		format = format.replace("%SS", execTimeSS);
+		format = format.replace("%ms", execTimeMs);
 
 		return format;
 	}
@@ -246,5 +272,22 @@ public class TimeUtils
 	 * ********* TEST CODE ********* TEST CODE ********* TEST CODE *********
 	 * *********************************************************************
 	 */
+	private static void test(String format, String expected, long ms)
+	{
+		String result = TimeUtils.msToTimeStr(format, ms);
 
+		if (expected.equals(result))
+			System.out.println("  OK: result '"+result+"' equals expected value '"+expected+"'.");
+		else
+			System.out.println("FAIL: result '"+result+"' IS NOT equal the expected value '"+expected+"'.");
+	}
+	public static void main(String[] args)
+	{
+		test("%MM:%SS.%ms",          "00:10.000",      10 * 1000);
+		test("%MM:%SS.%ms",          "01:01.000",      61 * 1000);
+		test("%?HH[:]%MM:%SS.%ms",   "01:01.000",      61 * 1000);
+		test("%?HH[:]%MM:%SS.%ms",   "01:01:01.000",   (3600 + 61) * 1000);
+		test("%?HH[---]%MM:%SS.%ms", "01:01.000",      61 * 1000);
+		test("%?HH[---]%MM:%SS.%ms", "01---01:01.000", (3600 + 61) * 1000);
+	}
 }

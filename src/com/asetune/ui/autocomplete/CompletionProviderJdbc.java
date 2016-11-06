@@ -1,7 +1,6 @@
 package com.asetune.ui.autocomplete;
 
 import java.awt.Window;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;

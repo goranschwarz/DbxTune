@@ -69,6 +69,24 @@ public class VersionShort
 	}
 
 	
+	public static String toStr(int version)
+	{
+		// 5 digit version number
+		if (version > 10000)
+		{
+			// The below is probably wrong
+			int major       = version                                     / 10000;
+			int minor       =(version -  (major * 10000))                 / 10;
+			int maintenance = version - ((major * 10000) + (minor * 10) + (minor * 10));
+
+//			System.out.println("VersionShort.toStr("+version+") <-- '"+major + "." + minor + "." + maintenance+"'");
+			return major + "." + minor + "." + maintenance;
+		}
+
+		return "unknown int("+version+")";
+	}
+
+	
 	public static void main(String[] args)
 	{
 		System.out.println("BEGIN: all test");

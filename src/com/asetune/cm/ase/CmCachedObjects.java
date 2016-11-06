@@ -253,6 +253,8 @@ extends CountersModel
 			"/*------ drop tempdb objects -------*/ \n" +
 			"drop table #cacheInfo\n";
 
+		addDropTempTable("#cacheInfo");
+
 		// TOP ROWS
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf.getBooleanProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows))

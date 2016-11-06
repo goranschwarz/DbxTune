@@ -10,15 +10,15 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
@@ -42,6 +42,8 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
+import net.miginfocom.swing.MigLayout;
+
 public abstract class CounterControllerAbstract
 //extends Thread
 implements ICounterController
@@ -53,6 +55,9 @@ implements ICounterController
 	@Override public void   setSupportedProductName(String str) { _supportedProductString = str; }
 	@Override public String getSupportedProductName()           { return _supportedProductString; }
 
+	public static final String PROPKEY_isClosed_timeout = "CounterController.isClosed.timeout";
+	public static final int    DEFAULT_isClosed_timeout = 3;
+	
 //	protected Thread   _thread  = null;
 //	protected boolean  _running = false;
 	private boolean _hasGui;
@@ -69,6 +74,11 @@ implements ICounterController
 	/** if any monitoring thread is currently getting information from the monitored server */
 	private boolean _isRefreshing = false;
 
+	/** When did we start last refresh. setInRefresh(true) */
+	private long _startRefreshTime = 0;
+
+	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
+	private long _refreshTimeInMs = 0;
 	
 	private String _waitEvent = "";
 	
@@ -1473,8 +1483,23 @@ implements ICounterController
 	public void setInRefresh(boolean s)
 	{
 		_isRefreshing = s;
+		if (_isRefreshing)
+		{
+			_startRefreshTime = System.currentTimeMillis();
+		}
+		else
+		{
+			_refreshTimeInMs = System.currentTimeMillis() - _startRefreshTime;
+		}
 	}
 
+	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
+	@Override
+	public long getLastRefreshTimeInMs()
+	{
+		return _refreshTimeInMs;
+	}
+	
 //	public void clearComponents()
 //	{
 //		if ( ! _isInitialized )
@@ -1630,15 +1655,17 @@ implements ICounterController
 	protected boolean isClosed(Connection conn)
 	throws SQLException
 	{
+		int timeout = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_isClosed_timeout, DEFAULT_isClosed_timeout);
+		String sql =  getIsClosedSql();
 		try
 		{
-			String sql =  getIsClosedSql();
 //System.out.println("isClosed(): autoCommit="+conn.getAutoCommit()+", sql="+sql);
 			
 			if (_logger.isDebugEnabled())
 				_logger.debug("isClosed(): sql="+sql);
 			
 			Statement stmnt = conn.createStatement();
+			stmnt.setQueryTimeout(timeout);
 			ResultSet rs    = stmnt.executeQuery(sql);
 
 			stmnt.setQueryTimeout(5);
@@ -1655,7 +1682,7 @@ implements ICounterController
 		catch (SQLException e)
 		{
 			if ( ! "JZ0C0".equals(e.getSQLState()) ) // connection is already closed...
-					_logger.warn("isClosed(conn) had problems", e);
+					_logger.warn("isClosed(conn) had problems. sql='"+sql+"'.", e);
 
 			throw e;
 		}
@@ -1918,6 +1945,97 @@ implements ICounterController
 	}
 	//==================================================================
 	// END: CM Tooltip
+	//==================================================================
+
+
+	
+	
+	
+	//==================================================================
+	// BEGIN: CM Demand Refresh List
+	//==================================================================
+	private Set<String> _cmDemandRefreshList = new HashSet<String>();
+	
+	@Override
+	public boolean isCmInDemandRefreshList(String name)
+	{
+		return _cmDemandRefreshList.contains(name);
+	}
+
+	@Override
+	public void addCmToDemandRefreshList(String name)
+	{
+		_cmDemandRefreshList.add(name);
+	}
+
+	@Override
+	public void removeCmFromDemandRefreshList(String name)
+	{
+		_cmDemandRefreshList.remove(name);
+	}
+
+	@Override
+	public void clearCmDemandRefreshList()
+	{
+		_cmDemandRefreshList.clear();
+	}
+
+	@Override
+	public Set<String> getCmDemandRefreshList()
+	{
+		return _cmDemandRefreshList;
+	}
+
+	@Override
+	public int getCmDemandRefreshListCount()
+	{
+		return _cmDemandRefreshList.size();
+	}
+	
+
+
+	public static final String PROPKEY_cmDemandRefreshSleepTime = "CounterCollector.cmDemandRefreshSleepTime";
+	public static final int    DEFAULT_cmDemandRefreshSleepTime = 3;
+
+	private int _cmDemandRefreshSleepTime = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmDemandRefreshSleepTime, DEFAULT_cmDemandRefreshSleepTime);
+
+	/**
+	 * Used in the check loop to check if we need to sleep for a shorter time that the suggested time.
+	 */
+	@Override
+	public int getCmDemandRefreshSleepTime(int suggestedSleepTime, long lastRefreshTimeInMs)
+	{
+//System.out.println("getCmDemandRefreshSleepTime(suggestedSleepTime="+suggestedSleepTime+", lastRefreshTimeInMs="+lastRefreshTimeInMs+"): shorterSleepTime="+_cmDemandRefreshSleepTime);
+		// If we have no DemandRefresh in the List, simply return the suggestedSleepTime
+		if (getCmDemandRefreshListCount() == 0)
+			return suggestedSleepTime;
+
+		int sleepTime        = suggestedSleepTime;
+		int shorterSleepTime = _cmDemandRefreshSleepTime;
+
+		// Loop all the CM's (in the demand list) and possibly decide for a shorted sleep time
+		for (String cmName : getCmDemandRefreshList())
+		{
+			CountersModel cm = getCmByName(cmName);
+			if (cm == null)
+				continue;
+
+			// if the CM's hasn't been refreshed in a while, then FORCE a shorter sleep time then the suggested
+			long cmRefreshedInMs = System.currentTimeMillis() - cm.getPrevLocalRefreshTime();
+			long expireValue = (suggestedSleepTime * 1000) + lastRefreshTimeInMs + 1000; // last 1000 is just add an extra second...
+//System.out.println("getCmDemandRefreshSleepTime(): cmName='"+cmName+"', cmRefreshedInMs="+cmRefreshedInMs+" > expireValue="+expireValue+". if="+(cmRefreshedInMs > expireValue) );
+			if (cmRefreshedInMs > expireValue)
+			{
+				sleepTime = shorterSleepTime;
+				_logger.info("Setting override-sleep time to "+sleepTime+" (from "+suggestedSleepTime+").This since previous sample had 'demand-refresh'. Descition based on CM '"+cmName+"' with "+cmRefreshedInMs+" ms since last refresh. Requested Counters: "+getCmDemandRefreshList());
+				break;
+			}
+		}
+
+		return sleepTime;
+	}
+	//==================================================================
+	// END: CM Demand Refresh List
 	//==================================================================
 
 }

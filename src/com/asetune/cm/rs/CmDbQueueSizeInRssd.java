@@ -207,6 +207,8 @@ extends CountersModel
 	{
 		String sql = rmpQueue(srvVersion);
 
+		addCleanupCmdOnException("disconnect");
+
 		return 
 			  "connect rssd \n"
 			+ "go\n"
@@ -248,6 +250,7 @@ extends CountersModel
 		"** four bytes of the subid \n" + 
 		"*/ \n" + 
 		"if (convert(int, 0x00000100) = 65536) \n" + 
+		"begin \n" + 
 		"	insert #subs \n" + 
 		"	select rawid = subid, \n" + 
 		"		   intid = substring(subid, 8, 1) + \n" + 
@@ -255,28 +258,31 @@ extends CountersModel
 		"				   substring(subid, 6, 1) + \n" + 
 		"				   substring(subid, 5, 1) \n" + 
 		"	from rs_subscriptions \n" + 
+		"end \n" + 
 		"else \n" + 
+		"begin \n" + 
 		"	insert #subs \n" + 
 		"	select rawid = subid, intid = substring(subid, 5, 4) \n" + 
 		"	from rs_subscriptions \n" + 
+		"end \n" + 
 		" \n" + 
-		"	create table #queues \n" + 
-		"		 (	name 		varchar(255), \n" + 
-		"			q_type_str	varchar(255), \n" + 
-		"			q_number 	int, \n" + 
-		"			q_type 		int, \n" + 
-		"			q_state		int, \n" + 
-		"			size 		int, \n" + 
-		"			saved 		int, \n" + 
-		"			detect_loss 	int, \n" + 
-		"			ignore_loss 	int, \n" + 
-		"			first_seg	int, \n" + 
-		"			q_objid		binary(8), \n" + 
-		"			q_objid_temp	binary(8), \n" + 
-		"			xnl_large_msg	varchar(9) NULL ) \n" + 
+		"create table #queues \n" + 
+		"	 (	name 		varchar(255), \n" + 
+		"		q_type_str	varchar(255), \n" + 
+		"		q_number 	int, \n" + 
+		"		q_type 		int, \n" + 
+		"		q_state		int, \n" + 
+		"		size 		int, \n" + 
+		"		saved 		int, \n" + 
+		"		detect_loss 	int, \n" + 
+		"		ignore_loss 	int, \n" + 
+		"		first_seg	int, \n" + 
+		"		q_objid		binary(8), \n" + 
+		"		q_objid_temp	binary(8), \n" + 
+		"		xnl_large_msg	varchar(9) NULL ) \n" + 
 		" \n" + 
 		"insert #queues \n" + 
-		"select distinct dsname + '.' + dbname + '(Inbound)', \n" + 
+		"select distinct dsname + '.' + dbname, 'Inbound', \n" + 
 		"	number, 1, q.state, 0, 0, 0, 0, 0, 0, 0, '' \n" + 
 		"from rs_queues q, rs_databases d \n" + 
 		"where number = d.dbid and type=1 \n" + 

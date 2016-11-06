@@ -18,10 +18,10 @@ extends JAseMessage
 
 	public JClientExecTime(final long execStartTime, final long execStopTime, final long execFinnishTime, long execReadRsSum, int atLine, String originSql)
 	{
-		super("Client Exec Time: " + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execFinnishTime - execStartTime) 
-				+ " (sqlExec="     + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execStopTime    - execStartTime)
-				+ ", readResults=" + TimeUtils.msToTimeStr( "%MM:%SS.%ms", execReadRsSum)
-				+ ", other="       + TimeUtils.msToTimeStr( "%MM:%SS.%ms", (execFinnishTime - execStopTime) - execReadRsSum)
+		super("Client Exec Time: " + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", execFinnishTime - execStartTime) 
+				+ " (sqlExec="     + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", execStopTime    - execStartTime)
+				+ ", readResults=" + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", execReadRsSum)
+				+ ", other="       + TimeUtils.msToTimeStr( "%?HH[:]%MM:%SS.%ms", (execFinnishTime - execStopTime) - execReadRsSum)
 				+ "), at '"+(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date()))
 				+"', for SQL starting at Line "+atLine, originSql );
 

@@ -48,7 +48,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -61,6 +60,7 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshFileSystemView;
 import com.asetune.tools.NormalExitException;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -142,7 +142,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private GTextField         _sshTailOsCmd_txt       = new GTextField("");
 	                           
 	private JPanel             _logTailPanel           = null;
-	private RSyntaxTextArea    _logTail_txt            = new RSyntaxTextArea();
+	private RSyntaxTextAreaX   _logTail_txt            = new RSyntaxTextAreaX();
 	private RTextScrollPane    _logTail_scroll         = new RTextScrollPane(_logTail_txt);
 
 

@@ -1,42 +1,10 @@
 package com.asetune.ssh;
 
 import java.io.File;
-import java.net.URI;
-
-//public class SshFile extends File
-//{
-//	private static final long serialVersionUID = 1L;
-//
-//	public SshFile(File parent, String child)
-//	{
-//		super(parent, child);
-//		// TODO Auto-generated constructor stub
-//	}
-//
-//	public SshFile(String parent, String child)
-//	{
-//		super(parent, child);
-//		// TODO Auto-generated constructor stub
-//	}
-//
-//	public SshFile(String pathname)
-//	{
-//		super(pathname);
-//		// TODO Auto-generated constructor stub
-//	}
-//
-//	public SshFile(URI uri)
-//	{
-//		super(uri);
-//		// TODO Auto-generated constructor stub
-//	}
-//}
-import java.io.File;
 import java.io.FileFilter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.PasswordAuthentication;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;

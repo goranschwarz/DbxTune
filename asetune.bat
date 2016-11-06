@@ -131,7 +131,7 @@ set classpath=%classpath%;%DBXTUNE_HOME%\lib\jtds-1.3.1.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\ngdbc.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%DBXTUNE_HOME%\lib\h2-1.4.192.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\h2-1.4.193.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\wizard.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\miglayout-core-4.2.jar
@@ -154,6 +154,7 @@ set classpath=%classpath%;%DBXTUNE_HOME%\lib\antlr-4.0-complete.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\juniversalchardet-1.0.3.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\DDLGen.jar
 set classpath=%classpath%;%DBXTUNE_HOME%\lib\simplemagic-1.6.jar
+set classpath=%classpath%;%DBXTUNE_HOME%\lib\jsqlparser-0.9.6.jar
 
 set classpath=%classpath%;%USERPROFILE%\.asetune\jdbc_drivers\*
 set classpath=%classpath%;%EXTRA_JDBC_DRIVERS%

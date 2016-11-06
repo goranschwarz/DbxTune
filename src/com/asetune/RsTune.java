@@ -11,7 +11,6 @@ import com.asetune.config.dict.MonTablesDictionaryRs;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
-import com.asetune.pcs.inspection.ObjectLookupInspectorAse;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.utils.DbUtils;
 

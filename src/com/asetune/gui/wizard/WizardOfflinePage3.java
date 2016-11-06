@@ -22,8 +22,6 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 import org.netbeans.spi.wizard.WizardPage;
@@ -35,6 +33,8 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class WizardOfflinePage3

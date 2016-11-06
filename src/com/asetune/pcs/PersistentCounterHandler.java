@@ -59,7 +59,7 @@ implements Runnable
 	public static final int     DEFAULT_warnQueueSizeThresh                      = 2;
                                                                                  
 	public static final String  PROPKEY_sqlCap_doSqlCaptureAndStore              = "PersistentCounterHandler.sqlCapture.doSqlCaptureAndStore";
-	public static final boolean DEFAULT_sqlCap_doSqlCaptureAndStore              = true;
+	public static final boolean DEFAULT_sqlCap_doSqlCaptureAndStore              = false;
                                                                                  
 //	public static final String  PROPKEY_sqlCap_xxx                               = "PersistentCounterHandler.sqlCapture.xxx-not-yet-used";
 //	public static final boolean DEFAULT_sqlCap_xxx                               = true;

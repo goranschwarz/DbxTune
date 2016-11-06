@@ -325,6 +325,12 @@ extends CounterCollectorThreadAbstract
 							sleepTime = shorterSleepTime;
 						}
 					}
+
+					// If previous CHECK has DEMAND checks, lets sleep for a shorter while
+					// This so we can catch data if the CM's are not yet initialized and has 2 samples (has diff data)
+					sleepTime = getCounterController().getCmDemandRefreshSleepTime(sleepTime, getCounterController().getLastRefreshTimeInMs());
+					
+					// SLEEP in a loop
 					for (int i=sleepTime; i>0; i--)
 					{						
 						boolean doJavaGc = false;
@@ -541,6 +547,9 @@ extends CounterCollectorThreadAbstract
 				//-----------------
 				// Update data in tabs
 				//-----------------
+
+				// Clear the demand refresh list
+				getCounterController().clearCmDemandRefreshList();
 
 				// Keep a list of all the CM's that are refreshed during this loop
 				// This one will be passed to doPostRefresh()

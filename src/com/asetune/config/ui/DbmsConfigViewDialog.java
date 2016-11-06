@@ -19,8 +19,6 @@ import javax.swing.JTabbedPane;
 
 import org.apache.log4j.Logger;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.Version;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
@@ -32,6 +30,8 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class DbmsConfigViewDialog
 //extends JDialog

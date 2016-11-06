@@ -24,7 +24,7 @@ extends CountersModel
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgTables.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Active Statements";
+	public static final String   SHORT_NAME       = "Table Info";
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"One row for each table in the current database, showing statistics about accesses to that specific table." +

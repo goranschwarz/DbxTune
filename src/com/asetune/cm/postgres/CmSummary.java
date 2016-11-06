@@ -185,10 +185,11 @@ extends CountersModel
 	{
 		return 
 				"select \n" + 
-				"    *,  \n" +
-				"    cast( version() as varchar(90))                                                                 as VERSION," +
-				"    CURRENT_TIMESTAMP                                                                               as TIME_NOW, \n" + 
-				"    cast( extract(epoch from (CURRENT_TIMESTAMP - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'))/60 as INT) as UTC_MINUTE_DIFF \n" +
+				"    *  \n" +
+				"    ,cast( version() as varchar(255))   as version \n" +
+				"    ,CURRENT_TIMESTAMP                  as time_now \n" + 
+				"    ,cast( extract(epoch from (CURRENT_TIMESTAMP - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'))/60 as INT) as utc_minute_diff \n" +
+				"    ,pg_postmaster_start_time()         as start_time \n" +
 				"from pg_catalog.pg_stat_bgwriter \n" +
 				"";
 	}

@@ -25,10 +25,10 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.mozilla.universalchardet.UniversalDetector;
+
+import net.miginfocom.swing.MigLayout;
 
 public class FileUtils
 {

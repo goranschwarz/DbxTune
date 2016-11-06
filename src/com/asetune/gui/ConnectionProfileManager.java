@@ -1,6 +1,8 @@
 package com.asetune.gui;
 
 import java.awt.Color;
+import java.awt.Container;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
@@ -23,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 
+import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -32,14 +35,13 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
@@ -54,12 +56,15 @@ import com.asetune.gui.ConnectionProfile.JdbcEntry;
 import com.asetune.gui.ConnectionProfile.OfflineEntry;
 import com.asetune.gui.ConnectionProfile.SrvType;
 import com.asetune.gui.ConnectionProfile.TdsEntry;
+import com.asetune.gui.ConnectionProfile.Type;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class ConnectionProfileManager
 {
@@ -68,6 +73,9 @@ public class ConnectionProfileManager
 
 	/** all connection profiles, by key: getName() from the profile */
 	private LinkedHashMap<String, ConnectionProfile> _profileMap = new LinkedHashMap<String, ConnectionProfile>();
+
+	/** all ProfileTypes */
+	private LinkedHashMap<String, ProfileType> _profileTypesMap = new LinkedHashMap<String, ProfileType>();
 
 	/** all connection profiles, by key: getKey() from  the profile */
 //	private LinkedHashMap<String, ConnectionProfile> _keyMap     = new LinkedHashMap<String, ConnectionProfile>();
@@ -172,12 +180,191 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_32_OTHER            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_unknown_vendor_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_UNDEFINED        = SwingUtils.readImageIcon(Version.class, "images/conn_profile_jdbc_undefined_32.png");
 
+	//-------------------------------------------------------------------------------------------------------------------
 	// XML Strings for the Catalog and ConnProfile Tree
 	private final static String XML_PROFILE_TREE                     = "ProfileTree";
 	private final static String XML_PROFILE_TREE_CATALOG             = "Catalog";
 	private final static String XML_PROFILE_TREE_CATALOG_ATTR_NAME   = "name";
 	private final static String XML_PROFILE_TREE_ENTRY               = "Entry";
 	private final static String XML_PROFILE_TREE_ENTRY_ATTR_NAME     = "name";
+
+	//-------------------------------------------------------------------------------------------------------------------
+	//  XML Strings for the ProfileTypes
+	public static final String       XML_PROFILE_TYPES                            = "ProfileTypes";
+	public static final String       XML_PROFILE_TYPE_ENTRY                       = "ProfileTypeEntry";
+	public static final String       XML_PROFILE_TYPE_ENTRY_ATTR_name             = "name";
+	public static final String       XML_PROFILE_TYPE_ENTRY_COLOR                 = "Color";
+	public static final String       XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_r          = "r";
+	public static final String       XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_g          = "g";
+	public static final String       XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_b          = "b";
+	public static final String       XML_PROFILE_TYPE_ENTRY_BORDER                = "Border";
+	public static final String       XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_top       = "top";
+	public static final String       XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_left      = "left";
+	public static final String       XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_bottom    = "bottom";
+	public static final String       XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_right     = "right";
+	
+	public static class ProfileType
+	{
+		public String        _name          = "unknown";
+		public Color         _color         = Color.WHITE;
+		public Insets        _borderMargins = new Insets(0, 0, 0, 0);;
+
+		public ProfileType()
+		{
+		}
+
+		public ProfileType(String name, Color color, Insets borderMargins)
+		{
+			_name          = name;
+			_color         = color;
+			_borderMargins = borderMargins;
+		}
+		
+		public ProfileType(String name)
+		{
+			_name          = name;
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if (obj == null) return false;
+			if (!(obj instanceof ProfileType)) return false;	
+			if (obj == this) return true;
+
+			ProfileType paramType = (ProfileType) obj;
+			return    equals(this._name,          paramType._name) 
+			       && equals(this._color,         paramType._color) 
+			       && equals(this._borderMargins, paramType._borderMargins);
+		}
+		private boolean equals(Object control, Object test)
+		{
+			if (null == control)
+				return null == test;
+			return control.equals(test);
+		}
+		
+		public String getName()
+		{
+			return _name;
+		}
+
+		public static String getColorRgbStr(Color color)
+		{
+			if (color == null)
+				return "rgb(255,255,255)"; // WHITE
+
+			return "rgb("+color.getRed()+","+color.getGreen()+","+color.getBlue()+")";
+		}
+		public String getColorRgbStr()
+		{
+			return getColorRgbStr(_color);
+		}
+		public String getMarginStr()
+		{
+			return "top="+_borderMargins.top+", left="+_borderMargins.left+", bottom="+_borderMargins.bottom+", right="+_borderMargins.right;
+		}
+
+		@Override
+		/** Used for displaying the value in JComboBox etc... */
+		public String toString()
+		{
+			// Get the default background color of the ComboBox
+			Color defaultComboBoxBgColor = UIManager.getColor("ComboBox.background");
+//			Color defaultComboBoxBgColor = UIManager.getColor("TextField.background");
+			if (defaultComboBoxBgColor == null)
+				defaultComboBoxBgColor = Color.WHITE;
+
+			// If background is the same as the ProfileType, then do not add any color... it will just look strange when selection the value
+			// otherwise: lets use HTML coloring...
+			if (defaultComboBoxBgColor.equals(_color))
+				return "<html>"+getName()+"</html>"; // Still do HTML rendering of the string 
+			else
+				return "<html><font fgcolor='black', bgcolor='"+getColorRgbStr()+"'>"+getName()+"</font></html>"; // Note this is used by the JComboBox to "color" the items
+//			return "<html>"+getName()+"<i><font bgcolor='"+getColorRgbStr()+"'> - Color</font></i></html>"; // Note this is used by the JComboBox to "color" the items
+//			return "<html><font fgcolor='black', bgcolor='"+getColorRgbStr()+"'>"+getName()+"</font></html>"; // Note this is used by the JComboBox to "color" the items
+//			return super.toString() + "; name='"+_name+"', color{"+getColorRgbStr()+"}, borderMargins{top="+_borderMargins.top+",left="+_borderMargins.left+",bottom="+_borderMargins.bottom+",right="+_borderMargins.right+"}";
+//			return super.toString() + "; name='"+_name+"', color{r="+_color.getRed()+",g="+_color.getGreen()+",b="+_color.getBlue()+"}, borderMargins{top="+_borderMargins.top+",left="+_borderMargins.left+",bottom="+_borderMargins.bottom+",right="+_borderMargins.right+"}";
+		}
+
+		public String toXml()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.append("        <").append(XML_PROFILE_TYPE_ENTRY).append(" ").append(XML_PROFILE_TYPE_ENTRY_ATTR_name).append("=\"").append(_name).append("\"").append(">\n");
+			sb.append("            <").append(XML_PROFILE_TYPE_ENTRY_COLOR).append(" ").append(XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_r).append("=\"").append( _color.getRed()   ).append("\"")
+			                                                               .append(" ").append(XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_g).append("=\"").append( _color.getGreen() ).append("\"")
+			                                                               .append(" ").append(XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_b).append("=\"").append( _color.getBlue()  ).append("\"")
+			                                                               .append("/>\n");
+			sb.append("            <").append(XML_PROFILE_TYPE_ENTRY_BORDER).append(" ").append(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_top)   .append("=\"").append( _borderMargins.top    ).append("\"")
+			                                                                .append(" ").append(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_left)  .append("=\"").append( _borderMargins.left   ).append("\"")
+			                                                                .append(" ").append(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_bottom).append("=\"").append( _borderMargins.bottom ).append("\"")
+			                                                                .append(" ").append(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_right) .append("=\"").append( _borderMargins.right  ).append("\"")
+			                                                                .append("/>\n");
+			sb.append("        </").append(XML_PROFILE_TYPE_ENTRY).append(">\n");
+			return sb.toString();
+		}
+
+		public static ProfileType parseXml(Element element)
+		{
+			ProfileType entry = new ProfileType();
+			
+			entry._name = element.getAttribute(XML_PROFILE_TYPE_ENTRY_ATTR_name);
+			
+			NodeList colorList = element.getElementsByTagName(XML_PROFILE_TYPE_ENTRY_COLOR);
+			if (colorList.getLength() > 0)
+			{
+				Node node = colorList.item(0);
+				if (node.getNodeType() == Node.ELEMENT_NODE) 
+				{
+					Element el = (Element) node;
+					int r = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_r), 0);
+					int g = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_g), 0);
+					int b = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_COLOR_ATTR_b), 0);
+					entry._color = new Color(r, g, b);
+				}
+			}
+			
+			NodeList borderList = element.getElementsByTagName(XML_PROFILE_TYPE_ENTRY_BORDER);
+			if (borderList.getLength() > 0)
+			{
+				Node node = borderList.item(0);
+				if (node.getNodeType() == Node.ELEMENT_NODE) 
+				{
+					Element el = (Element) node;
+					int top    = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_top   ), 0);
+					int left   = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_left  ), 0);
+					int bottom = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_bottom), 0);
+					int right  = StringUtil.parseInt(el.getAttribute(XML_PROFILE_TYPE_ENTRY_BORDER_ATTR_right ), 0);
+					entry._borderMargins = new Insets(top, left, bottom, right);
+				}
+			}
+
+			return entry;
+		}
+	}
+
+//<ProfileTypes>
+//  <ProfileTypeEntry name="Development">
+//		<Color r="0" g="255" b="0"/>
+//		<Border top="2" left="3" bottom="2" right="3"/>
+//  </ProfileTypeEntry>
+//  <ProfileTypeEntry name="Test">
+//		<Color r="0" g="255" b="0"/>
+//		<Border top="2" left="3" bottom="2" right="3"/>
+//  </ProfileTypeEntry>
+//  <ProfileTypeEntry name="Integration">
+//		<Color r="0" g="255" b="0"/>
+//		<Border top="2" left="3" bottom="2" right="3"/>
+//  </ProfileTypeEntry>
+//  <ProfileTypeEntry name="Staging">
+//		<Color r="0" g="255" b="0"/>
+//		<Border top="2" left="3" bottom="2" right="3"/>
+//  </ProfileTypeEntry>
+//  <ProfileTypeEntry name="Production">
+//		<Color r="255" g="0" b="0"/>
+//		<Border top="2" left="3" bottom="2" right="3"/>
+//  </ProfileTypeEntry>
+//</ProfileTypes>
 
 	
 	//---------------------------------------------------------------
@@ -318,6 +505,63 @@ public class ConnectionProfileManager
 	}
 
 	/**
+	 * Get all saved ProfileType objects
+	 * @return a LinkedHasMap of <name,ProfileType> (will never be null, if none found it will be an empty list)
+	 */
+	public LinkedHashMap<String, ProfileType> getProfileTypes()
+	{
+		return _profileTypesMap;
+	}
+
+	/**
+	 * A ProfileType object, associated to the name
+	 * <p>
+	 * @param name name of the profileType we want to get
+	 * @return A ProfileType object, if not found null will be returned
+	 */
+	public ProfileType getProfileTypeByName(String name)
+	{
+		if (StringUtil.isNullOrBlank(name))
+			return null;
+
+		ProfileType profileType = _profileTypesMap.get(name);
+
+		return profileType;
+	}
+
+	public void addProfileType(ProfileType entry)
+	{
+		_profileTypesMap.put(entry.getName(), entry);
+	}
+
+//	public void setProfileTypes(LinkedHashMap<String, ProfileType> entryMap)
+//	{
+//		_profileTypesMap = entryMap;
+//	}
+	public void setProfileTypes(List<ProfileType> entryList)
+	{
+		addProfileTypes(entryList, true);
+	}
+	public void addProfileTypes(List<ProfileType> entryList, boolean clearBeforeAdd)
+	{
+		if (clearBeforeAdd)
+			_profileTypesMap.clear();
+
+		for (ProfileType entry : entryList)
+			_profileTypesMap.put(entry.getName(), entry);
+	}
+
+	private void createDefaultProfileTypes()
+	{
+		addProfileType( new ProfileType("Development", Color.WHITE,  new Insets(0, 0, 0, 0)) );
+		addProfileType( new ProfileType("Test",        Color.WHITE,  new Insets(0, 0, 0, 0)) );
+		addProfileType( new ProfileType("Integration", Color.YELLOW, new Insets(2, 3, 2, 3)) );
+		addProfileType( new ProfileType("Staging",     Color.ORANGE, new Insets(2, 3, 2, 3)) );
+		addProfileType( new ProfileType("Production",  Color.RED,    new Insets(2, 3, 2, 3)) );
+	}
+
+
+	/**
 	 * A ConnectionProfile object, associated to the name
 	 * <p>
 	 * First it searches the Map containing profiles with key: getName()<br>
@@ -405,6 +649,7 @@ public class ConnectionProfileManager
 	 */
 	public void setProfileEntry(ConnectionProfile connProfile, ConnProfileEntry connProfileEntry)
 	{
+System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+connProfile.getName()+"', connProfileEntry='"+connProfileEntry.toXml("xxx", Type.TDS, SrvType.TDS_ASE)+"'.");
 		connProfile.setEntry(connProfileEntry);
 
 		_profileMap.put(connProfile.getName(), connProfile);
@@ -1867,6 +2112,32 @@ public class ConnectionProfileManager
 					}
 
 					//--------------------------------------
+					// Write 'ProfileTypes' Structure
+					if (writeTemplateFile)
+					{
+						// If we want to write a DUMMY Connection entry, this is the place to do it.
+					}
+					else
+					{
+						sb.setLength(0);
+
+						sb.append("    <").append(XML_PROFILE_TYPES).append(">\n");
+						sb.append("\n");
+						
+						for (ProfileType entry : getProfileTypes().values())
+						{
+							sb.append(entry.toXml());
+							sb.append("\n");
+						}
+
+						sb.append("    </").append(XML_PROFILE_TYPES).append(">\n");
+						sb.append("\n");
+
+						byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
+						channel.write(byteBuffer);
+					}
+					
+					//--------------------------------------
 					// Write TDS/JDBC/OFFLINE entries
 					if (writeTemplateFile)
 					{
@@ -2100,6 +2371,43 @@ public class ConnectionProfileManager
 		 		}
 			}
 
+			//----------------- ProfileTypes
+			subTag = XML_PROFILE_TYPES;
+			if (doc.getElementsByTagName(subTag).getLength() > 0)
+			{
+    			nlist  = doc.getElementsByTagName(subTag).item(0).getChildNodes();
+    			if (nlist.getLength() > 0)
+    			{
+    				addToProfileTypes(nlist);
+    			}
+			}
+//THIS_DOESNT_WORK_to_100_PERCENT
+
+//			nlist  = doc.getElementsByTagName(subTag);
+//			for (int i=0; i<nlist.getLength(); i++) 
+//			{
+//				Node node = nlist.item(i);
+//		 
+//				_logger.debug("Current Element at '"+subTag+"' :" + node.getNodeName());
+//				if (node.getNodeType() == Node.ELEMENT_NODE) 
+//				{
+//					try
+//					{
+//						ProfileType entry = ProfileType.parseXml((Element) node);
+//						addProfileType(entry);
+//					}
+//					catch (Throwable tr)
+//					{
+//						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+filename+"'.", tr);
+//					}
+//		 		}
+//			}
+			if (_profileTypesMap.size() == 0)
+			{
+				createDefaultProfileTypes();
+			}
+			
+			
 			//----------------- ProfileTree
 			subTag = XML_PROFILE_TREE;
 			if (doc.getElementsByTagName(subTag).getLength() > 0)
@@ -2140,6 +2448,36 @@ public class ConnectionProfileManager
 		}
 	}
 
+
+	private void addToProfileTypes(NodeList nlist)
+	{
+		for (int i=0; i<nlist.getLength(); i++) 
+		{
+			Node node = nlist.item(i);
+	 
+			if (node.getNodeType() == Node.ELEMENT_NODE) 
+			{
+				String tagName = node.getNodeName();
+
+				if (XML_PROFILE_TYPE_ENTRY.equals(tagName))
+				{
+					try
+					{
+						ProfileType entry = ProfileType.parseXml((Element) node);
+						addProfileType(entry);
+					}
+					catch (Throwable tr)
+					{
+						_logger.warn("Problems parsing an entry. This entry will be skipped. Entry='"+node.getTextContent()+"', File '"+getFilename()+"'.", tr);
+					}
+				}
+				else
+				{
+					_logger.warn("Connection Profile found unknwon XML tag '"+tagName+"' when parsing file '"+getFilename()+"'. Skipping this and continuing with next one...");
+				}
+	 		}
+		}
+	}
 
 	private void addToProfileTree(DefaultMutableTreeNode treeNode, NodeList nlist)
 	{
@@ -2183,5 +2521,51 @@ public class ConnectionProfileManager
 				}
 	 		}
 		}
+	}
+
+	/**
+	 * Set the color and size of the main border around the window
+	 * @param profileType
+	 */
+	public static void setBorderForConnectionProfileType(Container cont, String profileTypeName)
+	{
+		setBorderForConnectionProfileType( cont, getInstance().getProfileTypeByName(profileTypeName) );
+	}
+	public static void setBorderForConnectionProfileType(Container cont, ProfileType profileType)
+	{
+		if ( ! (cont instanceof JPanel) )
+		{
+			_logger.debug("setConnectionProfileType(): returning without doing anything. Passed Container is not JPanel. cont="+cont);
+			return;
+		}
+		JPanel contentPane = (JPanel) cont;
+
+		// Set empty border
+		if (profileType == null)
+		{
+			_logger.debug("Setting Connection Profile to emptyBorder, since a 'null' profileType was passed.");
+			contentPane.setBorder(BorderFactory.createEmptyBorder());
+			return;
+		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("Setting Connection Profile Type to name='"+profileType.getName()+"' in Container=."+cont);
+
+		if (    profileType._borderMargins.top    == 0 
+		     && profileType._borderMargins.left   == 0 
+		     && profileType._borderMargins.bottom == 0 
+		     && profileType._borderMargins.right  == 0 
+		   )
+		{
+			contentPane.setBorder(BorderFactory.createEmptyBorder());
+			return;
+		}
+
+		contentPane.setBorder(BorderFactory.createMatteBorder(
+				SwingUtils.hiDpiScale(profileType._borderMargins.top), 
+				SwingUtils.hiDpiScale(profileType._borderMargins.left), 
+				SwingUtils.hiDpiScale(profileType._borderMargins.bottom), 
+				SwingUtils.hiDpiScale(profileType._borderMargins.right), 
+				profileType._color));
 	}
 }

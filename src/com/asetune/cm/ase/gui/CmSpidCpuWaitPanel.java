@@ -8,9 +8,6 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -20,10 +17,13 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSpidCpuWaitPanel
 extends TabularCntrPanel
@@ -142,15 +142,15 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, HighlighterFactory.GENERIC_GRAY), null));
 	}
 
-	private JCheckBox       _sampleMonSqltext_chk;
-	private JCheckBox       _sampleDbccSqltext_chk;
-	private JCheckBox       _sampleProcCallStack_chk;
-	private JCheckBox       _sampleShowplan_chk;
-	private JCheckBox       _sampleDbccStacktrace_chk;
-	private JCheckBox       _sampleFreezeMda_chk;
-	private JCheckBox       _sampleSystemSpids_chk;
-	private RSyntaxTextArea _sampleExtraWhereClause_txt;
-	private JButton         _sampleExtraWhereClause_but;
+	private JCheckBox        _sampleMonSqltext_chk;
+	private JCheckBox        _sampleDbccSqltext_chk;
+	private JCheckBox        _sampleProcCallStack_chk;
+	private JCheckBox        _sampleShowplan_chk;
+	private JCheckBox        _sampleDbccStacktrace_chk;
+	private JCheckBox        _sampleFreezeMda_chk;
+	private JCheckBox        _sampleSystemSpids_chk;
+	private RSyntaxTextAreaX _sampleExtraWhereClause_txt;
+	private JButton          _sampleExtraWhereClause_but;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
@@ -174,7 +174,7 @@ extends TabularCntrPanel
 		_sampleDbccStacktrace_chk   = new JCheckBox("Get ASE Stacktrace",       conf == null ? CmSpidCpuWait.DEFAULT_sample_dbccStacktrace : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_dbccStacktrace, CmSpidCpuWait.DEFAULT_sample_dbccStacktrace));
 		_sampleFreezeMda_chk        = new JCheckBox("Freeze MDA Counters",      conf == null ? CmSpidCpuWait.DEFAULT_sample_freezeMda      : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_freezeMda,      CmSpidCpuWait.DEFAULT_sample_freezeMda     ));
 		_sampleSystemSpids_chk      = new JCheckBox("Get System SPID's",        conf == null ? CmSpidCpuWait.DEFAULT_sample_systemSpids    : conf.getBooleanProperty(CmSpidCpuWait.PROPKEY_sample_systemSpids,    CmSpidCpuWait.DEFAULT_sample_systemSpids   ));
-		_sampleExtraWhereClause_txt = new RSyntaxTextArea();
+		_sampleExtraWhereClause_txt = new RSyntaxTextAreaX();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
 
 //		_sampleMonSqltext_chk      .setName(CmSpidCpuWait.PROPKEY_sample_monSqlText);

@@ -23,21 +23,20 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import net.miginfocom.swing.MigLayout;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
-import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.RTextUtility;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class ShowCmPropertiesDialog
 extends JDialog implements ActionListener, ChangeListener
@@ -94,19 +93,19 @@ extends JDialog implements ActionListener, ChangeListener
 	
 	// Fields
 	private JLabel             _sqlInit_lbl          = new JLabel("SQL Init - Only executed once, before first sample");
-	private RSyntaxTextArea	   _sqlInit              = new RSyntaxTextArea();
+	private RSyntaxTextAreaX   _sqlInit              = new RSyntaxTextAreaX();
 //	private RTextScrollPane    _sqlInitScroll        = new RTextScrollPane(_sqlInit);
 
 	private JLabel             _sqlExec_lbl          = new JLabel("SQL - Executed on every sample");
-	private RSyntaxTextArea	   _sqlExec              = new RSyntaxTextArea();
+	private RSyntaxTextAreaX   _sqlExec              = new RSyntaxTextAreaX();
 //	private RTextScrollPane    _sqlExecScroll        = new RTextScrollPane(_sqlExec);
 
 	private JLabel             _sqlWhere_lbl         = new JLabel("Extra Where");
-	private RSyntaxTextArea	   _sqlWhere             = new RSyntaxTextArea();
+	private RSyntaxTextAreaX   _sqlWhere             = new RSyntaxTextAreaX();
 //	private RTextScrollPane    _sqlWhereScroll       = new RTextScrollPane(_sqlWhere);
 
 	private JLabel             _sqlClose_lbl         = new JLabel("SQL Close - Only executed once, when the connetion is closed");
-	private RSyntaxTextArea	   _sqlClose             = new RSyntaxTextArea();
+	private RSyntaxTextAreaX   _sqlClose             = new RSyntaxTextAreaX();
 //	private RTextScrollPane    _sqlCloseScroll       = new RTextScrollPane(_sqlClose);
 
 	private JLabel             _pkCols_lbl           = new JLabel("Primary Key Columns");

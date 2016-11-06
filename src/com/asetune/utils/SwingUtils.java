@@ -314,12 +314,13 @@ public class SwingUtils
 	private static void showMessageExt(final Level errorLevel, final Component owner, final String title, final String msg, final JCheckBox chkbox, Throwable throwable)
 	{
 		JXEditorPane details = new JXEditorPane();
-        details.setContentType("text/html");
-        JScrollPane detailsScrollPane = new JScrollPane(details);
-        detailsScrollPane.setPreferredSize(new Dimension(10, 250));
-        details.setEditable(false);
+		details.setContentType("text/html");
+		JScrollPane detailsScrollPane = new JScrollPane(details);
+//		detailsScrollPane.setPreferredSize(new Dimension(10, 250));
+		detailsScrollPane.setPreferredSize(hiDpiScale(new Dimension(10, 250)));
+		details.setEditable(false);
 
-        ErrorInfo info = new ErrorInfo(title, msg, null, null, throwable, errorLevel, null);
+		ErrorInfo info = new ErrorInfo(title, msg, null, null, throwable, errorLevel, null);
 		String htmlText = getDetailsAsHTML(info);
 		details.setText(htmlText);
 		details.setCaretPosition(0);

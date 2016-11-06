@@ -2,11 +2,15 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.naming.NameNotFoundException;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 
@@ -25,6 +29,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -49,10 +54,10 @@ extends CountersModel
 		"<br><br>" +
 		"Table Background colors:" +
 		"<ul>" +
-		"    <li>BLUE   - A Database backup is in progress</li>" +
-		"    <li>YELLOW - Has a long running transaction issued by a user.</li>" +
-		"    <li>PINK   - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
-		"    <li>RED    - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
+		"    <li>LIGHT_BLUE - A Database backup is in progress</li>" +
+		"    <li>YELLOW     - Has a long running transaction issued by a user.</li>" +
+		"    <li>PINK       - The transaction log for this database is filled to 90%, and will probably soon be full.</li>" +
+		"    <li>RED        - The transaction log for this database is <b>full</b> and users are probably suspended.</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -70,7 +75,8 @@ extends CountersModel
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"AppendLogRequests", "AppendLogWaits", 
 		"PRSUpdateCount", "PRSSelectCount", "PRSRewriteCount",
-		"LogSizeFreeInMbDiff", "DataSizeFreeInMbDiff"};
+		"LogSizeFreeInMbDiff", "DataSizeFreeInMbDiff",
+		"ReservedPages", "UsedPages", "DataPages", "IndexPages", "LobPages", "Tables", "RowCountSum", "OamPages", "AllocationUnits"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -120,6 +126,17 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                          = CM_NAME;
+
+	public static final String  PROPKEY_sample_spaceusage            = PROP_PREFIX + ".sample.spaceusage";
+	public static final boolean DEFAULT_sample_spaceusage            = true;
+
+	public static final String  PROPKEY_spaceusageInMb               = PROP_PREFIX + ".sample.spaceusageInMb";
+	public static final boolean DEFAULT_spaceusageInMb               = false;
+	
+
+	public static final String  PROPKEY_disable_spaceusage_onTimeout = PROP_PREFIX + ".disable.spaceusage.onTimeoutException";
+	public static final boolean DEFAULT_disable_spaceusage_onTimeout = true;
 	
 	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
 	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB    = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
@@ -231,11 +248,13 @@ extends CountersModel
 			                                                        "</html>");
 			mtd.addColumn("monOpenDatabases", "DataSizeInMb",       "<html>" +
 			                                                            "Size in MB of the Data Portion in the database. <br>" +
-			                                                            "<b>Formula</b>: This is simply grabbed by: sum(size) from sysusages where (segmap & 2) = 2<br>" +
+//			                                                            "<b>Formula</b>: This is simply grabbed by: sum(size) from sysusages where (segmap & 2) = 2<br>" +
+			                                                            "<b>Formula</b>: This is simply grabbed by: sum(size) from sysusages where (segmap & (power(2,30)-4)) > 0 -- meaning: all segments except 4, the logsegment<br>" +
 			                                                        "</html>");
 			mtd.addColumn("monOpenDatabases", "DataSizeFreeInMb",   "<html>" +
 			                                                            "How many MB have we got left in the Data Portion.<br> " +
-			                                                            "<b>Formula</b>: (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024*1024/@@maxpagesize)<br>" +
+//			                                                            "<b>Formula</b>: (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024*1024/@@maxpagesize)<br>" +
+			                                                            "<b>Formula</b>: (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (segmap & (power(2,30)-4)) > 0) -- -- meaning: all segments except 4, the logsegment<br>" +
 			                                                            "<b>Note 1</b>: This is the same formula as sp_helpdb 'dbname' uses to calculate space left.<br>" +
 			                                                            "<b>Note 2</b>: This might not work correct for databases with mixed data and log.<br>" +
 			                                                        "</html>");
@@ -274,6 +293,126 @@ extends CountersModel
 			                                                            "<b>Note:</b> you can do: dbcc traceon(3604)  dbcc page(dbid, pagenum) to see the content of that page.<br> " +
 			                                                            "<b>Formula</b>: OldestTranProg = column: master.dbo.syslogshold.page<br>" +
 			                                                        "</html>");
+
+			mtd.addColumn("monOpenDatabases",  "SrvPageSize",    "ASE Servers page size (@@maxpagesize)");
+
+			mtd.addColumn("monOpenDatabases", "RawSpaceUsage",     
+					"<html>" +
+						"Returns metrics for space use in SAP ASE as a comma-separated string.<br> " +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<br>" +
+						"Below is a description from the SAP/Sybase manual" +
+						"<ul>" +
+						"  <li><code>reserved pages</code>   - number of pages reserved for an object, which may include index pages if you selected index IDs based on the input parameters</li>" +
+						"  <li><code>used pages</code>       - number of pages used by the object, which may include index pages if you selected index IDs based on the input parameters.<br>"
+						                                    + "The value for used pages that spaceusage returns when you specify index_id = 1 (that is, for all-pages clustered indexes) is the used page count for the index layer of the clustered index. However, the value the used_pages function returns when you specify index_id = 1 includes the used page counts for the data and the index layers.</li>" +
+						"  <li><code>data pages</code>       - number of data pages used by the object, which may include index pages if you selected index IDs based on the input parameters.</li>" +
+						"  <li><code>index pages</code>      - index pages – number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.</li>" +
+						"  <li><code>oam pages</code>        - number of OAM pages for all OAM chains, as selected by the input parameters.<br>"
+						                                    + "For example, if you specify:<br>"
+						                                    + "<code>spaceusage(database_id, object_id, index_id)</code><br>"
+						                                    + "oam pages indicates the number of OAM pages found for this index and any of its local index partitions. If you run spaceusage against a specific object, oam pages returns the amount of overhead for the extra pages used for this object’s space management.<br>"
+						                                    + "When you execute spaceusage for an <b>entire database</i>, oam pages returns the total overhead for the number of OAM pages needed to track space across all objects, and their off-row LOB columns.</li>" +
+						"  <li><code>allocation units</code> - number of allocation units that hold one or more extents for the specified object, index, or partition. allocation units indicates how many allocation units (or pages) Adaptive Server must scan while accessing all the pages of that object, index, or partition.<br>"
+						                                    + "When you run spaceusage against the <b>entire database</b>, allocation units returns the total number of allocation units reserving space for an object. However, because Adaptive Server can share allocation units across objects, this field might show a number greater than the total number of allocation units in the entire database.</li>" +
+						"  <li><code>row count</code>        - number of rows in the object or partition. spaceusage reports this row count as 0 when you specify the index_id parameter.</li>" +
+						"  <li><code>tables</code>           - total number of tables processed when you execute spaceusage and include only the database_id parameter (that is, when you are investigating space metrics for the entire database).</li>" +
+						"  <li><code>LOB pages</code>        - number of off-row large object pages for which the index ID is 255.<br>"
+						                                    + "LOB pages returns a nonzero value only when you use spaceusage to determine the space metrics for all indexes, or only the LOB index, on objects that contain off-row LOB data. LOB pages returns 0 when you use spaceusage to examine the space metrics only for tables (which have index IDs of 0).<br>"
+						                                    + "When you run spaceusage against the <b>entire database</b>, LOB pages displays the aggregate page counts for all LOB columns occupying off-row storage in all objects.</li>" +
+						"  <li><code>syslog pages</code>     - Currently, spaceusage does not report on syslogs</li>" +
+						"</ul>" +
+						"However, spaceusage does not report on tables that do not occupy space (for example, fake and proxy tables).<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "ReservedPages",
+					"<html>" +
+						"This is 'reserved pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>reserved pages</code> - number of pages reserved for an object, which may include index pages if you selected index IDs based on the input parameters.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "UsedPages",
+					"<html>" +
+						"This is 'used pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>used pages</code> - number of pages used by the object, which may include index pages if you selected index IDs based on the input parameters.<br>" +
+						"The value for used pages that spaceusage returns when you specify index_id = 1 (that is, for all-pages clustered indexes) is the used page count for the index layer of the clustered index. However, the value the used_pages function returns when you specify index_id = 1 includes the used page counts for the data and the index layers.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "DataPages",
+					"<html>" +
+						"This is 'data pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>data pages</code> - number of data pages used by the object, which may include index pages if you selected index IDs based on the input parameters.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "IndexPages",
+					"<html>" +
+						"This is 'index pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>index pages</code> - index pages – number of index-only pages, if the input parameters specified processing indexes on the objects. To determine the number of pages used for only the index-level pages, subtract the number of large object (LOB) pages from the number of index pages.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "LobPages",
+					"<html>" +
+						"This is 'LOB pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>LOB pages</code> - number of off-row large object pages for which the index ID is 255.<br>" +
+                        "LOB pages returns a nonzero value only when you use spaceusage to determine the space metrics for all indexes, or only the LOB index, on objects that contain off-row LOB data. LOB pages returns 0 when you use spaceusage to examine the space metrics only for tables (which have index IDs of 0).<br>" +
+                        "When you run spaceusage against the <b>entire database</b>, LOB pages displays the aggregate page counts for all LOB columns occupying off-row storage in all objects.</li>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "Tables",
+					"<html>" +
+						"This is 'tables' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>tables</code> - total number of tables processed when you execute spaceusage and include only the database_id parameter (that is, when you are investigating space metrics for the entire database).<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this is <b>NOT</b> presenetd as MB.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "RowCountSum",
+					"<html>" +
+						"This is 'row count' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>row count</code> - number of rows in the object or partition. spaceusage reports this row count as 0 when you specify the index_id parameter.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this is <b>NOT</b> presenetd as MB.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "OamPages",
+					"<html>" +
+						"This is 'oam pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>oam pages</code> - number of OAM pages for all OAM chains, as selected by the input parameters.<br>" +
+						"For example, if you specify:<br>" +
+						"<code>spaceusage(database_id, object_id, index_id)</code><br>" +
+						"oam pages indicates the number of OAM pages found for this index and any of its local index partitions. If you run spaceusage against a specific object, oam pages returns the amount of overhead for the extra pages used for this object’s space management.<br>" +
+						"When you execute spaceusage for an <b>entire database</i>, oam pages returns the total overhead for the number of OAM pages needed to track space across all objects, and their off-row LOB columns.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "AllocationUnits",
+					"<html>" +
+						"This is 'allocation units' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>allocation units</code> - number of allocation units that hold one or more extents for the specified object, index, or partition. allocation units indicates how many allocation units (or pages) Adaptive Server must scan while accessing all the pages of that object, index, or partition.<br>" +
+						"When you run spaceusage against the <b>entire database</b>, allocation units returns the total number of allocation units reserving space for an object. However, because Adaptive Server can share allocation units across objects, this field might show a number greater than the total number of allocation units in the entire database.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this is <b>NOT</b> presenetd as MB.<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "SyslogPages",
+					"<html>" +
+						"This is 'syslog pages' output from the function <code>spaceusage(dbid)</code>.<br>" +
+						"<code>syslog pages</code> - Currently, spaceusage does not report on syslogs.<br>" +
+						"<b>Formula</b>: function: spaceusage(dbid)<br>" +
+						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
+					"</html>");
+
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -291,12 +430,43 @@ extends CountersModel
 		return pkCols;
 	}
 
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public Configuration getLocalConfiguration()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration lc = new Configuration();
+
+		lc.setProperty(PROPKEY_sample_spaceusage,  conf.getBooleanProperty(PROPKEY_sample_spaceusage,  DEFAULT_sample_spaceusage));
+		lc.setProperty(PROPKEY_spaceusageInMb,     conf.getBooleanProperty(PROPKEY_spaceusageInMb,     DEFAULT_spaceusageInMb));
+		
+		return lc;
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public String getLocalConfigurationDescription(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_spaceusage))  return "Execute spaceusage(dbid) on every sample. Only in ASE 16.0 and above.";
+		if (propName.equals(PROPKEY_spaceusageInMb))     return "Calculate spaceusage in MB instead of pages.";
+		return "";
+	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_spaceusage))  return Boolean.class.getSimpleName();
+		if (propName.equals(PROPKEY_spaceusageInMb))     return Boolean.class.getSimpleName();
+		return "";
+	}
+
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
+		boolean sampleSpaceusage = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_spaceusage, DEFAULT_sample_spaceusage);
+		
 		boolean canDoSelectOnSyslogshold = true;
 
 		if (isRuntimeInitialized())
@@ -342,6 +512,38 @@ extends CountersModel
 			nl_15702        = " \n";
 		}
 
+		// 16.0
+		String RawSpaceUsage   = "";
+		String ReservedPages   = "";
+		String UsedPages       = "";
+		String DataPages       = "";
+		String IndexPages      = "";
+		String LobPages        = "";
+		String Tables          = "";
+		String RowCountSum     = "";
+		String OamPages        = "";
+		String AllocationUnits = "";
+		String nl_160          = "";
+		if (aseVersion >= Ver.ver(16,0))
+		{
+			if (sampleSpaceusage)
+				RawSpaceUsage   = "RawSpaceUsage = spaceusage(od.DBID), ";
+			else
+				RawSpaceUsage   = "RawSpaceUsage = convert(varchar(255), '"+PROPKEY_sample_spaceusage+"=false'), ";
+
+			ReservedPages   = "ReservedPages = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			UsedPages       = "UsedPages = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			DataPages       = "DataPages = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			IndexPages      = "IndexPages = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			LobPages        = "LobPages = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			Tables          = "Tables = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			RowCountSum     = "RowCountSum = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			OamPages        = "OamPages = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			AllocationUnits = "AllocationUnits = convert(bigint, 0), "; // Value is derived from spaceusage(dbid)
+			
+			nl_160        = " \n";
+		}
+
 		// If we implement the FreeLogSize, then we need to take away databases that are in recovery etc...
 		// Also calculate it into MB...
 		// The calculation is stolen from: sp_helpdb dbname
@@ -361,16 +563,22 @@ extends CountersModel
 //		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2) / (1024.0*1024.0/@@maxpagesize)), \n";
 //		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
-		String DbSizeInMb           = "DbSizeInMb           = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID), \n";
+		// In ASE 15.7 when doing db shrink, it saves some rows in sysusages with a negative vdevno 
+		String DbSizeInMb_extraWhere = aseVersion >= Ver.ver(15, 0) ? " and u.vdevno > 0" : "";
+		String DbSizeInMb           = "DbSizeInMb           = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID" + DbSizeInMb_extraWhere + "), \n";
 
 		String LogSizeInMb          = "LogSizeInMb          = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4), \n";
 		String LogSizeFreeInMb      = "LogSizeFreeInMb      = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
 		String LogSizeFreeInMbDiff  = "LogSizeFreeInMbDiff  = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
 		String LogSizeUsedPct       = "LogSizeUsedPct       = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
-		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2), \n";
-		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)), \n";
-		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 2) = 2)), \n";
+//		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 3) > 0), \n";
+//		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 3) > 0)), \n";
+//		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (u.segmap & 3) > 0)), \n";
+//		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
+		String DataSizeInMb         = "DataSizeInMb         = (select sum(u.size/(1024*1024/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (segmap & (power(2,30)-4)) > 0), \n";  // (power(2,30)-4) == all segments except 4, the logsegment
+		String DataSizeFreeInMb     = "DataSizeFreeInMb     = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (segmap & (power(2,30)-4)) > 0)), \n";  // (power(2,30)-4) == all segments except 4, the logsegment
+		String DataSizeFreeInMbDiff = "DataSizeFreeInMbDiff = convert(numeric(10,1), (select sum(curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs)/(1024.0*1024.0/@@maxpagesize)) from master..sysusages u readpast where u.dbid = od.DBID and (segmap & (power(2,30)-4)) > 0)), \n";  // (power(2,30)-4) == all segments except 4, the logsegment
 		String DataSizeUsedPct      = "DataSizeUsedPct      = convert(numeric(10,1), 0), /* calculated in AseTune */ \n";
 
 
@@ -412,27 +620,29 @@ extends CountersModel
 		         OldestTranProg      + 
 		         OldestTranPage      + 
 		         PRSUpdateCount + PRSSelectCount + PRSRewriteCount + nl_15702 +
-		         "od.BackupInProgress, od.LastBackupFailed, od.BackupStartTime, ";
+		         ReservedPages + UsedPages + DataPages + IndexPages + LobPages + nl_160 +
+		         Tables + RowCountSum + OamPages + AllocationUnits  + nl_160 +
+		         "SrvPageSize = @@maxpagesize, od.BackupInProgress, od.LastBackupFailed, od.BackupStartTime, ";
 		cols2 += "";
-		cols3 += QuiesceTag;
-//		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
+		cols3 += QuiesceTag + RawSpaceUsage;
+
 		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 		}
-//		if (aseVersion >= 15025)
-//		if (aseVersion >= 1502050)
 		if (aseVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2 += "od.LastTranLogDumpTime, od.LastCheckpointTime, ";
 		}
+
 		String cols = cols1 + cols2 + cols3;
 		cols = StringUtil.removeLastComma(cols);
 
 		String sql = 
 			"select " + cols + "\n" +
 			"from master..monOpenDatabases od, master..syslogshold h \n" +
-			"where od.DBID in (select db.dbid from master..sysdatabases db readpast where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
+			"where od.DBID in (select db.dbid from master..sysdatabases db readpast \n" + 
+			"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256) \n" +   // 32=Database created with for load option, 256=Database suspect/not-recovered
+			"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) \n" + // 16=Database is offline, 32=Database is offline until recovery completes
 			"  and od.DBID *= h.dbid \n" + 
 			"  and h.name != '$replication_truncation_point' \n" + 
 			"order by od.DBName \n" +
@@ -443,7 +653,9 @@ extends CountersModel
 			sql = 
 				"select " + cols + "\n" +
 				"from master..monOpenDatabases od \n" +
-				"where od.DBID in (select db.dbid from master..sysdatabases db readpast where (db.status & 32 != 32) and (db.status & 256 != 256)) \n" +
+				"where od.DBID in (select db.dbid from master..sysdatabases db readpast \n" + 
+				"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256) \n" +
+				"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) \n" +
 				"order by od.DBName \n" +
 				"";
 		}
@@ -451,6 +663,156 @@ extends CountersModel
 		return sql;
 	}
 
+	/**
+	 * Called when a timeout has been found in the refreshGetData() method
+	 */
+	@Override
+	public void handleTimeoutException()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		// FIRST try to reset timeout if it's below the default
+		if (getQueryTimeout() < getDefaultQueryTimeout())
+		{
+			if (conf.getBooleanProperty(PROPKEY_disable_spaceusage_onTimeout, DEFAULT_disable_spaceusage_onTimeout))
+			{
+				setQueryTimeout(getDefaultQueryTimeout(), true);
+				_logger.warn("CM='"+getName()+"'. Setting Query Timeout to default of '"+getDefaultQueryTimeout()+"', from method handelTimeoutException().");
+				return;
+			}
+		}
+
+		// SECONDARY Disable the: TabRowCount, NumUsedPages, RowsPerPage
+		// It might be that what causing the timeout
+		if (conf.getBooleanProperty(PROPKEY_disable_spaceusage_onTimeout, DEFAULT_disable_spaceusage_onTimeout))
+		{
+			if (conf.getBooleanProperty(PROPKEY_sample_spaceusage, DEFAULT_sample_spaceusage) == true)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (tempConf == null) 
+					return;
+				tempConf.setProperty(PROPKEY_sample_spaceusage, false);
+				tempConf.save();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				setSql(null);
+	
+				String key=PROPKEY_sample_spaceusage;
+				_logger.warn("CM='"+getName()+"'. Disabling the 'spaceusage' columns, from method handelTimeoutException(). This is done by setting "+key+"=false");
+				
+				if (getGuiController() != null && getGuiController().hasGUI())
+				{
+					String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
+
+					JOptionPane optionPane = new JOptionPane(
+							"<html>" +
+							"The query for CM '"+getName()+"' took to long... and received a Timeout.<br>" +
+							"<br>" +
+							"This may be caused by the function spaceusage(dbid), which is used to get spaceusage on a database level.<br>" +
+							"This sometimes takes to long and may eat recources.<br>" +
+							"<br>" +
+							"To Workaround this issue:<br>" +
+							"I just disabled option 'Sample Spaceusage'... You can try to enable it again later.<br>" +
+							"</html>",
+							JOptionPane.INFORMATION_MESSAGE);
+					JDialog dialog = optionPane.createDialog(MainFrame.getInstance(), "Disabled 'Sample Spaceusage' @ "+dateStr);
+					dialog.setModal(false);
+					dialog.setVisible(true);
+				}
+			}
+		}
+	}
+
+	@Override
+	public void localCalculation(CounterSample newSample)
+	{
+		int RawSpaceUsage_pos   = -1;
+		int SrvPageSize_pos     = -1;
+                                
+		int ReservedPages_pos   = -1;
+		int UsedPages_pos       = -1;
+		int DataPages_pos       = -1;
+		int IndexPages_pos      = -1;
+		int OamPages_pos        = -1;
+		int AllocationUnits_pos = -1;
+		int RowCountSum_pos     = -1;
+		int Tables_pos          = -1;
+		int LobPages_pos        = -1;
+//		int SyslogsPages_pos    = -1;
+
+		boolean spaceusageInMb = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_spaceusageInMb, DEFAULT_spaceusageInMb);
+		
+		// Find column Id's
+		List<String> colNames = newSample.getColNames();
+		if (colNames == null)
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+			if      (colName.equals("RawSpaceUsage"))   RawSpaceUsage_pos   = colId;
+			else if (colName.equals("SrvPageSize"))     SrvPageSize_pos     = colId;
+			else if (colName.equals("ReservedPages"))   ReservedPages_pos   = colId;
+			else if (colName.equals("UsedPages"))       UsedPages_pos       = colId;
+			else if (colName.equals("DataPages"))       DataPages_pos       = colId;
+			else if (colName.equals("IndexPages"))      IndexPages_pos      = colId;
+			else if (colName.equals("OamPages"))        OamPages_pos        = colId;
+			else if (colName.equals("AllocationUnits")) AllocationUnits_pos = colId;
+			else if (colName.equals("RowCountSum"))     RowCountSum_pos     = colId;
+			else if (colName.equals("Tables"))          Tables_pos          = colId;
+			else if (colName.equals("LobPages"))        LobPages_pos        = colId;
+//			else if (colName.equals("SyslogsPages"))    SyslogsPages_pos    = colId;
+		}
+
+		// If NOT 'RawSpaceUsage' was found, no need to continue.
+		if (RawSpaceUsage_pos < 0)
+			return;
+
+		// Loop on all rows
+		for (int rowId = 0; rowId < newSample.getRowCount(); rowId++)
+		{
+			String RawSpaceUsage = newSample.getValueAt(rowId, RawSpaceUsage_pos)+"";
+			
+			// Split up the RawSpaceUsage, which looks looks the following:
+			// 'reserved pages=4190, used pages=3117, data pages=2985, index pages=456, oam pages=132, allocation units=181, row count=21771, tables=57, LOB pages=15, syslogs pages=0'
+
+			Map<String, String> map = StringUtil.parseCommaStrToMap(RawSpaceUsage);
+			if (_logger.isDebugEnabled())
+				_logger.debug("RawSpaceUsage(spaceusageInMb="+spaceusageInMb+"): "+map);
+			
+			if (spaceusageInMb)
+			{
+				int SrvPageSize = ((Number)newSample.getValueAt(rowId, SrvPageSize_pos)).intValue();
+				int divideBy = 1024*1024/SrvPageSize;
+				
+				newSample.setValueAt(StringUtil.parseLong(map.get("reserved pages"),   0)/divideBy, rowId, ReservedPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("used pages"),       0)/divideBy, rowId, UsedPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("data pages"),       0)/divideBy, rowId, DataPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("index pages"),      0)/divideBy, rowId, IndexPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("oam pages"),        0)/divideBy, rowId, OamPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("allocation units"), 0)         , rowId, AllocationUnits_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("row count"),        0)         , rowId, RowCountSum_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("tables"),           0)         , rowId, Tables_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("LOB pages"),        0)/divideBy, rowId, LobPages_pos);
+//				newSample.setValueAt(StringUtil.parseLong(map.get("syslogs pages"),    0)/divideBy, rowId, SyslogsPages_pos);
+			}
+			else
+			{
+				newSample.setValueAt(StringUtil.parseLong(map.get("reserved pages"),   0), rowId, ReservedPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("used pages"),       0), rowId, UsedPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("data pages"),       0), rowId, DataPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("index pages"),      0), rowId, IndexPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("oam pages"),        0), rowId, OamPages_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("allocation units"), 0), rowId, AllocationUnits_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("row count"),        0), rowId, RowCountSum_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("tables"),           0), rowId, Tables_pos);
+				newSample.setValueAt(StringUtil.parseLong(map.get("LOB pages"),        0), rowId, LobPages_pos);
+//				newSample.setValueAt(StringUtil.parseLong(map.get("syslogs pages"),    0), rowId, SyslogsPages_pos);
+			}
+		}
+	}
+	
 	/** 
 	 * Compute the AppendLogContPct for DIFF values
 	 */

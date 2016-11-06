@@ -10,6 +10,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -214,6 +215,24 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+//		RS> 29   row_lock_count                     java.sql.Types.BIGINT   bigint           
+//		RS> 30   row_lock_wait_count                java.sql.Types.BIGINT   bigint           
+//		RS> 31   row_lock_wait_in_ms                java.sql.Types.BIGINT   bigint           
+//		RS> 32   page_lock_count                    java.sql.Types.BIGINT   bigint           
+//		RS> 33   page_lock_wait_count               java.sql.Types.BIGINT   bigint           
+//		RS> 34   page_lock_wait_in_ms               java.sql.Types.BIGINT   bigint           
+
+		int c = 0;
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("dbname",               c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("objectName",           c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("index_id",             c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_count",       c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_wait_count",  c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("row_lock_wait_in_ms",  c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("page_lock_count",      c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("page_lock_wait_count", c++));
+		addPreferredColumnOrder(new ColumnHeaderPropsEntry("page_lock_wait_in_ms", c++));
+
 		String sql = "select \n"
 				+ "    dbname=db_name(database_id), \n"
 				+ "    objectName=object_name(object_id, database_id), \n"

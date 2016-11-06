@@ -33,8 +33,6 @@ import javax.swing.event.CaretListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.sort.RowFilters;
@@ -44,6 +42,8 @@ import com.asetune.check.CheckForUpdates;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class AboutBox

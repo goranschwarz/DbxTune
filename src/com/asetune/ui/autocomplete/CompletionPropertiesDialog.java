@@ -20,12 +20,12 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.JXTable;
 
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CompletionPropertiesDialog
 extends JDialog

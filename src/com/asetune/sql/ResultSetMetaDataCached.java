@@ -110,26 +110,26 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	{
 		for (int i = 0; i < source.getColumnCount(); i++)
 		{
-			_autoIncrement     [i] = source.isAutoIncrement     (i + 1);
-			_caseSensitive     [i] = source.isCaseSensitive     (i + 1);
-			_searchable        [i] = source.isSearchable        (i + 1);
-			_currency          [i] = source.isCurrency          (i + 1);
-			_nullable          [i] = source.isNullable          (i + 1);
-			_signed            [i] = source.isSigned            (i + 1);
-			_columnDisplaySize [i] = source.getColumnDisplaySize(i + 1);
-			_columnLabel       [i] = source.getColumnLabel      (i + 1);
-			_columnName        [i] = source.getColumnName       (i + 1);
-			_schemaName        [i] = source.getSchemaName       (i + 1);
-			_precision         [i] = source.getPrecision        (i + 1);
-			_scale             [i] = source.getScale            (i + 1);
-			_tableName         [i] = source.getTableName        (i + 1);
-			_catalogName       [i] = source.getCatalogName      (i + 1);
-			_columnType        [i] = source.getColumnType       (i + 1);
-			_columnTypeName    [i] = source.getColumnTypeName   (i + 1);
-			_readOnly          [i] = source.isReadOnly          (i + 1);
-			_writable          [i] = source.isWritable          (i + 1);
-			_definitelyWritable[i] = source.isDefinitelyWritable(i + 1);
-			_columnClassName   [i] = source.getColumnClassName  (i + 1);
+			try { _autoIncrement     [i] = source.isAutoIncrement     (i + 1); } catch(SQLException sqle) { _autoIncrement     [i] = false;                            _logger.info("Problems reading ResultSetMetaData.isAutoIncrement("     + (i+1) + "). Caught: " + sqle); }
+			try { _caseSensitive     [i] = source.isCaseSensitive     (i + 1); } catch(SQLException sqle) { _caseSensitive     [i] = false;                            _logger.info("Problems reading ResultSetMetaData.isCaseSensitive("     + (i+1) + "). Caught: " + sqle); }
+			try { _searchable        [i] = source.isSearchable        (i + 1); } catch(SQLException sqle) { _searchable        [i] = false;                            _logger.info("Problems reading ResultSetMetaData.isSearchable("        + (i+1) + "). Caught: " + sqle); }
+			try { _currency          [i] = source.isCurrency          (i + 1); } catch(SQLException sqle) { _currency          [i] = false;                            _logger.info("Problems reading ResultSetMetaData.isCurrency("          + (i+1) + "). Caught: " + sqle); }
+			try { _nullable          [i] = source.isNullable          (i + 1); } catch(SQLException sqle) { _nullable          [i] = ResultSetMetaData.columnNullable; _logger.info("Problems reading ResultSetMetaData.isNullable("          + (i+1) + "). Caught: " + sqle); }
+			try { _signed            [i] = source.isSigned            (i + 1); } catch(SQLException sqle) { _signed            [i] = false;                            _logger.info("Problems reading ResultSetMetaData.isSigned("            + (i+1) + "). Caught: " + sqle); }
+			try { _columnDisplaySize [i] = source.getColumnDisplaySize(i + 1); } catch(SQLException sqle) { _columnDisplaySize [i] = 30;                               _logger.info("Problems reading ResultSetMetaData.getColumnDisplaySize("+ (i+1) + "). Caught: " + sqle); }
+			try { _columnLabel       [i] = source.getColumnLabel      (i + 1); } catch(SQLException sqle) { _columnLabel       [i] = "unknown";                        _logger.info("Problems reading ResultSetMetaData.getColumnLabel("      + (i+1) + "). Caught: " + sqle); }
+			try { _columnName        [i] = source.getColumnName       (i + 1); } catch(SQLException sqle) { _columnName        [i] = "unknown";                        _logger.info("Problems reading ResultSetMetaData.getColumnName("       + (i+1) + "). Caught: " + sqle); }
+			try { _schemaName        [i] = source.getSchemaName       (i + 1); } catch(SQLException sqle) { _schemaName        [i] = "";                               _logger.info("Problems reading ResultSetMetaData.getSchemaName("       + (i+1) + "). Caught: " + sqle); }
+			try { _precision         [i] = source.getPrecision        (i + 1); } catch(SQLException sqle) { _precision         [i] = 0;                                _logger.info("Problems reading ResultSetMetaData.getPrecision("        + (i+1) + "). Caught: " + sqle); }
+			try { _scale             [i] = source.getScale            (i + 1); } catch(SQLException sqle) { _scale             [i] = 0;                                _logger.info("Problems reading ResultSetMetaData.getScale("            + (i+1) + "). Caught: " + sqle); }
+			try { _tableName         [i] = source.getTableName        (i + 1); } catch(SQLException sqle) { _tableName         [i] = "";                               _logger.info("Problems reading ResultSetMetaData.getTableName("        + (i+1) + "). Caught: " + sqle); }
+			try { _catalogName       [i] = source.getCatalogName      (i + 1); } catch(SQLException sqle) { _catalogName       [i] = "";                               _logger.info("Problems reading ResultSetMetaData.getCatalogName("      + (i+1) + "). Caught: " + sqle); }
+			try { _columnType        [i] = source.getColumnType       (i + 1); } catch(SQLException sqle) { _columnType        [i] = Types.OTHER;                      _logger.info("Problems reading ResultSetMetaData.getColumnType("       + (i+1) + "). Caught: " + sqle); }
+			try { _columnTypeName    [i] = source.getColumnTypeName   (i + 1); } catch(SQLException sqle) { _columnTypeName    [i] = "unknown";                        _logger.info("Problems reading ResultSetMetaData.getColumnTypeName("   + (i+1) + "). Caught: " + sqle); }
+			try { _readOnly          [i] = source.isReadOnly          (i + 1); } catch(SQLException sqle) { _readOnly          [i] = true;                             _logger.info("Problems reading ResultSetMetaData.isReadOnly("          + (i+1) + "). Caught: " + sqle); }
+			try { _writable          [i] = source.isWritable          (i + 1); } catch(SQLException sqle) { _writable          [i] = false;                            _logger.info("Problems reading ResultSetMetaData.isWritable("          + (i+1) + "). Caught: " + sqle); }
+			try { _definitelyWritable[i] = source.isDefinitelyWritable(i + 1); } catch(SQLException sqle) { _definitelyWritable[i] = false;                            _logger.info("Problems reading ResultSetMetaData.isDefinitelyWritable("+ (i+1) + "). Caught: " + sqle); }
+			try { _columnClassName   [i] = source.getColumnClassName  (i + 1); } catch(SQLException sqle) { _columnClassName   [i] = "unknown";                        _logger.info("Problems reading ResultSetMetaData.getColumnClassName("  + (i+1) + "). Caught: " + sqle); }
 
 			if ( _upcaseColumnNames && _columnName[i] != null )
 				_columnName[i] = _columnName[i].toUpperCase();

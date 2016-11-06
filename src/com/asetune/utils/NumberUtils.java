@@ -42,4 +42,17 @@ public class NumberUtils
 
 		return new Integer(asStr);
 	}
+
+	public static boolean isNumber(String str)
+	{
+		try
+		{
+			Long.parseLong(str);
+			return true;
+		}
+		catch(NumberFormatException e)
+		{
+			return false;
+		}
+	}
 }

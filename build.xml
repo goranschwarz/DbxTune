@@ -103,6 +103,11 @@
 				<include name="*.jar"/>
 			</fileset>
 		</copy>
+
+		<copy todir="${dist}/lib/jdbc_drivers">
+			<fileset dir="lib/jdbc_drivers"/>
+		</copy>
+
 		<copy todir="${dist}/resources">
 			<fileset dir="resources">
 				<include name="*.xml"/>

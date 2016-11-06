@@ -73,8 +73,6 @@ import javax.swing.event.MouseInputAdapter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 
-import com.asetune.gui.focusabletip.ResolverReturn.Type;
-
 
 /**
  * The actual tool tip component.
