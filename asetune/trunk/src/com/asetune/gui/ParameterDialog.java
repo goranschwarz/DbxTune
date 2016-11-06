@@ -19,10 +19,10 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class ParameterDialog
 	extends JDialog

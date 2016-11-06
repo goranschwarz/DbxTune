@@ -14,10 +14,10 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.ssh.SshConnection;
+
 import ch.ethz.ssh2.ChannelCondition;
 import ch.ethz.ssh2.Session;
-
-import com.asetune.ssh.SshConnection;
 
 /**
  * Class that does "tail" on any file

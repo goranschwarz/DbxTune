@@ -6,8 +6,6 @@ import java.awt.event.ActionListener;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmDeviceIo;
 import com.asetune.cm.ase.CmEngines;
@@ -19,6 +17,8 @@ import com.asetune.gui.swing.GCheckBox;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmEnginesPanel
 extends TabularCntrPanel

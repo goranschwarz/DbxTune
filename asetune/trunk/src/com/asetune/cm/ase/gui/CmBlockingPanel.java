@@ -8,8 +8,6 @@ import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -20,6 +18,8 @@ import com.asetune.gui.ChangeToJTabDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmBlockingPanel
 extends TabularCntrPanel

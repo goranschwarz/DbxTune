@@ -7,14 +7,13 @@ import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GMemoryIndicator;
-import com.asetune.gui.swing.JMemoryMonitor;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
+
+import net.miginfocom.swing.MigLayout;
 
 public class StatusBar extends JPanel
 {

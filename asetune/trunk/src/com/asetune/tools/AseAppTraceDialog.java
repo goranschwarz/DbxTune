@@ -61,7 +61,6 @@ import javax.swing.text.BadLocationException;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 
@@ -75,6 +74,7 @@ import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
@@ -181,7 +181,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private JButton           _traceOutSave_but       = new JButton("...");
 	private JCheckBox         _traceOutTail_chk       = new JCheckBox("Move to last row when input is received", true);
 	private JCheckBox         _traceShowProcPanel_chk = new JCheckBox("Show Procedure Text",   true);
-	private RSyntaxTextArea   _traceOut_txt           = new RSyntaxTextArea();
+	private RSyntaxTextAreaX  _traceOut_txt           = new RSyntaxTextAreaX();
 	private RTextScrollPane   _traceOut_scroll        = new RTextScrollPane(_traceOut_txt);
                               
 	private JPanel            _procPanel              = null;
@@ -192,11 +192,11 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private JCheckBox         _procMvToLine_chk       = new JCheckBox("Move to correct line in the procedure", true);
 	private DefaultComboBoxModel<String> _procName_cbxmdl   = new DefaultComboBoxModel<String>();
 	private JComboBox<String> _procName_cbx           = new JComboBox<String>(_procName_cbxmdl);
-	private RSyntaxTextArea   _proc_txt               = new RSyntaxTextArea();
+	private RSyntaxTextAreaX  _proc_txt               = new RSyntaxTextAreaX();
 	private RTextScrollPane   _proc_scroll            = new RTextScrollPane(_proc_txt);
                               
 	private JPanel            _traceCmdLogPanel       = null;
-	private RSyntaxTextArea   _traceCmdLog_txt        = new RSyntaxTextArea();
+	private RSyntaxTextAreaX  _traceCmdLog_txt        = new RSyntaxTextAreaX();
 	private RTextScrollPane   _traceCmdLog_scroll     = new RTextScrollPane(_traceCmdLog_txt);
                               
 	private int               _spid                   = -1;

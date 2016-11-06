@@ -23,8 +23,6 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -36,6 +34,8 @@ import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class RsResumeSuspendDialog
 extends JDialog

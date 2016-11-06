@@ -18,6 +18,9 @@ extends JTextArea
 
 	protected static Font _aseMsgFont = null;
 
+	public JPlainResultSet()
+	{
+	}
 	public JPlainResultSet(final ResultSetTableModel rstm)
 	{
 //		super(rstm.toTableString());

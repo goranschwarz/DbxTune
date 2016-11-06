@@ -1,11 +1,16 @@
 package com.asetune.gui;
 
 import java.awt.event.ActionEvent;
+import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
 import com.asetune.Version;
+import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.dict.MonTablesDictionaryPostgres;
 import com.asetune.gui.ConnectionDialog.Options;
@@ -113,6 +118,27 @@ extends MainFrame
 			@Override public boolean doInitDbServerConfigDictionary() { return true; } 
 			@Override public boolean initDbServerConfigDictionary(DbxConnection conn, ConnectionProgressDialog cpd) throws Exception
 			{
+				if (DbmsConfigManager.hasInstance())
+				{
+					cpd.setStatus("Getting Postgress Configurations");
+					IDbmsConfig dbmsCfg = DbmsConfigManager.getInstance();
+					if ( ! dbmsCfg.isInitialized() )
+						dbmsCfg.initialize(conn, true, false, null);
+				}
+				if (DbmsConfigTextManager.hasInstances())
+				{
+					List<IDbmsConfigText> list = DbmsConfigTextManager.getInstanceList();
+					for (IDbmsConfigText t : list)
+					{
+						if ( ! t.isInitialized() )
+						{
+							cpd.setStatus("Getting '"+t.getTabLabel()+"' settings");
+							t.initialize(conn, true, false, null);
+						}
+					}
+
+					cpd.setStatus("");
+				}
 				return true;
 			}
 			

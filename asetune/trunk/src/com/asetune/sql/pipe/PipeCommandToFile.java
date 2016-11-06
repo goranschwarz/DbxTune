@@ -3,7 +3,6 @@ package com.asetune.sql.pipe;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -21,8 +20,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
@@ -49,6 +46,7 @@ extends PipeCommandAbstract
 		String  _rowTerm       = "\n";
 		String  _nullValue     = "<NULL>";
 		String  _charset       = "UTF-8";
+		boolean _trimValues    = false;
 
 		boolean _queryInfo     = false;
 		boolean _rsInfo        = false;
@@ -111,6 +109,7 @@ extends PipeCommandAbstract
 				if (cmdLine.hasOption('f')) _params._fieldTerm     = cmdLine.getOptionValue('f');
 				if (cmdLine.hasOption('r')) _params._rowTerm       = cmdLine.getOptionValue('r');
 				if (cmdLine.hasOption('c')) _params._charset       = cmdLine.getOptionValue('c');
+				if (cmdLine.hasOption('t')) _params._trimValues    = true;
 				if (cmdLine.hasOption('q')) _params._queryInfo     = true;
 				if (cmdLine.hasOption('i')) _params._rsInfo        = true;
 				if (cmdLine.hasOption('n')) _params._noGuiQuestion = true;
@@ -161,6 +160,7 @@ extends PipeCommandAbstract
 			System.out.println("TOFILE Param: _rowTerm       = '"+ _params._rowTermReadable   + "'.");
 			System.out.println("TOFILE Param: _nullValue     = '"+ _params._nullValue         + "'.");
 			System.out.println("TOFILE Param: _charset       = '"+ _params._charset           + "'.");
+			System.out.println("TOFILE Param: _trimValues    = '"+ _params._trimValues        + "'.");
 			System.out.println("TOFILE Param: _queryInfo     = '"+ _params._queryInfo         + "'.");
 			System.out.println("TOFILE Param: _rsInfo        = '"+ _params._rsInfo            + "'.");
 			System.out.println("TOFILE Param: _noGuiQuestion = '"+ _params._noGuiQuestion     + "'.");
@@ -227,6 +227,7 @@ extends PipeCommandAbstract
 		options.addOption( "f", "field_terminator", true,  "Character(s) between fields     DEFAULT=\\t" );
 		options.addOption( "r", "row_terminator",   true,  "Character(s) to terminate a row DEFAULT=\\n" );
 		options.addOption( "c", "charset",          true,  "Java Characterset name          DEFAULT=UTF8" );
+		options.addOption( "t", "trim",             false, "Remove leading/trailing spaces  DEFAULT=false" );
 		options.addOption( "q", "query",            false, "Print Query at the top of the file" );
 		options.addOption( "i", "rsinfo",           false, "Print JDBC ResultSet info in the file" );
 		options.addOption( "n", "noguiquestion",    false, "Do not show GUI questions for file overwrite" );
@@ -287,6 +288,7 @@ extends PipeCommandAbstract
 		sb.append("  -f,--field_terminator <str>  Character(s) between fields                    DEFAULT=\\t\n");
 		sb.append("  -r,--row_terminator <str>    Character(s) to terminate a row                DEFAULT=\\n\n");
 		sb.append("  -c,--charset <name>          Java Characterset name                         DEFAULT=UTF8\n");
+		sb.append("  -t,--trim                    Trim or Remove leading/trailing spaces         DEFAULT=false\n");
 		sb.append("  -q,--query                   Print Query at the top of the file\n");
 		sb.append("  -i,--rsinfo                  Print JDBC ResultSet info in the file\n");
 		sb.append("  -n,--noguiquestion           Do not show GUI questions for file overwrite\n");
@@ -475,6 +477,12 @@ extends PipeCommandAbstract
 					try
 					{
 						String data = sourceRs.getString(c);
+						
+						// Trim the data
+						if (data != null && _cmdParams._trimValues)
+							data = data.trim();
+
+						// Replace null with "some" value
 						if (data == null)
 							data = _cmdParams._nullValue;
 
@@ -504,7 +512,7 @@ System.out.println("ROW: "+totalCount+" - Problems reading row "+totalCount+", c
 			}
 
 			pipeCmd._message = "Successfully wrote "+totalCount+" row(s) to file '"+_outfile+"'.\n" + 
-			"Using options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", fieldTerm='"+_cmdParams._fieldTermReadable+"', rowTerm='"+_cmdParams._rowTermReadable+"', charset='"+_cmdParams._charset+"', queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.";
+			"Using options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", fieldTerm='"+_cmdParams._fieldTermReadable+"', rowTerm='"+_cmdParams._rowTermReadable+"', charset='"+_cmdParams._charset+"', trim="+_cmdParams._trimValues+", queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.";
 
 			return totalCount;
 		}

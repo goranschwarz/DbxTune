@@ -38,8 +38,6 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -57,6 +55,8 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class AseConfigMonitoringDialog
@@ -178,6 +178,7 @@ public class AseConfigMonitoringDialog
 	private JCheckBox          _enableFileAccess_chk          = new JCheckBox("Enable ASE to Read OS Files");
 
 	// PANEL: ON-EXIT
+	private boolean            _showOnExitPanel               = true;
 	private JRadioButton       _onExitDoNotDisable_rb         = new JRadioButton("Do Not Disable", true);
 	private JRadioButton       _onExitAutoDisable_rb          = new JRadioButton("Automatically");
 	private JRadioButton       _onExitAsk_rb                  = new JRadioButton("Prompt");
@@ -193,22 +194,22 @@ public class AseConfigMonitoringDialog
 	**---------------------------------------------------
 	*/
 //	private AseConfigMonitoringDialog(Frame owner, Connection conn, int aseVersionNum, String title)
-	private AseConfigMonitoringDialog(Frame owner, DbxConnection conn, int aseVersionNum, String title)
+	private AseConfigMonitoringDialog(Frame owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel, String title)
 	{
 		super(owner, title, true);
-		init(owner, conn, aseVersionNum);
+		init(owner, conn, aseVersionNum, showOnExitPanel);
 	}
 //	private AseConfigMonitoringDialog(Dialog owner, Connection conn, int aseVersionNum, String title)
-	private AseConfigMonitoringDialog(Dialog owner, DbxConnection conn, int aseVersionNum, String title)
+	private AseConfigMonitoringDialog(Dialog owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel, String title)
 	{
 		super(owner, title, true);
-		init(owner, conn, aseVersionNum);
+		init(owner, conn, aseVersionNum, showOnExitPanel);
 	}
 //	private void init(Window owner, Connection conn, int aseVersionNum)
-	private void init(Window owner, DbxConnection conn, int aseVersionNum)
+	private void init(Window owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
 	{
-
 		_conn = conn;
+		_showOnExitPanel = showOnExitPanel;
 		
 		setAseVersion(aseVersionNum);
 		if ( AseConnectionUtils.isConnectionOk(_conn, false, null) )
@@ -238,9 +239,9 @@ public class AseConfigMonitoringDialog
 
 
 //	public static void showDialog(Frame owner, Connection conn, int aseVersionNum)
-	public static void showDialog(Frame owner, DbxConnection conn, int aseVersionNum)
+	public static void showDialog(Frame owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
 	{
-		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, msgDialogTitle);
+		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
 			return;
@@ -249,9 +250,9 @@ public class AseConfigMonitoringDialog
 		dialog.dispose();
 	}
 //	public static void showDialog(Dialog owner, Connection conn, int aseVersionNum)
-	public static void showDialog(Dialog owner, DbxConnection conn, int aseVersionNum)
+	public static void showDialog(Dialog owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
 	{
-		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, msgDialogTitle);
+		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
 			return;
@@ -260,15 +261,15 @@ public class AseConfigMonitoringDialog
 		dialog.dispose();
 	}
 //	public static void showDialog(Component owner, Connection conn, int aseVersionNum)
-	public static void showDialog(Component owner, DbxConnection conn, int aseVersionNum)
+	public static void showDialog(Component owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
 	{
 		AseConfigMonitoringDialog dialog = null;
 		if (owner instanceof Frame)
-			dialog = new AseConfigMonitoringDialog((Frame)owner, conn, aseVersionNum, msgDialogTitle);
+			dialog = new AseConfigMonitoringDialog((Frame)owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
 		else if (owner instanceof Dialog)
-			dialog = new AseConfigMonitoringDialog((Dialog)owner, conn, aseVersionNum, msgDialogTitle);
+			dialog = new AseConfigMonitoringDialog((Dialog)owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
 		else
-			dialog = new AseConfigMonitoringDialog((Dialog)null, conn, aseVersionNum, msgDialogTitle);
+			dialog = new AseConfigMonitoringDialog((Dialog)null, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
 			return;
@@ -325,7 +326,8 @@ public class AseConfigMonitoringDialog
 
 		topPanel.add(_monitoringPanel_1, "growx");
 		topPanel.add(_monitoringPanel_2, "growx");
-		topPanel.add(_monitoringPanel_3, "growx");
+		if (_showOnExitPanel)
+			topPanel.add(_monitoringPanel_3, "growx");
 
 		// ADD TOP and OK panel
 		panel.add(new JScrollPane(topPanel), BorderLayout.CENTER);
@@ -1318,11 +1320,13 @@ public class AseConfigMonitoringDialog
 		if (conn == null)
 			return false;
 
+//		if (_aseVersionNum < Ver.ver(15,0))
+//			return false;
 		if (_aseVersionNum >= Ver.ver(15,0))
-			return true;
+			return true; // In ASE 15 or above the 'ASE_XFS' is not a license option anymore, it's included.
 
 		int enabled = 0;
-		String sql = "select count(*) from master.dbo.monLicense where Name = 'ASE_XFS'";
+		String sql = "select count(*) from master.dbo.monLicense where Name = 'ASE_XFS'"; // Note: monLicense was introduced in 15.0,  
 
 		Statement stmt = null;
 		ResultSet rs = null;
@@ -1769,23 +1773,26 @@ public class AseConfigMonitoringDialog
 	*/
 	private void saveProps()
 	{
-		String onExit = null;
-		if ( _onExitDoNotDisable_rb.isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_NONE];
-		if ( _onExitAutoDisable_rb .isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_DISABLE];
-		if ( _onExitAsk_rb         .isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_PROMPT];
-
-		_logger.debug("saveProps: 'config.on_exit' = '"+onExit+"'");
-
-		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-		if (conf == null)
+		if (_showOnExitPanel)
 		{
-			_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
-			return;
+			String onExit = null;
+			if ( _onExitDoNotDisable_rb.isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_NONE];
+			if ( _onExitAutoDisable_rb .isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_DISABLE];
+			if ( _onExitAsk_rb         .isSelected() ) onExit = ON_EXIT_STR[ON_EXIT_PROMPT];
+
+			_logger.debug("saveProps: 'config.on_exit' = '"+onExit+"'");
+
+			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (conf == null)
+			{
+				_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
+				return;
+			}
+
+			conf.setProperty("config.on_exit", onExit);
+
+			conf.save();
 		}
-
-		conf.setProperty("config.on_exit", onExit);
-
-		conf.save();
 	}
 
 	private void loadProps()
@@ -1923,16 +1930,16 @@ public class AseConfigMonitoringDialog
 //			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
 			DbxConnection conn = DbxConnection.createDbxConnection( AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null) );
 //			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
-			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1));
+			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1), true);
 
 			System.out.println("Open the Dialog with a CLOSED connection.");
 			conn.close();
 //			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
-			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1));
+			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1), true);
 
 			System.out.println("Open the Dialog with a NULL connection.");
 //			AseConfigMonitoringDialog.showDialog((Frame)null, null, 1251000);
-			AseConfigMonitoringDialog.showDialog((Frame)null, null, Ver.ver(12,5,1));
+			AseConfigMonitoringDialog.showDialog((Frame)null, null, Ver.ver(12,5,1), true);
 		}
 		catch (Exception e)
 		{

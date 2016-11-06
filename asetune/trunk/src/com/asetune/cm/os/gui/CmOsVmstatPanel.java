@@ -7,12 +7,12 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmOsVmstatPanel
 extends TabularCntrPanel

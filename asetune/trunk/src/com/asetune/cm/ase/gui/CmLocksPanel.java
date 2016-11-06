@@ -8,7 +8,6 @@ import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -17,6 +16,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmLocks;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -91,8 +91,8 @@ extends TabularCntrPanel
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
-	private RSyntaxTextArea _sampleExtraWhereClause_txt;
-	private JButton         _sampleExtraWhereClause_but;
+	private RSyntaxTextAreaX _sampleExtraWhereClause_txt;
+	private JButton          _sampleExtraWhereClause_but;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
@@ -109,7 +109,7 @@ extends TabularCntrPanel
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		_sampleExtraWhereClause_txt = new RSyntaxTextArea();
+		_sampleExtraWhereClause_txt = new RSyntaxTextAreaX();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
 
 		_sampleExtraWhereClause_but.setToolTipText(TOOLTIP_sample_extraWhereClause);

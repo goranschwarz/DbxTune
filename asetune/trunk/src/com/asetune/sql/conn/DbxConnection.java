@@ -33,9 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
-import com.asetune.gui.ConnectionProgressExtraActions;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
-import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.DbUtils;

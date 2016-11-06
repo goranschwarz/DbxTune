@@ -22,14 +22,15 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.JXTable;
 
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class TrendGraphPanelReorderDialog
@@ -55,6 +56,7 @@ public class TrendGraphPanelReorderDialog
 	private JButton                  _rmOrderAndVis   = new JButton("Clear saved info");
 	private DefaultTableModel        _tableModel      = null;
 	private JXTable                  _table           = null;
+	private GTableFilter             _tableFilter     = null;
 	
 	private TrendGraphDashboardPanel _trendGraphPanel = null;
 	private List<String>             _originOrder     = new ArrayList<String>(); // The way the Model looks like
@@ -83,7 +85,7 @@ public class TrendGraphPanelReorderDialog
 
 		// Try to fit all rows on the open window
 		Dimension size = getSize();
-		size.height += (_table.getRowCount() - 6) * 18; // lets say 6 rows is the default showed AND each row takes 18 pixels
+		size.height += (_table.getRowCount() - 6) * SwingUtils.hiDpiScale(18); // lets say 6 rows is the default showed AND each row takes 18 pixels
 		size.width = Math.min(size.width, 645);
 		setSize(size);
 		
@@ -124,11 +126,13 @@ public class TrendGraphPanelReorderDialog
 		panel.add(_description1, "grow, wrap");
 		panel.add(_description2, "grow, wrap 10");
 
-//		panel.add(_table,          "grow, wrap");
 		_table = createTable();
+		_tableFilter = new GTableFilter(_table);
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_table);
-		panel.add(jScrollPane, "span, grow, height 100%, push, wrap");
+
+		panel.add(_tableFilter, "growx, pushx, wrap");
+		panel.add(jScrollPane,  "span, grow, height 100%, push, wrap");
 
 
 		panel.add(_up,             "tag left, span, split");
@@ -193,6 +197,8 @@ public class TrendGraphPanelReorderDialog
 	*/
 	private void apply()
 	{
+//		_tableFilter.resetFilter();
+		
 		// select NO rows.
 		_table.clearSelection();
 
@@ -200,13 +206,21 @@ public class TrendGraphPanelReorderDialog
 		LinkedHashMap<String, Boolean> newGraphOrder = new LinkedHashMap<String, Boolean>();
 
 		// Loop all the rows in the table and make changes
-		for (int r=0; r<_table.getRowCount(); r++)
+		// NOTE: we might want to use the model instead, then we don't have to reset the filter before apply...
+		for (int r=0; r<_tableModel.getRowCount(); r++)
 		{
-			String graphName = (String) _table.getValueAt(r, TabPos.GraphName.ordinal());
-			Boolean enabled  = (Boolean)_table.getValueAt(r, TabPos.Enabled.ordinal());
+			String graphName = (String) _tableModel.getValueAt(r, TabPos.GraphName.ordinal());
+			Boolean enabled  = (Boolean)_tableModel.getValueAt(r, TabPos.Enabled.ordinal());
 
 			newGraphOrder.put(graphName, enabled);
 		}
+//		for (int r=0; r<_table.getRowCount(); r++)
+//		{
+//			String graphName = (String) _table.getValueAt(r, TabPos.GraphName.ordinal());
+//			Boolean enabled  = (Boolean)_table.getValueAt(r, TabPos.Enabled.ordinal());
+//
+//			newGraphOrder.put(graphName, enabled);
+//		}
 
 		// make the new order
 		_trendGraphPanel.setGraphOrder(newGraphOrder);

@@ -30,8 +30,6 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
@@ -42,10 +40,13 @@ import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmOpenDatabases;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class DbSelectionForGraphsDialog
 extends JDialog
@@ -88,6 +89,7 @@ implements ActionListener, TableModelListener
 	private JButton                 _clearSavedInfo = new JButton("Clear saved info");
 	private DefaultTableModel       _tableModel     = null;
 	private JXTable                 _table          = null;
+	private GTableFilter            _tableFilter     = null;
 	
 	private JButton                 _ok             = new JButton("OK");
 	private JButton                 _cancel         = new JButton("Cancel");
@@ -215,9 +217,12 @@ implements ActionListener, TableModelListener
 		saveAfterApply();
 
 		_table = createTable();
+		_tableFilter = new GTableFilter(_table);
 
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_table);
+		
+		panel.add(_tableFilter, "growx, pushx, wrap");
 		panel.add(jScrollPane, "span, grow, push, width 100%, height 100%, wrap");
 
 		panel.add(createOkPanel(), "gap top 20, right");

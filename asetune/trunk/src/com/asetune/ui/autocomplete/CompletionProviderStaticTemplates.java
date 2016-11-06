@@ -71,6 +71,9 @@ public class CompletionProviderStaticTemplates
 		list.add( new CompletionTemplate( "loadfile",    "\\loadfile -T tabname filename"));
 		list.add( new CompletionTemplate( "\\loadfile",  "\\loadfile -T tabname filename"));
 
+		list.add( new CompletionTemplate( "ddlgen",    "\\ddlgen -t tabname"));
+		list.add( new CompletionTemplate( "\\ddlgen",  "\\ddlgen -t tabname"));
+
 		return list;
 	}
 

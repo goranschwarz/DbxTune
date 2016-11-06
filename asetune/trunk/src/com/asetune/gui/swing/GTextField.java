@@ -1,15 +1,32 @@
 package com.asetune.gui.swing;
 
-import java.awt.TextField;
 import java.awt.event.MouseEvent;
 
-import javax.swing.Icon;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.text.Document;
 
+import org.fife.rsta.ui.ContentAssistable;
+import org.fife.rsta.ui.search.AbstractSearchDialog;
+import org.fife.ui.autocomplete.AutoCompletion;
+import org.fife.ui.autocomplete.BasicCompletion;
+import org.fife.ui.autocomplete.Completion;
+import org.fife.ui.autocomplete.CompletionProvider;
+import org.fife.ui.autocomplete.DefaultCompletionProvider;
+
 import com.asetune.gui.focusabletip.FocusableTip;
 
-public class GTextField extends JTextField
+/**
+ * Same as JTextField, but also implements
+ * <ul>
+ *   <li>Focusable Tool tip</li>
+ *   <li>Auto Completion, by ctrl+space</li>
+ * </ul>
+ *
+ */
+public class GTextField 
+extends JTextField
+implements ContentAssistable // Not sure how this is used.
 {
 	private static final long serialVersionUID = 1L;
 
@@ -20,6 +37,15 @@ public class GTextField extends JTextField
 
 	/** The last focusable tip displayed. */
 	private FocusableTip _focusableTip = null;
+
+	/** Whether content assist is enabled. */
+	private boolean			   _acIsEnabled;
+
+	/** The auto-completion instance for this text field. */
+	private AutoCompletion	   _ac;
+
+	/** Provides the completions for this text field. */
+	private CompletionProvider _provider;
 
 
 	//--------------------------------------------------------
@@ -148,4 +174,144 @@ public class GTextField extends JTextField
 	{
 		super.setToolTipText(text);
 	}
+	
+	
+	//////////////////////////////////////////////////////////////////////////
+	// BEGIN - AUTO COMPLETE
+	//////////////////////////////////////////////////////////////////////////
+	/**
+	 * Adds the completions known to this text field.
+	 *
+	 * @param provider
+	 *            The completion provider to add to.
+	 */
+	public void addCompletions(CompletionProvider provider)
+	{
+	}
+
+	/**
+	 * Adds the completion text known to this text field.
+	 */
+	public void addCompletion(Completion completion)
+	{
+		setAutoCompleteEnabled(true);
+		
+		if (_provider instanceof DefaultCompletionProvider)
+		{
+			DefaultCompletionProvider p = (DefaultCompletionProvider) _provider;
+			p.addCompletion( completion );
+		}
+		else
+		{
+			throw new RuntimeException("Installed Completion Provider is not based on DefaultCompletionProvider.");
+		}
+	}
+
+	/**
+	 * Adds the completion text known to this text field.
+	 */
+	public void addCompletion(String text)
+	{
+		setAutoCompleteEnabled(true);
+		
+		if (_provider instanceof DefaultCompletionProvider)
+		{
+			DefaultCompletionProvider p = (DefaultCompletionProvider) _provider;
+			p.addCompletion( new BasicCompletion(_provider, text) );
+		}
+		else
+		{
+			throw new RuntimeException("Installed Completion Provider is not based on DefaultCompletionProvider.");
+		}
+	}
+
+	public void addCompletion(JTable table)
+	{
+		setAutoCompleteEnabled(true);
+
+		for (int c=0; c<table.getColumnCount(); c++)
+			addCompletion( table.getColumnName(c) );
+	}
+
+
+	/**
+	 * Lazily creates the AutoCompletion instance this text field uses.
+	 *
+	 * @return The auto-completion instance.
+	 */
+	private AutoCompletion getAutoCompletion()
+	{
+		if ( _ac == null )
+		{
+			_ac = new AutoCompletion(getCompletionProvider());
+		}
+		return _ac;
+	}
+
+	/**
+	 * Creates the shared completion provider instance.
+	 *
+	 * @return The completion provider.
+	 */
+	protected synchronized CompletionProvider getCompletionProvider()
+	{
+		if ( _provider == null )
+		{
+			_provider = new DefaultCompletionProvider();
+			addCompletions(_provider);
+		}
+		return _provider;
+	}
+
+	/**
+	 * Returns whether auto-complete is enabled.
+	 *
+	 * @return Whether auto-complete is enabled.
+	 * @see #setAutoCompleteEnabled(boolean)
+	 */
+	public boolean isAutoCompleteEnabled()
+	{
+		return _acIsEnabled;
+	}
+
+	/**
+	 * Toggles whether regex auto-complete is enabled. This method will fire a
+	 * property change event of type {@link ContentAssistable#ASSISTANCE_IMAGE}.
+	 * 
+	 * @param enabled
+	 *            Whether regex auto complete should be enabled.
+	 * @see #isAutoCompleteEnabled()
+	 */
+	public void setAutoCompleteEnabled(boolean enabled)
+	{
+		if ( this._acIsEnabled != enabled )
+		{
+			this._acIsEnabled = enabled;
+			if ( enabled )
+			{
+				AutoCompletion ac = getAutoCompletion();
+				ac.install(this);
+			}
+			else
+			{
+				_ac.uninstall();
+			}
+			String prop = ContentAssistable.ASSISTANCE_IMAGE;
+			// Must take care how we fire the property event, as Swing
+			// property change support won't fire a notice if old and new are
+			// both non-null and old.equals(new).
+			if ( enabled )
+			{
+				firePropertyChange(prop, null, AbstractSearchDialog.getContentAssistImage());
+			}
+			else
+			{
+				firePropertyChange(prop, null, null);
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////////
+	// END - AUTO COMPLETE
+	//////////////////////////////////////////////////////////////////////////
+
 }

@@ -7,9 +7,9 @@ import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 
-import ch.ethz.ssh2.LocalPortForwarder;
-
 import com.asetune.utils.StringUtil;
+
+import ch.ethz.ssh2.LocalPortForwarder;
 
 /**
  * Handle SSH Tunnels

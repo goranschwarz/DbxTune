@@ -41,8 +41,6 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -53,10 +51,13 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
 
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.JColorComboBox;
 import com.asetune.gui.swing.RowFilterValueAndLogLevel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 
 
@@ -845,6 +846,8 @@ implements ActionListener, TableModelListener
 
 			JScrollPane scroll = new JScrollPane(_dataTable);
 
+			panel.add(new GTableFilter(_dataTable), "gap 5 5 5, growx, pushx, wrap"); // gap left right top bottom
+			
 			panel.add(scroll, "grow, push, height 100%, wrap 15");
 
 			panel.add(_allToLevel_lbl  , "align right, split");

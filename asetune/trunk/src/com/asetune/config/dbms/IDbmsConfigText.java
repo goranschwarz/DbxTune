@@ -107,7 +107,7 @@ public interface IDbmsConfigText
 
 
 	/**
-	 * Timeout value that can be used when comunicationg with the server
+	 * Timeout value that can be used when communicating with the server
 	 * @return
 	 */
 	public int getSqlTimeout();
@@ -117,4 +117,10 @@ public interface IDbmsConfigText
 	 * @return A list of numbers to discard, null if this isn't used.
 	 */
 	public List<Integer> getDiscardDbmsErrorList();
+
+	/**
+	 * Should we get the configuration or not for this specific configuration
+	 * @return true if it's enabled or false if not
+	 */
+	boolean isEnabled();
 }

@@ -33,6 +33,7 @@ import java.sql.Timestamp;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -72,8 +73,6 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.decorator.AbstractHighlighter;
@@ -90,6 +89,7 @@ import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.gui.swing.DockUndockManagement;
 import com.asetune.gui.swing.EmptyTableModel;
 import com.asetune.gui.swing.GPanel;
@@ -107,6 +107,8 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.asetune.xmenu.TablePopupFactory;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class TabularCntrPanel 
@@ -142,7 +144,7 @@ implements
 	private boolean					_tailMode							= true;
 
 	/** Various types of how we do Automatic Column Width Adjustment in the JTable*/
-	public enum AutoAdjustTableColumnWidth { GLOBAL, AUTO_ON, AUTO_OFF }
+	public enum AutoAdjustTableColumnWidth { GLOBAL, AUTO_GROW_SHRINK_ON, AUTO_GROW_ON, AUTO_OFF }
 
 	// -------------------------------------------------
 	// FILTER Panel
@@ -185,6 +187,7 @@ implements
 	private JPanel					_timeInfoPanel;
 	// private String _timeEmptyConstant = "YYYY-MM-DD hh:mm:ss.444";
 	private String					_timeEmptyConstant					= "                       ";
+//	private String					_timeEmptyConstant					= "YYYY-MM-DD hh:mm:ss.444";
 	private JLabel					_timeClear_lbl						= new JLabel("Clear time");
 	private JTextField				_timeClear_txt						= new JTextField(_timeEmptyConstant);
 	private JLabel					_timeHeadSample_lbl					= new JLabel("Head time");
@@ -307,6 +310,12 @@ implements
 						}
 					}
 				}
+			}
+
+			@Override
+			public Map<String, ColumnHeaderPropsEntry> getPreferredColumnLayout()
+			{
+				return _cm.getPreferredColumnProps();
 			}
 		};
 		
@@ -871,10 +880,17 @@ implements
 	// }
 	public void adjustTableColumnWidth()
 	{
-		// Get out of here if do not want to adjust
-		if ( ! doAutoAdjustTableColumnWidth() )
-			return;
+//		// Get out of here if do not want to adjust
+//		if ( ! doAutoAdjustTableColumnWidth() )
+//			return;
 
+		final AutoAdjustTableColumnWidth autoAdjustType = getAutoAdjustTableColumnWidthType();
+		if (_logger.isDebugEnabled())
+			_logger.debug(getCm().getName()+": adjustTableColumnWidth(): autoAdjustType="+autoAdjustType);
+
+		if (AutoAdjustTableColumnWidth.AUTO_OFF.equals(autoAdjustType))
+			return;
+		
 		// Defer this work, a bit...
 		// probably most viable if we call it from tableChanged()... 
 		// this so all events has been processed by the Event Dispatcher before this is done
@@ -886,7 +902,11 @@ implements
 			{
 				_lastColWithRefresh = System.currentTimeMillis();
 				//SwingUtils.calcColumnWidths(_dataTable);
-				_dataTable.packAll(); // set size so that all content in all cells are visible
+				if (AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON.equals(autoAdjustType))
+					_dataTable.packAll(); // set size so that all content in all cells are visible
+				
+				if (AutoAdjustTableColumnWidth.AUTO_GROW_ON.equals(autoAdjustType))
+					_dataTable.packAllGrowOnly(); // set size so that all content in all cells are visible
 			} // end: run method
 		};
 		SwingUtilities.invokeLater(doWork);
@@ -1316,7 +1336,7 @@ implements
 		});
 
 		// ADJUST COLUMN WIDTH
-		menuItem = new JMenuItem("Adjust Column Width"); // Resizes all columns to fit their content
+		menuItem = new JMenuItem("Adjust Column Width, both shrink and grow"); // Resizes all columns to fit their content
 		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
 
 		popup.add(menuItem);
@@ -1332,33 +1352,58 @@ implements
 		});
 
 
+		// ADJUST COLUMN WIDTH
+		menuItem = new JMenuItem("Adjust Column Width, grow only"); // Resizes all columns to fit their content
+		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+
+		popup.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_dataTable.packAllGrowOnly();
+				// save is done by: addColumnModelListener:columnModelListener in the TCP table
+			}
+		});
+
+
 		// Automatically Adjust Column Width
 		JMenu autoAdjust = new JMenu("Automatically Adjust Column Width");
 		popup.add(autoAdjust);
 		autoAdjust.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
 
-		JRadioButtonMenuItem useGlobal = new JRadioButtonMenuItem("Use Global settings (in Preferences)");
-		JRadioButtonMenuItem autoOn    = new JRadioButtonMenuItem("Automatically Adjust Column Width");
-		JRadioButtonMenuItem autoOff   = new JRadioButtonMenuItem("Use Saved Column Width");
+		JRadioButtonMenuItem useGlobal        = new JRadioButtonMenuItem("Use Global settings (in Preferences)");
+		JRadioButtonMenuItem autoGrowShrinkOn = new JRadioButtonMenuItem("Automatically Adjust Column Width, both shrink and grow");
+		JRadioButtonMenuItem autoGrowOn       = new JRadioButtonMenuItem("Automatically Adjust Column Width, grow only");
+		JRadioButtonMenuItem autoOff          = new JRadioButtonMenuItem("Use Saved Column Width");
 
 		autoAdjust.add(useGlobal);
-		autoAdjust.add(autoOn);
+		autoAdjust.add(autoGrowShrinkOn);
+		autoAdjust.add(autoGrowOn);
 		autoAdjust.add(autoOff);
 
 		ButtonGroup group = new ButtonGroup();
 		group.add(useGlobal);
-		group.add(autoOn);
+		group.add(autoGrowShrinkOn);
+		group.add(autoGrowOn);
 		group.add(autoOff);
 
 		// Get saved value... if not found: use "global"
 		String key = getPanelName()+".autoAdjustTableColumnWidth";
 		Configuration conf = Configuration.getCombinedConfiguration();
-		String autoAdjustTableColumnWidth = conf.getProperty("", AutoAdjustTableColumnWidth.GLOBAL.toString());
+//		String autoAdjustTableColumnWidth = conf.getProperty("", AutoAdjustTableColumnWidth.GLOBAL.toString());
+		String autoAdjustTableColumnWidth = conf.getProperty(key, AutoAdjustTableColumnWidth.GLOBAL.toString());
 
-		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL  .toString())) useGlobal.setSelected(true);
-		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_ON .toString())) autoOn   .setSelected(true);
-		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF.toString())) autoOff  .setSelected(true);
-		else _logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'.");
+		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL             .toString())) useGlobal       .setSelected(true);
+		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON.toString())) autoGrowShrinkOn.setSelected(true);
+		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_ON       .toString())) autoGrowOn      .setSelected(true);
+		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF           .toString())) autoOff         .setSelected(true);
+		else
+		{
+			_logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'. Setting value to '"+AutoAdjustTableColumnWidth.AUTO_GROW_ON+"'");
+		}
 
 		useGlobal.addActionListener(new ActionListener()
 		{
@@ -1368,12 +1413,20 @@ implements
 				setAutoAdjustTableColumnWidth(AutoAdjustTableColumnWidth.GLOBAL);
 			}
 		});
-		autoOn.addActionListener(new ActionListener()
+		autoGrowShrinkOn.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				setAutoAdjustTableColumnWidth(AutoAdjustTableColumnWidth.AUTO_ON);
+				setAutoAdjustTableColumnWidth(AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON);
+			}
+		});
+		autoGrowOn.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				setAutoAdjustTableColumnWidth(AutoAdjustTableColumnWidth.AUTO_GROW_ON);
 			}
 		});
 		autoOff.addActionListener(new ActionListener()
@@ -1928,16 +1981,20 @@ implements
 		_timeOfflineFastForward_but.setVisible(false);
 		
 		panel.add(_timeClear_lbl,      "hidemode 3");
-		panel.add(_timeClear_txt,      "hidemode 3, width 132lp!, growx, wrap");
+//		panel.add(_timeClear_txt,      "hidemode 3, width 132lp!, growx, wrap");
+		panel.add(_timeClear_txt,      "hidemode 3, growx, wrap");
 
 		panel.add(_timeHeadSample_lbl, "hidemode 3");
-		panel.add(_timeHeadSample_txt, "hidemode 3, width 132lp!, growx, wrap");
+//		panel.add(_timeHeadSample_txt, "hidemode 3, width 132lp!, growx, wrap");
+		panel.add(_timeHeadSample_txt, "hidemode 3, growx, wrap");
 
 		panel.add(_timeSample_lbl,     "");
-		panel.add(_timeSample_txt,     "width 132lp!, growx, wrap");
+//		panel.add(_timeSample_txt,     "width 132lp!, growx, wrap");
+		panel.add(_timeSample_txt,     "wmin 132lp, growx, wrap");
 
 		panel.add(_timeIntervall_lbl,  "");
-		panel.add(_timeIntervall_txt,  "width 132lp!, growx, wrap");
+//		panel.add(_timeIntervall_txt,  "width 132lp!, growx, wrap");
+		panel.add(_timeIntervall_txt,  "growx, wrap");
 
 		panel.add(_timePostpone_lbl,   "hidemode 3");
 		panel.add(_timePostpone_txt,   "hidemode 3, growx, wrap");
@@ -2808,30 +2865,26 @@ implements
 		}
 	}
 
-	/**
-	 * Get if we should do Automatic Column With adjustments<br>
-	 * - First check the boolean Configuration "TabularCntrPanel.autoAdjustTableColumnWidth"<br>
-	 * - Then get the local settings..
-	 * 
-	 * @return
-	 */
-	public boolean doAutoAdjustTableColumnWidth()
+	public AutoAdjustTableColumnWidth getAutoAdjustTableColumnWidthType()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		//		boolean doAdjust = true;
-		boolean doAdjust = false;
-		doAdjust = conf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", doAdjust);
-
+		AutoAdjustTableColumnWidth returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+		AutoAdjustTableColumnWidth mfSetting = MainFrame.getInstance().getTcpAutoAdjustTableColumnWidthType();
+		
 		String key = getPanelName()+".autoAdjustTableColumnWidth";
-		String autoAdjustTableColumnWidth = conf.getProperty(getPanelName()+".autoAdjustTableColumnWidth", AutoAdjustTableColumnWidth.GLOBAL.toString());
+		String autoAdjustTableColumnWidth = conf.getProperty(key, AutoAdjustTableColumnWidth.GLOBAL.toString());
 
-		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL  .toString())) { /*keep doAdjust from above*/ }
-		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_ON .toString())) doAdjust = true;
-		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF.toString())) doAdjust = false;
-		else _logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'.");
+		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL              .name())) returnThis = mfSetting;
+		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON .name())) returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON;
+		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_ON        .name())) returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF            .name())) returnThis = AutoAdjustTableColumnWidth.AUTO_OFF;
+		else {
+			_logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'.");
+			returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+		}
 
-		// If the proprty 'XXXXXX.gui.column.header.props' has NOT been written, then DO auto adjust.
+		// If the property 'XXXXXX.gui.column.header.props' has NOT been written, then DO auto adjust.
 		// This means that it's probably the first time we see data...
 		CountersModel cm = getDisplayCm();
 		if (cm == null)
@@ -2841,11 +2894,68 @@ implements
 			if (cm.isRuntimeInitialized())
 				headerProps = conf.getProperty(getName() + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + cm.getServerVersion());
 		if (headerProps == null)
-			doAdjust = true;
+			returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+//		if (headerProps != null)
+//			returnThis = AutoAdjustTableColumnWidth.AUTO_OFF;
 
-		return doAdjust;
+		return returnThis;
 	}
-	
+
+//	/**
+//	 * Get if we should do Automatic Column With adjustments<br>
+//	 * - First check the boolean Configuration "TabularCntrPanel.autoAdjustTableColumnWidth"<br>
+//	 * - Then get the local settings..
+//	 * 
+//	 * @return
+//	 */
+//	public boolean doAutoAdjustTableColumnWidth()
+//	{
+//		Configuration conf = Configuration.getCombinedConfiguration();
+//
+//		//		boolean doAdjust = true;
+//		boolean doAdjust = false;
+//		doAdjust = conf.getBooleanProperty("TabularCntrPanel.autoAdjustTableColumnWidth", doAdjust);
+//
+//		String key = getPanelName()+".autoAdjustTableColumnWidth";
+//		String autoAdjustTableColumnWidth = conf.getProperty(key, AutoAdjustTableColumnWidth.GLOBAL.toString());
+//
+//		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL              .toString())) { /*keep doAdjust from above*/ }
+//		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON .toString())) doAdjust = true;
+//		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_ON        .toString())) doAdjust = true;
+//		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF            .toString())) doAdjust = false;
+//		else _logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'.");
+//
+//		// If the property 'XXXXXX.gui.column.header.props' has NOT been written, then DO auto adjust.
+//		// This means that it's probably the first time we see data...
+//		CountersModel cm = getDisplayCm();
+//		if (cm == null)
+//			cm = getCm();
+//		String headerProps = null;
+//		if (cm != null)
+//			if (cm.isRuntimeInitialized())
+//				headerProps = conf.getProperty(getName() + ".gui.column.header.props.["+SwingUtils.getScreenResulutionAsString()+"]." + cm.getServerVersion());
+//		if (headerProps == null)
+//			doAdjust = true;
+//
+//		return doAdjust;
+//	}
+//	public AutoAdjustTableColumnWidth getAutoAdjustTableColumnWidth_type()
+//	{
+//		Configuration conf = Configuration.getCombinedConfiguration();xxx
+//
+//		String key = getPanelName()+".autoAdjustTableColumnWidth";
+//		String autoAdjustTableColumnWidth = conf.getProperty(getPanelName()+".autoAdjustTableColumnWidth", AutoAdjustTableColumnWidth.GLOBAL.toString());
+//
+//		if      (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.GLOBAL              .toString())) return AutoAdjustTableColumnWidth.GLOBAL;
+//		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON .toString())) return AutoAdjustTableColumnWidth.AUTO_GROW_SHRINK_ON;
+//		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_GROW_ON        .toString())) return AutoAdjustTableColumnWidth.AUTO_GROW_ON;
+//		else if (autoAdjustTableColumnWidth.equals(AutoAdjustTableColumnWidth.AUTO_OFF            .toString())) return AutoAdjustTableColumnWidth.AUTO_OFF;
+//		else { 
+//			_logger.warn(getPanelName()+" Can't find appropriate value for "+key+" = '"+autoAdjustTableColumnWidth+"'.");
+//			return AutoAdjustTableColumnWidth.GLOBAL;
+//		}
+//	}
+
 	/**
 	 * helper method to convert a postpone time into seconds
 	 * <p>

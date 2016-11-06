@@ -421,6 +421,11 @@ extends CountersModel
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
 
+		addDropTempTable("#spin_names");
+		addDropTempTable("#sysmonitorsP");
+		addDropTempTable("#sysmonitorsW");
+		addDropTempTable("#sysmonitorsS");
+
 		/*
 		 * Retrieve the spinlocks. There are three spinlock counters collected by dbcc monitor:
 		 *	- spinlock_p_0 -> Spinlock "grabs" - as in attempted grabs for the spinlock - includes waits

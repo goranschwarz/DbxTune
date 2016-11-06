@@ -1,6 +1,5 @@
 package com.asetune.cm.postgres;
 
-import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
@@ -11,7 +10,6 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
-import com.asetune.utils.StringUtil;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)

@@ -332,6 +332,43 @@ FIXME
 </Entry>
 
 
+<!-- == \ddlgen =================================== -->
+<Entry>
+    <CmdName>ddlgen</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Generate DDL from some DBMS objects</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\ddlgen -h FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: for all object in a database<BR>
+       <CODE>\ddlgen -d [dbname]</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 1</B>: for table<BR>
+       <CODE>\ddlgen -t tablename</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: for procedure.<BR>
+       <CODE>\ddlgen -p procname</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 3</B>: for a view.<BR>
+       <CODE>\ddlgen -v viewname</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\ddlgen</SeeAlso>
+</Entry>
+
+
 
 
 

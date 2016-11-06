@@ -1,7 +1,6 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;

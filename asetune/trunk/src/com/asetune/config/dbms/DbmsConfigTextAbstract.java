@@ -10,10 +10,12 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
+import com.asetune.Version;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
@@ -313,6 +315,21 @@ implements IDbmsConfigText
 		return null;
 	}
 
+	/**
+	 * @return true if it's enabled or false if not
+	 */
+	@Override
+	public boolean isEnabled()
+	{
+		String propName = "dbms.config.text."+getName()+".enabled";
+		boolean isEnabled = Configuration.getCombinedConfiguration().getBooleanProperty(propName, true);
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug(propName + "=" + isEnabled);
+
+		return isEnabled;
+	}
+
 	@Override
 	public String getSyntaxEditingStyle()
 	{
@@ -345,6 +362,23 @@ implements IDbmsConfigText
 			boolean      needCluster = needCluster();
 			List<String> needRole    = needRole();
 			List<String> needConfig  = needConfig();
+			boolean      isEnabled   = isEnabled();
+
+			// Check if it's enabled, or should we go ahead and try to get the configuration
+			if ( ! isEnabled )
+			{
+				setConfig("This configuration check is disabled. \n"
+						+ "To enable it: change the property 'dbms.config.text."+getName()+".enabled=false', to true. Or simply remove it.\n"
+						+ "\n"
+						+ "The different properties files you can change it in is:\n"
+						+ "  - USER_TEMP:   " + Configuration.getInstance(Configuration.USER_TEMP).getFilename() + "\n"
+						+ "  - USER_CONF:   " + Configuration.getInstance(Configuration.USER_CONF).getFilename() + "\n"
+						+ "  - SYSTEM_CONF: " + Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename() + "\n"
+						+ Version.getAppName() + " reads the config files in the above order. So USER_TEMP overrides the other files, etc...\n"
+						+ "Preferable change it in *USER_CONF* or USER_TEMP. SYSTEM_CONF is overwritten when a new version of "+Version.getAppName()+" is installed.\n"
+						+ "If USER_CONF, do not exist: simply create it.");
+				return;
+			}
 
 			// Check if we can get the configuration, due to compatible version.
 			if (needVersion > 0 && srvVersion < needVersion)
@@ -421,8 +455,21 @@ implements IDbmsConfigText
 				setConfig(null);
 
 				// JZ0C0: Connection is already closed.
-				if ("JZ0C0".equals(ex.getSQLState()))
-					throw ex;
+				// JZ006: Caught IOException: com.sybase.jdbc4.jdbc.SybConnectionDeadException: JZ0C0: Connection is already closed.
+				if ( "JZ0C0".equals(ex.getSQLState()) || "JZ006".equals(ex.getSQLState()) )
+				{
+					try
+					{
+						_logger.info("AseConfigText:initialize(): lost connection... try to reconnect...");
+						conn.reConnect(null);
+						_logger.info("AseConfigText:initialize(): Reconnect succeeded, but the configuration will not be visible");
+					}
+					catch(Exception reconnectEx)
+					{
+						_logger.warn("AseConfigText:initialize(): reconnect failed due to: "+reconnectEx);
+						throw ex; // Note throw the original exception and not reconnectEx
+					}
+				}
 
 				return;
 			}

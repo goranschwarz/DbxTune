@@ -27,6 +27,8 @@ implements SybMessageHandler
 	private boolean       _discardMsgLoadDb = true; // discard messages that has with 'in load db', etc...
 	private boolean       _discardMsgLoadDbPrintInfo = true; 
 
+//	private boolean       _downgradeSqlException = false;
+
 	static
 	{
 //		_logger.setLevel(Level.DEBUG);
@@ -114,6 +116,16 @@ implements SybMessageHandler
 		if ( ! _logPrefix.endsWith(": ") )
 			_logPrefix += ": ";
 	}
+
+//	public void setDowngradeSqlExceptions(boolean toValue)
+//	{
+//		_downgradeSqlException = toValue;
+//	}
+//
+//	public boolean getDowngradeSqlExceptions()
+//	{
+//		return _downgradeSqlException;
+//	}
 
 	public String getLogPrefix()
 	{
@@ -351,6 +363,12 @@ implements SybMessageHandler
 			}
 			return null;
 		}
+		
+//		if (_downgradeSqlException)
+//		{
+//			// Downgrade ALL messages to SQLWarnings, so executions wont be interuppted.
+//			return AseConnectionUtils.sqlExceptionToWarning(sqle);
+//		}
 
 		// Pass the Exception on.
 		return sqle;

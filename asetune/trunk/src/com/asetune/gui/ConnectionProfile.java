@@ -188,6 +188,13 @@ public class ConnectionProfile
 		_srvType = getServerType(_type, productName);
 	}
 
+	public void setProfileTypeName(String profileTypeName)
+	{
+		if      (_type == Type.TDS)     _tdsEntry    ._profileTypeName = profileTypeName;
+		else if (_type == Type.JDBC)    _jdbcEntry   ._profileTypeName = profileTypeName;
+		else if (_type == Type.OFFLINE) _offlineEntry._profileTypeName = profileTypeName;
+		else _logger.warn("setProfileType() unknown type = "+_type);
+	}
 
 	@Override
 	public boolean equals(Object obj)
@@ -302,6 +309,8 @@ public class ConnectionProfile
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// TDS
+	public static final String       XML_TDS_PROFILE_TYPE_NAME                   = "ProfileTypeName";
+	
 	public static final String       XML_TDS_USERNAME                            = "Username";
 	public static final String       XML_TDS_PASSWORD                            = "Password";
 	public static final String       XML_TDS_SAVE_PASSWORD                       = "SavePassword";
@@ -356,6 +365,16 @@ public class ConnectionProfile
 	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime       = "pcsWriterDdlLookupSleepTime";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCounterDetailes          = "pcsWriterCounterDetailes";
 	
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore              = "pcsWriterCapSql_doSqlCaptureAndStore";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                         = "pcsWriterCapSql_doSqlText";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                   = "pcsWriterCapSql_doStatementInfo";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                        = "pcsWriterCapSql_doPlanText";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                     = "pcsWriterCapSql_sleepTimeInMs";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                  = "pcsWriterCapSql_sendDdlForLookup";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime      = "pcsWriterCapSql_sendDdlForLookup_gt_execTime";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = "pcsWriterCapSql_sendDdlForLookup_gt_logicalReads";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = "pcsWriterCapSql_sendDdlForLookup_gt_physicalReads";
+
 //	public static final String       XML_TDS_DBXTUNE_pcsReaderDriver             = "pcsReaderDriver";
 //	public static final String       XML_TDS_DBXTUNE_pcsReaderUrl                = "pcsReaderUrl";
 //	public static final String       XML_TDS_DBXTUNE_pcsReaderUsername           = "pcsReaderUsername";
@@ -366,6 +385,8 @@ public class ConnectionProfile
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// JDBC
+	public static final String       XML_JDBC_PROFILE_TYPE_NAME                   = "ProfileTypeName";
+
 	public static final String       XML_JDBC_DRIVER                              = "Driver";
 	public static final String       XML_JDBC_URL                                 = "URL";
 	public static final String       XML_JDBC_USERNAME                            = "Username";
@@ -380,6 +401,8 @@ public class ConnectionProfile
 	
 	//-------------------------------------------------------------------------------------------------------------------
 	// OFFLINE
+	public static final String       XML_OFFLINE_PROFILE_TYPE_NAME                = "ProfileTypeName";
+
 	public static final String       XML_OFFLINE_DRIVER                           = "Driver";
 	public static final String       XML_OFFLINE_URL                              = "URL";
 	public static final String       XML_OFFLINE_USERNAME                         = "Username";
@@ -400,6 +423,7 @@ public class ConnectionProfile
 		public String getDifference(ConnProfileEntry entry);
 		public String getKey();
 	}
+
 
 	public static class DbxTuneParams
 	{
@@ -433,10 +457,24 @@ public class ConnectionProfile
 		public String        _pcsWriterPassword          = null;
 		public boolean       _pcsWriterSavePassword      = true;
 		public boolean       _pcsWriterStartH2asNwServer = true;
-		public boolean       _pcsWriterDdlLookup                = PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore;
-		public boolean       _pcsWriterDdlStoreDependantObjects = PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue;
-		public int           _pcsWriterDdlLookupSleepTime       = PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
-
+		// Recordings DDL Lookup
+		public boolean       _pcsWriterDdlLookup                                = PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore;
+		public boolean       _pcsWriterDdlStoreDependantObjects                 = PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue;
+		public int           _pcsWriterDdlLookupSleepTime                       = PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
+		// Recordings SQL Capture
+		public boolean       _pcsWriterCapSql_doSqlCaptureAndStore              = PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore;
+		public boolean       _pcsWriterCapSql_doSqlText                         = PersistentCounterHandler.DEFAULT_sqlCap_doSqlText;
+		public boolean       _pcsWriterCapSql_doStatementInfo                   = PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo;
+		public boolean       _pcsWriterCapSql_doPlanText                        = PersistentCounterHandler.DEFAULT_sqlCap_doPlanText;
+		public int           _pcsWriterCapSql_sleepTimeInMs                     = PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs;
+		public boolean       _pcsWriterCapSql_sendDdlForLookup                  = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup;
+		public int           _pcsWriterCapSql_sendDdlForLookup_gt_execTime      = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime;
+		public int           _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads;
+		public int           _pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads;
+//		public boolean       _pcsWriterCapSql_clearBeforeFirstPoll              = PersistentCounterHandler.DEFAULT_sqlCap_clearBeforeFirstPoll;      // only as Property
+//		public int           _pcsWriterCapSql_sendSizeThreshold                 = PersistentCounterHandler.DEFAULT_sqlCap_sendSizeThreshold;         // only as Property
+//		public int           _pcsWriterCapSql_warnStoreQueueSizeThresh          = PersistentCounterHandler.DEFAULT_sqlCap_warnStoreQueueSizeThresh;  // only as Property
+		
 		/** default constructor */
 		public DbxTuneParams()
 		{
@@ -481,6 +519,16 @@ public class ConnectionProfile
 			_pcsWriterDdlLookup                = fromEntry._pcsWriterDdlLookup;
 			_pcsWriterDdlStoreDependantObjects = fromEntry._pcsWriterDdlStoreDependantObjects;
 			_pcsWriterDdlLookupSleepTime       = fromEntry._pcsWriterDdlLookupSleepTime;
+
+			_pcsWriterCapSql_doSqlCaptureAndStore              = fromEntry._pcsWriterCapSql_doSqlCaptureAndStore;
+			_pcsWriterCapSql_doSqlText                         = fromEntry._pcsWriterCapSql_doSqlText;
+			_pcsWriterCapSql_doStatementInfo                   = fromEntry._pcsWriterCapSql_doStatementInfo;
+			_pcsWriterCapSql_doPlanText                        = fromEntry._pcsWriterCapSql_doPlanText;
+			_pcsWriterCapSql_sleepTimeInMs                     = fromEntry._pcsWriterCapSql_sleepTimeInMs;
+			_pcsWriterCapSql_sendDdlForLookup                  = fromEntry._pcsWriterCapSql_sendDdlForLookup;
+			_pcsWriterCapSql_sendDdlForLookup_gt_execTime      = fromEntry._pcsWriterCapSql_sendDdlForLookup_gt_execTime;
+			_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = fromEntry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads;
+			_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = fromEntry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads;
 		}
 
 //		public PropPropEntry _pcsWriterCounterDetailes          = null;
@@ -519,16 +567,26 @@ public class ConnectionProfile
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup               , entry._pcsWriterDdlLookup);
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime      , entry._pcsWriterDdlLookupSleepTime);
+
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , _pcsWriterCapSql_doSqlCaptureAndStore             , entry._pcsWriterCapSql_doSqlCaptureAndStore             );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , _pcsWriterCapSql_doSqlText                        , entry._pcsWriterCapSql_doSqlText                        );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , _pcsWriterCapSql_doStatementInfo                  , entry._pcsWriterCapSql_doStatementInfo                  );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , _pcsWriterCapSql_doPlanText                       , entry._pcsWriterCapSql_doPlanText                       );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , _pcsWriterCapSql_sleepTimeInMs                    , entry._pcsWriterCapSql_sleepTimeInMs                    );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , _pcsWriterCapSql_sendDdlForLookup                 , entry._pcsWriterCapSql_sendDdlForLookup                 );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , _pcsWriterCapSql_sendDdlForLookup_gt_execTime     , entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, _pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 			}
 
 			if (_dbxtuneOptOsMonitoring || entry._dbxtuneOptOsMonitoring)
 			{
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonUsername    , _osMonUsername    , entry._osMonUsername);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonUsername       , _osMonUsername    , entry._osMonUsername);
 				if (_osMonSavePassword || entry._osMonSavePassword)
-					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPassword, _osMonPassword    , entry._osMonPassword);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword, entry._osMonSavePassword);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost        , entry._osMonHost);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort        , entry._osMonPort);
+					htmlTabRowIfChangedPwd(sb, XML_TDS_DBXTUNE_osMonPassword, _osMonPassword    , entry._osMonPassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonSavePassword   , _osMonSavePassword, entry._osMonSavePassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonHost           , _osMonHost        , entry._osMonHost);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPort           , _osMonPort        , entry._osMonPort);
 			}
 
 			return sb.toString();
@@ -572,6 +630,17 @@ public class ConnectionProfile
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup);
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime);
+
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , _pcsWriterCapSql_doSqlCaptureAndStore             );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , _pcsWriterCapSql_doSqlText                        );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , _pcsWriterCapSql_doStatementInfo                  );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , _pcsWriterCapSql_doPlanText                       );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , _pcsWriterCapSql_sleepTimeInMs                    );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , _pcsWriterCapSql_sendDdlForLookup                 );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , _pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, _pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
+
 				sb.append("</table>");
 			}
 
@@ -631,6 +700,16 @@ public class ConnectionProfile
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       _pcsWriterDdlLookupSleepTime);
 //			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          _pcsWriterCounterDetailes);
 
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , _pcsWriterCapSql_doSqlCaptureAndStore             );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , _pcsWriterCapSql_doSqlText                        );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , _pcsWriterCapSql_doStatementInfo                  );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , _pcsWriterCapSql_doPlanText                       );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , _pcsWriterCapSql_sleepTimeInMs                    );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , _pcsWriterCapSql_sendDdlForLookup                 );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , _pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, _pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
+
 //			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderDriver,             _pcsReaderDriver);
 //			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderUrl,                _pcsReaderUrl);
 //			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsReaderUsername,           _pcsReaderUsername);
@@ -686,6 +765,16 @@ public class ConnectionProfile
 				entry._pcsWriterDdlStoreDependantObjects = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
 				entry._pcsWriterDdlLookupSleepTime       = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       entry._pcsWriterDdlLookupSleepTime);
 //				entry._pcsWriterCounterDetailes          = getValue(element, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          entry._pcsWriterCounterDetailes);
+
+				entry._pcsWriterCapSql_doSqlCaptureAndStore              = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             ,                entry._pcsWriterCapSql_doSqlCaptureAndStore             );
+				entry._pcsWriterCapSql_doSqlText                         = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        ,                entry._pcsWriterCapSql_doSqlText                        );
+				entry._pcsWriterCapSql_doStatementInfo                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  ,                entry._pcsWriterCapSql_doStatementInfo                  );
+				entry._pcsWriterCapSql_doPlanText                        = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       ,                entry._pcsWriterCapSql_doPlanText                       );
+				entry._pcsWriterCapSql_sleepTimeInMs                     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    ,                entry._pcsWriterCapSql_sleepTimeInMs                    );
+				entry._pcsWriterCapSql_sendDdlForLookup                  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 ,                entry._pcsWriterCapSql_sendDdlForLookup                 );
+				entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime      = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     ,                entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+				entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads ,                entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+				entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads,                entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 			}
 			// Load Recordings
 //			entry._pcsReaderDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsReaderDriver,             entry._pcsReaderDriver);
@@ -703,6 +792,8 @@ public class ConnectionProfile
 	implements ConnProfileEntry
 	{
 		public String        _key              = null;
+
+		public String        _profileTypeName  = null;
 
 		// ASE, IQ, SA, OpenServer... any connection info using jConnect, which uses TDS Tabular Data Stream
 		public String        _tdsIfile         = null;
@@ -849,6 +940,7 @@ public class ConnectionProfile
 			
 			StringBuilder sb = new StringBuilder();
 			
+			htmlTabRowIfChanged(sb, XML_TDS_PROFILE_TYPE_NAME  , _profileTypeName   , entry._profileTypeName);
 			htmlTabRowIfChanged(sb, XML_TDS_IFILE              , _tdsIfile          , entry._tdsIfile);
 			htmlTabRowIfChanged(sb, XML_TDS_USERNAME           , _tdsUsername       , entry._tdsUsername);
 			if (_tdsSavePassword || entry._tdsSavePassword)
@@ -943,6 +1035,7 @@ public class ConnectionProfile
 			sb.append("<hr>");
 
 			sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+			htmlTabRow(sb, XML_TDS_PROFILE_TYPE_NAME  , _profileTypeName);
 			htmlTabRow(sb, XML_TDS_IFILE              , _tdsIfile);
 			htmlTabRow(sb, XML_TDS_USERNAME           , _tdsUsername);
 			if (_tdsSavePassword)
@@ -1037,6 +1130,8 @@ public class ConnectionProfile
 					XML_CONN_PROF_ATTR_SRV_TYPE, srvType.toString()
 					);
 
+//System.out.println("toXml(name='"+name+"', type='"+type+"', srvType='"+srvType+"': _profileTypeName='"+_profileTypeName+"')");
+			StringUtil.xmlTag(sb, 8, XML_TDS_PROFILE_TYPE_NAME,   _profileTypeName);
 			StringUtil.xmlTag(sb, 8, XML_TDS_IFILE,               _tdsIfile);
 			StringUtil.xmlTag(sb, 8, XML_TDS_USERNAME,            _tdsUsername);
 			if (_tdsSavePassword)
@@ -1125,6 +1220,7 @@ public class ConnectionProfile
 			String key = AseConnectionFactory.toHostPortStr(hostList, portList);
 			TdsEntry entry = new TdsEntry(key);
 			
+			entry._profileTypeName    = getValue(element, XML_TDS_PROFILE_TYPE_NAME,   entry._profileTypeName);
 			entry._tdsIfile           = getValue(element, XML_TDS_IFILE,               entry._tdsIfile);
 			entry._tdsUsername        = getValue(element, XML_TDS_USERNAME,            entry._tdsUsername);
 			entry._tdsSavePassword    = getValue(element, XML_TDS_SAVE_PASSWORD,       entry._tdsSavePassword);
@@ -1209,6 +1305,8 @@ public class ConnectionProfile
 	public static class JdbcEntry
 	implements ConnProfileEntry
 	{
+		public String        _profileTypeName        = null;
+
 		// JDBC
 		public String        _jdbcDriver             = null;
 		public String        _jdbcUrl                = null;
@@ -1266,17 +1364,18 @@ public class ConnectionProfile
 			
 			StringBuilder sb = new StringBuilder();
 			
-			htmlTabRowIfChanged(sb, XML_JDBC_DRIVER         , _jdbcDriver,        entry._jdbcDriver);
-			htmlTabRowIfChanged(sb, XML_JDBC_URL            , _jdbcUrl,           entry._jdbcUrl);
-			htmlTabRowIfChanged(sb, XML_JDBC_USERNAME       , _jdbcUsername,      entry._jdbcUsername);
-			if (_jdbcSavePassword)
-				htmlTabRowIfChangedPwd(sb, XML_JDBC_PASSWORD, _jdbcPassword,   entry._jdbcPassword);
-			htmlTabRowIfChanged(sb, XML_JDBC_SAVE_PASSWORD  , _jdbcSavePassword,  entry._jdbcSavePassword);
-			htmlTabRowIfChanged(sb, XML_JDBC_SqlInit        , _jdbcSqlInit,       entry._jdbcSqlInit);
-			htmlTabRowIfChanged(sb, XML_JDBC_UrlOptions     , _jdbcUrlOptions,    entry._jdbcUrlOptions);
-//			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo  , _jdbcShhTunnelInfo, entry._jdbcShhTunnelInfo);
-			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelUse   , _jdbcShhTunnelUse,  entry._jdbcShhTunnelUse);
-			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo  , _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false),  entry._jdbcShhTunnelInfo == null ? "" : entry._jdbcShhTunnelInfo.getConfigString(false));
+			htmlTabRowIfChanged(sb, XML_JDBC_PROFILE_TYPE_NAME, _profileTypeName,       entry._profileTypeName);
+			htmlTabRowIfChanged(sb, XML_JDBC_DRIVER           , _jdbcDriver,        entry._jdbcDriver);
+			htmlTabRowIfChanged(sb, XML_JDBC_URL              , _jdbcUrl,           entry._jdbcUrl);
+			htmlTabRowIfChanged(sb, XML_JDBC_USERNAME         , _jdbcUsername,      entry._jdbcUsername);
+			if (_jdbcSavePassword)                            
+				htmlTabRowIfChangedPwd(sb, XML_JDBC_PASSWORD  , _jdbcPassword,   entry._jdbcPassword);
+			htmlTabRowIfChanged(sb, XML_JDBC_SAVE_PASSWORD    , _jdbcSavePassword,  entry._jdbcSavePassword);
+			htmlTabRowIfChanged(sb, XML_JDBC_SqlInit          , _jdbcSqlInit,       entry._jdbcSqlInit);
+			htmlTabRowIfChanged(sb, XML_JDBC_UrlOptions       , _jdbcUrlOptions,    entry._jdbcUrlOptions);
+//			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo    , _jdbcShhTunnelInfo, entry._jdbcShhTunnelInfo);
+			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelUse     , _jdbcShhTunnelUse,  entry._jdbcShhTunnelUse);
+			htmlTabRowIfChanged(sb, XML_JDBC_ShhTunnelInfo    , _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false),  entry._jdbcShhTunnelInfo == null ? "" : entry._jdbcShhTunnelInfo.getConfigString(false));
 
 			if (_isDbxTuneParamsValid || entry._isDbxTuneParamsValid)
 			{
@@ -1313,17 +1412,18 @@ public class ConnectionProfile
 			sb.append("<hr>");
 
 			sb.append("<table border=0 cellspacing=1 cellpadding=1>");
-			htmlTabRow(sb, XML_JDBC_DRIVER       , _jdbcDriver);
-			htmlTabRow(sb, XML_JDBC_URL          , _jdbcUrl);
-			htmlTabRow(sb, XML_JDBC_USERNAME     , _jdbcUsername);
-			if (_jdbcSavePassword)
-			htmlTabRow(sb, XML_JDBC_PASSWORD     , !_logger.isDebugEnabled() ? "**secret**" : _jdbcPassword);
-			htmlTabRow(sb, XML_JDBC_SAVE_PASSWORD, _jdbcSavePassword);
-			htmlTabRow(sb, XML_JDBC_SqlInit      , _jdbcSqlInit);
-			htmlTabRow(sb, XML_JDBC_UrlOptions   , _jdbcUrlOptions);
-//			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo, _jdbcShhTunnelInfo);
-			htmlTabRow(sb, XML_JDBC_ShhTunnelUse , _jdbcShhTunnelUse);
-			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo, _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(true));
+			htmlTabRow(sb, XML_JDBC_PROFILE_TYPE_NAME , _profileTypeName);
+			htmlTabRow(sb, XML_JDBC_DRIVER            , _jdbcDriver);
+			htmlTabRow(sb, XML_JDBC_URL               , _jdbcUrl);
+			htmlTabRow(sb, XML_JDBC_USERNAME          , _jdbcUsername);
+			if (_jdbcSavePassword)                    
+			htmlTabRow(sb, XML_JDBC_PASSWORD          , !_logger.isDebugEnabled() ? "**secret**" : _jdbcPassword);
+			htmlTabRow(sb, XML_JDBC_SAVE_PASSWORD     , _jdbcSavePassword);
+			htmlTabRow(sb, XML_JDBC_SqlInit           , _jdbcSqlInit);
+			htmlTabRow(sb, XML_JDBC_UrlOptions        , _jdbcUrlOptions);
+//			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo     , _jdbcShhTunnelInfo);
+			htmlTabRow(sb, XML_JDBC_ShhTunnelUse      , _jdbcShhTunnelUse);
+			htmlTabRow(sb, XML_JDBC_ShhTunnelInfo     , _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(true));
 			sb.append("</table>");
 
 			if (_isDbxTuneParamsValid)
@@ -1348,18 +1448,19 @@ public class ConnectionProfile
 					XML_CONN_PROF_ATTR_SRV_TYPE, srvType.toString()
 					);
 
-			StringUtil.xmlTag(sb, 8, XML_JDBC_DRIVER,          _jdbcDriver);
-			StringUtil.xmlTag(sb, 8, XML_JDBC_URL,             _jdbcUrl);
-			StringUtil.xmlTag(sb, 8, XML_JDBC_USERNAME,        _jdbcUsername);
-			if (_jdbcSavePassword)
-				StringUtil.xmlTag(sb, 8, XML_JDBC_PASSWORD,    Configuration.encryptPropertyValue(XML_JDBC_PASSWORD, _jdbcPassword));
-			StringUtil.xmlTag(sb, 8, XML_JDBC_SAVE_PASSWORD,   _jdbcSavePassword);
-
-			StringUtil.xmlTag(sb, 8, XML_JDBC_SqlInit,         _jdbcSqlInit);
-			StringUtil.xmlTag(sb, 8, XML_JDBC_UrlOptions,      _jdbcUrlOptions);
-//			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,   _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
-			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelUse,    _jdbcShhTunnelUse);
-			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,   _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
+			StringUtil.xmlTag(sb, 8, XML_JDBC_PROFILE_TYPE_NAME, _profileTypeName);
+			StringUtil.xmlTag(sb, 8, XML_JDBC_DRIVER,            _jdbcDriver);
+			StringUtil.xmlTag(sb, 8, XML_JDBC_URL,               _jdbcUrl);
+			StringUtil.xmlTag(sb, 8, XML_JDBC_USERNAME,          _jdbcUsername);
+			if (_jdbcSavePassword)                               
+				StringUtil.xmlTag(sb, 8, XML_JDBC_PASSWORD,      Configuration.encryptPropertyValue(XML_JDBC_PASSWORD, _jdbcPassword));
+			StringUtil.xmlTag(sb, 8, XML_JDBC_SAVE_PASSWORD,     _jdbcSavePassword);
+                                                                 
+			StringUtil.xmlTag(sb, 8, XML_JDBC_SqlInit,           _jdbcSqlInit);
+			StringUtil.xmlTag(sb, 8, XML_JDBC_UrlOptions,        _jdbcUrlOptions);
+//			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,     _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
+			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelUse,      _jdbcShhTunnelUse);
+			StringUtil.xmlTag(sb, 8, XML_JDBC_ShhTunnelInfo,     _jdbcShhTunnelInfo == null ? "" : _jdbcShhTunnelInfo.getConfigString(false));
 			
 			StringUtil.xmlTag(sb, 8, XML_TDS_IsDbxTuneParamsValid, _isDbxTuneParamsValid);
 			if (_isDbxTuneParamsValid)
@@ -1381,16 +1482,17 @@ public class ConnectionProfile
 
 			// Tags in the XML_JDBC_ENTRY
 			JdbcEntry entry = new JdbcEntry();
-			entry._jdbcDriver        = getValue(element, XML_JDBC_DRIVER,        entry._jdbcDriver);
-			entry._jdbcUrl           = getValue(element, XML_JDBC_URL,           entry._jdbcUrl);
-			entry._jdbcUsername      = getValue(element, XML_JDBC_USERNAME,      entry._jdbcUsername);
-			entry._jdbcSavePassword  = getValue(element, XML_JDBC_SAVE_PASSWORD, entry._jdbcSavePassword);
-			if (entry._jdbcSavePassword)
-				entry._jdbcPassword  = getValue(element, XML_JDBC_PASSWORD,      entry._jdbcPassword);
-			entry._jdbcSqlInit       = getValue(element, XML_JDBC_SqlInit,       entry._jdbcSqlInit);
-			entry._jdbcUrlOptions    = getValue(element, XML_JDBC_UrlOptions,    entry._jdbcUrlOptions);
+			entry._profileTypeName   = getValue(element, XML_JDBC_PROFILE_TYPE_NAME, entry._profileTypeName);
+			entry._jdbcDriver        = getValue(element, XML_JDBC_DRIVER,            entry._jdbcDriver);
+			entry._jdbcUrl           = getValue(element, XML_JDBC_URL,               entry._jdbcUrl);
+			entry._jdbcUsername      = getValue(element, XML_JDBC_USERNAME,          entry._jdbcUsername);
+			entry._jdbcSavePassword  = getValue(element, XML_JDBC_SAVE_PASSWORD,     entry._jdbcSavePassword);
+			if (entry._jdbcSavePassword)                                             
+				entry._jdbcPassword  = getValue(element, XML_JDBC_PASSWORD,          entry._jdbcPassword);
+			entry._jdbcSqlInit       = getValue(element, XML_JDBC_SqlInit,           entry._jdbcSqlInit);
+			entry._jdbcUrlOptions    = getValue(element, XML_JDBC_UrlOptions,        entry._jdbcUrlOptions);
 //			entry._jdbcShhTunnelInfo = SshTunnelInfo.parseConfigString(getValue(element, XML_JDBC_ShhTunnelInfo));
-			entry._jdbcShhTunnelUse  = getValue(element, XML_JDBC_ShhTunnelUse,  entry._jdbcShhTunnelUse);
+			entry._jdbcShhTunnelUse  = getValue(element, XML_JDBC_ShhTunnelUse,      entry._jdbcShhTunnelUse);
 			entry._jdbcShhTunnelInfo = SshTunnelInfo.parseConfigString(getValue(element, XML_JDBC_ShhTunnelInfo));
 
 			entry._isDbxTuneParamsValid = getValue(element, XML_TDS_IsDbxTuneParamsValid, entry._isDbxTuneParamsValid);
@@ -1407,6 +1509,8 @@ public class ConnectionProfile
 	public static class OfflineEntry
 	implements ConnProfileEntry
 	{
+		public String        _profileTypeName        = null;
+
 		public String        _jdbcDriver             = null;
 		public String        _jdbcUrl                = null;
 		public String        _jdbcUsername           = null;
@@ -1444,6 +1548,7 @@ public class ConnectionProfile
 			
 			StringBuilder sb = new StringBuilder();
 			
+			htmlTabRowIfChanged(sb, XML_OFFLINE_PROFILE_TYPE_NAME    , _profileTypeName,       entry._profileTypeName);
 			htmlTabRowIfChanged(sb, XML_OFFLINE_DRIVER               , _jdbcDriver,            entry._jdbcDriver);
 			htmlTabRowIfChanged(sb, XML_OFFLINE_URL                  , _jdbcUrl,               entry._jdbcUrl);
 			htmlTabRowIfChanged(sb, XML_OFFLINE_USERNAME             , _jdbcUsername,          entry._jdbcUsername);
@@ -1480,6 +1585,7 @@ public class ConnectionProfile
 			sb.append("<hr>");
 
 			sb.append("<table border=0 cellspacing=1 cellpadding=1>");
+			htmlTabRow(sb, XML_OFFLINE_PROFILE_TYPE_NAME    , _profileTypeName);
 			htmlTabRow(sb, XML_OFFLINE_DRIVER               , _jdbcDriver);
 			htmlTabRow(sb, XML_OFFLINE_URL                  , _jdbcUrl);
 			htmlTabRow(sb, XML_OFFLINE_USERNAME             , _jdbcUsername);
@@ -1506,12 +1612,13 @@ public class ConnectionProfile
 					XML_CONN_PROF_ATTR_SRV_TYPE, srvType.toString()
 					);
 
-			StringUtil.xmlTag(sb, 8, XML_OFFLINE_DRIVER,          _jdbcDriver);
-			StringUtil.xmlTag(sb, 8, XML_OFFLINE_URL,             _jdbcUrl);
-			StringUtil.xmlTag(sb, 8, XML_OFFLINE_USERNAME,        _jdbcUsername);
-			if (_jdbcSavePassword)
-				StringUtil.xmlTag(sb, 8, XML_OFFLINE_PASSWORD,    Configuration.encryptPropertyValue(XML_OFFLINE_PASSWORD, _jdbcPassword));
-			StringUtil.xmlTag(sb, 8, XML_OFFLINE_SAVE_PASSWORD,   _jdbcSavePassword);
+			StringUtil.xmlTag(sb, 8, XML_OFFLINE_PROFILE_TYPE_NAME, _profileTypeName);
+			StringUtil.xmlTag(sb, 8, XML_OFFLINE_DRIVER,            _jdbcDriver);
+			StringUtil.xmlTag(sb, 8, XML_OFFLINE_URL,               _jdbcUrl);
+			StringUtil.xmlTag(sb, 8, XML_OFFLINE_USERNAME,          _jdbcUsername);
+			if (_jdbcSavePassword)                                  
+				StringUtil.xmlTag(sb, 8, XML_OFFLINE_PASSWORD,      Configuration.encryptPropertyValue(XML_OFFLINE_PASSWORD, _jdbcPassword));
+			StringUtil.xmlTag(sb, 8, XML_OFFLINE_SAVE_PASSWORD,     _jdbcSavePassword);
 
 			StringUtil.xmlTag(sb, 8, XML_OFFLINE_checkForNewSessions,   _checkForNewSessions);
 			StringUtil.xmlTag(sb, 8, XML_OFFLINE_H2Option_startH2NwSrv, _H2Option_startH2NwSrv);
@@ -1528,6 +1635,7 @@ public class ConnectionProfile
 			String srvType = element.getAttribute(ConnectionProfile.XML_CONN_PROF_ATTR_SRV_TYPE);
 
 			OfflineEntry entry = new OfflineEntry();
+			entry._profileTypeName       = getValue(element, XML_OFFLINE_PROFILE_TYPE_NAME,     entry._profileTypeName);
 			entry._jdbcDriver            = getValue(element, XML_OFFLINE_DRIVER,                entry._jdbcDriver);
 			entry._jdbcUrl               = getValue(element, XML_OFFLINE_URL,                   entry._jdbcUrl);
 			entry._jdbcUsername          = getValue(element, XML_OFFLINE_USERNAME,              entry._jdbcUsername);

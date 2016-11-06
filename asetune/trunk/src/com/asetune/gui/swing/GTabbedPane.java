@@ -88,6 +88,8 @@ public class GTabbedPane
 //	private GTabbedPane _thisGTabbedPane   = null;
 	private boolean    _restoreTabLayoutPolicy = true;
 
+//	private HashMap<String, Object> _titlesMap = new HashMap<String, Object>();
+	
 	/** when we have passed Constructor initialization this would be true */
 	private boolean _initialized = false;
 	
@@ -1193,14 +1195,17 @@ public class GTabbedPane
 	}
 	private static boolean isTabUnDocked(GTabbedPane tp, String title, boolean doSubLevels)
 	{
+//System.out.println(">>>>>>>>>>>>>> isTabUnDocked(): cm-title='"+title+"', doSubLevels="+doSubLevels+". tp.getTabCount="+tp.getTabCount()+", tp="+tp);
 		for (int t=0; t<tp.getTabCount(); t++)
 		{
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
 
+//System.out.println("-------------- isTabUnDocked(t="+t+"): cm-title='"+title+"', Tab-titleName="+titleName+"'.");
 			if (title.equals(titleName))
 			{
 				TabExtendedEntry xe = tp.getExtendedEntry(title);
+//System.out.println("----found----- isTabUnDocked(t="+t+"): cm-title='"+title+"', xe="+xe);
 				if (xe == null)
 					return false;
 				return ! xe._isDocked;
@@ -1208,7 +1213,14 @@ public class GTabbedPane
 
 			if (comp instanceof GTabbedPane && doSubLevels)
 			{
-				return isTabUnDocked((GTabbedPane)comp, title, doSubLevels);
+//System.out.println("  ->>recurs->> isTabUnDocked(t="+t+"): cm-title='"+title+"', Tab-titleName="+titleName+"'.");
+				boolean retVal = isTabUnDocked((GTabbedPane)comp, title, doSubLevels);
+				if (retVal)
+				{
+//System.out.println("  -<<recurs-<< isTabUnDocked(t="+t+"): cm-title='"+title+"', Tab-titleName="+titleName+"'. return="+retVal);
+					return retVal;
+//					return isTabUnDocked((GTabbedPane)comp, title, doSubLevels);
+				}
 			}
 		}
 		return false;
@@ -1977,12 +1989,21 @@ public class GTabbedPane
 //	}
 
 
-
 	/** Inserts a component, at index, represented by a title and/or icon, either of which may be null. */
 	@Override
-	public void insertTab(String title, Icon icon, Component component, String tip, int index)
+	public void insertTab(String title, Icon icon, Component component, String tip, final int index)
 	{
 		_logger.trace("insertTab(title, icon, comp, tip, index): index="+index+", title="+title+", icon='"+icon+"', component="+component+", tip="+tip);
+
+		// Write warning message if the title is already in the Map
+//FIXME: This needs to be on a "global" level... or really: think this true a bit more... or check all the "sub GTabbedPanes as well"
+		Component compExist = getComponentAtTitle(title, true);
+		if (compExist != null)
+		{
+			_logger.warn("The title '"+title+"' is already added by this TabbedPane or any sub TabbedPane(s). It holds the following Component: "+compExist, new Exception("The title '"+title+"' has already been inserted in his GTabbedPane"));
+		}
+//		_titlesMap.put(title, component);
+
 
 		boolean newComponent = false;
 		if (component instanceof UndockedTabHolder)
@@ -2060,7 +2081,19 @@ public class GTabbedPane
 				if (wp != null)
 				{
 					if (wp.undocked)
-						windowOpenClose(index);
+					{
+						// Open the window later
+						// This will make any "main" window to be visible before the UnDocked window gets visible
+						Runnable doLater = new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								windowOpenClose(index);
+							}
+						};
+						SwingUtilities.invokeLater(doLater);
+					}
 				}
 			}
 		}
@@ -2109,6 +2142,8 @@ public class GTabbedPane
 		}
 		else
 		{
+			//_titlesMap.remove(getTitleAt(viewIndex));
+			
 //			TabExtendedEntry xeAtViewIndex = getViewExtendedEntry(viewIndex);
 //			xeAtViewIndex._lastViewIndex = viewIndex;
 

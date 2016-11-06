@@ -25,10 +25,7 @@ import java.util.Map;
 
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-
-import net.miginfocom.swing.MigLayout;
 
 import org.apache.log4j.Logger;
 
@@ -37,11 +34,12 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
-import com.asetune.tools.sqlw.msg.JAseRowCount;
 import com.sybase.jdbc4.jdbc.SybSQLWarning;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
+
+import net.miginfocom.swing.MigLayout;
 
 public class AseConnectionUtils
 {
@@ -2122,7 +2120,7 @@ public class AseConnectionUtils
 								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, (JPanel)null);
 
 								// open config dialog
-								AseConfigMonitoringDialog.showDialog(parent, conn, aseVersionNum);
+								AseConfigMonitoringDialog.showDialog(parent, conn, aseVersionNum, true);
 		
 								// After reconfig, go and check again
 								errorMesage = checkAseConfig(conn, needsConfig, false, has_sa_role);
@@ -2734,8 +2732,14 @@ public class AseConnectionUtils
 			htmlEnd     = "</pre></html>";
 //			htmlNewLine = "<br>";
 		}
+		String showplanExtraParamInAse16 = "";
+		if (conn instanceof DbxConnection)
+		{
+			if (((DbxConnection) conn).getDbmsVersionNumber() >= Ver.ver(16, 0))
+				showplanExtraParamInAse16 = ", 'long'";
+		}
 		StringBuilder sb = null;
-		String sql = "exec sp_showplan "+spid+", null, null, null";
+		String sql = "exec sp_showplan "+spid+", null, null, null" + showplanExtraParamInAse16;
 
 		// Set an empty Message handler
 		SybMessageHandler curMsgHandler = null;
@@ -4285,8 +4289,16 @@ public class AseConnectionUtils
 	 * @param conn 
 	 * @return null if OK, otherwise a String with the warning message
 	 */
-	public static String getAseGracePeriodWarning(Connection conn)
+	public static String getAseGracePeriodWarning(DbxConnection conn)
 	{
+		if (conn == null)
+			return null;
+
+		// master.dbo.monLicense does only exists if ASE is above 15.0
+		if (conn.getDbmsVersionNumber() < Ver.ver(15,0))
+			return null;
+
+
 		String sql = "select Status, GraceExpiry, Name, Edition, Type, srvName=@@servername from master.dbo.monLicense";
 
 		try 

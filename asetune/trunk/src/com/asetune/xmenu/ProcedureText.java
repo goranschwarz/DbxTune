@@ -23,13 +23,13 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextArea;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionUtils;
 
@@ -79,8 +79,8 @@ extends XmenuActionBase
 		JPanel textPanel = new JPanel();
 		//final JTextArea procText = new JTextArea();
 //		final JTextArea procText = new LineNumberedPaper(0,0);
-		final RSyntaxTextArea procText      = new RSyntaxTextArea();
-		final RTextScrollPane procTextSroll = new RTextScrollPane(procText);
+		final RSyntaxTextAreaX procText      = new RSyntaxTextAreaX();
+		final RTextScrollPane  procTextSroll = new RTextScrollPane(procText);
 		final JFrame textFrame = new JFrame(procName);
 
 		//procText.setText(sql);

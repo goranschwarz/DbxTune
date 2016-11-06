@@ -8,8 +8,6 @@ import javax.swing.JPanel;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.ase.gui.CmTableStatisticsPanel;
-import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.tools.sqlcapture.CmLocks;
 

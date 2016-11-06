@@ -11,14 +11,11 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
-import com.asetune.cm.sqlserver.gui.CmWaitStatsPanel;
-import com.asetune.config.dict.MonTablesDictionary;
-import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.sqlserver.gui.CmWaitStatsPanel;
+import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.utils.XmlFormatter;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)

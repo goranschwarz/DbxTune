@@ -16,8 +16,6 @@ import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -28,6 +26,8 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmObjectActivityPanel
 extends TabularCntrPanel
@@ -67,6 +67,20 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
+
+		// BLOB (text/image columns)
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.blob");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Number indexId = (Number) adapter.getValue(adapter.getColumnIndex("IndexID"));
+				if ( indexId != null && indexId.intValue() == 255)
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
 	}
 
 	@Override

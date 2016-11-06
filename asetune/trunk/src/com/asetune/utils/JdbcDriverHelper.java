@@ -44,19 +44,22 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
+import org.jdesktop.swingx.JXTable;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import com.asetune.Version;
 import com.asetune.gui.swing.GTable;
+
+import net.miginfocom.swing.MigLayout;
 
 public class JdbcDriverHelper
 {
@@ -173,6 +176,7 @@ public class JdbcDriverHelper
 		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) //    (Microsoft SQL Server 2005 JDBC Driver )
 		{
 			templates.add("jdbc:sqlserver://<host>:<port> ");
+			templates.add("jdbc:sqlserver://localhost:1433;databaseName=db;integratedSecurity=true");
 		}
 		else if ("com.ibm.db2.jcc.DB2Driver".equals(driverName))
 		{
@@ -984,7 +988,7 @@ public class JdbcDriverHelper
 
 		public JdbcDriverTableModel()
 		{
-			loadModel(true);
+			loadModel_asWorker(true);
 		}
 
 		public boolean isChanged()
@@ -1128,6 +1132,48 @@ public class JdbcDriverHelper
 				return Boolean.class;
 
 			return super.getColumnClass(column);
+		}
+
+		private void loadModel_asWorker(final boolean parseXmlFile)
+		{
+			javax.swing.SwingWorker<Void, Void> loadModelWorker = new SwingWorker<Void, Void>()
+			{
+				@Override
+				protected Void doInBackground() throws Exception
+				{
+					loadModel(parseXmlFile);
+					return null;
+				}
+				@Override
+				public void done() 
+				{
+					try 
+					{
+						get();
+						
+						for (TableModelListener tml : getTableModelListeners())
+						{
+							if (tml instanceof JXTable)
+							{
+								((JXTable)tml).packAll();
+							}
+						}
+					} 
+					catch (InterruptedException ignore) {}
+					catch (java.util.concurrent.ExecutionException e) 
+					{
+						String why = null;
+						Throwable cause = e.getCause();
+						if (cause != null) {
+							why = cause.getMessage();
+						} else {
+							why = e.getMessage();
+						}
+						_logger.error("Error getting JDBC Driver Info: " + why);
+					}
+				}
+			};
+			loadModelWorker.execute();
 		}
 
 		private void loadModel(boolean parseXmlFile)

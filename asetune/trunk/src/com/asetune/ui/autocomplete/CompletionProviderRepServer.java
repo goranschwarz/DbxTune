@@ -14,6 +14,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Caret;
 import javax.swing.text.JTextComponent;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
@@ -929,22 +930,22 @@ extends CompletionProviderAbstract
 						while(rs.next())
 						{
 							RsDatabase rsdb = new RsDatabase();
-							rsdb.dsname          = rs.getString("dsname");
-							rsdb.dbname          = rs.getString("dbname");
-							rsdb.dbid            = rs.getInt   ("dbid");
-							rsdb.dist_status     = rs.getInt   ("dist_status");
-							rsdb.src_status      = rs.getInt   ("src_status");
-							rsdb.attributes      = rs.getInt   ("attributes");
-//							rsdb.errorclassid    = rs.getInt   ("errorclassid");
-//							rsdb.funcclassid     = rs.getInt   ("funcclassid");
-							rsdb.prsid           = rs.getInt   ("prsid");
-							rsdb.rowtype         = rs.getInt   ("rowtype");
-							rsdb.sorto_status    = rs.getInt   ("sorto_status");
-							rsdb.ltype           = rs.getString("ltype");
-							rsdb.ptype           = rs.getString("ptype");
-							rsdb.ldbid           = rs.getInt   ("ldbid");
-							rsdb.enable_seq      = rs.getInt   ("enable_seq");
-//							rsdb.rs_errorclassid = rs.getInt   ("rs_errorclassid");
+							rsdb.dsname          = StringUtils.trim(rs.getString("dsname"));
+							rsdb.dbname          = StringUtils.trim(rs.getString("dbname"));
+							rsdb.dbid            =                  rs.getInt   ("dbid");
+							rsdb.dist_status     =                  rs.getInt   ("dist_status");
+							rsdb.src_status      =                  rs.getInt   ("src_status");
+							rsdb.attributes      =                  rs.getInt   ("attributes");
+//							rsdb.errorclassid    =                  rs.getInt   ("errorclassid");
+//							rsdb.funcclassid     =                  rs.getInt   ("funcclassid");
+							rsdb.prsid           =                  rs.getInt   ("prsid");
+							rsdb.rowtype         =                  rs.getInt   ("rowtype");
+							rsdb.sorto_status    =                  rs.getInt   ("sorto_status");
+							rsdb.ltype           = StringUtils.trim(rs.getString("ltype"));
+							rsdb.ptype           = StringUtils.trim(rs.getString("ptype"));
+							rsdb.ldbid           =                  rs.getInt   ("ldbid");
+							rsdb.enable_seq      =                  rs.getInt   ("enable_seq");
+//							rsdb.rs_errorclassid =                  rs.getInt   ("rs_errorclassid");
 
 							rsdb._name = rsdb.dsname + "." + rsdb.dbname;
 							if ("L".equals(rsdb.ltype) && "L".equals(rsdb.ptype))
@@ -978,12 +979,12 @@ extends CompletionProviderAbstract
 							RsTableRepDef x = new RsTableRepDef();
 
 							int col = 1;
-							x.name   = rs.getString(col++);
-							x.prs    = rs.getString(col++);
-							x.pDsDb  = rs.getString(col++);
-							x.pTable = rs.getString(col++);
-							x.rTable = rs.getString(col++);
-							x.type   = rs.getString(col++);
+							x.name   = StringUtils.trim(rs.getString(col++));
+							x.prs    = StringUtils.trim(rs.getString(col++));
+							x.pDsDb  = StringUtils.trim(rs.getString(col++));
+							x.pTable = StringUtils.trim(rs.getString(col++));
+							x.rTable = StringUtils.trim(rs.getString(col++));
+							x.type   = StringUtils.trim(rs.getString(col++));
 
 							x._type = "TRD";
 							x._desc = "Table Replication Definition";
@@ -1007,13 +1008,13 @@ extends CompletionProviderAbstract
 							RsTableSub x = new RsTableSub();
 
 							int col = 1;
-							x.name           = rs.getString(col++);
-							x.rdName         = rs.getString(col++);
-							x.rDsDb          = rs.getString(col++);
-							x.autoCorrection = rs.getString(col++);
-							x.rRs            = rs.getString(col++);
-							x.pRs            = rs.getString(col++);
-							x.dynamicSql     = rs.getString(col++);
+							x.name           = StringUtils.trim(rs.getString(col++));
+							x.rdName         = StringUtils.trim(rs.getString(col++));
+							x.rDsDb          = StringUtils.trim(rs.getString(col++));
+							x.autoCorrection = StringUtils.trim(rs.getString(col++));
+							x.rRs            = StringUtils.trim(rs.getString(col++));
+							x.pRs            = StringUtils.trim(rs.getString(col++));
+							x.dynamicSql     = StringUtils.trim(rs.getString(col++));
 
 							x._type = "TSUB";
 							x._desc = "Table Subscription";
@@ -1037,19 +1038,19 @@ extends CompletionProviderAbstract
 							RsDbRepDef x = new RsDbRepDef();
 
 							int col = 1;
-							x.name     = rs.getString(col++);
-							x.pDsDb    = rs.getString(col++);
-							x.pRs      = rs.getString(col++);
-							x.repDDL   = rs.getString(col++);
-							x.repSys   = rs.getString(col++);
-							x.repTable = rs.getString(col++);
-							x.repFunc  = rs.getString(col++);
-							x.repTran  = rs.getString(col++);
-							x.repUpd   = rs.getString(col++);
-							x.repDel   = rs.getString(col++);
-							x.repIns   = rs.getString(col++);
-							x.repSel   = rs.getString(col++);
-							x.crDate   = rs.getString(col++);
+							x.name     = StringUtils.trim(rs.getString(col++));
+							x.pDsDb    = StringUtils.trim(rs.getString(col++));
+							x.pRs      = StringUtils.trim(rs.getString(col++));
+							x.repDDL   = StringUtils.trim(rs.getString(col++));
+							x.repSys   = StringUtils.trim(rs.getString(col++));
+							x.repTable = StringUtils.trim(rs.getString(col++));
+							x.repFunc  = StringUtils.trim(rs.getString(col++));
+							x.repTran  = StringUtils.trim(rs.getString(col++));
+							x.repUpd   = StringUtils.trim(rs.getString(col++));
+							x.repDel   = StringUtils.trim(rs.getString(col++));
+							x.repIns   = StringUtils.trim(rs.getString(col++));
+							x.repSel   = StringUtils.trim(rs.getString(col++));
+							x.crDate   = StringUtils.trim(rs.getString(col++));
 
 							x._type = "DBRD";
 							x._desc = "Database Replication Definition";
@@ -1073,17 +1074,17 @@ extends CompletionProviderAbstract
 							RsDbSub x = new RsDbSub();
 
 							int col = 1;
-							x.name        = rs.getString(col++);
-							x.rDsDb       = rs.getString(col++);
-							x.rRs         = rs.getString(col++);
-							x.statusAtRrs = rs.getString(col++);
-							x.dbRdName    = rs.getString(col++);
-							x.pDsDb       = rs.getString(col++);
-							x.pRs         = rs.getString(col++);
-							x.statusAtPrs = rs.getString(col++);
-							x.method      = rs.getString(col++);
-							x.truncTable  = rs.getString(col++);
-							x.crDate      = rs.getString(col++);
+							x.name        = StringUtils.trim(rs.getString(col++));
+							x.rDsDb       = StringUtils.trim(rs.getString(col++));
+							x.rRs         = StringUtils.trim(rs.getString(col++));
+							x.statusAtRrs = StringUtils.trim(rs.getString(col++));
+							x.dbRdName    = StringUtils.trim(rs.getString(col++));
+							x.pDsDb       = StringUtils.trim(rs.getString(col++));
+							x.pRs         = StringUtils.trim(rs.getString(col++));
+							x.statusAtPrs = StringUtils.trim(rs.getString(col++));
+							x.method      = StringUtils.trim(rs.getString(col++));
+							x.truncTable  = StringUtils.trim(rs.getString(col++));
+							x.crDate      = StringUtils.trim(rs.getString(col++));
 
 							x._type = "DBSUB";
 							x._desc = "Database Subscription";

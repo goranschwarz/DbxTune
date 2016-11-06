@@ -10,11 +10,11 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JLabel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.gui.swing.MultiLineLabel;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class WizardOfflinePage6

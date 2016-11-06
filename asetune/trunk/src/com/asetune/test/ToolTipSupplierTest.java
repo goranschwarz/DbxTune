@@ -16,7 +16,6 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.ToolTipSupplier;
 
 import com.asetune.gui.focusabletip.ResolverReturn;
-import com.asetune.gui.focusabletip.ResolverReturn.Type;
 import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.SwingUtils;

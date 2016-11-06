@@ -12,8 +12,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.text.BadLocationException;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.ToolTipSupplier;
@@ -26,6 +24,8 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public abstract class ToolTipSupplierAbstract
 implements ToolTipSupplier

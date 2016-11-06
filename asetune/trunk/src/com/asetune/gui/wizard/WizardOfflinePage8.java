@@ -16,12 +16,12 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.StringUtil;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class WizardOfflinePage8

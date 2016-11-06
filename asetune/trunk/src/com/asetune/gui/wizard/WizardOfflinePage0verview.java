@@ -5,12 +5,12 @@ package com.asetune.gui.wizard;
 
 import java.awt.Dimension;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;
+
+import net.miginfocom.swing.MigLayout;
 
 
 public class WizardOfflinePage0verview

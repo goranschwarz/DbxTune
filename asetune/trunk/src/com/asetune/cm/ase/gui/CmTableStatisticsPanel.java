@@ -93,6 +93,20 @@ extends TabularCntrPanel
 			}
 		}, SwingUtils.parseColor(colorStr, Color.ORANGE), null));
 
+		// BLOB (text/image columns)
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.blob");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Number indexId = (Number) adapter.getValue(adapter.getColumnIndex("IndexID"));
+				if ( indexId != null && indexId.intValue() == 255)
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
+
 		// System Tables >>>> YELLOW
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.apl");
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()

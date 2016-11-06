@@ -1,10 +1,15 @@
 package com.asetune.hostmon;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.utils.Configuration;
+import com.asetune.utils.VersionShort;
 
 public class MonitorVmstatLinux
 extends MonitorVmstat
 {
+	private static Logger _logger = Logger.getLogger(MonitorVmstatLinux.class);
+
 	public MonitorVmstatLinux()
 	{
 		this(-1);
@@ -33,6 +38,8 @@ extends MonitorVmstat
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
+		_logger.info("When creating meta data for Linux 'vmstat', initializing it using utility version "+VersionShort.toStr(utilVersion));
+		
 //		if ( utilVersion >= VersionShort.toInt(99,99,99) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 //		{
 //			// Latest version should be in here...

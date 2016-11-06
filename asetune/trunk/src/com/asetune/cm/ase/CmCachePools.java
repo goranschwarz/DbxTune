@@ -40,6 +40,11 @@ extends CountersModel
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"The cahces has 2K or 16K pools, how are they behaving?" +
+		"<br><br>" +
+		"Table Background colors:" +
+		"<ul>" +
+		"    <li>RED - Column 'Stalls' is above 0. Number of times I/O operation was delayed because no clean buffers were available in the 'wash area'.</li>" +
+		"</ul>" +
 		"</html>";
 
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
@@ -54,6 +59,7 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {"PhysicalReadsPct", "APFReadsPct", "CacheUtilization", "CacheEfficiency", "CacheEfficiencySlide", "CacheReplacementPct", "CacheReplacementSlidePct", "CacheHitRate"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
+		"PagesTouchedDiff", "UsedSizeInMbDiff", "UnUsedSizeInMbDiff", 
 		"PagesRead", "PhysicalReads", "Stalls", "BuffersToMRU", "BuffersToLRU", 
 		"LogicalReads", "PhysicalWrites", "APFReads"};
 
@@ -199,6 +205,23 @@ extends CountersModel
 			                                                       "<b>Formula</b>: AllocatedKB / 1024 <br>" +
 			                                                 "</html>");
 
+			mtd.addColumn("monCachePool",  "PagesTouchedDiff",   "<html>" +
+			                                                       "Same a 'PagesTouched' (pages in use), but difference calculated.<br>" +
+			                                                       "<b>Formula</b>: PagesTouched<br>" +
+			                                                     "</html>");
+
+			mtd.addColumn("monCachePool",  "UnUsedSizeInMbDiff", "<html>" +
+			                                                       "How many MB of the cache is not used, same as 'UnUsedSizeInMb' but diff calculated.<br>" +
+			                                                       "If anything is unused, it means that we have more space in the cache.<br>" +
+			                                                       "<b>Formula</b>: abs.AllocatedPages / abs.PagesTouched ... but in MB instead of pages.<br>" +
+			                                                     "</html>");
+
+			mtd.addColumn("monCachePool",  "UsedSizeInMbDiff",   "<html>" +
+			                                                       "How many MB of the cache is <b>used</b>, same as 'UsedSizeInMb' but diff calculated.<br>" +
+			                                                       "Also look at the value <code>UnUsedSizeInMb</code> which is the <i>same</i> thing, but the other way around.<br>" +
+			                                                       "<b>Formula</b>: abs.PagesTouched ... but in MB instead of pages.<br>" +
+			                                                     "</html>");
+
 			mtd.addColumn("monCachePool",  "UnUsedSizeInMb", "<html>" +
 			                                                       "How many MB of the cache is not used.<br>" +
 			                                                       "If anything is unused, it means that we have more space in the cache.<br>" +
@@ -319,18 +342,21 @@ extends CountersModel
 
 		cols1 += "CacheName, \n" +
 		         "CacheID, \n" +
-		         "SrvPageSize      = @@maxpagesize, \n" +
+		         "SrvPageSize        = @@maxpagesize, \n" +
 		         "IOBufferSize, \n" +
 		         WashSize +
 		         APFPercentage +
-		         "PagesPerIO       = IOBufferSize/@@maxpagesize, \n" +
-		         "AllocatedMb      = AllocatedKB / 1024, \n" +
+		         "PagesPerIO         = IOBufferSize/@@maxpagesize, \n" +
+		         "AllocatedMb        = AllocatedKB / 1024, \n" +
 		         "AllocatedKB, \n" +
-		         "AllocatedPages   = convert(int,AllocatedKB*(1024.0/@@maxpagesize)), \n" +
+		         "AllocatedPages     = convert(int,AllocatedKB*(1024.0/@@maxpagesize)), \n" +
+		         "PagesTouchedDiff   = PagesTouched, \n" +
+		         "UsedSizeInMbDiff   = convert(int, PagesTouched / (1024*1024/@@maxpagesize) ), \n" +
+		         "UnUsedSizeInMbDiff = convert(int, ((AllocatedKB*(1024.0/@@maxpagesize)) - PagesTouched) / (1024*1024/@@maxpagesize) ), \n" +
 		         "PagesTouched, \n" +
-		         "UsedSizeInMb     = convert(int, PagesTouched / (1024*1024/@@maxpagesize) ), \n" +
-		         "UnUsedSizeInMb   = convert(int, ((AllocatedKB*(1024.0/@@maxpagesize)) - PagesTouched) / (1024*1024/@@maxpagesize) ), \n" +
-		         "CacheUtilization = convert(numeric(12,1), PagesTouched / (AllocatedKB*(1024.0/@@maxpagesize)) * 100.0), \n" +
+		         "UsedSizeInMb       = convert(int, PagesTouched / (1024*1024/@@maxpagesize) ), \n" +
+		         "UnUsedSizeInMb     = convert(int, ((AllocatedKB*(1024.0/@@maxpagesize)) - PagesTouched) / (1024*1024/@@maxpagesize) ), \n" +
+		         "CacheUtilization   = convert(numeric(12,1), PagesTouched / (AllocatedKB*(1024.0/@@maxpagesize)) * 100.0), \n" +
 		         LogicalReads + 
 		         "PagesRead, \n" +
 		         CacheHitRate +

@@ -9,12 +9,12 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -120,7 +120,8 @@ extends SqlStatementAbstract
 	throws SQLException, PipeCommandException
 //	throws PipeCommandException
 	{
-		String params = input.substring(input.indexOf(' ') + 1).trim();
+//		String params = input.substring(input.indexOf(' ') + 1).trim();
+		String params = input.replace("\\loadfile", "").trim();
 
 		_args = StringUtil.translateCommandline(params);
 
@@ -293,8 +294,8 @@ extends SqlStatementAbstract
 		sb.append("  -c,--charset <name>          File content Characterset name  DEFAULT=guessed by the content\n");
 		sb.append("  -C,--check_and_stop          Try to add first record, but then rollback\n");
 		sb.append("                               Note: this can be used to check if everything works.\n");
-		sb.append("  -B,--batchsize               Commit every X record           DEFAULT=0, All in One tran\n");
-		sb.append("  -b,--sendbatchsize           Send batch of records           DEFAULT=1000\n");
+		sb.append("  -B,--batchSize               Commit every X record           DEFAULT=0, All in One tran\n");
+		sb.append("  -b,--sendBatchSize           Send batch of records           DEFAULT=1000\n");
 //		sb.append("  -n,--noGuiQuestion           Do not show GUI questions for file overwrite\n");
 		sb.append("  -t,--truncateTable           Truncate or delete records from the table at start.\n");
 //		sb.append("  -t,--type                    What type of file is this\n");
@@ -395,13 +396,22 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 		int fileColCount = 0;
 		try
 		{
-			CSVFormat format = CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+			CSVFormat format = _params._noheader 
+					? CSVFormat.DEFAULT.withIgnoreEmptyLines() 
+					: CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+//			CSVFormat format = CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+//			if (_params._noheader)
+//			{
+//System.out.println("Setting CSVFormat: format.withSkipHeaderRecord()");
+//				format = format.withSkipHeaderRecord();
+//			}
+//System.out.println("CSVFormat: format="+format.toString());
 			CSVParser parser = CSVParser.parse(new File(_params._filename), Charset.forName(_params._charset), format);
 			
 			// Create a list which would hold first X rows, so we can view content.
 			_filePreview = new ArrayList<List<Object>>();
 
-			// Copy the header map, if thete is one.
+			// Copy the header map, if there is one.
 			_fileColumnMap = parser.getHeaderMap();
 
 			// Loop first rows and add it 
@@ -426,6 +436,14 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 					break;
 			}
 			parser.close();
+
+			// if there wasn't any header, create some dummy field headers: f1, f2, f3
+			if (_fileColumnMap == null)
+			{
+				_fileColumnMap = new LinkedHashMap<String, Integer>();
+				for (int c=0; c<fileColCount; c++)
+					_fileColumnMap.put("f"+(c+1), c);
+			}
 		}
 		catch (IOException e)
 		{
@@ -625,7 +643,10 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 //			CSVFormat format = CSVFormat.EXCEL;
 //			CSVFormat format = CSVFormat.DEFAULT.withSkipHeaderRecord(false).withDelimiter(',').withIgnoreEmptyLines(true).withIgnoreSurroundingSpaces(true);
 			//withSkipHeaderRecord(true);
-			CSVFormat format = CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+//			CSVFormat format = CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+			CSVFormat format = _params._noheader 
+					? CSVFormat.DEFAULT.withIgnoreEmptyLines() 
+					: CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
 			
 			CSVParser parser = CSVParser.parse(new File(_params._filename), Charset.forName(_params._charset), format);
 //			Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(reader);
@@ -713,7 +734,7 @@ addResultMessage("parser format: "+format.toString());
 				skipInfo = "Skipped "+skippedRecordsList.size()+" records due to issues. ";
 			
 			BigDecimal rowsPerSec = new BigDecimal(String.valueOf(_rowsInserted*1000.0/execTime)).setScale(1, BigDecimal.ROUND_HALF_UP);
-			addResultMessage("Added "+_rowsInserted+" rows to table '"+_params._tablename+"'. "+skipInfo+"Using time "+TimeUtils.msToTimeStr("%MM:%SS.%ms", execTime)+". Which is "+rowsPerSec+" records per second.");
+			addResultMessage("Added "+_rowsInserted+" rows to table '"+_params._tablename+"'. "+skipInfo+"Using time "+TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", execTime)+". Which is "+rowsPerSec+" records per second.");
 		}
 		catch (SQLException e)
 		{

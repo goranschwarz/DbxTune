@@ -6,6 +6,7 @@ package com.asetune.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
@@ -13,6 +14,8 @@ import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
@@ -102,6 +105,7 @@ import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ConnectionProfile.DbxTuneParams;
+import com.asetune.gui.ConnectionProfileManager.ProfileType;
 import com.asetune.gui.focusabletip.FocusableTipExtention;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.gui.swing.GLabel;
@@ -166,6 +170,12 @@ public class ConnectionDialog
 	private static final String  PROPKEY_CONN_TABED_PANEL_VISIBLE    = "conn.panel.tabed.isVisible";
 	private static final boolean DEFAULT_CONN_TABED_PANEL_VISIBLE    = true;
 
+	private static final String  PROPKEY_CONN_SPLITPANE_DIVIDER_LOCATION = "conn.splitpane.dividerLocation";
+	private static final int     DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION = SwingUtils.hiDpiScale(150);
+	
+	public  static final String  PROPKEY_CONN_SQLSERVER_WIN_AUTH     = "conn.jdbc.sqlserver.windows.authentication";
+	public  static final boolean DEFAULT_CONN_SQLSERVER_WIN_AUTH     = false;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_RECONNECT_ON_FAILURE,       DEFAULT_RECONNECT_ON_FAILURE);
@@ -211,10 +221,10 @@ public class ConnectionDialog
 	private static final String TAB_TITLE_OFFLINE  = "Load Recorded Sessions";
 	private static final String TAB_TITLE_JDBC     = "JDBC";
 
-	private static final int    DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION = SwingUtils.hiDpiScale(150);
-	
-	private static final String NO_TEMPLATE_IS_SELECTED = "<choose a template>";
-	private static final String NO_PROFILE_IS_SELECTED  = "<choose a profile>";
+	private static final String      NO_TEMPLATE_IS_SELECTED       = "<choose a template>";
+	private static final String      NO_PROFILE_IS_SELECTED        = "<choose a profile>";
+	private static final ProfileType NO_PROFILE_TYPE_IS_SELECTED   = new ProfileType("&lt;choose type&gt;");
+	private static final ProfileType EDIT_PROFILE_TYPE_IS_SELECTED = new ProfileType("<b>Edit Types...</b>");
 
 	//-------------------------------------------------
 	// Actions
@@ -239,6 +249,8 @@ public class ConnectionDialog
 	private JLabel               _aseProfile_lbl     = new JLabel("Use Profile");
 	private ProfileComboBoxModel _aseProfile_mod     = new ProfileComboBoxModel(ConnectionProfile.Type.TDS);
 	private JComboBox<String>    _aseProfile_cbx     = new JComboBox<String>(_aseProfile_mod);
+	private ProfileTypeComboBoxModel _aseProfileType_mod = new ProfileTypeComboBoxModel();
+	private JComboBox<ProfileType>   _aseProfileType_cbx = new JComboBox<ProfileType>(_aseProfileType_mod);
 	private JButton              _aseProfileSave_but = new JButton("Save Profile...");
 	private ImageIcon            _aseLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
 	private JLabel               _aseLoginIcon       = new JLabel(_aseLoginImageIcon);
@@ -399,6 +411,8 @@ public class ConnectionDialog
 	private JLabel               _offlineProfile_lbl               = new JLabel("Use Profile");
 	private ProfileComboBoxModel _offlineProfile_mod               = new ProfileComboBoxModel(ConnectionProfile.Type.OFFLINE);
 	private JComboBox<String>    _offlineProfile_cbx               = new JComboBox<String>(_offlineProfile_mod);
+	private ProfileTypeComboBoxModel _offlineProfileType_mod       = new ProfileTypeComboBoxModel();
+	private JComboBox<ProfileType>   _offlineProfileType_cbx       = new JComboBox<ProfileType>(_offlineProfileType_mod);
 	private JButton              _offlineProfileSave_but           = new JButton("Save Profile...");
 	private JLabel               _offlineJdbcDriver_lbl            = new JLabel("JDBC Driver");
 	private JComboBox<String>    _offlineJdbcDriver_cbx            = new JComboBox<String>();
@@ -439,6 +453,8 @@ public class ConnectionDialog
 	private JLabel               _jdbcProfile_lbl      = new JLabel("Use Profile");
 	private ProfileComboBoxModel _jdbcProfile_mod      = new ProfileComboBoxModel(ConnectionProfile.Type.JDBC);
 	private JComboBox<String>    _jdbcProfile_cbx      = new JComboBox<String>(_jdbcProfile_mod);
+	private ProfileTypeComboBoxModel _jdbcProfileType_mod = new ProfileTypeComboBoxModel();
+	private JComboBox<ProfileType>   _jdbcProfileType_cbx = new JComboBox<ProfileType>(_jdbcProfileType_mod);
 	private JButton              _jdbcProfileSave_but  = new JButton("Save Profile...");
 	private JLabel               _jdbcDriver_lbl       = new JLabel("JDBC Driver");
 	private JComboBox<String>    _jdbcDriver_cbx       = new JComboBox<String>();
@@ -463,6 +479,8 @@ public class ConnectionDialog
 	private JLabel               _jdbcSshTunnelDesc_lbl   = new JLabel();
 	private JButton              _jdbcSshTunnel_but       = new JButton("SSH Settings...");
 
+	//---- JDBC proprietary fields
+	private JCheckBox            _jdbcSqlServerUseWindowsAuthentication_chk = new JCheckBox("Use Windows Authentication", DEFAULT_CONN_SQLSERVER_WIN_AUTH);
 
 	//---- JDBC Driver Info panel
 	private JPanel               _jdbcDriverInfoPanel      = null;
@@ -1113,9 +1131,11 @@ public class ConnectionDialog
 	public DbxConnection            getOfflineConn()    { return _offlineConn; }
 	public DbxConnection            getJdbcConn()       { return _jdbcConn; }
 
-	public SshTunnelInfo            getAseSshTunnelInfo()  { return _aseSshTunnelInfo; }
-	public SshTunnelInfo            getJdbcSshTunnelInfo() { return _jdbcSshTunnelInfo; }
-	
+	public boolean                  isAseSshTunnelSelected()  { return _aseSshTunnel_chk.isSelected(); }
+	public SshTunnelInfo            getAseSshTunnelInfo()     { return _aseSshTunnelInfo; }
+	public boolean                  isJdbcSshTunnelSelected() { return _jdbcSshTunnel_chk.isSelected(); }
+	public SshTunnelInfo            getJdbcSshTunnelInfo()    { return _jdbcSshTunnelInfo; }
+
 	public Date getDisConnectTime()
 	{
 		return _disConnectTime;
@@ -1284,6 +1304,15 @@ public class ConnectionDialog
 		aseDeferredConnectChkAction(null);
 		aseDeferredDisConnectChkAction(null);
 
+		// Save window & divider location etc... 
+		_connTabbedPanel.addComponentListener(new ComponentAdapter()
+		{
+			@Override
+			public void componentResized(ComponentEvent e)
+			{
+				saveWindowProps();
+			}
+		});
 		setContentPane(panel);
 	}
 
@@ -1941,6 +1970,7 @@ public class ConnectionDialog
 
 		_aseProfile_lbl     .setToolTipText("Choose an earlier sessions that was saved");
 		_aseProfile_cbx     .setToolTipText("Choose an earlier sessions that was saved");
+		_aseProfileType_cbx .setToolTipText("Set a Connection Profile Type, which you can set border colors etc...");
 		_aseProfileSave_but .setToolTipText("<html>Save the profile<br><ul>"
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
@@ -1991,8 +2021,10 @@ public class ConnectionDialog
 
 		panel.add(_aseProfile_lbl,       "");
 		panel.add(_aseProfile_cbx,       "push, grow, split");
+		panel.add(_aseProfileType_cbx,   "");
 		panel.add(_aseProfileSave_but,   "wrap");
 		_aseProfile_cbx.setEditable(false);
+		_aseProfileType_cbx.setEditable(false);
 
 //		_ifile_txt.setEditable(false);
 		panel.add(_aseIfile_lbl,         "");
@@ -2043,6 +2075,7 @@ public class ConnectionDialog
 
 		// ADD ACTION LISTENERS
 		_aseProfile_cbx      .addActionListener(this);
+		_aseProfileType_cbx  .addActionListener(this);
 		_aseProfileSave_but  .addActionListener(this);
 		_aseServer_cbx       .addActionListener(this);
 		_aseOptions_txt      .addActionListener(this);
@@ -2731,6 +2764,7 @@ public class ConnectionDialog
 
 		_offlineProfile_lbl     .setToolTipText("Choose an earlier sessions that was saved");
 		_offlineProfile_cbx     .setToolTipText("Choose an earlier sessions that was saved");
+		_offlineProfileType_cbx .setToolTipText("Set a Connection Profile Type, which you can set border colors etc...");
 		_offlineProfileSave_but .setToolTipText("<html>Save the profile<br><ul>"
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
@@ -2757,6 +2791,7 @@ public class ConnectionDialog
 
 		panel.add(_offlineProfile_lbl,      "");
 		panel.add(_offlineProfile_cbx,      "push, grow, split");
+		panel.add(_offlineProfileType_cbx,   "");
 		panel.add(_offlineProfileSave_but,  "wrap");
 
 		panel.add(_offlineJdbcDriver_lbl,   "");
@@ -2780,9 +2815,10 @@ public class ConnectionDialog
 		panel.add(_offlineTestConn_but, "skip, right, wrap");
 //		panel.add(_offlineWhatCm_but, "skip 1, right, wrap");
 
-		_offlineProfile_cbx   .setEditable(false);
-		_offlineJdbcDriver_cbx.setEditable(true);
-		_offlineJdbcUrl_cbx   .setEditable(true);
+		_offlineProfile_cbx    .setEditable(false);
+		_offlineProfileType_cbx.setEditable(false);
+		_offlineJdbcDriver_cbx .setEditable(true);
+		_offlineJdbcUrl_cbx    .setEditable(true);
 		
 		_offlineJdbcDriver_cbx.addItem("org.h2.Driver");
 		_offlineJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
@@ -2801,6 +2837,7 @@ public class ConnectionDialog
 		
 		// ACTIONS
 		_offlineProfile_cbx     .addActionListener(this);
+		_offlineProfileType_cbx .addActionListener(this);
 		_offlineProfileSave_but .addActionListener(this);
 		_offlineJdbcDriver_cbx  .addActionListener(this);
 		_offlineTestConn_but    .addActionListener(this);
@@ -2871,6 +2908,7 @@ public class ConnectionDialog
 
 		_jdbcProfile_lbl    .setToolTipText("Choose an earlier sessions that was saved");
 		_jdbcProfile_cbx    .setToolTipText("Choose an earlier sessions that was saved");
+		_jdbcProfileType_cbx.setToolTipText("Set a Connection Profile Type, which you can set border colors etc...");
 		_jdbcProfileSave_but.setToolTipText("<html>Save the profile<br><ul>"
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
@@ -2884,6 +2922,7 @@ public class ConnectionDialog
 		_jdbcUsername_txt  .setToolTipText("User name to be used when creating the connection");
 		_jdbcPassword_lbl  .setToolTipText("Password to be used when creating the connection");
 		_jdbcPassword_txt  .setToolTipText("Password to be used when creating the connection");
+		_jdbcSqlServerUseWindowsAuthentication_chk.setToolTipText("Use Windows Authentication subsystem when connecting.");
 		_jdbcSqlInit_lbl   .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
 		_jdbcSqlInit_txt   .setToolTipText("<html>Send this SQL Statement after the connection has been established.<br>If you want to send several statements, use ';' as a teminator for each statement.</html>");
 		_jdbcUrlOptions_lbl.setToolTipText("<html>If the current Driver supports <code>driver.getPropertyInfo()</code>, show available Options.<br><b>NOTE</b>: You still have to copy the Option into the URL field yourself...</html>");
@@ -2914,6 +2953,7 @@ public class ConnectionDialog
 
 		panel.add(_jdbcProfile_lbl,      "");
 		panel.add(_jdbcProfile_cbx,      "push, grow, split");
+		panel.add(_jdbcProfileType_cbx,  "");
 		panel.add(_jdbcProfileSave_but,  "wrap");
 
 		panel.add(_jdbcDriver_lbl,       "");
@@ -2928,8 +2968,9 @@ public class ConnectionDialog
 
 		panel.add(_jdbcPassword_lbl,     "");
 		panel.add(_jdbcPassword_txt,     "push, grow, split");
+		panel.add(_jdbcSqlServerUseWindowsAuthentication_chk,     "hidemode 3");
 		panel.add(_jdbcSavePassword_chk, "wrap");
-		
+
 		panel.add(_jdbcSshTunnel_chk,    "skip, push, grow, split");
 		panel.add(_jdbcSshTunnel_but,    "wrap");
 		
@@ -2948,24 +2989,40 @@ public class ConnectionDialog
 		panel.add(_jdbcDriverInfo_but,   "hidemode 2");
 		panel.add(_jdbcTestConn_but,     "wrap");
 
-		_jdbcProfile_cbx.setEditable(false);
-		_jdbcDriver_cbx .setEditable(true);
-		_jdbcUrl_cbx    .setEditable(true);
+		_jdbcProfile_cbx    .setEditable(false);
+		_jdbcProfileType_cbx.setEditable(false);
+		_jdbcDriver_cbx     .setEditable(true);
+		_jdbcUrl_cbx        .setEditable(true);
 
+		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(false);
+
+		// NOTE: initialization of the getAvailableDriverList() is now asynchronous (since it takes a long time)
+		//       So therefore: I added the _jdbcDriver_cbx.addPopupMenuListener() which will add the JDBC Drivers at a later time.
 		List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
 		if (driversList.size() > 0)
 		{
 			for (String str : driversList)
 				_jdbcDriver_cbx.addItem(str);
 		}
-		else
+		_jdbcDriver_cbx.addPopupMenuListener(new PopupMenuListener()
 		{
-			_jdbcDriver_cbx.addItem("org.h2.Driver");
-//			_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
-			_jdbcDriver_cbx.addItem("com.sybase.jdbc3.jdbc.SybDriver");
-			_jdbcDriver_cbx.addItem("com.sybase.jdbc4.jdbc.SybDriver");
-			_jdbcDriver_cbx.addItem("com.sap.db.jdbc.Driver");
-		}
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent paramPopupMenuEvent)
+			{
+				if (_jdbcDriver_cbx.getItemCount() == 0)
+				{
+					List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
+					if (driversList.size() > 0)
+					{
+						for (String str : driversList)
+							_jdbcDriver_cbx.addItem(str);
+					}
+				}
+			}
+			
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent paramPopupMenuEvent) {}
+			@Override public void popupMenuCanceled(PopupMenuEvent paramPopupMenuEvent) {}
+		});
 
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
@@ -2981,13 +3038,16 @@ public class ConnectionDialog
 		
 		// ACTIONS
 		_jdbcProfile_cbx    .addActionListener(this);
+		_jdbcProfileType_cbx.addActionListener(this);
 		_jdbcProfileSave_but.addActionListener(this);
 		_jdbcDriver_cbx     .addActionListener(this);
 		_jdbcTestConn_but   .addActionListener(this);
 		_jdbcUrl_cbx        .getEditor().getEditorComponent().addKeyListener(this);
 		_jdbcUrl_cbx        .addActionListener(this);
 		_jdbcPassword_txt   .addActionListener(this);
+		_jdbcSqlServerUseWindowsAuthentication_chk.addActionListener(this);
 		_jdbcUrl_but        .addActionListener(this);
+		_jdbcUrlOptions_txt .addActionListener(this);
 		_jdbcUrlOptions_but .addActionListener(this);
 		_jdbcSshTunnel_chk  .addActionListener(this);
 		_jdbcSshTunnel_but  .addActionListener(this);
@@ -3000,7 +3060,7 @@ public class ConnectionDialog
 
 		return panel;
 	}
-
+	
 	private JPanel createJdbcDriverInfoPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("JDBC Driver Information", true);
@@ -4195,6 +4255,17 @@ public class ConnectionDialog
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             entry._pcsWriterDdlLookup);
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue, entry._pcsWriterDdlStoreDependantObjects);
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     entry._pcsWriterDdlLookupSleepTime);
+
+						// SQL Capture
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , entry._pcsWriterCapSql_doSqlCaptureAndStore             );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , entry._pcsWriterCapSql_doSqlText                        );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , entry._pcsWriterCapSql_doStatementInfo                  );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , entry._pcsWriterCapSql_doPlanText                       );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , entry._pcsWriterCapSql_sleepTimeInMs                    );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , entry._pcsWriterCapSql_sendDdlForLookup                 );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 					}
 					else
 					{
@@ -4209,6 +4280,17 @@ public class ConnectionDialog
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             _pcsDdl_doDdlLookupAndStore_chk            .isSelected() + "");
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue, _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() + "");
 						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText());
+
+						// SQL Capture
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText());
+						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText());
 					}
 				}
 			}
@@ -5475,19 +5557,37 @@ if ( ! jdbcSshTunnelUse )
 		// --- JDBC COMBOBOX: JDBC DRIVER ---
 		if (_jdbcDriver_cbx.equals(source))
 		{
-//			String jdbcDriver = _jdbcDriver_cbx.getEditor().getItem().toString();
 			String jdbcDriver = StringUtil.getSelectedItemString(_jdbcDriver_cbx);
 
-			// Get templates
-			List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
-			if (urlTemplates != null && urlTemplates.size() > 0)
-			{
-				_jdbcUrl_cbx.removeAllItems();
-				for (String template : urlTemplates)
-					_jdbcUrl_cbx.addItem(template);
-			}
+			// Get/Set templates
+			setJdbcUrlTemplates(jdbcDriver);
 		}
 		
+		// --- JDBC COMBOBOX: URL ---
+		if (_jdbcUrl_cbx.equals(source))
+		{
+			String url = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
+
+			// Show or hide the MS SQL-Server Windows Authentication CheckBox
+			_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
+		}
+		
+		// --- JDBC: CHECKBOX: "Windows Authentication" 
+		if (_jdbcSqlServerUseWindowsAuthentication_chk.equals(source))
+		{
+			boolean useWinAuth = _jdbcSqlServerUseWindowsAuthentication_chk.isSelected();
+			
+			Map<String,String> optionsMap  = StringUtil.parseCommaStrToMap(_jdbcUrlOptions_txt.getText());
+
+			if (useWinAuth)
+				optionsMap.put("integratedSecurity", "true");
+			else
+				optionsMap.remove("integratedSecurity");
+
+			setJdbcUrlOptions(optionsMap);
+		}
+
+
 		// --- JDBC: BUTTON: "..." 
 		if (_jdbcUrl_but.equals(source))
 		{
@@ -5603,7 +5703,7 @@ if ( ! jdbcSshTunnelUse )
 			dialog.setVisible(true);
 		}
 
-		// --- ASE: jConnect Options BUTTON: "..."  (open dialig to choose available options)
+		// --- JDBC: Options BUTTON: "..."  (open dialig to choose available options)
 		if (_jdbcUrlOptions_but.equals(source))
 		{
 			Map<String,String> sendOpt = StringUtil.parseCommaStrToMap(_jdbcUrlOptions_txt.getText());
@@ -5611,7 +5711,11 @@ if ( ! jdbcSshTunnelUse )
 			Map<String,String> outOpt = JdbcOptionsDialog.showDialog(this, StringUtil.getSelectedItemString(_jdbcDriver_cbx), StringUtil.getSelectedItemString(_jdbcUrl_cbx), sendOpt);
 			// null == CANCEL
 			if (outOpt != null)
-				_jdbcUrlOptions_txt.setText(StringUtil.toCommaStr(outOpt));
+				setJdbcUrlOptions(outOpt);
+		}
+		if (_jdbcUrlOptions_txt.equals(source))
+		{
+			setJdbcUrlOptions(_jdbcUrlOptions_txt.getText());
 		}
 
 		// --- BUTTON: CANCEL ---
@@ -5723,6 +5827,10 @@ if ( ! jdbcSshTunnelUse )
 			else
 				_aseServerIcon.setIcon(_aseServerImageIcon);
 		}
+		if (_aseProfileType_cbx.equals(source))
+		{
+			action_ConnectionProfileTypeIsSelected(_aseProfileType_cbx, _aseProfile_cbx);
+		}
 		if (_aseProfileSave_but.equals(source))
 		{
 			updateConnectionProfile(TDS_CONN, false, StringUtil.getSelectedItemString(_aseProfile_cbx), null);
@@ -5737,6 +5845,10 @@ if ( ! jdbcSshTunnelUse )
 				load(connProfile);
 			else
 				_jdbcIcon.setIcon(_jdbcImageIcon);
+		}
+		if (_jdbcProfileType_cbx.equals(source))
+		{
+			action_ConnectionProfileTypeIsSelected(_jdbcProfileType_cbx, _jdbcProfile_cbx);
 		}
 		if (_jdbcProfileSave_but.equals(source))
 		{
@@ -5753,6 +5865,10 @@ if ( ! jdbcSshTunnelUse )
 				load(connProfile);
 			}
 		}
+		if (_offlineProfileType_cbx.equals(source))
+		{
+			action_ConnectionProfileTypeIsSelected(_offlineProfileType_cbx, _offlineProfile_cbx);
+		}
 		if (_offlineProfileSave_but.equals(source))
 		{
 			updateConnectionProfile(OFFLINE_CONN, false, StringUtil.getSelectedItemString(_offlineProfile_cbx), null);
@@ -5766,6 +5882,104 @@ if ( ! jdbcSshTunnelUse )
 		
 		validateContents();
 	}
+
+	private void action_ConnectionProfileTypeIsSelected(JComboBox<ProfileType> profileType_cbx, JComboBox<String> profile_cbx)
+	{
+//		String profileType = StringUtil.getSelectedItemString(profileType_cbx);
+//		if (NO_PROFILE_TYPE_IS_SELECTED.equals(profileType))
+//		{
+//			// Do nothing
+//		}
+//		if (EDIT_PROFILE_TYPE_IS_SELECTED.equals(profileType))
+//		{
+//			System.out.println("OPEN 'PROFILE_TYPE' EDITOR --- NOT-YET-IMPLEMENTED");
+//		}
+//		else
+//		{
+//			String profileName = StringUtil.getSelectedItemString(profile_cbx);
+//			ConnectionProfile connProfile = ConnectionProfileManager.getInstance().getProfile(profileName);
+//			if (connProfile != null)
+//				connProfile.setProfileType(profileType);
+//			setConnectionProfileType(profileType);
+//		}
+		
+		ProfileType profileType = (ProfileType) profileType_cbx.getSelectedItem();
+		if (profileType == null)
+			return;
+
+		if (NO_PROFILE_TYPE_IS_SELECTED.equals(profileType))
+		{
+			// Do nothing
+		}
+		else if (EDIT_PROFILE_TYPE_IS_SELECTED.equals(profileType))
+		{
+			ConnectionProfileTypeDialog dialog = new ConnectionProfileTypeDialog(this);
+			dialog.setVisible(true);
+			
+			if (dialog.wasOkPressed())
+			{
+				// TODO: maybe remember each of the selected items, and restore it after refresh
+				_aseProfileType_mod    .refresh();
+				_jdbcProfileType_mod   .refresh();
+				_offlineProfileType_mod.refresh();
+				
+				_aseProfileType_mod    .setSelectedItem(NO_PROFILE_TYPE_IS_SELECTED);
+				_jdbcProfileType_mod   .setSelectedItem(NO_PROFILE_TYPE_IS_SELECTED);
+				_offlineProfileType_mod.setSelectedItem(NO_PROFILE_TYPE_IS_SELECTED);
+			}
+		}
+		else
+		{
+			// Set the border on the ConnectionDialog
+			setBorderForConnectionProfileTypeName(profileType.getName());
+
+// Not 100% sure we should do this here... SInce it's REALLY done in updateConnectionProfile() when a connection is made
+//			// Get the selected Connection Profile (if we have selected a profile)
+//			String profileName = StringUtil.getSelectedItemString(profile_cbx);
+//
+//			// Get the PROFILE and set the TYPE
+//			ConnectionProfile connProfile = ConnectionProfileManager.getInstance().getProfile(profileName);
+//			if (connProfile != null)
+//				connProfile.setProfileTypeName(profileType.getName());
+		}
+	}
+
+	private void setJdbcUrlTemplates(String jdbcDriver)
+	{
+		List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
+		if (urlTemplates != null && urlTemplates.size() > 0)
+		{
+			_jdbcUrl_cbx.removeAllItems();
+			for (String template : urlTemplates)
+				_jdbcUrl_cbx.addItem(template);
+		}
+
+		// Show or hide the MS SQL-Server Windows Authentication CheckBox
+		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+	}
+
+	private void setJdbcUrlOptions(Map<String, String> optionsMap)
+	{
+		if (optionsMap == null)
+		{
+			_jdbcUrlOptions_txt.setText("");
+			return;
+		}
+		_jdbcUrlOptions_txt.setText(StringUtil.toCommaStr(optionsMap, "=", ", "));
+		
+		// Show or hide the MS SQL-Server Windows Authentication CheckBox
+		String url = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
+		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
+
+		// MS SQL-Server: Windows authentication
+		String val = optionsMap.get("integratedSecurity");
+		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(val != null && val.equalsIgnoreCase("true"));
+	}
+	private void setJdbcUrlOptions(String optionsStr)
+	{
+		setJdbcUrlOptions(StringUtil.parseCommaStrToMap(optionsStr));
+	}
+
 
 	private void action_nwPasswdEncryption()
 	{
@@ -6392,6 +6606,7 @@ if ( ! jdbcSshTunnelUse )
 			String key = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
 
 			ConnectionProfile.TdsEntry tds = new ConnectionProfile.TdsEntry(key);
+			tds._profileTypeName        = getSelectedConnectionProfileTypeName(connType);
 			tds._tdsIfile               = _aseIfile_txt .getText();
 			tds._tdsUsername            = _aseUser_txt  .getText();
 			tds._tdsPassword            = _asePasswd_txt.getText();
@@ -6467,6 +6682,7 @@ if ( ! jdbcSshTunnelUse )
 			String key = StringUtil.getSelectedItemString(_offlineJdbcUrl_cbx);
 
 			ConnectionProfile.OfflineEntry offline = new ConnectionProfile.OfflineEntry(); 
+			offline._profileTypeName  = getSelectedConnectionProfileTypeName(connType);
 			offline._jdbcDriver       = StringUtil.getSelectedItemString(_offlineJdbcDriver_cbx);
 			offline._jdbcUrl          = StringUtil.getSelectedItemString(_offlineJdbcUrl_cbx);
 			offline._jdbcUsername     = _offlineJdbcUsername_txt    .getText();
@@ -6485,6 +6701,7 @@ if ( ! jdbcSshTunnelUse )
 			String key = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
 
 			ConnectionProfile.JdbcEntry jdbc = new ConnectionProfile.JdbcEntry(); 
+			jdbc._profileTypeName        = getSelectedConnectionProfileTypeName(connType);
 			jdbc._jdbcDriver             = StringUtil.getSelectedItemString(_jdbcDriver_cbx);
 			jdbc._jdbcUrl                = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
 			jdbc._jdbcUsername           = _jdbcUsername_txt.getText();
@@ -6559,6 +6776,16 @@ if ( ! jdbcSshTunnelUse )
 			entry._pcsWriterDdlLookup                = _pcsDdl_doDdlLookupAndStore_chk            .isSelected();
 			entry._pcsWriterDdlStoreDependantObjects = _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected();
 			entry._pcsWriterDdlLookupSleepTime       = StringUtil.parseInt(_pcsDdl_afterDdlLookupSleepTimeInMs_txt.getText(), entry._pcsWriterDdlLookupSleepTime);
+
+			entry._pcsWriterCapSql_doSqlCaptureAndStore              =                     _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected();
+			entry._pcsWriterCapSql_doSqlText                         =                     _pcsCapSql_doSqlText_chk                    .isSelected();
+			entry._pcsWriterCapSql_doStatementInfo                   =                     _pcsCapSql_doStatementInfo_chk              .isSelected();
+			entry._pcsWriterCapSql_doPlanText                        =                     _pcsCapSql_doPlanText_chk                   .isSelected();
+			entry._pcsWriterCapSql_sleepTimeInMs                     = StringUtil.parseInt(_pcsCapSql_sleepTimeInMs_txt                .getText(), entry._pcsWriterCapSql_sleepTimeInMs);
+			entry._pcsWriterCapSql_sendDdlForLookup                  =                     _pcsCapSql_sendDdlForLookup_chk             .isSelected();
+			entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime      = StringUtil.parseInt(_pcsCapSql_sendDdlForLookup_execTime_txt    .getText(), entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+			entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = StringUtil.parseInt(_pcsCapSql_sendDdlForLookup_logicalRead_txt .getText(), entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+			entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = StringUtil.parseInt(_pcsCapSql_sendDdlForLookup_physicalRead_txt.getText(), entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 		}
 
 		return entry;
@@ -6608,6 +6835,16 @@ if ( ! jdbcSshTunnelUse )
 			_pcsDdl_doDdlLookupAndStore_chk            .setSelected(    entry._pcsWriterDdlLookup);
 			_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(    entry._pcsWriterDdlStoreDependantObjects);
 			_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setText(        entry._pcsWriterDdlLookupSleepTime+"");
+			
+			_pcsCapSql_doSqlCaptureAndStore_chk         .setSelected(entry._pcsWriterCapSql_doSqlCaptureAndStore             );
+			_pcsCapSql_doSqlText_chk                    .setSelected(entry._pcsWriterCapSql_doSqlText                        );
+			_pcsCapSql_doStatementInfo_chk              .setSelected(entry._pcsWriterCapSql_doStatementInfo                  );
+			_pcsCapSql_doPlanText_chk                   .setSelected(entry._pcsWriterCapSql_doPlanText                       );
+			_pcsCapSql_sleepTimeInMs_txt                .setText(""+ entry._pcsWriterCapSql_sleepTimeInMs                    );
+			_pcsCapSql_sendDdlForLookup_chk             .setSelected(entry._pcsWriterCapSql_sendDdlForLookup                 );
+			_pcsCapSql_sendDdlForLookup_execTime_txt    .setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+			_pcsCapSql_sendDdlForLookup_logicalRead_txt .setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+			_pcsCapSql_sendDdlForLookup_physicalRead_txt.setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 		}
 	}
 
@@ -6627,6 +6864,7 @@ if ( ! jdbcSshTunnelUse )
 
 				ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
 				
+				setConnectionProfileTypeName(connProfile, entry._profileTypeName);
 //				_aseIfile_txt              .setText(        entry._tdsIfile);
 				loadNewInterfaces(entry._tdsIfile);
 				_aseUser_txt               .setText(        entry._tdsUsername);
@@ -6708,12 +6946,15 @@ if ( ! jdbcSshTunnelUse )
 
 				ConnectionProfile.JdbcEntry entry = connProfile.getJdbcEntry(); 
 
+				setConnectionProfileTypeName(connProfile, entry._profileTypeName);
 				_jdbcDriver_cbx       .setSelectedItem(entry._jdbcDriver);
+				setJdbcUrlTemplates(entry._jdbcDriver);
 				_jdbcUrl_cbx          .setSelectedItem(entry._jdbcUrl);
 				_jdbcUsername_txt     .setText(        entry._jdbcUsername);
 				_jdbcPassword_txt     .setText(        entry._jdbcPassword);
 				_jdbcSqlInit_txt      .setText(        entry._jdbcSqlInit);
-				_jdbcUrlOptions_txt   .setText(        entry._jdbcUrlOptions);
+//				_jdbcUrlOptions_txt   .setText(        entry._jdbcUrlOptions);
+				setJdbcUrlOptions(entry._jdbcUrlOptions);
 				_jdbcSavePassword_chk .setSelected(    entry._jdbcSavePassword);
 //				_jdbcSshTunnelInfo = entry._jdbcShhTunnelInfo;            // NOT YET IMPLEMENTED
 				_jdbcSshTunnel_chk    .setSelected(    entry._jdbcShhTunnelUse);
@@ -6737,6 +6978,8 @@ if ( ! jdbcSshTunnelUse )
 				_offlineProfile_cbx.setSelectedItem(connProfile.getName());
 
 				ConnectionProfile.OfflineEntry entry = connProfile.getOfflineEntry();
+				
+				setConnectionProfileTypeName(connProfile, entry._profileTypeName);
 				_offlineJdbcDriver_cbx      .setSelectedItem(entry._jdbcDriver);
 				_offlineJdbcUrl_cbx         .setSelectedItem(entry._jdbcUrl);
 				_offlineJdbcUsername_txt    .setText(        entry._jdbcUsername);
@@ -7196,8 +7439,10 @@ if ( ! jdbcSshTunnelUse )
 		}
 
 		if (_connProfileVisible_chk.isSelected() && _connTabbedVisible_chk .isSelected())
-			conf.setLayoutProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
-//			conf.setProperty("conn.splitpane.dividerLocation",  _connSplitPane.getDividerLocation());
+		{
+			conf.setLayoutProperty(PROPKEY_CONN_SPLITPANE_DIVIDER_LOCATION,  _connSplitPane.getDividerLocation());
+//			System.out.println("saveProps(): "+PROPKEY_CONN_SPLITPANE_DIVIDER_LOCATION+" = "+_connSplitPane.getDividerLocation());
+		}
 		conf.setProperty(PROPKEY_CONN_PROFILE_PANEL_VISIBLE,    _connProfileVisible_chk.isSelected());
 		conf.setProperty(PROPKEY_CONN_TABED_PANEL_VISIBLE,      _connTabbedVisible_chk .isSelected());
 
@@ -7298,9 +7543,20 @@ if ( ! jdbcSshTunnelUse )
 				conf.setProperty    ("pcs.write.h2.startH2NetworkServer", false );
 
 			// DDL Lookup & Store
-			conf.setProperty        ("pcs.write.ddl.doDdlLookup",                     _pcsDdl_doDdlLookupAndStore_chk            .isSelected() );
-			conf.setProperty        ("pcs.write.ddl.addDependantObjectsToDdlInQueue", _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() );
-			conf.setProperty        ("pcs.write.ddl.afterDdlLookupSleepTimeInMs",     _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText() );
+			conf.setProperty        ("pcs.write.ddl.doDdlLookup",                              _pcsDdl_doDdlLookupAndStore_chk            .isSelected() );
+			conf.setProperty        ("pcs.write.ddl.addDependantObjectsToDdlInQueue",          _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() );
+			conf.setProperty        ("pcs.write.ddl.afterDdlLookupSleepTimeInMs",              _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText() );
+
+			// SQL Capture Lookup & Store
+			conf.setProperty        ("pcs.write.sqlCapture.doSqlCaptureAndStore",              _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected() );
+			conf.setProperty        ("pcs.write.sqlCapture.doSqlText",                         _pcsCapSql_doSqlText_chk                    .isSelected() );
+			conf.setProperty        ("pcs.write.sqlCapture.doStatementInfo",                   _pcsCapSql_doStatementInfo_chk              .isSelected() );
+			conf.setProperty        ("pcs.write.sqlCapture.doPlanText",                        _pcsCapSql_doPlanText_chk                   .isSelected() );
+			conf.setProperty        ("pcs.write.sqlCapture.sleepTimeInMs",                     _pcsCapSql_sleepTimeInMs_txt                .getText() );
+			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup",                  _pcsCapSql_sendDdlForLookup_chk             .isSelected() );
+			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup_gt_execTime",      _pcsCapSql_sendDdlForLookup_execTime_txt    .getText() );
+			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup_gt_logicalReads",  _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText() );
+			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup_gt_physicalReads", _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText() );
 
 			// The info in JTable is stored by the CM itself...
 		}
@@ -7340,6 +7596,9 @@ if ( ! jdbcSshTunnelUse )
 
 //			conf.setProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL,               _jdbcSshTunnel_chk.isSelected() );
 //			conf.setProperty(PROPKEY_CONN_JDBC_SSH_TUNNEL+"."+hostPort,  _jdbcSshTunnel_chk.isSelected() );
+
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH,             _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
+			conf.setProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH+"."+urlStr,  _jdbcSqlServerUseWindowsAuthentication_chk.isSelected() );
 		}
 
 		//------------------
@@ -7369,11 +7628,12 @@ if ( ! jdbcSshTunnelUse )
 			return;
 		}
 
-//		_lastKnownConnSplitPaneDividerLocation = conf.getIntProperty("conn.splitpane.dividerLocation", DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
-		_lastKnownConnSplitPaneDividerLocation = conf.getLayoutProperty("conn.splitpane.dividerLocation", DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
+		_lastKnownConnSplitPaneDividerLocation = conf.getLayoutProperty(PROPKEY_CONN_SPLITPANE_DIVIDER_LOCATION, DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION);
 		if (_lastKnownConnSplitPaneDividerLocation < 10)
 			_lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
 		_connSplitPane.setDividerLocation(_lastKnownConnSplitPaneDividerLocation);
+//System.out.println("loadProps(): "+PROPKEY_CONN_SPLITPANE_DIVIDER_LOCATION+" = "+_lastKnownConnSplitPaneDividerLocation);
+
 
 		if ( ! conf.getBooleanProperty(PROPKEY_CONN_PROFILE_PANEL_VISIBLE, DEFAULT_CONN_PROFILE_PANEL_VISIBLE) )
 			_connProfileVisible_chk.doClick();
@@ -7544,15 +7804,21 @@ if ( ! jdbcSshTunnelUse )
 		_pcsH2Option_startH2NetworkServer_chk.setSelected(bol);
 
 		// DDL Lookup & Store
-		bol = conf.getBooleanProperty("pcs.write.ddl.doDdlLookup", PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore );
-		_pcsDdl_doDdlLookupAndStore_chk.setSelected(bol);
-
-		bol = conf.getBooleanProperty("pcs.write.ddl.addDependantObjectsToDdlInQueue", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
-		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setSelected(bol);
-
-		str = conf.getProperty("pcs.write.ddl.afterDdlLookupSleepTimeInMs", PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs + "");
-		_pcsDdl_afterDdlLookupSleepTimeInMs_txt.setText(str);
+		_pcsDdl_doDdlLookupAndStore_chk             .setSelected(conf.getBooleanProperty("pcs.write.ddl.doDdlLookup",                     PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore));
+		_pcsDdl_addDependantObjectsToDdlInQueue_chk .setSelected(conf.getBooleanProperty("pcs.write.ddl.addDependantObjectsToDdlInQueue", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue));
+		_pcsDdl_afterDdlLookupSleepTimeInMs_txt     .setText    (conf.getProperty       ("pcs.write.ddl.afterDdlLookupSleepTimeInMs",     PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs + ""));
 		
+		// SQL Capture Lookup & Store
+		_pcsCapSql_doSqlCaptureAndStore_chk         .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.doSqlCaptureAndStore",              PersistentCounterHandler.DEFAULT_sqlCap_doSqlCaptureAndStore));
+		_pcsCapSql_doSqlText_chk                    .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.doSqlText",                         PersistentCounterHandler.DEFAULT_sqlCap_doSqlText                        ));
+		_pcsCapSql_doStatementInfo_chk              .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.doStatementInfo",                   PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo                  ));
+		_pcsCapSql_doPlanText_chk                   .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.doPlanText",                        PersistentCounterHandler.DEFAULT_sqlCap_doPlanText                       ));
+		_pcsCapSql_sleepTimeInMs_txt                .setText    (conf.getProperty       ("pcs.write.sqlCapture.sleepTimeInMs",                     PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs                     + ""));
+		_pcsCapSql_sendDdlForLookup_chk             .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.sendDdlForLookup",                  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup                 ));
+		_pcsCapSql_sendDdlForLookup_execTime_txt    .setText    (conf.getProperty       ("pcs.write.sqlCapture.sendDdlForLookup_gt_execTime",      PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime      + ""));
+		_pcsCapSql_sendDdlForLookup_logicalRead_txt .setText    (conf.getProperty       ("pcs.write.sqlCapture.sendDdlForLookup_gt_logicalReads",  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads  + ""));
+		_pcsCapSql_sendDdlForLookup_physicalRead_txt.setText    (conf.getProperty       ("pcs.write.sqlCapture.sendDdlForLookup_gt_physicalReads", PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads + ""));
+
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
@@ -7606,6 +7872,9 @@ if ( ! jdbcSshTunnelUse )
 		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
 		_jdbcSshTunnel_chk.setSelected(bol);
 
+		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH, DEFAULT_CONN_SQLSERVER_WIN_AUTH)); 
+
+
 		//----------------------------------
 		// last PROFILE
 		//----------------------------------
@@ -7647,6 +7916,38 @@ if ( ! jdbcSshTunnelUse )
 		if (lastTab != null)
 			_tab.setSelectedTitle(lastTab);
 	}
+
+	private void saveWindowProps()
+	{
+		if ( ! isVisible() )
+			return;
+
+		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+		if (conf == null)
+		{
+			_logger.warn("Getting Configuration for TEMP failed, probably not initialized");
+			return;
+		}
+		
+		//------------------
+		// SplitPane Divider location
+		//------------------
+		if (_connProfileVisible_chk.isSelected() && _connTabbedVisible_chk .isSelected())
+		{
+			conf.setLayoutProperty(PROPKEY_CONN_SPLITPANE_DIVIDER_LOCATION,  _connSplitPane.getDividerLocation());
+		}
+
+		//------------------
+		// WINDOW
+		//------------------
+		conf.setLayoutProperty("conn.dialog.window.width",  this.getSize().width);
+		conf.setLayoutProperty("conn.dialog.window.height", this.getSize().height);
+		conf.setLayoutProperty("conn.dialog.window.pos.x",  this.getLocationOnScreen().x);
+		conf.setLayoutProperty("conn.dialog.window.pos.y",  this.getLocationOnScreen().y);
+
+		conf.save();
+	}
+
 
 	
 //	private void loadPropsForServer(String host, int port)
@@ -8859,6 +9160,113 @@ if ( ! jdbcSshTunnelUse )
 				return null;
 			return value;
 		}
+	}
+
+	protected static class ProfileTypeComboBoxModel
+	extends DefaultComboBoxModel<ProfileType>
+	{
+		private static final long serialVersionUID = 1L;
+
+		public ProfileTypeComboBoxModel()
+		{
+			super();
+			refresh();
+		}
+
+		@SuppressWarnings("rawtypes")
+		public void refresh()
+		{
+			// NOTE: the save and restore wont work if there are more than 1 listener
+			// NOTE: this is a ugly hack, redo this with our own implementation of JComboBox instead
+			ProfileType currentSelected = null;
+			JComboBox cbxOwner = null;
+			ListDataListener[] la = getListDataListeners();
+			for (int i=0; i<la.length; i++)
+			{
+				if (la[i] instanceof JComboBox)
+				{
+					cbxOwner = (JComboBox)la[i];
+					currentSelected = (ProfileType) cbxOwner.getSelectedItem();
+				}
+			}
+			
+			removeAllElements();
+			
+			addElement(NO_PROFILE_TYPE_IS_SELECTED);
+			addElement(EDIT_PROFILE_TYPE_IS_SELECTED);
+
+			for (ProfileType type : ConnectionProfileManager.getInstance().getProfileTypes().values())
+			{
+				addElement(type);
+			}
+
+			if (cbxOwner != null && currentSelected != null)
+				cbxOwner.setSelectedItem(currentSelected);
+		}
+	}
+
+	/**
+	 * Set the color and size of the main border around the window
+	 * @param profileType
+	 */
+	public void setBorderForConnectionProfileTypeName(String profileTypeName)
+	{
+		Container contContentPane = getContentPane();
+		ConnectionProfileManager.setBorderForConnectionProfileType(contContentPane, profileTypeName);
+	}
+
+
+	/**
+	 * Set the ComboBox to the right value
+	 * Set the color and size of the main border around the window
+	 * @param profileType
+	 */
+	private void setConnectionProfileTypeName(ConnectionProfile profile, String profileTypeName)
+	{
+		// Retrive the ProfileType OBJECT
+		ProfileType profileType = ConnectionProfileManager.getInstance().getProfileTypeByName(profileTypeName);
+		if (profileType == null)
+			profileType = NO_PROFILE_TYPE_IS_SELECTED;
+
+		if      (profile.isType(ConnectionProfile.Type.TDS)    ) _aseProfileType_cbx    .setSelectedItem(profileType);
+		else if (profile.isType(ConnectionProfile.Type.JDBC)   ) _jdbcProfileType_cbx   .setSelectedItem(profileType);
+		else if (profile.isType(ConnectionProfile.Type.OFFLINE)) _offlineProfileType_cbx.setSelectedItem(profileType);
+
+		// Set border
+		setBorderForConnectionProfileTypeName(profileTypeName);
+	}
+
+
+
+	public ProfileType getSelectedConnectionProfileType(int connType)
+	{
+		JComboBox<ProfileType> cbx;
+		cbx = _aseProfileType_cbx;
+		
+//		int connType = getConnectionType();
+		if      (connType == TDS_CONN    ) cbx = _aseProfileType_cbx;
+		else if (connType == JDBC_CONN   ) cbx = _jdbcProfileType_cbx;
+		else if (connType == OFFLINE_CONN) cbx = _offlineProfileType_cbx;
+		else return null;
+
+//		String profileType = StringUtil.getSelectedItemString(cbx);
+		ProfileType profileType = (ProfileType) cbx.getSelectedItem();
+		if (profileType == null)
+			return null;
+		
+		if (profileType.equals(NO_PROFILE_TYPE_IS_SELECTED) || profileType.equals(EDIT_PROFILE_TYPE_IS_SELECTED))
+			return null;
+
+		return profileType;
+	}
+	
+	public String getSelectedConnectionProfileTypeName(int connType)
+	{
+		ProfileType profileType = getSelectedConnectionProfileType(connType);
+		if (profileType == null)
+			return null;
+		
+		return profileType.getName();
 	}
 
 	//--------------------------------------------------

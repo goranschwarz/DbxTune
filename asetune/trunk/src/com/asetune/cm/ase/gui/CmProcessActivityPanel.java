@@ -9,8 +9,6 @@ import java.util.HashMap;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -22,6 +20,9 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.ColorUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmProcessActivityPanel
 extends TabularCntrPanel
@@ -33,7 +34,12 @@ extends TabularCntrPanel
 
 	public static final String  TOOLTIP_sample_systemThreads        = "<html>Sample System SPID's that executes in the ASE Server.<br><b>Note</b>: This is not a filter, you will have to wait for next sample time for this option to take effect.</html>";
 	public static final String  TOOLTIP_summaryGraph_discardDbxTune = "<html>Do <b>not</b> include values where Application name starts with '"+Version.getAppName()+"' in the Summary Graphs.</html>";
+	public static final String  TOOLTIP_sample_sqlText              = "<html>Get SQL Text for SPID's that are active<br>Using ASE Function query_text(spid) but only if WaitEventID != 250 <i>'waiting for input from the network'</i>.<br><b>Note</b>: This functionality is only available in ASE 16 and above.</html>";
 
+	private JCheckBox l_sampleSystemThreads_chk;
+	private JCheckBox l_discardAppnameDbxTune_chk;
+	private JCheckBox l_sampleSqlText_chk;
+	
 	public CmProcessActivityPanel(CountersModel cm)
 	{
 		super(cm);
@@ -57,7 +63,7 @@ extends TabularCntrPanel
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String login = (String) adapter.getValue(adapter.getColumnIndex("Login"));
-				if ("".equals(login) || "probe".equals(login))
+				if (login == null || "".equals(login) || "probe".equals(login))
 					return true;
 				return false;
 			}
@@ -71,7 +77,8 @@ extends TabularCntrPanel
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Number StatementExecInMs = (Number) adapter.getValue(adapter.getColumnIndex("StatementExecInMs"));
-				if ( StatementExecInMs != null && StatementExecInMs.intValue() > 0 )
+				Number WaitEventID       = (Number) adapter.getValue(adapter.getColumnIndex("WaitEventID"));
+				if ( StatementExecInMs != null && WaitEventID != null && StatementExecInMs.intValue() > 0 && WaitEventID.intValue() != 250) // WaitEventID=250: waiting for input from the network
 					return true;
 				return false;
 			}
@@ -153,19 +160,27 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		JCheckBox sampleSystemThreads_chk   = new JCheckBox("Show system processes", conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads, CmProcessActivity.DEFAULT_sample_systemThreads));
-		JCheckBox discardAppnameDbxTune_chk = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
+//		JCheckBox sampleSystemThreads_chk   = new JCheckBox("Show system processes",                                                                   conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads        : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
+//		JCheckBox discardAppnameDbxTune_chk = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
+//		JCheckBox sampleSqlText_chk         = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
+		l_sampleSystemThreads_chk   = new JCheckBox("Show system processes",                                                                   conf == null ? CmProcessActivity.DEFAULT_sample_systemThreads        : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_systemThreads,        CmProcessActivity.DEFAULT_sample_systemThreads));
+		l_discardAppnameDbxTune_chk = new JCheckBox("<html>Discard '"+Version.getAppName()+"' Activity from the <b>Summary</b> Graphs</html>", conf == null ? CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune : conf.getBooleanProperty(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune, CmProcessActivity.DEFAULT_summaryGraph_discardDbxTune));
+		l_sampleSqlText_chk         = new JCheckBox("<html>Get SQL Text for active SPID's</html>",                                             conf == null ? CmProcessActivity.DEFAULT_sample_sqlText              : conf.getBooleanProperty(CmProcessActivity.PROPKEY_sample_sqlText,              CmProcessActivity.DEFAULT_sample_sqlText));
 
-		sampleSystemThreads_chk.setName(CmProcessActivity.PROPKEY_sample_systemThreads);
-		sampleSystemThreads_chk.setToolTipText(TOOLTIP_sample_systemThreads);
+		l_sampleSystemThreads_chk  .setName(CmProcessActivity.PROPKEY_sample_systemThreads);
+		l_sampleSystemThreads_chk  .setToolTipText(TOOLTIP_sample_systemThreads);
 
-		discardAppnameDbxTune_chk.setName(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune);
-		discardAppnameDbxTune_chk.setToolTipText(TOOLTIP_summaryGraph_discardDbxTune);
+		l_discardAppnameDbxTune_chk.setName(CmProcessActivity.PROPKEY_summaryGraph_discardDbxTune);
+		l_discardAppnameDbxTune_chk.setToolTipText(TOOLTIP_summaryGraph_discardDbxTune);
 
-		panel.add(sampleSystemThreads_chk,   "wrap");
-		panel.add(discardAppnameDbxTune_chk, "wrap");
+		l_sampleSqlText_chk        .setName(CmProcessActivity.PROPKEY_sample_sqlText);
+		l_sampleSqlText_chk        .setToolTipText(TOOLTIP_sample_sqlText);
 
-		sampleSystemThreads_chk.addActionListener(new ActionListener()
+		panel.add(l_sampleSystemThreads_chk,   "wrap");
+		panel.add(l_discardAppnameDbxTune_chk, "wrap");
+		panel.add(l_sampleSqlText_chk,         "wrap");
+
+		l_sampleSystemThreads_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -181,7 +196,7 @@ extends TabularCntrPanel
 			}
 		});
 		
-		discardAppnameDbxTune_chk.addActionListener(new ActionListener()
+		l_discardAppnameDbxTune_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -197,6 +212,49 @@ extends TabularCntrPanel
 			}
 		});
 		
+		l_sampleSqlText_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmProcessActivity.PROPKEY_sample_sqlText, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		
 		return panel;
+	}
+
+	@Override
+	public void checkLocalComponents()
+	{
+		CountersModel cm = getCm();
+		if (cm != null)
+		{
+			if (cm.isRuntimeInitialized())
+			{
+				// disable CachedPlanInXml is not 16.0
+				if ( cm.getServerVersion() > Ver.ver(16,0))
+				{
+					l_sampleSqlText_chk.setEnabled(true);
+				}
+				else
+				{
+					l_sampleSqlText_chk.setEnabled(false);
+
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmProcessActivity.PROPKEY_sample_sqlText, false);
+					}
+				}
+			} // end isRuntimeInitialized
+		} // end (cm != null)
 	}
 }

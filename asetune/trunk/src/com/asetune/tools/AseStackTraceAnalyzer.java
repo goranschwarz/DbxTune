@@ -58,11 +58,8 @@ import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.decorator.ColorHighlighter;
@@ -73,11 +70,14 @@ import com.asetune.Version;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 /**
  * Used to analyze sybmon Stack Trace output
@@ -1551,7 +1551,7 @@ public class AseStackTraceAnalyzer
 
 			private JPanel                _infoPane = new JPanel(new MigLayout());
 
-			private RSyntaxTextArea       _textArea = new RSyntaxTextArea();
+			private RSyntaxTextAreaX      _textArea = new RSyntaxTextAreaX();
 			private RTextScrollPane       _textScroll = new RTextScrollPane(_textArea);
 
 			private StackEntry            _se;
@@ -2390,8 +2390,8 @@ public class AseStackTraceAnalyzer
 			top.add(new JLabel("Copy and Paste the following into a Unix/Linux shell script, and execute it with the user 'sybase' or whoever is running ASE."), "wrap");
 
 			// The Example text panel
-			RSyntaxTextArea example_txt    = new RSyntaxTextArea();
-			RTextScrollPane example_scroll = new RTextScrollPane(example_txt);
+			RSyntaxTextAreaX example_txt    = new RSyntaxTextAreaX();
+			RTextScrollPane  example_scroll = new RTextScrollPane(example_txt);
 			example_txt   .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_UNIX_SHELL);
 			example_txt   .setText(exampleStr);
 			example_scroll.setLineNumbersEnabled(true);

@@ -7,16 +7,15 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmExecQueryStatsPanel
 extends TabularCntrPanel
@@ -136,11 +135,11 @@ extends TabularCntrPanel
 //		}, SwingUtils.parseColor(colorStr, HighlighterFactory.GENERIC_GRAY), null));
 	}
 
-	private JCheckBox       _sampleLastXminutes_chk;
-	private JCheckBox       _sampleAfterPrevSample_chk;
-	private RSyntaxTextArea _sampleExtraWhereClause_txt;
-	private JButton         _sampleExtraWhereClause_but;
-	private JButton         _sampleExtraWhereToDef_but;
+	private JCheckBox        _sampleLastXminutes_chk;
+	private JCheckBox        _sampleAfterPrevSample_chk;
+	private RSyntaxTextAreaX _sampleExtraWhereClause_txt;
+	private JButton          _sampleExtraWhereClause_but;
+	private JButton          _sampleExtraWhereToDef_but;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
@@ -159,7 +158,7 @@ extends TabularCntrPanel
 
 		_sampleLastXminutes_chk     = new JCheckBox("Show only SQL executed last 10 minutes",         conf == null ? CmExecQueryStats.DEFAULT_sample_lastXminutes    : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_lastXminutes,    CmExecQueryStats.DEFAULT_sample_lastXminutes));
 		_sampleAfterPrevSample_chk  = new JCheckBox("Show only SQL executed since last sample time",  conf == null ? CmExecQueryStats.DEFAULT_sample_afterPrevSample : conf.getBooleanProperty(CmExecQueryStats.PROPKEY_sample_afterPrevSample, CmExecQueryStats.DEFAULT_sample_afterPrevSample));
-		_sampleExtraWhereClause_txt = new RSyntaxTextArea();
+		_sampleExtraWhereClause_txt = new RSyntaxTextAreaX();
 		_sampleExtraWhereClause_but = new JButton("Apply Extra Where Clause");
 		_sampleExtraWhereToDef_but  = new JButton("To Default");
 

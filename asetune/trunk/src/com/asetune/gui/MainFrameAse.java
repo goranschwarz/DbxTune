@@ -201,7 +201,7 @@ extends MainFrame
 		// if not MON_ROLE or MonitoringNotEnabled, show all GRAPHS available for this mode (global variables)
 		boolean setMinimalGraphConfig = false;
 //		Connection conn = AseTune.getCounterCollector().getMonConnection();
-		Connection conn = CounterController.getInstance().getMonConnection();
+		DbxConnection conn = CounterController.getInstance().getMonConnection();
 
 		boolean hasMonRole          = AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE);
 		boolean hasEnableMonitoring = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
@@ -415,7 +415,7 @@ extends MainFrame
 		{
 //			Connection conn = CounterController.getInstance().getMonConnection();
 			DbxConnection conn = CounterController.getInstance().getMonConnection();
-			AseConfigMonitoringDialog.showDialog(this, conn, -1);
+			AseConfigMonitoringDialog.showDialog(this, conn, -1, true);
 
 			// If monitoring is NOT enabled anymore, do disconnect
 			// By the way, changes can only be made if you have SA_ROLE

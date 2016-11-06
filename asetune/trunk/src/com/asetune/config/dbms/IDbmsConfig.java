@@ -104,4 +104,14 @@ extends TableModel
 
 	/** Reset the underlying data structure */
 	void reset();
+
+	/** Should we show the table right click menu 'Reverse Engineer the configuration...' */
+	public boolean isReverseEngineeringPossible();
+
+	/**
+	 * Return a String with the reverse engineer DDL statements
+	 * @param modelRow null means ALL rows, otherwise an array of model rows that should be generated 
+	 * @return A String with the SQL Statements that should be executed...
+	 */
+	public String reverseEngineer(int[] modelRows);
 }

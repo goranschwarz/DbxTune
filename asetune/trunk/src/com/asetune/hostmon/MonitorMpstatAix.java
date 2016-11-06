@@ -3,7 +3,7 @@ package com.asetune.hostmon;
 import com.asetune.utils.Configuration;
 
 public class MonitorMpstatAix
-extends MonitorVmstat
+extends MonitorMpstat
 {
 	public MonitorMpstatAix()
 	{

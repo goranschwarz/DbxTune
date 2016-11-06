@@ -883,6 +883,9 @@ extends CounterCollectorThreadAbstract
 				// This one will be passed to doPostRefresh()
 				LinkedHashMap<String, CountersModel> refreshedCms = new LinkedHashMap<String, CountersModel>();
 
+				// Clear the demand refresh list
+				getCounterController().clearCmDemandRefreshList();
+
 				//-----------------
 				// LOOP all CounterModels, and get new data, 
 				//   if it should be done
@@ -998,20 +1001,25 @@ extends CounterCollectorThreadAbstract
 				System.gc();
 			}
 
+
+			// If previous CHECK has DEMAND checks, lets sleep for a shorter while
+			// This so we can catch data if the CM's are not yet initialized and has 2 samples (has diff data)
+			int sleepTime = getCounterController().getCmDemandRefreshSleepTime(_sleepTime, getCounterController().getLastRefreshTimeInMs());
+
 			//-----------------------------
 			// Sleep
 			//-----------------------------
 			if (_logger.isDebugEnabled())
 			{
 				getCounterController().setWaitEvent("next sample period...");
-				_logger.debug("Sleeping for "+_sleepTime+" seconds. Waiting for " + getCounterController().getWaitEvent() );
+				_logger.debug("Sleeping for "+sleepTime+" seconds. Waiting for " + getCounterController().getWaitEvent() );
 			}
 
 			// Sleep / wait for next sample
 			if (_scriptWaitForNextSample != null)
 				scriptWaitForNextSample();
 			else
-				getCounterController().sleep(_sleepTime * 1000);
+				getCounterController().sleep(sleepTime * 1000);
 
 		} // END: while(_running)
 

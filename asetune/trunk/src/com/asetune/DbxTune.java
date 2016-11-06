@@ -1,6 +1,5 @@
 package com.asetune;
 
-import java.awt.Font;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
@@ -816,10 +815,12 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			// Install a "special" EventQueue, which monitors deadlocks, and other "long" and time
 			// consuming operations on the EDT (Event Dispatch Thread)
 			// A WARN message will be written to the error log starting with 'Swing EDT-DEBUG - Hang: '
-			if (Debug.hasDebug(DebugOptions.EDT_HANG))
+			boolean useEdtHang = Version.getVersionStr().endsWith(".dev");
+			if (Debug.hasDebug(DebugOptions.EDT_HANG) || useEdtHang)
 			{
 				_logger.info("Installing a Swing EDT (Event Dispatch Thread) - Hang Monitor, which will write information about long running EDT operations to the "+Version.getAppName()+" log.");
 				EventDispatchThreadHangMonitor.initMonitoring();
+//				RepaintManager.setCurrentManager(new CheckThreadViolationRepaintManager());
 			}
 
 			// Do a dummy encryption, this will hopefully speedup, so that the connection dialog wont hang for a long time during initialization

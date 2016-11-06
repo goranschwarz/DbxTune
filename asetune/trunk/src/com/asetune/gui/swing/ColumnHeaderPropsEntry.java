@@ -39,8 +39,29 @@ public class ColumnHeaderPropsEntry
 	protected int       _sortOrderPos = -1;
 	protected int       _width        = -1;
 
+	public String    getColumnName()   { return _colName;      }
+	public int       getModelPos()     { return _modelPos;     }
+	public int       getViewPos()      { return _viewPos;      }
+	public boolean   isVisible()       { return _isVisible;    }
+	public SortOrder getSortOrder()    { return _sortOrder;    }
+	public int       getSortOrderPos() { return _sortOrderPos; }
+	public int       getWidth()        { return _width;        }
+	
 	public ColumnHeaderPropsEntry()
 	{
+	}
+
+	public ColumnHeaderPropsEntry(String name, int viewPos)
+	{
+		_colName      = name;
+		_viewPos      = viewPos;
+	}
+
+	public ColumnHeaderPropsEntry(String name, int viewPos, SortOrder sortOrder)
+	{
+		_colName      = name;
+		_viewPos      = viewPos;
+		_sortOrder    = sortOrder;
 	}
 
 	public ColumnHeaderPropsEntry(String name, int modelPos, int viewPos, boolean isVisible, SortOrder sortOrder, int sortOrderPos, int width)
@@ -176,9 +197,6 @@ public class ColumnHeaderPropsEntry
 			+"}";
 	}
 
-	
-	
-	
 	
 	public static void main(String[] args)
 	{

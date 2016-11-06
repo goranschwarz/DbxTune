@@ -9,6 +9,8 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.DbUtils;
+import com.asetune.utils.Ver;
 
 public class DbxConnectionStateInfoAse
 implements DbxConnectionStateInfo
@@ -16,15 +18,21 @@ implements DbxConnectionStateInfo
 	private static Logger _logger = Logger.getLogger(DbxConnectionStateInfoAse.class);
 
 	/** _current* below is only maintained if we are connected to ASE */
-	public String _dbname      = "";
-	public int    _spid        = -1;
-	public String _username    = "";
-	public String _susername   = "";
-	public int    _tranState   = -1;
-	public int    _tranCount   = -1;
-	public int    _tranChained = -1;
-	public int    _lockCount   = -1;
+	public String _dbname       = "";
+	public int    _spid         = -1;
+	public String _username     = "";
+	public String _susername    = "";
+	public int    _tranState    = -1;
+	public int    _tranCount    = -1;
+	public int    _tranChained  = -1;
+	public int    _lockCount    = -1;
+	public int    _hadrModeInt  = -1; // @@hadr_mode
+	public String _hadrModeStr  = ""; // hadr_mode()
+	public int    _hadrStateInt = 0;  // @@hadr_state
+	public String _hadrStateStr = ""; // hadr_state()
 	public List<LockRecord> _lockList = new ArrayList<LockRecord>();
+
+	private boolean _isAse = true;
 
 	// Transaction SQL states for DONE flavors
 	//
@@ -63,18 +71,26 @@ implements DbxConnectionStateInfo
 	};
 	
 
-	public DbxConnectionStateInfoAse(DbxConnection conn, boolean isAse)
+	public DbxConnectionStateInfoAse(DbxConnection conn)
 	{
-		refresh(conn, isAse);
+		refresh(conn);
 	}
 	
-	private void refresh(DbxConnection conn, boolean isAse)
+	private void refresh(DbxConnection conn)
 	{
+		_isAse = conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE);
+
 		String sql = "select dbname=db_name(), spid=@@spid, username = user_name(), susername =suser_name(), trancount=@@trancount";
-		if (isAse)
+		if (_isAse)
+		{
 			sql += ", tranchained=@@tranchained, transtate=@@transtate";
+			if (conn.getDbmsVersionNumber() >= Ver.ver(16,0,0, 2))
+				sql += ", @@hadr_mode, hadr_mode(), @@hadr_state, hadr_state()";
+		}
 		else
+		{	// SQL-Server
 			sql += ", tranchained=sign((@@options & 2))"; // MSSQL retired @@transtate in SqlServer2008, SqlServer never implemented @@transtate 
+		}
 
 		// Do the work
 		try
@@ -90,7 +106,26 @@ implements DbxConnectionStateInfo
 				_susername   = rs.getString(4);
 				_tranCount   = rs.getInt   (5);
 				_tranChained = rs.getInt   (6);
-				_tranState   = isAse ? rs.getInt(7) : TSQL_TRANSTATE_NOT_AVAILABLE;
+				if (_isAse)
+				{
+					_tranState = rs.getInt(7);
+
+					if (conn.getDbmsVersionNumber() >= Ver.ver(16,0,0, 2)) // 16.0 SP2
+					{
+    					_hadrModeInt  = rs.getInt   (8);
+    					_hadrModeStr  = rs.getString(9);
+    					_hadrStateInt = rs.getInt   (10);
+    					_hadrStateStr = rs.getString(11);
+					}
+				}
+				else
+				{
+					_tranState    = TSQL_TRANSTATE_NOT_AVAILABLE;
+					_hadrModeInt  = -1;
+					_hadrModeStr  = "Not Available";
+					_hadrStateInt = 0;
+					_hadrStateStr = "Not Available";
+				}
 			}
 
 //			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
@@ -99,7 +134,7 @@ implements DbxConnectionStateInfo
 //			{
 //				_lockCount = rs.getInt(1);
 //			}
-			if (isAse)
+			if (_isAse)
 			{
 				sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
 					+ " from master.dbo.syslocks "
@@ -214,6 +249,7 @@ implements DbxConnectionStateInfo
 		String tranCount   = "TranCount=<b>"   + _tranCount        + "</b>";
 		String tranChained = "TranChained=<b>" + _tranChained      + "</b>";
 		String lockCount   = "LockCount=<b>"   + _lockCount        + "</b>";
+		String hadrInfo    = "";
 
 		if (_tranCount > 0)
 			tranCount = "TranCount=<b><font color=\"red\">" + _tranCount        + "</font></b>";
@@ -227,8 +263,36 @@ implements DbxConnectionStateInfo
 		if (_lockCount > 0)
 			lockCount = "LockCount=<b><font color=\"red\">" + _lockCount    + "</font></b>";
 
+		if (_hadrModeInt >= 0) // -1 == Disabled
+		{
+			String color="black";
+			switch(_hadrModeInt)
+			{
+			case 0: // 0 == Standby
+				color="blue";
+				break;
+
+			case 1: // 1 == Primary
+				color="green";
+				break;
+
+			case 2: // 2 == Unreachable
+				color="red";
+				break;
+			
+			case 3: // 3 == Starting
+				color="fuchsia";
+				break;
+			
+			default: // unknown
+				color="black";
+				break;
+			}
+			hadrInfo  = ", HADR Mode=<font color='"+color+"'>" + _hadrModeInt  + ":<b>" + _hadrModeStr  + "</b></font>, State=<font color='"+color+"'>" + _hadrStateInt + ":<b>" + _hadrStateStr + "</b></font>";
+		}
+
 		// status: Normal state
-		String text = "<html>" + spid + ", " + dbname + ", " + username + ", " + susername + "</html>";
+		String text = "<html>" + spid + ", " + dbname + ", " + username + ", " + susername + hadrInfo + "</html>";
 
 		// status: "problem" state
 		if (_tranCount > 0 || isNonNormalTranState())
@@ -242,12 +306,13 @@ implements DbxConnectionStateInfo
 				+ tranCount + ", "
 				+ tranChained + ", "
 				+ lockCount
+				+ hadrInfo
 				+ "</html>";
 		}
 		// If we are in CHAINED mode, and do NOT hold any locks, set state to "normal"
 		if (_tranChained == 1 && _lockCount == 0)
 		{ // color #B45F04 = dark yellow/orange
-			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, " + spid + ", " + dbname + ", " + username + ", " + susername + "</html>";
+			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, " + spid + ", " + dbname + ", " + username + ", " + susername + hadrInfo + "</html>";
 		}
 
 		return text;
@@ -264,6 +329,14 @@ implements DbxConnectionStateInfo
 		if (_lockCount == -999)
 			lockCountStr = "<font color=\"red\"> To see lock count/table you need permission 'VIEW SERVER STATE'</font>";
 
+		String hadrTooltip = "";
+		if (_hadrModeInt >= 0) // -1 == Disabled
+		{
+			hadrTooltip = 
+                "<tr> <td>HADR Mode:  </td> <td><b>" + _hadrModeInt  + " = " + _hadrModeStr  + "</b> </td> </tr>" +
+                "<tr> <td>HADR State: </td> <td><b>" + _hadrStateInt + " = " + _hadrStateStr + "</b> </td> </tr>";
+		}
+		
 		String tooltip = "<html>" +
 			"<table border=0 cellspacing=0 cellpadding=1>" +
 			                         "<tr> <td>Current DB:    </td> <td><b>" + _dbname           + "</b> </td> </tr>" +
@@ -273,6 +346,7 @@ implements DbxConnectionStateInfo
 			    (isTranStateUsed() ? "<tr> <td>Tran State:    </td> <td><b>" + getTranStateStr() + "</b> </td> </tr>" : "") +
 			                         "<tr> <td>Tran Count:    </td> <td><b>" + _tranCount        + "</b> </td> </tr>" +
 			                         "<tr> <td>Tran Chained:  </td> <td><b>" + _tranChained      + "</b> </td> </tr>" +
+			                         hadrTooltip + 
 			                         "<tr> <td>Lock Count:    </td> <td><b>" + lockCountStr      + "</b> </td> </tr>" +
 			"</table>" +
 			lockText +

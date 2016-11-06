@@ -14,8 +14,6 @@ import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
-import javax.swing.UIDefaults;
-import javax.swing.UIManager;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.StyleContext;
 

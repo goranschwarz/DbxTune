@@ -10,12 +10,12 @@ import javax.swing.JCheckBox;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.Configuration;
+
+import net.miginfocom.swing.MigLayout;
 
 
 

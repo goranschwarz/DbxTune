@@ -20,25 +20,25 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.AutoCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.ShorthandCompletion;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class InterfaceFileEditor
 extends JDialog
@@ -65,8 +65,8 @@ implements ActionListener, DocumentListener
 	private boolean _changed = false;
 	private int     _originTextHasCode = 0;
 
-	private RSyntaxTextArea _textArea   = new RSyntaxTextArea();
-	private RTextScrollPane _textScroll = new RTextScrollPane(_textArea);
+	private RSyntaxTextAreaX _textArea   = new RSyntaxTextAreaX();
+	private RTextScrollPane  _textScroll = new RTextScrollPane(_textArea);
 
 	private JButton _ok      = new JButton("Save & Close");
 	private JButton _cancel  = new JButton("Cancel");

@@ -172,6 +172,8 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		addDropTempTable("#tmpCmThreads");
+
 		String preDropTmpTables =
 			"\n " +
 			"/*------ drop tempdb objects if we failed doing that in previous execution -------*/ \n" +

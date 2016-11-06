@@ -20,7 +20,6 @@ import org.jdesktop.swingx.JXTable;
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
-import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.tools.sqlw.msg.JAseProcRetCode;
 import com.asetune.tools.sqlw.msg.JAseProcRetParam;

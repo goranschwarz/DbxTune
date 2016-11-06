@@ -1170,6 +1170,25 @@ public class StringUtil
 			return defaultValue;
 		}
 	}
+
+	/**
+	 * Simply do Long.parseLong(str), but if it fails (NumberFormatException), then return the default value
+	 * @param str           String to be converted
+	 * @param defaultValue  if "str" can't be converted (NumberFormatException), then return this value
+	 * @return a long value
+	 */
+	public static long parseLong(String str, long defaultValue)
+	{
+		try
+		{
+			return Long.parseLong(str);
+		}
+		catch (NumberFormatException nfe)
+		{
+			return defaultValue;
+		}
+	}
+
 	/**
 	 * returns a "safe" XML tag content string
 	 * <p>
@@ -2027,6 +2046,26 @@ public class StringUtil
 		return str;
 	}
 
+	
+	/** 
+	 *  Translates<br>
+	 *  < to &lt;
+	 *  > to &gt;
+	 *  \n to <br>;
+	 */
+	public static String toHtmlString(Object o)
+	{
+		if (o == null)
+			return null;
+
+		String str = o.toString();
+		str = str.replace("&", "&amp;");
+		str = str.replace("<", "&lt;");
+		str = str.replace(">", "&gt;");
+		str = str.replace("\\n", "<br>");
+
+		return str;
+	}
 	
 	
 	

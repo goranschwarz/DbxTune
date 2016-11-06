@@ -13,7 +13,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.IGuiController;
 import com.asetune.gui.MainFrame;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.StringUtil;

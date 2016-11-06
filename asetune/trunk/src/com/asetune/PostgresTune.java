@@ -5,6 +5,7 @@ import org.apache.commons.cli.CommandLine;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesPostgres;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.PostgresConfig;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryPostgres;
 import com.asetune.gui.MainFrame;
@@ -106,7 +107,8 @@ extends DbxTune
 	@Override
 	public IDbmsConfig createDbmsConfig()
 	{
-		return null; // null means it's not supported
+//		return null; // null means it's not supported
+		return new PostgresConfig();
 	}
 
 	@Override

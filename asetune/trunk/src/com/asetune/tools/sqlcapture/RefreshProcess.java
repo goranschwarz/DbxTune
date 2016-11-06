@@ -3081,7 +3081,7 @@ public class RefreshProcess extends Thread
 				SwingUtils.showInfoMessageExt(pdf, Version.getAppName()+" - SPID monitoring",
 						msg.toString(), chk, (JPanel)null);
 
-				AseConfigMonitoringDialog.showDialog(pdf, _conn, -1);
+				AseConfigMonitoringDialog.showDialog(pdf, _conn, -1, true);
 			}
 		}
 

@@ -1,6 +1,5 @@
 package com.asetune.cm.sqlserver;
 
-import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.LinkedList;
@@ -13,10 +12,9 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
-import com.asetune.cm.ase.CmSpinlockSum;
+import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 
 /**

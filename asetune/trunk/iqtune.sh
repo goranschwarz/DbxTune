@@ -55,7 +55,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.3.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.192.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.193.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-4.2.jar
@@ -77,6 +77,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-1.0.3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.6.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsqlparser-0.9.6.jar
 
 export PATH=${DBXTUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}

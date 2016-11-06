@@ -26,8 +26,6 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -46,6 +44,8 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSummaryPanel
 //extends TabularCntrPanel

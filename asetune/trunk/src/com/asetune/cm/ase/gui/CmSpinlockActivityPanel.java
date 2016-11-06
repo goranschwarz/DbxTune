@@ -6,14 +6,14 @@ import java.awt.event.ActionListener;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmSpinlockActivity;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmSpinlockActivityPanel
 extends TabularCntrPanel

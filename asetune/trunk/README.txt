@@ -35,14 +35,15 @@ in the directory where the base package (asetune_YYYY-MM-DD.zip) is installed
 * HanaTune      - Tune SAP HANA - The InMemory combined Column/Row Store database
 * SqlServerTune - Tune Microsoft SQL-Server
 * OracleTune    - Tune Oracle DBMS
+* PostgresTune  - Tune Postgres DBMS
  
 
 
 ==============================================================================
  Requirements
 ==============================================================================
-* Java 7 and above (Java 6 is still working, but it I will remove support for that soon)
- 
+* Java 7 and above (Java 7 is still working, but it I will probably move to Java 8 on next release)
+
 
 ==============================================================================
  How to Install
@@ -106,6 +107,13 @@ This is the most complete tool. This because it has been around for 7-10 years
   This tool is new in release 2015-06-01
   Status: Not that much functionality, needs A LOT MORE work before released. 
   Note: Recording capability doesn't work that good for the moment (JDBC ResultSet MetaData returns "strange" data types for Oracle Columns, which I need to "map" into something more appropriate for H2 or any other "normal" database)
+  Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
+
+------------------------------------------------------------------------------
+-- PostgresTune --------------------------------------------------------------
+------------------------------------------------------------------------------
+  This tool is new in release 2016-11-06
+  Status: Not that much functionality, needs A LOT MORE work before released. 
   Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------

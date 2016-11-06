@@ -9,8 +9,6 @@ import java.util.HashMap;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 
-import net.miginfocom.swing.MigLayout;
-
 import org.jdesktop.swingx.decorator.ColorHighlighter;
 import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
@@ -20,6 +18,8 @@ import com.asetune.cm.sqlserver.CmWho;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
+
+import net.miginfocom.swing.MigLayout;
 
 public class CmWhoPanel
 extends TabularCntrPanel
