@@ -8,6 +8,8 @@
 <style type="text/css">
 body {font-family: Arial, Verdana, Helvetica, sans-serif; background-color: #FFFFFF; color:#000000}
 li   {margin-bottom: 6px}
+h2 { border-bottom: 3px solid black; border-top: 3px solid black; }
+h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:3px; }
 </style>
 
 </HEAD>
@@ -20,6 +22,466 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <br>
 
 <H1>History of what has been done so far</H1>
+
+<!-- ========================================================================== -->
+<H2>2016-11-07</H2>
+<UL>
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3> 
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Now java 1.7 is needed</LI>
+		<LI>introduced -H homeDir for where all peronal files are stored</LI>
+		<LI>Supports HI DPI screens in a better way than default... but this still needs *more* work</LI>
+		<LI>Number of Graph columns in the Summary panel is now 2 by default</LI>
+		<LI>Option to open the connection dialog when any of the tools starts (File->Open Connection Dilaog at Startup)</LI>
+		<LI>Changed the memory indicator to a bit more "graphic", so you se in a "bar chart" how much memory is used/left</LI>
+		<LI>Set a color around the main window, to indicate if it's a production/test/dev env. This so you dont apply commands in the wrong environment.</LI>
+		<LI>Now option to "Grow Only" column width when you automatically resizes columns/cells in any Performance Counter<br>This makes column width more constant and easier to read. This can be set on a Global Level or on each Performance counter.</LI>
+		<LI>Added a filter field on most lists, which makes it easier to find what we are looking for</LI>
+		<LI>Bugfix: undocked tab was not refreshed, in some cases</LI>
+		<LI>
+			<b>Upgraded some of the third party libraries/jars</b><br>
+			<ul>
+			  <li>To version 1.4.193,    Component: H2 database</li>
+			  <li>To version ASE 16 SP2, Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li>
+			</ul>
+		</LI>
+	</UL>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3> 
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Record a session: DDL Capture was changed to be more generic (internal changes)</LI>
+		<LI>Record a session: SQL Capture was introduced when recording a session (but no GUI to look at them, use SQL Window to do direct select from the tables MonSqlCapSqlText, MonSqlCapStatements, MonSqlCapPlans)</LI>
+		<LI>first refresh after a connect is made with shorter sleep times, just to get "something" going</LI>
+		<LI>When you have 'Blocking locks'. Performance counters 'Active Statements' & 'Blocking' are automatically enabled while we are in that state.</LI>
+		<LI>When you have 'Long running transactions' and 'Full logs'. Performance counters 'Databases' are automatically enabled while we are in that state.</LI>
+		<LI>XML Showplan viewer will popup if you "hovering" over ObjectName and some other columns and the content starts with '*ss' or '*sq'</LI>
+		<LI>XML Showplan has a Cache so we wont get the XML Plan from the ASE all the times</LI>
+		<LI>Show DBMS Configuration, added a checkbox if you want to show/hide configurations for 'Monitoring'</LI>
+		<LI>Disable get some DBMS Configuration. This can only be done in the config by setting: dbms.config.text.<type>.enabled=false, wher <type> can be: AseCacheConfig, AseThreadPool, AseHelpDb, AseTempdb, AseHelpDevice, AseDeviceFsSpaceUsage, AseHelpServer, AseTraceflags, AseSpVersion, AseShmDumpConfig, AseMonitorConfig, AseHelpSort, AseLicenseInfo, AseClusterInfo, AseConfigFile</LI>
+		<LI>Added Ase Plan View to the "tools" menu, so you can open it from there, also added the ability to open XML files from the Dialog (in various ways)</LI>
+		<LI>SQL Capture tool, wasn't able to connect if SSH Tunnel was used when connection to ASE.<br>
+			Also added Watermarks, why some panels isn't refreshed...<br>
+			XML Showplans can automatically be displayed when you select a row in the Statements Panel (if the option is enabled)<br>
+			Note: I'm in the progress of rewriting this tool from scratch, but it will take some time to do that!<br>
+		</LI>
+		<LI>If license is in grace mode, write a red warning message on the toolbar</LI>
+		<LI>When you record a session, if the PCS Storage starts to "lag", warnings will be showed in red at the status bar<BR>
+			Also if you are using the default H2 storage and it starts to get slow, a new "spillover" database is created when the queue becomes a bit to big
+		</LI>
+		<LI>DBMS Configuration, reverse engineer selected rows and open an editor with the values.</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Databases - CmDatabases</b><br>
+		<ul>
+			<li>Added a second Graph 'Data Space Usage in Percent' + the ability to enable/disable log/data graph</li>
+			<li>for ASE 16.0 also capture information from the function 'spaceusage()', which gives us some new columns</li>
+			<ul>
+				<li>RawSpaceUsage   = The raw information from spaceusage() function</li>
+				<li>ReservedPages   = The column 'reserved pages', from spaceusage()</li>
+				<li>UsedPages       = The column 'used pages', from spaceusage()</li>
+				<li>DataPages       = The column 'data pages', from spaceusage()</li>
+				<li>IndexPages      = The column 'index pages', from spaceusage()</li>
+				<li>LobPages        = The column 'LOB pages', from spaceusage()</li>
+				<li>Tables          = The column 'tables', from spaceusage()</li>
+				<li>RowCountSum     = The column 'row count', from spaceusage()</li>
+				<li>OamPages        = The column 'oam pages', from spaceusage()</li>
+				<li>AllocationUnits = The column 'allocation units', from spaceusage()</li>
+			</ul>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Active Statements - CmActiveStatements</b><br>
+		<ul>
+			<li>Highlight with YELLOW if SPID holds locks on the server, while in the client are in control (WiatEventID=250 'waiting for input from the network', status='recv sleep')<br>
+				also a separate row will be visible for this with the column 'monSource' set to 'HOLDING-LOCKS'<br>
+				also a checkbox if we want to sample the above 'HOLDING-LOCKS', which introduces some overhead
+			</li>
+			<li>new column 'HasCachedPlanInXml' and 'CachedPlanInXml'<br>
+				also a checkbox if we want to get XML Showplans or not
+			</li>
+			<li>RowsAffectedDiff, same as RowsAffected, but diff calculated</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Blocking - CmBlocking</b><br>
+		<ul>
+			<li>Small bug fix: Changed the logic to get BlockedState as like 'Blocked%' or 'Blocking%' to see more Blocking states</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Cache -&gt; Pools - CmCachePools</b><br>
+		<ul>
+			<li>got a major lookover and now has much more information, here are some of the new columns</li>
+			<ul>
+				<li>APFReadsPct              = What's the percentage of the Async Prefetch Reads (APFReads) compared to PhysicalReads.</li>
+				<li>PhysicalReadsPct         = What's the percentage of the PhysicalReads compared to Async Prefetch Reads (APFReads)</li>
+				<li>AllocatedMb              = Same as AlllocatedKB but as MB instead</li>
+				<li>PagesTouchedDiff         = Same as PagesTouched but diff calculated</li>
+				<li>UnUsedSizeInMb           = How many MB of the cache is not used</li>
+				<li>UnUsedSizeInMbDiff       = Same as UnUsedSizeInMb but diff calculated</li>
+				<li>UsedSizeInMb             = How many MB of the cache is <b>used</b>.</li>
+				<li>UsedSizeInMbDiff         = Same as UsedSizeInMb but diff calculated</li>
+				<li>CacheEfficiencySlide     = Same as 'CacheEfficiency' but within the "time slide" so we can see over a longer time span than between samples</li>
+				<li>CacheReplacementPct      = How much of the cache was replaced by new pages (Turnover in sp_sysmon). This is <b>between</b> two samples</li>
+				<li>CacheReplacementSlidePct = How much of the cache was replaced by new pages (Turnover in sp_sysmon). but within the "time slide" so we can see over a longer time span than between samples</li>
+				<li>CacheSlideTime           = This is the current <i>time span</i> the column <code>CacheReplacementSlidePct</code> reflects.</li>
+				<li>PagesReadInSlide         = Summary of all <i>diff</i> values for the column <code>PagesRead</code> within the <i>slide window</i>.</li>
+				<li>CacheHitRate             = Percent calculation of how many pages was fetched from the cache pool.</li>
+			</ul>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Engines - CmEngines</b><br>
+		<ul>
+			<li>A bunch of new columns (in ASE 15.7 SP 136 or higher)</li>
+			<ul>
+				<li>HkgcOverflowsCmpact = See ASE documentation for a description</li>
+				<li>HkgcOverflowsRec    = See ASE documentation for a description</li>
+				<li>LotsDelRolXacts     = See ASE documentation for a description</li>
+				<li>LotsDelCmtXacts     = See ASE documentation for a description</li>
+				<li>LongXacts           = See ASE documentation for a description</li>
+				<li>PostcommitPageCount = See ASE documentation for a description</li>
+				<li>HkgcReq             = See ASE documentation for a description</li>
+				<li>HkgcReqCmpact       = See ASE documentation for a description</li>
+				<li>HkgcReqDcomp        = See ASE documentation for a description</li>
+				<li>HkgcReqRec          = See ASE documentation for a description</li>
+				<li>HkgcRetries         = See ASE documentation for a description</li>
+			</ul>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Locks - CmLocks</b><br>
+		<ul>
+			<li>New Collector that simply checks what locks we have within this sample</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Objects - CmObjectActivity</b><br>
+		<ul>
+			<li>in ASE 15.7 row_count(... ,'noblock') is used to not get blocked by others in case of a Exclusive Table lock on the table</li>
+			<li>Introduced a new remark 'PROBABLY_TABLE_SCAN', which tries to identify a long running table scans on big table that hasn't yet completed while we query monObjectActivity and there for UsedCount etc hasn't yet been updated</li>
+			<li>Background color: VERY_LIGHT_BLUE - BLOB Text/Image Column (IndID = 255)</li>
+			<li>UsageInMb: same as NumUsedPages, but calculated in MB so you do not have to care about what page size you have</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Processes - CmProcessActivity</b><br>
+		<ul>
+			<li>Highligt with 'EXTREME_LIGHT_GREEN' if SPID is currently running a SQL Statement, Although it might be sleeping waiting for IO or something else.</li>
+			<li>New columns</li>
+			<ul>
+				<li>pssinfo_tempdb_pages_diff - which is the difference in how much tempdb pages this SPID is using (pssinfo_tempdb_pages is the sum of pages used)</li>
+				<li>StatementStartTime        - If this SPID is currently executing anything, this would be when the Statement started to execute</li>
+				<li>StatementExecInMs         - For how many milliseconds has this SPID been executing a SQL Statement</li>
+				<li>HasSqlText, SqlText       - only in ASE 16.x: Get SQL Text for SPID's that are currently executing SQL. Using function query_text(spid), This can be disable with the checkbox 'Get SQL Text for active SPIDs'</li>
+			</ul>
+			<li>New Summary Graphs</li>
+			<ul>
+				<li>BatchCountGraph - Show how many 'SQL Batches' all SPID's has been executed (SPID's that connects/disconnect quickly will not be displayed, since we can't see them...)</li>
+				<li>ExecTimeGraph   - Show the longest/max execution time for any active SPID's</li>
+				<li>ExecCountGraph  - How many concurrently SQL Statements where currently executing at the same time when we sampled data</li>
+			</ul>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Cache -&gt; Statement Cache Details - CmStmntCacheDetails</b><br>
+		<ul>
+			<li>new column 'ObjectName', which you can "hover" over to open the GUI Showplan Viewer to show the XML Showplan in a GUI Format</li>
+			<li>The XML Plan now uses the XML Plan Cache, to not 'overload' the ASE to get the XML Plan for every record</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Summary - CmSummary</b><br>
+		<ul>
+			<li>New field 'LockCount', so we can see how many locks we currently have in the system<br>
+				Note: this can be disabled via a checkbox if you don't want it or that it takes to much resource from the ASE
+			</li>
+			<li>New Graph: LockCountGraph (for other new graphs added to the summary, see the various CM* descriptions)</li>
+			<li>HADR Information (anly in ASE 16.0 SP2)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Sysmon Raw - CmSysmon</b><br>
+		<ul>
+			<li>Implemented the section 'Cache Usage'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Table Statistics - CmTableStatistics</b><br>
+		<ul>
+			<li>New Collector; with various table information, like 'datachange', 'UpdStatDate', 'Size', 'TableRowCount', '*ClusterRatio', '*Utilization', etc, etc...</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Workers - CmWorkerThreads</b><br>
+		<ul>
+			<li>New Collector; with information about how worker threads are used</li>
+		</ul>
+		</LI>
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<li>Some big numbers (which really is string columns) was converted to a "higher" datatype using a slightly faulty method, causing some errors, this is enhanced</li>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; context - CmContext</b><br>
+		<ul>
+			<li>Added 'ConnOrCursor' to the PK. So that "duplicate errors/warning" will go away and better DIFF calculations will be done</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; transactions - CmTransactions</b><br>
+		<ul>
+			<li>Added 'VersionID' to the PK. So that "duplicate errors/warning" will go away and better DIFF calculations will be done</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; version use - CmIqVersionUse</b><br>
+		<ul>
+			<li>Changed PK from 'IQConnID' to 'VersionID' hopefully this will work better for DIFF calculations now</li>
+		</ul>
+		</LI>
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+	
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Monitor & Counters -&gt; RS Counters - CmAdminStats</b><br>
+		<ul>
+			<li>Added 'InstanceId' to PK</li>
+		</ul>
+		</LI>
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+	
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<li>view SQL-Server configurations</li>
+		<li>Tooltip on the columns for the Counter Collectors (basically copied the text from MS web site)</li>
+		<li>DDL Capture of most accessed queries etc, where it stores table info and XML Plans</li>
+		<li>View Showplans in a separate HTML Browser or by using SQL Sentry Plan Explorer (which you need to download separate)</li>
+		<li>In the connection dialog: show 'use Windows Authentication'</li>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object & Access -&gt; Active Statements  - CmActiveStatements</b><br>
+		<ul>
+			<li>Now also include records which holds blocking locks (same as for ASE)</li>
+			<li>Columns 'monSource' indicate if the record comes from 'ACTIVE' or 'BLOCKER' section of the information.</li>
+			<li>A bunch of new columns was also added.</li>
+			<li>Tooltip was added to show sqlText when you "hover" over those columns, ShowPlan show the plan... and wait_type show's some extra information</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object & Access -&gt; Cursors  - CmExecCursors</b><br>
+		<ul>
+			<li>New - Show details from dm_exec_cursors</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object & Access -&gt; Procedures  - CmExecProcedureStats</b><br>
+		<ul>
+			<li>New - Show details from dm_exec_requests</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Sessions  - CmExecSessions</b><br>
+		<ul>
+			<li>New - Show details from dm_exec_sessions</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object & Access -&gt; Triggers  - CmExecTriggerStats</b><br>
+		<ul>
+			<li>New - Show details from dm_exec_sessions</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Schedulers  - CmExecTriggerStats</b><br>
+		<ul>
+			<li>Added 4 graphs</li>
+			<ul>
+				<li>RunQLengthSum - Show a summary of how long the runqueue is for all engines on the server</li>
+				<li>RunQLengthEng - Show runqueue run queue length for each engine</li>
+				<li>PendingIoSum  - Show outstanding/pending IO's for all engines on the server</li>
+				<li>PendingIoEng  - Show outstanding/pending IO's but for each engine</li>
+			</ul>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Spinlock  - CmSpinlocks</b><br>
+		<ul>
+			<li>New - Show details from dm_os_spinlock_stats</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Waiting Tasks  - CmWaitingTasks</b><br>
+		<ul>
+			<li>New - Show details from dm_os_waiting_tasks</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Wait Stats  - CmWaitStats</b><br>
+		<ul>
+			<li>Extended the SQL Statement a bit and also added some local pie/bar charts to see the distribution</li>
+		</ul>
+		</LI>
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>This is a <b>new tool</b>, for PostgreSQL</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Not yet created - Maybe in the future if someone requests it</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Not yet created - Maybe in the future if someone requests it</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SQL Window</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>SSH Tunnel can now also be used for JDBC connections</LI>
+		<LI>The Show JDBC MetaData information was extended to show more informations, like: Tables, Procedures and Functions</LI>
+		<LI>If ASE Server license is in grace mode, write a red warning message on the toolbar</LI>
+		<LI>tooltip on column headers was extended to also show the table origin (identify what table name this column belongs to)</LI>
+		<LI>Option to "load last used file" when the tool starts</LI>
+		<LI>New tools: ASE Application Trace, XML Plan View, DDL Generation (for ASE) </LI>
+		<LI>When there are to many rows in the "normal layout" a message will be displayed to change to "tabbed" view to be able to see all rows</LI>
+		<LI>Write output to a file instead of to the resultset window (good for exporting large result sets to a CSV file) use: 'go | tofile'</LI>
+		<LI>Load file into tables from CSV files (using command: \loadfile -T tabname filename)</LI>
+		<LI>Added a few more SQL Statements in the template for ASE (press Ctrl+Space twice to get the templates)</LI>
+		<LI>Added a "filter" field for ResultSet tables above 15 records (conif QueryWindow.resultset.filter.threshold.rowcount)<br>
+		    The filter value can be a regexp on any column OR use an SQL Like where clause, ex: where id in(1,2,3) or (name like 'syso%' and type='S')
+		</LI>
+		<LI>new command \ddlgen [options] for SYbase, which uses DDLGen.jar to reverse engineer various information</LI>
+		<LI>Shipping some more jdbc drivers (SQL-Server, Postgres, Oracle), previously Sybase jConnect, SAP HANA & jTds</LI>
+		<LI>HADR Information is displayed, also a popup is available which shows HADR members.</LI>
+		<LI>Change ASE MDA (monitor table) configuration(s)</LI>
+		<LI>For SQL-Server, in the connection dialog: show 'use Windows Authentication'</LI>
+		<LI>Probably other stuff also, but I can't remember...</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+	
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Log Tail Tool</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Can now use a GUI remote file chooser over SSH connection</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+</UL>
+
 
 <!-- ========================================================================== -->
 <H2>2015-06-24</H2>

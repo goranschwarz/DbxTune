@@ -59,9 +59,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 448;
-	$ASEMON_LATEST_VERSION_STR = "3.5.0";
-	$ASEMON_LATEST_VERSION_STR = "2015-06-24";
+	$ASEMON_LATEST_VERSION_SRC = 454;
+	$ASEMON_LATEST_VERSION_STR = "3.6.0";
+	$ASEMON_LATEST_VERSION_STR = "2016-11-07";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asetune.com/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=10, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
@@ -104,6 +104,15 @@
 	if ( $debug == "true" )
 		echo "DEBUG: clientSrcVer = '$clientSrcVer'\n";
 
+
+	//------------------------------------------
+	// SPECIAL FEEDBACK to JAVA 1.6 (1.7) users
+	//-------
+	$java_version = getUrlParam('java_version');
+	if (preg_match('#^1.[67]#', $java_version) === 1)
+	{
+		$FEEDBACK_URL = "2016-04-24:www.asetune.com/do_java_upgrade.html";
+	}
 
 	//------------------------------------------
 	// CHECK if later version exists

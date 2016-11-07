@@ -102,6 +102,9 @@ DB Cleanup:
 	$mda_lowVersion            = versionFix(str_replace(" ", "", $_GET['mda_lowVersion']));  // remove spaces in version str
 	$mda_highVersion           = versionFix(str_replace(" ", "", $_GET['mda_highVersion'])); // remove spaces in version str
 	$mda_isCluster             = $_GET['mda_isCluster'];
+	$mda_tableName             = $_GET['mda_tableName'];
+	$mda_columnNameList        = $_GET['mda_columnNameList'];
+
 
 	$ipDesc_key                = $_GET['ipDesc_key'];
 	$ipDesc_val                = $_GET['ipDesc_val'];
@@ -1088,10 +1091,10 @@ DB Cleanup:
 	if ( $rpt_summary_asever == "true" )
 	{
 		$sql = "
-			SELECT srvVersion, sum(isClusterEnabled) as clusterCount, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
+			SELECT clientAppName, srvVersion, sum(isClusterEnabled) as clusterCount, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_connect_info
-			GROUP BY srvVersion
-			ORDER BY srvVersion desc
+			GROUP BY clientAppName, srvVersion
+			ORDER BY clientAppName, srvVersion desc
 			";
 
 		// sending query
@@ -1103,10 +1106,10 @@ DB Cleanup:
 		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE Version Count");
 
 		$sql = "
-			SELECT srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
+			SELECT clientAppName, srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_connect_info
-			GROUP BY srvVersionStr
-			ORDER BY srvVersionStr desc
+			GROUP BY clientAppName, srvVersionStr
+			ORDER BY clientAppName, srvVersionStr desc
 			";
 
 		// sending query
@@ -1118,11 +1121,11 @@ DB Cleanup:
 		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE Version Count");
 
 		$sql = "
-			SELECT srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
+			SELECT clientAppName, srvVersionStr, count(*) as ConnectCount, max(serverAddTime) as lastUsedSrvDate
 			FROM asemon_connect_info
 			WHERE isClusterEnabled > 0
-			GROUP BY srvVersionStr
-			ORDER BY srvVersionStr desc
+			GROUP BY clientAppName, srvVersionStr
+			ORDER BY clientAppName, srvVersionStr desc
 			";
 
 		// sending query
@@ -1275,6 +1278,14 @@ DB Cleanup:
 				<input type="submit" />
 			</form>
 
+			<b>Get version information for a specific Table and Column Names</b>
+			<form action="usage_report.php" method="get">
+				<input type="text" size=7 name="mda" readonly="mda" value="tabList" />
+				Table Name:     <input type="text" size=30  maxlength=30  name="mda_tableName"      value="' . $mda_tableName      . '" />
+				Column Name(s): <input type="text" size=60  maxlength=600 name="mda_columnNameList" value="' . $mda_columnNameList . '" />
+				<input type="submit" />
+			</form>
+
 			<b>Get a full report of what tables and columns has been introduced in what release</b><br>
 			<b>Note: Not yet implemented</b>
 			<form action="usage_report.php" method="get">
@@ -1335,6 +1346,58 @@ DB Cleanup:
 		}
 
 		//------------------------------------------
+		// MDA Version List for Table + ColumnList
+		//------------------------------------------
+		if ( $rpt_mda == "tabList" )
+		{
+			//-----------------------------
+			$colArray        = array_map( 'trim', explode(',', $mda_columnNameList) );
+			$colQuoteListStr = "'" . implode("','", $colArray) . "'";
+
+			$sqlColName = "";
+			if ( $mda_columnNameList != "" )
+				$sqlColName = " AND h.ColumnName in ($colQuoteListStr) ";
+
+			if (strpos($mda_columnNameList, '%') !== false)
+				$sqlColName = " AND h.ColumnName like '$mda_columnNameList' ";
+
+			$sqlTabName = "h.TableName  = '$mda_tableName'";
+			if (strpos($mda_tableName, '%') !== false)
+				$sqlTabName = "h.TableName like '$mda_tableName'";
+
+
+			$label = "MDA TABLE Version Lookup For: Tab='$mda_tableName', ColList=$colQuoteListStr (only new tables in HIGH Version will be visible)";
+			$sql = "
+				SELECT
+					h.srvVersion,
+					h.isClusterEnabled,
+					h.TableName,
+					h.TableID,
+					h.ColumnName,
+					h.ColumnID,
+					h.TypeName,
+					h.Length,
+					h.Indicators,
+					h.Description
+				FROM asemon_mda_info h
+				WHERE $sqlTabName
+				$sqlColName
+				  AND h.type             = 'C'
+				  AND h.isClusterEnabled = 0
+				ORDER BY h.srvVersion, h.TableID, h.ColumnID
+			";
+echo "SQL: $sql";
+
+			// sending query
+			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			if (!$result) {
+				die("Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, $label, "srvVersion");
+
+		}
+
+		//------------------------------------------
 		// MDA DIFF REPORT
 		//------------------------------------------
 		if ( $rpt_mda == "diff" )
@@ -1376,7 +1439,8 @@ DB Cleanup:
 			//-----------------------------
 			$label = "MDA COLUMN DIFF Report: low=$mda_lowVersion, High=$mda_highVersion (only new columns in HIGH Version will be visible)";
 			$sql = "
-				SELECT h.srvVersion,
+				SELECT
+					h.srvVersion,
 					h.isClusterEnabled,
 					h.TableName,
 					h.TableID,
