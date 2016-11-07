@@ -310,6 +310,9 @@
 		//doCleanup("ALTER TABLE asemon_usage ADD COLUMN screenResolution varchar(100)  AFTER callerIpAddress");
 		//doCleanup("ALTER TABLE asemon_usage ADD COLUMN hiDpiScale       varchar(20)   AFTER screenResolution");
 
+		//doCleanup("ALTER TABLE sqlw_usage ADD COLUMN screenResolution varchar(100)  AFTER callerIpAddress");
+		//doCleanup("ALTER TABLE sqlw_usage ADD COLUMN hiDpiScale       varchar(20)   AFTER screenResolution");
+
 		//doCleanup("
 		//CREATE TABLE asemon_mda_info...
 		//");

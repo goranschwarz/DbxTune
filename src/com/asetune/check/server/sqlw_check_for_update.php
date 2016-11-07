@@ -59,9 +59,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$SQLW_LATEST_VERSION_SRC = 448;
-	$SQLW_LATEST_VERSION_STR = "3.5.0";
-	$SQLW_LATEST_VERSION_STR = "2015-06-24";
+	$SQLW_LATEST_VERSION_SRC = 454;
+	$SQLW_LATEST_VERSION_STR = "3.6.0";
+	$SQLW_LATEST_VERSION_STR = "2016-11-07";
 	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL            = "www.asetune.com/history.html";
 	$SEND_OPTIONS            = "sendConnectInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
@@ -106,6 +106,15 @@
 
 
 	//------------------------------------------
+	// SPECIAL FEEDBACK to JAVA 1.6 (1.7) users
+	//-------
+	$java_version = getUrlParam('java_version');
+	if (preg_match('#^1.[67]#', $java_version) === 1)
+	{
+		$FEEDBACK_URL = "2016-04-24:www.asetune.com/do_java_upgrade.html";
+	}
+
+	//------------------------------------------
 	// CHECK if later version exists
 	//-------
 	if ($clientSrcVer < $SQLW_LATEST_VERSION_SRC)
@@ -138,6 +147,9 @@
 	$clientHostName          = getUrlParam('clientHostName');
 	$clientHostAddress       = getUrlParam('clientHostAddress');
 	$clientCanonicalHostName = getUrlParam('clientCanonicalHostName');
+
+	$screenResolution        = getUrlParam('screenResolution');
+	$hiDpiScale              = getUrlParam('hiDpiScale');
 
 	$user_name               = getUrlParam('user_name');
 	$user_home               = getUrlParam('user_home');
@@ -186,6 +198,9 @@
 		clientCanonicalHostName,
 		callerIpAddress,
 
+		screenResolution,
+		hiDpiScale,
+
 		user_name,
 		user_home,
 		user_dir,
@@ -221,6 +236,9 @@
 		'$clientHostAddress',
 		'$clientCanonicalHostName',
 		'$caller_ip',
+
+		'$screenResolution',
+		'$hiDpiScale',
 
 		'$user_name',
 		'$user_home',
