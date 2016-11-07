@@ -541,7 +541,7 @@ extends JXTable
 					return 
 						"<html>"
 						+ "Opening the contect in the registered application (or browser)<br>"
-						+ "The Content were saved in the tempoary file: "+tmpFile+"<br>"
+						+ "The Content were saved in the temporary file: "+tmpFile+"<br>"
 						+ "And opened using local application using URL: "+url+"<br>"
 						+ "<html/>";
 				}

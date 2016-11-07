@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.text.Collator;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import org.jdesktop.swingx.sort.RowFilters;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 import net.miginfocom.swing.MigLayout;
@@ -275,6 +277,15 @@ extends JPanel
 		NumberFormat nf = NumberFormat.getInstance();
 		String rowc = nf.format(_table.getRowCount()) + "/" + nf.format(_table.getModel().getRowCount());
 		_filter_cnt.setText(rowc);
+	}
+
+	/**
+	 * Used to get row count and filter text
+	 * @return
+	 */
+	public String getFilterInfo()
+	{
+		return "Filter information: visibleRows=" + _table.getRowCount() + ", actualRows=" + _table.getModel().getRowCount() + ", filterText='" + _filter_txt.getText() + "'.";
 	}
 
 	/**
@@ -905,6 +916,10 @@ extends JPanel
 		/** In Case, the DataCell in the table is String, apply this regexp instead */
 		private Pattern    _strPattern = null;
 
+		/** Should we use RegExp for String values when operator is EQ or NEQ */
+//		private boolean    _useRegExpForStringIn_EQ_NEQ = false;
+		private boolean    _useRegExpForStringIn_EQ_NEQ = Configuration.getCombinedConfiguration().getBooleanProperty("GTableFilter.where.useRegExpForStringIn_EQ_NEQ", false);
+
 		/** In Case, the DataCell in the table is NO String, we need to 
 		 * create a object of the same type as the object DataCell. Then use
 		 * compare() to check for operator (EQ NE LT GT).
@@ -1043,11 +1058,12 @@ extends JPanel
 			// Create a new object that we use to compare
 			if (_filterObj == null)
 			{
+				String className = "-unknown-";
 				try
 				{
 					if (cellValue instanceof Number)
 					{
-						String className = (String) cellValue.getClass().getName();
+						className = (String) cellValue.getClass().getName();
 						Class<?> clazz = Class.forName(className);
 						Constructor<?> constr = clazz.getConstructor(new Class[]{String.class});
 						_filterObj = constr.newInstance(new Object[]{_filterVal});
@@ -1062,23 +1078,34 @@ extends JPanel
 						_filterObj = _filterVal;
 					}
 				}
-				catch (Exception e) 
+				catch (Throwable t) 
 				{
+					// for 'java.lang.reflect.InvocationTargetException', get the "real" problem...
+					if (t instanceof InvocationTargetException)
+						t = t.getCause();
+
 					// Problems creating a object...
-					// So lets go to some fallback... probably a string...
+					// So lets go to some fall back... probably a string...
 					//e.printStackTrace();
-//					_logger.info("Problems create a Number of the string '"+_filterVal+"' for filtering, using String matching instead. "+e.getMessage());
+					_logger.info("Problems create a Number of the string '"+_filterVal+"' for filtering, TableCellValueClassName='"+className+"'. using String matching instead. Caught: "+t);
 					_filterObj = _filterVal;
 				}
+			}
+
+			// Check how runtime compare are done, print the filter, and the value we are comparing against...
+			if (_logger.isTraceEnabled())
+			{
+				_logger.trace("showInView(): "+getClass().getSimpleName()+"@"+Integer.toHexString(hashCode())+" - "+opToName()+" - "
+					+ "filter=(colId="+_colId+", strVal='"+_filterVal+"', objVal="+_filterObj+", objClass='"+(_filterObj==null?"null":_filterObj.getClass().getName())+"'), "
+					+ "cell(id="+entry.getIdentifier()+", val='"+cellValue+"', class='"+(cellValue==null?"null":cellValue.getClass().getName())+"'.");
 			}
 
 			// If String, go and do reqexp
 			// else USE Comparable on the objects it they implements it, 
 			// otherwise do fallback on string matching
-			
 			if (_filterOp == FILTER_OP_EQ)
 			{
-				if (_filterObj instanceof String)
+				if (_useRegExpForStringIn_EQ_NEQ && _filterObj instanceof String)
 				{
 					if (_strPattern == null)
 						setStrPattern();
@@ -1088,7 +1115,7 @@ extends JPanel
 			}
 			else if (_filterOp == FILTER_OP_NE)
 			{
-				if (_filterObj instanceof String)
+				if (_useRegExpForStringIn_EQ_NEQ && _filterObj instanceof String)
 				{
 					if (_strPattern == null)
 						setStrPattern();
