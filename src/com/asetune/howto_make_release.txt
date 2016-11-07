@@ -24,7 +24,7 @@ svn st
 
 -----------------------------------------------------------
 ANT BUILD
-set JAVA_HOME=c:\Program Files\Java\jdk1.6.0_24
+set JAVA_HOME=c:\Program Files\Java\jdk1.7.0_79
 ant
 cd dist
 asetune.bat

@@ -154,6 +154,7 @@ SqlServerTune
 * Tooltip on the columns for the Counter Collectors (basically copied the text from MS web site)
 * DDL Capture of most accessed queries etc, where it stores table info and XML Plans
 * View Showplans in a separate HTML Browser or by using SQL Sentry Plan Explorer (which you need to download separate)
+* In the connection dialog: show 'use Windows Authentication'
 
 * CmActiveStatements
   Now also include records which holds blocking locks (same as for ASE)

@@ -8636,7 +8636,18 @@ checkPanelSize(_resPanel, comp);
 			Component comp = (Component) panel.getComponent(i);
 			if (comp instanceof JPanel)
 			{
-				sb.append( getResultPanelAsAscii( (JPanel)comp ) );
+				if (comp instanceof GTableFilter)
+				{
+					GTableFilter filter = (GTableFilter)comp;
+					String str = filter.getFilterInfo();
+					sb.append( str );
+					if ( ! str.endsWith("\n") )
+						sb.append("\n");
+				}
+				else
+				{
+					sb.append( getResultPanelAsAscii( (JPanel)comp ) );
+				}
 			}
 			else if (comp instanceof JTabbedPane)
 			{
@@ -8713,7 +8724,21 @@ checkPanelSize(_resPanel, comp);
 			Component comp = (Component) panel.getComponent(i);
 			if (comp instanceof JPanel)
 			{
-				sb.append( getResultPanelAsHtml( (JPanel)comp ) );
+				if (comp instanceof GTableFilter)
+				{
+					sb.append( "<pre>\n" );
+					GTableFilter filter = (GTableFilter)comp;
+					String str = filter.getFilterInfo();
+					sb.append( str );
+					if ( ! str.endsWith("\n") )
+						sb.append("\n");
+					sb.append( "</pre>\n" );
+					sb.append( "<BR>\n" );
+				}
+				else
+				{
+					sb.append( getResultPanelAsHtml( (JPanel)comp ) );
+				}
 			}
 			else if (comp instanceof JTabbedPane)
 			{
@@ -8815,7 +8840,19 @@ checkPanelSize(_resPanel, comp);
 			Component comp = (Component) panel.getComponent(i);
 			if (comp instanceof JPanel)
 			{
-				sb.append( getResultPanelAsCsv( (JPanel)comp ) );
+				if (comp instanceof GTableFilter)
+				{
+					GTableFilter filter = (GTableFilter)comp;
+					String str = filter.getFilterInfo();
+					sb.append( str );
+					if ( ! str.endsWith("\n") )
+						sb.append("\n");
+					//sb.append(terminatorStr);
+				}
+				else
+				{
+					sb.append( getResultPanelAsCsv( (JPanel)comp ) );
+				}
 			}
 			else if (comp instanceof JTabbedPane)
 			{
