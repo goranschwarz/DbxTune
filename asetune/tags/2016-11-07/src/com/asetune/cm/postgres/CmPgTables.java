@@ -1,0 +1,214 @@
+package com.asetune.cm.postgres;
+
+import java.sql.Connection;
+import java.util.LinkedList;
+import java.util.List;
+
+import com.asetune.ICounterController;
+import com.asetune.IGuiController;
+import com.asetune.cm.CounterSetTemplates;
+import com.asetune.cm.CounterSetTemplates.Type;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.postgres.gui.CmPgTablesPanel;
+import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
+import com.asetune.utils.Configuration;
+
+/**
+ * @author Goran Schwarz (goran_schwarz@hotmail.com)
+ */
+public class CmPgTables
+extends CountersModel
+{
+//	private static Logger        _logger          = Logger.getLogger(CmPgTables.class);
+	private static final long    serialVersionUID = 1L;
+
+	public static final String   CM_NAME          = CmPgTables.class.getSimpleName();
+	public static final String   SHORT_NAME       = "Table Info";
+	public static final String   HTML_DESC        = 
+		"<html>" +
+		"One row for each table in the current database, showing statistics about accesses to that specific table." +
+		"</html>";
+
+	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
+	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
+
+	public static final int      NEED_SRV_VERSION = 0;
+	public static final int      NEED_CE_VERSION  = 0;
+
+	public static final String[] MON_TABLES       = new String[] {"pg_stat_all_tables"};
+	public static final String[] NEED_ROLES       = new String[] {};
+	public static final String[] NEED_CONFIG      = new String[] {};
+
+	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] DIFF_COLUMNS     = new String[] {
+			"seq_scan",
+			"seq_tup_read",
+			"idx_scan",
+			"idx_tup_fetch",
+			"n_tup_ins",
+			"n_tup_upd",
+			"n_tup_del",
+			"n_tup_hot_upd",
+			"n_live_tup",
+			"n_dead_tup",
+			"n_mod_since_analyze",
+			"vacuum_count",
+			"autovacuum_count",
+			"analyze_count",
+			"autoanalyze_count"			
+	};
+//	RS> Col# Label               JDBC Type Name           Guessed DBMS type
+//	RS> ---- ------------------- ------------------------ -----------------
+//	RS> 1    relid               java.sql.Types.BIGINT    oid              
+//	RS> 2    schemaname          java.sql.Types.VARCHAR   name(2147483647) 
+//	RS> 3    relname             java.sql.Types.VARCHAR   name(2147483647) 
+//	RS> 4    seq_scan            java.sql.Types.BIGINT    int8             
+//	RS> 5    seq_tup_read        java.sql.Types.BIGINT    int8             
+//	RS> 6    idx_scan            java.sql.Types.BIGINT    int8             
+//	RS> 7    idx_tup_fetch       java.sql.Types.BIGINT    int8             
+//	RS> 8    n_tup_ins           java.sql.Types.BIGINT    int8             
+//	RS> 9    n_tup_upd           java.sql.Types.BIGINT    int8             
+//	RS> 10   n_tup_del           java.sql.Types.BIGINT    int8             
+//	RS> 11   n_tup_hot_upd       java.sql.Types.BIGINT    int8             
+//	RS> 12   n_live_tup          java.sql.Types.BIGINT    int8             
+//	RS> 13   n_dead_tup          java.sql.Types.BIGINT    int8             
+//	RS> 14   n_mod_since_analyze java.sql.Types.BIGINT    int8             
+//	RS> 15   last_vacuum         java.sql.Types.TIMESTAMP timestamptz      
+//	RS> 16   last_autovacuum     java.sql.Types.TIMESTAMP timestamptz      
+//	RS> 17   last_analyze        java.sql.Types.TIMESTAMP timestamptz      
+//	RS> 18   last_autoanalyze    java.sql.Types.TIMESTAMP timestamptz      
+//	RS> 19   vacuum_count        java.sql.Types.BIGINT    int8             
+//	RS> 20   autovacuum_count    java.sql.Types.BIGINT    int8             
+//	RS> 21   analyze_count       java.sql.Types.BIGINT    int8             
+//	RS> 22   autoanalyze_count   java.sql.Types.BIGINT    int8             
+	
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
+	public static final boolean  IS_SYSTEM_CM                   = true;
+	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+	public static final int      DEFAULT_QUERY_TIMEOUT          = CountersModel.DEFAULT_sqlQueryTimeout;
+
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public Type    getTemplateLevel()                       { return Type.MEDIUM; }
+
+	/**
+	 * FACTORY  method to create the object
+	 */
+	public static CountersModel create(ICounterController counterController, IGuiController guiController)
+	{
+		if (guiController != null && guiController.hasGUI())
+			guiController.splashWindowProgress("Loading: Counter Model '"+CM_NAME+"'");
+
+		return new CmPgTables(counterController, guiController);
+	}
+
+	public CmPgTables(ICounterController counterController, IGuiController guiController)
+	{
+		super(counterController,
+				CM_NAME, GROUP_NAME, /*sql*/null, /*pkList*/null, 
+				DIFF_COLUMNS, PCT_COLUMNS, MON_TABLES, 
+				NEED_ROLES, NEED_CONFIG, NEED_SRV_VERSION, NEED_CE_VERSION, 
+				NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
+
+		setDisplayName(SHORT_NAME);
+		setDescription(HTML_DESC);
+
+		setIconFile(GUI_ICON_FILE);
+
+		setCounterController(counterController);
+		setGuiController(guiController);
+		
+		addTrendGraphs();
+		
+		CounterSetTemplates.register(this);
+	}
+
+
+	//------------------------------------------------------------
+	// Implementation
+	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                          = CM_NAME;
+
+	public static final String  PROPKEY_sample_systemTables           = PROP_PREFIX + ".sample.systemTables";
+	public static final boolean DEFAULT_sample_systemTables           = false;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_systemTables,           DEFAULT_sample_systemTables);
+	}
+	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public Configuration getLocalConfiguration()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		Configuration lc = new Configuration();
+
+		lc.setProperty(PROPKEY_sample_systemTables, conf.getBooleanProperty(PROPKEY_sample_systemTables, DEFAULT_sample_systemTables));
+		
+		return lc;
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public String getLocalConfigurationDescription(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_systemTables)) return "Sample System Tables";
+		return "";
+	}
+	@Override
+	public String getLocalConfigurationDataType(String propName)
+	{
+		if (propName.equals(PROPKEY_sample_systemTables)) return Boolean.class.getSimpleName();
+		return "";
+	}
+
+
+	private void addTrendGraphs()
+	{
+	}
+
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new CmPgTablesPanel(this);
+	}
+
+
+//	@Override
+//	protected TabularCntrPanel createGui()
+//	{
+//		return new CmActiveStatementsPanel(this);
+//	}
+	
+	@Override
+	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	{
+		List <String> pkCols = new LinkedList<String>();
+
+		pkCols.add("relid");
+//		pkCols.add("schemaname");
+//		pkCols.add("relname");
+
+		return pkCols;
+	}
+
+	@Override
+	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		String tabName = "pg_catalog.pg_stat_user_tables";
+
+		// Sample System Tables
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_systemTables, DEFAULT_sample_systemTables))
+		{
+			tabName = "pg_catalog.pg_stat_all_tables";
+		}
+
+		return "select * from "+tabName;
+	}
+}
