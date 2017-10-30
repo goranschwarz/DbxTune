@@ -28,7 +28,7 @@ public class DbConnTest
 //		Configuration conf1 = new Configuration("c:\\projects\\asetune\\asetune.save.properties");
 //		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 //
-//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
+//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 
 
@@ -36,7 +36,7 @@ public class DbConnTest
 		try
 		{
 			System.out.println("Open DB connection.");
-			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "DbConnTest", null);
+			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "DbConnTest", null, null);
 
 			String sql = "exec master..sp_help 'dbo.monLocks' ";
 			System.out.println("DO SQL: "+sql);

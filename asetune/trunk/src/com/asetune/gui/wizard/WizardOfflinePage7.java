@@ -35,6 +35,7 @@ implements ActionListener
 	private JTextField _shutdownAfterXHours  = new JTextField("");
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	public WizardOfflinePage7()
@@ -148,6 +149,7 @@ implements ActionListener
 		return problem.length() == 0 ? null : "Following fields can't be empty: "+problem;
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();

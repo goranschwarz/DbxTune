@@ -10,6 +10,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -140,33 +141,17 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_resetAfter,  conf.getBooleanProperty(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
+		list.add(new CmSettingsHelper("Clear Counters", PROPKEY_sample_resetAfter , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_resetAfter  , DEFAULT_sample_resetAfter  ), DEFAULT_sample_resetAfter, CmAdminStatsPanel.TOOLTIP_sample_resetAfter ));
+
+		return list;
 	}
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_resetAfter))  return CmAdminStatsPanel.TOOLTIP_sample_resetAfter;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_resetAfter))  return Boolean.class.getSimpleName();
 
-		return "";
-	}
-
-	
-	
 	private void addTrendGraphs()
 	{
 	}

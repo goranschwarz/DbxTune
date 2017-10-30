@@ -11,7 +11,8 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.ConnectionProvider;
 
-public class XmlPlanCacheAse extends XmlPlanCache
+public class XmlPlanCacheAse 
+extends XmlPlanCache
 {
 	private static Logger _logger = Logger.getLogger(XmlPlanCacheAse.class);
 

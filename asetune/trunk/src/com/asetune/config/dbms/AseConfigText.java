@@ -25,6 +25,7 @@ public abstract class AseConfigText
 	public enum ConfigType
 	{
 		AseCacheConfig
+		,AseConfigHistory
 		,AseThreadPool
 		,AseHelpDb
 		,AseTempdb
@@ -79,6 +80,7 @@ public abstract class AseConfigText
 	public static void createAndRegisterAllInstances()
 	{
 		DbmsConfigTextManager.addInstance(new AseConfigText.Cache());              // ConfigType.AseCacheConfig);
+		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigHistory());
 		DbmsConfigTextManager.addInstance(new AseConfigText.ThreadPool());         // ConfigType.AseThreadPool);
 		DbmsConfigTextManager.addInstance(new AseConfigText.HelpDb());             // ConfigType.AseHelpDb);
 		DbmsConfigTextManager.addInstance(new AseConfigText.Tempdb());             // ConfigType.AseTempdb);
@@ -497,7 +499,7 @@ public abstract class AseConfigText
 
 				// Then copy and parse the information
 				_freeMemory = null;
-				if (stop > 0)
+				if (stop >= 0)
 				{
 					String mb = configStr.substring(start, stop);
 					_logger.debug("parse Available Memory for reconfiguration: start="+start+", stop="+stop+", MB='"+mb+"'.");
@@ -598,6 +600,76 @@ public abstract class AseConfigText
 			}
 
 			return sql;
+		}
+	}
+
+	public static class ConfigHistory extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                       { return "Config History"; }
+		@Override public    String     getName()                           { return ConfigType.AseConfigHistory.toString(); }
+		@Override public    String     getConfigType()                     { return getName(); }
+//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigHistory; }
+		@Override public    int        needVersion()                       { return Ver.ver(16,0); }
+		@Override protected String     getSqlCurrentConfig(int aseVersion) 
+		{
+			return ""
+				+ "-- Check if the database exists... \n"
+				+ "if exists (select * from master.dbo.sysdatabases where name = 'sybsecurity') \n"
+				+ "begin \n"
+				+ "    --execute('exec sybsecurity.dbo.sp_confighistory') \n"
+//				+ "    execute('select top 1000 * from sybsecurity.dbo.ch_events order by timestamp desc') \n" // to get *last* 1000 changes...
+				+ "    execute('select * from sybsecurity.dbo.ch_events') \n"
+				+ "end \n"
+				+ "else \n"
+				+ "begin \n"
+				+ "    print '--###########################################################################' \n"
+				+ "    print '--ERROR: the database ''sybsecurity'' do not exist.' \n"
+				+ "    print '-- NOTE: Auditing must be enabled to get this feature...' \n"
+				+ "    print '--###########################################################################' \n"
+				+ "    print '' \n"
+				+ "    print '----------------------------------------------------------' \n"
+				+ "    print '-- Below is some steps in how to create and enable this.'   \n"
+				+ "    print '----------------------------------------------------------' \n"
+				+ "    print '' \n"
+				+ "    print '-- Create data and log device to hold the database' \n"
+				+ "    print 'disk init name = ''sybsecurity_data_1'',   physname = ''/somewhere/devices/sybsecurity_data_1.dat'',  size = ''300m'', skip_alloc=false, directio=true, dsync=false' \n"
+				+ "    print 'disk init name = ''sybsecurity_log_1'',    physname = ''/somewhere/devices/sybsecurity_log_1.dat'',   size = ''50m'',  skip_alloc=false, directio=true, dsync=false' \n"
+				+ "    print 'go' \n"
+				+ "    print '' \n"
+				+ "    print '-- Create the database' \n"
+				+ "    print 'create database sybsecurity on sybsecurity_data_1=300 log on sybsecurity_log_1=50' \n"
+				+ "    print 'go' \n"
+				+ "    print '' \n"
+				+ "    print '-- apply the install script from the OS' \n"
+				+ "    print 'OS: isql -Usa -Psecret -S%1! -i ${SYBASE}/${SYBASE_ASE}/scripts/installsecurity', @@servername \n"
+				+ "    print 'OS: Most possible restart the ASE' \n"
+				+ "    print '' \n"
+				+ "    print '-- Configure auditing' \n"
+				+ "    print 'exec sp_configure ''auditing'', 1 -- NOTE: if you get errors here, you will probably have to reboot ASE' \n"
+				+ "    print 'go' \n"
+				+ "    print '' \n"
+				+ "    print '-- Configure auditing to save config changes' \n"
+				+ "    print 'exec sp_audit ''config_history'', ''all'', ''all'', ''on'' ' \n"
+				+ "    print 'go' \n"
+				+ "    print '' \n"
+				+ "    print '-- Create a view so we can read the config changes' \n"
+				+ "    print 'exec sybsecurity.dbo.sp_confighistory ''create_view'' ' \n"
+				+ "    print 'go' \n"
+				+ "    print '' \n"
+				+ "    print '----------------------------------------------------------' \n"
+				+ "    print '-- DONE'   \n"
+				+ "    print '----------------------------------------------------------' \n"
+				+ "    print '' \n"
+				+ "    print '-- So how do we get the configuration changes...' \n"
+				+ "    print 'exec sybsecurity.dbo.sp_confighistory ' \n"
+				+ "    print '' \n"
+				+ "    print '-- or:' \n"
+				+ "    print 'select * from sybsecurity.dbo.ch_events' \n"
+				+ "    print 'go' \n"
+				+ "    print '' \n"
+				+ "end \n"
+				+ "";
+//			return "exec sybsecurity.dbo.sp_confighistory"; 
 		}
 	}
 
@@ -947,7 +1019,7 @@ public abstract class AseConfigText
 //		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 //		PropertyConfigurator.configure(log4jProps);
 //
-//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
+//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 //
 //

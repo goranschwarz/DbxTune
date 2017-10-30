@@ -475,7 +475,7 @@ extends ObjectLookupInspectorAbstract
 		
 					//--------------------------------------------
 					// GET SOME OTHER STATISTICS
-					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
+					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"', 1 ";  // ,1 = get details on indexes
 	
 					ss = new AseSqlScript(conn, 10, false);
 					ss.setUseGlobalMsgHandler(false);
@@ -971,7 +971,7 @@ extends ObjectLookupInspectorAbstract
 //		
 //					//--------------------------------------------
 //					// GET SOME OTHER STATISTICS
-//					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"' ";
+//					sql = "exec "+entry.getDbname()+"..sp_spaceused '"+entry.getOwner()+"."+entry.getObjectName()+"', 1 ";
 //	
 //					ss = new AseSqlScript(conn, 10);
 //					try	{ 

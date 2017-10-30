@@ -2,6 +2,7 @@ package com.asetune.ssh;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
@@ -21,6 +22,7 @@ import javax.swing.JTextField;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.gui.swing.PromptForPassword;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -53,6 +55,9 @@ public class SshConnection
 	/** First String in the output from 'uname -a', which was made while the connection was created. */
 	private String _osName = null;
 
+	/** outpu from the 'nproc' command. Which tells us how many scheduling/processing units are available on this os */
+	private int _nproc = -1;
+
 	/** Used to create Strings from the remote host, so that client character set convention can be done. 
 	 * NOTE: For the moment this is hard coded based on the OsName 
 	 * (Linux=UTF-8, SunOs=ISO-8859-1, AIX=ISO-8859-1, HP-UX=ISO-8859-1, else=null)*/
@@ -76,7 +81,8 @@ public class SshConnection
 	private static final String _idRSAPath     = _homeDir + File.separator + ".ssh" + File.separator + "id_rsa";
 
 	private WaitForExecDialog _waitforDialog = null;
-	private static Component         _guiOwner = null;
+//	private static Component         _guiOwner = null;
+	private Component         _guiOwner = null;
 
 	public static String getRsaKeyFilename() { return _idRSAPath; }
 
@@ -88,6 +94,8 @@ public class SshConnection
 
 	public static final String  PROPKEY_sshAuthenticateEnableRSA                 = "ssh.authenticate.enable.RSA";
 	public static final boolean DEFAULT_sshAuthenticateEnableRSA                 = true;
+
+	public static final String PROMPT_FOR_PASSWORD = "<PROMPT_FOR_PASSWORD>";
 
 	/**
 	 * Create an empty SshConnection, but you need to setUser,password,host
@@ -136,9 +144,12 @@ public class SshConnection
 	public void              setWaitForDialog(WaitForExecDialog wait) { _waitforDialog = wait; }
 	public boolean           hasWaitForDialog()                       { return _waitforDialog != null; }
 
-	public static Component         getGuiOwner()                       { return _guiOwner; }
-	public static void              setGuiOwner(Component guiHandle)    { _guiOwner = guiHandle; }
-	public static boolean           hasGuiOwner()                       { return _guiOwner != null; }
+//	public static Component         getGuiOwner()                       { return _guiOwner; }
+//	public static void              setGuiOwner(Component guiHandle)    { _guiOwner = guiHandle; }
+//	public static boolean           hasGuiOwner()                       { return _guiOwner != null; }
+	public Component         getGuiOwner()                       { return _guiOwner; }
+	public void              setGuiOwner(Component guiHandle)    { _guiOwner = guiHandle; }
+	public boolean           hasGuiOwner()                       { return _guiOwner != null; }
 
 	private void logInfoMsg(String logMsg)
 	{
@@ -208,9 +219,14 @@ public class SshConnection
 
 		_logger.info("Just Connected to SSH host '"+_hostname+"' on port '"+_port+"' with user '"+_username+"'.");
 
+
 		// Try to get what OS we connected to
 		getOsInfo();
-		_logger.info("The host SSH host '"+_hostname+"' has '"+getOsName()+"' as it's Operating System. My guess is that it's using character set '"+getOsCharset()+"'.");
+
+		// Try to get number of procs (scheduble units on this os)
+		getNproc();
+
+		_logger.info("The host SSH host '"+_hostname+"' has '"+getOsName()+"' as it's Operating System (nproc="+_nproc+"). My guess is that it's using character set '"+getOsCharset()+"'.");
 
 		_isConnected = true;
 		return true;
@@ -330,8 +346,27 @@ public class SshConnection
 			if (_conn.isAuthMethodAvailable(_username, "password"))
 			{
 				logInfoMsg("SSH Authentication method 'password': Trying...");
-				
-				boolean res = _conn.authenticateWithPassword(_username, _password);
+
+				boolean res = false;
+				if (PROMPT_FOR_PASSWORD.equals(_password))
+				{
+					// Prompt for password
+					String promptPasswd = PromptForPassword.show(null, "Please specify the Password for SSH connection to '"+_hostname+"'.", _hostname, _username);
+
+					// Authenticate
+					res = _conn.authenticateWithPassword(_username, promptPasswd);
+					
+					if (res)
+						_password = promptPasswd;
+				}
+				else
+				{
+					// Use the already specified passord
+					res = _conn.authenticateWithPassword(_username, _password);
+
+					if ( ! res )
+						_password = PROMPT_FOR_PASSWORD;
+				}
 
 				if (res == true)
 				{
@@ -502,6 +537,12 @@ public class SshConnection
 		@Override
 		public boolean verifyServerHostKey(String hostname, int port, String serverHostKeyAlgorithm, byte[] serverHostKey) throws Exception
 		{
+			// If we cant provide a GUI simply say YES
+			if (GraphicsEnvironment.isHeadless()) 
+			{
+				return true;
+			}
+			
 			final String host = hostname;
 			final String algo = serverHostKeyAlgorithm;
 
@@ -846,6 +887,55 @@ public class SshConnection
 	}
 
 	/**
+	 * execute 'nproc' on the OS and return the result
+	 * 
+	 * @return The value of 'nproc'.  0 = failure to execute nproc
+	 */
+	public int getNproc()
+	{
+		if (_nproc != -1)
+			return _nproc;
+
+		String cmd = "nproc";
+		String str = "-empty-";
+		try
+		{
+			if (_conn == null)
+			{
+				throw new IOException("The SSH connection to the host '"+_hostname+"' was null. The connection has not been initialized OR someone has closed the connection.");
+			}
+
+			Session sess = _conn.openSession();
+			sess.execCommand(cmd);
+
+			InputStream stdout = new StreamGobbler(sess.getStdout());
+			BufferedReader br = new BufferedReader(new InputStreamReader(stdout));
+
+			String output = "";
+			while (true)
+			{
+				String line = br.readLine();
+				if (line == null)
+					break;
+
+				output += line;
+			}
+
+			br.close();
+			sess.close();
+
+			str = output;
+			_nproc = StringUtil.parseInt(str, 0);
+		}
+		catch (Exception e)
+		{
+			_nproc = 0;
+			_logger.info("Problems executing command '"+cmd+"'. retStr='"+str+"', Caught: "+e);
+		}
+		return _nproc;
+	}
+
+	/**
 	 * simply does 'uname -a' and return the string.
 	 */
 	public String getOsInfo()
@@ -1140,6 +1230,7 @@ public class SshConnection
 		BufferedReader stderr_br = new BufferedReader(new InputStreamReader(new StreamGobbler(sess.getStderr())));
 
 		int intVersion = -1;
+		String usedVersionString = null;
 		// Read output (probably on stdout)
 		while (true)
 		{
@@ -1152,7 +1243,10 @@ public class SshConnection
 //System.out.println("getLinuxUtilVersion() stdout: '"+line+"'. VersionShort.parse() returned: "+i);
 
 			if (i >= 0)
+			{
 				intVersion = i;
+				usedVersionString = line;
+			}
 		}
 
 		while (true)
@@ -1166,10 +1260,13 @@ public class SshConnection
 //System.out.println("getLinuxUtilVersion() stderr: '"+line+"'. VersionShort.parse() returned: "+i);
 
 			if (i >= 0)
+			{
 				intVersion = i;
+				usedVersionString = line;
+			}
 		}
 
-		_logger.info("When issuing command '"+cmd+"' the version "+intVersion+" was parsed.");
+		_logger.info("When issuing command '"+cmd+"' the version "+intVersion+" was parsed from the version string '"+StringUtil.removeLastNewLine(usedVersionString)+"'.");
 //		Integer exitCode = sess.getExitStatus();
 
 		stdout_br.close();

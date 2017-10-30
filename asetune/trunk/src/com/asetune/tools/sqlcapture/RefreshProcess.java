@@ -450,6 +450,15 @@ public class RefreshProcess extends Thread
 					ObjOwnerID = "ObjOwnerID = object_owner_id(S.ProcedureID, S.DBID), ";
 				}
 				
+				// ASE 16.0 SP3
+				String QueryOptimizationTime       = "";
+				String ase160_sp3_nl               = "";
+				if (_aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+				{
+					QueryOptimizationTime       = "  S.QueryOptimizationTime, ";
+					ase160_sp3_nl               = "\n";
+				}
+				
 //				String sql = 
 //					"select  SPID, KPID, BatchID, LineNumber, dbname=db_name(DBID), procname=isnull(object_name(ProcedureID,DBID),''), \n" 
 //					+ "  CpuTime, WaitTime, ExecTimeInMs=datediff(ms, StartTime, getdate()), MemUsageKB, PhysicalReads, LogicalReads, \n"
@@ -463,7 +472,8 @@ public class RefreshProcess extends Thread
 //					+ "  procname=isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),''), \n"
 					+ "  procname=isnull(isnull(isnull(object_name(S.ProcedureID,S.DBID),object_name(S.ProcedureID,2)),object_name(S.ProcedureID,db_id('sybsystemprocs'))),''), \n"
 					+ "  P.Command, S.CpuTime, S.WaitTime, \n"
-					+ "  ExecTimeInMs = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n"  // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+					+ "  ExecTimeInMs = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n"  // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+					+ QueryOptimizationTime + ase160_sp3_nl
 					+ "  S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n"
 					+ extraCols
 					+ "  P.Application, P.Login, \n"
@@ -873,6 +883,15 @@ public class RefreshProcess extends Thread
 					ObjOwnerID = "      ObjOwnerID = object_owner_id(ProcedureID, DBID), \n";
 				}
 				
+				// ASE 16.0 SP3
+				String QueryOptimizationTime       = "";
+				String ase160_sp3_nl               = "";
+				if (_aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+				{
+					QueryOptimizationTime       = "      QueryOptimizationTime, ";
+					ase160_sp3_nl               = "\n";
+				}
+				
 				
 				String sql =
 					"select SPID, KPID, BatchID, LineNumber, \n" +
@@ -880,9 +899,10 @@ public class RefreshProcess extends Thread
 //					"       procname=isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),''), \n" +
 					"       procname=isnull(isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),object_name(ProcedureID,db_id('sybsystemprocs'))),''), \n" +
 //					"       Elapsed_ms=datediff(ms,StartTime, EndTime), \n" +
-					"       Elapsed_ms = CASE WHEN datediff(day, StartTime, EndTime) > 20 THEN -1 ELSE  datediff(ms, StartTime, EndTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+					"       Elapsed_ms = CASE WHEN datediff(day, StartTime, EndTime) >= 24 THEN -1 ELSE  datediff(ms, StartTime, EndTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 					"       CpuTime, WaitTime, MemUsageKB, PhysicalReads, LogicalReads, \n" +
 					extraCols +
+					QueryOptimizationTime + ase160_sp3_nl +
 					"       PagesModified, PacketsSent, \n" +
 					"       PacketsReceived, NetworkPacketSize, \n" +
 					"       PlansAltered, StartTime, EndTime, \n" +
@@ -2096,7 +2116,7 @@ public class RefreshProcess extends Thread
 				SwingUtils.calcColumnWidths(pdf._historyStatementsTable);
 				_historyTableColmnsIsResized = false;
 			}
-			for (int i = 0; i < _newHistoryStatements.size(); i++)
+			for (int i=0; _newHistoryStatements!=null && i<_newHistoryStatements.size(); i++)
 			{
 				_historyStmtModel.addRow((Vector) _newHistoryStatements.get(i));
 
@@ -2996,9 +3016,7 @@ public class RefreshProcess extends Thread
 //		_isInitialized = true;
 //	}
 
-	
-	@Override
-	public void run()
+	private void refreshAseMonitorConfigs()
 	{
 		// Check configured options
 		try
@@ -3029,7 +3047,13 @@ public class RefreshProcess extends Thread
 			_logger.error(Version.getAppName()+" : error in refreshProcess getting options. ", SQLEx);
 			// SQLEx.printStackTrace();
 		}
+	}
 
+	@Override
+	public void run()
+	{
+		refreshAseMonitorConfigs();
+		
 		// Display warning if all configuration parameters are not set
 		StringBuilder             msg = new StringBuilder();
 		if (!stmtStat)            msg = msg.append("<li>'statement statistics active' to 1 </li>" );
@@ -3082,6 +3106,9 @@ public class RefreshProcess extends Thread
 						msg.toString(), chk, (JPanel)null);
 
 				AseConfigMonitoringDialog.showDialog(pdf, _conn, -1, true);
+
+				// Refresh this again...
+				refreshAseMonitorConfigs();
 			}
 		}
 

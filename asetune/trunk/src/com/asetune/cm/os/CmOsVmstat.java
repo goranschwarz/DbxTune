@@ -8,9 +8,11 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.gui.CmOsVmstatPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
+import com.asetune.hostmon.HostMonitor.OsVendor;
 
 public class CmOsVmstat
 extends CounterModelHostMonitor
@@ -66,24 +68,94 @@ extends CounterModelHostMonitor
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_CPU_USAGE = "CpuUsage";
+	public static final String GRAPH_NAME_PROCS_USAGE   = "ProcsUsage";
+	public static final String GRAPH_NAME_SWAP_USAGE    = "SwapUsage";
+	public static final String GRAPH_NAME_MEM_USAGE     = "MemUsage";
+	public static final String GRAPH_NAME_SWAP_IN_OUT   = "SwapInOut";
+	public static final String GRAPH_NAME_IO_READ_WRITE = "IoReadWrite";
+	public static final String GRAPH_NAME_CPU_USAGE     = "CpuUsage";
 
 	private void addTrendGraphs()
 	{
-//		String[] labelsCpu  = new String[] { "cpu_sy+cpu_us", "cpu_sy", "cpu_us", "cpu_id" };
-		String[] labelsCpu  = new String[] { "-runtime-replaced-" };
+////		String[] labelsCpu  = new String[] { "cpu_sy+cpu_us", "cpu_sy", "cpu_us", "cpu_id" };
+//		String[] labelsCpu  = new String[] { "-runtime-replaced-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_CPU_USAGE, new TrendGraphDataPoint(GRAPH_NAME_CPU_USAGE, labelsCpu));
+		addTrendGraphData(GRAPH_NAME_PROCS_USAGE,   new TrendGraphDataPoint(GRAPH_NAME_PROCS_USAGE,   labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_SWAP_USAGE,    new TrendGraphDataPoint(GRAPH_NAME_SWAP_USAGE,    labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_MEM_USAGE,     new TrendGraphDataPoint(GRAPH_NAME_MEM_USAGE,     labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_SWAP_IN_OUT,   new TrendGraphDataPoint(GRAPH_NAME_SWAP_IN_OUT,   labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_IO_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_IO_READ_WRITE, labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CPU_USAGE,     new TrendGraphDataPoint(GRAPH_NAME_CPU_USAGE,     labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
 		{
-			// GRAPH
 			TrendGraph tg = null;
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_PROCS_USAGE,
+				"vmstat: Processes Usage",                                // Menu CheckBox text
+				"vmstat: Processes Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_SWAP_USAGE,
+				"vmstat: Swap Usage",                                // Menu CheckBox text
+				"vmstat: Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_MEM_USAGE,
+				"vmstat: Memory Usage",                                // Menu CheckBox text
+				"vmstat: Memory Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_SWAP_IN_OUT,
+				"vmstat: Swap In/Out per sec",                                // Menu CheckBox text
+				"vmstat: Swap In/Out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_IO_READ_WRITE,
+				"vmstat: IO Read/Write or blk-in/out per sec",                                // Menu CheckBox text
+				"vmstat: IO Read/Write or blk-in/out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_CPU_USAGE,
-				"Host Monitoring - CPU Usage", 	                // Menu CheckBox text
-				"Host Monitoring - CPU Usage",                  // Label 
-				labelsCpu, 
+				"vmstat: CPU Usage",                                // Menu CheckBox text
+				"vmstat: CPU Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+				labels, 
 				true, // is Percent Graph
 				this, 
 				false, // visible at start
@@ -103,27 +175,155 @@ extends CounterModelHostMonitor
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
+		if (GRAPH_NAME_PROCS_USAGE.equals(tgdp.getName()))
+		{
+			String procs_r = null;
+			String procs_b = null;
+			if (     isConnectedToVendor(OsVendor.Linux))   { procs_r = "procs_r"; procs_b = "procs_b"; }
+			else if (isConnectedToVendor(OsVendor.Solaris)) { procs_r = "kthr_r";  procs_b = "kthr_b";  }
+			else if (isConnectedToVendor(OsVendor.Aix))     { procs_r = "kthr_r";  procs_b = "kthr_b";  }
+			else if (isConnectedToVendor(OsVendor.Hp))      { procs_r = "procs_r"; procs_b = "procs_b"; }
+
+			Double[] arr = new Double[2];
+			String[] label = new String[] {
+					"RunQueue - # Processes Waiting for CPU time ["+procs_r+"]", 
+					"WaitQueue - # Process Waiting for I/O (disk, network, user input,etc..) ["+procs_b+"]"};
+			
+			arr[0] = this.getAbsValueAvg(procs_r);
+			arr[1] = this.getAbsValueAvg(procs_b);
+
+			tgdp.setDataPoint(this.getTimestamp(), label, arr);
+		}
+		
+		if (GRAPH_NAME_SWAP_USAGE.equals(tgdp.getName()))
+		{
+			String memory_swpd = null;
+			if      (isConnectedToVendor(OsVendor.Linux))   { memory_swpd = "memory_swpd"; }
+			else if (isConnectedToVendor(OsVendor.Solaris)) { memory_swpd = "memory_swap"; } // INVESTIGATE HERE
+			else if (isConnectedToVendor(OsVendor.Aix))     { memory_swpd = "memory_avm";  } // INVESTIGATE HERE
+			else if (isConnectedToVendor(OsVendor.Hp))      { memory_swpd = "memory_avm";  } // INVESTIGATE HERE
+
+			Double[] arr = new Double[1];
+			String[] label = new String[] {"How many Blocks are Swapped out to disk (paged). Total Virtual memory usage. ["+memory_swpd+"]"};
+			
+			arr[0] = this.getAbsValueAvg(memory_swpd);
+
+			tgdp.setDataPoint(this.getTimestamp(), label, arr);
+		}
+	
+		if (GRAPH_NAME_MEM_USAGE.equals(tgdp.getName()))
+		{
+			String memory_free = null;
+			String memory_buff = null;
+			String memory_cache = null;
+			if (     isConnectedToVendor(OsVendor.Linux))   { memory_free = "memory_free"; memory_buff = "memory_buff"; memory_cache = "memory_cache"; }
+//			else if (isConnectedToVendor(OsVendor.Solaris)) { memory_free = "memory_free"; memory_buff = "?????";       memory_cache = "????"; } // INVESTIGATE HERE
+//			else if (isConnectedToVendor(OsVendor.Aix))     { memory_free = "memory_free"; memory_buff = "?????";       memory_cache = "????"; } // INVESTIGATE HERE
+//			else if (isConnectedToVendor(OsVendor.Hp))      { memory_free = "memory_free"; memory_buff = "?????";       memory_cache = "????"; } // INVESTIGATE HERE
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+    				tg.setWarningLabel("This graph is not available on '"+getConnectedToVendor()+"'.");
+				return;
+			}
+
+			Double[] arr = new Double[3];
+			String[] label = new String[] {
+					"Idle/Free Memory ["+memory_free+"]", 
+					"Memory used as Buffers ["+memory_buff+"]", 
+					"Memory used as cache by the Operating System ["+memory_cache+"]"};
+			
+			arr[0] = this.getAbsValueAvg(memory_free);
+			arr[1] = this.getAbsValueAvg(memory_buff);
+			arr[2] = this.getAbsValueAvg(memory_cache);
+
+			tgdp.setDataPoint(this.getTimestamp(), label, arr);
+		}
+	
+		if (GRAPH_NAME_SWAP_IN_OUT.equals(tgdp.getName()))
+		{
+			String swap_si = null;
+			String swap_so = null;
+			if (     isConnectedToVendor(OsVendor.Linux))   { swap_si = "swap_si"; swap_so = "swap_so"; }
+			else if (isConnectedToVendor(OsVendor.Solaris)) { swap_si = "page_pi"; swap_so = "page_po";  }
+			else if (isConnectedToVendor(OsVendor.Aix))     { swap_si = "page_pi"; swap_so = "page_po";  }
+			else if (isConnectedToVendor(OsVendor.Hp))      { swap_si = "page_pi"; swap_so = "page_po"; }
+
+			Double[] arr = new Double[2];
+			String[] label = new String[] {
+					"IN - Read from Swap to Memory ["+swap_si+"]", 
+					"OUT - Written to Swap and Removed from Memory ["+swap_so+"]"};
+			
+			arr[0] = this.getAbsValueAvg(swap_si);
+			arr[1] = this.getAbsValueAvg(swap_so);
+
+			tgdp.setDataPoint(this.getTimestamp(), label, arr);
+		}
+	
+		if (GRAPH_NAME_IO_READ_WRITE.equals(tgdp.getName()))
+		{
+			String io_bi = null;
+			String io_bo = null;
+			if (     isConnectedToVendor(OsVendor.Linux))   { io_bi = "io_bi"; io_bo = "io_bo"; }
+//			else if (isConnectedToVendor(OsVendor.Solaris)) { io_bi = "?????"; io_bo = "?????"; }  // INVESTIGATE HERE
+//			else if (isConnectedToVendor(OsVendor.Aix))     { io_bi = "?????"; io_bo = "?????"; }  // INVESTIGATE HERE
+//			else if (isConnectedToVendor(OsVendor.Hp))      { io_bi = "?????"; io_bo = "?????"; }  // INVESTIGATE HERE
+			else
+			{
+				TrendGraph tg = getTrendGraph(tgdp.getName());
+				if (tg != null)
+    				tg.setWarningLabel("This graph is not available on '"+getConnectedToVendor()+"'.");
+				return;
+			}
+
+			Double[] arr = new Double[2];
+			String[] label = new String[] {
+					"Reads/s - Blocks received from block device ["+io_bi+"]", 
+					"Writes/s - Blocks sent to a block device ["+io_bo+"]"};
+			
+			arr[0] = this.getAbsValueAvg(io_bi);
+			arr[1] = this.getAbsValueAvg(io_bo);
+
+			tgdp.setDataPoint(this.getTimestamp(), label, arr);
+		}
+//Also look at: SPID-Wait... "empty" labels, should expand to all-zero if we have previous labels attached...
+	
 		if (GRAPH_NAME_CPU_USAGE.equals(tgdp.getName()))
 		{
 			boolean hasCpuWa = this.findColumn("cpu_wa") > 0;
 			Double[] arr = new Double[4];
-			String[] label = new String[] {"cpu_sy+cpu_us", "cpu_sy", "cpu_us", "cpu_id", "cpu_wa"};
+			String[] label = new String[] {
+					"cpu_sy+cpu_us", 
+					"cpu_sy", 
+					"cpu_us", 
+					"cpu_id", 
+					"cpu_wa"};
 
 			// If we have WA = IO Wait, lets include that one
 			if (hasCpuWa)
 			{
 				arr = new Double[5];
-				label = new String[] {"Total (cpu_sy + cpu_us + cpu_wa)", "cpu_sy", "cpu_us", "cpu_id", "cpu_wa"};
+				label = new String[] {
+						"Total (cpu_sy + cpu_us + cpu_wa)", 
+						"cpu_sy", 
+						"cpu_us", 
+						"cpu_id", 
+						"cpu_wa"};
 			}
 			else
 			{
 				arr = new Double[4];
-				label = new String[] {"Total (cpu_sy + cpu_us)", "cpu_sy", "cpu_us", "cpu_id"};
+				label = new String[] {
+						"Total (cpu_sy + cpu_us)", 
+						"cpu_sy", 
+						"cpu_us", 
+						"cpu_id"};
 			}
 				
 
 			// NOTE: only ABS values are present in CounterModelHostMonitor
-//			arr[0] = this.getAbsValueAvg("cpu_us");
+//			arr[0] = this.getAbsValueAvg("cpu_us"); // NOTE: arr[0] is set near the end
 			arr[1] = this.getAbsValueAvg("cpu_sy");
 			arr[2] = this.getAbsValueAvg("cpu_us");
 			arr[3] = this.getAbsValueAvg("cpu_id");
@@ -150,9 +350,10 @@ extends CounterModelHostMonitor
 //				_logger.debug("updateGraphData(OsVmstat): us+sy='"+arr[0]+"', cpu_us='"+arr[1]+"', cpu_sy='"+arr[2]+"', cpu_id='"+arr[3]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(label);
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), label, arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setLabel(label);
+//			tgdp.setData(arr);
 		}
 	}
 }

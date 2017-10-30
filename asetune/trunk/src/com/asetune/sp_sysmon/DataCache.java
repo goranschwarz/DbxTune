@@ -6,9 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
-import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.ase.CmSpinlockSum;
 import com.asetune.utils.StringUtil;
 
 public class DataCache extends AbstractSysmonType
@@ -713,7 +711,8 @@ public class DataCache extends AbstractSysmonType
 		LargeIO_Detail_Cached_4pg = LargeIO_Detail_Cached_4pg * 4;
 		LargeIO_Detail_Cached_8pg = LargeIO_Detail_Cached_8pg * 8;
 
-		CountersModel cmSpinlockSum = CounterController.getInstance().getCmByName(CmSpinlockSum.CM_NAME);
+//		CountersModel cmSpinlockSum = CounterController.getInstance().getCmByName(CmSpinlockSum.CM_NAME);
+		CountersModel cmSpinlockSum = getSpinlockSum();
 		String spinlockCont = "unknown";
 		LinkedHashMap<String, Double> spinlockCachletCont = new LinkedHashMap<String, Double>();
 		if (cmSpinlockSum != null)
@@ -721,15 +720,18 @@ public class DataCache extends AbstractSysmonType
 			spinlockCont = cmSpinlockSum.getDiffString(entry._name, "contention");
 			
 			int[] rows = cmSpinlockSum == null ? null : cmSpinlockSum.getDiffRowIdsWhere("type", "CACHELET");
-			for (int i=0; i<rows.length; i++)
+			if (rows != null)
 			{
-				String name  = cmSpinlockSum.getDiffString(rows[i], "spinName");
-				String cont  = cmSpinlockSum.getDiffString(rows[i], "contention");
-				double dCont = cmSpinlockSum.getDiffValueAsDouble(rows[i], "contention");
-				if (name.startsWith(entry._name + " # "))
+				for (int i=0; i<rows.length; i++)
 				{
-//					System.out.println("#####: "+name+" = "+cont);
-					spinlockCachletCont.put(name, dCont);
+					String name  = cmSpinlockSum.getDiffString(rows[i], "spinName");
+				//	String cont  = cmSpinlockSum.getDiffString(rows[i], "contention");
+					double dCont = cmSpinlockSum.getDiffValueAsDouble(rows[i], "contention");
+					if (name.startsWith(entry._name + " # "))
+					{
+//						System.out.println("#####: "+name+" = "+cont);
+						spinlockCachletCont.put(name, dCont);
+					}
 				}
 			}
 		}

@@ -51,24 +51,28 @@ extends HostMonitor
 		if (osname.equals("SunOS"))
 		{
 			mon = new MonitorUpTimeAllOs();
+			mon.setConnectedToVendor(OsVendor.Solaris);
 		}
 		else if (osname.equals("Linux"))
 		{
 			//int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.UPTIME);
 			//mon = new MonitorUpTimeAllOs(utilVersion);
 			mon = new MonitorUpTimeAllOs();
+			mon.setConnectedToVendor(OsVendor.Linux);
 		}
 		else if (osname.equals("AIX"))
 		{
 			mon = new MonitorUpTimeAllOs();
+			mon.setConnectedToVendor(OsVendor.Aix);
 		}					
 		else if (osname.equals("HP-UX"))
 		{
 			mon = new MonitorUpTimeAllOs();
+			mon.setConnectedToVendor(OsVendor.Hp);
 		}
 		else
 		{
-			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorUpTimet' for the moment.");
+			throw new Exception("The Unix system '"+osname+"', is not supported by the module 'MonitorUpTime' for the moment.");
 		}
 
 		mon.setConnection(conn);

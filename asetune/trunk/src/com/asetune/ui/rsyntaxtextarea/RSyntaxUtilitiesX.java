@@ -4,6 +4,7 @@ import java.awt.Component;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 import javax.swing.AbstractAction;
@@ -35,6 +36,10 @@ import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 import org.fife.ui.rtextarea.SearchResult;
 
+import com.asetune.gui.MainFrame;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
+
 
 public class RSyntaxUtilitiesX
 {
@@ -42,7 +47,7 @@ public class RSyntaxUtilitiesX
 
 	protected static final String EMPTY_STRING = "";
 
-    private static String _charsAllowedInWords = "";
+    private static String _charsAllowedInWords = System.getProperty("RSyntaxTextArea.charsAllowedInWords", "_");
 
 	/**
 	 * Get characters that can be part of a word for all <code>RSyntaxTextAreaX</code>
@@ -110,9 +115,39 @@ public class RSyntaxUtilitiesX
 		menu.addSeparator();
 
 		//--------------------------------
+		// Format SQL
+		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.FormatSqlAction(RSyntaxTextAreaX.formatSql));
+		mi.setText("Format SQL");
+		mi.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | InputEvent.SHIFT_DOWN_MASK));
+		menu.add(mi);
+
+		//--------------------------------
 		// Change Case
 		m = new JMenu("Change Case");
 		menu.add(m);
+
+		//--------------------------------
+		// Offline DDL View
+		mi = new JMenuItem();
+		mi.setText("Offline DDL Viewer...");
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String dbname     = null;
+				String objectname = textArea.getSelectedText();
+				
+				if (StringUtil.isNullOrBlank(objectname))
+				{
+					SwingUtils.showErrorMessage(textArea, "Select a string", "You must select a text to lookup...", null);
+					return;
+				}
+
+				MainFrame.getInstance().action_openDdlViewer(dbname, objectname);
+			}
+		});
+		menu.add(mi);
 
 		//-- Upper
 		mi = new JMenuItem(new RSyntaxTextAreaEditorKitX.ToUpperCaseAction(RSyntaxTextAreaX.toUpperCase));
@@ -194,7 +229,7 @@ public class RSyntaxUtilitiesX
 		}
 
 		//--------------------------------
-		// Visible Whitespace
+		// Visible End Of Line Markers
 		if (syntaxTextArea != null)
 		{
 			mi = new JCheckBoxMenuItem("Visible End Of Line Markers", syntaxTextArea.getEOLMarkersVisible());

@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -27,6 +28,7 @@ import com.asetune.cm.rax.gui.CmRaStatisticsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -133,32 +135,16 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_resetAfter,  conf.getBooleanProperty(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
+		list.add(new CmSettingsHelper("Clear Counters", PROPKEY_sample_resetAfter , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_resetAfter  , DEFAULT_sample_resetAfter  ), DEFAULT_sample_resetAfter, CmRaStatisticsPanel.TOOLTIP_sample_resetAfter ));
+
+		return list;
 	}
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_resetAfter))  return CmRaStatisticsPanel.TOOLTIP_sample_resetAfter;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_resetAfter))  return Boolean.class.getSimpleName();
-
-		return "";
-	}
-
-	
 	
 	// NOTE: storage table name will be CmName_GraphName, so try to keep the name short
 	public static final String GRAPH_NAME_JVM_MEM          = "JvmMemory";  
@@ -193,20 +179,20 @@ extends CountersModel
 		String[] labels_oraLobOp       = new String[] { "Total LOB operations processed by query data from PDB" };
 		String[] labels_oraRasdCache   = new String[] { "Proc cache size (abs)", "Proc hits (per sec)", "Proc misses (per sec)", "Proc_Name cache size (abs)", "Proc_Name hits (per sec)", "Proc_Name misses (per sec)" };
 		
-		addTrendGraphData(GRAPH_NAME_JVM_MEM,          new TrendGraphDataPoint(GRAPH_NAME_JVM_MEM,          labels_jvmMem));
-		addTrendGraphData(GRAPH_NAME_JVM_MEM_PCT,      new TrendGraphDataPoint(GRAPH_NAME_JVM_MEM_PCT,      labels_jvmMemPct));
-		addTrendGraphData(GRAPH_NAME_LTL_CMD_SENT,     new TrendGraphDataPoint(GRAPH_NAME_LTL_CMD_SENT,     labels_ltlCmdSent));
-		addTrendGraphData(GRAPH_NAME_LTL_BYTES_SENT,   new TrendGraphDataPoint(GRAPH_NAME_LTL_BYTES_SENT,   labels_ltlBytesSent));
-		addTrendGraphData(GRAPH_NAME_LTL_KB_SENT,      new TrendGraphDataPoint(GRAPH_NAME_LTL_KB_SENT,      labels_ltlKbSent));
-		addTrendGraphData(GRAPH_NAME_LTL_MB_SENT,      new TrendGraphDataPoint(GRAPH_NAME_LTL_MB_SENT,      labels_ltlMbSent));
-		addTrendGraphData(GRAPH_NAME_LTI_QUEUE_SIZE,   new TrendGraphDataPoint(GRAPH_NAME_LTI_QUEUE_SIZE,   labels_ltiQueueSize));
-		addTrendGraphData(GRAPH_NAME_LR_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_LR_OPERATIONS,    labels_lrOperations));
-		addTrendGraphData(GRAPH_NAME_LR_TRANS,         new TrendGraphDataPoint(GRAPH_NAME_LR_TRANS,         labels_lrTrans));
-		addTrendGraphData(GRAPH_NAME_LR_MAINT_FILTER,  new TrendGraphDataPoint(GRAPH_NAME_LR_MAINT_FILTER,  labels_lrMaintFilter));
-		addTrendGraphData(GRAPH_NAME_GLOBAL_LRU_CACHE, new TrendGraphDataPoint(GRAPH_NAME_GLOBAL_LRU_CACHE, labels_globalLruCache));
-		addTrendGraphData(GRAPH_NAME_ORA_LR,           new TrendGraphDataPoint(GRAPH_NAME_ORA_LR,           labels_oraLr));
-		addTrendGraphData(GRAPH_NAME_ORA_LOB_OP,       new TrendGraphDataPoint(GRAPH_NAME_ORA_LOB_OP,       labels_oraLobOp));
-		addTrendGraphData(GRAPH_NAME_ORA_RASD_CACHE,   new TrendGraphDataPoint(GRAPH_NAME_ORA_RASD_CACHE,   labels_oraRasdCache));
+		addTrendGraphData(GRAPH_NAME_JVM_MEM,          new TrendGraphDataPoint(GRAPH_NAME_JVM_MEM,          labels_jvmMem,         LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_JVM_MEM_PCT,      new TrendGraphDataPoint(GRAPH_NAME_JVM_MEM_PCT,      labels_jvmMemPct,      LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LTL_CMD_SENT,     new TrendGraphDataPoint(GRAPH_NAME_LTL_CMD_SENT,     labels_ltlCmdSent,     LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LTL_BYTES_SENT,   new TrendGraphDataPoint(GRAPH_NAME_LTL_BYTES_SENT,   labels_ltlBytesSent,   LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LTL_KB_SENT,      new TrendGraphDataPoint(GRAPH_NAME_LTL_KB_SENT,      labels_ltlKbSent,      LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LTL_MB_SENT,      new TrendGraphDataPoint(GRAPH_NAME_LTL_MB_SENT,      labels_ltlMbSent,      LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LTI_QUEUE_SIZE,   new TrendGraphDataPoint(GRAPH_NAME_LTI_QUEUE_SIZE,   labels_ltiQueueSize,   LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LR_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_LR_OPERATIONS,    labels_lrOperations,   LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LR_TRANS,         new TrendGraphDataPoint(GRAPH_NAME_LR_TRANS,         labels_lrTrans,        LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LR_MAINT_FILTER,  new TrendGraphDataPoint(GRAPH_NAME_LR_MAINT_FILTER,  labels_lrMaintFilter,  LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_GLOBAL_LRU_CACHE, new TrendGraphDataPoint(GRAPH_NAME_GLOBAL_LRU_CACHE, labels_globalLruCache, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_ORA_LR,           new TrendGraphDataPoint(GRAPH_NAME_ORA_LR,           labels_oraLr,          LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_ORA_LOB_OP,       new TrendGraphDataPoint(GRAPH_NAME_ORA_LOB_OP,       labels_oraLobOp,       LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_ORA_RASD_CACHE,   new TrendGraphDataPoint(GRAPH_NAME_ORA_RASD_CACHE,   labels_oraRasdCache,   LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -395,8 +381,7 @@ extends CountersModel
 			arr[3] = this.getAbsValueAsDouble("VM memory usage - MB",           "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_JVM_MEM_PCT.equals(tgdp.getName()))
@@ -405,8 +390,7 @@ extends CountersModel
 			arr[0] = this.getAbsValueAsDouble("VM % max memory used" , "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LTL_CMD_SENT.equals(tgdp.getName()))
@@ -415,8 +399,7 @@ extends CountersModel
 			arr[0] = this.getRateValueAsDouble("Number of LTL commands sent" , "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LTL_BYTES_SENT.equals(tgdp.getName()))
@@ -425,8 +408,7 @@ extends CountersModel
 			arr[0] = this.getRateValueAsDouble("Total bytes sent" , "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LTL_KB_SENT.equals(tgdp.getName()))
@@ -435,8 +417,7 @@ extends CountersModel
 			arr[0] = this.getRateValueAsDouble("Total bytes sent - KB" , "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LTL_MB_SENT.equals(tgdp.getName()))
@@ -445,8 +426,7 @@ extends CountersModel
 			arr[0] = this.getRateValueAsDouble("Total bytes sent - MB" , "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LTI_QUEUE_SIZE.equals(tgdp.getName()))
@@ -455,8 +435,7 @@ extends CountersModel
 			arr[0] = this.getAbsValueAsDouble("Current number of commands in the LTI queue" , "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LR_OPERATIONS.equals(tgdp.getName()))
@@ -467,8 +446,7 @@ extends CountersModel
 			arr[2] = this.getRateValueAsDouble("Total operations skipped",   "NumberValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LR_TRANS.equals(tgdp.getName()))
@@ -483,8 +461,7 @@ extends CountersModel
 			arr[6] = this.getRateValueAsDouble("Total system transactions skipped",        "NumberValue");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_LR_MAINT_FILTER.equals(tgdp.getName()))
@@ -493,8 +470,7 @@ extends CountersModel
 			arr[0] = this.getRateValueAsDouble("Total maintenance user operations filtered", "NumberValue");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_GLOBAL_LRU_CACHE.equals(tgdp.getName()))
@@ -503,8 +479,7 @@ extends CountersModel
 			arr[0] = this.getAbsValueAsDouble("Items held in Global LRUCache", "NumberValue");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_ORA_LR.equals(tgdp.getName()))
@@ -514,8 +489,7 @@ extends CountersModel
 			arr[1] = this.getRateValueAsDouble("Total log records filtered", "NumberValue");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_ORA_LOB_OP.equals(tgdp.getName()))
@@ -524,8 +498,7 @@ extends CountersModel
 			arr[0] = this.getAbsValueAsDouble("Total LOB operations processed by query data from PDB", "NumberValue");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_ORA_RASD_CACHE.equals(tgdp.getName()))
@@ -540,8 +513,7 @@ extends CountersModel
 			arr[5] = this.getRateValueAsDouble("Total number of Op Proc_Name RASD marked object cache misses", "NumberValue");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 	

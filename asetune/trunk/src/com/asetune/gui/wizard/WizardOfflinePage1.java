@@ -308,7 +308,7 @@ implements ActionListener
 //			_logger.debug("Try getConnection to " + host + ":" + port + " user=" + user);
 //			Connection conn = DriverManager.getConnection(startOfConnUrl + host + ":" + port, props);
 
-			Connection conn = AseConnectionFactory.getConnection(host, port, null, user, passwd, appname, "", null);
+			Connection conn = AseConnectionFactory.getConnection(host, port, null, user, passwd, appname, null, "", null);
 		
 			// select @@version
 			String aseVersionStr = "unknown";

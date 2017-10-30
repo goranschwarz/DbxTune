@@ -8,6 +8,7 @@ import java.awt.event.KeyEvent;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -39,12 +40,14 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.AseStackTraceAnalyzer;
 import com.asetune.tools.AseStackTraceAnalyzer.AseStackTreeView;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlcapture.ProcessDetailFrame;
+import com.asetune.tools.sqlcapture.SqlCaptureOfflineView;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -58,6 +61,8 @@ extends MainFrame
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger = Logger.getLogger(MainFrameAse.class);
 
+	private SqlCaptureOfflineView _sqlCaptureOfflineView = null;
+
 	public MainFrameAse()
 	{
 		super();
@@ -69,6 +74,7 @@ extends MainFrame
 		return 20;
 	}
 
+	@Override public String    getTablePopupDbmsVendorString() { return "ase"; }
 	@Override public ImageIcon getApplicationIcon16() { return SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif"); };
 	@Override public ImageIcon getApplicationIcon32() { return SwingUtils.readImageIcon(Version.class, "images/asetune_icon_32.gif"); };
 
@@ -395,10 +401,30 @@ extends MainFrame
 
 		//waitDialog.setState("Clearing Wait Event Dictionary.");
 		//MonWaitEventIdDictionary.reset(); // Do not need to be reset, it's not getting anything from DB
+		
+		if (_sqlCaptureOfflineView != null)
+		{
+			_sqlCaptureOfflineView.setVisible(false);
+			_sqlCaptureOfflineView.dispose();
+			_sqlCaptureOfflineView = null;
+		}
 	}
 
 	
-	
+	@Override
+	public void setSqlCaptureOfflineCurrentSampleTime(Timestamp prevTs, Timestamp thisTs, Timestamp nextTs)
+	{
+		if (_sqlCaptureOfflineView != null)
+		{
+//			Timestamp ts2 = CounterController.getInstance().getSummaryCm().getSampleTime();
+//			long sampleIntervall = CounterController.getInstance().getSummaryCm().getSampleInterval();
+//			Timestamp ts1 = new Timestamp(ts2.getTime() - sampleIntervall);
+			
+System.out.println("setSqlCaptureOfflineCurrentSampleTime(): prevTs='"+prevTs+"', thisTs='"+thisTs+"', nextTs='"+nextTs+"'.");
+			_sqlCaptureOfflineView.setFromToTime(prevTs, thisTs);
+		}
+	}
+
 	@Override
 	public void actionPerformed(ActionEvent e, Object source, String actionCmd)
 	{
@@ -430,6 +456,16 @@ extends MainFrame
 
 		if (ACTION_OPEN_CAPTURE_SQL.equals(actionCmd))
 			new ProcessDetailFrame(this, -1, -1);
+
+		if (ACTION_OPEN_SQL_CAPTURE_OFFLINE_VIEW.equals(actionCmd))
+		{
+//			SwingUtils.showInfoMessage(this, "Not yet implemented", "NOT YET IMPLEMENTED, use SQL Window and query tables MonSqlCapSqlText, MonSqlCapStatements, MonSqlCapPlans");
+			if (_sqlCaptureOfflineView  == null)
+			{
+				_sqlCaptureOfflineView = new SqlCaptureOfflineView(this);
+			}
+			_sqlCaptureOfflineView.setVisible(true);
+		}
 
 		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
 		{
@@ -470,6 +506,7 @@ extends MainFrame
 //	public static final String ACTION_OPEN_ASE_CONFIG_VIEW              = "ACTION_OPEN_ASE_CONFIG_VIEW";
 	public static final String ACTION_OPEN_ASE_CONFIG_MON               = "OPEN_ASE_CONFIG_MON";
 	public static final String ACTION_OPEN_CAPTURE_SQL                  = "OPEN_CAPTURE_SQL";
+	public static final String ACTION_OPEN_SQL_CAPTURE_OFFLINE_VIEW     = "OPEN_SQL_CAPTURE_OFFLINE_VIEW";
 	public static final String ACTION_OPEN_ASE_APP_TRACE                = "OPEN_ASE_APP_TRACE";
 	public static final String ACTION_OPEN_ASE_PLAN_VIEWER              = "OPEN_ASE_PLAN_VIEWER";
 	public static final String ACTION_OPEN_ASE_STACKTRACE_TOOL          = "OPEN_ASE_STACKTRACE_TOOL";
@@ -478,6 +515,7 @@ extends MainFrame
 
 	private JMenuItem           _aseConfMon_mi;
 	private JMenuItem           _captureSql_mi;
+	private JMenuItem           _sqlCaptureOfflineView_mi;
 	private JMenuItem           _aseAppTrace_mi;
 	private JMenuItem           _asePlanViewer_mi;
 	private JMenuItem           _aseStackTraceAnalyzer_mi;
@@ -513,6 +551,7 @@ extends MainFrame
 
 		_aseConfMon_mi                 = new JMenuItem("Configure ASE for Monitoring...");
 		_captureSql_mi                 = new JMenuItem("Capture SQL...");
+		_sqlCaptureOfflineView_mi      = new JMenuItem("Capture SQL, Offline View...");
 		_aseAppTrace_mi                = new JMenuItem("ASE Application Tracing...");
 		_asePlanViewer_mi              = new JMenuItem("ASE Showplan Viewer...");
 		_aseStackTraceAnalyzer_mi      = new JMenuItem("ASE StackTrace Analyzer...");
@@ -521,6 +560,7 @@ extends MainFrame
 
 		_aseConfMon_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 		_captureSql_mi                .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
+		_sqlCaptureOfflineView_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/sql_capture_offline_view_16.gif"));
 		_aseAppTrace_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
 		_asePlanViewer_mi             .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_plan_viewer_16.png"));
 		_aseStackTraceAnalyzer_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_stack_trace_tool.png"));
@@ -528,6 +568,7 @@ extends MainFrame
 
 		_aseConfMon_mi                .setActionCommand(ACTION_OPEN_ASE_CONFIG_MON);
 		_captureSql_mi                .setActionCommand(ACTION_OPEN_CAPTURE_SQL);
+		_sqlCaptureOfflineView_mi     .setActionCommand(ACTION_OPEN_SQL_CAPTURE_OFFLINE_VIEW);
 		_aseAppTrace_mi               .setActionCommand(ACTION_OPEN_ASE_APP_TRACE);
 		_asePlanViewer_mi             .setActionCommand(ACTION_OPEN_ASE_PLAN_VIEWER);
 		_aseStackTraceAnalyzer_mi     .setActionCommand(ACTION_OPEN_ASE_STACKTRACE_TOOL);
@@ -535,6 +576,7 @@ extends MainFrame
 
 		_aseConfMon_mi                .addActionListener(this);
 		_captureSql_mi                .addActionListener(this);
+		_sqlCaptureOfflineView_mi     .addActionListener(this);
 		_aseAppTrace_mi               .addActionListener(this);
 		_asePlanViewer_mi             .addActionListener(this);
 		_aseStackTraceAnalyzer_mi     .addActionListener(this);
@@ -545,11 +587,12 @@ extends MainFrame
 		menu.add(_aseConfMon_mi,            0);
 		// here should 'Tail/View DB Server Log' be, but it's added in the super.createToolsMenu();
 		menu.add(_captureSql_mi,            2);
-		menu.add(_aseAppTrace_mi,           3);
-		menu.add(_asePlanViewer_mi,         4);
-		menu.add(_aseStackTraceAnalyzer_mi, 5);
+		menu.add(_sqlCaptureOfflineView_mi, 3);
+		menu.add(_aseAppTrace_mi,           4);
+		menu.add(_asePlanViewer_mi,         5);
+		menu.add(_aseStackTraceAnalyzer_mi, 6);
 		if (_preDefinedSql_m != null) 
-			menu.add(_preDefinedSql_m,      6);
+			menu.add(_preDefinedSql_m,      7);
 
 		return menu;
 	}
@@ -577,6 +620,8 @@ extends MainFrame
 			
 			// Tools
 			_aseConfMon_mi                .setEnabled(true);
+//			_sqlCaptureOfflineView_mi     .setEnabled(false);
+			_sqlCaptureOfflineView_mi     .setEnabled(PersistentCounterHandler.hasInstance());
 			_captureSql_mi                .setEnabled(true);
 			_aseAppTrace_mi               .setEnabled(true);
 			_asePlanViewer_mi             .setEnabled(true); // always TRUE
@@ -598,6 +643,7 @@ extends MainFrame
 			// Tools
 			_aseConfMon_mi                .setEnabled(false);
 			_captureSql_mi                .setEnabled(false);
+			_sqlCaptureOfflineView_mi     .setEnabled(true);
 			_aseAppTrace_mi               .setEnabled(false);
 			_asePlanViewer_mi             .setEnabled(true); // always TRUE
 			_aseStackTraceAnalyzer_mi     .setEnabled(true); // always TRUE
@@ -618,6 +664,7 @@ extends MainFrame
 			// Tools
 			_aseConfMon_mi                .setEnabled(false);
 			_captureSql_mi                .setEnabled(false);
+			_sqlCaptureOfflineView_mi     .setEnabled(false);
 			_aseAppTrace_mi               .setEnabled(false);
 			_asePlanViewer_mi             .setEnabled(true); // always TRUE
 			_aseStackTraceAnalyzer_mi     .setEnabled(true); // always TRUE
@@ -725,16 +772,27 @@ extends MainFrame
 		systmp.setProperty("system.predefined.sql.07.install.scriptName",          "sp_spaceused2.sql");
 		systmp.setProperty("system.predefined.sql.07.install.needsRole",           "sa_role");
 
-		//----- sp__updateIndexStat.sql -----
-		systmp.setProperty("system.predefined.sql.08.name",                        "<html><b>sp__updateIndexStat</b> - <i><font color=\"green\">Generate SQL statement for update index statistics.</font></i></html>");
-		systmp.setProperty("system.predefined.sql.08.execute",                     "exec sp__updateIndexStat");
+		//----- sp_spaceused2.sql -----
+		systmp.setProperty("system.predefined.sql.08.name",                        "<html><b>sp_spaceused2 with_index</b> - <i><font color=\"green\">List space and row used by each table, index and LOB in the current database.</font></i></html>");
+		systmp.setProperty("system.predefined.sql.08.execute",                     "exec sp_spaceused2 null, 1");
 		systmp.setProperty("system.predefined.sql.08.install.needsVersion",        Ver.ver(15,0));
 		systmp.setProperty("system.predefined.sql.08.install.dbname",              "sybsystemprocs");
-		systmp.setProperty("system.predefined.sql.08.install.procName",            "sp__updateIndexStat");
-		systmp.setProperty("system.predefined.sql.08.install.procDateThreshold",   VersionInfo.SP__UPDATE_INDEX_STAT_CR_STR);
+		systmp.setProperty("system.predefined.sql.08.install.procName",            "sp_spaceused2");
+		systmp.setProperty("system.predefined.sql.08.install.procDateThreshold",   VersionInfo.SP_SPACEUSED2_CR_STR);
 		systmp.setProperty("system.predefined.sql.08.install.scriptLocation",      com.asetune.cm.sql.VersionInfo.class.getName());
-		systmp.setProperty("system.predefined.sql.08.install.scriptName",          "sp__updateIndexStat.sql");
+		systmp.setProperty("system.predefined.sql.08.install.scriptName",          "sp_spaceused2.sql");
 		systmp.setProperty("system.predefined.sql.08.install.needsRole",           "sa_role");
+
+		//----- sp__updateIndexStat.sql -----
+		systmp.setProperty("system.predefined.sql.09.name",                        "<html><b>sp__updateIndexStat</b> - <i><font color=\"green\">Generate SQL statement for update index statistics.</font></i></html>");
+		systmp.setProperty("system.predefined.sql.09.execute",                     "exec sp__updateIndexStat");
+		systmp.setProperty("system.predefined.sql.09.install.needsVersion",        Ver.ver(15,0));
+		systmp.setProperty("system.predefined.sql.09.install.dbname",              "sybsystemprocs");
+		systmp.setProperty("system.predefined.sql.09.install.procName",            "sp__updateIndexStat");
+		systmp.setProperty("system.predefined.sql.09.install.procDateThreshold",   VersionInfo.SP__UPDATE_INDEX_STAT_CR_STR);
+		systmp.setProperty("system.predefined.sql.09.install.scriptLocation",      com.asetune.cm.sql.VersionInfo.class.getName());
+		systmp.setProperty("system.predefined.sql.09.install.scriptName",          "sp__updateIndexStat.sql");
+		systmp.setProperty("system.predefined.sql.09.install.needsRole",           "sa_role");
 
 		createPredefinedSqlMenu(menu, "system.predefined.sql.", systmp, callerInstance);
 		createPredefinedSqlMenu(menu, "user.predefined.sql.",   null,   callerInstance);

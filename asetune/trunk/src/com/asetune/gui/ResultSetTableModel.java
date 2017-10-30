@@ -13,6 +13,7 @@ import java.sql.Types;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import javax.swing.table.AbstractTableModel;
@@ -25,6 +26,7 @@ import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 
 /**
@@ -58,10 +60,21 @@ public class ResultSetTableModel
 	public static final String  PROPKEY_ShowRowNumber = "ResultSetTableModel.show.rowNumber";
 	public static final boolean DEFAULT_ShowRowNumber = false;
 
+	public static final String  PROPKEY_HtmlToolTip_stripeColor = "ResultSetTableModel.tooltip.stripe.color";
+	public static final String  DEFAULT_HtmlToolTip_stripeColor = "#ffffff"; // White
+//	public static final String  DEFAULT_HtmlToolTip_stripeColor = "#f2f2f2"; // Light gary
+
+	public static final String  PROPKEY_HtmlToolTip_maxCellLength = "ResultSetTableModel.tooltip.cell.maxLen";
+	public static final int     DEFAULT_HtmlToolTip_maxCellLength = 256;
+
 	private static final String  BINARY_PREFIX  = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_BINERY_PREFIX,  DEFAULT_BINERY_PREFIX);
 	private static final boolean BINARY_TOUPPER = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_BINARY_TOUPPER, DEFAULT_BINARY_TOUPPER);
 	private static final String  NULL_REPLACE   = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_NULL_REPLACE,   DEFAULT_NULL_REPLACE);
 	public  static final String  ROW_NUMBER_COLNAME = "row#";
+	
+	public static final String  SQLSERVER_JSON_COLUMN_LABEL     = "JSON_F52E2B61-18A1-11d1-B105-00805F49916B";
+	public static final String  PROPKEY_SqlServerJconConcatRows = "ResultSetTableModel.sqlserver.json.concat.rows";
+	public static final boolean DEFAULT_SqlServerJconConcatRows = true;
 	
 	private int	_numcols;
 	
@@ -88,7 +101,11 @@ public class ResultSetTableModel
 	private boolean                      _showRowNumber         = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ShowRowNumber,  DEFAULT_ShowRowNumber);
 
 	private int                          _readResultSetTime     = -1;
+
+	/** when using getValueAsXxx: if null values return a "empty" string or in numbers return a 0 */
+	private boolean                      _nullValuesAsEmptyInGetValueAsType = false;
 	
+
 	/** Set the name of this table model, could be used for debugging or other tracking purposes */
 	public void setName(String name) { _name = name; }
 
@@ -96,7 +113,10 @@ public class ResultSetTableModel
 	public String getName() { return _name; }
 
 	public int getResultSetReadTime() { return _readResultSetTime; }
-	
+
+	public void    setNullValuesAsEmptyInGetValuesAsType(boolean val) { _nullValuesAsEmptyInGetValueAsType = val; } 
+	public boolean getNullValuesAsEmptyInGetValuesAsType()            { return _nullValuesAsEmptyInGetValueAsType; } 
+
 	/**
 	 * INTERNAL: used by: <code>public static String getResultSetInfo(ResultSetTableModel rstm)</code>
 	 * @param rsmd
@@ -168,9 +188,12 @@ public class ResultSetTableModel
 			String refCatName = "";
 			String refSchName = "";
 			String refTabName = "";
-			try { refCatName        = rsmd.getCatalogName(c); } catch(SQLException ignore) {}
-			try { refSchName        = rsmd.getSchemaName(c);  } catch(SQLException ignore) {}
-			try { refTabName        = rsmd.getTableName(c);   } catch(SQLException ignore) {}
+//			try { refCatName        = rsmd.getCatalogName(c); } catch(SQLException ignore) {}
+//			try { refSchName        = rsmd.getSchemaName(c);  } catch(SQLException ignore) {}
+//			try { refTabName        = rsmd.getTableName(c);   } catch(SQLException ignore) {}
+			try { refCatName        = rsmd.getCatalogName(c); } catch(Exception ignore) {}
+			try { refSchName        = rsmd.getSchemaName(c);  } catch(Exception ignore) {}
+			try { refTabName        = rsmd.getTableName(c);   } catch(Exception ignore) {}
 			refCatName = StringUtil.isNullOrBlank(refCatName) ? "" : refCatName + ".";
 			refSchName = StringUtil.isNullOrBlank(refSchName) ? "" : refSchName + ".";
 			refTabName = StringUtil.isNullOrBlank(refTabName) ? "-none-" : refTabName;
@@ -224,6 +247,41 @@ public class ResultSetTableModel
 		if (progress != null)
 			originProgressState = progress.getState();
 
+		//---------------------------------------------------
+		// Special thing for SQL-Server and JSON column...
+		boolean isJsonColumn = false;
+		if (_rsmdColumnLabel.size() == 1)
+		{
+			if (SQLSERVER_JSON_COLUMN_LABEL.equals(_rsmdColumnLabel.get(0)))
+				isJsonColumn = true;
+
+			// Set to false if the config is DISABLED 
+			if (isJsonColumn && !Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_SqlServerJconConcatRows, DEFAULT_SqlServerJconConcatRows))
+				isJsonColumn = false;
+		}
+		if (isJsonColumn)
+		{
+			_logger.info("Special code path for (SQL-Server) JSON Concat of several rows into a single row... This can be disabled with the property '"+PROPKEY_SqlServerJconConcatRows+"=false'.");
+			int rowCount = 0;
+			StringBuilder sb = new StringBuilder();
+			while(rs.next())
+			{
+				String str = rs.getString(1);
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("JSON Concat row("+rowCount+"), value=|"+str+"|");
+
+				sb.append(str);
+				rowCount++;
+			}
+			ArrayList<Object> row = new ArrayList<Object>();
+			row.add(sb.toString());
+			_rows.add(row);
+			return;
+		}
+		// Yes this looks a bit ODD, but lets do it better later
+		//---------------------------------------------------
+			
 		_readCount = 0;
 		int rowCount = 0;
 		while(rs.next())
@@ -830,6 +888,19 @@ public class ResultSetTableModel
 		return (String)_rsmdColumnLabel.get(column);
 	}
 
+	public String getRsmdReferencedTableName(int col)
+	{
+		return _rsmdRefTableName.get(col);	
+	}
+	public List<String> getRsmdReferencedTableNames()
+	{
+		ArrayList<String> uniqueTables = new ArrayList<>();
+		for (String name : _rsmdRefTableName)
+			if ( ! uniqueTables.contains(name) )
+				uniqueTables.add(name);
+		return uniqueTables;
+	}
+
 	// This TableModel method specifies the data type for each column.
 	// We could map SQL types to Java types, but for this example, we'll just
 	// convert all the returned data to strings.
@@ -1195,6 +1266,21 @@ public class ResultSetTableModel
 			return StringUtil.left(str, fullSize);
 	}
 
+	public static Object tableToString(ResultSetTableModel tm)
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/**
+	 * Create a ASCII Table
+	 * @return
+	 */
+	public String toAsciiTableString()
+	{
+		return SwingUtils.tableToString(this);
+	}
+
 	public String toTableString()
 	{
 		return toTableString(" ");
@@ -1249,17 +1335,17 @@ public class ResultSetTableModel
 		}
 		sb.append("</tr>\n");
 
-		sb.append("<tr>");
 		// build all data rows...
 		for (int r=0; r<rows; r++)
 		{
+			sb.append("<tr>");
 			for (int c=0; c<cols; c++)
 			{
 				sb.append("<td nowrap>").append(getValueAtFullSize(r,c)).append("</td>");
 			}
+			sb.append("</tr>\n");
 			sb.append("\n");
 		}
-		sb.append("</tr>\n");
 		sb.append("</table>\n");
 
 		return sb.toString();
@@ -1268,28 +1354,56 @@ public class ResultSetTableModel
 	/**
 	 * Get 1 rows as a HTML Table. <br>
 	 * Left column is column names (in bold)<br>
-	 * Right column is cow content
+	 * Right column is row content
 	 * 
 	 * @param mrow
 	 * @return
 	 */
-	public String toHtmlTableString(int mrow, boolean borders)
+	public String toHtmlTableString(int mrow, boolean borders, boolean stripedRows, boolean addOuterHtmlTags)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
-		int cols = getColumnCount();
-		String border = borders ? " border=1" : " border=0";
+		if (addOuterHtmlTags)
+			sb.append("<html>");
 
+		int cols = getColumnCount();
+		String border      = borders ? " border=1"      : " border=0";
+		String cellPadding = borders ? ""               : " cellpadding=1";
+		String cellSpacing = borders ? ""               : " cellspacing=0";
+
+		String stripeColor = Configuration.getCombinedConfiguration().getProperty(   PROPKEY_HtmlToolTip_stripeColor,   DEFAULT_HtmlToolTip_stripeColor);
+		int    maxStrLen   = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_HtmlToolTip_maxCellLength, DEFAULT_HtmlToolTip_maxCellLength);
+		
 		// One row for every column
-		sb.append("<table").append(border).append(">\n");
+		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
 		for (int c=0; c<cols; c++)
 		{
-			sb.append("<tr>");
-			sb.append("<td nowrap><b>").append(getColumnName(c))  .append("</b></td>");
-			sb.append("<td nowrap>")   .append(getValueAt(mrow,c)).append("</td>");
+			String stripeTag = "";
+			if (stripedRows && ((c % 2) == 0) )
+				stripeTag = " bgcolor='" + stripeColor + "'";
+			
+			Object objVal = getValueAt(mrow,c);
+			String strVal = "";
+			if (objVal != null)
+			{
+				strVal = objVal.toString();
+				int strValLen = strVal.length(); 
+				if (strValLen > maxStrLen)
+				{
+					strVal =  strVal.substring(0, maxStrLen);
+					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+"), tooltip on this cell might show full content.</i></font>";
+				}
+			}
+			
+			sb.append("<tr").append(stripeTag).append(">");
+			sb.append("<td nowrap><b>").append(getColumnName(c)).append("</b>&nbsp;</td>");
+			sb.append("<td nowrap>")   .append(strVal)          .append("</td>");
 			sb.append("</tr>\n");
 		}
 		sb.append("</table>\n");
+
+		if (addOuterHtmlTags)
+			sb.append("</html>");
 
 		return sb.toString();
 	}
@@ -1302,14 +1416,18 @@ public class ResultSetTableModel
 	//------------------------------------------------------------
 	public String getValueAsString(int mrow, String colName)
 	{
-		return getValueAsString(mrow, colName, true);
+		return getValueAsString(mrow, colName, true, null);
 	}
 	public String getValueAsString(int mrow, String colName, boolean caseSensitive)
+	{
+		return getValueAsString(mrow, colName, caseSensitive, null);
+	}
+	public String getValueAsString(int mrow, String colName, boolean caseSensitive, String defaultNullValue)
 	{
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return null;
+			return _nullValuesAsEmptyInGetValueAsType ? "" : defaultNullValue;
 
 		return o.toString();
 	}
@@ -1320,10 +1438,14 @@ public class ResultSetTableModel
 	}
 	public Short getValueAsShort(int mrow, String colName, boolean caseSensitive)
 	{
+		return getValueAsShort(mrow, colName, caseSensitive, null);
+	}
+	public Short getValueAsShort(int mrow, String colName, boolean caseSensitive, Short defaultNullValue)
+	{
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return null;
+			return _nullValuesAsEmptyInGetValueAsType ? new Short((short)0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).shortValue();
@@ -1345,10 +1467,14 @@ public class ResultSetTableModel
 	}
 	public Integer getValueAsInteger(int mrow, String colName, boolean caseSensitive)
 	{
+		return getValueAsInteger(mrow, colName, caseSensitive, null);
+	}
+	public Integer getValueAsInteger(int mrow, String colName, boolean caseSensitive, Integer defaultNullValue)
+	{
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return null;
+			return _nullValuesAsEmptyInGetValueAsType ? new Integer(0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).intValue();
@@ -1370,10 +1496,14 @@ public class ResultSetTableModel
 	}
 	public Long getValueAsLong(int mrow, String colName, boolean caseSensitive)
 	{
+		return getValueAsLong(mrow, colName, caseSensitive, null);
+	}
+	public Long getValueAsLong(int mrow, String colName, boolean caseSensitive, Long defaultNullValue)
+	{
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return null;
+			return _nullValuesAsEmptyInGetValueAsType ? new Long(0) : defaultNullValue;
 
 		if (o instanceof Number)
 			return ((Number)o).longValue();
@@ -1395,10 +1525,14 @@ public class ResultSetTableModel
 	}
 	public Timestamp getValueAsTimestamp(int mrow, String colName, boolean caseSensitive)
 	{
+		return getValueAsTimestamp(mrow, colName, caseSensitive, null);
+	}
+	public Timestamp getValueAsTimestamp(int mrow, String colName, boolean caseSensitive, Timestamp defaultNullValue)
+	{
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return null;
+			return _nullValuesAsEmptyInGetValueAsType ? new Timestamp(0) : defaultNullValue;
 
 		if (o instanceof Timestamp)
 			return ((Timestamp)o);
@@ -1422,10 +1556,14 @@ public class ResultSetTableModel
 	}
 	public BigDecimal getValueAsBigDecimal(int mrow, String colName, boolean caseSensitive)
 	{
+		return getValueAsBigDecimal(mrow, colName, caseSensitive, null);
+	}
+	public BigDecimal getValueAsBigDecimal(int mrow, String colName, boolean caseSensitive, BigDecimal defaultNullValue)
+	{
 		Object o = getValueAsObject(mrow, colName, caseSensitive);
 
 		if (o == null)
-			return null;
+			return _nullValuesAsEmptyInGetValueAsType ? new BigDecimal(0) : defaultNullValue;
 
 		if (o instanceof BigDecimal)
 			return ((BigDecimal)o);
@@ -1484,4 +1622,5 @@ public class ResultSetTableModel
 	//------------------------------------------------------------
 	//-- END: getValueAsXXXXX using column name
 	//------------------------------------------------------------
+
 }

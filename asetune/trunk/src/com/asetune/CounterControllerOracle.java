@@ -15,6 +15,7 @@ import com.asetune.cm.oracle.CmSummary;
 import com.asetune.cm.oracle.CmSysStat;
 import com.asetune.cm.oracle.CmSystemEvent;
 import com.asetune.cm.os.CmOsIostat;
+import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
@@ -107,6 +108,7 @@ extends CounterControllerAbstract
 		CmOsVmstat          .create(counterController, guiController);
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
+		CmOsMeminfo         .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);

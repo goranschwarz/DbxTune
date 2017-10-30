@@ -1,5 +1,6 @@
 package com.asetune.tools.sqlw;
 
+import java.awt.Component;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -50,10 +51,10 @@ extends SqlStatementAbstract
 	private CmdParams _params = new CmdParams();
 	
 
-	public SqlStatementCmdDdlGen(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress)
+	public SqlStatementCmdDdlGen(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
 		parse(sqlOrigin);
 		init();
 	}

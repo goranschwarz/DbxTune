@@ -663,6 +663,10 @@ Example:
      Or,
 
   sp_configure "configuration file", 0, {"write" | "read" | "verify" | "restore" } "file_name"
+
+     Or,
+  -- Show non default configuration
+  sp_configure 'display_nondefault_settings'
     </pre>]]></Syntax>
 </Entry>
 

@@ -13,11 +13,14 @@ import java.net.URL;
 import java.sql.Types;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.List;
 
 import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.JXTableHeader;
@@ -31,11 +34,12 @@ import org.jdesktop.swingx.table.TableColumnExt;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.j256.simplemagic.ContentInfo;
 import com.j256.simplemagic.ContentInfoUtil;
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
+//import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 
 public class ResultSetJXTable
 extends JXTable
@@ -44,6 +48,9 @@ extends JXTable
 	private static Logger _logger = Logger.getLogger(ResultSetJXTable.class);
 
 	public final static Color NULL_VALUE_COLOR = new Color(240, 240, 240);
+
+	public static final String  PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS = "ResultSetJXTable.table.tooltip.show.all.columns";
+	public static final boolean DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS = true;
 
 	private Point _lastMouseClick = null;
 
@@ -344,19 +351,50 @@ extends JXTable
 					type = 1;
 				else if (sqlType == Types.LONGVARCHAR || sqlType == Types.CLOB)
 					type = 2;
+				else if (sqlType == Types.CHAR || sqlType == Types.VARCHAR || sqlType == Types.NCHAR || sqlType == Types.NVARCHAR)
+					type = 3;
 				
 				if (type != 0)
+//				if (type == 1 || type == 2)
 				{
 					Object cellValue = tm.getValueAt(row, col);
 					if (cellValue == null)
 						return null;
 					String cellStr   = cellValue.toString();
 
-					byte[] bytes = type == 2 ? cellStr.getBytes() : StringUtil.hexToBytes(cellStr);
+					if (cellStr.length() >= 100)
+					{
+						byte[] bytes = (type == 1) ? StringUtil.hexToBytes(cellStr) : cellStr.getBytes();
 
-					tooltip = getContentSpecificToolTipText(cellStr, bytes);
+						tooltip = getContentSpecificToolTipText(cellStr, bytes);
+					}
 				}
+//				else if (type == 3)
+//				{
+//					Object cellValue = tm.getValueAt(row, col);
+//					if (cellValue == null)
+//						return null;
+//					String cellStr   = cellValue.toString();
+//					
+//					if (isXml(cellStr))
+//					{
+//						
+//					}
+//					else if (isJson(cellStr))
+//					{
+//						
+//					}
+//				}
 				
+				if (tooltip == null)
+				{
+					boolean useAllColumnsTableTooltip = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS, DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS);
+					if (useAllColumnsTableTooltip)
+					{
+						tooltip = rstm.toHtmlTableString(row, false, true, true); // borders=false, stripedRows=true, addOuterHtmlTags=true
+					}
+				}
+
 				if (_cellContent_useFocusableTips)
 				{
 					if (tooltip != null) 
@@ -399,6 +437,39 @@ extends JXTable
 		// unrecognized MIME Type
 		if (info == null)
 		{
+			// JSON isn't picked up by the ContentInfoUtil
+			if (JsonUtils.isPossibleJson(cellStr))
+			{
+				if (JsonUtils.isJsonValid(cellStr))
+				{
+					StringBuilder sb = new StringBuilder();
+					sb.append("<html>");
+					sb.append("Cell content looks like <i>JSON</i>, so displaying it as formated JSON. Origin length="+cellStr.length()+"<br>");
+					sb.append("<hr>");
+					sb.append("<pre><code>");
+					sb.append(JsonUtils.format(cellStr).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"));
+					sb.append("</code></pre>");
+					sb.append("</html>");
+
+					return sb.toString();
+				}
+			}
+
+			// XML that do NOT start with '<?xml ' isn't picked up by the ContentInfoUtil, so lets dig into the String and check if it *might* be a XML content...
+			if (StringUtil.isPossibleXml(cellStr))
+			{
+				StringBuilder sb = new StringBuilder();
+				sb.append("<html>");
+				sb.append("Cell content looks like <i>XML</i>, so displaying it as formated XML. Origin length="+cellStr.length()+"<br>");
+				sb.append("<hr>");
+				sb.append("<pre><code>");
+				sb.append(StringUtil.xmlFormat(cellStr).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"));
+				sb.append("</code></pre>");
+				sb.append("</html>");
+
+				return sb.toString();
+			}
+
 			StringBuilder sb = new StringBuilder();
 			sb.append("<html>");
 			sb.append("Cell content is <i>unknown</i>, so displaying it as raw text. Length="+cellStr.length()+"<br>");
@@ -423,7 +494,8 @@ extends JXTable
 				boolean imageToolTipInline = Configuration.getCombinedConfiguration().getBooleanProperty("QueryWindow.tooltip.cellContent.image.inline.", false);
 				if (imageToolTipInline)
 				{
-					String bytesEncoded = Base64.encode(bytes);
+//					String bytesEncoded = Base64.encode(bytes);
+					String bytesEncoded = Base64.encodeBase64String(bytes);
 					
 					StringBuilder sb = new StringBuilder();
 					sb.append("<html>");
@@ -520,7 +592,123 @@ extends JXTable
 				}
 			}
 
-			return info.toString();
+			else if (info.getName().equals("xml")) // ?xml version="1.1" encoding="UTF-8"?>  XXXX 
+			{
+				StringBuilder sb = new StringBuilder();
+				sb.append("<html>");
+				sb.append("Cell content is <i>XML</i>, so displaying it as formated XML. Origin length="+cellStr.length()+"<br>");
+				sb.append("<hr>");
+				sb.append("<pre><code>");
+				sb.append(StringUtil.xmlFormat(cellStr).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"));
+				sb.append("</code></pre>");
+				sb.append("</html>");
+                
+				return sb.toString();
+			}
+
+System.out.println("getContentSpecificToolTipText() unhandled mime type: info.getName()='"+info.getName()+"'.");
+			// If "document type" isn't handle above, lets go "generic" and launch a browser with the registered content...
+			boolean launchBrowserOnUnknownMimeTypes = Configuration.getCombinedConfiguration().getBooleanProperty("QueryWindow.tooltip.cellContent.unknown.launchBrowser", true);
+			if (launchBrowserOnUnknownMimeTypes)
+			{
+				String[] fileExtentions = info.getFileExtensions();
+				String fileExt = "txt";
+				if (fileExtentions != null && fileExtentions.length >= 1)
+					fileExt = fileExtentions[0];
+
+System.out.println("getContentSpecificToolTipText() unhandled mime type: choosen file extention='"+fileExt+"' all extentions: "+StringUtil.toCommaStr(fileExtentions));
+				
+				String mimeTypeName = info.getName();
+				boolean promptExternalAppForThisMimeType = Configuration.getCombinedConfiguration().getBooleanProperty("QueryWindow.tooltip.cellContent.mimetype."+mimeTypeName+".launchExternalTool.ask", true);
+				boolean launchExternalAppForThisMimeType = Configuration.getCombinedConfiguration().getBooleanProperty("QueryWindow.tooltip.cellContent.mimetype."+mimeTypeName+".launchExternalTool", false);
+				if (promptExternalAppForThisMimeType)
+				{
+					String msgHtml = 
+							"<html>" +
+							   "<h2>Tooltip for MIME Type '"+mimeTypeName+"'</h2>" +
+							   "Sorry I have no way to internally show the content type '"+mimeTypeName+"'.<br>" +
+							   "Do you want to view the content with any external tool?<br>" +
+							   "<ul>" +
+							   "  <li><b>Show, This time</b> - Ask me every type if it should be opened in an external tool.</li>" +
+							   "  <li><b>Show, Always</b> - Always do this in the future for '"+mimeTypeName+"' mime type (do not show this popup in the future).</li>" +
+							   "  <li><b>Never</b> Do NOT show me the content at all (do not show this popup in the future).</li>" +
+							   "  <li><b>Cancel</b> Do NOT show me the content this time.</li>" +
+							   "</ul>" +
+							"</html>";
+		
+						Object[] options = {
+								"Show, This time",
+								"Show, Always",
+								"Never",
+								"Cancel"
+								};
+						int answer = JOptionPane.showOptionDialog(this, 
+							msgHtml,
+							"View content in external tool.", // title
+							JOptionPane.YES_NO_CANCEL_OPTION,
+							JOptionPane.QUESTION_MESSAGE,
+							null,     //do not use a custom Icon
+							options,  //the titles of buttons
+							options[0]); //default button title
+		
+						if (answer == 0) 
+						{
+							launchExternalAppForThisMimeType = true;
+						}
+						else if (answer == 1)
+						{
+							launchExternalAppForThisMimeType = true;
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf != null)
+							{
+								conf.setProperty("QueryWindow.tooltip.cellContent.mimetype."+mimeTypeName+".launchExternalTool.ask", false);
+								conf.setProperty("QueryWindow.tooltip.cellContent.mimetype."+mimeTypeName+".launchExternalTool", true);
+								conf.save();
+							}
+						}
+						else if (answer == 2)
+						{
+							launchExternalAppForThisMimeType = false;
+							Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+							if (conf != null)
+							{
+								conf.setProperty("QueryWindow.tooltip.cellContent.mimetype."+mimeTypeName+".launchExternalTool.ask", false);
+								conf.setProperty("QueryWindow.tooltip.cellContent.mimetype."+mimeTypeName+".launchExternalTool", false);
+								conf.save();
+							}
+						}
+						else
+						{
+							launchExternalAppForThisMimeType = false;
+						}
+				}
+				if (launchExternalAppForThisMimeType)
+				{
+					File tmpFile = null;
+					try
+					{
+						tmpFile = File.createTempFile("sqlw_mime_type_"+mimeTypeName+"_tooltip_", "." + fileExt);
+						tmpFile.deleteOnExit();
+						FileOutputStream fos = new FileOutputStream(tmpFile);
+						fos.write(bytes);
+						fos.close();
+
+						return openInLocalAppOrBrowser(tmpFile);
+					}
+					catch (Exception ex) 
+					{
+						return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+					}
+				}
+				else
+				{
+					return info.toString();
+				}
+			}
+			else
+			{
+				return info.toString();
+			}
 		}
 	}
 
@@ -560,6 +748,125 @@ extends JXTable
 			+ "Desktop browsing is not supported.<br>"
 			+ "But the file '"+tmpFile+"' was produced."
 			+ "<html/>";
+	}
+
+	public enum DmlOperation
+	{
+		Insert, Update, Delete
+	};
+	public String getDmlForSelectedRows(DmlOperation dmlOperation)
+	{
+		int[] selRows = getSelectedRows();
+
+		String tabname = "SOME_TABLE_NAME";
+		TableModel tm = getModel();
+		if (tm instanceof ResultSetTableModel)
+		{
+			ResultSetTableModel rstm = (ResultSetTableModel) tm;
+			List<String> uniqueTables = rstm.getRsmdReferencedTableNames();
+			if (uniqueTables.size() == 1)
+				tabname = uniqueTables.get(0);
+			else
+				for (String tab : uniqueTables)
+					tabname = tabname + "/" + tab;
+		}
+		if (tabname.startsWith("/"))
+			tabname = tabname.substring(1); // Remove first "/"
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("insert into ").append(tabname).append("(");
+		for (int c=0; c<getColumnCount(); c++)
+			sb.append(getColumnName(c)).append(", ");
+		sb.replace(sb.length()-2, sb.length(), ""); // remove last comma
+		sb.append(") values(");
+		
+		String insIntoStr = sb.toString();
+		sb.setLength(0);
+			
+		for (int r : selRows)
+		{
+			sb.append(insIntoStr);
+			for (int c=0; c<getColumnCount(); c++)
+			{
+				Object val = getValueAt(r, c);
+				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(val))
+					val = null;
+				if (val != null && needsQuotes(r, c, val))
+				{
+					if (val instanceof String)
+					{
+						val = val.toString().replace("'", "''");
+					}
+					sb.append("'").append(val).append("'").append(", ");
+				}
+				else
+					sb.append( val == null ? "NULL" : val).append(", ");
+			}
+			sb.replace(sb.length()-2, sb.length(), ""); // remove last comma
+			sb.append(")\n");
+		}
+		return sb.toString();
+	}
+
+	private boolean needsQuotes(int row, int col, Object val)
+	{
+		TableModel tm = getModel();
+		if (tm instanceof ResultSetTableModel)
+		{
+			ResultSetTableModel rstm = (ResultSetTableModel) tm;
+			int sqlType = rstm.getSqlType(col);
+
+			// Return the "object" via getXXX method for "known" datatypes
+			switch (sqlType)
+			{
+			case java.sql.Types.BIT:           return false;
+			case java.sql.Types.TINYINT:       return false;
+			case java.sql.Types.SMALLINT:      return false;
+			case java.sql.Types.INTEGER:       return false;
+			case java.sql.Types.BIGINT:        return false;
+			case java.sql.Types.FLOAT:         return false;
+			case java.sql.Types.REAL:          return false;
+			case java.sql.Types.DOUBLE:        return false;
+			case java.sql.Types.NUMERIC:       return false;
+			case java.sql.Types.DECIMAL:       return false;
+			case java.sql.Types.CHAR:          return true;
+			case java.sql.Types.VARCHAR:       return true;
+			case java.sql.Types.LONGVARCHAR:   return true;
+			case java.sql.Types.DATE:          return true;
+			case java.sql.Types.TIME:          return true;
+			case java.sql.Types.TIMESTAMP:     return true;
+			case java.sql.Types.BINARY:        return false;
+			case java.sql.Types.VARBINARY:     return false;
+			case java.sql.Types.LONGVARBINARY: return false;
+			case java.sql.Types.NULL:          return false;
+			case java.sql.Types.OTHER:         return false;
+			case java.sql.Types.JAVA_OBJECT:   return false;
+			case java.sql.Types.DISTINCT:      return false;
+			case java.sql.Types.STRUCT:        return false;
+			case java.sql.Types.ARRAY:         return false;
+			case java.sql.Types.BLOB:          return false;
+			case java.sql.Types.CLOB:          return true;
+			case java.sql.Types.REF:           return false;
+			case java.sql.Types.DATALINK:      return false;
+			case java.sql.Types.BOOLEAN:       return false;
+
+			//------------------------- JDBC 4.0 -----------------------------------
+			case java.sql.Types.ROWID:         return false;
+			case java.sql.Types.NCHAR:         return true;
+			case java.sql.Types.NVARCHAR:      return true;
+			case java.sql.Types.LONGNVARCHAR:  return true;
+			case java.sql.Types.NCLOB:         return true;
+			case java.sql.Types.SQLXML:        return true;
+
+			//------------------------- UNHANDLED TYPES  ---------------------------
+			default:
+				return false;
+			}
+		}
+		
+		if (val instanceof String)
+			return true;
+		return false;
 	}
 
 }

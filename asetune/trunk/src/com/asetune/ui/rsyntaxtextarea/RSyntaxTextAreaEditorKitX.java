@@ -10,6 +10,8 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RecordableTextAction;
 
+import com.asetune.utils.SqlUtils;
+
 public class RSyntaxTextAreaEditorKitX
 {
 //	/**
@@ -185,6 +187,86 @@ public class RSyntaxTextAreaEditorKitX
 		{
 //			return RSyntaxUtilities.getWordEnd((RSyntaxTextArea) textArea, offs);
 			return RSyntaxUtilitiesX.getWordEnd((RSyntaxTextArea) textArea, offs);
+		}
+	}
+
+	/**
+	 * to uppercase
+	 */
+	@SuppressWarnings("serial")
+	public static class FormatSqlAction extends RecordableTextAction
+	{
+		protected FormatSqlAction(String name)
+		{
+			super(name);
+		}
+
+		@Override
+		public void actionPerformedImpl(ActionEvent e, RTextArea textArea)
+		{
+			if (!textArea.isEditable() || !textArea.isEnabled())
+			{
+				UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+				return;
+			}
+
+			String str = textArea.getSelectedText();
+			boolean useSelection = true;
+			if (str == null)
+			{
+				str = textArea.getText();
+				useSelection = false;
+			}
+
+			if (str != null)
+			{
+				textArea.beginAtomicEdit();
+				try 
+				{
+					int selStart = textArea.getSelectionStart();
+					int selEnd   = textArea.getSelectionEnd();
+
+					try
+					{
+						str = SqlUtils.format(str);
+						if (str != null)
+							str = str.replace("\r\n", "\n"); // transform windows newline into Unix/Linux newlines (this works better with RSyntaxtTextArea)
+
+						if (useSelection)
+							textArea.replaceSelection(str);
+						else
+							textArea.setText(str);
+					}
+					catch (Exception ex)
+					{
+						UIManager.getLookAndFeel().provideErrorFeedback(textArea);
+System.out.println("Problems pretty print SQL. Caught: "+ex);
+ex.printStackTrace();
+						return;
+					}
+					
+					if (useSelection)
+					{
+						int newSqlLen = str.length();
+						int selectionLen = selEnd - selStart;
+						
+						selEnd = selEnd + (newSqlLen - selectionLen);
+						
+						textArea.setSelectionStart(selStart);
+						textArea.setSelectionEnd  (selEnd);
+					}
+				}
+				finally 
+				{
+					textArea.endAtomicEdit(); 
+				}
+			}
+		}
+
+		@Override
+		public final String getMacroID()
+		{
+			return getName();
 		}
 	}
 

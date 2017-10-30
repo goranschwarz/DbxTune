@@ -68,6 +68,12 @@ extends TabularCntrPanel
 	private static final boolean DEFAULT_showLegend    = true;
 
 
+	private static final String  PROPKEY_generateRwPct = PROP_PREFIX + ".graph.generate.io.read_write_pct";
+	private static final boolean DEFAULT_generateRwPct = true;
+
+	private static final String  PROPKEY_generateRvsApfPct = PROP_PREFIX + ".graph.generate.io.normalRead_vs_apfRead_pct";
+	private static final boolean DEFAULT_generateRvsApfPct = true;
+
 	private static final String  PROPKEY_generateTotalIo = PROP_PREFIX + ".graph.generate.io.total";
 	private static final boolean DEFAULT_generateTotalIo = true;
 
@@ -82,14 +88,16 @@ extends TabularCntrPanel
 
 	static
 	{
-		Configuration.registerDefaultValue(PROPKEY_generateDummy,   DEFAULT_generateDummy);
-		Configuration.registerDefaultValue(PROPKEY_enableGraph,     DEFAULT_enableGraph);
-		Configuration.registerDefaultValue(PROPKEY_graphType,       DEFAULT_graphType);
-		Configuration.registerDefaultValue(PROPKEY_showLegend,      DEFAULT_showLegend);
-		Configuration.registerDefaultValue(PROPKEY_generateTotalIo, DEFAULT_generateTotalIo);
-		Configuration.registerDefaultValue(PROPKEY_generateRead,    DEFAULT_generateRead);
-		Configuration.registerDefaultValue(PROPKEY_generateApfRead, DEFAULT_generateApfRead);
-		Configuration.registerDefaultValue(PROPKEY_generateWrite,   DEFAULT_generateWrite);
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,     DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,       DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,         DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,        DEFAULT_showLegend);
+		Configuration.registerDefaultValue(PROPKEY_generateRwPct,     DEFAULT_generateRwPct);
+		Configuration.registerDefaultValue(PROPKEY_generateRvsApfPct, DEFAULT_generateRvsApfPct);
+		Configuration.registerDefaultValue(PROPKEY_generateTotalIo,   DEFAULT_generateTotalIo);
+		Configuration.registerDefaultValue(PROPKEY_generateRead,      DEFAULT_generateRead);
+		Configuration.registerDefaultValue(PROPKEY_generateApfRead,   DEFAULT_generateApfRead);
+		Configuration.registerDefaultValue(PROPKEY_generateWrite,     DEFAULT_generateWrite);
 	}
 
 	public CmDeviceIoPanel(CountersModel cm)
@@ -109,11 +117,13 @@ extends TabularCntrPanel
 	private CategoryDataset createDataset(GTable dataTable)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean generateDummy   = conf.getBooleanProperty(PROPKEY_generateDummy,   DEFAULT_generateDummy);
-		boolean generateTotalIo = conf.getBooleanProperty(PROPKEY_generateTotalIo, DEFAULT_generateTotalIo);
-		boolean generateRead    = conf.getBooleanProperty(PROPKEY_generateRead,    DEFAULT_generateRead);
-		boolean generateApfRead = conf.getBooleanProperty(PROPKEY_generateApfRead, DEFAULT_generateApfRead);
-		boolean generateWrite   = conf.getBooleanProperty(PROPKEY_generateWrite,   DEFAULT_generateWrite);
+		boolean generateDummy     = conf.getBooleanProperty(PROPKEY_generateDummy,     DEFAULT_generateDummy);
+		boolean generateRwPct     = conf.getBooleanProperty(PROPKEY_generateRwPct,     DEFAULT_generateRwPct);
+		boolean generateRvsApfPct = conf.getBooleanProperty(PROPKEY_generateRvsApfPct, DEFAULT_generateRvsApfPct);
+		boolean generateTotalIo   = conf.getBooleanProperty(PROPKEY_generateTotalIo,   DEFAULT_generateTotalIo);
+		boolean generateRead      = conf.getBooleanProperty(PROPKEY_generateRead,      DEFAULT_generateRead);
+		boolean generateApfRead   = conf.getBooleanProperty(PROPKEY_generateApfRead,   DEFAULT_generateApfRead);
+		boolean generateWrite     = conf.getBooleanProperty(PROPKEY_generateWrite,     DEFAULT_generateWrite);
 
 		DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -135,6 +145,10 @@ extends TabularCntrPanel
 
 			if (cm != null)
 			{
+				double sumReads    = 0;
+				double sumApfReads = 0;
+				double sumWrites   = 0;
+
 				for(int r=0; r<dataTable.getRowCount(); r++)
 				{
 					String LogicalName = (String)dataTable.getValueAt(r, LogicalName_pos);
@@ -153,6 +167,10 @@ extends TabularCntrPanel
 					if (_logger.isDebugEnabled())
 						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": LogicalName("+LogicalName_pos+")='"+LogicalName+"', TotalIOs("+TotalIOs_pos+")='"+TotalIOs+"', Reads("+Reads_pos+")='"+Reads+"', APFReads("+APFReads_pos+")='"+APFReads+"', Writes("+Writes_pos+")='"+Writes+"'.");
 
+					sumReads    += Reads   .doubleValue();
+					sumApfReads += APFReads.doubleValue();
+					sumWrites   += Writes  .doubleValue();
+
 					if (generateTotalIo)
 						dataset.addValue(TotalIOs.doubleValue(), LogicalName, "TotalIOs");
 
@@ -164,6 +182,20 @@ extends TabularCntrPanel
 
 					if (generateWrite)
 						dataset.addValue(Writes.doubleValue(),   LogicalName, "Writes");
+				}
+				
+				if (generateRwPct)
+				{
+					dataset.addValue(sumReads,  "Reads",  "ReadWritePct");
+					dataset.addValue(sumWrites, "Writes", "ReadWritePct");
+				}
+
+				if (generateRvsApfPct)
+				{
+					double sumNormalReads = sumReads - sumApfReads;
+
+					dataset.addValue(sumNormalReads, "NormalReads", "NormalReadVsApfRead");
+					dataset.addValue(sumApfReads,    "APFReads",    "NormalReadVsApfRead");
 				}
 			}
 		}
@@ -377,6 +409,10 @@ extends TabularCntrPanel
 			panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
 		else
 			panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+
+		// Needs to be done since we remove and add content to the panel
+		panel.validate();
+		panel.repaint();
 	}
 
 	private void helperActionSave(String key, boolean b)
@@ -397,10 +433,12 @@ extends TabularCntrPanel
 		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
-		final JCheckBox generateTotalIo_chk = new JCheckBox("TotalIOs");
-		final JCheckBox generateRead_chk    = new JCheckBox("Reads");
-		final JCheckBox generateApfRead_chk = new JCheckBox("APFReads");
-		final JCheckBox generateWrite_chk   = new JCheckBox("Writes");
+		final JCheckBox generateRwPct_chk     = new JCheckBox("Read/Write Pct");
+		final JCheckBox generateRvsApfPct_chk = new JCheckBox("Read/APF Pct");
+		final JCheckBox generateTotalIo_chk   = new JCheckBox("TotalIOs");
+		final JCheckBox generateRead_chk      = new JCheckBox("Reads");
+		final JCheckBox generateApfRead_chk   = new JCheckBox("APFReads");
+		final JCheckBox generateWrite_chk     = new JCheckBox("Writes");
 
 		final JCheckBox enableGraph_chk     = new JCheckBox("Show Graph");
 		final JCheckBox showLegend_chk      = new JCheckBox("Show Legend");
@@ -424,10 +462,12 @@ extends TabularCntrPanel
 		graphType_lbl.setToolTipText(tooltip);
 		graphType_cbx.setToolTipText(tooltip);
 
-		generateTotalIo_chk.setToolTipText("<html>Include 'TotalIOs' data in the Graph.</html>");
-		generateRead_chk   .setToolTipText("<html>Include 'Reads'    data in the Graph.</html>");
-		generateApfRead_chk.setToolTipText("<html>Include 'APFReads' data in the Graph.</html>");
-		generateWrite_chk  .setToolTipText("<html>Include 'Writes'   data in the Graph.</html>");
+		generateRwPct_chk    .setToolTipText("<html>Include 'Read/Write Percentage' data in the Graph.</html>");
+		generateRvsApfPct_chk.setToolTipText("<html>Include 'Normal Read verses AsyncPreFetch Read Percentage' data in the Graph.</html>");
+		generateTotalIo_chk  .setToolTipText("<html>Include 'TotalIOs' data in the Graph.</html>");
+		generateRead_chk     .setToolTipText("<html>Include 'Reads'    data in the Graph.</html>");
+		generateApfRead_chk  .setToolTipText("<html>Include 'APFReads' data in the Graph.</html>");
+		generateWrite_chk    .setToolTipText("<html>Include 'Writes'   data in the Graph.</html>");
 
 		// SET INITIAL VALUES for components
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -437,10 +477,12 @@ extends TabularCntrPanel
 		if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
 		graphType_cbx.setSelectedItem(orientation);
 
-		generateTotalIo_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateTotalIo, DEFAULT_generateTotalIo));
-		generateRead_chk   .setSelected(conf.getBooleanProperty(PROPKEY_generateRead,    DEFAULT_generateRead));
-		generateApfRead_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateApfRead, DEFAULT_generateApfRead));
-		generateWrite_chk  .setSelected(conf.getBooleanProperty(PROPKEY_generateWrite,   DEFAULT_generateWrite));
+		generateRwPct_chk    .setSelected(conf.getBooleanProperty(PROPKEY_generateRwPct,     DEFAULT_generateRwPct));
+		generateRvsApfPct_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateRvsApfPct, DEFAULT_generateRvsApfPct));
+		generateTotalIo_chk  .setSelected(conf.getBooleanProperty(PROPKEY_generateTotalIo,   DEFAULT_generateTotalIo));
+		generateRead_chk     .setSelected(conf.getBooleanProperty(PROPKEY_generateRead,      DEFAULT_generateRead));
+		generateApfRead_chk  .setSelected(conf.getBooleanProperty(PROPKEY_generateApfRead,   DEFAULT_generateApfRead));
+		generateWrite_chk    .setSelected(conf.getBooleanProperty(PROPKEY_generateWrite,     DEFAULT_generateWrite));
 
 		enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
 		showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
@@ -482,6 +524,22 @@ extends TabularCntrPanel
 			}
 		});
 
+		generateRwPct_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_generateRwPct, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
+		generateRvsApfPct_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_generateRvsApfPct, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
 		generateTotalIo_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -516,16 +574,18 @@ extends TabularCntrPanel
 		});
 
 		// ADD to panel
-		panel.add(enableGraph_chk,     "split");
-		panel.add(graphType_lbl,       "");
-		panel.add(graphType_cbx,       "wrap");
+		panel.add(enableGraph_chk,       "split");
+		panel.add(graphType_lbl,         "");
+		panel.add(graphType_cbx,         "wrap");
 
-		panel.add(generateTotalIo_chk, "split");
-		panel.add(generateRead_chk,    "");
-		panel.add(generateApfRead_chk, "");
-		panel.add(generateWrite_chk,   "wrap");
+		panel.add(generateTotalIo_chk,   "split");
+		panel.add(generateRead_chk,      "");
+		panel.add(generateApfRead_chk,   "");
+		panel.add(generateWrite_chk,     "");
+		panel.add(generateRwPct_chk,     "");
+		panel.add(generateRvsApfPct_chk, "wrap");
 
-		panel.add(showLegend_chk,      "wrap");
+		panel.add(showLegend_chk,        "wrap");
 
 		// enable disable all subcomponents in panel
 		SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);

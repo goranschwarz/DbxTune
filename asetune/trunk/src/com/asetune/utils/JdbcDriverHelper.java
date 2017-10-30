@@ -1,11 +1,15 @@
 package com.asetune.utils;
 
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.AffineTransform;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -46,6 +50,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.event.TableModelListener;
+import javax.swing.plaf.basic.BasicComboBoxRenderer;
 import javax.swing.table.AbstractTableModel;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -64,7 +69,7 @@ import net.miginfocom.swing.MigLayout;
 public class JdbcDriverHelper
 {
 	private static Logger _logger = Logger.getLogger(JdbcDriverHelper.class);
-	public final static String  DEFAULT_DriversFileName = Version.APP_STORE_DIR + File.separator + "JdbcDrivers.xml";
+	public final static String  DEFAULT_DriversFileName = Version.getAppStoreDir() + File.separator + "JdbcDrivers.xml";
 
 	public static final String JDBC_DRIVER_DOWNLOAD_URL = "http://www.asetune.com/jdbc_drivers_download.php";
 
@@ -137,16 +142,17 @@ public class JdbcDriverHelper
 		else if ("org.h2.Driver".equals(driverName))
 		{
 //			String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
-			String envNameSaveDir = "DBXTUNE_SAVE_DIR";
+//			String envNameSaveDir = "DBXTUNE_SAVE_DIR";
 
 			templates.add("jdbc:h2:file:[<path>]<dbname>");
 			templates.add("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE");
 			templates.add("jdbc:h2:file:[<path>]<dbname>;AUTO_SERVER=TRUE");
 //			templates.add("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
-			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
-//			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
-			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
-//			templates.add("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE};AUTO_SERVER=TRUE");
+			templates.add("jdbc:h2:file:${DBXTUNE_SAVE_DIR}/${SERVERNAME}_${DATE}");
+			templates.add("jdbc:h2:file:${DBXTUNE_SAVE_DIR}/${SERVERNAME}_${DATE:format=yyyy-MM-dd:roll=true}}");
+//			templates.add("jdbc:h2:file:${DBXTUNE_SAVE_DIR}/${SERVERNAME}_${DATE};AUTO_SERVER=TRUE");
+			templates.add("jdbc:h2:file:${DBXTUNE_SAVE_DIR}/${HOSTNAME}_${DATE}");
+//			templates.add("jdbc:h2:file:${DBXTUNE_SAVE_DIR}/${HOSTNAME}_${DATE};AUTO_SERVER=TRUE");
 			templates.add("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 			templates.add("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
 			templates.add("jdbc:h2:zip:<zipFileName>!/<dbname>");
@@ -235,7 +241,7 @@ public class JdbcDriverHelper
 		else if ("com.sap.dbtech.jdbc.DriverSapDB"             .equals(driverName)) return "SAP MaxDB JDBC Driver";
 		else if ("oracle.jdbc.OracleDriver"                    .equals(driverName)) return "Oracle JDBC Driver";
 		else if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server JDBC Driver";
-		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server 2005 JDBC Driver";
+		else if ("com.microsoft.sqlserver.jdbc.SQLServerDriver".equals(driverName)) return "Microsoft SQL Server JDBC Driver";
 		else if ("com.ibm.db2.jcc.DB2Driver"                   .equals(driverName)) return "IBM DB2 Driver";
 		else if ("org.postgresql.Driver"                       .equals(driverName)) return "Postgres JDBC Driver";
 		else if ("org.apache.hive.jdbc.HiveDriver"             .equals(driverName)) return "Apache Hive JDBC Driver";
@@ -328,6 +334,47 @@ public class JdbcDriverHelper
 	}
 
 
+	/**
+	 * This takes the input (the jdbc driver class name) and displayes a 2 column output<br>
+	 * <pre>
+	 * Vendor name -> driver.class.name
+	 * -----------    ------------------------
+	 * </pre>
+	 * 
+	 */
+	public static class JdbcDriverComboBoxRender
+	extends BasicComboBoxRenderer
+	{
+		private static final long serialVersionUID = 1L;
+		private FontRenderContext _frc = new FontRenderContext(new AffineTransform(), true, true);     
+
+		@Override
+		public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus)
+		{
+			JLabel renderer = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+			// Get the max pixel witdth for the "left" side of the two columns
+			int maxWitdth = 0;
+			Font f = renderer.getFont().deriveFont(Font.BOLD);
+			for (int i=0; i<list.getModel().getSize(); i++)
+			{
+				String str = list.getModel().getElementAt(i) + "";
+				str = getDefaultDescription(str);
+
+				maxWitdth = Math.max(maxWitdth, (int)(f.getStringBounds(str, _frc).getWidth()));
+			}
+			String driver = getDefaultDescription(value + "");
+			maxWitdth += 10;
+			
+//			renderer.setText("<html>" + value + " <b> &#8212; " + driver + "</b> </html>");
+//			renderer.setText("<html> <code>" + value + "</code> &#8212; <b>" + driver + "</b> </html>");
+//			renderer.setText("<html><b>" + driver + "</b> &#8212; " + value + "</html>");
+			renderer.setText("<html><table align='left' border=0 cellspacing=0 cellpadding=0> <tr>  <td nowrap width="+maxWitdth+"><b>" + driver + "</b></td>  <td nowrap> &rarr;&nbsp;&nbsp; " + value + "</td>  </tr></table></html>");
+			
+			return renderer;
+		}
+	}
+	
 	private static class DriverWrapper implements Driver
 	{
 		private Driver	     _driver;
@@ -671,7 +718,7 @@ public class JdbcDriverHelper
 		}
 		private String getDriversPath()
 		{
-			File driversDir = new File(Version.APP_STORE_DIR + File.separator + "jdbc_drivers");
+			File driversDir = new File(Version.getAppStoreDir() + File.separator + "jdbc_drivers");
 			if ( ! driversDir.exists() )
 			{
 				if (driversDir.mkdir())
@@ -1170,6 +1217,7 @@ public class JdbcDriverHelper
 							why = e.getMessage();
 						}
 						_logger.error("Error getting JDBC Driver Info: " + why);
+						_logger.error("Error getting JDBC Driver Info: " + why, cause);
 					}
 				}
 			};

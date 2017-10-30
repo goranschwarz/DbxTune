@@ -662,8 +662,8 @@ extends MonTablesDictionary
 
 		HashMap<String,MonTableEntry> monTablesMap = new HashMap<String,MonTableEntry>();
 
-		String monTables       = "monTables";
-		String monTableColumns = "monTableColumns";
+		String monTables       = "master.dbo.monTables";
+		String monTableColumns = "master.dbo.monTableColumns";
 		if (offline)
 		{
 			monTables       = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
@@ -810,16 +810,19 @@ extends MonTablesDictionary
 
 			
 			mtd.addTable("sysprocesses",  "Holds information about SybasePID or threads/users logged in to the ASE.");
-			mtd.addColumn("sysprocesses", "kpid",           "Kernel Process Identifier.");
-			mtd.addColumn("sysprocesses", "fid",            "SPID of the parent process, Family ID.");
 			mtd.addColumn("sysprocesses", "spid",           "Session Process Identifier.");
+			mtd.addColumn("sysprocesses", "kpid",           "Kernel Process Identifier.");
+			mtd.addColumn("sysprocesses", "enginenum",      "Number of engine on which process is being executed.");
+			mtd.addColumn("sysprocesses", "status",         "Status that the SPID is currently in. \n'recv sleep'=waiting for incomming network trafic, \n'sleep'=various reasons but usually waiting for disk io, \n'running'=currently executing on a engine, \n'runnable'=waiting for an engine to execute its work, \n'lock sleep'=waiting for table/page/row locks, \n'sync sleep'=waiting for childs to finnish when parallel execution. \n'...'=and more statuses");
+			mtd.addColumn("sysprocesses", "suid",           "Sybase User ID of the user which the client logged in with.");
+			mtd.addColumn("sysprocesses", "fid",            "SPID of the parent process, Family ID.");
 			mtd.addColumn("sysprocesses", "program_name",   "Name of the client program, the client application has to set this to a value otherwise it will be empty.");
 			mtd.addColumn("sysprocesses", "dbname",         "Name of the database this user is currently using.");
 			mtd.addColumn("sysprocesses", "login",          "Username that is logged in.");
-			mtd.addColumn("sysprocesses", "status",         "Status that the SPID is currently in. \n'recv sleep'=waiting for incomming network trafic, \n'sleep'=various reasons but usually waiting for disk io, \n'running'=currently executing on a engine, \n'runnable'=waiting for an engine to execute its work, \n'lock sleep'=waiting for table/page/row locks, \n'sync sleep'=waiting for childs to finnish when parallel execution. \n'...'=and more statuses");
 			mtd.addColumn("sysprocesses", "cmd",            "What are we doing. \n'SELECT/INSERT/UPDATE/DELETE'=quite obvious, \n'LOG SUSP'=waiting for log space to be available, \n'COND'=On a IF or equivalent SQL statement, \n'...'=and more");
 			mtd.addColumn("sysprocesses", "tran_name",      "More info about what the ASE is doing. \nIf we are in CREATE INDEX it will tell you the index name. \nIf we are in BCP it will give you the tablename etc. \nThis is a good place to look at when you issue ASE administrational commands and want to know whet it really does.");
 			mtd.addColumn("sysprocesses", "physical_io",    "Total number of reads/writes, this is flushed in a strange way, so do not trust the Absolute value to much...");
+			mtd.addColumn("sysprocesses", "memusage",       "Amount of memory allocated to process.");
 			mtd.addColumn("sysprocesses", "procName",       "If a procedure is executing, this will be the name of the proc. \nif you execute a sp_ proc, it could give you a procedure name that is uncorrect. \nThis due to the fact that I'm using object_name(id,dbid) and dbid is the database the SPID is currently in, while the procId is really reflecting the id of the sp_ proc which usually is located in sybsystemprocs.");
 			mtd.addColumn("sysprocesses", "stmtnum",        "Statement number of the SQL batch or the procedure that is currently executing. \nThis might be faulty but it's usually a good indicator.");
 			mtd.addColumn("sysprocesses", "linenum",        "Line number of the SQL batch or the procedure that is currently executing. \nThis might be faulty but it's usually a good indicator. \nIf this does NOT move between samples you may have a HEAVY SQL statement to optimize or you may waiting for a blocking lock.");
@@ -828,14 +831,55 @@ extends MonTablesDictionary
 			mtd.addColumn("sysprocesses", "hostname",       "hostname of the machine where the clinet was started. (This can be filled in by the client, meaning it could be used for something else)");
 			mtd.addColumn("sysprocesses", "ipaddr",         "IP address of the connected client");
 			mtd.addColumn("sysprocesses", "hostprocess",    "hostprocess on the machine which the clinet was started at. (This can be filled in by the client, meaning it could be used for something else)");
-			mtd.addColumn("sysprocesses", "suid",           "Sybase User ID of the user which the client logged in with.");
 			mtd.addColumn("sysprocesses", "cpu",            "cumulative cpu time used by a process in 'ticks'. This is periodically flushed by the system (see sp_configure 'cpu accounting flush interval'");
 			mtd.addColumn("sysprocesses", "clientname",     clientXxx);
 			mtd.addColumn("sysprocesses", "clienthostname", clientXxx);
 			mtd.addColumn("sysprocesses", "clientapplname", clientXxx);
 
+//mtd.addColumn("sysprocesses", "spid",				"Process ID.");
+//mtd.addColumn("sysprocesses", "kpid",				"Kernel process ID.");
+//mtd.addColumn("sysprocesses", "enginenum",			"Number of engine on which process is being executed.");
+//mtd.addColumn("sysprocesses", "status",				"Process ID status.");
+//mtd.addColumn("sysprocesses", "suid",				"Server user ID of user who issued command.");
+//mtd.addColumn("sysprocesses", "hostname",			"Name of host computer.");
+//mtd.addColumn("sysprocesses", "program_name",		"Name of front-end module.");
+//mtd.addColumn("sysprocesses", "hostprocess",		"Host process ID number..");
+//mtd.addColumn("sysprocesses", "cmd",				"Command or process currently being executed. Evaluation of a conditional statement, such as an if or while loop, returns cond.");
+//mtd.addColumn("sysprocesses", "cpu",				"Cumulative CPU time for process in ticks");
+//mtd.addColumn("sysprocesses", "physical_io",		"Number of disk reads and writes for current command.");
+//mtd.addColumn("sysprocesses", "memusage",			"Amount of memory allocated to process.");
+//mtd.addColumn("sysprocesses", "blocked",			"Process ID of blocking process, if any.");
+//mtd.addColumn("sysprocesses", "dbid",				"Database ID.");
+//mtd.addColumn("sysprocesses", "uid",				"ID of user who executed command.");
+//mtd.addColumn("sysprocesses", "gid",				"Group ID of user who executed command.");
+//mtd.addColumn("sysprocesses", "tran_name",			"Name of the active transaction.");
+//mtd.addColumn("sysprocesses", "time_blocked",		"Time blocked in seconds.");
+//mtd.addColumn("sysprocesses", "network_pktsz",		"Current connection’s network packet size.");
+//mtd.addColumn("sysprocesses", "fid",				"Process ID of the worker process parent.");
+//mtd.addColumn("sysprocesses", "execlass",			"Execution class that the process is bound to.");
+//mtd.addColumn("sysprocesses", "priority",			"Base priority associated with the process.");
+//mtd.addColumn("sysprocesses", "affinity",			"Name of the engine to which the process has affinity.");
+//mtd.addColumn("sysprocesses", "id",					"Object ID of the currently running procedure (or 0 if no procedure is running).");
+//mtd.addColumn("sysprocesses", "stmtnum",			"The current statement number within the running procedure (or the SQL batch statement number if no procedure is running).");
+//mtd.addColumn("sysprocesses", "linenum",			"The line number of the current statement within the running stored procedure (or the line number of the current SQL batch statement if no procedure is running).");
+//mtd.addColumn("sysprocesses", "origsuid",			"Original server user ID. If this value is not NULL, a user with ansuid of origsuid executed set proxy or set session authorization to impersonate the user who executed the command.");
+//mtd.addColumn("sysprocesses", "block_xloid",		"Unique lock owner ID of a lock that is blocking a transaction.");
+//mtd.addColumn("sysprocesses", "clientname",			"Name by which the user is know for the current session. (set clientname somename)");
+//mtd.addColumn("sysprocesses", "clienthostname",		"Name by which the host is known for the current session. (set clienthostname somename)");
+//mtd.addColumn("sysprocesses", "clientapplname",		"Name by which the application is known for the current session. (set clientapplname somename)");
+//mtd.addColumn("sysprocesses", "sys_id",				"Unique identity of companion node.");
+//mtd.addColumn("sysprocesses", "ses_id",				"Unique identity of each client session.");
+//mtd.addColumn("sysprocesses", "loggedindatetime",	"Shows the time and date when the client connected to the SAP ASE server. See “Row-level access control“ in Chapter 11, “Managing User Permissions” of the Security Administration Guide for more information.");
+//mtd.addColumn("sysprocesses", "ipaddr",				"IP address of the client where the login is made. See “Row-level access control“ in Chapter 11, “Managing User Permissions” of the Security Administration Guide for more information.");
+//mtd.addColumn("sysprocesses", "nodeid",				"Reserved for future use (not available for cluster environments).");
+//mtd.addColumn("sysprocesses", "instanceid",			"ID of the instance (available only for cluster environments).");
+//mtd.addColumn("sysprocesses", "pad",				"(Cluster Edition) Column added for alignment purposes.");
+//mtd.addColumn("sysprocesses", "lcid",				"(Cluster Edition) ID of the cluster.");
+
+			
 			mtd.addColumn("sysprocesses", "tempdb_name",          "What tempdb is this SPID using for temporary storage.");
 			mtd.addColumn("sysprocesses", "pssinfo_tempdb_pages", "<html>Number of pages that this SPID is using in the tempdb.<br><b>NOTE:</b> When 'ordinary user' tables are shared between users in tempdb, this counter can be faulty,<br> this due to that all spids has a local counter (in the pss structure) which is NOT inc/decremented by other users working on the same 'global' temp table.</html>");
+			mtd.addColumn("sysprocesses", "pssinfo_tempdb_pages_diff", "<html>Number of pages that this SPID is using in the tempdb.<br><b>NOTE:</b> When 'ordinary user' tables are shared between users in tempdb, this counter can be faulty,<br> this due to that all spids has a local counter (in the pss structure) which is NOT inc/decremented by other users working on the same 'global' temp table.</html>");
 			mtd.addColumn("sysprocesses", "WaitClassDesc",        "Short description of what 'group' the WaitEventID is grouped in.");
 			mtd.addColumn("sysprocesses", "WaitEventDesc",        "Short description of what this specific WaitEventID stands for.");
 			mtd.addColumn("sysprocesses", "BatchIdDiff",          "How many 'SQL Batches' has the client sent to the server since the last sample, in Diff or Rate");

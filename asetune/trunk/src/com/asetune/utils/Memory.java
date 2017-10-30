@@ -3,6 +3,7 @@
  */
 package com.asetune.utils;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -388,4 +389,43 @@ public class Memory
 				+ "MaxMemory=" + getMaxMemoryInMB() + " MB."
 				;
 	}
+
+	
+	
+	
+	////////////////////////////////////////////////////////////
+	// Physical Memory
+	////////////////////////////////////////////////////////////
+	@SuppressWarnings("restriction")
+	private static com.sun.management.OperatingSystemMXBean _osMbean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+
+
+	/**
+	 * How much physical memory does machine have<br>
+	 * Uses com.sun.management.OperatingSystemMXBean.getTotalPhysicalMemorySize()
+	 * @return MB
+	 */
+	public static int getTotalPhysicalMemorySizeInMB()
+	{
+		@SuppressWarnings("restriction")
+		long osPhysMemSize     = _osMbean.getTotalPhysicalMemorySize();
+
+		return (int) (osPhysMemSize / 1024 / 1024);
+	}
+	
+
+	/**
+	 * How much <b>free</b> physical memory does machine have<br>
+	 * Uses com.sun.management.OperatingSystemMXBean
+	 * @return MB
+	 */
+	public static int getFreePhysicalMemorySizeInMB()
+	{
+		@SuppressWarnings("restriction")
+		long osPhysFreeMemSize = _osMbean.getFreePhysicalMemorySize();
+
+		return (int) (osPhysFreeMemSize / 1024 / 1024);
+	}
+	
+
 }

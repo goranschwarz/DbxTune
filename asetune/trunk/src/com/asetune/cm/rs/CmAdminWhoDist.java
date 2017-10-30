@@ -14,6 +14,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -109,10 +110,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_TRANS_PROCESSED,     new TrendGraphDataPoint(GRAPH_NAME_TRANS_PROCESSED,     labels));
-		addTrendGraphData(GRAPH_NAME_CMD_PROCESSED,       new TrendGraphDataPoint(GRAPH_NAME_CMD_PROCESSED,       labels));
+		addTrendGraphData(GRAPH_NAME_TRANS_PROCESSED,     new TrendGraphDataPoint(GRAPH_NAME_TRANS_PROCESSED,     labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CMD_PROCESSED,       new TrendGraphDataPoint(GRAPH_NAME_CMD_PROCESSED,       labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -122,8 +124,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_TRANS_PROCESSED,
-				"DIST: Number of Transactions (per second)", // Menu CheckBox text
-				"DIST: Number of Transactions (per second)", // Label 
+				"DIST: Number of Transactions (col 'TransProcessed', per second)", // Menu CheckBox text
+				"DIST: Number of Transactions (col 'TransProcessed', per second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -134,8 +136,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_CMD_PROCESSED,
-					"DIST: Number of Commands (per second)", // Menu CheckBox text
-					"DIST: Number of Commands (per second)", // Label 
+					"DIST: Number of Commands (col 'CmdsProcessed', per second)", // Menu CheckBox text
+					"DIST: Number of Commands (col 'CmdsProcessed', per second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -162,9 +164,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_CMD_PROCESSED.equals(tgdp.getName()))
@@ -179,9 +179,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

@@ -17,6 +17,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.HostMonitorMetaData;
 import com.asetune.hostmon.MonitorIo;
+import com.asetune.hostmon.MonitorMeminfo;
 import com.asetune.hostmon.MonitorMpstat;
 import com.asetune.hostmon.MonitorUpTime;
 import com.asetune.hostmon.MonitorUserDefined;
@@ -40,11 +41,14 @@ extends CountersModel
 	private OsTable     _osSampleTable = null;
 	private int         _hostMonType   = 0;
 
+//	private OsTable     _osPrevSampleTable = null; // Contains old raw data (previous sample), but only for non-streaming-modules
+
 	public static final int HOSTMON_IOSTAT   = 1; 
 	public static final int HOSTMON_VMSTAT   = 2; 
 	public static final int HOSTMON_MPSTAT   = 3; 
 	public static final int HOSTMON_UPTIME   = 4; 
-	public static final int HOSTMON_UD_CLASS = 5;
+	public static final int HOSTMON_MEMINFO  = 5;
+	public static final int HOSTMON_UD_CLASS = 6;
 	private String _udModuleName = null;
 
 	public static String getTypeExplanation(int type)
@@ -53,6 +57,7 @@ extends CountersModel
 		if (type == HOSTMON_VMSTAT)   return "HOSTMON_VMSTAT";
 		if (type == HOSTMON_MPSTAT)   return "HOSTMON_MPSTAT";
 		if (type == HOSTMON_UPTIME)   return "HOSTMON_UPTIME";
+		if (type == HOSTMON_MEMINFO)  return "HOSTMON_MEMINFO";
 		if (type == HOSTMON_UD_CLASS) return "HOSTMON_UD_CLASS";
 		return "UNKNOWN TYPE("+type+")";
 	}
@@ -73,6 +78,8 @@ extends CountersModel
 
 		setDataSource(DATA_ABS, false);
 
+		setUserDefinedAlarmInterrogator(createUserDefinedAlarmHandler());
+
 		// Load saved properties
 		super.loadProps();
 
@@ -81,6 +88,24 @@ extends CountersModel
 	//----------------------------------------------------------------------------
 	// END: Constructors
 	//----------------------------------------------------------------------------
+
+	/** Check if we are connected to a specififc OS Vendor */
+	public boolean isConnectedToVendor(HostMonitor.OsVendor vendor)
+	{
+		if (_hostMonitor == null)
+			return false;
+		
+		return _hostMonitor.isConnectedToVendor(vendor);
+	}
+
+	/** Check if we are connected to a specififc OS Vendor */
+	public HostMonitor.OsVendor getConnectedToVendor()
+	{
+		if (_hostMonitor == null)
+			return HostMonitor.OsVendor.NotSet;
+		
+		return _hostMonitor.getConnectedToVendor();
+	}
 
 	/** called from GetCounters.initCounters() */
 	@Override
@@ -105,10 +130,11 @@ extends CountersModel
 
 			// FIXME: Hmm do this in a BETTER way, factoring needs to much maintenance,
 			// it would be better to use some kind of class loading, or similar...
-			if      (_hostMonType == HOSTMON_IOSTAT) _hostMonitor = MonitorIo    .createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_VMSTAT) _hostMonitor = MonitorVmstat.createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_MPSTAT) _hostMonitor = MonitorMpstat.createMonitor(sshConn, false);
-			else if (_hostMonType == HOSTMON_UPTIME) _hostMonitor = MonitorUpTime.createMonitor(sshConn, false);
+			if      (_hostMonType == HOSTMON_IOSTAT)  _hostMonitor = MonitorIo     .createMonitor(sshConn, false);
+			else if (_hostMonType == HOSTMON_VMSTAT)  _hostMonitor = MonitorVmstat .createMonitor(sshConn, false);
+			else if (_hostMonType == HOSTMON_MPSTAT)  _hostMonitor = MonitorMpstat .createMonitor(sshConn, false);
+			else if (_hostMonType == HOSTMON_UPTIME)  _hostMonitor = MonitorUpTime .createMonitor(sshConn, false);
+			else if (_hostMonType == HOSTMON_MEMINFO) _hostMonitor = MonitorMeminfo.createMonitor(sshConn, false);
 			else if (_hostMonType == HOSTMON_UD_CLASS)
 			{
 				Configuration conf = null;
@@ -160,6 +186,17 @@ extends CountersModel
 		return null;
 	}
 
+	@Override
+	public Class<?> getColumnClass(int col)
+	{
+		if (_offlineValues != null) 
+			return _offlineValues.getColumnClass(col); 
+
+		if (isDataInitialized() && _osSampleTable != null)
+			return _osSampleTable.getColumnClass(col); 
+		return null;
+	}
+	
 	@Override
 	public int getRowCount()
 	{
@@ -265,10 +302,11 @@ extends CountersModel
 //		System.out.println("setColumnNames(): type="+type+", cols='"+cols+"'.");
 		if (_offlineMetadataArr == null)
 		{
-			if      (_hostMonType == HOSTMON_IOSTAT)   _offlineMetadataArr = MonitorIo    .createOfflineMetaData();
-			else if (_hostMonType == HOSTMON_VMSTAT)   _offlineMetadataArr = MonitorVmstat.createOfflineMetaData();
-			else if (_hostMonType == HOSTMON_MPSTAT)   _offlineMetadataArr = MonitorMpstat.createOfflineMetaData();
-			else if (_hostMonType == HOSTMON_UPTIME)   _offlineMetadataArr = MonitorUpTime.createOfflineMetaData();
+			if      (_hostMonType == HOSTMON_IOSTAT)   _offlineMetadataArr = MonitorIo     .createOfflineMetaData();
+			else if (_hostMonType == HOSTMON_VMSTAT)   _offlineMetadataArr = MonitorVmstat .createOfflineMetaData();
+			else if (_hostMonType == HOSTMON_MPSTAT)   _offlineMetadataArr = MonitorMpstat .createOfflineMetaData();
+			else if (_hostMonType == HOSTMON_UPTIME)   _offlineMetadataArr = MonitorUpTime .createOfflineMetaData();
+			else if (_hostMonType == HOSTMON_MEMINFO)  _offlineMetadataArr = MonitorMeminfo.createOfflineMetaData();
 			else if (_hostMonType == HOSTMON_UD_CLASS) _offlineMetadataArr = MonitorUserDefined.createOfflineMetaData(_udModuleName);
 	
 			_offlineMetadata = null;
@@ -395,7 +433,7 @@ extends CountersModel
 		}
 
 		// GET THE DATA FROM THE HOST MONITOR
-		OsTable tmpOsSampleTable;
+		final OsTable tmpOsSampleTable;
 		if (_hostMonitor.isOsCommandStreaming())
 			tmpOsSampleTable = _hostMonitor.getSummaryTable();
 		else
@@ -418,9 +456,21 @@ extends CountersModel
 		setDataInitialized(true);
 
 		// Update dates on panel
+		Timestamp prevSamplingTime = _thisSamplingTime;
 		_thisSamplingTime = new Timestamp(System.currentTimeMillis());
 		setSampleTime( _thisSamplingTime );
-		setSampleInterval(tmpOsSampleTable.getSampleSpanTime());
+		if (_hostMonitor.isOsCommandStreaming())
+			setSampleInterval(tmpOsSampleTable.getSampleSpanTime());
+		else
+		{
+			if (prevSamplingTime != null)
+				setSampleInterval(_thisSamplingTime.getTime() - prevSamplingTime.getTime());
+		}
+
+		localCalculation(tmpOsSampleTable);
+
+		// Do local calculation with availability to the previous sample
+		localCalculation(_osSampleTable, tmpOsSampleTable);
 
 		// NOW apply data to the VIEW
 		// in GUI mode this is done preferred by the EventDispathThread, thats why we
@@ -442,19 +492,19 @@ extends CountersModel
 			// Calculte what values we should have in the graphs
 			// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
 			updateGraphData();
+
+			// Do we want to send an Alarm somewhere, every CM's has to implement this.
+			wrapperFor_sendAlarmRequest();
 		}
 		else // HAS GUI
 		{
-			// Make them final copies to be used in the doWork/Runnable below
-			final OsTable fTmpOsSampleTable = tmpOsSampleTable;
-
 			Runnable doWork = new Runnable()
 			{
 				@Override
 				public void run()
 				{
 					// IMPORTANT: move datastructure.
-					_osSampleTable = fTmpOsSampleTable;
+					_osSampleTable = tmpOsSampleTable;
 
 					beginGuiRefresh();
 
@@ -484,6 +534,9 @@ extends CountersModel
 					updateGraphData();
 
 					endGuiRefresh();
+
+					// Do we want to send an Alarm somewhere, every CM's has to implement this.
+					wrapperFor_sendAlarmRequest();
 				}
 			};
 			// Invoke this job on the SWING Event Dispather Thread
@@ -497,6 +550,25 @@ extends CountersModel
 	}
 
 	
+	/**
+	 * Change some values...
+	 * @param tmpOsSampleTable
+	 */
+	public void localCalculation(OsTable osSampleTable)
+	{
+	}
+	
+	/** 
+	 * Do local calculation with availability to the previous sample
+	 * 
+	 * @param prevOsSampleTable
+	 * @param thisOsSampleTable
+	 */
+	public void localCalculation(OsTable prevOsSampleTable, OsTable thisOsSampleTable)
+	{
+	}
+
+
 	/**
 	 * SQL is not used here, so simply override this method with "nothing"
 	 */

@@ -349,6 +349,10 @@ extends TabularCntrPanel
 			panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
 		else
 			panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+
+		// Needs to be done since we remove and add content to the panel
+		panel.validate();
+		panel.repaint();
 	}
 
 	private void helperActionSave(String key, boolean b)

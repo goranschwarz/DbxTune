@@ -46,9 +46,10 @@ extends JPanel
 
 	private final String GRAPH_LAYOUT_CONSTRAINT = "insets 0 0 0 0, fill, hidemode 3, wrap "; // + _graphLayoutColumns
 //	private final String GRAPH_LAYOUT_PROP       = "push, grow, hidemode 3";
-	private final String GRAPH_LAYOUT_PROP       = "grow";
+	private final String GRAPH_LAYOUT_PROP       = "push, grow";
 
-	private final String FACEBOOK_URL            = "http://www.facebook.com/pages/AseTune/223112614400980"; 
+//	private final String FACEBOOK_URL            = "http://www.facebook.com/pages/AseTune/223112614400980"; 
+	private final String FACEBOOK_URL            = "http://www.facebook.com/asetune"; 
 	private final String SOURCEFORGE_URL         = "http://sourceforge.net/projects/asetune/"; 
 	private final String DONATE_URL              = "http://www.asetune.com/donate.html"; 
 
@@ -494,6 +495,15 @@ extends JPanel
 
 	public void add(TrendGraph tg)
 	{
+		// Check if the Graph Name is alraedy in use by another CM
+		TrendGraph alreadyUsedBy = _graphOriginOrderMap.get(tg.getName());
+		if (alreadyUsedBy == null)
+			alreadyUsedBy = _graphCurrentOrderMap.get(tg.getName());
+		
+		// Throw exception if name is already "in use"
+		if (alreadyUsedBy != null)
+			throw new RuntimeException("Sorry the trend graph named '"+tg.getName()+"' for CM '"+tg.getCm().getName()+"' is already used by another CM '"+alreadyUsedBy.getCm().getName()+"', the name must be unique.");
+
 		_graphOriginOrderMap .put(tg.getName(), tg);
 		_graphCurrentOrderMap.put(tg.getName(), tg);
 
@@ -581,7 +591,8 @@ extends JPanel
 	/**
 	 * remove/add all graphs from the GraphPanel, this so we can change number of columns in the layout etc...
 	 */
-	private void reLayout()
+//	private void reLayout()
+	public void reLayout()
 	{
 		// remove all Graphs from the Panels Layout Manager
 		for (TrendGraph tg : _graphCurrentOrderMap.values())
@@ -589,7 +600,27 @@ extends JPanel
 
 		// Then add them again... 
 		for (TrendGraph tg : _graphCurrentOrderMap.values())
-			_graphPanel.add(tg.getPanel(), GRAPH_LAYOUT_PROP);
+			if (tg.isGraphEnabled())
+				_graphPanel.add(tg.getPanel(), GRAPH_LAYOUT_PROP);
+
+		_graphPanel.revalidate();
+		_graphPanel.repaint();
+		
+//		SwingUtilities.invokeLater(new Runnable()
+//		{
+//			@Override
+//			public void run()
+//			{
+//				_graphPanel.repaint();
+//				System.out.println("");
+//				System.out.println("------------------------------------------------------------------");
+//				for (TrendGraph tg : _graphCurrentOrderMap.values())
+//				{
+//					if (tg.isGraphEnabled())
+//						System.out.println("GraphPanelSize: name="+StringUtil.left(tg.getName(),60)+", size="+tg.getPanel().getSize()+", prefSize="+tg.getPanel().getPreferredSize());
+//				}
+//			}
+//		});
 	}
 
 	/**
@@ -765,5 +796,10 @@ extends JPanel
 			conf.remove("graph.order");
 			conf.save();
 		}
+	}
+	
+	public JPanel getGraphPanelNoScroll()
+	{
+		return _graphPanel;
 	}
 }

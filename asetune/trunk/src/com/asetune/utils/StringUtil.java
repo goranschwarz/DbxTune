@@ -12,6 +12,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Formatter;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -26,6 +27,7 @@ import java.util.regex.Pattern;
 import javax.swing.JComboBox;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -122,6 +124,67 @@ public class StringUtil
 		}
 		return sb.toString();
 	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted('"', "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted('|', "a", "b", "c")
+	 * Returns: |a|, |b|, |c|
+	 * </pre>
+	 * 
+	 * @param quoteChar chars/str that will be used to suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(char quoteChar, String...names)
+	{
+		return toCommaStrQuoted(quoteChar, quoteChar, names);
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted('"', '"', "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted('<', '>', "a", "b", "c")
+	 * Returns: <a>, <b>, <c>
+	 * </pre>
+	 * 
+	 * @param startQuoteChar chars/str that will be used to start-suround all the input strings...
+	 * @param endQuoteChar chars/str that will be used to end-suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(char startQuoteChar, char endQuoteChar, String...names)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		for (String name : names)
+		{
+			sb.append(startQuoteChar).append(name).append(endQuoteChar).append(", ");
+		}
+		// Remove last ", "
+		sb.delete(sb.length()-2, sb.length());
+
+		return sb.toString();
+	}
+
 
 
 
@@ -549,7 +612,7 @@ public class StringUtil
 	}
 
 	/**
-	 * Left justify a string and fill extra spaces to the right
+	 * Left justify a string and fill extra spaces to the right, with allowGrow
 	 */
 	public static String left(String str, int expandToSize)
 	{
@@ -618,78 +681,150 @@ public class StringUtil
 	}
 
 	/**
-	 * All ${ENV_VARIABLE_NAME} will be substituted with the environment
-	 * variable from the OperatingSystem. Some JVM's the System.getenv() does not work<br>
-	 * In that case go and get the value from the runtime instead...
+	 * Substitutes environment variables within a string by values.
+	 * <p>
+	 * This class takes a piece of text and substitutes all the variables within it.
+	 * The default definition of a variable is <code>${variableName}</code>.
+	 * <p>
+	 * Variable values are resolved from system properties.<br>
+	 * Note: use </code>setEnvironmentVariablesToSystemProperties()</code> to transfer envVars 
+	 * to system properties when the application is started. 
+	 * <p>
+	 * Example of how to use this method:
+	 * <pre>
+	 * StringUtils.envVariableSubstitution("You are running with java.version = ${java.version} and os.name = ${os.name}.");
+	 * </pre>
+	 * <p>
 	 * 
-	 * @param val   A string that should be substituted
-	 * @return The substituted string
+	 * Also, this method allows to set a default value for unresolved variables.
+	 * The default value for a variable can be appended to the variable name after the variable
+	 * default value delimiter. The default value of the variable default value delimiter is ':-',
+	 * as in bash and other *nix shells.
+	 * <pre>
+	 * String templateString = &quot;Java Version ${java.version}, DUMMY_NAME=${DUMMY_NAME:-123}.&quot;;
+	 * String resolvedString = StringUtils.envVariableSubstitution(templateString);
+	 * </pre>
+	 * yielding:
+	 * <pre>
+	 *      Java Version 1.8.0_65, DUMMY_NAME=123.
+	 * </pre>
+	 * <p>
 	 */
-	public static String envVariableSubstitution(String val)
+	public static String envVariableSubstitution(String str)
 	{
-		// Extract Environment variables
-		// search for ${ENV_NAME}
-		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}"); // or maybe: "\\$\\{[A-Za-z0-9_]+\\}"
-		while( compiledRegex.matcher(val).find() )
-		{
-			String envVal  = null;
-			String envName = val.substring( val.indexOf("${")+2, val.indexOf("}") );
-
-			// Get value for a specific env variable
-			// But some java runtimes does not do getenv(),
-			// then we need to revert back to getProperty() from the system property
-			// then the user needs to pass that as a argument -Dxxx=yyy to the JVM
-			try
-			{
-				envVal  = System.getenv(envName);
-			}
-			catch (Throwable t)
-			{
-				envVal = System.getProperty(envName);
-				if (envVal == null)
-				{
-					_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
-					System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
-				}
-			}
-
-			// If we can't find it at the ENV fall back and get it from System.getProperty()
-			if (envVal == null)
-			{
-				envVal = System.getProperty(envName);
-			}
-
-			// Not found at all, simply set it to "" -- empty
-			if (envVal == null)
-			{
-				_logger.warn("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
-				System.out.println("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
-				envVal="";
-			}
-			// Backslashes does not work that good in replaceFirst()...
-			// So change them to / instead...
-			envVal = envVal.replace('\\', '/');
-
-			// NOW substitute the ENV VARIABLE with a real value...
-			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
-		}
-
-		return val;
+		return StrSubstitutor.replaceSystemProperties(str);
 	}
 
-	/**
-	 * Get environment variable from the OperatingSystem. Some JVM's the System.getenv() does not work<br>
-	 * In that case go and get the value from the runtime instead...
+	/** 
+	 * Works like {@link #envVariableSubstitution}, but instead of System Properties, take values from the valuesMap
 	 * 
-	 * @param val   variable name
+	 * @param templateString
+	 * @param valuesMap
+	 * @return String with changed values.
+	 * @see envVariableSubstitution 
+	 */
+	public static String variableSubstitution(String templateString, Map<String, String> valuesMap)
+	{
+		StrSubstitutor sub = new StrSubstitutor(valuesMap);
+		return sub.replace(templateString);
+	}
+
+//	/**
+//	 * All ${ENV_VARIABLE_NAME} will be substituted with the environment <br>
+//	 * variable from the OperatingSystem. Some JVM's the System.getenv() does not work <br>
+//	 * In that case go and get the value from the runtime instead... <br>
+//	 *  <br>
+//	 *  TODO: implement default value like ${ENV_VARIABLE_NAME:-defaultValue} and or ${ENV_VARIABLE_NAME:=defaultValue}<br>
+//	 *   
+//	 * @param val   A string that should be substituted
+//	 * @return The substituted string
+//	 */
+//	public static String envVariableSubstitution(String val)
+//	{
+//		// Extract Environment variables
+//		// search for ${ENV_NAME}
+//		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}"); // or maybe: "\\$\\{[A-Za-z0-9_]+\\}"
+//		while( compiledRegex.matcher(val).find() )
+//		{
+//			String envVal  = null;
+//			String envName = val.substring( val.indexOf("${")+2, val.indexOf("}") );
+//
+//			// Get value for a specific env variable
+//			// But some java runtimes does not do getenv(),
+//			// then we need to revert back to getProperty() from the system property
+//			// then the user needs to pass that as a argument -Dxxx=yyy to the JVM
+//			try
+//			{
+//				envVal  = System.getenv(envName);
+//			}
+//			catch (Throwable t)
+//			{
+//				envVal = System.getProperty(envName);
+//				if (envVal == null)
+//				{
+//					_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+//					System.out.println("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+//				}
+//			}
+//
+//			// If we can't find it at the ENV fall back and get it from System.getProperty()
+//			if (envVal == null)
+//			{
+//				envVal = System.getProperty(envName);
+//			}
+//
+//			// Not found at all, simply set it to "" -- empty
+//			if (envVal == null)
+//			{
+//				_logger.warn("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
+//				System.out.println("The Environment variable '"+envName+"' cant be found, replacing it with an empty string ''.");
+//				envVal="";
+//			}
+//			// Backslashes does not work that good in replaceFirst()...
+//			// So change them to / instead...
+//			envVal = envVal.replace('\\', '/');
+//
+//			// NOW substitute the ENV VARIABLE with a real value...
+//			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
+//		}
+//
+//		return val;
+//	}
+
+	/**
+	 * Get value for a System Property or a Environment Variable<br>
+	 * First check System Properties, then check Environment Variable
+	 * 
+	 * @param envName Name of the environment variable or Property
+	 * @param systemPropOverridesEnvVar TRUE = if you first want to check System.getProperty(envName)
 	 * @return The value, null if it can't be found.
 	 */
 	public static String getEnvVariableValue(String envName)
+	{
+		return getEnvVariableValue(envName, true);
+	}
+
+	/**
+	 * Get value for a System Property or a Environment Variable
+	 * 
+	 * @param envName Name of the environment variable or Property
+	 * @param systemPropOverridesEnvVar TRUE = if you first want to check System.getProperty(envName)
+	 * @return The value, null if it can't be found.
+	 */
+	public static String getEnvVariableValue(String envName, boolean systemPropOverridesEnvVar)
 	{
 		if (envName == null)
 			return null;
 
 		String envVal  = null;
+
+		// First check the SystemProperty
+		if (systemPropOverridesEnvVar)
+		{
+    		envVal = System.getProperty(envName);
+    		if (envVal != null)
+    			return envVal;
+		}
 
 		// Get value for a specific env variable
 		// But some java runtimes does not do getenv(),
@@ -724,6 +859,41 @@ public class StringUtil
 		return envVal;
 	}
 
+	/**
+	 * Take all Environment variables and add them as System Properties
+	 * 
+	 * @param overwrite                      overwrite the system properties
+	 * @param writeInfoOnOverwrittenValues   if overwrite=true, also write informational message if we overwrite a System Property
+	 */
+	public static void setEnvironmentVariablesToSystemProperties(boolean overwrite, boolean writeInfoOnOverwrittenValues)
+	{
+		Map<String, String> envVars = System.getenv();
+		for (String key : envVars.keySet())
+		{
+			String val = envVars.get(key);
+
+			if (overwrite)
+			{
+				String oldVal = System.setProperty(key, val);
+				
+				if (writeInfoOnOverwrittenValues && oldVal != null && !oldVal.equals(val))
+				{
+					_logger.info("Overwriting environment variable '"+key+"'. oldValue='"+oldVal+"', newValue='"+val+"'");
+				}
+			}
+			else
+			{
+				String oldVal = System.getProperty(key, null);
+				
+				// Only write if we did NOT have a value
+				if (oldVal == null)
+				{
+					System.setProperty(key, val);
+				}
+			}
+
+		}
+	}
 
 	/**
 	 * Duplicate the input string X number of times
@@ -996,7 +1166,8 @@ public class StringUtil
 		if (str == null)
 			return null;
 
-		str = str.trim();
+//		str = str.trim();
+		str = rtrim(str);
 
 		if (str.endsWith(","))
 			str = str.substring(0, str.length()-1);
@@ -1009,7 +1180,8 @@ public class StringUtil
 		if (str == null)
 			return null;
 
-		str = str.trim();
+//		str = str.trim();
+		str = rtrim2(str);
 
 		if (str.endsWith("\n"))
 			str = str.substring(0, str.length()-1);
@@ -1042,7 +1214,7 @@ public class StringUtil
 		if (row.endsWith(";"))
 			return true;
 		
-		for (int i=row.length()-1; i>0; i--)
+		for (int i=row.length()-1; i>=0; i--)
 		{
 			char ch = row.charAt(i);
 			if (Character.isWhitespace(ch))
@@ -1190,6 +1362,58 @@ public class StringUtil
 	}
 
 	/**
+	 * returns a "safe" SQL String for column or table names
+	 * <p>
+	 * This is simple for the moment, and will just do [colname]
+	 * 
+	 * @param inStr the input string
+	 * 
+	 * @return "[inStr]"
+	 */
+	public static String sqlSafeAlways(String inStr)
+	{
+		return sqlSafe(inStr, "[", "]", null, true);
+	}
+	/**
+	 * returns a "safe" SQL String for column or table names
+	 * 
+	 * @param inStr    the input string
+	 * @param preStr   the string to put before the input str
+	 * @param postStr  the string to put after the input str
+	 * @param reservedWords  A list of words that we should "save" the string with...
+	 * @param always   If you always want to "safe" the string or not.
+	 * 
+	 * @return preStr + inStr + postStr     or  just the inStr
+	 */
+	public static String sqlSafe(String inStr, String preStr, String postStr, List<String> reservedWords, boolean always)
+	{
+		if (isNullOrBlank(inStr))
+			return inStr;
+
+		boolean doQuote = false;
+		if (always)
+		{
+			doQuote = true;
+		}
+		else
+		{
+			if (reservedWords != null && reservedWords.contains(inStr))
+				doQuote = true;
+
+			// Check for strange characters
+			//if (strangeChars)
+			//	doQuote = true;
+		}
+		
+		if (doQuote)
+		{
+			StringBuilder sb = new StringBuilder();
+			return sb.append(preStr).append(inStr).append(postStr).toString();
+		}
+		return inStr;
+	}
+
+	/**
 	 * returns a "safe" XML tag content string
 	 * <p>
 	 * if '&' or '<' exists in the passed string a CDATA substitution will be done.
@@ -1319,6 +1543,63 @@ public class StringUtil
 			value = "";
 
 		return sb.append("<").append(tagName).append(">").append(value).append("</").append(tagName).append(">\n");
+	}
+
+	/**
+	 * Check if this "could" be a XML document...<br>
+	 * First check if the string starts with '<?xml ' or '<?XML ', then it is a xml documemt...<br>
+	 * Loop until we find: '<'...'>' and a closing tag '</' (max first 255 chars)<br>
+	 * A '<...>' must be present before a '</' closing tag... then it might be some form of XML document.
+	 * 
+	 * @param xmlInString The string to examen
+	 * @return
+	 */
+	public static boolean isPossibleXml(String xmlInString)
+	{
+		if (StringUtil.isNullOrBlank(xmlInString))
+			return false;
+
+		if (xmlInString.startsWith("<?xml "))
+			return true;
+		
+		if (xmlInString.startsWith("<?XML "))
+			return true;
+		
+		int posLt    = -1; // found '<'
+		int posGt    = -1; // found '>'
+		int posClose = -1; // found '</'
+		
+		posLt    = xmlInString.indexOf('<');
+		posGt    = xmlInString.indexOf('>');
+		posClose = xmlInString.indexOf("</");
+		// Loop first 255 characters
+		int len = Math.min(255, xmlInString.length());
+
+		// Loop until we find: Bracket Quote and Colon
+		// Then we can decide it it's possible a JSON
+		// Break if we find any nonWhiteSpaces before the first '{' or '['
+		for (int i=0; i<len; i++)
+		{
+			final char ch  = xmlInString.charAt(i);
+			final char ch2 = (i+1 < len) ? xmlInString.charAt(i+1) : ' ';
+
+			if ( posLt < 0 && ch == '<')
+				posLt = i;
+			
+			if ( posGt < 0 && ch == '>' )
+				posGt = i;
+			
+			if ( posClose < 0 && ch == '<' && ch2 == '/')
+				posClose = i;
+
+			// If we have found Bracket Quote and Colon
+			if (posLt >= 0 && posGt >= 0 && posClose >= 0)
+			{
+				return posLt < posGt 
+					&& posLt < posClose;
+			}
+		}
+		return false;
 	}
 
 	public static String xmlFormat(String xml)
@@ -1955,6 +2236,11 @@ public class StringUtil
 	    return s.substring(i);
 	}
 
+	/**
+	 * Remove traling spaces (including newlines etc, it uses Character.isWhitespace()
+	 * @param s
+	 * @return
+	 */
 	public static String rtrim(String s) 
 	{
 		if (s == null)
@@ -1967,6 +2253,22 @@ public class StringUtil
 	    return s.substring(0,i+1);
 	}
 
+	/**
+	 * Remove traling spaces, removes trailing characters (' ', '\t', '\f')
+	 * @param s
+	 * @return
+	 */
+	public static String rtrim2(String s) 
+	{
+		if (s == null)
+			return s;
+		
+	    int i = s.length()-1;
+	    while (i >= 0 && ( s.charAt(i) == ' ' || s.charAt(i) == '\t' || s.charAt(i) == '\f' ) ) 
+	        i--;
+
+	    return s.substring(0,i+1);
+	}
 
     /**
      * as str.indexOf("someStr") but ignore string case sensitivity.
@@ -2049,9 +2351,10 @@ public class StringUtil
 	
 	/** 
 	 *  Translates<br>
-	 *  < to &lt;
-	 *  > to &gt;
-	 *  \n to <br>;
+	 *  & to &amp;amp;   <br>
+	 *  < to &amp;lt;    <br>
+	 *  > to &amp;gt;    <br>
+	 *  \n to &lt;br&gt;
 	 */
 	public static String toHtmlString(Object o)
 	{
@@ -2414,7 +2717,46 @@ public class StringUtil
 		return sb.toString();
 	}
 
+//	public static String exceptionToString(Throwable throwable)
+//	{
+//		return ExceptionUtils.getStackTrace(throwable);
+//	}
+	public static String exceptionToString(final Throwable throwable) 
+	{
+		if (throwable == null)
+			return null;
+
+		final StringWriter sw = new StringWriter();
+		final PrintWriter pw = new PrintWriter(sw, true);
+
+		throwable.printStackTrace(pw);
+		
+		return sw.getBuffer().toString();
+	}
+
+	/** 
+	 * Simply do toString() on non null object, and "" on null objects 
+	 */
+	public static String toStr(Object obj)
+	{
+		if (obj == null)
+			return "";
+		return obj.toString();
+	}
 	
+	/**
+	 * conviniance wrapper for: String.format()
+	 * 
+	 * @link {@link String#format(String, Object...)}
+	 * 
+	 * @param format
+	 * @param args
+     * @return  A formatted string
+	 */
+	public static String format(String format, Object... args)
+	{
+		return String.format(format, args);
+	}
 	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////

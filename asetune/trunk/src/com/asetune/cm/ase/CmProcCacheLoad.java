@@ -12,6 +12,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -98,7 +99,7 @@ extends CountersModel
 	{
 		String[] sumLabels = new String[] { "Requests", "Loads" };
 		
-		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, sumLabels));
+		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, sumLabels, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -107,7 +108,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 				"Procedure Cache Requests", 	                                  // Menu CheckBox text
-				"Number of Procedure Requests per Second (procs,triggers,views)", // Label 
+				"Number of Procedure Requests per Second (procs,triggers,views) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				sumLabels, 
 				false, // is Percent Graph
 				this, 
@@ -174,8 +175,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(ProcCacheGraph): Requests='"+arr[0]+"', Loads='"+arr[1]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 }

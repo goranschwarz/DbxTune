@@ -6,6 +6,7 @@ import com.asetune.pcs.DdlDetails;
 import com.asetune.pcs.ObjectLookupQueueEntry;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 
 public interface IObjectLookupInspector
 {
@@ -47,4 +48,16 @@ public interface IObjectLookupInspector
 	 */
 	public DbxConnection createConnection()
 	throws Exception;
+
+	/**
+	 * Initialize the Lookup Inspector with the same configuartion as the PersistenceCounterHandler
+	 * @param conf
+	 */
+	public void init(Configuration conf);
+	
+	public Configuration getConfiguration();
+	public String        getProperty       (String propName, String  defaultValue);
+	public boolean       getBooleanProperty(String propName, boolean defaultValue);
+	public int           getIntProperty    (String propName, int     defaultValue);
+	public long          getLongProperty   (String propName, long    defaultValue);
 }

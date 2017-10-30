@@ -907,6 +907,8 @@ public class AseStackTraceAnalyzer
 		private static final String ACTION_DO_PARSE = "DO_PARSE";
 
 		private AseStackTraceReader _str = null;
+		
+		public enum ScriptType { BASH, BAT };
 
 		private JCheckBox    _sampleFilter_chk       = new JCheckBox("Filter on Samples");
 		private JLabel       _sampleStart_lbl        = new JLabel("Start Read at sample number");
@@ -943,7 +945,9 @@ public class AseStackTraceAnalyzer
 		private JTextField   _expectedSampleSlots_txt= new JTextField();
 		private JTextField   _actualSampleSlots_txt  = new JTextField();
 
-		private JButton      _sybmonExample_but      = new JButton("Example Script to do Stack Trace");
+		private JLabel       _sybmonExample_lbl      = new JLabel("Example Script to do Stack Trace");
+		private JButton      _sybmonExampleBash_but  = new JButton("Linux/Unix");
+		private JButton      _sybmonExampleBat_but   = new JButton("Windows");
 
 		private JTree        _treeView               = null;
 		private JPopupMenu   _treeViewPopupMenu      = null;
@@ -1077,7 +1081,9 @@ public class AseStackTraceAnalyzer
 			_expectedSampleSlots_txt.setToolTipText("<html>how many <i>slots</i> did we <b>expect</b> to sampled?  <br><b>Formula:</b> <code>samples * engines</code></html>"); 
 			_actualSampleSlots_txt  .setToolTipText("<html>how many <i>slots</i> did we <b>actually</b> sample?   <br>If this is <b>lower</b> than the expected, check the source file... it is probably <b>not</b> complete.</html>"); 
 
-			_sybmonExample_but      .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
+			_sybmonExample_lbl      .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
+			_sybmonExampleBash_but  .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
+			_sybmonExampleBat_but   .setToolTipText("<html>Show a script example of how to do stack trace using 'sybmon'.</html>");
 
 			_sampleCount_txt        .setEditable(false);
 			_actualSampleCount_txt  .setEditable(false);
@@ -1127,7 +1133,9 @@ public class AseStackTraceAnalyzer
 			panel.add(_expectedSampleSlots_txt, "w 50");
 			panel.add(_actualSampleSlots_txt,   "w 50");
 			panel.add(new JLabel(""),           "push, grow");
-			panel.add(_sybmonExample_but,       "wrap");
+			panel.add(_sybmonExample_lbl,       "");
+			panel.add(_sybmonExampleBash_but,   "");
+			panel.add(_sybmonExampleBat_but,    "wrap");
 
 			// set action
 			_loadRefresh_but       .setActionCommand(ACTION_DO_PARSE);
@@ -1147,7 +1155,8 @@ public class AseStackTraceAnalyzer
 			_functionFilter_txt    .addActionListener(this);
 			_functionStackStart_txt.addActionListener(this);
 			_tracefile_txt         .addActionListener(this);
-			_sybmonExample_but     .addActionListener(this);
+			_sybmonExampleBash_but .addActionListener(this);
+			_sybmonExampleBat_but  .addActionListener(this);
 
 			// Focus action listener
 
@@ -1364,9 +1373,15 @@ public class AseStackTraceAnalyzer
 			}
 
 			// BUT: Example of SYBMON script
-			if (_sybmonExample_but.equals(source))
+			if (_sybmonExampleBash_but.equals(source))
 			{
-				showSybmonExampleScript();
+				showSybmonExampleScript(ScriptType.BASH);
+			}
+
+			// BUT: Example of SYBMON script
+			if (_sybmonExampleBat_but.equals(source))
+			{
+				showSybmonExampleScript(ScriptType.BAT);
 			}
 			
 			// BUT: load trace file
@@ -2307,92 +2322,288 @@ public class AseStackTraceAnalyzer
 
 
 		
-		private void showSybmonExampleScript()
+		private void showSybmonExampleScript(ScriptType scriptType)
 		{
-			String exampleStr =
-				"#!/bin/bash\n" +
-				"\n" +
-				"#--- Use input params for setup\n" +
-				"export DSQUERY=${1:-$DSQUERY}\n" +
-				"\n" +
-				"#--- Setup/override environment if this is not done from the caller of the script\n" +
-				"#export DSQUERY=ase_server_name\n" +
-				"#export SYBASE=/opt/sybase\n" +
-				"#export SYBASE_ASE=ASE-15_0\n" +
-				"#export SYBASE_OCS=OCS-15_0\n" +
-				"\n" +
-				"#--- Setup LD_LIBRARY_PATH (Solaris, Linux), SHLIB (hp), LIBPATH (aix),\n" +
-				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_ASE/bin:$SYBASE/$SYBASE_ASE/lib:$LD_LIBRARY_PATH\n" +
-				"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/bin:$SYBASE/$SYBASE_OCS/lib:$SYBASE/$SYBASE_OCS/lib3p64:$LD_LIBRARY_PATH\n" +
-				"\n" +
-				"#--- Setup how many times we should stacktrace 'sampleCount'\n" +
-				"#--- and the sleeptime between stacktraces 'sampleInterval'\n" +
-				"sampleCount=${2:-500}\n" +
-				"sampleInterval=${3:-100}\n" +
-				"secItWillTake=$(( ${sampleCount} * ${sampleInterval} / 1000 ))\n" +
-				"\n" +
-				"ts=$(date +%Y%m%d_%H%M%S)\n" +
-				"logFile=\"stacktrace_${DSQUERY}_${ts}.out\"\n" +
-				"\n" +
-				"if [ \"\" = \"$DSQUERY\" ]\n" +
-				"then\n" +
-				"        echo ''\n" +
-				"        echo \"Usage: $(basename $0) [servername] [sampleCount] [sampleInterval]\"\n" +
-				"        echo '   or environment variable DSQUERY has to be set.'\n" +
-				"        echo ''\n" +
-				"        exit 1\n" +
-				"fi\n" +
-				"\n" +
-				"echo ''\n" +
-				"echo '############################################################################################'\n" +
-				"echo 'Starting stacktrace of ASE'\n" +
-				"echo \"  servername      = ${DSQUERY}\"\n" +
-				"echo \"  sample count    = ${sampleCount}\"\n" +
-				"echo \"  sample interval = ${sampleInterval}\"\n" +
-				"echo ''\n" +
-				"echo \"  SYBASE          = ${SYBASE}\"\n" +
-				"echo \"  SYBASE_ASE      = ${SYBASE_ASE}\"\n" + 
-				"echo \"  SYBASE_OCS      = ${SYBASE_OCS}\"\n" + 
-				"echo \"  LD_LIBRARY_PATH = ${LD_LIBRARY_PATH}\"\n" + 
-				"echo ''\n" +
-				"echo \"This will take approx ${secItWillTake} seconds\"\n" +
-				"echo ''\n" +
-				"echo 'The result will be found in: '\n" +
-				"echo \"  directory = $(pwd)\"\n" +
-				"echo \"  logFile   = ${logFile}\"\n" +
-				"echo '############################################################################################'\n" +
-				"echo ''\n" +
-				"\n" +
-//				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2>/dev/null << SYBMON\n" +
-				"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine << SYBMON\n" +
-				"\n" +
-				"catalog $SYBASE/$SYBASE_ASE\n" +
-				"attach $DSQUERY\n" +
-				"log on ${logFile}\n" +
-				"set display off\n" +
-				"sample count=${sampleCount} interval=${sampleInterval} context=y reg=n\n" +
-				"log close\n" +
-				"quit\n" +
-				"SYBMON\n" +
-				"\n" +
-				"if [ ! -f ${logFile} ]\n" +
-				"then\n" +
-				"        echo 'An error occured. The file has not been created'\n" +
-				"        exit -1\n" +
-				"fi\n" +
-				"";
+			String exampleStr = null;
+			String helpStr    = null;
+			String rstaSyntax = null;
+
+			if ( ScriptType.BASH.equals(scriptType))
+			{
+				rstaSyntax = SyntaxConstants.SYNTAX_STYLE_UNIX_SHELL;
+				helpStr = "Copy and Paste the following into a Unix/Linux shell script (maybe 'sybmon_stacktrace.sh'), and execute it with the user 'sybase' or whoever is running ASE.";
+
+				exampleStr =
+					"#!/bin/bash\n" +
+					"\n" +
+					"#--- Use input params for setup\n" +
+					"export DSQUERY=${1:-$DSQUERY}\n" +
+					"\n" +
+					"#--- Setup/override environment if this is not done from the caller of the script\n" +
+					"#export DSQUERY=ase_server_name\n" +
+					"#export SYBASE=/opt/sybase\n" +
+					"#export SYBASE_ASE=ASE-15_0\n" +
+					"#export SYBASE_OCS=OCS-15_0\n" +
+					"\n" +
+					"#--- Setup LD_LIBRARY_PATH (Solaris, Linux), SHLIB (hp), LIBPATH (aix),\n" +
+					"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_ASE/bin:$SYBASE/$SYBASE_ASE/lib:$LD_LIBRARY_PATH\n" +
+					"#export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/bin:$SYBASE/$SYBASE_OCS/lib:$SYBASE/$SYBASE_OCS/lib3p64:$LD_LIBRARY_PATH\n" +
+					"\n" +
+					"#--- Setup how many times we should stacktrace 'sampleCount'\n" +
+					"#--- and the sleeptime between stacktraces 'sampleInterval'\n" +
+					"sampleCount=${2:-500}\n" +
+					"sampleInterval=${3:-100}\n" +
+					"secItWillTake=$(( ${sampleCount} * ${sampleInterval} / 1000 ))\n" +
+					"\n" +
+					"ts=$(date +%Y%m%d_%H%M%S)\n" +
+					"logFile=\"stacktrace_${DSQUERY}_${ts}.out\"\n" +
+					"\n" +
+					"if [ \"\" = \"$DSQUERY\" ]\n" +
+					"then\n" +
+					"	echo ''\n" +
+					"	echo \"Usage: $(basename $0) [servername] [sampleCount] [sampleInterval]\"\n" +
+					"	echo '   or environment variable DSQUERY has to be set.'\n" +
+					"	echo ''\n" +
+					"	exit 1\n" +
+					"fi\n" +
+					"\n" +
+					"echo ''\n" +
+					"echo '############################################################################################'\n" +
+					"echo 'Starting stacktrace of ASE'\n" +
+					"echo \"  servername      = ${DSQUERY}\"\n" +
+					"echo \"  sample count    = ${sampleCount}\"\n" +
+					"echo \"  sample interval = ${sampleInterval}\"\n" +
+					"echo ''\n" +
+					"echo \"  SYBASE          = ${SYBASE}\"\n" +
+					"echo \"  SYBASE_ASE      = ${SYBASE_ASE}\"\n" + 
+					"echo \"  SYBASE_OCS      = ${SYBASE_OCS}\"\n" + 
+					"echo \"  LD_LIBRARY_PATH = ${LD_LIBRARY_PATH}\"\n" + 
+					"echo ''\n" +
+					"echo \"This will take approx ${secItWillTake} seconds\"\n" +
+					"echo ''\n" +
+					"echo 'The result will be found in: '\n" +
+					"echo \"  directory = $(pwd)\"\n" +
+					"echo \"  logFile   = ${logFile}\"\n" +
+					"echo '############################################################################################'\n" +
+					"echo ''\n" +
+					"\n" +
+//					"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine 2>/dev/null << SYBMON\n" +
+					"$SYBASE/$SYBASE_ASE/bin/dataserver -X -Pquine << SYBMON\n" +
+					"\n" +
+					"catalog $SYBASE/$SYBASE_ASE\n" +
+					"attach $DSQUERY\n" +
+					"log on ${logFile}\n" +
+					"set display off\n" +
+					"sample count=${sampleCount} interval=${sampleInterval} context=y reg=n\n" +
+					"log close\n" +
+					"quit\n" +
+					"SYBMON\n" +
+					"\n" +
+					"if [ ! -f ${logFile} ]\n" +
+					"then\n" +
+					"	echo 'An error occured. The file has not been created'\n" +
+					"	exit -1\n" +
+					"fi\n" +
+					"";
+			}
+
+			if ( ScriptType.BAT.equals(scriptType))
+			{
+				rstaSyntax = SyntaxConstants.SYNTAX_STYLE_WINDOWS_BATCH;
+				helpStr = "Copy and Paste the following into a BAT file (maybe 'sybmon_stacktrace.bat'), and execute it. Note: it needs to be executed as 'Administrator' authorizations.";
+
+				exampleStr =
+					"@echo off\r\n" +
+					"\r\n" +
+					"\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem --- Check that we have got 'administrator' rights\r\n" +
+					"rem --- If not: get out of here\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"NET SESSION >nul 2>&1\r\n" +
+					"IF %ERRORLEVEL% EQU 0 (\r\n" +
+					"	echo OK: Administrator PRIVILEGES Detected! \r\n" +
+					") ELSE (\r\n" +
+					"	echo.\r\n" +
+					"	echo ####### ERROR: ADMINISTRATOR PRIVILEGES REQUIRED #########\r\n" +
+					"	echo This script must be run as administrator to work properly!  \r\n" +
+					"	echo If you're seeing this after clicking on a start menu icon, then right click on the shortcut and select \"Run As Administrator\".\r\n" +
+					"	echo ##########################################################\r\n" +
+					"	echo.\r\n" +
+					"	pause\r\n" +
+					"	EXIT /B 1\r\n" +
+					")\r\n" +
+					"\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem --- Setup how many times we should stacktrace 'sampleCount'\r\n" +
+					"rem --- and the sleeptime between stacktraces 'sampleInterval'\r\n" +
+					"rem --- Note: they will be overriden by cmdline parameters\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"set sampleCount=500\r\n" +
+					"set sampleInterval=100\r\n" +
+					"\r\n" +
+					"rem --- timestamp in the form YYYYMMDD_HHMMSS\r\n" +
+					"set ts=%DATE:~6,4%%DATE:~3,2%%DATE:~0,2%_%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%\r\n" +
+					"set batFileDir=%~dp0\r\n" +
+					"set logFile=%batFileDir%stacktrace_%DSQUERY%_%ts%.out\r\n" +
+					"\r\n" +
+					"\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem --- Use input params for setup\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"IF NOT \"%1\"==\"\" set DSQUERY=%1\r\n" +
+					"IF NOT \"%2\"==\"\" set sampleCount=%2\r\n" +
+					"IF NOT \"%3\"==\"\" set sampleInterval=%3\r\n" +
+					"\r\n" +
+					"set /A secItWillTake = %sampleCount% * %sampleInterval% / 1000\r\n" +
+					"\r\n" +
+					"\r\n" +
+					"IF \"\"==\"%DSQUERY%\" (\r\n" +
+					"	echo.\r\n" +
+					"	echo.Usage: %~n0 [servername] [sampleCount] [sampleInterval]\r\n" +
+					"	echo.   or environment variable DSQUERY has to be set.\r\n" +
+					"	echo.\r\n" +
+					"\r\n" +
+					"	pause\r\n" +
+					"	exit /B 1\r\n" +
+					")\r\n" +
+					"\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem --- Setup/override environment if this is not done from the caller of the script\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem -- set DSQUERY=ase_server_name\r\n" +
+					"rem -- set SYBASE=c:\\sybase\r\n" +
+					"rem -- set SYBASE_ASE=ASE-15_0\r\n" +
+					"rem -- set SYBASE_OCS=OCS-15_0\r\n" +
+					"rem -- set PATH=%SYBASE%\\%SYBASE_ASE%\\bin;%SYBASE%\\%SYBASE_ASE%\\lib;%PATH%\r\n" +
+					"\r\n" +
+					"IF \"\"==\"%SYBASE%\" (\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	echo.ERROR: The environmet variable SYBASE is NOT set. This is mandatory\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	pause\r\n" +
+					"	exit /B 1\r\n" +
+					")\r\n" +
+					"IF \"\"==\"%SYBASE_ASE%\" (\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	echo.ERROR: The environmet variable SYBASE_ASE is NOT set. This is mandatory\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	pause\r\n" +
+					"	exit /B 1\r\n" +
+					")\r\n" +
+					"if not exist %SYBASE%\\%SYBASE_ASE%\\bin\\sqlsrvr.exe (\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					" 	echo.ERROR: can't find the Sybase/SAP ASE executable: %SYBASE%\\%SYBASE_ASE%\\bin\\sqlsrvr.exe\r\n" +
+					" 	echo.Are you sure you are on the host where the ASE is running on?\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	pause\r\n" +
+					"	exit /B 1\r\n" +
+					")\r\n" +
+					"\r\n" +
+					"echo.\r\n" +
+					"echo.############################################################################################\r\n" +
+					"echo.Starting stacktrace of ASE\r\n" +
+					"echo.  servername      = %DSQUERY%\r\n" +
+					"echo.  sample count    = %sampleCount%\r\n" +
+					"echo.  sample interval = %sampleInterval%\r\n" +
+					"echo.\r\n" +
+					"echo.  SYBASE     = %SYBASE%\r\n" +
+					"echo.  SYBASE_ASE = %SYBASE_ASE%\r\n" +
+					"echo.  PATH       = %PATH%\r\n" +
+					"echo.\r\n" +
+					"echo.This will take approx %secItWillTake% seconds\r\n" +
+					"echo.\r\n" +
+					"echo.The result will be found in: \r\n" +
+					"echo.  logFile   = %logFile%\r\n" +
+					"echo.############################################################################################\r\n" +
+					"echo.\r\n" +
+					"\r\n" +
+					"> %batFileDir%\\sybmon_input_cmds.txt (\r\n" +
+					"	@echo.n\r\n" +
+					"	@echo.catalog %SYBASE%\\%SYBASE_ASE%\r\n" +
+					"	@echo.attach %DSQUERY%\r\n" +
+					"	@echo.echo -------------------------------------------------------------------------------	\r\n" +
+					"	@echo.echo ---- Next step is to SAMPLE STACK TRACES for approx %secItWillTake% seconds\r\n" +
+					"	@echo.echo ---- Using command: sample count=%sampleCount% interval=%sampleInterval% context=y reg=n\r\n" +
+					"	@echo.echo ---- Please be patient... It looks like nothing is happening, but just WAIT...\r\n" +
+					"	@echo.echo -------------------------------------------------------------------------------	\r\n" +
+					"	@echo.log on %logFile%\r\n" +
+					"	@echo.set display off\r\n" +
+					"	@echo.sample count=%sampleCount% interval=%sampleInterval% context=y reg=n\r\n" +
+					"	@echo.log close\r\n" +
+					"	@echo.quit\r\n" +
+					")\r\n" +
+					"\r\n" +
+					"echo.Sending the following commands to the sybmon utility\r\n" +
+					"echo.-------------------------------------------------------------------\r\n" +
+					"more sybmon_input_cmds.txt\r\n" +
+					"echo.-------------------------------------------------------------------\r\n" +
+					"\r\n" +
+					"\r\n" +
+					"echo.\r\n" +
+					"echo ##############################################################\r\n" +
+					"echo ####### Now WAIT for approx %secItWillTake% seconds. \r\n" +
+					"echo ####### While ASE is collecting stacktrace information.\r\n" +
+					"echo ##############################################################\r\n" +
+					"echo.\r\n" +
+					"\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem --- Now \"pipe\" the file sybmon_input_cmds.txt into \"sybmon\"\r\n" +
+					"rem --- Change dir to the path where the PBD file exists (to get access to sybols/function names)\r\n" +
+					"rem --- After the stacktrace has been dumped, change back to the saved Current Working Dir\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"set saveCwd=%cd%\r\n" +
+					"cd %SYBASE%\\%SYBASE_ASE%\\bin\r\n" +
+					"%SYBASE%\\%SYBASE_ASE%\\bin\\sqlsrvr.exe -X -Pquine -M%SYBASE%\\%SYBASE_ASE% < %batFileDir%\\sybmon_input_cmds.txt\r\n" +
+					"del %batFileDir%\\sybmon_input_cmds.txt\r\n" +
+					"cd %saveCwd%\r\n" +
+					"\r\n" +
+					"echo.\r\n" +
+					"echo ##############################################################\r\n" +
+					"echo ####### Done, collecting...\r\n" +
+					"echo ####### Hopefully we will have a file here: %logFile%\r\n" +
+					"echo ##############################################################\r\n" +
+					"echo.\r\n" +
+					"\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"rem --- Check if the stacktrace file exists\r\n" +
+					"rem -----------------------------------------------\r\n" +
+					"if not exist %logFile% (\r\n" +
+					"	echo.\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	echo.ERROR: The output file has not been created\r\n" +
+					"	echo.The file '%logFile%' has not been created\r\n" +
+					"	echo.-------------------------------------------------------------------\r\n" +
+					"	echo.\r\n" +
+					"	pause\r\n" +
+					"	exit /B -1\r\n" +
+					")\r\n" +
+					"\r\n" +
+					"echo.\r\n" +
+					"echo.-------------------------------------------------------------------\r\n" +
+					"echo.The stacktrace output can be found in the file %logFile%\r\n" +
+					"echo.-------------------------------------------------------------------\r\n" +
+					"echo.\r\n" +
+					"pause\r\n" +
+					"";
+			}
+
+			if (StringUtil.isNullOrBlank(exampleStr))
+			{
+				throw new RuntimeException("Script type '"+scriptType+"' is not implemeted.");
+			}
 
 			// Top panel
 			JPanel top = SwingUtils.createPanel("Script example", false);
 			top.setLayout(new MigLayout());
 			top.add(new JLabel("Below is an example script of how to use 'sybmon' to generate X number of Stack Traces for a ASE Server"), "wrap");
 			top.add(new JLabel("Change 'count=500', to any value depending on how many stack traces you want."), "wrap 15");
-			top.add(new JLabel("Copy and Paste the following into a Unix/Linux shell script, and execute it with the user 'sybase' or whoever is running ASE."), "wrap");
+			top.add(new JLabel(helpStr), "wrap");
 
 			// The Example text panel
 			RSyntaxTextAreaX example_txt    = new RSyntaxTextAreaX();
 			RTextScrollPane  example_scroll = new RTextScrollPane(example_txt);
-			example_txt   .setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_UNIX_SHELL);
+			example_txt   .setSyntaxEditingStyle(rstaSyntax);
 			example_txt   .setText(exampleStr);
 			example_scroll.setLineNumbersEnabled(true);
 

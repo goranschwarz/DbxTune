@@ -8,6 +8,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -79,13 +80,20 @@ import javax.swing.event.TableModelListener;
 import org.apache.log4j.Logger;
 import org.apache.log4j.lf5.LogLevel;
 
+import com.asetune.CounterCollectorThreadAbstract;
 import com.asetune.CounterCollectorThreadGui;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.ui.config.AlarmConfigDialog;
+import com.asetune.alarm.ui.view.AlarmViewer;
+import com.asetune.alarm.writers.AlarmWriterToTableModel;
 import com.asetune.cache.XmlPlanCache;
+import com.asetune.cache.XmlPlanCacheOffline;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.check.MailGroupDialog;
@@ -114,6 +122,7 @@ import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.TdsConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.tools.tailw.LogTailWindow;
@@ -135,7 +144,16 @@ import net.miginfocom.swing.MigLayout;
 //public class MainFrame
 public abstract class MainFrame
     extends JFrame
-    implements IGuiController, ActionListener, ChangeListener, TableModelListener, TabOrderAndVisibilityListener, PersistentCounterHandler.PcsQueueChange, ConnectionProvider, Memory.MemoryListener
+    implements 
+    	IGuiController, 
+    	ActionListener, 
+    	ChangeListener, 
+    	TableModelListener, 
+    	TabOrderAndVisibilityListener, 
+    	PersistentCounterHandler.PcsQueueChange, 
+    	ConnectionProvider, 
+    	Memory.MemoryListener, 
+    	AlarmHandler.ChangeListener
 {
 	private static final long    serialVersionUID = 8984251025337127843L;
 	private static Logger        _logger          = Logger.getLogger(MainFrame.class);
@@ -183,6 +201,9 @@ public abstract class MainFrame
 
 	public static final String    PROPKEY_refreshIntervalNoGui         = "nogui.sleepTime";
 	public static final int       DEFAULT_refreshIntervalNoGui         = 60;
+
+	public final static String    PROPKEY_showAppNameInTitle           = "MainFrame.showAppNameInTitle";
+	public final static boolean   DEFAULT_showAppNameInTitle           = false;
 
 	public static final String    PROPKEY_useTcpGroups                 = "MainFrame.useTcpGroups";
 	public static final boolean   DEFAULT_useTcpGroups                 = true;
@@ -242,10 +263,14 @@ public abstract class MainFrame
 	public static final String ACTION_DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI = "DO_JAVA_GC_AFTER_REFRESH_SHOW_GUI";
 	public static final String ACTION_SUMMARY_OPERATIONS_TOGGLE         = "SUMMARY_OPERATIONS_TOGGLE";
 	public static final String ACTION_OPEN_REFRESH_RATE                 = "OPEN_REFRESH_RATE";
+	public static final String ACTION_SHOW_APPNAME_IN_TITLE             = "SHOW_APPNAME_IN_TITLE";
 	public static final String ACTION_OPEN_COUNTER_TAB_VIEW             = "OPEN_COUNTER_TAB_VIEW";
 	public static final String ACTION_OPEN_GRAPH_GRAPH_VIEW             = "OPEN_GRAPH_GRAPH_VIEW";
 	public static final String ACTION_OPEN_DBMS_CONFIG_VIEW             = "ACTION_OPEN_DBMS_CONFIG_VIEW";
+	public static final String ACTION_OPEN_ALARM_VIEW                   = "ACTION_OPEN_ALARM_VIEW";
+	public static final String ACTION_OPEN_ALARM_CONFIG                 = "ACTION_OPEN_ALARM_CONFIG";
 	public static final String ACTION_OPEN_TCP_PANEL_CONFIG             = "OPEN_TCP_PANEL_CONFIG";
+	public static final String ACTION_OPEN_JVM_MEMORY_CONFIG            = "OPEN_JVM_MEMORY_CONFIG";
 
 //	public static final String ACTION_OPEN_ASE_CONFIG_MON               = "OPEN_ASE_CONFIG_MON";
 //	public static final String ACTION_OPEN_CAPTURE_SQL                  = "OPEN_CAPTURE_SQL";
@@ -374,15 +399,19 @@ public abstract class MainFrame
 	private JMenu               _view_m;
 	private JMenuItem           _logView_mi;
 	private JMenuItem           _dbmsConfigView_mi;
+	private JMenuItem           _alarmView_mi;
+	private JMenuItem           _alarmConfig_mi;
 	private JMenuItem           _offlineSessionsView_mi;
 	private JMenu               _preferences_m;
 	private JMenuItem           _refreshRate_mi;
+	private JCheckBoxMenuItem    _prefShowAppNameInTitle_mi;
 	private JMenu               _autoResizePcTable_m;
 	private JRadioButtonMenuItem _autoResizePcTableShrinkGrow_mi;
 	private JRadioButtonMenuItem _autoResizePcTableGrow_mi;
 	private JRadioButtonMenuItem _autoResizePcTableNoResize_mi;
 	private JCheckBoxMenuItem   _autoRefreshOnTabChange_mi;
 	private JCheckBoxMenuItem   _groupTcpInTabPane_mi;
+	private JMenuItem           _prefJvmMemoryConfig_mi;
 	private JMenu               _optDoGc_m;
 	private JCheckBoxMenuItem   _optDoGcAfterXMinutes_mi;
 	private JMenuItem           _optDoGcAfterXMinutesValue_mi;
@@ -420,6 +449,7 @@ public abstract class MainFrame
 	//-------------------------------------------------
 	// STATUS Panel
 	private JPanel                    _statusPanel               = new JPanel();
+	private JButton                   _alarmView_but             = new JButton();
 	private JButton                   _blockAlert_but            = new JButton();
 	private JButton                   _fullTranlogAlert_but      = new JButton();
 	private JButton                   _oldestOpenTran_but        = new JButton();
@@ -428,6 +458,7 @@ public abstract class MainFrame
 	private JButton                   _samplePlay_but            = new JButton();
 	private JComboBox<Integer>        _sampleInterval_cbx        = new JComboBox<Integer>(new Integer[] {5, 10, 15, 20, 30, 45, 60, 90, 60*2, 60*5, 60*10, 60*30, 60*60});
 	private JButton                   _gcNow_but                 = new JButton();
+	private JButton                   _javaMemoryConfig_but      = new JButton();
 	private static JLabel             _statusStatus              = new JLabel(ST_DEFAULT_STATUS_FIELD);
 	private static JLabel             _statusStatus2             = new JLabel(ST_DEFAULT_STATUS2_FIELD);
 	private static JLabel             _statusServerName          = new JLabel(ST_DEFAULT_SERVER_NAME);
@@ -490,6 +521,9 @@ public abstract class MainFrame
 	/** DDL Viewer GUI */
 	private DdlViewer _ddlViewer = null;
 	
+	/** Alarm Viewer GUI */
+	private AlarmViewer _alarmView = null;
+
 	/** set to true at the end of initialization */
 	private boolean _initialized = false;
 	//-------------------------------------------------
@@ -606,14 +640,23 @@ public abstract class MainFrame
 		SplashWindow.drawProgress(msg);
 	}
 
+//	/**
+//	 * Set the color and size of the main border around the window
+//	 * @param profileType
+//	 */
+//	public void setBorderForConnectionProfileType(ConnectionProfileManager.ProfileType profileType)
+//	{
+//		Container contContentPane = getContentPane();
+//		ConnectionProfileManager.setBorderForConnectionProfileType(contContentPane, profileType);
+//	}
 	/**
 	 * Set the color and size of the main border around the window
 	 * @param profileType
 	 */
-	public void setBorderForConnectionProfileType(ConnectionProfileManager.ProfileType profileType)
+	public void setBorderForConnectionProfileType(String profileTypeName)
 	{
 		Container contContentPane = getContentPane();
-		ConnectionProfileManager.setBorderForConnectionProfileType(contContentPane, profileType);
+		ConnectionProfileManager.setBorderForConnectionProfileType(contContentPane, profileTypeName);
 	}
 
 	
@@ -666,7 +709,7 @@ public abstract class MainFrame
 
 	protected void initComponents() 
 	{
-		setTitle(Version.getAppName(), null);
+		setSrvInTitle(null);
 
 		// Set icons
 		setIconImages(getApplicationIcons());
@@ -685,14 +728,16 @@ public abstract class MainFrame
 			//setTitle(Version.getAppName()+" - This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version.");
 			//setTitle(Version.getAppName()+" - DEVELOPMENT VERSION, after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"' you will have to download a later version.");
 
-			_windowTitleAppend = "This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version.";
+//			_windowTitleAppend = "This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version.";
+//			_windowTitleAppend = "This Version Expires at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'.";
+			_windowTitleAppend = "Expires at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'.";
 		}
 		if (DbxTune.hasDevVersionExpired())
 		{
 			//setTitle(Version.getAppName()+" - In Development Version, \"time to live date\" has EXPIRED, only 'Persistent Counter Storage - READ' is enabled.");
 			_windowTitleAppend = "In Development Version, \"time to live date\" has EXPIRED, only 'Persistent Counter Storage - READ' is enabled.";
 		}
-		setTitle(Version.getAppName(), null);
+		setSrvInTitle(null);
 
 		
 		JPanel contentPane = (JPanel) this.getContentPane();
@@ -1244,6 +1289,7 @@ public abstract class MainFrame
 
 		//--------------------------
 		// STATUS PANEL
+		_alarmView_but        .setToolTipText("<html>Opens the Alarm View, this will also indicate/change icons if there are active alarms (and how many).</html>");
 		_blockAlert_but       .setToolTipText("<html>You have SPID(s) that <b>blocks</b> other SPID(s) from working. Click here to the 'Blocking' tab to find out more.</html>");
 		_fullTranlogAlert_but .setToolTipText("<html>The Transaction log in one/several databases are <b>full</b> other SPID(s) are probably <b>blocked</b> by this. Click here to the 'Database' tab to find out more.</html>");
 		_oldestOpenTran_but   .setToolTipText("<html>You have a transaction in one database that has been open for a long time. Click here to the 'Database' tab to find out more.</html>");
@@ -1252,6 +1298,7 @@ public abstract class MainFrame
 		_samplePlay_but       .setToolTipText("Continue to sample counters again.");
 		_sampleInterval_cbx   .setToolTipText("<html>Sleep time between Data Collection<p><b>Tip:</b> You can change this to <i>any</i> number in: <b>Menu-&gt;View-&gt;Preferences-&gt;Refresh Rate...<b></html>");
 		_gcNow_but            .setToolTipText("Do Java Garbage Collection.");
+		_javaMemoryConfig_but .setToolTipText("Open Dialog to Configure Java/JVM Memory and Garbage Collection");
 		_statusStatus         .setToolTipText("What are we doing or waiting for.");
 		_statusStatus2        .setToolTipText("What are we doing or waiting for.");
 		_statusServerName     .setToolTipText("<html>The local name of the ASE Server, as named in the interfaces or sql.ini file.<BR>Also show the HOST:PORT, which we are connected to.</html>");
@@ -1263,6 +1310,22 @@ public abstract class MainFrame
 		_statusPcsDdlStoreQueueSize   .setToolTipText("Number of entries in the DDL Storage Queue.");
 		_statusPcsSqlCapStoreQueueSize.setToolTipText("Number of entries in the SQL Capture Storage Queue (batchesInQueue : entriesInQueue)");
 		
+		// Alarm View butom
+		_alarmView_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/alarm_view_16.png"));
+		_alarmView_but.setText("");
+		_alarmView_but.setContentAreaFilled(false);
+//		_alarmView_but.setMargin( new Insets(3,3,3,3) );
+		_alarmView_but.setMargin( new Insets(0,0,0,0) );
+		_alarmView_but.addActionListener(this);
+		_alarmView_but.setActionCommand(ACTION_OPEN_ALARM_VIEW);
+		_alarmView_but.setHorizontalTextPosition(JButton.CENTER); // Center the text in the middle of the button
+		_alarmView_but.setVerticalTextPosition(JButton.CENTER);   // Center the text in the middle of the button
+		_alarmView_but.setFont(new Font("Arial", Font.BOLD, UIManager.getFont("Label.font").getSize()-2));
+		_alarmView_but.setForeground(Color.BLACK);
+		_alarmView_but.setVisible(true);
+		_alarmView_but.setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+		
+
 		// Blocking LOCK alert butt
 		_blockAlert_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/block_lock_alert.png"));
 		_blockAlert_but.setText("");
@@ -1324,7 +1387,8 @@ public abstract class MainFrame
 		_sampleInterval_cbx.setBackground(_statusPanel.getBackground());
 		_sampleInterval_cbx.addActionListener(this);
 		_sampleInterval_cbx.setActionCommand(ACTION_CHANGE_SAMPLE_INTERVAL);
-		
+		_sampleInterval_cbx.setMaximumRowCount(20);   // Set how many items the list can have before a JScrollBar is visible
+
 		// GC now butt
 		_gcNow_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/gc_now.png"));
 		_gcNow_but.setText(null);
@@ -1334,12 +1398,22 @@ public abstract class MainFrame
 		_gcNow_but.addActionListener(this);
 		_gcNow_but.setActionCommand(ACTION_GARBAGE_COLLECT);
 
+		// Java Mem Config butt
+		_javaMemoryConfig_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/jvm_memory_config.png"));
+		_javaMemoryConfig_but.setText(null);
+		_javaMemoryConfig_but.setContentAreaFilled(false);
+//		_javaMemoryConfig_but.setMargin( new Insets(3,3,3,3) );
+		_javaMemoryConfig_but.setMargin( new Insets(0,0,0,0) );
+		_javaMemoryConfig_but.addActionListener(this);
+		_javaMemoryConfig_but.setActionCommand(ACTION_OPEN_JVM_MEMORY_CONFIG);
+
 //		_statusPanel.setLayout(new MigLayout("insets 0 10 0 10")); // T L B R
 		_statusPanel.setLayout(new MigLayout("insets 0 0 0 10")); // T L B R
 		_statusPanel.add(_refreshNow_but,                         "");
 		_statusPanel.add(_samplePause_but,                        "hidemode 3");
 		_statusPanel.add(_samplePlay_but,                         "hidemode 3");
 		_statusPanel.add(_sampleInterval_cbx,                     "");
+		_statusPanel.add(_alarmView_but,                          "hidemode 3");
 		_statusPanel.add(_blockAlert_but,                         "hidemode 3");
 		_statusPanel.add(_fullTranlogAlert_but,                   "hidemode 3");
 		_statusPanel.add(_oldestOpenTran_but,                     "hidemode 3");
@@ -1358,6 +1432,7 @@ public abstract class MainFrame
 		_statusPanel.add(new JSeparator(SwingConstants.VERTICAL), "grow");
 		_statusPanel.add(new GMemoryIndicator(1000),  "growx, hidemode 3");
 		_statusPanel.add(_statusMemory,                           "right");
+		_statusPanel.add(_javaMemoryConfig_but,                   "right");
 		_statusPanel.add(_gcNow_but,                              "right");
 
 		
@@ -1399,6 +1474,13 @@ public abstract class MainFrame
 		if (GuiLogAppender.getTableModel() != null)
 			GuiLogAppender.getTableModel().addTableModelListener(this);
 
+
+		//--------------------------
+		// add myself as a listener to the AlarmHandler changes
+		if (AlarmHandler.hasInstance())
+			AlarmHandler.getInstance().addChangeListener(this);
+
+		
 		//--------------------------
 		// Hide/show various components and menus 
 		// for the default mode
@@ -1511,6 +1593,8 @@ public abstract class MainFrame
 		_logView_mi                    = new JMenuItem("Open Log Window...");
 		_offlineSessionsView_mi        = new JMenuItem("Offline Sessions Window...");
 		_dbmsConfigView_mi             = new JMenuItem("View DBMS Configuration...");
+		_alarmView_mi                  = new JMenuItem("View Alarm Active/History...");
+		_alarmConfig_mi                = new JMenuItem("Change 'Alarm' Options...");
 		_tcpSettingsConf_mi            = new JMenuItem("Change 'Performance Counter' Options...");
 		_counterTabView_mi             = new JMenuItem("Change 'Tab Titles' Order and Visibility...");
 		_graphView_mi                  = new JMenuItem("Change 'Graph' Order and Visibility...");
@@ -1519,6 +1603,8 @@ public abstract class MainFrame
 		_logView_mi                   .setIcon(SwingUtils.readImageIcon(Version.class, "images/log_viewer.gif"));
 		_offlineSessionsView_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/offline_sessions_view.png"));
 		_dbmsConfigView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_dbms_view_16.png"));
+		_alarmView_mi                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/alarm_view_16.png"));
+		_alarmConfig_mi               .setIcon(AlarmConfigDialog.getIcon16());
 		_tcpSettingsConf_mi           .setIcon(SwingUtils.readImageIcon(Version.class, "images/tcp_settings_conf.png"));
 		_counterTabView_mi            .setIcon(SwingUtils.readImageIcon(Version.class, "images/counter_tab_view.png"));
 		_graphView_mi                 .setIcon(SwingUtils.readImageIcon(Version.class, "images/graph.png"));
@@ -1527,6 +1613,8 @@ public abstract class MainFrame
 		_logView_mi                   .setActionCommand(ACTION_OPEN_LOG_VIEW);
 		_offlineSessionsView_mi       .setActionCommand(ACTION_OPEN_OFFLINE_SESSION_VIEW);
 		_dbmsConfigView_mi            .setActionCommand(ACTION_OPEN_DBMS_CONFIG_VIEW);
+		_alarmView_mi                 .setActionCommand(ACTION_OPEN_ALARM_VIEW);
+		_alarmConfig_mi               .setActionCommand(ACTION_OPEN_ALARM_CONFIG);
 		_tcpSettingsConf_mi           .setActionCommand(ACTION_OPEN_TCP_PANEL_CONFIG);
 		_counterTabView_mi            .setActionCommand(ACTION_OPEN_COUNTER_TAB_VIEW);
 		_graphView_mi                 .setActionCommand(ACTION_OPEN_GRAPH_GRAPH_VIEW);
@@ -1534,6 +1622,8 @@ public abstract class MainFrame
 		_logView_mi                   .addActionListener(this);
 		_offlineSessionsView_mi       .addActionListener(this);
 		_dbmsConfigView_mi            .addActionListener(this);
+		_alarmView_mi                 .addActionListener(this);
+		_alarmConfig_mi               .addActionListener(this);
 		_tcpSettingsConf_mi           .addActionListener(this);
 		_counterTabView_mi            .addActionListener(this);
 		_graphView_mi                 .addActionListener(this);
@@ -1545,6 +1635,8 @@ public abstract class MainFrame
 		menu.add(_offlineSessionsView_mi);
 		menu.add(_preferences_m);
 		menu.add(_dbmsConfigView_mi);
+		menu.add(_alarmView_mi);
+		menu.add(_alarmConfig_mi);
 		menu.add(_tcpSettingsConf_mi);
 		menu.add(_counterTabView_mi);
 		menu.add(_graphView_mi);
@@ -1564,7 +1656,9 @@ public abstract class MainFrame
 		
 		_autoRefreshOnTabChange_mi     = new JCheckBoxMenuItem("Auto Refresh when you change Performance Counter Tab", false);
 		_refreshRate_mi                = new JMenuItem("Refresh Rate...");
+		_prefShowAppNameInTitle_mi     = new JCheckBoxMenuItem("Show '"+Version.getAppName()+"' as Prefix in Window Title", DEFAULT_showAppNameInTitle);
 		_groupTcpInTabPane_mi          = new JCheckBoxMenuItem("Group Performance Counters in Tabular Panels", useTcpGroups());
+		_prefJvmMemoryConfig_mi        = new JMenuItem("Java/JVM Memory Parameters...");
 		_optSummaryOperShowAbs_mi      = new JCheckBoxMenuItem("Show Absolute Counters for Summary Operations",   DEFAULT_summaryOperations_showAbs);
 		_optSummaryOperShowDiff_mi     = new JCheckBoxMenuItem("Show Difference Counters for Summary Operations", DEFAULT_summaryOperations_showDiff);
 		_optSummaryOperShowRate_mi     = new JCheckBoxMenuItem("Show Rate Counters for Summary Operations",       DEFAULT_summaryOperations_showRate);
@@ -1572,10 +1666,13 @@ public abstract class MainFrame
 		_autoRefreshOnTabChange_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/auto_resize_on_tab_change.png"));
 		_refreshRate_mi               .setIcon(SwingUtils.readImageIcon(Version.class, "images/refresh_rate.png"));
 		_groupTcpInTabPane_mi         .setIcon(SwingUtils.readImageIcon(Version.class, "images/group_tcp_in_tab_pane.png"));
+		_prefJvmMemoryConfig_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/jvm_memory_config.png"));
 
 		_autoRefreshOnTabChange_mi    .setActionCommand(ACTION_TOGGLE_AUTO_REFRESH_ON_TAB_CHANGE);
 		_refreshRate_mi               .setActionCommand(ACTION_OPEN_REFRESH_RATE);
+		_prefShowAppNameInTitle_mi    .setActionCommand(ACTION_SHOW_APPNAME_IN_TITLE);
 		_groupTcpInTabPane_mi         .setActionCommand(ACTION_GROUP_TCP_IN_TAB_PANE);
+		_prefJvmMemoryConfig_mi       .setActionCommand(ACTION_OPEN_JVM_MEMORY_CONFIG);
 		_optSummaryOperShowAbs_mi     .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
 		_optSummaryOperShowDiff_mi    .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
 		_optSummaryOperShowRate_mi    .setActionCommand(ACTION_SUMMARY_OPERATIONS_TOGGLE);
@@ -1583,6 +1680,7 @@ public abstract class MainFrame
 		_autoRefreshOnTabChange_mi    .addActionListener(this);
 		_refreshRate_mi               .addActionListener(this);
 		_groupTcpInTabPane_mi         .addActionListener(this);
+		_prefJvmMemoryConfig_mi       .addActionListener(this);
 		_optSummaryOperShowAbs_mi     .addActionListener(this);
 		_optSummaryOperShowDiff_mi    .addActionListener(this);
 		_optSummaryOperShowRate_mi    .addActionListener(this);
@@ -1590,7 +1688,9 @@ public abstract class MainFrame
 		menu.add(_autoResizePcTable_m);
 		menu.add(_autoRefreshOnTabChange_mi);
 		menu.add(_refreshRate_mi);
+		menu.add(_prefShowAppNameInTitle_mi);
 		menu.add(_groupTcpInTabPane_mi);
+		menu.add(_prefJvmMemoryConfig_mi);
 		menu.add(_optDoGc_m);
 
 		menu.add(new JSeparator());
@@ -1846,7 +1946,7 @@ public abstract class MainFrame
 	public void memoryConsumption(int memoryLeftInMB)
 	{
 		// When 150 MB of memory or less, enable Java Garbage Collect after each Sample
-		if (memoryLeftInMB <= CounterCollectorThreadGui.MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB)
+		if (memoryLeftInMB <= CounterCollectorThreadAbstract.MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB)
 		{
 			ActionEvent doGcEvent = new ActionEvent(this, 0, MainFrame.ACTION_LOW_ON_MEMORY);
 			actionPerformed(doGcEvent);
@@ -1854,7 +1954,7 @@ public abstract class MainFrame
 
 		// When 30 MB of memory or less, write some info about that.
 		// and call some handler to act on low memory.
-		if (memoryLeftInMB <= CounterCollectorThreadGui.MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB)
+		if (memoryLeftInMB <= CounterCollectorThreadAbstract.MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB)
 		{
 			outOfMemoryHandler();
 		}
@@ -1863,6 +1963,20 @@ public abstract class MainFrame
 	** END: implementing Memory.MemoryListener
 	**---------------------------------------------------
 	*/	
+
+	/*---------------------------------------------------
+	** BEGIN: implementing - AlarmHandler.ChangeListener
+	**---------------------------------------------------
+	*/
+	@Override
+	public void alarmChanges(AlarmHandler alarmHandler, int activeAlarms, List<AlarmEvent> list)
+	{
+		MainFrame.getInstance().setActiveAlarms();
+	}
+	/*---------------------------------------------------
+	** END: implementing - AlarmHandler.ChangeListener
+	**---------------------------------------------------
+	*/
 
 	/*---------------------------------------------------
 	** BEGIN: implementing ActionListener
@@ -1939,8 +2053,17 @@ public abstract class MainFrame
 		if (ACTION_OPEN_DBMS_CONFIG_VIEW.equals(actionCmd))
 			DbmsConfigViewDialog.showDialog(this, this);
 
+		if (ACTION_OPEN_ALARM_VIEW.equals(actionCmd))
+			action_openAlarmViewDialog(e);
+
+		if (ACTION_OPEN_ALARM_CONFIG.equals(actionCmd))
+			action_openAlarmConfigDialog(e);
+
 		if (ACTION_OPEN_TCP_PANEL_CONFIG.equals(actionCmd))
 			TcpConfigDialog.showDialog(_instance);
+
+		if (ACTION_OPEN_JVM_MEMORY_CONFIG.equals(actionCmd))
+			action_openJvmMemoryConfig(e);
 
 //		if (ACTION_OPEN_CAPTURE_SQL.equals(actionCmd))
 //			new ProcessDetailFrame(this, -1, -1);
@@ -2235,6 +2358,7 @@ public abstract class MainFrame
 					  "The In Memory Counter History, will also be set to 1 minute! <br>" +
 					  "This reduce the memory usage in the future.<br>" +
 					  "<br>" +
+					  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> from MainMenu-&gt;View-&gt;Preferences-&gt;Java/JVM Memory Parameters...<br>" +
 					  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> in the "+Version.getAppName()+" start script.<br>" +
 					  "Current max memory setting seems to be around "+maxConfigMemInMB+" MB.<br>" +
 					  "After Garbage Collection, you now have "+mbLeftAfterGc+" free MB.<br>" +
@@ -2282,7 +2406,7 @@ public abstract class MainFrame
 					JOptionPane optionPane = new JOptionPane(
 							"<html>" +
 							  "<h2>Sorry, FREE Memory starts to get LOW </h2>" +
-							  "Low Memory Threshold limit is "+CounterCollectorThreadGui.MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB+" MB<br>" +
+							  "Low Memory Threshold limit is "+CounterCollectorThreadAbstract.MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB+" MB<br>" +
 							  "Currently there are "+memLeft+" MB left.<br>" +
 							  "<br>" +
 							  "I have <b>enabled</b> 'system' Garbage Collection after each data sample! <br>" +
@@ -2295,6 +2419,7 @@ public abstract class MainFrame
 							  "Especially after data has been refreshed and it's doing Garbage Collection.<br>" +
 							  "</b>" +
 							  "<br>" +
+							  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> from MainMenu-&gt;View-&gt;Preferences-&gt;Java/JVM Memory Parameters...<br>" +
 							  "<b>Note</b>: you can raise the memory parameter <code>-Xmx###m</code> in the "+Version.getAppName()+" start script.<br>" +
 							  "Current max memory setting seems to be around "+maxConfigMemInMB+" MB.<br>" +
 							"</html>",
@@ -2323,8 +2448,16 @@ public abstract class MainFrame
 
 			String fileList = "";
 			String extraInfo = Version.getAppName() + ", Version: "+ Version.getVersionStr();
-			String main = Screenshot.windowScreenshot(this, Version.APP_STORE_DIR, appName+".main", true, extraInfo);
+			
+			// Main window
+			String main = Screenshot.windowScreenshot(this, Version.getAppStoreDir(), appName+".main", true, extraInfo);
 			fileList += main + NL;
+
+			// ALL Summary graphs (even hidden ones, eg the ones outside of the ScrollPane)
+			// Note: the Header/Labels on the graphs are not there, this is due to the fact that they are printed "later" with the Watermark stuff that uses the AbstractComponentDecorator...
+			Component summaryComp = CounterController.getSummaryPanel().getGraphPanel().getGraphPanelNoScroll();
+			String summaryPanel = Screenshot.windowScreenshot(summaryComp, Version.getAppStoreDir(), appName+".graphs", true, extraInfo);
+			fileList += summaryPanel + NL;
 
 			// LOOP all CounterModels, and check if they got any windows open, then screenshot that also
 			for (CountersModel cm : CounterController.getInstance().getCmList())
@@ -2338,7 +2471,7 @@ public abstract class MainFrame
 					if (tp.isTabUnDocked(cm.getDisplayName()))
 					{
 						JFrame frame = tp.getTabUnDockedFrame(cm.getDisplayName());
-						String fn = Screenshot.windowScreenshot(frame, Version.APP_STORE_DIR, appName+"."+cm.getName(), true, extraInfo);
+						String fn = Screenshot.windowScreenshot(frame, Version.getAppStoreDir(), appName+"."+cm.getName(), true, extraInfo);
 						fileList += fn + NL;
 					}
 				}
@@ -2735,6 +2868,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		int listPos = _offlineSlider.getValue(); 
 		Timestamp ts = _offlineTsList.get(listPos);
+		Timestamp prevTs = null;
+		Timestamp nextTs = null;
+
+		if (ts != null)
+		{
+			if (listPos > 0 )                         prevTs = _offlineTsList.get(listPos - 1);
+			if (listPos + 1 < _offlineTsList.size() ) nextTs = _offlineTsList.get(listPos + 1);
+		}
+
 		_offlineTsWatermark.setWatermarkText(ts==null ? "-" : ts.toString());
 
 		if (ts == null)
@@ -2782,11 +2924,26 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			for (TrendGraph tg : summaryCm.getTrendGraphs().values())
 				tg.setTimeLineMarker(ts);
 
+		// Set the current timestamp for the Offline SQL Capture View 
+		setSqlCaptureOfflineCurrentSampleTime(prevTs, ts, nextTs);
+
 //		_offlineReadWatermark.setWatermarkText("");
 	}
 
 	
-	
+
+	/**
+	 * When the offline timeline is shifted, call this method.<br>
+	 * Probably needs to be implemented by any subclass
+	 * 
+	 * @param prevTs previous timestamp, null if we are at first
+	 * @param thisTs the ts we are currently pointing at
+	 * @param nextTs next timestamp that exists, null if at last entry
+	 */
+	public void setSqlCaptureOfflineCurrentSampleTime(Timestamp prevTs, Timestamp thisTs, Timestamp nextTs)
+	{
+	}
+
 	/*---------------------------------------------------
 	 ** BEGIN: implementing ConnectionProvider
 	 **---------------------------------------------------
@@ -2899,6 +3056,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		
 		
+		// Special thing for AlrmWriters
+		System.getProperties().remove("SERVERNAME");
+
+
 		ConnectionDialog connDialog = new ConnectionDialog(this, connDialogOptions);
 		if (source instanceof CounterCollectorThreadGui && connDialogOptions._showAseTab)
 		{
@@ -2984,6 +3145,14 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 //				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getAseSshTunnelInfo());
 			}
+
+			// Setting internal "system property" variable 'SERVERNAME' the DBMS Servername 
+			// This might be used by the AlarmWriterToFile or similar
+			try {
+    			String dbmsServerName = CounterController.getInstance().getMonConnection().getDbmsServerName();
+    			if (StringUtil.hasValue(dbmsServerName))
+    				System.setProperty("SERVERNAME", dbmsServerName);
+			} catch (Exception ignore) {}
 			
 		} // end: TDS_CONN
 
@@ -3019,6 +3188,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 //				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, connDialog.getJdbcSshTunnelInfo());
 			}
+
+			// Setting internal "system property" variable 'SERVERNAME' the DBMS Servername 
+			// This might be used by the AlarmWriterToFile or similar
+			try {
+    			String dbmsServerName = CounterController.getInstance().getMonConnection().getDbmsServerName();
+    			if (StringUtil.hasValue(dbmsServerName))
+    				System.setProperty("SERVERNAME", dbmsServerName);
+			} catch (Exception ignore) {}
+			
 		} // end: JDBC
 
 		if ( connType == ConnectionDialog.OFFLINE_CONN)
@@ -3046,6 +3224,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				openOfflineSessionView(true);
 
 				connectOfflineHookin();
+
+				// XML Plan Cache... maybe it's not the perfect place to initialize this...
+				XmlPlanCache.setInstance( new XmlPlanCacheOffline(this) );
 
 //				// Read in the MonTablesDictionary from the offline store
 //				// This will serve as a dictionary for ToolTip
@@ -3086,7 +3267,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		} // end: OFFLINE_CONN
 
 		// Set the window border for THIS Window
-		setBorderForConnectionProfileType(connDialog.getSelectedConnectionProfileType(connType));
+//		setBorderForConnectionProfileType(connDialog.getSelectedConnectionProfileType(connType));
+		setBorderForConnectionProfileType(connDialog.getConnectionProfileTypeName());
 	}
 
 	public abstract Options getConnectionDialogOptions();
@@ -3430,6 +3612,57 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 //		int ret = TrendGraphPanelReorderDialog.showDialog(this, SummaryPanel.getInstance().getGraphPanel());
 		int ret = TrendGraphPanelReorderDialog.showDialog(this, CounterController.getSummaryPanel().getGraphPanel());
+		if (ret == JOptionPane.OK_OPTION)
+		{
+		}
+	}
+
+	private void action_openAlarmViewDialog(ActionEvent e)
+	{
+		if (_alarmView == null)
+			_alarmView = new AlarmViewer(this);
+
+		_alarmView.setVisible(true);
+	}
+
+	private void action_openAlarmConfigDialog(ActionEvent e)
+	{
+		// Open config. 
+		//    CANCEL null will be returned.
+		//    OK     a Configuration object widh all settings will be returned.
+		Configuration alarmConf = AlarmConfigDialog.showDialog(this);
+		
+		// dialog returned some config... lets save it and reload the config
+		if (alarmConf != null)
+		{
+			Configuration userTmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (userTmpConf != null)
+			{
+				userTmpConf.add(alarmConf);
+				userTmpConf.save();
+				
+				// Remove/install writers to current AlarmHandler
+				if (AlarmHandler.hasInstance())
+				{
+					try
+					{
+						AlarmHandler.getInstance().reloadConfig();
+					}
+					catch(Exception ex)
+					{
+						SwingUtils.showErrorMessage(this, "Problems adding an alarm handler", "Problems adding an alarm handler", ex);
+						return;
+					}
+				}
+			}
+		}
+	}
+	
+	private void action_openJvmMemoryConfig(ActionEvent e)
+	{
+		String filename = System.getenv("DBXTUNE_JVM_PARAMETER_FILE");
+
+		int ret = JvmMemorySettingsDialog.showDialog(this, "DBXTUNE", filename);
 		if (ret == JOptionPane.OK_OPTION)
 		{
 		}
@@ -3978,6 +4211,42 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	}
 
 	/**
+	 * Set the ACTIVE ALARMS
+	 * @param visible
+	 */
+	public void setActiveAlarms()
+	{
+		boolean visible = true;
+		if (AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance())
+		{
+			int activeAlarmCount = AlarmWriterToTableModel.getInstance().getActiveTableModel().getRowCount();
+
+			if (activeAlarmCount > 0)
+				_alarmView_but.setText(""+activeAlarmCount);
+			else
+				_alarmView_but.setText("");
+		}
+		else
+		{
+			visible = false;
+		}
+
+//		_alarmView_but.setVisible(visible);
+		_alarmView_but.setEnabled(visible);
+	}
+	/** Checks if this flag is set or not */
+	public boolean hasActiveAlarms() 
+	{ 
+		if (AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance())
+		{
+			int activeAlarmCount = AlarmWriterToTableModel.getInstance().getActiveTableModel().getRowCount();
+			if (activeAlarmCount > 0)
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Set the BLOCKING LOCK to be visible or not.
 	 * @param visible
 	 */
@@ -3990,6 +4259,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 		_blockAlert_but.setVisible(visible);
 	}
+	/** Checks if this flag is set or not */
+	public boolean hasBlockingLocks() { return _blockAlert_but.isVisible(); }
 
 
 	/**
@@ -4005,6 +4276,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 		_fullTranlogAlert_but.setVisible(visible);
 	}
+	/** Checks if this flag is set or not */
+	public boolean hasFullTransactionLog() { return _fullTranlogAlert_but.isVisible(); }
 
 
 	/**
@@ -4020,6 +4293,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 		_oldestOpenTran_but.setVisible(visible);
 	}
+	/** Checks if this flag is set or not */
+	public boolean hasOldestOpenTran() { return _oldestOpenTran_but.isVisible(); }
 
 
 //	public static JMenu createPredefinedSqlMenu(final QueryWindow sqlWindowInstance)
@@ -4510,6 +4785,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._refreshRate_mi               .setEnabled(true);
 			mf._autoResizePcTable_m          .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
+			mf._prefShowAppNameInTitle_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
 			mf._optDoGc_m                    .setEnabled(true); // always TRUE
 			mf._optDoGcAfterXMinutes_mi      .setEnabled(true); // always TRUE
@@ -4517,6 +4793,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
 			mf._dbmsConfigView_mi            .setEnabled(DbmsConfigManager.hasInstance());
+			mf._alarmView_mi                 .setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+			mf._alarmConfig_mi               .setEnabled(AlarmHandler.hasInstance());
+			mf._alarmView_but                .setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+			mf._alarmView_but                .setVisible(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
 			mf._tcpSettingsConf_mi           .setEnabled(true); // always TRUE
 			mf._counterTabView_mi            .setEnabled(true); // always TRUE
 			mf._graphView_mi                 .setEnabled(true); // always TRUE
@@ -4565,6 +4845,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._refreshRate_mi               .setEnabled(false);
 			mf._autoResizePcTable_m          .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
+			mf._prefShowAppNameInTitle_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
 			mf._optDoGc_m                    .setEnabled(true); // always TRUE
 			mf._optDoGcAfterXMinutes_mi      .setEnabled(true); // always TRUE
@@ -4572,6 +4853,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
 			mf._dbmsConfigView_mi            .setEnabled(DbmsConfigManager.hasInstance());
+			mf._alarmView_mi                 .setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+			mf._alarmConfig_mi               .setEnabled(AlarmHandler.hasInstance());
+			mf._alarmView_but                .setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+			mf._alarmView_but                .setVisible(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
 			mf._tcpSettingsConf_mi           .setEnabled(true); // always TRUE
 			mf._counterTabView_mi            .setEnabled(true); // always TRUE
 			mf._graphView_mi                 .setEnabled(true); // always TRUE
@@ -4620,6 +4905,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._refreshRate_mi               .setEnabled(false);
 			mf._autoResizePcTable_m          .setEnabled(true); // always TRUE
 			mf._autoRefreshOnTabChange_mi    .setEnabled(true); // always TRUE
+			mf._prefShowAppNameInTitle_mi    .setEnabled(true); // always TRUE
 			mf._groupTcpInTabPane_mi         .setEnabled(true); // always TRUE
 			mf._optDoGc_m                    .setEnabled(true); // always TRUE
 			mf._optDoGcAfterXMinutes_mi      .setEnabled(true); // always TRUE
@@ -4627,6 +4913,10 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			mf._optDoGcAfterRefresh_mi       .setEnabled(true); // always TRUE
 			mf._optDoGcAfterRefreshShowGui_mi.setEnabled(true); // always TRUE
 			mf._dbmsConfigView_mi            .setEnabled(false);
+			mf._alarmView_mi                 .setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+			mf._alarmConfig_mi               .setEnabled(AlarmHandler.hasInstance());
+			mf._alarmView_but                .setEnabled(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
+			mf._alarmView_but                .setVisible(AlarmHandler.hasInstance() && AlarmWriterToTableModel.hasInstance());
 			mf._tcpSettingsConf_mi           .setEnabled(true); // always TRUE
 			mf._counterTabView_mi            .setEnabled(true); // always TRUE
 			mf._graphView_mi                 .setEnabled(true); // always TRUE
@@ -4642,7 +4932,8 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //			mf._preDefinedSql_m              .setEnabled(false);
 			mf._sqlQuery_mi                  .setEnabled(false);
 //			mf._lockTool_mi                  .setEnabled();
-			mf._createOffline_mi             .setEnabled(false);
+//			mf._createOffline_mi             .setEnabled(false);
+			mf._createOffline_mi             .setEnabled(true);
 			mf._wizardCrUdCm_mi              .setEnabled(false);
 			mf._doGc_mi                      .setEnabled(true); // always TRUE
 
@@ -4901,6 +5192,26 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					CounterController.getSummaryPanel().setWatermark();
 				}
 
+				// Set servername in windows - title
+				DbxConnection offlineConn = getOfflineConnection();
+				String name = null;
+				String dbmsSrvName = null;
+				String dbmsCatName = null;
+
+				try { dbmsSrvName = offlineConn.getDbmsServerName(); } catch(SQLException ignore) {}
+				try { dbmsCatName = offlineConn.getCatalog();        } catch(SQLException ignore) {}
+				
+				if ( StringUtil.hasValue(dbmsSrvName) && StringUtil.hasValue(dbmsCatName) )
+					name = dbmsCatName + "@" + dbmsSrvName;
+				else if (StringUtil.hasValue(dbmsSrvName))
+					name = dbmsSrvName;
+				else if (StringUtil.hasValue(dbmsCatName))
+					name = dbmsCatName;
+				else
+					name = "unknown";
+
+				getInstance().setSrvInTitle("offline:"+name);
+
 				setMenuMode(ST_OFFLINE_CONNECT);
 				_lastKnownStatus = ST_OFFLINE_CONNECT;
 			}
@@ -4936,19 +5247,21 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				DbxConnection xconn = CounterController.getInstance().getMonConnection();
 				ConnectionProp connProp = xconn.getConnProp();
 				
+				// StatusBar
 				String userHostPort = "";
+				String dbmsServerName = "";
 				if (connProp != null)
 				{
-					String serverName = connProp.getServer();
-					if (StringUtil.isNullOrBlank(serverName))
+					dbmsServerName = connProp.getServer();
+					if (StringUtil.isNullOrBlank(dbmsServerName))
 					{
-						try { serverName = xconn.getDbmsServerName(); }
+						try { dbmsServerName = xconn.getDbmsServerName(); }
     					catch (SQLException e) {}
 					}
 
 					JdbcUrlParser urlParser = JdbcUrlParser.parse(connProp.getUrl());
 					userHostPort = connProp.getUsername() 
-						+ " - " + serverName
+						+ " - " + dbmsServerName
 						+ " (" + urlParser.getHostPortStr() + ")";
 				}
 				_statusServerName.setText(userHostPort);
@@ -4976,10 +5289,24 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				}
 				
 				// Set servername in windows - title
-				String aseSrv      = AseConnectionFactory.getServer();
-				String aseHostPort = AseConnectionFactory.getHostPortStr();
-				String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
-				getInstance().setTitle(Version.getAppName(), srvStr);
+//				String aseSrv      = AseConnectionFactory.getServer();
+//				String aseHostPort = AseConnectionFactory.getHostPortStr();
+//				String srvStr      = aseSrv != null ? aseSrv : aseHostPort; 
+
+				// A bit of special consideration if it's a Sybase TDS connection, where we could find the server name in the interfaces file or not
+				// if we find it in the interfaces file, show the interface entry, otherwise show: "RdbmsServer (host:port)"
+				if (xconn instanceof TdsConnection)
+				{
+					String interfaceEntry = AseConnectionFactory.getServer();
+					String aseHostPort    = AseConnectionFactory.getHostPortStr();
+					if (StringUtil.hasValue(interfaceEntry))
+						dbmsServerName = interfaceEntry;
+					else
+						dbmsServerName = dbmsServerName + " (" + aseHostPort + ")";
+					
+				}
+				// Set servername in windows - title
+				getInstance().setSrvInTitle(dbmsServerName);
 
 				boolean hasPcsStorage = PersistentCounterHandler.hasInstance();
 				_statusPcsQueueSize         .setVisible(hasPcsStorage);
@@ -5030,7 +5357,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			}
 
 			// Reset servername in windows - title
-			getInstance().setTitle(Version.getAppName(), null);
+			getInstance().setSrvInTitle(null);
 
 			// Reset server Warning status
 			setServerWarningStatus(false, Color.BLACK, "");
@@ -5080,19 +5407,24 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 	/**
 	 * Set the windws title
-	 * @param appName name of the application.
 	 * @param srvStr servername we are connected to, null = not connected.
 	 */
-	private void setTitle(String appName, String srvStr)
+	private void setSrvInTitle(String srvStr)
 	{
-		if (appName == null)
-			appName = Version.getAppName();
+		boolean showAppNameInTitle = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showAppNameInTitle, DEFAULT_showAppNameInTitle);
 
-		String title = appName;
-		
-		if (srvStr != null)
-			title += " - " + srvStr;
-		
+		String appName = Version.getAppName() + " - ";
+
+		// Skip appname as prefix, but only when CONNECTED
+		if ( showAppNameInTitle == false && srvStr != null)
+			appName = "";
+
+		if ( srvStr == null)
+			srvStr = "not connected";
+
+		String title = appName + srvStr;
+
+		// Add any prefix to the title, like Expiration date...
 		if (_windowTitleAppend != null)
 			title += " - " + _windowTitleAppend;
 		
@@ -5344,6 +5676,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 
 		tmpConf.setProperty("TabularCntrPanel.autoAdjustTableColumnWidth", getTcpAutoAdjustTableColumnWidthType().name());
 		tmpConf.setProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
+		tmpConf.setProperty(PROPKEY_showAppNameInTitle,                    _prefShowAppNameInTitle_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_useTcpGroups,                          _groupTcpInTabPane_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterXMinutes,                 _optDoGcAfterXMinutes_mi.isSelected());
 		tmpConf.setProperty(PROPKEY_doJavaGcAfterRefresh,                  _optDoGcAfterRefresh_mi.isSelected());
@@ -5440,6 +5773,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		bool = tmpConf.getBooleanProperty("TabularCntrPanel.autoRefreshOnTabChange",     _autoRefreshOnTabChange_mi.isSelected());
 		_autoRefreshOnTabChange_mi.setSelected(bool);
 
+		_prefShowAppNameInTitle_mi    .setSelected(tmpConf.getBooleanProperty(PROPKEY_showAppNameInTitle,          DEFAULT_showAppNameInTitle));
 		_groupTcpInTabPane_mi         .setSelected(tmpConf.getBooleanProperty(PROPKEY_useTcpGroups,                DEFAULT_useTcpGroups));
 		_optDoGcAfterXMinutes_mi      .setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterXMinutes,       DEFAULT_doJavaGcAfterXMinutes));
 		_optDoGcAfterRefresh_mi       .setSelected(tmpConf.getBooleanProperty(PROPKEY_doJavaGcAfterRefresh,        DEFAULT_doJavaGcAfterRefresh));

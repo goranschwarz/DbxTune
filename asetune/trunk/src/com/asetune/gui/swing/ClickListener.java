@@ -34,20 +34,34 @@ implements ActionListener
 	{
 		if (SwingUtilities.isLeftMouseButton(e)) 
 		{
-    		if ( e.getClickCount() > 2 )
-    			return;
-    
-    		lastEvent = e;
-    
-    		if ( timer.isRunning() )
-    		{
-    			timer.stop();
-    			doubleClick(lastEvent);
-    		}
-    		else
-    		{
-    			timer.restart();
-    		}
+			if ( e.getClickCount() > 2 )
+				return;
+			
+			MouseEvent prev = lastEvent;
+			lastEvent = e;
+			
+			if ( timer.isRunning() )
+			{
+				// Check that the "double click" click is in close proximity with the previous click
+				if (prev != null)
+				{
+					double distance = prev.getPoint().distance( e.getPoint() );
+					//System.out.println("distance="+distance);
+					if (distance > 10)
+					{
+						// restart the timer, or make it a single click...
+						timer.restart();
+						return;
+					}
+				}
+
+				timer.stop();
+				doubleClick(lastEvent);
+			}
+			else
+			{
+				timer.restart();
+			}
 		}
 	}
 

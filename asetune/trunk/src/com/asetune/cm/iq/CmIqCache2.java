@@ -14,6 +14,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -111,7 +112,7 @@ extends CountersModel
 	{
 		String[] labels_memo = new String[] { "MemoryAllocated", "MemoryMaxAllocated", "MainCacheCurrentSize", "TempCacheCurrentSize", "CurrentCacheSize", "MaxCacheSize", "MinCacheSize"} ;
 		
-		addTrendGraphData(GRAPH_NAME_CACHE2, new TrendGraphDataPoint(GRAPH_NAME_CACHE2, labels_memo));
+		addTrendGraphData(GRAPH_NAME_CACHE2, new TrendGraphDataPoint(GRAPH_NAME_CACHE2, labels_memo, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -120,7 +121,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_CACHE2,
 				"Memory overview",                     // Menu CheckBox text
-				"Memory overview", // Label 
+				"Memory overview ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_memo, 
 				false, // is Percent Graph
 				this, 
@@ -147,8 +148,9 @@ extends CountersModel
 			arr[6] = this.getAbsValueAsDouble("MinCacheSize",         "PropValue");
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 	}
 	

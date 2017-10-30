@@ -12,6 +12,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
@@ -107,8 +108,8 @@ extends CountersModel
 		String[] labels1 = new String[] { "Pending" };
 		String[] labels2 = new String[] { "Completed" };
 		
-		addTrendGraphData(GRAPH_NAME_PENDING_DISK_IO,   new TrendGraphDataPoint(GRAPH_NAME_PENDING_DISK_IO,   labels1));
-		addTrendGraphData(GRAPH_NAME_COMPLETED_DISK_IO, new TrendGraphDataPoint(GRAPH_NAME_COMPLETED_DISK_IO, labels2));
+		addTrendGraphData(GRAPH_NAME_PENDING_DISK_IO,   new TrendGraphDataPoint(GRAPH_NAME_PENDING_DISK_IO,   labels1, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_COMPLETED_DISK_IO, new TrendGraphDataPoint(GRAPH_NAME_COMPLETED_DISK_IO, labels2, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -117,7 +118,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_PENDING_DISK_IO,
 					"Pending DiskIO's", 	                                 // Menu CheckBox text
-					"Pending DiskIO's, or number of outstanding (from IOController)", // Label 
+					"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					labels1, 
 					false, // is Percent Graph
 					this, 
@@ -129,7 +130,7 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
 					"Completed DiskIO's", 	                                 // Menu CheckBox text
-					"Completed DiskIO's per Seconds (from IOController)", // Label 
+					"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					labels2, 
 					false, // is Percent Graph
 					this, 
@@ -179,8 +180,7 @@ extends CountersModel
     			_logger.debug("updateGraphData("+GRAPH_NAME_PENDING_DISK_IO+"): Pending='"+arr[0]+"'.");
     
     			// Set the values
-    			tgdp.setDate(this.getTimestamp());
-    			tgdp.setData(arr);
+    			tgdp.setDataPoint(this.getTimestamp(), arr);
     		}
 		}
 
@@ -196,8 +196,7 @@ extends CountersModel
     			_logger.debug("updateGraphData("+GRAPH_NAME_COMPLETED_DISK_IO+"): Completed='"+arr[0]+"'.");
     
     			// Set the values
-    			tgdp.setDate(this.getTimestamp());
-    			tgdp.setData(arr);
+    			tgdp.setDataPoint(this.getTimestamp(), arr);
     		}
 		}
 	}

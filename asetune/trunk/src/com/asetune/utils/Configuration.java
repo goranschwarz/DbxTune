@@ -3,6 +3,7 @@
  */
 package com.asetune.utils;
 
+import java.awt.Window;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,6 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,6 +27,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -71,9 +74,14 @@ extends Properties
 	/** Increment this on every save */
 	private int _saveCount = 0;
 
+	/** when a property is changed, set it to true, and to false when it's saved */
+	private boolean _isDirty = false;
+
 	/** true if a save is done by a background thread, and while the thread is active, other save requests will be queued... */
 	private boolean _hasActiveSaveThread = false;
 
+	/** use to report any errors to any assosiated GUI */
+	private static Window _guiWindow = null;
 	
 	// original serialVersionUID = 5707562050158600080L
 	private static String encrypterBaseKey = "qazZSE44wsxXDR55"+serialVersionUID+"edcCFT66rfvVGY77";
@@ -89,6 +97,11 @@ extends Properties
 	public static void setGui(boolean hasGui)
 	{
 		System.setProperty(HAS_GUI, Boolean.toString(hasGui));
+	}
+	public static void setGuiWindow(Window w)
+	{
+		setGui( w != null );
+		_guiWindow = w;
 	}
 	
 
@@ -209,6 +222,12 @@ extends Properties
 
 	public void save()
 	{
+		if ( ! _isDirty )
+		{
+			_logger.debug("Save was called, but the configuration '"+getConfName()+"' was not dirty. Skipping this save.");
+			return;
+		}
+		_logger.debug("calling save(false) for the configuration '"+getConfName()+"'. _isDirty="+_isDirty);
 		save(false);
 	}
 
@@ -263,10 +282,20 @@ extends Properties
 					_hasActiveSaveThread = true;
 					long startTime = System.currentTimeMillis();
 					
-					FileOutputStream os = new FileOutputStream(new File(_propFileName));
+					File f = new File(_propFileName);
+					long needKB = f.length() * 2 / 1024;
+					long freeKB = f.getUsableSpace() / 1024;
+					if (needKB > freeKB)
+					{
+						throw new Exception("Before saving the file '"+_propFileName+"' I predicted that I will need/use "+needKB+" KB during the save. But the filesystem only has "+freeKB+" KB available. If I save the file it might be corrupted. So please clear some additional space, then the files will be saved.");
+					}
+
+					FileOutputStream os = new FileOutputStream(f);
 					store(os, getEmbeddedMessage());
 					//super.storeToXML(os, "This file will be overwritten and maintained by "+Version.getAppName();
 					os.close();
+
+					_isDirty = false;
 					
 					long saveTime = System.currentTimeMillis() - startTime;
 					if (saveTime > 1000)
@@ -276,6 +305,11 @@ extends Properties
 				catch (Exception e)
 				{
 					_logger.error("Problems saving Configuration name='"+_confName+"', file='"+_propFileName+"', currentSaveCount="+currentSaveCount+". Caught: "+e, e);
+					if (hasGui())
+					{
+						String msg = "Problems saving Configuration name='"+_confName+"', file='"+_propFileName+"', currentSaveCount="+currentSaveCount+". Caught: "+e;
+						SwingUtils.showErrorMessage(_guiWindow, "Save Configuration Error", msg, e);
+					}
 				}
 				finally 
 				{
@@ -324,6 +358,55 @@ extends Properties
 		}
 	}
 
+	/**
+	 * Only used for debugging...<br>
+	 * Print out the properties sorted in key order
+	 */
+	public void print(PrintStream ps, String heading)
+	{
+		if (ps == null)
+			ps = System.out;
+
+		ps.println("");
+
+		ps.println(heading);
+		if (getFilename() != null)
+			ps.println("Filename='"+getFilename()+"'.");
+
+		List<String> sorted = new ArrayList<>(new TreeSet<String>( stringPropertyNames() ));
+
+		ps.println("    key                                                          value");
+		ps.println("    ------------------------------------------------------------ ----------------------------------------------------------------------------------");
+
+		for ( String key : sorted )
+			ps.format ("    %-60s %s\n", key, getPropertyRaw(key));
+
+		ps.println("");
+	}
+
+	/**
+	 * Add the input configuration to the current object.
+	 * <p>
+	 * If the key already exists in "this" object, then it will be overwritten by the input Configuration
+	 * @param conf    A config object; allow null = nothing will be added
+	 */
+	public void add(Configuration conf)
+	{
+		if (conf == null)
+			return;
+
+		putAll(conf);
+		_isDirty = true;
+	}
+
+	@Override
+	public Object remove(Object key)
+	{
+		Object obj = super.remove(key);
+		if (obj != null)
+			_isDirty = true;
+		return obj;
+	}
 
 	/**
 	 * remove all keys that starts with the prefix
@@ -337,6 +420,7 @@ extends Properties
 			if (key.startsWith(prefix))
 			{
 				it.remove();
+				_isDirty = true;
 			}
 		}
 	}
@@ -576,6 +660,39 @@ extends Properties
 
 
 
+	/** Get a double value for property */
+	public double getDoubleMandatoryProperty(String propName)
+	throws MandatoryPropertyException
+	{
+		String val = getProperty(propName);
+		if (val == null)
+			throw new MandatoryPropertyException("The property '"+propName+"' is mandatory.");
+		return Double.parseDouble(val);
+	}
+	/** Get a Double value for property */
+	public double getDoubleProperty(String propName)
+	{
+		String val = getProperty(propName);
+		return Double.parseDouble(val);
+	}
+	/** Get a Double value for property */
+	public double getDoubleProperty(String propName, double defaultValue)
+	{
+		return getDoubleProperty(propName, Double.toString(defaultValue));
+	}
+	/** Get a Double value for property */
+	public double getDoubleProperty(String propName, String defaultValue)
+	{
+		String val = getProperty(propName, defaultValue);
+//		if (val != null && val.equals(""))
+		if (StringUtil.isNullOrBlank(val))
+			val = defaultValue;
+		return Double.parseDouble(val);
+	}
+
+
+
+
 	/** Get a boolean value for property */
 	public boolean getBooleanMandatoryProperty(String propName)
 	throws MandatoryPropertyException
@@ -593,14 +710,14 @@ extends Properties
 			return false;
 		return val.equalsIgnoreCase("true");
 	}
-	/** Get a boolean value for property */
-	public boolean getBooleanProperty(String propName, String defaultValue)
-	{
-		String val = getProperty(propName, defaultValue);
-		if (val == null)
-			return false;
-		return val.equalsIgnoreCase("true");
-	}
+//	/** Get a boolean value for property */
+//	public boolean getBooleanProperty(String propName, String defaultValue)
+//	{
+//		String val = getProperty(propName, defaultValue);
+//		if (val == null)
+//			return false;
+//		return val.equalsIgnoreCase("true");
+//	}
 
 
 
@@ -619,6 +736,9 @@ extends Properties
 	public String getProperty(String propName)
 	{
 		String val = super.getProperty(propName);
+//if (propName.indexOf(".window.active")>0)
+//	new Exception("Dummy exception: getProperty(name='"+propName+"'... got value='"+val+"'").printStackTrace();
+		
 		if (val == null)
 		{
 			// If the propName wasn't found in the properties.
@@ -765,6 +885,12 @@ extends Properties
 		return str.startsWith(ENCRYPTED_PREFIX);
 	}
 
+//	@Override
+//	public synchronized Object put(Object key, Object value)
+//	{
+//		throw new RuntimeException("put should not be used on a Configuration object. Use setProperty() instead.");
+//	}
+
 //	public Object setEncrypedProperty(String propName, String str)
 //	{
 //		return super.setProperty( propName, encryptPropertyValue(propName, str) );
@@ -778,6 +904,8 @@ extends Properties
 	@Override
 	public Object setProperty(String propName, String str)
 	{
+//		if (propName.indexOf(".window.active")>0)
+//			new Exception("Dummy exception: setProperty(name='"+propName+"', val='"+str+"'").printStackTrace();
 		return setProperty(propName, str, false);
 	}
 
@@ -810,6 +938,17 @@ extends Properties
 		// set the property in super object
 		Object prev = super.setProperty( propName, str );
 		
+		// If value was changed or new, mark the config as "dirty" and needs to be saved. 
+		if ( (str != null && !str.equals(prev)) || (prev != null && !prev.equals(str)) )
+		{
+			_isDirty = true;
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("Configuration '"+getConfName()+"' changed key='"+propName+"', newValue='"+str+"', oldValue='"+prev+"', _isDirty="+_isDirty+".");
+
+			// If we should have change listeners, this is where we should call: firePropertyChanged(propName, newValue, oldValue);
+		}
+		
 		// If the previously stored value, is having 'USE_DEFAULT:' as a prefix
 		// simply remove it and return the *actual* value it previously had.
 		if (prev != null && prev instanceof String)
@@ -833,6 +972,12 @@ extends Properties
 		return prev==null ? -1 : parseLong( (String)prev );
 	}
 
+	public double setProperty(String propName, double d)
+	{
+		Object prev = setProperty( propName, Double.toString(d) );
+		return prev==null ? -1 : parseDouble( (String)prev );
+	}
+
 	public boolean setProperty(String propName, boolean b)
 	{
 		Object prev = setProperty( propName, Boolean.toString(b) );
@@ -840,6 +985,7 @@ extends Properties
 	}
 	private int     parseInt(String str)     {try {return Integer.parseInt(str);}     catch(Throwable e) {return 0;}}
 	private long    parseLong(String str)    {try {return Long.parseLong(str);}       catch(Throwable e) {return 0;}}
+	private double  parseDouble(String str)  {try {return Double.parseDouble(str);}   catch(Throwable e) {return 0.0;}}
 	private boolean parseBoolean(String str) {try {return Boolean.parseBoolean(str);} catch(Throwable e) {return false;}}
 
 //			public static final String USE_DEFAULT = "USE_DEFAULT:";
@@ -908,6 +1054,11 @@ extends Properties
 	public static void registerDefaultValue(String propName, long defaultValue)
 	{
 		registerDefaultValue(propName, Long.toString(defaultValue));
+	}
+
+	public static void registerDefaultValue(String propName, double defaultValue)
+	{
+		registerDefaultValue(propName, Double.toString(defaultValue));
 	}
 
 	public static void registerDefaultValue(String propName, boolean defaultValue)
@@ -980,41 +1131,46 @@ extends Properties
 
 		// Extract Environment variables
 		// search for ${ENV_NAME}
+//		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
+//		while( compiledRegex.matcher(val).find() )
+//		{
+//			String envVal  = null;
+//			String envName = val.substring( val.indexOf("${")+2, val.indexOf("}") );
+//
+//			// Get value for a specific env variable
+//			// But some java runtimes does not do getenv(),
+//			// then we need to revert back to getProperty() from the system property
+//			// then the user needs to pass that as a argument -Dxxx=yyy to the JVM
+//			try
+//			{
+//				envVal  = System.getenv(envName);
+//			}
+//			catch (Throwable t)
+//			{
+//				envVal = System.getProperty(envName);
+//				if (envVal == null)
+//				{
+//					_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
+//				}
+//			}
+//			if (envVal == null)
+//			{
+//				_logger.warn("The Environment variable '"+envName+"' can't be found, replacing it with an empty string ''.");
+//				envVal="";
+//			}
+//			// Backslashes does not work that good in replaceFirst()...
+//			// So change them to / instead...
+//			envVal = envVal.replace('\\', '/');
+//
+//			_logger.debug("The Environment variable '"+envName+"' will be substituted with the value of '"+envVal+"'.");
+//
+//			// NOW substitute the ENVVARIABLE with a real value...
+//			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
+//		}
 		Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}");
-		while( compiledRegex.matcher(val).find() )
+		if( compiledRegex.matcher(val).find() )
 		{
-			String envVal  = null;
-			String envName = val.substring( val.indexOf("${")+2, val.indexOf("}") );
-
-			// Get value for a specific env variable
-			// But some java runtimes does not do getenv(),
-			// then we need to revert back to getProperty() from the system property
-			// then the user needs to pass that as a argument -Dxxx=yyy to the JVM
-			try
-			{
-				envVal  = System.getenv(envName);
-			}
-			catch (Throwable t)
-			{
-				envVal = System.getProperty(envName);
-				if (envVal == null)
-				{
-					_logger.warn("System.getenv(): Is not supported on this platform or version of Java. Please pass '-D"+envName+"=value' when starting the JVM.");
-				}
-			}
-			if (envVal == null)
-			{
-				_logger.warn("The Environment variable '"+envName+"' can't be found, replacing it with an empty string ''.");
-				envVal="";
-			}
-			// Backslashes does not work that good in replaceFirst()...
-			// So change them to / instead...
-			envVal = envVal.replace('\\', '/');
-
-			_logger.debug("The Environment variable '"+envName+"' will be substituted with the value of '"+envVal+"'.");
-
-			// NOW substitute the ENVVARIABLE with a real value...
-			val = val.replaceFirst("\\$\\{"+envName+"\\}", envVal);
+			val = StringUtil.envVariableSubstitution(val);
 		}
 
 		// Get the value from another property
@@ -1280,6 +1436,8 @@ extends Properties
 	{
 		private static final long	serialVersionUID	= 1L;
 
+		private boolean _fallbackOnSystemProperties = true;
+
 		//------------------------------------------
 		// The below will "might" be supported in the future
 		//------------------------------------------
@@ -1478,6 +1636,11 @@ extends Properties
 				if (conf != null && conf.hasProperty(propName))
 					return true;
 			}
+			if (_fallbackOnSystemProperties)
+			{
+				if (System.getProperty(propName) != null)
+					return true;
+			}
 			return false;
 		}
 
@@ -1508,6 +1671,18 @@ extends Properties
 						}
 					}					
 				}
+			}
+			if (_fallbackOnSystemProperties)
+			{
+				for (Iterator<Object> it = System.getProperties().keySet().iterator(); it.hasNext();)
+				{
+					String key = (String) it.next();
+					if (prefix == null || key.startsWith(prefix))
+					{
+						if ( ! matchingKeys.contains(key) )
+							matchingKeys.add(key);
+					}
+				}					
 			}
 
 			Collections.sort(matchingKeys);
@@ -1574,6 +1749,10 @@ extends Properties
 					}
 				}
 			}
+			if (_fallbackOnSystemProperties)
+			{
+				// NOT YET IMPLEMETED
+			}
 
 			Collections.sort(uniqueNames);
 			return uniqueNames;
@@ -1582,6 +1761,7 @@ extends Properties
 		//---------------------------------------------------------------
 		// INT methods
 		// LONG methods
+		// DOUBLE methods
 		// BOOLEAN methods
 		//---------------------------------------------------------------
 		// The above methods are ALL using String getProperty() methods
@@ -1621,6 +1801,12 @@ extends Properties
 					if (val != null)
 						return val;
 				}
+			}
+			if (_fallbackOnSystemProperties)
+			{
+				String val = System.getProperty(propName);
+				if (val != null)
+					return val;
 			}
 			return getRegisteredDefaultValue(propName);
 		}
@@ -1664,6 +1850,12 @@ extends Properties
 						return val;
 				}
 			}
+			if (_fallbackOnSystemProperties)
+			{
+				String val = System.getProperty(propName);
+				if (val != null)
+					return val;
+			}
 			return null;
 		}
 
@@ -1702,6 +1894,12 @@ extends Properties
 					if (val != null)
 						return val;
 				}
+			}
+			if (_fallbackOnSystemProperties)
+			{
+				String val = System.getProperty(propName);
+				if (val != null)
+					return val;
 			}
 			return null;
 		}
@@ -1785,24 +1983,12 @@ extends Properties
 
 
 			// now STORE the value...
-			conf.put(key, val);
+			conf.setProperty(key, val);
 		}
 
 		return conf;
 	}
 	
-	/**
-	 * Add the input configuration to the current object.
-	 * <p>
-	 * If the key already exists in "this" object, then it will be overwritten by the input Configuration
-	 * @param conf
-	 */
-	public void add(Configuration conf)
-	{
-		putAll(conf);
-	}
-
-
 	
 	//--------------------------------------------------------------------------
 	//--------------------------------------------------------------------------

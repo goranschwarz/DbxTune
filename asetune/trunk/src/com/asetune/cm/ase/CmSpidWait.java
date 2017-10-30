@@ -5,7 +5,7 @@ import java.awt.event.ActionListener;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -28,6 +29,7 @@ import com.asetune.cm.ase.helper.WaitCounterSummary.WaitCounterEntry;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -255,44 +257,21 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Extra Where Caluse",     PROPKEY_sample_extraWhereClause      , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause      , DEFAULT_sample_extraWhereClause      ), DEFAULT_sample_extraWhereClause     , CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause                     ));
+		list.add(new CmSettingsHelper("Skip Wait ID List",      PROPKEY_trendGraph_skipWaitIdList    , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitIdList    , DEFAULT_trendGraph_skipWaitIdList    ), DEFAULT_trendGraph_skipWaitIdList   , "Skip specific WaitEventID's from beeing in ThrendGraph"            ));
+		list.add(new CmSettingsHelper("Skip Wait Class List",   PROPKEY_trendGraph_skipWaitClassList , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipWaitClassList , DEFAULT_trendGraph_skipWaitClassList ), DEFAULT_trendGraph_skipWaitClassList, "Skip specific Event Clases from beeing in ThrendGraph"             ));
+		list.add(new CmSettingsHelper("Skip Username List",     PROPKEY_trendGraph_skipUserNameList  , String.class,  conf.getProperty       (PROPKEY_trendGraph_skipUserNameList  , DEFAULT_trendGraph_skipUserNameList  ), DEFAULT_trendGraph_skipUserNameList , "Skip specific users from beeing in ThrendGraph"                    ));
+		list.add(new CmSettingsHelper("Skip System Processes",  PROPKEY_trendGraph_skipSystemThreads , Boolean.class, conf.getBooleanProperty(PROPKEY_trendGraph_skipSystemThreads , DEFAULT_trendGraph_skipSystemThreads ), DEFAULT_trendGraph_skipSystemThreads, "Skip System SPID's from beeing in ThrendGraph"                     ));
+		list.add(new CmSettingsHelper("Trend Graph Datasource", PROPKEY_trendGraph_dataSource        , String.class,  conf.getProperty       (PROPKEY_trendGraph_dataSource        , DEFAULT_trendGraph_dataSource        ), DEFAULT_trendGraph_dataSource       , "What column should be the source WaitTime, Waits, WaitTimePerWait" ));
 
-		lc.setProperty(PROPKEY_sample_extraWhereClause,      conf.getProperty(       PROPKEY_sample_extraWhereClause,      DEFAULT_sample_extraWhereClause));
-		lc.setProperty(PROPKEY_trendGraph_skipWaitIdList,    conf.getProperty(       PROPKEY_trendGraph_skipWaitIdList,    DEFAULT_trendGraph_skipWaitIdList));
-		lc.setProperty(PROPKEY_trendGraph_skipWaitClassList, conf.getProperty(       PROPKEY_trendGraph_skipWaitClassList, DEFAULT_trendGraph_skipWaitClassList));
-		lc.setProperty(PROPKEY_trendGraph_skipUserNameList,  conf.getProperty(       PROPKEY_trendGraph_skipUserNameList,  DEFAULT_trendGraph_skipUserNameList));
-		lc.setProperty(PROPKEY_trendGraph_skipSystemThreads, conf.getBooleanProperty(PROPKEY_trendGraph_skipSystemThreads, DEFAULT_trendGraph_skipSystemThreads));
-		lc.setProperty(PROPKEY_trendGraph_dataSource,        conf.getProperty       (PROPKEY_trendGraph_dataSource,        DEFAULT_trendGraph_dataSource));
-
-		return lc;
+		return list;
 	}
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_extraWhereClause))      return CmSpidWaitPanel.TOOLTIP_sample_extraWhereClause;
-		if (propName.equals(PROPKEY_trendGraph_skipWaitIdList))    return "Skip specific WaitEventID's from beeing in ThrendGraph";
-		if (propName.equals(PROPKEY_trendGraph_skipWaitClassList)) return "Skip specific Event Clases from beeing in ThrendGraph";
-		if (propName.equals(PROPKEY_trendGraph_skipUserNameList))  return "Skip specific users from beeing in ThrendGraph";
-		if (propName.equals(PROPKEY_trendGraph_skipSystemThreads)) return "Skip System SPID's from beeing in ThrendGraph";
-		if (propName.equals(PROPKEY_trendGraph_dataSource))        return "What column should be the source WaitTime, Waits, WaitTimePerWait";
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_extraWhereClause))      return String .class.getSimpleName();
-		if (propName.equals(PROPKEY_trendGraph_skipWaitIdList))    return String .class.getSimpleName();
-		if (propName.equals(PROPKEY_trendGraph_skipWaitClassList)) return String .class.getSimpleName();
-		if (propName.equals(PROPKEY_trendGraph_skipUserNameList))  return String .class.getSimpleName();
-		if (propName.equals(PROPKEY_trendGraph_skipSystemThreads)) return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_trendGraph_dataSource))        return String .class.getSimpleName();
-		return "";
-	}
 
 	/** 
 	 * Fill in the WaitEventDesc column with data from
@@ -430,10 +409,11 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = new String[] { "runtime-replaced" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_EVENT_NAME, new TrendGraphDataPoint(GRAPH_NAME_EVENT_NAME, labels));
-		addTrendGraphData(GRAPH_NAME_CLASS_NAME, new TrendGraphDataPoint(GRAPH_NAME_CLASS_NAME, labels));
+		addTrendGraphData(GRAPH_NAME_EVENT_NAME, new TrendGraphDataPoint(GRAPH_NAME_EVENT_NAME, labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CLASS_NAME, new TrendGraphDataPoint(GRAPH_NAME_CLASS_NAME, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -442,7 +422,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new WaitTrendGraph(GRAPH_NAME_EVENT_NAME,
 					"SPID Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
-					"SPID Wait, group by EventID, WaitTimePerWait Average (from monProcessWaits)", // Label 
+					"SPID Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					labels, 
 					false, // is Percent Graph
 					this, 
@@ -454,7 +434,7 @@ extends CountersModel
 			// GRAPH
 			tg = new WaitTrendGraph(GRAPH_NAME_CLASS_NAME,
 					"SPID Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
-					"SPID Wait, group by ClassName, WaitTimePerWait Average (from monProcessWaits)", // Label 
+					"SPID Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					labels, 
 					false, // is Percent Graph
 					this, 
@@ -517,24 +497,24 @@ extends CountersModel
 			return list;
 		}
 		
-		@Override
-		public void resetGraph()
-		{
-			getTrendGraphData(getName()).clear();
-
-//			if (GRAPH_NAME_EVENT_NAME.equals(getName()))
-//			{
-//				_labelOrder_eventId         = new LinkedHashMap<Integer, Integer>();
-//				_labelOrder_aPosToEventName = new LinkedHashMap<Integer, String>();
-//			}
+//		@Override
+//		public void resetGraph()
+//		{
+//			getTrendGraphData(getName()).clear();
 //
-//			if (GRAPH_NAME_CLASS_NAME.equals(getName()))
-//			{
-//				_labelOrder_className       = new LinkedHashMap<String,  Integer>();
-//				_labelOrder_aPosToClassName = new LinkedHashMap<Integer, String>();
-//			}
-			super.resetGraph();
-		}
+////			if (GRAPH_NAME_EVENT_NAME.equals(getName()))
+////			{
+////				_labelOrder_eventId         = new LinkedHashMap<Integer, Integer>();
+////				_labelOrder_aPosToEventName = new LinkedHashMap<Integer, String>();
+////			}
+////
+////			if (GRAPH_NAME_CLASS_NAME.equals(getName()))
+////			{
+////				_labelOrder_className       = new LinkedHashMap<String,  Integer>();
+////				_labelOrder_aPosToClassName = new LinkedHashMap<Integer, String>();
+////			}
+//			super.resetGraph();
+//		}
 	}
 
 	/** 
@@ -604,9 +584,9 @@ extends CountersModel
 				// Set/change the Label....
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setLabel("SPID Wait, group by ClassName, "+type+" Average (from monProcessWaits)");
+					tg.setChartLabel("SPID Wait, group by ClassName, "+type+" Average  ("+GROUP_NAME+"->"+SHORT_NAME+")");
 
-				HashMap<String, Double> dataMap = new HashMap<String, Double>();
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
 				{
 					// Get the type of data we are going to present
@@ -618,7 +598,8 @@ extends CountersModel
 					// set data & label in the array
 					dataMap.put(wce.getEventNameLabel(), dataValue);
 				}
-				tgdp.setData(this.getTimestamp(), dataMap);
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
 
 
 //				// data & label array size = WaitCounterSummary.size or PRIVIOUS max size
@@ -685,9 +666,9 @@ extends CountersModel
 				// Set/change the Label....
 				TrendGraph tg = getTrendGraph(tgdp.getName());
 				if (tg != null)
-					tg.setLabel("SPID Wait, group by EventID, "+type+" Average (from monProcessWaits)");
+					tg.setChartLabel("SPID Wait, group by EventID, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")");
 
-				HashMap<String, Double> dataMap = new HashMap<String, Double>();
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
 				{
 					// Get the type of data we are going to present
@@ -699,7 +680,8 @@ extends CountersModel
 					// set data & label in the array
 					dataMap.put(wce.getClassName(), dataValue);
 				}
-				tgdp.setData(this.getTimestamp(), dataMap);
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
 				
 
 //				// data & label array size = WaitCounterSummary.size or PRIVIOUS max size

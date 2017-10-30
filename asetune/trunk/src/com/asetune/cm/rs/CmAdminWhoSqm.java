@@ -1,6 +1,7 @@
 package com.asetune.cm.rs;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -14,6 +15,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -110,12 +112,13 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_WRITES,          new TrendGraphDataPoint(GRAPH_NAME_WRITES,          labels));
-		addTrendGraphData(GRAPH_NAME_READ,            new TrendGraphDataPoint(GRAPH_NAME_READ,            labels));
-		addTrendGraphData(GRAPH_NAME_BLK_READS,       new TrendGraphDataPoint(GRAPH_NAME_BLK_READS,       labels));
-		addTrendGraphData(GRAPH_NAME_BLK_CACHE_READS, new TrendGraphDataPoint(GRAPH_NAME_BLK_CACHE_READS, labels));
+		addTrendGraphData(GRAPH_NAME_WRITES,          new TrendGraphDataPoint(GRAPH_NAME_WRITES,          labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_READ,            new TrendGraphDataPoint(GRAPH_NAME_READ,            labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_BLK_READS,       new TrendGraphDataPoint(GRAPH_NAME_BLK_READS,       labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_BLK_CACHE_READS, new TrendGraphDataPoint(GRAPH_NAME_BLK_CACHE_READS, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -174,75 +177,128 @@ extends CountersModel
 		}
 	}
 
+	private List<Integer> getValidRows()
+	{
+		ArrayList<Integer> list = new ArrayList<>(this.size()); 
+		for (int i = 0; i < this.size(); i++)
+		{
+			// disregards rows with "Next Read" is at "start"
+			String CurrentOriginQID = this.getAbsString(i, "Next Read");
+			if ( ! "0.1.0".equals(CurrentOriginQID) )
+				list.add(i);
+		}
+		return list;
+	}
+
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 		if (GRAPH_NAME_WRITES.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "Writes");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Writes");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "Writes");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_READ.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "Read");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Read");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "Read");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_BLK_READS.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "B Reads");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "B Reads");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "B Reads");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_BLK_CACHE_READS.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "B Cache");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "B Cache");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "B Cache");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

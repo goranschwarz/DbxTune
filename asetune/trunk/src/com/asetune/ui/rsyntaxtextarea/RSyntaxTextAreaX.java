@@ -14,6 +14,7 @@ import javax.swing.JComponent;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.event.CaretEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.StyleContext;
 
@@ -21,14 +22,21 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKit;
 import org.fife.ui.rtextarea.RTextAreaEditorKit;
+import org.fife.ui.rtextarea.SearchContext;
+import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
+import com.asetune.gui.swing.ClickListener;
+import com.asetune.gui.swing.DeferredCaretListener;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.FormatSqlAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.NextWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.PreviousWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.SelectWordAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToLowerCaseAction;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaEditorKitX.ToUpperCaseAction;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 public class RSyntaxTextAreaX
@@ -129,6 +137,7 @@ extends RSyntaxTextArea
 		localInit(this);
 	}
 
+    public static final String formatSql   = "format-sql";
     public static final String toUpperCase = "to-upper-case";
     public static final String toLowerCase = "to-lower-case";
 
@@ -147,6 +156,8 @@ extends RSyntaxTextArea
 		am.put(RTextAreaEditorKit.rtaIncreaseFontSizeAction,   new RSyntaxTextAreaEditorKit.IncreaseFontSizeAction());
 		am.put(RTextAreaEditorKit.rtaDecreaseFontSizeAction,   new RSyntaxTextAreaEditorKit.DecreaseFontSizeAction());
 
+		am.put(formatSql,   new FormatSqlAction(formatSql));
+		
 		am.put(toUpperCase, new ToUpperCaseAction(toUpperCase));
 		am.put(toLowerCase, new ToLowerCaseAction(toLowerCase));
 
@@ -162,6 +173,9 @@ extends RSyntaxTextArea
 
 		textArea.registerKeyboardAction(new RSyntaxTextAreaEditorKit.ToggleCommentAction(), RSyntaxTextAreaEditorKit.rstaToggleCommentAction, keyStroke, JComponent.WHEN_FOCUSED);
 //		textArea.getInputMap().put(keyStroke, NAME); // doesn't work...
+
+		// Format SQL: Ctrl + Shift + F
+		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask() | KeyEvent.SHIFT_DOWN_MASK), formatSql);
 
 		// TO LOWER and UPPPER mapping
 		textArea.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_U, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), toUpperCase);
@@ -249,7 +263,59 @@ extends RSyntaxTextArea
 				}
 			}
 		});
+
+		// Poor-mans version of NotePad++ select a word and we highlight the word everywhere in the doc 
+		textArea.addMouseListener(new ClickListener()
+		{
+			@Override
+			public void doubleClick(MouseEvent e)
+			{
+				String str = textArea.getSelectedText();
+				if (StringUtil.hasValue(str))
+				{
+					SearchContext context = new SearchContext(str.trim());
+					context.setMarkAll(true);
+					context.setMatchCase(true);
+					context.setWholeWord(true);
+					SearchEngine.markAll(textArea, context);
+				}
+			}
+			@Override
+			public void singleClick(MouseEvent e)
+			{
+				SearchContext context = new SearchContext();
+				context.setMarkAll(true);
+				context.setMatchCase(true);
+				context.setWholeWord(true);
+				SearchEngine.markAll(textArea, context);
+			}
+		});
+		
+		// Poor-mans version of NotePad++ select a word and we highlight the word everywhere in the doc 
+		textArea.addCaretListener(new DeferredCaretListener()
+		{
+			@Override
+			public void stopMoveWithSelection(CaretEvent e, String selectedText)
+			{
+				// If we have newline, the it's probably NOT a good idea to mark-the-selected-text
+				int nlPos = selectedText.lastIndexOf('\n');
+				if (nlPos == -1) // no newlines
+				{
+    				SearchContext context = new SearchContext(selectedText);
+    				context.setMarkAll(true);
+    				context.setMatchCase(true);
+    				context.setWholeWord(true);
+    				SearchResult sr = SearchEngine.markAll(textArea, context);
+//System.out.println("caretListener-searchResult: getCount()="+sr.getCount()+", getMarkedCount()="+sr.getMarkedCount());
+				}
+			}
+		});
+		
+		// new default: when selecting a variable (or similar) after 350ms, highlight all other variables... (default was 1 second)
+		textArea.setMarkOccurrencesDelay(350);
 	}
+//	private static final Color SELECTION_MARK_COLOR   = new Color(238, 221, 130); // Light Goldenrod
+	
 
 	/** 
 	 * String that holds characters allowed in words<br>
@@ -321,7 +387,7 @@ extends RSyntaxTextArea
 	public FocusableTip createFocusableTip(JTextArea textArea, HyperlinkListener listener)
 	{
 		FocusableTip ft = new FocusableTip(textArea, listener, getToolTipHyperlinkResolver());
-System.out.println("###############:createFocusableTip() created: ft="+ft);
+//System.out.println("###############:createFocusableTip() created: ft="+ft);
 		return ft;
 	}
 
@@ -334,13 +400,13 @@ System.out.println("###############:createFocusableTip() created: ft="+ft);
 	{
 super.setUseFocusableTips(false);
 		String text = super.getToolTipText(e);
-		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: getUseFocusableTips()="+getUseFocusableTips()+"super.text="+text);
+//		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: getUseFocusableTips()="+getUseFocusableTips()+"super.text="+text);
 
 		// Do we want to use "focusable" tips?
 //		if (getUseFocusableTips()) 
 		if (true) 
 		{
-			System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: _focusableTip="+_focusableTip);
+//			System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: _focusableTip="+_focusableTip);
 
 			if (text!=null) 
 			{
@@ -356,11 +422,11 @@ super.setUseFocusableTips(false);
 			{
 				_focusableTip.possiblyDisposeOfTipWindow();
 			}
-			System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: after getUseFocusableTips(): returns null");
+//			System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: after getUseFocusableTips(): returns null");
 			return null;
 		}
 
-		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: at the end, returns text="+text);
+//		System.out.println("XXXXXXXXXXXXXXXXXXXXXXXXXX: at the end, returns text="+text);
 		return text;
 	}
 	

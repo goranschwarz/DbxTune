@@ -67,6 +67,8 @@ extends MonitorIo
 		md.addStatColumn("Q_avgsqsz",  24, 23, true, 10,  1, "Indicates the average service queue size.");
 		md.addStatColumn("Q_sqfull",   25, 24, true, 10,  1, "Indicates the number of times the service queue becomes full (that is, the disk is not accepting any more service requests) per second.");
 
+		md.addStrColumn ("deviceDescription", 27, 0, true, 255, "Mapping of the column 'device' to your own description.");
+
 		// Use "Disks" as the Primary Key, which is used to du summary/average calculations
 		md.setPkCol("Disks");
 

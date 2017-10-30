@@ -146,7 +146,7 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 	protected void remap(int index)
 	{
 		// If we do not have a PCS do not bather to transform data types
-		if ( PersistentCounterHandler.getInstance() == null)
+		if ( ! PersistentCounterHandler.hasInstance() )
 			return;
 
 		//------------------------------------------------------------------------

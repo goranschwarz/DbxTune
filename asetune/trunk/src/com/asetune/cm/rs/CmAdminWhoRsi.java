@@ -14,6 +14,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -100,9 +101,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_BYTES_SENT,       new TrendGraphDataPoint(GRAPH_NAME_BYTES_SENT,       labels));
+		addTrendGraphData(GRAPH_NAME_BYTES_SENT,       new TrendGraphDataPoint(GRAPH_NAME_BYTES_SENT,       labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -112,8 +114,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_BYTES_SENT,
-				"RSI: Number of Bytes Sent, (per Second)", // Menu CheckBox text
-				"RSI: Number of Bytes Sent, (per Second)", // Label 
+				"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Menu CheckBox text
+				"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -140,9 +142,10 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setLabel(lArray);
+//			tgdp.setData(dArray);
 		}
 	}
 

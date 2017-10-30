@@ -1683,7 +1683,7 @@ public class AseConfigMonitoringDialog
 		if ( ! isEnabled )
 			return 0;
 
-		// No need to continue, if we do NOT hace SA_ROLE
+		// No need to continue, if we do NOT have SA_ROLE
 		boolean hasSaRole = AseConnectionUtils.hasRole(conn, AseConnectionUtils.SA_ROLE);
 		if ( ! hasSaRole )
 			return 0;
@@ -1919,7 +1919,7 @@ public class AseConfigMonitoringDialog
 		Configuration conf1 = new Configuration("c:\\projects\\asetune\\asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 
-		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
+		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 
 
@@ -1928,7 +1928,7 @@ public class AseConfigMonitoringDialog
 		{
 			System.out.println("Open the Dialog with a VALID connection.");
 //			Connection conn = AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null);
-			DbxConnection conn = DbxConnection.createDbxConnection( AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null) );
+			DbxConnection conn = DbxConnection.createDbxConnection( AseConnectionFactory.getConnection("gorans-xp", 5000, null, "sa", "", "test-AseConfigMonitoringDialog", null, null) );
 //			AseConfigMonitoringDialog.showDialog((Frame)null, conn, 1251000);
 			AseConfigMonitoringDialog.showDialog((Frame)null, conn, Ver.ver(12,5,1), true);
 

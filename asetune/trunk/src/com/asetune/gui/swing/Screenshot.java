@@ -1,11 +1,11 @@
 package com.asetune.gui.swing;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.Window;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -37,7 +37,8 @@ public class Screenshot
 	 * @param extraInfo     Write some extra info in the top right corner of the screen shot
 	 * @return filename on success, null of failure
 	 */
-	public static String windowScreenshot(Window window, String dir, String baseFilename, boolean doTimeStamp, String extraInfo)
+//	public static String windowScreenshot(Window window, String dir, String baseFilename, boolean doTimeStamp, String extraInfo)
+	public static String windowScreenshot(Component window, String dir, String baseFilename, boolean doTimeStamp, String extraInfo)
 	{
 		String fileSeparator = System.getProperty("file.separator");
 		String filename      = baseFilename;
@@ -68,7 +69,8 @@ public class Screenshot
 	}
 
 	
-	public static boolean windowScreenshot(Window window, String filename, String extraInfo)
+//	public static boolean windowScreenshot(Window window, String filename, String extraInfo)
+	public static boolean windowScreenshot(Component window, String filename, String extraInfo)
 	{
 		if ( window == null )
 			new IllegalArgumentException("Window can't be null");
@@ -138,10 +140,11 @@ public class Screenshot
 
 	/**
 	 */
-	protected static BufferedImage capture(Window window)
+//	protected static BufferedImage capture(Window window)
+	protected static BufferedImage capture(Component comp)
 	{
-		BufferedImage bi = new BufferedImage(window.getWidth(), window.getHeight(), BufferedImage.TYPE_INT_RGB);
-		window.paintAll(bi.createGraphics());
-		return bi;
+		BufferedImage img = new BufferedImage(comp.getWidth(), comp.getHeight(), BufferedImage.TYPE_INT_RGB);
+		comp.paintAll(img.createGraphics());
+		return img;
 	}
 }

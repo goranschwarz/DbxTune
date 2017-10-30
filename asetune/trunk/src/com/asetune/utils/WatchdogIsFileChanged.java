@@ -30,13 +30,27 @@ public class WatchdogIsFileChanged
 
 	/**
 	 * Create a WatchDog, later do: start(), setFile()
-	 * @param checker interface that will be called when a file has been changed
-	 * @param sleepTimeInMs sleep time between checks
+	 * @param checker        interface that will be called when a file has been changed
+	 * @param sleepTimeInMs  sleep time between checks
 	 */
 	public WatchdogIsFileChanged(WatchdogIsFileChangedChecker checker, int sleepTimeInMs)
 	{
+		this(checker, sleepTimeInMs, null);
+	}
+	
+	/**
+	 * Create a WatchDog, later do: start()
+	 * @param checker        interface that will be called when a file has been changed
+	 * @param sleepTimeInMs  sleep time between checks
+	 * @param filename       filename to watch, can be null or "", but then you need to setFile() later...
+	 */
+	public WatchdogIsFileChanged(WatchdogIsFileChangedChecker checker, int sleepTimeInMs, String filename)
+	{
 		_checker     = checker;
 		_sleepTimeMs = sleepTimeInMs;
+		
+		if (StringUtil.hasValue(filename))
+			setFile(filename);
 	}
 	
 	/**
@@ -162,6 +176,7 @@ public class WatchdogIsFileChanged
 	 */
 	public void checkNow()
 	{
-		_watchdogIsFileChanged.interrupt();
+		if (_watchdogIsFileChanged != null)
+			_watchdogIsFileChanged.interrupt();
 	}
 }

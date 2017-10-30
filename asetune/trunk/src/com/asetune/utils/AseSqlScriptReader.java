@@ -433,6 +433,22 @@ public class AseSqlScriptReader
 	}
 
 	/**
+	 * Is there any 'go append' in the script
+	 * @return true if it contains 'go append'
+	 */
+	public boolean isGoAppendInText()
+	{
+		if (_sqlStr == null)
+			return false;
+
+		Pattern goAppend = Pattern.compile("^go .*\\bappend\\b.*$", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+		return goAppend.matcher(_sqlStr).find();
+
+//		return _sqlStr.matches("^go .*\\bappend\\b.*$");  // case sensitive
+//		return _sqlStr.matches("(?i:^go .*\\bappend\\b.*$)");  // case in-sensitive
+	}
+
+	/**
 	 * Get number of batches in this Reader
 	 * <p>
 	 * This opens the input reader and reads thru the input.<br>

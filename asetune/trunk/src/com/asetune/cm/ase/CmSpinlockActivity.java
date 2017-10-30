@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -245,30 +246,16 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_SpinlockSlotID,  conf.getBooleanProperty(PROPKEY_sample_SpinlockSlotID,  DEFAULT_sample_SpinlockSlotID));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
+		list.add(new CmSettingsHelper("View Individual Spinlock Instances", PROPKEY_sample_SpinlockSlotID , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_SpinlockSlotID , DEFAULT_sample_SpinlockSlotID ), DEFAULT_sample_SpinlockSlotID, CmSpinlockActivityPanel.TOOLTIP_sample_SpinlockSlotID ));
+
+		return list;
 	}
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_SpinlockSlotID))  return CmSpinlockActivityPanel.TOOLTIP_sample_SpinlockSlotID;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_SpinlockSlotID))  return Boolean.class.getSimpleName();
-
-		return "";
-	}
 
 	@Override
 	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)

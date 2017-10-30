@@ -6,8 +6,10 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.fife.ui.autocomplete.Completion;
 
 import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CounterTableModel;
@@ -18,6 +20,8 @@ import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.ui.autocomplete.CompletionProviderAse;
+import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.StringUtil;
 
 public class ToolTipSupplierAse 
@@ -29,9 +33,14 @@ extends CmToolTipSupplierDefault
 //	private String _currentObjectName = "";
 //	Timer          _aseShowplanTimer;
 
+	private CompletionProviderAse _complProvider;
+
 	public ToolTipSupplierAse(CountersModel cm)
 	{
 		super(cm);
+		
+		_complProvider = new CompletionProviderAse(MainFrame.getInstance(), MainFrame.getInstance());
+		_complProvider.setWildcatdMath(false);
 		
 //		// Setup timer for not overloading the AseShowplan component
 //		_aseShowplanTimer = new Timer(500, new ActionListener()
@@ -86,7 +95,7 @@ extends CmToolTipSupplierDefault
 		}
 
 		// XML ShowPlan
-		if ( _cm.isConnected() && ("ObjectName".equalsIgnoreCase(colName) || "procName".equalsIgnoreCase(colName)) )
+		if ( _cm.isConnected() && ("ObjectName".equalsIgnoreCase(colName) || "procName".equalsIgnoreCase(colName) || "OldestTranProcName".equalsIgnoreCase(colName)) )
 		{
 			//Object cellVal = getValueAt(modelRow, modelCol);
 			if (cellValue != null && cellValue instanceof String)
@@ -95,6 +104,30 @@ extends CmToolTipSupplierDefault
 				if (objectName.startsWith("*ss") || objectName.startsWith("*sq"))
 				{
 					AsePlanViewer.getInstance().loadXmlFromCacheDeferred(objectName);
+				}
+				else
+				{
+					if ("ObjectName".equalsIgnoreCase(colName))
+					{
+//						DbxConnection conn = _cm.getCounterController().getMonConnection();
+						DbxConnection conn = _complProvider.getConnectionProvider().getConnection();
+
+						String dbName       = _cm.getAbsString(modelRow, "DBName");
+						String tabObjId     = _cm.getAbsString(modelRow, "ObjectID");
+						String tabOwnerName = AseConnectionUtils.getObjectOwner(conn, dbName, tabObjId);
+						
+						List<Completion> list = _complProvider.getTableListWithGuiProgress(conn, dbName, tabOwnerName, objectName);
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("ToolTipSupplierAse.getToolTipTextOnTableCell(ObjectName): dbName='"+dbName+"', ownerName='"+tabOwnerName+"', objectName='"+objectName+"', cm='"+_cm.getName()+"'. list.size()="+(list==null?"-null-":list.size())+".");
+
+						if ( list != null )
+						{
+							if      (list.size() == 0) return "No table information found for table '"+tabOwnerName+"."+objectName+"' in database '"+dbName+"'.";
+							else if (list.size() == 1) return list.get(0).getSummary();
+							else                       return "Found table information, but I found MORE than 1 table, count="+list.size()+". I can only show info for 1 table. (database='"+dbName+"', table='"+tabOwnerName+"."+objectName+"')";
+						}
+					}
 				}
 //System.out.println("colName='"+colName+"', cellValue='"+cellValue+"'");
 //				if (objectName.startsWith("*ss") || objectName.startsWith("*sq"))
@@ -292,6 +325,8 @@ extends CmToolTipSupplierDefault
 					       "</html>";
 				}
 			}
+			
+			return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 		}
 
 		return null;

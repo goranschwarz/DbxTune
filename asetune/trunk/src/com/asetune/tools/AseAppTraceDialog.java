@@ -89,7 +89,7 @@ import net.miginfocom.swing.MigLayout;
 
 public class AseAppTraceDialog
 extends JDialog
-implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
+implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
 {
 	private static Logger _logger = Logger.getLogger(AseAppTraceDialog.class);
 	private static final long serialVersionUID = 1L;
@@ -595,6 +595,13 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		_sshHostname_txt.addFocusListener(this);
 		_sshPort_txt    .addFocusListener(this);
 
+		// Caret listener
+		_sshUsername_txt.addCaretListener(this);
+		_sshPassword_txt.addCaretListener(this);
+		_sshHostname_txt.addCaretListener(this);
+		_sshPort_txt    .addCaretListener(this);
+
+		
 		return panel;
 	}
 
@@ -1011,6 +1018,12 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	{
 		// Simply use the action listener...
 		actionPerformed( new ActionEvent(e.getSource(), e.getID(), "focusLost") );
+	}
+
+	@Override
+	public void caretUpdate(CaretEvent e)
+	{
+		validateInput();
 	}
 
 	/** enable/disable some fields depending if we are connected or not, Try to figure out in what state we are in */
@@ -3107,7 +3120,7 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-		Configuration conf1 = new Configuration(Version.APP_STORE_DIR + "/asetune.save.properties");
+		Configuration conf1 = new Configuration(Version.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 		
 		Configuration.setSearchOrder(Configuration.USER_TEMP);

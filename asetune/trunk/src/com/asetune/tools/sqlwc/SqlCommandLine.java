@@ -33,18 +33,17 @@ public class SqlCommandLine
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
-		    && javaVersionInt <  JavaVersion.VERSION_1_7
+		    && javaVersionInt <  JavaVersion.VERSION_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception("This application needs a JVM 1.7 or higher.");
-//			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
 		}
 
 		//---------------------------------------------------------------
@@ -932,7 +931,7 @@ public class SqlCommandLine
 //		PropertyConfigurator.configure(log4jProps);
 //
 ////		// Set configuration, right click menus are in there...
-////		Configuration conf = new Configuration("c:\\projects\\asetune\\asetune.properties");
+////		Configuration conf = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 ////		Configuration.setInstance(Configuration.SYSTEM_CONF, conf);
 //
 ////		String server = "GORAN_1_DS";

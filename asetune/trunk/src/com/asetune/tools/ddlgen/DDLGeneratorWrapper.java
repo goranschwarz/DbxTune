@@ -237,7 +237,7 @@ public class DDLGeneratorWrapper
 
 			// Call setParams();
 			Method m_setParams = ddlGen.getClass().getMethod("setParams", String[].class);
-			m_setParams.invoke(ddlGen, xxx);
+			m_setParams.invoke(ddlGen, (Object)xxx);
 //			ddlGen.setParams(xxx);
 
 //	        Class<?> callerClass = classLoader.loadClass("com.sybase.ddlgen.sql.ASConnection"); 

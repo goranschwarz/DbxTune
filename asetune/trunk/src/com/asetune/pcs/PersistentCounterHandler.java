@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -24,6 +25,7 @@ import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -57,7 +59,9 @@ implements Runnable
                                                                                  
 	public static final String  PROPKEY_warnQueueSizeThresh                      = "PersistentCounterHandler.warnQueueSizeThresh";
 	public static final int     DEFAULT_warnQueueSizeThresh                      = 2;
-                                                                                 
+
+
+
 	public static final String  PROPKEY_sqlCap_doSqlCaptureAndStore              = "PersistentCounterHandler.sqlCapture.doSqlCaptureAndStore";
 	public static final boolean DEFAULT_sqlCap_doSqlCaptureAndStore              = false;
                                                                                  
@@ -73,6 +77,21 @@ implements Runnable
 	public static final String  PROPKEY_sqlCap_doPlanText                        = "PersistentCounterHandler.sqlCapture.doPlanText";
 	public static final boolean DEFAULT_sqlCap_doPlanText                        = false;
                                                                                  
+	public static final String  PROPKEY_sqlCap_sleepTimeInMs                     = "PersistentCounterHandler.sqlCapture.sleepTimeInMs";
+	public static final int     DEFAULT_sqlCap_sleepTimeInMs                     = 1000;
+	                                                                             
+	public static final String  PROPKEY_sqlCap_saveStatement_whereClause         = "PersistentCounterHandler.sqlCapture.saveStatement.where.clause";
+	public static final String  DEFAULT_sqlCap_saveStatement_whereClause         = ""; // "" = do not use any where caluse
+
+	public static final String  PROPKEY_sqlCap_saveStatement_gt_execTime         = "PersistentCounterHandler.sqlCapture.saveStatement.gt.execTime";
+	public static final int     DEFAULT_sqlCap_saveStatement_gt_execTime         = -1; // -1 = save everything
+
+	public static final String  PROPKEY_sqlCap_saveStatement_gt_logicalReads     = "PersistentCounterHandler.sqlCapture.saveStatement.gt.logicalReads";
+	public static final int     DEFAULT_sqlCap_saveStatement_gt_logicalReads     = -1; // -1 = save everything
+
+	public static final String  PROPKEY_sqlCap_saveStatement_gt_physicalReads    = "PersistentCounterHandler.sqlCapture.saveStatement.gt.physicalReads";
+	public static final int     DEFAULT_sqlCap_saveStatement_gt_physicalReads    = -1; // -1 = save everything
+
 	public static final String  PROPKEY_sqlCap_sendDdlForLookup                  = "PersistentCounterHandler.sqlCapture.sendDdlForLookup";
 	public static final boolean DEFAULT_sqlCap_sendDdlForLookup                  = true;
                                                                                  
@@ -87,15 +106,15 @@ implements Runnable
 
 	public static final String  PROPKEY_sqlCap_sendSizeThreshold                 = "PersistentCounterHandler.sqlCapture.sendSizeThreshold";
 	public static final int     DEFAULT_sqlCap_sendSizeThreshold                 = 1000;
-                                                                                 
-	public static final String  PROPKEY_sqlCap_sleepTimeInMs                     = "PersistentCounterHandler.sqlCapture.sleepTimeInMs";
-	public static final int     DEFAULT_sqlCap_sleepTimeInMs                     = 1000;
-	                                                                             
+
 	public static final String  PROPKEY_sqlCap_clearBeforeFirstPoll              = "PersistentCounterHandler.sqlCapture.clearBeforeFirstPoll";
 	public static final boolean DEFAULT_sqlCap_clearBeforeFirstPoll              = true;
-                                                                                 
+
 	public static final String  PROPKEY_sqlCap_warnStoreQueueSizeThresh          = "PersistentCounterHandler.sqlCapture.warnStoreQueueSizeThresh";
 	public static final int     DEFAULT_sqlCap_warnStoreQueueSizeThresh          = 5000;
+
+	public static final String  PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed  = "PersistentCounterHandler.sqlCapture.isNonConfiguredMonitoringAllowed";
+	public static final boolean DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed  = true;
 
 	public static final String  PROPKEY_WriterClass                              = "PersistentCounterHandler.WriterClass";
 //	public static final String  DEFAULT_WriterClass                              = null; // no default
@@ -115,10 +134,17 @@ implements Runnable
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_doStatementInfo,                   DEFAULT_sqlCap_doStatementInfo);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_doPlanText,                        DEFAULT_sqlCap_doPlanText);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_sleepTimeInMs,                     DEFAULT_sqlCap_sleepTimeInMs);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_saveStatement_gt_execTime,         DEFAULT_sqlCap_saveStatement_gt_execTime);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_saveStatement_gt_logicalReads,     DEFAULT_sqlCap_saveStatement_gt_logicalReads);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_saveStatement_gt_physicalReads,    DEFAULT_sqlCap_saveStatement_gt_physicalReads);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_sendDdlForLookup,                  DEFAULT_sqlCap_sendDdlForLookup);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_sendDdlForLookup_gt_execTime,      DEFAULT_sqlCap_sendDdlForLookup_gt_execTime);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads,  DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads);
 		Configuration.registerDefaultValue(PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_sendSizeThreshold,                 DEFAULT_sqlCap_sendSizeThreshold);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_clearBeforeFirstPoll,              DEFAULT_sqlCap_clearBeforeFirstPoll);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_warnStoreQueueSizeThresh,          DEFAULT_sqlCap_warnStoreQueueSizeThresh);
+		Configuration.registerDefaultValue(PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed,  DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed);
 	}
 
 	/*---------------------------------------------------
@@ -214,13 +240,13 @@ implements Runnable
 		_sqlCaptureBroker      = sqlCaptureBroker;
 	}
 
-	public PersistentCounterHandler(Configuration props, IObjectLookupInspector objectLookupInspector, ISqlCaptureBroker sqlCaptureBroker)
-	throws Exception
-	{
-		_objectLookupInspector = objectLookupInspector;
-		_sqlCaptureBroker      = sqlCaptureBroker;
-		init(props);
-	}
+//	public PersistentCounterHandler(Configuration props, IObjectLookupInspector objectLookupInspector, ISqlCaptureBroker sqlCaptureBroker)
+//	throws Exception
+//	{
+//		_objectLookupInspector = objectLookupInspector;
+//		_sqlCaptureBroker      = sqlCaptureBroker;
+//		init(props);
+//	}
 
 	public ISqlCaptureBroker getSqlCaptureBroker()
 	{
@@ -253,6 +279,16 @@ implements Runnable
 	throws Exception
 	{
 		_props = props; 
+//System.out.println("PersistanceCounterHandler.init(): props="+StringUtil.toCommaStr(props));
+//if (props != null)
+//{
+//	SortedSet<Object> keys = new TreeSet<Object>(props.keySet());
+//	for (Object key : keys)
+//		System.out.println("----- key="+StringUtil.left("'"+key+"'", 100)+", value='"+props.getProperty(key.toString())+"'");
+//
+//	System.out.println("===== PROPKEY_ddl_doDdlLookupAndStore:     '"+PROPKEY_ddl_doDdlLookupAndStore+"'    : "+props.getProperty(PROPKEY_ddl_doDdlLookupAndStore));
+//	System.out.println("===== PROPKEY_sqlCap_doSqlCaptureAndStore: '"+PROPKEY_sqlCap_doSqlCaptureAndStore+"': "+props.getProperty(PROPKEY_sqlCap_doSqlCaptureAndStore));
+//}
 		
 		_logger.info("Initializing the Persistent Counter Handler functionality.");
 
@@ -265,28 +301,67 @@ implements Runnable
 		_afterDdlLookupSleepTimeInMs     = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
 		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
 		
-		_doDdlLookupAndStore             = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             _doDdlLookupAndStore);
+		_doDdlLookupAndStore             = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             DEFAULT_ddl_doDdlLookupAndStore);
 		
-		_doSqlCaptureAndStore            = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore,         _doSqlCaptureAndStore);
+		_doSqlCaptureAndStore            = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore,         DEFAULT_sqlCap_doSqlCaptureAndStore);
 
 		// property: alarm.handleAlarmEventClass
 		// NOTE: this could be a comma ',' separated list
 		String writerClasses = _props.getProperty(PROPKEY_WriterClass);
 
 		_logger.info("Configuration for PersistentCounterHandler");
-		_logger.info("                  "+PROPKEY_WriterClass+"                         = "+writerClasses);
-		_logger.info("                  "+PROPKEY_warnQueueSizeThresh+"                 = "+_warnQueueSizeThresh);
-		_logger.info("                  "+PROPKEY_ddl_doDdlLookupAndStore+"             = "+_doDdlLookupAndStore);
-		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+" = "+_addDependantObjectsToDdlInQueue);
-		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"     = "+_afterDdlLookupSleepTimeInMs);
-		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"     = "+_warnDdlInputQueueSizeThresh);
-		_logger.info("                  "+PROPKEY_ddl_warnDdlStoreQueueSizeThresh+"     = "+_warnDdlStoreQueueSizeThresh);
+		_logger.info("                  "+PROPKEY_WriterClass+"                              = "+writerClasses);
+		_logger.info("                  "+PROPKEY_warnQueueSizeThresh+"                      = "+_warnQueueSizeThresh);
+		_logger.info("                  "+PROPKEY_ddl_doDdlLookupAndStore+"                  = "+_doDdlLookupAndStore);
+		if (_doDdlLookupAndStore)
+		{
+		_logger.info("                  ObjectLookupInspector ClassName                      = "+( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
+		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+"      = "+_addDependantObjectsToDdlInQueue);
+		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"          = "+_afterDdlLookupSleepTimeInMs);
+		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"          = "+_warnDdlInputQueueSizeThresh);
+		_logger.info("                  "+PROPKEY_ddl_warnDdlStoreQueueSizeThresh+"          = "+_warnDdlStoreQueueSizeThresh);
+		}
+
+		_logger.info("                  "+PROPKEY_sqlCap_doSqlCaptureAndStore    +"          = "+_doSqlCaptureAndStore);
+		if (_doSqlCaptureAndStore)
+		{
+		_logger.info("                  SqlCaptureBroker ClassName                           = "+( _sqlCaptureBroker == null ? "null" : _sqlCaptureBroker.getClass().getName()));
+		_logger.info("                  "+PROPKEY_sqlCap_doSqlText+"                         = "+_props.getProperty(PROPKEY_sqlCap_doSqlText));
+		_logger.info("                  "+PROPKEY_sqlCap_doStatementInfo+"                   = "+_props.getProperty(PROPKEY_sqlCap_doStatementInfo));
+		_logger.info("                  "+PROPKEY_sqlCap_doPlanText+"                        = "+_props.getProperty(PROPKEY_sqlCap_doPlanText));
+		_logger.info("                  "+PROPKEY_sqlCap_sleepTimeInMs+"                     = "+_props.getProperty(PROPKEY_sqlCap_sleepTimeInMs));
+		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_whereClause +"        = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_whereClause));
+		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_gt_execTime+"         = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_gt_execTime));
+		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_gt_logicalReads+"     = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_gt_logicalReads));
+		_logger.info("                  "+PROPKEY_sqlCap_saveStatement_gt_physicalReads+"    = "+_props.getProperty(PROPKEY_sqlCap_saveStatement_gt_physicalReads));
+		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup+"                  = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup));
+		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup_gt_execTime+"      = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_execTime));
+		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads+"  = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads));
+		_logger.info("                  "+PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads+" = "+_props.getProperty(PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads));
+		_logger.info("                  "+PROPKEY_sqlCap_sendSizeThreshold+"                 = "+_props.getProperty(PROPKEY_sqlCap_sendSizeThreshold));
+		_logger.info("                  "+PROPKEY_sqlCap_clearBeforeFirstPoll+"              = "+_props.getProperty(PROPKEY_sqlCap_clearBeforeFirstPoll));
+		_logger.info("                  "+PROPKEY_sqlCap_warnStoreQueueSizeThresh+"          = "+_props.getProperty(PROPKEY_sqlCap_warnStoreQueueSizeThresh));
+		_logger.info("                  "+PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed+"  = "+_props.getProperty(PROPKEY_sqlCap_isNonConfiguredMonitoringAllowed));
+		}
+
 
 		if (_doDdlLookupAndStore)
 			_logger.info("The most active objects/statements/etc, "+Version.getAppName()+" will do DDL Lookup and Store information about them. To turn this off, set the property 'PersistentCounterHandler.doDdlLookupAndStore' to 'false' in configuration for the PersistentCounterHandler module.");
 		else
 			_logger.info("No DDL Lookup and Store will be done. The property 'PersistentCounterHandler.doDdlLookupAndStore' is set to 'false' in configuration for the PersistentCounterHandler module.");
 
+		// Initialize The Object Inspector
+		if (_objectLookupInspector != null)
+		{
+			_objectLookupInspector.init(_props);
+		}
+
+		// Initialize The SQL Capture Broker
+		if (_sqlCaptureBroker != null)
+		{
+			_sqlCaptureBroker.init(_props);
+		}
+		
 		// Check writer classes
 		if (writerClasses == null)
 		{
@@ -1315,6 +1390,33 @@ implements Runnable
 	private class DdlLookupQueueHandler
 	implements Runnable
 	{
+		private void checkForConfigChanges()
+		{
+			// doSqlCaptureAndStore
+			boolean doDdlLookupAndStore = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore, DEFAULT_ddl_doDdlLookupAndStore);
+			if (doDdlLookupAndStore != _doDdlLookupAndStore)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _doDdlLookupAndStore from '"+_doDdlLookupAndStore+"', to '"+doDdlLookupAndStore+"'.");
+				_doDdlLookupAndStore = doDdlLookupAndStore;
+			}
+
+			// Check if Sleep time was changed
+			int afterDdlLookupSleepTimeInMs = _props.getIntProperty(PROPKEY_ddl_afterDdlLookupSleepTimeInMs, DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
+			if (afterDdlLookupSleepTimeInMs != _afterDdlLookupSleepTimeInMs)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in sleep time 'after persist' from '"+_sqlCaptureSleepTimeInMs+"', to '"+afterDdlLookupSleepTimeInMs+"'.");
+				_afterDdlLookupSleepTimeInMs = afterDdlLookupSleepTimeInMs;
+			}
+
+			// Add dependant Object
+			boolean addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, DEFAULT_ddl_addDependantObjectsToDdlInQueue);
+			if (addDependantObjectsToDdlInQueue != _addDependantObjectsToDdlInQueue)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _addDependantObjectsToDdlInQueue from '"+_addDependantObjectsToDdlInQueue+"', to '"+addDependantObjectsToDdlInQueue+"'.");
+				_addDependantObjectsToDdlInQueue = addDependantObjectsToDdlInQueue;
+			}
+		}
+
 		@Override
 		public void run()
 		{
@@ -1337,8 +1439,13 @@ implements Runnable
 	
 				try 
 				{
-					ObjectLookupQueueEntry qe = _ddlInputQueue.take();
-					fireQueueSizeChange();
+//					ObjectLookupQueueEntry qe = _ddlInputQueue.take();
+//					fireQueueSizeChange();
+					ObjectLookupQueueEntry qe = _ddlInputQueue.poll(1000, TimeUnit.MILLISECONDS);
+					if (qe != null)
+						fireQueueSizeChange();
+
+					checkForConfigChanges();
 
 					// this should not happen, but just in case
 					if ( ! _doDdlLookupAndStore )
@@ -1364,7 +1471,7 @@ implements Runnable
 					prevLookupTimeMs = stopTime-startTime;
 					if (_logger.isDebugEnabled())
 						_logger.debug("It took "+prevLookupTimeMs+" ms to lookup the DDL "+qe+".");
-					
+
 					// Let others do some work. so we don't monopolize the server.
 					if (didLookup && _afterDdlLookupSleepTimeInMs > 0)
 						Thread.sleep((int)_afterDdlLookupSleepTimeInMs);
@@ -1652,6 +1759,14 @@ implements Runnable
 		return (_writerClasses.size() > 0);
 	}
 
+	/**
+	 * Get installed writer classes
+	 * @return
+	 */
+	public List<IPersistWriter> getWriters()
+	{
+		return _writerClasses;
+	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
@@ -1930,7 +2045,7 @@ implements Runnable
 		if (persistTimeInMs > 30000) // more than 30 seconds, write it if format HH:MM:SS.ms
 			longTimeStr = "(" + TimeUtils.msToTimeStr(persistTimeInMs) + "). ";
 		
-		_logger.info("Persisting Counters using '"+persistWriterName+"' for sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. " + longTimeStr + writerStatistics.getStatisticsString() );
+		_logger.info("Persisting Counters using '"+persistWriterName+"' for sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. jvmMemoryLeftInMB="+Memory.getMemoryLeftInMB()+". "+ longTimeStr + writerStatistics.getStatisticsString() );
 
 		for (PcsQueueChange l : _queueChangeListeners)
 			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, writerStatistics);
@@ -1940,7 +2055,7 @@ implements Runnable
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
-	//// DDL Lookup Database Connection
+	//// SQL Capture Database Connection
 	////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////
 	/** Connection to the DDL Storage. */
@@ -2082,6 +2197,25 @@ implements Runnable
 	private class SqlCaptureHandler
 	implements Runnable
 	{
+		private void checkForConfigChanges()
+		{
+			// doSqlCaptureAndStore
+			boolean doSqlCaptureAndStore = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore, DEFAULT_sqlCap_doSqlCaptureAndStore);
+			if (doSqlCaptureAndStore != _doSqlCaptureAndStore)
+			{
+				_logger.info("SqlCaptureHandler: Discovered a config change in _doSqlCaptureAndStore from '"+_doSqlCaptureAndStore+"', to '"+doSqlCaptureAndStore+"'.");
+				_doSqlCaptureAndStore = doSqlCaptureAndStore;
+			}
+
+			// Sleep time 
+			int sqlCaptureSleepTimeInMs = _props.getIntProperty(PROPKEY_sqlCap_sleepTimeInMs, DEFAULT_sqlCap_sleepTimeInMs);
+			if (sqlCaptureSleepTimeInMs != _sqlCaptureSleepTimeInMs)
+			{
+				_logger.info("SqlCaptureHandler: Discovered a config change in sleep time from '"+_sqlCaptureSleepTimeInMs+"', to '"+sqlCaptureSleepTimeInMs+"'.");
+				_sqlCaptureSleepTimeInMs = sqlCaptureSleepTimeInMs;
+			}
+		}
+
 		@Override
 		public void run()
 		{
@@ -2097,9 +2231,14 @@ implements Runnable
 			{
 				try 
 				{
+					checkForConfigChanges();
+					
 					// this should not happen, but just in case
-					if ( ! _doDdlLookupAndStore )
+					if ( ! _doSqlCaptureAndStore )
+					{
+						Thread.sleep(1000);
 						continue;
+					}
 
 					// Go and store or consume the in-data/container
 					long startTime = System.currentTimeMillis();

@@ -71,16 +71,24 @@ public class JdbcUrlParser
 		}
 		else
 		{
+//			if (url.startsWith("jdbc:sqlserver://"))
+//				url = url.replace("jdbc:sqlserver://", "jdbc:sqlserver:/");
+//			if (url.startsWith("jdbc:sqlserver://"))
+//				url = url.replace("jdbc:sqlserver://", "jdbc:sqlserver:");
+
 			try
 			{
-        		String cleanURI = url.substring("jdbc:".length());
-        
-        		URI uri = URI.create(cleanURI);
-        
-    			p.setDbType     (uri.getScheme());
-        		p.setHost       (uri.getHost());
-        		p.setPort       (uri.getPort());
-        		p.setHostPortStr( null );
+				String cleanURI = url.substring("jdbc:".length());
+				
+				URI uri = URI.create(cleanURI);
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("JdbcUrlParser.parse(url='"+url+"'): cleanURI='"+cleanURI+"', uri.getScheme()='"+uri.getScheme()+"', uri.getHost()='"+uri.getHost()+"', uri.getPort()='"+uri.getPort()+"'.");
+				
+				p.setDbType     (uri.getScheme());
+				p.setHost       (uri.getHost());
+				p.setPort       (uri.getPort());
+				p.setHostPortStr( null ); // getHostPortStr(): if _hostPortStr==null -> getHost() + ":" + getPort()
 			}
 			catch (Throwable ex)
 			{
@@ -112,8 +120,11 @@ public class JdbcUrlParser
 		test("jdbc:sapdb://vadbj00.od.sap.biz/J00");
 		test("jdbc:oracle:thin:@//nlhtblob001.htb.sap.corp:1521/ORA11DEV");
 		test("jdbc:sqlserver://mo-58db799f7.mo.sap.corp:1433");
+		test("jdbc:sqlserver://gorans-ub2:1433");
 		test("jdbc:sap://mo-b402c54f9.mo.sap.corp:30015");
 		test("jdbc:h2:file:C:/projects/asetune_recordings_temp/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+		test("jdbc:h2:tcp://192.168.0.112/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+		test("jdbc:h2:tcp://192.168.0.111:9092/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
 		test("jdbc:sybase:Tds:localhost:15702,STON60266746A:15702?IS_CLOSED_TEST=INTERNAL&ENCRYPT_PASSWORD=true");
 		test("jdbc:sybase:Tds:localhost:15702/goransdb?IS_CLOSED_TEST=INTERNAL&ENCRYPT_PASSWORD=true");
 		test("jdbc:oracle:thin:@//nlhtblob001.htb.sap.corp:1521/ora11dev");

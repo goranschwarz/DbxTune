@@ -54,6 +54,7 @@ public abstract class PersistWriterBase
 	public static final int SQL_CAPTURE_SQLTEXT      = 60;
 	public static final int SQL_CAPTURE_STATEMENTS   = 61;
 	public static final int SQL_CAPTURE_PLANS        = 62;
+	public static final int ALARM_HISTORY            = 90;
 	public static final int ABS                      = 100;
 	public static final int DIFF                     = 101;
 	public static final int RATE                     = 102;
@@ -541,6 +542,7 @@ public abstract class PersistWriterBase
 		case SQL_CAPTURE_SQLTEXT:      return q + "MonSqlCapSqlText"            + q;
 		case SQL_CAPTURE_STATEMENTS:   return q + "MonSqlCapStatements"         + q;
 		case SQL_CAPTURE_PLANS:        return q + "MonSqlCapPlans"              + q;
+		case ALARM_HISTORY:            return q + "MonAlarmHistory"             + q;
 		case ABS:                      return q + cm.getName() + "_abs"         + q;
 		case DIFF:                     return q + cm.getName() + "_diff"        + q;
 		case RATE:                     return q + cm.getName() + "_rate"        + q;
@@ -654,6 +656,9 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"nonCfgMonMissingParams"+qic,40)+" "+fill(getDatatype("varchar", 100, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"nonCfgMonMessages"     +qic,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"isCountersCleared"     +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"hasValidSampleData"    +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"exceptionMsg"          +qic,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"exceptionFullText"     +qic,40)+" "+fill(getDatatype("text",    -1,  -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
 			else if (type == SESSION_MON_TAB_DICT)
@@ -667,7 +672,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"Indicators"       +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"Size"             +qic,40)+" "+fill(getDatatype("int",     -1,  -1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"TableName"        +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 1800,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 4000,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
 			else if (type == SESSION_MON_TAB_COL_DICT)
@@ -685,7 +690,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"TableName"        +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"ColumnName"       +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append("   ,"+fill(qic+"TypeName"         +qic,40)+" "+fill(getDatatype("varchar", 255, -1,-1),20)+" "+getNullable(true)+"\n");
-				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 1800,-1,-1),20)+" "+getNullable(true)+"\n");
+				sbSql.append("   ,"+fill(qic+"Description"      +qic,40)+" "+fill(getDatatype("varchar", 4000,-1,-1),20)+" "+getNullable(true)+"\n");
 				sbSql.append(") \n");
 			}
 			else if (type == SESSION_DBMS_CONFIG)
@@ -799,6 +804,37 @@ public abstract class PersistWriterBase
 ////			else if (type == SQL_CAPTURE_PLANS)
 ////			{
 ////			}
+			else if (type == ALARM_HISTORY)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"SessionStartTime"           +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"SessionSampleTime"          +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"eventTime"	              +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"action"                     +qic,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(false)+"\n");
+//				sbSql.append("   ,"+fill(qic+"isActive"                   +qic,40)+" "+fill(getDatatype("bit",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"alarmClass"                 +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"serviceType"                +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"serviceName"                +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"serviceInfo"                +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"extraInfo"                  +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"severity"                   +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"state"                      +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"repeatCnt"                  +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"duration"                   +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"createTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"cancelTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"timeToLive"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"description"                +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"lastDescription"            +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"extendedDescription"        +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"lastExtendedDescription"    +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"EventTime"+qic+", "+qic+"Action"+qic+", "+qic+"AlarmClass"+qic+", "+qic+"serviceType"+qic+", "+qic+"serviceName"+qic+", "+qic+"serviceInfo"+qic+", "+qic+"extraInfo"+qic+")\n");
+				sbSql.append(") \n");
+			}
 			else if (type == ABS || type == DIFF || type == RATE)
 			{
 				sbSql.append("create table " + tabName + "\n");
@@ -910,6 +946,19 @@ public abstract class PersistWriterBase
 	public String getTableInsertStr(int type, CountersModel cm, boolean addPrepStatementQuestionMarks)
 	throws SQLException
 	{
+		return getTableInsertStr(type, cm, addPrepStatementQuestionMarks, null);
+	}
+	/**
+	 * Helper method to generate a: "insert into TABNAME(c1,c2,c3) [values(?,?...)]"
+	 * @param type ABS | DIFF | RATE | SYSTEM_TYPE
+	 * @param cm Counter Model info (can be null if SYSTEM type is used)
+	 * @param tgdp Trends Graph information
+	 * @param addPrepStatementQuestionMarks if true add "values(?,?,?...)" which can be used by a prepared statement
+	 * @return
+	 */
+	public String getTableInsertStr(int type, CountersModel cm, boolean addPrepStatementQuestionMarks, List<String> cmColumns)
+	throws SQLException
+	{
 		String tabName = getTableName(type, cm, true);
 		StringBuffer sbSql = new StringBuffer();
 
@@ -987,7 +1036,10 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("nonCfgMonHappened")     .append(qic).append(", ");
 			sbSql.append(qic).append("nonCfgMonMissingParams").append(qic).append(", ");
 			sbSql.append(qic).append("nonCfgMonMessages")     .append(qic).append(", ");
-			sbSql.append(qic).append("isCountersCleared")     .append(qic).append(" ");
+			sbSql.append(qic).append("isCountersCleared")     .append(qic).append(", ");
+			sbSql.append(qic).append("hasValidSampleData")    .append(qic).append(", ");
+			sbSql.append(qic).append("exceptionMsg")          .append(qic).append(", ");
+			sbSql.append(qic).append("exceptionFullText")     .append(qic).append(" ");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
@@ -1119,6 +1171,37 @@ public abstract class PersistWriterBase
 //		else if (type == SQL_CAPTURE_PLANS)
 //		{
 //		}
+		else if (type == ALARM_HISTORY)
+		{
+			sbSql.append("insert into ").append(tabName).append(" (");
+			sbSql.append(qic).append("SessionStartTime"       ).append(qic).append(", ");
+			sbSql.append(qic).append("SessionSampleTime"      ).append(qic).append(", ");
+			sbSql.append(qic).append("EventTime"	          ).append(qic).append(", ");
+			sbSql.append(qic).append("Action"                 ).append(qic).append(", ");
+//			sbSql.append(qic).append("isActive"               ).append(qic).append(", ");
+			sbSql.append(qic).append("AlarmClass"             ).append(qic).append(", ");
+			sbSql.append(qic).append("serviceType"            ).append(qic).append(", ");
+			sbSql.append(qic).append("serviceName"            ).append(qic).append(", ");
+			sbSql.append(qic).append("serviceInfo"            ).append(qic).append(", ");
+			sbSql.append(qic).append("extraInfo"              ).append(qic).append(", ");
+			sbSql.append(qic).append("severity"               ).append(qic).append(", ");
+			sbSql.append(qic).append("state"                  ).append(qic).append(", ");
+			sbSql.append(qic).append("repeatCnt"              ).append(qic).append(", ");
+			sbSql.append(qic).append("duration"               ).append(qic).append(", ");
+			sbSql.append(qic).append("createTime"             ).append(qic).append(", ");
+			sbSql.append(qic).append("cancelTime"             ).append(qic).append(", ");
+			sbSql.append(qic).append("timeToLive"             ).append(qic).append(", ");
+			sbSql.append(qic).append("Data"                   ).append(qic).append(", ");
+			sbSql.append(qic).append("LastData"               ).append(qic).append(", ");
+			sbSql.append(qic).append("description"            ).append(qic).append(", ");
+			sbSql.append(qic).append("LastDescription"        ).append(qic).append(", ");
+			sbSql.append(qic).append("extendedDescription"    ).append(qic).append(", ");
+			sbSql.append(qic).append("LastExtendedDescription").append(qic).append("");
+			sbSql.append(") \n");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 
+		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
 			sbSql.append("insert into ").append(tabName) .append(" (");
@@ -1129,9 +1212,12 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("CmNewDiffRateRow") .append(qic).append(", ");
 			
 			// Get ALL other column names from the CM
-			int cols = cm.getColumnCount();
+//			int cols = cm.getColumnCount();
+//			for (int c=0; c<cols; c++) 
+//				sbSql.append(qic).append(cm.getColumnName(c)).append(qic).append(", ");
+			int cols = cmColumns.size();
 			for (int c=0; c<cols; c++) 
-				sbSql.append(qic).append(cm.getColumnName(c)).append(qic).append(", ");
+				sbSql.append(qic).append(cmColumns.get(c)).append(qic).append(", ");
 
 			// remove last ", "
 			sbSql.delete(sbSql.length()-2, sbSql.length());
@@ -1277,6 +1363,14 @@ public abstract class PersistWriterBase
 //		{
 //			return null;
 //		}
+		else if (type == ALARM_HISTORY)
+		{
+			String tabName = getTableName(type, null, false);
+			if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
+				return "create index " +     tabName+"_ix1"     + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
+			else
+				return "create index " + qic+tabName+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
+		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
 			String tabName = getTableName(type, cm, false);
@@ -1308,8 +1402,8 @@ public abstract class PersistWriterBase
 		Double[] dataArr  = tgdp.getData();
 		for (int d=0; d<dataArr.length; d++)
 		{
-			sb.append("   ,"+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",60,-1,-1),20)+" "+getNullable(true)+"\n");
-			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,16, 1),20)+" "+getNullable(true)+"\n");
+			sb.append("   ,"+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",100,-1,-1),20)+" "+getNullable(true)+"\n");
+			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric", -1,16, 1),20)+" "+getNullable(true)+"\n");
 		}
 		sb.append(") \n");
 

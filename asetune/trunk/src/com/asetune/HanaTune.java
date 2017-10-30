@@ -45,7 +45,7 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "hanatune.properties";
+		return "dbxtune.properties";
 	}
 
 	@Override

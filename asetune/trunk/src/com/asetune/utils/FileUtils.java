@@ -16,6 +16,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.URL;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -25,6 +26,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -588,4 +590,40 @@ public class FileUtils
 		return f.exists() || f.mkdir();
 	}
 
+
+	/**
+	 * Read a file from the class path
+	 * @param clazz
+	 * @param filename
+	 * @return
+	 * @throws Exception
+	 */
+	public static String readFile(Class<?> clazz, String filename)
+	throws Exception
+	{
+		InputStreamReader is = null;
+		try
+		{
+			URL url = clazz.getResource(filename);
+			if(url != null)
+			{
+				is = new InputStreamReader(url.openStream());
+				return IOUtils.toString(is);
+			}
+			else
+			{
+				_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. The URL was null, returned from clazz.getResource(filename)");
+				return null;
+			}
+		}
+		catch(IOException e)
+		{
+			_logger.error("Problems reading file '"+filename+"'. at class '"+clazz+"'. Caught: "+e, e);
+			return null;
+		}
+		finally 
+		{
+			IOUtils.closeQuietly(is);
+		}
+	}
 }

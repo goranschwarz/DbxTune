@@ -18,7 +18,7 @@ use master
 go
 if ((select object_id('sp_locksum')) is not null)
 begin
-	print "  drop procedure: sp_locksum      in: master"
+	print '  drop procedure: sp_locksum      in: master'
 	drop procedure sp_locksum
 end
 go
@@ -31,7 +31,7 @@ use sybsystemprocs
 go
 if ((select object_id('sp_locksum')) is not null)
 begin
-	print "  drop procedure: sp_locksum      in: sybsystemprocs"
+	print '  drop procedure: sp_locksum      in: sybsystemprocs'
 	drop procedure sp_locksum
 end
 go
@@ -40,12 +40,12 @@ go
 -------------------------------------------------------------
 -- Make sure we are NOT in master database
 -------------------------------------------------------------
-if ( (select db_name()) = "master" )
+if ( (select db_name()) = 'master' )
 begin
-	print "WRONG DATABASE: you should be in a USER DATABASE when creating this procedure."
+	print 'WRONG DATABASE: you should be in a USER DATABASE when creating this procedure.'
 end
 go
-if ( (select db_name()) = "master" )
+if ( (select db_name()) = 'master' )
 begin
 	select syb_quit()
 end
@@ -61,7 +61,7 @@ go
 -------------------------------------------------------------
 declare @dbname varchar(255)
 select @dbname = db_name()
-print "create procedure '%1!.%2!.%3!'.", @dbname, "dbo", "sp_locksum"
+print 'create procedure ''%1!.%2!.%3!''.', @dbname, 'dbo', 'sp_locksum'
 go
 
 /* Sccsid = "%Z% generic/sproc/%M% %I% %G%" */
@@ -94,9 +94,9 @@ set transaction isolation level 1
 	select dbname = db_name(dbid), table_name = convert(varchar(30),object_name(id,dbid)), locktype = v1.name, context=v2.name, spid, num_of_locks = count(*)
 	from master..syslocks l, master..spt_values v1, master..spt_values v2
 		where l.type = v1.number
-			and v1.type = "L"
+			and v1.type = 'L'
 			and (l.context+2049) = v2.number
-			and v2.type = "L2"
+			and v2.type = 'L2'
 	group by db_name(dbid), object_name(id,dbid), v1.name, v2.name, spid
 	order by 1, 2, 3, 4, 5
 
@@ -112,7 +112,7 @@ go
 declare @dbname varchar(255)
 select @dbname = db_name()
 if ((select object_id('sp_locksum')) is not null)
-	print "create procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp_locksum"
+	print 'create procedure ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', 'sp_locksum'
 else
-	print "create procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp_locksum"
+	print 'create procedure ''%1!.%2!.%3!''. FAILED', @dbname, 'dbo', 'sp_locksum'
 go

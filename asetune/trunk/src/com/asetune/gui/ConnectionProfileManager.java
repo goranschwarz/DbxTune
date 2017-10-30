@@ -95,7 +95,10 @@ public class ConnectionProfileManager
 
 	/** default file name where the connection profiles are stored */
 	public  final static String  PROPKEY_STORAGE_FILE = "ConnectionProfileManager.storage.filename";
-	public  final static String  DEFAULT_STORAGE_FILE = Version.APP_STORE_DIR + File.separator + "ConnectionProfiles.xml";
+	public  final static String  DEFAULT_STORAGE_FILE = Version.getAppStoreDir() + File.separator + "ConnectionProfiles.xml";
+
+	public static final String   PROPKEY_connProfile_serverAdd_showDialog_H2_offline = "ConnectionProfileManager.connProfile.serverAdd.showDialog.h2.offline";
+	public static final boolean  DEFAULT_connProfile_serverAdd_showDialog_H2_offline = false;
 
 	public static final String   PROPKEY_connProfile_serverAdd_showDialog = "ConnectionProfileManager.connProfile.serverAdd.showDialog";
 	public static final boolean  DEFAULT_connProfile_serverAdd_showDialog = true;
@@ -137,6 +140,7 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_16_H2               = SwingUtils.readImageIcon(Version.class, "images/conn_profile_h2_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_HSQL             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hsql_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_16.png");
+//	public static final ImageIcon ICON_DB_PROD_NAME_16_MSSQL_BLACK      = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_black_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_16.png");
@@ -169,6 +173,7 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_32_H2               = SwingUtils.readImageIcon(Version.class, "images/conn_profile_h2_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_HSQL             = SwingUtils.readImageIcon(Version.class, "images/conn_profile_hsql_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_32.png");
+//	public static final ImageIcon ICON_DB_PROD_NAME_32_MSSQL_BLACK      = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_black_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_32.png");
@@ -563,6 +568,25 @@ public class ConnectionProfileManager
 
 	/**
 	 * A ConnectionProfile object, associated to the name
+	 * 
+	 * @param name name of the profile we want to get
+	 * @return A connection object, if not found null will be returned
+	 */
+	public ConnectionProfile getFirstProfileThatStartsWith(String name)
+	{
+		if (StringUtil.isNullOrBlank(name))
+			return null;
+
+		for (ConnectionProfile cp : _profileMap.values())
+		{
+			if (cp.getName().startsWith(name))
+				return cp;
+		}
+		return null;
+	}
+
+	/**
+	 * A ConnectionProfile object, associated to the name
 	 * <p>
 	 * First it searches the Map containing profiles with key: getName()<br>
 	 * Second it searches the Map containing profiles with key: getKey()<br>
@@ -866,6 +890,14 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 	}
 
 
+//	public static ImageIcon getIcon16_forIconMerge(String productName)
+//	{
+//		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL       )) 
+//			return ICON_DB_PROD_NAME_16_MSSQL_BLACK;
+//
+//		return getIcon16(productName);
+//	}
+
 	public static ImageIcon getIcon16(String productName)
 	{
 		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX      )) return ICON_DB_PROD_NAME_16_DB2_UX;
@@ -1151,6 +1183,20 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			boolean showInterfacesPanel  = false;
 			boolean showConnProfilePanel = true;
 
+			showConnProfilePanel = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_connProfile_serverAdd_showDialog, DEFAULT_connProfile_serverAdd_showDialog);
+
+			// If it's a OFFLINE session and its a H2 URL, then: DO NOT SHOW THE save panel
+			if (_connProfile.isType(ConnectionProfile.Type.OFFLINE) && _connProfile.getOfflineEntry()._jdbcUrl.startsWith("jdbc:h2:"))
+			{
+				boolean showDialog_H2_offline = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_connProfile_serverAdd_showDialog_H2_offline, DEFAULT_connProfile_serverAdd_showDialog_H2_offline);
+				if ( ! showDialog_H2_offline )
+				{
+					_logger.info("Do not show the 'Save dialog' for H2 OFFLINE Sessions... Normally we dont want to store that in the profile. To enable this for H2, set property: "+PROPKEY_connProfile_serverAdd_showDialog_H2_offline+"=true");
+					showConnProfilePanel = false;
+				}
+			}
+				
+			
 			String userName = _connProfile.getDbUserName();
 			if (StringUtil.hasValue(userName))
 				userName = " - " + userName;
@@ -1290,11 +1336,17 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			interfacesButGroup.add(_interfacesQ1_rbt);
 			interfacesButGroup.add(_interfacesQ2_rbt);
 			interfacesButGroup.add(_interfacesQ3_rbt);
+			_interfacesQ1_rbt.addActionListener(this); // call validateCompenents()
+			_interfacesQ2_rbt.addActionListener(this); // call validateCompenents()
+			_interfacesQ3_rbt.addActionListener(this); // call validateCompenents()
 			
 			ButtonGroup profileButGroup = new ButtonGroup();
 			profileButGroup.add(_profileNameQ1_rbt);
 			profileButGroup.add(_profileNameQ2_rbt);
 			profileButGroup.add(_profileNameQ3_rbt);
+			_profileNameQ1_rbt.addActionListener(this); // call validateCompenents()
+			_profileNameQ2_rbt.addActionListener(this); // call validateCompenents()
+			_profileNameQ3_rbt.addActionListener(this); // call validateCompenents()
 			
 			_interfacesName_pan.add(_interfacesName_head,  "span, wrap 20");
 			_interfacesName_pan.add(_interfacesName_lbl,   "");
@@ -1334,7 +1386,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 				boolean bussy = AseConnectionFactory.getIHostPortStr(currentItem) != null;
 				_interfacesName_bussy.setVisible(bussy);
 
-				if (bussy)
+				if (bussy && _interfacesQ1_rbt.isSelected() )
 					enableOk = false;
 			}
 
@@ -1344,7 +1396,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 				boolean bussy = getProfile(currentItem) != null;
 				_profileName_bussy.setVisible(bussy);
 
-				if (bussy)
+				if (bussy && _profileNameQ1_rbt.isSelected())
 					enableOk = false;
 			}
 				
@@ -1383,7 +1435,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 						Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 						if (conf != null)
 						{
-							conf.setProperty(PROPKEY_connProfile_serverAdd_showDialog, !DEFAULT_ifile_serverAdd_showDialog);
+							conf.setProperty(PROPKEY_connProfile_serverAdd_showDialog, !DEFAULT_connProfile_serverAdd_showDialog);
 							conf.save();
 						}
 					}
@@ -1435,6 +1487,8 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			{
 				setVisible(false);
 			}
+			
+			validateCompenents();
 		}
 		
 		public void showPossibly()

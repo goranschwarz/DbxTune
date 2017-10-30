@@ -53,6 +53,7 @@ public class AseConnectionFactory
 	private static String              _username            = "";
 	private static String              _password            = "";
 	private static String              _appname             = "";
+	private static String              _appVersion          = "";
 	private static String              _hostname            = "";
 	private static Properties          _props               = new Properties();
 	
@@ -186,7 +187,7 @@ public class AseConnectionFactory
 	public static String getPrivateInterfacesFile(boolean setSybaseHome)
 	{
 		String file = null;
-		String tmpSybaseEnvLocation = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : ""; // points to: getProperty("user.home") + File.separator + ".asetune"
+		String tmpSybaseEnvLocation = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() : ""; // points to: getProperty("user.home") + File.separator + ".asetune"
 
 		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
 			file = tmpSybaseEnvLocation + "\\sql.ini";
@@ -276,6 +277,7 @@ public class AseConnectionFactory
 		_username    = "";
 		_password    = "";
 		_appname     = "";
+		_appVersion  = "";
 		_hostname    = "";
 		_props       = new Properties();
 		_defaultAppNameProps = new HashMap<String, Properties>();
@@ -369,6 +371,10 @@ public class AseConnectionFactory
 	{
 		_appname = appname;
 	}
+	public static void setAppVersion(String appVersion)
+	{
+		_appVersion = appVersion;
+	}
 	public static void setHostName(String hostname)
 	{
 		_hostname = hostname;
@@ -389,6 +395,7 @@ public class AseConnectionFactory
 	public static Map<String, List<String>> getHostPortMap()       { return _hostPortMap; }
 	public static String              getServer()                  { return _server; }
 	public static String              getAppName()                 { return _appname; }
+	public static String              getAppVersion()              { return _appVersion; }
 	public static String              getHostName()                { return _hostname; }
 
 
@@ -1197,14 +1204,14 @@ public class AseConnectionFactory
 	public static Connection getConnection(String dbname, String appname, String hostname) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(getHostPortStr(), dbname, _username, _password, appname, hostname, (Properties)null, (ConnectionProgressCallback)null);
+		return getConnection(getHostPortStr(), dbname, _username, _password, appname, _appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method */
 	public static Connection getConnection(String dbname) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(getHostPortStr(), dbname, _username, _password, _appname, _hostname, (Properties)null, (ConnectionProgressCallback)null);
+		return getConnection(getHostPortStr(), dbname, _username, _password, _appname, _appVersion, _hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method 
@@ -1213,56 +1220,63 @@ public class AseConnectionFactory
 	public static Connection getConnection(ConnectionProgressDialog connectionProgressDialog, ConnectionProp connProp) 
 	throws ClassNotFoundException, SQLException
 	{
-		String username = _username;
-		String password = _password;
-		String appname  = _appname;
-		String hostname = _hostname;
+		String username   = _username;
+		String password   = _password;
+		String appname    = _appname;
+		String appVersion = _appVersion;
+		String hostname   = _hostname;
 		if (connProp != null)
 		{
-			username = connProp.getUsername();
-			password = connProp.getPassword();
-			appname  = connProp.getAppName();
-			hostname = _hostname;
+			username   = connProp.getUsername();
+			password   = connProp.getPassword();
+			appname    = connProp.getAppName();
+			appVersion = connProp.getAppVersion();
+			hostname   = _hostname;
 		}
-		return getConnection(getHostPortStr(), null, username, password, appname, hostname, (Properties)null, (ConnectionProgressCallback)null);
+		return getConnection(getHostPortStr(), null, username, password, appname, appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 	public static Connection getConnection(ConnectionProgressCallback cpd) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(getHostPortStr(), null, _username, _password, _appname, _hostname, (Properties)null, cpd);
+		return getConnection(getHostPortStr(), null, _username, _password, _appname, _appVersion, _hostname, (Properties)null, cpd);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method */
-	public static Connection getConnection(String host, int port, String dbname, String username, String password, String appname, String hostname) 
+	public static Connection getConnection(String host, int port, String dbname, String username, String password, String appname, String appVersion, String hostname) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(host+":"+port, dbname, username, password, appname, hostname, (Properties)null, (ConnectionProgressCallback)null);
+		return getConnection(host+":"+port, dbname, username, password, appname, appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method */
-	public static Connection getConnection(String host, int port, String dbname, String username, String password, String appname, String hostname, Properties connProps) 
+	public static Connection getConnection(String host, int port, String dbname, String username, String password, String appname, String appVersion, String hostname, Properties connProps) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(host+":"+port, dbname, username, password, appname, hostname, connProps, (ConnectionProgressCallback)null);
+		return getConnection(host+":"+port, dbname, username, password, appname, appVersion, hostname, connProps, (ConnectionProgressCallback)null);
 	}
 
 	/** get a connection using the static settings priviously made, but override the input parameters for this method */
-	public static Connection getConnection(String hosts, String ports, String dbname, String username, String password, String appname, String hostname, Properties connProps) 
+	public static Connection getConnection(String hosts, String ports, String dbname, String username, String password, String appname, String appVersion, String hostname, Properties connProps) 
 	throws ClassNotFoundException, SQLException
 	{
-		return getConnection(toHostPortStr(hosts,ports), dbname, username, password, appname, hostname, connProps, (ConnectionProgressCallback)null);
+		return getConnection(toHostPortStr(hosts,ports), dbname, username, password, appname, appVersion, hostname, connProps, (ConnectionProgressCallback)null);
 	}
 	/** get a connection */
 	public static Connection getConnection(String srvname, String dbname, String username, String password, String appname)
 	throws ClassNotFoundException, SQLException
 	{
-		String hostPortStr = AseConnectionFactory.getIHostPortStr(srvname);
-		return getConnection(hostPortStr, dbname, username, password, appname, null, null, (ConnectionProgressCallback)null);
+		String hostPortStr;
+		if (srvname.indexOf(':') >= 0) // If it's already a host:port, use that...
+			hostPortStr = srvname;
+		else
+			hostPortStr = AseConnectionFactory.getIHostPortStr(srvname);
+
+		return getConnection(hostPortStr, dbname, username, password, appname, null, null, null, (ConnectionProgressCallback)null);
 	}
 	
 
 //	 * get a connection using all the input parameters (this does not use the static fields previously set) 
-	public static Connection getConnection(String hostPortStr, String dbname, String username, String password, String appname, String hostname, Properties connProps, ConnectionProgressCallback cpc) 
+	public static Connection getConnection(String hostPortStr, String dbname, String username, String password, String appname, String appVersion, String hostname, Properties connProps, ConnectionProgressCallback cpc) 
 	throws ClassNotFoundException, SQLException
 	{
 		String url = getUrlTemplate();
@@ -1289,6 +1303,9 @@ public class AseConnectionFactory
 		if (props.getProperty("password")        == null) props.put("password",        password);
 		if (props.getProperty("APPLICATIONNAME") == null) props.put("APPLICATIONNAME", appname);
 		if (props.getProperty("HOSTNAME")        == null) props.put("HOSTNAME",        hostname);
+
+		// I just invented this propery, so it's NOT supported by the jConnect, but we can use it to 'set clientapplname, set clientname, set clienthostname'
+		if (props.getProperty("CLIENT_APPLICATION_VERSION") == null && appVersion != null) props.put("CLIENT_APPLICATION_VERSION", appVersion);
 
 		// Forces jConnect to cancel all Statements on a Connection when a
 		// read timeout is encountered. This behavior can be used when a
@@ -1585,6 +1602,21 @@ public class AseConnectionFactory
 				{
 					// If this is not set to 'off', things like (print "any string") wont work
 					conn.createStatement().execute("set quoted_identifier off");
+
+					if (props != null)
+					{
+						String aseSetStr = "";
+						String appName    = props.getProperty("APPLICATIONNAME");
+						String hostName   = props.getProperty("HOSTNAME");
+						String appVersion = props.getProperty("CLIENT_APPLICATION_VERSION");
+
+						if (StringUtil.hasValue(appName))    aseSetStr += "set clientname '"     + appName  + "' \n";
+						if (StringUtil.hasValue(hostName))   aseSetStr += "set clienthostname '" + hostName + "' \n";
+						if (StringUtil.hasValue(appVersion)) aseSetStr += "set clientapplname '" + appName + " - " + appVersion  + "' \n";
+
+						if (StringUtil.hasValue(aseSetStr))
+							conn.createStatement().execute(aseSetStr);
+					}
 				}
 			}
 		}

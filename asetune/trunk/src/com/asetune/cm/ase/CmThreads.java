@@ -23,6 +23,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
@@ -113,15 +114,20 @@ extends CountersModel
 
 	public static final String   GRAPH_NAME_BUSY_AVG    = "busyAvg";
 	public static final String   GRAPH_NAME_BUSY_THREAD = "busyThread";
+	public static final String   GRAPH_NAME_TASKS       = "tasks";
 
 	private void addTrendGraphs()
 	{
-//		String[] sumLabels    = new String[] { "BusyTicksPct", "SleepTicksPct" };
-		String[] sumLabels    = new String[] { "-runtime-replaced-" };
-		String[] threadLabels = new String[] { "-runtime-replaced-" };
+////		String[] sumLabels    = new String[] { "BusyTicksPct", "SleepTicksPct" };
+//		String[] sumLabels    = new String[] { "-runtime-replaced-" };
+//		String[] threadLabels = new String[] { "-runtime-replaced-" };
+		String[] sumLabels    = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+		String[] threadLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+		String[] tasksLabels  = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 
-		addTrendGraphData(GRAPH_NAME_BUSY_AVG,    new TrendGraphDataPoint(GRAPH_NAME_BUSY_AVG,    sumLabels));
-		addTrendGraphData(GRAPH_NAME_BUSY_THREAD, new TrendGraphDataPoint(GRAPH_NAME_BUSY_THREAD, threadLabels));
+		addTrendGraphData(GRAPH_NAME_BUSY_AVG,    new TrendGraphDataPoint(GRAPH_NAME_BUSY_AVG,    sumLabels,    LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_BUSY_THREAD, new TrendGraphDataPoint(GRAPH_NAME_BUSY_THREAD, threadLabels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_TASKS,       new TrendGraphDataPoint(GRAPH_NAME_TASKS,       tasksLabels,  LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -130,7 +136,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_BUSY_AVG,
 					"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
-					"CPU Thread BusyTicksPct Average per Pool Type (15.7 and later)", // Label 
+					"CPU Thread BusyTicksPct Average per Pool Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					sumLabels, 
 					true,  // is Percent Graph
 					this, 
@@ -141,11 +147,22 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_BUSY_THREAD,
 					"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
-					"CPU Thread BusyTicksPct Usage per Thread (15.7 and later)", // Label 
+					"CPU Thread BusyTicksPct Usage per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					threadLabels, 
 					true,  // is Percent Graph
 					this, 
 					true,  // visible at start
+					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+					-1);   // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			tg = new TrendGraph(GRAPH_NAME_TASKS,
+					"Tasks Executed per Thread",                  // Menu CheckBox text
+					"Tasks Executed per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+					tasksLabels, 
+					false, // is Percent Graph
+					this, 
+					false, // visible at start
 					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 					-1);   // minimum height
 			addTrendGraph(tg.getName(), tg, true);
@@ -314,9 +331,7 @@ extends CountersModel
 				i++;
 			}
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_BUSY_THREAD.equals(tgdp.getName()))
@@ -351,9 +366,61 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_TASKS.equals(tgdp.getName()))
+		{
+			boolean useShortNames = this.size() > 32;
+			
+			if ( findColumn("TaskRuns") == -1 )
+				return;
+
+			// Get engine count
+			int engineCount = 0;
+			for (int i = 0; i < this.size(); i++)
+			{
+				String ThreadType = this.getRateString(i, "ThreadType");
+
+				if ( ! "Engine".equals(ThreadType) )
+					continue;
+				
+				engineCount++;
+			}
+			
+			// Write 1 "line" for every row, and a SUMMARY Line
+			Double[] dArray = new Double[engineCount + 1]; // + 1 for summary line
+			String[] lArray = new String[dArray.length];
+			for (int i = 1; i < dArray.length; i++) // leave pos 0 for summary
+			{
+				String ThreadType            = this.getRateString  (i-1, "ThreadType");            // -1 = adjust for the rownum
+				String ThreadPoolNameTypeNum = this.getRateString  (i-1, "ThreadPoolNameTypeNum"); // -1 = adjust for the rownum
+				String InstanceID            = this.getRateString  (i-1, "InstanceID");            // -1 = adjust for the rownum
+
+				if ( ! "Engine".equals(ThreadType) )
+					continue;
+				
+				String labelName = useShortNames ? "E" : "Engine";;
+				
+				if (isClusterEnabled())
+					labelName = InstanceID + ":" + labelName + "-" + ThreadPoolNameTypeNum;
+				else
+					labelName =                    labelName + "-" + ThreadPoolNameTypeNum;
+
+				lArray[i] = labelName;
+				dArray[i] = this.getRateValueAsDouble(i, "TaskRuns");
+			}
+
+			// Calculate the summary based on dArray[1..num]
+			double sumAllEngines = 0;
+			for (int i = 1; i < dArray.length; i++) // leave pos 0 for summary
+				sumAllEngines += dArray[i];
+			
+			lArray[0] = "All-Engines";
+			dArray[0] = sumAllEngines;
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

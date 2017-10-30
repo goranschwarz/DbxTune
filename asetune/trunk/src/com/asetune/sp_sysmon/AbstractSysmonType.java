@@ -74,6 +74,11 @@ public abstract class AbstractSysmonType
 		return _absData;
 	}
 
+	public CountersModel getSpinlockSum()
+	{
+		return _sysmon.getSpinlockSum();
+	}
+
 	public AbstractSysmonType(SpSysmon sysmon, CountersModel cm)
 	{
 		//		if (_cm == null)

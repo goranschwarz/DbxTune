@@ -108,6 +108,9 @@ extends JXTable
 	public static final String  PROPKEY_NULL_REPLACE = "GTable.replace.null.with";
 	public static final String  DEFAULT_NULL_REPLACE = "(NULL)";
 
+	public static final String TOOLTIP_TYPE_NORMAL    = "ToolTipType=normal:";
+	public static final String TOOLTIP_TYPE_FOCUSABLE = "ToolTipType=focusable:";
+
 //	private static final String NULL_REPLACE = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NULL_REPLACE, DEFAULT_NULL_REPLACE);
 	private String NULL_REPLACE = Configuration.getCombinedConfiguration().getProperty(PROPKEY_NULL_REPLACE, DEFAULT_NULL_REPLACE);
 //	private String _nullReplace = null;
@@ -120,19 +123,36 @@ extends JXTable
 
 	public GTable()
 	{
-		this(null, null);
+		this(null, null, null);
+	}
+
+	public GTable(String name)
+	{
+		this(null, null, name);
 	}
 
 	public GTable(String nullReplaceStr, Color nullValueBgColor)
 	{
+		this(null, null, null);
+	}
+
+	public GTable(String nullReplaceStr, Color nullValueBgColor, String name)
+	{
+		if (name != null)
+			setName(name);
+
 		setNullValueDisplay(nullReplaceStr);
 		setNullValueDisplayBgColor(nullValueBgColor);
 		init();
 	}
 
-	public GTable(TableModel tm)
+	public GTable(TableModel tm, String name)
 	{
 		super(tm);
+
+		if (name != null)
+			setName(name);
+
 		setNullValueDisplay(null);
 		setNullValueDisplayBgColor(null);
 		init();
@@ -1368,7 +1388,8 @@ extends JXTable
 							int modelPkRow = ctm.getRowNumberForPkValue(_lastSelectedModelPk);
 							if (modelPkRow >= 0)
 							{
-								int viewRow = convertRowIndexToView(modelPkRow);
+								int viewRow = -1;
+								try {viewRow = convertRowIndexToView(modelPkRow);} catch(Throwable t) {/*ignore*/}
 								if ( viewRow >= 0  && viewRow < getRowCount() )
 									getSelectionModel().setSelectionInterval(viewRow, viewRow);
 							}
@@ -1550,6 +1571,22 @@ extends JXTable
 				// Do we want to use "focusable" tips?
 				if (tip != null) 
 				{
+					boolean normalTooltip = false;
+					if (tip.startsWith(TOOLTIP_TYPE_NORMAL))
+					{
+						normalTooltip = true;
+						tip = tip.substring(TOOLTIP_TYPE_NORMAL.length());
+					}
+					if (tip.startsWith(TOOLTIP_TYPE_FOCUSABLE))
+					{
+						normalTooltip = false;
+						tip = tip.substring(TOOLTIP_TYPE_FOCUSABLE.length());
+					}
+					
+					// If it's a SHORT tip, display the "normal" tooltip, else use "focusable" tooltip
+					if (normalTooltip)
+						return tip;
+
 					if (_focusableTip == null) 
 						_focusableTip = new FocusableTip(this);
 
@@ -1569,7 +1606,7 @@ extends JXTable
 //			return tip;
 		return getToolTipText();
 	}
-
+	
 	// // TableCellRenderer _tableDiffDataCellRenderer = new
 	// DefaultTableCellRenderer()
 	// TableCellRenderer _tableDiffDataCellRenderer = new

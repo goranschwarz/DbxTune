@@ -33,11 +33,21 @@ public class RemarkDictionary
 		return desc;
 	}
 
+	//----------------------------------------------
+	// Remarks used in CmObjectActivity
+	//----------------------------------------------
 //	public static final String T_SCAN_OR_HTAB_INS = "TabScan/HeapTabIns";
 	public static final String PROBABLY_TABLE_SCAN = "ProbTabScan";
 	public static final String TABLE_SCAN          = "TabScan";
 	public static final String HEAP_TAB_INS        = "HeapTabIns";
 	
+	//----------------------------------------------
+	// Remarks used in CmStmntCacheDetails
+	//----------------------------------------------
+	public static final String SKEWED_EXEC_PLAN_ABS  = "SkewedExecPlan-Abs";
+	public static final String SKEWED_EXEC_PLAN_DIFF = "SkewedExecPlan-Diff";
+
+
 	private void init()
 	{
 		String key;
@@ -70,7 +80,7 @@ public class RemarkDictionary
 		desc = "<html>" +
 			"<h2>Probably Table Scan</h2>" +
 			"This could be a 'select that does a table scan'.<br>" +
-			"<b>Algorithm</b>: <code>IndexID == 0 && PagesRead > 1000</code><br>" +
+			"<b>Algorithm</b>: <code>IndexID == 0 && (PagesRead > 1000 || APFReads > 500)</code><br>" +
 			"<br>" +
 
 			"If it's a 'table scan', high LogicalReads/PhysicalReads/APFReads/PagesRead should be visible.<br>" +
@@ -128,6 +138,29 @@ public class RemarkDictionary
 			"<h3>Action:</h3>" +
 			"An clustered index, which distributes the insert location could be created." +
 			"</html>";
+		add(key, desc);
+
+		
+		
+		key = SKEWED_EXEC_PLAN_ABS;
+		desc = "<html>" +
+			"<h2>Exec plan is skewed</h2>" +
+			"This could be that the execution plan is reused but the execution plan was optimized for another parameter value'.<br>" +
+			"This caused the execution engine to make to many IO's due to the fact that it was optimized for other constants.'.<br>" +
+			"<b>Algorithm</b>: <code>LogicalIO(MinLIO & MaxLIO) differs more than 10%</code><br>" +
+			"<br>" +
+
+//			"If <b>no</b> Clustered Index exists on the table, inserts will go to the last page of the table, " +
+//			"those types of tables are called 'heap tables'.<br>" +
+//			"If UsedCount is approximately the same as RowsInserted, then this is mostly 'heap table' inserts." +
+
+			"<h3>Action:</h3>" +
+			"Create a nonclustered index (possibly a covered index). That contains more columns so we do not need to access base table." +
+			"</html>";
+		add(key, desc);
+
+		key = SKEWED_EXEC_PLAN_DIFF;
+		//desc = desc; // Use the same as for SKEWED_EXEC_PLAN_ABS
 		add(key, desc);
 	}
 	

@@ -11,6 +11,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmPCacheModuleUsagePanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -45,7 +46,7 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	public static final String[] DIFF_COLUMNS     = new String[] {"ActiveDiff", "NumPagesReused"};
+	public static final String[] DIFF_COLUMNS     = new String[] {"ActiveDiff", "ActiveDiffMb", "NumPagesReused"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -98,9 +99,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = new String[] { "runtime-replaced" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_MODULE_USAGE, new TrendGraphDataPoint(GRAPH_NAME_MODULE_USAGE, labels));
+		addTrendGraphData(GRAPH_NAME_MODULE_USAGE, new TrendGraphDataPoint(GRAPH_NAME_MODULE_USAGE, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -109,7 +111,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_MODULE_USAGE,
 				"Procedure Cache Module Usage", 	                                 // Menu CheckBox text
-				"Procedure Cache Module Usage (in page count)", // Label 
+				"Procedure Cache Module Usage (in page count) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -149,17 +151,31 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		String InstanceID = "";
-//		if (isClusterEnabled && aseVersion >= 15500)
-//		if (isClusterEnabled && aseVersion >= 1550000)
 		if (isClusterEnabled && aseVersion >= Ver.ver(15,5))
 		{
-			InstanceID = "InstanceID, ";
+			InstanceID = "    InstanceID, \n";
 		}
 
+//		String sql = 
+//			"select "+InstanceID+"ModuleName, ModuleID, Active, ActiveDiff = Active, HWM, NumPagesReused \n" +
+//			"from master..monProcedureCacheModuleUsage\n" +
+//			"order by ModuleID";
 		String sql = 
-			"select "+InstanceID+"ModuleName, ModuleID, Active, ActiveDiff = Active, HWM, NumPagesReused \n" +
-			"from master..monProcedureCacheModuleUsage\n" +
-			"order by ModuleID";
+			"select \n" + 
+			InstanceID + 
+			"    ModuleName, \n" + 
+			"    ModuleID, \n" + 
+			"    Active, \n" + 
+			"    ActiveDiff   = Active, \n" + 
+			"    ActiveMb     = convert(numeric(8,1), Active / 512.0), \n" + 
+			"    ActiveDiffMb = convert(numeric(8,1), Active / 512.0), \n" + 
+			"    HWM, \n" + 
+			"    HwmMb        = convert(numeric(8,1), HWM / 512.0), \n" + 
+			"    NumPagesReused \n" + 
+			"from master.dbo.monProcedureCacheModuleUsage \n" + 
+			"order by ModuleID \n" + 
+			"";
+				
 
 		return sql;
 	}
@@ -179,9 +195,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 }

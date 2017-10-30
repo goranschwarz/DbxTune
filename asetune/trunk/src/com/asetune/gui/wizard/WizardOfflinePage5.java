@@ -7,12 +7,16 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Map;
 
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
+import org.netbeans.spi.wizard.WizardPanelNavResult;
 
 import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;
@@ -34,6 +38,7 @@ implements ActionListener
 	private static final String WIZ_HELP = "If you selected any Performance Counter Module in the previous page that was of the type 'Host Monitor'\nThen you need to specify SSH (Secure Shell) information, otherwise we can't connect to it when polling for Performance Counters.";
 
 	private JLabel     _noHostMonWasSelected = new JLabel("<html><b>No Host Monitor, Performance Counter was selected.</b> Just press <b>Next</b> to continue.</b></html>");
+	private JCheckBox  _cmdLine_chk = new JCheckBox("Use Command Line Switches for the below information", false);
 
 //	private boolean    _firtsTimeRender = true;
 
@@ -43,6 +48,7 @@ implements ActionListener
 	private JTextField _sshPassword = new JPasswordField();
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	public WizardOfflinePage5()
@@ -50,6 +56,11 @@ implements ActionListener
 		super(WIZ_NAME, WIZ_DESC);
 		
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
+
+		_cmdLine_chk.setToolTipText("<html>" +
+				"Command Line Switches '-uuser -ppasswd -ssrvname' will override information in this wizard.<br>" +
+				"This so you can generate one template file that is applicable for many servers.<br>" +
+				"</html>");
 
 		_sshHostname.setName("sshHostname");
 		_sshPort    .setName("sshPort");
@@ -69,6 +80,7 @@ implements ActionListener
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
 
 		add(_noHostMonWasSelected, "span 2, growx, hidemode 3, wrap 20");
+		add(_cmdLine_chk,          "skip, wrap");
 
 		add(new JLabel("SSH Hostname"));
 		add(_sshHostname, "growx, wrap");
@@ -121,7 +133,9 @@ implements ActionListener
 
 			if (_sshHostname.getText().trim().length() == 0)
 			{
-				String aseHost = getWizardData("aseHost").toString();
+				Object oAseHost = getWizardData("aseHost");
+				String aseHost = oAseHost == null ? null : oAseHost.toString();
+
 				if (aseHost != null && ! aseHost.equals(""))
 				{
 					String oshostname = "";
@@ -151,12 +165,30 @@ implements ActionListener
 //	    _firtsTimeRender = false;
     }
 
+	@Override
 	protected String validateContents(Component comp, Object event)
 	{
 		// If the nothing needs to be done, then return here.
 		if (_noHostMonWasSelected.isVisible())
-			return null;
+			return null;  // NO Need to continue
 
+		if (_cmdLine_chk.isSelected())
+		{
+			_sshHostname.setEnabled(false);
+			_sshPort    .setEnabled(false);
+			_sshUsername.setEnabled(false);
+			_sshPassword.setEnabled(false);
+
+			return null; // NO Need to continue
+		}
+		else
+		{
+			_sshHostname.setEnabled(true);
+			_sshPort    .setEnabled(true);
+			_sshUsername.setEnabled(true);
+			_sshPassword.setEnabled(true);
+		}
+		
 		// CHECK required fields
 		String problem = "";
 		if ( _sshHostname.getText().trim().length() <= 0) problem += "Hostname, ";
@@ -183,6 +215,44 @@ implements ActionListener
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
+	private void saveWizardData()
+	{
+		if (_cmdLine_chk.isSelected())
+		{
+			Map<String, Object> wizData = getWizardDataMap();
+			wizData.remove(_sshHostname.getName());
+			wizData.remove(_sshPort    .getName());
+			wizData.remove(_sshUsername.getName());
+			wizData.remove(_sshPassword.getName());
+		}
+		else
+		{
+			Map<String, Object> wizData = getWizardDataMap();
+			wizData.put(_sshHostname.getName(), _sshHostname.getText());
+			wizData.put(_sshPort    .getName(), _sshPort    .getText());
+			wizData.put(_sshUsername.getName(), _sshUsername.getText());
+			wizData.put(_sshPassword.getName(), _sshPassword.getText());
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public WizardPanelNavResult allowBack(String stepName, Map settings, Wizard wizard)
+    {
+		saveWizardData();
+		return WizardPanelNavResult.PROCEED;
+    }
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public WizardPanelNavResult allowNext(String stepName, Map settings, Wizard wizard)
+	{
+		saveWizardData();
+		return WizardPanelNavResult.PROCEED;
+	}
+
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 	}

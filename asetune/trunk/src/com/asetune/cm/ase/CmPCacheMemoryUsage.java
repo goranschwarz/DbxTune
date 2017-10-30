@@ -43,7 +43,7 @@ extends CountersModel
 	public static final String[] NEED_CONFIG      = new String[] {};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
-	public static final String[] DIFF_COLUMNS     = new String[] {"ActiveDiff", "NumReuseCaused"};
+	public static final String[] DIFF_COLUMNS     = new String[] {"ActiveDiff", "ActiveDiffMb", "NumReuseCaused"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -142,23 +142,46 @@ extends CountersModel
 //		if (isClusterEnabled && aseVersion >= 1550000)
 		if (isClusterEnabled && aseVersion >= Ver.ver(15,5))
 		{
-			InstanceID     = "M.InstanceID, ";
-			InstanceIDJoin = "  and M.InstanceID *= C.InstanceID \n";
+//			InstanceID     = "M.InstanceID, ";
+//			InstanceIDJoin = "  and M.InstanceID *= C.InstanceID \n";
+			InstanceID     = "    m.InstanceID, \n";
+			InstanceIDJoin = " and m.InstanceID = s.InstanceID";
 		}
 
-		String sql = 
-			"select M.ModuleName, "+InstanceID+"M.ModuleID, \n" +
-			"       AllocatorName = isnull(C.AllocatorName, '-AT-MODULE-LEVEL-'), \n" +
-			"       AllocatorID   = isnull(C.AllocatorID,   -1), \n" +
-			"       Active        = isnull(C.Active,        M.Active), \n" +
-			"       ActiveDiff    = isnull(C.Active,        M.Active), \n" +
-			"       HWM           = isnull(C.HWM,           M.HWM), \n" +
-			"       ChunkHWM      = isnull(C.ChunkHWM,      -1), \n" +
-			"       NumReuseCaused= isnull(C.NumReuseCaused,-1) \n" +
-			"from master..monProcedureCacheModuleUsage M, master..monProcedureCacheMemoryUsage C \n" +
-			"where M.ModuleID *= C.ModuleID \n" +
-			InstanceIDJoin +
-			"order by M.ModuleID, C.AllocatorID \n" +
+//		String sql = 
+//			"select M.ModuleName, "+InstanceID+"M.ModuleID, \n" +
+//			"       AllocatorName = isnull(C.AllocatorName, '-AT-MODULE-LEVEL-'), \n" +
+//			"       AllocatorID   = isnull(C.AllocatorID,   -1), \n" +
+//			"       Active        = isnull(C.Active,        M.Active), \n" +
+//			"       ActiveDiff    = isnull(C.Active,        M.Active), \n" +
+//			"       HWM           = isnull(C.HWM,           M.HWM), \n" +
+//			"       ChunkHWM      = isnull(C.ChunkHWM,      -1), \n" +
+//			"       NumReuseCaused= isnull(C.NumReuseCaused,-1) \n" +
+//			"from master..monProcedureCacheModuleUsage M, master..monProcedureCacheMemoryUsage C \n" +
+//			"where M.ModuleID *= C.ModuleID \n" +
+//			InstanceIDJoin +
+//			"order by M.ModuleID, C.AllocatorID \n" +
+//			optGoalPlan;
+
+		String sql =
+    		"select \n" + 
+    		"    ModuleName = (select s.ModuleName \n" + 
+    		"                  from master.dbo.monProcedureCacheModuleUsage s \n" + 
+    		"                  where m.ModuleID = s.ModuleID"+InstanceIDJoin+"), \n" + 
+    		InstanceID + 
+    		"    m.ModuleID,  \n" + 
+    		"    m.AllocatorName, \n" + 
+    		"    m.AllocatorID, \n" + 
+    		"    m.Active, \n" + 
+    		"    ActiveDiff   = m.Active, \n" + 
+    		"    ActiveMb     = convert(numeric(8,1), m.Active / 512.0), \n" + 
+    		"    ActiveDiffMb = convert(numeric(8,1), m.Active / 512.0), \n" + 
+    		"    m.HWM, \n" + 
+    		"    HwmMb        = convert(numeric(8,1), m.HWM / 512.0), \n" + 
+    		"    m.ChunkHWM, \n" + 
+    		"    m.NumReuseCaused \n" + 
+    		"from master.dbo.monProcedureCacheMemoryUsage m \n" + 
+    		"order by ModuleID, AllocatorID \n" +
 			optGoalPlan;
 
 		return sql;

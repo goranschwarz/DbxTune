@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cache.XmlPlanCache;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -20,6 +22,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmStmntCacheDetailsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.config.dict.RemarkDictionary;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -203,6 +206,7 @@ extends CountersModel
 			mtd.addColumn("monCachedStatement",  "HasSqltext",    sqltextTooltip);
 			mtd.addColumn("monCachedStatement",  "xmlPlan",       xmlPlanTooltip);
 			mtd.addColumn("monCachedStatement",  "HasXmlPlan",    xmlPlanTooltip);
+			mtd.addColumn("monCachedStatement",  "Remark",        "<html>Some tip of what's happening with this PerformanceCounter.<br><b>Tip</b>: \"Hover\" over the cell to get more information on the Tip.</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -361,6 +365,7 @@ extends CountersModel
 //			(aseVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
 //			(aseVersion >= 1570000 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
 			(aseVersion >= Ver.ver(15,7) ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+			"Remark = convert(varchar(60), ''), \n" + // Display some findings...
 			sql_hasSqlText +
 			sql_hasShowplan + 
 			sql_hasXmlPlan +
@@ -518,40 +523,20 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Get SQL Text",           PROPKEY_sample_sqlText               , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText               , DEFAULT_sample_sqlText               ), DEFAULT_sample_sqlText              , CmStmntCacheDetailsPanel.TOOLTIP_sample_sqlText                ));
+		list.add(new CmSettingsHelper("Get Showplan",           PROPKEY_sample_showplan              , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan              , DEFAULT_sample_showplan              ), DEFAULT_sample_showplan             , CmStmntCacheDetailsPanel.TOOLTIP_sample_showplan               ));
+		list.add(new CmSettingsHelper("Get XML Plan",           PROPKEY_sample_xmlPlan               , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_xmlPlan               , DEFAULT_sample_xmlPlan               ), DEFAULT_sample_xmlPlan              , CmStmntCacheDetailsPanel.TOOLTIP_sample_xmlPlan                ));
+		list.add(new CmSettingsHelper("XML Level of Details",   PROPKEY_sample_xmlPlan_levelOfDetail , Integer.class, conf.getIntProperty    (PROPKEY_sample_xmlPlan_levelOfDetail , DEFAULT_sample_xmlPlan_levelOfDetail ), DEFAULT_sample_xmlPlan_levelOfDetail, CmStmntCacheDetailsPanel.TOOLTIP_sample_xmlPlan_levelOfDetail  ));
+		list.add(new CmSettingsHelper("Where MetricsCount > 0", PROPKEY_sample_metricsCountGtZero    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_metricsCountGtZero    , DEFAULT_sample_metricsCountGtZero    ), DEFAULT_sample_metricsCountGtZero   , CmStmntCacheDetailsPanel.TOOLTIP_sample_metricsCountGtZero     ));
 
-		lc.setProperty(PROPKEY_sample_sqlText,               conf.getBooleanProperty(PROPKEY_sample_sqlText,               DEFAULT_sample_sqlText));
-		lc.setProperty(PROPKEY_sample_showplan,              conf.getBooleanProperty(PROPKEY_sample_showplan,              DEFAULT_sample_showplan));
-		lc.setProperty(PROPKEY_sample_xmlPlan,               conf.getBooleanProperty(PROPKEY_sample_xmlPlan,               DEFAULT_sample_xmlPlan));
-		lc.setProperty(PROPKEY_sample_xmlPlan_levelOfDetail, conf.getIntProperty(    PROPKEY_sample_xmlPlan_levelOfDetail, DEFAULT_sample_xmlPlan_levelOfDetail));
-		lc.setProperty(PROPKEY_sample_metricsCountGtZero,    conf.getBooleanProperty(PROPKEY_sample_metricsCountGtZero,    DEFAULT_sample_metricsCountGtZero));
-		return lc;
+		return list;
 	}
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_sqlText))               return CmStmntCacheDetailsPanel.TOOLTIP_sample_sqlText;
-		if (propName.equals(PROPKEY_sample_showplan))              return CmStmntCacheDetailsPanel.TOOLTIP_sample_showplan;
-		if (propName.equals(PROPKEY_sample_xmlPlan))               return CmStmntCacheDetailsPanel.TOOLTIP_sample_xmlPlan;
-		if (propName.equals(PROPKEY_sample_xmlPlan_levelOfDetail)) return CmStmntCacheDetailsPanel.TOOLTIP_sample_xmlPlan_levelOfDetail;
-		if (propName.equals(PROPKEY_sample_metricsCountGtZero))    return CmStmntCacheDetailsPanel.TOOLTIP_sample_metricsCountGtZero;
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_sqlText))               return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_showplan))              return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_xmlPlan))               return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_xmlPlan_levelOfDetail)) return Integer.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_metricsCountGtZero))    return Boolean.class.getSimpleName();
-		return "";
-	}
 
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
@@ -612,6 +597,130 @@ extends CountersModel
 		return "<html><pre>" + str + "</pre></html>";
 	}
 
+//	/**
+//	 * Calculate some stuff 'Remarks' for the ABSOLUTE values
+//	 */
+//	@Override
+//	public void localCalculation(CounterSample prevSample, CounterSample newSample)
+//	{
+//	}
+	/**
+	 * Calculate some stuff 'Remarks' for both the ABSOLUTE and the DELTA values
+	 */
+	@Override
+	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	{
+		// set some "Remark", below is columns user to draw some conclutions 
+		int Remark_pos       = -1;
+		int UseCount_pos     = -1;
+		int MinLIO_pos       = -1;
+		int MaxLIO_pos       = -1;
+		
+		
+		// Find column Id's
+		List<String> colNames = diffData.getColNames();
+		if (colNames == null)
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+			if      (colName.equals("Remark"))       Remark_pos       = colId;
+			else if (colName.equals("UseCount"))     UseCount_pos     = colId;
+			else if (colName.equals("MinLIO"))       MinLIO_pos       = colId;
+			else if (colName.equals("MaxLIO"))       MaxLIO_pos       = colId;
+		}
+
+		// Loop on all diffData rows
+		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+		{
+//			int absUseCount  = ((Number)newSample.getValueAt(rowId, UseCount_pos)).intValue();
+//			int diffUseCount = ((Number)diffData .getValueAt(rowId, UseCount_pos)).intValue();
+//			if (absUseCount <= 10)
+//				continue;
+//			if (diffUseCount == 0)
+//				continue;
+//
+//			// Check MaxLIO & MinLIO
+//			// If the gap are to big, then we probably have a "faulty plan" due to: data screw...
+//			// Meaning: one is using a cheap plan, the other one is using an expensive, probably does to many lookups at DataPages from the NotClustered index scan leaf pages
+//			int diffMinLIO = ((Number)diffData.getValueAt(rowId, MinLIO_pos)).intValue();
+//			int diffMaxLIO = ((Number)diffData.getValueAt(rowId, MaxLIO_pos)).intValue();
+//
+//			int absMinLIO = ((Number)newSample.getValueAt(rowId, MinLIO_pos)).intValue();
+//			int absMaxLIO = ((Number)newSample.getValueAt(rowId, MaxLIO_pos)).intValue();
+			
+//			fixme
+//			also do "same" for CachedProcedures..absMaxLIO.
+			//------------------------------
+			// CALC: Remark
+			// A LOT of stuff can be included here...
+			if (Remark_pos >= 0 && UseCount_pos >= 0 && MinLIO_pos >= 0 && MaxLIO_pos >= 0)
+			{
+//				int UsedCount    = ((Number)diffData.getValueAt(rowId, UsedCount_pos   )).intValue();
+//				int IndexID      = ((Number)diffData.getValueAt(rowId, IndexID_pos     )).intValue();
+//				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos)).intValue();
+//				int RowsInserted = ((Number)diffData.getValueAt(rowId, RowsInserted_pos)).intValue();
+//				int PagesRead    = ((Number)diffData.getValueAt(rowId, PagesRead_pos   )).intValue();
+				
+				int absUseCount  = ((Number)newSample.getValueAt(rowId, UseCount_pos)).intValue();
+				int diffUseCount = ((Number)diffData .getValueAt(rowId, UseCount_pos)).intValue();
+				if (absUseCount <= 10)
+					continue;
+				if (diffUseCount == 0)
+					continue;
+
+//				// Check MaxLIO & MinLIO
+//				// If the gap are to big, then we probably have a "faulty plan" due to: data screw...
+//				// Meaning: one is using a cheap plan, the other one is using an expensive, probably does to many lookups at DataPages from the NotClustered index scan leaf pages
+				int diffMinLIO = ((Number)diffData.getValueAt(rowId, MinLIO_pos)).intValue();
+				int diffMaxLIO = ((Number)diffData.getValueAt(rowId, MaxLIO_pos)).intValue();
+	
+				int absMinLIO = ((Number)newSample.getValueAt(rowId, MinLIO_pos)).intValue();
+				int absMaxLIO = ((Number)newSample.getValueAt(rowId, MaxLIO_pos)).intValue();
+
+				String diffRemark = null;
+				String absRemark  = null;
+	
+				double calcVal =  ((absMinLIO*1.0) / (absMaxLIO*1.0)) * 100.0;
+//System.out.println("abs: calcVal="+calcVal+": absMinLIO="+absMinLIO+", absMaxLIO="+absMaxLIO+".");
+				if ( calcVal < 10.0 )
+				{
+					absRemark = RemarkDictionary.SKEWED_EXEC_PLAN_ABS;
+				}
+
+				calcVal =  ((diffMinLIO*1.0) / (diffMaxLIO*1.0)) * 100.0;
+//System.out.println("diff: calcVal="+calcVal+": diffMinLIO="+diffMinLIO+", diffMaxLIO="+diffMaxLIO+".");
+				if ( calcVal < 10.0 )
+				{
+					diffRemark = RemarkDictionary.SKEWED_EXEC_PLAN_DIFF;
+				}
+
+//				if (IndexID == 0 && UsedCount > 0 && LogicalReads > 0)
+//				{
+////					remark = RemarkDictionary.T_SCAN_OR_HTAB_INS;
+//					remark = RemarkDictionary.TABLE_SCAN;
+//
+//					// Allow up to 10% variance of inserts and still consider it to be a "Table Scan"
+//					// But if it's more than that 10% inserts, then consider it as a "Heap Table Insert"
+//					// pctNear is just: 10% more or 10% less than the baseValue(UsedCount)
+//					if ( MathUtils.pctNear(10, UsedCount, RowsInserted) )
+//						remark = RemarkDictionary.HEAP_TAB_INS;
+//				}
+				
+				// set ABS - Remark
+				if ( ! StringUtil.isNullOrBlank(absRemark) )
+					newSample.setValueAt(absRemark, rowId, Remark_pos);
+
+				// set DIFF - Remark
+				if ( ! StringUtil.isNullOrBlank(diffRemark) )
+					diffData.setValueAt(diffRemark, rowId, Remark_pos);
+			}
+
+		}
+	}
+
+	
 	/** 
 	 * Get number of rows to save/request ddl information for 
 	 */

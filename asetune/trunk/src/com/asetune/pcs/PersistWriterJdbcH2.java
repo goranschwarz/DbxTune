@@ -71,48 +71,49 @@ extends PersistWriterJdbc
 	@Override
 	public void init(Configuration props) throws Exception
 	{
-		String propPrefix = "PersistWriterJdbcH2.";
-		String propname = null;
-
-		// property: name
-		propname = propPrefix+"name";
-		_name = props.getProperty(propname, _name);
-
-		// WRITE init message, jupp a little late, but I wanted to grab the _name
-		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '"+_name+"'.");
-		
-		_jdbcDriver = props.getProperty(propPrefix+"jdbcDriver", "org.h2.Driver");
-		_jdbcUrl    = props.getProperty(propPrefix+"jdbcUrl",    "jdbc:h2:pcdb");
-		_jdbcUser   = props.getProperty(propPrefix+"jdbcUser",   "sa");
-		_jdbcPasswd = props.getProperty(propPrefix+"jdbcPasswd", "");
-		if (_jdbcPasswd.equalsIgnoreCase("null"))
-			_jdbcPasswd="";
-
-		_startH2NetworkServer = props.getBooleanProperty(propPrefix+"startH2NetworkServer", _startH2NetworkServer);
-
-		String configStr = "jdbcDriver='"+_jdbcDriver+"', jdbcUrl='"+_jdbcUrl+"', jdbcUser='"+_jdbcUser+"', jdbcPasswd='*hidden*'.";
-		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+configStr);
-
-		// Everything could NOT be done with the jdbcUrl... so here goes some special
-		// start the H2 TCP Server
-		if ( _startH2NetworkServer )
-		{
-			_logger.info("Starting a H2 TCP server.");
-			org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
-			h2ServerTcp.start();
-
-//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
-			_logger.info("H2 TCP server, url='"+h2ServerTcp.getURL()+"', service='"+h2ServerTcp.getService()+"'.");
-
-			if (true)
-			{
-				_logger.info("Starting a H2 WEB server.");
-				org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer();
-				h2ServerWeb.start();
-
-				_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
-			}
-		}
+		throw new Exception("PersistWriterJdbcH2 should not be used...");
+//		String propPrefix = "PersistWriterJdbcH2.";
+//		String propname = null;
+//
+//		// property: name
+//		propname = propPrefix+"name";
+//		_name = props.getProperty(propname, _name);
+//
+//		// WRITE init message, jupp a little late, but I wanted to grab the _name
+//		_logger.info("Initializing the PersistentCounterHandler.WriterClass component named '"+_name+"'.");
+//		
+//		_jdbcDriver = props.getProperty(propPrefix+"jdbcDriver", "org.h2.Driver");
+//		_jdbcUrl    = props.getProperty(propPrefix+"jdbcUrl",    "jdbc:h2:pcdb");
+//		_jdbcUser   = props.getProperty(propPrefix+"jdbcUser",   "sa");
+//		_jdbcPasswd = props.getProperty(propPrefix+"jdbcPasswd", "");
+//		if (_jdbcPasswd.equalsIgnoreCase("null"))
+//			_jdbcPasswd="";
+//
+//		_startH2NetworkServer = props.getBooleanProperty(propPrefix+"startH2NetworkServer", _startH2NetworkServer);
+//
+//		String configStr = "jdbcDriver='"+_jdbcDriver+"', jdbcUrl='"+_jdbcUrl+"', jdbcUser='"+_jdbcUser+"', jdbcPasswd='*hidden*'.";
+//		_logger.info("Configuration for PersistentCounterHandler.WriterClass component named '"+_name+"': "+configStr);
+//
+//		// Everything could NOT be done with the jdbcUrl... so here goes some special
+//		// start the H2 TCP Server
+//		if ( _startH2NetworkServer )
+//		{
+//			_logger.info("Starting a H2 TCP server.");
+//			org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
+//			h2ServerTcp.start();
+//
+////			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
+//			_logger.info("H2 TCP server, url='"+h2ServerTcp.getURL()+"', service='"+h2ServerTcp.getService()+"'.");
+//
+//			if (true)
+//			{
+//				_logger.info("Starting a H2 WEB server.");
+//				org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer();
+//				h2ServerWeb.start();
+//
+//				_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
+//			}
+//		}
 
 	}
 

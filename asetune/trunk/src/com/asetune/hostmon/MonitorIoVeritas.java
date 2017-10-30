@@ -62,6 +62,8 @@ extends MonitorIo
 		md.addStatColumn("AvgTimeMsRead",    8,  7, true, 10, 1, "The average time in milliseconds spent on read operations in the interval");
 		md.addStatColumn("AvgTimeMsWrite",   9,  8, true, 10, 1, "The average time in milliseconds spent on write operations in the interval");
 
+		md.addStrColumn ("deviceDescription", 10, 0, true, 255, "Mapping of the column 'device' to your own description.");
+
 		// Use "name" as the Primary Key, which is used to do summary/average calculations
 		md.setPkCol("name");
 

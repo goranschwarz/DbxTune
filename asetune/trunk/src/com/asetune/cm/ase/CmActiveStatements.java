@@ -3,6 +3,7 @@ package com.asetune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cache.XmlPlanCache;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -226,6 +228,17 @@ extends CountersModel
 			ClientDriverVersion = "P.ClientDriverVersion, ";
 		}
 
+		// ASE 16.0 SP3
+		String QueryOptimizationTime       = "";
+		String QueryOptimizationTime_union = "";
+		String ase160_sp3_nl               = "";
+		if (aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+		{
+			QueryOptimizationTime       = "S.QueryOptimizationTime, ";
+			QueryOptimizationTime_union = "QueryOptimizationTime=-1, ";    // Used be the seconds SQL Statement, just to create a "union"
+			ase160_sp3_nl               = "\n";
+		}
+		
 		String optGoalPlan = "";
 //		if (aseVersion >= 15020)
 //		if (aseVersion >= 1502000)
@@ -255,8 +268,9 @@ extends CountersModel
 		         "P.Command, P.Application, \n" +
 		         HostName + ClientName + ClientHostName + ClientApplName + ClientDriverVersion + ase1570_nl +
 		         "S.CpuTime, S.WaitTime, \n" +
-		         "ExecTimeInMs    = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-		         "UsefullExecTime = CASE WHEN datediff(day, S.StartTime, getdate()) > 20 THEN -1 ELSE (datediff(ms, S.StartTime, getdate()) - S.WaitTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+		         "ExecTimeInMs    = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+		         "UsefullExecTime = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE (datediff(ms, S.StartTime, getdate()) - S.WaitTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+		         QueryOptimizationTime + ase160_sp3_nl +
 		         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
 		         "P.SecondsWaiting, P.WaitEventID, \n" +
 		         "WaitClassDesc=convert(varchar(50),''), \n" +
@@ -320,6 +334,17 @@ extends CountersModel
 			dbNameCol  = "dbname=P.DBName";
 		}
 
+		// 16.0 SP2 PL5 and 15.7.0 SP138 the column is bigint
+		String PhysicalReads = "PhysicalReads=-1";
+		String LogicalReads  = "LogicalReads=-1";
+		String PagesModified = "PagesModified=-1";
+		if (aseVersion >= Ver.ver(16,0,0, 2,5) || (aseVersion >= Ver.ver(15,7,0, 138) && aseVersion < Ver.ver(16,0)) )
+		{
+			PhysicalReads = "PhysicalReads=convert(bigint,-1)";
+			LogicalReads  = "LogicalReads=convert(bigint,-1)";
+			PagesModified = "PagesModified=convert(bigint,-1)";
+		}
+
 		cols1 += "monSource=convert(varchar(15),'BLOCKER'), \n" +
 		         "P.SPID, P.KPID, \n" +
 		         "multiSampled=convert(varchar(10),''), \n" +
@@ -330,15 +355,16 @@ extends CountersModel
 		         "CpuTime=-1, WaitTime=-1, \n" +
 		         "ExecTimeInMs    = -1, \n" +
 		         "UsefullExecTime = -1, \n" +
+		         QueryOptimizationTime_union + ase160_sp3_nl +
 		         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
 		         "P.SecondsWaiting, P.WaitEventID, \n" +
 		         "WaitClassDesc=convert(varchar(50),''), \n" +
 		         "WaitEventDesc=convert(varchar(50),''), \n" +
 		         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
-		         "MemUsageKB=-1, PhysicalReads=-1, LogicalReads=-1, \n";
+		         "MemUsageKB=-1, "+PhysicalReads+", "+LogicalReads+", \n";
 		cols2 += "";
-		cols3 += "PagesModified=-1, PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
+		cols3 += PagesModified+", PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
 		         "PlansAltered=-1, StartTime=convert(datetime,NULL), PlanID=-1, P.DBID, ProcedureID=-1, \n" +
 		         "P.SecondsConnected, P.EngineNumber, P.NumChildren, \n" +
 		         "MonSqlText=convert(text,null), \n" +
@@ -392,47 +418,21 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Get Showplan",             getName()+".sample.showplan"        , Boolean.class, conf.getBooleanProperty(getName()+".sample.showplan"        , true ), true , "Do 'sp_showplan spid' on every row in the table."                                      ));
+		list.add(new CmSettingsHelper("Get Monitored SQL Text",   getName()+".sample.monSqltext"      , Boolean.class, conf.getBooleanProperty(getName()+".sample.monSqltext"      , true ), true , "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table." ));
+		list.add(new CmSettingsHelper("Get DBCC SQL Text",        getName()+".sample.dbccSqltext"     , Boolean.class, conf.getBooleanProperty(getName()+".sample.dbccSqltext"     , false), false, "Do 'dbcc sqltext(spid)' on every row in the table."                                    ));
+		list.add(new CmSettingsHelper("Get Procedure Call Stack", getName()+".sample.procCallStack"   , Boolean.class, conf.getBooleanProperty(getName()+".sample.procCallStack"   , false), false, "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table."    ));
+		list.add(new CmSettingsHelper("Get ASE Stacktrace",       getName()+".sample.dbccStacktrace"  , Boolean.class, conf.getBooleanProperty(getName()+".sample.dbccStacktrace"  , false), false, "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
+		list.add(new CmSettingsHelper("Get Cached Plan in XML",   getName()+".sample.cachedPlanInXml" , Boolean.class, conf.getBooleanProperty(getName()+".sample.cachedPlanInXml" , false), false, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks", getName()+".sample.holdingLocks"    , Boolean.class, conf.getBooleanProperty(getName()+".sample.holdingLocks"    , true ), true , "Include SPID's that holds locks even if that are not active in the server."            ));
 
-		lc.setProperty(getName()+".sample.showplan",        conf.getBooleanProperty(getName()+".sample.showplan",        true));
-		lc.setProperty(getName()+".sample.monSqltext",      conf.getBooleanProperty(getName()+".sample.monSqltext",      true));
-		lc.setProperty(getName()+".sample.dbccSqltext",     conf.getBooleanProperty(getName()+".sample.dbccSqltext",     false));
-		lc.setProperty(getName()+".sample.procCallStack",   conf.getBooleanProperty(getName()+".sample.procCallStack",   true));
-		lc.setProperty(getName()+".sample.dbccStacktrace",  conf.getBooleanProperty(getName()+".sample.dbccStacktrace",  false));
-		lc.setProperty(getName()+".sample.cachedPlanInXml", conf.getBooleanProperty(getName()+".sample.cachedPlanInXml", false));
-		lc.setProperty(getName()+".sample.holdingLocks",    conf.getBooleanProperty(getName()+".sample.holdingLocks",    false));
-
-		return lc;
+		return list;
 	}
-
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(getName()+".sample.showplan"))        return "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.";
-		if (propName.equals(getName()+".sample.monSqltext"))      return "Do 'dbcc sqltext(spid)' on every row in the table.";
-		if (propName.equals(getName()+".sample.dbccSqltext"))     return "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table.";
-		if (propName.equals(getName()+".sample.procCallStack"))   return "Do 'sp_showplan spid' on every row in the table.";
-		if (propName.equals(getName()+".sample.dbccStacktrace"))  return "Do 'dbcc stacktrace(spid)' on every row in the table.";
-		if (propName.equals(getName()+".sample.cachedPlanInXml")) return "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table.";
-		if (propName.equals(getName()+".sample.holdingLocks"))    return "Include SPID's that holds locks even if that are not active in the server.";
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(getName()+".sample.showplan"))        return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.monSqltext"))      return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.dbccSqltext"))     return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.procCallStack"))   return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.dbccStacktrace"))  return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.cachedPlanInXml")) return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.holdingLocks"))    return Boolean.class.getSimpleName();
-		return "";
-	}
-
 
 
 	@Override

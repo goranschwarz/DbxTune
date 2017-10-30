@@ -16,6 +16,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -127,12 +128,13 @@ extends CountersModel
 	{
 		String[] labels_runQueueLength  = new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" };
 		String[] labels_pendingIo       = new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" };
-		String[] labels_runtimeReplaced = new String[] { "-runtime-replaced-" };
+//		String[] labels_runtimeReplaced = new String[] { "-runtime-replaced-" };
+		String[] labels_runtimeReplaced = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 
-		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, labels_runQueueLength));
-		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, labels_runtimeReplaced));
-		addTrendGraphData(GRAPH_NAME_PENDING_IO_SUM,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_SUM,       labels_pendingIo));
-		addTrendGraphData(GRAPH_NAME_PENDING_IO_ENG,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_ENG,       labels_runtimeReplaced));
+		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, labels_runQueueLength,  LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, labels_runtimeReplaced, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_PENDING_IO_SUM,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_SUM,       labels_pendingIo,       LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_PENDING_IO_ENG,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_ENG,       labels_runtimeReplaced, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -213,8 +215,7 @@ extends CountersModel
 					_logger.debug("updateGraphData("+tgdp.getName()+"): runnable_tasks_count(sum)='"+arr[0]+"', runnable_tasks_count(avg)='"+arr[1]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -250,9 +251,7 @@ extends CountersModel
 				}
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setLabel(label);
-				tgdp.setData(data);
+				tgdp.setDataPoint(this.getTimestamp(), label, data);
 			}
 		}
 
@@ -274,8 +273,7 @@ extends CountersModel
 					_logger.debug("updateGraphData("+tgdp.getName()+"): pending_disk_io_count(sum)='"+arr[0]+"', pending_disk_io_count(avg)='"+arr[1]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -311,9 +309,7 @@ extends CountersModel
 				}
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setLabel(label);
-				tgdp.setData(data);
+				tgdp.setDataPoint(this.getTimestamp(), label, data);
 			}
 		}
 	}

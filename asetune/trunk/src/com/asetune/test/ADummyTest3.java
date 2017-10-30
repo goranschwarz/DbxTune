@@ -1,11 +1,18 @@
 package com.asetune.test;
 
+import java.text.NumberFormat;
 
 public class ADummyTest3
 {
 
 	public static void main(String[] args)
 	{
+	    System.out.println("User's number (DEFAULT LOCALE): " + NumberFormat.getNumberInstance().format(1.123));
+	    System.out.println("User's number (DEFAULT LOCALE): " + NumberFormat.getNumberInstance().format(100.123));
+	    System.out.println("User's number (DEFAULT LOCALE): " + NumberFormat.getNumberInstance().format(1000.123));
+	    System.out.println("User's number (DEFAULT LOCALE): " + NumberFormat.getNumberInstance().format(1000000.123));
+	    System.out.println("User's number (DEFAULT LOCALE): " + NumberFormat.getNumberInstance().format(123456789.123));
+
 //		String str="b6Awj8ncl5wouLWbVKwYM+Ev+Y/+nwExI0tld4EZQJVluWLy/qR8l4T473vzr5eMNS";
 //		
 //		int ENC_KEY_LEN_C = 32;

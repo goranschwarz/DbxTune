@@ -5,17 +5,24 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.ProcedureInfo;
+import com.asetune.ui.autocomplete.completions.TableExtraInfo;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class OracleConnection 
 extends DbxConnection
 {
+	private static Logger _logger = Logger.getLogger(OracleConnection.class);
 
 	public OracleConnection(Connection conn)
 	{
@@ -107,4 +114,60 @@ extends DbxConnection
 		setConnectionStateInfo(csi);
 		return csi;
 	}
+
+	@Override
+	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
+	{
+		LinkedHashMap<String, TableExtraInfo> extraInfo = new LinkedHashMap<>();
+
+//		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".";
+//		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
+
+		
+		String sql = 
+				  "select num_rows, blocks/128*1024 as SizeKB \n"
+				+ "from all_tables \n"
+				+ "where 1=1 \n"
+				+ (StringUtil.hasValue(schema) ? "  and owner      = '" + schema + "' \n" : "")
+				+                                "  and table_name = '" + table  + "' \n";
+
+//-----------------------------------------------------------------------------------------
+//--- Possibly use the follwing in future (when I can test on an Oracle system)
+//--- This gets the LOB size as well
+//-----------------------------------------------------------------------------------------
+//            	SELECT s.segment_name segment_name,
+//                   SUM(s.bytes/1024/1024) tab_size,
+//                   SUM((SELECT SUM(b.bytes/1024/1024)
+//                          FROM dba_segments b
+//                         WHERE b.owner = '<dbs_ora_schema>'
+//                           AND b.segment_type = 'LOBSEGMENT'
+//                           AND b.segment_name = l.segment_name)) lob_size
+//              FROM dba_segments s LEFT JOIN dba_lobs l
+//                ON s.owner = l.owner
+//               AND s.segment_name = l.table_name
+//             WHERE s.owner = '<dbs_ora_schema>'
+//               AND s.segment_type LIKE 'TABLE%'
+//               AND s.segment_name = '<table name>'
+//            GROUP BY s.segment_name
+
+		try
+		{
+			Statement stmnt = _conn.createStatement();
+			ResultSet rs = stmnt.executeQuery(sql);
+			while(rs.next())
+			{
+				extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rs.getLong(1), "Estimated rows in the table. Fetched using 'num_rows' from 'all_tables'", null));
+				extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", rs.getLong(2), "Estimated table size in KB. Fetched using 'blocks/128*1024' from 'all_tables'", null));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			if (_logger.isDebugEnabled())
+				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+		}
+		
+		return extraInfo;
+	}
+
 }

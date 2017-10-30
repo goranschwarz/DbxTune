@@ -32,7 +32,7 @@ extends TabularCntrPanel
 	private static final long    serialVersionUID      = 1L;
 
 	public static final String  TOOLTIP_sample_monSqlText       = "<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>";
-	public static final String  TOOLTIP_sample_dbccSqltext      = "<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>";
+	public static final String  TOOLTIP_sample_dbccSqlText      = "<html>Do 'dbcc sqltext(spid)' on every row in the table.<br>     This will help us to diagnose what SQL the client sent to the server.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>";
 	public static final String  TOOLTIP_sample_procCallStack    = "<html>Do 'select * from monProcessProcedures where SPID=spid.<br>This will help us to diagnose what stored procedure called before we ended up here.</html>";
 	public static final String  TOOLTIP_sample_showplan         = "<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>";
 	public static final String  TOOLTIP_sample_dbccStacktrace   = "<html>do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>";
@@ -185,7 +185,7 @@ extends TabularCntrPanel
 //		_sampleExtraWhereClause_txt.setName(CmSpidCpuWait.PROPKEY_sample_extraWhereClause);
 		
 		_sampleMonSqltext_chk      .setToolTipText(TOOLTIP_sample_monSqlText);
-		_sampleDbccSqltext_chk     .setToolTipText(TOOLTIP_sample_dbccSqltext);
+		_sampleDbccSqltext_chk     .setToolTipText(TOOLTIP_sample_dbccSqlText);
 		_sampleProcCallStack_chk   .setToolTipText(TOOLTIP_sample_procCallStack);
 		_sampleShowplan_chk        .setToolTipText(TOOLTIP_sample_showplan);
 		_sampleDbccStacktrace_chk  .setToolTipText(TOOLTIP_sample_dbccStacktrace);

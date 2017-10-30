@@ -24,7 +24,7 @@ export CP=${CP}:$javaLibDir/jconn3.jar
 export CP=${CP}:$javaLibDir/jtds-1.3.1.jar
 export CP=${CP}:$javaLibDir/dsparser.jar
 export CP=${CP}:$javaLibDir/log4j-1.2.17.jar
-export CP=${CP}:$javaLibDir/h2-1.4.193.jar
+export CP=${CP}:$javaLibDir/h2-1.4.194.jar
 export CP=${CP}:$javaLibDir/wizard.jar
 export CP=${CP}:$javaLibDir/miglayout-swing-4.2.jar
 export CP=${CP}:$javaLibDir/miglayout-core-4.2.jar
@@ -34,7 +34,7 @@ export CP=${CP}:$javaLibDir/planviewer.jar
 export CP=${CP}:$javaLibDir/commons-lang3-3.4.jar
 export CP=${CP}:$javaLibDir/commons-io-2.4.jar
 export CP=${CP}:$javaLibDir/commons-csv-1.2.jar
-export CP=${CP}:$javaLibDir/commons-cli-1.3.1.jar
+export CP=${CP}:$javaLibDir/commons-cli-1.4.jar
 export CP=${CP}:$javaLibDir/proxy-vole_20131209.jar
 export CP=${CP}:$javaLibDir/ganymed-ssh2-build251beta1.jar
 export CP=${CP}:$javaLibDir/rsyntaxtextarea.jar
@@ -155,7 +155,7 @@ EOF
 #
 cp lib/* ${appname}.app/Contents/Resources/Java/
 cp lib/asetune_icon_32.png ${appname}.app/Contents/Resources/
-cp asetune.properties ${appname}.app/
+cp dbxtune.properties ${appname}.app/
 
 #
 # Set the bundle bit Finder attribute

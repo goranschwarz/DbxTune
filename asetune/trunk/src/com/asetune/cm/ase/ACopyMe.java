@@ -9,6 +9,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.ACopyMePanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -97,7 +98,7 @@ extends CountersModel
 	{
 		String[] labels = new String[] { "XXX", "YYY", "ZZZ" };
 		
-		addTrendGraphData(GRAPH_NAME_XXX, new TrendGraphDataPoint(GRAPH_NAME_XXX, labels));
+		addTrendGraphData(GRAPH_NAME_XXX, new TrendGraphDataPoint(GRAPH_NAME_XXX, labels, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())

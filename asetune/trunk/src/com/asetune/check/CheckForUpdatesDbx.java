@@ -364,6 +364,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		String srvUser           = "";
 		String srvUserRoles      = "";
 		String srvVersionStr     = "";
+		String srvPageSizeInKb   = "";
 		String srvSortOrderId    = "";
 		String srvSortOrderName  = "";
 		String srvCharsetId      = "";
@@ -392,6 +393,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			srvUser          = connInfo.getDbmsUserName();
 			srvUserRoles     = "not_initialized";
 			srvVersionStr    = connInfo.getDbmsVersionStr();
+			srvPageSizeInKb  = connInfo.getDbmsPageSizeInKb();
 			srvSortOrderId   = connInfo.getDbmsSortorderId();
 			srvSortOrderName = connInfo.getDbmsSortorderName();
 			srvCharsetId     = connInfo.getDbmsCharsetId();
@@ -444,6 +446,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 //			srvSortOrderName = "offline-read";
 //			srvCharsetId     = "offline-read";
 //			srvCharsetName   = "offline-read";
+			srvPageSizeInKb  = connInfo.getDbmsPageSizeInKb();
 			srvSortOrderId   = connInfo.getDbmsSortorderId();
 			srvSortOrderName = connInfo.getDbmsSortorderName();
 			srvCharsetId     = connInfo.getDbmsCharsetId();
@@ -491,6 +494,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		urlParams.add("srvUser",             srvUser);
 		urlParams.add("srvUserRoles",        srvUserRoles);
 		urlParams.add("srvVersionStr",       srvVersionStr);
+		urlParams.add("srvPageSizeInKb",     srvPageSizeInKb);
 		urlParams.add("srvSortOrderId",      srvSortOrderId);
 		urlParams.add("srvSortOrderName",    srvSortOrderName);
 		urlParams.add("srvCharsetId",        srvCharsetId);
@@ -529,6 +533,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		private       String        _dbmsVersionStr    = "";
 		private       String        _dbmsServerName    = "";
 		private       String        _dbmsUserName      = "";
+		private       String        _dbmsPageSizeInKb  = "";
 		private       String        _dbmsCharsetName   = "";
 		private       String        _dbmsCharsetId     = "";
 		private       String        _dbmsSortorderName = "";
@@ -586,6 +591,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 			      setDbmsVersionInt    (xconn.getDbmsVersionNumber());
 			try { setDbmsVersionStr    (xconn.getDbmsVersionStr());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsVersionStr().    Caught: "+ex); }
 			try { setDbmsServerName    (xconn.getDbmsServerName());                } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsServerName().    Caught: "+ex); }
+			try { setDbmsPageSizeInKb  (xconn.getDbmsPageSizeInKb());              } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsPageSizeInKb().  Caught: "+ex); }
 			try { setDbmsCharsetName   (xconn.getDbmsCharsetName());               } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetName().   Caught: "+ex); }
 			try { setDbmsCharsetId     (xconn.getDbmsCharsetId());                 } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsCharsetId().     Caught: "+ex); }
 			try { setDbmsSortorderName (xconn.getDbmsSortOrderName());             } catch(SQLException ex) { _logger.warn("Problems initializing DbxConnectInfo object, calling getDbmsSortOrderName(). Caught: "+ex); }
@@ -627,6 +633,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		public String        getDbmsVersionStr   () { return _dbmsVersionStr    == null ? "" : _dbmsVersionStr   .trim(); }
 		public String        getDbmsServerName   () { return _dbmsServerName    == null ? "" : _dbmsServerName   .trim(); }
 		public String        getDbmsUserName     () { return _dbmsUserName      == null ? "" : _dbmsUserName     .trim(); }
+		public String        getDbmsPageSizeInKb () { return _dbmsPageSizeInKb  == null ? "" : _dbmsPageSizeInKb .trim(); }
 		public String        getDbmsCharsetName  () { return _dbmsCharsetName   == null ? "" : _dbmsCharsetName  .trim(); }
 		public String        getDbmsCharsetId    () { return _dbmsCharsetId     == null ? "" : _dbmsCharsetId    .trim(); }
 		public String        getDbmsSortorderName() { return _dbmsSortorderName == null ? "" : _dbmsSortorderName.trim(); }
@@ -646,6 +653,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		public void setDbmsVersionStr    (String str)            { _dbmsVersionStr    = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsServerName    (String str)            { _dbmsServerName    = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsUserName      (String str)            { _dbmsUserName      = StringUtil.hasValue(str) ? str : ""; }
+		public void setDbmsPageSizeInKb  (String str)            { _dbmsPageSizeInKb  = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsCharsetName   (String str)            { _dbmsCharsetName   = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsCharsetId     (String str)            { _dbmsCharsetId     = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsSortorderName (String str)            { _dbmsSortorderName = StringUtil.hasValue(str) ? str : ""; }

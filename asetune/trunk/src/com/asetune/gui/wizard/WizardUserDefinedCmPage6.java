@@ -479,7 +479,7 @@ implements ActionListener, TableModelListener
 				TrendGraph tg = cm.getTrendGraph(gn);
 				
 				_name_txt      .setText( tg.getName() );
-				_graphLabel_txt.setText( tg.getLabel() );
+				_graphLabel_txt.setText( tg.getChartLabel() );
 				_menuDesc_txt  .setText( tg.getViewMenuItem().getText() );
 
 				int graphType = tg.getGraphType();

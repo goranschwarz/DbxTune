@@ -153,8 +153,9 @@ go
 
 create procedure sp_asetune_qp_metrics
 (
-	@cmd  varchar(20)  = null,
-	@cmd2 varchar(255) = null
+	@cmd   varchar(20)  = null,
+	@cmd2  varchar(255) = null,
+	@flush int          = 1          -- Enable or disable: exec sp_metrics 'flush'
 )
 as
 begin
@@ -168,12 +169,13 @@ begin
 	if (@cmd is null)
 		select @cmd = "show"
 		
-	if      (@cmd = "show")   select @x = 0
-	else if (@cmd = "drop")   select @x = 0
-	else if (@cmd = "filter") select @x = 0
+	if      (@cmd = "show"  ) begin  select @x = 0  end
+	else if (@cmd = "drop"  ) begin  select @x = 0  end
+	else if (@cmd = "filter") begin  select @x = 0  end
+	else if (@cmd = "flush" ) begin  select @x = 0  select @flush = 1  end
 	else
 	begin
-		print "Usage: sp_asetune_qp_metrics show|drop|filter"
+		print "Usage: sp_asetune_qp_metrics show|drop|filter|flush"
 		return 0
 	end
 	
@@ -182,7 +184,14 @@ begin
 	** OR: do I need to issue this in every database?
 	** CHECK: dbcc flushmetrics, to check for the above
 	*/
-	exec sp_metrics 'flush'
+	if (@flush >= 1)
+	begin
+		exec sp_metrics 'flush'
+		if (@cmd = "flush") -- if command was a manual 'flush', then do not continue... 
+		begin
+			return 0
+		end 
+	end
 	
 	-- master..sysdatabases.status
 	-- 32 = Database created with for load option, or crashed while loading database, instructs recovery not to proceed

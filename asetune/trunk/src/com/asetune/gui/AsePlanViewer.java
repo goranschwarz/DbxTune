@@ -23,8 +23,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 
@@ -36,6 +36,7 @@ import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.sybase.ase.planviewer.ASEPlanViewer;
@@ -62,6 +63,8 @@ implements ActionListener
 	private JButton           _cloneWindow_but   = new JButton("Clone Window");
 	private JButton           _loadClipboard_but = new JButton("Load Clipboard");
 	private JButton           _loadFile_but      = new JButton("Load File");
+	private JButton           _loadName_but      = new JButton("Load Name");
+	private JTextField        _loadName_txt      = new JTextField();
 	private JButton           _close_but         = new JButton("Close");
 
 	private RSyntaxTextAreaX   _sqlText = new RSyntaxTextAreaX(7, 30);
@@ -192,6 +195,9 @@ implements ActionListener
 			_sqlText.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 //FIXME: fix_a_splitpane, or use Tooltip is the SQL text is to big...
 
+			RSyntaxUtilitiesX.installRightClickMenuExtentions(_sqlScroll, this);
+
+
 //			_sqlPanel.add(sqlText,    "grow, push, wrap");
 			_sqlPanel.add(_sqlScroll,  "grow, push, wrap");
 			_sqlPanel.setMinimumSize(new Dimension(100, 200));
@@ -205,14 +211,18 @@ implements ActionListener
 			_butPanel.setLayout(new MigLayout());
 			
 			_butPanel.add(_toggleSql_but,     "left");
-			_butPanel.add(new JLabel(),       "pushx, growx");
 			_butPanel.add(_cloneWindow_but,   "");
-			_butPanel.add(_loadClipboard_but, "");
+//			_butPanel.add(new JLabel(),       "pushx, growx");
+			_butPanel.add(_loadName_but,      "gap 20");
+			_butPanel.add(_loadName_txt,      "pushx, growx");
+			_butPanel.add(_loadClipboard_but, "gap 20");
 			_butPanel.add(_loadFile_but,      "");
-			_butPanel.add(_close_but,         "");
+			_butPanel.add(_close_but,         "gap 20");
 
 			_toggleSql_but    .addActionListener(this);
 			_cloneWindow_but  .addActionListener(this);
+			_loadName_txt     .addActionListener(this);
+			_loadName_but     .addActionListener(this);
 			_loadClipboard_but.addActionListener(this);
 			_loadFile_but     .addActionListener(this);
 			_close_but        .addActionListener(this);
@@ -280,7 +290,17 @@ implements ActionListener
 			clone.setTitle(currentTitle);
 		}
 
-		// BUTTON: LOAD FILE
+		// BUTTON: LOAD Name
+		if (_loadName_but.equals(source))
+		{
+			loadXmlFromCacheDeferred(_loadName_txt.getText());
+		}
+		if (_loadName_txt.equals(source))
+		{
+			_loadName_but.doClick();
+		}
+
+		// BUTTON: LOAD from clipboard
 		if (_loadClipboard_but.equals(source))
 		{
 			try

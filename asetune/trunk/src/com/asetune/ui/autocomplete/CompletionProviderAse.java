@@ -67,6 +67,9 @@ extends CompletionProviderAbstractSql
 		// enable the "icon" area on the left side
 		scroll.setIconRowHeaderEnabled(true);
 
+		// Install any extra items in the Editors Right Click Menu
+		acProvider.installEditorPopupMenuExtention(textPane);
+
 		return acProvider;
 	}
 
@@ -370,12 +373,12 @@ extends CompletionProviderAbstractSql
 		// monTables
 		list.add( new CompletionTemplate( 
 				"monTables",  
-				"select TableID, TableName, Columns, Description from monTables where TableName like 'mon%'", 
+				"select TableID, TableName, Columns, Description from master.dbo.monTables where TableName like 'mon%'", 
 				"Get monitor tables in this system."));
 		// monColumns
 		list.add( new CompletionTemplate( 
 				"monColumns", 
-				"select TableName, ColumnName, TypeName, Length, Description from monTableColumns where TableName like 'mon%'", 
+				"select TableName, ColumnName, TypeName, Length, Description from master.dbo.monTableColumns where TableName like 'mon%'", 
 				"Get monitor tables and columns in this system."));
 		
 //		// \exec  and \rpc templates
@@ -510,6 +513,7 @@ extends CompletionProviderAbstractSql
 				"create table <TABNAME> \n" +
 				"( \n" +
 				"	id      int             not null,\n" +
+				"	--id    bigint          identity,\n" +
 				"	c1      varchar(30)     not null,\n" +
 				"	c2      varchar(30)     not null,\n" +
 				"	c3      varchar(30)     not null,\n" +
@@ -518,6 +522,7 @@ extends CompletionProviderAbstractSql
 				"	primary key(id) \n" +
 				") \n" +
 				"--lock datarows|datapages|allpages\n" +
+				"--with identity_gap = ####\n" +
 				" \n" +
 				"-- Who should be able to access the table \n" +
 				"grant select, insert, update, delete on <TABNAME> to public|user_name|group_name|role_name \n" +
@@ -540,6 +545,69 @@ extends CompletionProviderAbstractSql
 				"create unique clustered index <TABNAME>_ix1 on <TABNAME>(c1, c2)\n" +
 				"",
 				"Create index"));
+
+		list.add( new CompletionTemplate( "identity",
+				"------------------------------------------------------------------------------------------------\n" +
+				"-- Set a new MAX value for identity column for a specific table \n" +
+				"------------------------------------------------------------------------------------------------\n" +
+				"exec sp_chgattribute 'dbo.table_name', 'identity_burn_max', 0, 'new-identity-value' \n" +
+				"-- This command sets the identity counter to the specified new value. To avoid interference by user access, \n" +
+				"-- sp_chgattribute first takes out an exclusive-table lock on the table. \n" +
+				"-- While this command finally makes it easy to fix identity gaps, note the following: sp_chgattribute actually checks whether there is a row in the table \n" + 
+				"-- with a higher identity column value than the new value for the identify counter. When such a higher value exists (which is likely when you're repairing \n" +
+				"-- an identity gap), sp_chgattribute refuses to change the identity counter in order to protect you against the risk of generating duplicate identity column \n" +
+				"-- value at some point in the future. \n" + 
+				"-- \n" + 
+				"-- Should this check-for-a-higher-value be a problem, it can be bypassed by running the following dbcc command directly \n" +
+				"--     dbcc set_identity_burn_max('database_name', 'table_name', 'new-identity-value') \n" +
+				"-- \n" + 
+				"------------------------------------------------------------------------------------------------\n" +
+				"-- Note: it's probably a good idea to also change the 'identity_gap' at a table level so we don't check-out a large chunk \n" +
+				"--     exec sp_chgattribute 'dbo.table_name', 'identity_gap', 1000 \n" +
+				"-- \n" + 
+				"-- Use below sql to generate 'sp_chgattribute' for all tables that has a identity field\n" +
+				"--     select 'exec sp_chgattribute ''' + user_name(so.uid) + '.' + so.name + ''', ''identity_gap'', 1000' \n" +
+				"--     from  sysobjects so \n" +
+				"--     where so.sysstat2 & 64  = 64   -- table has identity column \n" +
+				"--     order by 1 \n" +
+				"-- \n" + 
+				"------------------------------------------------------------------------------------------------\n" +
+				"-- To check what next value of an identity indsert will be use: \n" +
+				"--     select next_identity('dbo.table_name') \n" +
+				"-- \n" + 
+				"-- Use below sql to get next identity values for all tables that has identity fields\n" +
+				"--     select dbname            = db_name() \n" +
+				"--           ,owner             = user_name(o.uid) \n" +
+				"--           ,tablename         = o.name \n" +
+				"--           ,identity_col      = c.name \n" +
+				"--           ,next_identity_val = convert(numeric,next_identity(user_name(o.uid)+'.'+o.name)) \n" +
+				"--           ,tab_row_count     = row_count(db_id(), o.id) \n" +
+				"--     from  sysobjects o inner join syscolumns c on o.id = c.id \n" +
+				"--     where o.sysstat2 & 64  = 64   -- table has identity column \n" +
+				"--       and c.status   & 128 = 128  -- column is an identity column \n" +
+				"--     order by 1, 2, 3 \n" +
+				"-- \n" + 
+				"------------------------------------------------------------------------------------------------\n" +
+				"-- Below might be usable to figgure out the id<->next_identity difference: next_identity('dbo.table_name')-1 - MAX(id) \n" +
+				"-- select 'select ' \n" +
+				"--      + '   tab_name          = ''' + user_name(o.uid) + '.' + o.name + '''' \n" +
+				"--      + '  ,id_gap            = (convert(numeric, next_identity(''' + user_name(o.uid) + '.' + o.name + '''))-1) - max('+c.name+')' \n" +
+				"--      + '  ,max_tab_id_val    = max('+c.name+') ' \n" +
+				"--      + '  ,next_identity_val = convert(numeric, next_identity(''' + user_name(o.uid) + '.' + o.name + '''))' \n" +
+				"--      + '  ,tab_row_count     = row_count(db_id(), object_id(''' + user_name(o.uid) + '.' + o.name + ''')) ' \n" +
+				"--      + 'from '+ user_name(o.uid) + '.' + o.name \n" +
+				"-- from  sysobjects o inner join syscolumns c on o.id = c.id  \n" +
+				"-- where o.sysstat2 & 64  = 64   -- table has identity column  \n" +
+				"--   and c.status   & 128 = 128  -- column is an identity column  \n" +
+				"-- order by user_name(o.uid), o.name \n" +
+				"-- \n" + 
+				"------------------------------------------------------------------------------------------------\n" +
+				"-- To insert or update hard coded identity values use the following: \n" +
+				"--     set identity_insert dbo.table_name on|off \n" +
+				"--     set identity_update dbo.table_name on|off \n" +
+				"-- \n" +
+				"",
+				"set identity identity_burn_max"));
 
 		return list;
 	}

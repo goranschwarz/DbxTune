@@ -17,6 +17,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.oracle.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.TrendGraph;
 
 /**
@@ -118,11 +119,11 @@ extends CountersModel
 		String[] labels_openTran         = new String[] { "Seconds" };
 		String[] labels_transaction      = new String[] { "user commits", "user rollbacks" };
 		
-		addTrendGraphData(GRAPH_NAME_XXX,                new TrendGraphDataPoint(GRAPH_NAME_XXX,                labels_xxx));
-		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction));
-		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks));
-		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
-		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran));
+		addTrendGraphData(GRAPH_NAME_XXX,                new TrendGraphDataPoint(GRAPH_NAME_XXX,                labels_xxx,           LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction,   LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,    LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,      LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -134,7 +135,7 @@ extends CountersModel
 //				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
 //				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
 				"Dummy Graph", 	                        // Menu CheckBox text
-				"Dummy Graph showing hour, minute, second", // Label 
+				"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_xxx, 
 				true,  // is Percent Graph
 				this, 
@@ -145,7 +146,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
 				"Transaction per second",    // Menu CheckBox text
-				"Transaction per Second",    // Label 
+				"Transaction per Second ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
 				labels_transaction, 
 				false,   // is Percent Graph
 				this, 
@@ -156,7 +157,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 				"Blocking Locks", 	                     // Menu CheckBox text
-				"Number of Concurrently Blocking Locks", // Label 
+				"Number of Concurrently Blocking Locks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_blockingLocks, 
 				false, // is Percent Graph
 				this, 
@@ -167,7 +168,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
 				"Connections/Users", 	          // Menu CheckBox text
-				"Connections/Users connected to Oracle", // Label 
+				"Connections/Users connected to Oracle ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_connection, 
 				false, // is Percent Graph
 				this, 
@@ -178,7 +179,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 				"Oldest Open Transaction",     // Menu CheckBox text
-				"Oldest Open Transaction, in Seconds", // Label 
+				"Oldest Open Transaction, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_openTran, 
 				false, // is Percent Graph
 				this, 
@@ -281,8 +282,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -298,9 +298,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		//---------------------------------
@@ -314,8 +312,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): LockWait='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -330,8 +327,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -345,8 +341,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): oldestOpenTranInSec='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 }

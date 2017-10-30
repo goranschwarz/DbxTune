@@ -61,7 +61,7 @@ public class TcpConfigDialog
 extends JDialog
 implements ActionListener, TableModelListener
 {
-	private static Logger _logger = Logger.getLogger(OfflineSessionVeiwer.class);
+	private static Logger _logger = Logger.getLogger(TcpConfigDialog.class);
 	private static final long	serialVersionUID	= -8717629657711689568L;
 
 //	private Frame                  _owner           = null;

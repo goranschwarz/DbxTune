@@ -5,12 +5,16 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.ui.autocomplete.completions.TableExtraInfo;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 
@@ -121,4 +125,36 @@ extends TdsConnection
 			return null;
 		}
 	}
+
+	@Override
+	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
+	{
+		LinkedHashMap<String, TableExtraInfo> extraInfo = new LinkedHashMap<>();
+
+//		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".";
+		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
+
+		
+		String sql = "call sp_iqtablesize('" + schema + table + "')";
+
+		try
+		{
+			Statement stmnt = _conn.createStatement();
+			ResultSet rs = stmnt.executeQuery(sql);
+			while(rs.next())
+			{
+//				extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong(1), "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
+				extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getInt(4),  "Physical table size in KB. Note: sp_iqtablesize, column 'KBytes'.", null));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			if (_logger.isDebugEnabled())
+				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+		}
+		
+		return extraInfo;
+	}
+
 }

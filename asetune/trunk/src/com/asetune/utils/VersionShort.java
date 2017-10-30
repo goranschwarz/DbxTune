@@ -72,12 +72,12 @@ public class VersionShort
 	public static String toStr(int version)
 	{
 		// 5 digit version number
-		if (version > 10000)
+		if (version > 10000) // 1.00.00
 		{
 			// The below is probably wrong
 			int major       = version                                     / 10000;
-			int minor       =(version -  (major * 10000))                 / 10;
-			int maintenance = version - ((major * 10000) + (minor * 10) + (minor * 10));
+			int minor       =(version -  (major * 10000))                 / 100;
+			int maintenance =(version - ((major * 10000) + (minor * 100))); // Take whats left, when subtracting major and minor
 
 //			System.out.println("VersionShort.toStr("+version+") <-- '"+major + "." + minor + "." + maintenance+"'");
 			return major + "." + minor + "." + maintenance;
@@ -97,6 +97,10 @@ public class VersionShort
 		if (toInt(10, 1, 1) != parse("10.1.1")) System.err.println("Test parse-1: failed");
 		if (toInt(10, 1, 0) != parse("10.1"))   System.err.println("Test parse-2: failed");
 		if (toInt(10, 1, 1) != parse("xxx 10.1.1 xxx")) System.err.println("Test parse-3: failed: ");
+		
+		if ( ! toStr(12345).equals("1.23.45") ) System.err.println("Test toStr(12345): failed: got result '"+toStr(12345)+"', expected '1.23.45'.");
+		if ( ! toStr(30310).equals("3.3.10") ) System.err.println("Test toStr(12345): failed: got result '"+toStr(30310)+"', expected '3.3.10'.");
+		
 		
 		System.out.println("END: all test");
 	}

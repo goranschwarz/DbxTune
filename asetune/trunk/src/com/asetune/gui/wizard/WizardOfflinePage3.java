@@ -31,6 +31,7 @@ import com.asetune.Version;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.utils.SwingUtils;
 
@@ -77,6 +78,7 @@ implements ActionListener, TableModelListener
 		private static final long	serialVersionUID	= 1L;
 
 		/** Enable/Disable + add some color to pcsStore, Abs, Diff, Rate */
+		@Override
 		public Component prepareRenderer(TableCellRenderer renderer, int row, int column)
 		{
 			Component c = super.prepareRenderer(renderer, row, column);
@@ -101,6 +103,7 @@ implements ActionListener, TableModelListener
 	};
 
 	public static String getDescription() { return WIZ_DESC; }
+	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
 	public WizardOfflinePage3()
@@ -133,6 +136,7 @@ implements ActionListener, TableModelListener
 		{
             private static final long serialVersionUID = 1L;
 
+			@Override
 			public Class<?> getColumnClass(int column) 
 			{
 				if (column == TAB_POS_TIMEOUT)    return Integer.class;
@@ -144,6 +148,7 @@ implements ActionListener, TableModelListener
 				if (column == TAB_POS_ICON)       return Icon.class;
 				return Object.class;
 			}
+			@Override
 			public boolean isCellEditable(int row, int col)
 			{
 				if (row == 0) // CMSummary
@@ -200,6 +205,11 @@ implements ActionListener, TableModelListener
 			TableColumnModelExt tcmx = (TableColumnModelExt)_sessionTable.getColumnModel();
 			tcmx.getColumnExt(TAB_HEADER[TAB_POS_GROUP_NAME]).setVisible(false);
 		}
+
+		GTableFilter filter = new GTableFilter(_sessionTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
+		filter.setText("");
+		
+		add(filter,      "span, growx, wrap");
 
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_sessionTable);
@@ -361,7 +371,7 @@ implements ActionListener, TableModelListener
 			
 			// This line is picked up by WizardOffline.finish(), which produces the out file.
 			// and will be used for User Defined Counter checking...
-			putWizardData( "to-be-discarded" + "." + cmName, cmName);
+			putWizardData( "to-be-discarded" + ".udc." + cmName, cmName);
 
 			putWizardData( cmName+"."+CountersModel.PROPKEY_queryTimeout,         timeout.toString());
 			putWizardData( cmName+"."+CountersModel.PROPKEY_postponeTime,         postpone.toString());
@@ -383,6 +393,7 @@ implements ActionListener, TableModelListener
 		return rows > 1 ? null : "Atleast one session needs to be checked (except Summary).";
 	}
 
+	@Override
 	public void actionPerformed(ActionEvent ae)
 	{
 		JComponent src = (JComponent) ae.getSource();

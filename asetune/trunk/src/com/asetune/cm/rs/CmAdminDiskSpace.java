@@ -14,6 +14,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -94,13 +95,14 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_QUEUE_SIZE = "QueueSize";
+	public static final String GRAPH_NAME_QUEUE_SIZE = "SdQueueSize";
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels));
+		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -110,8 +112,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
-				"Stable Device Usage, from 'admin disk_space' (Absolute Value)", // Menu CheckBox text
-				"Stable Device Usage, from 'admin disk_space' (Absolute Value)", // Label 
+				"Stable Device Usage, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Menu CheckBox text
+				"Stable Device Usage, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -141,9 +143,10 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setLabel(lArray);
+//			tgdp.setData(dArray);
 		}
 	}
 	
@@ -185,7 +188,7 @@ extends CountersModel
 					+ "<ul>"
 					+ "  <li>ON-LINE  – The device is normal</li>"
 					+ "  <li>OFF-LINE – The device cannot be found</li>"
-					+ "  <li>DROPPED  – The device has been dropped but has not disappeared (some queues are using it)</li>"
+					+ "  <li>DROPPED  – The device has been dropped but has not disappeared (some queues are still using it)</li>"
 					+ "  <li>AUTO     – The device is automatically resizable. See Automatically Resizable Partitions in the Replication Server Administration Guide Volume 1.</li>"
 					+ "</ul>"
 					+ "</html>");
@@ -206,7 +209,42 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
 	{
-		String sql = "admin disk_space";
+		String sql = "admin disk_space"; // see below on admin disk_space, MB (which adds 2 columns... but I don't know what version of RS supports that. 15.7.1 SP 305 has it)
 		return sql;
 	}
 }
+/*
+1> admin disk_space
+RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
+RS> ---- ---------- ---------------------- ----------------- ------------
+RS> 1    Partition  java.sql.Types.VARCHAR varchar(255)      -none-      
+RS> 2    Logical    java.sql.Types.VARCHAR varchar(31)       -none-      
+RS> 3    Part.Id    java.sql.Types.INTEGER int               -none-      
+RS> 4    Total Segs java.sql.Types.INTEGER int               -none-      
+RS> 5    Used Segs  java.sql.Types.INTEGER int               -none-      
+RS> 6    State      java.sql.Types.VARCHAR varchar(31)       -none-      
++-------------------------------+-------+-------+----------+---------+----------+
+|Partition                      |Logical|Part.Id|Total Segs|Used Segs|State     |
++-------------------------------+-------+-------+----------+---------+----------+
+|/sybdev/devices/rs/PROD_REP.sd1|sd1    |101    |16384     |10       |ON-LINE///|
++-------------------------------+-------+-------+----------+---------+----------+
+(1 rows affected)
+
+1> admin disk_space,mb
+RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
+RS> ---- ---------- ---------------------- ----------------- ------------
+RS> 1    Partition  java.sql.Types.VARCHAR varchar(255)      -none-      
+RS> 2    Logical    java.sql.Types.VARCHAR varchar(31)       -none-      
+RS> 3    Part.Id    java.sql.Types.INTEGER int               -none-      
+RS> 4    Total Segs java.sql.Types.INTEGER int               -none-      
+RS> 5    Used Segs  java.sql.Types.INTEGER int               -none-      
+RS> 6    Total MBs  java.sql.Types.INTEGER int               -none-      
+RS> 7    Used MBs   java.sql.Types.INTEGER int               -none-      
+RS> 8    State      java.sql.Types.VARCHAR varchar(31)       -none-      
++-------------------------------+-------+-------+----------+---------+---------+--------+----------+
+|Partition                      |Logical|Part.Id|Total Segs|Used Segs|Total MBs|Used MBs|State     |
++-------------------------------+-------+-------+----------+---------+---------+--------+----------+
+|/sybdev/devices/rs/PROD_REP.sd1|sd1    |101    |16384     |10       |16384    |10      |ON-LINE///|
++-------------------------------+-------+-------+----------+---------+---------+--------+----------+
+(1 rows affected)
+*/

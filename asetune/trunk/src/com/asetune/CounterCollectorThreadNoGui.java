@@ -1,5 +1,6 @@
 package com.asetune;
 
+import java.awt.event.ActionEvent;
 import java.io.Console;
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +19,9 @@ import javax.script.ScriptException;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.cache.XmlPlanCache;
+import com.asetune.cache.XmlPlanCacheAse;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CounterModelHostMonitor;
@@ -34,19 +38,25 @@ import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.Memory;
+import com.asetune.utils.MemoryWarningSystem;
 import com.asetune.utils.PropPropEntry;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 
 public class CounterCollectorThreadNoGui
 extends CounterCollectorThreadAbstract
+implements Memory.MemoryListener
 {
 	/** Log4j logging. */
 	private static Logger _logger = Logger.getLogger(CounterCollectorThreadNoGui.class);
@@ -260,7 +270,12 @@ extends CounterCollectorThreadAbstract
 				//System.out.println("Read ASE password from Console '"+_asePassword+"'.");
 			}
 		}
-		// treat null password
+		// if we started in background... stdin is not available
+		if (_asePassword == null)
+		{
+			throw new MandatoryPropertyException("No Password for the DBMS could be retrived.");
+		}
+		// treat "null" password, and set it to blank
 		if (_asePassword.equalsIgnoreCase("null"))
 			_asePassword = "";
 
@@ -281,7 +296,12 @@ extends CounterCollectorThreadAbstract
 				//System.out.println("Read SSH password from Console '"+_sshPassword+"'.");
 			}
 		}
-		// treat null password
+		// if we started in background... stdin is not available
+		if (_sshPassword == null)
+		{
+			throw new MandatoryPropertyException("No Password for SSH could be retrived.");
+		}
+		// treat "null" password, and set it to blank
 		if (_sshPassword != null && _sshPassword.equalsIgnoreCase("null"))
 			_sshPassword = "";
 
@@ -306,10 +326,40 @@ extends CounterCollectorThreadAbstract
 		if (_scriptWaitForNextSample != null)
 			_logger.info("Using Java Script when waiting for next sample period. Script: "+_scriptWaitForNextSample);
 
+		// Setting internal "system property" variable 'SERVERNAME' to "specified server name" or the "hostName.portNum" 
+		// This might be used by the AlarmWriterToFile or similar
+		if (StringUtil.hasValue(_aseServer) || StringUtil.hasValue(_aseHostPortStr))
+		{
+			String servername = null;
+			
+			if (StringUtil.hasValue(_aseServer))
+				servername = _aseServer;
+			else
+				servername = _aseHostPortStr;
+
+			if (StringUtil.hasValue(servername))
+			{
+				// change any ':' to '.'   ... due to windows can't handle ':' to good in files
+				// I choosed char '.' because '-' is probably in any hostnames, and '_' is usualy within any ASE-Servername
+				// So if we want to have some logic when looking at a filename, then '.' made "best sence"
+				servername = servername.replace(':', '.');
+
+				System.setProperty("SERVERNAME", servername);
+			}
+		}
+		
+		
 		//---------------------------
 		// Create all the CM objects, the objects will be added to _CMList
-		getCounterController().createCounters(hasGui);
+		long start = System.currentTimeMillis();
 		
+		getCounterController().createCounters(hasGui);
+
+		long time = System.currentTimeMillis() - start;
+		_logger.info("Creating ALL CM Objects took " + TimeUtils.msToTimeStr("%MM:%SS.%ms", time) + " time format(MM:SS.ms)");
+		
+
+
 		// SPECIAL things for some offline CMD LINE parameters
 		String cmOptions = _storeProps.getProperty("cmdLine.cmOptions");
 		if (cmOptions != null)
@@ -433,7 +483,86 @@ extends CounterCollectorThreadAbstract
 			if (_sshHostname == null || _sshUsername == null || _sshPassword == null)
 				throw new Exception("There are "+activeCountHostMon+" active Performance Counters that are doing Host Monitoring, this is using SSH for communication, but no hostname/user/passwd is given. hostname='"+_sshHostname+"', username='"+_sshUsername+"', password='"+(_sshPassword==null?null:"*has*passwd*")+"'.");
 		}
+		
+		// Add a "low memory" listener... so we can cleanup some stuff...
+		Memory.addMemoryListener(this);
+
+		// Add another memory listener...
+		MemoryWarningSystem mws = new MemoryWarningSystem();
+		MemoryWarningSystem.setPercentageUsageThreshold(0.8);
+		
+		mws.addListener(new MemoryWarningSystem.Listener()
+		{
+			@Override
+			public void memoryUsageLow(long usedMemory, long maxMemory)
+			{
+				double percentageUsed = ((double) usedMemory) / maxMemory;
+				_logger.warn("Low on memory usage ?... percentageUsed="+percentageUsed);
+			}
+		});
 	}
+	
+	/*---------------------------------------------------
+	** BEGIN: implementing Memory.MemoryListener
+	**---------------------------------------------------
+	*/
+	@Override
+	public void outOfMemoryHandler()
+	{
+		_logger.info("called: outOfMemoryHandler() - OUT_OF_MEMORY");
+//		ActionEvent doGcEvent = new ActionEvent(this, 0, MainFrame.ACTION_OUT_OF_MEMORY);
+//		actionPerformed(doGcEvent);
+		
+		
+		// XML Plan Cache
+		if (XmlPlanCache.hasInstance())
+		{
+			XmlPlanCache.getInstance().outOfMemoryHandler();
+		}
+
+		// Persistent Counter Storage
+		if (PersistentCounterHandler.hasInstance())
+		{
+			PersistentCounterHandler.getInstance().outOfMemoryHandler();
+		}
+
+		System.gc();
+	}
+
+	@Override
+	public void memoryConsumption(int memoryLeftInMB)
+	{
+		// When 150 MB of memory or less, enable Java Garbage Collect after each Sample
+		if (memoryLeftInMB <= MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB)
+		{
+			_logger.info("called: memoryConsumption(memoryLeftInMB=" + memoryLeftInMB + ") - LOW_ON_MEMORY");
+			
+			// XML Plan Cache
+			if (XmlPlanCache.hasInstance())
+			{
+				XmlPlanCache.getInstance().lowOnMemoryHandler();
+			}
+
+			// Persistent Counter Storage
+			if (PersistentCounterHandler.hasInstance())
+			{
+				PersistentCounterHandler.getInstance().lowOnMemoryHandler();
+			}
+
+			System.gc();
+		}
+
+		// When 30 MB of memory or less, write some info about that.
+		// and call some handler to act on low memory.
+		if (memoryLeftInMB <= MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB)
+		{
+			outOfMemoryHandler();
+		}
+	}
+	/*---------------------------------------------------
+	** END: implementing Memory.MemoryListener
+	**---------------------------------------------------
+	*/	
 
 	/**
 	 * Return a list of entries that specifies what CM's that should be used
@@ -610,6 +739,7 @@ extends CounterCollectorThreadAbstract
 		boolean startNewPcsSession = false;
 
 		// loop
+		@SuppressWarnings("unused")
 		int loopCounter = 0;
 
 		MonTablesDictionary mtd = null;
@@ -626,6 +756,8 @@ extends CounterCollectorThreadAbstract
 			pch = new PersistentCounterHandler(oli, scb);
 			pch.init( _storeProps );
 			pch.start();
+			
+			PersistentCounterHandler.setInstance(pch);
 		}
 		catch (Exception e)
 		{
@@ -638,6 +770,17 @@ extends CounterCollectorThreadAbstract
 			return;
 		}
 
+		//---------------------------
+		// START Heart Beat Monitor thread
+		// If we do not PING this monitor it will start to do stacktraces of all threads...
+		// This so we can debug what's happening on the system. 
+		// This is used if the collector thread get "stuck" or "freezes" for some reason
+		//---------------------------
+		HeartbeatMonitor.setAlarmTime(_sleepTime * 3); // Dump threads if no Heartbeat has been issued for a while (3 times the sleep time)
+		HeartbeatMonitor.setSleepTime(_sleepTime / 2); // check every now and then... (half the sleep time seems resonable)
+		HeartbeatMonitor.start();
+
+
 		// remember when we started
 		long threadStartTime = System.currentTimeMillis();
 
@@ -648,6 +791,10 @@ extends CounterCollectorThreadAbstract
 		//---------------------------
 		while (_running)
 		{
+			// notify the heartbeat that we are still running...
+			// This is also done right before we go to sleep (waiting for next data collection)
+			HeartbeatMonitor.doHeartbeat();
+			
 			// Check if current MONITOR-ASE connection is lost
 //			if (_monConn != null)
 //			{
@@ -677,11 +824,53 @@ extends CounterCollectorThreadAbstract
 					AseConnectionFactory.setUser(_aseUsername); // Set this just for SendConnectInfo uses it
 					AseConnectionFactory.setHostPort(_aseHostPortStr);
 
-					Connection conn = AseConnectionFactory.getConnection(_aseHostPortStr, null, _aseUsername, _asePassword, Version.getAppName()+"-nogui", Version.getVersionStr(), (Properties)null, null);
+					Connection conn = AseConnectionFactory.getConnection(_aseHostPortStr, null, _aseUsername, _asePassword, Version.getAppName()+"-nogui", Version.getVersionStr(), null, (Properties)null, null);
 //					getCounterController().setMonConnection( conn);
 					getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
 //					getCounterController().getMonConnection().reConnect();
 
+					// set the connection props so it can be reused...
+					// FIXME: This is very ASE Specific right now... it needs to be more generic for DbxTune (sqlServerTune, oracleTune, etc)
+					ConnectionProp cp = new ConnectionProp();
+					cp.setLoginTimeout ( 20 );
+					cp.setDriverClass  ( AseConnectionFactory.getDriver() );
+					cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
+//					cp.setUrlOptions   ( tdsUrlOptions );
+					cp.setUsername     ( _aseUsername );
+					cp.setPassword     ( _asePassword );
+					cp.setAppName      ( Version.getAppName() );
+					cp.setAppVersion   ( Version.getVersionStr() );
+//					cp.setHostPort     ( hosts, ports );
+//					cp.setSshTunnelInfo( sshTunnelInfo );
+
+					DbxConnection.setDefaultConnProp(cp);
+					
+					// ASE: 
+					// XML Plan Cache... maybe it's not the perfect place to initialize this...
+					XmlPlanCache.setInstance( new XmlPlanCacheAse( new ConnectionProvider()
+					{
+						@Override
+						public DbxConnection getNewConnection(String appname)
+						{
+							try 
+							{
+								return DbxConnection.connect(null, appname);
+							} 
+							catch(Exception e) 
+							{
+								_logger.error("Problems getting a new connection. Caught: "+e, e);
+								return null;
+							}
+						}
+						
+						@Override
+						public DbxConnection getConnection()
+						{
+							return getCounterController().getMonConnection();
+						}
+					}) );
+
+					
 					// CHECK the connection for proper configuration.
 					// If failure, go and FIX
 					// FIXME: implement the below "set minimal logging options"
@@ -735,6 +924,9 @@ extends CounterCollectorThreadAbstract
 				if ( ! getCounterController().isMonConnected(true, true) )
 				{
 					_logger.error("Problems connecting to ASE server. sleeping for "+_sleepOnFailedConnectTime+" seconds before retry...");
+
+					// Send ALARM: Server is down
+					sendAlarmServerIsDown(_aseHostPortStr);
 
 					getCounterController().sleep(_sleepTime * 1000);
 //					try { Thread.sleep( _sleepTime * 1000 ); }
@@ -802,16 +994,16 @@ extends CounterCollectorThreadAbstract
 					_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"'");
 	
 					// get a connection
-						try
-						{
-							SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword);
-							sshConn.connect();
-							getCounterController().setHostMonConnection(sshConn);
-						}
-						catch (IOException e)
-						{
-							_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
-						}
+					try
+					{
+						SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword);
+						sshConn.connect();
+						getCounterController().setHostMonConnection(sshConn);
+					}
+					catch (IOException e)
+					{
+						_logger.error("Host Monitoring: Failed to connect to SSH hostname='"+_sshHostname+"', user='"+_sshUsername+"'.", e);
+					}
 				}
 			}
 				
@@ -878,6 +1070,9 @@ extends CounterCollectorThreadAbstract
 				// add some statistics on the "main" sample level
 				getCounterController().setStatisticsTime(headerInfo._mainSampleTime);
 
+				// Set SERVERNAME to where we are currently connected 
+				System.setProperty("DBMS_SERVERNAME", headerInfo.getServerName());
+				
 
 				// Keep a list of all the CM's that are refreshed during this loop
 				// This one will be passed to doPostRefresh()
@@ -952,6 +1147,16 @@ extends CounterCollectorThreadAbstract
 				// That thread will store the information in any Storage.
 				pch.add(pc);
 
+
+				//-----------------
+				// AlarmHandler: end-of-scan: Cancel any alarms that has not been repeated
+				//-----------------
+				if (AlarmHandler.hasInstance())
+				{
+//					AlarmHandler.getInstance().endOfScan();           // This is synchronous operation
+					AlarmHandler.getInstance().addEndOfScanToQueue(); // This is async operation
+				}
+
 			}
 			catch (Throwable t)
 			{
@@ -991,6 +1196,25 @@ extends CounterCollectorThreadAbstract
 				}
 			}
 
+			//----------------------------------------------------
+			// Post checking: should we reconnect to the server
+			//----------------------------------------------------
+			DbxConnection conn = getCounterController().getMonConnection();
+			if (conn != null && conn.isConnectionMarked(DbxConnection.MarkTypes.MarkForReConnect))
+			{
+				_logger.warn("The Connection to the monitored DBMS has been marked for 're-connect'. So lets close the connection, and open a new one.");
+				try
+				{
+					conn.clearConnectionMark(DbxConnection.MarkTypes.MarkForReConnect);
+					conn.close();
+					conn.reConnect(null);
+				}
+				catch (Exception ex)
+				{
+					_logger.error("Problems during 're-connect' after a sample is finished. Caught: "+ex);
+				}
+			}
+
 			//-----------------------------
 			// Do Java Garbage Collection?
 			//-----------------------------
@@ -1014,6 +1238,9 @@ extends CounterCollectorThreadAbstract
 				getCounterController().setWaitEvent("next sample period...");
 				_logger.debug("Sleeping for "+sleepTime+" seconds. Waiting for " + getCounterController().getWaitEvent() );
 			}
+
+			// notify the heartbeat that we are still running...
+			HeartbeatMonitor.doHeartbeat();
 
 			// Sleep / wait for next sample
 			if (_scriptWaitForNextSample != null)

@@ -470,7 +470,7 @@ public class TrendGraphPanelReorderDialog
 			row.set(TabPos.Icon      .ordinal(), icon);//cm.getTabPanel().getIcon());
 			row.set(TabPos.Enabled   .ordinal(), tg.isGraphEnabled());
 			row.set(TabPos.CmOwner   .ordinal(), cmDisplayName);
-			row.set(TabPos.GraphLabel.ordinal(), tg.getLabel());
+			row.set(TabPos.GraphLabel.ordinal(), tg.getChartLabel());
 			row.set(TabPos.GraphName .ordinal(), tg.getName());
 
 			tab.add(row);

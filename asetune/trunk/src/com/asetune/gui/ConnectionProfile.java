@@ -70,6 +70,11 @@ public class ConnectionProfile
 	private TdsEntry     _tdsEntry     = null;
 	private JdbcEntry    _jdbcEntry    = null;
 	private OfflineEntry _offlineEntry = null;
+
+	// If some "sub" values should be seved even if the "super" level is not marked for save...
+	// or: write config for unset values...
+	private static boolean _saveEverything = true;
+
 	
 	public static SrvType getServerType(Type type, String productName)
 	{
@@ -194,6 +199,15 @@ public class ConnectionProfile
 		else if (_type == Type.JDBC)    _jdbcEntry   ._profileTypeName = profileTypeName;
 		else if (_type == Type.OFFLINE) _offlineEntry._profileTypeName = profileTypeName;
 		else _logger.warn("setProfileType() unknown type = "+_type);
+	}
+
+	public String getProfileTypeName()
+	{
+		if      (_type == Type.TDS)     return _tdsEntry    ._profileTypeName;
+		else if (_type == Type.JDBC)    return _jdbcEntry   ._profileTypeName;
+		else if (_type == Type.OFFLINE) return _offlineEntry._profileTypeName;
+
+		throw new RuntimeException("Unknow _type: "+_type);
 	}
 
 	@Override
@@ -370,6 +384,9 @@ public class ConnectionProfile
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                   = "pcsWriterCapSql_doStatementInfo";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                        = "pcsWriterCapSql_doPlanText";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                     = "pcsWriterCapSql_sleepTimeInMs";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime         = "pcsWriterCapSql_saveStatement_gt_execTime";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads     = "pcsWriterCapSql_saveStatement_gt_logicalReads";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads    = "pcsWriterCapSql_saveStatement_gt_physicalReads";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                  = "pcsWriterCapSql_sendDdlForLookup";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime      = "pcsWriterCapSql_sendDdlForLookup_gt_execTime";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = "pcsWriterCapSql_sendDdlForLookup_gt_logicalReads";
@@ -467,6 +484,9 @@ public class ConnectionProfile
 		public boolean       _pcsWriterCapSql_doStatementInfo                   = PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo;
 		public boolean       _pcsWriterCapSql_doPlanText                        = PersistentCounterHandler.DEFAULT_sqlCap_doPlanText;
 		public int           _pcsWriterCapSql_sleepTimeInMs                     = PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs;
+		public int           _pcsWriterCapSql_saveStatement_gt_execTime         = PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime;
+		public int           _pcsWriterCapSql_saveStatement_gt_logicalReads     = PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads;
+		public int           _pcsWriterCapSql_saveStatement_gt_physicalReads    = PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads;
 		public boolean       _pcsWriterCapSql_sendDdlForLookup                  = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup;
 		public int           _pcsWriterCapSql_sendDdlForLookup_gt_execTime      = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime;
 		public int           _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads;
@@ -525,6 +545,9 @@ public class ConnectionProfile
 			_pcsWriterCapSql_doStatementInfo                   = fromEntry._pcsWriterCapSql_doStatementInfo;
 			_pcsWriterCapSql_doPlanText                        = fromEntry._pcsWriterCapSql_doPlanText;
 			_pcsWriterCapSql_sleepTimeInMs                     = fromEntry._pcsWriterCapSql_sleepTimeInMs;
+			_pcsWriterCapSql_saveStatement_gt_execTime         = fromEntry._pcsWriterCapSql_saveStatement_gt_execTime;
+			_pcsWriterCapSql_saveStatement_gt_logicalReads     = fromEntry._pcsWriterCapSql_saveStatement_gt_logicalReads;
+			_pcsWriterCapSql_saveStatement_gt_physicalReads    = fromEntry._pcsWriterCapSql_saveStatement_gt_physicalReads;
 			_pcsWriterCapSql_sendDdlForLookup                  = fromEntry._pcsWriterCapSql_sendDdlForLookup;
 			_pcsWriterCapSql_sendDdlForLookup_gt_execTime      = fromEntry._pcsWriterCapSql_sendDdlForLookup_gt_execTime;
 			_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = fromEntry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads;
@@ -554,7 +577,7 @@ public class ConnectionProfile
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLaterHour  , _dbxtuneOptDissConnectLaterHour  , entry._dbxtuneOptDissConnectLaterHour);
 			htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, _dbxtuneOptDissConnectLaterMinute, entry._dbxtuneOptDissConnectLaterMinute);
 
-			if (_dbxtuneOptRecordSession || entry._dbxtuneOptRecordSession)
+			if (_saveEverything || _dbxtuneOptRecordSession || entry._dbxtuneOptRecordSession)
 			{
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterClass                   , _pcsWriterClass   , entry._pcsWriterClass);
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDriver                  , _pcsWriterDriver  , entry._pcsWriterDriver);
@@ -573,13 +596,16 @@ public class ConnectionProfile
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , _pcsWriterCapSql_doStatementInfo                  , entry._pcsWriterCapSql_doStatementInfo                  );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , _pcsWriterCapSql_doPlanText                       , entry._pcsWriterCapSql_doPlanText                       );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , _pcsWriterCapSql_sleepTimeInMs                    , entry._pcsWriterCapSql_sleepTimeInMs                    );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime        , _pcsWriterCapSql_saveStatement_gt_execTime        , entry._pcsWriterCapSql_saveStatement_gt_execTime        );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads    , _pcsWriterCapSql_saveStatement_gt_logicalReads    , entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads   , _pcsWriterCapSql_saveStatement_gt_physicalReads   , entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , _pcsWriterCapSql_sendDdlForLookup                 , entry._pcsWriterCapSql_sendDdlForLookup                 );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , _pcsWriterCapSql_sendDdlForLookup_gt_execTime     , entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, _pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 			}
 
-			if (_dbxtuneOptOsMonitoring || entry._dbxtuneOptOsMonitoring)
+			if (_saveEverything || _dbxtuneOptOsMonitoring || entry._dbxtuneOptOsMonitoring)
 			{
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonUsername       , _osMonUsername    , entry._osMonUsername);
 				if (_osMonSavePassword || entry._osMonSavePassword)
@@ -636,6 +662,9 @@ public class ConnectionProfile
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , _pcsWriterCapSql_doStatementInfo                  );
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , _pcsWriterCapSql_doPlanText                       );
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , _pcsWriterCapSql_sleepTimeInMs                    );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime        , _pcsWriterCapSql_saveStatement_gt_execTime        );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads    , _pcsWriterCapSql_saveStatement_gt_logicalReads    );
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads   , _pcsWriterCapSql_saveStatement_gt_physicalReads   );
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , _pcsWriterCapSql_sendDdlForLookup                 );
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , _pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
@@ -705,6 +734,9 @@ public class ConnectionProfile
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , _pcsWriterCapSql_doStatementInfo                  );
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , _pcsWriterCapSql_doPlanText                       );
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , _pcsWriterCapSql_sleepTimeInMs                    );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime        , _pcsWriterCapSql_saveStatement_gt_execTime        );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads    , _pcsWriterCapSql_saveStatement_gt_logicalReads    );
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads   , _pcsWriterCapSql_saveStatement_gt_physicalReads   );
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , _pcsWriterCapSql_sendDdlForLookup                 );
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , _pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , _pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
@@ -740,7 +772,7 @@ public class ConnectionProfile
 			entry._dbxtuneOptDissConnectLaterMinute  = getValue(element, XML_TDS_DBXTUNE_OptDissConnectLaterMinute, entry._dbxtuneOptDissConnectLaterMinute);  // should the be in here???
 
 			// HostMonitor
-			if (entry._dbxtuneOptOsMonitoring)
+			if (_saveEverything || entry._dbxtuneOptOsMonitoring)
 			{
 				entry._osMonUsername                 = getValue(element, XML_TDS_DBXTUNE_osMonUsername,     entry._osMonUsername);
 				entry._osMonSavePassword             = getValue(element, XML_TDS_DBXTUNE_osMonSavePassword, entry._osMonSavePassword); // Should this be here???
@@ -751,7 +783,7 @@ public class ConnectionProfile
 			}
 
 			// Recordings
-			if (entry._dbxtuneOptRecordSession)
+			if (_saveEverything || entry._dbxtuneOptRecordSession)
 			{
 				entry._pcsWriterClass                    = getValue(element, XML_TDS_DBXTUNE_pcsWriterClass,                    entry._pcsWriterClass);
 				entry._pcsWriterDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterDriver,                   entry._pcsWriterDriver);
@@ -771,6 +803,9 @@ public class ConnectionProfile
 				entry._pcsWriterCapSql_doStatementInfo                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  ,                entry._pcsWriterCapSql_doStatementInfo                  );
 				entry._pcsWriterCapSql_doPlanText                        = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       ,                entry._pcsWriterCapSql_doPlanText                       );
 				entry._pcsWriterCapSql_sleepTimeInMs                     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    ,                entry._pcsWriterCapSql_sleepTimeInMs                    );
+				entry._pcsWriterCapSql_saveStatement_gt_execTime         = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime        ,                entry._pcsWriterCapSql_saveStatement_gt_execTime        );
+				entry._pcsWriterCapSql_saveStatement_gt_logicalReads     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads    ,                entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
+				entry._pcsWriterCapSql_saveStatement_gt_physicalReads    = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads   ,                entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
 				entry._pcsWriterCapSql_sendDdlForLookup                  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 ,                entry._pcsWriterCapSql_sendDdlForLookup                 );
 				entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime      = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     ,                entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
 				entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads ,                entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
@@ -961,7 +996,7 @@ public class ConnectionProfile
 			if (_tdsUseUrl || entry._tdsUseUrl)
 				htmlTabRowIfChanged(sb, XML_TDS_UseRawUrlStr   , _tdsUseUrlStr      , entry._tdsUseUrlStr);
 
-			if (_isDbxTuneParamsValid || entry._isDbxTuneParamsValid)
+			if (_saveEverything || _isDbxTuneParamsValid || entry._isDbxTuneParamsValid)
 			{
 				if (_dbxtuneParams == null)
 					_dbxtuneParams = DBXTUNE_PARAMS_EMPTY;
@@ -1666,6 +1701,8 @@ public class ConnectionProfile
 	
 	private static StringBuilder htmlTabRowIfChangedPwd(StringBuilder sb, String key, Object oldValue, Object newValue)
 	{
+		if (oldValue == null) oldValue = "";
+		if (newValue == null) newValue = "";
 		return htmlTabRowIfChanged(sb, key, Configuration.encryptPropertyValue(key, oldValue+""), Configuration.encryptPropertyValue(key, newValue+""));
 	}
 	private static StringBuilder htmlTabRowIfChanged(StringBuilder sb, String key, Object oldValue, Object newValue)

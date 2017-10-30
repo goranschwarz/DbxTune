@@ -40,6 +40,9 @@ extends TabularCntrPanel
 	private JCheckBox l_discardAppnameDbxTune_chk;
 	private JCheckBox l_sampleSqlText_chk;
 	
+	private static final Color WORKER_PARENT    = new Color(229, 194, 149); // DARK Beige 
+	private static final Color WORKER_PROCESSES = new Color(255, 245, 216); // Beige
+	
 	public CmProcessActivityPanel(CountersModel cm)
 	{
 		super(cm);
@@ -54,6 +57,35 @@ extends TabularCntrPanel
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String colorStr = null;
+
+		// DARK BEIGE = PARENT of WORKER processes
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Number FamilyID = (Number) adapter.getValue(adapter.getColumnIndex("FamilyID"));
+				Number SPID     = (Number) adapter.getValue(adapter.getColumnIndex("SPID"));
+				if (FamilyID != null && SPID != null && FamilyID.intValue() == SPID.intValue())
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, WORKER_PARENT), null));
+
+		// BEIGE = WORKER process
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String cmd = (String) adapter.getValue(adapter.getColumnIndex("Command"));
+				if ("WORKER PROCESS".equals(cmd))
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, WORKER_PROCESSES), null));
 
 		// YELLOW = SYSTEM process
 		if (conf != null) colorStr = conf.getProperty(getName()+".color.system");

@@ -2912,11 +2912,76 @@ public class AseConnectionUtils
 
 	}
 
+//	/**
+//	 * Check if trace is enabled at the server.
+//	 * <br>
+//	 * First try: <code>show switch</code><br>
+//	 * If it fails try: <code>dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)</code><br>
+//	 * 
+//	 * @param conn
+//	 * @param trace
+//	 */
+//	public static boolean isTraceEnabled(Connection conn, int trace)
+//	throws SQLException
+//	{
+//		// Works with above ASE 12.5.4 and 15.0.2
+//		String showSwitch   = "show switch";
+//
+//		// Used as fallback if above 'set switch...' is failing
+//		String dbccTraceFlags = "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)";
+//
+//		SQLException sqlEx = null;
+//		// TRY with show switch
+//		// This should also be changed to check if the MonConnection, is of version... MonConnection needs to be implemented
+//		try
+//		{
+//			Statement stmt = conn.createStatement();
+//			stmt.executeUpdate(showSwitch);
+//
+//			SQLWarning sqlwarn = stmt.getWarnings();
+//			while (sqlwarn != null)
+//			{
+//				// output looks like this: Serverwide switches set :  3650,  3651.
+//				if (sqlwarn.getMessage().indexOf(" "+trace+",") >= 0 || sqlwarn.getMessage().indexOf(" "+trace+".") >= 0)
+//					return true;
+//				sqlwarn = sqlwarn.getNextWarning();
+//			}
+//			stmt.close();
+//			return false;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("Problems when executing sql '"+showSwitch+"', I will fallback and use '"+dbccTraceFlags+"' instead.");
+//
+//			// Fallback and use DBCC traceflags
+//			try
+//			{
+//				Statement stmt = conn.createStatement();
+//				stmt.executeUpdate(dbccTraceFlags);
+//
+//				SQLWarning sqlwarn = stmt.getWarnings();
+//				while (sqlwarn != null)
+//				{
+//					// output looks like this: Active traceflags: 3604, 3650, 3651
+//					if (sqlwarn.getMessage().indexOf(" "+trace+",") >= 0 || sqlwarn.getMessage().indexOf(" "+trace+"") >= 0) // NOTE: this might be true for "any" *3650*...
+//						return true;
+//					sqlwarn = sqlwarn.getNextWarning();
+//				}
+//				stmt.close();
+//				return false;
+//			}
+//			catch (SQLException e2)
+//			{
+//				sqlEx = e2;
+//				_logger.warn("Problems when executing sql: "+dbccTraceFlags, e2);
+//				throw e2; // HERE WE DO THROW IF WE ECAUSED ALL OUR OPTIONS
+//			}
+//		}
+//	}
 	/**
 	 * Check if trace is enabled at the server.
 	 * <br>
-	 * First try: <code>show switch</code><br>
-	 * If it fails try: <code>dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)</code><br>
+	 * Uses: <code>dbcc istraceon(####)</code><br>
 	 * 
 	 * @param conn
 	 * @param trace
@@ -2924,58 +2989,30 @@ public class AseConnectionUtils
 	public static boolean isTraceEnabled(Connection conn, int trace)
 	throws SQLException
 	{
-		// Works with above ASE 12.5.4 and 15.0.2
-		String showSwitch   = "show switch";
+		// Tested that this works on 12.5.3 and above
+		String dbccTraceFlags = 
+			"dbcc istraceon("+trace+") \n" +
+			"select istraceon = case when @@error = 0 then 1 else 0 end";
 
-		// Used as fallback if above 'set switch...' is failing
-		String dbccTraceFlags = "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)";
-
-		SQLException sqlEx = null;
-		// TRY with show switch
-		// This should also be changed to check if the MonConnection, is of version... MonConnection needs to be implemented
 		try
 		{
 			Statement stmt = conn.createStatement();
-			stmt.executeUpdate(showSwitch);
+			ResultSet rs = stmt.executeQuery(dbccTraceFlags);
 
-			SQLWarning sqlwarn = stmt.getWarnings();
-			while (sqlwarn != null)
+			int isTraceEnabled = 0;
+			while (rs.next())
 			{
-				// output looks like this: Serverwide switches set :  3650,  3651.
-				if (sqlwarn.getMessage().indexOf(" "+trace+",") >= 0 || sqlwarn.getMessage().indexOf(" "+trace+".") >= 0)
-					return true;
-				sqlwarn = sqlwarn.getNextWarning();
+				isTraceEnabled = rs.getInt(1);
 			}
+			rs.close();
 			stmt.close();
-			return false;
+
+			return isTraceEnabled > 0;
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("Problems when executing sql '"+showSwitch+"', I will fallback and use '"+dbccTraceFlags+"' instead.");
-
-			// Fallback and use DBCC traceflags
-			try
-			{
-				Statement stmt = conn.createStatement();
-				stmt.executeUpdate(dbccTraceFlags);
-
-				SQLWarning sqlwarn = stmt.getWarnings();
-				while (sqlwarn != null)
-				{
-					// output looks like this: Active traceflags: 3604, 3650, 3651
-					if (sqlwarn.getMessage().indexOf(" "+trace+",") >= 0 || sqlwarn.getMessage().indexOf(" "+trace+"") >= 0) // NOTE: this might be true for "any" *3650*...
-						return true;
-					sqlwarn = sqlwarn.getNextWarning();
-				}
-				stmt.close();
-				return false;
-			}
-			catch (SQLException e2)
-			{
-				sqlEx = e2;
-				_logger.warn("Problems when executing sql: "+dbccTraceFlags, e2);
-				throw e2; // HERE WE DO THROW IF WE ECAUSED ALL OUR OPTIONS
-			}
+			_logger.warn("Problems when executing sql: "+dbccTraceFlags, e);
+			throw e;
 		}
 	}
 
@@ -3572,8 +3609,8 @@ public class AseConnectionUtils
 	 * Get object owner
 	 * 
 	 * @param conn       Connection to the database
-	 * @param dbname     Name of the database
-	 * @param objectName Name of the procedure/view/trigger...
+	 * @param dbname     Name of the database (not the dbid)
+	 * @param objectName Name or ID of the procedure/view/trigger...
 	 * 
 	 * @return owner of the object name
 	 */
@@ -3585,12 +3622,33 @@ public class AseConnectionUtils
 		dbname     = dbname    .trim();
 		objectName = objectName.trim();
 
-		String sql = 
-			"select owner = u.name \n" +
-			"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
-			"where o.name = '"+objectName+"' \n" +
-			"  and o.uid  = u.uid";
+//		String sql = 
+//			"select owner = u.name \n" +
+//			"from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+//			"where o.name = '"+objectName+"' \n" +
+//			"  and o.uid  = u.uid";
+		String sql = "";
 
+		// Create SQL
+		// - first part if objectName is a number
+		// - second part if objectName is a normal string
+		try
+		{
+			int objId = Integer.parseInt(objectName);
+
+			sql = "select owner = u.name \n" +
+				      "from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+				      "where o.id  = "+objId+" \n" +
+				      "  and o.uid = u.uid";
+		}
+		catch(NumberFormatException nfe)
+		{
+			sql = "select owner = u.name \n" +
+			      "from "+dbname+"..sysobjects o, "+dbname+"..sysusers u \n" +
+			      "where o.name = '"+objectName+"' \n" +
+			      "  and o.uid  = u.uid";
+		}
+		
 		String owner = "dbo";
 		try
 		{
@@ -3836,7 +3894,8 @@ public class AseConnectionUtils
 				else
 				{
 					// Maybe the MetaData is wrong... so if it's "master" and a proc starting with "sp_", lets try to look it up in sybsystemprocs 
-					if ("master".equals(dbname) && objectName.startsWith("sp_"))
+//					if ("master".equals(dbname) && objectName.startsWith("sp_"))
+					if (objectName.startsWith("sp_"))
 						returnText = getObjectText(conn, "sybsystemprocs", objectName, owner, planId, aseVersion);
 				}
 			}
@@ -3846,6 +3905,8 @@ public class AseConnectionUtils
 				_logger.warn("Problems getting text for object '"+objectName+"', with owner '"+owner+"', in db '"+dbname+"'. Caught: "+e); 
 			}
 		}
+		if (_logger.isDebugEnabled())
+			_logger.debug("Fetched text for object '"+objectName+"', with owner '"+owner+"', in db '"+dbname+"'. textLength=" + (returnText==null ? "-null-" : returnText.length()) );
 
 		return returnText;
 	}
@@ -4326,6 +4387,88 @@ public class AseConnectionUtils
 				}
 			}
 			rs.close();
+			stmt.close();
+			
+			return warningStr;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+			return "Problems when checking grace period. ("+StringUtil.stripNewLine(ex.getMessage()+").");
+		}
+	}
+
+	/**
+	 * Check if the RS Replication Server is is grace period
+	 * @param conn 
+	 * @return null if OK, otherwise a String with the warning message
+	 */
+	public static String getRsGracePeriodWarning(DbxConnection conn)
+	{
+		if (conn == null)
+			return null;
+
+		// Only in 15.7 and above
+		if (conn.getDbmsVersionNumber() < Ver.ver(15,7))
+			return null;
+
+
+		String sql = "sysadmin lmconfig";
+
+		try 
+		{
+			String warningStr = null;
+			
+			// do dummy select, which will return 0 rows
+			Statement stmt = conn.createStatement();
+			ResultSet rs;
+			//int rsNum = 0;
+			boolean hasRs = stmt.execute(sql);
+			while (hasRs)
+			{
+				if(hasRs) 
+				{
+					rs = stmt.getResultSet();
+					int colCount = rs.getMetaData().getColumnCount();
+					boolean hasExpiryDate = false;
+					for (int c=0; c<colCount; c++)
+					{
+						if ("Expiry Date".equalsIgnoreCase(rs.getMetaData().getColumnLabel(c+1)))
+							hasExpiryDate = true;
+					}
+					while(rs.next()) 
+					{
+						if (hasExpiryDate)
+						{
+							String licStatus      = rs.getString("Status");
+							String licGraceExpiry = rs.getString("Expiry Date");
+							String licName        = rs.getString("License Name");
+							String srvName        = rs.getString("Server Name");
+
+							if ("graced".equalsIgnoreCase(licStatus))
+							{
+								// add newline if we have several rows
+								warningStr = warningStr == null ? "" : warningStr + "\n";
+								
+								if (srvName != null && "null".equalsIgnoreCase(srvName))
+									srvName = conn.getDbmsServerName();
+
+								warningStr += "Server '"+srvName+"' is in grace period and will stop working at '"+licGraceExpiry+"'. (licName='"+licName+"').";
+							}
+						}
+					}
+
+					rs.close();
+				}
+				else
+				{
+					if(stmt.getUpdateCount() == -1)
+						break;
+				}
+
+				//rsNum++;
+				hasRs = stmt.getMoreResults();
+			}
 			stmt.close();
 			
 			return warningStr;

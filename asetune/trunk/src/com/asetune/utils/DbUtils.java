@@ -28,6 +28,7 @@ public class DbUtils
 	public static final String DB_PROD_NAME_SYBASE_RS    = "Replication Server";
 	public static final String DB_PROD_NAME_SYBASE_RAX   = "Sybase Replication Agent for Unix & Windows";
 	public static final String DB_PROD_NAME_SYBASE_RSDRA = "DR Agent";
+	public static final String DB_PROD_NAME_SYBASE_RSDA  = "SAP Replication Server Data Assurance";
 
 	public static final String DB_PROD_NAME_H2           = "H2";
 	public static final String DB_PROD_NAME_HANA         = "HDB";
@@ -460,6 +461,23 @@ public class DbUtils
 		rs.close();
 		stmt.close();
 
+		// Postfix on the filename
+		if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_MSSQL))
+		{
+			if (StringUtil.hasValue(retStr))
+			{
+				// MsSql for Linux seesm to return a "windows type" path... at least for CTP Drop
+				// @@version: 'Microsoft SQL Server vNext (CTP1.3) - 14.0.304.138 (X64) Feb 13 2017 16:49:12 Copyright (C) 2016 Microsoft Corporation. All rights reserved. on Linux (Ubuntu 16.04.1 LTS)' 
+				// serverproperty('ErrorLogFileName') returns: 'C:\var\opt\mssql\log\errorlog'
+				// but I dont think "anyone" would be allowed to look at the file alyway, since the directory is only accessable by user 'mssql' and group 'mssql'... ls -Fal /var/opt/ 'drwxrwx---  7 mssql mssql 4096 mar 11 23:30 mssql/'
+				if (retStr.startsWith("C:\\var\\opt\\mssql"))
+				{
+					// Remove 'C:' and turn \ into /
+					retStr = retStr.substring(2).replace('\\', '/');
+				}
+			}
+		}
+
 		return retStr;
 	}
 
@@ -554,7 +572,7 @@ public class DbUtils
 	 * @return a list of ResultSets if any
 	 * @throws SQLException if we had problems
 	 */
-	public static List<ResultSetTableModel> exec(Connection conn, String sql)
+	public static List<ResultSetTableModel> exec(Connection conn, String sql, int timeout)
 	throws SQLException
 	{
 		ArrayList<ResultSetTableModel> rsList = new ArrayList<ResultSetTableModel>();
@@ -563,6 +581,10 @@ public class DbUtils
 			return rsList;
 
 		Statement stmnt = conn.createStatement();
+		if (timeout > 0)
+		{
+			stmnt.setQueryTimeout(timeout);
+		}
 
 		boolean hasRs = stmnt.execute(sql);
 		int rowsAffected = 0;

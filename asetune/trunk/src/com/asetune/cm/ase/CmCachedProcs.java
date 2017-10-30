@@ -298,7 +298,9 @@ extends CountersModel
 
 		cols = 
 			InstanceID + 
-			"PlanID, DBName, ObjectName, ObjectType, " + Active + "MemUsageKB, CompileDate, CompileAgeInSec=datediff(ss, CompileDate, getdate()), " +
+			"PlanID, DBName, ObjectName, ObjectType, " + Active + "MemUsageKB, CompileDate, \n" + 
+//			"CompileAgeInSec=datediff(ss, CompileDate, getdate()), " +
+			"CompileAgeInSec = CASE WHEN datediff(day, CompileDate, getdate()) >= 24 THEN -1 ELSE  datediff(ss, CompileDate, getdate()) END, " +
 			ase1550_nl + RequestCnt + TempdbRemapCnt + AvgTempdbRemapTime +
 			ase1570_nl + ExecutionCount + ase1570_nl +  
 			AvgCPUTime + 

@@ -1,8 +1,10 @@
 package com.asetune.sp_sysmon;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.utils.StringUtil;
 
 public class ProcCache
 extends AbstractSysmonType
@@ -176,6 +178,17 @@ extends AbstractSysmonType
 				fld_SqlStatementCache_StatementsNotCached += value; // NOT SUM, but += anyway
 		}
 
+//		CountersModel cmSpinlockSum = CounterController.getInstance().getCmByName(CmSpinlockSum.CM_NAME);
+		CountersModel cmSpinlockSum = getSpinlockSum();
+		String rproccache_spin = "unknown";
+		String rprocmgr_spin = "unknown";
+		LinkedHashMap<String, Double> spinlockCachletCont = new LinkedHashMap<String, Double>();
+		if (cmSpinlockSum != null)
+		{
+			rproccache_spin = cmSpinlockSum.getDiffString("Resource->rproccache_spin", "contention");
+			rprocmgr_spin   = cmSpinlockSum.getDiffString("Resource->rprocmgr_spin", "contention");
+		}
+
 		addReportHead("Procedure Cache Management");
 		addReportLnCnt("  Procedure Requests",        fld_ProcedureRequests);
 		addReportLnPct("  Procedure Reads from Disk", fld_ProcedureReadsFromDisk, fld_ProcedureRequests);
@@ -205,6 +218,12 @@ extends AbstractSysmonType
 		addReportLnCnt("    Statements Dropped",       fld_SqlStatementCache_StatementsDropped);
 		addReportLnCnt("    Statements Restored",      fld_SqlStatementCache_StatementsRestored);
 		addReportLnCnt("    Statements Not Cached",    fld_SqlStatementCache_StatementsNotCached);
+
+		addReportLn   ();
+		addReportLn   ("  Procedure Cache Spinlocks (added by AseTune):");
+		addReportLn   ("    Spinlock Contention: <<<< see 'tab' Spinlock Sum for Spinlock contention >>>>");
+		addReportLn   ("    Proc Cache Spinlock:         " + StringUtil.left("", 35) + " " + StringUtil.right(rproccache_spin + " %", 10));
+		addReportLn   ("    Proc Cache Manager Spinlock: " + StringUtil.left("", 35) + " " + StringUtil.right(rprocmgr_spin   + " %", 10));
 	}
 //	print "Procedure Cache Management        per sec      per xact       count  %% of total"
 //

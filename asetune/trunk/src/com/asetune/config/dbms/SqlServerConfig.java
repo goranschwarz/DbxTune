@@ -145,8 +145,8 @@ implements IDbmsConfig
 
 	public SqlServerConfig()
 	{
-//		DbmsConfigTextManager.clear();
-//		RaxConfigText.createAndRegisterAllInstances();
+		DbmsConfigTextManager.clear();
+		SqlServerConfigText.createAndRegisterAllInstances();
 	}
 
 	/**

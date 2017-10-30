@@ -212,6 +212,7 @@ implements ContentAssistable // Not sure how this is used.
 	 */
 	public void addCompletion(String text)
 	{
+//System.out.println("GTextField.addCompletion(): text='"+text+"'.");
 		setAutoCompleteEnabled(true);
 		
 		if (_provider instanceof DefaultCompletionProvider)
@@ -225,13 +226,44 @@ implements ContentAssistable // Not sure how this is used.
 		}
 	}
 
-	public void addCompletion(JTable table)
+	public void addCompletion(final JTable table)
 	{
+//System.out.println("GTextField.addCompletion()");
 		setAutoCompleteEnabled(true);
 
 		for (int c=0; c<table.getColumnCount(); c++)
 			addCompletion( table.getColumnName(c) );
+		
+//		table.addPropertyChangeListener(new PropertyChangeListener()
+//		{
+//			@Override
+//			public void propertyChange(PropertyChangeEvent evt)
+//			{
+//				if ("model".equals(evt.getPropertyName()) && evt.getNewValue() != null && !evt.getNewValue().equals(evt.getOldValue()))
+//				{
+//					System.out.println("GTextField(table).propertyChange(): tableName='"+table.getName()+"', getPropertyName()="+evt.getPropertyName());
+//					refreshCompletion(table);
+//				}
+//			}
+//		});
 	}
+
+	public void refreshCompletion(JTable table)
+	{
+//System.out.println("GTextField.refreshCompletion()");
+		if (_provider instanceof DefaultCompletionProvider)
+		{
+			DefaultCompletionProvider p = (DefaultCompletionProvider) _provider;
+			p.clear();
+		}
+		else
+		{
+			throw new RuntimeException("Installed Completion Provider is not based on DefaultCompletionProvider.");
+		}
+
+		addCompletion(table);
+	}
+
 
 
 	/**

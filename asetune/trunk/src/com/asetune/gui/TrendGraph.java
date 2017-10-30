@@ -24,6 +24,7 @@ import java.awt.event.MouseListener;
 import java.awt.geom.Rectangle2D;
 import java.sql.Timestamp;
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -60,6 +61,7 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
 
 import info.monitorenter.gui.chart.Chart2D;
 import info.monitorenter.gui.chart.IAxis;
@@ -104,7 +106,7 @@ implements ActionListener, MouseListener
 	private ITrace2D           _dummySeries           = null;    // Used to avoid NPE when not connected
 	private ChartPanel         _chartPanel;
 	private String             _graphName;
-	private String             _labelName;
+	private String             _chartLabelName;
 	private String             _menuItemText          = null;
 	private String[]           _seriesNames	          = null;
 	private String[]           _dataColNames          = {};
@@ -125,6 +127,7 @@ implements ActionListener, MouseListener
 
 	// The name of the graph, jachrt2d not good enough.
 	private Watermark          _watermark            = null;
+	private WatermarkWarning   _watermarkWarning     = null;
 	
 	// TimeLine stuff
 	private MyTracePainter     _tracePainter         = null;
@@ -153,11 +156,10 @@ implements ActionListener, MouseListener
 	 * @param initialVisibleVersion If the graph should be visible in the summary at "initial" startup, when properties has been saved for the graph, the initial visible state will be reflected from that. visible at start 0=false, 1=always_true, 15702=true_if_ase_is_15702_or_over
 	 * @param panelMinHeight Initial minimum height of the chart panel, when properties has been saved for the graph, the initial minimum height will be reflected from that.
 	 */
-//	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int panelMinHeight)
-	public TrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
+	public TrendGraph(String name, String chkboxText, String chartLabel, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
 	{
 		_graphName             = name;
-		_labelName             = label;
+		_chartLabelName        = chartLabel;
 		_menuItemText          = chkboxText;
 		_seriesNames           = seriesNames;
 		_cm                    = cm;
@@ -194,8 +196,9 @@ implements ActionListener, MouseListener
 		// Add a mouse listener...
 		installMouseListener();
 
-		_chartPanel = new ChartPanel(_chart);
-		_watermark = new Watermark(_chartPanel, _labelName);
+		_chartPanel       = new ChartPanel(_chart);
+		_watermark        = new Watermark(_chartPanel, _chartLabelName);
+		_watermarkWarning = new WatermarkWarning(_chartPanel, "");
 
 		_logger.debug("showToolTip = " + showToolTip); 
 		if(showToolTip)
@@ -323,13 +326,19 @@ implements ActionListener, MouseListener
 	public String getName()  { return _graphName; }
 
 	/** Get the label name of the ThrendGraph, this is what is displayed at the top of the Graph */
-	public String getLabel() { return _labelName; }
+	public String getChartLabel() { return _chartLabelName; }
 
 	/** Set the label name of the ThrendGraph, this is what is displayed at the top of the Graph */
-	public void setLabel(String label)
+	public void setChartLabel(String label)
 	{
-		_labelName = label;
-		_watermark.setWatermarkText(_labelName);
+		_chartLabelName = label;
+		_watermark.setWatermarkText(_chartLabelName);
+	}
+	
+	/** Set the label name of the ThrendGraph, this is what is displayed at the top of the Graph */
+	public void setWarningLabel(String warning)
+	{
+		_watermarkWarning.setWatermarkText(warning);
 	}
 	
 	/** Get the original text associated with the JMenuItemCheckbox */
@@ -414,19 +423,19 @@ implements ActionListener, MouseListener
 					if (closest == tpBigger.getX() - time)  _currentTimeLinePoint = tpBigger;
 
 					if (_logger.isTraceEnabled())
-						_logger.trace("TrendGraph='"+_labelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
+						_logger.trace("TrendGraph='"+_chartLabelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
 				}
 			}
 		}
 		if (_currentTimeLinePoint != null)
 		{
-			_logger.trace("TrendGraph='"+_labelName+"', setTimeLineMarked(true)");
+			_logger.trace("TrendGraph='"+_chartLabelName+"', setTimeLineMarked(true)");
 			_currentTimeLinePoint.setTimeLineMarked(true);
 			//_series[0].firePointChanged(_currentTimeLinePoint,  TracePoint2D.STATE_CHANGED);
 		}
 		else
 		{
-			_logger.trace("TrendGraph='"+_labelName+"', did not find point "+time);
+			_logger.trace("TrendGraph='"+_chartLabelName+"', did not find point "+time);
 		}
 	}
 
@@ -506,19 +515,19 @@ implements ActionListener, MouseListener
 					if (closest == tpBigger.getX() - time)  _currentTimeLinePoint2 = tpBigger;
 
 					if (_logger.isTraceEnabled())
-						_logger.trace("TrendGraph='"+_labelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
+						_logger.trace("TrendGraph='"+_chartLabelName+"', no '"+time+"' was found, Choosing a SMALLER timeLinePoint");
 				}
 			}
 		}
 		if (_currentTimeLinePoint2 != null)
 		{
-			_logger.trace("TrendGraph='"+_labelName+"', setTimeLineMarked2(true)");
+			_logger.trace("TrendGraph='"+_chartLabelName+"', setTimeLineMarked2(true)");
 			_currentTimeLinePoint2.setTimeLineMarked2(true);
 			//_series[0].firePointChanged(_currentTimeLinePoint2,  TracePoint2D.STATE_CHANGED);
 		}
 		else
 		{
-			_logger.trace("TrendGraph='"+_labelName+"', did not find point "+time);
+			_logger.trace("TrendGraph='"+_chartLabelName+"', did not find point "+time);
 		}
 	}
 
@@ -582,14 +591,7 @@ implements ActionListener, MouseListener
 							{
 								if(iter.hasNext())
 								{
-//									MyTracePoint2D tp = (MyTracePoint2D) iter.next();
 									ITracePoint2D tp = iter.next();
-									
-//									if( _logger.isDebugEnabled() && firstTP )
-//									{
-//										_logger.debug(series[i].getName() + "-Series[" + i + "] " 
-//												+ "First TP:" + sdf.format(new java.util.Date(pointTime)) + " Cnt:" + cnt);
-//									}
 									
 									if( _logger.isDebugEnabled() && firstTP && (long)prevTrace.getMinX() != (long)tp.getX() )
 									{
@@ -676,49 +678,57 @@ implements ActionListener, MouseListener
 		_udGraphType = type;
 	}
 
+	/** calls _chart.isVisible() */
+	public Boolean isVisible()
+	{
+		return _chart.isVisible();
+	}
+	/** calls _chart.setVisible() */
+	public void setVisible(boolean toValue)
+	{
+		_chart.setVisible(toValue);
+	}
+
 	/** Add graph data */
 	public void addPoint(TrendGraphDataPoint tgdp)
 	{
 		if (tgdp == null)
 			return;
 
-		addPoint(tgdp.getDate(), tgdp.getData(), tgdp.getLabel());
+		addPoint(tgdp.getDate(), tgdp.getData(), tgdp.getLabel(), tgdp.getLabelDisplay());
 	}
 
-	public void addPoint(java.util.Date s, Double[] val)
-	{
-		addPoint(s, val, null);
-	}
+//	public void addPoint(java.util.Date s, Double[] val)
+//	{
+//		addPoint(s, val, null);
+//	}
 
-	public void addPoint(java.util.Date s, Double[] val, String[] name)
+	private void addPoint(java.util.Date s, Double[] val, String[] labelNames, String[] displayNames)
 	{
 		int refreshIntervalInSec = MainFrame.getRefreshInterval();
 		int chartMaxSamples = (_chartMaxSaveTimeInSec/refreshIntervalInSec);
-		addPoint(s, val, name, chartMaxSamples, -1);
+		addPoint(s, val, labelNames, displayNames, chartMaxSamples, -1);
 	}
 
-	public void addPoint(java.util.Date s, Double[] val, String[] name, Timestamp startPeriod, Timestamp endPeriod)
+	public void addPoint(java.util.Date s, Double[] val, String[] labelNames, String[] displayNames, Timestamp startPeriod, Timestamp endPeriod)
 	{
 		int refreshIntervalInSec = MainFrame.getRefreshInterval();
 		int secondsInSamplpe = (int) (endPeriod.getTime() - startPeriod.getTime()) / 1000;
 		int chartMaxSamples = (secondsInSamplpe/refreshIntervalInSec);
-		addPoint(s, val, name, chartMaxSamples, endPeriod.getTime());
+		addPoint(s, val, labelNames, displayNames, chartMaxSamples, endPeriod.getTime());
 	}
 
-	public void addPoint(java.util.Date s, Double[] val, String[] name, int chartMaxSamples, long startTime)
+	private void addPoint(java.util.Date ts, Double[] val, String[] labelNames, String[] displayNames, int chartMaxSamples, long startTime)
 	{
-		MyTracePoint2D tp;
-		boolean graphNeedInit = false;
-		
-		if (s == null)
+		if (ts == null)
 			return;
 
 		// to avoid duplicate values
 		if (_oldTs != null)
-			if (_oldTs.equals(s))
+			if (_oldTs.equals(ts))
 				return;
 
-		_oldTs = s;
+		_oldTs = ts;
 
 		// Resize the series array...
 		ITrace2D[] prevSeries = null;
@@ -734,59 +744,80 @@ implements ActionListener, MouseListener
 //System.out.println("+ EXTEND: GRAPH.addPoint() graph='"+getName()+"', (val.length > _series.length)... prevSize="+prevSeries.length+", newSize="+_series.length);
 		}
 
-		for (int i = 0; i < val.length; i++)
+		for (int i=0; i<val.length; i++)
 		{
+			boolean graphNeedInit = false;
+
 			// Check if its initialized
 			if (_series[i] == null)
 			{
-				// Try get a name, first try the objects names, then the passed
-				// ones
-				String seriesName = null;
-				if (seriesName == null && name != null && name.length > i)
+				graphNeedInit = true;
+
+				// Try get a name for the label
+				String newLabelName = null;
+				// Try the passed labelNames... if there is a displayNames, that will override the labelNames
+				if (newLabelName == null && labelNames != null && labelNames.length > i)
 				{
-					seriesName = name[i];
+					newLabelName = labelNames[i];
+					if (displayNames != null && displayNames.length > i && displayNames[i] != null)
+						newLabelName = displayNames[i];
 				}
-				if (seriesName == null && prevSeries != null && prevSeries.length > i && prevSeries[i] != null)
-				{
-					seriesName = prevSeries[i].getName();
-				}
-				if (seriesName == null && _seriesNames != null && _seriesNames.length > i)
-				{
-					seriesName = _seriesNames[i];
-				}
-				if (seriesName == null)
-				{
-					seriesName = "Unknown";
-				}
-//System.out.println("  INIT:   GRAPH.addPoint() graph='"+getName()+"', _series["+i+"]==null, so lets initialize this one. _colorPtr="+_colorPtr+", chartMaxSamples="+chartMaxSamples+", seriesName='"+seriesName+"'.");
+
+				// Get it from the saved/prev series before we resized/added a slot to the _series array
+				if (newLabelName == null && prevSeries != null && prevSeries.length > i && prevSeries[i] != null)
+					newLabelName = prevSeries[i].getName();
+
+				// Get it from the initially from the constructor passed _seriesNames
+				if (newLabelName == null && _seriesNames != null && _seriesNames.length > i)
+					newLabelName = _seriesNames[i];
+
+				// Ok use a fony name if we can't find any...
+				if (newLabelName == null)
+					newLabelName = "Unknown-"+i;
 
 				_series[i] = new Trace2DLtd(chartMaxSamples);
 				_series[i].setRenderer(_chart); // needed in jChart2D 3.2.1  
 				_series[i].setZIndex(new Integer(_colorPtr));
 				_series[i].setColor(nextColor());
-				_series[i].setName(seriesName);
+				_series[i].setName(newLabelName);
 				//_series[i].setStroke(new BasicStroke((float) 1.2));
+
+				// Add the black vertical TimeLineMarker in the graph
 				if (i == 0)
 					_series[i].addTracePainter(_tracePainter);
 				
 				_chart.addTrace(_series[i]);
-
-				graphNeedInit = true;
-				//_logger.debug(series[i].getName() + "-Series[" + i + "] Z=" + series[i].getZIndex());
 
 				// Set a highlighter for the trace: 
 				Set<IPointPainter<?>> highlighters = _series[i].getPointHighlighters();
 				highlighters.clear();
 				_series[i].addPointHighlighter(new TooltipPointPainter());
 			}
-			//_logger.debug("val["+i+"] isnull:" + (val[i]==null?"null":val[i].toString()));
+
+			// If alternate label name is passed, check if we need to change the name
+			if (displayNames != null && displayNames[i] != null)
+			{
+				ITrace2D line = _series[i];
+				if ( ! displayNames[i].equals(line.getName()) )
+				{
+System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+displayNames[i]+"', for CM='"+getCm().getName()+"', GraphName='"+getName()+"'.");
+					line.setName(displayNames[i]);
+				}
+			}
+			
+//			// If "line" start with "Unknown-", then it wasn't found during initialization... But lets change it if we know it now
+//			ITrace2D line = _series[i];
+//			if (line != null && line.getName() != null && line.getName().startsWith("Unknown-") && labelNames != null)
+//			{
+//				line.setName(labelNames[i]);
+//			}
 
 			// ADD the point
-			tp = new MyTracePoint2D((double)s.getTime(), (val[i]==null ? 0 : val[i].doubleValue()));
-
+//System.out.println("MyTracePoint2D: ts='"+ts+"', val["+i+"]="+val[i]);
+			MyTracePoint2D tp = new MyTracePoint2D((double)ts.getTime(), (val[i]==null ? 0 : val[i].doubleValue()));
 			_series[i].addPoint(tp);
 			
-			if(graphNeedInit && i == 0)
+			if( i == 0 && graphNeedInit )
 			{
 				_logger.debug(_series[i].getName() + "-Series[" + i + "] graphNeedInit=" + graphNeedInit);
 
@@ -963,6 +994,13 @@ implements ActionListener, MouseListener
 	 */
 	public void resetGraph()
 	{
+		CountersModel cm = getCm();
+		if (cm != null)
+		{
+			Map<String, TrendGraphDataPoint> map = cm.getTrendGraphData();
+			for (TrendGraphDataPoint tgdp : map.values())
+				tgdp.clear();
+		}
 		clearGraph();
 	}
 
@@ -988,6 +1026,9 @@ implements ActionListener, MouseListener
 				_dummySeries.setName(".");
 				_chart.addTrace(_dummySeries);
 				_dummySeries.addPoint(new MyTracePoint2D( (new java.util.Date()).getTime() , 0.0));
+				
+				// Clear the "problem" label
+				setWarningLabel(null);
 			}
 		};
 
@@ -1106,7 +1147,7 @@ implements ActionListener, MouseListener
 				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
 				in.put(key1, "-1");
 
-				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Max Value, for Graph: "+getLabel(), in, false);
+				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Max Value, for Graph: "+getChartLabel(), in, false);
 
 				if (results != null)
 				{
@@ -1135,7 +1176,7 @@ implements ActionListener, MouseListener
 				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
 				in.put(key1, Integer.toString( (_panelMinHeight <= 0 ? PANEL_MIN_HEIGHT_DEFAULT : _panelMinHeight) ));
 
-				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Graph Sizing, for Graph: "+getLabel(), in, false);
+				Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "Graph Sizing, for Graph: "+getChartLabel(), in, false);
 
 				if (results != null)
 				{
@@ -1363,7 +1404,7 @@ implements ActionListener, MouseListener
 							final TrendGraph tg = cm.getTrendGraph(name);
 		
 							JCheckBoxMenuItem mi = new JCheckBoxMenuItem();
-							mi.setText(tg.getLabel());
+							mi.setText(tg.getChartLabel());
 							mi.setSelected(tg.isGraphEnabled());
 							mi.addActionListener(new ActionListener()
 							{
@@ -1531,35 +1572,33 @@ implements ActionListener, MouseListener
 	 */
 	public void initializeGraphForVersion(int serverVersion)
 	{
-		// FIXME: this isn't good enough
-//		boolean graphVisible = true;
-//
-//		Configuration conf = Configuration.getCombinedConfiguration();
-//		boolean savedGraphVisibility = conf.getBooleanProperty("MainFrame.menu."+this.getName()+".checkbox",  _initialVisible);
-//
-//		// Valid for all versions, do nothing.
-//		if (_validFromVersion == 0)
-//		{
-//			graphVisible = true;
-//			if ( ! savedGraphVisibility )
-//				graphVisible = false;
-//		}
-//		// connected server is less that validFromVersion
-//		else if (serverVersion <= _validFromVersion)
-//		{
-//			graphVisible = false;
-//		}
-//		// validFromVersion is OK, so lets check the saved version.
-//		else
-//		{
-//			if ( ! savedGraphVisibility )
-//				graphVisible = false;
-//		}
-//		
-//		// Now set components
-//		_chkboxMenuItem.setSelected(graphVisible);
-//		_panel.setVisible(graphVisible);
+		// Check if we got proper version...
+		// NOTE: This a fallback: most problem will be displayed by the below CM.getProblemDesc()
+		if (serverVersion <= _validFromVersion)
+			setWarningLabel("This graph is only available if DBMS version is above "+Ver.versionIntToStr(_validFromVersion));
+		else
+			setWarningLabel(null);
+
+		// Check if the CM has problems, then override the above version message with the CM issue
+		// Note: The CM Issue will also complain about the "Version", so the above is just a "fallback"...
+		//       And the CM message will be able to print more DBMS specific messages
+		CountersModel cm = getCm();
+		if (cm != null)
+		{
+			if (StringUtil.hasValue(cm.getProblemDesc()))
+				setWarningLabel(cm.getProblemDesc());
+		}
 	}
+	
+//	/**
+//	 * Called from CounterModelHostMonitor, when initializing
+//	 * @param _hostMonitor
+//	 */
+//	public void initializeGraphUsingHostMonitoring(HostMonitor hostMonitor)
+//	{
+//		
+//	}
+
 
 	
 	
@@ -1596,7 +1635,8 @@ implements ActionListener, MouseListener
 			r = getDecorationBounds();
 			g = (Graphics2D) graphics;
 			
-			Font f = UIManager.getDefaults().getFont("Label.font").deriveFont(14f*SwingUtils.getHiDpiScale()).deriveFont(Font.BOLD);
+			float fontSize = 14f;
+			Font f = UIManager.getDefaults().getFont("Label.font").deriveFont(fontSize*SwingUtils.getHiDpiScale()).deriveFont(Font.BOLD);
 			g.setFont(f);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			
@@ -1620,6 +1660,94 @@ implements ActionListener, MouseListener
 			
 			_text = text;
 			_logger.debug("setWatermarkText: to '" + _text + "'.");
+			repaint();
+		}
+	}
+
+
+	//------------------------------------------------------------
+	/** Used to write the LABEL on the top of the graph */
+	//------------------------------------------------------------
+	private class WatermarkWarning
+	extends AbstractComponentDecorator
+	{
+		public WatermarkWarning(JComponent target, String text)
+		{
+			super(target);
+			setWatermarkText(text);
+		}
+		private String[]    _textBr   = null; // Break Lines by '\n'
+		private String      _textSave = null; // Save last text so we don't need to do repaint if no changes.
+		private Graphics2D  g         = null;
+		private Rectangle   r         = null;
+	
+		@Override
+		public void paint(Graphics graphics)
+		{
+			if ( _textBr == null || _textBr != null && _textBr.length < 0 )
+				return;
+	
+			r = getDecorationBounds();
+			g = (Graphics2D) graphics;
+
+			float fontSize = 12f;
+//			Font f = UIManager.getDefaults().getFont("Label.font").deriveFont(fontSize*SwingUtils.getHiDpiScale()).deriveFont(Font.BOLD);
+			Font f = UIManager.getDefaults().getFont("Label.font").deriveFont(fontSize*SwingUtils.getHiDpiScale());
+			g.setFont(f);
+			g.setColor(Color.GRAY);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			
+//			FontMetrics fm = g.getFontMetrics();
+//			int strWidth = fm.stringWidth(_text);
+//			int xPos = (r.width - strWidth) / 2;
+////			int yPos = (int) fm.getHeight() - 2;
+//		    int yPos = ((r.height - fm.getHeight()) / 2) + fm.getAscent();
+//			
+//			// We don't want the start of the label to be invisible (so we dont see the start of the string)
+//			if (xPos < 3)
+//				xPos = 3;
+//			
+//			g.drawString(_text, xPos, yPos);
+
+			FontMetrics fm = g.getFontMetrics();
+			int maxStrWidth = 0;
+			int maxStrHeight = fm.getHeight();
+
+			// get max with for all of the lines
+			for (int i = 0; i < _textBr.length; i++)
+			{
+				int CurLineStrWidth = fm.stringWidth(_textBr[i]);
+				maxStrWidth = Math.max(maxStrWidth, CurLineStrWidth);
+			}
+			int xPos = (r.width - maxStrWidth) / 2;
+//			int yPos = (int) (r.height - ((r.height - fm.getHeight()) / 2) * 1.3);
+		    int yPos = ((r.height - fm.getHeight()) / 2) + fm.getAscent();
+
+			// We don't want the start of the label to be invisible (so we dont see the start of the string)
+			if (xPos < 3)
+				xPos = 3;
+
+			// Print all the lines
+			for (int i = 0; i < _textBr.length; i++)
+			{
+				g.drawString(_textBr[i], xPos, (yPos + (maxStrHeight * i)));
+			}
+		}
+
+		public void setWatermarkText(String text)
+		{
+			if ( text == null )
+				text = "";
+
+			// If text has NOT changed, no need to continue
+			if (text.equals(_textSave))
+				return;
+
+			_textSave = text;
+
+			_textBr = text.split("\n");
+			_logger.debug("setWatermarkText: to '" + text + "'.");
+
 			repaint();
 		}
 	}
@@ -1800,7 +1928,8 @@ implements ActionListener, MouseListener
 			if (yAxisName == null) yAxisName = trace.getName();
 			if (yAxisName == null) yAxisName = "Value";
 			buffer.append(yAxisName).append(": ");
-			buffer.append(yAxis.getFormatter().format(point.getY()));
+//			buffer.append(yAxis.getFormatter().format( point.getY()) );
+			buffer.append( NumberFormat.getInstance().format(point.getY()) );
 			buffer.append("<br>");
 
 			buffer.append("Time: ");
@@ -1833,5 +1962,4 @@ implements ActionListener, MouseListener
 			}
 		}
 	}
-
 }

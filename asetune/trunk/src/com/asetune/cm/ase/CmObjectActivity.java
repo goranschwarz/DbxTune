@@ -3,9 +3,12 @@ package com.asetune.cm.ase;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.NameNotFoundException;
 import javax.swing.JDialog;
@@ -15,6 +18,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -237,38 +241,19 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_tabRowCount,  conf.getBooleanProperty(PROPKEY_sample_tabRowCount,  DEFAULT_sample_tabRowCount));
-		lc.setProperty(PROPKEY_sample_topRows,      conf.getBooleanProperty(PROPKEY_sample_topRows,      DEFAULT_sample_topRows));
-		lc.setProperty(PROPKEY_sample_topRowsCount, conf.getIntProperty    (PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount));
-		lc.setProperty(PROPKEY_sample_systemTables, conf.getBooleanProperty(PROPKEY_sample_systemTables, DEFAULT_sample_systemTables));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
-	}
+		list.add(new CmSettingsHelper("Sample Table Row Count", PROPKEY_sample_tabRowCount  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_tabRowCount  , DEFAULT_sample_tabRowCount  ), DEFAULT_sample_tabRowCount , "Sample Table Row Count using ASE functions row_count() and data_pages()" ));
+		list.add(new CmSettingsHelper("Limit num of rows",      PROPKEY_sample_topRows      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_topRows      , DEFAULT_sample_topRows      ), DEFAULT_sample_topRows     , "Get only first # rows (select top # ...) true or false"                  ));
+		list.add(new CmSettingsHelper("Limit num of rowcount",  PROPKEY_sample_topRowsCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount , DEFAULT_sample_topRowsCount ), DEFAULT_sample_topRowsCount, "Get only first # rows (select top # ...), number of rows"                ));
+		list.add(new CmSettingsHelper("Include System Tables",  PROPKEY_sample_systemTables , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemTables , DEFAULT_sample_systemTables ), DEFAULT_sample_systemTables, "Sample ASE System Tables, dbcc traceon(3650)"                            ));
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_tabRowCount))  return "Sample Table Row Count using ASE functions row_count() and data_pages()";
-		if (propName.equals(PROPKEY_sample_topRows))      return "Get only first # rows (select top # ...) true or false";
-		if (propName.equals(PROPKEY_sample_topRowsCount)) return "Get only first # rows (select top # ...), number of rows";
-		if (propName.equals(PROPKEY_sample_systemTables)) return "Sample ASE System Tables, dbcc traceon(3650)";
-		return "";
+		return list;
 	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_tabRowCount))  return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_topRows))      return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_topRowsCount)) return Integer.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_systemTables)) return Boolean.class.getSimpleName();
-		return "";
-	}
+	
 
 	@Override
 	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) 
@@ -324,14 +309,14 @@ extends CountersModel
 
 		if (aseVersion >= Ver.ver(15,0,2))
 		{
-			String rowCountOption = "          ";
-			if (aseVersion >= Ver.ver(15,7,0, 130))
+			String rowCountOption = "          "; // 16.0 SP2 or 15.7 SP130 (I know it was introduced in SP130, but not in what 16 SP, so lets guess at SP2) 
+			if (aseVersion >= Ver.ver(16,0,0, 2) || (aseVersion >= Ver.ver(15,7,0, 130) && aseVersion < Ver.ver(16,0)) )
 				rowCountOption = ",'noblock'";
 
 			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID"+rowCountOption+")),   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			UsageInMb    = "UsageInMb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) / (1024*1024/@@maxpagesize)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
-			RowsPerPage  = "RowsPerPage  = convert(numeric(6,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			RowsPerPage  = "RowsPerPage  = convert(numeric(9,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			DBName       = "A.DBName, \n";
 //			ObjectName   = "A.ObjectName, \n";
 			ObjectName   = "ObjectName = isnull(object_name(A.ObjectID, A.DBID), 'Obj='+A.ObjectName), \n"; // if user is not a valid user in A.DBID, then object_name() will return null
@@ -726,6 +711,7 @@ extends CountersModel
 		int LogicalReads_pos = -1;
 		int RowsInserted_pos = -1;
 		int PagesRead_pos    = -1;
+		int APFReads_pos     = -1;
 		
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -746,7 +732,8 @@ extends CountersModel
 			else if (colName.equals("IndexID"))      IndexID_pos      = colId;
 			else if (colName.equals("LogicalReads")) LogicalReads_pos = colId;
 			else if (colName.equals("RowsInserted")) RowsInserted_pos = colId;
-			else if (colName.equals("PagesRead"))    PagesRead_pos = colId;
+			else if (colName.equals("PagesRead"))    PagesRead_pos    = colId;
+			else if (colName.equals("APFReads"))     APFReads_pos     = colId;
 
 			// Noo need to continue, we got all our columns
 			if (    LockRequests_pos  >= 0 
@@ -761,6 +748,7 @@ extends CountersModel
 			     && LogicalReads_pos  >= 0  
 			     && RowsInserted_pos  >= 0  
 			     && PagesRead_pos     >= 0  
+			     && APFReads_pos      >= 0  
 			   )
 				break;
 		}
@@ -816,9 +804,10 @@ extends CountersModel
 				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos)).intValue();
 				int RowsInserted = ((Number)diffData.getValueAt(rowId, RowsInserted_pos)).intValue();
 				int PagesRead    = ((Number)diffData.getValueAt(rowId, PagesRead_pos   )).intValue();
+				int APFReads     = ((Number)diffData.getValueAt(rowId, APFReads_pos    )).intValue();
 				
 				String remark = null;
-				if (IndexID == 0 && PagesRead > 1000)
+				if (IndexID == 0 && (PagesRead > 1000 || APFReads > 500))
 				{
 					remark = RemarkDictionary.PROBABLY_TABLE_SCAN;
 				}
@@ -858,5 +847,22 @@ extends CountersModel
 	{
 		String[] sa = {"LogicalReads", "APFReads", "PhysicalReads", "LockWaits"};
 		return sa;
+	}
+	
+	@Override
+	public Map<String, String> getPkRewriteMap(int modelRow)
+	{
+		List<String> pkList = getPk();
+		if (pkList == null)
+			return null;
+
+		Map<String, String> map = new LinkedHashMap<>();
+		for (String pkCol : pkList)
+		{
+			if      ("DBID"    .equals(pkCol)) { map.put("DBName",     getAbsString(modelRow, "DBName"));     }
+			else if ("ObjectID".equals(pkCol)) { map.put("ObjectName", getAbsString(modelRow, "ObjectName")); }
+			else                               { map.put(pkCol,        getAbsString(modelRow, pkCol));        }
+		}
+		return map;
 	}
 }

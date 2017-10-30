@@ -15,6 +15,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -104,7 +105,7 @@ extends CountersModel
 	{
 		String[] labels = new String[] { "Max", "Average" };
 		
-		addTrendGraphData(GRAPH_NAME_DEVICE_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_DEVICE_SERVICE_TIME, labels));
+		addTrendGraphData(GRAPH_NAME_DEVICE_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_DEVICE_SERVICE_TIME, labels, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -113,7 +114,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_DEVICE_SERVICE_TIME,
 				"Device IO Service Time", 	              // Menu CheckBox text
-				"Device IO Service Time in Milliseconds", // Label 
+				"Device IO Service Time in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -192,8 +193,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 	@Override

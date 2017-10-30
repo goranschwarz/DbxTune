@@ -22,9 +22,11 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import javax.swing.ImageIcon;
@@ -35,11 +37,16 @@ import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.ssh.SshTunnelInfo;
+import com.asetune.ui.autocomplete.completions.TableExtraInfo;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.RepServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.Ver;
+import com.asetune.utils.VersionShort;
+import com.sybase.jdbc4.jdbc.SybConnection;
 
 public abstract class DbxConnection
 implements Connection
@@ -55,6 +62,11 @@ implements Connection
 //	protected String _driver = null;
 //	protected String _url    = null;
 
+	public enum MarkTypes
+	{
+		MarkForReConnect
+	};
+
 	protected ConnectionProp _connProp = null;
 	protected static ConnectionProp _defaultConnProp = null;
 	
@@ -64,6 +76,7 @@ implements Connection
 	protected int    _dbmsVersionNumber      = -1;
 	protected String _dbmsVersionStr         = null;
 	
+	protected String _dbmsPageSizeInKb       = null;
 	protected String _dbmsCharsetName        = null;
 	protected String _dbmsCharsetId          = null;
 	protected String _dbmsSortOrderName      = null;
@@ -156,8 +169,15 @@ implements Connection
 			}
 			catch (Exception ex)
 			{
-				_logger.warn("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex);
-				_logger.debug("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex, ex);
+				_logger.warn( "Can't locate JDBC driver '"+driverClass+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClass+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
+				_logger.debug("Can't locate JDBC driver '"+driverClass+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClass+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex, ex);
+
+				try { Class.forName(driverClass).newInstance(); }
+				catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
+				{
+					_logger.warn("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+				}
+				//JdbcDriverHelper.newDriverInstance(driverClass);
 			}
 
 //			Class.forName(driver).newInstance();
@@ -455,6 +475,32 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
     				}
     				catch(SQLException ignoreRsExceptions) {}
 				}
+
+				// Check for Data Asurance
+				if (StringUtil.isNullOrBlank(productName))
+				{
+    				try
+    				{
+    					String str1 = "";
+    					Statement stmt = conn.createStatement();
+    					ResultSet rs = stmt.executeQuery("version");
+    					while ( rs.next() )
+    					{
+    						str1 = rs.getString(1);
+    						
+        					_logger.info("Data Assurance Version '"+str1+"'.");
+
+    						if (StringUtil.hasValue(str1))
+    						{
+    							if (str1.startsWith("SAP Replication Server Data Assurance"))
+    								productName = DbUtils.DB_PROD_NAME_SYBASE_RSDA;
+    						}
+    					}
+    					rs.close();
+    					stmt.close();
+    				}
+    				catch(SQLException ignoreRsExceptions) {}
+				}
 			}
 			
 			if (StringUtil.isNullOrBlank(productName))
@@ -463,7 +509,12 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 
 
 		if (StringUtil.isNullOrBlank(productName))
+		{
+			if (conn instanceof SybConnection)
+				return new TdsUnknownConnection(conn);
+
 			return new UnknownConnection(conn);
+		}
 
 		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASE))   return new AseConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_ASA))   return new AsaConnection(conn);
@@ -471,6 +522,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))    return new RsConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   return new RaxConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return new RsDraConnection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDA))  return new RsDaConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX))       return new Db2Connection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      return new Db2Connection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        return new DerbyConnection(conn);
@@ -548,8 +600,6 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	public void reConnect(Window guiOwner)
 	throws Exception
 	{
-//		throw new Exception("NOT YET IMPLEMENTED");
-
 		ConnectionProp connProp = getConnProp();
 		if (connProp == null)
 			connProp = getDefaultConnProp();
@@ -569,7 +619,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 
 	
 	/**
-	 * Basically checks if the connection is OK, probably calls isClosed()
+	 * Basically checks if the connection is OK, probably calls isValid(2) or isClosed()
 	 * @return
 	 */
 	public boolean isConnectionOk()
@@ -580,6 +630,9 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	{
 		String msg   = "";
 		String title = "Checking DB Connection";
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug("DbxConnection.isConnectionOk(guiMsgOnError="+guiMsgOnError+", guiOwner='"+guiOwner+"'): _conn="+_conn+", _conn.class="+(_conn==null?"-null-":_conn.getClass().getName())+", this.class="+this.getClass().getName()+", _databaseProductName='"+_databaseProductName+"'.");
 
 		if ( _conn == null ) 
 		{	
@@ -594,7 +647,17 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		
 		try
 		{
-			if ( _conn.isClosed() )
+//			if ( _conn.isClosed() )
+			/*
+			 * Note: isClosed() do not seems to have a query timeout... and in some cases it just hangs forever...
+			 *       so lets try with isValid() instead
+			 *       If this isn't good enough, lets try to fiddle around with: get/setNetworkTimeout()
+			 *
+			 * Note2: Do not do _conn.isValid(), instead do this.isValid().  
+			 *        - _conn is the Vendors implementation (for example SybConnection)
+			 *        - this is the DbxConnection where we can override isValid()
+			 */
+			if ( ! this.isValid(2) )
 			{
 				msg = "The Connection object is NOT connected.";
 				_logger.debug(msg);
@@ -631,6 +694,11 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		if (_conn == null)
 			return null;
 
+		if      (this instanceof RsConnection)    { _databaseProductName = DbUtils.DB_PROD_NAME_SYBASE_RS;    return _databaseProductName; }
+		else if (this instanceof RaxConnection)   { _databaseProductName = DbUtils.DB_PROD_NAME_SYBASE_RAX;   return _databaseProductName; }
+		else if (this instanceof RsDaConnection)  { _databaseProductName = DbUtils.DB_PROD_NAME_SYBASE_RSDA;  return _databaseProductName; }
+		else if (this instanceof RsDraConnection) { _databaseProductName = DbUtils.DB_PROD_NAME_SYBASE_RSDRA; return _databaseProductName; }
+
 		try
 		{
 			String str = _conn.getMetaData().getDatabaseProductName();
@@ -641,32 +709,32 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		}
 		catch (SQLException e)
 		{
-			// If NO metadata installed, check if it's a Sybase Replication Server.
-			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
-			if ( "JZ0SJ".equals(e.getSQLState()) )
-			{
-				try
-				{
-					String str1 = "";
-					String str2 = "";
-					Statement stmt = _conn.createStatement();
-					ResultSet rs = stmt.executeQuery("admin rssd_name");
-					while ( rs.next() )
-					{
-						str1 = rs.getString(1);
-						str2 = rs.getString(2);
-					}
-					rs.close();
-					stmt.close();
-
-					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
-
-					// If the above statement succeeds, then it must be a RepServer without metadata installed.
-					_databaseProductName = DbUtils.DB_PROD_NAME_SYBASE_RS;
-					return _databaseProductName;
-				}
-				catch(SQLException ignoreRsExceptions) {}
-			}
+//			// If NO metadata installed, check if it's a Sybase Replication Server.
+//			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+//			if ( "JZ0SJ".equals(e.getSQLState()) )
+//			{
+//				try
+//				{
+//					String str1 = "";
+//					String str2 = "";
+//					Statement stmt = _conn.createStatement();
+//					ResultSet rs = stmt.executeQuery("admin rssd_name");
+//					while ( rs.next() )
+//					{
+//						str1 = rs.getString(1);
+//						str2 = rs.getString(2);
+//					}
+//					rs.close();
+//					stmt.close();
+//
+//					_logger.info("Replication Server with RSSD at '"+str1+"."+str2+"'.");
+//
+//					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+//					_databaseProductName = DbUtils.DB_PROD_NAME_SYBASE_RS;
+//					return _databaseProductName;
+//				}
+//				catch(SQLException ignoreRsExceptions) {}
+//			}
 			_logger.debug("getDatabaseProductName() Caught: "+e, e);
 			throw e;
 		}
@@ -695,9 +763,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		}
 		catch (SQLException e)
 		{
-			// If NO metadata installed, check if it's a Sybase Replication Server.
-			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
-			if ( "JZ0SJ".equals(e.getSQLState()) )
+			if (this instanceof RsConnection)    
 			{
 				try
 				{
@@ -715,10 +781,109 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 
 					// If the above statement succeeds, then it must be a RepServer without metadata installed.
 					_databaseProductVersion = str;
-					return str;
+					return _databaseProductVersion;
 				}
 				catch(SQLException ignoreRsExceptions) {}
 			}
+			else if (this instanceof RaxConnection)
+			{
+				try
+				{
+					String str1 = "";
+					Statement stmt = _conn.createStatement();
+					ResultSet rs = stmt.executeQuery("ra_version");
+					while ( rs.next() )
+					{
+						str1 = rs.getString(1);
+					}
+					rs.close();
+					stmt.close();
+
+					_logger.info("Replication Agent Version '"+str1+"'.");
+
+					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+					_databaseProductVersion = str1;
+					return _databaseProductVersion;
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+			else if (this instanceof RsDaConnection)
+			{
+				try
+				{
+					String str1 = "";
+					Statement stmt = _conn.createStatement();
+					ResultSet rs = stmt.executeQuery("version");
+					while ( rs.next() )
+					{
+						str1 = rs.getString(1);
+						
+    					_logger.info("Data Assurance Version '"+str1+"'.");
+
+						if (StringUtil.hasValue(str1))
+						{
+							if (str1.startsWith("SAP Replication Server Data Assurance"))
+								_databaseProductVersion = str1;
+						}
+					}
+					rs.close();
+					stmt.close();
+					return _databaseProductVersion;
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+			else if (this instanceof RsDraConnection)
+			{
+				try
+				{
+					String str1 = "";
+					String str2 = "";
+					Statement stmt = _conn.createStatement();
+					ResultSet rs = stmt.executeQuery("sap_version");
+					while ( rs.next() )
+					{
+						str1 = rs.getString(1);
+						str2 = rs.getString(2);
+						
+						_logger.info("DR Agent Version info type='"+str1+"', version='"+str2+"'.");
+
+						if ("DR Agent".equals(str1))
+						{
+	    					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+							_databaseProductVersion = str2;
+						}
+					}
+					rs.close();
+					stmt.close();
+					return _databaseProductVersion;
+				}
+				catch(SQLException ignoreRsExceptions) {}
+			}
+
+//			// If NO metadata installed, check if it's a Sybase Replication Server.
+//			// JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+//			if ( "JZ0SJ".equals(e.getSQLState()) )
+//			{
+//				try
+//				{
+//					String str = "";
+//					Statement stmt = _conn.createStatement();
+//					ResultSet rs = stmt.executeQuery("admin version");
+//					while ( rs.next() )
+//					{
+//						str = rs.getString(1);
+//					}
+//					rs.close();
+//					stmt.close();
+//
+//					_logger.info("Replication Server with Version string '"+str+"'.");
+//
+//					// If the above statement succeeds, then it must be a RepServer without metadata installed.
+//					_databaseProductVersion = str;
+//					return str;
+//				}
+//				catch(SQLException ignoreRsExceptions) {}
+//			}
 			_logger.debug("getDatabaseProductVersion() Caught: "+e, e);
 			throw e;
 		}
@@ -793,6 +958,10 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		// H2
 		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
 		{
+			H2UrlHelper urlHelper = new H2UrlHelper(_conn.getMetaData().getURL());
+			if ( "file".equals(urlHelper.getUrlType()) ) serverName = "LOCAL-FILE";
+			if ( "tcp" .equals(urlHelper.getUrlType()) ) serverName = urlHelper.getUrlTcpHostPort();
+			if ( "ssl" .equals(urlHelper.getUrlType()) ) serverName = urlHelper.getUrlTcpHostPort();
 		}
 		// ORACLE
 		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
@@ -811,6 +980,66 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 
 		_databaseServerName = serverName;
 		return serverName;
+	}
+
+	public String getDbmsPageSizeInKb()
+	throws SQLException
+	{
+		if (_dbmsPageSizeInKb != null)
+			return _dbmsPageSizeInKb;
+
+		String pageSizeInKb = "";
+		String currentDbProductName = getDatabaseProductName();
+
+		// FIXME: move the below code to it's individual extended classes 
+
+		// ASE
+		if      (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(currentDbProductName))
+		{
+			int pageSize = AseConnectionUtils.getAsePageSize(_conn);
+			pageSizeInKb = pageSize <= 0 ? "" : AseConnectionUtils.getAsePageSize(_conn)/1024 + "";
+		}
+		// ASA SQL Anywhere
+		else if (DbUtils.DB_PROD_NAME_SYBASE_ASA.equals(currentDbProductName))
+		{
+		}
+		// Sybase IQ
+		else if (DbUtils.DB_PROD_NAME_SYBASE_IQ.equals(currentDbProductName))
+		{
+		}
+		// Replication Server
+		else if (DbUtils.DB_PROD_NAME_SYBASE_RS.equals(currentDbProductName))
+		{
+		}
+		// HANA
+		else if (DbUtils.DB_PROD_NAME_HANA.equals(currentDbProductName))
+		{
+		}
+		// H2
+		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
+		{
+		}
+		// ORACLE
+		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
+		{
+		}
+		// MySQL
+		else if (DbUtils.DB_PROD_NAME_MYSQL.equals(currentDbProductName))
+		{
+			// pageSizeInKb = "16"; // for InnoDB, but I dont know how to *really* check it...
+		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+			pageSizeInKb = "8";
+		}
+		// UNKNOWN
+		else
+		{
+		}
+
+		_dbmsPageSizeInKb = pageSizeInKb;
+		return pageSizeInKb;
 	}
 
 	public String getDbmsCharsetName()
@@ -1168,10 +1397,58 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		// UNKNOWN
 		else
 		{
+			try
+			{
+				// Get the version string and convert it into a "short int" xx.yy.zz -> xxyyzz
+				String verStr = getDatabaseProductVersion();
+				int shortVerInt = VersionShort.parse(verStr);
+
+				// Make the "short int version" a "longer int version" 11.2.3 -> 110203 -> 112300000
+				// The "long" is the version we use in DbxTune... (in the future it might be even larger, (11020300000) 11 02 03 000 00  major minor main sp pl
+				dbmsVersionNumber = Ver.shortVersionStringToNumber(shortVerInt);
+				
+				// No Warning message for Postgres
+				if (DbUtils.DB_PROD_NAME_POSTGRES.equals(currentDbProductName)) {} 
+				// If 'unknown' then write warning message so we can see if it's "parsed" correctly for that product. When it's verified we can add a line in the above if statement
+				else
+					_logger.info("getDbmsVersionNumber(): Unhandled ProductName='"+currentDbProductName+"' with VersionString='"+verStr+"' parsed into: shortVerInt="+shortVerInt+", dbmsVersionNumber="+dbmsVersionNumber);
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("getDbmsVersionNumber(): Problems getting version string from getDatabaseProductVersion()");
+			}
 		}
 
 		_dbmsVersionNumber = dbmsVersionNumber;
 		return dbmsVersionNumber;
+	}
+
+	/**
+	 * Return various extra information about a Table<br>
+	 * This information can for example be used by a ToolTip when displaying information on the table.<br>
+	 * For example
+	 * <ul>
+	 *      <li>TableRowCount</li>
+	 *      <li>TableTotalSizeInMb</li>
+	 *      <li>TableDataSizeInMb</li>
+	 *      <li>TableIndexSizeInMb</li>
+	 *      <li>TableLobSizeInMb</li>
+	 * </ul>
+	 * 
+	 * @return a Map with various extra table information. 
+	 */
+	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
+	{
+		return null;
+	}
+	/**
+	 * Return a list of objects that the view references<br>
+	 * 
+	 * @return a List of strings with references objects. 
+	 */
+	public List<String> getViewReferences(String cat, String schema, String table)
+	{
+		return null;
 	}
 
 	//#################################################################################
@@ -1731,6 +2008,30 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	public List<String> getActiveServerRolesOrPermissions()
 	{
 		return null;
+	}
+
+	/** internally used to store Connection Markers */
+	private Set<MarkTypes> _connectionMarkers = new LinkedHashSet<MarkTypes>();
+	
+	/** Set a specific "marker" at the connection level */
+	public void setConnectionMark(MarkTypes markType)
+	{
+		_connectionMarkers.add(markType);
+	}
+//	/** Get a specific "marker" object at the connection level */
+//	public MarkTypes getConnectionMark(MarkTypes markType)
+//	{
+//		return _connectionMarkers.get(markType);
+//	}
+	/** Check if a specific "marker" object at the connection level is set */
+	public boolean isConnectionMarked(MarkTypes markType)
+	{
+		return _connectionMarkers.contains(markType);
+	}
+	/** Clear a specific "marker" object at the connection level */
+	public void clearConnectionMark(MarkTypes markType)
+	{
+		_connectionMarkers.remove(markType);
 	}
 
 	

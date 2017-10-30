@@ -15,6 +15,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -116,9 +117,9 @@ extends CountersModel
 		String[] labels_disk = new String[] { "[Main Store Disk Reads]",	"[Main Store Disk Writes]", "[Temp Store Disk Reads]", "[Temp Store Disk Writes]", "[Cache Dbspace Disk Reads]", "[Cache Dbspace Disk Writes]"} ;
 		String[] labels_cpus = new String[] { "[Cpu Total Time]", "[Cpu User Time]", "[Cpu System Time]"} ;
 				
-		addTrendGraphData(GRAPH_NAME_STAT_OPER, new TrendGraphDataPoint(GRAPH_NAME_STAT_OPER, labels_oper));
-		addTrendGraphData(GRAPH_NAME_STAT_DISK,       new TrendGraphDataPoint(GRAPH_NAME_STAT_DISK,       labels_disk));
-		addTrendGraphData(GRAPH_NAME_STAT_CPUS,        new TrendGraphDataPoint(GRAPH_NAME_STAT_CPUS,        labels_cpus));
+		addTrendGraphData(GRAPH_NAME_STAT_OPER, new TrendGraphDataPoint(GRAPH_NAME_STAT_OPER, labels_oper, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_STAT_DISK, new TrendGraphDataPoint(GRAPH_NAME_STAT_DISK, labels_disk, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_STAT_CPUS, new TrendGraphDataPoint(GRAPH_NAME_STAT_CPUS, labels_cpus, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -127,7 +128,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_STAT_OPER,
 				"Connections, Operations and Load", // Menu CheckBox text
-				"Connections, Operations and Load", // Label 
+				"Connections, Operations and Load ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_oper, 
 				false, // is Percent Graph
 				this, 
@@ -138,7 +139,7 @@ extends CountersModel
 			
 			tg = new TrendGraph(GRAPH_NAME_STAT_DISK,
 					"Disk activity", // Menu CheckBox text
-					"Disk activity", // Label 
+					"Disk activity ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					labels_disk, 
 					false, // is Percent Graph
 					this, 
@@ -149,7 +150,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_STAT_CPUS,
 					"CPU usage",                     // Menu CheckBox text
-					"CPU usage (100 per core)", // Label 
+					"CPU usage (100 per core) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					labels_disk, 
 					false, // is Percent Graph
 					this, 
@@ -173,8 +174,9 @@ extends CountersModel
 			arr[3] = this.getAbsValueAsDouble("OperationsActiveloadTableStatement", "stat_value");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 		
 			
@@ -190,8 +192,9 @@ extends CountersModel
 			arr[3] = this.getRateValueAsDouble("CacheDbspaceDiskWrites", "stat_value");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 		
 		if (GRAPH_NAME_STAT_CPUS.equals(tgdp.getName()))
@@ -227,8 +230,9 @@ extends CountersModel
 				//_logger.debug("updateGraphData("+tgdp.getName()+"): some-value-was-null... CpuTotalTime='"+CpuTotalTime+"', CpuSystemTime='"+CpuSystemTime+"', CpuUserTime='"+CpuUserTime+"'. Adding a 0 pct CPU Usage.");
 			}
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}		
 	}
 	

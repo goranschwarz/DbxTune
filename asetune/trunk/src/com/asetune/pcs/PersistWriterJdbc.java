@@ -3,6 +3,9 @@
  */
 package com.asetune.pcs;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -32,9 +35,13 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.log4j.Logger;
 import org.h2.server.TcpServer;
+import org.h2.tools.Server;
 
 import com.asetune.DbxTune;
 import com.asetune.Version;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
 import com.asetune.config.dbms.DbmsConfigManager;
@@ -57,6 +64,8 @@ import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
+import com.asetune.utils.JavaUtils;
+import com.asetune.utils.NetUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
@@ -129,9 +138,10 @@ public class PersistWriterJdbc
 	private boolean _cachePreparedStatements = false;
 	protected boolean _jdbcDriverInfoHasBeenWritten = false;
 
-	private org.h2.tools.Server _h2ServerTcp = null;
-	private org.h2.tools.Server _h2ServerWeb = null;
-	private org.h2.tools.Server _h2ServerPg  = null;
+	private Server _h2TcpServer = null;
+	private Server _h2WebServer = null;
+	private Server _h2PgServer  = null;
+	private File   _h2ServiceInfoFile = null;
 
 	private boolean _h2NewDbOnDateChange = false;
 	private String  _h2LastDateChange    = null;
@@ -312,51 +322,227 @@ public class PersistWriterJdbc
 		close();
 	}
 
+//	@Override
+//	public void startServices()
+//	throws Exception
+//	{
+//		// Everything could NOT be done with the jdbcUrl... so here goes some special
+//		// start the H2 TCP Server
+//		if ( _jdbcDriver.equals("org.h2.Driver") && _startH2NetworkServer )
+//		{
+//			_logger.info("Starting a H2 TCP server.");
+//			_h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
+//			_h2ServerTcp.start();
+//
+////			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
+//			_logger.info("H2 TCP server, url='"+_h2ServerTcp.getURL()+"', service='"+_h2ServerTcp.getService()+"'.");
+//
+//			if (true)
+//			{
+//				try
+//				{
+//					_logger.info("Starting a H2 WEB server.");
+//					_h2ServerWeb = org.h2.tools.Server.createWebServer();
+//					_h2ServerWeb.start();
+//
+//					_logger.info("H2 WEB server, url='"+_h2ServerWeb.getURL()+"', service='"+_h2ServerWeb.getService()+"'.");
+//				}
+//				catch (Exception e)
+//				{
+//					_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+//				}
+//			}
+//
+//			if (true)
+//			{
+//				try
+//				{
+//					_logger.info("Starting a H2 Postgres server.");
+//					_h2ServerPg = org.h2.tools.Server.createPgServer("-pgAllowOthers");
+//					_h2ServerPg.start();
+//	
+//					_logger.info("H2 Postgres server, url='"+_h2ServerPg.getURL()+"', service='"+_h2ServerPg.getService()+"'.");
+//				}
+//				catch (Exception e)
+//				{
+//					_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+//				}
+//			}
+//		}
+//	}
+
 	@Override
 	public void startServices()
 	throws Exception
 	{
+		if (_lastUsedUrl == null)
+		{
+			_logger.info("The services will be started later. After A proper database URL has been determened in the open() method.");
+			return;
+		}
+
 		// Everything could NOT be done with the jdbcUrl... so here goes some special
 		// start the H2 TCP Server
 		if ( _jdbcDriver.equals("org.h2.Driver") && _startH2NetworkServer )
 		{
-			_logger.info("Starting a H2 TCP server.");
-			_h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
-			_h2ServerTcp.start();
-
-//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
-			_logger.info("H2 TCP server, url='"+_h2ServerTcp.getURL()+"', service='"+_h2ServerTcp.getService()+"'.");
-
-			if (true)
+			try
 			{
-				try
-				{
-					_logger.info("Starting a H2 WEB server.");
-					_h2ServerWeb = org.h2.tools.Server.createWebServer();
-					_h2ServerWeb.start();
+				boolean writeDbxTuneServiceFile = false;
+				String baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 
-					_logger.info("H2 WEB server, url='"+_h2ServerWeb.getURL()+"', service='"+_h2ServerWeb.getService()+"'.");
-				}
-				catch (Exception e)
+				List<String> tcpSwitches = new ArrayList<>();
+				List<String> webSwitches = new ArrayList<>();
+				List<String> pgSwitches  = new ArrayList<>();
+
+				boolean startTcpServer = Configuration.getCombinedConfiguration().getBooleanProperty("h2.tcp.startServer", true);
+				boolean startWebServer = Configuration.getCombinedConfiguration().getBooleanProperty("h2.web.startServer", true);
+				boolean startPgServer  = Configuration.getCombinedConfiguration().getBooleanProperty("h2.pg.startServer",  true);
+
+				int     tcpBasePortNumber  = Configuration.getCombinedConfiguration().getIntProperty("h2.tcp.port", 19092);
+				int     webBasePortNumber  = Configuration.getCombinedConfiguration().getIntProperty("h2.web.port", 18082);
+				int     pgBasePortNumber   = Configuration.getCombinedConfiguration().getIntProperty("h2.pg.port",  15435);
+
+				tcpBasePortNumber = NetUtils.getFirstFreeLocalPortNumber(tcpBasePortNumber);
+				webBasePortNumber = NetUtils.getFirstFreeLocalPortNumber(webBasePortNumber);
+				pgBasePortNumber  = NetUtils.getFirstFreeLocalPortNumber(pgBasePortNumber);
+
+				// If we couldn't get a port number... do not start that specific service
+				if (tcpBasePortNumber == -1) { startTcpServer = false; _logger.warn("Could not get a valid port for H2 TCP Network Service, which wont be started."); }
+				if (webBasePortNumber == -1) { startWebServer = false; _logger.warn("Could not get a valid port for H2 WEB Network Service, which wont be started."); }
+				if (pgBasePortNumber  == -1) { startPgServer  = false; _logger.warn("Could not get a valid port for H2 Postgres Network Service, which wont be started."); }
+
+				//-------------------------------------------
+				// Switches to TCP server
+				tcpSwitches.add("-tcpDaemon");         // Start the service thread as a daemon
+				tcpSwitches.add("-tcpAllowOthers");    // Allow other that the localhost to connect
+				tcpSwitches.add("-tcpPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
+				tcpSwitches.add(""+tcpBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				tcpSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
+				if (StringUtil.hasValue(baseDir))
 				{
-					_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+					tcpSwitches.add("-baseDir");
+					tcpSwitches.add(baseDir);
+					
+					writeDbxTuneServiceFile = true;
+				}
+				
+				//-------------------------------------------
+				// Switches to WEB server
+				webSwitches.add("-webDaemon");         // Start the service thread as a daemon
+				webSwitches.add("-webAllowOthers");    // Allow other that the localhost to connect
+				webSwitches.add("-webPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
+				webSwitches.add(""+webBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				webSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
+				if (StringUtil.hasValue(baseDir))
+				{
+					webSwitches.add("-baseDir");
+					webSwitches.add(baseDir);
+				}
+
+				//-------------------------------------------
+				// Switches to POSTGRES server
+				pgSwitches.add("-pgDaemon");         // Start the service thread as a daemon
+				pgSwitches.add("-pgAllowOthers");    // Allow other that the localhost to connect
+				pgSwitches.add("-pgPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
+				pgSwitches.add(""+pgBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+				pgSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
+				if (StringUtil.hasValue(baseDir))
+				{
+					pgSwitches.add("-baseDir");
+					pgSwitches.add(baseDir);
+				}
+				
+				
+				//java -cp ${H2_JAR} org.h2.tools.Server -tcp -tcpAllowOthers -tcpPort ${portStart} -ifExists -baseDir ${baseDir} &
+
+				
+				if (startTcpServer)
+				{
+					_logger.info("Starting a H2 TCP server. Switches: "+tcpSwitches);
+					_h2TcpServer = Server.createTcpServer(tcpSwitches.toArray(new String[0]));
+					_h2TcpServer.start();
+		
+		//			_logger.info("H2 TCP server, listening on port='"+h2TcpServer.getPort()+"', url='"+h2TcpServer.getURL()+"', service='"+h2TcpServer.getService()+"'.");
+					_logger.info("H2 TCP server, url='"+_h2TcpServer.getURL()+"', Status='"+_h2TcpServer.getStatus()+"'.");
+				}
+	
+				if (startWebServer)
+				{
+					try
+					{
+						_logger.info("Starting a H2 WEB server. Switches: "+webSwitches);
+						_h2WebServer = Server.createWebServer(webSwitches.toArray(new String[0]));
+						_h2WebServer.start();
+
+						_logger.info("H2 WEB server, url='"+_h2WebServer.getURL()+"', Status='"+_h2WebServer.getStatus()+"'.");
+					}
+					catch (Exception e)
+					{
+						_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+					}
+				}
+
+				if (startPgServer)
+				{
+					try
+					{
+						_logger.info("Starting a H2 Postgres server. Switches: "+pgSwitches);
+						_h2PgServer = Server.createPgServer(pgSwitches.toArray(new String[0]));
+						_h2PgServer.start();
+		
+						_logger.info("H2 Postgres server, url='"+_h2PgServer.getURL()+"', Status='"+_h2PgServer.getStatus()+"'.");
+					}
+					catch (Exception e)
+					{
+						_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+					}
+				}
+				
+				if (writeDbxTuneServiceFile)
+				{
+					try
+					{
+						H2UrlHelper urlHelper = new H2UrlHelper(_lastUsedUrl);
+
+						// Create a file like: $DBXTUNE_SAVE_DIR/H2DBNAME.dbxtune
+						File f = new File(baseDir + File.separatorChar + urlHelper.getFile().getName() + ".dbxtune");
+						_logger.info("Creating DbxTune - H2 Service information file '" + f.getAbsolutePath() + "'.");
+
+						f.createNewFile();
+						f.deleteOnExit();
+						_h2ServiceInfoFile = f;
+
+						PrintStream w = new PrintStream( new FileOutputStream(f) );
+						w.println("dbxtune.pid = " + JavaUtils.getProcessId("-1"));
+						w.println("dbxtune.last.url = " + _lastUsedUrl);
+
+						if (_h2TcpServer != null)
+						{
+							w.println("h2.tcp.port = " + _h2TcpServer.getPort());
+							w.println("h2.tcp.url  = " + _h2TcpServer.getURL());
+							w.println("h2.jdbc.url = " + "jdbc:h2:" + _h2TcpServer.getURL() + "/" + urlHelper.getFile().getName() );
+						}
+						if (_h2WebServer != null)
+						{
+							w.println("h2.web.port = " + _h2WebServer.getPort());
+							w.println("h2.web.url  = " + _h2WebServer.getURL());
+						}
+						if (_h2PgServer != null)
+						{
+							w.println("h2.pg.port  = " + _h2PgServer.getPort());
+							w.println("h2.pg.url   = " + _h2PgServer.getURL());
+						}
+						w.close();
+					}
+					catch (Exception ex)
+					{
+						_logger.warn("Problems creating DbxTune H2 internal service file, continuing anyway. Caught: "+ex);
+					}
 				}
 			}
-
-			if (true)
+			catch (SQLException e) 
 			{
-				try
-				{
-					_logger.info("Starting a H2 Postgres server.");
-					_h2ServerPg = org.h2.tools.Server.createPgServer("-pgAllowOthers");
-					_h2ServerPg.start();
-	
-					_logger.info("H2 Postgres server, url='"+_h2ServerPg.getURL()+"', service='"+_h2ServerPg.getService()+"'.");
-				}
-				catch (Exception e)
-				{
-					_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
-				}
+				_logger.warn("Problem starting H2 network service", e);
 			}
 		}
 	}
@@ -428,23 +614,34 @@ public class PersistWriterJdbc
 			dbExecNoException(_mainConn, shutdownCmd);
 		}
 
-		if (_h2ServerTcp != null)
+		if (_h2TcpServer != null)
 		{
-			_logger.info("Stopping H2 TCP Service.");
-			_h2ServerTcp.stop();
+			_logger.info("Stopping H2 TCP Service. at port="+_h2TcpServer.getPort()+", URL: "+_h2TcpServer.getURL());
+			_h2TcpServer.stop();
+			_h2TcpServer = null;
 		}
 
-		if (_h2ServerWeb != null)
+		if (_h2WebServer != null)
 		{
-			_logger.info("Stopping H2 WEB Service.");
-			_h2ServerWeb.stop();
+			_logger.info("Stopping H2 WEB Service. at port="+_h2WebServer.getPort()+", URL: "+_h2WebServer.getURL());
+			_h2WebServer.stop();
+			_h2WebServer = null;
 		}
 
-		if (_h2ServerPg != null)
+		if (_h2PgServer != null)
 		{
-			_logger.info("Stopping H2 Postgres Service.");
-			_h2ServerPg.stop();
+			_logger.info("Stopping H2 Postgres Service. at port="+_h2PgServer.getPort()+", URL: "+_h2PgServer.getURL());
+			_h2PgServer.stop();
+			_h2PgServer = null;
 		}
+
+		if (_h2ServiceInfoFile != null)
+		{
+			_logger.info("Deleting DbxTune - H2 Service Info File: " + _h2ServiceInfoFile.getAbsolutePath());
+			_h2ServiceInfoFile.delete();
+			_h2ServiceInfoFile = null;
+		}
+
 	}
 
 	/*---------------------------------------------------
@@ -507,7 +704,7 @@ public class PersistWriterJdbc
 		_logger.info ("                  "+propPrefix+"jdbcDriver           = " + _jdbcDriver);
 		_logger.info ("                  "+propPrefix+"jdbcUrl              = " + _jdbcUrl);
 		_logger.info ("                  "+propPrefix+"jdbcUser             = " + _jdbcUser);
-		_logger.info ("                  "+propPrefix+"jdbcPasswd           = " + "*hidden*");
+		_logger.info ("                  "+propPrefix+"jdbcPasswd           = " + "*hidden*" + ("".equals(_jdbcPasswd) ? " (no-passwd/blank)" : "") );
 		_logger.debug(" *not-encrypted*  "+propPrefix+"jdbcPasswd           = " + _jdbcPasswd);
 		_logger.info ("                  "+propPrefix+"jdbcKeepConnOpen     = " + _keepConnOpen);
 		_logger.info ("                  "+propPrefix+"h2NewDbOnDateChange  = " + _h2NewDbOnDateChange);
@@ -569,6 +766,9 @@ public class PersistWriterJdbc
 				try { _sqlCaptureStorageConn.close(); } catch(Exception ignore) {}
 				_sqlCaptureStorageConn = null;
 			}
+			
+			// NOTE: Should we STOP any of the (H2) services???
+			stopServices(5000);
 		}
 	}
 
@@ -915,6 +1115,31 @@ public class PersistWriterJdbc
 					urlMap.put("DATABASE_TO_UPPER", "false");
 				}
 
+				// This sis a test to see if H2 behaves better with AseTune
+				// SInce AseTune only *writes* to the database... we do not need to ReUseSpace (nothing gets deleted)
+				// and the hope is that the function MVStore.java - freeUnusedChunks() wont get called
+				// It seems to be the cleanup that causes us problem...
+// This made the files *much* bigger... So I had to turn REUSE_SPACE=true (which is the default) back on again 
+//				if ( ! urlMap.containsKey("REUSE_SPACE") )
+//				{
+//					change = true;
+//					_logger.info("H2 URL add option: REUSE_SPACE=FALSE");
+//					urlMap.put("REUSE_SPACE",  "FALSE");
+//				}
+
+				// If we want to bump up the cache... Default is 64M per GB the JVM has
+				if ( ! urlMap.containsKey("CACHE_SIZE") )
+				{
+					int h2CacheInMb = getConfig().getIntProperty("dbxtune.h2.cacheSizeInMb", -1);
+					if (h2CacheInMb > 0)
+					{
+    					int h2CacheInKb = h2CacheInMb * 1024;
+    					change = true;
+    					_logger.info("H2 URL add option: CACHE_SIZE="+h2CacheInKb);
+    					urlMap.put("REUSE_SPACE",  h2CacheInKb+"");
+					}
+				}
+
 				// The maximum time in milliseconds used to compact a database when closing.
 				if ( ! urlMap.containsKey("MAX_COMPACT_TIME") )
 				{
@@ -932,12 +1157,12 @@ public class PersistWriterJdbc
 				}
 
 				// AutoServer mode
-				if ( ! urlMap.containsKey("AUTO_SERVER") )
-				{
-					change = true;
-					_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
-					urlMap.put("AUTO_SERVER",  "TRUE");
-				}
+//				if ( ! urlMap.containsKey("AUTO_SERVER") )
+//				{
+//					change = true;
+//					_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
+//					urlMap.put("AUTO_SERVER",  "TRUE");
+//				}
 
 				// WRITE_DELAY mode, hopefully this will help to shorten commit time, and we don't really need the durability...
 				// Maybe MVStore has some more specific options RETENTION_TIME... may be something to look at
@@ -1121,7 +1346,9 @@ public class PersistWriterJdbc
 
 			// GET information already stored in the DDL Details storage
 			populateDdlDetailesCache();
-
+			
+			// Start any services that depended on open() to complete
+			startServices();
 		}
 		catch (SQLException ev)
 		{
@@ -1387,6 +1614,16 @@ public class PersistWriterJdbc
 	}
 
 
+	/**
+	 * Get the JDBC Connection used to store data in the database.<br>
+	 * NOTE: This might be dangerous to use (especially for long running queries), since it will potentially block the Storage Thread from working (if you use the connection at the same time as the Storge Thread)
+	 * @return
+	 */
+	public DbxConnection getStorageConnection()
+	{
+		return _mainConn;
+	}
+
 	private boolean dbExecSetting(DbxConnection conn, String sql, boolean logInfo)
 	throws SQLException
 	{
@@ -1565,11 +1802,19 @@ public class PersistWriterJdbc
 					dbDdlExec(conn, sql);
 				}
 
-				sql = sqlCapBroker.getIndexDdlString(dbmd, tabName);
-				if (sql != null)
+				List<String> list = sqlCapBroker.getIndexDdlString(dbmd, tabName);
+				if (list != null && !list.isEmpty())
 				{
-					dbDdlExec(conn, sql);
-				}				
+					for (String indexDdl : list)
+					{
+						dbDdlExec(conn, indexDdl);
+					}
+				}
+//				sql = sqlCapBroker.getIndexDdlString(dbmd, tabName);
+//				if (sql != null)
+//				{
+//					dbDdlExec(conn, sql);
+//				}				
 			}
 			
 			markDdlAsCreated(tabName);
@@ -1673,14 +1918,18 @@ public class PersistWriterJdbc
 //			checkAndCreateTable(conn, SQL_CAPTURE_SQLTEXT);
 //			checkAndCreateTable(conn, SQL_CAPTURE_STATEMENTS);
 //			checkAndCreateTable(conn, SQL_CAPTURE_PLANS);
+			checkAndCreateTable(conn, ALARM_HISTORY);
 			// Create tables for SQL Capture... they can have more (or less) tables than SQL_CAPTURE_SQLTEXT, SQL_CAPTURE_STATEMENTS, SQL_CAPTURE_PLANS
-			ISqlCaptureBroker sqlCapBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
-			if (sqlCapBroker != null)
+			if (PersistentCounterHandler.hasInstance())
 			{
-				List<String> tableNames = sqlCapBroker.getTableNames();
-				for (String tabName : tableNames)
+				ISqlCaptureBroker sqlCapBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
+				if (sqlCapBroker != null)
 				{
-					checkAndCreateTable(conn, tabName, sqlCapBroker);
+					List<String> tableNames = sqlCapBroker.getTableNames();
+					for (String tabName : tableNames)
+					{
+						checkAndCreateTable(conn, tabName, sqlCapBroker);
+					}
 				}
 			}
 			
@@ -2104,6 +2353,86 @@ public class PersistWriterJdbc
 		}
 	}
 
+	/**
+	 * Save any alarms
+	 * 
+	 * @param conn                Database connection 
+	 * @param sessionStartTime 
+	 * @param sessionSampleTime   
+	 * @throws SQLException 
+	 */
+	private void saveAlarms(DbxConnection conn, Timestamp sessionStartTime, Timestamp sessionSampleTime) 
+	throws SQLException
+	{
+		if ( ! AlarmWriterToPcsJdbc.hasInstance() )
+			return;
+
+		// Get the list... and start a new list...
+		List<AlarmEventWrapper> alarmList = AlarmWriterToPcsJdbc.getInstance().getList(true);
+		
+		if (alarmList.isEmpty())
+			return;
+
+		// Loop all the allrms and insert them into the database...
+		for (AlarmEventWrapper aew : alarmList)
+		{
+			AlarmEvent ae = aew.getAlarmEvent();
+
+			try
+			{
+				// Get the SQL statement
+				String sql = getTableInsertStr(ALARM_HISTORY, null, true);
+				PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
+		
+//System.out.println("saveAlarms(): SQL="+sql);
+				// Set values
+				int i=1;
+				pst.setTimestamp(i++, sessionStartTime                                                    ); // sessionStartTime        - datetime    , Nullable = false
+				pst.setTimestamp(i++, sessionSampleTime                                                   ); // sessionSampleTime       - datetime    , Nullable = false
+				pst.setTimestamp(i++, aew.getAddDate()                                                    ); // eventTime	            - datetime    , Nullable = false
+				pst.setString   (i++, aew.getAction()                                                     ); // action                  - varchar(15) , Nullable = false
+//				pst.setBoolean  (i++, ae.isActive()                                                       ); // isActive                - bit         , Nullable = false
+				pst.setString   (i++, ae.getAlarmClassAbriviated()                                        ); // alarmClass              - varchar(80) , Nullable = false
+				pst.setString   (i++, ae.getServiceType()                                                 ); // serviceType             - varchar(80) , Nullable = false
+				pst.setString   (i++, ae.getServiceName()                                                 ); // serviceName             - varchar(30) , Nullable = false
+				pst.setString   (i++, ae.getServiceInfo()                                                 ); // serviceInfo             - varchar(80) , Nullable = false
+				pst.setString   (i++, ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()     ); // extraInfo               - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getSeverity()+""                                                 ); // severity                - varchar(10) , Nullable = false
+				pst.setString   (i++, ae.getState()+""                                                    ); // state                   - varchar(10) , Nullable = false
+				pst.setInt      (i++, ae.getReRaiseCount()                                                ); // repeatCnt               - int         , Nullable = false
+				pst.setString   (i++, ae.getDuration()                                                    ); // duration                - varchar(10) , Nullable = false
+//				pst.setTimestamp(i++, ae.getCrTimeStr()                                                   ); // createTime              - datetime    , Nullable = false
+//				pst.setTimestamp(i++, ae.getCancelTimeStr()                                               ); // cancelTime              - datetime    , Nullable = true 
+				pst.setTimestamp(i++, ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())     ); // createTime              - datetime    , Nullable = false
+				pst.setTimestamp(i++, ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime()) ); // cancelTime              - datetime    , Nullable = true 
+//				pst.setInt      (i++, ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                ); // timeToLive              - int         , Nullable = true 
+				pst.setInt      (i++, ae.getTimeToLive()                                                  ); // timeToLive              - int         , Nullable = true 
+				pst.setString   (i++, ae.getData()        == null ? null : ae.getData().toString()        ); // data                    - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString() ); // lastData                - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getDescription()                                                 ); // description             - varchar(512), Nullable = false
+				pst.setString   (i++, ae.getReRaiseDescription()                                          ); // lastDescription         - varchar(512), Nullable = false
+				pst.setString   (i++, ae.getExtendedDescription()                                         ); // extendedDescription     - text        , Nullable = true 
+				pst.setString   (i++, ae.getReRaiseExtendedDescription()                                  ); // lastExtendedDescription - text        , Nullable = true 
+		
+				// EXECUTE
+				pst.executeUpdate();
+				pst.close();
+				getStatistics().incInserts();
+			}
+			catch (SQLException ex)
+			{
+				_logger.warn("Error in saveAlarms() writing to Persistent Counter Store.", ex);
+				if (isSevereProblem(conn, ex))
+					throw ex;
+			}
+			catch (RuntimeException rte)
+			{
+				_logger.warn("Error in saveAlarms() writing to Persistent Counter Store. which is disregarded... Caught a RuntimeException="+rte, rte);
+			}
+		}
+	}
+
+
 
 	@Override
 	public void saveSample(PersistContainer cont)
@@ -2130,6 +2459,9 @@ public class PersistWriterJdbc
 
 		try
 		{
+			// Save any alarms
+			saveAlarms(conn, sessionStartTime, sessionSampleTime);
+
 			// START a transaction
 			// This will lower number of IO's to the transaction log
 			if (conn.getAutoCommit() == true)
@@ -2334,11 +2666,11 @@ public class PersistWriterJdbc
 		if (cm instanceof CountersModelAppend) 
 			return;
 
-		if ( ! cm.hasDiffData() && ( cm.isPersistCountersDiffEnabled() || cm.isPersistCountersRateEnabled() ) )
-		{
-			_logger.info("No diffData is available, skipping writing Counters for name='"+cm.getName()+"'.");
-			return;
-		}
+//		if ( ! cm.hasDiffData() && ( cm.isPersistCountersDiffEnabled() || cm.isPersistCountersRateEnabled() ) )
+//		{
+//			_logger.info("No diffData is available, skipping writing Counters for name='"+cm.getName()+"'.");
+//			return;
+//		}
 
 		if (_shutdownWithNoWait)
 		{
@@ -2352,9 +2684,15 @@ public class PersistWriterJdbc
 		int absRows     = 0;
 		int diffRows    = 0;
 		int rateRows    = 0;
-		if (cm.hasAbsData()  && cm.isPersistCountersAbsEnabled())  {counterType += 1; absRows  = save(conn, cm, ABS,  sessionStartTime, sessionSampleTime);}
-		if (cm.hasDiffData() && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(conn, cm, DIFF, sessionStartTime, sessionSampleTime);}
-		if (cm.hasRateData() && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(conn, cm, RATE, sessionStartTime, sessionSampleTime);}
+		if (cm.hasValidSampleData())
+		{
+    		if (cm.hasAbsData()  && cm.isPersistCountersAbsEnabled())  {counterType += 1; absRows  = save(conn, cm, ABS,  sessionStartTime, sessionSampleTime);}
+    		if (cm.hasDiffData() && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(conn, cm, DIFF, sessionStartTime, sessionSampleTime);}
+    		if (cm.hasRateData() && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(conn, cm, RATE, sessionStartTime, sessionSampleTime);}
+//    		if (cm.hasAbsData()  && cm.getAbsColumnCount()  > 0 && cm.getAbsRowCount()  > 0 && cm.isPersistCountersAbsEnabled())  {counterType += 1; absRows  = save(conn, cm, ABS,  sessionStartTime, sessionSampleTime);}
+//    		if (cm.hasDiffData() && cm.getDiffColumnCount() > 0 && cm.getDiffRowCount() > 0 && cm.isPersistCountersDiffEnabled()) {counterType += 2; diffRows = save(conn, cm, DIFF, sessionStartTime, sessionSampleTime);}
+//    		if (cm.hasRateData() && cm.getRateColumnCount() > 0 && cm.getRateRowCount() > 0 && cm.isPersistCountersRateEnabled()) {counterType += 4; rateRows = save(conn, cm, RATE, sessionStartTime, sessionSampleTime);}
+		}
 		
 		if (_shutdownWithNoWait)
 		{
@@ -2363,29 +2701,22 @@ public class PersistWriterJdbc
 		}
 
 		int graphCount = 0;
-		Map<String,TrendGraphDataPoint> tgdMap = cm.getTrendGraphData();
-		if (tgdMap != null)
+		if (cm.hasValidSampleData())
 		{
-			for (Map.Entry<String,TrendGraphDataPoint> entry : tgdMap.entrySet()) 
+			Map<String,TrendGraphDataPoint> tgdMap = cm.getTrendGraphData();
+			if (tgdMap != null)
 			{
-			//	String              key  = entry.getKey();
-				TrendGraphDataPoint tgdp = entry.getValue();
+				for (Map.Entry<String,TrendGraphDataPoint> entry : tgdMap.entrySet()) 
+				{
+				//	String              key  = entry.getKey();
+					TrendGraphDataPoint tgdp = entry.getValue();
 
-				saveGraphData(conn, cm, tgdp, sessionStartTime, sessionSampleTime);
-				graphCount++;
+					saveGraphData(conn, cm, tgdp, sessionStartTime, sessionSampleTime);
+					graphCount++;
+				}
+
 			}
-
 		}
-
-		// here is how the SESSION_SAMPLE_DETAILES should look like
-//		sbSql.append("    "+fill(qic+"SessionStartTime" +qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"SessionSampleTime"+qic,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"CmName"           +qic,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-//		sbSql.append("   ,"+fill(qic+"type"             +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//		sbSql.append("   ,"+fill(qic+"graphCount"       +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//		sbSql.append("   ,"+fill(qic+"absRows"          +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//		sbSql.append("   ,"+fill(qic+"diffRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
-//		sbSql.append("   ,"+fill(qic+"rateRows"         +qic,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(true)+"\n");
 
 		if (_shutdownWithNoWait)
 		{
@@ -2416,6 +2747,9 @@ public class PersistWriterJdbc
 			sbSql.append(", ") .append(safeStr(cm.getNonConfiguredMonitoringMissingParams()));
 			sbSql.append(", ") .append(safeStr(cm.getNonConfiguredMonitoringMessage(false)));
 			sbSql.append(", ") .append(cm.isCountersCleared() ? 1 : 0);
+			sbSql.append(", ") .append(cm.hasValidSampleData() ? 1 : 0);
+			sbSql.append(", ") .append(cm.getSampleException() == null ? "NULL" : safeStr(cm.getSampleException().toString()));
+			sbSql.append(", ") .append(safeStr(StringUtil.exceptionToString(cm.getSampleException()))); // FIXME: maybe we can store it as a serialized object... and deserialize it on retrival 
 			sbSql.append(")");
 
 			dbExec(conn, sbSql.toString());
@@ -2490,10 +2824,11 @@ public class PersistWriterJdbc
 //		StringBuffer sqlSb     = new StringBuffer();
 //		StringBuffer rowSb     = new StringBuffer();
 
-		int cmWhatData = -99;
-		if      (whatData == ABS)  cmWhatData = CountersModel.DATA_ABS;
-		else if (whatData == DIFF) cmWhatData = CountersModel.DATA_DIFF;
-		else if (whatData == RATE) cmWhatData = CountersModel.DATA_RATE;
+		int    cmWhatData    = -99;
+		String cmWhatDataStr = "UNKNOWN";
+		if      (whatData == ABS)  { cmWhatData = CountersModel.DATA_ABS;  cmWhatDataStr = "ABS"; }
+		else if (whatData == DIFF) { cmWhatData = CountersModel.DATA_DIFF; cmWhatDataStr = "DIFF"; }
+		else if (whatData == RATE) { cmWhatData = CountersModel.DATA_RATE; cmWhatDataStr = "RATE"; }
 		else
 		{
 			_logger.error("Type of data is unknown, only 'ABS', 'DIFF' and 'RATE' is handled.");
@@ -2521,6 +2856,13 @@ public class PersistWriterJdbc
 
 		int rowsCount = rows.size();
 		int colsCount = cols.size();
+		
+//System.out.println("Counter '"+cmWhatDataStr+"' data for CM '"+cm.getName()+"'. (rowsCount="+rowsCount+", colsCount="+colsCount+") cols="+cols);
+		if (rowsCount == 0 || colsCount == 0)
+		{
+			_logger.debug("Skipping Storing Counter '"+cmWhatDataStr+"' data for CM '"+cm.getName()+"'. Rowcount or column count is 0 (rowsCount="+rowsCount+", colsCount="+colsCount+")");
+			return 0;
+		}
 		
 		// First BUILD up SQL statement used for the insert
 //		sqlSb.append("insert into ").append(qic).append(tabName).append(qic);
@@ -2554,10 +2896,11 @@ public class PersistWriterJdbc
 //			}
 //		}
 //		catch (SQLException ignore) { /*ignore*/ }
-		
+
+		String sql = "";
 		try
 		{
-			String sql = getTableInsertStr(whatData, cm, true);
+			sql = getTableInsertStr(whatData, cm, true, cols);
 //			PreparedStatement pstmt = conn.prepareStatement(sql);
 //			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(conn, sql);
 			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
@@ -2690,7 +3033,7 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode(), e);
+			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode()+" SQL="+sql, e);
 			isSevereProblem(conn, e);
 			return -1;
 		}
@@ -3206,6 +3549,13 @@ public class PersistWriterJdbc
 		if (sqlCaptureDetails == null)
 			throw new RuntimeException("saveSqlCaptureDetails(), input 'ddlDesqlCaptureDetailstails', can't be null.");
 			
+		
+		if ( ! PersistentCounterHandler.hasInstance() )
+		{
+			_logger.info("SQL Capture Storage: No PersistentCounterHandler has yet been installed.");
+			return;
+		}
+
 		ISqlCaptureBroker sqlCaptureBroker = PersistentCounterHandler.getInstance().getSqlCaptureBroker();
 		if (sqlCaptureBroker == null)
 		{

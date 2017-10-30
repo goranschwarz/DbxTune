@@ -12,10 +12,12 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
 import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -46,6 +48,7 @@ import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.InputMap;
 import javax.swing.JButton;
@@ -59,6 +62,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -69,6 +73,8 @@ import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.border.Border;
 import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
@@ -85,6 +91,11 @@ import org.jdesktop.swingx.error.ErrorInfo;
 
 import com.asetune.gui.swing.GPanel;
 
+import net.java.balloontip.BalloonTip;
+import net.java.balloontip.TableCellBalloonTip;
+import net.java.balloontip.positioners.LeftAbovePositioner;
+import net.java.balloontip.styles.EdgedBalloonStyle;
+import net.java.balloontip.utils.TimingUtils;
 import net.miginfocom.swing.MigLayout;
 
 public class SwingUtils
@@ -105,6 +116,15 @@ public class SwingUtils
 			try { return Float.parseFloat(hiDpiScale); }
 			catch(NumberFormatException e) { _logger.error("Problems parsing the property 'SwingUtils.hiDpiScale', allowed values is any float value (like 2.0 for 200% scaling). Continuing with normal processing inside SwingUtils.getHiDpiScale()"); }
 		}
+		
+		// use system scale factor(s)
+		// Swing in Java 9 scales automatically using the system scale factor(s) that the
+		// user can change in the system settings (Windows: Control Panel; Mac: System Preferences).
+		// Each connected screen may use its own scale factor
+		// (e.g. 1.5 for primary 4K 40inch screen and 1.0 for secondary HD screen).
+		if (JavaVersion.isJava9orLater())
+			return 1.0f;
+		
 //		Font labelFont = UIManager.getFont("TextArea.font");   // Default is 13, on HiDPI it doesn't seems to be scaled???
 //		Font labelFont = UIManager.getFont("TextField.font");  // Default is 11, on HiDPI xx
 		Font labelFont = UIManager.getFont("Label.font");      // Default is 11, on HiDPI xx
@@ -129,6 +149,37 @@ public class SwingUtils
 	public static Dimension hiDpiScale(Dimension dim)
 	{
 		return new Dimension( hiDpiScale(dim.width), hiDpiScale(dim.height) );
+	}
+
+	/**
+	 * Add an "indicator" color to the icon
+	 */
+	public static ImageIcon paintIcon(ImageIcon icon, Color indColor, int indSize, boolean indToLeft)
+	{
+		// well if we do not have an Icon attached here, no need to continue
+		if ( icon == null )     return null;
+		if ( indColor == null ) return icon;
+
+		BufferedImage im;
+		Graphics2D img;
+
+		int stipeSize = SwingUtils.hiDpiScale(indSize);
+		im = new BufferedImage(icon.getIconWidth() + stipeSize, icon.getIconHeight(), BufferedImage.TRANSLUCENT);
+		img = im.createGraphics();
+		img.setColor(indColor);
+
+		if ( indToLeft )
+		{
+			icon.paintIcon(null, img, stipeSize, 0);
+			img.fillRect(0, 1, stipeSize, icon.getIconHeight()-2);
+		}
+		else
+		{
+			icon.paintIcon(null, img, 0, 0);
+			img.fillRect(icon.getIconWidth(), 1, stipeSize, icon.getIconHeight()-2);
+		}
+
+		return new ImageIcon(im);
 	}
 
 	public static void printComponents(JComponent c, String text)
@@ -1083,6 +1134,12 @@ public class SwingUtils
 		throw new ParseException("Color string '"+colorStr+"' can't be parsed. I tried 'int' & 'r,g,b[,a]|r.g.b[.a]' & '#rrggbb[aa]|0xrrggbb[aa]' & 'java colors' (out of parser implementations).", -1);
 	}
 
+	public static String tableToString(TableModel tm)
+	{
+		JTable dummyJtable = new JTable(tm);
+		return tableToString(dummyJtable);
+		
+	}
 	public static String tableToString(JTable jtable, int[] justRowNumbers)
 	{
 		int firstRow = justRowNumbers[0];
@@ -1577,6 +1634,12 @@ public class SwingUtils
 	 */
 	public static String getScreenResulutionAsString()
 	{
+		// If we cant provide a GUI simply say YES
+		if (GraphicsEnvironment.isHeadless()) 
+		{
+			return "headless";
+		}
+
 		String retStr = "";
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -1585,6 +1648,11 @@ public class SwingUtils
 		for (int i=0; i<n; i++) 
 		{
 			GraphicsDevice gd = screens[i];
+			if (gd == null) 
+				continue;
+			if (gd.getDisplayMode() == null) 
+				continue;
+
 			int width = gd.getDisplayMode().getWidth();
 			int height = gd.getDisplayMode().getHeight();
 
@@ -1739,7 +1807,8 @@ public class SwingUtils
 	}
 
 	/**
-	 * Set focus to a good field or button
+	 * Set focus to a good field or button<br>
+	 * uses: <code>SwingUtilities.invokeLater()</code>
 	 */
 	public static void setFocus(final Component compToFocus)
 	{
@@ -1867,6 +1936,379 @@ public class SwingUtils
 		return bi;
 	}
 
+	public static Image iconToImage(Icon icon)
+	{
+		if ( icon instanceof ImageIcon )
+		{
+			return ((ImageIcon) icon).getImage();
+		}
+		else
+		{
+			int w = icon.getIconWidth();
+			int h = icon.getIconHeight();
+			GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+			GraphicsDevice gd = ge.getDefaultScreenDevice();
+			GraphicsConfiguration gc = gd.getDefaultConfiguration();
+			BufferedImage image = gc.createCompatibleImage(w, h);
+			Graphics2D g = image.createGraphics();
+			icon.paintIcon(null, g, 0, 0);
+			g.dispose();
+			return image;
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableDataChanged on the Event Dispatch Thread 
+	 */
+	public static void fireTableDataChanged(final AbstractTableModel tm)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableDataChanged();
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableDataChanged();
+				}
+			});
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableDataChanged on the Event Dispatch Thread 
+	 */
+	public static void fireTableStructureChanged(final AbstractTableModel tm)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableStructureChanged();
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableStructureChanged();
+				}
+			});
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableRowsInserted on the Event Dispatch Thread 
+	 */
+	public static void fireTableRowsInserted(final AbstractTableModel tm, final int firstRow, final int lastRow)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableRowsInserted(firstRow, lastRow);
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableRowsInserted(firstRow, lastRow);
+				}
+			});
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableRowsDeleted on the Event Dispatch Thread 
+	 */
+	public static void fireTableRowsDeleted(final AbstractTableModel tm, final int firstRow, final int lastRow)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableRowsDeleted(firstRow, lastRow);
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableRowsDeleted(firstRow, lastRow);
+				}
+			});
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableRowsUpdated on the Event Dispatch Thread 
+	 */
+	public static void fireTableRowsUpdated(final AbstractTableModel tm, final int firstRow, final int lastRow)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableRowsUpdated(firstRow, lastRow);
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableRowsUpdated(firstRow, lastRow);
+				}
+			});
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableCellUpdated on the Event Dispatch Thread 
+	 */
+	public static void fireTableCellUpdated(final AbstractTableModel tm, final int row, final int column)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableCellUpdated(row, column);
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableCellUpdated(row, column);
+				}
+			});
+		}
+	}
+
+	/** 
+	 * Just a wrapper to make sure we execute fireTableChanged on the Event Dispatch Thread 
+	 */
+	public static void fireTableCellUpdated(final AbstractTableModel tm, final TableModelEvent tme)
+	{
+		if (SwingUtilities.isEventDispatchThread())
+		{
+			tm.fireTableChanged(tme);
+		}
+		else
+		{
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					tm.fireTableChanged(tme);
+				}
+			});
+		}
+	}
+
+	/**
+	 * Show a balloontip for X ms with a text.
+	 * @param jcomp         A JComponent, or null. null will try to pickup your last focused component...
+	 * @param timeoutVal    Number of milliseconds the popup will be visible
+	 * @param ping          Sound an alarm
+	 * @param msg           The String you want to display.
+	 */
+	public static void showTimedBalloonTip(JComponent jcomp, int timeoutVal, boolean ping, String msg)
+	{
+		if (jcomp == null)
+		{
+			Component comp = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+			if (comp instanceof JComponent)
+				jcomp = (JComponent) comp;
+			else
+				throw new RuntimeException("showTimedBalloonTip: jcomp was null and the derived componen was not a JComponent. comp="+comp);
+		}
+
+		// Make some noice
+		if (ping)
+			UIManager.getLookAndFeel().provideErrorFeedback(jcomp);
+
+		// Show the balloon
+		BalloonTip balloonTip = new BalloonTip(jcomp,
+				new JLabel(msg),
+				new EdgedBalloonStyle(new Color(255,253,245), new Color(64,64,64)),
+				new LeftAbovePositioner(15, 10), 
+				null);
+		TimingUtils.showTimedBalloon(balloonTip, timeoutVal);
+	}
+
+	/**
+	 * Show a balloontip for X ms with a text. in a JTable for row and column
+	 * 
+	 * @param jcomp         A JComponent, or null. null will try to pickup your last focused component...
+	 * @param row           row int the table
+	 * @param col           column in the table
+	 * @param timeoutVal    Number of milliseconds the popup will be visible
+	 * @param ping          Sound an alarm
+	 * @param msg           The String you want to display.
+	 */
+	public static void showTimedBalloonTip(JComponent jcomp, int row, int col, int timeoutVal, boolean ping, String msg)
+	{
+		if (jcomp == null)
+		{
+			Component comp = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+			if (comp instanceof JComponent)
+				jcomp = (JComponent) comp;
+			else
+				throw new RuntimeException("showTimedBalloonTip: jcomp was null and the derived componen was not a JComponent. comp="+comp);
+		}
+		
+		JTable table;
+		if (jcomp instanceof JTable)
+			table = (JTable) jcomp;
+		else
+		{
+			table = null; 
+			for (Component c = jcomp.getParent(); c!=null; c=c.getParent())
+			{
+				if (c instanceof JTable)
+					table = (JTable) c;
+			}
+
+			if (table == null)
+			{
+				SwingUtils.printParents(jcomp, "showTimedBalloonTip: ");
+				throw new RuntimeException("showTimedBalloonTip: component was not a JTable. comp="+jcomp);
+			}
+		}
+
+		// Make some noice
+		if (ping)
+			UIManager.getLookAndFeel().provideErrorFeedback(jcomp);
+
+		// Show the balloon
+		TableCellBalloonTip balloonTip = new TableCellBalloonTip(table,  
+				new JLabel(msg),
+				row, col,
+				new EdgedBalloonStyle(new Color(255,253,245), new Color(64,64,64)),
+				new LeftAbovePositioner(15, 10), 
+				null);
+		TimingUtils.showTimedBalloon(balloonTip, timeoutVal);
+	}
+
+	/**
+	 * Show a balloontip for X ms with a text. in a JTable for row and column
+	 * 
+	 * @param model         Table model from where this origins
+	 * @param row           row int the table
+	 * @param col           column in the table
+	 * @param timeoutVal    Number of milliseconds the popup will be visible
+	 * @param ping          Sound an alarm
+	 * @param msg           The String you want to display.
+	 */
+	public static void showTimedBalloonTip(AbstractTableModel model, int row, int col, int timeoutVal, boolean ping, String msg)
+	{
+		// If we do not have a TableModel...
+		if (model == null)
+		{
+			showTimedBalloonTip((JComponent)null, row, col, timeoutVal, ping, msg);
+			return;
+		}
+
+		// Try to get the JTable instance... from the Listeners...
+		JTable table = getJTableByModel(model);
+		showTimedBalloonTip(table, row, col, timeoutVal, ping, msg);
+	}
+
+	/**
+	 * Get first JTable that the table model is listening on
+	 * @param model
+	 * @return
+	 */
+	public static JTable getJTableByModel(AbstractTableModel model)
+	{
+		JTable table = null;
+		for (TableModelListener tml : model.getTableModelListeners())
+		{
+			if (tml instanceof JTable)
+			{
+				table = (JTable) tml;
+				break;
+			}
+		}
+		return table;
+	}
+	
+	/**
+     * Returns the <b>view<b> column position given its name. (not case sensitive)
+     *
+     * @param columnName string containing name of column to be located
+     * @return the view column with <code>columnName</code>, or -1 if not found
+     */
+	public static int findColumnView(JTable tab, String columnName)
+	{
+		for (int c=0; c<tab.getColumnCount(); c++)
+		{
+			if ( columnName.equalsIgnoreCase(tab.getColumnName(c)) )
+				return c;
+		}
+		return -1;
+	}
+
+	/**
+     * Returns the <b>model<b> column position given its name. (not case sensitive)
+     *
+     * @param columnName string containing name of column to be located
+     * @return the model column with <code>columnName</code>, or -1 if not found
+     */
+	public static int findColumnModel(JTable tab, String columnName)
+	{
+		return findColumn(tab.getModel(), columnName);
+	}
+
+	/**
+     * Returns the <b>model<b> column position given its name. (not case sensitive)
+     *
+     * @param columnName string containing name of column to be located
+     * @return the model column with <code>columnName</code>, or -1 if not found
+     */
+	public static int findColumn(TableModel tm, String columnName)
+	{
+		for (int c=0; c<tm.getColumnCount(); c++)
+		{
+			if ( columnName.equalsIgnoreCase(tm.getColumnName(c)) )
+				return c;
+		}
+		return -1;
+	}
+
+	/** 
+	 * Get the Window component from a specific Component
+	 * 
+	 * @param comp
+	 * @return null or the Window object...
+	 */
+	public static Window getParentWindow(Component comp)
+	{
+		Window window = null;
+		for (Component c = comp.getParent(); c!=null; c=c.getParent())
+		{
+			if (c instanceof Window)
+				window = (Window) c;
+		}
+		return window;
+	}
+	/** 
+	 * Get the Window component, based on the KeyboardFocusManager
+	 *  
+	 * @param comp
+	 * @return null or the Window object...
+	 */
+	public static Window getParentWindowByFocus()
+	{
+		return getParentWindow(KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner());
+	}
+	
 	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
@@ -1894,5 +2336,4 @@ public class SwingUtils
 		System.out.println(xxx);
 		System.out.println("##################################");
 	}
-
 }

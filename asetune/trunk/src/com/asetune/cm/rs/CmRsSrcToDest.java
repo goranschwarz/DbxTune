@@ -28,6 +28,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.DbxTuneResultSetMetaData;
 import com.asetune.cm.NoValidRowsInSample;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrameRs;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.RepServerUtils;
@@ -141,9 +142,10 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_PERF_INDICATOR, new TrendGraphDataPoint(GRAPH_NAME_PERF_INDICATOR, labels));
+		addTrendGraphData(GRAPH_NAME_PERF_INDICATOR, new TrendGraphDataPoint(GRAPH_NAME_PERF_INDICATOR, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -183,9 +185,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 	

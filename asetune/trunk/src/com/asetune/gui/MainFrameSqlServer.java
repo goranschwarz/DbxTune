@@ -40,6 +40,7 @@ extends MainFrame
 		return 20;
 	}
 
+	@Override public String    getTablePopupDbmsVendorString() { return "sqlserver"; }
 	@Override public ImageIcon getApplicationIcon16() { return SwingUtils.readImageIcon(Version.class, "images/sqlservertune_icon_16.png"); };
 	@Override public ImageIcon getApplicationIcon32() { return SwingUtils.readImageIcon(Version.class, "images/sqlservertune_icon_32.png"); };
 

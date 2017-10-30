@@ -72,7 +72,12 @@ import org.jdesktop.swingx.JXTable;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.ConnectionProfile;
+import com.asetune.gui.ConnectionProfile.TdsEntry;
+import com.asetune.gui.ConnectionProfileManager;
+import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.sql.conn.TdsConnection;
@@ -197,6 +202,7 @@ implements ActionListener
                               
 	private JCheckBox         _rclCmd_chk                    = new JCheckBox("Use RCS Command", DEFAULT_rclCmd_chk);
 	private JTextField        _rclCmd_txt                    = new JTextField(DEFAULT_rclCmd_txt); // show the RCL which will be executed
+	private GLabel            _rclCmd_help                   = new GLabel(TEXT_rclCmd_help); 
 //	private String dummyRcl   = "sysadmin dump_queue, 'GORAN_DS', 'wsdb3', 1, -1, -2, -1, L0, client";
 //	private JCheckBox         _rclCmd_chk                    = new JCheckBox("Use RCS Command", true);
 //	private JTextField        _rclCmd_txt                    = new JTextField(dummyRcl); // show the RCL which will be executed
@@ -257,7 +263,7 @@ implements ActionListener
 		Version.setAppName("Dump Queue");
 		
 		// Create store dir if it did not exists.
-		File appStoreDir = new File(Version.APP_STORE_DIR);
+		File appStoreDir = new File(Version.getAppStoreDir());
 		if ( ! appStoreDir.exists() )
 		{
 			if (appStoreDir.mkdir())
@@ -268,17 +274,17 @@ implements ActionListener
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
-		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "asetune.properties");
-		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "asetune.user.properties");
+		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "dbxtune.properties");
+		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "rsDumpQueue.user.properties");
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "rsDumpQueue.save.properties");
 		final String RS_DUMP_QUEUE_HOME    = System.getProperty("RS_DUMP_QUEUE_HOME");
 		
-		String defaultPropsFile     = (RS_DUMP_QUEUE_HOME    != null) ? RS_DUMP_QUEUE_HOME    + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (RS_DUMP_QUEUE_HOME       != null) ? RS_DUMP_QUEUE_HOME       + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-		String filename = Version.APP_STORE_DIR + File.separator + CONFIG_FILE_NAME;
+		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -295,17 +301,17 @@ implements ActionListener
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
-		    && javaVersionInt <  JavaVersion.VERSION_1_7
+		    && javaVersionInt <  JavaVersion.VERSION_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties...
@@ -381,7 +387,7 @@ implements ActionListener
 		}
 
 //		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
-		Logging.init("rsDumpQueue.", propFile);
+		Logging.init("rsDumpQueue.", propFile, null);
 		
     	try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -410,7 +416,7 @@ implements ActionListener
 			{
 				Properties props = new Properties();
 	//			props.put("CHARSET", "iso_1");
-				conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, "RS Dump Queue", null, props, null);
+				conn = AseConnectionFactory.getConnection(hostPortStr, aseDbname, aseUsername, asePassword, "RS Dump Queue", Version.getVersionStr(), null, props, null);
 	
 				// Set the correct dbname, if it hasnt already been done
 				AseConnectionUtils.useDbname(conn, aseDbname);
@@ -730,6 +736,11 @@ implements ActionListener
 		panel.add(_queueTypeOut_rbt, "wrap");
 //		panel.add(_wsConnDesc_lbl,   "wrap");
 
+		// Set height of the combobox content
+		_queueNameLconn_cbx.setMaximumRowCount(50);
+		_queueNamePconn_cbx.setMaximumRowCount(50);
+		_queueNameRoute_cbx.setMaximumRowCount(50);
+
 		// Action Commands
 //		_lSrvDb_cbx   .setActionCommand(ACTION_XXX);
 //		_pSrvDb_cbx   .setActionCommand(ACTION_XXX);
@@ -787,7 +798,7 @@ implements ActionListener
 
 		_rclCmd_chk                   .setToolTipText("Check this if you want to specify your own command parameters");
 		_rclCmd_txt                   .setToolTipText("This is the RCL command this will be executed.");
-
+		_rclCmd_help                  .setToolTipText( createToolTipForRclCmd() );
 //		// ADD Components
 //		panel.add(_filterOutAppliedTrans_chk,     "span, split, wrap");
 //
@@ -843,6 +854,7 @@ implements ActionListener
 		panel.add(panelAdvanced,                 "wrap");
 		panel.add(_rclCmd_chk,                    "split, span");
 		panel.add(_rclCmd_txt,                    "pushx, growx, wrap");
+		panel.add(_rclCmd_help,                   "gapleft 33mm, pushx, growx, wrap");
 
 		// Special settings
 		_rclCmd_txt.setEditable(false);
@@ -864,6 +876,116 @@ implements ActionListener
 		SwingUtils.setEnabled(panelAdvanced, false);
 		return panel;
 	}
+
+	private String createToolTipForRclCmd()
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<html> \n");
+		sb.append("<h2>sysadmin dump_queue</h2> \n");
+		sb.append("Dumps the contents of a Replication Server stable queue. \n");
+		sb.append(" \n");
+		sb.append("<h3>Syntax</h3> \n");
+		sb.append("<pre> \n");
+		sb.append("sysadmin dump_queue {, &lt;q_number&gt; | &lt;server&gt;[,&lt;database&gt;]}, &lt;qtype&gt; \n");
+		sb.append("{ \n");
+		sb.append("        , &lt;seg&gt;, &lt;blk&gt;, &lt;cnt&gt; \n");
+		sb.append("        [, &lt;num_cmds&gt;] \n");
+		sb.append("        [, {L0 | L1 | L2 | L3}] \n");
+		sb.append("        [, {RSSD | client | \"log\" | &lt;file_name&gt;}] \n");
+		sb.append("        | \n");
+		sb.append("        “next” [, &lt;num_cmds&gt;] \n");
+		sb.append("  \n");
+		sb.append("} \n");
+		sb.append("</pre> \n");
+		sb.append("<h3>Parameters</h3> \n");
+		sb.append("<table> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>q_number | server[, database]</td>  \n");
+		sb.append("	<td>Identifies the stable queue to dump. Use either &lt;q_number&gt; or &lt;server&gt;[, &lt;database&gt;] to specify the queue number. <br> \n");
+		sb.append("	    You can use admin who, admin who, sqm, and admin who, sqt to identify the queue number.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>q_type</td>  \n");
+		sb.append("	<td>The queue type of the stable queue. Values are 0 for outbound queues and 1 for inbound queues. <br> \n");
+		sb.append("	    Use admin who, admin who, sqm, and admin who, sqt to identify the queue type. \n");
+		sb.append("	</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>seg</td>  \n");
+		sb.append("	<td>Identifies the starting segment</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>blk</td>  \n");
+		sb.append("	<td>Identifies the 16K block in the segment where the dump is to begin. Block numbering starts at 1 and ends at 64. <br> \n");
+		sb.append("	    sysadmin dump_queue recognizes four special settings for &lt;seg&gt; and &lt;blk&gt;: \n");
+		sb.append("		<ul> \n");
+		sb.append("		  <li>Setting &lt;seg&gt; to -1 starts with the first active segment in the queue. </li> \n");
+		sb.append("		  <li>Setting &lt;seg&gt; to -2 starts with the first segment in the queue, including any inactive segments retained by setting a save interval. </li> \n");
+		sb.append("		  <li>Setting &lt;seg&gt; to -1 and &lt;blk&gt; to -1 starts with the first undeleted block in the queue. </li> \n");
+		sb.append("		  <li>Setting &lt;seg&gt; to -1 and &lt;blk&gt; to -2 starts with the first unread block in the queue. </li> \n");
+		sb.append("		</ul> \n");
+		sb.append("   </td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>cnt</td>  \n");
+		sb.append("	<td>Specifies the number of blocks to dump. This number can span multiple segments. <br> \n");
+		sb.append("	    If &lt;cnt> is set to -1, the end of the current segment is the last block dumped. <br> \n");
+		sb.append("		If it is set to -2, the end of the queue is the last block dumped. \n");
+		sb.append("	</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>num_cmds</td>  \n");
+		sb.append("	<td>Specifies the number of commands to dump. This number overrides &lt;cnt&gt;. <br> \n");
+		sb.append("	    If &lt;num_cmds&gt; is set to -1, the end of the current segment is the last command dumped. <br> \n");
+		sb.append("		If &lt;num_cmds&gt; is set to -2, the end of the queue is the last command dumped. <br> \n");
+		sb.append("	</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>L0</td>  \n");
+		sb.append("	<td>Dumps all of the stable queue’s content. This is the default behavior if L0, L1, L2, or L3 is not specified.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>L1</td>  \n");
+		sb.append("	<td>Dumps only the begin and end commands of transactions found in the stable queue.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>L2</td>  \n");
+		sb.append("	<td>Dumps the begin and end commands of the stable queue transactions together with the first 100 characters of all the other commands in the transactions.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>L3</td>  \n");
+		sb.append("	<td>Dumps all of the stable queue’s content. Except for SQL statements, all other commands are printed as comments. You can use L3 only when you use the &lt;file_name&gt; option or the sysadmin dump_file command to specify an alternate log file. You cannot use L3 with RSSD or client options.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>RSSD</td>  \n");
+		sb.append("	<td>Forces output to system tables in the RSSD</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>client</td>  \n");
+		sb.append("	<td>Forces output to the client that is issuing this command.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>\"log\"</td>  \n");
+		sb.append("	<td>Forces output to the Replication Server log file.</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>file_name</td>  \n");
+		sb.append("	<td>Forces the output into the &lt;file_name&gt; log file. You can also set an alternate log file using the sysadmin dump_file command. The location of this file is recorded in the Replication Server log. </td>  \n");
+		sb.append("</tr> \n");
+		sb.append("<tr>  \n");
+		sb.append("	<td>\"next\"[, num_cmds] </td>  \n");
+		sb.append("	<td>Starts from where the last run of sysadmin dump_queue for a particular queue and session left off, and dumps the same number of commands or blocks that the last run did. You can use &lt;num_cmds&gt; to override the value of previous &lt;cnt&gt; or &lt;num_cmds&gt;. <br> \n");
+		sb.append("	    If you use \"next\"[, num_cmds] without a prior invocation of sysadmin dump_queue, the dump starts from the beginning of the queue with the default values of seg -1, blk -1, and cnt -2, and &lt;num_cmds&gt; is treated as the number of commands. \n");
+		sb.append("	</td>  \n");
+		sb.append("</tr> \n");
+		sb.append("</table> \n");
+		sb.append("</html> \n");
+
+		
+		return sb.toString();
+	}
+
 	private JPanel createOutputFormatPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Output Format", true);
@@ -1039,6 +1161,8 @@ implements ActionListener
 
 	public static final String  PROPKEY_rclCmd_txt            = "RsDumpQueue.rcl.cmd.txt";
 	public static final String  DEFAULT_rclCmd_txt            = "";
+	
+	public static final String  TEXT_rclCmd_help              = "sysamin dump_queue  {<q_number>|<server>,<database>}, <qtype>, <seg>, <blk>, <cnt> [, <num_cmds>] [, {L0 | L1 | L2 | L3}] ,client | \"next\" [, <num_cmds>]";
 
 
 	public static final String  PROPKEY_outputFile_chk        = "RsDumpQueue.output.file.chk";
@@ -1188,17 +1312,19 @@ implements ActionListener
 		_queueNameRoute_cbx.setVisible(route);
 		if (lConn)
 		{
-			_queueTypeIn_rbt .setSelected(true);
+//			_queueTypeIn_rbt .setSelected(true);
 			
-			_queueTypeIn_rbt .setEnabled(false);
-			_queueTypeOut_rbt.setEnabled(false);
+//			_queueTypeIn_rbt .setEnabled(false);
+//			_queueTypeOut_rbt.setEnabled(false);
+			_queueTypeIn_rbt .setEnabled(true);
+			_queueTypeOut_rbt.setEnabled(true);
 			
 //			_wsConnDesc_lbl.setText("Active '', Standby ''.");
 		}
 		if (pConn)
 		{
 			// First time we choose Physical Connection, Change to OutBound Queue
-			if ( ! _queueTypeOut_rbt.isEnabled())
+//			if ( ! _queueTypeOut_rbt.isEnabled())
 				_queueTypeOut_rbt.setSelected(true);
 
 			_queueTypeIn_rbt .setEnabled(true);
@@ -1296,14 +1422,42 @@ implements ActionListener
 			if ( lSrv instanceof LogicalConnectionItem )
 			{
 				String[] sa = ((LogicalConnectionItem) lSrv)._logicalName.split("\\.");
+System.out.println("setRclCommand(): logicalName='"+((LogicalConnectionItem) lSrv)._logicalName+"'. sa.length="+sa.length);
 				_selectedDestSrvName   = sa.length >= 1 ? sa[0] : null;
 				_selectedDestDbName    = sa.length >= 2 ? sa[1] : null;
 				dbid = "'" + _selectedDestSrvName + "', '" + _selectedDestDbName + "'";
 	
-				// Set the below values to STANDBY server instead of the LOGICAL name
-				sa = ((LogicalConnectionItem) lSrv)._standbyName.split("\\.");
-				_selectedDestSrvName   = sa.length >= 1 ? sa[0] : null;
-				_selectedDestDbName    = sa.length >= 2 ? sa[1] : null;
+				if (_queueTypeIn_rbt.isSelected())
+				{
+    				// Set the below values to STANDBY server instead of the LOGICAL name
+    				sa = ((LogicalConnectionItem) lSrv)._standbyName.split("\\.");
+    				_selectedDestSrvName   = sa.length >= 1 ? sa[0] : null;
+    				_selectedDestDbName    = sa.length >= 2 ? sa[1] : null;
+				}
+				else
+				{
+    				// Set the below values to ACTIVE server instead of the LOGICAL name
+					// This is if you are replicating INTO a logical connection, then data will be put on the OUT-queue
+    				sa = ((LogicalConnectionItem) lSrv)._activeName.split("\\.");
+    				_selectedDestSrvName   = sa.length >= 1 ? sa[0] : null;
+    				_selectedDestDbName    = sa.length >= 2 ? sa[1] : null;
+				}
+
+				if ("none".equals(_selectedDestSrvName) && StringUtil.isNullOrBlank(_selectedDestDbName))
+				{
+					String lSrvName = ((LogicalConnectionItem) lSrv)._logicalName;
+					String queueType = _queueTypeIn_rbt.isSelected() ? "IN" : "OUT";
+					String switchTo  = _queueTypeIn_rbt.isSelected() ? "OUT" : "IN";
+					String connType  = _queueTypeIn_rbt.isSelected() ? "STANDBY" : "ACTIVE";
+					SwingUtils.showInfoMessage(_window, "No Queue for this", 
+							"<html>"
+							+ "Sorry the logical connection '"+lSrvName+"' doesn't have an "+queueType+" Queue.<br>"
+							+ "Which means that it do not have a "+connType+" connection attached to it.<br>"
+							+ "<br>"
+							+ "Try to Switch to the "+switchTo+" Queue instead..."
+							+ "</html>");
+					return;
+				}
 			}
 		}
 
@@ -1329,6 +1483,7 @@ implements ActionListener
 				dbid = "'" + _selectedDestRouteName + "'";
 			}
 		}
+System.out.println("setRclCommand(): to get rs_lastcommit values: _selectedDestSrvName='"+_selectedDestSrvName+"', _selectedDestDbName='"+_selectedDestDbName+"'.");
 
 		if (dbid == null)
 			dbid = "<DBID>";
@@ -1826,8 +1981,52 @@ saveProps();
 				username = username.replaceAll("<dbname>", _selectedDestDbName);
 				password = password.replaceAll("<dbname>", _selectedDestDbName);
 				
+				String hostPortStr = AseConnectionFactory.getIHostPortStr(_selectedDestSrvName);
+				if ( StringUtil.isNullOrBlank(hostPortStr) )
+				{
+					if (ConnectionProfileManager.hasInstance())
+					{
+						ConnectionProfile connProfile = ConnectionProfileManager.getInstance().getFirstProfileThatStartsWith(_selectedDestSrvName);
+System.out.println("connProfile="+connProfile);
+						if (connProfile != null)
+						{
+							TdsEntry tdsEntry = connProfile.getTdsEntry();
+System.out.println("tdsEntry="+tdsEntry);
+							if (tdsEntry != null)
+							{
+								String hosts = tdsEntry._tdsHosts;
+								String ports = tdsEntry._tdsPorts;
+								hostPortStr = AseConnectionFactory.toHostPortStr(hosts, ports);
+							}
+						}
+					}
+					if ( StringUtil.isNullOrBlank(hostPortStr) )
+					{
+//						String ifile = AseConnectionFactory.getIFileName();
+						
+						String key1 = "Hostname";
+						String key2 = "Port";
+//						String key3 = "Add entry to the sql.ini or interfaces file";
+
+						LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+						in.put(key1, "");
+						in.put(key2, "");
+//						in.put(key3, "false");
+
+						Map<String,String> results = ParameterDialog.showParameterDialog(_window, "Connection details for: "+_selectedDestSrvName, in, false);
+						if (results != null)
+						{
+							hostPortStr = AseConnectionFactory.toHostPortStr(results.get(key1), results.get(key2));
+
+//							if (addToIFile)
+//								AseConnectionFactory.addIFileEntry(ifile, _selectedDestSrvName, newHostPortStr);
+						}
+					}
+				}
+System.out.println("hostPortStr="+hostPortStr);
+
 //				tmp_rsLastcommit = RsLastcommit.getRsLastcommit(conn, _selectedDestSrvName, _selectedDestDbName);
-				tmp_rsLastcommit = RsLastcommit.getRsLastcommit(_selectedDestSrvName, _selectedDestDbName, username, password);
+				tmp_rsLastcommit = RsLastcommit.getRsLastcommit(_selectedDestSrvName, hostPortStr, _selectedDestDbName, username, password);
 			}
 			catch (SQLException e1)
 			{
@@ -1836,6 +2035,8 @@ saveProps();
 						"Can <b>not</b> filter out Already Applied or Replicated records<br>" +
 						"<br>" +
 						"Problems accessing the table '<b>rs_lastcommit</b>' in ASE '<b>"+_selectedDestSrvName+"</b>' db '<b>"+_selectedDestDbName+"</b>' <br>" +
+						"So I can not filter out already applied transactions...<br>" +
+						"All available entries will be displayed.<br>" +
 						"<br>" +
 						"Problem: <i>"+e1.getMessage()+"</i>" +
 						"</html>";
@@ -1926,7 +2127,20 @@ saveProps();
 						rs = stmnt.getResultSet();
 					else
 					{
-System.out.println("NO RESULT SET ");
+						// reset the Table Model, to reduce memory
+						_dumpQueueTab.setModel(new DefaultTableModel());
+						
+						StringBuilder sb = new StringBuilder();
+						sb.append("------------------------------------------------------------------------------------\n");
+						sb.append("-- RCL Command used: ").append(rcl).append("\n");
+						sb.append("------------------------------------------------------------------------------------\n");
+						sb.append("-- But no ResultSet was returned.\n");
+						sb.append("------------------------------------------------------------------------------------\n");
+						_dumpQueueTxt.setText(sb.toString());
+
+						_dumpQueueTabScroll.setVisible(false);
+						_dumpQueueTxtScroll.setVisible(true);
+
 						return null;
 					}
 
@@ -1940,43 +2154,65 @@ System.out.println("NO RESULT SET ");
 					boolean asTable = _outputFormatTab_rbt.isSelected();
 					if (asTable)
 					{
-System.out.println("TO TABLE");
+System.out.println("TO TABLE - begin");
 
 						// reset the Text Area, to reduce memory
 						_dumpQueueTxt.setText("");
 
 						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true, rcl);
+						final ResultSetTableModel tm = new ResultSetTableModel(rs, true, rcl);
 //System.out.println("ResultSetTableModel.toTableString():\n"+tm.toTableString());
 
-						_dumpQueueTab.setModel(tm);
-						_dumpQueueTab.setSortable(true);
-						_dumpQueueTab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-						_dumpQueueTab.packAll(); // set size so that all content in all cells are visible
-						_dumpQueueTab.setColumnControlVisible(true);
-						_dumpQueueTab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-						_dumpQueueTab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+						// This is NOT safe to do in here, but I'm tired...
+						SwingUtilities.invokeLater(new Runnable()
+						{
+							@Override
+							public void run()
+							{
+        						_dumpQueueTab.setModel(tm);
+        						_dumpQueueTab.setSortable(true);
+        						_dumpQueueTab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
+        						_dumpQueueTab.packAll(); // set size so that all content in all cells are visible
+        						_dumpQueueTab.setColumnControlVisible(true);
+        						_dumpQueueTab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        						_dumpQueueTab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+							}
+						});
 
 //						// Add a popup menu
 ////						tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
 
 						_dumpQueueTabScroll.setVisible(true);
 						_dumpQueueTxtScroll.setVisible(false);
+System.out.println("TO TABLE - end");
 					}
 					else
 					{
-System.out.println("TO TXT");
+System.out.println("TO TXT - begin");
 
 						// reset the Table Model, to reduce memory
 						_dumpQueueTab.setModel(new DefaultTableModel());
 
 //						boolean shortDesc = OUT_TEXT_SHORT.equals(outputFormat);
 						boolean shortDesc = _outputFormatTxtShort_rbt.isSelected();
-						_dumpQueueTxt.setText(buildDumpString(rs, rsLastcommit, shortDesc, getWaitDialog()));
+						final String dumpStr = buildDumpString(rcl, rs, rsLastcommit, shortDesc, getWaitDialog());
+						
+						// This is NOT safe to do in here, but I'm tired...
+						SwingUtilities.invokeLater(new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								_dumpQueueTxt.setText(dumpStr);
+								_dumpQueueTxt.setCaretPosition(0);
+							}
+						});
+						
 
 						_dumpQueueTabScroll.setVisible(false);
 						_dumpQueueTxtScroll.setVisible(true);
 						//_resultCompList.add(new JPlainResultSet(tm));				
+System.out.println("TO TXT - end");
 					}
 
 					// Close it
@@ -2032,13 +2268,22 @@ System.out.println("TO TXT");
 		
 	}
 
-	private String buildDumpString(ResultSet rs, RsLastcommit rsLastcommit, boolean shortDesc, WaitForExecDialog wait)
+	private String buildDumpString(String rcl, ResultSet rs, RsLastcommit rsLastcommit, boolean shortDesc, WaitForExecDialog wait)
 //	throws SQLException
 	{
 //		ResultSetTableModel tm = new ResultSetTableModel(rs, true);
 //		return tm.toString();
 
 		StringBuilder sb = new StringBuilder();
+		sb.append("------------------------------------------------------------------------------------\n");
+		sb.append("-- RCL Command used: ").append(rcl).append("\n");
+		if (rsLastcommit != null)
+		{
+			for (RsLastcommitEntry rse : rsLastcommit.values())
+				if (rse._origin != 0)
+					sb.append("-- rs_lastcommit: Origin=").append(rse._origin).append(", OQID=0x").append(rse._origin_qid).append(", SecondaryQID=0x").append(rse._secondary_qid).append("\n");
+		}
+		sb.append("------------------------------------------------------------------------------------\n");
 		List<List<String>> dumpList = getDumpQueue(rs, rsLastcommit, shortDesc, wait);
 		for (List<String> sqlList : dumpList)
 		{
@@ -2071,7 +2316,7 @@ System.out.println("TO TXT");
 		{
 			discardQueueRecordsList.add("-- Removing Queue Records with a OriginQueueID less than OQID");
 			for (RsLastcommitEntry rse : rsLastcommit.values())
-				discardQueueRecordsList.add("-- Origin: "+rse._origin+" OQID: 0x"+rse._origin_qid);
+				discardQueueRecordsList.add("-- Origin="+rse._origin+", OQID=0x"+rse._origin_qid+", SecondaryQID=0x"+rse._secondary_qid);
 
 			transList.add(discardQueueRecordsList);
 		}
@@ -2120,7 +2365,7 @@ System.out.println("TO TXT");
 				{
 					try
 					{
-						alreadyAppliedToDest = rsLastcommit.hasOqidBeenApplied(orgnSiteid, orgnQid);
+						alreadyAppliedToDest = rsLastcommit.hasOqidBeenApplied(orgnSiteid, orgnQid, command, seqNo);
 					}
 					catch (OriginNotFoundException e)
 					{

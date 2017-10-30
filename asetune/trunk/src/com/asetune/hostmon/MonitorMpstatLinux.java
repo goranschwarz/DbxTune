@@ -39,7 +39,7 @@ extends MonitorMpstat
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
 
-		_logger.info("When creating meta data for Linux 'mpstat', initializing it using utility version "+VersionShort.toStr(utilVersion));
+		_logger.info("When creating meta data for Linux 'mpstat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+").");
 
 		// gorans@gorans-ub:~$ mpstat -V
 		// sysstat version 10.2.0
@@ -57,39 +57,40 @@ extends MonitorMpstat
 		// This version also includes support for "systemd", the system and service manager intended to replace the init daemon for Linux.
 		//
 		// The source code on github also indicates this: https://github.com/sysstat/sysstat/commits/master/mpstat.c
-		
+
+//System.out.println("Linux-MPSTAT: utilVersion="+utilVersion+", VersionShort.toInt(10,1,2)="+VersionShort.toInt(10,1,2));
 		if ( utilVersion >= VersionShort.toInt(10,1,2) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{
-			md.addStrColumn( "CPU",            1,  3, false,   5, "Processor number. The keyword all indicates that statistics are calculated as averages among all processors.");
+			md.addStrColumn( "CPU",            1,  2, false,   5, "Processor number. The keyword all indicates that statistics are calculated as averages among all processors.");
 			md.addIntColumn( "samples",        2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
 
-			md.addStatColumn("usrPct",         3,  4, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level (application).");
-			md.addStatColumn("nicePct",        4,  5, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level with nice priority.");
-			md.addStatColumn("sysPct",         5,  6, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the system level (kernel). Note that this does not include time spent servicing hardware and software interrupts.");
-			md.addStatColumn("iowaitPct",      6,  7, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle during which the system had an outstanding disk I/O request.");
-			md.addStatColumn("irqPct",         7,  8, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service hardware interrupts.");
-			md.addStatColumn("softPct",        8,  9, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service software interrupts.");
-			md.addStatColumn("stealPct",       9, 10, true, 5,  1, "Show the percentage of time spent in involuntary wait by the virtual CPU or CPUs while the hypervisor was servicing another virtual processor.");
-			md.addStatColumn("guestPct",      10, 11, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to run a virtual processor.");
-			md.addStatColumn("gnicePct",      11, 12, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to run a niced guest.");
-			md.addStatColumn("idlePct",       12, 13, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request.");
+			md.addStatColumn("usrPct",         3,  3, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level (application).");
+			md.addStatColumn("nicePct",        4,  4, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level with nice priority.");
+			md.addStatColumn("sysPct",         5,  5, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the system level (kernel). Note that this does not include time spent servicing hardware and software interrupts.");
+			md.addStatColumn("iowaitPct",      6,  6, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle during which the system had an outstanding disk I/O request.");
+			md.addStatColumn("irqPct",         7,  7, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service hardware interrupts.");
+			md.addStatColumn("softPct",        8,  8, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service software interrupts.");
+			md.addStatColumn("stealPct",       9,  9, true, 5,  1, "Show the percentage of time spent in involuntary wait by the virtual CPU or CPUs while the hypervisor was servicing another virtual processor.");
+			md.addStatColumn("guestPct",      10, 10, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to run a virtual processor.");
+			md.addStatColumn("gnicePct",      11, 11, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to run a niced guest.");
+			md.addStatColumn("idlePct",       12, 12, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request.");
 
 			md.setPercentCol("gnicePct");
 		}
 		else
 		{
-			md.addStrColumn( "CPU",            1,  3, false,   5, "Processor number. The keyword all indicates that statistics are calculated as averages among all processors.");
+			md.addStrColumn( "CPU",            1,  2, false,   5, "Processor number. The keyword all indicates that statistics are calculated as averages among all processors.");
 			md.addIntColumn( "samples",        2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");
 
-			md.addStatColumn("usrPct",         3,  4, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level (application).");
-			md.addStatColumn("nicePct",        4,  5, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level with nice priority.");
-			md.addStatColumn("sysPct",         5,  6, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the system level (kernel). Note that this does not include time spent servicing hardware and software interrupts.");
-			md.addStatColumn("iowaitPct",      6,  7, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle during which the system had an outstanding disk I/O request.");
-			md.addStatColumn("irqPct",         7,  8, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service hardware interrupts.");
-			md.addStatColumn("softPct",        8,  9, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service software interrupts.");
-			md.addStatColumn("stealPct",       9, 10, true, 5,  1, "Show the percentage of time spent in involuntary wait by the virtual CPU or CPUs while the hypervisor was servicing another virtual processor.");
-			md.addStatColumn("guestPct",      10, 11, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to run a virtual processor.");
-			md.addStatColumn("idlePct",       11, 12, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request.");
+			md.addStatColumn("usrPct",         3,  3, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level (application).");
+			md.addStatColumn("nicePct",        4,  4, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the user level with nice priority.");
+			md.addStatColumn("sysPct",         5,  5, true, 5,  1, "Show the percentage of CPU utilization that occurred while executing at the system level (kernel). Note that this does not include time spent servicing hardware and software interrupts.");
+			md.addStatColumn("iowaitPct",      6,  6, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle during which the system had an outstanding disk I/O request.");
+			md.addStatColumn("irqPct",         7,  7, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service hardware interrupts.");
+			md.addStatColumn("softPct",        8,  8, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to service software interrupts.");
+			md.addStatColumn("stealPct",       9,  9, true, 5,  1, "Show the percentage of time spent in involuntary wait by the virtual CPU or CPUs while the hypervisor was servicing another virtual processor.");
+			md.addStatColumn("guestPct",      10, 10, true, 5,  1, "Show the percentage of time spent by the CPU or CPUs to run a virtual processor.");
+			md.addStatColumn("idlePct",       11, 11, true, 5,  1, "Show the percentage of time that the CPU or CPUs were idle and the system did not have an outstanding disk I/O request.");
 		}
 
 		// Set Percent columns
@@ -119,6 +120,25 @@ extends MonitorMpstat
 		// Get SKIP and ALLOW from the Configuration
 		md.setSkipAndAllowRows(null, Configuration.getCombinedConfiguration());
 		md.setSkipAndAllowRows("hostmon.MonitorMpstat.", Configuration.getCombinedConfiguration());
+
+		// create an object that can change the "raw" row after it has been read from the input, but before it gets split  
+		md.setSourceRowAdjuster(new SourceRowAdjuster()
+		{
+			@Override
+			public String adjustRow(String row, int type)
+			{
+				if (row == null)
+					return row;
+
+				// In some cases the PM/AM is NOT present... it seems to be optional... so lets remove it from the input.
+				// from: 00:38:26 AM  all   10.66
+				//   to: 00:38:26 all   10.66
+				if ( row.length() > 12 && (row.startsWith(" AM ", 8) | row.startsWith(" PM ", 8)) )
+					row = row.substring(0, 8) + row.substring(12);
+
+				return row;
+			}
+		});
 
 		return md;
 	}

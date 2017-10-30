@@ -36,6 +36,7 @@ in the directory where the base package (asetune_YYYY-MM-DD.zip) is installed
 * SqlServerTune - Tune Microsoft SQL-Server
 * OracleTune    - Tune Oracle DBMS
 * PostgresTune  - Tune Postgres DBMS
+* MySqlTune     - Tune MySQL DBMS (5.7 and later)
  
 
 
@@ -113,6 +114,13 @@ This is the most complete tool. This because it has been around for 7-10 years
 -- PostgresTune --------------------------------------------------------------
 ------------------------------------------------------------------------------
   This tool is new in release 2016-11-06
+  Status: Not that much functionality, needs A LOT MORE work before released. 
+  Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
+
+------------------------------------------------------------------------------
+-- PostgresTune --------------------------------------------------------------
+------------------------------------------------------------------------------
+  This tool is new in release 2017-11-xx
   Status: Not that much functionality, needs A LOT MORE work before released. 
   Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 

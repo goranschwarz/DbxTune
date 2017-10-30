@@ -38,4 +38,10 @@ public interface IGuiController
 	 * @return
 	 */
 	public Component getGuiHandle();
+
+	/**
+	 * A part of the properties entry key to get valid entries for the Table right click popup menu.
+	 * @return for example: "ase", "iq", "rs", "hana", "oracle", "sqlserver"
+	 */
+	public String getTablePopupDbmsVendorString();
 }

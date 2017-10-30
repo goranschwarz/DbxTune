@@ -22,6 +22,7 @@ public abstract class RsConfigText
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfigAsText());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfigAsTextNonDefault());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsConfig());
+		DbmsConfigTextManager.addInstance(new RsConfigText.RsLogicalStatus());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsTbConfig());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsHelpDb());
 		DbmsConfigTextManager.addInstance(new RsConfigText.RsHelpDbRep());
@@ -111,6 +112,16 @@ public abstract class RsConfigText
 		@Override public    String        getName()                           { return "RsTbConfig"; }
 		@Override public    String        getConfigType()                     { return getName(); }
 		@Override protected String        getSqlCurrentConfig(int aseVersion) { return "connect to rssd\ngo\n select * from rs_tbconfig \ngo\ndisconnect"; }
+		@Override public    boolean       getKeepDbmsState()                  { return false; }
+		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
+	}
+
+	public static class RsLogicalStatus extends DbmsConfigTextAbstract
+	{
+		@Override public    String        getTabLabel()                       { return "Logical Conn"; }
+		@Override public    String        getName()                           { return "RsLogicalStatus"; }
+		@Override public    String        getConfigType()                     { return getName(); }
+		@Override protected String        getSqlCurrentConfig(int aseVersion) { return "admin logical_status"; }
 		@Override public    boolean       getKeepDbmsState()                  { return false; }
 		@Override public    List<Integer> getDiscardDbmsErrorList()           { return _discardRsMsgNumbers; }
 	}

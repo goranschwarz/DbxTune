@@ -159,10 +159,17 @@ public abstract class MonTablesDictionary
 	 */
 	public int getDbmsMonTableVersion()
 	{
+		int ver = 0;
+
 		if (_trustMonTablesVersion)
-			return getDbmsMonTableVersionNum();
-		return getDbmsExecutableVersionNum();
+			ver = getDbmsMonTableVersionNum();
+
+		if (ver <= 0)
+			ver = getDbmsExecutableVersionNum();
+
+		return ver;
 	}
+
 	public boolean isClusterEnabled()              { return _isClusterEnabled; }
 	public String  getDbmsServerName()              { return _dbmsServerName; }
 	

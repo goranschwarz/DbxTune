@@ -30,7 +30,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
-import com.asetune.cm.postgres.CmSummary;
+import com.asetune.cm.oracle.CmSummary;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ShowCmPropertiesDialog;

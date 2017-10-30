@@ -1,21 +1,35 @@
 package com.asetune.utils;
 
+import java.lang.management.ManagementFactory;
+import java.util.StringTokenizer;
+
 /**
  * This class detects the Java-Version
  */
 public class JavaVersion
 {
 	public static final int	VERSION_NOTFOUND	= -1;
+//	public static final int	VERSION_1_0			= 100;
+//	public static final int	VERSION_1_1			= 110;
+//	public static final int	VERSION_1_2			= 120;
+//	public static final int	VERSION_1_3			= 130;
+//	public static final int	VERSION_1_4			= 140;
+//	public static final int	VERSION_1_5			= 150;
+//	public static final int	VERSION_1_6			= 160;
+//	public static final int	VERSION_1_7			= 170;
+//	public static final int	VERSION_1_8			= 180;
+//	public static final int	VERSION_9			= 190;
+
 	public static final int	VERSION_1_0			= 100;
 	public static final int	VERSION_1_1			= 110;
 	public static final int	VERSION_1_2			= 120;
 	public static final int	VERSION_1_3			= 130;
 	public static final int	VERSION_1_4			= 140;
-	public static final int	VERSION_1_5			= 150;
-	public static final int	VERSION_1_6			= 160;
-	public static final int	VERSION_1_7			= 170;
-	public static final int	VERSION_1_8			= 170;
-	public static final int	VERSION_1_9			= 170;
+	public static final int	VERSION_5			= 500;
+	public static final int	VERSION_6			= 600;
+	public static final int	VERSION_7			= 700;
+	public static final int	VERSION_8			= 800;
+	public static final int	VERSION_9			= 900;
 
 	private static int _major = -1;
 	private static int _minor = -1;
@@ -30,16 +44,41 @@ public class JavaVersion
 		if (verStr == null)
 			return VERSION_NOTFOUND;
 
+		// IN Java 9 there is a new versioning string schema... http://openjdk.java.net/jeps/223
 		String[] ver = verStr.split("\\.");
+
 		if ( ver.length < 2 )
+		{
+			try
+			{
+    			// '9-ea' is for example Java9 EarlyAccess
+    			if (verStr.indexOf('-') > 0)
+    			{
+    				String[] java9sa = verStr.split("-");
+    				_major  = Integer.parseInt(java9sa[0]);
+    				_minor  = 0;
+    			}
+    			else
+    			{
+    				_major  = Integer.parseInt(verStr);
+    				_minor  = 0;
+    			}
+    			return (_major*100) + (_minor*10) + _maint;
+			}
+			catch(NumberFormatException ex)
+			{
+				// TODO: handle exception
+			}
+			
 			return VERSION_NOTFOUND;
+		}
 
 		try
 		{
 			_major = Integer.parseInt(ver[0]);
 			_minor = Integer.parseInt(ver[1]);
 
-//			int bugfix = 0;
+//			int bugfix/spLevel/pathLevel = 0;
 			if (ver.length >= 3)
 			{
 				String[] maint_bugfix_arr = ver[2].split("_");
@@ -49,6 +88,19 @@ public class JavaVersion
 //					bugfix = Integer.parseInt(maint_bugfix_arr[1]);
 			}
 
+			// Java 9: looks like 9.x.y    
+			// Since all releases before java 9 had 1.x.y we just need to look for 'larger than 1' to determen if its the new version schema
+			// if it's the new version schema we just "do nothing"
+			if (_major > 1)
+			{
+			}
+			else if (_minor >= 5) // if java 5 and above (1.5.x) move the version parts one left. (1.5.1 -> 5.1.0) to follow the new version schema 
+			{
+				_major = _minor;
+				_minor = _maint;
+				_maint = 0; // or if we start to parse the "bugfix/spLevel/pathLevel" we can use that as _maint.
+			}
+			
 //			if ( major == 1 )
 //			{
 //				switch (minor)
@@ -109,7 +161,26 @@ public class JavaVersion
 		return _maint;
 	}
 
-	
+
+	/**
+	 * If jave is above 9
+	 * @return
+	 */
+	public static boolean isJava9orLater()
+	{
+		try
+		{
+			// Java 9 version-String Scheme: http://openjdk.java.net/jeps/223
+			StringTokenizer st = new StringTokenizer(System.getProperty("java.version"), "._-+");
+			int majorVersion = Integer.parseInt(st.nextToken());
+			return majorVersion >= 9;
+		}
+		catch (Exception e)
+		{
+			return false;
+		}
+	}
+
 	/**
 	 * 
 	 * @param args
@@ -133,11 +204,8 @@ public class JavaVersion
 		}
 		int checkForVersion = Integer.parseInt(args[0]);
 
-		// Note: JVM version 
-		//       1.4 = Java 4
-		//       1.5 = Java 5
-		//       1.6 = Java 6
-		int javaVer = getMinor();
+		// JVM MAJOR version (which wont work for java 1.4 and below, but on those releases  getMajor() will always return 1, which isn't supported anymore...
+		int javaVer = getMajor();
 
 		if (javaVer >= checkForVersion)
 		{
@@ -148,9 +216,9 @@ public class JavaVersion
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" This application needs a runtime JVM 1."+checkForVersion+" or higher.");
+			System.out.println(" This application needs a runtime Java "+checkForVersion+" or higher.");
 			System.out.println(" Current 'java.version' = " + System.getProperty("java.version"));
-			System.out.println(" which is parsed into the Java Version Number: " + JavaVersion.getMinor());
+			System.out.println(" which is parsed into the Java (major) Version Number: " + JavaVersion.getMajor());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
 

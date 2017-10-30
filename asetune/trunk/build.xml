@@ -26,6 +26,18 @@
 	<!-- - - - - - - - - - - - - - -->
 	<!--  target: init             -->
 	<!-- - - - - - - - - - - - - - -->
+	<target name="help">
+		<echo>Here is a couple of commands</echo>
+		<echo>    ant -p                               --- List things that can be done</echo>
+		<echo>    ant                                  --- just build a ZIP file</echo>
+		<echo>    ant clean                            --- Remove various files</echo>
+		<echo>    ant -Dpassword=theSecretPasswd push  --- build and pushes a build to gorans.org</echo>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: init             -->
+	<!-- - - - - - - - - - - - - - -->
 	<target name="init">
 		<!-- Create the time stamp -->
 		<tstamp>
@@ -57,7 +69,7 @@
 		<mkdir dir="${build}"/>
 
 		<!-- Compile the java code from ${src} into ${build} -->
-		<javac source="1.6" target="1.6" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
+		<javac source="1.7" target="1.7" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
 			<classpath refid="project.class.path"/>
 		</javac>
 
@@ -88,9 +100,10 @@
 		<copy file="${src}/com/asetune/images/sqlw_splash.jpg"          toFile="${dist}/lib/sqlw_splash.jpg"/>
 		<copy file="${src}/com/asetune/images/sql_query_window_32.png"  toFile="${dist}/lib/sqlw_icon_32.png"/>
 
+		<copy file="dbxlaunch.bat"                                      toFile="${dist}/dbxlaunch.bat"/>
 		<copy file="asetune.bat"                                        toFile="${dist}/asetune.bat"/>
 		<copy file="asetune.sh"                                         toFile="${dist}/asetune.sh"/>
-		<copy file="asetune.properties"                                 toFile="${dist}/asetune.properties"/>
+		<copy file="dbxtune.properties"                                 toFile="${dist}/dbxtune.properties"/>
 		<copy file="${src}/com/asetune/images/asetune_splash.jpg"       toFile="${dist}/lib/asetune_splash.jpg"/>
 		<copy file="${src}/com/asetune/images/asetune_icon_32.gif"      toFile="${dist}/lib/asetune_icon_32.gif"/>
 		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
@@ -109,9 +122,7 @@
 		</copy>
 
 		<copy todir="${dist}/resources">
-			<fileset dir="resources">
-				<include name="*.xml"/>
-			</fileset>
+			<fileset dir="resources"/>
 		</copy>
 
 		<!-- Put everything in ${build} into the asetune.jar file -->
@@ -144,38 +155,35 @@
 
 		<copy file="iqtune.bat"                                         toFile="${dist}/beta/iqtune.bat"/>
 <!--		<copy file="iqtune.sh"                                          toFile="${dist}/beta/iqtune.sh"/>-->
-		<copy file="iqtune.properties"                                  toFile="${dist}/beta/iqtune.properties"/>
 		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"        toFile="${dist}/beta/lib/iqtune_splash.jpg"/>
 
 		<copy file="rstune.bat"                                         toFile="${dist}/beta/rstune.bat"/>
 <!--		<copy file="rstune.sh"                                          toFile="${dist}/beta/rstune.sh"/>-->
-		<copy file="rstune.properties"                                  toFile="${dist}/beta/rstune.properties"/>
 		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/beta/lib/rstune_splash.jpg"/>
 
 		<copy file="raxtune.bat"                                         toFile="${dist}/beta/raxtune.bat"/>
 <!--		<copy file="raxtune.sh"                                          toFile="${dist}/beta/raxtune.sh"/>-->
-		<copy file="raxtune.properties"                                  toFile="${dist}/beta/raxtune.properties"/>
 		<copy file="${src}/com/asetune/images/raxtune_splash.jpg"        toFile="${dist}/beta/lib/raxtune_splash.jpg"/>
 
 		<copy file="hanatune.bat"                                       toFile="${dist}/beta/hanatune.bat"/>
 <!--		<copy file="hanatune.sh"                                        toFile="${dist}/beta/hanatune.sh"/>-->
-		<copy file="hanatune.properties"                                toFile="${dist}/beta/hanatune.properties"/>
 		<copy file="${src}/com/asetune/images/hanatune_splash.jpg"      toFile="${dist}/beta/lib/hanatune_splash.jpg"/>
 
 		<copy file="sqlservertune.bat"                                  toFile="${dist}/beta/sqlservertune.bat"/>
 <!--		<copy file="sqlservertune.sh"                                   toFile="${dist}/beta/sqlservertune.sh"/>-->
-		<copy file="sqlservertune.properties"                           toFile="${dist}/beta/sqlservertune.properties"/>
 		<copy file="${src}/com/asetune/images/sqlservertune_splash.jpg" toFile="${dist}/beta/lib/sqlservertune_splash.jpg"/>
 
 		<copy file="oracletune.bat"                                     toFile="${dist}/beta/oracletune.bat"/>
 <!--		<copy file="oracletune.sh"                                      toFile="${dist}/beta/oracletune.sh"/>-->
-		<copy file="oracletune.properties"                              toFile="${dist}/beta/oracletune.properties"/>
 		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/beta/lib/oracletune_splash.jpg"/>
 
 		<copy file="postgrestune.bat"                                   toFile="${dist}/beta/postgrestune.bat"/>
 <!--		<copy file="postgrestune.sh"                                    toFile="${dist}/beta/postgrestune.sh"/>-->
-		<copy file="postgrestune.properties"                            toFile="${dist}/beta/postgrestune.properties"/>
 		<copy file="${src}/com/asetune/images/postgrestune_splash.jpg"  toFile="${dist}/beta/lib/postgrestune_splash.jpg"/>
+
+		<copy file="mysqltune.bat"                                      toFile="${dist}/beta/mysqltune.bat"/>
+<!--		<copy file="mysqltune.sh"                                       toFile="${dist}/beta/mysqltune.sh"/>-->
+		<copy file="${src}/com/asetune/images/mysqltune_splash.jpg"  toFile="${dist}/beta/lib/mysqltune_splash.jpg"/>
 
 		<zip destfile="${dist}/dbxtune_beta_tools.zip"
 			basedir="${dist}/beta"
@@ -191,6 +199,23 @@
 			basedir="${dist}"
 		/>
 
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: push            -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="push" depends="init,clean,dist" description="Push a temporary drop" >
+		<echo> ================================================================</echo>
+		<echo> Note: specify password with: ant -Dpassword=theSecretPasswd push</echo>
+		<echo> ----------------------------------------------------------------</echo>
+		<!-- use: ant -Dpassword=xxx push -->
+		<scp file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" />
+		<!-- <scp file="asetune_${DSTAMP}.zip" todir="gorans@gorans.org:www/asetune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
+
+		<!-- Delete the ${build} and ${dist} directory trees -->
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
 	</target>
 
 

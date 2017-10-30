@@ -1,5 +1,6 @@
 package com.asetune.ui.autocomplete;
 
+import java.awt.Component;
 import java.awt.Window;
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,6 +11,10 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
 import javax.swing.ListCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
@@ -71,7 +76,12 @@ extends DefaultCompletionProvider
 	public static final int     DEFAULT_CODE_COMP_saveCacheTimeInMs                    = 7000;
 	public static final boolean DEFAULT_CODE_COMP_saveCacheQuestion                    = true;
 
-	public static final String  TEMPLATE_CODE_COMP_saveCacheFileName                   = Version.APP_STORE_DIR + File.separator + "CompletionProviderCache.{INSTANCE}.jso";
+	public static final String  TEMPLATE_CODE_COMP_saveCacheFileName                   = "CompletionProviderCache.{INSTANCE}.jso";
+
+	protected boolean _wilcardMatch                 = true;
+
+	public void    setWildcatdMath(boolean to) { _wilcardMatch = to; }
+	public boolean isWildcatdMath()            { return _wilcardMatch; }
 
 	protected static final List<Completion> EMPTY_COMPLETION_LIST = new ArrayList<Completion>();
 	
@@ -194,7 +204,7 @@ extends DefaultCompletionProvider
 		// Keep only A-Z, a-z so no strange chars will be part of the filename
 		instanceName = instanceName.replaceAll("[^A-Za-z0-9_.-]", "");
 		
-		String filename = TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
+		String filename = Version.getAppStoreDir() + File.separator + TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
 		_codeCompletionCacheSavedFile = filename;
 	}
 
@@ -668,5 +678,120 @@ extends DefaultCompletionProvider
 	public Window getGuiOwner()
 	{
 		return _guiOwner;
+	}
+
+//	/**
+//	 * Install any entries to the Editors Popup Menu
+//	 * @param textarea
+//	 */
+//	public void installEditorPopupMenuExtention(RTextArea textarea)
+//	{
+//		JMenu addThis = createEditorPopupMenuExtention(textarea);
+//		if (addThis == null)
+//			return;
+//
+//		JPopupMenu pm = textarea.getPopupMenu();
+//		if (pm == null)
+//			return;
+//
+//		// Mark this item as a 'MenuExtention'
+//		JSeparator separator = new JSeparator();
+//		separator.putClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention.separator", true);
+//
+//		// Mark this item as a 'MenuExtention'
+//		addThis.putClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention", true);
+//
+//		// Loop current menu items and check if we got any extentions installed, if se they will be removed.
+//		JSeparator currentMenuSeparator = null;
+//		JMenuItem  currentMenuExtention = null;
+//		for (int i=0; i<pm.getComponentCount(); i++)
+//		{
+//			Component c = pm.getComponent(i);
+//			if (c instanceof JSeparator)
+//			{
+//				Object obj = ((JSeparator) c).getClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention.separator");
+//				if (obj != null)
+//					currentMenuSeparator = (JSeparator) c;
+//			}
+//			if (c instanceof JMenuItem)
+//			{
+//				Object obj = ((JMenuItem) c).getClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention");
+//				if (obj != null)
+//					currentMenuExtention = (JMenuItem) c;
+//			}
+//		}
+//		// Remove already existing entries
+//		if (currentMenuSeparator != null)
+//			pm.remove(currentMenuSeparator);
+//		if (currentMenuExtention != null)
+//			pm.remove(currentMenuExtention);
+//
+//		// Finally ADD the entry
+//		pm.add(separator);
+//		pm.add(addThis);
+//	}
+	/**
+	 * Install any entries to the Editors Popup Menu
+	 * @param textarea
+	 */
+	public void installEditorPopupMenuExtention(RTextArea textarea)
+	{
+		List<JMenu> addThisList = createEditorPopupMenuExtention(textarea);
+		if (addThisList == null)
+			return;
+		if (addThisList.isEmpty())
+			return;
+
+		JPopupMenu pm = textarea.getPopupMenu();
+		if (pm == null)
+			return;
+
+		// Mark this item as a 'MenuExtention'
+		JSeparator separator = new JSeparator();
+		separator.putClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention.separator", true);
+
+		// Mark this item as a 'MenuExtention'
+		for (JMenu jMenu : addThisList)
+			jMenu.putClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention", true);
+
+		// Loop current menu items and check if we got any extentions installed, if se they will be removed.
+		JSeparator currentMenuSeparator = null;
+		JMenuItem  currentMenuExtention = null;
+		for (int i=0; i<pm.getComponentCount(); i++)
+		{
+			Component c = pm.getComponent(i);
+			if (c instanceof JSeparator)
+			{
+				Object obj = ((JSeparator) c).getClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention.separator");
+				if (obj != null)
+					currentMenuSeparator = (JSeparator) c;
+			}
+			if (c instanceof JMenuItem)
+			{
+				Object obj = ((JMenuItem) c).getClientProperty("CompletionProviderAbstract.EditorPopupCcMenuExtention");
+				if (obj != null)
+					currentMenuExtention = (JMenuItem) c;
+			}
+		}
+		// Remove already existing entries
+		if (currentMenuSeparator != null)
+			pm.remove(currentMenuSeparator);
+		if (currentMenuExtention != null)
+			pm.remove(currentMenuExtention);
+
+		// Finally ADD the entry
+		pm.add(separator);
+		for (JMenu jMenu : addThisList)
+			pm.add(jMenu);
+	}
+
+	/**
+	 * Create any entries that should go into the Editors Right Click popup menu (at the end)
+	 * @param textarea
+	 * @return
+	 */
+	public List<JMenu> createEditorPopupMenuExtention(RTextArea textarea)
+	{
+		return null;
 	}
 }

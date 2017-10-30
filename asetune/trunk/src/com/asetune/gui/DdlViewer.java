@@ -610,7 +610,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			if (obj instanceof DbEntry)
 			{
 				DbEntry dbe = (DbEntry) obj;
-				if (dbe._dbname.equals(dbname) || dbname == null)
+				if (dbe._dbname.equalsIgnoreCase(dbname) || dbname == null)
 					fnr = findEntry(dbe, dbname, objectName, level+1);
 				if (fnr != null)
 					return fnr;
@@ -625,7 +625,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			if (obj instanceof ObjectEntry)
 			{
 				ObjectEntry oe = (ObjectEntry) obj;
-				if (oe._name.equals(objectName))
+				if (oe._name.equalsIgnoreCase(objectName))
 					return oe;
 			}
 		}
@@ -916,7 +916,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-		Configuration conf1 = new Configuration(Version.APP_STORE_DIR + "/asetune.save.properties");
+		Configuration conf1 = new Configuration(Version.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 		
 		Configuration.setSearchOrder(Configuration.USER_TEMP);

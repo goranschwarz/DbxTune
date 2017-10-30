@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.mozilla.universalchardet.UniversalDetector;
 
 import com.asetune.ssh.SshConnection;
 
@@ -447,6 +448,8 @@ public class FileTail
 				InputStream stderr = sess.getStderr();
 				
 				Charset osCharset = Charset.forName(_sshConn.getOsCharset());
+				Charset fileCharset = osCharset;
+				boolean firstChunk = true;
 
 				String strSpillOut = null;
 				String strSpillErr = null;
@@ -520,8 +523,38 @@ public class FileTail
 							int len = stdout.read(buffer);
 							if (len > 0) // this check is somewhat paranoid
 							{
+								// If first read try to discover what charset the source file has
+								if (firstChunk)
+								{
+									// Construct an instance of org.mozilla.universalchardet.UniversalDetector. 
+									UniversalDetector detector = new UniversalDetector(null);
+
+									// Read from the file until the detector is "happy" 
+									detector.handleData(buffer, 0, len);
+
+									// Notify the detector of the end of data by calling UniversalDetector.dataEnd(). 
+									detector.dataEnd();
+
+									// Get the detected encoding name by calling UniversalDetector.getDetectedCharset(). 
+									String encoding = detector.getDetectedCharset();
+									if ( encoding != null )
+									{
+										fileCharset = Charset.forName(encoding);
+										_logger.info("First read of the file, detected Java charset encoding '"+fileCharset+"'. The string delivered by universalchardet was '" + encoding + "'.");
+									}
+									else
+									{
+										fileCharset = osCharset;
+										_logger.info("First read of the file, could NOT detect a any charset encoding. Using the OS default charset of '"+osCharset+"'.");
+									}
+
+									// Don't forget to call UniversalDetector.reset() before you reuse the detector instance. 
+									detector.reset();
+									firstChunk = false;
+								}
+
 								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-								String strBuf = new String(buffer, 0, len, osCharset);
+								String strBuf = new String(buffer, 0, len, fileCharset);
 
 								// add "spill" that did NOT have a newline terminator
 								if (strSpillOut != null)
@@ -581,7 +614,7 @@ public class FileTail
 							if (len > 0) // this check is somewhat paranoid
 							{
 								// NOTE if charset convertion is needed, use: new String(buffer, CHARSET)
-								String strBuf = new String(buffer, 0, len, osCharset);
+								String strBuf = new String(buffer, 0, len, fileCharset);
 
 								// add "spill" that did NOT have a newline terminator
 								if (strSpillErr != null)

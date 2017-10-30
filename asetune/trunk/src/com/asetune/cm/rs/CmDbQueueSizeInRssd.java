@@ -15,6 +15,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -96,13 +97,14 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_QUEUE_SIZE = "QueueSize";
+	public static final String GRAPH_NAME_QUEUE_SIZE = "RssdQueueSize";
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels));
+		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -112,8 +114,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
-				"Queue Size from the RSSD (Absolute Value)", // Menu CheckBox text
-				"Queue Size from the RSSD (Absolute Value)", // Label 
+				"Queue Size from the RSSD (col 'size', Absolute Value)", // Menu CheckBox text
+				"Queue Size from the RSSD (col 'size', Absolute Value)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -129,20 +131,50 @@ extends CountersModel
 	{
 		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
-			String[] lArray = new String[dArray.length];
-			for (int i = 0; i < dArray.length; i++)
+			int rows = 0;
+			for (int i = 0; i < this.size(); i++)
 			{
-				lArray[i] = this.getAbsString       (i, "name") + "(" + this.getAbsString(i, "q_type_str") + ")";
-				dArray[i] = this.getAbsValueAsDouble(i, "size");
+				Double qSize = this.getAbsValueAsDouble(i, "size");
+				if (qSize > 0.0)
+					rows++;
+			}
+			
+			// Write 1 "line" for every SQMRBacklogSeg row
+			Double[] dArray = new Double[rows];
+			String[] lArray = new String[dArray.length];
+			int i2 = 0;
+			for (int i = 0; i < this.size(); i++)
+			{
+				Double qSize = this.getAbsValueAsDouble(i, "size");
+				if (qSize > 0.0)
+				{
+					lArray[i2] = this.getAbsString       (i, "name") + "(" + this.getAbsString(i, "q_type_str") + ")";
+					dArray[i2] = this.getAbsValueAsDouble(i, "size");
+					i2++;
+				}
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
+
+//		if (GRAPH_NAME_QUEUE_SIZE.equals(tgdp.getName()))
+//		{
+//			// Write 1 "line" for every device
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getAbsString       (i, "name") + "(" + this.getAbsString(i, "q_type_str") + ")";
+//				dArray[i] = this.getAbsValueAsDouble(i, "size");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+////			tgdp.setDate(this.getTimestamp());
+////			tgdp.setLabel(lArray);
+////			tgdp.setData(dArray);
+//		}
 	}
 	
 	@Override
@@ -238,7 +270,7 @@ extends CountersModel
 	 * @param srvVersion
 	 * @return
 	 */
-	private String rmpQueue(int srvVersion)
+	public static String rmpQueue(int srvVersion)
 	{
 		return 
 		"/* NOTE: Below code is grabbed from RSSD Stored Proc: RMP_QUEUE */ \n" + 

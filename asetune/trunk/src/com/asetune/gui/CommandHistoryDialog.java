@@ -148,7 +148,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	private static final boolean DEFAULT_MOVE_TO_LATEST_ENTRY     = true;
 	
 	private static final String  PROPKEY_HISTORY_SIZE             = "CommandHistory.history.size";
-	private static final int     DEFAULT_HISTORY_SIZE             = 500;
+	private static final int     DEFAULT_HISTORY_SIZE             = 10000;
 	
 	private static final String  PROPKEY_SHOW_ONLY_LOCAL_COMMANDS = "CommandHistory.history.show.only.local.commands";
 	private static final boolean DEFAULT_SHOW_ONLY_LOCAL_COMMANDS = false;
@@ -157,7 +157,7 @@ implements ChangeListener, ActionListener, FocusListener, KeyListener
 	private static final int     DEFAULT_SPLITPANE_DIV_LOC        = SwingUtils.hiDpiScale(300);
 	
 	private static final String  PROPKEY_FILE_MAX_SIZE_KB         = "CommandHistory.file.max.size.kb";
-	private static final int     DEFAULT_FILE_MAX_SIZE_KB         = 1024;
+	private static final int     DEFAULT_FILE_MAX_SIZE_KB         = 1024 * 10; // 10MB
 
 	private static final String  PROPKEY_FILE_SAVE_ENTRIES        = "CommandHistory.file.save.entries";
 	private static final int     DEFAULT_FILE_SAVE_ENTRIES        = 100;
