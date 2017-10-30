@@ -79,7 +79,7 @@ extends TabularCntrPanel
 	private static final String CHART_TITLE_DATA = "Data Space Usage in Percent";
 
 	private JCheckBox sampleSpaceusage_chk;
-	private JCheckBox spaceusageInMb_chk;
+//	private JCheckBox spaceusageInMb_chk;
 
 	static
 	{
@@ -195,7 +195,8 @@ extends TabularCntrPanel
 
 					if (dbList.keySet().contains(DBName))
 					{
-						categoryDataset.addValue(LogSizeUsedPct,  "FREE MB: " + LogSizeFreeInMb,  DBName);
+						String sizeStr = NumberFormat.getNumberInstance().format(LogSizeFreeInMb);
+						categoryDataset.addValue(LogSizeUsedPct,  "FREE MB: " + sizeStr,  DBName);
 //						categoryDataset.addValue(LogSizeUsedPct,  LogSizeFreeInMb +" MB FREE Log",  DBName);
 //						categoryDataset.addValue(DataSizeUsedPct, DataSizeFreeInMb+" MB FREE Data", DBName);
 					}
@@ -257,8 +258,9 @@ extends TabularCntrPanel
 
 					if (dbList.keySet().contains(DBName))
 					{
+						String sizeStr = NumberFormat.getNumberInstance().format(DataSizeFreeInMb);
 //						categoryDataset.addValue(LogSizeUsedPct,  LogSizeFreeInMb +" MB FREE",  DBName);
-						categoryDataset.addValue(DataSizeUsedPct, "FREE MB: " + DataSizeFreeInMb, DBName);
+						categoryDataset.addValue(DataSizeUsedPct, "FREE MB: " + sizeStr, DBName);
 					}
 				}
 			}
@@ -461,6 +463,10 @@ extends TabularCntrPanel
 		
 		if (enableLogGraph == false && enableDataGraph == false)
 			panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER), "grow, push" );
+
+		// Needs to be done since we remove and add content to the panel
+		panel.validate();
+		panel.repaint();
 	}
 
 	private void helperActionSave(String key, boolean b)
@@ -482,8 +488,8 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 //		final JCheckBox sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");;
-		sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");
-		spaceusageInMb_chk   = new JCheckBox("Spaceusage in MB");
+		sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage details");
+//		spaceusageInMb_chk   = new JCheckBox("Spaceusage in MB");
 		final JCheckBox enableLogGraph_chk   = new JCheckBox("Tran Log Graph");
 		final JCheckBox enableDataGraph_chk  = new JCheckBox("Data Graph");
 		final JButton resetMoveToTab_but     = new JButton("Reset 'Move to Tab' settings");
@@ -515,15 +521,18 @@ extends TabularCntrPanel
 		graphType_lbl.setToolTipText(tooltip);
 		graphType_cbx.setToolTipText(tooltip);
 
-		sampleSpaceusage_chk.setToolTipText("Execute spaceusage(dbid) on every sample. Note this may take some extra recources. Only available in ASE 16.0 and above.");
-		spaceusageInMb_chk  .setToolTipText("Calculate spaceusage in MB instead of pages.");
+		sampleSpaceusage_chk.setToolTipText("Execute spaceusage(dbid) on every sample. Note this may take some extra recources. Only available in ASE 15.7 SP64 & SP136 and above.");
+//		spaceusageInMb_chk  .setToolTipText("<html>"
+//				+ "Calculate spaceusage in MB instead of pages.<br>"
+//				+ "This is only for the spaceusage columns: 'ReservedPages, UsedPages, UnUsedPages, DataPages, DataPagesReal, IndexPages, IndexPagesReal, LobPages' in ASE 16.0<br>"
+//				+ "</html>");
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		enableLogGraph_chk .setSelected(conf.getBooleanProperty(PROPKEY_enableLogGraph,  DEFAULT_enableLogGraph));
 		enableDataGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableDataGraph, DEFAULT_enableDataGraph));
 		sampleSpaceusage_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_spaceusage, CmOpenDatabases.DEFAULT_sample_spaceusage));
-		spaceusageInMb_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_spaceusageInMb, CmOpenDatabases.DEFAULT_spaceusageInMb));
+//		spaceusageInMb_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_spaceusageInMb, CmOpenDatabases.DEFAULT_spaceusageInMb));
 		
 		// Set initial value for Graph Orientation
 		String orientationStr = conf.getProperty(PROPKEY_plotOrientation, DEFAULT_plotOrientation);
@@ -543,14 +552,14 @@ extends TabularCntrPanel
 				getCm().setSql(null); // Causes SQL Statement to be recreated
 			}
 		});
-		spaceusageInMb_chk.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				helperActionSave(CmOpenDatabases.PROPKEY_spaceusageInMb, ((JCheckBox)e.getSource()).isSelected());
-			}
-		});
+//		spaceusageInMb_chk.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				helperActionSave(CmOpenDatabases.PROPKEY_spaceusageInMb, ((JCheckBox)e.getSource()).isSelected());
+//			}
+//		});
 		enableLogGraph_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -611,14 +620,15 @@ extends TabularCntrPanel
 		});
 
 		// ADD to panel
+		panel.add(dblist_but,           "span, split");
 		panel.add(resetMoveToTab_but,   "wrap");
-		panel.add(dblist_but,           "wrap");
 		panel.add(graphType_lbl,        "split");
 		panel.add(graphType_cbx,        "wrap");
 		panel.add(enableLogGraph_chk,   "span, split");
 		panel.add(enableDataGraph_chk,  "wrap");
-		panel.add(sampleSpaceusage_chk, "span, split");
-		panel.add(spaceusageInMb_chk,   "wrap");
+		panel.add(sampleSpaceusage_chk, "wrap");
+//		panel.add(sampleSpaceusage_chk, "span, split");
+//		panel.add(spaceusageInMb_chk,   "wrap");
 
 		return panel;
 	}
@@ -632,15 +642,17 @@ extends TabularCntrPanel
 			if (cm.isRuntimeInitialized())
 			{
 				// disable if not 16.0
-				if ( cm.getServerVersion() > Ver.ver(16,0))
+//				if ( cm.getServerVersion() > Ver.ver(16,0))
+				int aseVersion = cm.getServerVersion();
+				if (aseVersion >= Ver.ver(15,7,0, 136) || (aseVersion >= Ver.ver(15,7,0, 64) && aseVersion < Ver.ver(15,7,0, 100)) )
 				{
 					sampleSpaceusage_chk.setEnabled(true);
-					spaceusageInMb_chk  .setEnabled(true);
+//					spaceusageInMb_chk  .setEnabled(true);
 				}
 				else
 				{
 					sampleSpaceusage_chk.setEnabled(false);
-					spaceusageInMb_chk  .setEnabled(false);
+//					spaceusageInMb_chk  .setEnabled(false);
 
 					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 					if (conf != null)

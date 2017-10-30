@@ -56,23 +56,28 @@ extends HostMonitor
 		if (osname.equals("SunOS"))
 		{
 			mon = new MonitorIoSolaris();
+			mon.setConnectedToVendor(OsVendor.Solaris);
 		}
 		else if (osname.equals("Linux"))
 		{
 			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.IOSTAT);
 			mon = new MonitorIoLinux(utilVersion);
+			mon.setConnectedToVendor(OsVendor.Linux);
 		}
 		else if (osname.equals("AIX"))
 		{
 			mon = new MonitorIoAix();
+			mon.setConnectedToVendor(OsVendor.Aix);
 		}					
 		else if (osname.equals("HP-UX"))
 		{
 			mon = new MonitorIoHp();
+			mon.setConnectedToVendor(OsVendor.Hp);
 		}					
 		else if (osname.equals("VERITAS"))
 		{
 			mon = new MonitorIoVeritas();
+			mon.setConnectedToVendor(OsVendor.Veritas);
 		}
 		else
 		{

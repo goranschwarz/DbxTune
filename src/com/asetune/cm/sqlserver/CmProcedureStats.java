@@ -160,9 +160,11 @@ extends CountersModel
 			"  type, \n" +
 			"  type_desc, \n" +
 			"  cached_time, \n" +
-			"  cached_time_ss         = datediff(ss, cached_time, getdate()), \n" +
+//			"  cached_time_ss         = datediff(ss, cached_time, getdate()), \n" +
+			"  cached_time_ss         = CASE WHEN datediff(day, cached_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, cached_time, getdate()) END, \n" +
 			"  last_execution_time, \n" +
-			"  last_execution_time_ss = datediff(ss, last_execution_time, getdate()), \n" +
+//			"  last_execution_time_ss = datediff(ss, last_execution_time, getdate()), \n" +
+			"  last_execution_time_ss = CASE WHEN datediff(day, last_execution_time, getdate()) >= 24 THEN -1 ELSE  datediff(ss, last_execution_time, getdate()) END, \n" +
 			"  execution_count, \n" +
 			"  total_worker_time, \n" +
 			"  last_worker_time, \n" +

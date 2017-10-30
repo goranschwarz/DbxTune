@@ -10,6 +10,7 @@ import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 
 
 /**
@@ -25,6 +26,17 @@ extends XmenuActionBase
 	public SQLWindow() 
 	{
 		super();
+	}
+
+	/**
+	 * Decide if the Caller should create a new connection for us or just pass the connection the caller was using.<br>
+	 * Lets ALWAYS just REUSE the callers connection, if we need a new connection we will create one ourself from the ConnectionProvider.
+	 * 
+	 */
+	@Override 
+	public boolean createConnectionOnStart()
+	{
+		return false;
 	}
 
 	/**
@@ -88,9 +100,32 @@ extends XmenuActionBase
 		//       if called from SQLWindow execute the statement in current window
 		// can we use a stacktrace to see from where it's called?
 		// or do we need to add some parameter ???
+		ConnectionProvider connProvider = getConnectionProvider();
+		if (connProvider instanceof QueryWindow)
+		{
+			QueryWindow qw = (QueryWindow)connProvider;
+			qw.displayQueryResults(sql, 0, false, true);
+		}
+		else
+		{
+			boolean closeConnOnExit = true;
+			DbxConnection newConn = getConnectionProvider().getNewConnection("QueryWindow");
+//			QueryWindow qf = new QueryWindow(conn, sql, null, isCloseConnOnExit(), WindowType.JFRAME, getConfiguration());
+			QueryWindow qf = new QueryWindow(newConn, sql, null, closeConnOnExit, WindowType.JFRAME, getConfiguration());
+			qf.openTheWindow();
+			
+		}
+//		else if (connProvider instanceof MainFrame)
+//		{
+//			QueryWindow qf = new QueryWindow(conn, sql, null, isCloseConnOnExit(), WindowType.JFRAME, getConfiguration());
+//			qf.openTheWindow();
+//		}
+//		else
+//		{
+//			SwingUtils.showInfoMessage(null, "Sorry not from here", "This functionality is not available from the Component '"+connProvider.getClass().getSimpleName()+"'.");
+//			return;
+//		}
 
-		QueryWindow qf = new QueryWindow(conn, sql, null, isCloseConnOnExit(), WindowType.JFRAME, getConfiguration());
-		qf.openTheWindow();
 
 //				"print '11111111'\n" +
 //				"exec sp_whoisw2\n" +

@@ -168,6 +168,10 @@ public class GTabbedPane
 			for (int t=0; t<getTabCount(); t++)
 			{
 				Component comp = getComponentAt(t);
+
+				if (comp instanceof UndockedTabHolder)
+					comp = ((UndockedTabHolder)comp)._xe._comp;
+
 				if (comp instanceof JTabbedPane)
 					((JTabbedPane)comp).addChangeListener(l);
 			}
@@ -188,6 +192,10 @@ public class GTabbedPane
 			for (int t=0; t<getTabCount(); t++)
 			{
 				Component comp = getComponentAt(t);
+
+				if (comp instanceof UndockedTabHolder)
+					comp = ((UndockedTabHolder)comp)._xe._comp;
+
 				if (comp instanceof JTabbedPane)
 					((JTabbedPane)comp).removeChangeListener(l);
 			}
@@ -344,6 +352,9 @@ public class GTabbedPane
 			if (tcomp.equals(comp))
 				return true;
 
+			if (tcomp instanceof UndockedTabHolder)
+				tcomp = ((UndockedTabHolder)comp)._xe._comp;
+
 			if (tcomp instanceof JTabbedPane)
 				if (contains((JTabbedPane)tcomp, tcomp))
 					return true;
@@ -367,6 +378,10 @@ public class GTabbedPane
 			return null;
 
 		Component comp = tp.getComponentAt(index);
+
+		if (comp instanceof UndockedTabHolder)
+			comp = ((UndockedTabHolder)comp)._xe._comp;
+
 		if (comp instanceof JTabbedPane && doSubLevels)
 			return getSelectedTitle((JTabbedPane)comp, doSubLevels);
 		else
@@ -394,6 +409,10 @@ public class GTabbedPane
 			return null;
 
 		Component comp = tp.getComponentAt(index);
+
+		if (comp instanceof UndockedTabHolder)
+			comp = ((UndockedTabHolder)comp)._xe._comp;
+
 		if (comp instanceof JTabbedPane && doSubLevels)
 			return getSelectedComponent((JTabbedPane)comp, doSubLevels);
 		else
@@ -416,6 +435,10 @@ public class GTabbedPane
 		for (int t=0; t<tp.getTabCount(); t++)
 		{
 			Component comp = tp.getComponentAt(t);
+
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			if (comp instanceof JTabbedPane)
 				return true;
 		}
@@ -448,6 +471,9 @@ public class GTabbedPane
 		for (int t=0; t<tp.getTabCount(); t++)
 		{
 			Component comp = tp.getComponentAt(t);
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			String tabTitle = tp.getTitleAt(t);
 			if (comp instanceof JTabbedPane)
 				getAllTitles((JTabbedPane)comp, list, format, tabTitle);
@@ -482,6 +508,9 @@ public class GTabbedPane
 		for (int t=0; t<tp.getTabCount(); t++)
 		{
 			Component comp = tp.getComponentAt(t);
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			String tabTitle = tp.getTitleAt(t);
 			if (comp instanceof JTabbedPane)
 			{
@@ -519,7 +548,11 @@ public class GTabbedPane
 		for (int t=0; t<tp.getTabCount(); t++)
 		{
 			Component comp = tp.getComponentAt(t);
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			String tabTitle = tp.getTitleAt(t);
+
 			if (comp instanceof JTabbedPane)
 			{
 				String p = getParentTitleName((JTabbedPane)comp, title, tabTitle);
@@ -1201,6 +1234,9 @@ public class GTabbedPane
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
 
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 //System.out.println("-------------- isTabUnDocked(t="+t+"): cm-title='"+title+"', Tab-titleName="+titleName+"'.");
 			if (title.equals(titleName))
 			{
@@ -1285,6 +1321,10 @@ public class GTabbedPane
 			if (index >= 0)
 			{
 				Component comp = tp.getComponentAt(index);
+
+				if (comp instanceof UndockedTabHolder)
+					comp = ((UndockedTabHolder)comp)._xe._comp;
+
 				if (comp instanceof GTabbedPane)
 					tp = (GTabbedPane) comp;
 			}
@@ -1909,6 +1949,10 @@ public class GTabbedPane
 			for (int t=0; t<tp.getTabCount(); t++)
 			{
 				Component comp      = tp.getComponentAt(t);
+
+				if (comp instanceof UndockedTabHolder)
+					comp = ((UndockedTabHolder)comp)._xe._comp;
+
 				if (comp instanceof GTabbedPane)
 					setTabLayoutPolicy((GTabbedPane)comp, policy);
 			}
@@ -2237,6 +2281,9 @@ public class GTabbedPane
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
 
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			if (title.equals(titleName))
 			{
 				tp.setIconAt(t, icon);
@@ -2270,6 +2317,9 @@ public class GTabbedPane
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
 
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			if (title.equals(titleName))
 				return tp.getIconAt(t);
 
@@ -2296,6 +2346,9 @@ public class GTabbedPane
 		{
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
+
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
 
 			if (title.equals(titleName))
 			{
@@ -2330,6 +2383,9 @@ public class GTabbedPane
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
 
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			if (title.equals(titleName))
 				return tp.getToolTipTextAt(t);
 
@@ -2356,6 +2412,9 @@ public class GTabbedPane
 		{
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
+
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
 
 			if (title.equals(titleName))
 			{
@@ -2390,6 +2449,9 @@ public class GTabbedPane
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
 
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
+
 			if (title.equals(titleName))
 				return comp;
 
@@ -2416,6 +2478,9 @@ public class GTabbedPane
 		{
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
+
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
 
 			if (title.equals(titleName))
 			{
@@ -2449,6 +2514,9 @@ public class GTabbedPane
 		{
 			String    titleName = tp.getTitleAt(t);
 			Component comp      = tp.getComponentAt(t);
+
+			if (comp instanceof UndockedTabHolder)
+				comp = ((UndockedTabHolder)comp)._xe._comp;
 
 			if (title.equals(titleName))
 			{

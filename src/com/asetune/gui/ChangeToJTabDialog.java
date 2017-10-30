@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 
 import javax.swing.ButtonGroup;
@@ -150,10 +152,13 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 																// Left Bottom
 																// Right
 
-		_message_lbl.setText("<html>" + "<h4>" + _message + "</h4>" +
-		// "Do you want to change input focus to the tab <b>'"+_toTabName+"'</b>."
-		// +
-				"Choose an <b>Action</b> below that you find suitable." + "</html>");
+		_message_lbl.setText(
+			"<html>" + 
+			"<h4>" + _message + "</h4>" +
+			"Choose an <b>Action</b> below that you find suitable. <br>" +
+			"<br>" +
+			"This was found at: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "<br>" +
+			"</html>");
 
 		// Get the swings default question mark
 //		Icon icon = UIManager.getIcon("OptionPane.questionIcon");
@@ -238,6 +243,14 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 			return;
 		}
 
+		_message_lbl.setText(
+				"<html>" + 
+				"<h4>" + _message + "</h4>" +
+				"Choose an <b>Action</b> below that you find suitable. <br>" +
+				"<br>" +
+				"This was found at: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "<br>" +
+				"</html>");
+
 		// Always do ask what we want to do
 		if ( _next_alwaysAsk_rb.isSelected() )
 		{
@@ -309,7 +322,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		else if ( nextTime.equals(PROP_NEXT_TIME_QUESTION) )
 			_next_alwaysAsk_rb.setSelected(true);
 		else
-			_next_rememberSession_rb.setSelected(true);
+			_next_alwaysAsk_rb.setSelected(true);
 	}
 
 	private void saveProps()

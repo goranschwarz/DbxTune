@@ -132,6 +132,9 @@ public class SplashWindow
 		catch (UnsupportedOperationException e)
 		{
 		}
+		catch (Throwable t)
+		{
+		}
 	}
 
 	public static void drawProgress(String msg)

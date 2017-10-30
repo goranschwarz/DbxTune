@@ -24,6 +24,8 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -32,6 +34,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -134,9 +137,11 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.H2UrlHelper;
+import com.asetune.utils.JavaVersion;
 import com.asetune.utils.JdbcDriverHelper;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.RepServerUtils;
+import com.asetune.utils.SqlUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -366,6 +371,9 @@ public class ConnectionDialog
 	private JLabel               _pcsJdbcUrl_lbl             = new GLabel("JDBC Url"); 
 	private JComboBox<String>    _pcsJdbcUrl_cbx             = new JComboBox<String>();
 	private JButton              _pcsJdbcUrl_but             = new JButton("...");
+	private JLabel               _pcsDbxTuneSaveDir_lbl      = new JLabel("<html><i>${DBXTUNE_SAVE_DIR}</i></html>");
+	private JTextField           _pcsDbxTuneSaveDir_txt      = new JTextField();
+	private JButton              _pcsDbxTuneSaveDir_but      = new JButton("...");
 	private JLabel               _pcsJdbcUsername_lbl        = new JLabel("Username");
 	private JTextField           _pcsJdbcUsername_txt        = new JTextField("sa");
 	private JLabel               _pcsJdbcPassword_lbl        = new JLabel("Password");
@@ -394,13 +402,22 @@ public class ConnectionDialog
 	private JCheckBox            _pcsCapSql_doSqlText_chk                     = new JCheckBox("SQL Text",       PersistentCounterHandler.DEFAULT_sqlCap_doSqlText);
 	private JCheckBox            _pcsCapSql_doStatementInfo_chk               = new JCheckBox("Statement Info", PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo);
 	private JCheckBox            _pcsCapSql_doPlanText_chk                    = new JCheckBox("Plan Text",      PersistentCounterHandler.DEFAULT_sqlCap_doPlanText);
+	
+	private JLabel               _pcsCapSql_saveStatement_lbl                 = new JLabel("                   But only save Statements if: "); // apces is for "aligning" with the field _pcsCapSql_sendDdlForLookup_chk
+	private JLabel               _pcsCapSql_saveStatement_execTime_lbl        = new JLabel("Exec Time is above (ms)");
+	private JTextField           _pcsCapSql_saveStatement_execTime_txt        = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime, 3);
+	private JLabel               _pcsCapSql_saveStatement_logicalRead_lbl     = new JLabel(", and Logical Reads >");
+	private JTextField           _pcsCapSql_saveStatement_logicalRead_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads, 3);
+	private JLabel               _pcsCapSql_saveStatement_physicalRead_lbl    = new JLabel(", and Physical Reads >");
+	private JTextField           _pcsCapSql_saveStatement_physicalRead_txt    = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads, 3);
+
 	private JCheckBox            _pcsCapSql_sendDdlForLookup_chk              = new JCheckBox("Send Statements for DDL Lookup if:", PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup);
 	private JLabel               _pcsCapSql_sendDdlForLookup_execTime_lbl     = new JLabel("Exec Time is above (ms)");
-	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime);
-	private JLabel               _pcsCapSql_sendDdlForLookup_logicalRead_lbl  = new JLabel("Logical Reads");
-	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads);
-	private JLabel               _pcsCapSql_sendDdlForLookup_physicalRead_lbl = new JLabel("Physical Reads");
-	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads);
+	private JTextField           _pcsCapSql_sendDdlForLookup_execTime_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime, 3);
+	private JLabel               _pcsCapSql_sendDdlForLookup_logicalRead_lbl  = new JLabel(", and Logical Reads >");
+	private JTextField           _pcsCapSql_sendDdlForLookup_logicalRead_txt  = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads, 3);
+	private JLabel               _pcsCapSql_sendDdlForLookup_physicalRead_lbl = new JLabel(", and Physical Reads >");
+	private JTextField           _pcsCapSql_sendDdlForLookup_physicalRead_txt = new JTextField(""+PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads, 3);
 
 	//---- OFFLINE panel
 	@SuppressWarnings("unused")
@@ -513,6 +530,22 @@ public class ConnectionDialog
 //	{
 //		return _instance;
 //	}
+
+	// When we actually did a connection, this will hold the Connection Profile Type NAME, if none was used, then it will hold null
+	private String _usedConnectionProfileTypeName = null;
+
+	// Only do this ONCE
+	// If we have saved 'DBXTUNE_SAVE_DIR' in this dialog, then set it to the System Property
+	static
+	{
+		String dbxTuneSaveDir = Configuration.getCombinedConfiguration().getProperty("DBXTUNE_SAVE_DIR");
+		if (StringUtil.hasValue(dbxTuneSaveDir))
+		{
+			_logger.info("Setting 'DBXTUNE_SAVE_DIR' in the System Properties to value '"+dbxTuneSaveDir+"'.");
+			System.setProperty("DBXTUNE_SAVE_DIR", dbxTuneSaveDir);
+		}
+	}
+
 
 	/**
 	 * Options that can be passed to the Connection Dialog, what should be visible etc...
@@ -1567,7 +1600,10 @@ public class ConnectionDialog
 						{
 							JLabel l = (JLabel) comp;
 							ConnectionProfile t = (ConnectionProfile) o;
-							l.setIcon(ConnectionProfileManager.getIcon16(t.getSrvType()));
+//							ImageIcon icon = ConnectionProfileManager.getIcon16(t.getSrvType());
+							ProfileType connProfileType = ConnectionProfileManager.getInstance().getProfileTypeByName(t.getProfileTypeName());
+							Color indicatorColor = (connProfileType == null ? null : connProfileType._color);
+							l.setIcon(SwingUtils.paintIcon(ConnectionProfileManager.getIcon16(t.getSrvType()), indicatorColor, 3, false));
 							l.setText(t.getName());
 							l.setToolTipText(t.getToolTipText());
 
@@ -2329,12 +2365,13 @@ public class ConnectionDialog
 		JPanel panel = SwingUtils.createPanel("Basic Host Monitoring Information", true);
 		panel.setLayout(new MigLayout("wrap 1, gap 0", "", ""));   // insets Top Left Bottom Right
 
-		MultiLineLabel txt;
+//		MultiLineLabel txt;
+		GLabel txt;
 		String s, t;
 
 		s = "Hover over the different subsection and the ToolTip manager will display more information about the various topics.";
 		t = s;
-		txt = new MultiLineLabel("<html>"+s+"</html>");
+		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
@@ -2342,7 +2379,7 @@ public class ConnectionDialog
 		t = "If you want to monitor the Operating System with some basic command, this is one way you can do it.<br>" +
 		    "And also if you are storing the Performance Counters in a Persistent storage, the OS Monitoring is in sync with <br>" +
 		    "the Performance Counters from the monitored  Server, which makes it easier to correlate the various metrics.";
-		txt = new MultiLineLabel("<html>"+s+"</html>");
+		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
@@ -2357,7 +2394,7 @@ public class ConnectionDialog
 		    "If you are using <b>Veritas</b> as the Disk IO subsystem and want to sample disk statistics with <b>vxstat</b> and not iostat.<br>" +
 		    "Make sure <b>vxstat</b> is executable and in the <b>$PATH</b> off the user that you're connecting to the Operating System with.<br>" +
 		    "Then it will execute <b>vxstat</b> instead of iostat and use that information.";
-		txt = new MultiLineLabel("<html>"+s+"</html>");
+		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
@@ -2371,7 +2408,7 @@ public class ConnectionDialog
 		    "Also if you want to change the parameters/flags to the OS Commands, to get better Performance Counters, kick me and I'll fix it!<br>" +
 		    "<br>" +
 		    "The only thing that can change by ourself is the OS Commands sleep interval<br>" +
-		    "This is done by adding the below information to the configuration file. (asetune.properties)" +
+		    "This is done by adding the below information to the configuration file. (dbxtune.properties)" +
 			"<ul>" +
 			"  <li> for iostat: <code>MonitorIoSolaris.sleep=5</code></li>" +
 			"  <li> for mpstat: <code>MonitorVmstatAix.sleep=5</code></li>" +
@@ -2384,7 +2421,7 @@ public class ConnectionDialog
 		    "<br>" +
 		    "Or you can use the 'log viewer' to change the 'log level' while "+Version.getAppName()+" is still running: <br>" +
 		    "MainMenu->View->Open Log Window..., then Press 'Set log level'... locate com.asetune.hostmon.HostMonitor and change it.";
-		txt = new MultiLineLabel("<html>"+s+"</html>");
+		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
@@ -2402,7 +2439,7 @@ public class ConnectionDialog
 		    "<br>" +
 		    "Instead I simply displays <b>all</b> the sampled records I have received from the command with a 'timestamp' column to indicate when it was received.<br>" +
 		    "If you instead want to have some kind of average or summary, please notify me and explain...";
-		txt = new MultiLineLabel("<html>"+s+"</html>");
+		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
@@ -2428,7 +2465,7 @@ public class ConnectionDialog
 		    "hostmon.udc.TestGoransLs.addStrColumn.filename         = {length=99, sqlColumnNumber=8,  parseColumnNumber=8,  isNullable=true,  description=xxx}<BR>" +
 		    "</pre>" +
 		    "Some Graph properties can also be added, they are using the same notation as for 'SQL Used Defined Counters'.";
-		txt = new MultiLineLabel("<html>"+s+"</html>");
+		txt = new GLabel("<html>"+s+"</html>");
 		txt.setToolTipText("<html>"+t+"</html>");
 		panel.add(txt, "wmin 100, push, grow, wrap 10");
 
@@ -2474,6 +2511,7 @@ public class ConnectionDialog
 		"  </li>" +
 		"  <li><code>${DBXTUNE_SAVE_DIR}</code> <br>" +
 		"    The DBXTUNE_SAVE_DIR will be substituted with ${DBXTUNE_HOME}/data or whatever the environment variable is set to.<br>" +
+		"    DBXTUNE_SAVE_DIR is currently set to '<RUNTIME_REPLACE_DBXTUNE_SAVE_DIR>'<br>" +
 		"  </li>" +
 		"</ul>" +
 		"" +
@@ -2498,13 +2536,20 @@ public class ConnectionDialog
 			"If this is enabled counters that are sampled via the GUI would be stored in a database, this so we can view them later... One good thing about this is that we can view 'baseline' for different configurations or sample sessions\n" +
 			"You can also create an offline session and start in no-gui mode instead.");
 		
+		String dbxTuneSaveDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+		if (dbxTuneSaveDir == null)
+			dbxTuneSaveDir = "Not yet specified";
+		
 		_pcsWriter_lbl      .setToolTipText("Persistent Counter Storage Implementation(s) that is responsible for Storing the Counter Data.");
 		_pcsWriter_cbx      .setToolTipText("Persistent Counter Storage Implementation(s) that is responsible for Storing the Counter Data.");
 		_pcsJdbcDriver_lbl  .setToolTipText("JDBC drivername to be used by the Persistent Counter Storage to save Counter Data");
 		_pcsJdbcDriver_cbx  .setToolTipText("JDBC drivername to be used by the Persistent Counter Storage to save Counter Data");
-		_pcsJdbcUrl_lbl     .setToolTipText(JDBC_URL_TOOLTIP);
-		_pcsJdbcUrl_cbx     .setToolTipText(JDBC_URL_TOOLTIP);
+		_pcsJdbcUrl_lbl     .setToolTipText(JDBC_URL_TOOLTIP.replace("<RUNTIME_REPLACE_DBXTUNE_SAVE_DIR>", dbxTuneSaveDir));
+		_pcsJdbcUrl_cbx     .setToolTipText(JDBC_URL_TOOLTIP.replace("<RUNTIME_REPLACE_DBXTUNE_SAVE_DIR>", dbxTuneSaveDir));
 		_pcsJdbcUrl_but     .setToolTipText("Open a File chooser dialog to get a filename, for some templates values are replaced");
+		_pcsDbxTuneSaveDir_lbl.setToolTipText("<html>Where is the variable 'DBXTUNE_SAVE_DIR' pointing to. This is the directory where the H2 database will be stored if using the ${DBXTUNE_SAVE_DIR} variable in the URL.</html>");
+		_pcsDbxTuneSaveDir_txt.setToolTipText(_pcsDbxTuneSaveDir_lbl.getToolTipText());
+		_pcsDbxTuneSaveDir_but.setToolTipText("Open a File chooser dialog to get a directory");
 		_pcsJdbcUsername_lbl.setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the monitored DB Server username</html>");
 		_pcsJdbcUsername_txt.setToolTipText("<html>User name to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the monitored DB Server username</html>");
 		_pcsJdbcPassword_lbl.setToolTipText("<html>Password to be used by the Persistent Counter Storage to save Counter Data<br><br><b>Note</b>: this is <b>not</b> the password to the monitored DB Server, you can most likely leave this to blank.</html>");
@@ -2531,6 +2576,10 @@ public class ConnectionDialog
 //		panel.add(_pcsJdbcUrl_txt,      "push, grow, split");
 		panel.add(_pcsJdbcUrl_cbx,      "push, grow, split");
 		panel.add(_pcsJdbcUrl_but,      "wrap");
+
+		panel.add(_pcsDbxTuneSaveDir_lbl, "skip, span, split, hidemode 3");
+		panel.add(_pcsDbxTuneSaveDir_txt, "push, grow, hidemode 3");
+		panel.add(_pcsDbxTuneSaveDir_but, "hidemode 3, wrap");
 
 		panel.add(_pcsJdbcUsername_lbl, "");
 		panel.add(_pcsJdbcUsername_txt, "push, grow, wrap");
@@ -2584,15 +2633,45 @@ public class ConnectionDialog
 
 //		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
 		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
-		
+
+		_pcsDbxTuneSaveDir_txt.setText( StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR"));
+
 		_pcsWriter_cbx    .setEditable(true);
 		_pcsJdbcDriver_cbx.setEditable(true);
 		_pcsJdbcUrl_cbx   .setEditable(true);
 		
-		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterJdbc");
+		_pcsJdbcDriver_cbx.setRenderer(new JdbcDriverHelper.JdbcDriverComboBoxRender());
 
-		_pcsJdbcDriver_cbx.addItem("org.h2.Driver");
-		_pcsJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
+		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterJdbc");
+		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterToHttpJson");
+
+//		_pcsJdbcDriver_cbx.addItem("org.h2.Driver");
+//		_pcsJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
+		List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
+		if (driversList.size() > 0)
+		{
+			for (String str : driversList)
+				_pcsJdbcDriver_cbx.addItem(str);
+		}
+		_pcsJdbcDriver_cbx.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent paramPopupMenuEvent)
+			{
+				if (_pcsJdbcDriver_cbx.getItemCount() == 0)
+				{
+					List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
+					if (driversList.size() > 0)
+					{
+						for (String str : driversList)
+							_pcsJdbcDriver_cbx.addItem(str);
+					}
+				}
+			}
+			
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent paramPopupMenuEvent) {}
+			@Override public void popupMenuCanceled(PopupMenuEvent paramPopupMenuEvent) {}
+		});
 
 		// http://www.h2database.com/html/features.html#database_url
 		_pcsJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
@@ -2611,11 +2690,19 @@ public class ConnectionDialog
 
 		
 		// ACTIONS
-		_pcsTestConn_but  .addActionListener(this);
-		_pcsJdbcUrl_cbx   .getEditor().getEditorComponent().addKeyListener(this);
-		_pcsJdbcUrl_cbx   .addActionListener(this);
-		_pcsJdbcUrl_but   .addActionListener(this);
-		_pcsJdbcDriver_cbx.addActionListener(this);
+		_pcsTestConn_but      .addActionListener(this);
+		_pcsJdbcUrl_cbx       .getEditor().getEditorComponent().addKeyListener(this);
+		_pcsJdbcUrl_cbx       .addActionListener(this);
+		_pcsJdbcUrl_but       .addActionListener(this);
+		_pcsJdbcDriver_cbx    .addActionListener(this);
+		_pcsDbxTuneSaveDir_txt.addActionListener(this);
+		_pcsDbxTuneSaveDir_but.addActionListener(this);
+
+		_pcsDbxTuneSaveDir_txt.addFocusListener( new FocusListener()
+		{
+			@Override public void focusGained(FocusEvent e) {}
+			@Override public void focusLost(FocusEvent e) { _pcsDbxTuneSaveDir_txt.postActionEvent(); }
+		});
 
 		// ADD FOCUS LISTENERS
 //		xxx_txt.addFocusListener(this);
@@ -2656,6 +2743,39 @@ public class ConnectionDialog
 		return panel;
 	}
 
+	/** Helper class to toggle if fields are "enabled" or not */ 
+	private void updateEnabledForPcsDdlLookupAndSqlCapture()
+	{
+		boolean enableDdlLookupFields  = _pcsDdl_doDdlLookupAndStore_chk    .isSelected();
+		boolean enableSqlCaptureFields = _pcsCapSql_doSqlCaptureAndStore_chk.isSelected();
+		
+		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setEnabled(enableDdlLookupFields);
+		_pcsDdl_afterDdlLookupSleepTimeInMs_lbl    .setEnabled(enableDdlLookupFields);
+		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setEnabled(enableDdlLookupFields);
+		
+		_pcsCapSql_doSqlText_chk           .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_doStatementInfo_chk     .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_doPlanText_chk          .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_sleepTimeInMs_lbl       .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_sleepTimeInMs_txt       .setEnabled(enableSqlCaptureFields);
+
+		_pcsCapSql_saveStatement_lbl             .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_saveStatement_execTime_lbl    .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_saveStatement_execTime_txt    .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_saveStatement_logicalRead_lbl .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_saveStatement_logicalRead_txt .setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_saveStatement_physicalRead_lbl.setEnabled(enableSqlCaptureFields);
+		_pcsCapSql_saveStatement_physicalRead_txt.setEnabled(enableSqlCaptureFields);
+		
+		_pcsCapSql_sendDdlForLookup_chk             .setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+		_pcsCapSql_sendDdlForLookup_execTime_lbl    .setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+		_pcsCapSql_sendDdlForLookup_execTime_txt    .setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+		_pcsCapSql_sendDdlForLookup_logicalRead_lbl .setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+		_pcsCapSql_sendDdlForLookup_logicalRead_txt .setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+		_pcsCapSql_sendDdlForLookup_physicalRead_lbl.setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+		_pcsCapSql_sendDdlForLookup_physicalRead_txt.setEnabled(enableDdlLookupFields && enableSqlCaptureFields);
+	}
+	
 	private JPanel createPcsSqlCaptureAndStorePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Capture SQL and Store", true);
@@ -2669,13 +2789,21 @@ public class ConnectionDialog
 		_pcsCapSql_sleepTimeInMs_lbl       .setToolTipText("<html>How many milliseconds should we wait between SQL Capture Lookups.</html>");
 		_pcsCapSql_sleepTimeInMs_txt       .setToolTipText("<html>How many milliseconds should we wait between SQL Capture Lookups.</html>");
 
+		_pcsCapSql_saveStatement_lbl             .setToolTipText("<html>You can choose to save Statements that are more expensive... set some limits on what to save...</html>");
+		_pcsCapSql_saveStatement_execTime_lbl    .setToolTipText("<html>Only save Statements if the execution time for this statement is above this value in milliseconds. <br>Note: -1 means save all statements </html>"); // <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to save it.</html>");
+		_pcsCapSql_saveStatement_execTime_txt    .setToolTipText("<html>Only save Statements if the execution time for this statement is above this value in milliseconds. <br>Note: -1 means save all statements </html>"); // <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to save it.</html>");
+		_pcsCapSql_saveStatement_logicalRead_lbl .setToolTipText("<html>Only save Statements if the number of LogicalReads for this statement is above this value.         <br>Note: -1 means save all statements </html>"); // <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to save it.</html>");
+		_pcsCapSql_saveStatement_logicalRead_txt .setToolTipText("<html>Only save Statements if the number of LogicalReads for this statement is above this value.         <br>Note: -1 means save all statements </html>"); // <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to save it.</html>");
+		_pcsCapSql_saveStatement_physicalRead_lbl.setToolTipText("<html>Only save Statements if the number of PhysicalReads for this statement is above this value.        <br>Note: -1 means save all statements </html>"); // <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to save it.</html>");
+		_pcsCapSql_saveStatement_physicalRead_txt.setToolTipText("<html>Only save Statements if the number of PhysicalReads for this statement is above this value.        <br>Note: -1 means save all statements </html>"); // <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to save it.</html>");
+
 		_pcsCapSql_sendDdlForLookup_chk             .setToolTipText("<html>When a procedure name is found in monSysStatement send it of for DDL Lookup</html>");
-		_pcsCapSql_sendDdlForLookup_execTime_lbl    .setToolTipText("<html>Send DDL only if the execution time for this statement is above this value in milliseconds. <br>Note: -1 means send all statements</html>");
-		_pcsCapSql_sendDdlForLookup_execTime_txt    .setToolTipText("<html>Send DDL only if the execution time for this statement is above this value in milliseconds. <br>Note: -1 means send all statements</html>");
-		_pcsCapSql_sendDdlForLookup_logicalRead_lbl .setToolTipText("<html>Send DDL only if the number of LogicalReads for this statement is above this value.         <br>Note: -1 means send all statements</html>");
-		_pcsCapSql_sendDdlForLookup_logicalRead_txt .setToolTipText("<html>Send DDL only if the number of LogicalReads for this statement is above this value.         <br>Note: -1 means send all statements</html>");
-		_pcsCapSql_sendDdlForLookup_physicalRead_lbl.setToolTipText("<html>Send DDL only if the number of PhysicalReads for this statement is above this value.        <br>Note: -1 means send all statements</html>");
-		_pcsCapSql_sendDdlForLookup_physicalRead_txt.setToolTipText("<html>Send DDL only if the number of PhysicalReads for this statement is above this value.        <br>Note: -1 means send all statements</html>");
+		_pcsCapSql_sendDdlForLookup_execTime_lbl    .setToolTipText("<html>Send DDL only if the execution time for this statement is above this value in milliseconds. </html>"); // <br>Note: -1 means send all statements <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to send it for DDL lookup.</html>");
+		_pcsCapSql_sendDdlForLookup_execTime_txt    .setToolTipText("<html>Send DDL only if the execution time for this statement is above this value in milliseconds. </html>"); // <br>Note: -1 means send all statements <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to send it for DDL lookup.</html>");
+		_pcsCapSql_sendDdlForLookup_logicalRead_lbl .setToolTipText("<html>Send DDL only if the number of LogicalReads for this statement is above this value.         </html>"); // <br>Note: -1 means send all statements <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to send it for DDL lookup.</html>");
+		_pcsCapSql_sendDdlForLookup_logicalRead_txt .setToolTipText("<html>Send DDL only if the number of LogicalReads for this statement is above this value.         </html>"); // <br>Note: -1 means send all statements <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to send it for DDL lookup.</html>");
+		_pcsCapSql_sendDdlForLookup_physicalRead_lbl.setToolTipText("<html>Send DDL only if the number of PhysicalReads for this statement is above this value.        </html>"); // <br>Note: -1 means send all statements <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to send it for DDL lookup.</html>");
+		_pcsCapSql_sendDdlForLookup_physicalRead_txt.setToolTipText("<html>Send DDL only if the number of PhysicalReads for this statement is above this value.        </html>"); // <br>Note: -1 means send all statements <br>Note: all 3 fields need to be <b>greater</b> than -1 if you do <b>not</b> want to send it for DDL lookup.</html>");
 
 		// LAYOUT
 		panel.add(_pcsCapSql_doSqlCaptureAndStore_chk, "split");
@@ -2686,6 +2814,14 @@ public class ConnectionDialog
 		panel.add(_pcsCapSql_sleepTimeInMs_lbl,        "gap 50");
 		panel.add(_pcsCapSql_sleepTimeInMs_txt,        "pushx, growx, wrap");
 		
+		panel.add(_pcsCapSql_saveStatement_lbl,                 "split");
+		panel.add(_pcsCapSql_saveStatement_execTime_lbl,        "");
+		panel.add(_pcsCapSql_saveStatement_execTime_txt,        "wmin 10lp, pushx, growx");
+		panel.add(_pcsCapSql_saveStatement_logicalRead_lbl,     "");
+		panel.add(_pcsCapSql_saveStatement_logicalRead_txt,     "wmin 10lp, pushx, growx");
+		panel.add(_pcsCapSql_saveStatement_physicalRead_lbl,    "");
+		panel.add(_pcsCapSql_saveStatement_physicalRead_txt,    "wmin 10lp, pushx, growx, wrap");
+
 		panel.add(_pcsCapSql_sendDdlForLookup_chk,              "split");
 		panel.add(_pcsCapSql_sendDdlForLookup_execTime_lbl,     "");
 		panel.add(_pcsCapSql_sendDdlForLookup_execTime_txt,     "wmin 10lp, pushx, growx");
@@ -2701,6 +2837,10 @@ public class ConnectionDialog
 		_pcsCapSql_doPlanText_chk          .addActionListener(this);
 //		_pcsCapSql_xxx_chk                 .addActionListener(this);
 		_pcsCapSql_sleepTimeInMs_txt       .addActionListener(this);
+
+		_pcsCapSql_saveStatement_execTime_txt       .addActionListener(this);
+		_pcsCapSql_saveStatement_logicalRead_txt    .addActionListener(this);
+		_pcsCapSql_saveStatement_physicalRead_txt   .addActionListener(this);
 
 		_pcsCapSql_sendDdlForLookup_chk             .addActionListener(this);
 		_pcsCapSql_sendDdlForLookup_execTime_txt    .addActionListener(this);
@@ -2820,10 +2960,38 @@ public class ConnectionDialog
 		_offlineJdbcDriver_cbx .setEditable(true);
 		_offlineJdbcUrl_cbx    .setEditable(true);
 		
-		_offlineJdbcDriver_cbx.addItem("org.h2.Driver");
-		_offlineJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
+//		_offlineJdbcDriver_cbx.addItem("org.h2.Driver");
+//		_offlineJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
+		List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
+		if (driversList.size() > 0)
+		{
+			for (String str : driversList)
+				_offlineJdbcDriver_cbx.addItem(str);
+		}
+		_offlineJdbcDriver_cbx.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent paramPopupMenuEvent)
+			{
+				if (_offlineJdbcDriver_cbx.getItemCount() == 0)
+				{
+					List<String> driversList = JdbcDriverHelper.getAvailableDriverList();
+					if (driversList.size() > 0)
+					{
+						for (String str : driversList)
+							_offlineJdbcDriver_cbx.addItem(str);
+					}
+				}
+			}
+			
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent paramPopupMenuEvent) {}
+			@Override public void popupMenuCanceled(PopupMenuEvent paramPopupMenuEvent) {}
+		});
+
+		_offlineJdbcDriver_cbx.setRenderer(new JdbcDriverHelper.JdbcDriverComboBoxRender());
 
 		// http://www.h2database.com/html/features.html#database_url
+		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE");
 		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
 		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:zip:<zipFileName>!/<dbname>");
 		_offlineJdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
@@ -2994,7 +3162,8 @@ public class ConnectionDialog
 		_jdbcDriver_cbx     .setEditable(true);
 		_jdbcUrl_cbx        .setEditable(true);
 
-		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(false);
+//		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(false);
+		setSqlServerUseWindowsAuthenticationVisible(false);
 
 		// NOTE: initialization of the getAvailableDriverList() is now asynchronous (since it takes a long time)
 		//       So therefore: I added the _jdbcDriver_cbx.addPopupMenuListener() which will add the JDBC Drivers at a later time.
@@ -3023,8 +3192,10 @@ public class ConnectionDialog
 			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent paramPopupMenuEvent) {}
 			@Override public void popupMenuCanceled(PopupMenuEvent paramPopupMenuEvent) {}
 		});
+		_jdbcDriver_cbx.setRenderer(new JdbcDriverHelper.JdbcDriverComboBoxRender());
 
 		// http://www.h2database.com/html/features.html#database_url
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>;IFEXISTS=TRUE;AUTO_SERVER=TRUE");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:zip:<zipFileName>!/<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
@@ -4061,7 +4232,8 @@ public class ConnectionDialog
 
 		// The AseConnectionFactory will be phased out and replaced with DbxConnection
 		AseConnectionFactory.setAppName ( Version.getAppName() );
-		AseConnectionFactory.setHostName( Version.getVersionStr() );
+//		AseConnectionFactory.setHostName( Version.getVersionStr() );
+		AseConnectionFactory.setAppVersion( Version.getVersionStr() );
 		AseConnectionFactory.setUser    ( username );
 		AseConnectionFactory.setPassword( password );
 //		AseConnectionFactory.setHost    ( hosts );
@@ -4214,6 +4386,7 @@ public class ConnectionDialog
 	 */
 	private boolean pcsConnect(ConnectionProfile connProfile)
 	{
+//System.out.println("pcsConnect(): connProfile="+connProfile);
 		//---------------------------
 		// START the Persistent Storage thread
 		//---------------------------
@@ -4228,80 +4401,107 @@ public class ConnectionDialog
 			{
 				pcsAll = connProfile.getDbxTuneParams()._pcsWriterClass;
 			}
-			pcsProps.put(PersistentCounterHandler.PROPKEY_WriterClass, pcsAll);
+			pcsProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, pcsAll);
+//System.out.println("pcsConnect(): pcsAll='"+pcsAll+"'.");
 
 			// pcsAll "could" be a ',' separated string
-			// But I dont know how to set the properties for those Writers
-			String[] pcsa = pcsAll.split(",");
-			for (int i=0; i<pcsa.length; i++)
+			// But I don't know how to set the properties for those Writers
+			for (String pcs : pcsAll.split(","))
 			{
-				String pcs = pcsa[i].trim();
-				
+//System.out.println("pcsConnect(): pcs='"+pcs+"'.");
+
 				if (pcs.equals("com.asetune.pcs.PersistWriterJdbc"))
 				{
+//System.out.println("pcsConnect(): XXXXXX: com.asetune.pcs.PersistWriterJdbc");
 					if (connProfile != null)
 					{
 //						ConnectionProfile.TdsEntry tdsEntry = connProfile.getTdsEntry();
 						ConnectionProfile.DbxTuneParams entry = connProfile.getDbxTuneParams(); 
 
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcDriver,   entry._pcsWriterDriver);
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUrl,      entry._pcsWriterUrl);
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUsername, entry._pcsWriterUsername);
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcPassword, entry._pcsWriterPassword == null ? "" : entry._pcsWriterPassword); // do not write NULL objects to the HashTable, then it's NullPointerException 
+//System.out.println(">>>>PROFILE>>>>>>> XML = "+entry.toXml());
+//System.out.println(">>>>PROFILE>>>>>>> entry._pcsWriterDdlLookup = "+entry._pcsWriterDdlLookup);
+//System.out.println(">>>>PROFILE>>>>>>> entry._pcsWriterCapSql_doSqlCaptureAndStore = "+entry._pcsWriterCapSql_doSqlCaptureAndStore);
+//System.out.println(">>>>PROFILE>>>>>>> entry._pcsWriterPassword = "+entry._pcsWriterPassword);
+
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   entry._pcsWriterDriver);
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      entry._pcsWriterUrl);
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, entry._pcsWriterUsername);
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, entry._pcsWriterPassword == null ? "" : entry._pcsWriterPassword); // do not write NULL objects to the HashTable, then it's NullPointerException 
 	
-						pcsProps.put(PersistWriterJdbc.PROPKEY_startH2NetworkServer, entry._pcsWriterStartH2asNwServer);
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_startH2NetworkServer, entry._pcsWriterStartH2asNwServer);
 	
 						// DDL
-						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             entry._pcsWriterDdlLookup);
-						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue, entry._pcsWriterDdlStoreDependantObjects);
-						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     entry._pcsWriterDdlLookupSleepTime);
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             entry._pcsWriterDdlLookup);
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue, entry._pcsWriterDdlStoreDependantObjects);
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     entry._pcsWriterDdlLookupSleepTime);
 
 						// SQL Capture
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , entry._pcsWriterCapSql_doSqlCaptureAndStore             );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , entry._pcsWriterCapSql_doSqlText                        );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , entry._pcsWriterCapSql_doStatementInfo                  );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , entry._pcsWriterCapSql_doPlanText                       );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , entry._pcsWriterCapSql_sleepTimeInMs                    );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , entry._pcsWriterCapSql_sendDdlForLookup                 );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , entry._pcsWriterCapSql_doSqlCaptureAndStore             );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , entry._pcsWriterCapSql_doSqlText                        );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , entry._pcsWriterCapSql_doStatementInfo                  );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , entry._pcsWriterCapSql_doPlanText                       );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , entry._pcsWriterCapSql_sleepTimeInMs                    );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , entry._pcsWriterCapSql_saveStatement_gt_execTime        );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , entry._pcsWriterCapSql_sendDdlForLookup                 );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 					}
 					else
 					{
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcDriver,   _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUrl,      _pcsJdbcUrl_cbx     .getEditor().getItem().toString());
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcUsername, _pcsJdbcUsername_txt.getText());
-						pcsProps.put(PersistWriterJdbc.PROPKEY_jdbcPassword, _pcsJdbcPassword_txt.getText());
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   _pcsJdbcDriver_cbx  .getEditor().getItem().toString());
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      _pcsJdbcUrl_cbx     .getEditor().getItem().toString());
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, _pcsJdbcUsername_txt.getText());
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, _pcsJdbcPassword_txt.getText());
 	
-						pcsProps.put(PersistWriterJdbc.PROPKEY_startH2NetworkServer, _pcsH2Option_startH2NetworkServer_chk.isSelected() + "");
+						pcsProps.setProperty(PersistWriterJdbc.PROPKEY_startH2NetworkServer, _pcsH2Option_startH2NetworkServer_chk.isSelected() + "");
 	
 						// DDL
-						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             _pcsDdl_doDdlLookupAndStore_chk            .isSelected() + "");
-						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue, _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() + "");
-						pcsProps.put(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore,             _pcsDdl_doDdlLookupAndStore_chk            .isSelected() + "");
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue, _pcsDdl_addDependantObjectsToDdlInQueue_chk.isSelected() + "");
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _pcsDdl_afterDdlLookupSleepTimeInMs_txt    .getText());
 
 						// SQL Capture
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText());
-						pcsProps.put(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , _pcsCapSql_saveStatement_execTime_txt       .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , _pcsCapSql_saveStatement_logicalRead_txt    .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , _pcsCapSql_saveStatement_physicalRead_txt   .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText());
+						pcsProps.setProperty(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText());
+//System.out.println(">>>>GUI>>>>>>> _pcsDdl_doDdlLookupAndStore_chk.isSelected() = "+_pcsDdl_doDdlLookupAndStore_chk.isSelected());
+//System.out.println(">>>>GUI>>>>>>> _pcsCapSql_doSqlCaptureAndStore_chk.isSelected() = "+_pcsCapSql_doSqlCaptureAndStore_chk.isSelected());
+//System.out.println(">>>>GUI>>>>>>> _pcsJdbcPassword_txt.getText() = "+_pcsJdbcPassword_txt.getText());
 					}
 				}
 			}
-			
+
+//System.out.println(">>000>>> PROPKEY_ddl_doDdlLookupAndStore:     '"+PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore+"'    : "+pcsProps.getProperty(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore));
+//System.out.println(">>000>>> PROPKEY_sqlCap_doSqlCaptureAndStore: '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"': "+pcsProps.getProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore));
+			// Craete the Vendor Specific Object Inspector and SqlCaptureBroker
 			IObjectLookupInspector oli = DbxTune.getInstance().createPcsObjectLookupInspector();
 			ISqlCaptureBroker      scb = DbxTune.getInstance().createPcsSqlCaptureBroker();
+
+//System.out.println("pcsConnect(): IObjectLookupInspector='"+oli+"'.");
+//System.out.println("pcsConnect(): ISqlCaptureBroker='"+scb+"'.");
+//System.out.println("pcsConnect(): pcsProps="+StringUtil.toCommaStr(pcsProps));
+
+//System.out.println(">>111>>> PROPKEY_ddl_doDdlLookupAndStore:     '"+PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore+"'    : "+pcsProps.getProperty(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore));
+//System.out.println(">>111>>> PROPKEY_sqlCap_doSqlCaptureAndStore: '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"': "+pcsProps.getProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore));
 			
+			// Create the Persistance Counter Handler and initialize it
 			PersistentCounterHandler pch = new PersistentCounterHandler(oli, scb);
-			
 			pch.init( pcsProps );
-			
+//System.out.println(">>222>>> PROPKEY_ddl_doDdlLookupAndStore:     '"+PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore+"'    : "+pcsProps.getProperty(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore));
+//System.out.println(">>222>>> PROPKEY_sqlCap_doSqlCaptureAndStore: '"+PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore+"': "+pcsProps.getProperty(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore));
+
 			if (pch.hasWriters())
 			{
 				PersistentCounterHandler.setInstance(pch);
@@ -4363,56 +4563,206 @@ public class ConnectionDialog
 		//-----------------------------------------------------
 		if ( jdbcDriver.equals("org.h2.Driver") )
 		{
-			// start the H2 TCP Server
-			if (startH2NetworkServer)
-			{
-				try
-				{
-					_logger.info("Starting a H2 TCP server.");
-					org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
-					h2ServerTcp.start();
-		
-		//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
-					_logger.info("H2 TCP server, url='"+h2ServerTcp.getURL()+"', service='"+h2ServerTcp.getService()+"'.");
-		
-					if (true)
-					{
-						try
-						{
-							_logger.info("Starting a H2 WEB server.");
-							//String[] argsWeb = new String[] { "-trace" };
-							org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer();
-							h2ServerWeb.start();
-
-							_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
-						}
-						catch (Exception e)
-						{
-							_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
-						}
-					}
-
-					if (true)
-					{
-						try
-						{
-							_logger.info("Starting a H2 Postgres server.");
-							org.h2.tools.Server h2ServerPostgres = org.h2.tools.Server.createPgServer("-pgAllowOthers");
-							h2ServerPostgres.start();
-			
-							_logger.info("H2 Postgres server, url='"+h2ServerPostgres.getURL()+"', service='"+h2ServerPostgres.getService()+"'.");
-						}
-						catch (Exception e)
-						{
-							_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
-						}
-					}
-				}
-				catch (SQLException e) 
-				{
-					_logger.warn("Problem starting H2 network service", e);
-				}
-			}
+//			// start the H2 TCP Server
+//			if (startH2NetworkServer)
+//			{
+//				try
+//				{
+//					_logger.info("Starting a H2 TCP server.");
+//					org.h2.tools.Server h2ServerTcp = org.h2.tools.Server.createTcpServer("-tcpAllowOthers");
+//					h2ServerTcp.start();
+//		
+//		//			_logger.info("H2 TCP server, listening on port='"+h2Server.getPort()+"', url='"+h2Server.getURL()+"', service='"+h2Server.getService()+"'.");
+//					_logger.info("H2 TCP server, url='"+h2ServerTcp.getURL()+"', service='"+h2ServerTcp.getService()+"'.");
+//		
+//					if (true)
+//					{
+//						try
+//						{
+//							_logger.info("Starting a H2 WEB server.");
+//							//String[] argsWeb = new String[] { "-trace" };
+//							org.h2.tools.Server h2ServerWeb = org.h2.tools.Server.createWebServer();
+//							h2ServerWeb.start();
+//
+//							_logger.info("H2 WEB server, url='"+h2ServerWeb.getURL()+"', service='"+h2ServerWeb.getService()+"'.");
+//						}
+//						catch (Exception e)
+//						{
+//							_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+//						}
+//					}
+//
+//					if (true)
+//					{
+//						try
+//						{
+//							_logger.info("Starting a H2 Postgres server.");
+//							org.h2.tools.Server h2ServerPostgres = org.h2.tools.Server.createPgServer("-pgAllowOthers");
+//							h2ServerPostgres.start();
+//			
+//							_logger.info("H2 Postgres server, url='"+h2ServerPostgres.getURL()+"', service='"+h2ServerPostgres.getService()+"'.");
+//						}
+//						catch (Exception e)
+//						{
+//							_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+//						}
+//					}
+//				}
+//				catch (SQLException e) 
+//				{
+//					_logger.warn("Problem starting H2 network service", e);
+//				}
+//			}
+//			// start the H2 TCP Server
+//			if (startH2NetworkServer)
+//			{
+//				try
+//				{
+//					boolean writeDbxTuneServiceFile = false;
+//					String baseDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
+//
+//					List<String> tcpSwitches = new ArrayList<>();
+//					List<String> webSwitches = new ArrayList<>();
+//					List<String> pgSwitches  = new ArrayList<>();
+//
+//					boolean startTcpServer = Configuration.getCombinedConfiguration().getBooleanProperty("h2.tcp.startServer", true);
+//					boolean startWebServer = Configuration.getCombinedConfiguration().getBooleanProperty("h2.web.startServer", true);
+//					boolean startPgServer  = Configuration.getCombinedConfiguration().getBooleanProperty("h2.pg.startServer",  true);
+//
+//					int     tcpBasePortNumber  = Configuration.getCombinedConfiguration().getIntProperty("h2.tcp.basePort", 19092);
+//					int     webBasePortNumber  = Configuration.getCombinedConfiguration().getIntProperty("h2.web.basePort", 18082);
+//					int     pgBasePortNumber   = Configuration.getCombinedConfiguration().getIntProperty("h2.pg.basePort",  15435);
+//					
+//					//-------------------------------------------
+//					// Switches to TCP server
+//					tcpSwitches.add("-tcpAllowOthers");    // Allow other that the localhost to connect
+//					tcpSwitches.add("-tcpPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
+//					tcpSwitches.add(""+tcpBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+//					tcpSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
+//					if (StringUtil.hasValue(baseDir))
+//					{
+//						tcpSwitches.add("-baseDir");
+//						tcpSwitches.add(baseDir);
+//						
+//						writeDbxTuneServiceFile = true;
+//					}
+//					
+//					//-------------------------------------------
+//					// Switches to WEB server
+//					webSwitches.add("-webAllowOthers"); // Allow other that the localhost to connect
+//					webSwitches.add("-webPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
+//					webSwitches.add(""+webBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+//					webSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
+//					if (StringUtil.hasValue(baseDir))
+//					{
+//						webSwitches.add("-baseDir");
+//						webSwitches.add(baseDir);
+//					}
+//
+//					//-------------------------------------------
+//					// Switches to POSTGRES server
+//					pgSwitches.add("-pgAllowOthers"); // Allow other that the localhost to connect
+//					pgSwitches.add("-pgPort");           // Try this port as a base, if it's bussy, H2 will grab "next" available
+//					pgSwitches.add(""+pgBasePortNumber); // Try this port as a base, if it's bussy, H2 will grab "next" available
+//					pgSwitches.add("-ifExists");          // If the database file DO NOT exists, DO NOT CREATE one
+//					if (StringUtil.hasValue(baseDir))
+//					{
+//						pgSwitches.add("-baseDir");
+//						pgSwitches.add(baseDir);
+//					}
+//					
+//					
+//					//java -cp ${H2_JAR} org.h2.tools.Server -tcp -tcpAllowOthers -tcpPort ${portStart} -ifExists -baseDir ${baseDir} &
+//
+//					org.h2.tools.Server h2TcpServer = null;
+//					org.h2.tools.Server h2WebServer = null;
+//					org.h2.tools.Server h2PgServer  = null;
+//					
+//					if (startTcpServer)
+//					{
+//						_logger.info("Starting a H2 TCP server. Switches: "+tcpSwitches);
+//						h2TcpServer = org.h2.tools.Server.createTcpServer(tcpSwitches.toArray(new String[0]));
+//						h2TcpServer.start();
+//			
+//			//			_logger.info("H2 TCP server, listening on port='"+h2TcpServer.getPort()+"', url='"+h2TcpServer.getURL()+"', service='"+h2TcpServer.getService()+"'.");
+//						_logger.info("H2 TCP server, url='"+h2TcpServer.getURL()+"', Status='"+h2TcpServer.getStatus()+"'.");
+//					}
+//		
+//					if (startWebServer)
+//					{
+//						try
+//						{
+//							_logger.info("Starting a H2 WEB server. Switches: "+webSwitches);
+//							h2WebServer = org.h2.tools.Server.createWebServer(webSwitches.toArray(new String[0]));
+//							h2WebServer.start();
+//
+//							_logger.info("H2 WEB server, url='"+h2WebServer.getURL()+"', Status='"+h2WebServer.getStatus()+"'.");
+//						}
+//						catch (Exception e)
+//						{
+//							_logger.info("H2 WEB server, failed to start, but I will continue anyway... Caught: "+e);
+//						}
+//					}
+//
+//					if (startPgServer)
+//					{
+//						try
+//						{
+//							_logger.info("Starting a H2 Postgres server. Switches: "+pgSwitches);
+//							h2PgServer = org.h2.tools.Server.createPgServer(pgSwitches.toArray(new String[0]));
+//							h2PgServer.start();
+//			
+//							_logger.info("H2 Postgres server, url='"+h2PgServer.getURL()+"', Status='"+h2PgServer.getStatus()+"'.");
+//						}
+//						catch (Exception e)
+//						{
+//							_logger.info("H2 Postgres server, failed to start, but I will continue anyway... Caught: "+e);
+//						}
+//					}
+//					
+//					if (writeDbxTuneServiceFile)
+//					{
+//						try
+//						{
+//							H2UrlHelper urlHelper = new H2UrlHelper(jdbcUrl);
+//
+//							// Create a file like: $DBXTUNE_SAVE_DIR/H2DBNAME.dbxtune
+//							File f = new File(baseDir + File.separatorChar + urlHelper.getFile().getName() + ".dbxtune");
+//							_logger.info("Creating DbxTune - H2 Service information file '" + f.getAbsolutePath() + "'.");
+//System.out.println("Creating DbxTune - H2 Service information file '" + f.getAbsolutePath() + "'.");
+//							f.createNewFile();
+//							f.deleteOnExit();
+//
+//							PrintStream w = new PrintStream( new FileOutputStream(f) );
+//							w.println("dbxtune.pid = " + JavaVersion.getProcessId("-1"));
+//							if (h2TcpServer != null)
+//							{
+//								w.println("h2.tcp.port = " + h2TcpServer.getPort());
+//								w.println("h2.tcp.url  = " + h2TcpServer.getURL());
+//							}
+//							if (h2WebServer != null)
+//							{
+//								w.println("h2.web.port = " + h2WebServer.getPort());
+//								w.println("h2.web.url  = " + h2WebServer.getURL());
+//							}
+//							if (h2PgServer != null)
+//							{
+//								w.println("h2.pg.port  = " + h2PgServer.getPort());
+//								w.println("h2.pg.url   = " + h2PgServer.getURL());
+//							}
+//							w.close();
+//						}
+//						catch (Exception ex)
+//						{
+//							_logger.warn("Problems creating DbxTune H2 internal service file, continuing anyway. Caught: "+ex);
+//						}
+//					}
+//				}
+//				catch (SQLException e) 
+//				{
+//					_logger.warn("Problem starting H2 network service", e);
+//				}
+//			}
 
 			//-----------------------------------------------------
 			// IF H2, add hard coded stuff to URL
@@ -4445,12 +4795,12 @@ public class ConnectionDialog
 //			}
 
 			// AutoServer mode
-			if ( ! urlMap.containsKey("AUTO_SERVER") )
-			{
-				change = true;
-				_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
-				urlMap.put("AUTO_SERVER",  "TRUE");
-			}
+//			if ( ! urlMap.containsKey("AUTO_SERVER") )
+//			{
+//				change = true;
+//				_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
+//				urlMap.put("AUTO_SERVER",  "TRUE");
+//			}
 
 //			// DATABASE_EVENT_LISTENER
 //			if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
@@ -4518,16 +4868,20 @@ public class ConnectionDialog
 			catch (SQLException e) {}
 			_offlineConn = null;
 
-			String msg = "This is NOT a valid offline database. No "+Version.getAppName()+" system table exists.";
-			if (jdbcDriver.equals("org.h2.Driver"))
+			String msg = "This is NOT a valid offline database. No DbxTune system table exists.<br>";
+			
+//			if (jdbcDriver.equals("org.h2.Driver"))
+			if (jdbcUrl.startsWith("jdbc:h2:"))
 			{
+				msg += " If the DB file was transferred from another machine, make sure it was done in <b>binary</b> mode.<br>";
+
 				if (jdbcUrl.indexOf("IFEXISTS=TRUE") == -1)
-					msg += " Please append ';IFEXISTS=TRUE' to the URL, this stops H2 to create an empty database if it didn't exist.";
+					msg += " Please append ';IFEXISTS=TRUE' to the URL, this stops H2 to create an empty database if it didn't exist.<br>";
 			}
 
 			_logger.error(msg);
 			JOptionPane.showMessageDialog(this, 
-					msg, 
+					"<html>" + msg + "</html>", 
 					Version.getAppName()+" - offline db check", 
 					JOptionPane.ERROR_MESSAGE);
 			return false;
@@ -5375,9 +5729,19 @@ if ( ! jdbcSshTunnelUse )
 			String jdbcDriver = StringUtil.getSelectedItemString(_pcsJdbcDriver_cbx);
 
 			if ("org.h2.Driver".equals(jdbcDriver))
+			{
 				_pcsH2Option_startH2NetworkServer_chk.setVisible(true);
+				_pcsDbxTuneSaveDir_lbl.setVisible(true);
+				_pcsDbxTuneSaveDir_txt.setVisible(true);
+				_pcsDbxTuneSaveDir_but.setVisible(true);
+			}
 			else
+			{
 				_pcsH2Option_startH2NetworkServer_chk.setVisible(false);
+				_pcsDbxTuneSaveDir_lbl.setVisible(false);
+				_pcsDbxTuneSaveDir_txt.setVisible(false);
+				_pcsDbxTuneSaveDir_but.setVisible(false);
+			}
 			
 			// add templates
 			List<String> urlTemplates = JdbcDriverHelper.getUrlTemplateList(jdbcDriver);
@@ -5438,6 +5802,11 @@ if ( ! jdbcSshTunnelUse )
 		if (_pcsJdbcUrl_cbx.equals(source))
 		{
 			checkForH2LocalDrive(null);
+			
+			String jdbcUrl = _pcsJdbcUrl_cbx.getEditor().getItem().toString();
+			_pcsDbxTuneSaveDir_lbl.setEnabled( jdbcUrl.startsWith("jdbc:h2:") );
+			_pcsDbxTuneSaveDir_txt.setEnabled( jdbcUrl.startsWith("jdbc:h2:") );
+			_pcsDbxTuneSaveDir_but.setEnabled( jdbcUrl.startsWith("jdbc:h2:") );
 		}
 
 		// --- PCS: BUTTON: "..." 
@@ -5451,6 +5820,9 @@ if ( ! jdbcSshTunnelUse )
 			String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
 
 			File baseDir = h2help.getDir(envNameSaveDirVal);
+			if (baseDir == null || (baseDir != null && baseDir.toString().equals("${DBXTUNE_SAVE_DIR}")) )
+				baseDir = new File(envNameSaveDirVal);
+
 			JFileChooser fc = new JFileChooser(baseDir);
 
 			int returnVal = fc.showOpenDialog(this);
@@ -5461,6 +5833,44 @@ if ( ! jdbcSshTunnelUse )
 
 				_pcsJdbcUrl_cbx.getEditor().setItem(newUrl);
 				checkForH2LocalDrive(null);
+
+				String jdbcUrl = _pcsJdbcUrl_cbx.getEditor().getItem().toString();
+				_pcsDbxTuneSaveDir_txt.setEnabled( jdbcUrl.startsWith("jdbc:h2:") );
+				_pcsDbxTuneSaveDir_but.setEnabled( jdbcUrl.startsWith("jdbc:h2:") );
+			}
+		}
+
+		// --- PCS: DBXTUNE_SAVE_DIR - FIELD ---
+		if (_pcsDbxTuneSaveDir_txt.equals(source))
+		{
+			String dbxTuneSaveDir = _pcsDbxTuneSaveDir_txt.getText();
+			System.setProperty("DBXTUNE_SAVE_DIR", dbxTuneSaveDir);
+			
+			Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+			if (conf != null)
+			{
+				conf.setProperty("DBXTUNE_SAVE_DIR", dbxTuneSaveDir);
+				conf.save();
+			}
+		}
+
+		// --- PCS: DBXTUNE_SAVE_DIR - BUTTON: "..." ---
+		if (_pcsDbxTuneSaveDir_but.equals(source))
+		{
+			String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
+			String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+
+			JFileChooser fc = new JFileChooser(envNameSaveDirVal);
+			fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+			int returnVal = fc.showDialog(this, "Select Directory");
+//			int returnVal = fc.showOpenDialog(this);
+			if(returnVal == JFileChooser.APPROVE_OPTION) 
+			{
+				String newFile = fc.getSelectedFile().getAbsolutePath().replace('\\', '/');
+
+				_pcsDbxTuneSaveDir_txt.setText(newFile);
+				_pcsDbxTuneSaveDir_txt.postActionEvent(); // Calls this handler but with _pcsDbxTuneSaveDir_txt as source
 			}
 		}
 
@@ -5569,7 +5979,8 @@ if ( ! jdbcSshTunnelUse )
 			String url = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
 
 			// Show or hide the MS SQL-Server Windows Authentication CheckBox
-			_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
+			//_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
+			setSqlServerUseWindowsAuthenticationVisible(url.startsWith("jdbc:sqlserver:"));
 		}
 		
 		// --- JDBC: CHECKBOX: "Windows Authentication" 
@@ -5880,6 +6291,9 @@ if ( ! jdbcSshTunnelUse )
 		// ALWAYS: update tunnel description
 		updateSshTunnelDescription();
 		
+		// ALWAYS: update if some fields are enabled or disabled
+		updateEnabledForPcsDdlLookupAndSqlCapture();
+		
 		validateContents();
 	}
 
@@ -5955,7 +6369,9 @@ if ( ! jdbcSshTunnelUse )
 		}
 
 		// Show or hide the MS SQL-Server Windows Authentication CheckBox
-		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+		//_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+		setSqlServerUseWindowsAuthenticationVisible(StringUtil.getSelectedItemString(_jdbcUrl_cbx).startsWith("jdbc:sqlserver:"));
+
 	}
 
 	private void setJdbcUrlOptions(Map<String, String> optionsMap)
@@ -5969,17 +6385,33 @@ if ( ! jdbcSshTunnelUse )
 		
 		// Show or hide the MS SQL-Server Windows Authentication CheckBox
 		String url = StringUtil.getSelectedItemString(_jdbcUrl_cbx);
-		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
+//		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(url.startsWith("jdbc:sqlserver:"));
+		setSqlServerUseWindowsAuthenticationVisible(url.startsWith("jdbc:sqlserver:"));
 
 		// MS SQL-Server: Windows authentication
 		String val = optionsMap.get("integratedSecurity");
-		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(val != null && val.equalsIgnoreCase("true"));
+//		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(val != null && val.equalsIgnoreCase("true"));
+		setSqlServerUseWindowsAuthenticationSelected(val != null && val.equalsIgnoreCase("true"));
 	}
 	private void setJdbcUrlOptions(String optionsStr)
 	{
 		setJdbcUrlOptions(StringUtil.parseCommaStrToMap(optionsStr));
 	}
 
+	private void setSqlServerUseWindowsAuthenticationVisible(boolean toValue)
+	{
+		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible( toValue );
+
+		_jdbcUsername_txt.setEnabled( ! toValue );
+		_jdbcPassword_txt.setEnabled( ! toValue );
+	}
+	private void setSqlServerUseWindowsAuthenticationSelected(boolean toValue)
+	{
+		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected( toValue );
+
+		_jdbcUsername_txt.setEnabled( ! toValue );
+		_jdbcPassword_txt.setEnabled( ! toValue );
+	}
 
 	private void action_nwPasswdEncryption()
 	{
@@ -5997,6 +6429,10 @@ if ( ! jdbcSshTunnelUse )
 
 	private void action_connect(int connType, ConnectionProfile connProfile)
 	{
+		boolean recordThisSession        = false;
+		boolean dbxDeferredConnect       = false;
+		boolean dbxHostMonitor           = false;
+
 		// If we call the actionPerformed() from outside, we do not want to save stuff
 		if (isVisible())
 			saveProps();
@@ -6014,6 +6450,8 @@ if ( ! jdbcSshTunnelUse )
 			// Update Connection Profile
 			updateConnectionProfile(OFFLINE_CONN, true, StringUtil.getSelectedItemString(_offlineProfile_cbx), connProfile);
 
+			_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_offlineProfileType_cbx) : connProfile.getProfileTypeName();
+			
 			// SET CONNECTION TYP and "CLOSE" the dialog
 			_connectionType = OFFLINE_CONN;
 			setVisible(false);
@@ -6284,12 +6722,12 @@ if ( ! jdbcSshTunnelUse )
 		// ASE/JDBC & PCS CONNECT
 		else if (TDS_CONN == connType || JDBC_CONN == connType)
 		{
+			recordThisSession        = _aseOptionStore_chk.isSelected();
+			dbxDeferredConnect       = _aseDeferredConnect_chk.isSelected();
+			dbxHostMonitor           = _aseHostMonitor_chk.isSelected();
+
 			if (_options._showDbxTuneOptionsInTds || _options._showDbxTuneOptionsInJdbc)
 			{
-				boolean recordThisSession        = _aseOptionStore_chk.isSelected();
-				boolean dbxDeferredConnect       = _aseDeferredConnect_chk.isSelected();
-				boolean dbxHostMonitor           = _aseHostMonitor_chk.isSelected();
-	
 				if (connProfile != null)
 				{
 //					ConnectionProfile.TdsEntry entry = connProfile.getTdsEntry();
@@ -6348,7 +6786,7 @@ if ( ! jdbcSshTunnelUse )
 						if (startTime != null)
 						{
 							// Create a Waitfor Dialog
-							WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at "+startTime);
+							WaitForExecDialog wait = new WaitForExecDialog(this, "Waiting for a Deferred Connect, at: "+SimpleDateFormat.getDateTimeInstance().format(startTime));
 	
 							// Create the Executor object
 							WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
@@ -6547,19 +6985,31 @@ if ( ! jdbcSshTunnelUse )
 				}
 			} // end: _showAseTuneOptions || _showDbxTuneOptionsInJdbc
 
-			// Update Connection Profile
-			if (TDS_CONN == connType)
+			// 
+			if (dbxDeferredConnect)
 			{
-				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
-			}
-			else if (JDBC_CONN == connType)
-			{
-				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
+				_logger.info("Since 'deferred connect' was enabled, I will skip saving the connection profile. If we did we might 'require a save question/popup' after the connection was made.");
 			}
 			else
 			{
-				// This could not happen but lets put it ion here if we change the code
-				throw new RuntimeException("Unknow connection type. connType="+connType);
+    			// Update Connection Profile
+    			if (TDS_CONN == connType)
+    			{
+    				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
+    				
+    				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_aseProfileType_cbx) : connProfile.getProfileTypeName();
+    			}
+    			else if (JDBC_CONN == connType)
+    			{
+    				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
+    
+    				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_jdbcProfileType_cbx) : connProfile.getProfileTypeName();
+    			}
+    			else
+    			{
+    				// This could not happen but lets put it ion here if we change the code
+    				throw new RuntimeException("Unknow connection type. connType="+connType);
+    			}
 			}
 
 
@@ -6581,6 +7031,9 @@ if ( ! jdbcSshTunnelUse )
 		{
 			try { dbProduct = getDatabaseProductName(); }
 			catch (SQLException ignore) {}
+
+			// Not sure if this is a "correct" place to do this, but lets do it for now (when we do disconnect, it "needs" to be cleared)
+			SqlUtils.setPrettyPrintDatabaseProductName(dbProduct);
 		}
 
 		// Get servername we connected to (if it's available, and implemented for that database product/type)
@@ -6709,7 +7162,6 @@ if ( ! jdbcSshTunnelUse )
 			jdbc._jdbcSqlInit            = _jdbcSqlInit_txt.getText();
 			jdbc._jdbcUrlOptions         = _jdbcUrlOptions_txt.getText(); // should the be in here???
 			jdbc._jdbcSavePassword       = _jdbcSavePassword_chk.isSelected();
-//			jdbc._jdbcShhTunnelInfo      = _jdbcSshTunnelInfo;            // NOT YET IMPLEMENTED
 			jdbc._jdbcShhTunnelUse       = _jdbcSshTunnel_chk.isSelected();
 			jdbc._jdbcShhTunnelInfo      = _jdbcSshTunnelInfo;
 
@@ -6769,8 +7221,8 @@ if ( ! jdbcSshTunnelUse )
 			entry._pcsWriterClass                    = StringUtil.getSelectedItemString(_pcsWriter_cbx);
 			entry._pcsWriterDriver                   = StringUtil.getSelectedItemString(_pcsJdbcDriver_cbx);
 			entry._pcsWriterUrl                      = StringUtil.getSelectedItemString(_pcsJdbcUrl_cbx);
-			entry._pcsWriterUsername                 = _pcsJdbcUsername_txt    .getText();
-			entry._pcsWriterPassword                 = _pcsJdbcPassword_txt    .getText();
+			entry._pcsWriterUsername                 = _pcsJdbcUsername_txt    .getText().trim();
+			entry._pcsWriterPassword                 = _pcsJdbcPassword_txt    .getText().trim();
 			entry._pcsWriterSavePassword             = _pcsJdbcSavePassword_chk.isSelected();
 			entry._pcsWriterStartH2asNwServer        = _pcsH2Option_startH2NetworkServer_chk      .isSelected();
 			entry._pcsWriterDdlLookup                = _pcsDdl_doDdlLookupAndStore_chk            .isSelected();
@@ -6782,6 +7234,9 @@ if ( ! jdbcSshTunnelUse )
 			entry._pcsWriterCapSql_doStatementInfo                   =                     _pcsCapSql_doStatementInfo_chk              .isSelected();
 			entry._pcsWriterCapSql_doPlanText                        =                     _pcsCapSql_doPlanText_chk                   .isSelected();
 			entry._pcsWriterCapSql_sleepTimeInMs                     = StringUtil.parseInt(_pcsCapSql_sleepTimeInMs_txt                .getText(), entry._pcsWriterCapSql_sleepTimeInMs);
+			entry._pcsWriterCapSql_saveStatement_gt_execTime         = StringUtil.parseInt(_pcsCapSql_saveStatement_execTime_txt       .getText(), entry._pcsWriterCapSql_saveStatement_gt_execTime     );
+			entry._pcsWriterCapSql_saveStatement_gt_logicalReads     = StringUtil.parseInt(_pcsCapSql_saveStatement_logicalRead_txt    .getText(), entry._pcsWriterCapSql_saveStatement_gt_logicalReads );
+			entry._pcsWriterCapSql_saveStatement_gt_physicalReads    = StringUtil.parseInt(_pcsCapSql_saveStatement_physicalRead_txt   .getText(), entry._pcsWriterCapSql_saveStatement_gt_physicalReads);
 			entry._pcsWriterCapSql_sendDdlForLookup                  =                     _pcsCapSql_sendDdlForLookup_chk             .isSelected();
 			entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime      = StringUtil.parseInt(_pcsCapSql_sendDdlForLookup_execTime_txt    .getText(), entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
 			entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = StringUtil.parseInt(_pcsCapSql_sendDdlForLookup_logicalRead_txt .getText(), entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
@@ -6841,6 +7296,9 @@ if ( ! jdbcSshTunnelUse )
 			_pcsCapSql_doStatementInfo_chk              .setSelected(entry._pcsWriterCapSql_doStatementInfo                  );
 			_pcsCapSql_doPlanText_chk                   .setSelected(entry._pcsWriterCapSql_doPlanText                       );
 			_pcsCapSql_sleepTimeInMs_txt                .setText(""+ entry._pcsWriterCapSql_sleepTimeInMs                    );
+			_pcsCapSql_saveStatement_execTime_txt       .setText(""+ entry._pcsWriterCapSql_saveStatement_gt_execTime        );
+			_pcsCapSql_saveStatement_logicalRead_txt    .setText(""+ entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
+			_pcsCapSql_saveStatement_physicalRead_txt   .setText(""+ entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
 			_pcsCapSql_sendDdlForLookup_chk             .setSelected(entry._pcsWriterCapSql_sendDdlForLookup                 );
 			_pcsCapSql_sendDdlForLookup_execTime_txt    .setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
 			_pcsCapSql_sendDdlForLookup_logicalRead_txt .setText(""+ entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
@@ -6956,7 +7414,6 @@ if ( ! jdbcSshTunnelUse )
 //				_jdbcUrlOptions_txt   .setText(        entry._jdbcUrlOptions);
 				setJdbcUrlOptions(entry._jdbcUrlOptions);
 				_jdbcSavePassword_chk .setSelected(    entry._jdbcSavePassword);
-//				_jdbcSshTunnelInfo = entry._jdbcShhTunnelInfo;            // NOT YET IMPLEMENTED
 				_jdbcSshTunnel_chk    .setSelected(    entry._jdbcShhTunnelUse);
 				_jdbcSshTunnelInfo    =                entry._jdbcShhTunnelInfo;
 
@@ -7060,7 +7517,6 @@ if ( ! jdbcSshTunnelUse )
 ////		_jdbcPassword_txt  .setText(jdbcPassword);
 ////		_jdbcSqlInit_txt   .setText(jdbcSqlInit);
 ////		_jdbcUrlOptions_txt.setText(jdbcUrlOptions);
-//////		_jdbcSshTunnelInfo;            // NOT YET IMPLEMENTED
 //	}
 
 	private void updateSshTunnelDescription()
@@ -7553,6 +8009,9 @@ if ( ! jdbcSshTunnelUse )
 			conf.setProperty        ("pcs.write.sqlCapture.doStatementInfo",                   _pcsCapSql_doStatementInfo_chk              .isSelected() );
 			conf.setProperty        ("pcs.write.sqlCapture.doPlanText",                        _pcsCapSql_doPlanText_chk                   .isSelected() );
 			conf.setProperty        ("pcs.write.sqlCapture.sleepTimeInMs",                     _pcsCapSql_sleepTimeInMs_txt                .getText() );
+			conf.setProperty        ("pcs.write.sqlCapture.saveStatement_gt_execTime",         _pcsCapSql_saveStatement_execTime_txt       .getText() );
+			conf.setProperty        ("pcs.write.sqlCapture.saveStatement_gt_logicalReads",     _pcsCapSql_saveStatement_logicalRead_txt    .getText() );
+			conf.setProperty        ("pcs.write.sqlCapture.saveStatement_gt_physicalReads",    _pcsCapSql_saveStatement_physicalRead_txt   .getText() );
 			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup",                  _pcsCapSql_sendDdlForLookup_chk             .isSelected() );
 			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup_gt_execTime",      _pcsCapSql_sendDdlForLookup_execTime_txt    .getText() );
 			conf.setProperty        ("pcs.write.sqlCapture.sendDdlForLookup_gt_logicalReads",  _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText() );
@@ -7814,11 +8273,16 @@ if ( ! jdbcSshTunnelUse )
 		_pcsCapSql_doStatementInfo_chk              .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.doStatementInfo",                   PersistentCounterHandler.DEFAULT_sqlCap_doStatementInfo                  ));
 		_pcsCapSql_doPlanText_chk                   .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.doPlanText",                        PersistentCounterHandler.DEFAULT_sqlCap_doPlanText                       ));
 		_pcsCapSql_sleepTimeInMs_txt                .setText    (conf.getProperty       ("pcs.write.sqlCapture.sleepTimeInMs",                     PersistentCounterHandler.DEFAULT_sqlCap_sleepTimeInMs                     + ""));
+		_pcsCapSql_saveStatement_execTime_txt       .setText    (conf.getProperty       ("pcs.write.sqlCapture.saveStatement_gt_execTime",         PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_execTime         + ""));
+		_pcsCapSql_saveStatement_logicalRead_txt    .setText    (conf.getProperty       ("pcs.write.sqlCapture.saveStatement_gt_logicalReads",     PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_logicalReads     + ""));
+		_pcsCapSql_saveStatement_physicalRead_txt   .setText    (conf.getProperty       ("pcs.write.sqlCapture.saveStatement_gt_physicalReads",    PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_gt_physicalReads    + ""));
 		_pcsCapSql_sendDdlForLookup_chk             .setSelected(conf.getBooleanProperty("pcs.write.sqlCapture.sendDdlForLookup",                  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup                 ));
 		_pcsCapSql_sendDdlForLookup_execTime_txt    .setText    (conf.getProperty       ("pcs.write.sqlCapture.sendDdlForLookup_gt_execTime",      PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_execTime      + ""));
 		_pcsCapSql_sendDdlForLookup_logicalRead_txt .setText    (conf.getProperty       ("pcs.write.sqlCapture.sendDdlForLookup_gt_logicalReads",  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads  + ""));
 		_pcsCapSql_sendDdlForLookup_physicalRead_txt.setText    (conf.getProperty       ("pcs.write.sqlCapture.sendDdlForLookup_gt_physicalReads", PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads + ""));
 
+		updateEnabledForPcsDdlLookupAndSqlCapture();
+		
 		//----------------------------------
 		// TAB: Offline
 		//----------------------------------
@@ -7872,7 +8336,8 @@ if ( ! jdbcSshTunnelUse )
 		bol = conf.getBooleanProperty(PROPKEY_CONN_SSH_TUNNEL, DEFAULT_CONN_SSH_TUNNEL);
 		_jdbcSshTunnel_chk.setSelected(bol);
 
-		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH, DEFAULT_CONN_SQLSERVER_WIN_AUTH)); 
+//		_jdbcSqlServerUseWindowsAuthentication_chk.setSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH, DEFAULT_CONN_SQLSERVER_WIN_AUTH)); 
+		setSqlServerUseWindowsAuthenticationSelected(conf.getBooleanProperty(PROPKEY_CONN_SQLSERVER_WIN_AUTH, DEFAULT_CONN_SQLSERVER_WIN_AUTH));
 
 
 		//----------------------------------
@@ -9125,20 +9590,20 @@ if ( ! jdbcSshTunnelUse )
 			refresh();
 		}
 
-		@SuppressWarnings("rawtypes")
+		@SuppressWarnings("unchecked")
 		public void refresh()
 		{
 			// NOTE: the save and restore wont work if there are more than 1 listener
 			// NOTE: this is a ugly hack, redo this with our own implementation of JComboBox instead
 			String currentSelected = null;
-			JComboBox cbxOwner = null;
+			JComboBox<String> cbxOwner = null;
 			ListDataListener[] la = getListDataListeners();
 			for (int i=0; i<la.length; i++)
 			{
 				if (la[i] instanceof JComboBox)
 				{
-					_logger.debug("refresh("+_type+"): "+ StringUtil.getSelectedItemString( ((JComboBox)la[i]) ) );
-					cbxOwner = (JComboBox)la[i];
+					_logger.debug("refresh("+_type+"): "+ StringUtil.getSelectedItemString( ((JComboBox<String>)la[i]) ) );
+					cbxOwner = (JComboBox<String>)la[i];
 					currentSelected = notSelectedValueToNull(StringUtil.getSelectedItemString(cbxOwner));
 				}
 			}
@@ -9171,6 +9636,18 @@ if ( ! jdbcSshTunnelUse )
 		{
 			super();
 			refresh();
+		}
+
+		public static String getSelectedProfileTypeName(JComboBox<ProfileType> cbx)
+		{
+			ProfileType profileType = (ProfileType) cbx.getSelectedItem();
+			if (profileType == null)
+				return null;
+			if (NO_PROFILE_TYPE_IS_SELECTED.equals(profileType))
+				return null;
+			if (EDIT_PROFILE_TYPE_IS_SELECTED.equals(profileType))
+				return null;
+			return profileType.getName();
 		}
 
 		@SuppressWarnings("rawtypes")
@@ -9238,7 +9715,7 @@ if ( ! jdbcSshTunnelUse )
 
 
 
-	public ProfileType getSelectedConnectionProfileType(int connType)
+	private ProfileType getSelectedConnectionProfileType(int connType)
 	{
 		JComboBox<ProfileType> cbx;
 		cbx = _aseProfileType_cbx;
@@ -9260,7 +9737,7 @@ if ( ! jdbcSshTunnelUse )
 		return profileType;
 	}
 	
-	public String getSelectedConnectionProfileTypeName(int connType)
+	private String getSelectedConnectionProfileTypeName(int connType)
 	{
 		ProfileType profileType = getSelectedConnectionProfileType(connType);
 		if (profileType == null)
@@ -9269,17 +9746,23 @@ if ( ! jdbcSshTunnelUse )
 		return profileType.getName();
 	}
 
+	/** Get the connection profile type NAME that was used when connecting. If none was selected null will be returned */
+	public String getConnectionProfileTypeName()
+	{
+		return _usedConnectionProfileTypeName;
+	}
+
 	//--------------------------------------------------
 	// TEST-CODE
 	//--------------------------------------------------
 	public static void main(String[] args)
 	{
-		final String CONFIG_FILE_NAME     = System.getProperty("CONFIG_FILE_NAME",     "asetune.properties");
+		final String CONFIG_FILE_NAME     = System.getProperty("CONFIG_FILE_NAME",     "dbxtune.properties");
 		final String TMP_CONFIG_FILE_NAME = System.getProperty("TMP_CONFIG_FILE_NAME", "asetune.save.properties");
 		final String ASETUNE_HOME         = System.getProperty("ASETUNE_HOME");
 		
-		String defaultPropsFile    = (ASETUNE_HOME          != null) ? ASETUNE_HOME          + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
-		String defaultTmpPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile    = (ASETUNE_HOME             != null) ? ASETUNE_HOME             + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
+		String defaultTmpPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

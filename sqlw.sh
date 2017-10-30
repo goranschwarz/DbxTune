@@ -51,7 +51,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.3.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/sqljdbc4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.193.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.194.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-4.2.jar
@@ -61,7 +61,8 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/planviewer.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-lang3-3.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-io-2.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-csv-1.2.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.3.1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-codec-1.10.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-build251beta1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea.jar
@@ -75,6 +76,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/EccpressoFIPS.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/EccpressoFIPSJca.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsqlparser-0.9.6.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/bcprov-jdk15on-157.jar
 
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.6.jar
 

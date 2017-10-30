@@ -89,7 +89,7 @@ public abstract class CheckForUpdates
 	
 	private boolean _sendConnectInfo      = true;
 	private boolean _sendMdaInfo          = true;
-	private int     _sendMdaInfoBatchSize = 20;
+	private int     _sendMdaInfoBatchSize = 10;
 	private boolean _sendUdcInfo          = true;
 	private boolean _sendCounterUsageInfo = true;
 	private boolean _sendLogInfoWarning   = false;
@@ -1648,7 +1648,7 @@ public abstract class CheckForUpdates
 //		Configuration conf1 = new Configuration("c:\\projects\\asetune\\asetune.save.properties");
 //		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 //
-//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
+//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 //
 ////		System.setProperty("java.net.useSystemProxies", "true");

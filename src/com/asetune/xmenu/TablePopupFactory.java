@@ -13,6 +13,7 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Set;
 
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JTable;
@@ -46,10 +47,15 @@ public class TablePopupFactory
 		Component invoker = null;
 		JPopupMenu popmenu = null; 
 		for (Component c = mi.getParent(); c!=null; c=c.getParent())
+		{
 			if (c instanceof JPopupMenu)
 				popmenu = (JPopupMenu) c;
+		}
 		if (popmenu != null)
 			invoker = popmenu.getInvoker();
+
+		if (invoker != null && invoker instanceof JMenu)
+			invoker = getPopupMenuInvoker((JMenuItem)invoker);
 
 		return invoker;
 	}

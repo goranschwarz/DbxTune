@@ -1,0 +1,20 @@
+package asetune;
+
+import com.asetune.alarm.IUserDefinedAlarmInterrogator;
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.CounterSample;
+
+public class GenericFallbackAlarmInterrogator
+implements IUserDefinedAlarmInterrogator
+{
+	public void interrogateCounterData(CountersModel cm)
+	{
+		System.out.println(">>>> ----------------------------------------------");
+		System.out.println("     GenericFallbackAlarmInterrogator: interrogateCounterData(cm) was called.");
+		if (cm != null)
+		{
+			System.out.println("     GenericFallbackAlarmInterrogator: cmName = '" + cm.getName() + "'. absRowCount = " + cm.getAbsRowCount() + " --->> cm="+cm);
+		}
+		System.out.println("<<<< ----------------------------------------------");
+	}
+}

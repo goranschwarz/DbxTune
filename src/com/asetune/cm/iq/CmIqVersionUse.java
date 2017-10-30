@@ -143,7 +143,7 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-//		pkCols.add("IQConnID");
+		pkCols.add("IQConnID");
 		pkCols.add("VersionID");
 
 		return pkCols;

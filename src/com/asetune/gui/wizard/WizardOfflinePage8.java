@@ -7,35 +7,37 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.util.Map;
 
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
 
+import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
+import org.netbeans.spi.wizard.WizardPanelNavResult;
 
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.ui.config.AlarmWritersPanel;
 import com.asetune.gui.swing.MultiLineLabel;
-import com.asetune.utils.StringUtil;
 
 import net.miginfocom.swing.MigLayout;
 
 
 public class WizardOfflinePage8
 extends WizardPage
-implements ActionListener
+implements ActionListener, PropertyChangeListener
 {
     private static final long serialVersionUID = 1L;
-	private static final String WIZ_NAME = "filename";
-	private static final String WIZ_DESC = "Filename";
-	private static final String WIZ_HELP = "A filename where this information should be stored to.";
+	private static final String WIZ_NAME = "alarmWriters";
+	private static final String WIZ_DESC = "Alarm Writers";
+	private static final String WIZ_HELP = "Generated Alarms Should be sent somewhere, this is the setup for that.";
 
-	private JTextField _storeFile = new JTextField("");
-	private JCheckBox  _previewFile = new JCheckBox("Preview the output file when closing the wizard", true);
+	private JCheckBox  _enableAlarmHandling_chk = new JCheckBox("Enable Alarm Handling", true);
 
+	private AlarmWritersPanel _alarmWritersPanel;
+	
+	
 	public static String getDescription() { return WIZ_DESC; }
 	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
@@ -46,24 +48,39 @@ implements ActionListener
 
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
 
+		_alarmWritersPanel = new AlarmWritersPanel();
+
+		_enableAlarmHandling_chk.setName("to-be-discarded.enableAlarmHandling");
+
+
 		// Add a helptext
 		add( new MultiLineLabel(WIZ_HELP), WizardOffline.MigLayoutHelpConstraints );
+		add(_enableAlarmHandling_chk, "span, wrap 20");
+		add(_alarmWritersPanel, "span, grow, push, wrap");
+		
+		_alarmWritersPanel.setVisible(false);
 
-		_storeFile.setName("storeFile");
+		_alarmWritersPanel.addPropertyChangeListener(this);
 
-		add(new JLabel("Filename"));
-		add(_storeFile, "growx");
-		JButton button = new JButton("...");
-		button.addActionListener(this);
-		button.putClientProperty("NAME", "BUTTON_STORE_FILE");
-		add(button, "wrap");
-
-		add(_previewFile, "span, wrap");
-
-//		add(new JLabel("Filename 23"));
-//		add(new JTextField(), "growx");
-//		add(new JButton(",,,"), "wrap");
 		initData();
+	}
+	@Override
+	public void propertyChange(PropertyChangeEvent evt)
+	{
+//		System.out.println("propertyChange(): evt="+evt);
+
+		if ( evt.getPropertyName().startsWith("tableChanged") )
+		{
+//			System.out.println("propertyChange(): call: userInputReceived(null, null)");
+
+			// Just to kick off validateContents()...
+			userInputReceived(null, null); // Just to kick off validateContents()... 
+			// but the above did not work; so use setProblem() instead
+			if (_enableAlarmHandling_chk.isSelected())
+			{
+				setProblem(_alarmWritersPanel.getProblem());
+			}
+		}
 	}
 
 	private void initData()
@@ -71,59 +88,75 @@ implements ActionListener
 	}
 
 	@Override
+	public void actionPerformed(ActionEvent ae)
+	{
+	}
+
+	@Override
 	protected String validateContents(Component comp, Object event)
 	{
+//System.out.println("PAGE-8 ------------------------- validateContents() comp=|"+comp+"|, event=|"+event+"|.");
 //		String name = null;
 //		if (comp != null)
 //			name = comp.getName();
 
 		//System.out.println("validateContents: name='"+name+"',\n\ttoString='"+comp+"'\n\tcomp='"+comp+"',\n\tevent='"+event+"'.");
 
-		String problem = "";
-		if ( _storeFile.getText().trim().length() <= 0) problem += "Filename, ";
-
-		putWizardData("to-be-discarded.previewFile", _previewFile.isSelected()+"");
-
-		if (problem.length() > 0)
-		{
-			// Discard last ', '
-			problem = problem.substring(0, problem.length()-2);
-		}
+		boolean isAlarmHandlingEnabled = _enableAlarmHandling_chk.isSelected();
+		_alarmWritersPanel.setVisible(isAlarmHandlingEnabled);
 		
-		return problem.length() == 0 ? null : "Following fields cant be empty: "+problem;
+		putWizardData("to-be-discarded.enableAlarmHandling", isAlarmHandlingEnabled+""); // Note: STRING
+		putWizardData(AlarmHandler.PROPKEY_enable,           isAlarmHandlingEnabled+""); // Note: STRING
+
+		if ( isAlarmHandlingEnabled )
+		{
+			String problem = _alarmWritersPanel.getProblem();
+			if (problem != null)
+			{
+				return problem;
+			}
+//System.out.println("_alarmWritersPanel.getConfig().toString(): "+ _alarmWritersPanel.getConfig());
+			putWizardData("to-be-discarded.alarmWritersPanelConfig", _alarmWritersPanel.getConfig());
+		}
+
+		return null;
 	}
 
-	@Override
-	public void actionPerformed(ActionEvent ae)
+	@SuppressWarnings("unchecked")
+	private void saveWizardData()
 	{
-		JComponent src = (JComponent) ae.getSource();
-		String name = (String)src.getClientProperty("NAME");
-		if (name == null)
-			name = "-null-";
+		boolean isAlarmHandlingEnabled = _enableAlarmHandling_chk.isSelected();
 
-//		System.out.println("Source("+name+"): " + src);
-
-		if (name.equals("BUTTON_STORE_FILE"))
+		if (isAlarmHandlingEnabled)
 		{
-//			String envNameSaveDir    = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
-			String envNameSaveDir    = "DBXTUNE_SAVE_DIR";
-			String envNameSaveDirVal = StringUtil.getEnvVariableValue(envNameSaveDir);
+			Map<String, Object> wizData = getWizardDataMap();
 
-			JFileChooser fc = new JFileChooser();
-			if (envNameSaveDirVal != null)
-				fc.setCurrentDirectory(new File(envNameSaveDirVal));
-
-			int returnVal = fc.showOpenDialog(null);
-			if (returnVal == JFileChooser.APPROVE_OPTION) 
-	        {
-				File file = fc.getSelectedFile();
-
-				//This is where a real application would open the file.
-				String filename = file.getAbsolutePath();
-				//System.out.println("Opening '" + filename + "'.");
-
-				_storeFile.setText( filename );
-	        }
+//System.out.println("WRITERS-CONFIG: "+ _alarmWritersPanel.getConfig());
+			wizData.put("to-be-discarded.alarmWritersPanelConfig", _alarmWritersPanel.getConfig());
 		}
+		else
+		{
+			Map<String, Object> wizData = getWizardDataMap();
+
+			wizData.remove("to-be-discarded.alarmWritersPanelConfig");
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public WizardPanelNavResult allowBack(String stepName, Map settings, Wizard wizard)
+    {
+//System.out.println("Page-8------: allowBack()");
+		saveWizardData();
+		return WizardPanelNavResult.PROCEED;
+    }
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public WizardPanelNavResult allowNext(String stepName, Map settings, Wizard wizard)
+	{
+//System.out.println("Page-8------: allowNext()");
+		saveWizardData();
+		return WizardPanelNavResult.PROCEED;
 	}
 }

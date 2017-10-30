@@ -79,7 +79,7 @@ implements ActionListener
 
 	
 	JXMultiSplitPane _multiSplitPane = new JXMultiSplitPane(); 
-	String _splitPaneLayoutFilename = Version.APP_STORE_DIR + "/perfDemo.layout.save.xml";
+	String _splitPaneLayoutFilename = Version.getAppStoreDir() + "/perfDemo.layout.save.xml";
 
 	// JDBC PANEL
 	private JComboBox<String>   _aseName	    = new JComboBox<String>();
@@ -955,7 +955,7 @@ implements ActionListener
 //			_logger.debug("Try getConnection to " + host + ":" + port + " user=" + user);
 //			Connection conn = DriverManager.getConnection(startOfConnUrl + host + ":" + port, props);
 
-			Connection aseConn = AseConnectionFactory.getConnection(host, port, dbname, user, passwd, appname, "", null);
+			Connection aseConn = AseConnectionFactory.getConnection(host, port, dbname, user, passwd, appname, null, "", null);
 			DbxConnection conn = new AseConnection(aseConn);
 
 			if (conn instanceof SybConnection)
@@ -1682,7 +1682,7 @@ implements ActionListener
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
+//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.CONF, conf2);
 
 		PerfDemo perfDemo = new PerfDemo("perfdemo");

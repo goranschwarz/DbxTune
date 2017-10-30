@@ -1,14 +1,17 @@
 package com.asetune.cm.ase;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmLocksPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -110,7 +113,7 @@ extends CountersModel
 	{
 		String[] labelsLockCount  = new String[] { "Lock Count" };
 		
-		addTrendGraphData(GRAPH_NAME_LOCK_COUNT, new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT, labelsLockCount));
+		addTrendGraphData(GRAPH_NAME_LOCK_COUNT, new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT, labelsLockCount, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -119,7 +122,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
 				"Lock Count", 	                           // Menu CheckBox text
-				"Number of Current Locks Held in the Server", // Label 
+				"Number of Current Locks Held in the Server ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labelsLockCount, 
 				false, // is Percent Graph
 				this, 
@@ -141,29 +144,14 @@ extends CountersModel
 	
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getProperty(PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
-	}
+		list.add(new CmSettingsHelper("Extra Where Clause", PROPKEY_sample_extraWhereClause , String.class, conf.getProperty(PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmLocksPanel.TOOLTIP_sample_extraWhereClause ));
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmLocksPanel.TOOLTIP_sample_extraWhereClause;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
-
-		return "";
+		return list;
 	}
 
 
@@ -223,7 +211,7 @@ extends CountersModel
 		
 		String sql =
 			"select " + cols1 + cols2 + cols3 + "\n" +
-			"from monLocks L \n" +
+			"from master..monLocks L \n" +
 			"where 1 = 1 \n" +
 			sql_sample_extraWhereClause;
 
@@ -241,8 +229,7 @@ extends CountersModel
 			arr[0] = new Double( this.getCounterDataAbs().getRowCount() );
 			
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 }

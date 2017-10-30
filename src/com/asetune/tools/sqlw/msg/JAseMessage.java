@@ -19,6 +19,7 @@ import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.swing.RXTextUtilities;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.ColorUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -28,6 +29,9 @@ extends JTextArea
 	private static final long serialVersionUID = 1L;
 
 	public static final String FOCUSABLE_TIPS_PROPERTY				= "RSTA.focusableTips";
+
+	public static final String  PROPKEY_showToolTip = "AseMessage.tooltip.show";
+	public static final boolean DEFAULT_showToolTip = true;
 
 	/** Whether "focusable" tool tips are used instead of standard ones. */
 	private boolean _useFocusableTips = true;
@@ -178,6 +182,10 @@ extends JTextArea
 		if (StringUtil.isNullOrBlank(_originSql))
 			return null;
 
+		boolean showToolTip = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showToolTip, DEFAULT_showToolTip);
+		if (StringUtil.isNullOrBlank(_objectText) && showToolTip == false)
+			return null;
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("<html>");
 		sb.append("<pre>");

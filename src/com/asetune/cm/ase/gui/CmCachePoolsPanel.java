@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -34,6 +35,11 @@ extends TabularCntrPanel
 			+ "Set number of seconds the <i>slide window time</i> will keep <code>PagesRead</code> for.<br>"
 			+ "This will affect the columns 'CacheReplacementSlidePct', 'CacheSlideTime', 'PagesReadInSlide', 'CacheEfficiencySlide'.<br>"
 			+ "<b>tip:</b> '10m' is 10 minutes, '2h' is 2 hours<br>"
+			+ "</html>";
+		
+	public static final String  TOOLTIP_onZeroLogicalReads = 
+			"<html>"
+			+ "When LogicalReads is Zero, set CacheHitRate to 100% instead of 0%.<br>"
 			+ "</html>";
 		
 	public CmCachePoolsPanel(CountersModel cm)
@@ -66,6 +72,8 @@ extends TabularCntrPanel
 	private JLabel     _slideWindowTime_lbl;
 	private JTextField _slideWindowTime_txt;
 
+	private JCheckBox  _onZeroLogicalReads_chk;
+
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
@@ -73,7 +81,8 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 		Configuration conf = Configuration.getCombinedConfiguration();
-		int defaultIntOpt;
+		int     defaultIntOpt;
+		boolean defaultBoolOpt;
 
 		//-----------------------------------------
 		// Slide Time
@@ -85,6 +94,12 @@ extends TabularCntrPanel
 		_slideWindowTime_txt.setName(CmCachePools.PROPKEY_CacheSlideTimeInSec);
 		_slideWindowTime_txt.setToolTipText(TOOLTIP_slideWindowTime);
 		_slideWindowTime_lbl.setToolTipText(TOOLTIP_slideWindowTime);
+
+		defaultBoolOpt = conf == null ? CmCachePools.DEFAULT_CacheHitRateTo100PctOnZeroReads : conf.getBooleanProperty(CmCachePools.PROPKEY_CacheHitRateTo100PctOnZeroReads, CmCachePools.DEFAULT_CacheHitRateTo100PctOnZeroReads);
+		_onZeroLogicalReads_chk = new JCheckBox("set CacheHitRate to 100% when LogicalReads is 0", defaultBoolOpt);
+
+		_onZeroLogicalReads_chk.setName(CmCachePools.PROPKEY_CacheHitRateTo100PctOnZeroReads);
+		_onZeroLogicalReads_chk.setToolTipText(TOOLTIP_onZeroLogicalReads);
 
 		final ActionListener slideWindowTime_action = new ActionListener()
 		{
@@ -122,11 +137,29 @@ extends TabularCntrPanel
 			@Override public void focusGained(FocusEvent e) {}
 		});
 		
+		
+		_onZeroLogicalReads_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+
+				conf.setProperty(CmCachePools.PROPKEY_CacheHitRateTo100PctOnZeroReads, _onZeroLogicalReads_chk.isSelected());
+				conf.save();
+			}
+		});
+
+		
 		//-----------------------------------------
 		// LAYOUT
 		//-----------------------------------------
 		panel.add(_slideWindowTime_lbl, "split");
 		panel.add(_slideWindowTime_txt, "wrap");
+
+		panel.add(_onZeroLogicalReads_chk, "wrap");
 
 		return panel;
 	}

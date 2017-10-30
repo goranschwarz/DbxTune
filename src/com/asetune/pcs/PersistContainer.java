@@ -54,6 +54,12 @@ public class PersistContainer
 		public HeaderInfo()
 		{
 		}
+		
+		public Timestamp getMainSampleTime()   { return _mainSampleTime; }
+		public String    getServerName()       { return _serverName; }
+		public String    getOnHostname()       { return _onHostname; }
+		public Timestamp getCounterClearTime() { return _counterClearTime; }
+
 
 		public HeaderInfo(Timestamp mainSampleTime, String serverName, String onHostname, Timestamp counterClearTime)
 		{

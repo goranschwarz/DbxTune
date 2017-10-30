@@ -1,6 +1,7 @@
 package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -129,32 +131,17 @@ extends CountersModel
 	
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Sample System Threads", PROPKEY_sample_systemThreads , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads  , DEFAULT_sample_systemThreads  ), DEFAULT_sample_systemThreads, CmWhoPanel.TOOLTIP_sample_systemThreads ));
 
-		lc.setProperty(PROPKEY_sample_systemThreads,  conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads));
-
-		return lc;
+		return list;
 	}
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_systemThreads)) return CmWhoPanel.TOOLTIP_sample_systemThreads;
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_systemThreads)) return Boolean.class.getSimpleName();
-		return "";
-	}
 
-	
-	
 	private void addTrendGraphs()
 	{
 	}
@@ -177,6 +164,7 @@ extends CountersModel
 		List <String> pkCols = new LinkedList<String>();
 
 		pkCols.add("spid");
+		pkCols.add("kpid");
 
 		return pkCols;
 	}
@@ -215,7 +203,8 @@ extends CountersModel
 			"	memusage, \n" +
 			"	login_time, \n" +
 			"	last_batch, \n" +
-			"	last_batch_ss = datediff(ss, last_batch, getdate()), \n" +
+//			"	last_batch_ss = datediff(ss, last_batch, getdate()), \n" +
+			"	last_batch_ss = CASE WHEN datediff(day, last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ss, last_batch, getdate()) END, \n" +
 			"	hostname, \n" +
 			"	program_name, \n" +
 			"	hostprocess, \n" +

@@ -14,6 +14,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -151,8 +152,8 @@ extends CountersModel
 		String[] labelsPerSec  = new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" };
 		String[] labelsHitRate = new String[] { "Hit rate percent" };
 		
-		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec));
-		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate));
+		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec,  LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -161,7 +162,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 				"Statement Cache Requests", 	                           // Menu CheckBox text
-				"Number of Requests from the Statement Cache, per Second", // Label 
+				"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labelsPerSec, 
 				false, // is Percent Graph
 				this, 
@@ -173,7 +174,7 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_HIT_RATE_PCT,
 				"Statement Cache Hit Rate", 	                           // Menu CheckBox text
-				"Statement Cache Hit Rate, in Percent",                    // Label 
+				"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
 				labelsHitRate, 
 				true, // is Percent Graph
 				this, 
@@ -371,8 +372,9 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): NumSearches='"+arr[0]+"', HitCount='"+arr[1]+"', NumInserts='"+arr[2]+"', NumRemovals='"+arr[3]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 
 		if (GRAPH_NAME_HIT_RATE_PCT.equals(tgdp.getName()))
@@ -385,8 +387,9 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): CacheHitPct='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 	}
 }

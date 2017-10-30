@@ -61,9 +61,25 @@ rem set JAVA_HOME=C:\Program Files\Java\jdk1.6.0_07
 
 
 rem ------------------------------------------------------------------------
+rem --- get JVM Parameters from file: 
+rem ------------------------------------------------------------------------
+set SQLW_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.asetune\.sqlw_jvm_settings.properties
+if exist %SQLW_JVM_PARAMETER_FILE% (
+	echo Reading SQLW_JVM_PARAMETER_FILE: %SQLW_JVM_PARAMETER_FILE%
+	setlocal disabledelayedexpansion
+	FOR /F "tokens=1* delims==" %%i IN (%SQLW_JVM_PARAMETER_FILE%) DO (
+		echo     Found parameter '%%i' which is set to '%%j'
+		set "%%i=%%j"
+	)
+) else (
+	echo The SQLW_JVM_PARAMETER_FILE: %SQLW_JVM_PARAMETER_FILE% did NOT EXIST
+)
+
+
+rem ------------------------------------------------------------------------
 rem --- set JVM MEMORY parameters
 rem ------------------------------------------------------------------------
-echo NOTE: Set/Change JVM Memory parameters by setting Environment variable: SQLW_JVM_MEMORY_PARAMS 
+echo NOTE: Set/Change JVM Memory parameters by setting Environment variable: SQLW_JVM_MEMORY_PARAMS which may be stored in %DBXTUNE_JVM_PARAMETER_FILE%
 
 set JVM_MEMORY_PARAMS_32=-Xmx1024m -Xms64m
 set JVM_MEMORY_PARAMS_64=-Xmx2048m -Xms64m
@@ -124,7 +140,7 @@ rem set classpath=%classpath%;%SQLW_HOME%\lib\sqljdbc4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\postgresql-9.4.1209.jre7.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.4.193.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.4.194.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\wizard.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-core-4.2.jar
@@ -134,7 +150,8 @@ set classpath=%classpath%;%SQLW_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-lang3-3.4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-io-2.4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-csv-1.2.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.3.1.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.4.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-codec-1.10.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\proxy-vole_20131209.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\rsyntaxtextarea.jar
@@ -148,6 +165,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\EccpressoFIPS.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\EccpressoFIPSJca.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\simplemagic-1.6.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jsqlparser-0.9.6.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\gson-2.8.0.jar
 
 rem set classpath=%classpath%;%SQLW_HOME%\lib\SybaseParser_0.5.1.121_alpha.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ngdbc.jar
@@ -167,6 +185,13 @@ rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
 set PATH=%SQLW_JAVA_HOME%\bin;%DBXTUNE_JAVA_HOME%\bin;%JAVA_HOME%\bin;%PATH% 	
+
+
+rem ------------------------------------------------------------------------
+rem --- Just for informational purposes, print out the Java Version we are using
+rem ------------------------------------------------------------------------
+java -version
+
 
 
 rem ------------------------------------------------------------------------

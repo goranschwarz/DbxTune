@@ -9,6 +9,7 @@ import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
+import java.util.List;
 import java.util.Vector;
 
 import javax.swing.Icon;
@@ -24,9 +25,10 @@ import org.jdesktop.swingx.JXTable;
 import org.netbeans.spi.wizard.WizardPage;
 
 import com.asetune.CounterController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CountersModel;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.MultiLineLabel;
-import com.asetune.utils.Configuration;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -44,14 +46,17 @@ implements ActionListener, TableModelListener
 	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
-	private static final String[] TAB_HEADER = {"Icon", "Performance Counter", "Local Option", "Data Type", "Value", "StringValue", "Description"};
-	private static final int TAB_POS_ICON             = 0;
-	private static final int TAB_POS_TAB_NAME         = 1;
-	private static final int TAB_POS_OPTION           = 2;
-	private static final int TAB_POS_OPTION_DTYPE     = 3;
-	private static final int TAB_POS_OPTION_BOL_VALUE = 4;
-	private static final int TAB_POS_OPTION_STR_VALUE = 5;
-	private static final int TAB_POS_OPTION_DESC      = 6;
+	private static final String[] TAB_HEADER = {"Icon", "Performance Counter", "Name", "Local Option", "Data Type", "Value", "StringValue", "isDefault", "Default", "Description"};
+	private static final int TAB_POS_ICON                 = 0;
+	private static final int TAB_POS_TAB_NAME             = 1;
+	private static final int TAB_POS_NAME                 = 2;
+	private static final int TAB_POS_OPTION               = 3;
+	private static final int TAB_POS_OPTION_DTYPE         = 4;
+	private static final int TAB_POS_OPTION_BOL_VALUE     = 5;
+	private static final int TAB_POS_OPTION_STR_VALUE     = 6;
+	private static final int TAB_POS_OPTION_IS_DEFAULT    = 7;
+	private static final int TAB_POS_OPTION_DEFAULT_VALUE = 8;
+	private static final int TAB_POS_OPTION_DESC          = 9;
 
 //	private static final Color TAB_DISABLED_COL_BG = new Color(240, 240, 240);
 
@@ -115,13 +120,16 @@ implements ActionListener, TableModelListener
 		// Create a TABLE
 		Vector<String> tabHead = new Vector<String>();
 		tabHead.setSize(TAB_HEADER.length);
-		tabHead.set(TAB_POS_ICON,             TAB_HEADER[TAB_POS_ICON]);
-		tabHead.set(TAB_POS_TAB_NAME,         TAB_HEADER[TAB_POS_TAB_NAME]);
-		tabHead.set(TAB_POS_OPTION,           TAB_HEADER[TAB_POS_OPTION]);
-		tabHead.set(TAB_POS_OPTION_DTYPE,     TAB_HEADER[TAB_POS_OPTION_DTYPE]);
-		tabHead.set(TAB_POS_OPTION_BOL_VALUE, TAB_HEADER[TAB_POS_OPTION_BOL_VALUE]);
-		tabHead.set(TAB_POS_OPTION_STR_VALUE, TAB_HEADER[TAB_POS_OPTION_STR_VALUE]);
-		tabHead.set(TAB_POS_OPTION_DESC,      TAB_HEADER[TAB_POS_OPTION_DESC]);
+		tabHead.set(TAB_POS_ICON,                 TAB_HEADER[TAB_POS_ICON]);
+		tabHead.set(TAB_POS_TAB_NAME,             TAB_HEADER[TAB_POS_TAB_NAME]);
+		tabHead.set(TAB_POS_NAME,                 TAB_HEADER[TAB_POS_NAME]);
+		tabHead.set(TAB_POS_OPTION,               TAB_HEADER[TAB_POS_OPTION]);
+		tabHead.set(TAB_POS_OPTION_DTYPE,         TAB_HEADER[TAB_POS_OPTION_DTYPE]);
+		tabHead.set(TAB_POS_OPTION_BOL_VALUE,     TAB_HEADER[TAB_POS_OPTION_BOL_VALUE]);
+		tabHead.set(TAB_POS_OPTION_STR_VALUE,     TAB_HEADER[TAB_POS_OPTION_STR_VALUE]);
+		tabHead.set(TAB_POS_OPTION_IS_DEFAULT,    TAB_HEADER[TAB_POS_OPTION_IS_DEFAULT]);
+		tabHead.set(TAB_POS_OPTION_DEFAULT_VALUE, TAB_HEADER[TAB_POS_OPTION_DEFAULT_VALUE]);
+		tabHead.set(TAB_POS_OPTION_DESC,          TAB_HEADER[TAB_POS_OPTION_DESC]);
 
 		Vector<Vector<Object>> tabData = populateTable();
 
@@ -132,8 +140,9 @@ implements ActionListener, TableModelListener
 			@Override
 			public Class<?> getColumnClass(int column) 
 			{
-				if (column == TAB_POS_ICON)             return Icon.class;
-				if (column == TAB_POS_OPTION_BOL_VALUE) return Boolean.class;
+				if (column == TAB_POS_ICON)              return Icon.class;
+				if (column == TAB_POS_OPTION_BOL_VALUE)  return Boolean.class;
+				if (column == TAB_POS_OPTION_IS_DEFAULT) return Boolean.class;
 				return Object.class;
 			}
 
@@ -163,7 +172,12 @@ implements ActionListener, TableModelListener
 		JScrollPane jScrollPane = new JScrollPane();
 		jScrollPane.setViewportView(_optionsTable);
 
-		add(jScrollPane, "span, grow, height 100%, wrap");
+		GTableFilter filter = new GTableFilter(_optionsTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
+		filter.setFilterChkboxSelected(false);
+		filter.setText("where isDefault = 'false'");
+		
+		add(filter,      "span, growx, wrap");
+		add(jScrollPane, "span, grow,  height 100%, wrap");
 	}
 
 	private Vector<Vector<Object>> populateTable()
@@ -178,30 +192,24 @@ implements ActionListener, TableModelListener
 			{
 				if (cm != null)
 				{
-					Configuration conf = cm.getLocalConfiguration();
-					if (conf != null)
+					List<CmSettingsHelper> list = cm.getLocalSettings();
+					if (list != null)
 					{
-//						for (Entry<Object, Object> entry : conf.entrySet()) 
-//						{
-//							String key      = (String)entry.getKey();
-//							String val      = (String)entry.getValue();
-						for (Object keyObj : conf.keySet()) 
+						for (CmSettingsHelper cmsh : list) 
 						{
-							String key      = keyObj + "";
-							String val      = conf.getProperty(key);
-							String desc     = cm.getLocalConfigurationDescription(key);
-							String dataType = cm.getLocalConfigurationDataType(key);
-
 							row = new Vector<Object>();
 							row.setSize(TAB_HEADER.length);
 
-							row.set(TAB_POS_ICON,             cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
-							row.set(TAB_POS_TAB_NAME,         cm.getDisplayName());
-							row.set(TAB_POS_OPTION,           key);
-							row.set(TAB_POS_OPTION_DTYPE,     dataType);
-							row.set(TAB_POS_OPTION_BOL_VALUE, "Boolean".equals(dataType) ? new Boolean(val) : new Boolean(false));
-							row.set(TAB_POS_OPTION_STR_VALUE, val);
-							row.set(TAB_POS_OPTION_DESC,      desc);
+							row.set(TAB_POS_ICON,                 cm.getTabPanel() == null ? null : cm.getTabPanel().getIcon());
+							row.set(TAB_POS_TAB_NAME,             cm.getDisplayName());
+							row.set(TAB_POS_NAME,                 cmsh.getName());
+							row.set(TAB_POS_OPTION,               cmsh.getPropName());
+							row.set(TAB_POS_OPTION_DTYPE,         cmsh.getDataTypeString());
+							row.set(TAB_POS_OPTION_BOL_VALUE,     "Boolean".equals(cmsh.getDataTypeString()) ? new Boolean(cmsh.getStringValue()) : new Boolean(false));
+							row.set(TAB_POS_OPTION_STR_VALUE,     cmsh.getStringValue());
+							row.set(TAB_POS_OPTION_IS_DEFAULT,    cmsh.isDefaultValue());
+							row.set(TAB_POS_OPTION_DEFAULT_VALUE, cmsh.getDefaultValue());
+							row.set(TAB_POS_OPTION_DESC,          cmsh.getDescription());
 
 							tab.add(row);
 						}
@@ -230,8 +238,18 @@ implements ActionListener, TableModelListener
 			String  option        = (String)  tm.getValueAt(r, TAB_POS_OPTION);
 			Boolean optionBolVal  = (Boolean) tm.getValueAt(r, TAB_POS_OPTION_BOL_VALUE);
 			String  optionStrVal  = (String)  tm.getValueAt(r, TAB_POS_OPTION_STR_VALUE);
+			String  optionDefVal  = (String)  tm.getValueAt(r, TAB_POS_OPTION_DEFAULT_VALUE);
 			String  optionType    = (String)  tm.getValueAt(r, TAB_POS_OPTION_DTYPE);
 
+			// set the isDefault
+			if (optionStrVal != null)
+			{
+				boolean isDefault = optionStrVal.equals(optionDefVal);
+				//tm.setValueAt(isDefault, r, TAB_POS_OPTION_IS_DEFAULT); // You can not use setValue() is fill fire this again and we circular call
+				((Vector)tm.getDataVector().get(r)).set(TAB_POS_OPTION_IS_DEFAULT, isDefault);
+			}
+
+			// Check validity for Integer & Booleans
 			if (optionType.equals("Integer"))
 			{
 				try 

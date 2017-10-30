@@ -47,6 +47,13 @@ public class SpSysmon
 	private String    _sampleMode       = "";
 	private Timestamp _counterClearTime = null;
 
+	private CountersModel _cmSpinlockSum = null;
+	
+	public CountersModel getSpinlockSum()
+	{
+		return _cmSpinlockSum;
+	}
+
 	public String getReportHead()
 	{
 		StringBuilder sb = new StringBuilder();
@@ -91,8 +98,10 @@ public class SpSysmon
 	private AbstractSysmonType netio; // NOT YET IMPLEMENTED
 	private AbstractSysmonType repagent; // NOT YET IMPLEMENTED
 	
-	public SpSysmon(CountersModel cm)
+	public SpSysmon(CountersModel cm, CountersModel cmSpinlockSum)
 	{
+		_cmSpinlockSum = cmSpinlockSum;
+		
 		basicCalc = new BasicCalc(this, cm);
 		kernel    = new Kernel   (this, cm);
 		wpm       = new Wpm      (this, cm);

@@ -14,6 +14,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -113,14 +114,15 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_CLOSED,  new TrendGraphDataPoint(GRAPH_NAME_CLOSED,  labels));
-		addTrendGraphData(GRAPH_NAME_READ,    new TrendGraphDataPoint(GRAPH_NAME_READ,    labels));
-		addTrendGraphData(GRAPH_NAME_OPEN,    new TrendGraphDataPoint(GRAPH_NAME_OPEN,    labels));
-		addTrendGraphData(GRAPH_NAME_TRUNC,   new TrendGraphDataPoint(GRAPH_NAME_TRUNC,   labels));
-		addTrendGraphData(GRAPH_NAME_REMOVED, new TrendGraphDataPoint(GRAPH_NAME_REMOVED, labels));
-		addTrendGraphData(GRAPH_NAME_PARSED,  new TrendGraphDataPoint(GRAPH_NAME_PARSED,  labels));
+		addTrendGraphData(GRAPH_NAME_CLOSED,  new TrendGraphDataPoint(GRAPH_NAME_CLOSED,  labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_READ,    new TrendGraphDataPoint(GRAPH_NAME_READ,    labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_OPEN,    new TrendGraphDataPoint(GRAPH_NAME_OPEN,    labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_TRUNC,   new TrendGraphDataPoint(GRAPH_NAME_TRUNC,   labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_REMOVED, new TrendGraphDataPoint(GRAPH_NAME_REMOVED, labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_PARSED,  new TrendGraphDataPoint(GRAPH_NAME_PARSED,  labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -130,8 +132,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_CLOSED,
-				"SQM: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
-				"SQM: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
+				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
+				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -142,8 +144,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_READ,
-					"SQM: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
-					"SQM: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
+				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
+				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -154,8 +156,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_OPEN,
-					"SQM: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
-					"SQM: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
+				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
+				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -166,8 +168,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_TRUNC,
-					"SQM: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
-					"SQM: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
+				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
+				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -178,8 +180,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_REMOVED,
-					"SQM: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
-					"SQM: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
+				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
+				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -190,8 +192,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_PARSED,
-					"SQM: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
-					"SQM: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
+				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
+				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -218,9 +220,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_READ.equals(tgdp.getName()))
@@ -235,9 +235,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_OPEN.equals(tgdp.getName()))
@@ -252,9 +250,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_TRUNC.equals(tgdp.getName()))
@@ -269,9 +265,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_REMOVED.equals(tgdp.getName()))
@@ -286,9 +280,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_PARSED.equals(tgdp.getName()))
@@ -303,9 +295,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

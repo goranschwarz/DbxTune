@@ -2,7 +2,6 @@ package com.asetune.ui.autocomplete.completions;
 
 import org.fife.ui.autocomplete.CompletionProvider;
 
-import com.asetune.ui.autocomplete.CompletionProviderAbstract;
 import com.asetune.ui.autocomplete.CompletionProviderAbstractSql;
 import com.asetune.utils.StringUtil;
 
@@ -69,8 +68,10 @@ extends SqlCompletion
 		if ( ! _tableInfo.isColumnRefreshed() )
 		{
 			CompletionProvider cp = getProvider();
-			if (cp instanceof CompletionProviderAbstract)
-				_tableInfo.refreshColumnInfo(((CompletionProviderAbstract)cp).getConnectionProvider());
+//			if (cp instanceof CompletionProviderAbstract)
+//				_tableInfo.refreshColumnInfo(((CompletionProviderAbstract)cp).getConnectionProvider());
+			if (cp instanceof CompletionProviderAbstractSql)
+				_tableInfo.refreshColumnInfo(((CompletionProviderAbstractSql)cp).getConnection());
 		}
 		return _tableInfo.toHtmlString();
 	}

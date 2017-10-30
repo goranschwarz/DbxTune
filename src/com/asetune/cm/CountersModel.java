@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -48,15 +49,19 @@ import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.alarm.IUserDefinedAlarmInterrogator;
+import com.asetune.alarm.UserDefinedAlarmHandler;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
+import com.asetune.pcs.PersistReader.PcsSavedException;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
@@ -69,6 +74,7 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
+import com.google.gson.stream.JsonWriter;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
 
@@ -102,6 +108,7 @@ implements Cloneable, ITableTooltip
 	private boolean            _negativeDiffCountersToZero = true;
 
 	private Timer              _refreshTimer      = new Timer(200, new RefreshTimerAction());
+	private long               _refreshTimerStartTime = 0; // when we start the timer, just record the time we started it...
 	private String             _name;
 	private boolean            _systemCm;
 	private String             _displayName       = null;  // Name that will be tabname etc
@@ -147,7 +154,8 @@ implements Cloneable, ITableTooltip
 
 	private String[]           _monTablesInQuery     = null;
 	
-	private List<String>       _dependsOnCm          = null;
+	private Set<String>        _cmsDependsOnMe       = null;
+	private Set<String>        _dependsOnCm          = null;
 	private String[]           _dependsOnRole        = null;
 	private String[]           _dependsOnConfig      = null;
 	private int                _dependsOnVersion     = 0;
@@ -157,6 +165,10 @@ implements Cloneable, ITableTooltip
 	/** If we should refresh this CM in a different manner than the default refresh rate. 0=useDefault, >0=number of seconds between samples */
 	private int                _postponeTime         = DEFAULT_postponeTime;
 	public  static final int   DEFAULT_postponeTime  = 0;
+
+	/** Is postpone enabled or disabled */
+	private boolean            _postponeIsEnabled    = DEFAULT_postponeIsEnabled;
+	public static final boolean DEFAULT_postponeIsEnabled = true;
 
 	/** every time the CM is refreshed set this to System.currentTimeMillis() */
 	private long               _lastLocalRefreshTime = 0;
@@ -236,12 +248,22 @@ implements Cloneable, ITableTooltip
 	public enum State { NORMAL, SRV_IN_SHUTDOWN };
 	private State _state = State.NORMAL;
 
+	/** Class for handling User Defined Alarms */
+	private IUserDefinedAlarmInterrogator _udAlarmInterrorgator = null;
+
 	private GTable.ITableTooltip _cmToolTipSupplier = null;
 	private Map<String, String> _cmLocalToolTipColumnDescriptions = new HashMap<String, String>();
 	
 	// Columns that should be first in the output table
 //	private Set<String> _preferredColumnOrder = new LinkedHashSet<String>();
 	private HashMap<String, ColumnHeaderPropsEntry> _preferredColumnProps = new LinkedHashMap<String, ColumnHeaderPropsEntry>();
+
+	private int _aseError_2714_count = 0;
+	private int _aseError_2714_actionThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_aseError_2714_actionThreshold, DEFAULT_aseError_2714_actionThreshold);
+
+	
+	public static final String 	PROPKEY_aseError_2714_actionThreshold = "CounterModel.ase.error.2714.action.threshold";
+	public static final int     DEFAULT_aseError_2714_actionThreshold = 5;
 
 	//-------------------------------------------------------
 	// BEGIN: Graph members
@@ -361,6 +383,10 @@ implements Cloneable, ITableTooltip
 		// reset panel, if we got one
 		if (tabPanel != null)
 			tabPanel.reset();
+		
+		// reset trendgraph DATA
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values())
+			tgdp.clear();
 	}
 
 
@@ -480,6 +506,8 @@ implements Cloneable, ITableTooltip
 		_negativeDiffCountersToZero = negativeDiffCountersToZero;
 		_postponeTime       = defaultPostponeTime;
 
+		setUserDefinedAlarmInterrogator(createUserDefinedAlarmHandler());
+
 		_sybMessageHandler  = createSybMessageHandler();
 		
 		_cmToolTipSupplier  = createToolTipSupplier();
@@ -502,8 +530,9 @@ implements Cloneable, ITableTooltip
 		if (_dependsOnConfig  == null) _dependsOnConfig  = emptyArray;
 
 		// Set some default values
-		_postponeTime    = getDefaultPostponeTime();
-		_sqlQueryTimeout = getDefaultQueryTimeout();
+		_postponeIsEnabled = getDefaultPostponeIsEnabled();
+		_postponeTime      = getDefaultPostponeTime();
+		_sqlQueryTimeout   = getDefaultQueryTimeout();
 
 		// register some default values before loading values.
 		registerDefaultValues();
@@ -551,6 +580,7 @@ implements Cloneable, ITableTooltip
 			c = new CountersModel();
 		}
 
+		c._sampleException            = this._sampleException;
 		c._sybMessageHandler          = this._sybMessageHandler;
 
 		c._refreshTimer               = null;
@@ -593,6 +623,7 @@ implements Cloneable, ITableTooltip
 
 		c._monTablesInQuery           = this._monTablesInQuery;    // no need to full copy, static usage
 
+		c._cmsDependsOnMe             = this._cmsDependsOnMe;      // no need to full copy, static usage
 		c._dependsOnCm                = this._dependsOnCm;         // no need to full copy, static usage
 		c._dependsOnRole              = this._dependsOnRole;       // no need to full copy, static usage
 		c._dependsOnConfig            = this._dependsOnConfig;     // no need to full copy, static usage
@@ -601,6 +632,7 @@ implements Cloneable, ITableTooltip
 		c._dependsOnStoredProc        = this._dependsOnStoredProc; // no need to full copy, static usage
 
 		c._postponeTime               = this._postponeTime;
+		c._postponeIsEnabled          = this._postponeIsEnabled;
 		c._lastLocalRefreshTime       = this._lastLocalRefreshTime;
 		c._prevLocalRefreshTime       = this._prevLocalRefreshTime;
 
@@ -781,6 +813,55 @@ implements Cloneable, ITableTooltip
 	** END: implementing TableModel or overriding AbstractTableModel
 	**---------------------------------------------------
 	*/
+
+	/**
+	 * Simply a convenience method that calls <code>findColumn(colName)</code>
+	 * @param colName Column name to check for existance
+	 * @return true if the column exists, otherwise false
+	 */
+	public boolean hasColumn(String colName)
+	{
+		return findColumn(colName) >= 0;
+	}
+
+	/**
+	 * Simply a convenience method that calls <code>hasColumns(colName)</code> for all passed columns
+	 * 
+	 * @param colNames 
+	 * @return true if all columns exists, otherwise false
+	 */
+	public boolean hasColumns(String... colNames)
+	{
+		for (String colName : colNames)
+		{
+			if ( ! hasColumn(colName) )
+				return false;
+
+		}
+		return true;
+	}
+
+	/**
+	 * Get a list of column names that are missing in this CM
+	 * 
+	 * @param colNames 
+	 * @return A List with the missing columns. <br>
+	 *         If none is missing the list will be empty. <br>
+	 *         A List will always be returned
+	 */
+	public List<String> getMissingColumns(String... colNames)
+	{
+		List<String> list = new ArrayList<>();
+
+		for (String colName : colNames)
+		{
+			if ( ! hasColumn(colName) )
+				list.add(colName);
+		}
+		return list;
+	}
+
+
 
 	/**
 	 * Set who is responsible for collecting the counters for this CounterModel
@@ -1108,19 +1189,9 @@ implements Cloneable, ITableTooltip
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		return null;
-	}
-	/** Used by the: Create 'Offline Session' Wizard */
-	public String getLocalConfigurationDescription(String propName)
-	{
-		return "";
-	}
-	/** Used by the: Create 'Offline Session' Wizard */
-	public String getLocalConfigurationDataType(String propName)
-	{
-		return "";
 	}
 
 	/**
@@ -1155,7 +1226,7 @@ implements Cloneable, ITableTooltip
 			// This could be that the Summary CM has found a "long running transaction" or a "blocking lock" or something simular
 			if ( getCounterController().isCmInDemandRefreshList(this.getName()) )
 				refresh = true;
-			
+
 			// Current TAB is visible
 //			if ( equalsTabPanel(MainFrame.getActiveTab()) )
 			if ( getGuiController() != null && equalsTabPanel(getGuiController().getActiveTab()) )
@@ -1166,7 +1237,27 @@ implements Cloneable, ITableTooltip
 			{
 				GTabbedPane tp = getGuiController().getTabbedPane();
 				if (tp.isTabUnDocked(getDisplayName()))
-						refresh = true;
+					refresh = true;
+				
+//				String parentTitle = tp.getParentTitleName(getDisplayName());
+//if (getName().equals("CmCachePools")) System.out.println("1: isRefreshable() cm='"+getName()+"', ParentTitle='"+parentTitle+"'.");
+//				if (parentTitle != null)
+//				{
+//					Component parentComp = tp.getComponentAtTitle(parentTitle);
+//if (getName().equals("CmCachePools")) System.out.println("2: --- isRefreshable() cm='"+getName()+"', ParentTitle='"+parentTitle+"', parentComp.classname='"+parentComp.getClass().getName()+"'");
+//					if (parentComp instanceof GTabbedPane)
+//					{
+//						GTabbedPane parentTabbedPane = (GTabbedPane)parentComp;
+//if (getName().equals("CmCachePools")) System.out.println("3: --- --- --- isRefreshable() cm='"+getName()+"', ParentTitle='"+parentTitle+"', parentTabbedPane='"+parentTabbedPane.getClass().getName()+"', parentTabbedPane.isTabUnDocked(parentTitle)="+parentTabbedPane.isTabUnDocked(parentTitle));
+//						if (parentTabbedPane.isTabUnDocked(parentTitle))
+//						{
+//							String selectedTitle = parentTabbedPane.getSelectedTitle(true);
+//if (getName().equals("CmCachePools")) System.out.println("4: --- --- --- isRefreshable() cm='"+getName()+"', ParentTitle='"+parentTitle+"', selectedTitle='"+selectedTitle+"'. cmTabName='"+getDisplayName()+"'");
+//							if (getDisplayName().equals(selectedTitle))
+//								refresh = true;
+//						}
+//					}
+//				}
 			}
 //System.out.println(getName()+".isRefreshable(): After isTabUndocked(): refresh="+refresh);
 
@@ -1179,7 +1270,7 @@ implements Cloneable, ITableTooltip
 				refresh = true;
 
 			// Store data in DB && we have storage
-			if ( isPersistCountersEnabled() && PersistentCounterHandler.getInstance() != null)
+			if ( isPersistCountersEnabled() && PersistentCounterHandler.hasInstance() )
 				refresh = true;
 
 			// NO-REFRESH if data polling is PAUSED
@@ -1194,6 +1285,11 @@ implements Cloneable, ITableTooltip
 				refresh = false;
 			}
 
+			// Check if any CM's that depends on Me needs refresh at this time
+			// Which overrides the above PostPoneTime
+			if (doAnyDependantCmNeedMeToRefresh())
+				refresh = true;
+			
 			// If we are not connected anymore, do not try to refresh
 			if (refresh)
 				refresh = isConnected();
@@ -1681,6 +1777,18 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Get a readable PK value Map<br>
+	 * This can/will be used by tooltip to show "readable" values instead if ID fields.<br>
+	 * Example: DBID -> DBName 
+	 * @param modelRow
+	 * @return a LinkedHashMap with the values to be displayed in a tooltip. If null, then no rewrite is available; Show: PK=val
+	 */
+	public Map<String, String> getPkRewriteMap(int modelRow)
+	{
+		return null;
+	}
+
+	/**
 	 * Used by the TabularCntrPanel.JTable to get tool tip on a cell level.
 	 * Override it to set specific tooltip... 
 	 * @param e
@@ -1967,6 +2075,9 @@ implements Cloneable, ITableTooltip
 	 */
 	public void addTrendGraph(String name, TrendGraph tg, boolean addToSummary)
 	{
+		if (_trendGraphs.containsKey(name))
+			throw new RuntimeException("Sorry the trend graph named '"+name+"' is already used, the name must be unique.");
+
 		_trendGraphs.put(name, tg);
 		
 		tg.setCm(this);
@@ -2137,8 +2248,7 @@ implements Cloneable, ITableTooltip
 			}
 
 			// SET DATA
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(dataArray);
+			tgdp.setDataPoint(this.getTimestamp(), dataArray);
 		}
 		else if (_graphType == GRAPH_TYPE_BY_ROW)
 		{
@@ -2194,9 +2304,7 @@ implements Cloneable, ITableTooltip
 			}
 
 			// SET DATA
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(dataArray);
-			tgdp.setLabel(labelArray);
+			tgdp.setDataPoint(this.getTimestamp(), labelArray, dataArray);
 		}
 		else
 		{
@@ -2219,6 +2327,12 @@ implements Cloneable, ITableTooltip
 	{
 		if (_trendGraphsData.size() == 0)
 			return;
+		
+		if (getRowCount() == 0)
+		{
+			_logger.debug("Current sample has 0 rows for CM '"+getName()+"' when trying to update it's graphs. Skipping updateGraphData().");
+			return;
+		}
 
 		for (TrendGraphDataPoint tgdp : _trendGraphsData.values()) 
 		{
@@ -2248,14 +2362,17 @@ implements Cloneable, ITableTooltip
 	 */
 	public void addTrendGraphData(String name, TrendGraphDataPoint tgdp)
 	{
+		if (_trendGraphsData.containsKey(name))
+			throw new RuntimeException("Sorry the trend graph named '"+name+"' is already used, the name must be unique.");
+
 		_trendGraphsData.put(name, tgdp);
 	}
 	
-	public void addTrendGraphData(String name)
-	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint(name);
-		addTrendGraphData(name, tgdp);
-	}
+//	public void addTrendGraphData(String name)
+//	{
+//		TrendGraphDataPoint tgdp = new TrendGraphDataPoint(name);
+//		addTrendGraphData(name, tgdp);
+//	}
 
 	public String[] getTrendGraphNames()
 	{
@@ -2998,8 +3115,46 @@ implements Cloneable, ITableTooltip
 		}
 		missing = StringUtil.removeLastComma(missing);
 		
+		// If we still are missing the parameters: search the: getNonConfiguedMonitoringMessageList()
+		// THIS will be cheaper if we do search the message list FIRST instead of getting ASE Config... 
+		// but that wont work if the language isn't ENGLISH.... so lets change that later... 
+		if (StringUtil.isNullOrBlank(missing))
+		{
+			// try to parse the messages received and get what's missing.
+			Set<String> paramSet = new LinkedHashSet<>();
+			List<String> cfgMsgList = getNonConfiguedMonitoringMessageList();
+			if (cfgMsgList != null)
+			{
+				for (String msg : cfgMsgList)
+				{
+					// '12036: Collection of monitoring data for table 'monProcessStatement' requires that the 'per object statistics active' configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.'
+					String searchFor = "' requires that the '";
+					int searchPos = msg.indexOf(searchFor);
+					if (searchPos >= 0)
+					{
+						int endPos = msg.indexOf("'", searchPos + searchFor.length());
+						if (endPos >= 0)
+						{
+							String cfgParam = msg.substring(searchPos + searchFor.length(), endPos);
+							paramSet.add(cfgParam);
+						}
+					}
+					
+				}
+			}
+			// Add the Set to the "missing" string...
+			if (paramSet.size() > 0)
+			{
+				for (String param : paramSet)
+					missing += param + ", ";				
+
+				missing = StringUtil.removeLastComma(missing);
+			}
+		} // end: search messages
+
 		if (StringUtil.isNullOrBlank(missing))
 			return null;
+
 		return missing;
 	}
 
@@ -3381,7 +3536,7 @@ implements Cloneable, ITableTooltip
 	 * 
 	 * @param tmpRateData
 	 */
-	public void localCalculationRatePerSec(CounterSample rateData)
+	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
 	{
 	}
 
@@ -3473,10 +3628,11 @@ implements Cloneable, ITableTooltip
 		_sampleException = e;
 		if (e != null)
 		{
-			if      (e instanceof NoValidRowsInSample)          _logger.debug("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else if (e instanceof DependsOnCmPostponeException) _logger.info ("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else if (e instanceof SQLException)                 _logger.info ("setSampleException() for cm='"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
-			else                                                _logger.warn ("setSampleException() for cm='"+getName()+"'. " + e.toString(), e);
+			if      (e instanceof PcsSavedException)            { /*do nothing*/ }
+			else if (e instanceof NoValidRowsInSample)          _logger.debug("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof DependsOnCmPostponeException) _logger.info ("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else if (e instanceof SQLException)                 _logger.info ("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
+			else                                                _logger.warn ("setSampleException() for cm '"+getName()+"'. " + e.toString(), e);
 		}
 	}
 
@@ -3496,6 +3652,11 @@ implements Cloneable, ITableTooltip
 		return _prevLocalRefreshTime;
 	}
 
+	/**  */
+	public boolean isPostponeEnabled() 
+	{
+		return _postponeIsEnabled; 
+	}
 	/** If this CM has a "delay" option set */
 	public int getPostponeTime() 
 	{
@@ -3522,14 +3683,30 @@ implements Cloneable, ITableTooltip
 			getTabPanel().setPostponeTime(seconds);
 	}
 
+	/** Set smallest time between two samples */
+	public void setPostponeIsEnabled(boolean enabled, boolean saveProps) 
+	{ 
+		// No need to continue if we are not changing it
+		if (isPostponeEnabled() == enabled)
+			return;
+
+		_postponeIsEnabled = enabled;
+		
+		if (saveProps)
+			saveProps();
+
+		if (getTabPanel() != null)
+			getTabPanel().setPostponeIsEnabled(enabled);
+	}
+
 	/** get dependant CM's postpone time */
 	public CountersModel getDependantCmThatHasPostponeTime()
 	{
-		List<String> cmList = getDependsOnCm();
-		if (cmList == null)
+		Set<String> cmSet = getDependsOnCm();
+		if (cmSet == null)
 			return null;
 
-		for (String cmName : cmList)
+		for (String cmName : cmSet)
 		{
 			CountersModel cm = getCounterController().getCmByName(cmName);
 			if (cm != null)
@@ -3545,9 +3722,18 @@ implements Cloneable, ITableTooltip
 	/** do we need to postpone next refresh */
 	public long getTimeToNextPostponedRefresh()
 	{
+		if ( doAnyDependantCmNeedMeToRefresh() )
+			return 0;
+
+		if ( ! isPostponeEnabled() )
+			return 0;
+
 		if (getPostponeTime() == 0)
 			return 0;
 
+		if ( getCounterController().isCmInDemandRefreshList(this.getName()) )
+			return 0;
+		
 		// do not postpone next sample if diff data hasnt been calculated
 		if (isDiffCalcEnabled() && ! hasDiffData())
 			return 0;
@@ -3657,11 +3843,11 @@ implements Cloneable, ITableTooltip
 	public void checkDependsOnOtherCm()
 	throws Exception
 	{
-		List<String> cmList = getDependsOnCm();
-		if (cmList == null)
+		Set<String> cmSet = getDependsOnCm();
+		if (cmSet == null)
 			return;
 
-		for (String cmName : cmList)
+		for (String cmName : cmSet)
 		{
 			CountersModel cm = getCounterController().getCmByName(cmName);
 			if (cm == null)
@@ -3678,13 +3864,55 @@ implements Cloneable, ITableTooltip
 	public void addDependsOnCm(String cmName)
 	{
 		if (_dependsOnCm == null)
-			_dependsOnCm = new LinkedList<String>();
+			_dependsOnCm = new LinkedHashSet<String>();
 		_dependsOnCm.add(cmName);
 	}
 	/** Get a list of CM's that we depends upon */
-	public List<String> getDependsOnCm()
+	public Set<String> getDependsOnCm()
 	{
 		return _dependsOnCm;
+	}
+
+	/** Add a CM that this CM depends upon */
+	public void addCmDependsOnMe(String cmName)
+	{
+		if (_cmsDependsOnMe == null)
+			_cmsDependsOnMe = new LinkedHashSet<String>();
+		_cmsDependsOnMe.add(cmName);
+	}
+	/** Get a list of CM's that we depends upon */
+	public Set<String> getCmDependsOnMe()
+	{
+		return _cmsDependsOnMe;
+	}
+
+	/** Check all CM's that depends on ME, if they needs to be refreshed...
+	 * Since the depends on me to have data, then I need to refresh
+	 * @return
+	 */
+	private boolean doAnyDependantCmNeedMeToRefresh()
+	{
+		Set<String> cmSet = getCmDependsOnMe();
+		if (cmSet == null)
+			return false;
+		
+		for (String cmName : cmSet)
+		{
+			CountersModel cm = getCounterController().getCmByName(cmName);
+			if (cm == null)
+			{
+				String msg = "The cm '"+this.getName()+"' wants to check if cm '"+cmName+"' needs to be refreshed, bat that CM ("+cmName+") can't be found.";
+				_logger.warn(msg);
+			}
+			else
+			{
+				if (cm.isRefreshable())
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public void incRefreshCounter() { _refreshCounter++; }
@@ -3724,16 +3952,24 @@ implements Cloneable, ITableTooltip
 			setValidSampleData(false);
 			return;
 		}
-		
-		// is it time to do refresh or not
-		if (getTimeToNextPostponedRefresh() > 0)
-		{
-			if (_logger.isDebugEnabled()) 
-				_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
-			// NOTE: should we do setValidSampleData(false) here or not?, I think so...
-			setValidSampleData(false);
-			return;
-		}
+
+		// If other CM's depends on Me that needs refres
+//		if ( doAnyDependantCmNeedMeToRefresh() )
+//		{
+//			// simply continue with refresh
+//		}
+//		else
+//		{
+			// is it time to do refresh or not
+    		if (getTimeToNextPostponedRefresh() > 0)
+    		{
+    			if (_logger.isDebugEnabled()) 
+    				_logger.debug("Next refresh for the cm '"+getName()+"' will have to wait '"+TimeUtils.msToTimeStr(getTimeToNextPostponedRefresh())+"'.");
+    			// NOTE: should we do setValidSampleData(false) here or not?, I think so...
+    			setValidSampleData(false);
+    			return;
+    		}
+//		}
 
 		// SET the message handler used for this CM
 		SybMessageHandler curMsgHandler = null;
@@ -3844,9 +4080,10 @@ implements Cloneable, ITableTooltip
 		if (_logger.isDebugEnabled())
 			_logger.debug("Refreshing Counters for '"+getName()+"'.");
 
-		// Start the timer which will be kicked of after X ms
-		// This si we can do something if the refresh takes to long time
+		// Start the timer which will be kicked of after X milliseconds
+		// This so we can do something if the refresh takes to long time
 		_refreshTimer.start();
+		_refreshTimerStartTime = System.currentTimeMillis();
 
 
 		// If the CounterModel need to be initialized by executing any 
@@ -3899,16 +4136,22 @@ implements Cloneable, ITableTooltip
 			beginSqlRefresh();
 			if ( tmpNewSample.getSample(this, conn, getSql()+getSqlWhere(), _pkCols) == false )
 				return -1;
+			
+			// If we want to test some error handling
+			boolean exceptionTest = false;
+//exceptionTest = true;
+			if (exceptionTest)
+			{
+    			if ("CmProcessActivity".equals(getName()))
+    				throw new SQLException("dummy test of '2714'...", "XXXX", 2714);
+			}
 		}
 		catch (NoValidRowsInSample e)
 		{
-			if (tabPanel != null)
-			{
-				String msg = e.getMessage();
-				setSampleException(e);
+			setSampleException(e);
 
-				tabPanel.setWatermarkText(msg);
-			}
+			if (tabPanel != null)
+				tabPanel.setWatermarkText(e.getMessage());
 
 			// No data should be visible, so reset some structures
 			// NOTE: is this enough or should we do fireXXXXChange as well... 
@@ -3920,14 +4163,10 @@ implements Cloneable, ITableTooltip
 		}
 		catch (SQLException e)
 		{
-			if (tabPanel != null)
-			{
-				String msg = e.getMessage();
-				setSampleException(e);
+			setSampleException(e);
 
-				// maybe use property change listeners instead: firePropChanged("status", "refreshing");
-				tabPanel.setWatermarkText(msg);
-			}
+			if (tabPanel != null)
+				tabPanel.setWatermarkText(e.getMessage());
 
 			// No data should be visible, so reset some structures
 			// NOTE: is this enough or should we do fireXXXXChange as well... 
@@ -4017,6 +4256,28 @@ implements Cloneable, ITableTooltip
 					{
 						_logger.warn("Problems Re-Initializing Performance Counter '"+getDisplayName()+"' shortName='"+getName()+"', After MsgNumber '"+errorCode+"', with Description '"+errorMsg+"', Caught: "+ex2, ex2);
 					}
+				}
+			}
+
+			// --- ASE ---- 
+			// 2714 There is already an object named '#xxxxxxxxxx' in the database.
+			if (errorCode == 2714)
+			{
+				// Mark the connection for "reconnect" on the next sample
+				// This to try to workaround this issue
+				// - checking/dropping at the start of the SQL Batch...
+				// - dropping the tables at the end of this method: dropTempTables()
+				_aseError_2714_count++;
+				_logger.info("Temp Table Creation error for cm '"+getName()+"'. Setting _aseError_2714_count="+_aseError_2714_count+"' after "+_aseError_2714_actionThreshold+" errors an action will be taken, which is 're-connect'.");
+				if (_aseError_2714_count > _aseError_2714_actionThreshold)
+				{
+					_logger.warn("Temp Table Creation error for CM='"+getName()+"'. The connection is marked for 're-connect'. After all CM's has been refreshed the DBMS connection will be re-established. (_aseError_2714_count="+_aseError_2714_count+", _aseError_2714_actionThreshold="+_aseError_2714_actionThreshold+").");
+
+					// Mark the connection...
+					conn.setConnectionMark(DbxConnection.MarkTypes.MarkForReConnect);
+					
+					// Reset the counter...
+					_aseError_2714_count = 0;
 				}
 			}
 
@@ -4158,7 +4419,7 @@ implements Cloneable, ITableTooltip
 				tmpRateData = computeRatePerSec(tmpDiffData, _isDiffCol, _isPctCol);
 
 				// Compute local stuff for RatePerSec, here we can adjust some stuff if needed
-				localCalculationRatePerSec(tmpRateData);
+				localCalculationRatePerSec(tmpRateData, tmpDiffData);
 	
 				long secondLcTime = endLcRefresh();
 				setLcRefreshTime(firstLcTime + secondLcTime);
@@ -4174,7 +4435,8 @@ implements Cloneable, ITableTooltip
 		sendDdlDetailsRequest(tmpNewSample, tmpDiffData, tmpRateData);
 
 		// Do we want to send an Alarm somewhere, every CM's has to implement this.
-		sendAlarmRequest(tmpNewSample, tmpDiffData, tmpRateData);
+		// NOTE: This is moved a bit down, until the "end" so that the CM's _prevSample, _newSample, _diffData, _rateData has been SET...
+		//sendAlarmRequest(fTmpNewSample, fTmpDiffData, fTmpRateData);
 
 
 		if ( ! DbxTune.hasGui() )
@@ -4195,6 +4457,10 @@ implements Cloneable, ITableTooltip
 			// Calculte what values we should have in the graphs
 			// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
 			updateGraphData();
+
+			// Do we want to send an Alarm somewhere, every CM's has to implement this.
+//			wrapperFor_sendAlarmRequest(tmpNewSample, tmpDiffData, tmpRateData);
+			wrapperFor_sendAlarmRequest();
 		}
 		else // HAS GUI
 		{
@@ -4299,6 +4565,10 @@ implements Cloneable, ITableTooltip
 					{
 						getTabPanel().ddlRequestInfoSave();
 					}
+
+					// Do we want to send an Alarm somewhere, every CM's has to implement this.
+//					wrapperFor_sendAlarmRequest(fTmpNewSample, fTmpDiffData, fTmpRateData);
+					wrapperFor_sendAlarmRequest();
 
 				} // end: run method
 			};
@@ -4997,6 +5267,179 @@ implements Cloneable, ITableTooltip
 	}
 
 
+
+
+	//----------------------------------------------------------------------------------------------------------
+	// ALARM HANDLING
+	//----------------------------------------------------------------------------------------------------------
+	public static final String  PROPKEY_ALARM_isAlarmsEnabled = "<CMNAME>.alarm.enabled";
+	public static final boolean DEFAULT_ALARM_isAlarmsEnabled = true;
+
+	public static final String  PROPKEY_ALARM_isSystemAlarmsEnabled = "<CMNAME>.alarm.system.enabled";
+	public static final boolean DEFAULT_ALARM_isSystemAlarmsEnabled = true;
+
+	public static final String  PROPKEY_ALARM_isSystemAlarmsForColumnEnabled = "<CMNAME>.alarm.system.enabled.<COLNAME>";
+	public static final boolean DEFAULT_ALARM_isSystemAlarmsForColumnEnabled = true;
+
+	public static final String  PROPKEY_ALARM_isUserdefinedAlarmsEnabled = "<CMNAME>.alarm.userdefined.enabled";
+	public static final boolean DEFAULT_ALARM_isUserdefinedAlarmsEnabled = true;
+
+	/** Simply replace a tag &lt;CMNAME&gt; with the name of the CM */ 
+	public String replaceCmName(String propKey)
+	{
+		return replaceCmName(getName(), propKey);
+	}
+	/** Simply replace a tag &lt;CMNAME&gt; with the name of the CM and &lt;COLNAME&gt; with the passed colname */ 
+	public String replaceCmAndColName(String propKey, String colname)
+	{
+		return replaceCmAndColName(getName(), propKey, colname);
+	}
+
+//	/** Simply replace a tag &lt;CMNAME&gt; with the name of the CM */ 
+//	public static String replaceCmName(CountersModel cm, String propKey)
+//	{
+//		return replaceCmName(cm.getName(), propKey);
+//	}
+//	/** Simply replace a tag &lt;CMNAME&gt; with the name of the CM and &lt;COLNAME&gt; with the passed colname */ 
+//	public static String replaceCmAndColName(CountersModel cm, String propKey, String colname)
+//	{
+//		return replaceCmAndColName(cm.getName(), propKey, colname);
+//	}
+
+	/** Simply replace a tag &lt;CMNAME&gt; with the name of the CM */ 
+	public static String replaceCmName(String cmName, String propKey)
+	{
+		return propKey.replace("<CMNAME>", cmName);
+	}
+	/** Simply replace a tag &lt;CMNAME&gt; with the name of the CM and &lt;COLNAME&gt; with the passed colname */ 
+	public static String replaceCmAndColName(String cmName, String propKey, String colname)
+	{
+		return propKey.replace("<CMNAME>", cmName).replace("<COLNAME>", colname);
+	}
+	
+	
+	/**
+	 * PRIVATE/LOCAL wrapper of sendAlarmRequest(...) so we can detemine what to do...
+	 */
+//	protected void wrapperFor_sendAlarmRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	protected void wrapperFor_sendAlarmRequest()
+	{
+//		System.out.println("################################## wrapperFor_sendAlarmRequest(): cm='"+getName()+"'.");
+		if ( ! isAlarmEnabled() )
+			return;
+
+		// Lets use the "built in" logic... which any subclases has to implement :)
+		if (hasSystemAlarms() && isSystemAlarmsEnabled()) 
+		{
+			sendAlarmRequest();
+		}
+
+		//
+		// The default behaviour is to load a java source file, that is compiled "on the fly"<br>
+		// The User Defined logic is implemented by the Java Source file
+		// 
+		if (hasUserDefinedAlarmInterrogator() && isUserDefinedAlarmsEnabled() )
+		{
+//			if ( ! UserDefinedAlarmHandler.hasInstance() )
+//			return;
+//
+//			IUserDefinedAlarmInterrogator interrorgator = UserDefinedAlarmHandler.getInstance().newClassInstance(this);
+//			if (interrorgator != null)
+//			{
+//				interrorgator.interrogateCounterData(this, absData, diffData, rateData);
+//			}
+		
+			// FIXME: sendAlarmRequest_internal() should be called, which calls overrided/local sendAlarmRequest() where this/local should be empty
+			// FIXME: The UserDefinedAlarmHander should also considder other loaded JAR files
+			try
+			{
+//System.out.println("DEBUG: Create new object interrogator for "+getName());
+//_udAlarmInterrorgator = createUserDefinedAlarmHandler(); // create a new object on every execution... this to check if the Java source file is re-compiled on changes
+				getUserDefinedAlarmInterrogator().interrogateCounterData(this);
+			}
+			catch (Throwable t) 
+			{
+				_logger.warn("Problems executing User Defined Alarm Interrogater in CM '"+getName()+"'. This will be ignored, and monitoring will continue... Caught: "+t, t);
+			}
+
+			// or use: compile on the fly java and store class/bytecode in memory and execute it via reflection
+			//         This is what I currently look at, or leaning towards...
+			// Some examples:
+			//      https://fivedots.coe.psu.ac.th/~ad/jg/javaArt1/onTheFlyArt1.pdf
+			//      http://www.soulmachine.me/blog/2015/07/22/compile-and-run-java-source-code-in-memory/
+			//      http://www.beyondlinux.com/2011/07/20/3-steps-to-dynamically-compile-instantiate-and-run-a-java-class/
+			//      http://janino-compiler.github.io/janino/
+			//      https://commons.apache.org/proper/commons-jci/usage.html
+			//      
+			
+			// or use: LUA script language... http://www.luaj.org/luaj/3.0/README.html
+			//         This might be an overkill
+
+			// or use: JSR 223 calling various script languages (like JavaScript, Groovy or some other dynamic script language
+			//         The problem with this seems to be that we need to "export" the CounterSample in some way...
+			//   Groovy: http://groovy-lang.org/integrating.html
+		}
+
+		boolean simplePropertyBasedLogic = false;
+		if (simplePropertyBasedLogic)
+		{
+			// Not yet implemented...
+			// But we might do a simplified logic, like the one we have with UserDefinedCounter Graph...
+			// we may use something like the "system alarms" properties:
+			// ----------------------------------------------------------------------
+			//    <CMNAME>.alarm.userdefined.enabled.<COLNAME>={true|false}
+			//    <CMNAME>.alarm.userdefined.if.<COLNAME>.{eq|neq|gt|lt}=value
+			//    <CMNAME>.alarm.userdefined.if.<COLNAME>.{eq|neq|gt|lt}.alarmEventClass=com.asetune.alarm.events.AlarmEventUserDefinedColumnWarning
+			// ----------------------------------------------------------------------
+			//
+			/* ****************************************************************************************************
+			 * BELOW IS ONLY AN EXAMPLE OF HOW THIS MIGHT BE IMPLEMENTED, the below is not correct and dosn't work
+			 * ****************************************************************************************************
+			public void createSimpleUsedDefinedColumnInterrogators()
+			{
+				// - Loop Configuration and get keys: <CMNAME>.alarm.userdefined.if.<COLNAME>.{eq|neq|gt|lt}=value
+				// - create object SimpleUserDefinedColumnInterrogator(colname, op, value)
+				// - Add it to a List<SimpleUserDefinedColumnInterrogator>
+			}
+			public void checkSimpleUsedDefinedColumnInterrogators()
+			{
+				for (SimpleUserDefinedColumnInterrogator si : _simpleUserDefinedInterrogatorList)
+				{
+					if (si.test(val))
+						// Send alarm
+				}
+			}
+
+			public static class SimpleUserDefinedColumnInterrogator
+			{
+				public enum Operator { EQ, NEQ, GT, LT };
+
+				private String        _colname;
+				private Operator      _op;
+				private Comparable<?> _value;
+
+				public SimpleUserDefinedColumnInterrogator(String colname, Operator op, Comparable<?> value)
+				{
+					_colname = colname;
+					_op      = op;
+					_value   = value;
+				}
+				
+				public boolean test(Comparable<?> val)
+				{
+					switch (_op)
+					{
+					case EQ:  return   _value.equals(val);
+					case NEQ: return ! _value.equals(val);
+					case GT:  return _value.compareTo(val) < 0; // Note: this wont work, it's only an example
+					case LT:  return _value.compareTo(val) > 0; // Note: this wont work, it's only an example
+					}
+				}
+			}
+			*/
+		}
+	}
+
 	/**
 	 * Any CM that wants to send Alarm Requests somewhere should implement this
 	 * 
@@ -5004,10 +5447,95 @@ implements Cloneable, ITableTooltip
 	 * @param diffData
 	 * @param rateData
 	 */
-	public void sendAlarmRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+//	public void sendAlarmRequest(CounterSample absData, CounterSample diffData, CounterSample rateData)
+	public void sendAlarmRequest()
 	{
 		// empty implementation, any subclass can implement it.
 	}
+
+	/**
+	 * If alarm handeling is enabled or disabled for this specific cm<br>
+	 * The idea is that Alarms could be enabled/disabled for specific cm's temporary during runtime (by the gui) 
+	 */
+	public boolean isAlarmEnabled()
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(replaceCmName(PROPKEY_ALARM_isAlarmsEnabled), DEFAULT_ALARM_isAlarmsEnabled);
+	}
+
+	/** Tells weather this CM has any SYSTEM Alarms defined */
+	public boolean hasSystemAlarms()
+	{
+		return ! getLocalAlarmSettings().isEmpty();
+	}
+
+	/** Is SYSTEM Alarms enabled or disabled */
+	public boolean isSystemAlarmsEnabled()
+	{
+		return hasSystemAlarms() && Configuration.getCombinedConfiguration().getBooleanProperty(replaceCmName(PROPKEY_ALARM_isSystemAlarmsEnabled), DEFAULT_ALARM_isSystemAlarmsEnabled);
+	}
+
+	/** Is SYSTEM Alarms enabled or disabled */
+	public boolean isSystemAlarmsForColumnEnabled(String colname)
+	{
+		return Configuration.getCombinedConfiguration().getBooleanProperty(replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname), DEFAULT_ALARM_isSystemAlarmsForColumnEnabled);
+	}
+
+	/** Is USER DEFINED Alarms enabled or disabled */
+	public boolean isUserDefinedAlarmsEnabled()
+	{
+		return hasUserDefinedAlarmInterrogator() && Configuration.getCombinedConfiguration().getBooleanProperty(replaceCmName(PROPKEY_ALARM_isUserdefinedAlarmsEnabled), DEFAULT_ALARM_isUserdefinedAlarmsEnabled);
+	}
+	
+	/**
+	 * Create a Class that handler User Defined Alarm handling
+	 * @return
+	 */
+	public IUserDefinedAlarmInterrogator createUserDefinedAlarmHandler()
+	{
+		//System.out.println("################################## createUserDefinedAlarmHandler(): cm='"+getName()+"'.");
+		if ( ! UserDefinedAlarmHandler.hasInstance() )
+			return null;
+
+		IUserDefinedAlarmInterrogator inst = UserDefinedAlarmHandler.getInstance().newClassInstance(this);
+		return inst;
+	}
+	/** Set a User Defined Alarm Interrogator */
+	public void setUserDefinedAlarmInterrogator(IUserDefinedAlarmInterrogator interrogator)
+	{
+		_udAlarmInterrorgator = interrogator;
+	}
+	/** Get the User Defined Alarm Interrogator */
+	public IUserDefinedAlarmInterrogator getUserDefinedAlarmInterrogator()
+	{
+		return _udAlarmInterrorgator;
+	}
+	/** Check if we have a User Defined Alarm Interrogator */
+	public boolean hasUserDefinedAlarmInterrogator()
+	{
+		return _udAlarmInterrorgator != null;
+	}
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		return Collections.emptyList();
+//		return new ArrayList<CmSettingsHelper>();
+
+		//--------------------------------------------------------------------------------------------
+		// Example from ase.CmSummary:
+		//--------------------------------------------------------------------------------------------
+		// Configuration conf = Configuration.getCombinedConfiguration();
+		// List<CmSettingsHelper> list = new ArrayList<>();
+		// 
+		// list.add(new CmSettingsHelper(PROPKEY_alarm_CPUTime             , Integer.class, conf.getIntProperty(PROPKEY_alarm_CPUTime             , DEFAULT_alarm_CPUTime             ), "If 'CPUTime' is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+		// list.add(new CmSettingsHelper(PROPKEY_alarm_LockWaits           , Integer.class, conf.getIntProperty(PROPKEY_alarm_LockWaits           , DEFAULT_alarm_LockWaits           ), "If 'LockWaits' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		// list.add(new CmSettingsHelper(PROPKEY_alarm_oldestOpenTranInSec , Integer.class, conf.getIntProperty(PROPKEY_alarm_oldestOpenTranInSec , DEFAULT_alarm_oldestOpenTranInSec ), "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+		// list.add(new CmSettingsHelper(PROPKEY_alarm_fullTranslogCount   , Integer.class, conf.getIntProperty(PROPKEY_alarm_fullTranslogCount   , DEFAULT_alarm_fullTranslogCount   ), "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
+        // 
+		// return list;
+		//--------------------------------------------------------------------------------------------
+	}
+
 
 	/**
 	 * FIXME: Describe what this is used for
@@ -5157,6 +5685,67 @@ implements Cloneable, ITableTooltip
 		else return "UNKNOWN DATA TYPE OF '"+whatData+"'.";
 	}
 
+
+	public int getRowCount(int type)
+	{
+		CounterTableModel ctm = getCounterData(type);
+		if (ctm == null)
+			return 0;
+		return ctm.getRowCount();
+	}
+	public int getAbsRowCount()
+	{
+		CounterTableModel ctm = getCounterDataAbs();
+		if (ctm == null)
+			return 0;
+		return ctm.getRowCount();
+	}
+	public int getDiffRowCount()
+	{
+		CounterTableModel ctm = getCounterDataDiff();
+		if (ctm == null)
+			return 0;
+		return ctm.getRowCount();
+	}
+	public int getRateRowCount()
+	{
+		CounterTableModel ctm = getCounterDataRate();
+		if (ctm == null)
+			return 0;
+		return ctm.getRowCount();
+	}
+
+
+	public int getColumnCount(int type)
+	{
+		CounterTableModel ctm = getCounterData(type);
+		if (ctm == null)
+			return 0;
+		return ctm.getColumnCount();
+	}
+	public int getAbsColumnCount()
+	{
+		CounterTableModel ctm = getCounterDataAbs();
+		if (ctm == null)
+			return 0;
+		return ctm.getColumnCount();
+	}
+	public int getDiffColumnCount()
+	{
+		CounterTableModel ctm = getCounterDataDiff();
+		if (ctm == null)
+			return 0;
+		return ctm.getColumnCount();
+	}
+	public int getRateColumnCount()
+	{
+		CounterTableModel ctm = getCounterDataRate();
+		if (ctm == null)
+			return 0;
+		return ctm.getColumnCount();
+	}
+
+
 	public boolean hasAbsData()
 	{
 		return getCounterDataAbs() != null;
@@ -5171,6 +5760,29 @@ implements Cloneable, ITableTooltip
 	{
 		return getCounterDataRate() != null;
 	}
+//	public boolean hasAbsData()
+//	{
+//		CounterTableModel ctm = getCounterDataAbs();
+//		if (ctm == null)
+//			return false;
+//		return ctm.getRowCount() > 0;
+//	}
+//
+//	public boolean hasDiffData()
+//	{
+//		CounterTableModel ctm = getCounterDataDiff();
+//		if (ctm == null)
+//			return false;
+//		return ctm.getRowCount() > 0;
+//	}
+//
+//	public boolean hasRateData()
+//	{
+//		CounterTableModel ctm = getCounterDataRate();
+//		if (ctm == null)
+//			return false;
+//		return ctm.getRowCount() > 0;
+//	}
 
 	/** this should return true if the current sample has any data to show */
 	public boolean hasValidSampleData()
@@ -5205,6 +5817,19 @@ implements Cloneable, ITableTooltip
 	public synchronized int size()
 	{
 		return (_diffData == null) ? 0 : _diffData.getRowCount();
+	}
+
+	// 
+	private synchronized Double getValueAsDouble(int whatData, int rowId, int colPos)
+	{
+		Object o = getValue(whatData, rowId, colPos);
+		if (o == null)
+			return null;
+
+		if (o instanceof Number)
+			return new Double(((Number) o).doubleValue());
+		else
+			return new Double(Double.parseDouble(o.toString()));
 	}
 
 	// 
@@ -5246,6 +5871,32 @@ implements Cloneable, ITableTooltip
 			return null;
 
 		return data.getValueAt(rowId, idCol);
+	}
+
+	// Return the value of a cell by ROWID (rowId, ColumnName)
+	private synchronized Object getValue(int whatData, int rowId, int colId)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return null;
+
+		if (colId < 0 || colId > data.getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getValue: column id " + colId + " is out of range. column Count is "+data.getColumnCount());
+			return null;
+		}
+		if (data.getRowCount() <= rowId)
+			return null;
+
+		return data.getValueAt(rowId, colId);
 	}
 
 	// 
@@ -5361,7 +6012,6 @@ implements Cloneable, ITableTooltip
 		return ia;
 	}
 
-	// Return the MAX of the values of a column (ColumnName)
 	private synchronized Double getMaxValue(int whatData, int[] rowIds, String colname)
 	{
 		CounterTableModel data = null;
@@ -5375,11 +6025,32 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-//		int idCol = data.getColNames().indexOf(colname);
-		int idCol = data.findColumn(colname);
-		if (idCol == -1)
+		int colPos = data.findColumn(colname);
+		if (colPos == -1)
 		{
 			_logger.info("getMaxValue: Can't find the column '" + colname + "'.");
+			return null;
+		}
+		return getMaxValue(whatData, rowIds, colPos);
+	}
+	// Return the MAX of the values of a column (ColumnName)
+	private synchronized Double getMaxValue(int whatData, int[] rowIds, int colPos)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return null;
+
+		if (colPos < 0 || colPos > data.getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getMaxValue: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -5398,20 +6069,20 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
-			Object o = data.getValueAt(rowId, idCol);
+			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
 
 			if (o instanceof Number)
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', Number: " + ((Number) o).doubleValue());
 				result = ((Number) o).doubleValue();
 			}
 			else
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', toString(): " + o.toString());
 				result = Double.parseDouble(o.toString());
 			}
 
@@ -5437,11 +6108,32 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-//		int idCol = data.getColNames().indexOf(colname);
-		int idCol = data.findColumn(colname);
-		if (idCol == -1)
+		int colPos = data.findColumn(colname);
+		if (colPos == -1)
 		{
 			_logger.info("getMinValue: Can't find the column '" + colname + "'.");
+			return null;
+		}
+		return getMinValue(whatData, rowIds, colPos);
+	}
+	// Return the MIN of the values of a column (ColumnName)
+	private synchronized Double getMinValue(int whatData, int[] rowIds, int colPos)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return null;
+
+		if (colPos < 0 || colPos > data.getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getMinValue: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -5460,20 +6152,20 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
-			Object o = data.getValueAt(rowId, idCol);
+			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
 
 			if (o instanceof Number)
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', Number: " + ((Number) o).doubleValue());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', Number: " + ((Number) o).doubleValue());
 				result = ((Number) o).doubleValue();
 			}
 			else
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', toString(): " + o.toString());
 				result = Double.parseDouble(o.toString());
 			}
 
@@ -5499,11 +6191,32 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-//		int idCol = data.getColNames().indexOf(colname);
-		int idCol = data.findColumn(colname);
-		if (idCol == -1)
+		int colPos = data.findColumn(colname);
+		if (colPos == -1)
 		{
 			_logger.info("getSumValue: Can't find the column '" + colname + "'.");
+			return null;
+		}
+		return getSumValue(whatData, rowIds, colPos);
+	}
+	// Return the sum of the values of a Long column (ColumnName)
+	private synchronized Double getSumValue(int whatData, int[] rowIds, int colPos)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return null;
+
+		if (colPos < 0 || colPos > data.getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getSumValue: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
 			return null;
 		}
 		if (data.getRowCount() == 0)
@@ -5521,26 +6234,26 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
-			Object o = data.getValueAt(rowId, idCol);
+			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
 
 			if (o instanceof Long)
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', Long: " + ((Long) o).longValue());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', Long: " + ((Long) o).longValue());
 				result += ((Long) o).longValue();
 			}
 			else if (o instanceof Double)
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', Double: " + ((Double) o).doubleValue());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', Double: " + ((Double) o).doubleValue());
 				result += ((Double) o).doubleValue();
 			}
 			else
 			{
 				if (_logger.isDebugEnabled()) 
-					_logger.debug("Colname='" + colname + "', toString(): " + o.toString());
+					_logger.debug("Colname='" + data.getColumnName(colPos) + "', toString(): " + o.toString());
 				result += Double.parseDouble(o.toString());
 			}
 		}
@@ -5561,11 +6274,32 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return 0;
 
-//		int idCol = data.getColNames().indexOf(colname);
-		int idCol = data.findColumn(colname);
-		if (idCol == -1)
+		int colPos = data.findColumn(colname);
+		if (colPos == -1)
 		{
-			_logger.info("getCountGtZero: Can't find the column '" + colname + "'.");
+			_logger.info("getMaxValue: Can't find the column '" + colname + "'.");
+			return 0;
+		}
+		return getCountGtZero(whatData, rowIds, colPos);
+	}
+	// Return the sum of the values of a Long column (ColumnName)
+	private synchronized int getCountGtZero(int whatData, int[] rowIds, int colPos)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return 0;
+
+		if (colPos < 0 || colPos > data.getColumnCount())
+		{
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("getCountGtZero: column pos " + colPos + " is out of range. column Count is "+data.getColumnCount());
 			return 0;
 		}
 		if (data.getRowCount() == 0)
@@ -5583,7 +6317,7 @@ implements Cloneable, ITableTooltip
 			if (rowIds != null)
 				rowId = rowIds[i];
 
-			Object o = data.getValueAt(rowId, idCol);
+			Object o = data.getValueAt(rowId, colPos);
 			if (o == null)
 				continue;
 
@@ -5594,7 +6328,7 @@ implements Cloneable, ITableTooltip
 			}
 			else
 			{
-				_logger.warn("NOT A INSTANCE OF NUMBER: Colname='" + colname + "', toString(): " + o.toString());
+				_logger.warn("NOT A INSTANCE OF NUMBER: Colname='" + data.getColumnName(colPos) + "', toString(): " + o.toString());
 			}
 		}
 		return counter;
@@ -5615,6 +6349,34 @@ implements Cloneable, ITableTooltip
 			return null;
 
 		Double sum = getSumValue(whatData, rowIds, colname);
+		if (sum == null)
+			return null;
+
+		int count = data.getRowCount();
+		if (rowIds != null)
+			count = rowIds.length;
+		
+		if (count == 0)
+			return new Double(0);
+		else
+			return new Double(sum.doubleValue() / count);
+	}
+
+	// Return the AVG of the values of a Long column (ColumnName)
+	private synchronized Double getAvgValue(int whatData, int[] rowIds, int colPos)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return null;
+
+		Double sum = getSumValue(whatData, rowIds, colPos);
 		if (sum == null)
 			return null;
 
@@ -5654,6 +6416,32 @@ implements Cloneable, ITableTooltip
 			return new Double(sum.doubleValue() / count);
 	}
 
+	// Return the AVG of the values of a Long column (ColumnName)
+	private synchronized Double getAvgValueGtZero(int whatData, int[] rowIds, int colPos)
+	{
+		CounterTableModel data = null;
+
+		if      (whatData == DATA_ABS)  data = getCounterDataAbs();
+		else if (whatData == DATA_DIFF) data = getCounterDataDiff();
+		else if (whatData == DATA_RATE) data = getCounterDataRate();
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		if (data == null)
+			return null;
+
+		Double sum = getSumValue(whatData, rowIds, colPos);
+		if (sum == null)
+			return null;
+
+		int count = getCountGtZero(whatData, rowIds, colPos);
+		
+		if (count == 0)
+			return new Double(0);
+		else
+			return new Double(sum.doubleValue() / count);
+	}
+
 	// Return the Primary Key for a specific row
 	private synchronized String getPkValue(int whatData, int rowId)
 	{
@@ -5674,16 +6462,24 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read ABSOLUTE values
 	//--------------------------------------------------------------
+	public String getAbsString        (int    rowId, int    colPos)  { Object o = getValue     (DATA_ABS, rowId, colPos);  return (o==null)?"":o.toString(); }
 	public String getAbsString        (int    rowId, String colname) { Object o = getValue     (DATA_ABS, rowId, colname); return (o==null)?"":o.toString(); }
 	public String getAbsString        (String pkStr, String colname) { Object o = getValue     (DATA_ABS, pkStr, colname); return (o==null)?"":o.toString(); }
+	public Object getAbsValue         (int    rowId, int    colPos)  { Object o = getValue     (DATA_ABS, rowId, colPos);  return o; }
 	public Object getAbsValue         (int    rowId, String colname) { return getValue         (DATA_ABS, rowId, colname); }
 	public Object getAbsValue         (String pkStr, String colname) { return getValue         (DATA_ABS, pkStr, colname); }
+	public Double getAbsValueAsDouble (int    rowId, int    colPos)  { return getValueAsDouble (DATA_ABS, rowId, colPos);  }
 	public Double getAbsValueAsDouble (int    rowId, String colname) { return getValueAsDouble (DATA_ABS, rowId, colname); }
 	public Double getAbsValueAsDouble (String pkStr, String colname) { return getValueAsDouble (DATA_ABS, pkStr, colname); }
+	public Double getAbsValueMax      (int    colPos)                { return getMaxValue      (DATA_ABS, null,  colPos);  }
 	public Double getAbsValueMax      (String colname)               { return getMaxValue      (DATA_ABS, null,  colname); }
+	public Double getAbsValueMin      (int    colPos)                { return getMinValue      (DATA_ABS, null,  colPos);  }
 	public Double getAbsValueMin      (String colname)               { return getMinValue      (DATA_ABS, null,  colname); }
+	public Double getAbsValueAvg      (int    colPos)                { return getAvgValue      (DATA_ABS, null,  colPos);  }
 	public Double getAbsValueAvg      (String colname)               { return getAvgValue      (DATA_ABS, null,  colname); }
+	public Double getAbsValueAvgGtZero(int    colPos)                { return getAvgValueGtZero(DATA_ABS, null,  colPos);  }
 	public Double getAbsValueAvgGtZero(String colname)               { return getAvgValueGtZero(DATA_ABS, null,  colname); }
+	public Double getAbsValueSum      (int    colPos)                { return getSumValue      (DATA_ABS, null,  colPos);  }
 	public Double getAbsValueSum      (String colname)               { return getSumValue      (DATA_ABS, null,  colname); }
 	public String getAbsPkValue       (int    rowId)                 { return getPkValue       (DATA_ABS, rowId  ); }
 
@@ -5697,16 +6493,24 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read DIFF (new-old) values
 	//--------------------------------------------------------------
+	public String getDiffString        (int    rowId, int    colPos)  { Object o = getValue     (DATA_DIFF, rowId, colPos);  return (o==null)?"":o.toString(); }
 	public String getDiffString        (int    rowId, String colname) { Object o = getValue     (DATA_DIFF, rowId, colname); return (o==null)?"":o.toString(); }
 	public String getDiffString        (String pkStr, String colname) { Object o = getValue     (DATA_DIFF, pkStr, colname); return (o==null)?"":o.toString(); }
+	public Object getDiffValue         (int    rowId, int    colPos)  { Object o = getValue     (DATA_DIFF, rowId, colPos);  return o; }
 	public Object getDiffValue         (int    rowId, String colname) { return getValue         (DATA_DIFF, rowId, colname); }
 	public Object getDiffValue         (String pkStr, String colname) { return getValue         (DATA_DIFF, pkStr, colname); }
+	public Double getDiffValueAsDouble (int    rowId, int    colPos)  { return getValueAsDouble (DATA_DIFF, rowId, colPos);  }
 	public Double getDiffValueAsDouble (int    rowId, String colname) { return getValueAsDouble (DATA_DIFF, rowId, colname); }
 	public Double getDiffValueAsDouble (String pkStr, String colname) { return getValueAsDouble (DATA_DIFF, pkStr, colname); }
+	public Double getDiffValueMax      (int    colPos)                { return getMaxValue      (DATA_DIFF, null,  colPos);  }
 	public Double getDiffValueMax      (String colname)               { return getMaxValue      (DATA_DIFF, null,  colname); }
+	public Double getDiffValueMin      (int    colPos)                { return getMinValue      (DATA_DIFF, null,  colPos);  }
 	public Double getDiffValueMin      (String colname)               { return getMinValue      (DATA_DIFF, null,  colname); }
+	public Double getDiffValueAvg      (int    colPos)                { return getAvgValue      (DATA_DIFF, null,  colPos);  }
 	public Double getDiffValueAvg      (String colname)               { return getAvgValue      (DATA_DIFF, null,  colname); }
+	public Double getDiffValueAvgGtZero(int    colPos)                { return getAvgValueGtZero(DATA_DIFF, null,  colPos);  }
 	public Double getDiffValueAvgGtZero(String colname)               { return getAvgValueGtZero(DATA_DIFF, null,  colname); }
+	public Double getDiffValueSum      (int    colPos)                { return getSumValue      (DATA_DIFF, null,  colPos);  }
 	public Double getDiffValueSum      (String colname)               { return getSumValue      (DATA_DIFF, null,  colname); }
 	public String getDiffPkValue       (int    rowId)                 { return getPkValue       (DATA_DIFF, rowId  ); }
 
@@ -5720,16 +6524,24 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read RATE DIFF/time values
 	//--------------------------------------------------------------
+	public String getRateString        (int    rowId, int    colPos)  { Object o = getValue     (DATA_RATE, rowId, colPos);  return (o==null)?"":o.toString(); }
 	public String getRateString        (int    rowId, String colname) { Object o = getValue     (DATA_RATE, rowId, colname); return (o==null)?"":o.toString(); }
 	public String getRateString        (String pkStr, String colname) { Object o = getValue     (DATA_RATE, pkStr, colname); return (o==null)?"":o.toString(); }
+	public Object getRateValue         (int    rowId, int    colPos)  { Object o = getValue     (DATA_RATE, rowId, colPos);  return o; }
 	public Object getRateValue         (int    rowId, String colname) { return getValue         (DATA_RATE, rowId, colname); }
 	public Object getRateValue         (String pkStr, String colname) { return getValue         (DATA_RATE, pkStr, colname); }
+	public Double getRateValueAsDouble (int    rowId, int    colPos)  { return getValueAsDouble (DATA_RATE, rowId, colPos);  }
 	public Double getRateValueAsDouble (int    rowId, String colname) { return getValueAsDouble (DATA_RATE, rowId, colname); }
 	public Double getRateValueAsDouble (String pkStr, String colname) { return getValueAsDouble (DATA_RATE, pkStr, colname); }
+	public Double getRateValueMax      (int    colPos)                { return getMaxValue      (DATA_RATE, null,  colPos);  }
 	public Double getRateValueMax      (String colname)               { return getMaxValue      (DATA_RATE, null,  colname); }
+	public Double getRateValueMin      (int    colPos)                { return getMinValue      (DATA_RATE, null,  colPos);  }
 	public Double getRateValueMin      (String colname)               { return getMinValue      (DATA_RATE, null,  colname); }
+	public Double getRateValueAvg      (int    colPos)                { return getAvgValue      (DATA_RATE, null,  colPos);  }
 	public Double getRateValueAvg      (String colname)               { return getAvgValue      (DATA_RATE, null,  colname); }
+	public Double getRateValueAvgGtZero(int    colPos)                { return getAvgValueGtZero(DATA_RATE, null,  colPos);  }
 	public Double getRateValueAvgGtZero(String colname)               { return getAvgValueGtZero(DATA_RATE, null,  colname); }
+	public Double getRateValueSum      (int    colPos)                { return getSumValue      (DATA_RATE, null,  colPos);  }
 	public Double getRateValueSum      (String colname)               { return getSumValue      (DATA_RATE, null,  colname); }
 	public String getRatePkValue       (int    rowId)                 { return getPkValue       (DATA_RATE, rowId  ); }
 
@@ -5801,6 +6613,7 @@ implements Cloneable, ITableTooltip
 			tempProps.setProperty(base + PROPKEY_nonConfiguredMonitoringAllowed, isNonConfiguredMonitoringAllowed());
 			tempProps.setProperty(base + PROPKEY_highlightNewDateOrRateRows,     isNewDeltaOrRateRowHighlightEnabled());
 
+			tempProps.setProperty(base + PROPKEY_postponeIsEnabled,              isPostponeEnabled());
 			tempProps.setProperty(base + PROPKEY_postponeTime,                   getPostponeTime());
 			tempProps.setProperty(base + PROPKEY_queryTimeout,                   getQueryTimeout());
 
@@ -5827,6 +6640,7 @@ implements Cloneable, ITableTooltip
 		Configuration.registerDefaultValue(base + PROPKEY_nonConfiguredMonitoringAllowed, getDefaultIsNonConfiguredMonitoringAllowed());
 		Configuration.registerDefaultValue(base + PROPKEY_highlightNewDateOrRateRows,     getDefaultIsNewDeltaOrRateRowHighlightEnabled());
 
+		Configuration.registerDefaultValue(base + PROPKEY_postponeIsEnabled,              getDefaultPostponeIsEnabled());
 		Configuration.registerDefaultValue(base + PROPKEY_postponeTime,                   getDefaultPostponeTime());
 	}
 
@@ -5878,6 +6692,7 @@ implements Cloneable, ITableTooltip
 	public static final String PROPKEY_persistCounters_abs            = "persistCounters.abs";
 	public static final String PROPKEY_persistCounters_diff           = "persistCounters.diff";
 	public static final String PROPKEY_persistCounters_rate           = "persistCounters.rate";
+	public static final String PROPKEY_postponeIsEnabled              = "postponeIsEnabled";
 	public static final String PROPKEY_postponeTime                   = "postponeTime";
 	public static final String PROPKEY_queryTimeout                   = "queryTimeout";
 	public static final String PROPKEY_nonConfiguredMonitoringAllowed = "nonConfiguredMonitoringAllowed";
@@ -5907,7 +6722,9 @@ implements Cloneable, ITableTooltip
 			if (tabPanel != null)
 			{
 				// maybe use property change listeners instead: firePropChanged("status", "refreshing");
-				tabPanel.setWatermarkText("Refreshing data...");
+
+				long timeSpent = System.currentTimeMillis() - _refreshTimerStartTime;
+				tabPanel.setWatermarkText("Refreshing data, passed time "+TimeUtils.msToTimeStr("%MM:%SS.%ms", timeSpent));
 			}
 		}
 	}
@@ -5940,6 +6757,7 @@ implements Cloneable, ITableTooltip
 
 	public int     getDefaultQueryTimeout()                             { return DEFAULT_sqlQueryTimeout; }
 	public int     getDefaultPostponeTime()                             { return DEFAULT_postponeTime; }
+	public boolean getDefaultPostponeIsEnabled()                        { return DEFAULT_postponeIsEnabled; }
 	public boolean getDefaultIsFilterAllZero()                          { return false; }
 	public boolean getDefaultIsDataPollingPaused()                      { return false; }
 	public boolean getDefaultIsBackgroundDataPollingEnabled()           { return false; }
@@ -6148,4 +6966,229 @@ implements Cloneable, ITableTooltip
 			_logger.warn("computeDiffCnt(): cm='"+getName()+"', _isNewDeltaOrRateRow[newRowId="+mrow+"]=FALSE, _isNewDeltaOrRateRow.length="+_isNewDeltaOrRateRow.length+".");
 	}
 
+	
+	//-------------------------------------------------------
+	// BEGIN: toJson and to toXml 
+	//-------------------------------------------------------
+	public String toXml()
+	{
+		return "NOT-YET_IMPLEMENTED";
+	}
+
+	//-------------------------------------------------------
+	// BEGIN: toJson and to toXml 
+	//-------------------------------------------------------
+	/**
+	 * output
+	 * <pre>
+	 * "AbsCounter|DiffCounter|RateCounter" :
+	 * [
+	 *     {
+	 *         "col1" : "somedata",
+	 *         "col2" : "somedata",
+	 *         "col3" : "somedata"
+	 *     },
+	 *     {
+	 *         "col1" : "somedata",
+	 *         "col2" : "somedata",
+	 *         "col3" : "somedata"
+	 *     },
+	 *     {
+	 *         "col1" : "somedata",
+	 *         "col2" : "somedata",
+	 *         "col3" : "somedata"
+	 *     }
+	 * ]
+	 * </pre>
+	 * @param w
+	 * @param type
+	 * @throws IOException
+	 */
+	private void writeJsonCounterSample(JsonWriter w, int type)
+			throws IOException
+	{
+		// Write the TYPE
+		String counterType;
+		if      (type == DATA_ABS)  counterType = "AbsCounters";
+		else if (type == DATA_DIFF) counterType = "DiffCounters";
+		else if (type == DATA_RATE) counterType = "RateCounters";
+		else throw new IOException("Unknown type="+type);
+
+		// Set name
+		w.name(counterType);
+		
+		// Write an array of row objects: [ 
+		//                                  { "c1":"data", "c2":"data", "c3":"data" }, 
+		//                                  { "c1":"data", "c2":"data", "c3":"data" } 
+		//                                ]  
+		w.beginArray();
+		int rowc = getRowCount(type);
+		int colc = getColumnCount(type);
+		for (int r=0; r<rowc; r++)
+		{
+			w.beginObject();
+			for (int c=0; c<colc; c++)
+			{
+				Object obj  = getValue(type, r, c);
+				String name = getColumnName(c);  
+				
+				if (name == null)
+					throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+type+", row="+r+", col="+c+", Column Name was 'null' (not set).");
+
+				w.name(name);
+				if (obj == null)
+					w.nullValue();
+				else
+				{
+					if      (obj instanceof Number)  w.value( (Number)  obj );
+					else if (obj instanceof Boolean) w.value( (Boolean) obj );
+					else                             w.value( obj.toString() );
+				}
+			}
+			w.endObject();
+		}
+		w.endArray();		
+	}
+	
+	public void toJson(JsonWriter w, boolean writeCounters, boolean writeGraphs)
+	throws IOException
+	{
+		w.beginObject();
+
+		w.name("CmName")           .value(getName());
+		w.name("CmSampleTime")     .value(getTimestamp()+"");
+		w.name("CmSampleMs")       .value(getLastSampleInterval());
+		w.name("Type")             .value(isSystemCm() ? "SYSTEM" : "USER_DEFINED");
+
+		if (writeCounters)
+		{
+			w.name("Counters");
+			w.beginObject();
+
+			if (hasResultSetMetaData())
+			{
+				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
+				try
+				{
+					w.name("MetaData");
+					w.beginArray(); 
+
+					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
+					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
+					{
+						w.beginObject();
+						w.name("ColumnName")     .value(rsmd.getColumnLabel(c));
+						w.name("JdbcTypeName")   .value(ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
+						w.name("GuessedDbmsType").value(ResultSetTableModel.getColumnTypeName(rsmd, c));
+						w.name("isDiffColumn")   .value(isDiffColumn(c-1)); // column pos starts at 0 in the CM
+						w.name("isPctColumn")    .value(isPctColumn(c-1));  // column pos starts at 0 in the CM
+						w.endObject();
+					}
+					w.endArray();
+				}
+				catch (SQLException ex)
+				{
+					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
+				}
+			}
+
+			if (hasAbsData())
+				writeJsonCounterSample(w, DATA_ABS);
+
+			if (hasDiffData())
+				writeJsonCounterSample(w, DATA_DIFF);
+
+			if (hasRateData())
+				writeJsonCounterSample(w, DATA_RATE);
+
+			w.endObject(); // END: Counters
+		}
+
+		if (writeGraphs && hasTrendGraph())
+		{
+			w.name("Graphs");
+			w.beginArray();
+			for (String graphName : getTrendGraphs().keySet())
+			{
+				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
+
+				w.beginObject();
+				w.name("GraphName").value(graphName);
+				w.name("Data");
+				w.beginArray();
+				// loop all data
+				Double[] dataArr  = tgdp.getData();
+				String[] labelArr = tgdp.getLabel();
+//				if (dataArr  == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's DATA array.");
+//				if (labelArr == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's LABEL array.");
+				if (dataArr != null && labelArr != null)
+				{
+					for (int d=0; d<dataArr.length; d++)
+					{
+						w.beginObject();
+
+						Double data  = dataArr[d];
+						String label = null;
+						if (d < labelArr.length)
+							label = labelArr[d];
+
+						w.name("Label")    .value(label);
+						w.name("DataPoint").value(data);
+
+						w.endObject();
+					}
+				}
+				w.endArray();
+				w.endObject(); // END: GraphName
+			}
+			w.endArray();
+		}
+
+		w.endObject(); // END: this CM
+	}
+// How a JSON might look like
+//	{
+//		"name" : "CmExample",
+//		"sampleIntervall" : 111111,
+//		"sampleTime" : "2017-01-01 11:22:33.123",
+//		"type" : "system|userdefined"
+//	
+//		"MetaData" : 
+//		{
+//			[
+//				{ "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
+//			]
+//		},
+//		"counters" :
+//		{
+//			"absCounters" :
+//			[
+//				{ "colname" : "XxxXxxx", "data" : "someVal" },
+//				{ "colname" : "XxxXxxx", "data" : "someVal" },
+//				{ "colname" : "XxxXxxx", "data" : "someVal" },
+//				{ "colname" : "XxxXxxx", "data" : "someVal" },
+//			],
+//			"diffCounters" :
+//			[
+//			],
+//			"rateCounters" :
+//			[
+//			],
+//		}
+//		"graphs" :
+//		[
+//			{ 
+//				"name" : "xxxxx",
+//				"data" : 
+//				[
+//					{"label" : "label-1", "dataPoint" : 1.1 },
+//					{"label" : "label-2", "dataPoint" : 2.2 },
+//					{"label" : "label-3", "dataPoint" : 3.3 },
+//					{"label" : "label-4", "dataPoint" : 4.4 },
+//					{"label" : "label-5", "dataPoint" : 5.5 }
+//				]
+//			}
+//		]
+//	}
+	
 }

@@ -76,6 +76,7 @@ import com.asetune.cm.ase.CmWorkQueues;
 import com.asetune.cm.ase.CmWorkerThread;
 import com.asetune.cm.ase.ToolTipSupplierAse;
 import com.asetune.cm.os.CmOsIostat;
+import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
@@ -385,6 +386,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmOsVmstat         .create(counterController, guiController);
 		CmOsMpstat         .create(counterController, guiController);
 		CmOsUptime         .create(counterController, guiController);
+		CmOsMeminfo        .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -556,11 +558,19 @@ public class CounterControllerAse extends CounterControllerAbstract
 				{
 					_logger.debug("Checking for full transaction log in the master database.");
 	
+//					String sql = "select 'isLoggFull' = lct_admin('logfull', db_id('master'))," +
+//					             "       'spaceLeft'  = lct_admin('logsegment_freepages', db_id('master')) " +      // Describes the free space available for a database
+//					             "                    - lct_admin('reserve', 0) " +                                 // Returns the current last-chance threshold of the transaction log in the database from which the command was issued
+//					             "                    - lct_admin('reserved_for_rollbacks', db_id('master'), 0) " + // Determines the number of pages reserved for rollbacks in the master database
+//					             "                    - @@thresh_hysteresis";                                       // Take away hysteresis
 					String sql = "select 'isLoggFull' = lct_admin('logfull', db_id('master'))," +
-					             "       'spaceLeft'  = lct_admin('logsegment_freepages', db_id('master')) " +      // Describes the free space available for a database
-					             "                    - lct_admin('reserve', 0) " +                                 // Returns the current last-chance threshold of the transaction log in the database from which the command was issued
-					             "                    - lct_admin('reserved_for_rollbacks', db_id('master'), 0) " + // Determines the number of pages reserved for rollbacks in the master database
-					             "                    - @@thresh_hysteresis";                                       // Take away hysteresis
+					             "       'spaceLeft'  = CASE WHEN lct_admin('logfull', db_id('master')) >= 1 " +
+					             "                           THEN 0 " +
+					             "                           ELSE   lct_admin('logsegment_freepages', db_id('master')) " +      // Describes the free space available for a database
+					             "                                - lct_admin('reserve', 0) " +                                 // Returns the current last-chance threshold of the transaction log in the database from which the command was issued
+					             "                                - lct_admin('reserved_for_rollbacks', db_id('master'), 0) " + // Determines the number of pages reserved for rollbacks in the master database
+					             "                                - @@thresh_hysteresis" +                                      // Take away hysteresis
+					             "                      END";
 	
 					int isLogFull = 0;
 					int spaceLeft = 0;

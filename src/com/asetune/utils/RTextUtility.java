@@ -1,6 +1,7 @@
 package com.asetune.utils;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -15,6 +16,14 @@ import org.fife.ui.rtextarea.SearchResult;
 
 public class RTextUtility
 {
+	public static int markAll(JTextArea ta, Color color, String toMark)
+	{
+		ArrayList<String> list = new ArrayList<String>(1);
+		list.add(toMark);
+		
+		return markAll(ta, color, list);
+	}
+
 	public static int markAll(JTextArea ta, Color color, String[] toMarkArr)
 	{
 		return markAll(ta, color, Arrays.asList(toMarkArr));
@@ -75,6 +84,16 @@ public class RTextUtility
 			}
 		}
 		return numMarked;
+	}
+	
+	public static void unMarkAll(JTextArea ta)
+	{
+//		((RTextAreaHighlighter)ta.getHighlighter()).clearMarkAllHighlights();
+//		ta.repaint();
+
+		SearchContext context = new SearchContext();
+		context.setMarkAll(false);
+		SearchEngine.find(ta, context);
 	}
 
 }

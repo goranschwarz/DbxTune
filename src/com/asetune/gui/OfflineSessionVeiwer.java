@@ -56,6 +56,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.decorator.Highlighter;
 import org.jdesktop.swingx.treetable.TreeTableModel;
 
+import com.asetune.CounterController;
 import com.asetune.CounterControllerAbstract;
 import com.asetune.Version;
 import com.asetune.config.dbms.DbmsConfigManager;
@@ -70,7 +71,6 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
-
 
 public class OfflineSessionVeiwer 
 extends JFrame
@@ -680,6 +680,13 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 			reader.loadSessionCmIndicators(ts);
 			reader.loadSummaryCm(ts);
 		}
+
+		final TrendGraphDashboardPanel tgdp = CounterController.getSummaryPanel().getGraphPanel();
+		if (tgdp != null)
+		{
+			// FIXME: This do not seems to work... maybe do it in a timer with a delay of 500ms instead
+			SwingUtilities.invokeLater(new Runnable() { @Override public void run() { tgdp.reLayout(); } });
+		}
 	}
 
 	public void doActionShowAseConfig()
@@ -769,7 +776,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		if (_linkSliderTree_chk.isSelected())
 		{
 			// FIXME: Get the correct node in the list, and show it in the tree view
-			System.out.println("FIXME: Get the correct node in the list, and show it in the tree view... ts='"+ts+"'.");
+//			System.out.println("FIXME: Get the correct node in the list, and show it in the tree view... ts='"+ts+"'.");
+
 ////			_treeTable.getSelectionModel().setSelectionInterval(xxxx, xxxx); xxxx++;
 //			TreePath tp  = _model.getTreePathForSampleTime(ts);
 //			TreePath ctp = _treeTable.getTreeSelectionModel().getSelectionPath();

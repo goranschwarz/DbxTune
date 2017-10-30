@@ -48,7 +48,7 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "asetune.properties";
+		return "dbxtune.properties";
 	}
 
 	@Override

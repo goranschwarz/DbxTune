@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSampleCatalogIteratorAse;
 import com.asetune.cm.CounterSetTemplates;
@@ -179,41 +181,20 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_spaceUsage,        conf.getBooleanProperty(PROPKEY_sample_spaceUsage,        DEFAULT_sample_spaceUsage));
-		lc.setProperty(PROPKEY_sample_minPageLimit,      conf.getBooleanProperty(PROPKEY_sample_minPageLimit,      DEFAULT_sample_minPageLimit));
-		lc.setProperty(PROPKEY_sample_minPageLimitCount, conf.getIntProperty    (PROPKEY_sample_minPageLimitCount, DEFAULT_sample_minPageLimitCount));
-		lc.setProperty(PROPKEY_sample_systemTables,      conf.getBooleanProperty(PROPKEY_sample_systemTables,      DEFAULT_sample_systemTables));
-		lc.setProperty(PROPKEY_sample_partitions,        conf.getBooleanProperty(PROPKEY_sample_partitions,        DEFAULT_sample_partitions));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
+		list.add(new CmSettingsHelper("Sample Space Usage",            PROPKEY_sample_spaceUsage        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spaceUsage        , DEFAULT_sample_spaceUsage        ), DEFAULT_sample_spaceUsage       , "Sample Table Space Usage with ASE functions data_pages() and reserved_pages()" ));
+		list.add(new CmSettingsHelper("Minimum Number of Pages",       PROPKEY_sample_minPageLimit      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_minPageLimit      , DEFAULT_sample_minPageLimit      ), DEFAULT_sample_minPageLimit     , "Sample table that has X number of pages or more"                               ));
+		list.add(new CmSettingsHelper("Minimum Number of Pages Count", PROPKEY_sample_minPageLimitCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_minPageLimitCount , DEFAULT_sample_minPageLimitCount ), DEFAULT_sample_minPageLimitCount, "Table must have more pages than this to be included"                           ));
+		list.add(new CmSettingsHelper("Include System Tables",         PROPKEY_sample_systemTables      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemTables      , DEFAULT_sample_systemTables      ), DEFAULT_sample_systemTables     , "Include ASE System Tables."                                                    ));
+		list.add(new CmSettingsHelper("Stats at Partition Level",      PROPKEY_sample_partitions        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_partitions        , DEFAULT_sample_partitions        ), DEFAULT_sample_partitions       , "Sample statistics on a partition level, not summarized at the table level"     ));
+
+		return list;
 	}
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_spaceUsage))        return "Sample Table Space Usage with ASE functions data_pages() and reserved_pages()";
-		if (propName.equals(PROPKEY_sample_minPageLimit))      return "Sample table that has X number of pages or more";
-		if (propName.equals(PROPKEY_sample_minPageLimitCount)) return "Table must have more pages than this to be included";
-		if (propName.equals(PROPKEY_sample_systemTables))      return "Include ASE System Tables.";
-		if (propName.equals(PROPKEY_sample_partitions))        return "Sample statistics on a partition level, not summarized at the table level";
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_spaceUsage))        return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_minPageLimit))      return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_minPageLimitCount)) return Integer.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_systemTables))      return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_partitions))        return Boolean.class.getSimpleName();
-		return "";
-	}
 
 	@Override
 	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)

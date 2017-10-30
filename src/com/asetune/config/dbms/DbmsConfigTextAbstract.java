@@ -445,6 +445,7 @@ implements IDbmsConfigText
 			{
 				 // 10 seconds timeout, it shouldn't take more than 10 seconds to get Cache Config or similar.
 				script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
+				script.setRsAsAsciiTable(true);
 				setConfig(script.executeSqlStr(sql, true));
 			}
 			catch (SQLException ex)
@@ -932,7 +933,7 @@ implements IDbmsConfigText
 //		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 //		PropertyConfigurator.configure(log4jProps);
 //
-//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\asetune.properties");
+//		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 //
 //

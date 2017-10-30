@@ -8,7 +8,10 @@ import javax.swing.JSplitPane;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.ase.CmSpinlockSum;
+import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sp_sysmon.SpSysmon;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -66,12 +69,28 @@ extends TabularCntrPanel
 		
 //		if ( ! isMonConnected() )
 //			return;
+		CountersModel cmSpinlockSum = CounterController.getInstance().getCmByName(CmSpinlockSum.CM_NAME);
+		if ( MainFrame.isOfflineConnected() )
+		{
+			if (cmSpinlockSum != null)
+			{
+				TabularCntrPanel tcp = cmSpinlockSum.getTabPanel();
+				if (tcp != null)
+				{
+//					tcp.tabSelected();
+					tcp.readOfflineSample_withProgressDialog();
+					cmSpinlockSum = tcp.getDisplayCm();
+//System.out.println("CmSysmonPanle.updateExtendedInfoPanel(): isOfflineConnected:cmSpinlockSum="+ ( cmSpinlockSum == null ? null : cmSpinlockSum.getRowCount()) );
+				}
+			}
+		}
+
 
 		CountersModel cm = getDisplayCm();
 		if (cm == null)
 			cm = getCm();
 
-//System.out.println(CM_NAME__SYSMON+" -- CM="+cm);
+//System.out.println("CmSysmonPanel.updateExtendedInfoPanel -- CM="+cm);
 		if (cm == null)
 			return;
 
@@ -85,7 +104,7 @@ extends TabularCntrPanel
 
 		int caretPosition = textArea.getCaretPosition();
 
-		SpSysmon sysmon = new SpSysmon(cm);
+		SpSysmon sysmon = new SpSysmon(cm, cmSpinlockSum);
 		sysmon.calc();
 //		sysmon.printReport();
 		String report = sysmon.getReportText();

@@ -70,6 +70,20 @@ extends CounterTableModel
 	}
 
 	/**
+	 * remove a record for a specific Primary Key
+	 * @param pk the PK to remove
+	 * @return null if the PK was not found, otherwise the a OsTableRow object removed
+	 */
+	public OsTableRow removeRowByPk(String pk)
+	{
+		OsTableRow entry = _pkMap.remove(pk);
+		if (entry != null)
+			_rowList.remove(entry);
+		
+		return entry;
+	}
+
+	/**
 	 * Get a row based on the row number
 	 * @param row row number
 	 * @return a OsTableRow
@@ -193,11 +207,13 @@ extends CounterTableModel
 		return _metaData.getColumnName( column + 1 );
 	}
 
-//	@Override
-//	public Class<?> getColumnClass(int column)
-//	{
-//		return _metaData.getColumnClass(column);
-//	}
+	@Override
+	public Class<?> getColumnClass(int column)
+	{
+		// TableModel start at 0, ResultSetMetaData starts at 1
+		// so fetch column + 1, since we use underlying ResultSetMetaData interface 
+		return _metaData.getColumnClass( column + 1 );
+	}
 
 	@Override
 	public boolean isCellEditable(int row, int column)
@@ -216,6 +232,8 @@ extends CounterTableModel
 	public void setValueAt(Object val, int row, int column)
 	{
 		// NOT implemented, this is a read-only storage
+		OsTableRow entry = getRow(row);      // rows    starts at 0
+		entry.setValue( column + 1 , val);   // columns starts at 1
 	}
 
 	@Override // CounterTableModel

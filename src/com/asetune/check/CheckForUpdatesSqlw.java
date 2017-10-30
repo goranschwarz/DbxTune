@@ -155,6 +155,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionInt()+"");
 		urlParams.add("srvName",             sqlwConnInfo.getSrvName());
 		urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
+		urlParams.add("srvPageSizeInKb",     sqlwConnInfo.getSrvPageSIzeInKb());
 		urlParams.add("srvCharsetName",      sqlwConnInfo.getSrvCharset());
 		urlParams.add("srvSortOrderName",    sqlwConnInfo.getSrvSortorder());
 
@@ -288,6 +289,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		private       int           _srvVersionInt     = 0;
 		private       String        _srvName           = "";
 		private       String        _srvUser           = "";
+		private       String        _srvPageSizeInKb   = "";
 		private       String        _srvCharset        = "";
 		private       String        _srvSortorder      = "";
 		private       SshTunnelInfo _sshInfo           = null;
@@ -312,6 +314,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		public int           getSrvVersionInt    () { return _srvVersionInt; }
 		public String        getSrvName          () { return _srvName           == null ? "" : _srvName          .trim(); }
 		public String        getSrvUser          () { return _srvUser           == null ? "" : _srvUser          .trim(); }
+		public String        getSrvPageSIzeInKb  () { return _srvPageSizeInKb   == null ? "" : _srvPageSizeInKb  .trim(); }
 		public String        getSrvCharset       () { return _srvCharset        == null ? "" : _srvCharset       .trim(); }
 		public String        getSrvSortorder     () { return _srvSortorder      == null ? "" : _srvSortorder     .trim(); }
 		public SshTunnelInfo getSshTunnelInfo    () { return _sshInfo; }
@@ -326,6 +329,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		public void setSrvVersionInt    (int    ver)            { _srvVersionInt     = ver; }
 		public void setSrvName          (String str)            { _srvName           = str; }
 		public void setSrvUser          (String str)            { _srvUser           = str; }
+		public void setSrvPageSizeInKb  (String str)            { _srvPageSizeInKb   = str; }
 		public void setSrvCharset       (String str)            { _srvCharset        = str; }
 		public void setSrvSortorder     (String str)            { _srvSortorder      = str; }
 		public void setSshTunnelInfo    (SshTunnelInfo sshInfo) { _sshInfo           = sshInfo; }

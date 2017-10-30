@@ -133,7 +133,12 @@ extends TabularCntrPanel
 
 					if (_logger.isDebugEnabled())
 						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": OperationName("+OperationName_pos+")='"+OperationName+"', ExecutionCnt("+ExecutionCnt_pos+")='"+ExecutionCnt+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"'.");
-					
+
+					// add 0 if null value...
+					if (ExecutionCnt       == null) ExecutionCnt        = new Double(0);
+					if (ExecutionTime      == null) ExecutionTime       = new Double(0);
+					if (ExecutionTimePerCnt== null) ExecutionTimePerCnt = new Double(0);
+
 					if (generateExecutionCnt)        dataset.addValue(ExecutionCnt       .doubleValue(), OperationName, "ExecutionCnt");
 					if (generateExecutionTime)       dataset.addValue(ExecutionTime      .doubleValue(), OperationName, "ExecutionTime");
 					if (generateExecutionTimePerCnt) dataset.addValue(ExecutionTimePerCnt.doubleValue(), OperationName, "ExecutionTimePerCnt");
@@ -346,6 +351,10 @@ extends TabularCntrPanel
 			panel.add( new ChartPanel(createChart(createDataset(dataTable))) );
 		else
 			panel.add( new JLabel("Graph NOT Enabled", JLabel.CENTER) );
+
+		// Needs to be done since we remove and add content to the panel
+		panel.validate();
+		panel.repaint();
 	}
 
 	private void helperActionSave(String key, boolean b)

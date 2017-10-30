@@ -17,6 +17,7 @@ import com.asetune.cm.ase.gui.CmExecutionTimePanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -112,11 +113,12 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = new String[] { "runtime-replaced" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_EXECUTION_COUNT,          new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_COUNT,          labels));
-		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME,           new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME,           labels));
-		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, labels));
+		addTrendGraphData(GRAPH_NAME_EXECUTION_COUNT,          new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_COUNT,          labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME,           new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME,           labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -125,12 +127,11 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_EXECUTION_COUNT,
 				"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
-				"ASE SubSystem Operations - Execution Count (15.7 SP100 or above)", // Label 
+				"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-//				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
@@ -138,12 +139,11 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME,
 				"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
-				"ASE SubSystem Operations - Execution Time, in Micro Seconds (15.7 SP100 or above)", // Label 
+				"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-//				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
@@ -151,12 +151,11 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
 				"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
-				"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count (15.7 SP100 or above)", // Label 
+				"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
-//				1570100,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
@@ -238,9 +237,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_EXECUTION_TIME.equals(tgdp.getName()))
@@ -255,9 +252,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_EXECUTION_TIME_PER_COUNT.equals(tgdp.getName()))
@@ -272,9 +267,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

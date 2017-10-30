@@ -7,6 +7,7 @@ import java.sql.Statement;
 import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.RsConnection;
 
 public class DbxConnectionStateInfoRs
 implements DbxConnectionStateInfo
@@ -47,6 +48,16 @@ implements DbxConnectionStateInfo
 		}
 		catch (SQLException sqle)
 		{
+			if (conn instanceof RsConnection)
+			{
+				if ( ((RsConnection)conn).isInGatewayMode(3) )
+				{
+					_mode    = "GATEWAY";
+					_quiesce = "UNKNOWN";
+					_status  = ((RsConnection)conn).getLastGatewaySrvName();
+					return;
+				}
+			}
 			_logger.error("Error in DbxConnectionStateInfoRs.refresh()", sqle);
 		}
 	}

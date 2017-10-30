@@ -279,6 +279,7 @@ public class StatusBar extends JPanel
 					"    <li>Product Name:    <b>" + si.getProductName()    + "</b></li>" +
 					"    <li>Product Version: <b>" + si.getProductVersion() + "</b></li>" +
 					listeners +
+					(StringUtil.isNullOrBlank(si.getPageSizeKb()       ) ? "" : "<li>Page Size in KB:     <b>" + si.getPageSizeKb()        + "</b></li>") +
 					(StringUtil.isNullOrBlank(si.getCharset()          ) ? "" : "<li>Server Charset:      <b>" + si.getCharset()           + "</b></li>") +
 					(StringUtil.isNullOrBlank(si.getSortorder()        ) ? "" : "<li>Server SortOrder:    <b>" + si.getSortorder()         + "</b></li>") +
 					(StringUtil.isNullOrBlank(si.getClientCharsetId()  ) ? "" : "<li>Client Charset ID:   <b>" + si.getClientCharsetId()   + "</b></li>") +
@@ -487,6 +488,7 @@ public class StatusBar extends JPanel
 		public String _username;
 		public String _withUrl;
 		public String _sysListeners;
+		public String _pageSizeInKb;
 		public String _charset;
 		public String _sortorder;
 
@@ -496,7 +498,7 @@ public class StatusBar extends JPanel
 		
 		public ServerInfo(String srvName, String productName, String productVersion, 
 				String serverName, String username, String withUrl, String sysListeners, 
-				String srvCharset, String srvSortorder,
+				String srvPageSizeInKb, String srvCharset, String srvSortorder,
 				String clientCharsetId, String clientCharsetName, String clientCharsetDesc)
 		{
 			_srvName           = srvName;
@@ -506,6 +508,7 @@ public class StatusBar extends JPanel
 			_username          = username;
 			_withUrl           = withUrl;
 			_sysListeners      = sysListeners;
+			_pageSizeInKb      = srvPageSizeInKb;
 			_charset           = srvCharset;
 			_sortorder         = srvSortorder;
 
@@ -521,6 +524,7 @@ public class StatusBar extends JPanel
 		public String getUsername()          { return _username          != null ? _username       : ""; }
 		public String getWithUrl()           { return _withUrl           != null ? _withUrl        : ""; }
 		public String getSysListeners()      { return _sysListeners      != null ? _sysListeners   : ""; }
+		public String getPageSizeKb()        { return _pageSizeInKb      != null ? _pageSizeInKb   : ""; }
 		public String getCharset()           { return _charset           != null ? _charset        : ""; }
 		public String getSortorder()         { return _sortorder         != null ? _sortorder      : ""; }
 
@@ -540,6 +544,7 @@ public class StatusBar extends JPanel
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RS))    productNameShort = "RS";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   productNameShort = "RAX";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) productNameShort = "RSDRA";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDA))  productNameShort = "RSDA";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))         productNameShort = "HANA";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MAXDB))        productNameShort = "MaxDB";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))           productNameShort = "H2";
@@ -563,6 +568,7 @@ public class StatusBar extends JPanel
 		public void   setUsername         (String username)          { _username          = username; }
 		public void   setWithUrl          (String withUrl)           { _withUrl           = withUrl; }
 		public void   setSysListeners     (String sysListeners)      { _sysListeners      = sysListeners; }
+		public void   getPageSizeKb       (String srvPageSizeInKb)   { _pageSizeInKb      = srvPageSizeInKb; }
 		public void   setCharset          (String charset)           { _charset           = charset; }
 		public void   setSortorder        (String sortorder)         { _sortorder         = sortorder; }
 

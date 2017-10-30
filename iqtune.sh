@@ -39,7 +39,7 @@ export JVM_MEMORY_PARAMS_64=${DBXTUNE_JVM_MEMORY_PARAMS:-"-Xmx2048m -Xms64m"}
 export JVM_GC_PARAMS_32=${DBXTUNE_JVM_GC_PARAMS:-""}
 export JVM_GC_PARAMS_64=${DBXTUNE_JVM_GC_PARAMS:-""}
 
-export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-""}
+export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-"-noverify"}
 
 export EXTRA=
 #export DEBUG_OPTIONS=-agentlib:hprof=cpu=samples,interval=20,depth=50
@@ -55,7 +55,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jconn3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jtds-1.3.1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.193.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.194.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-4.2.jar
@@ -65,7 +65,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/planviewer.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-lang3-3.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-io-2.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-csv-1.2.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.3.1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-build251beta1.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea.jar
@@ -78,6 +78,27 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-1.0.3.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/simplemagic-1.6.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsqlparser-0.9.6.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/bcprov-jdk15on-157.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-compiler-3.0.7.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/janino-3.0.7.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/balloontip-1.2.4.1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/reflections-0.9.11.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/guava-20.0.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/javassist-3.21.0-GA.jar
+#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cloning-1.9.6.jar
+#export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/objenesis-2.6.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/syslog-java-client-1.1.0.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/javax.mail.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-email-1.4.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jsendnsca-2.1.0.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/slf4j-api-1.7.25.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/slf4j-log4j12-1.7.25.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/velocity-engine-core-2.0.jar
+
+export CLASSPATH=${CLASSPATH}:${HOME}/.asetune/jdbc_drivers/*
+export CLASSPATH=${CLASSPATH}:${HOME}/.asetune/lib/*
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jdbc_drivers/*
+export CLASSPATH=${CLASSPATH}:${EXTRA_JDBC_DRIVERS}
 
 export PATH=${DBXTUNE_JAVA_HOME}/bin:${JAVA_HOME}/bin:${PATH}
 cd ${APPL_HOME}
@@ -159,7 +180,7 @@ echo "JVM_PARAMS=${JVM_PARAMS}"
 
 
 
-#echo java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
-      java -cp ${CLASSPATH} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+#echo java ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+      java ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
 
 

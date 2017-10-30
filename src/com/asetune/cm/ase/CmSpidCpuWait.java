@@ -3,6 +3,7 @@ package com.asetune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -323,6 +325,15 @@ extends CountersModel
 			nl_15702           = "\n";
 		}
 
+		// ASE 16.0 SP3
+		String QueryOptimizationTime       = "";
+		String ase160_sp3_nl               = "";
+		if (aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+		{
+			QueryOptimizationTime       = "  A.QueryOptimizationTime, ";
+			ase160_sp3_nl               = "\n";
+		}
+		
 		cols += 
 			"  A.SPID, A.KPID, " + UserName + OrigUserName + "\n" +
 			"  sampleTimeInMs = convert(int,-1), \n" + // This value is replaced with a real value in class CounterSample
@@ -334,6 +345,7 @@ extends CountersModel
 			"  A.LogicalReads, A.PhysicalReads, A.PhysicalWrites, A.PagesRead, A.PagesWritten, \n" +
 			IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 			"  A.TableAccesses, A.IndexAccesses, A.Transactions, A.Commits, A.Rollbacks, A.LocksHeld, A.MemUsageKB, \n" +
+			QueryOptimizationTime + ase160_sp3_nl +
 //			(aseVersion >= 15700 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
 //			(aseVersion >= 1570000 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
 			(aseVersion >= Ver.ver(15,7) ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
@@ -371,50 +383,21 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_monSqlText,       conf.getBooleanProperty(PROPKEY_sample_monSqlText,       DEFAULT_sample_monSqlText));
-		lc.setProperty(PROPKEY_sample_dbccSqlText,      conf.getBooleanProperty(PROPKEY_sample_dbccSqlText,      DEFAULT_sample_dbccSqlText));
-		lc.setProperty(PROPKEY_sample_procCallStack,    conf.getBooleanProperty(PROPKEY_sample_procCallStack,    DEFAULT_sample_procCallStack));
-		lc.setProperty(PROPKEY_sample_showplan,         conf.getBooleanProperty(PROPKEY_sample_showplan,         DEFAULT_sample_showplan));
-		lc.setProperty(PROPKEY_sample_dbccStacktrace,   conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace,   DEFAULT_sample_dbccStacktrace));
-		lc.setProperty(PROPKEY_sample_freezeMda,        conf.getBooleanProperty(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda));
-		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
-		lc.setProperty(PROPKEY_sample_systemSpids,      conf.getBooleanProperty(PROPKEY_sample_systemSpids,      DEFAULT_sample_systemSpids));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
-	}
+		list.add(new CmSettingsHelper("Get Monitored SQL Text",   PROPKEY_sample_monSqlText       , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText       , DEFAULT_sample_monSqlText      ), DEFAULT_sample_monSqlText      , CmSpidCpuWaitPanel.TOOLTIP_sample_monSqlText       ));
+		list.add(new CmSettingsHelper("Get DBCC SQL Text",        PROPKEY_sample_dbccSqlText      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccSqlText      , DEFAULT_sample_dbccSqlText     ), DEFAULT_sample_dbccSqlText     , CmSpidCpuWaitPanel.TOOLTIP_sample_dbccSqlText      ));
+		list.add(new CmSettingsHelper("Get Procedure Call Stack", PROPKEY_sample_procCallStack    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_procCallStack    , DEFAULT_sample_procCallStack   ), DEFAULT_sample_procCallStack   , CmSpidCpuWaitPanel.TOOLTIP_sample_procCallStack    ));
+		list.add(new CmSettingsHelper("Get Showplan",             PROPKEY_sample_showplan         , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan         , DEFAULT_sample_showplan        ), DEFAULT_sample_showplan        , CmSpidCpuWaitPanel.TOOLTIP_sample_showplan         ));
+		list.add(new CmSettingsHelper("Get ASE Stacktrace",       PROPKEY_sample_dbccStacktrace   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace   , DEFAULT_sample_dbccStacktrace  ), DEFAULT_sample_dbccStacktrace  , CmSpidCpuWaitPanel.TOOLTIP_sample_dbccStacktrace   ));
+		list.add(new CmSettingsHelper("Freeze MDA Counters",      PROPKEY_sample_freezeMda        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_freezeMda        , DEFAULT_sample_freezeMda       ), DEFAULT_sample_freezeMda       , CmSpidCpuWaitPanel.TOOLTIP_sample_freezeMda        ));
+		list.add(new CmSettingsHelper("Extra Where Clause",       PROPKEY_sample_extraWhereClause , String.class,  conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause), DEFAULT_sample_extraWhereClause, CmSpidCpuWaitPanel.TOOLTIP_sample_extraWhereClause ));
+		list.add(new CmSettingsHelper("Get System SPID's",        PROPKEY_sample_systemSpids      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemSpids      , DEFAULT_sample_systemSpids     ), DEFAULT_sample_systemSpids     , CmSpidCpuWaitPanel.TOOLTIP_sample_systemSpids      ));
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_monSqlText))       return CmSpidCpuWaitPanel.TOOLTIP_sample_monSqlText;
-		if (propName.equals(PROPKEY_sample_dbccSqlText))      return CmSpidCpuWaitPanel.TOOLTIP_sample_dbccSqltext;
-		if (propName.equals(PROPKEY_sample_procCallStack))    return CmSpidCpuWaitPanel.TOOLTIP_sample_procCallStack;
-		if (propName.equals(PROPKEY_sample_showplan))         return CmSpidCpuWaitPanel.TOOLTIP_sample_showplan;
-		if (propName.equals(PROPKEY_sample_dbccStacktrace))   return CmSpidCpuWaitPanel.TOOLTIP_sample_dbccStacktrace;
-		if (propName.equals(PROPKEY_sample_freezeMda))        return CmSpidCpuWaitPanel.TOOLTIP_sample_freezeMda;
-		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmSpidCpuWaitPanel.TOOLTIP_sample_extraWhereClause;
-		if (propName.equals(PROPKEY_sample_systemSpids))      return CmSpidCpuWaitPanel.TOOLTIP_sample_systemSpids;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_monSqlText))       return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_dbccSqlText))      return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_procCallStack))    return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_showplan))         return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_dbccStacktrace))   return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_freezeMda))        return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_systemSpids))      return Boolean.class.getSimpleName();
-
-		return "";
+		return list;
 	}
 
 

@@ -46,7 +46,7 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "postgrestune.properties";
+		return "dbxtune.properties";
 	}
 
 	@Override

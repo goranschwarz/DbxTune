@@ -328,6 +328,8 @@ implements ActionListener, ConnectionProvider
 			}
 		};
 		wait.execAndWait(bgExec);
+
+		_freeMb.setText(DbmsConfigTextManager.hasInstances() ? DbmsConfigManager.getInstance().getFreeMemoryStr() : "");
 	}
 
 	private void doApply()

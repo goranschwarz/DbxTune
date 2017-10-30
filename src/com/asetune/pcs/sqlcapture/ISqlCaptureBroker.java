@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 
 public interface ISqlCaptureBroker
 {
@@ -50,9 +51,21 @@ public interface ISqlCaptureBroker
 
 	public List<String> getTableNames();
 	public String getTableDdlString(DatabaseMetaData dbmd, String tabName);
-	public String getIndexDdlString(DatabaseMetaData dbmd, String tabName);
+	public List<String> getIndexDdlString(DatabaseMetaData dbmd, String tabName);
 
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler persistentCounterHandler);
 
 	public String getInsertStatement(String tabName);
+
+	/**
+	 * Initialize the Broker with the same configuartion as the PersistenceCounterHandler
+	 * @param conf
+	 */
+	public void init(Configuration conf);
+
+	public Configuration getConfiguration();
+	public String        getProperty       (String propName, String  defaultValue);
+	public boolean       getBooleanProperty(String propName, boolean defaultValue);
+	public int           getIntProperty    (String propName, int     defaultValue);
+	public long          getLongProperty   (String propName, long    defaultValue);
 }

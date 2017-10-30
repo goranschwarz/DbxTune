@@ -1,5 +1,6 @@
 package com.asetune.tools.sqlw;
 
+import java.awt.Component;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
@@ -13,7 +14,7 @@ import com.asetune.utils.StringUtil;
 
 public class SqlStatementFactory
 {
-	public static SqlStatement create(DbxConnection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress)
+	public static SqlStatement create(DbxConnection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
 	throws SQLException, PipeCommandException
 	{
 		String sqlOrigin = sql;
@@ -25,8 +26,8 @@ public class SqlStatementFactory
 		if (sql.startsWith("\\"))
 		{
 			// A set of known commands
-			String[] knownCommands  = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile", "\\ddlgen"};
-			String[] mustHaveParams = {"\\exec", "\\rpc", "\\call", "\\prep"};
+			String[] knownCommands  = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile", "\\ddlgen", "\\ssh", "\\set"};
+			String[] mustHaveParams = {"\\exec", "\\rpc", "\\call", "\\prep", "\\ssh"};
 
 			// Get first and seconds word
 			StringTokenizer st = new StringTokenizer(sql);
@@ -52,6 +53,8 @@ public class SqlStatementFactory
 					+ "    \\prep insert inti t1 values(? ?) :(params) -- exec using Prepared Statement\n"
 					+ "    \\loadfile -T tabname filename              -- load a (CSV) file into a table\n"
 					+ "    \\ddlgen -h | -t tabname                    -- generate DDL and open editor\n"
+					+ "    \\ssh [user@host] cmd                       -- execute a command on the remote host\n"
+					+ "    \\set [-u] [var=val]                        -- Set a variable to a value. Varaibles can be used in text as ${varname}\n"
 					+ "\n"
 					+ "param description: \n"
 					+ "    Type        Value               java.sql.Types  Example: replace question mark(?) with value\n"
@@ -80,8 +83,10 @@ public class SqlStatementFactory
 		}
 
 		// Decide what to create
-		if      (w1.equals("\\loadfile")) return new SqlStatementCmdLoadFile(conn, sqlOrigin, dbProductName, resultCompList, progress);
-		if      (w1.equals("\\ddlgen"))   return new SqlStatementCmdDdlGen  (conn, sqlOrigin, dbProductName, resultCompList, progress);
+		if      (w1.equals("\\loadfile")) return new SqlStatementCmdLoadFile(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\ddlgen"))   return new SqlStatementCmdDdlGen  (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\ssh"))      return new SqlStatementCmdSsh     (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\set"))      return new SqlStatementCmdSet     (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
 //		else if (w1.equals("\\exec"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\rpc" ))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\call"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);

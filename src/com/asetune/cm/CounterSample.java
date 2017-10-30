@@ -1144,7 +1144,7 @@ extends CounterTableModel
 				String newType = rsmd.getColumnClassName(i);
 				if ( ! oldType.equals(newType) )
 				{
-					_logger.error(getName()+": ResultSet number "+rsNum+" column number "+i+" has SQL datatype "+newType+", while we expected datatype "+oldType+".  Skipping this result set.");
+					_logger.error(getName()+": ResultSet number "+rsNum+" column number "+i+" (colName='"+rsmd.getColumnLabel(i)+"') has SQL datatype "+newType+", while we expected datatype "+oldType+".  Skipping this result set.");
 					rs.close();
 					return false;
 				}

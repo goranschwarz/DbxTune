@@ -400,7 +400,7 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 					sendMdaInfoBatchSize, sendQueryList);
 
 //			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
-			_logger.info("sendMdaInfo: Sending MDA information entries for ASE Version '"+mtd.getDbmsExecutableVersionNum()+"'.");
+			_logger.info("sendMdaInfo: Sending MDA information entries for ASE Version '"+mtd.getDbmsExecutableVersionNum()+"'. (sendMdaInfoBatchSize="+sendMdaInfoBatchSize+")");
 		}
 		catch (SQLException e)
 		{

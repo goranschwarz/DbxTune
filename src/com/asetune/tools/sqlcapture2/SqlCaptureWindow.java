@@ -62,6 +62,12 @@ implements IGuiController
 		}
 	}
 
+	@Override 
+	public String getTablePopupDbmsVendorString() 
+	{ 
+		return "ase"; 
+	}
+
 	private void init()
 	{
 		ImageIcon icon16 = SwingUtils.readImageIcon(Version.class, "images/asetune_icon.gif");
@@ -189,7 +195,7 @@ implements IGuiController
 		PropertyConfigurator.configure(log4jProps);
 
 		// Set configuration, right click menus are in there...
-//		Configuration conf = new Configuration("c:\\projects\\asetune\\asetune.properties");
+//		Configuration conf = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
 //		Configuration.setInstance(Configuration.SYSTEM_CONF, conf);
 
 		// Create the factory object that holds the database connection using
@@ -211,7 +217,7 @@ implements IGuiController
 				{
 					Properties props = new Properties();
 					props.put("CHARSET", "iso_1");
-					Connection c = AseConnectionFactory.getConnection("192.168.0.110:1570", null, "sa", "sybase", Version.getAppName()+"-"+appname, null, props, null);
+					Connection c = AseConnectionFactory.getConnection("192.168.0.110:1570", null, "sa", "sybase", Version.getAppName()+"-"+appname, Version.getVersionStr(), null, props, null);
 					conn = DbxConnection.createDbxConnection(c);
 				}
 				catch (Exception e)

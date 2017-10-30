@@ -2,14 +2,24 @@ package com.asetune.cm.os.gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
+import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
+import com.asetune.hostmon.MonitorIoLinux;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -42,11 +52,13 @@ extends TabularCntrPanel
 	private JLabel  _hostmonHostname_lbl;
 	private JButton _hostmonStart_but;
 	private JButton _hostmonStop_but;
+	private JButton _iostatMapping_but;
+//	private IoStatDeviceMapperDialog _deviceMapperDialog = null;
 
 	@Override
 	protected JPanel createLocalOptionsPanel()
 	{
-		JPanel panel = SwingUtils.createPanel("Host Monitor", true);
+		final JPanel panel = SwingUtils.createPanel("Host Monitor", true);
 		panel.setLayout(new MigLayout("ins 5, gap 0", "", "0[0]0"));
 		panel.setToolTipText(
 			"<html>" +
@@ -60,6 +72,7 @@ extends TabularCntrPanel
 		_hostmonHostname_lbl         = new JLabel();
 		_hostmonStart_but            = new JButton("Start");
 		_hostmonStop_but             = new JButton("Stop");
+		_iostatMapping_but           = new JButton("Device Mapping");
 
 		_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates whether the underlying Host Monitor Thread has not yet been initialized.</html>");
 		_hostmonThreadIsRunning_lbl.setToolTipText("<html>Indicates whether the underlying Host Monitor Thread is running.</html>");
@@ -67,12 +80,14 @@ extends TabularCntrPanel
 		_hostmonHostname_lbl       .setToolTipText("<html>What host name are we monitoring.</html>");
 		_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
 		_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
+		_iostatMapping_but         .setToolTipText("<html>Open a dialog where you can map 'device name' to a more readable name, which is displaied in the column 'deviceDescription'.</html>");
 
 		_hostmonThreadNotInit_lbl  .setVisible(true);
 		_hostmonThreadIsRunning_lbl.setVisible(false);
 		_hostmonThreadIsStopped_lbl.setVisible(false);
 		_hostmonStart_but          .setVisible(false);
 		_hostmonStop_but           .setVisible(false);
+		_iostatMapping_but         .setVisible(true);
 
 		panel.add( _hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
 		panel.add( _hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
@@ -80,6 +95,7 @@ extends TabularCntrPanel
 		panel.add( _hostmonHostname_lbl,        "hidemode 3, wrap 10");
 		panel.add( _hostmonStart_but,           "hidemode 3, wrap");
 		panel.add( _hostmonStop_but,            "hidemode 3, wrap");
+		panel.add( _iostatMapping_but,          "hidemode 3, wrap");
 
 		_hostmonStart_but.addActionListener(new ActionListener()
 		{
@@ -123,6 +139,79 @@ extends TabularCntrPanel
 				}
 			}
 		});
+
+		_iostatMapping_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String forHostName = null; 
+				Map<String, String> dmToNameMap = new LinkedHashMap<>(); // Map: 'dm-0' -> 'nameOfLogiclaVolume'
+
+				HostMonitor hostMonitor = (HostMonitor) getCm().getClientProperty(HostMonitor.PROPERTY_NAME);
+				if (hostMonitor != null)
+				{
+					// What host are we connected to
+					forHostName = hostMonitor.getHostname();
+					
+					// If Linux, list '/dev/mapper' and put the entries in the Map dmToNameMap :: 'dm-0' -> 'nameOfLogiclaVolume'
+					// The Map will be used to GUESS name when adding them...
+					if (hostMonitor instanceof MonitorIoLinux)
+					{
+						try
+						{
+							String dir_devMapper = hostMonitor.getConnection().execCommandOutputAsStr("ls -l /dev/mapper");
+
+							// loop lines and get info
+							Scanner scanner = new Scanner(dir_devMapper);
+							while (scanner.hasNextLine()) 
+							{
+								String lineStr = scanner.nextLine();
+								if (StringUtil.isNullOrBlank(lineStr)) // Skip empty lines
+									continue;
+								if (lineStr.indexOf(" -> ") == -1) // Skip lines that do not contain ' -> '
+									continue;
+
+								String[] sa = lineStr.split(" ");
+								int ptrPos     = Arrays.asList(sa).indexOf("->");
+								int volNamePos = ptrPos - 1;
+								int dmNamePos  = ptrPos + 1;
+
+								if (ptrPos != -1)
+								{
+									String volNameStr = sa[volNamePos];
+									String dmNameStr  = sa[dmNamePos];
+									while (dmNameStr.startsWith("../"))
+										dmNameStr = dmNameStr.substring("../".length()); // Remove leading ../
+									
+									dmToNameMap.put(dmNameStr, volNameStr);
+								}
+							}
+							scanner.close();
+						}
+						catch(Throwable ignore) {}
+					}
+				}
+
+				// Add all "devices names" to a Set, which will be passed to the dialog
+				Set<String> devices = new LinkedHashSet<String>();
+				CounterTableModel tm = getCm().getCounterDataAbs();
+				if (tm != null)
+				{
+    				for (int r=0; r<tm.getRowCount(); r++)
+    				{
+    					Object deviceName_o = tm.getValueAt(r, 0); // The device name is always the first, even if they have different name
+    					if (deviceName_o != null)
+    						devices.add(deviceName_o.toString());
+    				}
+				}
+
+				// Open the dialog
+				IoStatDeviceMapperDialog deviceMapperDialog = new IoStatDeviceMapperDialog(SwingUtilities.getWindowAncestor(panel), forHostName, devices, dmToNameMap);
+				deviceMapperDialog.setVisible(true);
+			}
+		});
+
 		return panel;
 	}
 

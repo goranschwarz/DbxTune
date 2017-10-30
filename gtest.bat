@@ -100,7 +100,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\jconn3.jar
 rem set classpath=%classpath%;%SQLW_HOME%\lib\jtds-1.3.1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\log4j-1.2.17.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.4.193.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\h2-1.4.194.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\wizard.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-swing-4.2.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\miglayout-core-4.2.jar
@@ -110,7 +110,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\planviewer.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-lang3-3.4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-io-2.4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\commons-csv-1.2.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.3.1.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\commons-cli-1.4.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\proxy-vole_20131209.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\rsyntaxtextarea.jar
@@ -135,6 +135,13 @@ rem ------------------------------------------------------------------------
 rem --- set PATH, just add JAVA_HOME at the start
 rem ------------------------------------------------------------------------
 set PATH=%JAVA_HOME%\bin;%PATH%
+
+
+
+rem ------------------------------------------------------------------------
+rem --- Just for informational purposes, print out the Java Version we are using
+rem ------------------------------------------------------------------------
+java -version
 
 
 

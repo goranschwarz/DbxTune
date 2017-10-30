@@ -37,6 +37,15 @@ extends TdsConnection
 		return false; // FIXME: Don't know how to check this, so lets assume FALSE
 	}
 
+	/**
+	 * If it's a Unknown TDS connection, it's probably some jTDS (JavaOpenServer implementation) where isValid() do not seem to work, so lets fall back to use isClosed()
+	 */
+	@Override
+	public boolean isValid(int timeout) throws SQLException
+	{
+		return ! _conn.isClosed();
+	}
+
 	//---------------------------------------
 	// Lets cache some stuff
 	//---------------------------------------

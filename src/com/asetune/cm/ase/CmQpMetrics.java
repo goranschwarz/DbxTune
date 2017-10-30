@@ -1,8 +1,10 @@
 package com.asetune.cm.ase;
 
+import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -10,6 +12,7 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -23,6 +26,8 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.ResultSetMetaDataChangable;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 /**
@@ -110,7 +115,36 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX = CM_NAME;
 	
+	public static final String  PROPKEY_sample_filter  = PROP_PREFIX + ".sample.filter";
+	public static final String  DEFAULT_sample_filter  = "lio_avg > 100 and elap_max > 10";
+
+	public static final String  PROPKEY_onSample_flush = PROP_PREFIX + ".onSample.flush";
+	public static final boolean DEFAULT_onSample_flush = false;
+
+	@Override
+	protected void registerDefaultValues()
+	{
+		super.registerDefaultValues();
+
+		Configuration.registerDefaultValue(PROPKEY_sample_filter,  DEFAULT_sample_filter);
+		Configuration.registerDefaultValue(PROPKEY_onSample_flush, DEFAULT_onSample_flush);
+	}
+	
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Flush QP Metrics", PROPKEY_onSample_flush , Boolean.class, conf.getBooleanProperty(PROPKEY_onSample_flush , DEFAULT_onSample_flush ), DEFAULT_onSample_flush, "Execute sp_metrics 'flush' on every refresh."   ));
+		list.add(new CmSettingsHelper("SQL Where Filter", PROPKEY_sample_filter ,  String.class,  conf.getProperty       (PROPKEY_sample_filter  , DEFAULT_sample_filter  ), DEFAULT_sample_filter , "Send extra where clauses to restrict ResultSet" ));
+
+		return list;
+	}
+
 	private void addTrendGraphs()
 	{
 	}
@@ -189,7 +223,15 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-		String sql = "exec sp_asetune_qp_metrics";
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String  filterStr      = conf.getProperty(       PROPKEY_sample_filter,  DEFAULT_sample_filter);
+		boolean onSample_flush = conf.getBooleanProperty(PROPKEY_onSample_flush, DEFAULT_onSample_flush);
+
+		String cmdParam   = "    @cmd   = 'show', \n";
+		String cmd2Param  = "    @cmd2  = " + (StringUtil.hasValue(filterStr) ? "'"+filterStr+"'" : "NULL") + ", \n";
+		String flushParam = "    @flush = " + (onSample_flush                 ? "1"               : "0")    + "\n";
+
+		String sql = "exec sp_asetune_qp_metrics\n" + cmdParam + cmd2Param + flushParam;
 		return sql;
 	}
 
@@ -245,5 +287,29 @@ extends CountersModel
 			}
 		}
 		return true;
+	}
+	
+	@Override
+	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
+	{
+		if ("qtext".equals(colName))
+		{
+			return cellValue == null ? null : toHtmlString(cellValue.toString(), true);
+//			return cellValue == null ? null : cellValue.toString();
+		}
+		
+		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
+	}
+	/** add HTML around the string, and translate linebreaks into <br> */
+	private String toHtmlString(String in, boolean breakLines)
+	{
+		String str = in;
+		str = str.replaceAll("<", "&lt;");
+		str = str.replaceAll(">", "&gt;");
+		if (breakLines)
+			str = StringUtil.makeApproxLineBreak(in, 150, 5, "\n");
+		str = str.replaceAll("\\n", "<br>");
+
+		return "<html><pre>" + str + "</pre></html>";
 	}
 }

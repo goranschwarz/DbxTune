@@ -16,6 +16,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.rs.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.TrendGraph;
 
 /**
@@ -106,8 +107,8 @@ extends CountersModel
 		String[] labels_xxx            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
 		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
 		
-		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx));
-		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
+		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx,        LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,    new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,    labels_aaNwPacket, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -218,8 +219,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+GRAPH_NAME_XXX+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 //		//---------------------------------

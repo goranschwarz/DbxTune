@@ -19,6 +19,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.gui.ConnectionProgressCallback;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.SqlProgressDialog;
@@ -348,7 +349,7 @@ extends PipeCommandAbstract
     			if (StringUtil.isNullOrBlank(hostPortStr))
     				throw new Exception("Can't find server name information about '"+_cmdParams._server+"', hostPortStr=null. Please try with -S hostname:port");
 
-    			_conn = AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", null, props, (ConnectionProgressCallback)null);
+    			_conn = AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null);
 
     			if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
     				AseConnectionUtils.useDbname(_conn, _cmdParams._db);

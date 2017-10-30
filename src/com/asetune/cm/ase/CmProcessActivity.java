@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,6 +14,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -22,6 +24,7 @@ import com.asetune.cm.ase.gui.CmProcessActivityPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -50,6 +53,8 @@ extends CountersModel
 		"<br><br>" +
 		"Table Background colors:" +
 		"<ul>" +
+		"    <li>DARK BEIGE          - SPID has Worker Processes Connected to it (Parent for a worker thread)</li>" +
+		"    <li>BEIGE               - SPID is a Worker Processes</li>" +
 		"    <li>YELLOW              - SPID is a System Processes</li>" +
 		"    <li>EXTREME_LIGHT_GREEN - SPID is currently running a SQL Statement, Although it might be sleeping waiting for IO or something else.</li>" +
 		"    <li>GREEN               - SPID is Executing(running) or are in the Run Queue Awaiting a time slot to Execute (runnable)</li>" +
@@ -67,7 +72,7 @@ extends CountersModel
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessActivity", "monProcess", "sysprocesses", "monProcessNetIO", "monProcessStatement"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
-	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "object lockwait timing=1", "wait event timing=1"};
+	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "object lockwait timing=1", "wait event timing=1", "per object statistics active=1"};
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
@@ -78,7 +83,12 @@ extends CountersModel
 		"Transactions", "Commits", "Rollbacks", 
 		"PacketsSent", "PacketsReceived", "BytesSent", "BytesReceived", 
 		"WorkTables", "pssinfo_tempdb_pages_diff",
-		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages"};
+		"IOSize1Page", "IOSize2Pages", "IOSize4Pages", "IOSize8Pages",
+		"AvgBytesPerSentPacket", "AvgBytesPerReceivedPacket",
+//		"HeapMemoryInUseKB", "HeapMemoryReservedKB", "HeapMemoryAllocs", 
+		"HeapMemoryAllocs", 
+		"RowsAffected"
+		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -164,10 +174,10 @@ extends CountersModel
 		String[] labels_execTime  = new String[] { "Max Active SQL Execution Time In Seconds" };
 		String[] labels_execCount = new String[] { "Active/Concurrent SQL Statement Execution Count" };
 		
-		addTrendGraphData(GRAPH_NAME_CHKPT_HK,    new TrendGraphDataPoint(GRAPH_NAME_CHKPT_HK,    labels_chkptHk));
-		addTrendGraphData(GRAPH_NAME_BATCH_COUNT, new TrendGraphDataPoint(GRAPH_NAME_BATCH_COUNT, labels_batch));
-		addTrendGraphData(GRAPH_NAME_EXEC_TIME,   new TrendGraphDataPoint(GRAPH_NAME_EXEC_TIME,   labels_execTime));
-		addTrendGraphData(GRAPH_NAME_EXEC_COUNT,  new TrendGraphDataPoint(GRAPH_NAME_EXEC_COUNT,  labels_execCount));
+		addTrendGraphData(GRAPH_NAME_CHKPT_HK,    new TrendGraphDataPoint(GRAPH_NAME_CHKPT_HK,    labels_chkptHk,   LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_BATCH_COUNT, new TrendGraphDataPoint(GRAPH_NAME_BATCH_COUNT, labels_batch,     LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_EXEC_TIME,   new TrendGraphDataPoint(GRAPH_NAME_EXEC_TIME,   labels_execTime,  LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_EXEC_COUNT,  new TrendGraphDataPoint(GRAPH_NAME_EXEC_COUNT,  labels_execCount, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -176,7 +186,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_CHKPT_HK,
 				"Checkpoint and HK Writes",                     // Menu CheckBox text
-				"Checkpoint and Housekeeper Writes Per Second (from Server->Processes)", // Label 
+				"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_chkptHk, 
 				false, // is Percent Graph
 				this, 
@@ -189,7 +199,7 @@ extends CountersModel
 			tg = null;
 			tg = new TrendGraph(GRAPH_NAME_BATCH_COUNT,
 				"SQL Batch/Statement Count",                   // Menu CheckBox text
-				"SQL Batches/Statements Processed Per Second (from Server->Processes)", // Label 
+				"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_batch, 
 				false, // is Percent Graph
 				this, 
@@ -202,7 +212,7 @@ extends CountersModel
 			tg = null;
 			tg = new TrendGraph(GRAPH_NAME_EXEC_TIME,
 				"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
-				"Max Active SQL Execution Time In Seconds (from Server->Processes)", // Label 
+				"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_execTime, 
 				false, // is Percent Graph
 				this, 
@@ -215,7 +225,7 @@ extends CountersModel
 			tg = null;
 			tg = new TrendGraph(GRAPH_NAME_EXEC_COUNT,
 				"Active SQL Statement Execution Count",                   // Menu CheckBox text
-				"Active SQL Statement Execution Count (from Server->Processes)", // Label 
+				"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_execCount, 
 				false, // is Percent Graph
 				this, 
@@ -266,15 +276,13 @@ extends CountersModel
 			sql_sample_systemThreads = "  and SP.suid > 0 -- Property: "+PROPKEY_sample_systemThreads+" is "+sample_systemThreads+". \n";
 
 		// If not ASE 16, do not sample SQL Text
-		if (aseVersion < Ver.ver(16,0))
+		if (aseVersion < Ver.ver(16,0,0, 2)) // 16.0 PL1 didn't have 
 			sample_sqlText = false;
 
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
 
 		String optGoalPlan = "";
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
 		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
@@ -317,7 +325,34 @@ extends CountersModel
 		addDropTempTable("#monProcessNetIO");
 		addDropTempTable("#monProcessStatement");
 
-		
+		// ASE 12.5.4... and 15.0.2  (15.0 do NOT have this counter)
+		String RowsAffected = "";
+		String ClientRemotePort = "";
+		String sp_1254 = "";
+		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+		{
+			RowsAffected     = "RowsAffected = isnull(ST.RowsAffected, 0), ";
+			ClientRemotePort = "ClientRemotePort = CASE WHEN SP.suid = 0 THEN null ELSE convert(varchar(15), pssinfo(SP.spid, 'ipport')) END, \n";
+			sp_1254 = "  ";
+		}
+
+		// ASE 15.7.0
+		String HeapMemoryInUseKB    = ""; // Amount of heap memory currently used by the process (KB)
+		String HeapMemoryUsedHWM_KB = ""; // High-water mark of heap memory used by the process (KB)
+		String HeapMemoryReservedKB = ""; // Amount of heap memory currently reserved by the process (KB)
+		String HeapMemoryAllocs     = ""; // Number of times the process allocated heap memory
+		String nl_1570              = ""; // NL for this section
+		String sp_1570              = ""; // column Space padding for this section
+		if (aseVersion >= Ver.ver(15,7,0))
+		{
+			HeapMemoryInUseKB    = "A.HeapMemoryInUseKB, ";
+			HeapMemoryUsedHWM_KB = "A.HeapMemoryUsedHWM_KB, ";
+			HeapMemoryReservedKB = "A.HeapMemoryReservedKB, ";
+			HeapMemoryAllocs     = "A.HeapMemoryAllocs, ";
+			nl_1570              = "\n";
+			sp_1570              = "  ";
+		}
+
 		// ASE 15.7.0 ESD#2
 		String IOSize1Page        = ""; // Number of 1 page physical reads performed by the process
 		String IOSize2Pages       = ""; // Number of 2 pages physical reads performed for the process
@@ -325,8 +360,6 @@ extends CountersModel
 		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
 		String nl_15702           = ""; // NL for this section
 		String sp_15702           = ""; // column Space padding for this section
-//		if (aseVersion >= 15702)
-//		if (aseVersion >= 1570020)
 		if (aseVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "A.IOSize1Page, ";
@@ -343,8 +376,7 @@ extends CountersModel
 		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
 		String nl_16000           = ""; // NL for this section
 		String sp_16000           = ""; // column Space padding for this section
-//		if (aseVersion >= 1600000)
-		if (aseVersion >= Ver.ver(16,0))
+		if (aseVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
 		{
 			if (sample_sqlText)
 			{
@@ -361,13 +393,24 @@ extends CountersModel
 			sp_16000            = "  ";
 		}
 
+		// ASE 16.0 SP3
+		String QueryOptimizationTime       = "";
+		String ase160_sp3_nl               = "";
+		if (aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+		{
+			QueryOptimizationTime       = "  ST.QueryOptimizationTime, ";
+			ase160_sp3_nl               = "\n";
+		}
+		
 		cols1+=" MP.FamilyID, MP.SPID, MP.KPID, MP.NumChildren, \n"
 			+ "  SP.status, MP.WaitEventID, \n"
 			+ "  WaitClassDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
 			+ "  WaitEventDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
 			+ "  MP.SecondsWaiting, MP.BlockingSPID, \n"
 			+ "  StatementStartTime = ST.StartTime, \n"
-			+ "  StatementExecInMs = datediff(ms, ST.StartTime, getdate()), \n"
+//			+ "  StatementExecInMs = datediff(ms, ST.StartTime, getdate()), \n"
+			+ "  StatementExecInMs = CASE WHEN datediff(day, ST.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, ST.StartTime, getdate()) END, \n"
+			+ QueryOptimizationTime + ase160_sp3_nl
 			+ "  MP.Command, SP.tran_name, "+HasSqlText+"\n"
 			+ "  MP.BatchID, BatchIdDiff=convert(int,MP.BatchID), \n" // BatchIdDiff diff calculated
 			+ "  procName = isnull(object_name(SP.id, SP.dbid), object_name(SP.id, 2)), \n"
@@ -375,37 +418,38 @@ extends CountersModel
 			+ sp_16000 + ClientDriverVersion + nl_16000 
 			+ "  MP.Application, SP.clientname, SP.clienthostname, SP.clientapplname, "
 			+ "  SP.hostname, SP.ipaddr, SP.hostprocess, \n"
+			+ sp_1254 + ClientRemotePort
 			+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"
-			+ "  SP.loggedindatetime, SP.cpu, SP.physical_io, \n"
-			+ "  A.CPUTime, A.WaitTime, A.LogicalReads, \n"
+			+ "  SP.loggedindatetime, SP.cpu, SP.physical_io, SP.memusage, \n"
+			+ "  A.CPUTime, A.WaitTime, " + RowsAffected + "A.LogicalReads, \n"
 			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n"
 			+ sp_15702 + IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
 		cols2 += "";
-//		if (aseVersion >= 12520)
-//		if (aseVersion >= 1252000)
 		if (aseVersion >= Ver.ver(12,5,2))
 		{
 			cols2+="  A.WorkTables,  \n";
 		}
-//		if (aseVersion >= 15020 || (aseVersion >= 12540 && aseVersion < 15000) )
-//		if (aseVersion >= 1502000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
 		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
 		{
 			cols2+="  tempdb_name = db_name(tempdb_id(SP.spid)), \n";
 			cols2+="  pssinfo_tempdb_pages      = convert(int, pssinfo(SP.spid, 'tempdb_pages')), \n";
 			cols2+="  pssinfo_tempdb_pages_diff = convert(int, pssinfo(SP.spid, 'tempdb_pages')), \n";
 		}
-//		if (aseVersion >= 15025)
-//		if (aseVersion >= 1502050)
 		if (aseVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2+="  N.NetworkEngineNumber, MP.ServerUserID, \n";
 		}
-		cols3+=" A.TableAccesses, A.IndexAccesses, A.TempDbObjects, \n"
+		cols3+=""
+			+ "  A.TableAccesses, A.IndexAccesses, A.TempDbObjects, \n"
 			+ "  A.ULCBytesWritten, A.ULCFlushes, A.ULCFlushFull, \n"
 			+ "  A.Transactions, A.Commits, A.Rollbacks, \n"
 			+ "  MP.EngineNumber, MP.Priority, \n"
-			+ "  N.PacketsSent, N.PacketsReceived, N.BytesSent, N.BytesReceived, \n"
+			+ sp_1570 + HeapMemoryInUseKB + HeapMemoryUsedHWM_KB + HeapMemoryReservedKB + HeapMemoryAllocs + nl_1570
+			+ "  A.MemUsageKB, N.NetworkPacketSize, \n"
+			+ "  N.BytesSent, N.PacketsSent, \n"
+			+ "  AvgBytesPerSentPacket     = CASE WHEN N.PacketsSent     > 0 THEN N.BytesSent     / N.PacketsSent     ELSE 0 END, \n" 
+			+ "  N.BytesReceived, N.PacketsReceived, \n"
+			+ "  AvgBytesPerReceivedPacket = CASE WHEN N.PacketsReceived > 0 THEN N.BytesReceived / N.PacketsReceived ELSE 0 END, \n" 
 			+ "  MP.ExecutionClass, MP.EngineGroupName, "
 			+ nl_16000 + SqlText;
 		cols3 = StringUtil.removeLastComma(cols3);
@@ -434,36 +478,18 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Show System Processes",                   PROPKEY_sample_systemThreads ,        Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemThreads        , DEFAULT_sample_systemThreads        ), DEFAULT_sample_systemThreads       , CmProcessActivityPanel.TOOLTIP_sample_systemThreads        ));
+		list.add(new CmSettingsHelper("Discard AseTune Activity in TrendGraphs", PROPKEY_summaryGraph_discardDbxTune , Boolean.class, conf.getBooleanProperty(PROPKEY_summaryGraph_discardDbxTune , DEFAULT_summaryGraph_discardDbxTune ), DEFAULT_summaryGraph_discardDbxTune, CmProcessActivityPanel.TOOLTIP_summaryGraph_discardDbxTune ));
+		list.add(new CmSettingsHelper("Get SQL Text from Active SPID's",         PROPKEY_sample_sqlText ,              Boolean.class, conf.getBooleanProperty(PROPKEY_sample_sqlText              , DEFAULT_sample_sqlText              ), DEFAULT_sample_sqlText             , CmProcessActivityPanel.TOOLTIP_sample_sqlText              ));
 
-		lc.setProperty(PROPKEY_sample_systemThreads,        conf.getBooleanProperty(PROPKEY_sample_systemThreads,        DEFAULT_sample_systemThreads));
-		lc.setProperty(PROPKEY_summaryGraph_discardDbxTune, conf.getBooleanProperty(PROPKEY_summaryGraph_discardDbxTune, DEFAULT_summaryGraph_discardDbxTune));
-		lc.setProperty(PROPKEY_sample_sqlText,              conf.getBooleanProperty(PROPKEY_sample_sqlText,              DEFAULT_sample_sqlText));
-
-		return lc;
+		return list;
 	}
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-//		if (propName.equals(PROPKEY_sample_systemThreads))        return "Sample System SPID's that executes in the ASE Server";
-		if (propName.equals(PROPKEY_sample_systemThreads))        return CmProcessActivityPanel.TOOLTIP_sample_systemThreads;
-		if (propName.equals(PROPKEY_summaryGraph_discardDbxTune)) return CmProcessActivityPanel.TOOLTIP_summaryGraph_discardDbxTune;
-		if (propName.equals(PROPKEY_sample_sqlText))              return CmProcessActivityPanel.TOOLTIP_sample_sqlText;
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_systemThreads))        return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_summaryGraph_discardDbxTune)) return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_sqlText))              return Boolean.class.getSimpleName();
-		return "";
-	}
 
 	@Override
 	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
@@ -505,9 +531,29 @@ extends CountersModel
 			                                                   "Date when this SPID connect/login to the ASE..<br>" +
 			                                                   "<b>Formula</b>: column 'loggedindatetime' from table 'sysprocesses'.<br>" +
 			                                              "</html>");
+			mtd.addColumn("monProcessStatement", "AvgBytesPerSentPacket", 
+					"<html>" +
+							"Average bytes per packet<br>" +
+							"<b>Formula</b>: diff.BytesSent / diff.PacketsSent<br>" +
+							"<b>Note</b>: This is <b>not</b> rate calculated, it's the diff values even in the <i>rate</i> view<br>" +
+					"</html>");
+
+			mtd.addColumn("monProcessStatement", "AvgBytesPerReceivedPacket", 
+					"<html>" +
+							"Average bytes per packet<br>" +
+							"<b>Formula</b>: diff.BytesReceived / diff.PacketsReceived<br>" +
+							"<b>Note</b>: This is <b>not</b> rate calculated, it's the diff values even in the <i>rate</i> view<br>" +
+					"</html>");
+
+			mtd.addColumn("sysprocesses", "ClientRemotePort", 
+                    "<html>" +
+                         "The port number at the clients machine.<br>" +
+                         "<b>Formula</b>: pssinfo(SP.spid, 'ipport').<br>" +
+                    "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
+
 	/** 
 	 * Fill in the WaitEventDesc column with data from
 	 * MonTableDictionary.. transforms a WaitEventId -> text description
@@ -520,6 +566,10 @@ extends CountersModel
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID = -1, pos_WaitEventDesc = -1, pos_WaitClassDesc = -1, pos_BlockingSPID = -1;
 		int pos_SqlText = -1, pos_HasSqlText = -1;
+		int pos_AvgBytesPerSentPacket = -1, pos_AvgBytesPerReceivedPacket = -1;
+		int pos_BytesSent             = -1, pos_PacketsSent               = -1;
+		int pos_BytesReceived         = -1, pos_PacketsReceived           = -1;
+
 		int waitEventID = 0;
 		String waitEventDesc = "";
 		String waitClassDesc = "";
@@ -547,12 +597,18 @@ extends CountersModel
 		for (int colId=0; colId < colNames.size(); colId++) 
 		{
 			String colName = colNames.get(colId);
-			if      (colName.equals("WaitEventID"))   pos_WaitEventID   = colId;
-			else if (colName.equals("WaitEventDesc")) pos_WaitEventDesc = colId;
-			else if (colName.equals("WaitClassDesc")) pos_WaitClassDesc = colId;
-			else if (colName.equals("BlockingSPID"))  pos_BlockingSPID  = colId;
-			else if (colName.equals("SqlText"))       pos_SqlText       = colId;
-			else if (colName.equals("HasSqlText"))    pos_HasSqlText    = colId;
+			if      (colName.equals("WaitEventID"))               pos_WaitEventID               = colId;
+			else if (colName.equals("WaitEventDesc"))             pos_WaitEventDesc             = colId;
+			else if (colName.equals("WaitClassDesc"))             pos_WaitClassDesc             = colId;
+			else if (colName.equals("BlockingSPID"))              pos_BlockingSPID              = colId;
+			else if (colName.equals("SqlText"))                   pos_SqlText                   = colId;
+			else if (colName.equals("HasSqlText"))                pos_HasSqlText                = colId;
+			else if (colName.equals("AvgBytesPerSentPacket"))     pos_AvgBytesPerSentPacket     = colId;
+			else if (colName.equals("AvgBytesPerReceivedPacket")) pos_AvgBytesPerReceivedPacket = colId;
+			else if (colName.equals("BytesSent"))                 pos_BytesSent                 = colId;
+			else if (colName.equals("PacketsSent"))               pos_PacketsSent               = colId;
+			else if (colName.equals("BytesReceived"))             pos_BytesReceived             = colId;
+			else if (colName.equals("PacketsReceived"))           pos_PacketsReceived           = colId;
 		}
 
 		if (pos_WaitEventID < 0 || pos_WaitEventDesc < 0 || pos_WaitClassDesc < 0)
@@ -564,6 +620,12 @@ extends CountersModel
 		if (pos_BlockingSPID < 0)
 		{
 			_logger.debug("Can't find the position for column ('BlockingSPID'="+pos_BlockingSPID+")");
+			return;
+		}
+		
+		if (pos_AvgBytesPerSentPacket < 0 || pos_AvgBytesPerReceivedPacket < 0 || pos_BytesSent < 0 || pos_PacketsSent < 0 || pos_BytesReceived < 0 || pos_PacketsReceived < 0)
+		{
+			_logger.debug("Can't find the position for column ('pos_AvgBytesPerSentPacket'="+pos_AvgBytesPerSentPacket+", pos_AvgBytesPerReceivedPacket="+pos_AvgBytesPerReceivedPacket+", pos_BytesSent="+pos_BytesSent+", pos_PacketsSent="+pos_PacketsSent+", pos_BytesReceived="+pos_BytesReceived+", pos_PacketsReceived="+pos_PacketsReceived+")");
 			return;
 		}
 		
@@ -611,6 +673,72 @@ extends CountersModel
 				if (o_blockingSpid != null && ((Number)o_blockingSpid).intValue() != 0 )
 					_blockingSpids.put((Number)o_blockingSpid, null);
 			}
+
+			// AvgBytesPerSentPacket
+			Object o_BytesSent       = counters.getValueAt(rowId, pos_BytesSent);
+			Object o_PacketsSent     = counters.getValueAt(rowId, pos_PacketsSent);
+			if (o_BytesSent instanceof Number && o_PacketsSent instanceof Number)
+			{
+				int bytes   = ((Number)o_BytesSent)  .intValue();
+				int packets = ((Number)o_PacketsSent).intValue();
+				
+				counters.setValueAt(new Integer( (packets > 0 ? bytes/packets : 0) ), rowId, pos_AvgBytesPerSentPacket);
+			}
+
+			// AvgBytesPerReceivedPacket
+			Object o_BytesReceived   = counters.getValueAt(rowId, pos_BytesReceived);
+			Object o_PacketsReceived = counters.getValueAt(rowId, pos_PacketsReceived);
+			if (o_BytesReceived instanceof Number && o_PacketsReceived instanceof Number)
+			{
+				int bytes   = ((Number)o_BytesReceived)  .intValue();
+				int packets = ((Number)o_PacketsReceived).intValue();
+				
+				counters.setValueAt(new Integer( (packets > 0 ? bytes/packets : 0) ), rowId, pos_AvgBytesPerReceivedPacket);
+			}
+		}
+	}
+
+	/**
+	 * Local adjustments to the rate values 
+	 * Use: DIFF values for 
+	 *         - AvgBytesPerSentPacket
+	 *         - AvgBytesPerReceivedPacket
+	 */
+	@Override
+	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
+	{
+		int pos_AvgBytesPerSentPacket = -1, pos_AvgBytesPerReceivedPacket = -1;
+
+		// Find column Id's
+		List<String> colNames = rateData.getColNames();
+		if (colNames==null) 
+			return;
+
+		for (int colId=0; colId < colNames.size(); colId++) 
+		{
+			String colName = colNames.get(colId);
+			if      (colName.equals("AvgBytesPerSentPacket"))     pos_AvgBytesPerSentPacket     = colId;
+			else if (colName.equals("AvgBytesPerReceivedPacket")) pos_AvgBytesPerReceivedPacket = colId;
+		}
+
+		if (pos_AvgBytesPerSentPacket < 0 || pos_AvgBytesPerReceivedPacket < 0)
+		{
+			_logger.debug("Can't find the position for column ('pos_AvgBytesPerSentPacket'="+pos_AvgBytesPerSentPacket+", pos_AvgBytesPerReceivedPacket="+pos_AvgBytesPerReceivedPacket+")");
+			return;
+		}
+		
+		// Loop on all diffData rows
+		for (int rowId=0; rowId < rateData.getRowCount(); rowId++) 
+		{
+			// AvgBytesPerSentPacket - set to DIFF value
+			Object o_diffAvgBytesPerSentPacket = diffData.getValueAt(rowId, pos_AvgBytesPerSentPacket);
+			if (o_diffAvgBytesPerSentPacket instanceof Number)
+				rateData.setValueAt(((Number) o_diffAvgBytesPerSentPacket).doubleValue(), rowId, pos_AvgBytesPerSentPacket);
+
+			// AvgBytesPerReceivedPacket - set to DIFF value
+			Object o_diffAvgBytesPerReceivedPacket = diffData.getValueAt(rowId, pos_AvgBytesPerReceivedPacket);
+			if (o_diffAvgBytesPerReceivedPacket instanceof Number)
+				rateData.setValueAt(((Number) o_diffAvgBytesPerReceivedPacket).doubleValue(), rowId, pos_AvgBytesPerReceivedPacket);
 		}
 	}
 
@@ -733,8 +861,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(ChkptHkGraph): o_CheckpointWrite='"+o_CheckpointWrite+"', o_HkWashWrite='"+o_HkWashWrite+"', o_HkGcWrite='"+o_HkGcWrite+"', o_HkChoresWrite='"+o_HkChoresWrite+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_BATCH_COUNT.equals(tgdp.getName()))
@@ -806,8 +933,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): BatchIdDiff_sum='"+BatchIdDiff_sum+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_EXEC_TIME.equals(tgdp.getName()))
@@ -912,8 +1038,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_maxValue='"+maxValue+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		if (GRAPH_NAME_EXEC_COUNT.equals(tgdp.getName()))
@@ -1018,8 +1143,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_count='"+count+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 }

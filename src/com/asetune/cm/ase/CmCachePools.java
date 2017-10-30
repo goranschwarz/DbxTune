@@ -3,6 +3,7 @@ package com.asetune.cm.ase;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,6 +14,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -20,8 +22,11 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmCachePoolsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
@@ -111,40 +116,375 @@ extends CountersModel
 	//------------------------------------------------------------
 	private static final String PROP_PREFIX                       = CM_NAME;
 
-	public static final String  PROPKEY_CacheSlideTimeInSec = PROP_PREFIX + ".CacheSlideTimeInSec";
-	public static final int     DEFAULT_CacheSlideTimeInSec = 900;
+	public static final String  PROPKEY_CacheSlideTimeInSec             = PROP_PREFIX + ".CacheSlideTimeInSec";
+	public static final int     DEFAULT_CacheSlideTimeInSec             = 900;
+
+	public static final String  PROPKEY_CacheHitRateTo100PctOnZeroReads = PROP_PREFIX + ".CacheHitRateTo100PctOnZeroReads";
+	public static final boolean DEFAULT_CacheHitRateTo100PctOnZeroReads = true;
+
+	public static final String GRAPH_NAME_POOL_HIT_RATE      = "PoolHitRate";
+	public static final String GRAPH_NAME_POOL_UTIL          = "PoolUtil";
+	public static final String GRAPH_NAME_POOL_USED_MB       = "PoolUsedMb";
+	public static final String GRAPH_NAME_POOL_FREE_MB       = "PoolFreeMb";
+	public static final String GRAPH_NAME_POOL_TO_MRU        = "PoolToMru";
+	public static final String GRAPH_NAME_POOL_TO_LRU        = "PoolToLru";
+	public static final String GRAPH_NAME_POOL_LOGICAL_READ  = "PoolLogicalRead";
+	public static final String GRAPH_NAME_POOL_PHYSICAL_READ = "PoolPhysicalRead";
+	public static final String GRAPH_NAME_POOL_APF_READ      = "PoolApfRead";
+	public static final String GRAPH_NAME_POOL_APF_PCT       = "PoolApfPct";
+	public static final String GRAPH_NAME_POOL_REPLACE_SLIDE = "PoolReplaceSlide";
+
+	private void addTrendGraphs()
+	{
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+		
+		addTrendGraphData(GRAPH_NAME_POOL_HIT_RATE,      new TrendGraphDataPoint(GRAPH_NAME_POOL_HIT_RATE,      labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_UTIL,          new TrendGraphDataPoint(GRAPH_NAME_POOL_UTIL,          labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_USED_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_USED_MB,       labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_FREE_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_FREE_MB,       labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_TO_MRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_MRU,        labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_TO_LRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_LRU,        labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_LOGICAL_READ,  new TrendGraphDataPoint(GRAPH_NAME_POOL_LOGICAL_READ,  labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_PHYSICAL_READ, new TrendGraphDataPoint(GRAPH_NAME_POOL_PHYSICAL_READ, labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_APF_READ,      new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_READ,      labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_APF_PCT,       new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_PCT,       labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_POOL_REPLACE_SLIDE, new TrendGraphDataPoint(GRAPH_NAME_POOL_REPLACE_SLIDE, labels, LabelType.Dynamic));
+
+		// if GUI
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			TrendGraph tg = null;
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_HIT_RATE,
+				"Cache Pools Hit Rate", 	               // Menu CheckBox text
+				"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				true, // is Percent Graph
+				this, 
+				false,  // visible at start
+				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_UTIL,
+				"Cache Pools Utilization", 	               // Menu CheckBox text
+				"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				true, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_USED_MB,
+				"Cache Pools Used MB", 	               // Menu CheckBox text
+				"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_FREE_MB,
+				"Cache Pools Free MB", 	               // Menu CheckBox text
+				"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_TO_MRU,
+				"Cache Pools MRU Replacement", 	               // Menu CheckBox text
+				"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_TO_LRU,
+				"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
+				"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
+				"Cache Pools Logical Reads", 	               // Menu CheckBox text
+				"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
+				"Cache Pools Physical Reads", 	               // Menu CheckBox text
+				"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_APF_READ,
+				"Cache Pools APF Reads", 	               // Menu CheckBox text
+				"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_APF_PCT,
+				"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
+				"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				true, // is Percent Graph
+				this, 
+				false,  // visible at start
+				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
+				"Cache Pools Replacement Slide", 	               // Menu CheckBox text
+				"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph (this can be more than 100%)
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+		}
+	}
+
+	private String getLabel(int row)
+	{
+		StringBuilder sb = new StringBuilder();
+//		sb.append(this.getRateString(row, "CacheName")).append("[").append(this.getRateValueAsDouble(row, "IOBufferSize")/1024).append("K]");
+		sb.append(this.getRateString(row, "CacheName")).append("[").append(this.getRateString(row, "PagesPerIO")).append("-pg]");
+		return sb.toString();
+	}
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_POOL_HIT_RATE.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "CacheHitRate");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_UTIL.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "CacheUtilization");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_USED_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "UsedSizeInMb");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_FREE_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "UnUsedSizeInMb");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_TO_MRU.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "BuffersToMRU");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_TO_LRU.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "BuffersToLRU");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_LOGICAL_READ.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "LogicalReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_PHYSICAL_READ.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "PhysicalReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_APF_READ.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "APFReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_APF_PCT.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "APFReadsPct");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_POOL_REPLACE_SLIDE.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every pool
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = getLabel(i);
+				dArray[i] = this.getRateValueAsDouble(i, "CacheReplacementSlidePct");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+	}
 
 	@Override
 	protected void registerDefaultValues()
 	{
 		super.registerDefaultValues();
 
-		Configuration.registerDefaultValue(PROPKEY_CacheSlideTimeInSec, DEFAULT_CacheSlideTimeInSec);
+		Configuration.registerDefaultValue(PROPKEY_CacheSlideTimeInSec,             DEFAULT_CacheSlideTimeInSec);
+		Configuration.registerDefaultValue(PROPKEY_CacheHitRateTo100PctOnZeroReads, DEFAULT_CacheHitRateTo100PctOnZeroReads);
 	}
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_CacheSlideTimeInSec, conf.getIntProperty(PROPKEY_CacheSlideTimeInSec, DEFAULT_CacheSlideTimeInSec));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
-	}
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_CacheSlideTimeInSec)) return "Set number of seconds the 'slide window time' will keep 'PagesRead' for.";
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_CacheSlideTimeInSec)) return Integer.class.getSimpleName();
-		return "";
+		list.add(new CmSettingsHelper("Slide Window Time",                     PROPKEY_CacheSlideTimeInSec             , Integer.class, conf.getIntProperty    (PROPKEY_CacheSlideTimeInSec             , DEFAULT_CacheSlideTimeInSec             ), DEFAULT_CacheSlideTimeInSec            , "Set number of seconds the 'slide window time' will keep 'PagesRead' for." ));
+		list.add(new CmSettingsHelper("CacheHitRate to 100% if LogReads is 0", PROPKEY_CacheHitRateTo100PctOnZeroReads , Boolean.class, conf.getBooleanProperty(PROPKEY_CacheHitRateTo100PctOnZeroReads , DEFAULT_CacheHitRateTo100PctOnZeroReads ), DEFAULT_CacheHitRateTo100PctOnZeroReads, "When LogicalReads is Zero, set CacheHitRate to 100% instead of 0%"        ));
+
+		return list;
 	}
 
 
@@ -161,10 +501,6 @@ extends CountersModel
 		}
 	}
 	LinkedHashMap<String, LinkedList<CacheSlideEntry>> _slideCache = new LinkedHashMap<String, LinkedList<CacheSlideEntry>>();
-
-	private void addTrendGraphs()
-	{
-	}
 
 	@Override
 	protected TabularCntrPanel createGui()
@@ -544,7 +880,11 @@ extends CountersModel
 
 				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReadsId)).intValue();
 
-				BigDecimal calc_CacheHitRate = new BigDecimal( LogicalReads <= 0 ? 0 : (100.0 - (PagesRead*1.0/LogicalReads) * 100.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				int usePctValueOnZeroReads = 0;
+				if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_CacheHitRateTo100PctOnZeroReads, DEFAULT_CacheHitRateTo100PctOnZeroReads))
+					usePctValueOnZeroReads = 100;
+				
+				BigDecimal calc_CacheHitRate = new BigDecimal( LogicalReads <= 0 ? usePctValueOnZeroReads : (100.0 - (PagesRead*1.0/LogicalReads) * 100.0) ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
 				diffData.setValueAt(calc_CacheHitRate, rowId, CacheHitRateId );
 			}

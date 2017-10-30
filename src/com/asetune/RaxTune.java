@@ -46,7 +46,7 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "raxtune.properties";
+		return "dbxtune.properties";
 	}
 
 	@Override

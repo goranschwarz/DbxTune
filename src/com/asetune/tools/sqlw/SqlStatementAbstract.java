@@ -1,5 +1,6 @@
 package com.asetune.tools.sqlw;
 
+import java.awt.Component;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
@@ -17,8 +18,9 @@ implements SqlStatement
 	protected String _dbProductName;
 	protected ArrayList<JComponent> _resultCompList;
 	protected SqlProgressDialog _progress;
+	protected Component _owner;
 	
-	public SqlStatementAbstract(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress)
+	public SqlStatementAbstract(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
 	throws SQLException
 	{
 		_conn           = conn;
@@ -26,6 +28,7 @@ implements SqlStatement
 		_dbProductName  = dbProductName;
 		_resultCompList = resultCompList;
 		_progress       = progress;
+		_owner          = owner;
 	}
 
 	@Override

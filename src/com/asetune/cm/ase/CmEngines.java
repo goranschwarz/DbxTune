@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,6 +12,10 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
+import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -19,6 +24,7 @@ import com.asetune.cm.ase.gui.CmEnginesPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -148,10 +154,11 @@ extends CountersModel
 	private void addTrendGraphs()
 	{
 		String[] sumLabels = new String[] { "System+User CPU", "System CPU", "User CPU" };
-		String[] engLabels = new String[] { "eng-0" };
+//		String[] engLabels = new String[] { "eng-0" };
+		String[] engLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_CPU_SUM, new TrendGraphDataPoint(GRAPH_NAME_CPU_SUM, sumLabels));
-		addTrendGraphData(GRAPH_NAME_CPU_ENG, new TrendGraphDataPoint(GRAPH_NAME_CPU_ENG, engLabels));
+		addTrendGraphData(GRAPH_NAME_CPU_SUM, new TrendGraphDataPoint(GRAPH_NAME_CPU_SUM, sumLabels, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_CPU_ENG, new TrendGraphDataPoint(GRAPH_NAME_CPU_ENG, engLabels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -160,7 +167,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_CPU_SUM,
 					"CPU Summary", 	                                 // Menu CheckBox text
-					"CPU Summary for all Engines (using monEngine)", // Label 
+					"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					sumLabels, 
 					true, // is Percent Graph
 					this, 
@@ -171,7 +178,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_CPU_ENG,
 					"CPU per Engine",                       // Menu CheckBox text
-					"CPU Usage per Engine (System + User)", // Label 
+					"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 					engLabels, 
 					true, // is Percent Graph
 					this, 
@@ -438,9 +445,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(labelArray);
-			tgdp.setData(dataArray);
+			tgdp.setDataPoint(this.getTimestamp(), labelArray, dataArray);
 		}
 
 		if (GRAPH_NAME_CPU_ENG.equals(tgdp.getName()))
@@ -452,13 +457,13 @@ extends CountersModel
 				{
     				TrendGraph tg = getTrendGraph(tgdp.getName());
     				if (tg != null)
-    					tg.setLabel("CPU Usage per Engine (System + User)");
+    					tg.setChartLabel("CPU Usage per Engine (System + User)");
 				}
 				else
 				{
     				TrendGraph tg = getTrendGraph(tgdp.getName());
     				if (tg != null)
-    					tg.setLabel("CPU Usage per Engine (System + User + IO)");
+    					tg.setChartLabel("CPU Usage per Engine (System + User + IO)");
 				}
 			}
 			
@@ -483,40 +488,23 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(engNumArray);
-			tgdp.setData(engCpuArray);
+			tgdp.setDataPoint(this.getTimestamp(), engNumArray, engCpuArray);
 		}
 	}
 
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Callapse IOCPUTime into IdleCPUTime", PROPKEY_collapse_IoCpuTime_to_IdleCpuTime , Boolean.class, conf.getBooleanProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime , DEFAULT_collapse_IoCpuTime_to_IdleCpuTime ), DEFAULT_collapse_IoCpuTime_to_IdleCpuTime, CmEnginesPanel.TOOLTIP_collapse_IoCpuTime_to_IdleCpuTime ));
 
-		lc.setProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime,  conf.getBooleanProperty(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime, DEFAULT_collapse_IoCpuTime_to_IdleCpuTime));
-
-		return lc;
+		return list;
 	}
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime)) return CmEnginesPanel.TOOLTIP_collapse_IoCpuTime_to_IdleCpuTime;
-		return "";
-	}
-	
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_collapse_IoCpuTime_to_IdleCpuTime)) return Boolean.class.getSimpleName();
-		return "";
-	}
 
 	/** 
 	 * Compute the CPU times in pct instead of numbers of usage seconds since last sample
@@ -620,7 +608,7 @@ extends CountersModel
 	 * Local adjustments to the rate values 
 	 */
 	@Override
-	public void localCalculationRatePerSec(CounterSample rateData)
+	public void localCalculationRatePerSec(CounterSample rateData, CounterSample DiffData)
 	{
 		int aseVersion = getServerVersion();
 
@@ -648,5 +636,75 @@ extends CountersModel
 				rateData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);
 			}
 		}
+	}
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasRateData() )
+			return;
+
+		CountersModel cm = this; // Do this only to make it easier to "copy" this code into a User Defined Interrogater
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		//-------------------------------------------------------
+		// CPU Usage
+		//-------------------------------------------------------
+//		if (isSystemAlarmsForColumnEnabled("CPUTime"))
+//		{
+//			Double IdleCPUTimePct = cm.getRateValueAvg("IdleCPUTimePct");
+//
+//			if (IdleCPUTimePct != null)
+//			{
+//				Double cpuUsagePct = 100.0 - IdleCPUTimePct;
+//
+//				if (debugPrint || _logger.isDebugEnabled())
+//					System.out.println("##### sendAlarmRequest("+cm.getName()+"): cpuUsagePct='"+cpuUsagePct+"'.");
+//
+//				if (AlarmHandler.hasInstance())
+//				{
+//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CPUTime, DEFAULT_alarm_CPUTime);
+//					if (cpuUsagePct.intValue() > threshold)
+//						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, cpuUsagePct) );
+//				}
+//			}
+//		}
+		if (isSystemAlarmsForColumnEnabled("CPUTime"))
+		{
+			Double NonIdleCPUTimePct = cm.getRateValueAvg("NonIdleCPUTimePct");
+			Double SystemCPUTimePct  = cm.getRateValueAvg("SystemCPUTimePct");
+			Double UserCPUTimePct    = cm.getRateValueAvg("UserCPUTimePct");
+//			Double IOCPUTimePct      = cm.getRateValueAvg("IOCPUTimePct");
+			Double IdleCPUTimePct    = cm.getRateValueAvg("IdleCPUTimePct");
+
+			if (NonIdleCPUTimePct != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): NonIdleCPUTimePct='"+NonIdleCPUTimePct+"'.");
+
+				if (AlarmHandler.hasInstance())
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CPUTime, DEFAULT_alarm_CPUTime);
+					if (NonIdleCPUTimePct.intValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct) );
+				}
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_CPUTime             = CM_NAME + ".alarm.system.if.CPUTime.gt";
+	public static final int     DEFAULT_alarm_CPUTime             = 85;
+	
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("CPUTime", PROPKEY_alarm_CPUTime, Integer.class, conf.getIntProperty(PROPKEY_alarm_CPUTime             , DEFAULT_alarm_CPUTime             ), DEFAULT_alarm_CPUTime            , "If 'CPUTime' is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+
+		return list;
 	}
 }

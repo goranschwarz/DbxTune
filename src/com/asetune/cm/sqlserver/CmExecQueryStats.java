@@ -2,11 +2,13 @@ package com.asetune.cm.sqlserver;
 
 import java.sql.Connection;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -198,40 +200,20 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_extraWhereClause, conf.getProperty       (PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause));
-		lc.setProperty(PROPKEY_sample_afterPrevSample,  conf.getBooleanProperty(PROPKEY_sample_afterPrevSample,  DEFAULT_sample_afterPrevSample));
-		lc.setProperty(PROPKEY_sample_lastXminutes,     conf.getBooleanProperty(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes));
-		lc.setProperty(PROPKEY_sample_lastXminutesTime, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime, DEFAULT_sample_lastXminutesTime));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
+		list.add(new CmSettingsHelper("Extra Where Clause",                           PROPKEY_sample_extraWhereClause , String .class, conf.getProperty       (PROPKEY_sample_extraWhereClause , DEFAULT_sample_extraWhereClause ), DEFAULT_sample_extraWhereClause, CmExecQueryStatsPanel.TOOLTIP_sample_extraWhereClause ));
+		list.add(new CmSettingsHelper("Show only SQL exected since last sample time", PROPKEY_sample_afterPrevSample  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_afterPrevSample  , DEFAULT_sample_afterPrevSample  ), DEFAULT_sample_afterPrevSample , CmExecQueryStatsPanel.TOOLTIP_sample_afterPrevSample  ));
+		list.add(new CmSettingsHelper("Show only SQL exected last 10 minutes",        PROPKEY_sample_lastXminutes     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_lastXminutes     , DEFAULT_sample_lastXminutes     ), DEFAULT_sample_lastXminutes    , CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutes     ));
+		list.add(new CmSettingsHelper("Show only SQL exected last ## minutes",        PROPKEY_sample_lastXminutesTime , Integer.class, conf.getIntProperty    (PROPKEY_sample_lastXminutesTime , DEFAULT_sample_lastXminutesTime ), DEFAULT_sample_lastXminutesTime, CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutesTime ));
+
+		return list;
 	}
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_extraWhereClause)) return CmExecQueryStatsPanel.TOOLTIP_sample_extraWhereClause;
-		if (propName.equals(PROPKEY_sample_afterPrevSample))  return CmExecQueryStatsPanel.TOOLTIP_sample_afterPrevSample;
-		if (propName.equals(PROPKEY_sample_lastXminutes))     return CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutes;
-		if (propName.equals(PROPKEY_sample_lastXminutesTime)) return CmExecQueryStatsPanel.TOOLTIP_sample_lastXminutesTime;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_extraWhereClause)) return String .class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_afterPrevSample))  return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_lastXminutes))     return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_lastXminutesTime)) return Integer.class.getSimpleName();
 
-		return "";
-	}
-	
 	private void addTrendGraphs()
 	{
 	}

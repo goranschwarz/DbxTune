@@ -123,7 +123,10 @@ extends CountersModel
 
 		pkCols.add("InstanceID");
 		pkCols.add("DBID");
-		pkCols.add("SenderSPID");
+		if (srvVersion < Ver.ver(15,7,0, 100))
+			pkCols.add("SPID");
+		else
+			pkCols.add("SenderSPID"); // above 15.7 SP100
 
 		return pkCols;
 	}

@@ -3,6 +3,7 @@ package com.asetune.cm.ase;
 import java.awt.Component;
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -15,12 +16,20 @@ import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
+import com.asetune.alarm.events.AlarmEventFullTranLog;
+import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
+import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
+import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
@@ -116,7 +125,7 @@ extends CountersModel
 	private static final String  PROP_PREFIX = CM_NAME;
 
 	public static final String  PROPKEY_sample_lockCount     = PROP_PREFIX + ".sample.lockCount";
-	public static final boolean DEFAULT_sample_lockCount     = false;
+	public static final boolean DEFAULT_sample_lockCount     = true;
 	
 	public static final String  PROPKEY_oldestOpenTranInSecThreshold     = PROP_PREFIX + ".oldestOpenTranInSecThreshold";
 	public static final int     DEFAULT_oldestOpenTranInSecThreshold     = 10;
@@ -159,22 +168,22 @@ extends CountersModel
 		String[] labels_ioRw             = new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" };
 		String[] labels_logicalReads     = new String[] { "LogicalReads" };
 		
-		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu));
-		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction));
-		addTrendGraphData(GRAPH_NAME_SELECT_OPERATIONS,  new TrendGraphDataPoint(GRAPH_NAME_SELECT_OPERATIONS,  labels_selectOperations));
-		addTrendGraphData(GRAPH_NAME_IUDM_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_IUDM_OPERATIONS,    labels_iudmOperations));
-		addTrendGraphData(GRAPH_NAME_TAB_IND_ACCESS,     new TrendGraphDataPoint(GRAPH_NAME_TAB_IND_ACCESS,     labels_tabIndAccess));
-		addTrendGraphData(GRAPH_NAME_TEMPDB_ACCESS,      new TrendGraphDataPoint(GRAPH_NAME_TEMPDB_ACCESS,      labels_tempdbAccess));
-		addTrendGraphData(GRAPH_NAME_ULC,                new TrendGraphDataPoint(GRAPH_NAME_ULC,                labels_ulc));
-		addTrendGraphData(GRAPH_NAME_IO_RW,              new TrendGraphDataPoint(GRAPH_NAME_IO_RW,              labels_ioRw));
-		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads));
-		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks));
-		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection));
-		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate));
-		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW));
-		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
-		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran));
-		addTrendGraphData(GRAPH_NAME_LOCK_COUNT,         new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT,         labels_lockCount));
+		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu,            LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction,      LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_SELECT_OPERATIONS,  new TrendGraphDataPoint(GRAPH_NAME_SELECT_OPERATIONS,  labels_selectOperations, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_IUDM_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_IUDM_OPERATIONS,    labels_iudmOperations,   LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_TAB_IND_ACCESS,     new TrendGraphDataPoint(GRAPH_NAME_TAB_IND_ACCESS,     labels_tabIndAccess,     LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_TEMPDB_ACCESS,      new TrendGraphDataPoint(GRAPH_NAME_TEMPDB_ACCESS,      labels_tempdbAccess,     LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_ULC,                new TrendGraphDataPoint(GRAPH_NAME_ULC,                labels_ulc,              LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_IO_RW,              new TrendGraphDataPoint(GRAPH_NAME_IO_RW,              labels_ioRw,             LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads,     LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks,    LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,       LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate,         LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW,         LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket,       LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,         LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_LOCK_COUNT,         new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT,         labels_lockCount,        LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -183,7 +192,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_AA_CPU,
 				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
+				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Label 
 				labels_aaCpu, 
 				true,  // is Percent Graph
 				this, 
@@ -194,7 +203,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
 				"ASE Operations - Transaction per second",                         // Menu CheckBox text
-				"ASE Operations - Transaction per Second (15.0.3 esd#3 or above)", // Label 
+				"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
 				labels_transaction, 
 				false,   // is Percent Graph
 				this, 
@@ -206,7 +215,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
 				"ASE Operations - Selects per second", 	                     // Menu CheckBox text
-				"ASE Operations - Selects per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
 				labels_selectOperations, 
 				false,   // is Percent Graph
 				this, 
@@ -218,7 +227,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
 				"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
-				"ASE Operations - Ins/Upd/Del/Merge per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
 				labels_iudmOperations, 
 				false,   // is Percent Graph
 				this, 
@@ -230,7 +239,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
 				"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
-				"ASE Operations - Table/Index Access per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
 				labels_tabIndAccess, 
 				false,   // is Percent Graph
 				this, 
@@ -242,7 +251,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
 				"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
-				"ASE Operations - Tempdb Objects and Work Tables per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
 				labels_tempdbAccess, 
 				false,   // is Percent Graph
 				this, 
@@ -254,7 +263,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_ULC,
 				"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
-				"ASE Operations - User Log Cache Information per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
 				labels_ulc, 
 				false,   // is Percent Graph
 				this, 
@@ -266,7 +275,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_IO_RW,
 				"ASE Operations - IO's per second", 	                  // Menu CheckBox text
-				"ASE Operations - IO's per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
 				labels_ioRw, 
 				false,   // is Percent Graph
 				this, 
@@ -278,7 +287,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_LOGICAL_READ,
 				"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
-				"ASE Operations - Logical Reads per Second (15.7 SP100 or above)", // Label 
+				"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
 				labels_logicalReads, 
 				false,   // is Percent Graph
 				this, 
@@ -290,7 +299,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 				"Blocking Locks", 	                                     // Menu CheckBox text
-				"Number of Concurrently Blocking Locks (from monState)", // Label 
+				"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
 				labels_blockingLocks, 
 				false, // is Percent Graph
 				this, 
@@ -301,7 +310,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
 				"Connections/Users in ASE", 	          // Menu CheckBox text
-				"Connections/Users connected to the ASE", // Label 
+				"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
 				labels_connection, 
 				false, // is Percent Graph
 				this, 
@@ -312,7 +321,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
 				"Connection Rate in ASE", 	          // Menu CheckBox text
-				"Connection Attemtps per Second (source @@connections)", // Label 
+				"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
 				labels_connRate, 
 				false, // is Percent Graph
 				this, 
@@ -323,7 +332,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-				"Disk read/write per second, using @@total_read, @@total_write", // Label 
+				"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
 				labels_aaDiskRW, 
 				false, // is Percent Graph
 				this, 
@@ -334,7 +343,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
 				"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-				"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
+				"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
 				labels_aaNwPacket, 
 				false, // is Percent Graph
 				this, 
@@ -345,7 +354,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-				"Oldest Open Transaction in any Databases, in Seconds", // Label 
+				"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
 				labels_openTran, 
 				false, // is Percent Graph
 				this, 
@@ -356,7 +365,7 @@ extends CountersModel
 
 			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
 				"Lock Count", 	                   // Menu CheckBox text
-				"Lock Count, number of concurrent locks (from syslocks)", // Label 
+				"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
 				labels_lockCount, 
 				false,   // is Percent Graph
 				this, 
@@ -480,7 +489,7 @@ extends CountersModel
 		String oldestOpenTranInSecThreshold = ", oldestOpenTranInSecThreshold = convert(int, "+default_oldestOpenTranInSecThreshold+") \n";
 
 		String oldestOpenTranInSec = 
-			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) >= 24 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"                                               THEN -1 \n" +
 			"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
 			"                                          END),0) \n" +
@@ -604,7 +613,7 @@ extends CountersModel
 //				"                          and name != 'model' " + (isClusterEnabled ? "and @@instanceid = isnull(instanceid,@@instanceid)" : "") + ") \n" + 
 				fullTranslogCount +
 
-//				", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) > 20 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+//				", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) >= 24 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 //				"                                               THEN -1 \n" +
 //				"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
 //				"                                          END),0) \n" +
@@ -781,8 +790,7 @@ extends CountersModel
 				_logger.debug("updateGraphData(aaCpuGraph): @@cpu_busy+@@cpu_io='"+arr[0]+"', @@cpu_io='"+arr[1]+"', @@cpu_busy='"+arr[2]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -821,9 +829,7 @@ extends CountersModel
 					_logger.debug("updateGraphData(TransGraph): Transactions='"+dArray[0]+"', Rollbacks='"+dArray[1]+"'.");
 
 					// Set the values
-					tgdp.setDate(this.getTimestamp());
-					tgdp.setLabel(lArray);
-					tgdp.setData(dArray);
+					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 				}
 				else
 				{
@@ -834,9 +840,7 @@ extends CountersModel
 					_logger.debug("updateGraphData(TransGraph): Transactions='"+dArray[0]+"'.");
 
 					// Set the values
-					tgdp.setDate(this.getTimestamp());
-					tgdp.setLabel(lArray);
-					tgdp.setData(dArray);
+					tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 				}
 			}
 		}
@@ -871,8 +875,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_SELECT_OPERATIONS+"): Selects='"+arr[0]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -909,8 +912,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_IUDM_OPERATIONS+"): Inserts='"+arr[0]+"', Updates='"+arr[1]+"', Deletes='"+arr[2]+"', Merges='"+arr[3]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -945,8 +947,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_TAB_IND_ACCESS+"): TableAccesses='"+arr[0]+"', IndexAccesses='"+arr[1]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -981,8 +982,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_TEMPDB_ACCESS+"): TempDbObjects='"+arr[0]+"', WorkTables='"+arr[1]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -1018,8 +1018,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_ULC+"): ULCFlushes='"+arr[0]+"', ULCFlushFull='"+arr[1]+"', ULCKBWritten='"+arr[2]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -1056,8 +1055,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_IO_RW+"): PagesRead='"+arr[0]+"', PagesWritten='"+arr[1]+"', PhysicalReads='"+arr[2]+"', PhysicalWrites='"+arr[3]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -1091,8 +1089,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+GRAPH_NAME_LOGICAL_READ+"): LogicalReads='"+arr[0]+"'.");
 
 				// Set the values
-				tgdp.setDate(this.getTimestamp());
-				tgdp.setData(arr);
+				tgdp.setDataPoint(this.getTimestamp(), arr);
 			}
 		}
 
@@ -1107,8 +1104,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): LockCount='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -1122,8 +1118,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(BlockingLocksGraph): LockWait='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -1140,8 +1135,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(ConnectionsGraph): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"', aaConnections(Rate)='"+arr[3]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -1155,8 +1149,7 @@ extends CountersModel
 			_logger.debug("updateGraphData("+GRAPH_NAME_CONNECTION_RATE+"): aaConnections(Rate)='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -1171,8 +1164,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(aaReadWriteGraph): io_total_read='"+arr[0]+"', io_total_write='"+arr[1]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -1188,8 +1180,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 
 		//---------------------------------
@@ -1203,8 +1194,168 @@ extends CountersModel
 			_logger.debug("updateGraphData("+GRAPH_NAME_OLDEST_TRAN_IN_SEC+"): oldestOpenTranInSec='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+
+		CountersModel cm = this;
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		//-------------------------------------------------------
+		// CPU Usage
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabled("TotalCPUTime") || isSystemAlarmsForColumnEnabled("UserCPUTime") || isSystemAlarmsForColumnEnabled("IoCPUTime"))
+		{
+			Double cpuUser        = cm.getDiffValueAsDouble(0, "cpu_busy");
+			Double cpuSystem      = cm.getDiffValueAsDouble(0, "cpu_io");
+			Double cpuIdle        = cm.getDiffValueAsDouble(0, "cpu_idle");
+
+//			System.out.println("##### sendAlarmRequest("+cm.getName()+"): @@cpu_busy='"+cpuUser+"', @@cpu_io='"+cpuSystem+"', @@cpu_idle='"+cpuIdle+"'.");
+			
+			if (cpuUser != null && cpuSystem != null && cpuIdle != null)
+			{
+				double CPUTime   = cpuUser  .doubleValue() + cpuSystem.doubleValue() + cpuIdle.doubleValue();
+				double CPUUser   = cpuUser  .doubleValue();
+				double CPUSystem = cpuSystem.doubleValue();
+				double CPUIdle   = cpuIdle  .doubleValue();
+
+				BigDecimal pctCPUTime       = new BigDecimal( ((1.0 * (CPUUser + CPUSystem)) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctUserCPUTime   = new BigDecimal( ((1.0 * (CPUUser            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctSystemCPUTime = new BigDecimal( ((1.0 * (CPUSystem          )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				BigDecimal pctIdleCPUTime   = new BigDecimal( ((1.0 * (CPUIdle            )) / CPUTime) * 100 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): pctCPUTime='"+pctCPUTime+"', pctSystemCPUTime='"+pctUserCPUTime+"', pctUserCPUTime='"+pctSystemCPUTime+"', pctIdleCPUTime='"+pctIdleCPUTime+"'.");
+
+				if (AlarmHandler.hasInstance())
+				{
+					if (isSystemAlarmsForColumnEnabled("TotalCPUTime"))
+					{
+						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TotalCPUTime, DEFAULT_alarm_TotalCPUTime);
+						if (pctCPUTime.intValue() > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+					}
+
+					if (isSystemAlarmsForColumnEnabled("UserCPUTime"))
+					{
+						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_UserCPUTime, DEFAULT_alarm_UserCPUTime);
+						if (pctUserCPUTime.intValue() > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+					}
+
+					if (isSystemAlarmsForColumnEnabled("IoCPUTime"))
+					{
+						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_IoCPUTime, DEFAULT_alarm_IoCPUTime);
+						if (pctSystemCPUTime.intValue() > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+					}
+				}
+			}
+			// CmSummary.system.alarm.system.if.CPUTime.gt=90
+			// CmSummary.ud.alarm.if.CPUTime.gt=90:AlarmClassName
+		}
+		
+		//-------------------------------------------------------
+		// Blocking Locks
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabled("LockWaits"))
+		{
+			Double LockWaits = cm.getAbsValueAsDouble (0, "LockWaits");
+			if (LockWaits != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): LockWaits='"+LockWaits+"'.");
+
+				if (AlarmHandler.hasInstance())
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
+					if (LockWaits.intValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, LockWaits) );
+				}
+			}
+		}
+
+
+		//-------------------------------------------------------
+		// Long running transaction
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabled("oldestOpenTranInSec"))
+		{
+			Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
+			if (oldestOpenTranInSec != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): oldestOpenTranInSec='"+oldestOpenTranInSec+"'.");
+
+				if (AlarmHandler.hasInstance())
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
+					if (oldestOpenTranInSec.intValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, oldestOpenTranInSec) );
+				}
+			}
+		}
+
+		
+		//-------------------------------------------------------
+		// Full transaction log in "any" database
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabled("fullTranslogCount"))
+		{
+			Double fullTranslogCount = cm.getAbsValueAsDouble(0, "fullTranslogCount");
+			if (fullTranslogCount != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): fullTranslogCount='"+fullTranslogCount+"'.");
+
+				if (AlarmHandler.hasInstance())
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
+					if (fullTranslogCount.intValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, fullTranslogCount) );
+				}
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_TotalCPUTime        = CM_NAME + ".alarm.system.if.TotalCPUTime.gt";
+	public static final int     DEFAULT_alarm_TotalCPUTime        = 99;
+	
+	public static final String  PROPKEY_alarm_UserCPUTime         = CM_NAME + ".alarm.system.if.UserCPUTime.gt";
+	public static final int     DEFAULT_alarm_UserCPUTime         = 70;
+	
+	public static final String  PROPKEY_alarm_IoCPUTime           = CM_NAME + ".alarm.system.if.IoCPUTime.gt";
+	public static final int     DEFAULT_alarm_IoCPUTime           = 95;
+	
+	public static final String  PROPKEY_alarm_LockWaits           = CM_NAME + ".alarm.system.if.LockWaits.gt";
+	public static final int     DEFAULT_alarm_LockWaits           = 5;
+	
+	public static final String  PROPKEY_alarm_oldestOpenTranInSec = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
+	public static final int     DEFAULT_alarm_oldestOpenTranInSec = 10;
+	
+	public static final String  PROPKEY_alarm_fullTranslogCount   = CM_NAME + ".alarm.system.if.fullTranslogCount.gt";
+	public static final int     DEFAULT_alarm_fullTranslogCount   = 0;
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("TotalCPUTime",        PROPKEY_alarm_TotalCPUTime        , Integer.class, conf.getIntProperty(PROPKEY_alarm_TotalCPUTime        , DEFAULT_alarm_TotalCPUTime        ), DEFAULT_alarm_TotalCPUTime       , "If 'TotalCPUTime' (user+io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+		list.add(new CmSettingsHelper("UserCPUTime",         PROPKEY_alarm_UserCPUTime         , Integer.class, conf.getIntProperty(PROPKEY_alarm_UserCPUTime         , DEFAULT_alarm_UserCPUTime         ), DEFAULT_alarm_UserCPUTime        , "If 'UserCPUTime' (user cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+		list.add(new CmSettingsHelper("IoCPUTime",           PROPKEY_alarm_IoCPUTime           , Integer.class, conf.getIntProperty(PROPKEY_alarm_IoCPUTime           , DEFAULT_alarm_IoCPUTime           ), DEFAULT_alarm_IoCPUTime          , "If 'IoCPUTime' (io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'. Note: for ASE 15.7 or above, in threaded-kernel-mode. IO counter is incremented a bit faulty (all engines get IO ticks, while the IO-Controller-thread does the IO. This is CR# 757246)" ));
+		list.add(new CmSettingsHelper("LockWaits",           PROPKEY_alarm_LockWaits           , Integer.class, conf.getIntProperty(PROPKEY_alarm_LockWaits           , DEFAULT_alarm_LockWaits           ), DEFAULT_alarm_LockWaits          , "If 'LockWaits' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec", PROPKEY_alarm_oldestOpenTranInSec , Integer.class, conf.getIntProperty(PROPKEY_alarm_oldestOpenTranInSec , DEFAULT_alarm_oldestOpenTranInSec ), DEFAULT_alarm_oldestOpenTranInSec, "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("fullTranslogCount",   PROPKEY_alarm_fullTranslogCount   , Integer.class, conf.getIntProperty(PROPKEY_alarm_fullTranslogCount   , DEFAULT_alarm_fullTranslogCount   ), DEFAULT_alarm_fullTranslogCount  , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
+
+		return list;
 	}
 }

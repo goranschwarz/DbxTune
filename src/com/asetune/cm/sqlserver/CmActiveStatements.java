@@ -3,6 +3,7 @@ package com.asetune.cm.sqlserver;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -192,8 +194,8 @@ extends CountersModel
 			"    des.writes, \n" +
 //			"    dec.last_write , \n" +
 			"    der.start_time, \n" +
-			"    ExecTimeInMs    = CASE WHEN datediff(day, der.start_time, getdate()) > 20 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-			"    UsefullExecTime = CASE WHEN datediff(day, der.start_time, getdate()) > 20 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    ExecTimeInMs    = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE  datediff(ms, der.start_time, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+			"    UsefullExecTime = CASE WHEN datediff(day, der.start_time, getdate()) >= 24 THEN -1 ELSE (datediff(ms, der.start_time, getdate()) - der.wait_time) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 			"    des.[program_name], \n" +
 			"    der.wait_type, \n" +
 			"    der.wait_time, \n" +
@@ -240,8 +242,8 @@ extends CountersModel
 			"    999999, --des.logical_reads ,  \n" +
 			"    999999, --des.writes ,  \n" +
 			"    p1.last_batch, --der.start_time,  \n" +
-			"    ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) > 20 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END,  \n" +
-			"    UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) > 20 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END,  \n" +
+			"    ExecTimeInMs    = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE  datediff(ms, p1.last_batch, getdate()) END,  \n" +
+			"    UsefullExecTime = CASE WHEN datediff(day, p1.last_batch, getdate()) >= 24 THEN -1 ELSE (datediff(ms, p1.last_batch, getdate()) - p1.waittime) END,  \n" +
 			"    p1.program_name, --des.[program_name] ,  \n" +
 			"    p1.waittype, --der.wait_type ,  \n" +
 			"    p1.waittime, --der.wait_time ,  \n" +
@@ -354,46 +356,20 @@ extends CountersModel
 	
 	
 	
-	
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Get Query Plan", getName()+".sample.showplan"   , Boolean.class, conf.getBooleanProperty(getName()+".sample.showplan"   , true ), true, "Also get queryplan" ));
+		list.add(new CmSettingsHelper("Get SQL Text",   getName()+".sample.monSqltext" , Boolean.class, conf.getBooleanProperty(getName()+".sample.monSqltext" , true ), true, "Also get SQL Text"  ));
 
-		lc.setProperty(getName()+".sample.showplan",       conf.getBooleanProperty(getName()+".sample.showplan",       true));
-		lc.setProperty(getName()+".sample.monSqltext",     conf.getBooleanProperty(getName()+".sample.monSqltext",     true));
-//		lc.setProperty(getName()+".sample.dbccSqltext",    conf.getBooleanProperty(getName()+".sample.dbccSqltext",    false));
-//		lc.setProperty(getName()+".sample.procCallStack",  conf.getBooleanProperty(getName()+".sample.procCallStack",  true));
-//		lc.setProperty(getName()+".sample.dbccStacktrace", conf.getBooleanProperty(getName()+".sample.dbccStacktrace", false));
-
-		return lc;
+		return list;
 	}
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(getName()+".sample.showplan"))       return "Also get queryplan";
-		if (propName.equals(getName()+".sample.monSqltext"))     return "Also get SQL Text";
-//		if (propName.equals(getName()+".sample.dbccSqltext"))    return "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table.";
-//		if (propName.equals(getName()+".sample.procCallStack"))  return "Do 'sp_showplan spid' on every row in the table.";
-//		if (propName.equals(getName()+".sample.dbccStacktrace")) return "Do 'dbcc stacktrace(spid)' on every row in the table.";
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(getName()+".sample.showplan"))       return Boolean.class.getSimpleName();
-		if (propName.equals(getName()+".sample.monSqltext"))     return Boolean.class.getSimpleName();
-//		if (propName.equals(getName()+".sample.dbccSqltext"))    return Boolean.class.getSimpleName();
-//		if (propName.equals(getName()+".sample.procCallStack"))  return Boolean.class.getSimpleName();
-//		if (propName.equals(getName()+".sample.dbccStacktrace")) return Boolean.class.getSimpleName();
-		return "";
-	}
-
-
-
+	
 	@Override
 	public Class<?> getColumnClass(int columnIndex)
 	{

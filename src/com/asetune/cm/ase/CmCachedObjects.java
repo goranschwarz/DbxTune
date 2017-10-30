@@ -1,6 +1,7 @@
 package com.asetune.cm.ase;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -10,6 +11,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -128,31 +130,15 @@ extends CountersModel
 	
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_topRows,      conf.getBooleanProperty(PROPKEY_sample_topRows,      DEFAULT_sample_topRows));
-		lc.setProperty(PROPKEY_sample_topRowsCount, conf.getIntProperty    (PROPKEY_sample_topRowsCount, DEFAULT_sample_topRowsCount));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		return lc;
-	}
+		list.add(new CmSettingsHelper("Limit num of rows",     PROPKEY_sample_topRows      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_topRows      , DEFAULT_sample_topRows      ), DEFAULT_sample_topRows     , "Get only first # rows (select top # ...) true or false"   ));
+		list.add(new CmSettingsHelper("Limit num of rowcount", PROPKEY_sample_topRowsCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount , DEFAULT_sample_topRowsCount ), DEFAULT_sample_topRowsCount, "Get only first # rows (select top # ...), number of rows" ));
 
-	/** Used by the: Create 'Offline Session' Wizard */
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_topRows))      return "Get only first # rows (select top # ...) true or false";
-		if (propName.equals(PROPKEY_sample_topRowsCount)) return "Get only first # rows (select top # ...), number of rows";
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_topRows))      return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_topRowsCount)) return Integer.class.getSimpleName();
-		return "";
+		return list;
 	}
 
 	
@@ -216,11 +202,10 @@ extends CountersModel
 			pkCols.add("InstanceID");
 
 		pkCols.add("DBID");
+		pkCols.add("OwnerUserID");
 		pkCols.add("ObjectID");
 		pkCols.add("IndexID");
 
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
 		if (aseVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
@@ -272,26 +257,20 @@ extends CountersModel
 
 		String TableCachedPct    = "";
 		String TotalSizeKB_where = "";
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
 		if (aseVersion >= Ver.ver(15,0))
 		{
 			TableCachedPct    = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
 			TotalSizeKB_where = "  and M.TotalSizeKB > 0 \n";
 		}
 		
-		cols1 += "M.DBID, M.ObjectID, M.IndexID, M.DBName, M.ObjectName, M.ObjectType, \n";
+		cols1 += "M.DBID, M.OwnerUserID, M.ObjectID, M.IndexID, M.DBName, OwnerName=isnull(M.OwnerName, 'dbo'), M.ObjectName, M.ObjectType, \n";
 		cols2 += "";
 		cols3 += "M.CachedKB, CachedKBDiff=M.CachedKB, "+TableCachedPct+"M.CacheName, M.CacheID, \n" +
 		         "T.TotalCacheSizeKB, CacheUsagePct = convert(numeric(5,1), M.CachedKB/(T.TotalCacheSizeKB*1.0) * 100.0)";
 
-//		if (aseVersion >= 15504) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
-//		if (aseVersion >= 1550040) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
 		if (aseVersion >= Ver.ver(15,5,0,4)) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
 			cols2 += "M.ProcessesAccessing, \n";
 
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
 		if (aseVersion >= Ver.ver(15,0))
 			cols2 += "M.PartitionID, M.PartitionName, M.TotalSizeKB, TotalSizeKBDiff=M.TotalSizeKB, \n";
 

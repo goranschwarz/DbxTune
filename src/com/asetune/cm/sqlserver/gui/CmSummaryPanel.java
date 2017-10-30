@@ -1509,12 +1509,15 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			_lockWaits_txt    .setBackground(Color.RED);
 			_lockWaitsDiff_txt.setBackground(Color.RED);
 
+			boolean isVisibleInPrevSample = MainFrame.getInstance().hasBlockingLocks();
 			MainFrame.getInstance().setBlockingLocks(true, lockWaits);
 
 			String toTabName = "Active Statements";
 			if ( _focusToBlockingTab == null )
 				_focusToBlockingTab = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Blocking Locks in the SQL-Server", cm.getGuiController().getTabbedPane(), toTabName);
-			_focusToBlockingTab.setVisible(true);
+
+			if ( ! isVisibleInPrevSample )
+				_focusToBlockingTab.setVisible(true);
 		}
 		else
 		{
@@ -1536,12 +1539,15 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		{
 			_fullTranslog_txt.setBackground(Color.RED);
 
+			boolean isVisibleInPrevSample = MainFrame.getInstance().hasFullTransactionLog();
 			MainFrame.getInstance().setFullTransactionLog(true, fullLogs);
 
 			String toTabName = "Databases";
 			if ( _focusToDatabasesTab_fullLog == null )
 				_focusToDatabasesTab_fullLog = new ChangeToJTabDialog(MainFrame.getInstance(), "Found Full Database Transaction Logs in the SQL-Server", cm.getGuiController().getTabbedPane(), toTabName);
-			_focusToDatabasesTab_fullLog.setVisible(true);
+			
+			if ( ! isVisibleInPrevSample )
+				_focusToDatabasesTab_fullLog.setVisible(true);
 		}
 		else
 		{
@@ -1561,12 +1567,15 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		{
 			_oldestOpenTran_txt.setBackground(Color.RED);
 
+			boolean isVisibleInPrevSample = MainFrame.getInstance().hasOldestOpenTran();
 			MainFrame.getInstance().setOldestOpenTran(true, oldestOpenTranInSec);
 
 			String toTabName = "Databases";
 			if ( _focusToDatabasesTab_oldestOpenTran == null )
 				_focusToDatabasesTab_oldestOpenTran = new ChangeToJTabDialog(MainFrame.getInstance(), "Found A 'long' running Transaction in the SQL-Server", cm.getGuiController().getTabbedPane(), toTabName);
-			_focusToDatabasesTab_oldestOpenTran.setVisible(true);
+			
+			if ( ! isVisibleInPrevSample )
+				_focusToDatabasesTab_oldestOpenTran.setVisible(true);
 		}
 		else
 		{

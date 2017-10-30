@@ -18,6 +18,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.iq.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.TrendGraph;
 
 /**
@@ -141,11 +142,11 @@ extends CountersModel
 		String[] labels_commits        = new String[] { "Commits" };
 		String[] labels_requests       = new String[] { "ConnectionsActive", "OperationsWaiting", "OperationsActive", "OperationsActiveLoadTableStatements" };
 		
-		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx));
-		addTrendGraphData(GRAPH_NAME_CPU,             new TrendGraphDataPoint(GRAPH_NAME_CPU,             labels_cpu));
-		addTrendGraphData(GRAPH_NAME_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_NW_PACKET,       labels_aaNwPacket));
-		addTrendGraphData(GRAPH_NAME_COMMITS,         new TrendGraphDataPoint(GRAPH_NAME_COMMITS,         labels_commits));
-		addTrendGraphData(GRAPH_NAME_REQUESTS,        new TrendGraphDataPoint(GRAPH_NAME_REQUESTS,        labels_requests));
+		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx,        LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_CPU,             new TrendGraphDataPoint(GRAPH_NAME_CPU,             labels_cpu,        LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_NW_PACKET,       labels_aaNwPacket, LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_COMMITS,         new TrendGraphDataPoint(GRAPH_NAME_COMMITS,         labels_commits,    LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_REQUESTS,        new TrendGraphDataPoint(GRAPH_NAME_REQUESTS,        labels_requests,   LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -157,7 +158,7 @@ extends CountersModel
 //				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
 //				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
 				"Dummy Graph", 	                        // Menu CheckBox text
-				"Dummy Graph showing hour, minute, second", // Label 
+				"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_xxx, 
 				true,  // is Percent Graph
 				this, 
@@ -169,7 +170,7 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_CPU,
 				"CPU Summary", 	                        // Menu CheckBox text
-				"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser')", // Label 
+				"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser') ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_cpu, 
 				true,  // is Percent Graph
 				this, 
@@ -181,7 +182,7 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_NW_PACKET,
 				"Network Packets received/sent", 	                            // Menu CheckBox text
-				"Network Packets received/sent per second", // Label 
+				"Network Packets received/sent per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_aaNwPacket, 
 				false, // is Percent Graph
 				this, 
@@ -193,7 +194,7 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_COMMITS,
 				"Commits", 	                            // Menu CheckBox text
-				"Commits per second", // Label 
+				"Commits per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels_commits, 
 				false, // is Percent Graph
 				this, 
@@ -205,7 +206,7 @@ extends CountersModel
 			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_REQUESTS,
 				"RequestsReceived", 	            // Menu CheckBox text
-				"RequestsReceived per second", 		// Label 
+				"RequestsReceived per second ("+GROUP_NAME+"->"+SHORT_NAME+")", 		// Label 
 				labels_requests, 
 				false, // is Percent Graph
 				this, 
@@ -338,8 +339,9 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 
 		//---------------------------------
@@ -378,8 +380,9 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): some-value-was-null... ProcessCPU='"+ProcessCPU+"', ProcessCPUSystem='"+ProcessCPUSystem+"', ProcessCPUUser='"+ProcessCPUUser+"'. Adding a 0 pct CPU Usage.");
 			}
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 
 
@@ -395,8 +398,9 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): PacketsReceived='"+arr[0]+"', PacketsSent='"+arr[1]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 
 		//---------------------------------
@@ -410,8 +414,9 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): Commit='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 
 		//---------------------------------
@@ -430,8 +435,9 @@ extends CountersModel
 			_logger.debug("updateGraphData("+tgdp.getName()+"): ConnectionsActive='"+arr[0]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+//			tgdp.setDate(this.getTimestamp());
+//			tgdp.setData(arr);
 		}
 
 	}

@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.CmOsIostat;
+import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
@@ -44,6 +45,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.RsConnection;
 import com.asetune.utils.AseConnectionUtils;
 
 
@@ -122,6 +124,7 @@ extends CounterControllerAbstract
 		CmOsVmstat          .create(counterController, guiController);
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
+		CmOsMeminfo         .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -200,6 +203,16 @@ extends CounterControllerAbstract
 	@Override
 	public void checkServerSpecifics()
 	{
+		DbxConnection conn = getMonConnection();
+		if (conn instanceof RsConnection)
+		{
+			RsConnection rsconn = (RsConnection) conn;
+			if (rsconn.isInGatewayMode())
+			{
+				_logger.warn("Still in a RepServer Gateway connection to '"+rsconn.getLastGatewaySrvName()+"'. Closing this by issuing 'disconnect' at the Replication Server.");
+				rsconn.closeGatewayMode();
+			}
+		}
 	}
 
 	@Override

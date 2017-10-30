@@ -1374,6 +1374,8 @@ implements ActionListener, FocusListener //, ChangeListener
 		public void actionPerformed(ActionEvent e)
 		{
 			int vrow = _table.getSelectedRow();
+			if (vrow == -1)
+				return;
 			int mrow = _table.convertRowIndexToModel(vrow);
 
 			int[] vrows = _table.getSelectedRows();
@@ -1420,6 +1422,8 @@ implements ActionListener, FocusListener //, ChangeListener
 		public void actionPerformed(ActionEvent e)
 		{
 			int vrow = _table.getSelectedRow();
+			if (vrow == -1)
+				return;
 			int mrow = _table.convertRowIndexToModel(vrow);
 
 			int[] vrows = _table.getSelectedRows();

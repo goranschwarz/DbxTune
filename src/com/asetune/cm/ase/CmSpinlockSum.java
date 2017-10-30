@@ -3,6 +3,7 @@ package com.asetune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -10,6 +11,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -325,6 +327,8 @@ extends CountersModel
 		setCounterController(counterController);
 		setGuiController(guiController);
 
+		addCmDependsOnMe(CmSysmon.CM_NAME); // go and check CmSysmon if it needs refresh as part of this refresh (if CmSysmon needs to be refreshed, lets refresh since he depends on me)
+
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
@@ -408,14 +412,10 @@ extends CountersModel
 		String datatype    = "numeric(19,0)"; // 19.0 is unsigned bigint, so lets use that... 
 		String optGoalPlan = "";
 
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
 		if (aseVersion >= Ver.ver(15,0))
 		{
 			datatype    = "bigint";
 		}
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
 		if (aseVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
@@ -674,37 +674,21 @@ extends CountersModel
 
 	/** Used by the: Create 'Offline Session' Wizard */
 	@Override
-	public Configuration getLocalConfiguration()
+	public List<CmSettingsHelper> getLocalSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		Configuration lc = new Configuration();
-
-		lc.setProperty(PROPKEY_sample_resetAfter,  conf.getBooleanProperty(PROPKEY_sample_resetAfter,  DEFAULT_sample_resetAfter));
+		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		if (isClusterEnabled())
-		{
-		lc.setProperty(PROPKEY_sample_fglockspins, conf.getBooleanProperty(PROPKEY_sample_fglockspins, DEFAULT_sample_fglockspins));
-		}
-		
-		return lc;
+		list.add(new CmSettingsHelper("Clear Counters",              PROPKEY_sample_resetAfter  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_resetAfter  , DEFAULT_sample_resetAfter  ), DEFAULT_sample_resetAfter,  CmSpinlockSumPanel.TOOLTIP_sample_resetAfter  ));
+
+//		if (isClusterEnabled())
+//		{
+		list.add(new CmSettingsHelper("Include Field 'fglockspins'", PROPKEY_sample_fglockspins , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_fglockspins , DEFAULT_sample_fglockspins ), DEFAULT_sample_fglockspins, CmSpinlockSumPanel.TOOLTIP_sample_fglockspins ));
+//		}
+
+		return list;
 	}
 
-	@Override
-	public String getLocalConfigurationDescription(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_resetAfter))  return CmSpinlockSumPanel.TOOLTIP_sample_resetAfter;
-		if (propName.equals(PROPKEY_sample_fglockspins)) return CmSpinlockSumPanel.TOOLTIP_sample_fglockspins;
-	
-		return "";
-	}
-	@Override
-	public String getLocalConfigurationDataType(String propName)
-	{
-		if (propName.equals(PROPKEY_sample_resetAfter))  return Boolean.class.getSimpleName();
-		if (propName.equals(PROPKEY_sample_fglockspins)) return Boolean.class.getSimpleName();
-
-		return "";
-	}
 
 	@Override
 	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)

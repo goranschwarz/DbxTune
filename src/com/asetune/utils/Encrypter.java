@@ -15,6 +15,8 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 
+import org.apache.commons.codec.binary.Base64;
+
 public class Encrypter
 {
 	private Cipher ecipher;
@@ -83,7 +85,8 @@ public class Encrypter
 			// Encode bytes to base64 to get a string
 			// A ALTERNATE FOR 'sun.misc.BASE64Encoder' can be http://commons.apache.org/codec/download_codec.cgi
 			// OR: http://www.source-code.biz/base64coder/java/
-			return new sun.misc.BASE64Encoder().encode(enc);
+//			return new sun.misc.BASE64Encoder().encode(enc);
+			return new Base64().encodeAsString(enc);
 		}
 		catch (javax.crypto.BadPaddingException e) {}
 		catch (IllegalBlockSizeException e)        {}
@@ -98,7 +101,8 @@ public class Encrypter
 			// Decode base64 to get bytes
 			// A ALTERNATE FOR 'sun.misc.BASE64Decoder' can be http://commons.apache.org/codec/download_codec.cgi
 			// OR: http://www.source-code.biz/base64coder/java/
-			byte[] dec = new sun.misc.BASE64Decoder().decodeBuffer(str);
+//			byte[] dec = new sun.misc.BASE64Decoder().decodeBuffer(str);
+			byte[] dec = new Base64().decode(str);
 
 			// Decrypt
 			byte[] utf8 = dcipher.doFinal(dec);
@@ -109,7 +113,6 @@ public class Encrypter
 		catch (javax.crypto.BadPaddingException e) {}
 		catch (IllegalBlockSizeException e)        {}
 		catch (UnsupportedEncodingException e)     {}
-		catch (java.io.IOException e)              {}
 		return null;
 	}
 

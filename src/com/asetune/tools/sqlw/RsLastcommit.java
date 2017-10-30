@@ -9,13 +9,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 
-import javax.swing.JOptionPane;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.RepServerUtils;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 public class RsLastcommit
 {
@@ -72,10 +72,12 @@ public class RsLastcommit
 	 * @param origin     origin RepServer database id
 	 * @param originQid  The Origin QID to check if it has been applied/replicated in the destination server. 
 	 *                   This is typically an entry on the RepServer Stable Device Queue System
+	 * @param seqNo      Just for DEBUGGING purposes
+	 * @param command    Just for DEBUGGING purposes
 	 * @return true or false
 	 * @throws OriginNotFoundException
 	 */
-	public boolean hasOqidBeenApplied(int origin, String originQid)
+	public boolean hasOqidBeenApplied(int origin, String originQid, String command, int seqNo)
 	throws OriginNotFoundException
 	{
 		if (originQid == null)
@@ -86,10 +88,43 @@ public class RsLastcommit
 			throw new OriginNotFoundException("Origin "+origin+" can't be found in the Map");
 
 		String rsLcQid = entry._origin_qid;
-//		if (entry._secondary_qid != null && ! entry._secondary_qid.equals("000000000000000000000000000000000000000000000000000000000000000000000000"))
-//			rsLcQid = entry._secondary_qid;
 		
-		int diff = originQid.compareTo(rsLcQid);
+		boolean trustSecondaryQid = false;
+		if (entry._secondary_qid != null)
+		{
+			String secQidStripAllZero = entry._secondary_qid.replace("0", "");
+			if (StringUtil.hasValue(secQidStripAllZero))
+			{
+				trustSecondaryQid = true;
+			
+				// Should we also use the SecondaryQID as the QID????
+				// Do this later after we have tested much more... I dont know how it works if we have several System Transaction after each other...
+				//rsLcQid = entry._secondary_qid;
+			}
+		}
+
+		// 
+		// The origin queue ID (OQID) for Sybase Adaptive Server Replication Agent is 36 bytes and contains the following fields:
+        // 
+		// Bytes     Contents
+		// --------- --------------------------------------------------------------------
+		// 1-2   (2) Generation number
+		// 3-8   (6) Log page timestamp
+		// 9-14  (6) Rowid of this tran
+		// 15-20 (6) Rowid of begin tran
+		// 21-28 (8) Datetime of begin tran
+		// 29-30 (2) Reserved for RepAgent to delete orphans
+		// 31-32 (2) Unused
+		// 33-34 (2) Appended by TD (Transaction Delivery module) for uniqueness
+		// 35-36 (2) Appended by MD (Message Delivery module)
+		// ------------------------------------------------------------------------------
+		// The origin queue ID for Replication Agent 15.0 is 32 bytes
+		//
+		String modOriginQid = originQid.substring(0, originQid.length()-8); // -8 would be 4 bytes removed at the end (see above, 4 bytes for TD & MD module)
+		String modRsLcQid   = rsLcQid  .substring(0, rsLcQid  .length()-8); // -8 would be 4 bytes removed at the end (see above, 4 bytes for TD & MD module)
+
+//		int diff = originQid.compareTo(rsLcQid);
+		int diff = modOriginQid.compareTo(modRsLcQid);
 
 		// FIXME: Investigate more on this
 		// Lets also look at the _secondary_qid
@@ -99,23 +134,32 @@ public class RsLastcommit
 
 		// FIXME: how about if this is a NEW Connection and nothing has yet been replicated...
 		//        this should probably work for this situation as well
-		
-//		System.out.println("hasOqidBeenApplied: returns "+(diff <= 0)+", origin="+origin);
-//		System.out.println("                         queue OQID = '"+originQid + "'.");
-//		System.out.println("                 rs_lastcommit OQID = '"+entry._origin_qid + "'.");
-//		System.out.println();
 
-//		return (diff <= 0);
-		return (diff < 0);
+		boolean ret = (diff <= 0);
+		if (trustSecondaryQid)
+			ret = (diff < 0);
+		
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("hasOqidBeenApplied: trustSecondaryQid="+trustSecondaryQid+", returns "+(ret ? "TRUE":"false")+", origin="+origin + "   " + (ret ? "--- DISCARD":" +++ keep") );
+			_logger.debug("                         queue OQID = '" + originQid + "'   modQueueQid = '" + modOriginQid + "', CmdTextSeqNo="+seqNo+", CmdText='"+command+"'");
+			_logger.debug("                 rs_lastcommit OQID = '" + rsLcQid   + "'   modRsLcQid  = '" + modRsLcQid   + "', CmdTextSeqNo="+seqNo+", CmdText='"+command+"'");
+			_logger.debug("");
+		}
+
+		return ret;
 	}
 
-	public static RsLastcommit getRsLastcommit(String srvname, String dbname, String username, String password)
+	public static RsLastcommit getRsLastcommit(String srvname, String hostPortStr, String dbname, String username, String password)
 	throws SQLException
 	{
+		if (StringUtil.isNullOrBlank(hostPortStr))
+			hostPortStr = srvname;
+
 		Connection conn = null;
 		try
 		{
-			conn = AseConnectionFactory.getConnection(srvname, dbname, username, password, "getRsLastcommit");
+			conn = AseConnectionFactory.getConnection(hostPortStr, dbname, username, password, "getRsLastcommit");
 			AseConnectionUtils.useDbname(conn, dbname);
 
 			RsLastcommit rsLastcommit = getRsLastcommit(conn, srvname, dbname, false);
@@ -141,7 +185,8 @@ public class RsLastcommit
 				"\n" +
 				"\n" + 
 				sb.toString();
-			JOptionPane.showMessageDialog(null, msg, "getRsLastcommit - connect check", JOptionPane.ERROR_MESSAGE);
+//			JOptionPane.showMessageDialog(null, msg, "getRsLastcommit - connect check", JOptionPane.ERROR_MESSAGE);
+			SwingUtils.showErrorMessage(null, "getRsLastcommit - connect check", msg, e);
 		}
 		catch (Exception e)
 		{
@@ -153,7 +198,8 @@ public class RsLastcommit
 				"\n" +
 				"\n" + 
 				e.toString();
-			JOptionPane.showMessageDialog(null, msg,  "getRsLastcommit - connect check", JOptionPane.ERROR_MESSAGE);
+//			JOptionPane.showMessageDialog(null, msg,  "getRsLastcommit - connect check", JOptionPane.ERROR_MESSAGE);
+			SwingUtils.showErrorMessage(null, "getRsLastcommit - connect check", msg, e);
 		}
 		return null;
 	}

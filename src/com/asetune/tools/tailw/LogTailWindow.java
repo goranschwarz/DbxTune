@@ -19,8 +19,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Properties;
 
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -39,6 +42,9 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.text.BadLocationException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -48,7 +54,17 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.fife.ui.rsyntaxtextarea.ErrorStrip;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rsyntaxtextarea.folding.Fold;
+import org.fife.ui.rsyntaxtextarea.folding.FoldManager;
+import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
+import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
+import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
+import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
@@ -60,6 +76,7 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.ssh.SshConnection;
 import com.asetune.ssh.SshFileSystemView;
 import com.asetune.tools.NormalExitException;
+import com.asetune.tools.tailw.LogFileFilterAndColorManager.FilterEntry;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.AseConnectionFactory;
@@ -77,7 +94,7 @@ import net.miginfocom.swing.MigLayout;
 public class LogTailWindow
 //extends JDialog
 extends JFrame
-implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
+implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener, Memory.MemoryListener
 {
 	private static Logger _logger = Logger.getLogger(LogTailWindow.class);
 	private static final long serialVersionUID = 1L;
@@ -101,6 +118,9 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
                                
 	private JPanel             _topPanel               = null;
 	private JLabel             _warning_lbl            = new JLabel("Choose 'SSH connection' or 'remote mount'.");
+	private JLabel             _filterColorSchema_lbl  = new JLabel("Filter and Color Schema");
+//	private JComboBox<String>  _filterColorSchema_cbx  = new JComboBox<String>(new String[] {"Not Yet Implemented"});
+	private JComboBox<String>  _filterColorSchema_cbx  = new JComboBox<String>(LogFileFilterAndColorManager.getInstance().getFilterGroups().toArray(new String[0]));
 	private JButton            _startTail_but          = new JButton("Start Tail");
 	private JButton            _stopTail_but           = new JButton("Stop Tail");
 	private JButton            _serverNameRemove_but   = new JButton("Remove");
@@ -144,7 +164,14 @@ implements ActionListener, FocusListener, FileTail.TraceListener, Memory.MemoryL
 	private JPanel             _logTailPanel           = null;
 	private RSyntaxTextAreaX   _logTail_txt            = new RSyntaxTextAreaX();
 	private RTextScrollPane    _logTail_scroll         = new RTextScrollPane(_logTail_txt);
+	private ErrorStrip         _logErrStrip            = new ErrorStrip(_logTail_txt);
 
+	private boolean            _discardMessages        = Configuration.getCombinedConfiguration().getBooleanProperty("LogTailWindow.messages.discard",      true);
+	private boolean            _foldDiscardedMessages  = Configuration.getCombinedConfiguration().getBooleanProperty("LogTailWindow.messages.discard.fold", true);
+
+	private LogParser               _logParser          = null;
+	private DefaultParseResult      _parserResult       = null;
+	private ArrayList<TrackingIcon> _addedTrackingIcons = new ArrayList<TrackingIcon>();
 
 	
 //	private static final String  PROPKEY_TAIL_SIZE       = "LogTail.size";
@@ -202,7 +229,7 @@ log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p 
 PropertyConfigurator.configure(log4jProps);
 		
 //		// Create store dir if it did not exists.
-//		File appStoreDir = new File(Version.APP_STORE_DIR);
+//		File appStoreDir = new File(Version.getAppStoreDir());
 //		if ( ! appStoreDir.exists() )
 //		{
 //			if (appStoreDir.mkdir())
@@ -212,18 +239,18 @@ PropertyConfigurator.configure(log4jProps);
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
-//		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "asetune.properties");
-//		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "asetune.user.properties");
+//		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "dbxtune.properties");
+//		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "dbxtune.user.properties");
 //		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "sqlw.save.properties");
 //		final String TAILW_HOME            = System.getProperty("TAILW_HOME");
 		
-//		String defaultPropsFile     = (TAILW_HOME            != null) ? TAILW_HOME            + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-//		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-//		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+//		String defaultPropsFile     = (TAILW_HOME               != null) ? TAILW_HOME               + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+//		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+//		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 //		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-//		String filename = Version.APP_STORE_DIR + File.separator + CONFIG_FILE_NAME;
+//		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 //		if ( (new File(filename)).exists() )
 //			defaultPropsFile = filename;
 
@@ -241,17 +268,17 @@ PropertyConfigurator.configure(log4jProps);
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND 
-		    && javaVersionInt <  JavaVersion.VERSION_1_7
+		    && javaVersionInt <  JavaVersion.VERSION_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -348,7 +375,7 @@ PropertyConfigurator.configure(log4jProps);
 				if (hostPortStr.indexOf(":") < 0) // no host:port, go and get the hst:port from the interfaces file
 					hostPortStr = AseConnectionFactory.getIHostPortStr(hostPortStr);
 
-				conn = AseConnectionFactory.getConnection(hostPortStr, null, tdsUsername, tdsPassword, APP_NAME, null, props, null);
+				conn = AseConnectionFactory.getConnection(hostPortStr, null, tdsUsername, tdsPassword, APP_NAME, Version.getVersionStr(), null, props, null);
 			}
 			catch (SQLException e)
 			{
@@ -474,7 +501,25 @@ PropertyConfigurator.configure(log4jProps);
 		}
 
 		// Set STYLE of the SYNTAX in the output/tail view
-		_logTail_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+		_logTail_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+//		_logTail_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
+//		FoldParserManager.get().addFoldParserMapping(SyntaxConstants.SYNTAX_STYLE_SQL, new CurlyFoldParser());
+		if (_foldDiscardedMessages)
+		{
+			_logTail_txt.setCodeFoldingEnabled(true);
+			_logTail_scroll.setFoldIndicatorEnabled(true);
+			
+//			// Collapse by default
+//			FoldCollapser collapser = new FoldCollapser() 
+//			{
+//				@Override
+//				public boolean getShouldCollapse(Fold fold) {
+//					return true;
+//				}
+//			};
+//			collapser.collapseFolds(_logTail_txt.getFoldManager());
+		}
+
 		if ( _fileType == FileType.ASE_LOG)
 		{
 //			_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL_LOG); // FIXME: create a ASE LOG SYNTAX
@@ -554,25 +599,30 @@ PropertyConfigurator.configure(log4jProps);
 		_warning_lbl  .setHorizontalAlignment(SwingConstants.RIGHT);
 		_warning_lbl  .setVerticalAlignment(SwingConstants.BOTTOM);
 
-		_startTail_but.setToolTipText("Start doing Tail on the log");
-		_stopTail_but .setToolTipText("Stop doing Tail on the log");
+		_filterColorSchema_lbl.setToolTipText("<html>Apply a Color and Filter functionality for this session.<br><br>You can edit the file '"+LogFileFilterAndColorManager.DEFAULT_filename+"', or copy it from '$DBXTUNE_HOME/lib/asetune.jar:resources/LogFileFilters.xml'</html>");
+		_filterColorSchema_cbx.setToolTipText(_filterColorSchema_lbl.getToolTipText());
+		_startTail_but        .setToolTipText("Start doing Tail on the log");
+		_stopTail_but         .setToolTipText("Stop doing Tail on the log");
 
 		_sshPanel         = createSshPanel();
 		_accessTypePanel  = createAccessPanel();
 
-		panel.add(_accessTypePanel,      "push, grow,             hidemode 2");
-		panel.add(_sshPanel,             "push, grow, span, wrap, hidemode 2");
+		panel.add(_accessTypePanel,       "push, grow,             hidemode 2");
+		panel.add(_sshPanel,              "push, grow, span, wrap, hidemode 2");
 
-//		panel.add(new JLabel(""),        "wrap, push"); // dummy JLabel just to do "push", it will disappear if
-		panel.add(_tailNewRecordsBot_chk,"span 4, split, hidemode 2");
-		panel.add(_warning_lbl,          "growx");
-		panel.add(_startTail_but,        "gap 10 10 0 10, hidemode 3");   // gap left [right] [top] [bottom]
-		panel.add(_stopTail_but,         "gap 10 10 0 10, hidemode 3");   // gap left [right] [top] [bottom]
-		
+//		panel.add(new JLabel(""),         "wrap, push"); // dummy JLabel just to do "push", it will disappear if
+		panel.add(_tailNewRecordsBot_chk, "span 4, split, hidemode 2");
+		panel.add(_warning_lbl,           "growx");
+		panel.add(_filterColorSchema_lbl, "");
+		panel.add(_filterColorSchema_cbx, "");
+		panel.add(_startTail_but,         "gap 10 10 0 10, hidemode 3");   // gap left [right] [top] [bottom]
+		panel.add(_stopTail_but,          "gap 10 10 0 10, hidemode 3");   // gap left [right] [top] [bottom]
+
 		// disable input to some fields
 		_stopTail_but         .setVisible(false);
 		_tailNewRecordsBot_chk.setVisible(false);
 
+		_filterColorSchema_cbx.addActionListener(this);
 		_tailNewRecordsBot_chk.addActionListener(this);
 		_startTail_but        .addActionListener(this);
 		_stopTail_but         .addActionListener(this);
@@ -730,6 +780,12 @@ PropertyConfigurator.configure(log4jProps);
 		_sshPassword_txt.addFocusListener(this);
 		_sshHostname_txt.addFocusListener(this);
 		_sshPort_txt    .addFocusListener(this);
+		
+		// Caret listener
+		_sshUsername_txt.addCaretListener(this);
+		_sshPassword_txt.addCaretListener(this);
+		_sshHostname_txt.addCaretListener(this);
+		_sshPort_txt    .addCaretListener(this);
 
 		return panel;
 	}
@@ -737,7 +793,8 @@ PropertyConfigurator.configure(log4jProps);
 	private JPanel createLogTailPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Trace Command Log", false);
-		panel.setLayout(new MigLayout("insets 0 0 0 0"));
+//		panel.setLayout(new MigLayout("insets 0 0 0 0"));
+		panel.setLayout(new BorderLayout());
 
 		// Tooltip
 //		panel       .setToolTipText("Tail of the Log");
@@ -745,13 +802,51 @@ PropertyConfigurator.configure(log4jProps);
 		
 //		_logTail_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 
-		panel.add(_logTail_scroll, "grow, push, wrap");
+		// enable the "icon" area on the left side
+		_logTail_scroll.setLineNumbersEnabled(true);
+		_logTail_scroll.setIconRowHeaderEnabled(true);
+		_logErrStrip.setVisible(true);
+		_logErrStrip.setLevelThreshold(ParserNotice.Level.INFO); // Show everyting 
+
+		// Parser
+		_logParser = new LogParser();
+		_parserResult = new DefaultParseResult(_logParser);
+		_logTail_txt.addParser(_logParser);
+
+//		panel.add(_logTail_scroll, "grow, push");
+//		panel.add(_logErrStrip,    "wrap");
+		panel.add(_logTail_scroll, BorderLayout.CENTER);
+		panel.add(_logErrStrip,    BorderLayout.LINE_END);
+
 
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(_logTail_scroll, this);
 
 		return panel;
 	}
-
+	
+	private class LogParser
+	extends AbstractParser
+	{
+		@Override 
+		public ParseResult parse(RSyntaxDocument doc, String style)
+		{
+			// Check the list of TrackerIcons (icons at the Gutter), if some hasn't been added, add them
+			for (TrackingIcon ti : _addedTrackingIcons)
+			{
+				if (ti._gii == null)
+				{
+					try
+					{
+						GutterIconInfo gii = _logTail_scroll.getGutter().addLineTrackingIcon(ti._line, ti._icon, ti._toolTip);
+						ti._gii = gii;
+					}
+					catch (BadLocationException ignore) { /* ignore */ }
+				}
+			}
+			
+			return _parserResult;
+		}
+	}
 
 	@Override
 	public void setVisible(boolean visible) 
@@ -809,6 +904,20 @@ PropertyConfigurator.configure(log4jProps);
 			stopTail();
 		}
 		
+		// ComboBox: Filters
+		if (_filterColorSchema_cbx.equals(source))
+		{
+			String filterSchema = StringUtil.getSelectedItemString(_filterColorSchema_cbx);
+			LogFileFilterAndColorManager.getInstance().setFilterGroup(filterSchema);
+			
+			// Restart if already started.
+			if (_fileTail != null)
+			{
+				stopTail();
+				startTail();
+			}
+		}
+
 		// COMBOBOX: SERVERNAMES
 		if (_serverName_cbx.equals(source))
 		{
@@ -899,52 +1008,347 @@ PropertyConfigurator.configure(log4jProps);
 		validateInput(); // are we allowed to connect, or are we missing information
 	}
 
+//	@Override
+//	public void newTraceRow(String row)
+//	{
+//		_logBuffer.append(row);
+//		if ( ! row.endsWith("\n") )
+//			_logBuffer.append("\n");
+//
+//		if ( _logBufferTimer.isRunning() )
+//			_logBufferTimer.restart();
+//		else
+//			_logBufferTimer.start();
+//	}
+//	// BEGIN: Deferred processing of the entries
+//	StringBuilder _logBuffer = new StringBuilder();
+//	Timer         _logBufferTimer = new Timer(100, new ActionListener()
+//	{
+//		@Override
+//		public void actionPerformed(ActionEvent e)
+//		{
+//			// Make a new buffer, and send the old buffer to be processed
+//			synchronized (LogTailWindow.this)
+//			{
+//				StringBuilder sb = _logBuffer;
+//				_logBuffer = new StringBuilder();
+//
+//				logBufferApply(sb);
+//
+//				_logBufferTimer.stop();
+//			}
+//		}
+//	});
+//	private void logBufferApply(StringBuilder logBuffer)
+//	{
+//		// Get the Filter "manager"
+//		LogFileFilterAndColorManager filter = LogFileFilterAndColorManager.getInstance();
+//
+//		// Loop the input
+//		try (BufferedReader reader = new BufferedReader(new StringReader(logBuffer.toString()))) 
+//		{
+//			// Keep discarded records in a List...
+//			List<String> discardedRecords = new LinkedList<>();
+//			
+//			// Read first line... subsequential lines is read at the end...
+//			String line = reader.readLine();
+//			while (line != null) 
+//			{
+//				// This will holds records that we can add directly...
+//				String lineToAdd = null;
+//				
+//				// Get "properties" for this row... It cab be a Warning/Error row... or it it should be discarded...
+//				FilterEntry fe = filter.getFilterEntryForRow(line);
+//				
+//				// Check if this record should be displayed or not
+//				boolean allowRecord = fe.isAllowed();
+//				
+//				// If we should NOT discard messages, then set it as ALLOWED
+//				if (_discardMessages == false)
+//					allowRecord = true;
+//
+//				if (allowRecord)
+//				{
+//					// CLOSE any discarded message group...
+//					// and add all records to:
+//					// - The tooltip gutter
+//					// - And possibly: add the discarded records as a "folded group" in the editor...
+//					if (discardedRecords.size() > 0)
+//					{
+//						handleDiscardedRecords(discardedRecords, _foldDiscardedMessages);
+//						
+//						// Start a new List to store discarded messages.
+//						discardedRecords = new LinkedList<>();
+//					}
+//
+//					// This line should soon be appended to the log
+//					lineToAdd = line;
+//				}
+//				else
+//				{
+//					// If not displayed, maybe do it later... use the list as a counter of discarded records
+//					discardedRecords.add(line);
+//
+//					lineToAdd = null;
+//				}
+//
+//				// Here is where we ADD the record to the log, if it wasn't discarded.
+//				// Also: get next line... we might need to concatenate next line to current if it's not probely "terminated"
+//				line = reader.readLine();
+//				if (lineToAdd != null)
+//				{
+//					_logTail_txt.append(lineToAdd);
+//
+//					// This is a special fix for Replication Server (should probably be done in a better way, possibly by the FilterEntry "manager")
+//					// If next line is "'." then it means it's a RepServer Message that can be added on same line as this line...
+//					// FIXME: Fix this as a Property for the FilterGroup...
+//					if ("'.".equals(line))
+//					{
+//						_logTail_txt.append(line);
+//						line = reader.readLine(); // And read next line
+//					}
+//
+//					// Append a <newline>
+//					_logTail_txt.append("\n");
+//					
+//					// possibly MARK the line as Warning/Error
+//					if (fe.getIcon() != null)
+//						addParserNotice(-1, fe.getIcon(), fe.getLevel(), lineToAdd);
+//				}
+//			} // end: looping the input
+//
+//			// Add possibly records that has been discarded
+//			handleDiscardedRecords(discardedRecords, _foldDiscardedMessages);
+//
+//			// Should we position ourself "at the end"
+//			if (_tailNewRecordsTop_chk.isSelected() || _tailNewRecordsBot_chk.isSelected())
+//			{
+//				_logTail_txt.setCaretPosition( _logTail_txt.getDocument().getLength() );
+//			}
+//		}
+//		catch(Throwable t)
+//		{
+//			_logger.error("Problems adding text to the tail-output window", t);
+//		}
+//	}
 	@Override
 	public void newTraceRow(String row)
 	{
-		_logBuffer.append(row);
-		if ( ! row.endsWith("\n") )
-			_logBuffer.append("\n");
+		_logBufferList.add(row);
 
-		if ( ! _logBufferTimer.isRunning() )
+		if ( _logBufferTimer.isRunning() )
+			_logBufferTimer.restart();
+		else
 			_logBufferTimer.start();
 	}
 	// BEGIN: Deferred processing of the entries
-	StringBuilder _logBuffer = new StringBuilder();
-	Timer         _logBufferTimer = new Timer(100, new ActionListener()
+	LinkedList<String> _logBufferList  = new LinkedList<>();
+	Timer              _logBufferTimer = new Timer(100, new ActionListener()
 	{
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
 			// Make a new buffer, and send the old buffer to be processed
-			StringBuilder sb = _logBuffer;
-			_logBuffer = new StringBuilder();
-
-			logBufferApply(sb);
-
-			_logBufferTimer.stop();
-		}
-	});
-	private void logBufferApply(StringBuilder sb)
-	{
-//		try { _logTail_txt.addLineHighlight(_logTail_txt.getCaretLineNumber(), Color.RED); }
-//		catch (BadLocationException e) { e.printStackTrace();}
-
-		try
-		{
-			_logTail_txt.append(sb.toString());
-
-			if (_tailNewRecordsTop_chk.isSelected() || _tailNewRecordsBot_chk.isSelected())
+			synchronized (LogTailWindow.this)
 			{
-				_logTail_txt.setCaretPosition( _logTail_txt.getDocument().getLength() );
+				LinkedList<String> currentBufferList = _logBufferList;
+				_logBufferList = new LinkedList<>();
+
+				try
+				{
+					_logTail_txt.beginAtomicEdit();
+    				logBufferApply(currentBufferList);
+				}
+				finally
+				{
+					_logTail_txt.endAtomicEdit();
+				}
+
+				_logBufferTimer.stop();
 			}
 		}
-		catch(Throwable t)
+	});
+	private void logBufferApply(LinkedList<String> logBuffer)
+	{
+		// Get the Filter "manager"
+		LogFileFilterAndColorManager filter = LogFileFilterAndColorManager.getInstance();
+		
+		String currentFilterGroupName = filter.getCurrentFilterGroupName(); 
+
+		// Keep discarded records in a List...
+		List<String> discardedRecords = new LinkedList<>();
+		
+		// Loop the list of records
+		for( int bufCnt=0; bufCnt<logBuffer.size(); bufCnt++ )
 		{
-			_logger.error("Problems adding text to the tail-output window", t);
+			String line = logBuffer.get(bufCnt);
+
+			// This will holds records that we can add directly...
+			String lineToAdd = null;
+			
+			// Get "properties" for this row... It cab be a Warning/Error row... or it it should be discarded...
+			FilterEntry fe = filter.getFilterEntryForRow(line);
+			
+			// Check if this record should be displayed or not
+			boolean allowRecord = fe.isAllowed();
+			
+			// If we should NOT discard messages, then set it as ALLOWED
+			if (_discardMessages == false)
+				allowRecord = true;
+
+			if (allowRecord)
+			{
+				// CLOSE any discarded message group...
+				// and add all records to:
+				// - The tooltip gutter
+				// - And possibly: add the discarded records as a "folded group" in the editor...
+				if (discardedRecords.size() > 0)
+				{
+					handleDiscardedRecords(discardedRecords, _foldDiscardedMessages);
+					
+					// Start a new List to store discarded messages.
+					discardedRecords = new LinkedList<>();
+				}
+
+				// This line should soon be appended to the log
+				lineToAdd = line;
+			}
+			else
+			{
+				// If not displayed, maybe do it later... use the list as a counter of discarded records
+				discardedRecords.add(line);
+
+				lineToAdd = null;
+			}
+
+			// Here is where we ADD the record to the log, if it wasn't discarded.
+			if (lineToAdd != null)
+			{
+				_logTail_txt.append(lineToAdd);
+
+				// This is a special fix for Replication Server (should probably be done in a better way, possibly by the FilterEntry "manager")
+				// If next line is "'." then it means it's a RepServer Message that can be added on same line as this line...
+				// FIXME: Fix this as a Property for the FilterGroup...
+				if ("RepServer".equals(currentFilterGroupName))
+				{
+					// Also: get next line... we might need to concatenate next line to current if it's not probely "terminated"
+					String nextLine = (bufCnt+1 < logBuffer.size()) ? logBuffer.get(bufCnt+1) : null;
+
+					if ("'.".equals(nextLine))
+					{
+						_logTail_txt.append(nextLine);
+						bufCnt++; // mark next line as "read"
+					}
+				}
+
+				// Append a <newline>
+				_logTail_txt.append("\n");
+				
+				// possibly MARK the line as Warning/Error
+				if (fe.getIcon() != null)
+					addParserNotice(-1, fe.getIcon(), fe.getLevel(), lineToAdd);
+			}
+		} // end: looping the input
+
+		// Add possibly records that has been discarded
+		handleDiscardedRecords(discardedRecords, _foldDiscardedMessages);
+
+		// Should we position ourself "at the end"
+		if (_tailNewRecordsTop_chk.isSelected() || _tailNewRecordsBot_chk.isSelected())
+		{
+			_logTail_txt.setCaretPosition( _logTail_txt.getDocument().getLength() );
 		}
 	}
-	// END: Deferred processing of the entries
+
+	private void handleDiscardedRecords(List<String> discardedRecords, boolean foldMessages)
+	{
+		if (discardedRecords.isEmpty())
+			return;
+
+		StringBuilder discToLog = new StringBuilder();
+		StringBuilder toToolTip = new StringBuilder("<html><code>");
+		for (String disardedRow : discardedRecords)
+		{
+			discToLog.append(disardedRow).append("\n");
+			toToolTip.append(disardedRow).append("<br>\n");
+		}
+		toToolTip.append("</code></html>");
+		String toToolTipStr = toToolTip.toString();
+
+		// append BEGIN to log
+		if (foldMessages)
+		{
+			String discardStr = "{ // >>>>>>>>>>>> begin: Discarding " + discardedRecords.size() + " records from the log. >>>>>>>>>>>>\n";
+			_logTail_txt.append(discardStr);
+			addParserNotice(-1, LogFileFilterAndColorManager.FILTER_ROW_DISCARDED_ICON, LogFileFilterAndColorManager.Level.Discard, toToolTipStr);
+
+			// add the "hidden" records
+			_logTail_txt.append(discToLog.toString());
+		}
+		
+		// append END to log
+		String discardPrefix = foldMessages ? "} // <<<<<<<<<<<< end:" : "############";
+		String discardStr    = discardPrefix + " Discarded "+discardedRecords.size()+" record from the log. <<<<<<<<<<<<\n";
+
+		// Write "end" message and add a "notation" to the gutter
+		_logTail_txt.append(discardStr);
+		addParserNotice(-1, LogFileFilterAndColorManager.FILTER_ROW_DISCARDED_ICON, LogFileFilterAndColorManager.Level.Discard, toToolTipStr);
+
+		// Fold the last message "group"
+		if (foldMessages)
+		{
+			// We need to check for new fold sections...
+			FoldManager foldManager = _logTail_txt.getFoldManager();
+			foldManager.reparse();
+
+			// Get last fold section
+			int foldCount = foldManager.getFoldCount();
+			Fold fold = null;
+			if (foldCount > 0)
+				fold = foldManager.getFold( foldCount - 1 );
+
+			// collapse
+			if (fold != null)
+			{
+				if ( ! fold.isCollapsed() )
+					fold.setCollapsed(true);
+			}
+		}
+	}
+
+	private void addParserNotice(int rownum, final Icon icon, LogFileFilterAndColorManager.Level level, final String tooltip)
+	{
+		final int finalRowNum = rownum > 0 ? rownum : _logTail_txt.getLineCount() - 2;
+		
+		DefaultParserNotice notice = new DefaultParserNotice(_logParser, tooltip, finalRowNum);
+
+		if      (LogFileFilterAndColorManager.Level.Error  .equals(level)) notice.setLevel(ParserNotice.Level.ERROR);
+		else if (LogFileFilterAndColorManager.Level.Warning.equals(level)) notice.setLevel(ParserNotice.Level.WARNING);
+		else                                                               notice.setLevel(ParserNotice.Level.INFO);
+
+		_parserResult.addNotice(notice);
+
+		// Add the Icon to a list, which will be added by the LogParser (at a later step)
+		_addedTrackingIcons.add( new TrackingIcon(finalRowNum, icon, tooltip) );
+	}
+
+	/** Just a holding object */
+	private static class TrackingIcon
+	{
+		int            _line    = -1;
+		Icon           _icon    = null;
+		String         _toolTip = null;
+		GutterIconInfo _gii     = null; // is null until it's added to the Gutter
+
+		public TrackingIcon(int line, Icon icon, String toolTip)
+		{
+			_line    = line;
+			_icon    = icon;
+			_toolTip = toolTip;
+			_gii     = null;
+		}
+	}
+
 
 	@Override
 	public void focusGained(FocusEvent e)
@@ -957,6 +1361,13 @@ PropertyConfigurator.configure(log4jProps);
 		// Simply use the action listener...
 		actionPerformed( new ActionEvent(e.getSource(), e.getID(), "focusLost") );
 	}
+
+	@Override
+	public void caretUpdate(CaretEvent e)
+	{
+		validateInput();
+	}
+
 
 	
 	/**
@@ -1086,6 +1497,8 @@ PropertyConfigurator.configure(log4jProps);
 		conf.setProperty("LogTail.misc."+getServername()+".tail_size",       _tailSize_spm      .getNumber().intValue());
 		conf.setProperty("LogTail.misc."+getServername()+".from_file_start", _tailFromStart_cbx.isSelected());
 
+		conf.setProperty("LogTail.misc."+getServername()+".filterGroup", StringUtil.getSelectedItemString(_filterColorSchema_cbx));
+		
 		//----------------------------------
 		// TYPE
 		//----------------------------------
@@ -1180,13 +1593,17 @@ PropertyConfigurator.configure(log4jProps);
 			return;
 		}
 
-		_tailNewRecordsTop_chk.setSelected( conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
-		_tailNewRecordsBot_chk.setSelected( conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
+		_tailNewRecordsTop_chk.setSelected(     conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
+		_tailNewRecordsBot_chk.setSelected(     conf.getBooleanProperty("LogTail.misc."+servername+".tail", true) );
 		
-		_tailSize_spm     .setValue(    conf.getIntProperty(    "LogTail.misc."+servername+".tail_size",       DEFAULT_TAIL_SIZE));
-		_tailFromStart_cbx.setSelected( conf.getBooleanProperty("LogTail.misc."+servername+".from_file_start", DEFAULT_TAIL_FROM_START));
-
+		_tailSize_spm     .setValue(            conf.getIntProperty(    "LogTail.misc."+servername+".tail_size",       DEFAULT_TAIL_SIZE));
+		_tailFromStart_cbx.setSelected(         conf.getBooleanProperty("LogTail.misc."+servername+".from_file_start", DEFAULT_TAIL_FROM_START));
+		
 		_tailSize_sp.setEnabled( ! _tailFromStart_cbx.isSelected() );
+
+		String filterSchema = conf.getProperty("LogTail.misc."+servername+".filterGroup", LogFileFilterAndColorManager.DEFAULT_FILTER_GROUP);
+		_filterColorSchema_cbx.setSelectedItem(filterSchema);
+		LogFileFilterAndColorManager.getInstance().setFilterGroup(filterSchema);
 
 		if ( ! atStartup )
 		{
@@ -1605,8 +2022,8 @@ PropertyConfigurator.configure(log4jProps);
 
 	public static String getDefaultPropFile()
 	{
-		if (Version.APP_STORE_DIR != null) 
-			return Version.APP_STORE_DIR + File.separator + TAIL_CONFIG_FILE_NAME;
+		if (Version.getAppStoreDir() != null) 
+			return Version.getAppStoreDir() + File.separator + TAIL_CONFIG_FILE_NAME;
 
 		return TAIL_CONFIG_FILE_NAME;
 	}
@@ -1849,5 +2266,4 @@ PropertyConfigurator.configure(log4jProps);
 			System.out.println("--------------------------------------------------------------------");
 		}
 	}
-
 }

@@ -46,6 +46,9 @@ extends CompletionProviderAbstractSql
 		// enable the "icon" area on the left side
 		scroll.setIconRowHeaderEnabled(true);
 
+		// Install any extra items in the Editors Right Click Menu
+		acProvider.installEditorPopupMenuExtention(textPane);
+
 		return acProvider;
 	}
 

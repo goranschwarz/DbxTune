@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -47,6 +48,7 @@ import org.jdesktop.swingx.sort.RowFilters;
 
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
+import com.asetune.sql.SqlPickList;
 import com.asetune.tools.sqlw.ResultSetJXTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -116,6 +118,30 @@ extends JDialog
 	private JTextField             _ta_filter_txt = new JTextField();
 	private JLabel                 _ta_filter_cnt = new JLabel();
 
+	private JLabel                 _co_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _co_filter_txt = new JTextField();
+	private JLabel                 _co_filter_cnt = new JLabel();
+
+	private JLabel                 _pk_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _pk_filter_txt = new JTextField();
+	private JLabel                 _pk_filter_cnt = new JLabel();
+
+	private JLabel                 _br_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _br_filter_txt = new JTextField();
+	private JLabel                 _br_filter_cnt = new JLabel();
+
+	private JLabel                 _ix_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _ix_filter_txt = new JTextField();
+	private JLabel                 _ix_filter_cnt = new JLabel();
+
+	private JLabel                 _ik_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _ik_filter_txt = new JTextField();
+	private JLabel                 _ik_filter_cnt = new JLabel();
+
+	private JLabel                 _ek_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _ek_filter_txt = new JTextField();
+	private JLabel                 _ek_filter_cnt = new JLabel();
+
 	private JLabel                 _ta_cat_lbl = new JLabel("Catalog: ");
 	private JTextField             _ta_cat_txt = new JTextField("null");
 	private JLabel                 _ta_sch_lbl = new JLabel("Schema Pattern: ");
@@ -125,6 +151,61 @@ extends JDialog
 	private JLabel                 _ta_typ_lbl = new JLabel("Table Types: ");
 	private JTextField             _ta_typ_txt = new JTextField("null");
 	private JLabel                 _ta_api_lbl = new JLabel("Press button to call getTables(catalog, schemaPattern, tableNamePattern, types)");
+
+	private JLabel                 _co_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _co_cat_txt = new JTextField("null");
+	private JLabel                 _co_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _co_sch_txt = new JTextField("null");
+	private JLabel                 _co_val_lbl = new JLabel("Table Name Pattern: ");
+	private JTextField             _co_val_txt = new JTextField("%");
+	private JLabel                 _co_col_lbl = new JLabel("Columns Name: ");
+	private JTextField             _co_col_txt = new JTextField("%");
+	private JLabel                 _co_api_lbl = new JLabel("Press button to call getColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern)");
+
+	private JLabel                 _pk_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _pk_cat_txt = new JTextField("null");
+	private JLabel                 _pk_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _pk_sch_txt = new JTextField("null");
+	private JLabel                 _pk_val_lbl = new JLabel("Table Name: ");
+	private JTextField             _pk_val_txt = new JTextField("");
+	private JLabel                 _pk_api_lbl = new JLabel("Press button to call getTables(catalog, schemaPattern, tableName)");
+
+	private JLabel                 _br_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _br_cat_txt = new JTextField("null");
+	private JLabel                 _br_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _br_sch_txt = new JTextField("null");
+	private JLabel                 _br_val_lbl = new JLabel("Table Name: ");
+	private JTextField             _br_val_txt = new JTextField("");
+	private JLabel                 _br_scope_lbl    = new JLabel("Scope: ");
+	private JComboBox<BestRow>     _br_scope_cbx    = new JComboBox<BestRow>(BestRow.values());
+	private JCheckBox              _br_nullable_chk = new JCheckBox("include columns that are nullable.", true);
+	private JLabel                 _br_api_lbl = new JLabel("Press button to call getBestRowIdentifier(catalog, schema, tableName, scope, nullable)");
+
+	private JLabel                 _ix_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _ix_cat_txt = new JTextField("null");
+	private JLabel                 _ix_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _ix_sch_txt = new JTextField("null");
+	private JLabel                 _ix_val_lbl = new JLabel("Table Name: ");
+	private JTextField             _ix_val_txt = new JTextField("");
+	private JCheckBox              _ix_unique_chk = new JCheckBox("When true, return only indices for unique values; when false, return indices regardless of whether unique or not");
+	private JCheckBox              _ix_approx_chk = new JCheckBox("When true, result is allowed to reflect approximate or out of data values; when false, results are requested to be accurate");
+	private JLabel                 _ix_api_lbl = new JLabel("Press button to call getIndexInfo(catalog, schemaPattern, tableNamePattern, unique, approximate)");
+
+	private JLabel                 _ik_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _ik_cat_txt = new JTextField("null");
+	private JLabel                 _ik_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _ik_sch_txt = new JTextField("null");
+	private JLabel                 _ik_val_lbl = new JLabel("Table Name: ");
+	private JTextField             _ik_val_txt = new JTextField("");
+	private JLabel                 _ik_api_lbl = new JLabel("Press button to call getImportedKeys(catalog, schemaPattern, tableName)");
+
+	private JLabel                 _ek_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _ek_cat_txt = new JTextField("null");
+	private JLabel                 _ek_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _ek_sch_txt = new JTextField("null");
+	private JLabel                 _ek_val_lbl = new JLabel("Table Name: ");
+	private JTextField             _ek_val_txt = new JTextField("");
+	private JLabel                 _ek_api_lbl = new JLabel("Press button to call getExportedKeys(catalog, schemaPattern, tableName)");
 
 	private JLabel                 _pr_filter_lbl = new JLabel("Filter: ");
 	private JTextField             _pr_filter_txt = new JTextField();
@@ -162,6 +243,12 @@ extends JDialog
 	private CatalogsTable          _ca_tab  = null;
 	private SchemasTable           _sc_tab  = null;
 	private TablesTable            _ta_tab  = null;
+	private ColumnsTable           _co_tab  = null;
+	private TablesPkTable          _pk_tab  = null;
+	private BestRowTable           _br_tab  = null;
+	private IndexTable             _ix_tab  = null;
+	private ImportedKeysTable      _ik_tab  = null;
+	private ExportedKeysTable      _ek_tab  = null;
 	private ProceduresTable        _pr_tab  = null;
 	private FunctionsTable         _fu_tab  = null;
 	private ConnInfoTable          _ci_tab  = null;
@@ -170,6 +257,37 @@ extends JDialog
 	private JButton                _cancel = new JButton("Cancel");
 
 	private boolean                _okWasPressed = false;
+	
+	
+	// Enums for various things
+	public enum BestRow
+	{
+		NotPseudo  (DatabaseMetaData.bestRowNotPseudo,   "Best row identifier is NOT a pseudo column."), 
+		Pseudo     (DatabaseMetaData.bestRowPseudo,      "Best row identifier is a pseudo column."), 
+		Session    (DatabaseMetaData.bestRowSession,     "Scope of the best row identifier is the remainder of the current session."), 
+		Temporary  (DatabaseMetaData.bestRowTemporary,   "Scope of the best row identifier is very temporary, lasting only while the row is being used."), 
+		Transaction(DatabaseMetaData.bestRowTransaction, "Scope of the best row identifier is the remainder of the current transaction."), 
+		Unknown    (DatabaseMetaData.bestRowUnknown,     "Best row identifier may or may not be a pseudo column.");
+		
+		private int jdbcNumber;
+		private String desc;
+		
+		private BestRow(int jdbcNumber, String desc)
+		{
+			this.jdbcNumber = jdbcNumber;
+			this.desc       = desc;
+		}
+
+		public int    getJdbcNumber() { return jdbcNumber; }
+		public String getDesciption() { return desc; }
+
+		@Override
+		public String toString()
+		{
+			return "<html>" + name() + " - <font color=\"green\">" + getDesciption() + "</font></html>";
+		}
+	};
+	
 	
 	/** 
 	 * Renderer that accepts both a boolean and a "other" values.
@@ -201,7 +319,8 @@ extends JDialog
 
 	public JdbcMetaDataInfoDialog(Window owner, Connection conn)
 	{
-		super(owner, "JDBC Connection Information", ModalityType.APPLICATION_MODAL);
+//		super(owner, "JDBC Connection Information", ModalityType.APPLICATION_MODAL);
+		super(owner, "JDBC Connection Information", ModalityType.MODELESS);
 
 		_owner = owner;
 		_conn  = conn;
@@ -217,6 +336,9 @@ extends JDialog
 		applyCaFilter();
 		applyScFilter();
 		applyCiFilter();
+//		applyPkFilter();
+//		applyBrFilter();
+//		applyIxFilter();
 
 		SwingUtils.installEscapeButton(this, _cancel);
 
@@ -239,6 +361,12 @@ extends JDialog
 		_tabPane.addTab("Catalogs",             createCatalogPanel());
 		_tabPane.addTab("Schemas",              createSchemasPanel());
 		_tabPane.addTab("Tables",               createTablesPanel());
+		_tabPane.addTab("Columns",              createColumnsPanel());
+		_tabPane.addTab("PrimayKeys",           createTablesPkPanel());
+		_tabPane.addTab("BestRow",              createBestRowPanel());
+		_tabPane.addTab("IndexInfo",            createIndexPanel());
+		_tabPane.addTab("FK ->",                createImportedKeysPanel());
+		_tabPane.addTab("FK <-",                createExportedKeysPanel());
 		_tabPane.addTab("Procedures",           createProceduresPanel());
 		_tabPane.addTab("Functions",            createFunctionsPanel());
 		_tabPane.addTab("getClientInfo()",      createClientInfoPanel());
@@ -256,6 +384,12 @@ extends JDialog
 		_ca_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyCaFilter(); } });
 		_sc_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyScFilter(); } });
 		_ta_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyTaFilter(); } });
+		_co_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyCoFilter(); } });
+		_pk_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyPkFilter(); } });
+		_br_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyBrFilter(); } });
+		_ix_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyIxFilter(); } });
+		_ik_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyIkFilter(); } });
+		_ek_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyEkFilter(); } });
 		_pr_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyPrFilter(); } });
 		_fu_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyFuFilter(); } });
 		_ci_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyCiFilter(); } });
@@ -600,6 +734,469 @@ extends JDialog
 	}
 
 	
+	private JPanel createColumnsPanel()
+	{
+		_co_tab = new ColumnsTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_co_tab.refresh();
+			}
+		});
+		
+		JButton getTables_but = new JButton("...");
+		getTables_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				ResultSetTableModel rstm = getTables(_conn, _co_cat_txt.getText(), _co_sch_txt.getText(), _co_val_txt.getText(), null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getTables()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_co_cat_txt.setText(pickList.getSelectedValuesAsString("TABLE_CAT"));
+					_co_sch_txt.setText(pickList.getSelectedValuesAsString("TABLE_SCHEM"));
+					_co_val_txt.setText(pickList.getSelectedValuesAsString("TABLE_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getColumns(catalog, schemaPattern, TablePattern, ColumnPattern)</code></b><br>"
+				+ "</html>";
+		
+		_co_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_co_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_co_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_co_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_co_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+		_co_col_txt.setToolTipText("<html>a column name pattern; must match the column name as it is stored in the database</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_co_cat_lbl,              "");
+		p1.add(_co_cat_txt,              "growx, pushx, wrap");
+		p1.add(_co_sch_lbl,              "");
+		p1.add(_co_sch_txt,              "growx, pushx, wrap");
+		p1.add(_co_val_lbl,              "");
+		p1.add(_co_val_txt,              "growx, pushx, split");
+		p1.add(getTables_but,            "wrap");
+		p1.add(_co_col_lbl,              "");
+		p1.add(_co_col_txt,              "growx, pushx, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_co_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_co_filter_lbl,           "gap 5, split");
+		p.add(_co_filter_txt,           "growx, pushx");
+		p.add(_co_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_co_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createTablesPkPanel()
+	{
+		_pk_tab = new TablesPkTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_pk_tab.refresh();
+			}
+		});
+		
+		JButton getTables_but = new JButton("...");
+		getTables_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+//				ResultSetTableModel rstm = getTables(_conn, _pk_cat_txt.getText(), _pk_sch_txt.getText(), _pk_val_txt.getText(), null);
+				ResultSetTableModel rstm = getTables(_conn, _pk_cat_txt.getText(), _pk_sch_txt.getText(), "", null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getTables()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_pk_cat_txt.setText(pickList.getSelectedValuesAsString("TABLE_CAT"));
+					_pk_sch_txt.setText(pickList.getSelectedValuesAsString("TABLE_SCHEM"));
+					_pk_val_txt.setText(pickList.getSelectedValuesAsString("TABLE_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getPrimaryKeys(catalog, schemaPattern, TablePattern)</code></b><br>"
+				+ "</html>";
+		
+		_pk_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_pk_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_pk_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_pk_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_pk_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_pk_cat_lbl,              "");
+		p1.add(_pk_cat_txt,              "growx, pushx, wrap");
+		p1.add(_pk_sch_lbl,              "");
+		p1.add(_pk_sch_txt,              "growx, pushx, wrap");
+		p1.add(_pk_val_lbl,              "");
+		p1.add(_pk_val_txt,              "growx, pushx, split");
+		p1.add(getTables_but,            "wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_pk_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_pk_filter_lbl,           "gap 5, split");
+		p.add(_pk_filter_txt,           "growx, pushx");
+		p.add(_pk_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_pk_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createBestRowPanel()
+	{
+		_br_tab = new BestRowTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_br_tab.refresh();
+			}
+		});
+		
+		JButton getTables_but = new JButton("...");
+		getTables_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+//				ResultSetTableModel rstm = getTables(_conn, _br_cat_txt.getText(), _br_sch_txt.getText(), _br_val_txt.getText(), null);
+				ResultSetTableModel rstm = getTables(_conn, _br_cat_txt.getText(), _br_sch_txt.getText(), "", null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getTables()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_br_cat_txt.setText(pickList.getSelectedValuesAsString("TABLE_CAT"));
+					_br_sch_txt.setText(pickList.getSelectedValuesAsString("TABLE_SCHEM"));
+					_br_val_txt.setText(pickList.getSelectedValuesAsString("TABLE_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getBestRowIdentifier(catalog, schemaPattern, Table, scope, nullable)</code></b><br>"
+				+ "</html>";
+		
+		_br_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_br_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_br_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_br_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_br_val_txt.setToolTipText("<html>a table name; must match the table name as it is stored in the database</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_br_cat_lbl,              "");
+		p1.add(_br_cat_txt,              "growx, pushx, wrap");
+		p1.add(_br_sch_lbl,              "");
+		p1.add(_br_sch_txt,              "growx, pushx, wrap");
+		p1.add(_br_val_lbl,              "");
+		p1.add(_br_val_txt,              "growx, pushx, split");
+		p1.add(getTables_but,            "wrap");
+		p1.add(_br_scope_lbl,            "");
+		p1.add(_br_scope_cbx,            "growx, pushx, wrap");
+		p1.add(_br_nullable_chk,         "skip, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_br_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_br_filter_lbl,           "gap 5, split");
+		p.add(_br_filter_txt,           "growx, pushx");
+		p.add(_br_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_br_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createIndexPanel()
+	{
+		_ix_tab = new IndexTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_ix_tab.refresh();
+			}
+		});
+		
+		JButton getTables_but = new JButton("...");
+		getTables_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+//				ResultSetTableModel rstm = getTables(_conn, _ix_cat_txt.getText(), _ix_sch_txt.getText(), _ix_val_txt.getText(), null);
+				ResultSetTableModel rstm = getTables(_conn, _ix_cat_txt.getText(), _ix_sch_txt.getText(), "", null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getTables()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_ix_cat_txt.setText(pickList.getSelectedValuesAsString("TABLE_CAT"));
+					_ix_sch_txt.setText(pickList.getSelectedValuesAsString("TABLE_SCHEM"));
+					_ix_val_txt.setText(pickList.getSelectedValuesAsString("TABLE_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getIndexInfo(catalog, schemaPattern, TablePattern, unique, approximate)</code></b><br>"
+				+ "</html>";
+		
+		_ix_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_ix_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_ix_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_ix_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_ix_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_ix_cat_lbl,              "");
+		p1.add(_ix_cat_txt,              "growx, pushx, wrap");
+		p1.add(_ix_sch_lbl,              "");
+		p1.add(_ix_sch_txt,              "growx, pushx, wrap");
+		p1.add(_ix_val_lbl,              "");
+		p1.add(_ix_val_txt,              "growx, pushx, split");
+		p1.add(getTables_but,            "wrap");
+		p1.add(_ix_unique_chk,           "skip, wrap");
+		p1.add(_ix_approx_chk,           "skip, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_ix_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_ix_filter_lbl,           "gap 5, split");
+		p.add(_ix_filter_txt,           "growx, pushx");
+		p.add(_ix_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_ix_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createImportedKeysPanel()
+	{
+		_ik_tab = new ImportedKeysTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_ik_tab.refresh();
+			}
+		});
+		
+		JButton getTables_but = new JButton("...");
+		getTables_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+//				ResultSetTableModel rstm = getTables(_conn, _ik_cat_txt.getText(), _ik_sch_txt.getText(), _ik_val_txt.getText(), null);
+				ResultSetTableModel rstm = getTables(_conn, _ik_cat_txt.getText(), _ik_sch_txt.getText(), "", null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getTables()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_ik_cat_txt.setText(pickList.getSelectedValuesAsString("TABLE_CAT"));
+					_ik_sch_txt.setText(pickList.getSelectedValuesAsString("TABLE_SCHEM"));
+					_ik_val_txt.setText(pickList.getSelectedValuesAsString("TABLE_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getImportedKeys(catalog, schemaPattern, TablePattern)</code></b><br>"
+				+ "</html>";
+		
+		_ik_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_ik_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_ik_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_ik_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_ik_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_ik_cat_lbl,              "");
+		p1.add(_ik_cat_txt,              "growx, pushx, wrap");
+		p1.add(_ik_sch_lbl,              "");
+		p1.add(_ik_sch_txt,              "growx, pushx, wrap");
+		p1.add(_ik_val_lbl,              "");
+		p1.add(_ik_val_txt,              "growx, pushx, split");
+		p1.add(getTables_but,            "wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_ik_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_ik_filter_lbl,           "gap 5, split");
+		p.add(_ik_filter_txt,           "growx, pushx");
+		p.add(_ik_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_ik_tab), "grow, push");
+
+		return p;
+	}
+
+	
+	private JPanel createExportedKeysPanel()
+	{
+		_ek_tab = new ExportedKeysTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_ek_tab.refresh();
+			}
+		});
+		
+		JButton getTables_but = new JButton("...");
+		getTables_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+//				ResultSetTableModel rstm = getTables(_conn, _ek_cat_txt.getText(), _ek_sch_txt.getText(), _ek_val_txt.getText(), null);
+				ResultSetTableModel rstm = getTables(_conn, _ek_cat_txt.getText(), _ek_sch_txt.getText(), "", null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getTables()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_ek_cat_txt.setText(pickList.getSelectedValuesAsString("TABLE_CAT"));
+					_ek_sch_txt.setText(pickList.getSelectedValuesAsString("TABLE_SCHEM"));
+					_ek_val_txt.setText(pickList.getSelectedValuesAsString("TABLE_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getExportedKeys(catalog, schemaPattern, TablePattern)</code></b><br>"
+				+ "</html>";
+		
+		_ek_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_ek_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_ek_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_ek_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_ek_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_ek_cat_lbl,              "");
+		p1.add(_ek_cat_txt,              "growx, pushx, wrap");
+		p1.add(_ek_sch_lbl,              "");
+		p1.add(_ek_sch_txt,              "growx, pushx, wrap");
+		p1.add(_ek_val_lbl,              "");
+		p1.add(_ek_val_txt,              "growx, pushx, split");
+		p1.add(getTables_but,            "wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_ek_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_ek_filter_lbl,           "gap 5, split");
+		p.add(_ek_filter_txt,           "growx, pushx");
+		p.add(_ek_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_ek_tab), "grow, push");
+
+		return p;
+	}
+
+	
 	private JPanel createProceduresPanel()
 	{
 		_pr_tab = new ProceduresTable(_conn);
@@ -712,6 +1309,12 @@ extends JDialog
 	public void applyCaFilter() { applyFilter(_ca_filter_txt, _ca_tab, _ca_filter_cnt); }
 	public void applyScFilter() { applyFilter(_sc_filter_txt, _sc_tab, _sc_filter_cnt); }
 	public void applyTaFilter() { applyFilter(_ta_filter_txt, _ta_tab, _ta_filter_cnt); }
+	public void applyCoFilter() { applyFilter(_co_filter_txt, _co_tab, _co_filter_cnt); }
+	public void applyPkFilter() { applyFilter(_pk_filter_txt, _pk_tab, _pk_filter_cnt); }
+	public void applyBrFilter() { applyFilter(_br_filter_txt, _br_tab, _br_filter_cnt); }
+	public void applyIxFilter() { applyFilter(_ix_filter_txt, _ix_tab, _ix_filter_cnt); }
+	public void applyIkFilter() { applyFilter(_ik_filter_txt, _ik_tab, _ik_filter_cnt); }
+	public void applyEkFilter() { applyFilter(_ek_filter_txt, _ek_tab, _ek_filter_cnt); }
 	public void applyPrFilter() { applyFilter(_pr_filter_txt, _pr_tab, _pr_filter_cnt); }
 	public void applyFuFilter() { applyFilter(_fu_filter_txt, _fu_tab, _fu_filter_cnt); }
 	public void applyCiFilter() { applyFilter(_ci_filter_txt, _ci_tab, _ci_filter_cnt); }
@@ -743,6 +1346,45 @@ extends JDialog
 		return _okWasPressed;
 	}
 
+
+	/**
+	 * 
+	 * @param conn
+	 * @param catalog
+	 * @param schemaPattern
+	 * @param valueNamePattern
+	 * @param tableTypesStr default is to get type of TABLE
+	 * @return
+	 */
+	public ResultSetTableModel getTables(Connection conn, String catalog, String schemaPattern, String valueNamePattern, String tableTypesStr)
+	{
+		String[] tableTypes = new String[] {"TABLE"};
+
+		if (StringUtil.isNullOrBlank(valueNamePattern))
+			valueNamePattern = "";
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+		if (tableTypesStr != null)
+		{
+    		if (tableTypesStr   .equalsIgnoreCase("null")) tableTypesStr    = null;
+    		if (tableTypesStr   != null)                   tableTypes       = StringUtil.commaStrToArray(tableTypesStr);
+		}
+
+		try
+		{
+    		ResultSet rs = conn.getMetaData().getTables(catalog, schemaPattern, valueNamePattern, tableTypes);
+    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.TablesModel");
+    		return rstm;
+		}
+		catch(SQLException ex)
+		{
+			SwingUtils.showErrorMessage(getOwner(), "Problems getting tables", "Problems getting tables", ex);
+			return null;
+		}
+	}
+	
 	
 	
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -981,6 +1623,138 @@ extends JDialog
 		public void refresh()
 		{
 			setModel(createTablesTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class ColumnsTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public ColumnsTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.ColumnsTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createColumnsTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class TablesPkTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public TablesPkTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.TablesPkTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createTablesPkTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class BestRowTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public BestRowTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.BestRowTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createBestRowTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class IndexTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public IndexTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.IndexTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createIndexTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class ImportedKeysTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public ImportedKeysTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.ImportedKeysTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createImportedKeysTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class ExportedKeysTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public ExportedKeysTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.ExporetdKeysTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createExportedKeysTableModel(_conn));
 			packAll();
 		}
 	}
@@ -1386,6 +2160,252 @@ extends JDialog
 			Vector<Object> row = new Vector<Object>();
 
 			row.add("conn.getMetaData().getTables()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createColumnsTableModel(Connection conn)
+	{
+		String   catalog          = _co_cat_txt.getText();
+		String   schemaPattern    = _co_sch_txt.getText();
+		String   valueNamePattern = _co_val_txt.getText();
+		String   columnNamePattern= _co_col_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		String columnTypesDesc      = columnNamePattern== null ? "null" : '"' + columnNamePattern + '"';
+		
+		String apiCall = "parameters to getColumns("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+columnTypesDesc+")";
+		_co_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getColumns(catalog, schemaPattern, valueNamePattern, columnNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.ColumnsModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getColumns()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createTablesPkTableModel(Connection conn)
+	{
+		String   catalog          = _pk_cat_txt.getText();
+		String   schemaPattern    = _pk_sch_txt.getText();
+		String   valueNamePattern = _pk_val_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getPrimaryKeys("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		_pk_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getPrimaryKeys(catalog, schemaPattern, valueNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.TablesPkModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getPrimaryKeys()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createBestRowTableModel(Connection conn)
+	{
+		String   catalog          = _br_cat_txt.getText();
+		String   schemaPattern    = _br_sch_txt.getText();
+		String   valueNamePattern = _br_val_txt.getText();
+		int      scope            = ((BestRow)_br_scope_cbx.getSelectedItem()).getJdbcNumber();
+		boolean  nullable         = _br_nullable_chk.isSelected();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getBestRowIdentifier("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+scope+", "+nullable+")";
+		_br_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getBestRowIdentifier(catalog, schemaPattern, valueNamePattern, scope, nullable);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.BestRowModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getIndexInfo()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createIndexTableModel(Connection conn)
+	{
+		String   catalog          = _ix_cat_txt.getText();
+		String   schemaPattern    = _ix_sch_txt.getText();
+		String   valueNamePattern = _ix_val_txt.getText();
+		boolean  unique           = _ix_unique_chk.isSelected();
+		boolean  approximate      = _ix_approx_chk.isSelected();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getIndexInfo("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+unique+", "+approximate+")";
+		_ix_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getIndexInfo(catalog, schemaPattern, valueNamePattern, unique, approximate);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.IndexModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getIndexInfo()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createImportedKeysTableModel(Connection conn)
+	{
+		String   catalog          = _ik_cat_txt.getText();
+		String   schemaPattern    = _ik_sch_txt.getText();
+		String   valueNamePattern = _ik_val_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getImportedKeys("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		_ik_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getImportedKeys(catalog, schemaPattern, valueNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.ImportedKeysModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getExportedKeys()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
+	public TableModel createExportedKeysTableModel(Connection conn)
+	{
+		String   catalog          = _ek_cat_txt.getText();
+		String   schemaPattern    = _ek_sch_txt.getText();
+		String   valueNamePattern = _ek_val_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		
+		String apiCall = "parameters to getExportedKeys("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+")";
+		_ek_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getExportedKeys(catalog, schemaPattern, valueNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.ExportedKeysModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getImportedKeys()");
 			row.add(e.getMessage());
 			rows.add(row);
 

@@ -10,7 +10,9 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
+import org.h2.util.Profiler;
 
+import com.asetune.alarm.AlarmHandler;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog;
@@ -21,6 +23,7 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.pcs.InMemoryCounterHandler;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
@@ -37,23 +40,6 @@ extends CounterCollectorThreadAbstract
 	/** means if we have ever been connected to any server, which then means we can do reconnect if we lost the connection */
 	private boolean _canDoReconnect = false; 
 
-	public static final String PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.low_on_memory.mb"; 
-	public static final int    DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = 130; 
-
-	public static final String PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = "asetune.memory.monitor.threshold.out_of_memory.mb";
-	public static final int    DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = 30; 
-
-	static
-	{
-		Configuration.registerDefaultValue(PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB);
-		Configuration.registerDefaultValue(PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB);
-	}
-
-	public static final int MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB = Configuration.getCombinedConfiguration().getIntProperty(PROPERTY_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_LOW_ON_MEMORY_THRESHOLD_IN_MB);
-	public static final int MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB = Configuration.getCombinedConfiguration().getIntProperty(PROPERTY_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB, DEFAULT_MEMORY_OUT_OF_MEMORY_THRESHOLD_IN_MB);
-
-	
-	
 	
 	public CounterCollectorThreadGui(CounterControllerAbstract counterController)
 	{
@@ -67,9 +53,37 @@ extends CounterCollectorThreadAbstract
 	{
 		Configuration conf    = Configuration.getCombinedConfiguration();
 
-		// Create all the CM objects, the objects will be added to _CMList
-		getCounterController().createCounters(hasGui);
+		boolean doProfile = Configuration.getCombinedConfiguration().getBooleanProperty("init.createCounters.profile", false);
+		//doProfile = true;
+		if (doProfile)
+		{
+			long start = System.currentTimeMillis();
+			Profiler prof = new Profiler();
+			prof.startCollecting();
 
+			// Create all the CM objects, the objects will be added to _CMList
+			getCounterController().createCounters(hasGui);
+
+			prof.stopCollecting();
+			long time = System.currentTimeMillis() - start;
+			if (time > 5*1000)
+			{
+				String profStr = prof.getTop(3);
+				_logger.info("createCounters(): time=" + time + ", profStr:\n" + profStr);
+			}
+		}
+		else
+		{
+			long start = System.currentTimeMillis();
+			
+			// Create all the CM objects, the objects will be added to _CMList
+			getCounterController().createCounters(hasGui);
+
+			long time = System.currentTimeMillis() - start;
+			_logger.info("Creating ALL CM Objects took " + TimeUtils.msToTimeStr("%MM:%SS.%ms", time) + " time format(MM:SS.ms)");
+		}
+			
+		
 		// Connect ON-STARTUP, use the ConnectionDialog for this, so we do not have
 		// to duplicate the logic for this in here as well...
 		// WARNING: if logic in ConnectionDialog changes, we might be in trouble
@@ -256,6 +270,9 @@ extends CounterCollectorThreadAbstract
 								_logger.debug("Problem when re-connecting to monitored server. Caught: "+e, e);
 								MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Re-connect FAILED, I will soon try again.");
 
+								// Send ALARM
+								sendAlarmServerIsDown(null);
+								
 								// On connect failure sleep for a little longer
 								int sleepTime = 5000;
 								getCounterController().sleep(sleepTime);
@@ -522,7 +539,9 @@ extends CounterCollectorThreadAbstract
 				// Get the CounterStorage if we have any
 				PersistentCounterHandler pcs = PersistentCounterHandler.getInstance();
 
-				// Do various other checks in the system, for instance in ASE do: checkForFullTransLogInMaster()
+				// Do various other checks in the system, for instance in:
+				//    - ASE do: checkForFullTransLogInMaster()
+				//    - RS  do: checkIfWeAreInGatewayMode
 				getCounterController().checkServerSpecifics();
 
 				// Get some Header information that will be used by the PersistContainer sub system
@@ -544,6 +563,9 @@ extends CounterCollectorThreadAbstract
 				// add some statistics on the "main" sample level
 				getCounterController().setStatisticsTime(headerInfo._mainSampleTime);
 
+				// Set SERVERNAME to where we are currently connected 
+				System.setProperty("DBMS_SERVERNAME", headerInfo.getServerName());
+				
 				//-----------------
 				// Update data in tabs
 				//-----------------
@@ -555,6 +577,7 @@ extends CounterCollectorThreadAbstract
 				// This one will be passed to doPostRefresh()
 				LinkedHashMap<String, CountersModel> refreshedCms = new LinkedHashMap<String, CountersModel>();
 
+//System.out.println("main: ----------------------------------------------------------------------------------------------");
 				// LOOP all CounterModels, and get new data,
 				//   if it should be done
 				long cmRefreshStartTime = System.currentTimeMillis();
@@ -588,6 +611,7 @@ extends CounterCollectorThreadAbstract
 
 						try
 						{
+//System.out.println("############################## main: do-refresh: "+cm.getDisplayName());
 							MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing... "+cm.getDisplayName());
 							cm.setSampleException(null);
 							cm.refresh();
@@ -687,8 +711,46 @@ extends CounterCollectorThreadAbstract
 					}
 				}
 
+				//-----------------
+				// AlarmHandler: end-of-scan: Cancel any alarms that has NOT been repeated
+				//-----------------
+				if (AlarmHandler.hasInstance())
+				{
+//					AlarmHandler.getInstance().endOfScan();           // This is synchronous operation
+					AlarmHandler.getInstance().addEndOfScanToQueue(); // This is async operation
+
+					// Wait for the above end-of-schan to be executed, but wait for max 100ms
+					// Note: This will block the Event Dispatch Thread from updating the GUI in 100ms
+//					long waitTime = AlarmHandler.getInstance().waitForQueueEndOfScan(100); 
+//
+//					if (_logger.isDebugEnabled())
+//						_logger.debug("waitForQueueEndOfScan(): waitTime="+waitTime);
+				}
+//				// FIXME: in MainFrame: instead of the below call... use some kind of listener from the AlarmHandler which will notify on changes
+//				MainFrame.getInstance().setActiveAlarms();
+
+				// NO Longer in refresh mode
 				getCounterController().setInRefresh(false);
-			
+
+				//----------------------------------------------------
+				// Post checking: should we reconnect to the server
+				//----------------------------------------------------
+				DbxConnection conn = getCounterController().getMonConnection();
+				if (conn != null && conn.isConnectionMarked(DbxConnection.MarkTypes.MarkForReConnect))
+				{
+					_logger.warn("The Connection to the monitored DBMS has been marked for 're-connect'. So lets close the connection, and open a new one.");
+					try
+					{
+						conn.clearConnectionMark(DbxConnection.MarkTypes.MarkForReConnect);
+						conn.close();
+						conn.reConnect( MainFrame.hasInstance() ? MainFrame.getInstance() : null );
+					}
+					catch (Exception ex)
+					{
+						_logger.error("Problems during 're-connect' after a sample is finished. Caught: "+ex);
+					}
+				}
+
 				getCounterController().setWaitEvent("next sample period...");
 				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Sleeping for "+MainFrame.getRefreshInterval()+" seconds.");
 			}

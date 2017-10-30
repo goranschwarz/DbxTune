@@ -1,10 +1,15 @@
 package com.asetune.utils;
 
 import java.io.File;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Properties;
 
+import org.apache.log4j.PropertyConfigurator;
 import org.h2.engine.SysProperties;
+
+import com.asetune.sql.JdbcUrlParser;
 
 public class H2UrlHelper
 {
@@ -12,6 +17,9 @@ public class H2UrlHelper
 	private static String _h2UrlStart = "jdbc:h2:";
 
 	private String _urlType   = "file";
+
+	private String _tcpHost   = null;
+	private int    _tcpPort   = -1;
 
 	private String _originUrl         = null;
 	private String _urlOptions        = null;
@@ -76,6 +84,26 @@ public class H2UrlHelper
 			urlVal = urlVal.substring("zip:".length());
 		}
 
+		// for TCP/SSL get host/port
+		if (_urlType.equals("tcp") || _urlType.equals("ssl"))
+		{
+			try
+			{
+				URI uri = URI.create(urlVal);
+
+				//System.out.println("H2UrlHelper.parse(url='"+url+"'): cleanURI='"+urlVal+"', uri.getScheme()='"+uri.getScheme()+"', uri.getHost()='"+uri.getHost()+"', uri.getPort()='"+uri.getPort()+"'.");
+				
+				_tcpHost = uri.getHost();
+				_tcpPort = uri.getPort();
+
+				//p.setHostPortStr( null ); // getHostPortStr(): if _hostPortStr==null -> getHost() + ":" + getPort()
+			}
+			catch (Throwable ex)
+			{
+				//System.out.println("Problem parsing the GENERIC URL '"+url+"'. Caught: "+ex);
+			}
+		}
+
 		_rawFileName = urlVal.trim();
 
 		// FIX template stuff
@@ -136,12 +164,25 @@ public class H2UrlHelper
 	}
 
 	/**
-	 * returns true if the URL is of type "file"
+	 * returns type "file, mem, tcp, ssl, zip"
 	 * @return
 	 */
 	public String getUrlType()
 	{
 		return _urlType;
+	}
+
+	public String getUrlTcpHostPort()
+	{
+		//p.setHostPortStr( null ); // getHostPortStr(): if _hostPortStr==null -> getHost() + ":" + getPort()
+
+		if (StringUtil.isNullOrBlank(_tcpHost))
+			return null;
+
+		if (_tcpPort != -1)
+			return _tcpHost + ":" + _tcpPort;
+
+		return _tcpHost;
 	}
 
 	/**
@@ -341,5 +382,30 @@ public class H2UrlHelper
 		}
 		
 		return url;
+	}
+
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		//log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+		test("jdbc:h2:file:C:/projects/asetune_recordings_temp/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+		test("jdbc:h2:tcp://192.168.0.112/spam_prod_b_2014-09-23.15");
+		test("jdbc:h2:tcp://192.168.0.112/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+		test("jdbc:h2:tcp://192.168.0.111:9092/spam_prod_b_2014-09-23.15;IFEXISTS=TRUE;DATABASE_TO_UPPER=false;AUTO_SERVER=TRUE");
+	}
+	
+	private static void test(String url)
+	{
+		H2UrlHelper h = new H2UrlHelper(url);
+		System.out.println("");
+		System.out.println("########################################################");
+		System.out.println(" URL="+url);
+		System.out.println(" toString="+h);
 	}
 }

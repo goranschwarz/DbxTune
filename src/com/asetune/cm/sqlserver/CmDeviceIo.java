@@ -18,6 +18,7 @@ import com.asetune.cm.sqlserver.gui.CmDeviceIoPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -120,15 +121,16 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_RW_DISK_IO,      new TrendGraphDataPoint(GRAPH_NAME_RW_DISK_IO,      labels));
-		addTrendGraphData(GRAPH_NAME_R_DISK_IO,       new TrendGraphDataPoint(GRAPH_NAME_R_DISK_IO,       labels));
-		addTrendGraphData(GRAPH_NAME_W_DISK_IO,       new TrendGraphDataPoint(GRAPH_NAME_W_DISK_IO,       labels));
+		addTrendGraphData(GRAPH_NAME_RW_DISK_IO,      new TrendGraphDataPoint(GRAPH_NAME_RW_DISK_IO,      labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_R_DISK_IO,       new TrendGraphDataPoint(GRAPH_NAME_R_DISK_IO,       labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_W_DISK_IO,       new TrendGraphDataPoint(GRAPH_NAME_W_DISK_IO,       labels, LabelType.Dynamic));
 
-		addTrendGraphData(GRAPH_NAME_RW_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_RW_SERVICE_TIME, labels));
-		addTrendGraphData(GRAPH_NAME_R_SERVICE_TIME,  new TrendGraphDataPoint(GRAPH_NAME_R_SERVICE_TIME,  labels));
-		addTrendGraphData(GRAPH_NAME_W_SERVICE_TIME,  new TrendGraphDataPoint(GRAPH_NAME_W_SERVICE_TIME,  labels));
+		addTrendGraphData(GRAPH_NAME_RW_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_RW_SERVICE_TIME, labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_R_SERVICE_TIME,  new TrendGraphDataPoint(GRAPH_NAME_R_SERVICE_TIME,  labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_W_SERVICE_TIME,  new TrendGraphDataPoint(GRAPH_NAME_W_SERVICE_TIME,  labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -139,7 +141,7 @@ extends CountersModel
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_RW_DISK_IO,
 				"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
-				"Number of Disk Operations (Read+Write), per Second and Device", // Label 
+				"Number of Disk Operations (Read+Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -151,7 +153,7 @@ extends CountersModel
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_R_DISK_IO,
 				"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
-				"Number of Disk Operations (Read), per Second and Device", // Label 
+				"Number of Disk Operations (Read), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -163,7 +165,7 @@ extends CountersModel
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_W_DISK_IO,
 				"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
-				"Number of Disk Operations (Write), per Second and Device", // Label 
+				"Number of Disk Operations (Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -177,7 +179,7 @@ extends CountersModel
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
 				"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
-				"Device IO Service Time (Read+Write) in Milliseconds, per Device", // Label 
+				"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -189,7 +191,7 @@ extends CountersModel
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_R_SERVICE_TIME,
 				"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
-				"Device IO Service Time (Read) in Milliseconds, per Device", // Label 
+				"Device IO Service Time (Read) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -203,7 +205,7 @@ extends CountersModel
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_W_SERVICE_TIME,
 				"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
-				"Device IO Service Time (Write) in Milliseconds, per Device", // Label 
+				"Device IO Service Time (Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -353,9 +355,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_R_DISK_IO.equals(tgdp.getName()))
@@ -370,9 +370,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_W_DISK_IO.equals(tgdp.getName()))
@@ -387,9 +385,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		
@@ -406,9 +402,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_R_SERVICE_TIME.equals(tgdp.getName()))
@@ -423,9 +417,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_W_SERVICE_TIME.equals(tgdp.getName()))
@@ -440,9 +432,7 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

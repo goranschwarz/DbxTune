@@ -12,6 +12,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -97,7 +98,7 @@ extends CountersModel
 	{
 		String[] activeThreadsLabels = new String[] { "ThreadsActive", "ParallelQueries" };
 		
-		addTrendGraphData(GRAPH_NAME_ACTIVE_THREADS, new TrendGraphDataPoint(GRAPH_NAME_ACTIVE_THREADS, activeThreadsLabels));
+		addTrendGraphData(GRAPH_NAME_ACTIVE_THREADS, new TrendGraphDataPoint(GRAPH_NAME_ACTIVE_THREADS, activeThreadsLabels, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -106,7 +107,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_ACTIVE_THREADS,
 				"Worker Threads in Use ", 	                                  // Menu CheckBox text
-				"Worker Threads in Use & Parallel Queries per second (monSysWorkerThread)", // Label 
+				"Worker Threads in Use & Parallel Queries per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				activeThreadsLabels, 
 				false, // is Percent Graph
 				this, 
@@ -162,8 +163,7 @@ extends CountersModel
 				_logger.debug("updateGraphData("+tgdp.getName()+"): ThreadsActive='"+arr[0]+"', ParallelQueries='"+arr[1]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
 }

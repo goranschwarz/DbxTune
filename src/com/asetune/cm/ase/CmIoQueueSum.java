@@ -16,6 +16,7 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.gui.CmIoQueueSumPanel;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
@@ -107,7 +108,7 @@ extends CountersModel
 	{
 		String[] labels = new String[] { "User Data", "User Log", "Tempdb Data", "Tempdb Log", "System" };
 		
-		addTrendGraphData(GRAPH_NAME_DISK_IO_OPS, new TrendGraphDataPoint(GRAPH_NAME_DISK_IO_OPS, labels));
+		addTrendGraphData(GRAPH_NAME_DISK_IO_OPS, new TrendGraphDataPoint(GRAPH_NAME_DISK_IO_OPS, labels, LabelType.Static));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -116,7 +117,7 @@ extends CountersModel
 			TrendGraph tg = null;
 			tg = new TrendGraph(GRAPH_NAME_DISK_IO_OPS,
 				"Disk IO Operations, per Type",                     // Menu CheckBox text
-				"Number of Disk IO Operations per Second and Type", // Label 
+				"Number of Disk IO Operations per Second and Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -201,8 +202,7 @@ extends CountersModel
 			_logger.debug("updateGraphData(diskIo): User Data='"+arr[0]+"', User Log='"+arr[1]+"', Tempdb Data='"+arr[2]+"', Tempdb Log='"+arr[3]+"', System='"+arr[4]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 //		CounterSample sAbs  = (CounterSample)getCounterDataAbs();
 //		CounterSample sDiff = (CounterSample)getCounterDataDiff();

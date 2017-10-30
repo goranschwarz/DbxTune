@@ -27,13 +27,13 @@ public class Logging
 
 	public static void init()
 	{
-		init( (String)null, (Properties)null );
+		init( (String)null, (Properties)null, null );
 	}
 	public static void init(String propFile)
 	{
-		init((String)null, propFile);
+		init((String)null, propFile, null);
 	}
-	public static void init(String prefix, String propFile)
+	public static void init(String prefix, String propFile, String logFilename)
 	{
 		_propFile     = propFile;
 
@@ -58,10 +58,10 @@ public class Logging
 			}
 		}
 
-		init(prefix, logProps);
+		init(prefix, logProps, logFilename);
 	}
 
-	public static void init(String prefix, Properties props)
+	public static void init(String prefix, Properties props, String logFilename)
 	{
 		if (props == null)
 			props = new Properties();
@@ -108,7 +108,7 @@ public class Logging
 		}
 
 		_props = props;
-		String logfile = null;
+		String logfile = logFilename;
 
 		// Setup HARDCODED, configuration for LOG4J, if not found in config file
 		if (_props.getProperty("log4j.rootLogger") == null)
@@ -128,9 +128,17 @@ public class Logging
 				System.out.println("To turn OFF the above message. Use '-DLogging.print.noDefaultLoggerMessage=false' flag to the JRE when starting the app.");
 			}
 
-			_props.setProperty("log4j.rootLogger", "INFO, console, logfile");
-//			_props.setProperty("log4j.rootLogger", "INFO, console, asetune");
-//			_props.setProperty("log4j.rootLogger", "DEBUG, console");
+			boolean console = System.getProperty("Logging.console", "true").equalsIgnoreCase("true");
+			if (console)
+			{
+				_props.setProperty("log4j.rootLogger", "INFO, console, logfile");
+//				_props.setProperty("log4j.rootLogger", "INFO, console, asetune");
+//				_props.setProperty("log4j.rootLogger", "DEBUG, console");
+			}
+			else
+			{
+				_props.setProperty("log4j.rootLogger", "INFO, logfile");
+			}
 
 //			if (_props.getProperty("log4j.appender.asetune") == null)
 //				_props.setProperty("log4j.appender.asetune", "com.asetune.gui.GuiLogAppender");
@@ -144,14 +152,17 @@ public class Logging
 				_props.setProperty("log4j.appender.console.layout.ConversionPattern", "%d - %-5p - %-30t - %-30c{1} - %m%n");
 
 			// logfile, add / or \ if it's not at the end.
-			logfile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR : System.getProperty("user.home");
-			if ( logfile != null && ! (logfile.endsWith("/") || logfile.endsWith("\\")) )
-				logfile += System.getProperty("file.separator");
-
-			if (prefix != null  && !prefix.equals("") )
-				logfile += Version.getAppName()+"."+prefix+"log";
-			else
-				logfile += Version.getAppName()+".log";
+			if (logfile == null)
+			{
+    			logfile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() : System.getProperty("user.home");
+    			if ( logfile != null && ! (logfile.endsWith("/") || logfile.endsWith("\\")) )
+    				logfile += System.getProperty("file.separator");
+    
+    			if (prefix != null  && !prefix.equals("") )
+    				logfile += Version.getAppName()+"."+prefix+"log";
+    			else
+    				logfile += Version.getAppName()+".log";
+			}
 			
 			if (_props.getProperty("log4j.appender.logfile") == null)
 				_props.setProperty("log4j.appender.logfile", "org.apache.log4j.RollingFileAppender");

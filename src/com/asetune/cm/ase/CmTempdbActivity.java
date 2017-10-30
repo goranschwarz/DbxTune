@@ -16,6 +16,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
@@ -104,25 +105,70 @@ extends CountersModel
 	//------------------------------------------------------------
 	
 	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT = "LogSemapContGraph"; //GetCounters.CM_GRAPH_NAME__TEMPDB_ACTIVITY__LOGSEMAPHORE_CONT;
+	public static final String GRAPH_NAME_LREADS            = "LReads";
+	public static final String GRAPH_NAME_PWRITES           = "PWrites";
+	public static final String GRAPH_NAME_CAT_LOCK_REQ      = "CatLockReq";
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = new String[] { "runtime-replaced" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT, new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT, labels));
+		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT, new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT, labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_LREADS,            new TrendGraphDataPoint(GRAPH_NAME_LREADS,            labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_PWRITES,           new TrendGraphDataPoint(GRAPH_NAME_PWRITES,           labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CAT_LOCK_REQ,      new TrendGraphDataPoint(GRAPH_NAME_CAT_LOCK_REQ,      labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
 		{
+			TrendGraph tg;
+
 			// GRAPH
-			TrendGraph tg = new TrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
-				"TempDB Transaction Log Semaphore Contention", 	          // Menu CheckBox text
-				"TempDB Transaction Log Semaphore Contention in Percent", // Label 
+			tg = new TrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
+				"TempDB Transaction Log Semaphore Contention ", 	          // Menu CheckBox text
+				"TempDB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
 				false, // visible at start
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_LREADS,
+				"TempDB Logical Reads", 	          // Menu CheckBox text
+				"TempDB Logical Reads per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_PWRITES,
+				"TempDB Physical Writes", 	          // Menu CheckBox text
+				"TempDB Physical Writes per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_CAT_LOCK_REQ,
+				"TempDB Catalog Lock Requests", 	          // Menu CheckBox text
+				"TempDB Catalog Lock Requests per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false, // visible at start
+				Ver.ver(15,5),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
 		}
@@ -321,9 +367,52 @@ extends CountersModel
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_LREADS.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString        (i, "DBName");
+				dArray[i] = this.getRateValueAsDouble(i, "LogicalReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_PWRITES.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString        (i, "DBName");
+				dArray[i] = this.getRateValueAsDouble(i, "PhysicalWrites");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_CAT_LOCK_REQ.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString        (i, "DBName");
+				dArray[i] = this.getRateValueAsDouble(i, "CatLockRequests");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 }

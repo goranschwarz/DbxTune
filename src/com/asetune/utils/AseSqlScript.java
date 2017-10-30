@@ -52,6 +52,10 @@ implements SybMessageHandler
 	private boolean            _printSqlInGlobalMsgHandler = true;
 	
 	private String             _currentSqlStatement        = null;
+	private boolean            _rsAsciiTable               = false;
+
+	public boolean getRsAsAsciiTable()          { return _rsAsciiTable; }
+	public void    setRsAsAsciiTable(boolean b) { _rsAsciiTable = b; }
 
 	/** 
 	 * On open current database and message handler are saved, which is restored by close()
@@ -540,7 +544,10 @@ implements SybMessageHandler
 						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql);
 
 						// Write ResultSet Content as a "string table"
-						sb.append(tm.toTableString());
+						if (_rsAsciiTable)
+							sb.append(tm.toAsciiTableString());
+						else
+							sb.append(tm.toTableString());
 
 						// Append, messages and Warnings to output, if any
 						sb.append(getSqlWarningMsgs(stmnt, true));
@@ -1176,7 +1183,7 @@ implements SybMessageHandler
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-		Configuration conf1 = new Configuration(Version.APP_STORE_DIR + "/asetune.save.properties");
+		Configuration conf1 = new Configuration(Version.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 		
 		Configuration.setSearchOrder(Configuration.USER_TEMP);

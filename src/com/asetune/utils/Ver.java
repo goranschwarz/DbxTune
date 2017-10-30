@@ -954,6 +954,31 @@ public class Ver
 	}
 
 
+	/**
+	 * Take a "short version int" into a "long version int", which is the "internal" version number used in DbxTune to compare version numbers.<br>
+	 * <b>Note</b>: this might change in the future to use an larger part of the Integer, so we can compare larger minor/mantenance numbers. (today we can only have 1 minor/maintenance digit)<br>
+	 * So use the methods: <code>ver(major); ver(major,minor); ver(major,minor,maint); ver(major,minor,maint, sp); ver(major,minor,maint, sp, pl);</code> to generate version numbers for comparisons.   
+	 * <pre>
+	 * ShortVerStr    ShortInt(6)  LongerInt(9)
+	 * -----------    ------       ---------
+	 *       1.2.3 ->  10203    ->  12300000
+	 *      99.2.3 -> 990203    -> 992300000
+	 * </pre>
+	 * @param shortVerInt
+	 * @return a "long version number" which can be used for comparison inside DbxTune
+	 */
+	public static int shortVersionStringToNumber(int shortVerInt)
+	{
+		int major       = shortVerInt / 10000;
+		int minor       = (shortVerInt % 10000) / 100;
+		int maint       = shortVerInt % 100;
+
+		if (major > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'major' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as major="+major);
+		if (minor > 9)  _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'minor' greater than 9 (1 digit), the passed shortVerInt="+shortVerInt+" was calculated as minor="+minor);
+		if (maint > 9)  _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'maint' greater than 9 (1 digit), the passed shortVerInt="+shortVerInt+" was calculated as maint="+maint);
+
+		return ver(major, minor, maint);
+	}
 
 
 

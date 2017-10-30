@@ -333,11 +333,11 @@ implements ActionListener
 				if (StringUtil.isNullOrBlank(pendingColName))
 					return false;
 
-				int index = adapter.getColumnIndex(pendingColName);
-				if (index < 0)
+				int mindex = adapter.getColumnIndex(pendingColName);
+				if (mindex < 0)
 					return false;
 				
-				Object o_pending = adapter.getValue(adapter.getColumnIndex(index));
+				Object o_pending = adapter.getValue(mindex);
 				if ( Boolean.TRUE.equals(o_pending) )
 					return true;
 				return false;

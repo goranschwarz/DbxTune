@@ -1,5 +1,6 @@
 package com.asetune.tools.sqlw;
 
+import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -97,10 +98,10 @@ extends SqlStatementAbstract
 	private List<List<Object>> _filePreview = null;
 
 	
-	public SqlStatementCmdLoadFile(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress)
+	public SqlStatementCmdLoadFile(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
 		parse(sqlOrigin);
 		init();
 	}

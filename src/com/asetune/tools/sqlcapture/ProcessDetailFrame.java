@@ -172,6 +172,11 @@ public class ProcessDetailFrame
 	private DbxConnection cnx;
 	private ConnectionProvider _connectionProvider = null;
 
+	@Override 
+	public String getTablePopupDbmsVendorString() 
+	{ 
+		return "ase"; 
+	}
 
 	//
 //	TableCellRenderer activeStmtRenderer = new DefaultTableCellRenderer()

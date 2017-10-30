@@ -1110,7 +1110,7 @@ finally
 					//-------------------------
 					if (_sshConnection != null)
 					{
-						SshConnection.setGuiOwner(ConnectionProgressDialog.this); // well this is a bit ugly...
+						_sshConnection.setGuiOwner(ConnectionProgressDialog.this); // well this is a bit ugly...
 						try
 						{
 							setTaskStatus(TASK_SSH_CONNECT, ConnectionProgressCallback.TASK_STATUS_CURRENT);
@@ -1138,7 +1138,7 @@ finally
 							if (answer != JOptionPane.YES_OPTION)
 								throw ex;
 						}
-						SshConnection.setGuiOwner(null); // well this is a bit ugly...
+						_sshConnection.setGuiOwner(null); // well this is a bit ugly...
 					}
 
 					//-------------------------
@@ -1146,7 +1146,8 @@ finally
 					//-------------------------
 					if (_sshTunnelInfo != null)
 					{
-						SshConnection.setGuiOwner(ConnectionProgressDialog.this); // well this is a bit ugly...
+						if (_sshConnection != null)
+							_sshConnection.setGuiOwner(ConnectionProgressDialog.this); // well this is a bit ugly...
 //						SshConnection sshConn = new SshConnection(
 //								_sshTunnelInfo.getSshHost(), 
 //								_sshTunnelInfo.getSshPort(), 
@@ -1217,7 +1218,8 @@ finally
 								throw ex;
 							}
 						}
-						SshConnection.setGuiOwner(null); // well this is a bit uggly...
+						if (_sshConnection != null)
+							_sshConnection.setGuiOwner(null); // well this is a bit ugly...
 					}
 
 
@@ -1257,13 +1259,21 @@ finally
 								// If we have a Tunnel, we need to change the JDBC URL to point to the local SSH host:port instead of the URL's destinations host:port
 								if (_sshTunnelInfo != null)
 								{
+									if (_logger.isDebugEnabled())
+										_logger.debug("SSH-TUNNEL-INFO="+_sshTunnelInfo.getConfigString(true));
 									JdbcUrlParser jdbcUrlParser = JdbcUrlParser.parse(jdbcUrl);
 									String urlHostPortStr            = jdbcUrlParser.getHostPortStr();
 									String sshTunnelLocalHostPortStr = _sshTunnelInfo.getLocalHost()+":"+_sshTunnelInfo.getLocalPort();
 									
 									// Try to change the origin HOST:PORT into the SSH Tunnels Local Host:Port
 									// FIXME: implement this in the "parser" instead... See AseUrlHelper class for ideas
+									if (_logger.isDebugEnabled())
+										_logger.debug("SSH-TUNNEL: url origin='"+jdbcUrl+"'. urlHostPortStr='"+urlHostPortStr+"', sshTunnelLocalHostPortStr='"+sshTunnelLocalHostPortStr+"', jdbcUrlParser.toString='"+jdbcUrlParser.toString()+"'.");
+
 									jdbcUrl = jdbcUrl.replace(urlHostPortStr, sshTunnelLocalHostPortStr);
+
+									if (_logger.isDebugEnabled())
+										_logger.debug("SSH-TUNNEL: url fixed ='"+jdbcUrl+"'.");
 								}
 //System.out.println("ConnectionProgressDialog.doBackgroundConnect(): _rawJdbcDriver='"+_rawJdbcDriver+"', jdbcUrl='"+jdbcUrl+"', _rawJdbcProps='"+_rawJdbcProps+"'.");
 								conn = DbxConnection.createDbxConnection( jdbcConnect(_rawJdbcDriver, jdbcUrl, _rawJdbcProps) );
@@ -1411,7 +1421,7 @@ finally
 								if ("".equals(sql))
 									continue;
 								_logger.info("Sending SQL Initialization str: "+sql);
-								DbUtils.exec(_connection, sql);
+								DbUtils.exec(_connection, sql, -1);
 							}
 							setTaskStatus(TASK_SQL_INIT, ConnectionProgressCallback.TASK_STATUS_SUCCEEDED);
 						}
@@ -1553,8 +1563,16 @@ finally
 			}
 			catch (Exception ex)
 			{
-				_logger.warn("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex);
-				_logger.debug("Can't load JDBC driver for URL='"+url+"' using 'old way od doing it' using: DriverManager.getDriver(url); Lets continue and try just to use DriverManager.getConnection(url, props); which is the 'new' way of doing it. Caught="+ex, ex);
+				_logger.warn( "Can't locate JDBC driver '"+driver+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driver+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
+				_logger.debug("Can't locate JDBC driver '"+driver+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driver+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex, ex);
+
+				try { Class.forName(driver).newInstance(); }
+				catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
+				{
+					_logger.warn("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+				}
+				//JdbcDriverHelper.newDriverInstance(driverClass);
+				//JdbcDriverHelper.newDriverInstance(driverClass);
 			}
 
 			// Add specific JDBC Properties, for specific URL's, if not already specified

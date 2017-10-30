@@ -96,7 +96,7 @@ public class PersistWriterStatistics
 
 	public String getStatisticsString()
 	{
-		return "inserts="+_inserts+", updates="+_updates+", deletes="+_deletes+", createTables="+_createTables+", alterTables="+_alterTables+", dropTables="+_dropTables+", ddlSaveCount="+_ddlSaveCount+", ddlSaveCountSum="+_ddlSaveCountSum+", sqlCaptureBatchCount="+_sqlCaptureBatchCount+", sqlCaptureEntryCount="+_sqlCaptureEntryCount+".";
+		return "inserts="+_inserts+", updates="+_updates+", deletes="+_deletes+", createTables="+_createTables+", alterTables="+_alterTables+", dropTables="+_dropTables+", ddlSaveCount="+_ddlSaveCount+", ddlSaveCountSum="+_ddlSaveCountSum+", sqlCaptureBatchCount="+_sqlCaptureBatchCount+", sqlCaptureEntryCount="+_sqlCaptureEntryCount+", sqlCaptureBatchCountSum="+_sqlCaptureBatchCountSum+", sqlCaptureEntryCountSum="+_sqlCaptureEntryCountSum+".";
 	}
 
 }

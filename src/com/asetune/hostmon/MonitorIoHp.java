@@ -40,6 +40,8 @@ extends MonitorIo
 		md.addStatColumn("sps",     4,  3, true, 10, 1, "Number of seeks per second");
 		md.addStatColumn("msps",    5,  4, true, 10, 1, "Milliseconds per average seek");
 
+		md.addStrColumn ("deviceDescription", 6, 0, true, 255, "Mapping of the column 'device' to your own description.");
+
 		// Use "device" as the Primary Key, which is used to du summary/average calculations
 		md.setPkCol("device");
 

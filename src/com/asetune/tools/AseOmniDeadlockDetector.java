@@ -70,7 +70,7 @@ extends Thread
 	private Connection connect(String host, int port, String username, String password)
 	throws SQLException, ClassNotFoundException
 	{
-		return AseConnectionFactory.getConnection(host, port, null, username, password, "AseOmniDeadlockDetector", null);
+		return AseConnectionFactory.getConnection(host, port, null, username, password, "AseOmniDeadlockDetector", null, null);
 	}
 
 	public void connectLeft()

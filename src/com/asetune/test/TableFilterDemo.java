@@ -91,6 +91,7 @@ table.getTableHeader().setReorderingAllowed(true);
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String str = (String) adapter.getValue(adapter.getColumnIndex("FirstName"));
@@ -102,6 +103,7 @@ table.getTableHeader().setReorderingAllowed(true);
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String str = (String) adapter.getValue(adapter.getColumnIndex("LastName"));
@@ -113,6 +115,7 @@ table.getTableHeader().setReorderingAllowed(true);
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				String str = (String) adapter.getValue(adapter.getColumnIndex("Sport"));
@@ -124,6 +127,7 @@ table.getTableHeader().setReorderingAllowed(true);
 
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Boolean bool = (Boolean) adapter.getValue(adapter.getColumnIndex("Vegetarian"));
@@ -136,6 +140,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
+			@Override
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				Integer years = (Integer) adapter.getValue(adapter.getColumnIndex("# of Years"));
@@ -188,6 +193,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		// both view and model.
 		table.getSelectionModel().addListSelectionListener(new ListSelectionListener()
 		{
+			@Override
 			public void valueChanged(ListSelectionEvent event)
 			{
 				int viewRow = table.getSelectedRow();
@@ -218,16 +224,19 @@ table.getTableHeader().setReorderingAllowed(true);
 		// Whenever filterText changes, invoke newFilter.
 		filterText.getDocument().addDocumentListener(new DocumentListener()
 		{
+			@Override
 			public void changedUpdate(DocumentEvent e)
 			{
 				newFilter();
 			}
 
+			@Override
 			public void insertUpdate(DocumentEvent e)
 			{
 				newFilter();
 			}
 
+			@Override
 			public void removeUpdate(DocumentEvent e)
 			{
 				newFilter();
@@ -288,6 +297,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		{
 			Runnable doWork = new Runnable()
 			{
+				@Override
 				public void run()
 				{
 					if (op == ModelOperation.DELETE)
@@ -361,22 +371,26 @@ table.getTableHeader().setReorderingAllowed(true);
 			System.out.println("DONE: init()");
 		}
 
+		@Override
 		public int getColumnCount()
 		{
 			return columnNames.length;
 		}
 
+		@Override
 		public int getRowCount()
 		{
 			//System.out.println("getRowCount() == "+data.size());
 			return data.size();
 		}
 
+		@Override
 		public String getColumnName(int col)
 		{
 			return columnNames[col];
 		}
 
+		@Override
 		public Object getValueAt(int row, int col)
 		{
 			if (row >= data.size())
@@ -397,6 +411,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		 * each cell. If we didn't implement this method, then the last column
 		 * would contain text ("true"/"false"), rather than a check box.
 		 */
+		@Override
 		public Class<?> getColumnClass(int c)
 		{
 			return getValueAt(0, c).getClass();
@@ -405,6 +420,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		/*
 		 * Don't need to implement this method unless your table's editable.
 		 */
+		@Override
 		public boolean isCellEditable(int row, int col)
 		{
 			// Note that the data/cell address is constant,
@@ -423,6 +439,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		 * Don't need to implement this method unless your table's data can
 		 * change.
 		 */
+		@Override
 		public void setValueAt(Object value, int row, int col)
 		{
 			if ( DEBUG )
@@ -485,6 +502,7 @@ table.getTableHeader().setReorderingAllowed(true);
 		// creating and showing this application's GUI.
 		javax.swing.SwingUtilities.invokeLater(new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				createAndShowGUI();
@@ -510,6 +528,7 @@ table.getTableHeader().setReorderingAllowed(true);
 
 	private HighlightPredicate	_highligtIfDelta = new HighlightPredicate()
 	{
+		@Override
 		public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 		{
 			return adapter.convertColumnIndexToModel(adapter.column) == 3;
@@ -528,6 +547,7 @@ table.getTableHeader().setReorderingAllowed(true);
 			super(predicate);
 		}
 
+		@Override
 		protected Component doHighlight(Component comp, ComponentAdapter adapter)
 		{
 //System.out.println("doHighlight(): model.rows()="+(adapter.getRowCount()-1)+", adapter.row="+adapter.row);

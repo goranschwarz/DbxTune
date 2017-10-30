@@ -15,6 +15,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -98,13 +99,14 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_QUEUE_SIZE = "QueueSize";
+	public static final String GRAPH_NAME_QUEUE_SIZE = "BlQueueSize";
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels));
+		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -114,8 +116,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
-				"Backlog Size from 'admin statistics, backlog' in MB (Absolute Value)", // Menu CheckBox text
-				"Backlog Size from 'admin statistics, backlog' in MB (Absolute Value)", // Label 
+				"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Menu CheckBox text
+				"Backlog Size from 'admin statistics, backlog' in MB (col 'Last', Absolute Value)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -134,8 +136,9 @@ extends CountersModel
 			int size = 0;
 			for (int i = 0; i < this.size(); i++)
 			{
-				String monitorVal = this.getAbsString(i, "Monitor");
-				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0)
+				String monitorVal = this.getAbsString       (i, "Monitor");
+				Double Max        = this.getAbsValueAsDouble(i, "Max");
+				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Max > 0.0)
 					size++;
 			}
 			
@@ -143,21 +146,21 @@ extends CountersModel
 			Double[] dArray = new Double[size];
 			String[] lArray = new String[dArray.length];
 			int i2 = 0;
-			for (int i = 0; i < dArray.length; i++)
+//			for (int i = 0; i < dArray.length; i++)
+			for (int i = 0; i < this.size(); i++)
 			{
-				String monitorVal = this.getAbsString(i, "Monitor");
-				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0)
+				String monitorVal = this.getAbsString       (i, "Monitor");
+				Double Max        = this.getAbsValueAsDouble(i, "Max");
+				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Max > 0.0)
 				{
-    				lArray[i2] = this.getAbsString       (i, "Instance");
-    				dArray[i2] = this.getAbsValueAsDouble(i, "Last");
-    				i2++;
+					lArray[i2] = this.getAbsString       (i, "Instance");
+					dArray[i2] = this.getAbsValueAsDouble(i, "Last");
+					i2++;
 				}
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 	

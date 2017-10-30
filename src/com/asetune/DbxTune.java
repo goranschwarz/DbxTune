@@ -2,24 +2,28 @@ package com.asetune;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.UserDefinedAlarmHandler;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.config.dbms.DbmsConfigManager;
@@ -44,6 +48,7 @@ import com.asetune.utils.Encrypter;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
 import com.asetune.utils.Memory;
+import com.asetune.utils.OpenSslAesUtil;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingExceptionHandler;
 import com.asetune.utils.SwingUtils;
@@ -69,9 +74,11 @@ public abstract class DbxTune
 	public DbxTune(CommandLine cmd)
 	throws Exception
 	{
+		// Set this early, some initialization blocks might use DbxTune.getInstance()
+		_instance = this;
+
 		// Kick it off
 		init(cmd);
-		_instance = null;
 	}
 	private static DbxTune _instance = null;
 	public static DbxTune getInstance()
@@ -145,7 +152,7 @@ public abstract class DbxTune
 //		_cmdLine = cmd;
 
 		// Create store dir if it did not exists.
-		File appStoreDir = new File(Version.APP_STORE_DIR);
+		File appStoreDir = new File(Version.getAppStoreDir());
 		if ( ! appStoreDir.exists() )
 		{
 			if (appStoreDir.mkdir())
@@ -156,8 +163,8 @@ public abstract class DbxTune
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
-//		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "iqtune.properties");
-//		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "iqtune.user.properties");
+//		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "dbxtune.properties");
+//		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "dbxtune.user.properties");
 //		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "iqtune.save.properties");
 //		final String IQTUNE_HOME           = System.getProperty("IQTUNE_HOME");
 		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      getConfigFileName());
@@ -165,13 +172,13 @@ public abstract class DbxTune
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  getSaveConfigFileName());
 		final String APP_HOME              = System.getProperty(getAppHomeEnvName());
 
-		String defaultPropsFile     = (APP_HOME              != null) ? APP_HOME              + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (Version.APP_STORE_DIR != null) ? Version.APP_STORE_DIR + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (APP_HOME                 != null) ? APP_HOME                 + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then IQTUNE_HOME)
-		String filename = Version.APP_STORE_DIR + File.separator + CONFIG_FILE_NAME;
+		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -202,17 +209,17 @@ public abstract class DbxTune
 		// -----------------------------------------------------------------
 		int javaVersionInt = JavaVersion.getVersion();
 		if (   javaVersionInt != JavaVersion.VERSION_NOTFOUND
-		    && javaVersionInt <  JavaVersion.VERSION_1_7
+		    && javaVersionInt <  JavaVersion.VERSION_7
 		   )
 		{
 			System.out.println("");
 			System.out.println("===============================================================");
-			System.out.println(" "+Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			System.out.println(" "+Version.getAppName()+" needs a runtime Java 7 or higher.");
 			System.out.println(" java.version = " + System.getProperty("java.version"));
 			System.out.println(" which is parsed into the number: " + JavaVersion.getVersion());
 			System.out.println("---------------------------------------------------------------");
 			System.out.println("");
-			throw new Exception(Version.getAppName()+" needs a runtime JVM 1.7 or higher.");
+			throw new Exception(Version.getAppName()+" needs a runtime Java 7 or higher.");
 		}
 
 		// The SAVE Properties for shared Tail
@@ -236,15 +243,51 @@ public abstract class DbxTune
 		Configuration.setInstance(Configuration.PCS, storeConfigProps);
 
 		// Set the Configuration search order when using the: Configuration.getCombinedConfiguration()
-		Configuration.setSearchOrder(
-			Configuration.TAIL_TEMP,    // First
-			Configuration.USER_TEMP,    // Second
-			Configuration.USER_CONF,    // Third
-			Configuration.SYSTEM_CONF); // Forth
+		if (_gui)
+		{
+			Configuration.setSearchOrder(
+					Configuration.TAIL_TEMP,    // First
+					Configuration.USER_TEMP,    // Second
+					Configuration.USER_CONF,    // Third
+					Configuration.SYSTEM_CONF); // Forth
+		}
+		else
+		{
+			Configuration.setSearchOrder(
+					Configuration.PCS,          // First
+					Configuration.USER_TEMP,    // Second
+					Configuration.USER_CONF,    // Third
+					Configuration.SYSTEM_CONF); // Forth
+		}
 
 		
+		
 		//-------------------------------
-		// LIST CM
+		// Set system properties
+		//-------------------------------
+		if (cmd.hasOption('D'))
+		{
+			Properties javaProps = cmd.getOptionProperties("D");
+
+			for (String key : javaProps.stringPropertyNames())
+			{
+				String val = javaProps.getProperty(key);
+				System.setProperty(key, val);
+
+				boolean debug = true;
+				if (debug)
+					System.out.println("   SETTING SYSTEM PROPERTY: key=|"+key+"|, val=|"+val+"|.");
+			}
+
+		}
+		
+		// Take all Environment variables and add them as System Properties
+		// But: Do NOT overwrite already set System Properties with Environment variables
+		StringUtil.setEnvironmentVariablesToSystemProperties(false, false);  
+
+
+		//-------------------------------
+		// LIST CM and exit
 		//-------------------------------
 		if (cmd.hasOption('l'))
 		{
@@ -283,7 +326,7 @@ public abstract class DbxTune
 		}
 
 		//-------------------------------
-		// DEBUG switches
+		// SHOW DEBUG switches and exit
 		//-------------------------------
 		DebugOptions.init();
 		if (cmd.hasOption('x'))
@@ -318,245 +361,9 @@ public abstract class DbxTune
 			}
 		}
 
-		// Put command line properties into the Configuration
-		if ( _gui )
-		{
-			if (cmd.hasOption('U'))	appProps.setProperty("cmdLine.aseUsername", cmd.getOptionValue('U'));
-			if (cmd.hasOption('P'))	appProps.setProperty("cmdLine.asePassword", cmd.getOptionValue('P'), true);
-			if (cmd.hasOption('S'))	appProps.setProperty("cmdLine.aseServer",   cmd.getOptionValue('S'));
 
-			// Check servername
-			if (cmd.hasOption('S'))
-			{
-				String cmdLineServer = cmd.getOptionValue('S');
-				if (cmdLineServer.indexOf(":") >= 0)
-				{
-					if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
-						throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
-				}
-				else
-				{
-					if (AseConnectionFactory.resolvInterfaceEntry(cmdLineServer) == null)
-						throw new Exception("Server '"+cmdLineServer+"' is not found in the file '"+AseConnectionFactory.getIFileName()+"'.");
-				}
-			}
-
-			if (cmd.hasOption('u'))	storeConfigProps.setProperty("cmdLine.sshUsername", cmd.getOptionValue('u'));
-			if (cmd.hasOption('p'))	storeConfigProps.setProperty("cmdLine.sshPassword", cmd.getOptionValue('p'), true);
-			if (cmd.hasOption('s'))
-			{
-				storeConfigProps.setProperty("cmdLine.sshHostname", cmd.getOptionValue('s'));
-				storeConfigProps.setProperty("cmdLine.sshPort", 22);
-
-				String cmdLineHostname = cmd.getOptionValue('s');
-				if (cmdLineHostname.indexOf(":") >= 0)
-				{
-					String[] sa = cmdLineHostname.split(":");
-					storeConfigProps.setProperty("cmdLine.sshHostname", sa[0]);
-					storeConfigProps.setProperty("cmdLine.sshPort",     Integer.parseInt(sa[1]));
-				}
-			}
-		}
-		else
-		{
-			// Check if the configuration file exists
-			// or if it's appropriate options...
-			if ( (new File(noGuiConfigFile)).exists() )
-			{
-				storeConfigProps.load(noGuiConfigFile);
-			}
-			else
-			{
-//				if (GetCountersNoGui.checkValidCmShortcuts(noGuiConfigFile))
-				if (CounterCollectorThreadNoGui.checkValidCmShortcuts(noGuiConfigFile))
-					storeConfigProps.setProperty("cmdLine.cmOptions", noGuiConfigFile);
-				else
-					throw new FileNotFoundException("The noGuiConfig file '"+noGuiConfigFile+"' doesn't exists.");
-			}
-
-			if (cmd.hasOption('U'))	storeConfigProps.setProperty("conn.aseUsername", cmd.getOptionValue('U'));
-			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.asePassword", cmd.getOptionValue('P'), true);
-			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.aseName",     cmd.getOptionValue('S'));
-
-			if (cmd.hasOption('u'))	storeConfigProps.setProperty("conn.sshUsername", cmd.getOptionValue('u'));
-			if (cmd.hasOption('p'))	storeConfigProps.setProperty("conn.sshPassword", cmd.getOptionValue('p'), true);
-			if (cmd.hasOption('s'))
-			{
-				storeConfigProps.setProperty("conn.sshHostname", cmd.getOptionValue('s'));
-				storeConfigProps.setProperty("conn.sshPort", 22);
-
-				String cmdLineHostname = cmd.getOptionValue('s');
-				if (cmdLineHostname.indexOf(":") >= 0)
-				{
-					String[] sa = cmdLineHostname.split(":");
-					storeConfigProps.setProperty("conn.sshHostname", sa[0]);
-					storeConfigProps.setProperty("conn.sshPort",     Integer.parseInt(sa[1]));
-				}
-			}
-
-			// -r, --reconfigure: Offline: if monitored ASE is not properly configured, try to configure it.
-			if (cmd.hasOption('r'))
-			{
-				storeConfigProps.setProperty("offline.configuration.fix", true);
-			}
-
-			// -i, --interval: Offline: time between samples.
-			if (cmd.hasOption('i'))
-			{
-				storeConfigProps.setProperty("offline.sampleTime", cmd.getOptionValue('i'));
-			}
-
-			// -f, --finish: Offline: shutdown/stop the no-gui service after # hours.
-			if (cmd.hasOption('f'))
-			{
-				String recordingStopTime = cmd.getOptionValue('e');
-				try {
-					PersistWriterBase.getRecordingStopTime(null,recordingStopTime);
-				} catch (Exception e) {
-					throw new Exception("Switch '-f|--finish' "+e.getMessage());
-				}
-				storeConfigProps.setProperty("offline.shutdownAfterXHours", cmd.getOptionValue('f'));
-			}
-
-			// -e, --enable: Offline: enable/start the recording at a specific time
-			if (cmd.hasOption('e'))
-			{
-				String recordingStartTime = cmd.getOptionValue('e');
-				try {
-					PersistWriterBase.getRecordingStartTime(recordingStartTime);
-				} catch (Exception e) {
-					throw new Exception("Switch '-e|--enable' "+e.getMessage());
-				}
-				storeConfigProps.setProperty(CounterController.PROPKEY_startRecordingAtTime, recordingStartTime);
-			}
-
-
-			// -D --dbtype: Offline: Type of database storage H2 or ASE or ASA
-			// values for -D is handled within the -d section
-			if (cmd.hasOption('D'))
-			{
-				if ( ! cmd.hasOption('d') )
-				{
-					throw new Exception("If you use switch '-D|--dbtype' you must also use switch '-d|--dbname'.");
-				}
-			}
-
-			// -d --dbname: Offline: dbname to store offline samples.
-			if (cmd.hasOption('d'))
-			{
-				String opt = cmd.getOptionValue('d');
-				_logger.info("Command Line Option '-d|--dbname' was specified, dbname to use is '"+opt+"'.");
-
-				String opt_D = "H2";
-				if (cmd.hasOption('D'))
-				{
-					opt_D = cmd.getOptionValue('D').toUpperCase();
-					_logger.info("Command Line Option '-D|--dbtype' was specified, type to use is '"+opt_D+"'.");
-				}
-				else
-				{
-					opt_D = "H2";
-					_logger.info("Command Line Option '-D|--dbtype' was NOT specified, using the default 'H2'.");
-				}
-
-				if (opt_D.equals("H2"))
-				{
-					String envNameSaveDir    = getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
-
-					String jdbcDriver = "org.h2.Driver";
-					String jdbcUrl    = "jdbc:h2:file:"+opt;
-					String jdbcUser   = "sa";
-					String jdbcPasswd = "";
-
-					if ("default".equalsIgnoreCase(opt))
-						jdbcUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}";
-
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,           jdbcDriver);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,              jdbcUrl);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername,         jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword,         jdbcPasswd, true);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_startH2NetworkServer, true);
-
-					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
-
-					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', startH2NetworkServer=true.");
-				}
-				else if (opt_D.equals("ASE"))
-				{
-					String[] strArr = opt.split(":");
-					if (strArr.length != 5)
-						throw new Exception("Wrong format of '-d|-dbname' for type 'ASE', this should look like 'hostname:port:dbname:user:passwd' ");
-					String aseHost   = strArr[0];
-					String asePort   = strArr[1];
-					String aseDbname = strArr[2];
-					String aseUser   = strArr[3];
-					String asePasswd = strArr[4];
-
-					if (asePasswd.trim().equalsIgnoreCase("null"))
-						asePasswd = "";
-
-					String urlOptions =
-						"?APPLICATIONNAME="+Version.getAppName()+"-Writer" +
-						"&HOSTNAME=" + Version.VERSION_STRING +
-						"&DYNAMIC_PREPARE=true" +
-						"&SQLINITSTRING=set statement_cache off" +
-					//	"&ENABLE_BULK_LOAD=true" +
-						"";
-
-					String jdbcDriver = AseConnectionFactory.getDriver();
-					String jdbcUrl    = "jdbc:sybase:Tds:"+aseHost+":"+asePort+"/"+aseDbname+urlOptions;
-					String jdbcUser   = aseUser;
-					String jdbcPasswd = asePasswd;
-
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   jdbcDriver);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      jdbcUrl);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, jdbcPasswd, true);
-
-					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
-
-					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+aseDbname+"'.");
-				}
-				else if (opt_D.equals("ASA"))
-				{
-					String[] strArr = opt.split(":");
-//					if (strArr.length != 5)
-//						throw new Exception("Wrong format of '-d|-dbname' for type 'ASE', this should look like 'hostname:port:dbname:user:passwd' ");
-					String asaHost   = (strArr.length >= 0+1) ? strArr[0] : "localhost";
-					String asaPort   = (strArr.length >= 1+1) ? strArr[1] : "2638";
-					String asaDbname = (strArr.length >= 2+1) ? strArr[2] : "";
-					String asaUser   = (strArr.length >= 3+1) ? strArr[3] : "dba";
-					String asaPasswd = (strArr.length >= 4+1) ? strArr[4] : "sql";
-
-					if (asaPasswd.trim().equalsIgnoreCase("null"))
-						asaPasswd = "";
-
-					if ( ! asaDbname.equals("") )
-						asaDbname = "/" + asaDbname;
-
-
-					String jdbcDriver = AseConnectionFactory.getDriver();
-					String jdbcUrl    = "jdbc:sybase:Tds:"+asaHost+":"+asaPort+asaDbname;
-					String jdbcUser   = asaUser;
-					String jdbcPasswd = asaPasswd;
-
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   jdbcDriver);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      jdbcUrl);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, jdbcUser);
-					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, jdbcPasswd, true);
-
-					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
-
-					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+asaDbname+"'.");
-				}
-				else
-				{
-					throw new Exception("Unknown -D,--dbtype value of '"+opt+"' was specified, known values 'H2|ASE|ASA'.");
-				}
-			}
-		}
-
-
+		
+		
 //		// Check if we are in NO-GUI mode
 //		_gui = System.getProperty("asetune.gui", "true").trim().equalsIgnoreCase("true");
 
@@ -565,7 +372,7 @@ public abstract class DbxTune
 		{
 			// How many steps do we have, NOTE: needs to be updated if you add steps
 //			SplashWindow.init(false, GetCounters.NUMBER_OF_PERFORMANCE_COUNTERS, 1000);
-			SplashWindow.init(false, getSplashShreenSteps(), 1000);
+			SplashWindow.init(false, getSplashShreenSteps(), 5000);
 			SplashWindow.drawTopRight("Version: " + Version.getVersionStr());
 		}
 		else
@@ -573,16 +380,56 @@ public abstract class DbxTune
 			SplashWindow.close();
 		}
 
+
+
+		// Check if we have a specific LOG filename before we initialize the logger...
+		String logFilename = null;
+		if (cmd.hasOption('L'))
+		{
+			String opt = cmd.getOptionValue('L');
+			//check/fix opt Str
+			logFilename = opt;
+		}
+		// If NO-GUI mode and NO Logfile was specified, maybe try to set the filename to AppName.nogui.dbmsSrvName.log
+		if ( ! _gui  &&  StringUtil.isNullOrBlank(logFilename) )
+		{
+			// first: get servername from the propfile
+			String srvName = storeConfigProps.getProperty("conn.aseName");
+
+			// Override the name if we got the servernmae from the command line params
+			if (cmd.hasOption('S'))
+				srvName = cmd.getOptionValue('S');
+
+			// If we GOT a servername, set the log-name based on that
+			if (srvName != null)
+			{
+				// Windows do not handle ':' characters in filenames that well
+				if (srvName.indexOf(':') >= 0)
+					srvName = srvName.replace(':', '.');
+
+				logFilename = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() : System.getProperty("user.home");
+    			if ( logFilename != null && ! (logFilename.endsWith("/") || logFilename.endsWith("\\")) )
+    				logFilename += System.getProperty("file.separator");
+    
+				logFilename += Version.getAppName()+".nogui."+srvName+".log";
+			}
+		}
+
+
+
+
 		// Setup HARDCODED, configuration for LOG4J, if not found in config file
 		if (_gui)
-			Logging.init(null, propFile);
+			Logging.init(null, propFile, logFilename);
 		else
-			Logging.init("nogui.", propFile);
+			Logging.init("nogui.", propFile, logFilename);
 
 		if (_gui && !SplashWindow.isOk())
 			_logger.info("Splash screen could not be displayed.");
 
 		SplashWindow.drawProgress("Initializing.");
+
+
 
 		//--------------------------------------------------------------------
 		// BEGIN: Set some SYSTEM properties
@@ -688,6 +535,8 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		_logger.info("Path of extension directory or directories: " +System.getProperty("java.ext.dirs"));
 
 		_logger.info("Maximum memory is set to:  "+Runtime.getRuntime().maxMemory() / 1024 / 1024 + " MB. this could be changed with  -Xmx###m (where ### is number of MB)"); // jdk 1.4 or higher
+		_logger.info("Total Physical Memory on this machine:  "+ Memory.getTotalPhysicalMemorySizeInMB() + " MB.");
+		_logger.info("Free Physical Memory on this machine:  "+ Memory.getFreePhysicalMemorySizeInMB() + " MB.");
 		_logger.info("Running on Operating System Name:  "+System.getProperty("os.name"));
 		_logger.info("Running on Operating System Version:  "+System.getProperty("os.version"));
 		_logger.info("Running on Operating System Architecture:  "+System.getProperty("os.arch"));
@@ -711,6 +560,388 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			_logger.error(message);
 			throw new Exception(message);
 		}
+
+
+		// Put command line properties into the Configuration
+		if ( _gui ) // GUI MODE
+		{
+			if (cmd.hasOption('U'))	appProps.setProperty("cmdLine.aseUsername", cmd.getOptionValue('U'));
+			if (cmd.hasOption('P'))	appProps.setProperty("cmdLine.asePassword", cmd.getOptionValue('P'), true);
+			if (cmd.hasOption('S'))	appProps.setProperty("cmdLine.aseServer",   cmd.getOptionValue('S'));
+
+			// Check servername
+			if (cmd.hasOption('S'))
+			{
+				String cmdLineServer = cmd.getOptionValue('S');
+				if (cmdLineServer.indexOf(":") >= 0)
+				{
+					if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
+						throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
+				}
+				else
+				{
+					if (AseConnectionFactory.resolvInterfaceEntry(cmdLineServer) == null)
+						throw new Exception("Server '"+cmdLineServer+"' is not found in the file '"+AseConnectionFactory.getIFileName()+"'.");
+				}
+			}
+
+			if (cmd.hasOption('u'))	appProps.setProperty("cmdLine.sshUsername", cmd.getOptionValue('u'));
+			if (cmd.hasOption('p'))	appProps.setProperty("cmdLine.sshPassword", cmd.getOptionValue('p'), true);
+			if (cmd.hasOption('s'))
+			{
+				appProps.setProperty("cmdLine.sshHostname", cmd.getOptionValue('s'));
+				appProps.setProperty("cmdLine.sshPort", 22);
+
+				String cmdLineHostname = cmd.getOptionValue('s');
+				if (cmdLineHostname.indexOf(":") >= 0)
+				{
+					String[] sa = cmdLineHostname.split(":");
+					appProps.setProperty("cmdLine.sshHostname", sa[0]);
+					appProps.setProperty("cmdLine.sshPort",     Integer.parseInt(sa[1]));
+				}
+			}
+		}
+		else // NO-GUI MODE
+		{
+			// Check if the configuration file exists
+			// or if it's appropriate options...
+			if ( (new File(noGuiConfigFile)).exists() )
+			{
+				storeConfigProps.load(noGuiConfigFile);
+			}
+			else
+			{
+//				if (GetCountersNoGui.checkValidCmShortcuts(noGuiConfigFile))
+				if (CounterCollectorThreadNoGui.checkValidCmShortcuts(noGuiConfigFile))
+					storeConfigProps.setProperty("cmdLine.cmOptions", noGuiConfigFile);
+				else
+					throw new FileNotFoundException("The noGuiConfig file '"+noGuiConfigFile+"' doesn't exists.");
+			}
+
+			//-------------------------------------------------
+			// ASE CONNECTION
+			if (cmd.hasOption('U'))	storeConfigProps.setProperty("conn.aseUsername", cmd.getOptionValue('U'));
+			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.asePassword", cmd.getOptionValue('P'), true);
+			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.aseName",     cmd.getOptionValue('S'));
+			
+			// Check servername
+			boolean plainAseServerName = false;
+			String aseCmdLineSwitchHostname = null;
+			if (cmd.hasOption('S'))
+			{
+				String cmdLineServer = cmd.getOptionValue('S');
+
+				// Only SYBASE srvTypes is for the moment validated
+				String srvType = "SYB";
+
+				if ("SYB".equals(srvType))
+				{
+					if (cmdLineServer.indexOf(":") != -1) // HAS ":" is cmdLineServer 
+					{
+						if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
+							throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
+						
+						aseCmdLineSwitchHostname = cmdLineServer.substring(0, cmdLineServer.indexOf(":"));
+
+						storeConfigProps.setProperty("conn.aseHostPort", cmdLineServer);
+					}
+					else
+					{
+						if (AseConnectionFactory.resolvInterfaceEntry(cmdLineServer) == null)
+							throw new Exception("Server '"+cmdLineServer+"' is not found in the file '"+AseConnectionFactory.getIFileName()+"'.");
+
+						String hostPort = AseConnectionFactory.getIHostPortStr(cmdLineServer);
+//						appProps.setProperty("cmdLine.aseServer",   hostPort);
+//						storeConfigProps.setProperty("conn.aseName",   hostPort);
+						storeConfigProps.setProperty("conn.aseHostPort",   hostPort);
+						_logger.info("Resolved the Command Line Switch -S '"+cmdLineServer+"'. To host:port '"+hostPort+"'.");
+						
+						plainAseServerName = true;
+					}
+				}
+				else if ("XXX".equals(srvType))
+				{
+				}
+				else // "unhandled" server types
+				{
+				}
+			}
+
+//System.out.println("####################### DBMS");
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.aseUsername) = " + storeConfigProps.getProperty("conn.aseUsername"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.asePassword) = " + storeConfigProps.getProperty("conn.asePassword"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.aseName)     = " + storeConfigProps.getProperty("conn.aseName"));
+//System.out.println("---> DbxTune: storeConfigProps.hasProperty(conn.asePassword) = " + storeConfigProps.hasProperty("conn.asePassword"));
+			// If no password, try to grab a password from the file '~/.passwd.enc'
+			if ( ! storeConfigProps.hasProperty("conn.asePassword") )
+			{
+				try 
+				{
+//					String aseUser   = cmd.getOptionValue('U', "sa");
+					String aseUser   = storeConfigProps.getProperty("conn.aseUsername", "sa");
+					String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : aseCmdLineSwitchHostname;
+
+					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
+					String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
+					
+					if (asePasswd != null)
+					{
+						_logger.info("No DBMS password was specified. But the password '******', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						if (_logger.isDebugEnabled())
+							_logger.info("No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						storeConfigProps.setProperty("conn.asePassword", asePasswd, true); // should we encrypt the passwd or not
+					}
+					else
+						_logger.info("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+				}
+				catch(FileNotFoundException ex)
+				{
+					_logger.info("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+				}
+				catch(IOException ex)
+				{
+					_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+				}
+			}
+			
+
+			//-------------------------------------------------
+			// SSH CONNECTION
+			if (cmd.hasOption('u'))	storeConfigProps.setProperty("conn.sshUsername", cmd.getOptionValue('u'));
+			if (cmd.hasOption('p'))	storeConfigProps.setProperty("conn.sshPassword", cmd.getOptionValue('p'), true);
+			if (cmd.hasOption('s'))
+			{
+				storeConfigProps.setProperty("conn.sshHostname", cmd.getOptionValue('s'));
+				storeConfigProps.setProperty("conn.sshPort", 22);
+
+				String cmdLineHostname = cmd.getOptionValue('s');
+				if (cmdLineHostname.indexOf(":") >= 0)
+				{
+					String[] sa = cmdLineHostname.split(":");
+					storeConfigProps.setProperty("conn.sshHostname", sa[0]);
+					storeConfigProps.setProperty("conn.sshPort",     Integer.parseInt(sa[1]));
+				}
+			}
+			// If we havn't got any SSH-Server (property or switch), then try to get it from the DBMS specification
+			if ( ! storeConfigProps.hasProperty("conn.sshHostname") )
+			{
+				// only when we have a SSH-User name... otherwise we wont do SSH Connect
+				if (storeConfigProps.hasProperty("conn.sshUsername"))
+				{
+					String aseHostPort = storeConfigProps.getProperty("conn.aseHostPort", null);
+					if (StringUtil.hasValue(aseHostPort))
+					{
+						String sa[] = aseHostPort.split(":");
+						String sshHostname = sa[0];
+						storeConfigProps.setProperty("conn.sshHostname", sshHostname);
+						
+						_logger.info("No SSH Hostname was specified. Resolving this from the DBMS connection to be '"+sshHostname+"'. If this is NOT Correct, please specify it with the -s switch or the property 'conn.sshHostname'.");
+					}
+				}
+			}
+
+//System.out.println("####################### SSH");
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.sshUsername) = " + storeConfigProps.getProperty("conn.sshUsername"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.sshPassword) = " + storeConfigProps.getProperty("conn.sshPassword"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.sshHostname) = " + storeConfigProps.getProperty("conn.sshHostname"));
+//System.out.println("---> DbxTune: storeConfigProps.hasProperty(conn.sshPassword) = " + storeConfigProps.hasProperty("conn.sshPassword"));
+			// If no password, try to grab a password from the file '~/.passwd.enc'
+			if ( ! storeConfigProps.hasProperty("conn.sshPassword"))
+			{
+				try 
+				{
+					String sshUser   = storeConfigProps.getProperty("conn.sshUsername", "sybase");
+					String sshServer = storeConfigProps.getProperty("conn.sshHostname", null);
+
+					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
+					String sshPasswd = OpenSslAesUtil.readPasswdFromFile(sshUser, sshServer);
+					
+					if (sshPasswd != null)
+					{
+						_logger.info("No SSH password was specified. But the password '******', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						if (_logger.isDebugEnabled())
+							_logger.debug("No SSH password was specified. But the password '"+sshPasswd+"', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+						storeConfigProps.setProperty("conn.sshPassword", sshPasswd, true); // should we encrypt the passwd or not
+					}
+					else
+						_logger.info("No SSH password was specified and NO entry, for user '"+sshUser+"', SSH Server '"+sshServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+				}
+				catch(FileNotFoundException ex)
+				{
+					_logger.info("The password file '"+OpenSslAesUtil.getPasswordFilename()+"' didn't exists.");
+				}
+				catch(IOException ex)
+				{
+					_logger.error("Problems reading the password file "+OpenSslAesUtil.getPasswordFilename()+"'. Caught: "+ex);
+				}
+			}
+
+
+			//-------------------------------------------------
+			// Other flags
+
+			// -r, --reconfigure: Offline: if monitored ASE is not properly configured, try to configure it.
+			if (cmd.hasOption('r'))
+			{
+				storeConfigProps.setProperty("offline.configuration.fix", true);
+			}
+
+			// -i, --interval: Offline: time between samples.
+			if (cmd.hasOption('i'))
+			{
+				storeConfigProps.setProperty("offline.sampleTime", cmd.getOptionValue('i'));
+			}
+
+			// -f, --finish: Offline: shutdown/stop the no-gui service after # hours.
+			if (cmd.hasOption('f'))
+			{
+				String recordingStopTime = cmd.getOptionValue('e');
+				try {
+					PersistWriterBase.getRecordingStopTime(null,recordingStopTime);
+				} catch (Exception e) {
+					throw new Exception("Switch '-f|--finish' "+e.getMessage());
+				}
+				storeConfigProps.setProperty("offline.shutdownAfterXHours", cmd.getOptionValue('f'));
+			}
+
+			// -e, --enable: Offline: enable/start the recording at a specific time
+			if (cmd.hasOption('e'))
+			{
+				String recordingStartTime = cmd.getOptionValue('e');
+				try {
+					PersistWriterBase.getRecordingStartTime(recordingStartTime);
+				} catch (Exception e) {
+					throw new Exception("Switch '-e|--enable' "+e.getMessage());
+				}
+				storeConfigProps.setProperty(CounterController.PROPKEY_startRecordingAtTime, recordingStartTime);
+			}
+
+
+			// -T --dbtype: Offline: Type of database storage H2 or ASE or ASA
+			// values for -T is handled within the -d section
+			if (cmd.hasOption('T'))
+			{
+				if ( ! cmd.hasOption('d') )
+				{
+					throw new Exception("If you use switch '-T|--dbtype' you must also use switch '-d|--dbname'.");
+				}
+			}
+
+			// -d --dbname: Offline: dbname to store offline samples.
+			if (cmd.hasOption('d'))
+			{
+				String opt = cmd.getOptionValue('d');
+				_logger.info("Command Line Option '-d|--dbname' was specified, dbname to use is '"+opt+"'.");
+
+				String opt_D = "H2";
+				if (cmd.hasOption('T'))
+				{
+					opt_D = cmd.getOptionValue('T').toUpperCase();
+					_logger.info("Command Line Option '-T|--dbtype' was specified, type to use is '"+opt_D+"'.");
+				}
+				else
+				{
+					opt_D = "H2";
+					_logger.info("Command Line Option '-T|--dbtype' was NOT specified, using the default 'H2'.");
+				}
+
+				if (opt_D.equals("H2"))
+				{
+					String envNameSaveDir    = getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
+
+					String jdbcDriver = "org.h2.Driver";
+					String jdbcUrl    = "jdbc:h2:file:"+opt;
+					String jdbcUser   = "sa";
+					String jdbcPasswd = "";
+
+					if ("default".equalsIgnoreCase(opt))
+						jdbcUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}";
+
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,           jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,              jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername,         jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword,         jdbcPasswd, true);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_startH2NetworkServer, true);
+
+					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
+
+					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', startH2NetworkServer=true.");
+				}
+				else if (opt_D.equals("ASE"))
+				{
+					String[] strArr = opt.split(":");
+					if (strArr.length != 5)
+						throw new Exception("Wrong format of '-d|-dbname' for type 'ASE', this should look like 'hostname:port:dbname:user:passwd' ");
+					String aseHost   = strArr[0];
+					String asePort   = strArr[1];
+					String aseDbname = strArr[2];
+					String aseUser   = strArr[3];
+					String asePasswd = strArr[4];
+
+					if (asePasswd.trim().equalsIgnoreCase("null"))
+						asePasswd = "";
+
+					String urlOptions =
+						"?APPLICATIONNAME="+Version.getAppName()+"-Writer" +
+						"&HOSTNAME=" + Version.VERSION_STRING +
+						"&DYNAMIC_PREPARE=true" +
+						"&SQLINITSTRING=set statement_cache off" +
+					//	"&ENABLE_BULK_LOAD=true" +
+						"";
+
+					String jdbcDriver = AseConnectionFactory.getDriver();
+					String jdbcUrl    = "jdbc:sybase:Tds:"+aseHost+":"+asePort+"/"+aseDbname+urlOptions;
+					String jdbcUser   = aseUser;
+					String jdbcPasswd = asePasswd;
+
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, jdbcPasswd, true);
+
+					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
+
+					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+aseDbname+"'.");
+				}
+				else if (opt_D.equals("ASA"))
+				{
+					String[] strArr = opt.split(":");
+//					if (strArr.length != 5)
+//						throw new Exception("Wrong format of '-d|-dbname' for type 'ASE', this should look like 'hostname:port:dbname:user:passwd' ");
+					String asaHost   = (strArr.length >= 0+1) ? strArr[0] : "localhost";
+					String asaPort   = (strArr.length >= 1+1) ? strArr[1] : "2638";
+					String asaDbname = (strArr.length >= 2+1) ? strArr[2] : "";
+					String asaUser   = (strArr.length >= 3+1) ? strArr[3] : "dba";
+					String asaPasswd = (strArr.length >= 4+1) ? strArr[4] : "sql";
+
+					if (asaPasswd.trim().equalsIgnoreCase("null"))
+						asaPasswd = "";
+
+					if ( ! asaDbname.equals("") )
+						asaDbname = "/" + asaDbname;
+
+
+					String jdbcDriver = AseConnectionFactory.getDriver();
+					String jdbcUrl    = "jdbc:sybase:Tds:"+asaHost+":"+asaPort+asaDbname;
+					String jdbcUser   = asaUser;
+					String jdbcPasswd = asaPasswd;
+
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcDriver,   jdbcDriver);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUrl,      jdbcUrl);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcUsername, jdbcUser);
+					storeConfigProps.setProperty(PersistWriterJdbc.PROPKEY_jdbcPassword, jdbcPasswd, true);
+
+					storeConfigProps.setProperty(PersistentCounterHandler.PROPKEY_WriterClass, "com.asetune.pcs.PersistWriterJdbc");
+
+					_logger.info("PCS: using jdbcDriver='"+jdbcDriver+"', jdbcUrl='"+jdbcUrl+"', jdbcUser='"+jdbcUser+"', jdbcPasswd='*secret*', dbname='"+asaDbname+"'.");
+				}
+				else
+				{
+					throw new Exception("Unknown -T,--dbtype value of '"+opt+"' was specified, known values 'H2|ASE|ASA'.");
+				}
+			}
+		}
+
 
 		//-------------------------------------------------------------------------
 		// HARDCODE a STOP date when this "DEVELOPMENT VERSION" will STOP working
@@ -772,6 +1003,82 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		MonTablesDictionary monTableDict = createMonTablesDictionary();
 		MonTablesDictionaryManager.setInstance(monTableDict);
 
+
+		//--------------------------------------------------------
+		// ALARM Handling
+		boolean enableAlarmHandler = Configuration.getCombinedConfiguration().getBooleanProperty(AlarmHandler.PROPKEY_enable, AlarmHandler.DEFAULT_enable);
+		if (enableAlarmHandler)
+		{
+			//--------------------------------------------------------
+			// Alarm Queue Handler (This will SOON be replaced with the AlarmHandler, below)
+			//--------------------------------------------------------
+//			AlarmQueueHandler aqh = new AlarmQueueHandler();
+//			aqh.init(Configuration.getCombinedConfiguration());
+//			aqh.start();
+//			AlarmQueueHandler.setInstance(aqh);
+
+			//--------------------------------------------------------
+			// Alarm Handler
+			//--------------------------------------------------------
+//System.setProperty("AlarmHandler.WriterClass",                 "com.asetune.alarm.writers.AlarmWriterToStdout, com.asetune.alarm.writers.AlarmWriterToFile");
+//System.setProperty("AlarmWriterToFile.alarms.active.filename", "c:\\tmp\\AseTune_alarm_active.log");
+//System.setProperty("AlarmWriterToFile.alarms.log.filename",    "c:\\tmp\\AseTune_alarm.log");
+
+			try
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				if ( ! _gui )
+					conf = Configuration.getInstance(Configuration.PCS);
+				
+				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);
+				if (StringUtil.hasValue(alarmWriters))
+				{
+					//--------------------------------------------------------
+					// User Defined Alarm Handler
+					// Compiling some dynamic java classes
+					//--------------------------------------------------------
+					UserDefinedAlarmHandler udah = new UserDefinedAlarmHandler();
+					udah.init(conf);
+					UserDefinedAlarmHandler.setInstance(udah);
+
+					// Initialize the alarm handler
+					AlarmHandler ah = new AlarmHandler();
+					AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
+					ah.init(conf, _gui, true);
+					ah.start();
+				}
+				else
+				{
+					_logger.warn("No 'Alarm Writers' was found in the current configuration '"+conf.getFilename()+"'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '"+AlarmHandler.PROPKEY_WriterClass+"'.");
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.error("Problems Initializing the Alarm Handler Module", ex);
+
+				if ( ! _gui )
+					throw ex;
+				else
+				{
+					try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
+					catch (Exception e) { _logger.warn("Problem setting the Look And Feel to 'getSystemLookAndFeelClassName()'.", e); }
+
+					String htmlMsg = 
+							"<html>"
+							+ "Propblems Initializing the Alarm Handler Module<br>"
+							+ "<br>"
+							+ "The Alarm Module or any of the Alarm Writers might not work as expected<br>"
+							+ "Please look at the errolog and fix the problem.<br>"
+							+ "<b>Then restart "+Version.getAppName()+"</b><br>"
+							+ "<br>"
+							+ "However the "+Version.getAppName()+" will start after you dismiss this message."
+							+ "</html>";
+					SwingUtils.showErrorMessage("Propblems Initializing the Alarm Handler Module", htmlMsg, ex);
+				}
+			}
+		}
+		
+
 		
 		if ( ! _gui )
 		{
@@ -807,6 +1114,9 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				}
 			});
 
+			// Start OutOfMemory check/thread
+			// Listeners has to be attached, which is done in CounterCollectorThreadNoGui
+			Memory.start();
 		}
 		else
 		{
@@ -877,6 +1187,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 					SplashWindow.drawProgress("Loading: Main Frame...");
 //					final MainFrame frame = new MainFrame();
 					final MainFrame frame = createGuiMainFrame();
+					Configuration.setGuiWindow(frame);
 
 					// Create and Start the "collector" thread
 					SplashWindow.drawProgress("Loading: Counter Models...");
@@ -1016,9 +1327,10 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 		pw.println("usage: "+getAppNameCmd()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] ");
 		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>]");
-		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] [-H <dirname>] ");
+		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] ");
+		pw.println("              [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
 		pw.println("              [-n <cfgFile|cmNames>] [-r] [-l] [-i <seconds>] [-f <hours>]");
-		pw.println("              [-d <dbname>] [-D <H2|ASE|ASE>] ");
+		pw.println("              [-d <dbname>] [-T <H2|ASE|ASE>] ");
 		pw.println("  ");
 		pw.println("options:");
 		pw.println("  -C,--config <cfgName>     System Config file");
@@ -1036,7 +1348,11 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		pw.println("  -u,--sshUser <user>       SSH Username, used by Host Monitoring subsystem.");
 		pw.println("  -p,--sshPasswd <passwd>   SSH Password, used by Host Monitoring subsystem.");
 		pw.println("  -s,--sshServer <host>     SSH Hostname, used by Host Monitoring subsystem.");
+		pw.println("  ");
+		pw.println("  -L,--logfile <filename>   Name of the logfile where application logging is saved.");
 		pw.println("  -H,--homedir <dirname>    HOME Directory, where all personal files are stored.");
+		pw.println("  -R,--savedir <dirname>    DBXTUNE_SAVE_DIR, where H2 Database recordings are stored.");
+		pw.println("  -D,--javaSystemProp <k=v> set Java System Property, same as java -Dkey=value");
 		pw.println("  ");
 		pw.println("  Switches for offline mode:");
 		pw.println("  -n,--noGui <cfgFile|cmNames> Do not start with GUI.");
@@ -1053,20 +1369,20 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		pw.println("  -i,--interval <seconds>   sample Interval, time between samples.");
 		pw.println("  -e,--enable   <hh[:mm]>   enable/start the recording at Hour(00-23) Minute(00-59)");
 		pw.println("  -f,--finish   <hh[:mm]>   shutdown/stop the no-gui service after # hours.");
-		pw.println("  -D,--dbtype <H2|ASE|ASA>  type of database to use as offline store.");
+		pw.println("  -T,--dbtype <H2|ASE|ASA>  type of database to use as offline store.");
 		pw.println("  -d,--dbname <connSpec>    Connection specification to store offline data.");
-		pw.println("                            Depends on -D, see below for more info.");
+		pw.println("                            Depends on -T, see below for more info.");
 		pw.println("");
-		pw.println("If you specify '-D and -d':");
-		pw.println("  -D H2  -d h2dbfile|default");
-		pw.println("  -D ASE -d hostname:port:dbname:user:passwd");
-		pw.println("  -D ASA -d hostname:port:dbname:user:passwd");
+		pw.println("If you specify '-T and -d':");
+		pw.println("  -T H2  -d h2dbfile|default");
+		pw.println("  -T ASE -d hostname:port:dbname:user:passwd");
+		pw.println("  -T ASA -d hostname:port:dbname:user:passwd");
 		pw.println("  Default connection specifications for different dbtypes:");
 		pw.println("     H2:  'h2dbfile' file is mandatory.");
 		pw.println("          Use: -d default, will set h2dbfile to '${<DBXTUNE>_SAVE_DIR}/${SERVERNAME}_${DATE}'");
 		pw.println("     ASE: 'hostname:port:dbname:user:passwd' is all mandatory.");
 		pw.println("     ASA: port=2638, dbname='', user='DBA', passwd='SQL'");
-		pw.println("  If only '-d' is given, the default value for '-D' is 'H2'.");
+		pw.println("  If only '-d' is given, the default value for '-T' is 'H2'.");
 		pw.println("");
 		pw.flush();
 	}
@@ -1081,32 +1397,66 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 	{
 		Options options = new Options();
 
+//		// create the Options
+//		options.addOption( "C", "config",         true,  "The System Config file" );
+//		options.addOption( "c", "userConfig",     true,  "The User Config file where, overrides values in System Config." );
+//		options.addOption( "t", "tmpConfig",      true,  "Config file where temporary stuff are stored." );
+//		options.addOption( "h", "help",           false, "Usage information." );
+//		options.addOption( "v", "version",        false, "Display "+Version.getAppName()+" and JVM Version." );
+//		options.addOption( "x", "debug",          true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
+//                                                  
+//		options.addOption( "U", "user",           true, "Username when connecting to server." );
+//		options.addOption( "P", "passwd",         true, "Password when connecting to server. (null=noPasswd)" );
+//		options.addOption( "S", "server",         true, "Server to connect to." );
+//                                                  
+//		options.addOption( "u", "sshUser",        true, "SSH Username when connecting to server for Host Monitoring." );
+//		options.addOption( "p", "sshPasswd",      true, "SSH Password when connecting to server for Host Monitoring." );
+//		options.addOption( "s", "sshServer",      true, "SSH Hostname to connect to." );
+//                                                  
+//		options.addOption( "L", "logfile",        true, "Name of the logfile." );
+//		options.addOption( "H", "homedir",        true, "HOME Directory, where all personal files are stored." );
+//		options.addOption( "R", "savedir",        true, "DBXTUNE_SAVE_DIR, where H2 Database recordings are stored." );
+////		options.addOption( "D", "javaSystemProp", true, "set Java System Property, same as java -DpropName=val, example -DpropName=val" );
+//		options.addOption( Option.builder("D").longOpt("javaSystemProp").hasArg().valueSeparator('=').build() );
+//
+//		options.addOption( "n", "noGui",          true, "Do not start with GUI, instead collect counters to a database <a config file for offline sample>." );
+//		options.addOption( "r", "reconfigure",    false,"Offline: if monitored ASE is not properly configured, try to configure it." );
+//		options.addOption( "l", "listcm",         false,"Offline: List cm's that can be used in '-n' switch." );
+//		options.addOption( "i", "interval",       true, "Offline: Sample Interval, time between samples." );
+//		options.addOption( "T", "dbtype",         true, "Offline: {H2|ASE|ASA} database type default is H2." );
+//		options.addOption( "d", "dbname",         true, "Offline: dbname/file to store offline samples." );
+//		options.addOption( "f", "finish",         true, "Offline: Shutdown the NO-GUI service after # hours" );
+//		options.addOption( "e", "enable",         true, "Offline: enable/start the recording at Hour Minute" );
+
 		// create the Options
-		options.addOption( "C", "config",      true,  "The System Config file" );
-		options.addOption( "c", "userConfig",  true,  "The User Config file where, overrides values in System Config." );
-		options.addOption( "t", "tmpConfig",   true,  "Config file where temporary stuff are stored." );
-		options.addOption( "h", "help",        false, "Usage information." );
-		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
-		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
+		options.addOption( Option.builder("C").longOpt("config"        ).hasArg(true ).build() );
+		options.addOption( Option.builder("c").longOpt("userConfig"    ).hasArg(true ).build() );
+		options.addOption( Option.builder("t").longOpt("tmpConfig"     ).hasArg(true ).build() );
+		options.addOption( Option.builder("h").longOpt("help"          ).hasArg(false).build() );
+		options.addOption( Option.builder("v").longOpt("version"       ).hasArg(false).build() );
+		options.addOption( Option.builder("x").longOpt("debug"         ).hasArg(true ).build() );
 
-		options.addOption( "U", "user",        true, "Username when connecting to server." );
-		options.addOption( "P", "passwd",      true, "Password when connecting to server. (null=noPasswd)" );
-		options.addOption( "S", "server",      true, "Server to connect to." );
+		options.addOption( Option.builder("U").longOpt("user"          ).hasArg(true ).build() );
+		options.addOption( Option.builder("P").longOpt("passwd"        ).hasArg(true ).build() );
+		options.addOption( Option.builder("S").longOpt("server"        ).hasArg(true ).build() );
 
-		options.addOption( "u", "sshUser",     true, "SSH Username when connecting to server for Host Monitoring." );
-		options.addOption( "p", "sshPasswd",   true, "SSH Password when connecting to server for Host Monitoring." );
-		options.addOption( "s", "sshServer",   true, "SSH Hostname to connect to." );
+		options.addOption( Option.builder("u").longOpt("sshUser"       ).hasArg(true ).build() );
+		options.addOption( Option.builder("p").longOpt("sshPasswd"     ).hasArg(true ).build() );
+		options.addOption( Option.builder("s").longOpt("sshServer"     ).hasArg(true ).build() );
 
-		options.addOption( "H", "homedir",     true, "HOME Directory, where all personal files are stored." );
+		options.addOption( Option.builder("L").longOpt("logfile"       ).hasArg(true ).build() );
+		options.addOption( Option.builder("H").longOpt("homedir"       ).hasArg(true ).build() );
+		options.addOption( Option.builder("R").longOpt("savedir"       ).hasArg(true ).build() );
+		options.addOption( Option.builder("D").longOpt("javaSystemProp").hasArgs().valueSeparator('=').build() ); // NOTE the hasArgs() instead of hasArg() *** the 's' at the end of hasArg<s>() does the trick...
 
-		options.addOption( "n", "noGui",       true, "Do not start with GUI, instead collect counters to a database <a config file for offline sample>." );
-		options.addOption( "r", "reconfigure", false,"Offline: if monitored ASE is not properly configured, try to configure it." );
-		options.addOption( "l", "listcm",      false,"Offline: List cm's that can be used in '-n' switch." );
-		options.addOption( "i", "interval",    true, "Offline: Sample Interval, time between samples." );
-		options.addOption( "D", "dbtype",      true, "Offline: {H2|ASE|ASA} database type default is H2." );
-		options.addOption( "d", "dbname",      true, "Offline: dbname/file to store offline samples." );
-		options.addOption( "f", "finish",      true, "Offline: Shutdown the NO-GUI service after # hours" );
-		options.addOption( "e", "enable",      true, "Offline: enable/start the recording at Hour Minute" );
+		options.addOption( Option.builder("n").longOpt("noGui"         ).hasArg(true ).build() );
+		options.addOption( Option.builder("r").longOpt("reconfigure"   ).hasArg(false).build() );
+		options.addOption( Option.builder("l").longOpt("listcm"        ).hasArg(false).build() );
+		options.addOption( Option.builder("i").longOpt("interval"      ).hasArg(true ).build() );
+		options.addOption( Option.builder("T").longOpt("dbtype"        ).hasArg(true ).build() );
+		options.addOption( Option.builder("d").longOpt("dbname"        ).hasArg(true ).build() );
+		options.addOption( Option.builder("f").longOpt("finish"        ).hasArg(true ).build() );
+		options.addOption( Option.builder("e").longOpt("enable"        ).hasArg(true ).build() );
 
 		return options;
 	}
@@ -1119,14 +1469,14 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 	throws ParseException
 	{
 		// create the command line parser
-		CommandLineParser parser = new PosixParser();
+		CommandLineParser parser = new DefaultParser();
 
 		// parse the command line arguments
 		CommandLine cmd = parser.parse( options, args );
 
 		if (_logger.isDebugEnabled())
 		{
-			for (@SuppressWarnings("unchecked") Iterator<Option> it=cmd.iterator(); it.hasNext();)
+			for (Iterator<Option> it=cmd.iterator(); it.hasNext();)
 			{
 				Option opt = it.next();
 				_logger.debug("parseCommandLine: swith='"+opt.getOpt()+"', value='"+opt.getValue()+"'.");
@@ -1178,6 +1528,44 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		System.out.println();
 
 	}
+
+	public static void main_testCmdLineOptions(String[] args)
+	{
+		try
+		{
+			Options options = new Options();
+
+			options.addOption( Option.builder("D").longOpt("javaSystemProp").hasArgs().valueSeparator('=').build() ); // NOTE the hasArgs() instead of hasArg() *** the 's' at the end of hasArg<s>()
+
+//			String[] args = { "-Dxxxxxxxx=111" };
+			CommandLineParser parser = new DefaultParser();
+			CommandLine cmd = parser.parse(options, args);
+
+//			String propertyName = cmd.getOptionValues("D")[0]; // will be "key"
+//			String propertyValue = cmd.getOptionValues("D")[1]; // will be "value"
+//			System.out.println("propertyName=|"+propertyName+"|");
+//			System.out.println("propertyValue=|"+propertyValue+"|");
+
+			if (cmd.hasOption('D'))
+			{
+				Properties javaProps = cmd.getOptionProperties("D");
+				System.setProperties(javaProps);
+				
+				for (Object key : javaProps.keySet())
+				{
+					Object val = javaProps.get(key);
+					System.out.println("SYSTEM: key=|"+key+"|, val=|"+val+"|.");
+				}
+			}
+
+			System.exit(0);
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
 	//---------------------------------------------------
 	// MAIN
 	//---------------------------------------------------
@@ -1191,6 +1579,18 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		int lastDot = _mainClassName.lastIndexOf('.');
 		if (lastDot != -1)
 			_mainClassName = _mainClassName.substring(lastDot+1);
+
+
+		// if we want to print input arguments
+		//System.setProperty("dbxtune.print.input.args", "true");
+		if ( System.getProperty("dbxtune.print.input.args") != null )
+		{
+			for (int i=0; i<args.length; i++)
+			{
+				System.out.println("TRACE-INPUT-ARGS["+i+"] = |"+args[i]+"|");
+			}
+		}
+
 
 		Options options = buildCommandLineOptions();
 		try
@@ -1229,6 +1629,10 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				if ( cmd.hasOption("homedir") )
 					System.setProperty("user.home", cmd.getOptionValue("homedir"));
 
+				if ( cmd.hasOption("savedir") )
+					System.setProperty("DBXTUNE_SAVE_DIR", cmd.getOptionValue("savedir"));
+				
+				// Note: _instance is also set in the DbxTune constructor... This is if any of the subinitializers use DbxTune.getIntance()
 				if      ("AseTune"      .equalsIgnoreCase(_mainClassName)) _instance = new AseTune      (cmd);
 				else if ("IqTune"       .equalsIgnoreCase(_mainClassName)) _instance = new IqTune       (cmd);
 				else if ("RsTune"       .equalsIgnoreCase(_mainClassName)) _instance = new RsTune       (cmd);
@@ -1237,6 +1641,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				else if ("SqlServerTune".equalsIgnoreCase(_mainClassName)) _instance = new SqlServerTune(cmd);
 				else if ("OracleTune"   .equalsIgnoreCase(_mainClassName)) _instance = new OracleTune   (cmd);
 				else if ("PostgresTune" .equalsIgnoreCase(_mainClassName)) _instance = new PostgresTune (cmd);
+				else if ("MySqlTune"    .equalsIgnoreCase(_mainClassName)) _instance = new MySqlTune    (cmd);
 				else
 				{
 					throw new Exception("Unknown Implementor of type '"+_mainClassName+"'.");
@@ -1245,6 +1650,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		}
 		catch (ParseException pe)
 		{
+//pe.printStackTrace();
 			String error = "Error: " + pe.getMessage();
 			printHelp(options, error);
 		}
@@ -1262,6 +1668,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			System.out.println("--------------------------------------------------------------------");
 			e.printStackTrace();
 			System.out.println("--------------------------------------------------------------------");
+			System.exit(1);
 		}
 	}
 }
+
+//LOOK AT:
+//	* tooltip (focusable) tooltip and normal tooltip... maybe create your own normal-tooltip manager, that handles both normal and focusable tooltip.
+//	  or at least... focusable tooltip should be a singleton so we can "cancel" other tooltip that might still be "up"
+//	  and thats also the reason why we would want to group the two together...
+

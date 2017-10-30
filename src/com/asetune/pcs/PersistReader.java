@@ -1434,6 +1434,8 @@ implements Runnable, ConnectionProvider
 //			Timestamp sessionStartTime  = null;
 			Timestamp sessionSampleTime = null;
 //			Timestamp sampleTime        = null;
+			// do not render while we addPoints
+			//tg.setVisible(false);
 
 			while (rs.next())
 			{
@@ -1441,6 +1443,7 @@ implements Runnable, ConnectionProvider
 				sessionSampleTime = rs.getTimestamp(2);
 //				sampleTime        = rs.getTimestamp(3);
 
+//System.out.println("loadSessionGraph(): READ(row="+row+"): graphName='"+graphName+"', sampleId="+sampleId+", sessionSampleTime="+sessionSampleTime);
 				// Start to read column 4
 				// move c (colIntex) 2 cols at a time, move ca (ArrayIndex) by one
 				for (int c=4, ca=0; c<=cols; c+=2, ca++)
@@ -1457,7 +1460,7 @@ implements Runnable, ConnectionProvider
 						firstDatapt[d] = new Double(0);
 					tg.addPoint(new Timestamp(sessionSampleTime.getTime()-10),  // - 10 millisec
 							firstDatapt, 
-							labels, startTime, endTime);
+							labels, null, startTime, endTime);
 				}
 
 				// If we expect a big graph, load only every X row
@@ -1465,7 +1468,10 @@ implements Runnable, ConnectionProvider
 				// has to do too many repaints, we could do an "average" of X rows during the load
 				// but I took the easy way out... (or figure out why it's taking all the CPU)
 				if ( row % loadEveryXRow == 0 )
-					tg.addPoint(sessionSampleTime, datapt, labels, startTime, endTime);
+				{
+//System.out.println("loadSessionGraph(): ADD (row="+row+"): graphName='"+graphName+"', sampleId="+sampleId+", sessionSampleTime="+sessionSampleTime);
+					tg.addPoint(sessionSampleTime, datapt, labels, null, startTime, endTime);
+				}
 
 				row++;
 			}
@@ -1480,7 +1486,7 @@ implements Runnable, ConnectionProvider
 					lastDatapt[d] = new Double(0);
 				tg.addPoint(new Timestamp(sessionSampleTime.getTime()+10), // + 10 millisec
 						lastDatapt, 
-						labels, startTime, endTime);
+						labels, null, startTime, endTime);
 			}
 //System.out.println("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
 			_logger.debug("Loaded "+row+" rows into TrendGraph named '"+graphName+"', for the CM '"+cmName+"', which took '"+TimeUtils.msToTimeStr(System.currentTimeMillis()-fetchStartTime)+"'.");
@@ -1494,7 +1500,44 @@ implements Runnable, ConnectionProvider
 		{
 			_logger.error("Problems loading graph for cm='"+cmName+"', graph='"+graphName+"'.", e);
 		}
+		finally 
+		{
+			// restore rendering
+			//tg.setVisible(true);
+		}
 		return 0;
+	}
+
+	private void setAllChartRendering(boolean toValue)
+	{
+		for (Map.Entry<String,OfflineCm> entry : _offlineCmMap.entrySet())
+		{
+			String cmName = entry.getKey();
+			OfflineCm ocm = entry.getValue();
+
+			//System.out.println("loadSessionGraphs(): LOOP, cmName='"+cmName+"', ocm='"+ocm+"'.");
+			if (ocm == null)           continue; // why should this happen
+			if (ocm.graphList == null) continue;
+
+			for (String graphName : ocm.graphList)
+			{
+//				loadEveryXRow = loadSessionGraph(cmName, graphName, sampleId, startTime, endTime, expectedRows);
+				CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+				if (cm == null)
+				{
+					_logger.warn("Can't find any CM named '"+cmName+"'.");
+					continue;
+				}
+				TrendGraph tg = cm.getTrendGraph(graphName);
+				if (tg == null)
+				{
+					_logger.warn("Can't find any TrendGraph named '"+graphName+"', for the CM '"+cmName+"'.");
+					continue;
+				}
+				tg.setVisible(toValue);
+			}
+		}
+		
 	}
 
 	private void execLoadSessionGraphs(Timestamp sampleId, Timestamp startTime, Timestamp endTime, int expectedRows)
@@ -1511,31 +1554,43 @@ implements Runnable, ConnectionProvider
 
 		int loadEveryXRow = 0;
 
-		// Write "HH:mm - HH:mm" of what we are watching in the MainFrame's watermark
-		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
-		String graphWatermark = sdf.format(startTime) + " - " + sdf.format(endTime);
-		MainFrame.setOfflineSamplePeriodText(graphWatermark);
-
-		// Now loop the _offlineCmMap
-		for (Map.Entry<String,OfflineCm> entry : _offlineCmMap.entrySet())
+		try
 		{
-			String cmName = entry.getKey();
-			OfflineCm ocm = entry.getValue();
+			// Disable rendering of charts
+			setAllChartRendering(false);
+			
+			// Write "HH:mm - HH:mm" of what we are watching in the MainFrame's watermark
+			SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+			String graphWatermark = sdf.format(startTime) + " - " + sdf.format(endTime);
+			MainFrame.setOfflineSamplePeriodText(graphWatermark);
 
-			//System.out.println("loadSessionGraphs(): LOOP, cmName='"+cmName+"', ocm='"+ocm+"'.");
-			if (ocm == null)           continue; // why should this happen
-			if (ocm.graphList == null) continue;
-
-			for (String  graphName : ocm.graphList)
+			// Now loop the _offlineCmMap
+			for (Map.Entry<String,OfflineCm> entry : _offlineCmMap.entrySet())
 			{
-				loadEveryXRow = loadSessionGraph(cmName, graphName, sampleId, startTime, endTime, expectedRows);
+				String cmName = entry.getKey();
+				OfflineCm ocm = entry.getValue();
+
+				//System.out.println("loadSessionGraphs(): LOOP, cmName='"+cmName+"', ocm='"+ocm+"'.");
+				if (ocm == null)           continue; // why should this happen
+				if (ocm.graphList == null) continue;
+
+				for (String graphName : ocm.graphList)
+				{
+//System.out.println("execLoadSessionGraphs(): cmName="+cmName+", graphName="+graphName+", sampleId="+sampleId+", startTime="+startTime+", endTime="+endTime+", expectedRows="+expectedRows+"");
+					loadEveryXRow = loadSessionGraph(cmName, graphName, sampleId, startTime, endTime, expectedRows);
+				}
 			}
+			String str = "Loading all TrendGraphs took '"+TimeUtils.msToTimeStr("%SS.%ms", System.currentTimeMillis()-xStartTime)+"' seconds.";
+			if (loadEveryXRow > 1)
+				str += " Loaded every "+(loadEveryXRow-1)+" row, graphs was to big.";
+			setStatusText(str);
+			setWatermark();
 		}
-		String str = "Loading all TrendGraphs took '"+TimeUtils.msToTimeStr("%SS.%ms", System.currentTimeMillis()-xStartTime)+"' seconds.";
-		if (loadEveryXRow > 1)
-			str += " Loaded every "+(loadEveryXRow-1)+" row, graphs was to big.";
-		setStatusText(str);
-		setWatermark();
+		finally 
+		{
+			// Enable rendering of charts
+			setAllChartRendering(true);
+		}
 	}
 
 	@SuppressWarnings("unused")
@@ -1916,6 +1971,7 @@ implements Runnable, ConnectionProvider
 			boolean hasSqlGuiRefreshTime    = cols >= 9;
 			boolean hasNonConfiguredFields  = cols >= 12;
 			boolean hasCounterClearedFields = cols >= 15;
+			boolean hasExceptionFields      = cols >= 16;
 //FIXME: nonConfigCapture....cols both in the reader and writer
 //boolean nonConfigCapture
 //String  missingConfigParams
@@ -1939,14 +1995,18 @@ implements Runnable, ConnectionProvider
 				String    nonConfiguedMonitoringMissingParams =  hasNonConfiguredFields  ? rs.getString(13) : null;
 				String    nonConfiguedMonitoringMessages      =  hasNonConfiguredFields  ? rs.getString(14) : null;
 				boolean   isCountersCleared                   = (hasCounterClearedFields ? rs.getInt   (15) : 0) > 0;
+				boolean   hasValidCounterData                 = (hasExceptionFields      ? rs.getInt   (16) : 0) > 0;
+				String    exceptionMsg                        =  hasExceptionFields      ? rs.getString(17) : null;
+				String    exceptionFullText                   =  hasExceptionFields      ? rs.getString(18) : null;
 
+				
 				// Map cmName from DB->Internal name if needed.
 				cmName = getNameTranslateDbToCm(cmName);
 				
 				CmIndicator cmInd = new CmIndicator(sessionStartTime, sessionSampleTime, cmName, type, graphCount, absRows, diffRows, rateRows, 
 						sqlRefreshTime, guiRefreshTime, lcRefreshTime,
 						nonConfiguredMonitoringHappened, nonConfiguedMonitoringMissingParams, nonConfiguedMonitoringMessages,
-						isCountersCleared);
+						isCountersCleared, hasValidCounterData, exceptionMsg, exceptionFullText);
 
 				// Add it to the indicators map
 				_currentIndicatorMap.put(cmName, cmInd);
@@ -2033,6 +2093,10 @@ implements Runnable, ConnectionProvider
 		cm.setNonConfiguredMonitoringMissingParams(cmInd._nonConfiguedMonitoringMissingParams);
 
 		cm.setIsCountersCleared(cmInd._isCountersCleared);
+
+		cm.setValidSampleData        (cmInd._hasValidSampleData);
+		cm.setSampleException        (cmInd._exceptionMsg == null ? null : new PcsSavedException(cmInd._exceptionMsg));
+//		cm.setSampleExceptionFullText(cmInd._exceptionFullText);
 
 		cm.setDataInitialized(true);
 //		cm.fireTableStructureChanged();
@@ -2581,12 +2645,15 @@ implements Runnable, ConnectionProvider
 		public String    _nonConfiguedMonitoringMissingParams = null;
 		public String    _nonConfiguedMonitoringMessages      = null;
 		public boolean   _isCountersCleared                   = false;
+		public boolean   _hasValidSampleData                  = false;
+		public String    _exceptionMsg                        = null;
+		public String    _exceptionFullText                   = null;
 
 		public CmIndicator(Timestamp sessionStartTime, Timestamp sessionSampleTime, 
 		                   String cmName, int type, int graphCount, int absRows, int diffRows, int rateRows,
 		                   int sqlRefreshTime, int guiRefreshTime, int lcRefreshTime, 
 		                   boolean nonConfiguredMonitoringHappened, String nonConfiguedMonitoringMissingParams, String nonConfiguedMonitoringMessages,
-		                   boolean isCountersCleared)
+		                   boolean isCountersCleared, boolean hasValidSampleData, String exceptionMsg, String exceptionFullText)
 		{
 			_sessionStartTime                    = sessionStartTime;
 			_sessionSampleTime                   = sessionSampleTime;
@@ -2603,6 +2670,9 @@ implements Runnable, ConnectionProvider
 			_nonConfiguedMonitoringMissingParams = nonConfiguedMonitoringMissingParams;
 			_nonConfiguedMonitoringMessages      = nonConfiguedMonitoringMessages;
 			_isCountersCleared                   = isCountersCleared;
+			_hasValidSampleData                  = hasValidSampleData;
+			_exceptionMsg                        = exceptionMsg;
+			_exceptionFullText                   = exceptionFullText;
 		}
 		
 		@Override
@@ -2624,7 +2694,19 @@ implements Runnable, ConnectionProvider
 			sb.append(", nonConfiguedMonitoringMissingParams='").append(_nonConfiguedMonitoringMissingParams).append("'");
 			sb.append(", nonConfiguedMonitoringMessages='")     .append(_nonConfiguedMonitoringMessages)     .append("'");
 			sb.append(", isCountersCleared=")                   .append(_isCountersCleared);
+			sb.append(", hasValidSampleData=")                  .append(_hasValidSampleData);
+			sb.append(", exceptionMsg='")                       .append(_exceptionMsg)     .append("'");
+			sb.append(", exceptionFullText='")                  .append(_exceptionFullText).append("'");
 			return sb.toString();
+		}
+	}
+	
+	public static class PcsSavedException
+	extends Exception
+	{
+		public PcsSavedException(String message)
+		{
+			super(message);
 		}
 	}
 

@@ -71,11 +71,17 @@ implements Runnable
 	/** What version is the OS utility of, that is if the OS has different versions of the utility that has different number of columns etc */
 	private int _utilVersion = -1;
 
+	private OsVendor _osVendor   = OsVendor.NotSet;
+
 	static
 	{
 //		_logger.setLevel(Level.DEBUG);
 	}
 
+	public enum OsVendor
+	{
+		NotSet, Linux, Solaris, Aix, Hp, Veritas, Unknown //, Windows
+	};
 	/**
 	 * Implicitly called by any that extends this class
 	 */
@@ -119,6 +125,23 @@ implements Runnable
 		return _utilVersion;
 	}
 	
+	/** is this monitor connected to the passed vendor ? */
+	public boolean isConnectedToVendor(OsVendor vendor)
+	{
+		return _osVendor.equals(vendor);
+	}
+
+	/** Set the vendor we are connected to */
+	public void setConnectedToVendor(OsVendor vendor)
+	{
+		_osVendor = vendor;
+	}
+	/** get the vendor we are connected to */
+	public OsVendor getConnectedToVendor()
+	{
+		return _osVendor;
+	}
+
 	/**
 	 * A sample is considered to be closed/finished after X ms<br>
 	 * This simply means when to more records has been received for X ms, 
@@ -452,6 +475,25 @@ implements Runnable
 	}
 
 	/**
+	 * If we want to change anything in the row before it gets parsed/splitter...
+	 * For instance 'mpstat' sometimes has. HH:MM:SS [PM/AM] CPU, if the AM/PM IS missing we will get faulty numbers of columns...
+	 * So: the solution might be to "strip off" AM/PM from the input, or similar 
+	 * 
+	 * @param md
+	 * @param row
+	 * @param type
+	 * @return
+	 */
+	public String adjustRow(HostMonitorMetaData md, String row, int type)
+	{
+		if ( ! md.hasSourceRowAdjuster() )
+			return row;
+		
+		SourceRowAdjuster srcRowAdjuster = md.getSourceRowAdjuster();
+		return srcRowAdjuster.adjustRow(row, type);
+	}
+
+	/**
 	 * Parse the input row from the OS Command and add it to the "sample" table, which 
 	 * can be fetched by a user at a later stage.
 	 * <p>
@@ -476,6 +518,7 @@ implements Runnable
 
 		// Make a simple preparse, which splits the input string into a String[] 
 		String trimedRow = row.trim();
+		trimedRow = adjustRow(md, trimedRow, type);
 		String[] isa = trimedRow.split(md.getParseRegexp()); // Internal String Array
 
 		// Parse: Accept or Re-arrange columns
@@ -505,7 +548,7 @@ implements Runnable
 		else
 		{
 			//_logger.trace("-DISCARD-: The String Array ["+StringUtil.toCommaStr(isa)+"].");
-			_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
+			_logger.debug("-DISCARD-: This row has '"+isa.length+"' entries. MetaDataExpected parseCount='"+md.getParseColumnCount()+"'. Row '"+row+"'. The Input/PreParsed String Array, size("+isa.length+")=["+StringUtil.toCommaStr(isa)+"].");
 		}
 	}
 

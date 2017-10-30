@@ -51,6 +51,8 @@ implements ResultSetMetaData
 	private String  _osCommand            = null;
 	private boolean _osCommandIsStreaming = true;
 
+	private SourceRowAdjuster _sourceRowAdjuster	= null;
+
 	/** Class that holds a entry */
 	public static class ColumnEntry implements Comparable<ColumnEntry>
 	{
@@ -271,7 +273,6 @@ implements ResultSetMetaData
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
 	 * @param parseColumnNumber Column number to parse from the OS command.  0 or < 0 = not part of the columns to parse NOTE: 1=parseCol1, 2=parseCol2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param length            The MAX length of the string
 	 * @param description       A description of the column that can be used a s a graphical tooltip
@@ -291,6 +292,7 @@ implements ResultSetMetaData
 		entry._isPartOfPk    = false;
 		entry._isNullable    = isNullable;
 
+		entry._isStatColumn  = false;
 		entry._sqlType       = Types.VARCHAR;
 		entry._sqlDataType   = "varchar";
 		entry._javaClass     = String.class;
@@ -310,7 +312,6 @@ implements ResultSetMetaData
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
 	 * @param parseColumnNumber Column number to parse from the OS command.  0 or < 0 = not part of the columns to parse NOTE: 1=parseCol1, 2=parseCol2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param description       A description of the column that can be used a s a graphical tooltip
 	 */
@@ -329,6 +330,7 @@ implements ResultSetMetaData
 		entry._isPartOfPk    = false;
 		entry._isNullable    = isNullable;
 
+		entry._isStatColumn  = false;
 		entry._sqlType       = Types.INTEGER;
 		entry._sqlDataType   = "int";
 		entry._javaClass     = Integer.class;
@@ -344,11 +346,89 @@ implements ResultSetMetaData
 	}
 
 	/**
+	 * Add a column of type Integer
+	 * @param colName           Name of the column
+	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
+	 * @param parseColumnNumber Column number to parse from the OS command.  0 or < 0 = not part of the columns to parse NOTE: 1=parseCol1, 2=parseCol2...
+	 * @param isNullable        Is can this be a NULL result
+	 * @param description       A description of the column that can be used a s a graphical tooltip
+	 */
+	public void addLongColumn(String colName, 
+			int sqlColumnNumber, int parseColumnNumber, 
+			boolean isNullable, 
+			String description)
+	{
+		ColumnEntry entry = new ColumnEntry();
+
+		entry._colName       = colName;
+
+		entry._sqlColNum     = sqlColumnNumber;
+		entry._parseColNum   = parseColumnNumber;
+
+		entry._isPartOfPk    = false;
+		entry._isNullable    = isNullable;
+
+		entry._isStatColumn  = false;
+		entry._sqlType       = Types.BIGINT;
+		entry._sqlDataType   = "bigint";
+		entry._javaClass     = Long.class;
+		entry._isNumber      = true;
+
+		entry._displayLength = Math.max(colName.length(), Long.toString(Long.MAX_VALUE).length());
+		entry._precision     = -1;
+		entry._scale         = -1;
+
+		entry._description   = description;
+		
+		addColumn(entry);
+	}
+
+	/**
+	 * Add a column of type Decimal
+	 * @param colName           Name of the column
+	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
+	 * @param parseColumnNumber Column number to parse from the OS command.  0 or < 0 = not part of the columns to parse NOTE: 1=parseCol1, 2=parseCol2...
+	 * @param isNullable        Is can this be a NULL result
+	 * @param precision         Precision of the number 
+	 * @param scale             Scale of the number 
+	 * @param description       A description of the column that can be used a s a graphical tooltip
+	 */
+	public void addDecColumn(String colName,
+			int sqlColumnNumber, int parseColumnNumber,
+			boolean isNullable,
+			int precision, int scale, 
+			String description)
+	{
+		ColumnEntry entry = new ColumnEntry();
+
+		entry._colName       = colName;
+
+		entry._sqlColNum     = sqlColumnNumber;
+		entry._parseColNum   = parseColumnNumber;
+
+		entry._isPartOfPk    = false;
+		entry._isNullable    = isNullable;
+
+		entry._isStatColumn  = false;
+		entry._sqlType       = Types.NUMERIC;
+		entry._sqlDataType   = "numeric";  // "numeric" or "decimal"
+		entry._javaClass     = BigDecimal.class;
+		entry._isNumber      = true;
+
+		entry._displayLength = Math.max(colName.length(), precision + 1);
+		entry._precision     = precision;
+		entry._scale         = scale;
+
+		entry._description       = description;
+		
+		addColumn(entry);
+	}
+
+	/**
 	 * Add a column of type Datetime...
 	 * @param colName           Name of the column
 	 * @param sqlColumnNumber   SQL Column number. 0 or < 0 = not part of the SQL results NOTE: 1=col1, 2=col2...
 	 * @param parseColumnNumber Column number to parse from the OS command.  0 or < 0 = not part of the columns to parse NOTE: 1=parseCol1, 2=parseCol2...
-	 * @param isPartOfPk        Is this part of the Primary Key
 	 * @param isNullable        Is can this be a NULL result
 	 * @param description       A description of the column that can be used a s a graphical tooltip
 	 */
@@ -367,6 +447,7 @@ implements ResultSetMetaData
 		entry._isPartOfPk    = false;
 		entry._isNullable    = isNullable;
 
+		entry._isStatColumn  = false;
 		entry._sqlType       = Types.TIMESTAMP;
 		entry._sqlDataType   = "datetime";
 		entry._javaClass     = Timestamp.class;
@@ -616,6 +697,51 @@ implements ResultSetMetaData
 	}
 
 	/**
+	 * Get rid of internationalazation for numbers.<br>
+	 * Meaning '12,123' is translated to '12.123'
+	 * @param str input string
+	 * @return the translated string
+	 */
+	private String normalizeNumber(String str)
+	{
+		if (str == null)
+			return null;
+
+		int commaPos = str.indexOf(',');
+		int dotPos   = str.indexOf('.');
+		
+		// No commas or dots, get out of here
+		if (commaPos < 0 && dotPos < 0)
+			return str;
+
+		// Only dots, do nothing
+		if (commaPos < 0 && dotPos >= 0)
+			return str;
+
+		// Only commas: translate ',' to '.'
+		if (commaPos >= 0 && dotPos < 0)
+			return str.replace(',', '.');
+
+		// Both commas and Dots
+		if (commaPos >= 0 && dotPos >= 0)
+		{
+			// if number is "fancy formated" as number: 123,456.0  ==>> 123456.0
+			if (commaPos < dotPos)
+				return str.replace(",", "");
+
+			// if number is "fancy formated" as number: 123.456,0  ==>> 123456.0
+			if (dotPos < commaPos)
+			{
+				str = str.replace(".", "");
+				return str.replace(',', '.');
+			}
+		}
+
+		// we probably never reach here, but if we do, just return the input
+		return str;
+	}
+
+	/**
 	 * Internal SQL type -> Java Object method
 	 * @param sqlType
 	 * @param val
@@ -644,9 +770,9 @@ implements ResultSetMetaData
 			case java.sql.Types.BIGINT:       return new Long(strVal);
 			case java.sql.Types.FLOAT:        return new Float(strVal);
 			case java.sql.Types.REAL:         return new Float(strVal);
-			case java.sql.Types.DOUBLE:       return new Double(strVal);
-			case java.sql.Types.NUMERIC:      return new BigDecimal(strVal).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
-			case java.sql.Types.DECIMAL:      return new BigDecimal(strVal).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+			case java.sql.Types.DOUBLE:       return new Double(normalizeNumber(strVal));
+			case java.sql.Types.NUMERIC:      return new BigDecimal(normalizeNumber(strVal)).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+			case java.sql.Types.DECIMAL:      return new BigDecimal(normalizeNumber(strVal)).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
 			case java.sql.Types.CHAR:         return new String(strVal);
 			case java.sql.Types.VARCHAR:      return new String(strVal);
 			case java.sql.Types.LONGVARCHAR:  return new String(strVal);
@@ -1003,6 +1129,11 @@ implements ResultSetMetaData
 	//-------------------------------------------------------
 
 	
+	// This is to support TableModel, which is called from the OsTable, which ise used by CounterModelHostMonitor, which extends CountersModel that implements TableModel 
+	public Class<?> getColumnClass(int column) //throws SQLException
+	{
+		return getSqlColumn(column)._javaClass;
+	}
 	
 	
 	
@@ -1328,6 +1459,20 @@ implements ResultSetMetaData
 		}
 	}
 
+	public boolean hasSourceRowAdjuster()
+	{
+		return _sourceRowAdjuster != null;
+	}
+
+	public void setSourceRowAdjuster(SourceRowAdjuster sourceRowAdjuster)
+	{
+		_sourceRowAdjuster = sourceRowAdjuster;
+	}
+	
+	public SourceRowAdjuster getSourceRowAdjuster()
+	{
+		return _sourceRowAdjuster;
+	}
 	
 	
 	

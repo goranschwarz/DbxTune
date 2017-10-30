@@ -87,6 +87,16 @@ public class OsTableRow
 	}
 
 	/**
+	 * Set a Object for a specific column
+	 * @param col, NOTE: starts at 1. so 1=col1, 2=col2, 0=outOfRange
+	 * @return
+	 */
+	public void setValue(int col, Object val)
+	{
+		_values[ col - 1 ] = val;
+	}
+
+	/**
 	 * Get a some debug info about the row.<br>
 	 * Probably Used for debugging
 	 * @return a String 

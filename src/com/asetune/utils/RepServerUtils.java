@@ -1009,7 +1009,7 @@ public class RepServerUtils
 			log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 			PropertyConfigurator.configure(log4jProps);
 
-			Connection conn = AseConnectionFactory.getConnection(host, portNum, null, user, pass, "test-rsConfig", null);
+			Connection conn = AseConnectionFactory.getConnection(host, portNum, null, user, pass, "test-rsConfig", null, null);
 			System.out.println(printConfig(conn, true, null));
 //			printConfig(conn, false);
 		}

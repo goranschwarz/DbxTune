@@ -18,6 +18,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
@@ -101,26 +102,84 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 	
-	public static final String GRAPH_NAME_CACHE_ACTIVITY = "CacheGraph"; //String x=GetCounters.CM_GRAPH_NAME__DATA_CACHE__ACTIVITY;
+	public static final String GRAPH_NAME_CACHE_ACTIVITY       = "CacheGraph";
+	public static final String GRAPH_NAME_CACHE_LOGICAL_READS  = "CacheLReads";
+	public static final String GRAPH_NAME_CACHE_PHYSICAL_READS = "CachePReads";
+	public static final String GRAPH_NAME_CACHE_APF_READS      = "CacheApfReads";
+	public static final String GRAPH_NAME_CACHE_WRITES         = "CacheWrites";
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "Logical Reads", "Physical Reads", "Writes" };
+		String[] labels  = new String[] { "Logical Reads", "Physical Reads", "Writes" };
+		String[] dynLbls = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_CACHE_ACTIVITY, new TrendGraphDataPoint(GRAPH_NAME_CACHE_ACTIVITY, labels));
+		addTrendGraphData(GRAPH_NAME_CACHE_ACTIVITY,       new TrendGraphDataPoint(GRAPH_NAME_CACHE_ACTIVITY,       labels,  LabelType.Static));
+		addTrendGraphData(GRAPH_NAME_CACHE_LOGICAL_READS,  new TrendGraphDataPoint(GRAPH_NAME_CACHE_LOGICAL_READS,  dynLbls, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CACHE_PHYSICAL_READS, new TrendGraphDataPoint(GRAPH_NAME_CACHE_PHYSICAL_READS, dynLbls, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CACHE_APF_READS,      new TrendGraphDataPoint(GRAPH_NAME_CACHE_APF_READS,      dynLbls, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CACHE_WRITES,         new TrendGraphDataPoint(GRAPH_NAME_CACHE_WRITES,         dynLbls, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
 		{
-			// GRAPH
 			TrendGraph tg = null;
+
+			// GRAPH
 			tg = new TrendGraph(GRAPH_NAME_CACHE_ACTIVITY,
 				"Data Caches Activity", 	               // Menu CheckBox text
-				"Activity for All Data Caches per Second", // Label 
+				"Activity for All Data Caches per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
 				true,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_CACHE_LOGICAL_READS,
+				"Data Caches LogicalReads", 	               // Menu CheckBox text
+				"Data Caches LogicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_CACHE_PHYSICAL_READS,
+				"Data Caches PhysicalReads", 	               // Menu CheckBox text
+				"Data Caches PhysicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_CACHE_APF_READS,
+				"Data Caches ApfReads", 	               // Menu CheckBox text
+				"Data Caches ApfReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
+				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+				-1);  // minimum height
+			addTrendGraph(tg.getName(), tg, true);
+
+			// GRAPH
+			tg = new TrendGraph(GRAPH_NAME_CACHE_WRITES,
+				"Data Caches Writes", 	               // Menu CheckBox text
+				"Data Caches Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				labels, 
+				false, // is Percent Graph
+				this, 
+				false,  // visible at start
 				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 				-1);  // minimum height
 			addTrendGraph(tg.getName(), tg, true);
@@ -277,8 +336,67 @@ extends CountersModel
 			_logger.debug("updateGraphData(CacheGraph): LogicalReads='"+arr[0]+"', PhysicalReads='"+arr[1]+"', PhysicalWrites='"+arr[2]+"'.");
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setData(arr);
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_CACHE_LOGICAL_READS.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every named cache
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "CacheName");
+				dArray[i] = this.getRateValueAsDouble(i, "LogicalReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_CACHE_PHYSICAL_READS.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every named cache
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "CacheName");
+				dArray[i] = this.getRateValueAsDouble(i, "PhysicalReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_CACHE_APF_READS.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every named cache
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "CacheName");
+				dArray[i] = this.getRateValueAsDouble(i, "APFReads");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_CACHE_WRITES.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every named cache
+			Double[] dArray = new Double[this.size()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getRateString       (i, "CacheName");
+				dArray[i] = this.getRateValueAsDouble(i, "PhysicalWrites");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 	/** 

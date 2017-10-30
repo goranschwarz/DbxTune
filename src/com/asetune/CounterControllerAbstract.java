@@ -28,6 +28,7 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelUserDefined;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.SplashWindow;
@@ -1111,7 +1112,7 @@ implements ICounterController
 			// Data Point
 			cm.setGraphType(udcGraphType);
 			cm.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
-			cm.addTrendGraphData(udcGraphName, new TrendGraphDataPoint(udcGraphName, udcGraphDataLabelsArr));
+			cm.addTrendGraphData(udcGraphName, new TrendGraphDataPoint(udcGraphName, udcGraphDataLabelsArr, LabelType.Static));
 		}
 	}
 	
@@ -2027,7 +2028,7 @@ implements ICounterController
 			if (cmRefreshedInMs > expireValue)
 			{
 				sleepTime = shorterSleepTime;
-				_logger.info("Setting override-sleep time to "+sleepTime+" (from "+suggestedSleepTime+").This since previous sample had 'demand-refresh'. Descition based on CM '"+cmName+"' with "+cmRefreshedInMs+" ms since last refresh. Requested Counters: "+getCmDemandRefreshList());
+				_logger.info("Setting override-sleep time to "+sleepTime+" (from "+suggestedSleepTime+").This since previous sample had 'demand-refresh'. Decision based on CM '"+cmName+"' with "+cmRefreshedInMs+" ms since last refresh. Requested Counters: "+getCmDemandRefreshList());
 				break;
 			}
 		}

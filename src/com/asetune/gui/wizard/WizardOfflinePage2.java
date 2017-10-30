@@ -126,7 +126,7 @@ implements ActionListener
 			"<html>" +
 			"The above options can be overridden or specified using the following command line switches" +
 			"<table>" +
-			"<tr><code>-D,--dbtype  &lt;H2|ASE|ASA&gt;</code><td></td>type of database to use as offline store.</tr>" +
+			"<tr><code>-T,--dbtype &lt;H2|ASE|ASA&gt; </code><td></td>type of database to use as offline store.</tr>" +
 			"<tr><code>-d,--dbname &lt;connSpec&gt;   </code><td></td>Connection specification to store offline data.<br> For details about 'connSpec' see --help </tr>" +
 			"</table>" +
 			"</html>";
@@ -181,6 +181,7 @@ implements ActionListener
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE:format=yyyy-MM-dd:roll=true}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");

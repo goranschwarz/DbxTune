@@ -1,6 +1,9 @@
 package com.asetune.ui.autocomplete;
 
 import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.io.IOException;
+import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -13,6 +16,8 @@ import java.util.Set;
 
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
@@ -20,7 +25,9 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
+import javax.swing.text.TextAction;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
@@ -31,14 +38,20 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxUtilities;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rsyntaxtextarea.Token;
 import org.fife.ui.rsyntaxtextarea.TokenTypes;
+import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.OracleConnection;
+import com.asetune.tools.ddlgen.DdlGen;
+import com.asetune.tools.ddlgen.DdlGen.Type;
+import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.autocomplete.completions.AbstractCompletionX;
 import com.asetune.ui.autocomplete.completions.DbInfo;
 import com.asetune.ui.autocomplete.completions.FunctionColumnInfo;
@@ -55,11 +68,13 @@ import com.asetune.ui.autocomplete.completions.SqlSchemaCompletion;
 import com.asetune.ui.autocomplete.completions.SqlTableCompletion;
 import com.asetune.ui.autocomplete.completions.TableColumnInfo;
 import com.asetune.ui.autocomplete.completions.TableInfo;
+import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.CollectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
 import net.miginfocom.swing.MigLayout;
@@ -104,6 +119,9 @@ extends CompletionProviderAbstract
 	protected String _currentCatalog                = null;
 	protected String _currentServerName             = null;
 
+	private DbxConnection _localConn    = null; 
+	private String        _localCatName = null; 
+
 	@Override
 	public void disconnect()
 	{
@@ -132,6 +150,13 @@ extends CompletionProviderAbstract
 		_procedureComplList      .clear();
 		_systemProcInfoList      .clear();
 		_systemProcComplList     .clear();
+		
+		if (_localConn != null)
+		{
+			try { _localConn.close(); }
+			catch(SQLException ignore) {}
+			_localCatName = null;
+		}
 	}
 	
 	public void addSqlCompletion(Completion c)
@@ -159,15 +184,64 @@ extends CompletionProviderAbstract
 //		super.addCompletions(list);
 	}
 
+	public void setCatalog(String catName)
+	{
+		if (StringUtil.isNullOrBlank(catName))
+			return;
+
+		// Set this early, if the CompletionProvider isn't yet used; we will set it when first connection is made.
+		_localCatName = catName;
+
+		if (_localConn == null)
+			return;
+
+		try 
+		{
+			_localConn.setCatalog(catName);
+		}
+		catch(SQLException ex) 
+		{ 
+			_logger.error("Problems setting catalog name to '"+_localCatName+"'. Caught: "+ex);
+		}
+	}
+
+	public DbxConnection getConnection()
+	{
+		if (_localConn == null)
+		{
+			_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Completion");
+			setCatalog(_localCatName);
+		}
+		
+		if (_localConn != null)
+		{
+			if ( ! _localConn.isConnectionOk(false, _guiOwner) )
+			{
+				try
+				{
+					_localConn.reConnect(_guiOwner);
+				}
+				catch(Exception ex)
+				{
+					_logger.error("Problems in Code Compleation: When trying to re-connect to DBMS there was problems. Caught: "+ex);
+				}
+			}
+		}
+		
+		return _localConn;
+	}
+
 	@Override
 	public String getDbProductName()
 	{
 		if (StringUtil.isNullOrBlank(_dbProductName))
 		{
-			Connection conn = _connectionProvider.getConnection();
+//			Connection conn = _connectionProvider.getConnection();
+			DbxConnection conn = getConnection();
 			if (conn != null)
 			{
-				try { _dbProductName = ConnectionDialog.getDatabaseProductName(conn); }
+//				try { _dbProductName = ConnectionDialog.getDatabaseProductName(conn); }
+				try { _dbProductName = conn.getDatabaseProductName(); }
 				catch (SQLException ignore) {}
 			}
 		}
@@ -179,9 +253,14 @@ extends CompletionProviderAbstract
 	{
 		if (StringUtil.isNullOrBlank(_currentServerName))
 		{
-			Connection conn = _connectionProvider.getConnection();
+//			Connection conn = _connectionProvider.getConnection();
+			DbxConnection conn = getConnection();
 			if (conn != null)
-				_currentServerName = DbUtils.getDatabaseServerName(conn, getDbProductName());
+			{
+//				_currentServerName = DbUtils.getDatabaseServerName(conn, getDbProductName());
+				try { _currentServerName = conn.getDbmsServerName(); }
+				catch (SQLException ignore) {}
+			}
 		}
 		return _currentServerName;
 	}
@@ -189,7 +268,8 @@ extends CompletionProviderAbstract
 //	@Override
 	public String getDbCatalogName()
 	{
-		Connection conn = _connectionProvider.getConnection();
+//		Connection conn = _connectionProvider.getConnection();
+		DbxConnection conn = getConnection();
 		if (conn != null)
 		{
 			try { _currentCatalog = conn.getCatalog(); }
@@ -690,7 +770,8 @@ System.out.println("loadSavedCacheFromFilePostAction: START... list.size()="+ (l
 			}
 		}
 
-		final Connection conn = _connectionProvider.getConnection();
+//		final Connection conn = _connectionProvider.getConnection();
+		final DbxConnection conn = getConnection();
 		if (conn == null)
 		{
 			_logger.warn("No connection, can't initiate Mandatory Settings, completions might not work at 100%");
@@ -933,7 +1014,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			if (etId.isFullyQualifiedObject()) // CATALOG.SCHEMA.OBJECT
 			{
 //System.out.println(">>> in: Complete STORED PROCS: isFullyQualifiedObject");
-				Connection conn = _connectionProvider.getConnection();
+//				Connection conn = _connectionProvider.getConnection();
+				DbxConnection conn = getConnection();
 				if (conn == null)
 					return null;
 
@@ -983,7 +1065,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				if (list.isEmpty())
 				{
 //System.out.println("EXEC: SCHEMA.OBJECT: NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
-					Connection conn = _connectionProvider.getConnection();
+//					Connection conn = _connectionProvider.getConnection();
+					DbxConnection conn = getConnection();
 					if (conn == null)
 						return null;
 
@@ -1051,7 +1134,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		if (etId.isFullyQualifiedObject()) // CATALOG.SCHEMA.OBJECT
 		{
 //System.out.println(">>> in: TABLES in other databases, (isFullyQualifiedObject=TRUE, CATALOG.SCHEMA.OBJECT) do lookup 'on the fly' for: "+etId);
-			Connection conn = _connectionProvider.getConnection();
+//			Connection conn = _connectionProvider.getConnection();
+			DbxConnection conn = getConnection();
 			if (conn == null)
 				return null;
 
@@ -1160,7 +1244,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				if (colList.isEmpty())
 				{
 //System.out.println("XXXX NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
-					Connection conn = _connectionProvider.getConnection();
+//					Connection conn = _connectionProvider.getConnection();
+					DbxConnection conn = getConnection();
 					if (conn == null)
 						return null;
 
@@ -1232,7 +1317,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 							}
 							else // Lookup the schemas for the non-local-database do this ON THE FLY (NON CACHED)
 							{
-								Connection conn = _connectionProvider.getConnection();
+//								Connection conn = _connectionProvider.getConnection();
+								DbxConnection conn = getConnection();
 								if (conn == null)
 									return null;
 
@@ -1661,7 +1747,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		DatabaseMetaData dbmd = conn.getMetaData();
 
 		// What PRODUCT are we connected to 
-		try { _dbProductName = dbmd.getDatabaseProductName(); } catch(SQLException ignore) { _logger.warn("dbmd.getDatabaseProductName() caused SQLException", ignore); }
+		try { _dbProductName = dbmd.getDatabaseProductName(); } catch(SQLException ignore) { _logger.warn("ignoring this; dbmd.getDatabaseProductName() caused SQLException", ignore); }
 
 		_currentServerName = DbUtils.getDatabaseServerName(conn, _dbProductName);
 
@@ -1809,7 +1895,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( ! schemaName.endsWith("%") )
+			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -1844,7 +1930,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	@Override
 	public TableModel getLookupTableTypesModel()
 	{
-		Connection conn = _connectionProvider.getConnection();
+//		Connection conn = _connectionProvider.getConnection();
+		DbxConnection conn = getConnection();
 		String[] cols = {"Include", "TableType"};
 		DefaultTableModel tm = new DefaultTableModel(cols,  0)
 		{
@@ -1991,7 +2078,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( ! schemaName.endsWith("%") )
+			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -2000,7 +2087,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			tableName = tableName.replace('*', '%').trim();
-			if ( ! tableName.endsWith("%") )
+			if ( isWildcatdMath() && ! tableName.endsWith("%") )
 				tableName += "%";
 		}
 
@@ -2059,7 +2146,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		if (catalogName != null)
 //		{
 //			catalogName = catalogName.replace('*', '%').trim();
-//			if ( ! catalogName.endsWith("%") )
+//			if ( isWildcatdMath() && ! catalogName.endsWith("%") )
 //				catalogName += "%";
 //		}
 //
@@ -2067,7 +2154,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		if (schemaName != null)
 //		{
 //			schemaName = schemaName.replace('*', '%').trim();
-//			if ( ! schemaName.endsWith("%") )
+//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
 //				schemaName += "%";
 //		}
 //
@@ -2077,7 +2164,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		else
 //		{
 //			tableName = tableName.replace('*', '%').trim();
-//			if ( ! tableName.endsWith("%") )
+//			if ( isWildcatdMath() && ! tableName.endsWith("%") )
 //				tableName += "%";
 //		}
 
@@ -2087,7 +2174,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			colName = colName.replace('*', '%').trim();
-			if ( ! colName.endsWith("%") )
+			if ( isWildcatdMath() && ! colName.endsWith("%") )
 				colName += "%";
 		}
 
@@ -2254,31 +2341,34 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 					return;
 
 				waitDialog.setState("Getting Column information for table '"+ti._tabName+"'.");
-				ti._needColumnRefresh = false;
+//				ti._needColumnRefresh = false;
+//
+//				ResultSet rs = dbmd.getColumns(ti._tabCat, ti._tabSchema, ti._tabName, "%");
+//
+//				MonTablesDictionary mtd = MonTablesDictionaryManager.hasInstance() ? MonTablesDictionaryManager.getInstance() : null;
+//				while(rs.next())
+//				{
+//					TableColumnInfo ci = new TableColumnInfo();
+//					ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
+//					ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
+//					ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
+//					ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
+//					ci._colIsNullable =                  rs.getInt   ("NULLABLE");
+//					ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
+//					ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
+//					ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
+//					
+////System.out.println("refreshCompletionForTableColumns(): bulkGetColumns="+bulkGetColumns+", ROW="+ci);
+//					// Check with the MonTable dictionary for Descriptions
+//					if (mtd != null && StringUtil.isNullOrBlank(ci._colRemark))
+//						ci._colRemark = StringUtil.stripHtmlStartEnd(mtd.getDescription(ti._tabName, ci._colName));
+//
+//					ti.addColumn(ci);
+//				}
+//				rs.close();
 
-				ResultSet rs = dbmd.getColumns(ti._tabCat, ti._tabSchema, ti._tabName, "%");
-
-				MonTablesDictionary mtd = MonTablesDictionaryManager.hasInstance() ? MonTablesDictionaryManager.getInstance() : null;
-				while(rs.next())
-				{
-					TableColumnInfo ci = new TableColumnInfo();
-					ci._colName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
-					ci._colPos        =                  rs.getInt   ("ORDINAL_POSITION");
-					ci._colType       = StringUtils.trim(rs.getString("TYPE_NAME"));
-					ci._colLength     =                  rs.getInt   ("COLUMN_SIZE");
-					ci._colIsNullable =                  rs.getInt   ("NULLABLE");
-					ci._colRemark     = StringUtils.trim(rs.getString("REMARKS"));
-					ci._colDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
-					ci._colScale      =                  rs.getInt   ("DECIMAL_DIGITS");
-					
-//System.out.println("refreshCompletionForTableColumns(): bulkGetColumns="+bulkGetColumns+", ROW="+ci);
-					// Check with the MonTable dictionary for Descriptions
-					if (mtd != null && StringUtil.isNullOrBlank(ci._colRemark))
-						ci._colRemark = StringUtil.stripHtmlStartEnd(mtd.getDescription(ti._tabName, ci._colName));
-
-					ti.addColumn(ci);
-				}
-				rs.close();
+//				ti.refreshColumnInfo(_connectionProvider);
+				ti.refreshColumnInfo(getConnection());
 
 //				// PK INFO
 //				rs = dbmd.getPrimaryKeys(null, null, ti._tabName);
@@ -2364,7 +2454,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( ! schemaName.endsWith("%") )
+			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -2373,7 +2463,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			functionName = functionName.replace('*', '%').trim();
-			if ( ! functionName.endsWith("%") )
+			if ( isWildcatdMath() && ! functionName.endsWith("%") )
 				functionName += "%";
 		}
 
@@ -2440,7 +2530,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		if (catalogName != null)
 //		{
 //			catalogName = catalogName.replace('*', '%').trim();
-//			if ( ! catalogName.endsWith("%") )
+//			if ( isWildcatdMath() && ! catalogName.endsWith("%") )
 //				catalogName += "%";
 //		}
 //
@@ -2448,7 +2538,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		if (schemaName != null)
 //		{
 //			schemaName = schemaName.replace('*', '%').trim();
-//			if ( ! schemaName.endsWith("%") )
+//			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
 //				schemaName += "%";
 //		}
 //
@@ -2458,7 +2548,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 //		else
 //		{
 //			tableName = tableName.replace('*', '%').trim();
-//			if ( ! tableName.endsWith("%") )
+//			if ( isWildcatdMath() && ! tableName.endsWith("%") )
 //				tableName += "%";
 //		}
 
@@ -2468,7 +2558,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			colName = colName.replace('*', '%').trim();
-			if ( ! colName.endsWith("%") )
+			if ( isWildcatdMath() && ! colName.endsWith("%") )
 				colName += "%";
 		}
 
@@ -2745,7 +2835,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (schemaName != null)
 		{
 			schemaName = schemaName.replace('*', '%').trim();
-			if ( ! schemaName.endsWith("%") )
+			if ( isWildcatdMath() && ! schemaName.endsWith("%") )
 				schemaName += "%";
 		}
 
@@ -2754,7 +2844,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		else
 		{
 			procName = procName.replace('*', '%').trim();
-			if ( ! procName.endsWith("%") )
+			if ( isWildcatdMath() && ! procName.endsWith("%") )
 				procName += "%";
 		}
 
@@ -3042,7 +3132,8 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 	protected <T extends AbstractCompletionX> List<T> refreshCompletion()
 	{
 //System.out.println("SQL: refreshCompletion()");
-		final Connection conn = _connectionProvider.getConnection();
+//		final Connection conn = _connectionProvider.getConnection();
+		final DbxConnection conn = getConnection();
 		if (conn == null)
 			return null;
 
@@ -3377,7 +3468,8 @@ if (_guiOwner == null)
 	 * @param objName
 	 * @return
 	 */
-	private List<Completion> getTableListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
+//	private List<Completion> getTableListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
+	public List<Completion> getTableListWithGuiProgress(final Connection conn, final String catName, final String schemaName, final String objName)
 	{
 //new Exception("DUMMY EXCEPTION at: getTableListWithGuiProgress(conn='"+conn+"', catName='"+catName+"', schemaName='"+schemaName+"', objName='"+objName+"')").printStackTrace();
 		// Create a Waitfor Dialog and Executor, then execute it.
@@ -3456,7 +3548,7 @@ if (_guiOwner == null)
 		}; // END: new WaitForExecDialog.BgExecutor()
 		
 		// Execute and WAIT
-		ArrayList<Completion> list = (ArrayList)wait.execAndWait(doWork);
+		ArrayList<Completion> list = (ArrayList)wait.execAndWait(doWork, 250);
 		if (list == null)
 		{
 			if (doWork.hasException())
@@ -4220,8 +4312,10 @@ if (_guiOwner == null)
 				if (StringUtil.hasValue(schemaName) && ! schemaName.equalsIgnoreCase(ti._tabSchema))
 					continue;
 					
+//				if (getColInfo && ! ti.isColumnRefreshed())
+//					ti.refreshColumnInfo(_connectionProvider);
 				if (getColInfo && ! ti.isColumnRefreshed())
-					ti.refreshColumnInfo(_connectionProvider);
+					ti.refreshColumnInfo(getConnection());
 					
 				return ti;
 			}
@@ -5002,6 +5096,443 @@ if (_guiOwner == null)
 		return new SqlCellRenderer();
 	}
 
+
+
+	public enum GenerateSqlType
+	{
+		SELECT, SELECT_EXEC, SELECT_EXEC_TOP, INSERT, UPDATE, DELETE
+	};
+
+	public enum GenerateJavaType
+	{
+		SQL_STRING, SQL_STRINGBUILDER
+	};
+
+	@Override
+	public List<JMenu> createEditorPopupMenuExtention(RTextArea textarea)
+	{
+		List<JMenu> list = new ArrayList<>();
+		
+		list.add(createGenerateSqlMenu());
+		list.add(createGenerateJavaMenu());
+		
+		return list;
+	}
+
+	/*----------------------------------------------------------------------
+	**----------------------------------------------------------------------
+	** BEGIN: Generate SQL Menu
+	**----------------------------------------------------------------------
+	**----------------------------------------------------------------------*/ 
+	public JMenu createGenerateSqlMenu()
+	{
+		JMenu top = new JMenu("Generate SQL, for selected text");
+
+		JMenu select = new JMenu("Select");
+		JMenu insert = new JMenu("Insert");
+		JMenu update = new JMenu("Update");
+		JMenu delete = new JMenu("Delete");
+		JMenu ddlGen = new JMenu("DDL");
+
+		select.add(new JMenuItem( new SqlGenerator("To Clipboard",                CmdOutputType.TO_CLIPBOARD, GenerateSqlType.SELECT)          ));
+		select.add(new JMenuItem( new SqlGenerator("To Editors Current Location", CmdOutputType.TO_EDITOR,    GenerateSqlType.SELECT)          ));
+		select.add(new JMenuItem( new SqlGenerator("To Separate Window",          CmdOutputType.TO_WINDOW,    GenerateSqlType.SELECT)          ));
+		select.add(new JMenuItem( new SqlGenerator("Execute 'select ...'",        CmdOutputType.EXECUTE,      GenerateSqlType.SELECT_EXEC)     ));
+		select.add(new JMenuItem( new SqlGenerator("Execute 'select top 1000 ...",CmdOutputType.EXECUTE,      GenerateSqlType.SELECT_EXEC_TOP) ));
+
+		insert.add(new JMenuItem( new SqlGenerator("To Clipboard",                CmdOutputType.TO_CLIPBOARD, GenerateSqlType.INSERT)          ));
+		insert.add(new JMenuItem( new SqlGenerator("To Editors Current Location", CmdOutputType.TO_EDITOR,    GenerateSqlType.INSERT)          ));
+		insert.add(new JMenuItem( new SqlGenerator("To Separate Window",          CmdOutputType.TO_WINDOW,    GenerateSqlType.INSERT)          ));
+
+		update.add(new JMenuItem( new SqlGenerator("To Clipboard",                CmdOutputType.TO_CLIPBOARD, GenerateSqlType.UPDATE)          ));
+		update.add(new JMenuItem( new SqlGenerator("To Editors Current Location", CmdOutputType.TO_EDITOR,    GenerateSqlType.UPDATE)          ));
+		update.add(new JMenuItem( new SqlGenerator("To Separate Window",          CmdOutputType.TO_WINDOW,    GenerateSqlType.UPDATE)          ));
+
+		delete.add(new JMenuItem( new SqlGenerator("To Clipboard",                CmdOutputType.TO_CLIPBOARD, GenerateSqlType.DELETE)          ));
+		delete.add(new JMenuItem( new SqlGenerator("To Editors Current Location", CmdOutputType.TO_EDITOR,    GenerateSqlType.DELETE)          ));
+		delete.add(new JMenuItem( new SqlGenerator("To Separate Window",          CmdOutputType.TO_WINDOW,    GenerateSqlType.DELETE)          ));
+
+		ddlGen.add(new JMenuItem( new DdlOutput   ("To Clipboard",                DdlOutputType.TO_CLIPBOARD) ));
+		ddlGen.add(new JMenuItem( new DdlOutput   ("To Editors Current Location", DdlOutputType.TO_EDITOR)    ));
+		ddlGen.add(new JMenuItem( new DdlOutput   ("To Separate Window",          DdlOutputType.TO_WINDOW)    ));
+		
+		top.add(select);
+		top.add(insert);
+		top.add(update);
+		top.add(delete);
+		top.add(ddlGen);
+		
+		return top;
+	}
+
+	/**
+	 * 
+	 */
+	public String getSqlFor(String word, GenerateSqlType type)
+	{
+		if (StringUtil.isNullOrBlank(word))
+			return null;
+
+		if (needRefresh())
+			refresh();
+
+		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
+
+		// For completion, lets not assume "dbo"
+		String schemaName = sqlObj.getSchemaName();
+		if ("dbo".equals(schemaName))
+			schemaName = "";
+
+//		DbInfo        dbInfo    = getDbInfo(             sqlObj.getObjectName());
+		TableInfo     tabInfo   = getTableInfo(          sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
+//		FunctionInfo  funcInfo  = getFunctionInfo(       sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
+//		ProcedureInfo procInfo  = getProcedureInfo(      sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
+//		ProcedureInfo sProcInfo = getSystemProcedureInfo(sqlObj.getCatalogName(), schemaName, sqlObj.getObjectName(), true);
+
+//System.out.println("dbInfo="+dbInfo);
+//System.out.println("tabInfo="+tabInfo);
+//System.out.println("procInfo="+procInfo);
+//System.out.println("sProcInfo="+sProcInfo);
+
+		StringBuilder sb = new StringBuilder();
+//		if (dbInfo    != null) sb.append(dbInfo   .toSelect());
+//		if (tabInfo   != null) sb.append(tabInfo  .toSelect());
+//		if (funcInfo  != null) sb.append(funcInfo .toSelect());
+//		if (procInfo  != null) sb.append(procInfo .toSelect());
+//		if (sProcInfo != null) sb.append(sProcInfo.toSelect());
+
+		if (tabInfo != null)
+		{
+			if      (GenerateSqlType.SELECT         .equals(type)) { sb.append(tabInfo.toSelect()); }
+			else if (GenerateSqlType.SELECT_EXEC    .equals(type)) { sb.append(tabInfo.toSelect(true, -1)); }
+			else if (GenerateSqlType.SELECT_EXEC_TOP.equals(type)) { sb.append(tabInfo.toSelect(true, 1000)); }
+			else if (GenerateSqlType.INSERT         .equals(type)) { sb.append(tabInfo.toInsert()); }
+			else if (GenerateSqlType.UPDATE         .equals(type)) { sb.append(tabInfo.toUpdate()); }
+			else if (GenerateSqlType.DELETE         .equals(type)) { sb.append(tabInfo.toDelete()); }
+		}
+		else
+		{
+			return "-- Sorry: table '"+word+"' was not found in the dictionary.";
+		}
+
+//System.out.println("getSqlFor(word='"+word+"', type='"+type+"') tabInfo="+tabInfo+", sb.length()="+sb.length()+", sqlObj"+sqlObj);
+
+		if (sb.length() != 0)
+		{
+			return sb.toString();
+		}
+		
+		return null;
+	}
+
+	/**
+	 * Helper method to get the current text to lookup. It can be the text we are currently standing at, or the selected text
+	 * @param textComp
+	 * @return
+	 */
+	private String getLookupText(JTextComponent textComp)
+	{
+		String word;
+		String fullWord;
+		if (textComp instanceof RTextArea)
+		{
+			RTextArea rta = (RTextArea) textComp;
+			int dot = textComp.getCaretPosition();
+
+			word     = RSyntaxUtilitiesX.getCurrentWord(rta, dot, getCharsAllowedInWordCompletion());
+			fullWord = RSyntaxUtilitiesX.getCurrentFullWord(rta, dot);
+
+			String selectedText = textComp.getSelectedText();
+			if (selectedText != null)
+			{
+				word     = selectedText;
+				fullWord = selectedText;
+			}
+		}
+		else
+		{
+			String selectedText = textComp.getSelectedText();
+			word     = selectedText;
+			fullWord = selectedText;
+		}
+		
+		if (StringUtil.isNullOrBlank(fullWord))
+		{
+			SwingUtils.showInfoMessage(getGuiOwner(), "Nothing selected", "No text is selected, so nothing to lookup...");
+			return null;
+		}
+		return fullWord;
+	}
+
+	//-----------------------------------------------------------------------------
+	// SQL GENERATOR
+	//-----------------------------------------------------------------------------
+	private enum CmdOutputType {TO_CLIPBOARD, TO_EDITOR, TO_WINDOW, EXECUTE};
+
+	private class SqlGenerator extends TextAction
+	{
+		private static final long serialVersionUID = 1L;
+		private GenerateSqlType _generateType;
+		private CmdOutputType   _outputType;
+
+		public SqlGenerator(String name, CmdOutputType outputType, GenerateSqlType generateType)
+		{
+			super(name);
+			_outputType   = outputType;
+			_generateType = generateType;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			String sql = getSqlFor(getLookupText(getTextComponent(e)), _generateType);
+
+			if (StringUtil.hasValue(sql))
+			{
+				if (CmdOutputType.TO_CLIPBOARD.equals(_outputType))
+				{
+					SwingUtils.setClipboardContents(sql);
+				}
+
+				if (CmdOutputType.TO_EDITOR.equals(_outputType)) 
+				{
+					getTextComponent(e).replaceSelection(sql);
+				}
+
+				if (CmdOutputType.TO_WINDOW.equals(_outputType))
+				{
+					SqlTextDialog dialog = new SqlTextDialog(null, sql);
+					dialog.setVisible(true);
+				}
+
+				if (CmdOutputType.EXECUTE.equals(_outputType))
+				{
+					ConnectionProvider connProvider = getConnectionProvider();
+					if (connProvider instanceof QueryWindow)
+						((QueryWindow)connProvider).displayQueryResults(sql, 0, false);
+				}
+			}
+		}
+	}
+
+	//-----------------------------------------------------------------------------
+	// DDL
+	//-----------------------------------------------------------------------------
+	private enum DdlOutputType {TO_CLIPBOARD, TO_EDITOR, TO_WINDOW};
+
+	private class DdlOutput extends TextAction
+	{
+		private static final long serialVersionUID = 1L;
+		private DdlOutputType _type;
+		public DdlOutput(String name, DdlOutputType type)
+		{
+			super(name);
+			_type = type;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			String lookupText = getLookupText(getTextComponent(e));
+			if (lookupText == null)
+				return; // message popup is raised in getLookupText()
+
+			String retStr = null;
+			DdlGen ddlgen = null;
+			try
+			{
+				// Get default database
+				DbxConnection conn = getConnectionProvider().getConnection();
+				String dbname = conn.getCatalog();
+
+				ddlgen = DdlGen.create(conn, false, true);
+				ddlgen.setDefaultDbname(dbname);
+
+				// Generate the DDL
+				retStr = ddlgen.getDdlForType(Type.TABLE, lookupText);
+			}
+			catch (Throwable ex)
+			{
+				_logger.warn("Problems when generating DDL Statements: args="+(ddlgen==null?"null":ddlgen.getUsedCommand())+", Caught="+ex, ex);
+				SwingUtils.showErrorMessage(null, "Problems generating DDL", 
+						"<html>Problems when generating DDL Statements:<br>"
+						+ "args="+(ddlgen==null?"null":ddlgen.getUsedCommand())+"<br>"
+						+ "<br>"
+						+ ex
+						+ "</html>", ex);
+			}
+	
+			
+			if (StringUtil.hasValue(retStr))
+			{
+				if (DdlOutputType.TO_CLIPBOARD.equals(_type)) SwingUtils.setClipboardContents(retStr);
+				if (DdlOutputType.TO_EDITOR   .equals(_type)) getTextComponent(e).replaceSelection(retStr);
+				if (DdlOutputType.TO_WINDOW   .equals(_type))
+				{
+    				SqlTextDialog dialog = new SqlTextDialog(null, retStr);
+    				dialog.setVisible(true);
+				}
+			}
+		}
+	}
+
+//	//-----------------------------------------------------------------------------
+//	// SELECT
+//	//-----------------------------------------------------------------------------
+//	private class SelectToClipboard extends TextAction
+//	{
+//		private static final long serialVersionUID = 1L;
+//
+//		public SelectToClipboard()
+//		{
+//			super("To Clipboard");
+//		}
+//
+//		@Override
+//		public void actionPerformed(ActionEvent e)
+//		{
+//			String sql = getSqlFor(getLookupText(getTextComponent(e)), GenerateSqlType.SELECT);
+//
+//			if (StringUtil.hasValue(sql))
+//				SwingUtils.setClipboardContents(sql);
+//		}
+//	}
+
+	/*----------------------------------------------------------------------
+	**----------------------------------------------------------------------
+	** END: Generate SQL Menu
+	**----------------------------------------------------------------------
+	**----------------------------------------------------------------------*/ 	
+
+
+
+
+	/*----------------------------------------------------------------------
+	**----------------------------------------------------------------------
+	** BEGIN: Generate JAVA Menu
+	**----------------------------------------------------------------------
+	**----------------------------------------------------------------------*/ 
+	public JMenu createGenerateJavaMenu()
+	{
+		JMenu top = new JMenu("Generate Java Code, for selected text");
+
+		JMenu sqlStr = new JMenu("SQL String");
+		JMenu sqlSb  = new JMenu("SQL StringBuilder");
+
+		sqlStr.add(new JMenuItem( new JavaGenerator("To Clipboard",               CmdOutputType.TO_CLIPBOARD, GenerateJavaType.SQL_STRING)          ));
+		sqlStr.add(new JMenuItem( new JavaGenerator("To Separate Window",         CmdOutputType.TO_WINDOW,    GenerateJavaType.SQL_STRING)          ));
+
+		sqlSb.add( new JMenuItem( new JavaGenerator("To Clipboard",               CmdOutputType.TO_CLIPBOARD, GenerateJavaType.SQL_STRINGBUILDER)   ));
+		sqlSb.add( new JMenuItem( new JavaGenerator("To Separate Window",         CmdOutputType.TO_WINDOW,    GenerateJavaType.SQL_STRINGBUILDER)   ));
+
+		top.add(sqlStr);
+		top.add(sqlSb);
+		
+		return top;
+	}
+
+	/**
+	 * 
+	 */
+	public String getJavaFor(String inputStr, GenerateJavaType type)
+	{
+//System.out.println("getJavaFor: type="+type);
+//System.out.println("getJavaFor: inputStr=|"+inputStr+"|");
+		if (StringUtil.isNullOrBlank(inputStr))
+			return null;
+
+		// Destination
+		StringBuilder sb = new StringBuilder();
+
+		// Get a list, one entry for each row
+		List<String> lines;
+		try { lines = IOUtils.readLines(new StringReader(inputStr)); }
+		catch(IOException e) { return null; }
+
+		// Get max width
+		int maxStrLen = 0;
+		for (String line : lines)
+			maxStrLen = Math.max(maxStrLen, line.length());
+		
+		char qc = '"';
+
+		
+		if (GenerateJavaType.SQL_STRING.equals(type)) 
+		{
+			sb.append("String sql = ").append(qc).append(qc).append("\n");
+			for (String str : lines)
+			{
+				String toPrint = StringUtil.rtrim2(str).replace("\"", "\\\"");
+				sb.append("    + ").append(qc).append(toPrint).append(" \\n").append(qc).append("\n");
+			}
+			sb.append("    + ").append(qc).append(qc).append(";\n");
+		}
+		else if (GenerateJavaType.SQL_STRINGBUILDER.equals(type))
+		{
+			sb.append("StringBuilder sb = new StringBuilder();\n");
+			for (String str : lines)
+			{
+				String toPrint = StringUtil.rtrim2(str).replace("\"", "\\\"");
+				sb.append("sb.append(").append(qc).append(toPrint).append(" \\n").append(qc).append("); \n");
+			}
+			sb.append("String sql = sb.toString();\n"); 
+		}
+
+		if (sb.length() != 0)
+		{
+			return sb.toString();
+		}
+		
+		return null;
+	}
+
+	//-----------------------------------------------------------------------------
+	// JAVA GENERATOR
+	//-----------------------------------------------------------------------------
+//	private enum CmdOutputType {TO_CLIPBOARD, TO_EDITOR, TO_WINDOW, EXECUTE};
+
+	private class JavaGenerator extends TextAction
+	{
+		private static final long serialVersionUID = 1L;
+		private GenerateJavaType _generateType;
+		private CmdOutputType   _outputType;
+
+		public JavaGenerator(String name, CmdOutputType outputType, GenerateJavaType generateType)
+		{
+			super(name);
+			_outputType   = outputType;
+			_generateType = generateType;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			String text = getJavaFor(getLookupText(getTextComponent(e)), _generateType);
+
+			if (StringUtil.hasValue(text))
+			{
+				if (CmdOutputType.TO_CLIPBOARD.equals(_outputType))
+				{
+					SwingUtils.setClipboardContents(text);
+				}
+
+				if (CmdOutputType.TO_EDITOR.equals(_outputType)) 
+				{
+					getTextComponent(e).replaceSelection(text);
+				}
+
+				if (CmdOutputType.TO_WINDOW.equals(_outputType))
+				{
+					SqlTextDialog dialog = new SqlTextDialog(null, text);
+					dialog.setVisible(true);
+				}
+			}
+		}
+	}
+
+	/*----------------------------------------------------------------------
+	** END: Generate SQL Menu
+	**----------------------------------------------------------------------*/ 	
 }
 
 

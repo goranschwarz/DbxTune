@@ -3,6 +3,8 @@ package com.asetune.gui.swing;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.text.Collator;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.Stack;
 import java.util.regex.Pattern;
 
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.RowFilter;
@@ -19,6 +22,8 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
@@ -31,6 +36,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 import net.sf.jsqlparser.JSQLParserException;
@@ -117,6 +123,9 @@ extends JPanel
 	private GTextField _filter_txt = new GTextField();
 	private JLabel     _filter_cnt = new JLabel();
 	
+	private JCheckBox  _filter_chk = new JCheckBox("", true);
+	private boolean    _filter_chk_visible = false;
+	
 	private static final String FILTER_TOOLTIP = "<html>"
 			+ "Enter a search criteria that will search <b>all</b> columns in the table<br>"
 			+ "<b>Tip</b>: regular expresion can be used.<br>"
@@ -143,12 +152,52 @@ extends JPanel
 	
 	public GTableFilter(JXTable table)
 	{
-		this(table, ROW_COUNT_LAYOUT_RIGHT);
+		this(table, ROW_COUNT_LAYOUT_RIGHT, false);
 	}
 	public GTableFilter(JXTable table, int rowCountLayout)
 	{
+		this(table, rowCountLayout, false);
+	}
+	public GTableFilter(JXTable table, int rowCountLayout, boolean showCheckbox)
+	{
 		_table = table;
 		_rowCntLayout = rowCountLayout;
+		_filter_chk_visible = showCheckbox;
+
+		// Create and Add table model listener, so when the table content is changed we can update the rowcount field
+		final TableModelListener tml = new TableModelListener()
+		{
+			@Override
+			public void tableChanged(TableModelEvent e)
+			{
+				// event: AbstactTableModel.fireTableStructureChanged
+				if ( SwingUtils.isStructureChanged(e) )
+					refreshCompletion();
+
+				updateRowCount();
+			}
+		};
+		_table.getModel().addTableModelListener(tml);
+
+		// on JTable.setModel() a PropertyChangeListener is fired with property "model"
+		_table.addPropertyChangeListener("model", new PropertyChangeListener()
+		{
+			@Override
+			public void propertyChange(PropertyChangeEvent evt)
+			{
+				Object oldTm = evt.getOldValue();
+				Object newTm = evt.getNewValue();
+
+				// Remove This listener from the old TableModel
+				if (oldTm instanceof AbstractTableModel)
+					((AbstractTableModel)oldTm).removeTableModelListener(tml);
+				
+				// ADD This listener to the NEW TableModel
+				if (newTm instanceof AbstractTableModel)
+					((AbstractTableModel)newTm).addTableModelListener(tml);
+			}
+		});
+
 		initComponents();
 	}
 
@@ -157,6 +206,12 @@ extends JPanel
 	
 	public void setDeferredFilterSleepTime(int timeInMs) { _deferredFilterSleepTime = timeInMs; }
 	public void setDeferredFilterThreshold(int rows)     { _deferredFilterThreshold = rows; }
+
+	public void   setText(String str) { _filter_txt.setText(str); }
+	public String getText()           { return _filter_txt.getText(); }
+
+	public boolean isFilterChkboxSelected()             { return _filter_chk.isSelected(); }
+	public void    setFilterChkboxSelected(boolean val) { _filter_chk.setSelected(val); _filter_txt.setEnabled(val); }
 	
 	/*---------------------------------------------------
 	** BEGIN: component initialization
@@ -168,15 +223,20 @@ extends JPanel
 
 		// Add Code Completion to the text field
 		_filter_txt.addCompletion(_table);
-		
+
+		_filter_chk.setVisible(_filter_chk_visible);
+		_filter_chk.setToolTipText("<html>Quick way to enable/disable this filter without removing/deleting the text content</html>");
+			
 		if (_rowCntLayout == ROW_COUNT_LAYOUT_RIGHT)
 		{
+			add(_filter_chk, "hidemode 3");
 			add(_filter_lbl, "");
 			add(_filter_txt, "growx, pushx");
 			add(_filter_cnt, "wrap");
 		}
 		else // ROW_COUNT_LAYOUT_LEFT
 		{
+			add(_filter_chk, "hidemode 3");
 			add(_filter_lbl, "");
 			add(_filter_cnt, "");
 			add(_filter_txt, "growx, pushx, wrap");
@@ -213,6 +273,15 @@ extends JPanel
 				}
 			}
 		});
+		
+		_filter_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				applyFilter();
+			}
+		});
 
 		// Set some ToolTip
 		_filter_lbl.setToolTipText(FILTER_TOOLTIP);
@@ -223,8 +292,33 @@ extends JPanel
 		resetFilter();
 	}
 	
+	public void refreshCompletion()
+	{
+		_filter_txt.refreshCompletion(_table);
+	}
+
+	/**
+	 * Simply update the rowcount label
+	 */
+	public void updateRowCount()
+	{
+		NumberFormat nf = NumberFormat.getInstance();
+		String rowc = nf.format(_table.getRowCount()) + "/" + nf.format(_table.getModel().getRowCount());
+		_filter_cnt.setText(rowc);
+	}
+
 	public void applyFilter()
 	{
+		// The text field should be enabled/disabled based on the Checkbox
+		_filter_txt.setEnabled(_filter_chk.isSelected());
+
+		// IF the filter checkbox is NOT set, simply reset the filter and return
+		if ( _filter_chk_visible && ! _filter_chk.isSelected() )
+		{
+			_table.setRowFilter(null);
+			return;
+		}
+		
 		try
 		{
 			String searchStringNoTrim = _filter_txt.getText();
@@ -242,9 +336,12 @@ extends JPanel
 				{
     				// Create a array with all visible columns... hence: it's only those we want to search
     				// Note the indices are MODEL column index
-    				int[] mcols = new int[_table.getColumnCount()];
+//    				int[] mcols = new int[_table.getColumnCount()];
+//    				for (int i=0; i<mcols.length; i++)
+//    					mcols[i] = _table.convertColumnIndexToModel(i);
+    				int[] mcols = new int[_table.getModel().getColumnCount()];
     				for (int i=0; i<mcols.length; i++)
-    					mcols[i] = _table.convertColumnIndexToModel(i);
+    					mcols[i] = i;
     
     				_table.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString, mcols));
 				}
@@ -254,6 +351,10 @@ extends JPanel
 		}
 		catch (Throwable t)
 		{
+			// Well if we "restore" a saved filter and parse that, AND we got 0 columns the parser will complain about missing column names...  
+			if (_table.getColumnCount() == 0)
+				return;
+
 			if (_logger.isDebugEnabled())
 				_logger.debug("Stacktrace for WHERE parsing", t);
 
@@ -263,10 +364,7 @@ extends JPanel
 			_filter_txt.setToolTipText("<html><pre><code>" + StringUtil.toHtmlString(t) + "</code></pre></html>");
 			_filter_txt.setBackground(ERROR_COLOR);
 		}
-		
-		NumberFormat nf = NumberFormat.getInstance();
-		String rowc = nf.format(_table.getRowCount()) + "/" + nf.format(_table.getModel().getRowCount());
-		_filter_cnt.setText(rowc);
+		updateRowCount();
 	}
 
 	public void resetFilter()
@@ -274,9 +372,17 @@ extends JPanel
 		_filter_txt.setText("");
 		_table.setRowFilter(null);
 
-		NumberFormat nf = NumberFormat.getInstance();
-		String rowc = nf.format(_table.getRowCount()) + "/" + nf.format(_table.getModel().getRowCount());
-		_filter_cnt.setText(rowc);
+		updateRowCount();
+	}
+
+	/**
+	 * Set the filter text and apply the filter
+	 * @param string
+	 */
+	public void setFilterText(String text)
+	{
+		_filter_txt.setText(text);
+		applyFilter();
 	}
 
 	/**
@@ -286,6 +392,15 @@ extends JPanel
 	public String getFilterInfo()
 	{
 		return "Filter information: visibleRows=" + _table.getRowCount() + ", actualRows=" + _table.getModel().getRowCount() + ", filterText='" + _filter_txt.getText() + "'.";
+	}
+
+	/**
+	 * Check if the filer box is empty
+	 * @return
+	 */
+	public boolean hasFilterInfo()
+	{
+		return StringUtil.hasValue(_filter_txt.getText());
 	}
 
 	/**
@@ -384,9 +499,17 @@ extends JPanel
 		}
 		private void closeAnd()
 		{
+			closeAnd(false);
+		}
+		private void closeAnd(boolean isNot)
+		{
 			ALocalFilter<TableModel, Integer> thisLevel = _andOrStack.pop();
 			ALocalFilter<TableModel, Integer> lastLevel = _andOrStack.peek();
-			lastLevel.addFilter(thisLevel);
+
+			if ( isNot )
+				lastLevel.addFilter( RowFilter.notFilter(thisLevel) );
+			else
+				lastLevel.addFilter(thisLevel);
 			
 			if (_logger.isDebugEnabled()) dp("< closeAndOr(): _andOrStack.size()="+_andOrStack.size() +", lastLevel.size()="+lastLevel.size());
 		}
@@ -590,7 +713,10 @@ extends JPanel
 
 			String likeStr = _lastStrValue.replace("_", ".").replace("%", ".*");
 			likeStr = "^" + likeStr + "$";
-			addRowFilter(RowFilter.regexFilter(likeStr, _lastColIndex));
+			if (expr.isNot())
+				addRowFilter(RowFilter.notFilter(RowFilter.regexFilter(likeStr, _lastColIndex)));
+			else
+				addRowFilter(RowFilter.regexFilter(likeStr, _lastColIndex));
 //			addRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, likeStr));
 		}
 
@@ -650,16 +776,30 @@ extends JPanel
 			expr.getRightItemsList().accept(ilv);
 			if (_logger.isDebugEnabled()) in("<--- InExpression-visitor: "+expr);
 			
-			
-			startOr();
-			if (_logger.isDebugEnabled()) in("---> Simulate-OR-InExpression-visitor(start): "+expr);
-			for (String str : inListValues)
+			if (expr.isNot())
 			{
-				addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_EQ, _lastColIndex, str));
-				if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_EQ, colId="+_lastColIndex+", str=|"+str+"|.");
+				startAnd();
+				if (_logger.isDebugEnabled()) in("---> Simulate-AND-InExpression-visitor(start): "+expr);
+				for (String str : inListValues)
+				{
+					addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_NE, _lastColIndex, str));
+					if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_NE, colId="+_lastColIndex+", str=|"+str+"|.");
+				}
+				if (_logger.isDebugEnabled()) out("<--- Simulate-AND-InExpression-visitor(out): "+expr);
+				closeAnd();
 			}
-			if (_logger.isDebugEnabled()) out("<--- Simulate-OR-InExpression-visitor(out): "+expr);
-			closeOr();
+			else
+			{
+				startOr();
+				if (_logger.isDebugEnabled()) in("---> Simulate-OR-InExpression-visitor(start): "+expr);
+				for (String str : inListValues)
+				{
+					addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_EQ, _lastColIndex, str));
+					if (_logger.isDebugEnabled()) dp("     add or value: FILTER_OP_EQ, colId="+_lastColIndex+", str=|"+str+"|.");
+				}
+				if (_logger.isDebugEnabled()) out("<--- Simulate-OR-InExpression-visitor(out): "+expr);
+				closeOr();
+			}
 		}
 
 		//-------------------------------------------------------
@@ -672,7 +812,34 @@ extends JPanel
 			expr.getLeftExpression().accept(this);
 			if (_logger.isDebugEnabled()) out("<--- IsNullExpression-visitor: "+expr);
 
-			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_IS_NULL, _lastColIndex, null));
+			if (expr.isNot())
+				addRowFilter(RowFilter.notFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_IS_NULL, _lastColIndex, null)));
+			else
+				addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_IS_NULL, _lastColIndex, null));
+		}
+		
+		//-------------------------------------------------------
+		// BETWEEN
+		//-------------------------------------------------------
+		@Override public void visit(Between expr)
+		{
+			if (_logger.isDebugEnabled()) in("---> Between-visitor: "+expr);
+			
+			startAnd();
+
+			expr.getLeftExpression().accept(this);
+			expr.getBetweenExpressionStart().accept(this);
+			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_GT_OR_EQ, _lastColIndex, _lastStrValue));
+
+			expr.getLeftExpression().accept(this);
+			expr.getBetweenExpressionEnd().accept(this);
+			addRowFilter(new RowFilterOpValue(RowFilterOpValue.FILTER_OP_LT_OR_EQ, _lastColIndex, _lastStrValue));
+
+			closeAnd( expr.isNot() );
+
+			if (_logger.isDebugEnabled()) out("<--- Between-visitor: "+expr);
+			
+//			throw new FilterParserException("Operation 'Between' not yet implemeted.");			
 		}
 
 		//-------------------------------------------------------
@@ -692,6 +859,12 @@ extends JPanel
 			}
 			else
 			{
+				// check for SQL-Server like quoted identifier
+				if (key.startsWith("[") && key.endsWith("]"))
+				{
+					key = key.substring(1, key.length()-1);
+				}
+
 				int colIndex = _tm.findColumn(key);
 				if (colIndex < 0)
 					throw new FilterParserException("Column '"+key+"', can't be found in the table.");
@@ -778,7 +951,7 @@ extends JPanel
 //		@Override public void visit(GreaterThanEquals expr)            { throw new FilterParserException("Operation 'GreaterThanEquals' not yet implemeted."); }
 //		@Override public void visit(GreaterThan expr)                  { throw new FilterParserException("Operation 'GreaterThan' not yet implemeted."); }
 //		@Override public void visit(EqualsTo expr)                     { throw new FilterParserException("Operation 'EqualsTo' not yet implemeted."); }
-		@Override public void visit(Between expr)                      { throw new FilterParserException("Operation 'Between' not yet implemeted."); }
+//		@Override public void visit(Between expr)                      { throw new FilterParserException("Operation 'Between' not yet implemeted."); }
 //		@Override public void visit(OrExpression expr)                 { throw new FilterParserException("Operation 'OrExpression' not yet implemeted."); }
 //		@Override public void visit(AndExpression expr)                { throw new FilterParserException("Operation 'AndExpression' not yet implemeted."); }
 		@Override public void visit(Subtraction expr)                  { throw new FilterParserException("Operation 'Subtraction' not yet implemeted."); }

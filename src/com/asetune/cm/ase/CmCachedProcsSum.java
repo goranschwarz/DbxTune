@@ -268,7 +268,8 @@ extends CountersModel
 			SumActive + ase1600_nl +
 			"  SumMemUsageKB         = sum(convert(bigint,MemUsageKB)), \n" +
 			"  MaxCompileDate        = max(CompileDate), \n" +
-			"  MinCompileAgeInSec    = datediff(ss, max(CompileDate), getdate()), \n" +
+//			"  MinCompileAgeInSec    = datediff(ss, max(CompileDate), getdate()), \n" +
+			"  MinCompileAgeInSec    = CASE WHEN datediff(day, CompileDate, getdate()) >= 24 THEN -1 ELSE  datediff(ss, CompileDate, getdate()) END, \n" +
 			"  SumRequestCnt         = sum(convert(bigint,RequestCnt)), \n" +
 			"  SumRequestCntDiff     = sum(convert(bigint,RequestCnt)), \n" +
 			"  SumTempdbRemapCnt     = sum(convert(bigint,TempdbRemapCnt)), \n" +

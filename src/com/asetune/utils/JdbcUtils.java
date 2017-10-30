@@ -82,13 +82,13 @@ public class JdbcUtils
 //				urlMap.put("MAX_COMPACT_TIME",  "2000");
 //			}
 
-			// AutoServer mode
-			if ( ! urlMap.containsKey("AUTO_SERVER") )
-			{
-				change = true;
-				_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
-				urlMap.put("AUTO_SERVER",  "TRUE");
-			}
+//			// AutoServer mode
+//			if ( ! urlMap.containsKey("AUTO_SERVER") )
+//			{
+//				change = true;
+//				_logger.info("H2 URL add option: AUTO_SERVER=TRUE");
+//				urlMap.put("AUTO_SERVER",  "TRUE");
+//			}
 
 //			// DATABASE_EVENT_LISTENER
 //			if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )

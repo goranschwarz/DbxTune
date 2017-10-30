@@ -1,6 +1,7 @@
 package com.asetune.cm.rs;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -14,6 +15,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 
@@ -123,11 +125,12 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = new String[] { "-added-at-runtime-" };
+		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
-		addTrendGraphData(GRAPH_NAME_XACT_SUCCEEDED,     new TrendGraphDataPoint(GRAPH_NAME_XACT_SUCCEEDED,    labels));
-		addTrendGraphData(GRAPH_NAME_CMD_READ,           new TrendGraphDataPoint(GRAPH_NAME_CMD_READ,          labels));
-		addTrendGraphData(GRAPH_NAME_CMD_PARSED_BY_SQT,  new TrendGraphDataPoint(GRAPH_NAME_CMD_PARSED_BY_SQT, labels));
+		addTrendGraphData(GRAPH_NAME_XACT_SUCCEEDED,     new TrendGraphDataPoint(GRAPH_NAME_XACT_SUCCEEDED,    labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CMD_READ,           new TrendGraphDataPoint(GRAPH_NAME_CMD_READ,          labels, LabelType.Dynamic));
+		addTrendGraphData(GRAPH_NAME_CMD_PARSED_BY_SQT,  new TrendGraphDataPoint(GRAPH_NAME_CMD_PARSED_BY_SQT, labels, LabelType.Dynamic));
 
 		// if GUI
 		if (getGuiController() != null && getGuiController().hasGUI())
@@ -137,8 +140,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_XACT_SUCCEEDED,
-				"DSI: Number of Transactions Succeeded (per second)", // Menu CheckBox text
-				"DSI: Number of Transactions Succeeded (per second)", // Label 
+				"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Menu CheckBox text
+				"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -149,8 +152,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_CMD_READ,
-					"DSI: Number of Commands Read (per second)", // Menu CheckBox text
-					"DSI: Number of Commands Read (per second)", // Label 
+					"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Menu CheckBox text
+					"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -161,8 +164,8 @@ extends CountersModel
 
 			//-----
 			tg = new TrendGraph(GRAPH_NAME_CMD_PARSED_BY_SQT,
-					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (per second)", // Menu CheckBox text
-					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (per second)", // Label 
+					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Menu CheckBox text
+					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Label 
 				labels, 
 				false, // is Percent Graph
 				this, 
@@ -174,58 +177,101 @@ extends CountersModel
 		}
 	}
 
+	private List<Integer> getValidRows()
+	{
+		ArrayList<Integer> list = new ArrayList<>(this.size()); 
+		for (int i = 0; i < this.size(); i++)
+		{
+			// Records with an empty CurrentOriginQID, shouldn't be in the graph, since nothing has been replicated.
+			String CurrentOriginQID = this.getAbsString(i, "Current Origin QID");
+			if ( ! "0x000000000000000000000000000000000000000000000000000000000000000000000000".equals(CurrentOriginQID) )
+				list.add(i);
+		}
+		return list;
+	}
+
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
 		if (GRAPH_NAME_XACT_SUCCEEDED.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "Xacts_succeeded");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Xacts_succeeded");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "Xacts_succeeded");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_CMD_READ.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "Cmds_read");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Cmds_read");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "Cmds_read");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
 		if (GRAPH_NAME_CMD_PARSED_BY_SQT.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every device
-			Double[] dArray = new Double[this.size()];
+			List<Integer> validRows = getValidRows();
+			
+			Double[] dArray = new Double[validRows.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
 			{
-				lArray[i] = this.getRateString       (i, "Info");
-				dArray[i] = this.getRateValueAsDouble(i, "Cmds_parsed_by_sqt");
+				lArray[i] = this.getRateString       (validRows.get(i), "Info");
+				dArray[i] = this.getRateValueAsDouble(validRows.get(i), "Cmds_parsed_by_sqt");
 			}
 
 			// Set the values
-			tgdp.setDate(this.getTimestamp());
-			tgdp.setLabel(lArray);
-			tgdp.setData(dArray);
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+
+//			Double[] dArray = new Double[this.size()];
+//			String[] lArray = new String[dArray.length];
+//			for (int i = 0; i < dArray.length; i++)
+//			{
+//				lArray[i] = this.getRateString       (i, "Info");
+//				dArray[i] = this.getRateValueAsDouble(i, "Cmds_parsed_by_sqt");
+//			}
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 	}
 

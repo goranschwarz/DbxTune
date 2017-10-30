@@ -87,6 +87,7 @@ import org.jdesktop.swingx.table.ColumnControlButton;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
+import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.swing.ColumnHeaderPropsEntry;
@@ -96,6 +97,7 @@ import com.asetune.gui.swing.GPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTabbedPaneWindowProps;
 import com.asetune.gui.swing.GTable;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.gui.swing.RowFilterDiffCounterIsZero;
 import com.asetune.gui.swing.RowFilterValueAndOp;
 import com.asetune.pcs.InMemoryCounterHandler;
@@ -160,6 +162,7 @@ implements
 
 	private JPanel					_filterPanel;
 	private JLabel					_filterColumn_lbl					= new JLabel("Column");
+	private JCheckBox				_filterColumn_chk					= new JCheckBox("", true);
 	private JComboBox<String>		_filterColumn_cb					= new JComboBox<String>();
 	private JLabel					_filterOperation_lbl				= new JLabel("Operation");
 	private JComboBox<String>		_filterOperation_cb					= new JComboBox<String>();
@@ -173,7 +176,9 @@ implements
 	private List<RowFilter<TableModel,Integer>>	_tableRowFilterList	         = new ArrayList<RowFilter<TableModel,Integer>>();
 	private RowFilterValueAndOp                 _tableRowFilterValAndOp      = null;
 	private RowFilterDiffCounterIsZero          _tableRowFilterDiffCntIsZero = null;
-	
+
+	private GTableFilter                        _tableFreetextFilter         = null;
+
 	// COUNTER Panel
 	private JPanel					_counterPanel;
 	private JRadioButton			_counterAbs_rb						= new JRadioButton("Absolute values");
@@ -196,6 +201,7 @@ implements
 	private JTextField				_timeSample_txt						= new JTextField(_timeEmptyConstant);
 	private JLabel					_timeIntervall_lbl					= new JLabel("Intervall (ms)");
 	private JTextField				_timeIntervall_txt					= new JTextField();
+	private JCheckBox				_timePostponeIsEnabled_chk			= new JCheckBox();
 	private JLabel					_timePostpone_lbl					= new JLabel("Postpone time");
 	private JTextField				_timePostpone_txt					= new JTextField();
 //	private JCheckBox				_timePostpone_lbl					= new JCheckBox("", true); // not used, maybe in the future
@@ -326,6 +332,9 @@ implements
 		_tableRowFilterList.add(_tableRowFilterValAndOp);
 		_tableRowFilterList.add(_tableRowFilterDiffCntIsZero);
 		_tableRowFilter = RowFilter.andFilter(_tableRowFilterList);
+		
+		// Install "freetext" filter
+		_tableFreetextFilter = new GTableFilter(_dataTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 
 		initComponents();
 
@@ -436,6 +445,7 @@ implements
    			_timeClear_txt             .setVisible(showClearTime);
    			_timeHeadSample_lbl        .setVisible(!showClearTime);
    			_timeHeadSample_txt        .setVisible(!showClearTime);
+			_timePostponeIsEnabled_chk .setVisible(true);
 			_timePostpone_lbl          .setVisible(true);
 			_timePostpone_txt          .setVisible(true);
 			_timeViewStored_lbl        .setVisible(false);
@@ -485,6 +495,7 @@ implements
 			_timeClear_txt             .setVisible(false);
 			_timeHeadSample_lbl        .setVisible(true);
 			_timeHeadSample_txt        .setVisible(true);
+			_timePostponeIsEnabled_chk .setVisible(false);
 			_timePostpone_lbl          .setVisible(false);
 			_timePostpone_txt          .setVisible(false);
 			_timeViewStored_lbl        .setVisible(true);
@@ -597,6 +608,7 @@ implements
 				_counterAbs_rb.setSelected(true);
 			}
 			setPostponeTime(_cm.getPostponeTime());
+			setPostponeIsEnabled(_cm.isPostponeEnabled());
 
 			_dataTable.setModel(_cm);
 			_cm.addTableModelListener(this);
@@ -790,6 +802,8 @@ implements
 
 	public void refreshFilterColumns(TableModel tm)
 	{
+		_tableFreetextFilter.refreshCompletion();
+
 		if (tm != null)
 		{
 			int tmSize = tm.getColumnCount();
@@ -957,6 +971,13 @@ implements
 			_optionQueryTimeout_txt.setText(Integer.toString(queryTimeout));
 	}
 
+	public void setPostponeIsEnabled(boolean enabled)
+	{
+		_timePostponeIsEnabled_chk.setSelected(enabled);
+		_timePostpone_txt.setEnabled(enabled);
+		
+	}
+
 	public void setPostponeTime(int postponeTime)
 	{
 		if ( postponeTime == 0 )
@@ -1037,8 +1058,9 @@ implements
 	private JPanel createTopPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Top", false);
-		panel.setLayout(new MigLayout(_migDebug ? "debug" : "" + "ins 3 10 3 3", // ins T L B R???
-				"[] [] [] []", ""));
+//		panel.setLayout(new MigLayout(_migDebug ? "debug" : "" + "ins 3 10 3 3", // ins Top Left Bottom Right
+//				"[] [] [] []", ""));
+		panel.setLayout(new MigLayout((_migDebug ? "debug, " : "") + "ins 3 10 0 3")); // ins Top Left Bottom Right
 
 		JLabel title = new JLabel(_displayName);
 //		title.setFont(new java.awt.Font(Font.DIALOG, Font.BOLD, 16));
@@ -1050,24 +1072,16 @@ implements
 		_optionsPanel      = createOptionsPanel();
 		_localOptionsPanel = createLocalOptionsPanel();
 
-		// Title over filter panel
-		// panel.add(title, "span 1 1, split 2, top, flowy");
-		// panel.add(_filterPanel, "flowx, grow");
-		// panel.add(_counterPanel, "top, grow");
-		// panel.add(_timeInfoPanel, "top, grow");
-		// panel.add(_optionsPanel, "top, grow");
-
-		// Title over counter panel
-		panel.add(title, "span 1 1, split 2, top, flowy");
-		panel.add(_counterPanel, "flowx, grow");
-		panel.add(_filterPanel, "top, grow");
-		panel.add(_timeInfoPanel, "top, grow");
-		panel.add(_optionsPanel, "top, grow");
+		panel.add(title,          "span 1 1, split 2, top, flowy");
+		panel.add(_counterPanel,  "flowx, top, growx");
+		panel.add(_filterPanel,   "top, growx");
+		panel.add(_timeInfoPanel, "top, growx");
+		panel.add(_optionsPanel,  "top, growx");
 		if (_localOptionsPanel != null)
-			panel.add(_localOptionsPanel, "top, grow");
-			
+			panel.add(_localOptionsPanel, "top, growx");
 
-		panel.add(_tabDockUndockButton, "top, right, push");
+		panel.add(_tabDockUndockButton, "top, right, push, wrap");
+		panel.add(_tableFreetextFilter, "gapleft 10, dock south"); // gap left [right] [top] [bottom]
 
 		return panel;
 	}
@@ -1690,8 +1704,10 @@ implements
 //		TablePopupFactory.createMenu(popup, TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
 //		TablePopupFactory.createMenu(popup, _displayName.replaceAll(" ", "") + "." + TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
 
-		String propPrefix  = _displayName.replaceAll(" ", "") + ".";
-		String propPostfix = "ase.";
+//		String propPrefix  = _displayName.replaceAll(" ", "") + ".";
+		String propPrefix  = getName() + ".";
+		String propPostfix = getCm().getGuiController().getTablePopupDbmsVendorString() + ".";
+//		String propPostfix = "ase."; 
 		TablePopupFactory.createMenu(popup, 
 				TablePopupFactory.TABLE_PUPUP_MENU_PREFIX + propPostfix, 
 				Configuration.getCombinedConfiguration(), 
@@ -1840,7 +1856,7 @@ implements
 	private JPanel createFilterPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Filter", true);
-		panel.setLayout(new MigLayout(_migDebug ? "debug, " : "" + "ins 0", "[] [grow]", ""));
+		panel.setLayout(new MigLayout((_migDebug ? "debug, " : "") + "ins 0", "[] [grow]", ""));
 
 		_filterColumn_cb.addItem(FILTER_NO_COLUMN_IS_SELECTED);
 
@@ -1853,6 +1869,7 @@ implements
 		AutoCompleteDecorator.decorate(_filterColumn_cb);
 		AutoCompleteDecorator.decorate(_filterOperation_cb);
 		
+		_filterColumn_chk        .setToolTipText("<html>Quick way to enable/disable filter on columns via this input</html>");
 		_filterColumn_cb         .setToolTipText("<html>Column that you want to filter on.</html>");
 		_filterOperation_cb      .setToolTipText("<html>Operation to use when filtering data.</html>");
 		_filterValue_tf          .setToolTipText("<html>Value to filter on, in the specified Column. <br><br>RegExp will be used for operator 'Equal' and 'Not Equal' (even for integer values).<br>To Apply the filter value, simply press &lt;return&gt;, leave the field, or press the apply button to the right.<br><br><b>Example</b>: '^2$|38|39|40' if you want to filter on DBID: 2,38,39,40<br></html>");
@@ -1865,7 +1882,8 @@ implements
 		_filterValue_but.setMargin( new Insets(0,0,0,0) );
 		
 		panel.add(_filterColumn_lbl, "");
-		panel.add(_filterColumn_cb,  "growx, wrap");
+		panel.add(_filterColumn_cb,  "growx, split");
+		panel.add(_filterColumn_chk, "wrap");
 
 		panel.add(_filterOperation_lbl, "");
 		panel.add(_filterOperation_cb,  "growx, wrap");
@@ -1874,7 +1892,7 @@ implements
 		panel.add(_filterValue_tf,  "split, growx");
 		panel.add(_filterValue_but, "gapx 0 0, wrap");
 
-		panel.add(_filterNoZeroCounters_chk, "span, wrap");
+		panel.add(_filterNoZeroCounters_chk, "span");
 
 		_filterColumn_cb.setMaximumRowCount(50);
 
@@ -1884,7 +1902,7 @@ implements
 	private JPanel createCounterTypePanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Show Counter Type", true);
-		panel.setLayout(new MigLayout(_migDebug ? "debug, " : "" + "wrap 2, ins 0", "", "0[0]0"));
+		panel.setLayout(new MigLayout((_migDebug ? "debug, " : "") + "wrap 2, ins 0", "", "0[0]0"));
 
 		_counterDelta_rb.setForeground(Color.BLUE);
 		_counterRate_rb .setForeground(Color.BLUE);
@@ -1945,7 +1963,7 @@ implements
 		panel.setBorder(BorderFactory.createTitledBorder("Sample Information"));
 
 //		panel.setLayout(new MigLayout(_migDebug ? "debug, " : "" + "wrap 2, ins 0", "[growx] [growx]", ""));
-		panel.setLayout(new MigLayout("wrap 2, ins 0", "[fill] [fill]", ""));
+		panel.setLayout(new MigLayout( (_migDebug ? "debug, " : "") + "wrap 2, ins 0", "[fill] [fill]", ""));
 
 		_timeClear_txt     .setEditable(false);
 		_timeHeadSample_txt.setEditable(false);
@@ -1963,6 +1981,7 @@ implements
 		_timeHeadSample_txt.setToolTipText("<html>This is the Head/Main sample time, which is when we started to sample all individual Performance Counters. Also this would be the time in the 'slider'<br>If this is ORANGE it means that underlying counters has been cleared (for instance by sp_sysmon).</html>");
 		_timeSample_txt    .setToolTipText("Date when the data showned in the table was sampled.");
 		_timeIntervall_txt .setToolTipText("Milliseconds since last sample period.");
+		_timePostponeIsEnabled_chk.setToolTipText("<html>Should we use postpone time or not.<br>This mean that we can temporaraly disable the postpone, without changing the postpone time...</html>");
 		_timePostpone_txt  .setToolTipText("<html>If you want to skip some intermidiate samples, Here you can specify minimum seconds between samples.<br>tip: '10m' is 10 minutes, '24h' is 24 hours</html>");
 		_timeViewStored_lbl.setToolTipText("You are viewing data that has been stored in the In Memory Counter Storage or the Persistent Counter Storage");
 
@@ -1996,8 +2015,9 @@ implements
 //		panel.add(_timeIntervall_txt,  "width 132lp!, growx, wrap");
 		panel.add(_timeIntervall_txt,  "growx, wrap");
 
-		panel.add(_timePostpone_lbl,   "hidemode 3");
-		panel.add(_timePostpone_txt,   "hidemode 3, growx, wrap");
+		panel.add(_timePostpone_lbl,           "hidemode 3");
+		panel.add(_timePostpone_txt,           "hidemode 3, split, growx");
+		panel.add(_timePostponeIsEnabled_chk,  "hidemode 3, wrap");
 
 		panel.add(_timeOfflineRewind_but,      "hidemode 3, left, bottom, span 2, split 3");
 		panel.add(_timeViewStored_lbl,         "hidemode 3, growx, center, bottom");
@@ -2010,7 +2030,7 @@ implements
 	private JPanel createOptionsPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Options", true);
-		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
+		panel.setLayout(new MigLayout((_migDebug ? "debug, " : "") + "ins 0, gap 0", "", "0[0]0"));
 
 		_optionPauseDataPolling_chk     .setToolTipText("<html>Pause data polling for this Tab. This makes the values easier to read...</html>");
 		_optionEnableBgPolling_chk      .setToolTipText("<html>Sample this panel even when this Tab is not active.<br><b>Note:</b> If there are active graphs attached, it implies that data will be sampled even if this option is <b>not</b> enabled.</html>");
@@ -2111,6 +2131,33 @@ implements
 								cm.setNewDeltaOrRateRowHighlightEnabled(toValue, true); // calls saveProps() on the CM
 
 								_logger.info("Setting 'Highlight new diff/rate rows' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+							}
+						}
+					});
+					popupMenu.add(mi);
+
+					// Show PK value on Cell tooltip
+					boolean showPkCols = Configuration.getCombinedConfiguration().getBooleanProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK.replace("<CMNAME>", cm.getName()), CmToolTipSupplierDefault.DEFAULT_TABLE_TOOLTIP_SHOW_PK); 
+
+					mi = new JCheckBoxMenuItem();
+					mi.setText("<html>Show PrimaryKey value(s) on cell tooltip</html>");
+					mi.setSelected(showPkCols);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JCheckBoxMenuItem)
+							{
+								boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+								if (conf != null)
+								{
+									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK.replace("<CMNAME>", cm.getName()), toValue);
+									_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+								}
 							}
 						}
 					});
@@ -2422,6 +2469,15 @@ implements
 	private void initComponentActions()
 	{
 		// ---- FILTER PANEL -----
+		_filterColumn_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				filterAction(_filterColumn_chk.isSelected() ? "ENABLE" : "DISABLE");
+				saveFilterProps();
+			}
+		});
 		_filterColumn_cb.addActionListener(new ActionListener()
 		{
 			@Override
@@ -2545,6 +2601,16 @@ implements
 		});
 
 		// ---- SAMPLE TIME PANEL -----
+		_timePostponeIsEnabled_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				CountersModel cm = _cm;
+				if ( cm != null )
+					cm.setPostponeIsEnabled(_timePostponeIsEnabled_chk.isSelected(), true);
+			}
+		});
 		_timePostpone_txt.addActionListener(new ActionListener()
 		{
 			@Override
@@ -2769,6 +2835,26 @@ implements
 //	private void filterAction(ActionEvent e, String type)
 	private void filterAction(String type)
 	{
+		if ("DISABLE".equals(type))
+		{
+			_filterColumn_cb   .setEnabled(false);
+			_filterOperation_cb.setEnabled(false);
+			_filterValue_tf    .setEnabled(false);
+			
+			_tableRowFilterValAndOp.resetFilter();
+			return;
+		}
+
+		if ("ENABLE".equals(type))
+		{
+			_filterColumn_cb   .setEnabled(true);
+			_filterOperation_cb.setEnabled(true);
+			_filterValue_tf    .setEnabled(true);
+
+			// Do NOT exit, bul falltrough and let the "normal" code do it's work
+			//return;
+		}
+
 		if ("NO_ZERO_COUNTERS".equals(type))
 		{
 			if ( _filterNoZeroCounters_chk.isSelected() )
@@ -2870,7 +2956,7 @@ implements
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		AutoAdjustTableColumnWidth returnThis = AutoAdjustTableColumnWidth.AUTO_GROW_ON;
-		AutoAdjustTableColumnWidth mfSetting = MainFrame.getInstance().getTcpAutoAdjustTableColumnWidthType();
+		AutoAdjustTableColumnWidth mfSetting = MainFrame.getInstance() != null ? MainFrame.getInstance().getTcpAutoAdjustTableColumnWidthType() : AutoAdjustTableColumnWidth.AUTO_GROW_ON;
 		
 		String key = getPanelName()+".autoAdjustTableColumnWidth";
 		String autoAdjustTableColumnWidth = conf.getProperty(key, AutoAdjustTableColumnWidth.GLOBAL.toString());
@@ -3020,8 +3106,10 @@ implements
 				tmpConf.setProperty(keyPrefix+"mainSplitPane.dividerLocation",  dividerLocation);
 			else
 				tmpConf.remove(keyPrefix+"mainSplitPane.dividerLocation");
-
 		}
+
+		tmpConf.setProperty(keyPrefix+"freeTextFilter.value",    _tableFreetextFilter.getText());
+		tmpConf.setProperty(keyPrefix+"freeTextFilter.selected", _tableFreetextFilter.isFilterChkboxSelected());
 
 		tmpConf.save();
 	}
@@ -3047,6 +3135,9 @@ implements
 
 			_mainSplitPane.setDividerLocation(dividerLocation);
 		}
+
+		_tableFreetextFilter.setText(                 conf.getProperty(       keyPrefix+"freeTextFilter.value",    "")   );
+		_tableFreetextFilter.setFilterChkboxSelected( conf.getBooleanProperty(keyPrefix+"freeTextFilter.selected", true) );
 	}
 
 	/**  */
@@ -3095,6 +3186,10 @@ implements
 			return;
 		}
 
+		// Free text filter
+		_tableFreetextFilter.applyFilter();
+		
+		
 		String keyPrefix = cmName + ".filter.";
 
 		String column        = conf.getProperty(keyPrefix+"column");
@@ -4189,6 +4284,12 @@ implements
 					setErrorToolTipText(msg);
 				}
 			}
+			else if (_offlineCm != null && _offlineCm.getSampleException() != null)
+			{
+				// Make long string a little bit more readable split with
+				// newline after '. ' and ': '
+				setWatermarkText(_offlineCm.getSampleException().toString().replaceFirst(": ", ": \n").replaceAll("\\. ", "\\. \n"));
+			}
 			else
 			{
 				// Change back to NORMAL color
@@ -4243,7 +4344,7 @@ implements
 				setWatermarkText(_cm.getSampleException().toString().replaceFirst(": ", ": \n").replaceAll("\\. ", "\\. \n"));
 				//_logger.info(_cm.getSampleException().toString(), _cm.getSampleException());
 			}
-			else if ( _cm.getTimeToNextPostponedRefresh() > 0 )
+			else if ( _cm.isPostponeEnabled() && _cm.getTimeToNextPostponedRefresh() > 0 )
 			{
 				setWatermarkText("Postponing next sample refresh until '" + TimeUtils.msToTimeStr("%HH:%MM:%SS", _cm.getTimeToNextPostponedRefresh()) + "'.");
 			}
@@ -4376,6 +4477,7 @@ implements
 		// FIXME: maybe do this somewhere else as well
 		// set how many rows we have in the table
 		_counterRows_lbl.setText(_dataTable.getModel().getRowCount() + " / " + _dataTable.getRowCount());
+		_tableFreetextFilter.updateRowCount();
 	}
 
 //	private class Watermark extends AbstractComponentDecorator
@@ -4472,12 +4574,14 @@ implements
 	 */
 	public void tabSelected()
 	{
+//System.out.println("tabSelected(): cm="+getCm().getName());
 		if ( MainFrame.isOfflineConnected() )
 		{
 			// If data hasn't been read from the Offline storage, do so now...
 			if ( !_offlineSampleHasBeenRead )
 			{
 //				readOfflineSample();
+//System.out.println("tabSelected(): cm="+getCm().getName()+"::::readOfflineSample_withProgressDialog");
 				readOfflineSample_withProgressDialog();
 			}
 		}
@@ -4673,6 +4777,9 @@ implements
 			return;
 		}
 
+//		Set<String> dependans = _cm.getDependsOnCm();
+//System.out.println("readOfflineSample_withProgressDialog: "+getName()+", dependans="+dependans);
+		
 		// set watermark for local tab... read in progress
 		// Start the timer which will be kicked of after X ms
 		// This so we can do something if the refresh takes to long time
