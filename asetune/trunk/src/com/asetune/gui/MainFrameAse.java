@@ -12,12 +12,14 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.ImageIcon;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 
 import org.apache.log4j.Logger;
 
@@ -414,14 +416,14 @@ extends MainFrame
 	@Override
 	public void setSqlCaptureOfflineCurrentSampleTime(Timestamp prevTs, Timestamp thisTs, Timestamp nextTs)
 	{
-		if (_sqlCaptureOfflineView != null)
+		if (_sqlCaptureOfflineView != null && _sqlCaptureOfflineView.isVisible())
 		{
 //			Timestamp ts2 = CounterController.getInstance().getSummaryCm().getSampleTime();
 //			long sampleIntervall = CounterController.getInstance().getSummaryCm().getSampleInterval();
 //			Timestamp ts1 = new Timestamp(ts2.getTime() - sampleIntervall);
 			
-System.out.println("setSqlCaptureOfflineCurrentSampleTime(): prevTs='"+prevTs+"', thisTs='"+thisTs+"', nextTs='"+nextTs+"'.");
-			_sqlCaptureOfflineView.setFromToTime(prevTs, thisTs);
+//System.out.println("setSqlCaptureOfflineCurrentSampleTime(): prevTs='"+prevTs+"', thisTs='"+thisTs+"', nextTs='"+nextTs+"'.");
+			_sqlCaptureOfflineView.setFromToTime(prevTs, thisTs, getOfflineSliderTsList());
 		}
 	}
 
@@ -459,11 +461,21 @@ System.out.println("setSqlCaptureOfflineCurrentSampleTime(): prevTs='"+prevTs+"'
 
 		if (ACTION_OPEN_SQL_CAPTURE_OFFLINE_VIEW.equals(actionCmd))
 		{
-//			SwingUtils.showInfoMessage(this, "Not yet implemented", "NOT YET IMPLEMENTED, use SQL Window and query tables MonSqlCapSqlText, MonSqlCapStatements, MonSqlCapPlans");
 			if (_sqlCaptureOfflineView  == null)
-			{
 				_sqlCaptureOfflineView = new SqlCaptureOfflineView(this);
-			}
+
+			// Set start/stop values of what we currently has in the MainFrame
+			// Do this "later"... 
+			SwingUtilities.invokeLater(new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					Map<String, Timestamp> tsMap = getTimelineSliderTsMap();
+					_sqlCaptureOfflineView.setFromToTime(tsMap.get(MainFrame.TIMELINE_TS_PREVIOUS), tsMap.get(MainFrame.TIMELINE_TS_CURRENT), getOfflineSliderTsList());
+				}
+			});
+
 			_sqlCaptureOfflineView.setVisible(true);
 		}
 

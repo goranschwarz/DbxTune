@@ -256,6 +256,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _oldestOpenTran_txt           = new JTextField();
 	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
 	private JTextField       _oldestOpenTranThreshold_txt  = new JTextField();
+	private JLabel           _oldestOpenTranName_lbl       = new JLabel();
+	private JTextField       _oldestOpenTranName_txt       = new JTextField();
+	private JLabel           _oldestOpenTranDbName_lbl     = new JLabel();
+	private JTextField       _oldestOpenTranDbName_txt     = new JTextField();
+	private JLabel           _oldestOpenTranSpid_lbl       = new JLabel();
+	private JTextField       _oldestOpenTranSpid_txt       = new JTextField();
 	
 	private JLabel           _bootcount_lbl                = new JLabel();
 	private JTextField       _bootcount_txt                = new JTextField();
@@ -1200,6 +1206,33 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 			}
 		});
 		
+		tooltip = "<html>Oldest Open Transaction in any database. This is the 'transaction name'.<br>" +
+				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"<br>" +
+				"<b>Note</b>: if value is '-', this means that you did not have access to the 'master..syslogshold' table.</html>";
+		_oldestOpenTranName_lbl.setText("Open Tran Name");
+		_oldestOpenTranName_lbl.setToolTipText(tooltip);
+		_oldestOpenTranName_txt.setToolTipText(tooltip);
+		_oldestOpenTranName_txt.setEditable(false);
+
+		tooltip = "<html>Oldest Open Transaction in any database. This is the 'database name'.<br>" +
+				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"<br>" +
+				"<b>Note</b>: if value is '-', this means that you did not have access to the 'master..syslogshold' table.</html>";
+		_oldestOpenTranDbName_lbl.setText("Open Tran DBName");
+		_oldestOpenTranDbName_lbl.setToolTipText(tooltip);
+		_oldestOpenTranDbName_txt.setToolTipText(tooltip);
+		_oldestOpenTranDbName_txt.setEditable(false);
+
+		tooltip = "<html>Oldest Open Transaction in any database. This is the responsible 'spid'.<br>" +
+				"Check Performance Counter '"+CmOpenDatabases.SHORT_NAME+"' for details.<br>" +
+				"<br>" +
+				"<b>Note</b>: if value is -1, this means that you did not have access to the 'master..syslogshold' table.</html>";
+		_oldestOpenTranSpid_lbl.setText("Open Tran SPID");
+		_oldestOpenTranSpid_lbl.setToolTipText(tooltip);
+		_oldestOpenTranSpid_txt.setToolTipText(tooltip);
+		_oldestOpenTranSpid_txt.setEditable(false);
+
 		
 		tooltip = "How many times has this ASE been rebooted.";
 		_bootcount_lbl      .setText("Boot Count");
@@ -1381,7 +1414,17 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_oldestOpenTran_txt,      "growx, wrap");
 		
 		panel.add(_oldestOpenTranThreshold_lbl, "");
-		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap 20");
+		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap");
+		
+		panel.add(_oldestOpenTranName_lbl,  "");
+		panel.add(_oldestOpenTranName_txt,  "growx, wrap");
+		
+		panel.add(_oldestOpenTranDbName_lbl, "");
+		panel.add(_oldestOpenTranDbName_txt, "growx, wrap");
+		
+		panel.add(_oldestOpenTranSpid_lbl,  "");
+		panel.add(_oldestOpenTranSpid_txt,  "growx, wrap 20");
+
 		
 		panel.add(_Transactions_lbl,        "hidemode 3");
 		panel.add(_Transactions_Abs_txt,    "hidemode 3, growx, split");
@@ -1917,6 +1960,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt           .setText(cm.getAbsString (0, "fullTranslogCount"));
 		_oldestOpenTran_txt         .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
 		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
+		_oldestOpenTranName_txt     .setText(cm.getAbsString (0, "oldestOpenTranName"));
+		_oldestOpenTranDbName_txt   .setText(cm.getAbsString (0, "oldestOpenTranDbName"));
+		_oldestOpenTranSpid_txt     .setText(cm.getAbsString (0, "oldestOpenTranSpid"));
 
 		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
 		_recoveryState_txt    .setText(cm.getAbsString (0, "recovery_state"));
@@ -2218,9 +2264,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_SnapsExecuted_Diff_txt .setText("");
 		_SnapsExecuted_Rate_txt .setText("");
 
-		_fullTranslog_txt       .setText("");
-		_oldestOpenTran_txt     .setText("");
+		_fullTranslog_txt           .setText("");
+		_oldestOpenTran_txt         .setText("");
 		_oldestOpenTranThreshold_txt.setText("");
+		_oldestOpenTranName_txt     .setText("");
+		_oldestOpenTranDbName_txt   .setText("");
+		_oldestOpenTranSpid_txt     .setText("");
 		
 		_bootcount_txt          .setText("");
 		_recoveryState_txt      .setText("");

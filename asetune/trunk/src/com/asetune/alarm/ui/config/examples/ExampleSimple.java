@@ -32,7 +32,7 @@ implements IUserDefinedAlarmInterrogator
 		if (colName1 > 50.0)
 		{
 			// Create the alarm and add/send it to the AlrmHandler
-			AlarmEvent alarm = new AlarmEventHighCpuUtilization(cm, colName1);
+			AlarmEvent alarm = new AlarmEventHighCpuUtilization(cm, 50.0, colName1);
 			AlarmHandler.getInstance().addAlarm(alarm);
 		}
 	}

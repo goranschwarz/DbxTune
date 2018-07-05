@@ -89,7 +89,11 @@ extends Thread
 	{
 		if (StringUtil.isNullOrBlank(fallbackSrvName))
 			fallbackSrvName = "-UNKNOWN-";
-		
+
+		if ( ! AlarmHandler.hasInstance() )
+			_logger.warn("No alarm handler installed, so NO alarms will be created for this. sendAlarmServerIsDown(fallbackSrvName='"+fallbackSrvName+"')");
+
+	
 		// Send alarm: Server is down
 		//  hasDefaultConnProp indicate that we previously had a good connection
 		DbxConnection conn = getCounterController().getMonConnection();
@@ -120,8 +124,26 @@ extends Thread
 				if (StringUtil.isNullOrBlank(serverName)) serverName = fallbackSrvName;
 				if (StringUtil.isNullOrBlank(jdbcUrl   )) jdbcUrl    = connProp.getUrl();
 				
+				_logger.info("Sending AlarmEventSrvDown(serverName='"+serverName+"', jdbcUrl='"+jdbcUrl+"') to the AlarmHandler.");
+
 				AlarmEvent alarmEvent = new AlarmEventSrvDown(serverName, jdbcUrl);
 				AlarmHandler.getInstance().addAlarmToQueue(alarmEvent);
+
+				// Make the AlarmHandler act NOW
+				AlarmHandler.getInstance().endOfScan(); // This is synchronous operation
+			}
+		}
+		else
+		{
+			if ( AlarmHandler.hasInstance() )
+			{
+				_logger.warn("Can't send detailed AlarmEventSrvDown, instead sending a simplified one sending: new AlarmEventSrvDown(serverName='"+fallbackSrvName+"', jdbcUrl='unknown-url'). Reason: No Monitor Connection or no defaultConnProp. fallbackSrvName='"+fallbackSrvName+"', conn='"+conn+"', conn.getConnProp()='"+(conn==null?"":conn.getConnProp())+"', DbxConnection.hasDefaultConnProp()='"+DbxConnection.hasDefaultConnProp()+"'.");
+
+				AlarmEvent alarmEvent = new AlarmEventSrvDown(fallbackSrvName, "unknown-url");
+				AlarmHandler.getInstance().addAlarmToQueue(alarmEvent);
+
+				// Make the AlarmHandler act NOW
+				AlarmHandler.getInstance().endOfScan(); // This is synchronous operation
 			}
 		}
 	}

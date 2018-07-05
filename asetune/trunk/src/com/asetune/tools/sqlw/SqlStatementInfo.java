@@ -110,6 +110,7 @@ implements SqlStatement
 					+ "    int       = integer             Types.INTEGER   int=99, int=null\n"
 					+ "    bigint    = long                Types.BIGINT    bigint=9999999999999999999, int=null\n"
 					+ "    numeric   = bigdecimal          Types.NUMERIC   numeric=1.12, numeric=null\n"
+					+ "    double    = double              Types.DOUBLE    double=1.12, double=null\n"
 					+ "    timestamp = 'datetime str'      Types.TIMESTAMP timestamp='2015-01-10 14:20:10', timestamp(dd/MM/yyyy HH.mm)='31/12/2014 14.00', timestamp=null\n"
 					+ "    date      = 'date str'          Types.DATE      date='2015-01-10', date(dd/MM/yyyy)='31/12/2014', date=null\n"
 					+ "    time      = 'time str'          Types.TIME      time='14:20:10', time(HH.mm)='14.00', time=null\n"
@@ -311,7 +312,7 @@ implements SqlStatement
 			}
 			if (questionMarkCount != _sqlParams.size())
 			{
-				String rpcParamSpec        = ":( {int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob} = val [ out] [,...] )";
+				String rpcParamSpec        = ":( {int|bigint|string|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob} = val [ out] [,...] )";
 				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\\filename.txt', clob='http://google.com' )";
 				String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 				
@@ -387,6 +388,16 @@ implements SqlStatement
 							else
 								_cstmnt.setBigDecimal(pos, bd);
 						}
+//						else if (param.getSqlType() == Types.DOUBLE)
+//						{
+//							Double d = (Double) param.getValue();
+//
+//							// for jConnect we need to set the precision and scale (maybe in later jConnect this works out-of-the-box)
+//							if (_cstmnt instanceof SybPreparedStatement)
+//								((SybPreparedStatement)_cstmnt).setDouble(pos, d);
+//							else
+//								_cstmnt.setDouble(pos, d);
+//						}
 						else
 						{
 							_cstmnt.setObject(pos, param.getValue(), param.getSqlType());

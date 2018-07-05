@@ -17,7 +17,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -103,26 +102,37 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "Max", "Average" };
-		
-		addTrendGraphData(GRAPH_NAME_DEVICE_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_DEVICE_SERVICE_TIME, labels, LabelType.Static));
+//		String[] labels = new String[] { "Max", "Average" };
+//		
+//		addTrendGraphData(GRAPH_NAME_DEVICE_SERVICE_TIME, new TrendGraphDataPoint(GRAPH_NAME_DEVICE_SERVICE_TIME, labels, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_DEVICE_SERVICE_TIME,
-				"Device IO Service Time", 	              // Menu CheckBox text
-				"Device IO Service Time in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		addTrendGraph(GRAPH_NAME_DEVICE_SERVICE_TIME,
+			"Device IO Service Time", 	              // Menu CheckBox text
+			"Device IO Service Time in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Max", "Average" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_DEVICE_SERVICE_TIME,
+//				"Device IO Service Time", 	              // Menu CheckBox text
+//				"Device IO Service Time in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 //	@Override

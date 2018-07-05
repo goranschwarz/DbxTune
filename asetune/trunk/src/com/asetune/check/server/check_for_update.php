@@ -64,7 +64,7 @@
 	$ASEMON_LATEST_VERSION_STR = "2016-11-07";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.asetune.com/history.html";
-	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=10, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
+	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=5, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
 	$FEEDBACK_URL              = "2011-06-09:www.asemon.se/feedback.html";
 	$FEEDBACK_URL              = "";
 	$PROBLEM_URL               = "2012-06-01:www.asemon.se/asetune_problem.html";

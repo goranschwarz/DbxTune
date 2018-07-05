@@ -158,6 +158,24 @@ extends TabularCntrPanel
 				return isLogFull != null && isLogFull.intValue() > 0;
 			}
 		}, SwingUtils.parseColor(colorStr, Color.RED), null));
+
+		// RED (or 1 cell) = LAST BACKUP FAILED
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.lastBackupFailed");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				int lastBackupFailed_mpos = adapter.getColumnIndex("LastBackupFailed");
+				int mcol = adapter.convertColumnIndexToModel(adapter.column);
+				if (mcol == lastBackupFailed_mpos)
+				{
+					Number lastBackupFailed = (Number) adapter.getValue(lastBackupFailed_mpos);
+					return lastBackupFailed != null && lastBackupFailed.intValue() > 0;
+				}
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, Color.RED), null));
 	}
 
 	private CategoryDataset createDatasetForLog(GTable dataTable)

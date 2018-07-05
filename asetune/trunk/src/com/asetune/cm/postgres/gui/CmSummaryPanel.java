@@ -1354,7 +1354,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //System.out.println("getColNames="+cm.getCounterSampleAbs().getColNames());
 //System.out.println("getColNames="+cm.getCounterSampleAbs().getDataCollection());
 
-		_dbmsServerName_txt         .setText(cm.getAbsString (0, "database_name"));
+		_dbmsServerName_txt         .setText(cm.getAbsString (0, "instance_name"));
 		_dbmsListeners_txt          .setText(cm.getAbsString (0, "host"));
 		_dbmsVersion_txt            .setText(cm.getAbsString (0, "version"));           _dbmsVersion_txt.setCaretPosition(0);
 		_lastSampleTime_txt         .setText(cm.getAbsString (0, "time_now"));

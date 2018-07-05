@@ -181,7 +181,7 @@ implements ActionListener
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
-		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE:format=yyyy-MM-dd:roll=true}");
+		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE:format=yyyy-MM-dd;roll=true}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");

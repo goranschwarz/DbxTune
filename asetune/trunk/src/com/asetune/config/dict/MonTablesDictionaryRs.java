@@ -175,6 +175,7 @@ extends MonTablesDictionary
 ////						}
 ////						catch (NameNotFoundException e) {/*ignore*/ e.printStackTrace();}
 ////					}
+////					rs.close();
 //
 //					ResultSet rs = md.getColumns(null, null, tableName, "%");
 //					while(rs.next())
@@ -199,6 +200,7 @@ extends MonTablesDictionary
 //						
 //						tEntry._monTableColumns.put(cEntry._columnName, cEntry);
 //					}
+//					rs.close();
 //				}
 //			}
 //		}

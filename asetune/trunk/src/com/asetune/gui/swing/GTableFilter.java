@@ -15,7 +15,6 @@ import java.util.Stack;
 import java.util.regex.Pattern;
 
 import javax.swing.JCheckBox;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.RowFilter;
 import javax.swing.Timer;
@@ -60,6 +59,7 @@ import net.sf.jsqlparser.expression.JsonExpression;
 import net.sf.jsqlparser.expression.KeepExpression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.MySQLGroupConcat;
+import net.sf.jsqlparser.expression.NotExpression;
 import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.NumericBind;
 import net.sf.jsqlparser.expression.OracleHierarchicalExpression;
@@ -94,6 +94,7 @@ import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.expression.operators.relational.ItemsListVisitor;
+import net.sf.jsqlparser.expression.operators.relational.JsonOperator;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.Matches;
 import net.sf.jsqlparser.expression.operators.relational.MinorThan;
@@ -117,15 +118,20 @@ extends JPanel
 
 	private JXTable    _table      = null;
 
-	private JLabel     _filter_lbl = new JLabel("Filter: ");
+	private GLabel     _filter_lbl = new GLabel("Filter: ");
 //	private JTextField _filter_txt = new JTextField();
 //	private GTextFieldWithCompletion _filter_txt = new GTextFieldWithCompletion();
 	private GTextField _filter_txt = new GTextField();
-	private JLabel     _filter_cnt = new JLabel();
+	private GLabel     _filter_cnt = new GLabel();
 	
 	private JCheckBox  _filter_chk = new JCheckBox("", true);
 	private boolean    _filter_chk_visible = false;
 	
+	private static final String FILTER_TOOLTIP_SHORT = "<html>"
+			+ "Filter what to view in the table. You can use RegExp or SQL WHERE behaviour.<br>"
+			+ "<b>Tip</b>: Hover/tooltip over 'Filter:' label to see details.<br>"
+			+ "</html>";
+
 	private static final String FILTER_TOOLTIP = "<html>"
 			+ "Enter a search criteria that will search <b>all</b> columns in the table<br>"
 			+ "<b>Tip</b>: regular expresion can be used.<br>"
@@ -221,8 +227,11 @@ extends JPanel
 	{
 		setLayout(new MigLayout("insets 0 0 0 0"));   // insets Top Left Bottom Right
 
+		_filter_lbl.setUseFocusableTips(true);
+
 		// Add Code Completion to the text field
 		_filter_txt.addCompletion(_table);
+		_filter_txt.setUseFocusableTips(false);
 
 		_filter_chk.setVisible(_filter_chk_visible);
 		_filter_chk.setToolTipText("<html>Quick way to enable/disable this filter without removing/deleting the text content</html>");
@@ -285,7 +294,7 @@ extends JPanel
 
 		// Set some ToolTip
 		_filter_lbl.setToolTipText(FILTER_TOOLTIP);
-		_filter_txt.setToolTipText(FILTER_TOOLTIP);
+		_filter_txt.setToolTipText(FILTER_TOOLTIP_SHORT);
 		_filter_cnt.setToolTipText("How many rows does the table contain. (visibleRows/actualRows");
 		
 		// Set row count label to table size
@@ -346,7 +355,7 @@ extends JPanel
     				_table.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString, mcols));
 				}
 			}
-			_filter_txt.setToolTipText(FILTER_TOOLTIP);
+			_filter_txt.setToolTipText(FILTER_TOOLTIP_SHORT);
 			_filter_txt.setBackground( UIManager.getColor("TextField.background") );
 		}
 		catch (Throwable t)
@@ -971,6 +980,8 @@ extends JPanel
 		@Override public void visit(SignedExpression expr)             { throw new FilterParserException("Operation 'SignedExpression' not yet implemeted."); }
 		@Override public void visit(Function expr)                     { throw new FilterParserException("Operation 'Function' not yet implemeted."); }
 		@Override public void visit(NullValue expr)                    { throw new FilterParserException("Operation 'NullValue' not yet implemeted."); }
+		@Override public void visit(JsonOperator expr)                 { throw new FilterParserException("Operation 'JsonOperator' not yet implemeted."); }
+		@Override public void visit(NotExpression expr)                { throw new FilterParserException("Operation 'NotExpression' not yet implemeted."); }
 	};
 	
 	

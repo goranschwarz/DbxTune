@@ -664,7 +664,22 @@ extends CountersModel
 	
 				String key=PROPKEY_sample_tabRowCount;
 				_logger.warn("CM='"+getName()+"'. Disabling the column 'TabRowCount', 'NumUsedPages', 'RowsPerPage', from method handelTimeoutException(). This is done by setting "+key+"=false");
+
+				// DUMMY: check if config is set... because somewhere there is a problem when reading the value... (at least in no-gui mode)
+				String dummyTest = tempConf.getProperty(PROPKEY_sample_tabRowCount);
+				if (StringUtil.isNullOrBlank(dummyTest))
+					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. tempConf="+tempConf);
+				else if ( ! dummyTest.trim().equalsIgnoreCase("false") )
+					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. tempConf="+tempConf);
 				
+				// DUMMY: check if config is set... because somewhere there is a problem when reading the value... (at least in no-gui mode)
+				dummyTest = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sample_tabRowCount);
+				if (StringUtil.isNullOrBlank(dummyTest))
+					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. from Configuration.getCombinedConfiguration()");
+				else if ( ! dummyTest.trim().equalsIgnoreCase("false") )
+					_logger.warn("DEBUG: Disabling of '"+PROPKEY_sample_tabRowCount+"' was not successfull. the value is '"+dummyTest+"'. from Configuration.getCombinedConfiguration()");
+
+				// Show a popup, what we did if we are in GUI mode
 				if (getGuiController() != null && getGuiController().hasGUI())
 				{
 					String dateStr = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());

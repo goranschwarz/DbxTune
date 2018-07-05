@@ -20,7 +20,6 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
 
 /**
@@ -108,40 +107,63 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labelsPerSec  = new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" };
-		String[] labelsHitRate = new String[] { "Hit rate" };
-		
-		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec,  LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate, LabelType.Static));
+//		String[] labelsPerSec  = new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" };
+//		String[] labelsHitRate = new String[] { "Hit rate" };
+//		
+//		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec,  LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
-				"Statement Cache Requests", 	                           // Menu CheckBox text
-				"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labelsPerSec, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
+			"Statement Cache Requests", 	                           // Menu CheckBox text
+			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_HIT_RATE_PCT,
-				"Statement Cache Hit Rate", 	                           // Menu CheckBox text
-				"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
-				labelsHitRate, 
-				true, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
+			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
+			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			new String[] { "Hit rate" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			true, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
+//				"Statement Cache Requests", 	                           // Menu CheckBox text
+//				"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labelsPerSec, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_HIT_RATE_PCT,
+//				"Statement Cache Hit Rate", 	                           // Menu CheckBox text
+//				"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+//				labelsHitRate, 
+//				true, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 //	@Override
@@ -202,6 +224,7 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		// Can we reset counters/something if 'NumSearches' or 'HitCount' is below 0 (counter has wrapped)
 		String sql = 
 			"SELECT \n" +
 			(isClusterEnabled ? "  InstanceID, \n" : "") +
@@ -211,14 +234,18 @@ extends CountersModel
 			"  AvgStmntSizeInKB  = CASE WHEN NumStatements>0 THEN UsedSizeKB / NumStatements ELSE 0 END, \n" +
 			"  NumStatements, \n" +
 			"  NumStatementsDiff = NumStatements, \n" +
-			"  CacheHitPct       = CASE WHEN NumSearches  >0 \n" +
+			"  CacheHitPct       = CASE WHEN NumSearches > 0 \n" +
 			"                           THEN convert(numeric(10,1), ((HitCount+0.0)/(NumSearches+0.0))  *100.0 ) \n" +
-			"                           ELSE convert(numeric(10,1), 0) \n" +
+			"                           ELSE convert(numeric(10,1), -1) \n" +
 			"                      END, \n" +
 //			"  OveralAvgReusePct = CASE WHEN NumStatements>0 THEN convert(numeric(10,1), ((HitCount+0.0)/(NumStatements+0.0))*100.0 ) ELSE convert(numeric(10,1), 0) END, \n" +
 			"  NumSearches, \n" +
 			"  HitCount, \n" +
-			"  MissCount = NumSearches - HitCount, \n" +
+//			"  MissCount = NumSearches - HitCount, \n" +
+			"  MissCount         = CASE WHEN NumSearches > 0 AND HitCount > 0 -- Protect for 'counter spillover' to negative number or 'arithmic overflow' \n" +
+			"                           THEN NumSearches - HitCount \n" +
+			"                           ELSE -1 \n" +
+			"                      END, \n" +
 			"  NumInserts, \n" +
 			"  NumRemovals, \n" +
 			"  NumRecompilesSchemaChanges, \n" +

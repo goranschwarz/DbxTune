@@ -5,11 +5,14 @@ package com.asetune.pcs;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cm.CountersModel;
 import com.asetune.utils.StringUtil;
 
@@ -35,10 +38,13 @@ public class PersistContainer
 	protected long                _sampleInterval   = 0;
 	protected String              _serverName       = null;
 	protected String              _onHostname       = null;
+	protected String              _serverNameAlias  = null;
 	protected List<CountersModel> _counterObjects   = null;
 
 	protected boolean             _startNewSample   = false;
 
+	protected List<AlarmEvent>        _activeAlarmList = null;
+	protected List<AlarmEventWrapper> _alarmEventsList = null; // This is "history" events (that has happened during last sample)
 
 
 	/**
@@ -46,10 +52,11 @@ public class PersistContainer
 	 */
 	public static class HeaderInfo
 	{
-		public Timestamp _mainSampleTime;
-		public String    _serverName;
-		public String    _onHostname;
-		public Timestamp _counterClearTime;
+		private Timestamp _mainSampleTime;
+		private String    _serverName;        // Normally the DBMS instance name
+		private String    _serverNameAlias;   // If we want an alternate name for DbxCentral (eg schema name storage in DbxCentral)
+		private String    _onHostname;        // on which host does this server run
+		private Timestamp _counterClearTime;  // if the server wise counters are cleared at some date/time, then this is it.
 		
 		public HeaderInfo()
 		{
@@ -60,6 +67,34 @@ public class PersistContainer
 		public String    getOnHostname()       { return _onHostname; }
 		public Timestamp getCounterClearTime() { return _counterClearTime; }
 
+		public void      setServerNameAlias(String alias) { _serverNameAlias = alias; }
+		public String    getServerNameAlias()
+		{
+			String alias = _serverNameAlias; 
+			if (StringUtil.hasValue(alias))
+			{
+				// replace template with the server name
+				if (alias.indexOf("<SRVNAME>") != -1)
+					alias = alias.replace("<SRVNAME>", getServerName());
+			}
+			return alias; 
+		}
+
+		/**
+		 * Get Server Name
+		 * <ul>
+		 *   <li>First try the Alternate/Alis server name</li>
+		 *   <li>Fallback on the real DBMS Instance Name</li>
+		 * </ul>
+		 * @return
+		 */
+		public String getServerNameOrAlias()
+		{
+			String srvName = getServerNameAlias();
+			if (StringUtil.isNullOrBlank(srvName))
+				srvName = getServerName();
+			return srvName;
+		}
 
 		public HeaderInfo(Timestamp mainSampleTime, String serverName, String onHostname, Timestamp counterClearTime)
 		{
@@ -67,6 +102,8 @@ public class PersistContainer
 			_serverName       = serverName;
 			_onHostname       = onHostname;
 			_counterClearTime = counterClearTime;
+
+			_serverNameAlias  = null;
 		}
 	}
 	
@@ -81,17 +118,18 @@ public class PersistContainer
 //		_serverName       = serverName;
 //		_onHostname       = onHostname;
 //	}
-	public PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname)
+	public PersistContainer(Timestamp mainSampleTime, String serverName, String onHostname, String serverNameAlias)
 	{
 		_sessionStartTime = null;
 		_mainSampleTime   = mainSampleTime;
 		_serverName       = serverName;
 		_onHostname       = onHostname;
+		_serverNameAlias  = serverNameAlias;
 	}
 	
 	public PersistContainer(HeaderInfo headerInfo)
 	{
-		this(headerInfo._mainSampleTime, headerInfo._serverName, headerInfo._onHostname);
+		this(headerInfo.getMainSampleTime(), headerInfo.getServerName(), headerInfo.getOnHostname(), headerInfo.getServerNameAlias());
 	}
 
 
@@ -102,9 +140,10 @@ public class PersistContainer
 	/** Set the time when X number of "main samples" should consist of, this is basically when we connect to a ASE and start to sample performance counters */
 	public void setSessionStartTime(Timestamp startTime)    { _sessionStartTime = startTime; }
 	/** Set the "main" Timestamp, this is the time when a "loop" to collect all various ConterModdel's, which we get data for */ 
-	public void setMainSampleTime(Timestamp mainSampleTime) { _mainSampleTime = mainSampleTime; }
-	public void setServerName(String serverName)            { _serverName = serverName; }
-	public void setOnHostname(String onHostname)            { _onHostname = onHostname; }
+	public void setMainSampleTime(Timestamp mainSampleTime) { _mainSampleTime   = mainSampleTime; }
+	public void setServerName     (String serverName)       { _serverName       = serverName; }
+	public void setOnHostname     (String onHostname)       { _onHostname       = onHostname; }
+	public void setServerNameAlias(String alias)            { _serverNameAlias  = alias; }
 	
 	/** This can be used to "force" a new sample, for example if you want to 
 	 * start a new session on reconnects to the monitored ASE server */
@@ -117,7 +156,24 @@ public class PersistContainer
 	public long      getSampleInterval()   { return _sampleInterval; }
 	public String    getServerName()       { return _serverName; }
 	public String    getOnHostname()       { return _onHostname; }
+	public String    getServerNameAlias()  { return _serverNameAlias; }
 	public boolean   getStartNewSample()   { return _startNewSample; }
+
+	/**
+	 * Get Server Name
+	 * <ul>
+	 *   <li>First try the Alternate/Alis server name</li>
+	 *   <li>Fallback on the real DBMS Instance Name</li>
+	 * </ul>
+	 * @return
+	 */
+	public String getServerNameOrAlias()
+	{
+		String srvName = getServerNameAlias();
+		if (StringUtil.isNullOrBlank(srvName))
+			srvName = getServerName();
+		return srvName;
+	}
 
 	public CountersModel getCm(String name)
 	{
@@ -151,6 +207,48 @@ public class PersistContainer
 		_counterObjects.add(cm.copyForStorage());
 	}
 
+	/**
+	 * Add the active alarms to the container.
+	 * @param alarmList
+	 */
+	public void addActiveAlarms(List<AlarmEvent> alarmList)
+	{
+		_activeAlarmList = new ArrayList<>(alarmList);
+	}
+
+	/**
+	 * Get the alarm list
+	 * @return
+	 */
+	public List<AlarmEvent> getAlarmList()
+	{
+		if (_activeAlarmList == null)
+			return Collections.emptyList();
+		return _activeAlarmList;
+	}
+
+	/**
+	 * Add Alarm Events that has happened in last sample (RAISE/RE-RAISE/CANCEL)
+	 * @param alarmEvents
+	 */
+	public void addAlarmEvents(List<AlarmEventWrapper> alarmEvents)
+	{
+		_alarmEventsList = new ArrayList<>(alarmEvents);
+	}
+
+	/**
+	 * Get the alarm list
+	 * @return
+	 */
+	public List<AlarmEventWrapper> getAlarmEvents()
+	{
+		if (_alarmEventsList == null)
+			return Collections.emptyList();
+		return _alarmEventsList;
+	}
+
+
+	
 	public boolean equals(PersistContainer pc)
 	{
 		if (pc == null)	         return false;

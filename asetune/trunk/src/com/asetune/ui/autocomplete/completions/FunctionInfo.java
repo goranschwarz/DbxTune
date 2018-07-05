@@ -74,7 +74,11 @@ if (existingCi._colName == null || ci._colName == null)
 			while(rs.next())
 			{
 				FunctionColumnInfo ci = new FunctionColumnInfo();
-				ci._colName       = rs.getString("COLUMN_NAME");
+				try {
+					ci._colName   = rs.getString("COLUMN_NAME");
+				} catch (SQLException ignore) {
+					ci._colName   = rs.getString("PARAMETER_NAME");   // DB2 has PARAMETER_NAME instead of COLUMN_NAME
+				}
 				ci._colPos        = rs.getInt   ("ORDINAL_POSITION");
 				ci._colType       = rs.getString("TYPE_NAME");
 				ci._colLength     = rs.getInt   ("LENGTH");
@@ -95,7 +99,7 @@ if (existingCi._colName == null || ci._colName == null)
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Problems looking up Column MetaData for function '"+_funcName+"'. Caught: "+e);
+			_logger.warn("Problems looking up Column MetaData for cat='"+_funcCat+"', schema='"+_funcSchema+"', function='"+_funcName+"'. using 'dbmd.getFunctionColumns()' Caught: "+e);
 		}
 	}
 

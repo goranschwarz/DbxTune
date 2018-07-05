@@ -159,6 +159,7 @@ extends ObjectLookupInspectorAbstract
 					
 					objectList.add(entry);
 				}
+				rs.close();
 			}
 			catch (SQLException e)
 			{

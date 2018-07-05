@@ -24,7 +24,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
-<H2>2017-11-xx</H2>
+<H2>2018-09-xx</H2>
 <UL>
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>Generic - Changes that affects all DbxTune tools</H3> 
@@ -58,18 +58,28 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<br>
 			Below is a list of Alarms that currently available... But more will come...
 			<table BORDER=1 CELLSPACING=0 CELLPADDING=2>
-				<tr> <td>BlockingLockAlarm      </td> <td> Found Blocking locks in '${servername}'. Count=${cnt}.</td></tr>
-				<tr> <td>FullTranLog            </td> <td> Full transaction log in some database(s) in '${servername}'. Count=${cnt}.</td></tr>
-				<tr> <td>FullTranLog            </td> <td> Full transaction log in '${servername}', dbname='${dbname}'.</td></tr>
-				<tr> <td>HighCpuUtilization     </td> <td> High CPU Utilization in '${servername}'. CPU at ${totalCpuUsagePct}.</td></tr>
-				<tr> <td>HighCpuUtilization     </td> <td> High ${cpuType} Utilization in '${servername}'. CPU at ${totalCpuUsagePct} percent (total=${totalCpuUsagePct}%, user=${userCpuUsagePct}%, system=${systemCpuUsagePct}%, idle=${idleCpuUsagePct}%).</td></tr>
-				<tr> <td>LongRunningTransaction </td> <td> Found Long running transaction in '${servername}'. Seconds=${sec}.</td></tr>
-				<tr> <td>LongRunningTransaction </td> <td> Found Long running transaction in '${servername}', dbname='${dbname}'. Seconds=${sec}, TranName='${oldestTranName}'.</td></tr>
-				<tr> <td>OsLoadAverage          </td> <td> Exhausting CPU Scheduling resources at OperatingSystem level on hostname '${hostname}'. adjLoadAverage: 1min=${avg_1min}, 5min=${avg_5min}, 15min=${avg_15min}.</td></tr>
-				<tr> <td>RunQueueLength         </td> <td> Exhausting CPU Scheduling resources in '${servername}'. RunQueueLength: avg_1min=${avg_1min}, avg_5min=${avg_5min}, avg_15min=${avg_15min}.</td></tr>
-				<tr> <td>SrvDown                </td> <td> Server is DOWN. Name='${servername}'</td></tr>
-				<tr> <td>SrvDown                </td> <td> Server is DOWN. Name='${servername}', url='${url}'</td></tr>
+				<tr> <td>BlockingLockAlarm              </td> <td> Found Blocking locks in '${servername}'. Count=${cnt}.</td></tr>
+				<tr> <td>FullTranLog                    </td> <td> Full transaction log in some database(s) in '${servername}'. Count=${cnt}.</td></tr>
+				<tr> <td>FullTranLog                    </td> <td> Full transaction log in '${servername}', dbname='${dbname}'.</td></tr>
+				<tr> <td>HighCpuUtilization             </td> <td> High CPU Utilization in '${servername}'. CPU at ${totalCpuUsagePct}.</td></tr>
+				<tr> <td>HighCpuUtilization             </td> <td> High ${cpuType} Utilization in '${servername}'. CPU at ${totalCpuUsagePct} percent (total=${totalCpuUsagePct}%, user=${userCpuUsagePct}%, system=${systemCpuUsagePct}%, idle=${idleCpuUsagePct}%).</td></tr>
+				<tr> <td>LastBackupFailed               </td> <td> Last Backup FAILED in Server '${servername}' and dbname '${dbname}'.</td></tr>
+				<tr> <td>LongRunningDetachedTransaction </td> <td> Found Long running transaction, with state 'Detached' in '${servername}', dbname='${dbname}'. Seconds=${seconds}, TranName='${tranName}'.</td></tr>
+				<tr> <td>LongRunningTransaction         </td> <td> Found Long running transaction in '${servername}'. Seconds=${sec}.</td></tr>
+				<tr> <td>LongRunningTransaction         </td> <td> Found Long running transaction in '${servername}', dbname='${dbname}'. Seconds=${sec}, TranName='${oldestTranName}'.</td></tr>
+				<tr> <td>LowDbFreeSpace                 </td> <td> Low DB DATA Free Space in Server '${servername}' and dbname '${dbname}', FreeSpaceInMB=###, UsedSpaceInPcs=###. </td></tr>
+				<tr> <td>LowLogFreeSpace                </td> <td> Low LOG DATA Free Space in Server '${servername}' and dbname '${dbname}', FreeSpaceInMB=###, UsedSpaceInPcs=###. </td></tr>
+				<tr> <td>LowOsDiskFreeSpace             </td> <td> Low Operating System Disk Free Space in Server '${servername}' at MountPoint '${mountPoint}', FreeSpaceInMB=###, UsedSpaceInPcs=###.</td></tr>
+				<tr> <td>OldBackup                      </td> <td> Old or No backup found in '${servername}', dbname='${dbname}', for backup type '${dumpType}', Backup Age in Hours '###'.</td></tr>
+				<tr> <td>ProcedureCacheLowOnMemory      </td><td> Stored Procedure Cache Memory is getting low in server '${servername}'. FreeSpaceInMB=###, UsedSpaceInPcs=###. </td></tr>
+				<tr> <td>ProcedureCacheOutOfMemory      </td><td> Out Of Stored Procedure Cache Memory in server '${servername}'. </td></tr>
+				<tr> <td>OsLoadAverage                  </td> <td> Exhausting CPU Scheduling resources at OperatingSystem level on hostname '${hostname}'. adjLoadAverage: 1min=${avg_1min}, 5min=${avg_5min}, 15min=${avg_15min}.</td></tr>
+				<tr> <td>RunQueueLength                 </td> <td> Exhausting CPU Scheduling resources in '${servername}'. RunQueueLength: avg_1min=${avg_1min}, avg_5min=${avg_5min}, avg_15min=${avg_15min}.</td></tr>
+				<tr> <td>SrvDown                        </td> <td> Server is DOWN. Name='${servername}'</td></tr>
+				<tr> <td>SrvDown                        </td> <td> Server is DOWN. Name='${servername}', url='${url}'</td></tr>
+				<tr> <td>StatementCacheAboveConfig      </td> <td> Statement Cache is above the configured value in server '${servername}'. configuredSpaceInMb=###, usedSpaceInMb=###, usedSpaceInPct=###, usedPercentOfProcedurMemory=###.</td></tr>
 			</table>
+			Some alarms specific for RepServer: RsDbQueueSize, RsMemoryUsage, RsReplicationAge, RsSdUsage, RsWsState
 			<br>
 			</LI>
 		<LI>NO-GUI Mode: if no password has been specified for DBMS/SSH (-P, -p or in the config file), get the password from the file $HOME/.passwd.enc (which is encrypted passwords using opensll)</LI>
@@ -84,9 +94,35 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Tail of log files, now has filters that you can apply to discard some records (good for RepServer and other log files, which generates a lot of output)</LI>
 		<LI>New Counter Collector, HostMonitoring: Memory Information, which gets information from /proc/meminfo</LI>
 		<LI>set or change the DBXTUNE_SAVE_DIR in the connection dialog</LI>
+		<LI>Changing local home directory from '~/.asetune' to '~/.dbxtune'</LI>
+		<LI>config and log files changed from '~/.asetune' to '~/.dbxtune/conf' and '~/.dbxtune/log'</LI>
+		<LI>Some new command line switches: '-a|--createAppDir', '-A|--serverAlias', '-O|--urlOptions'... mainly for no-gui</LI>
+		<LI>Connection Dialog: set/change the DBXTUNE_SAVE_DIR in the dialog</LI>
+		<LI>Connection Dialog: button to create a new Profile</LI>
+		<LI>Connection Dialog: Made number of items before scroll, in the JDBC Driver drop-down larger.</LI>
+		<LI>DDL View: Added search field/dialog</LI>
+		
 		<LI>Probably a bunch of other stuff, which I can't remember...</LI>
 	</UL>
 
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>DbxCentral - The central WEB console to view Trend Graphs</H3> 
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>This is a total new functionality</LI>
+		<LI>All dbxTune collectors can now send the "trend graph" information to a Central Server, which can/will store the data for a longer time. 
+		    The default retention period is 1 year.</LI>
+		<LI>Trend Graphs can be viewed from "any" web browser, by "anyone" (except the old Microsoft Internet Explorer)
+            This will enable developers to find potential performance problems while testing/developing.</LI>
+		<LI>Trend graph updates are "pushed" from the web server to the browser via web sockets (so no need to refresh every x second)</LI>
+		<LI>To view all *details* about a recording you will still have to use the "fat" GUI,  the current GUI implementation
+            (but you can remote-connect to the recorded database, which is stored on the DbxCentral host)</LI>
+		<LI>If all collectors are also running on the same host as DbxCentral, it will also delete old recordings based on how 
+            much space we got left on the file system, and prediction of how much recording space we will need for next 2 days.</LI>
+		<LI>Alarm information is also sent from the collectors to DbxCentral, so we can see if we are having active alarms for specific servers</LI>
+		<LI>The Alarm information is also stored, so we can later on check what alarms we had, and for how long they were active</LI>
+	</UL>
+	
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3> 
 	<!-- ---------------------------------------------------------------------- -->
@@ -112,6 +148,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Show DBMS Configuration, added Configuration History tab (for ASE 16)</LI>
 		<LI>Show DBMS Configuration, changed from "isql" column layout to "sqlw" layout (more condensed)</LI>
 		<LI>Show application name in the titlebar can be enabled or disabled. Under preferences.</LI>
+		<LI>Configure monitoring Dialog, added 'nonpushdown pipe active', and 'show deferred compilation text'.</LI>
+		<LI>Capture SQL when recording a session (and the below dialog to view Captured SQL - in offline mode)</LI>
+		<LI>Added dialog so we can view 'Capture SQL, Offline view'.</LI>
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
@@ -226,6 +265,33 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
+		<b>Object/Access -&gt; Transactions - CmTransactions</b><br>
+		<ul>
+			<li>This one is new</li>
+			<li>List current Transactions in the system - mostly to check if we have long running distributed transactions</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Host Monitor -&gt; Network Stats - CmOsNwInfo</b><br>
+		<ul>
+			<li>This one is new</li>
+			<li>Checks The Network activity from the OS</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Host Monitor -&gt; OS Disk Space Usage(df) - CmOsDiskSpace</b><br>
+		<ul>
+			<li>This one is new</li>
+			<li>Does 'df' on the OS, so we can check for full or near-full disk systems (more important for PostgresTune MySqlTune etc)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Graphs ----- -->
+		<LI>
 		<b>New Graphs</b><br>
 		<ul>
 			<li>CmCachePools<ul>
@@ -241,20 +307,38 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>Cache Pools APF Reads Percent</li>
 				<li>Cache Pools Replacement Slide</li>
 			</ul></li>
+
 			<li>CmDataCache <ul>
 				<li>Data Caches LogicalReads</li>
 				<li>Data Caches PhysicalReads</li>
 				<li>Data Caches ApfReads</li>
 				<li>Data Caches Writes</li>
 			</ul></li>
+
 			<li>CmOpenDatabases <ul>
 				<li>DB Data Space left in MB</li>
 				<li>DB Data Space used in PCT</li>
 			</ul></li>
+
 			<li>CmSpMonitorConfig <ul>
 				<li>Procedure Cache Usage in Percent</li>
 				<li>Procedure Cache Usage in MB</li>
+				<li>MetaData Cache Usage in Percent</li>
+				<li>MetaData Cache Active Count (number of: open objects, open index, open partitions, locks, sort buffers, user connections, worker processes)</li>
 			</ul></li>
+
+			<li>CmPCacheModuleUsage <ul>
+				<li>Procedure Cache Module Usage (in MB)</li>
+			</ul></li>
+
+			<li>CmPCacheModuleUsage <ul>
+				<li>Procedure Cache Module Usage (in MB)</li>
+			</ul></li>
+
+			<li>CmProcessActivity <ul>
+				<li>Tempdb Usage in MB, using pssinfo</li>
+			</ul></li>
+
 			<li>CmRaLogActivity <ul>
 				<li>RA LogScan Records Sum, per second</li>
 				<li>RA Log Transaction Records Sum, per second</li>
@@ -262,14 +346,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>RA Log Other Operations Sum, per second</li>
 				<li>RA CRUD Operations per DB, per second</li>
 			</ul></li>
+
 			<li>CmTempdbActivity <ul>
 				<li>TempDB Logical Reads per seconds</li>
 				<li>TempDB Physical Writes per seconds</li>
 				<li>TempDB Catalog Lock Requests per seconds</li>
 			</ul></li>
+
 			<li>CmThreads <ul>
 				<li>Tasks Executed per Thread</li>
 			</ul></li>
+
 			<li>CmOsIostat <ul>
 				<li>iostat: Wait Time(await) per Device</li>
 				<li>iostat: Read Wait Time(r_await) per Device</li>
@@ -284,10 +371,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>iostat: Avg Read KB/IO(avgReadKbPerIo) per Device</li>
 				<li>iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device</li>
 			</ul></li>
+
 			<li>CmOsMpstat <ul>
 				<li>mpstat: CPU usage Summary</li>
 				<li>mpstat: CPU usage per core</li>
 			</ul></li>
+
 			<li>CmOsVmstat <ul>
 				<li>vmstat: Processes Usage</li>
 				<li>vmstat: Swap Usage</li>
@@ -295,9 +384,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>vmstat: Swap In/Out per sec</li>
 				<li>vmstat: IO Read/Write or blk-in/out per sec</li>
 			</ul></li>
+
 			<li>CmOsUptime <ul>
 				<li>uptime: Adjusted Load Average (normal load average / nproc)</li>
 			</ul></li>
+
 			<li>CmOsMeminfo <ul>
 				<li>/proc/meminfo: MemFree in MB</li>
 				<li>/proc/meminfo: MemAvailable in MB</li>
@@ -341,6 +432,34 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>Check if we got stuck in "gateway mode" and do "disconnect" if it happens</LI>
 		<LI>Show DBMS Configuration, added 'admin logical_status'</LI>
+		<LI>new collector: CmRsMemory - Replication Server Memory Usage in each <i>module</i>.</LI>
+		<LI>new collector: CmWsRepLatency - Warm Standby Latency: How long does it take to replicate a record from Active to Standby.</LI>
+
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmAdminDiskSpace<ul>
+				<li>Stable Device Usage in PCT, for all Partitions</li>
+			</ul></li>
+
+			<li>CmPgStatements<ul>
+				<li>SQL Statement Calls per second</li>
+			</ul></li>
+
+			<li>CmRsMemory<ul>
+				<li>Stat: RS Total Memory Usage in Percent</li>
+				<li>Stat: Memory Usage in MB per Module</li>
+			</ul></li>
+
+			<li>CmWsRepLatency<ul>
+				<li>Latency In Seconds, from Active->Standby</li>
+				<li>Apply Age In Seconds, from Active->Standby</li>
+				<li>Data Age In Seconds, from Active->Standby</li>
+			</ul></li>
+
+		</ul>
+		</LI>
 	<!-- ---end-of-this-tool--- -->
 	</UL>
 
@@ -367,7 +486,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>Capture DBMS Configuration (from v$parameter & v$nls_parameters)</LI>
+		<LI>Enhanced some generic DbxTune code to always close the ResultSet's</LI>
+		<LI>Added some Oracle specific datatypes</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -379,15 +500,107 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>DBMS Configurations: 'sp_helpdb' and 'sys.databases'</LI>
 		<LI>Added Host Monitoring iostat/vmstat/mpstat/uptime/meminfo for Linux (since SQL-Server now can run on Linux)</LI>
 		<LI>CmWho Extended PK to 'spid', 'kpid'</LI>
-	<!-- ---end-of-this-tool--- -->
+		<LI>new collector: CmTempdbSpidUsage - What session_id's are using the tempdb.</LI>
+		<LI>new collector: CmOsLatchStats - Show information about LATCH, from table 'sys.dm_os_latch_stats'.</LI>
+		<LI>DBMS Configuration, enhanced to include/save: HelpSort, HostInfo, SysInfo, ClusterNodes</LI>
+		<LI>Help text for 'CmPerfCounters', to describe what the different values are.</LI>
+		
+		
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmPerfCounters<ul>
+				<li>CPU Usage in Percent</li>
+				<li>CPU Usage Effective in Percent</li>
+				<li>SQL Batches Received per Sec</li>
+				<li>SQL Batches (all) In Time Span Received per Sec</li>
+				<li>SQL Batches (0-10ms) In Time Span Received per Sec</li>
+				<li>SQL Batches (10ms-100ms) In Time Span Received per Sec</li>
+				<li>SQL Batches (100ms-1s) In Time Span Received per Sec</li>
+				<li>SQL Batches (1s-10s) In Time Span Received per Sec</li>
+				<li>SQL Batches (>10s) In Time Span Received per SAMPLE</li>
+				<li>Buffer Cache Hit Rate, in Percent</li>
+				<li>Page Life Expectancy</li>
+				<li>Buffer Cache Reads per Sec</li>
+				<li>Buffer Cache Physical Reads per Sec</li>
+				<li>Buffer Cache Writes per Sec</li>
+				<li>Temp Table Stats</li>
+				<li>Tempdb Free Space</li>
+				<li>Version Store in Tempdb</li>
+				<li>Snapshot Isolation</li>
+				<li>Log Cache Hit Rate, in Percent</li>
+				<li>Log Cache Reads per Sec</li>
+				<li>Log Pool Requets per Sec</li>
+				<li>Transactions per Sec</li>
+				<li>Active Transactions</li>
+				<li>SQL Compilations per Sec</li>
+				<li>SQL Re-Compilations per Sec</li>
+				<li>Blocked Processes</li>
+				<li>Page Splits per Sec</li>
+				<li>Forwarded Records per Sec</li>
+				<li>Access Methods per Sec</li>
+				<li>Latch Waits per Sec</li>
+				<li>Average Latch Wait Time</li>
+			</ul></li>
+
+			<li>CmSummary<ul>
+				<li>Max Active SQL Execution Time In Seconds</li>
+			</ul></li>
+
+		</ul>
+		</LI>
 	</UL>
+	<!-- ---end-of-this-tool--- -->
 
 
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>PostgresTune - PostgreSQL</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>new collector: BgWriter - One row only, showing statistics about the background writer process's activity.</LI>
+		<LI>new collector: CmPgTablesIo - One row for each table in the current database, showing statistics about accesses to that specific table..</LI>
+		<LI>new collector: CmPgIndexes - One row for each index in the current database, showing statistics about accesses to that specific index.</LI>
+		<LI>new collector: CmPgIndexesIo - One row for each index in the current database, showing statistics about accesses to that specific index.</LI>
+		<LI>new collector: CmPgFunctions - One row for each tracked function, showing statistics about executions of that function.</LI>
+		<LI>new collector: CmPgSequencesIo - One row for each index in the current database, showing statistics about accesses to that specific sequence.</LI>
+		<LI>new collector: CmPgTableSize - Show how large tables are (rows, total, data, index & toast).</LI>
+
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmPgDatabases<ul>
+				<li>Row Fetch Efficiency (tup_fetched/tup_returned) in Percent</li>
+				<li>Row Fetch Efficiency ABS (tup_fetched/tup_returned) in Percent</li>
+				<li>Row Fetch Efficiency SUM [tup_returned, tup_fetched]</li>
+				<li>Connections</li>
+				<li>Connections Sum</li>
+				<li>Commits per second</li>
+				<li>Rollbacks per second</li>
+				<li>Reads per second</li>
+				<li>Cache Hits per second</li>
+				<li>Rows Returned per second</li>
+				<li>Rows Fetched per second</li>
+				<li>Rows Inserted per second</li>
+				<li>Rows Updated per second</li>
+				<li>Rows Deleted per second</li>
+				<li>Conflicting Statements per second</li>
+				<li>Temp Files Created per second</li>
+				<li>Temp Bytes per second</li>
+				<li>Deadlocks per second</li>
+				<li>Read Time per second</li>
+				<li>Write Time per second</li>
+				<li>DB Size in MB</li>
+			</ul></li>
+
+			<li>CmPgStatements<ul>
+				<li>SQL Statement Calls per second</li>
+			</ul></li>
+
+		</ul>
+		</LI>
+
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -405,7 +618,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Db2Tune - IBM DB2 LWU</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
-		<LI>Not yet created - Maybe in the future if someone requests it</LI>
+		<LI>This is a <b>new tool</b></LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -415,7 +628,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
 		<LI>Show Tooltip: as a html table for all columns on current row. Easier to view any "wide" rows. This can be enabled/disabled in the Preferences</LI>
-		<LI>JDBC Meta Data Information. Added new tabs 'Columns', 'PrimaryKeys', 'BestRow', 'IndexInfo', 'FK -&gt;', 'FK &lt;-'</LI>
+		<LI>JDBC Meta Data Information. Added new tabs 'Columns', 'PrimaryKeys', 'BestRow', 'IndexInfo', 'FK -&gt;', 'FK &lt;-', 'Func Columns'</LI>
 		<LI>JSON output in a formated way in the output window, with syntax higlightning and code folding (only if it's a single row and columns)</LI>
 		<LI>Generate SQL Statements (select, insert, udate, delete) from selected text in the editor (right click menu in the editor)</LI>
 		<LI>Generate SQL Statements (insert, udate, delete) from selected rows in the ResultSet (easy to copy records, and insert them in some other place) (right click menu in the ResultSet table)</LI>

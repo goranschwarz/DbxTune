@@ -67,6 +67,7 @@ import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.fife.ui.rtextarea.GutterIconInfo;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.swing.GLabel;
@@ -102,7 +103,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	public enum FileType {ASE_LOG, REPSERVER_LOG, IQ_LOG, UNKNOWN_LOG}
 
 	public final static String APP_NAME              = "tailw";
-	public static final String TAIL_CONFIG_FILE_NAME = System.getProperty("TAIL_CONFIG_FILE_NAME", "tailw.save.properties");
+	public static final String TAIL_CONFIG_FILE_NAME = System.getProperty("TAIL_CONFIG_FILE_NAME", "conf"+File.separatorChar+"tailw.save.properties");
 
 	
 	private boolean            _startTailAfterSartup   = false;
@@ -229,7 +230,7 @@ log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p 
 PropertyConfigurator.configure(log4jProps);
 		
 //		// Create store dir if it did not exists.
-//		File appStoreDir = new File(Version.getAppStoreDir());
+//		File appStoreDir = new File(AppDir.getAppStoreDir());
 //		if ( ! appStoreDir.exists() )
 //		{
 //			if (appStoreDir.mkdir())
@@ -244,13 +245,13 @@ PropertyConfigurator.configure(log4jProps);
 //		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "sqlw.save.properties");
 //		final String TAILW_HOME            = System.getProperty("TAILW_HOME");
 		
-//		String defaultPropsFile     = (TAILW_HOME               != null) ? TAILW_HOME               + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-//		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-//		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+//		String defaultPropsFile     = (TAILW_HOME              != null) ? TAILW_HOME              + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+//		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+//		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 //		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-//		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+//		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 //		if ( (new File(filename)).exists() )
 //			defaultPropsFile = filename;
 
@@ -2022,8 +2023,8 @@ PropertyConfigurator.configure(log4jProps);
 
 	public static String getDefaultPropFile()
 	{
-		if (Version.getAppStoreDir() != null) 
-			return Version.getAppStoreDir() + File.separator + TAIL_CONFIG_FILE_NAME;
+		if (AppDir.getAppStoreDir() != null) 
+			return AppDir.getAppStoreDir() + File.separator + TAIL_CONFIG_FILE_NAME;
 
 		return TAIL_CONFIG_FILE_NAME;
 	}

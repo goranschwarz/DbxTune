@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
@@ -21,9 +22,14 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.ContextHandler;
 
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.UserDefinedAlarmHandler;
+import com.asetune.alarm.writers.AlarmWriterToFile;
+import com.asetune.central.controllers.DbxTuneGuiHttpConnectOfflineHandler;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.config.dbms.DbmsConfigManager;
@@ -45,10 +51,13 @@ import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Debug;
 import com.asetune.utils.Encrypter;
+import com.asetune.utils.JavaUtils;
 import com.asetune.utils.JavaVersion;
 import com.asetune.utils.Logging;
 import com.asetune.utils.Memory;
 import com.asetune.utils.OpenSslAesUtil;
+import com.asetune.utils.OpenSslAesUtil.DecryptionException;
+import com.asetune.utils.ShutdownHandler;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingExceptionHandler;
 import com.asetune.utils.SwingUtils;
@@ -65,6 +74,8 @@ public abstract class DbxTune
 {
 	private static Logger _logger = Logger.getLogger(DbxTune.class);
 	private static String _mainClassName = "unknown"; // this is set in main() by looking at the stack trace, by getting the last entry";
+
+	public static final String DBXTUNE_NOGUI_INFO_CONFIG = "DBXTUNE_NOGUI_INFO_CONFIG";
 
 	/** This can be either GUI or NO-GUI "collector" */
 //	private static ICounterController _counterController = null;
@@ -110,7 +121,126 @@ public abstract class DbxTune
 	{
 		return _mainClassName;
 	}
+	
+	/**
+	 * Strip of some part of a servername<br>
+	 * For SqlServer (which has default port 1433), it will do the following<br>
+	 * <pre>
+	 * 192.168.0.1         -> 192-168-0-1 
+	 * 192.168.0.1:1234    -> 192-168-0-1_1234
+	 * 192.168.0.1:1433    -> 192-168-0-1
+	 * gorans              -> gorans
+	 * gorans:1234         -> gorans_1234
+	 * gorans:1433         -> gorans
+	 * gorans.xxx.com      -> gorans
+	 * gorans.xxx.com:1234 -> gorans_1234
+	 * gorans.xxx.com:1433 -> gorans
+	 * </pre>
+	 * Other default port numbers
+	 * <pre>
+	 * SqlServerTune : 1433
+	 * PostgresTune  : 5432
+	 * MySqlTune     : 3306
+	 * OracleTune    : 1521
+	 * Db2Tune       : 50000
+	 * HanaTune      : 30015
+	 * </pre>
+	 * @param srvName
+	 * @return
+	 */
+	public static String stripSrvName(String srvName)
+	{
+		if (srvName == null)
+			return null;
 
+		// Should we strip off the "last part" of any host name:  "host1.acme.com:1234" -> "host1:1234" or shoudl we keep it 
+		if (srvName.indexOf('.') >= 0 || srvName.indexOf(':') >= 0)
+		{
+			String beforeColon = srvName;
+			String afterColon  = "";
+			int firstColon = srvName.indexOf(':');
+			if (firstColon >= 0)
+			{
+				beforeColon = srvName.substring(0, firstColon);
+				afterColon  = srvName.substring(firstColon + 1);
+			}
+
+			// get only the hostname: "host1.acme.com" -> "host1"
+			int firstDot = srvName.indexOf('.');
+			if (firstDot >= 0)
+			{
+				String validIpAddressRegex = "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$";
+				//String validHostnameRegex = "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$";
+
+				if (beforeColon.matches(validIpAddressRegex))
+				{
+					// Replace all '.'
+					beforeColon = beforeColon.replace('.', '-');
+				}
+				else
+				{
+					beforeColon = srvName.substring(0, firstDot);
+				}
+			}
+
+			// If the portnumber is the default... strip it out
+//			if ("AseTune"      .equalsIgnoreCase(Version.getAppName()) && "5000" .equals(afterColon)) afterColon = "";
+			if ("SqlServerTune".equalsIgnoreCase(Version.getAppName()) && "1433" .equals(afterColon)) afterColon = "";
+			if ("PostgresTune" .equalsIgnoreCase(Version.getAppName()) && "5432" .equals(afterColon)) afterColon = "";
+			if ("MySqlTune"    .equalsIgnoreCase(Version.getAppName()) && "3306" .equals(afterColon)) afterColon = "";
+			if ("OracleTune"   .equalsIgnoreCase(Version.getAppName()) && "1521" .equals(afterColon)) afterColon = "";
+			if ("Db2Tune"      .equalsIgnoreCase(Version.getAppName()) && "50000".equals(afterColon)) afterColon = "";
+			if ("HanaTune"     .equalsIgnoreCase(Version.getAppName()) && "30015".equals(afterColon)) afterColon = "";
+			
+			// Now set servername
+			srvName = beforeColon;
+			if (StringUtil.hasValue(afterColon))
+				srvName = beforeColon + ":" + afterColon;
+		}
+		
+		// Windows do not handle ':' characters in filenames that well
+		if (srvName.indexOf(':') >= 0)
+			srvName = srvName.replace(':', '_');
+
+		return srvName;
+	}
+//	public static void main(String[] args)
+//	{
+//		Version.setAppName("SqlServerTune");
+//		
+//		System.out.println("stripSrvName()='"+stripSrvName("192.168.0.1")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("192.168.0.1:1234")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("192.168.0.1:1433")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("gorans")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("gorans:1234")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("gorans:1433")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("gorans.xxx.com")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("gorans.xxx.com:1234")+"'");
+//		System.out.println("stripSrvName()='"+stripSrvName("gorans.xxx.com:1433")+"'");
+//	}
+
+	/**
+	 * What port number should the DbxTune GUI application use (for listening on local web calls/requests to connect to any db recording that is hosted on other server)
+	 * @param appname
+	 * @return
+	 */
+	public static int getGuiWebPort(String appname)
+	{
+		if ("AseTune"      .equalsIgnoreCase(appname)) return 6904;
+		if ("IqTune"       .equalsIgnoreCase(appname)) return 6905;
+		if ("RsTune"       .equalsIgnoreCase(appname)) return 6906;
+		if ("RaxTune"      .equalsIgnoreCase(appname)) return 6907;
+		if ("SqlServerTune".equalsIgnoreCase(appname)) return 6908;
+		if ("PostgresTune" .equalsIgnoreCase(appname)) return 6909;
+		if ("MySqlTune"    .equalsIgnoreCase(appname)) return 6910;
+		if ("OracleTune"   .equalsIgnoreCase(appname)) return 6911;
+		if ("Db2Tune"      .equalsIgnoreCase(appname)) return 6912;
+		if ("HanaTune"     .equalsIgnoreCase(appname)) return 6913;
+
+		return 6903;
+	}
+
+	
 	public abstract String getAppName();
 //	public abstract String getAppHomeEnvName();
 //	public abstract String getAppSaveDirEnvName();
@@ -152,12 +282,20 @@ public abstract class DbxTune
 //		_cmdLine = cmd;
 
 		// Create store dir if it did not exists.
-		File appStoreDir = new File(Version.getAppStoreDir());
-		if ( ! appStoreDir.exists() )
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
+
+
+		// Are we in GUI mode or not
+		_gui = true;
+		if (cmd.hasOption("noGui"))
+//		if ( ! hasGui() )
 		{
-			if (appStoreDir.mkdir())
-				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
+			_gui = false;
+			// Should we set this to headless... so that we throws "headless exception" if accessing GUI parts
+			System.setProperty("java.awt.headless", "true");
 		}
+		Configuration.setGui(_gui);
+//		System.setProperty(Configuration.HAS_GUI, Boolean.toString(_gui)); // used in AseConnectionFactory
 
 
 		// -----------------------------------------------------------------
@@ -172,15 +310,23 @@ public abstract class DbxTune
 		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  getSaveConfigFileName());
 		final String APP_HOME              = System.getProperty(getAppHomeEnvName());
 
-		String defaultPropsFile     = (APP_HOME                 != null) ? APP_HOME                 + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (APP_HOME                != null) ? APP_HOME                + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then IQTUNE_HOME)
-		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
+
+		// Set default values for NO-GUI mode
+		if ( ! _gui )
+		{
+			defaultUserPropsFile = null; // no file, just keep temp settings in-memory
+			defaultTmpPropsFile  = null; // no file, just keep temp settings in-memory
+			
+		}
 
 		String propFile        = cmd.getOptionValue("config",     defaultPropsFile);
 		String userPropFile    = cmd.getOptionValue("userConfig", defaultUserPropsFile);
@@ -191,18 +337,6 @@ public abstract class DbxTune
 		// Check if the configuration file exists
 		if ( ! (new File(propFile)).exists() )
 			throw new FileNotFoundException("The configuration file '"+propFile+"' doesn't exists.");
-
-		// Are we in GUI mode or not
-		_gui = true;
-		if (cmd.hasOption("noGui"))
-//		if ( ! hasGui() )
-		{
-			_gui = false;
-			// Should we set this to headless... so that we throws "headless exception" if accessing GUI parts
-			System.setProperty("java.awt.headless", "true");
-		}
-		Configuration.setGui(_gui);
-//		System.setProperty(Configuration.HAS_GUI, Boolean.toString(_gui)); // used in AseConnectionFactory
 
 		// -----------------------------------------------------------------
 		// CHECK JAVA JVM VERSION
@@ -227,11 +361,31 @@ public abstract class DbxTune
 		Configuration.setInstance(Configuration.TAIL_TEMP, tailSaveProps);
 
 		// The SAVE Properties...
-		Configuration appSaveProps = new Configuration(tmpPropFile);
-		Configuration.setInstance(Configuration.USER_TEMP, appSaveProps);
+		Configuration appSaveProps = null;
+		if (_gui)
+		{
+			appSaveProps = StringUtil.hasValue(tmpPropFile) ? new Configuration(tmpPropFile) : new Configuration();
+			Configuration.setInstance(Configuration.USER_TEMP, appSaveProps);
+		}
+		else
+		{
+			appSaveProps = new Configuration();
+			Configuration.setInstance(Configuration.USER_TEMP, appSaveProps);
+
+			if (StringUtil.hasValue(tmpPropFile))
+			{
+				System.out.println("");
+				System.out.println("===============================================================");
+				System.out.println(" WARNING: you have specified cmdline option --tmpConfig "+tmpPropFile);
+				System.out.println(" This will NOT be used in NU-GUI mode.");
+				System.out.println(" A new 'USER_TEMP' object will be created on every startup.");
+				System.out.println("---------------------------------------------------------------");
+				System.out.println("");
+			}
+		}
 
 		// Get the USER properties that could override CONF
-		Configuration appUserProps = new Configuration(userPropFile);
+		Configuration appUserProps = StringUtil.hasValue(userPropFile) ? new Configuration(userPropFile) : new Configuration();
 		Configuration.setInstance(Configuration.USER_CONF, appUserProps);
 
 		// Get the "OTHER" properties that has to do with LOGGING etc...
@@ -254,8 +408,8 @@ public abstract class DbxTune
 		else
 		{
 			Configuration.setSearchOrder(
-					Configuration.PCS,          // First
-					Configuration.USER_TEMP,    // Second
+					Configuration.USER_TEMP,    // First   (this must be first, otherwise "overrides" like 'timeout'->changeSqlBehaviour wont work)
+					Configuration.PCS,          // Second
 					Configuration.USER_CONF,    // Third
 					Configuration.SYSTEM_CONF); // Forth
 		}
@@ -382,19 +536,23 @@ public abstract class DbxTune
 
 
 
-		// Check if we have a specific LOG filename before we initialize the logger...
+		// Both below is used later in the code
+		String dbmsSrvName = null;
 		String logFilename = null;
+		
+		// Check if we have a specific LOG filename before we initialize the logger...
 		if (cmd.hasOption('L'))
 		{
 			String opt = cmd.getOptionValue('L');
 			//check/fix opt Str
 			logFilename = opt;
 		}
-		// If NO-GUI mode and NO Logfile was specified, maybe try to set the filename to AppName.nogui.dbmsSrvName.log
-		if ( ! _gui  &&  StringUtil.isNullOrBlank(logFilename) )
+		// If NO-GUI mode try to figgure out a 
+		if ( ! _gui )
 		{
 			// first: get servername from the propfile
-			String srvName = storeConfigProps.getProperty("conn.aseName");
+			//String srvName = storeConfigProps.getProperty("conn.dbmsName");
+			String srvName = storeConfigProps.getProperty("conn.dbmsName");
 
 			// Override the name if we got the servernmae from the command line params
 			if (cmd.hasOption('S'))
@@ -402,17 +560,22 @@ public abstract class DbxTune
 
 			// If we GOT a servername, set the log-name based on that
 			if (srvName != null)
-			{
-				// Windows do not handle ':' characters in filenames that well
-				if (srvName.indexOf(':') >= 0)
-					srvName = srvName.replace(':', '.');
+				srvName = stripSrvName(srvName);
 
-				logFilename = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() : System.getProperty("user.home");
-    			if ( logFilename != null && ! (logFilename.endsWith("/") || logFilename.endsWith("\\")) )
-    				logFilename += System.getProperty("file.separator");
-    
+			// NO Logfile was specified, maybe try to set the filename to AppName.nogui.dbmsSrvName.log
+			if ( srvName != null && StringUtil.isNullOrBlank(logFilename) )
+			{
+				logFilename = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
+				if ( logFilename != null && ! (logFilename.endsWith("/") || logFilename.endsWith("\\")) )
+					logFilename += System.getProperty("file.separator");
+
+				logFilename += "log" + System.getProperty("file.separator");
+
 				logFilename += Version.getAppName()+".nogui."+srvName+".log";
 			}
+			
+			// DBMS Srv Name is used later
+			dbmsSrvName = srvName;
 		}
 
 
@@ -549,6 +712,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
 		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
 
+		if (crAppDirLog != null && !crAppDirLog.isEmpty())
+		{
+			_logger.info("Below messages was created earlier by 'check/create application directory'.");
+			for (String msg : crAppDirLog)
+				_logger.info(msg);
+		}
+
 		// check if sufficient memory has been configured.
 		// [FIXME] what is appropriate default value here.
 		String needMemInMBStr = "32";
@@ -561,13 +731,12 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			throw new Exception(message);
 		}
 
-
 		// Put command line properties into the Configuration
 		if ( _gui ) // GUI MODE
 		{
-			if (cmd.hasOption('U'))	appProps.setProperty("cmdLine.aseUsername", cmd.getOptionValue('U'));
-			if (cmd.hasOption('P'))	appProps.setProperty("cmdLine.asePassword", cmd.getOptionValue('P'), true);
-			if (cmd.hasOption('S'))	appProps.setProperty("cmdLine.aseServer",   cmd.getOptionValue('S'));
+			if (cmd.hasOption('U'))	appProps.setProperty("cmdLine.dbmsUsername", cmd.getOptionValue('U'));
+			if (cmd.hasOption('P'))	appProps.setProperty("cmdLine.dbmsPassword", cmd.getOptionValue('P'), true);
+			if (cmd.hasOption('S'))	appProps.setProperty("cmdLine.dbmsServer",   cmd.getOptionValue('S'));
 
 			// Check servername
 			if (cmd.hasOption('S'))
@@ -620,30 +789,34 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 			//-------------------------------------------------
 			// ASE CONNECTION
-			if (cmd.hasOption('U'))	storeConfigProps.setProperty("conn.aseUsername", cmd.getOptionValue('U'));
-			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.asePassword", cmd.getOptionValue('P'), true);
-			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.aseName",     cmd.getOptionValue('S'));
+			if (cmd.hasOption('U'))	storeConfigProps.setProperty("conn.dbmsUsername",    cmd.getOptionValue('U'));
+			if (cmd.hasOption('P'))	storeConfigProps.setProperty("conn.dbmsPassword",    cmd.getOptionValue('P'), true);
+			if (cmd.hasOption('S'))	storeConfigProps.setProperty("conn.dbmsName",        cmd.getOptionValue('S'));
+			if (cmd.hasOption('A'))	storeConfigProps.setProperty("conn.dbmsServerAlias", cmd.getOptionValue('A'));
+			if (cmd.hasOption('O'))	storeConfigProps.setProperty("conn.jdbcUrlOptions",  cmd.getOptionValue('O'));
 			
 			// Check servername
 			boolean plainAseServerName = false;
-			String aseCmdLineSwitchHostname = null;
+			String dbmsCmdLineSwitchHostname = null;
 			if (cmd.hasOption('S'))
 			{
 				String cmdLineServer = cmd.getOptionValue('S');
 
-				// Only SYBASE srvTypes is for the moment validated
-				String srvType = "SYB";
-
-				if ("SYB".equals(srvType))
+				// Only SYBASE/TDS srvTypes is for the moment validated
+				if (    "AseTune".equalsIgnoreCase(Version.getAppName()) 
+				     || "IqTune" .equalsIgnoreCase(Version.getAppName())
+				     || "RsTune" .equalsIgnoreCase(Version.getAppName())
+				     || "RaxTune".equalsIgnoreCase(Version.getAppName())
+				   )
 				{
 					if (cmdLineServer.indexOf(":") != -1) // HAS ":" is cmdLineServer 
 					{
 						if ( ! AseConnectionFactory.isHostPortStrValid(cmdLineServer) )
 							throw new Exception("Problems with command line parameter -S"+cmdLineServer+"; "+AseConnectionFactory.isHostPortStrValidReason(cmdLineServer));
 						
-						aseCmdLineSwitchHostname = cmdLineServer.substring(0, cmdLineServer.indexOf(":"));
+						dbmsCmdLineSwitchHostname = cmdLineServer.substring(0, cmdLineServer.indexOf(":"));
 
-						storeConfigProps.setProperty("conn.aseHostPort", cmdLineServer);
+						storeConfigProps.setProperty("conn.dbmsHostPort", cmdLineServer);
 					}
 					else
 					{
@@ -652,34 +825,49 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 						String hostPort = AseConnectionFactory.getIHostPortStr(cmdLineServer);
 //						appProps.setProperty("cmdLine.aseServer",   hostPort);
-//						storeConfigProps.setProperty("conn.aseName",   hostPort);
-						storeConfigProps.setProperty("conn.aseHostPort",   hostPort);
+//						storeConfigProps.setProperty("conn.dbmsName",   hostPort);
+						storeConfigProps.setProperty("conn.dbmsHostPort",   hostPort);
 						_logger.info("Resolved the Command Line Switch -S '"+cmdLineServer+"'. To host:port '"+hostPort+"'.");
 						
 						plainAseServerName = true;
 					}
 				}
-				else if ("XXX".equals(srvType))
+				else if ("XxxTune".equalsIgnoreCase(Version.getAppName()))
 				{
 				}
 				else // "unhandled" server types
 				{
+//					JdbcUrlParser jdbcUrlParser = JdbcUrlParser.parse(cmdLineServer);
+//System.out.println("jdbcUrlParser='"+jdbcUrlParser+"'");
+//					
+//					dbmsCmdLineSwitchHostname = jdbcUrlParser.getHost();
+//					storeConfigProps.setProperty("conn.dbmsHostPort", jdbcUrlParser.getHostPortStr());
+					
+					dbmsCmdLineSwitchHostname = cmdLineServer;
+					storeConfigProps.setProperty("conn.dbmsHostPort", cmdLineServer);
+
+					if (cmdLineServer.indexOf(":") != -1) // HAS ":" is cmdLineServer 
+					{
+						dbmsCmdLineSwitchHostname = cmdLineServer.substring(0, cmdLineServer.indexOf(":"));
+						storeConfigProps.setProperty("conn.dbmsHostPort", cmdLineServer);
+					}
+					
 				}
 			}
 
 //System.out.println("####################### DBMS");
-//System.out.println("DbxTune: storeConfigProps.getProperty(conn.aseUsername) = " + storeConfigProps.getProperty("conn.aseUsername"));
-//System.out.println("DbxTune: storeConfigProps.getProperty(conn.asePassword) = " + storeConfigProps.getProperty("conn.asePassword"));
-//System.out.println("DbxTune: storeConfigProps.getProperty(conn.aseName)     = " + storeConfigProps.getProperty("conn.aseName"));
-//System.out.println("---> DbxTune: storeConfigProps.hasProperty(conn.asePassword) = " + storeConfigProps.hasProperty("conn.asePassword"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.dbmsUsername) = " + storeConfigProps.getProperty("conn.dbmsUsername"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.dbmsPassword) = " + storeConfigProps.getProperty("conn.dbmsPassword"));
+//System.out.println("DbxTune: storeConfigProps.getProperty(conn.dbmsName)     = " + storeConfigProps.getProperty("conn.dbmsName"));
+//System.out.println("---> DbxTune: storeConfigProps.hasProperty(conn.dbmsPassword) = " + storeConfigProps.hasProperty("conn.dbmsPassword"));
 			// If no password, try to grab a password from the file '~/.passwd.enc'
-			if ( ! storeConfigProps.hasProperty("conn.asePassword") )
+			if ( ! storeConfigProps.hasProperty("conn.dbmsPassword") )
 			{
 				try 
 				{
 //					String aseUser   = cmd.getOptionValue('U', "sa");
-					String aseUser   = storeConfigProps.getProperty("conn.aseUsername", "sa");
-					String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : aseCmdLineSwitchHostname;
+					String aseUser   = storeConfigProps.getProperty("conn.dbmsUsername", "sa");
+					String aseServer = plainAseServerName ? cmd.getOptionValue('S', null) : dbmsCmdLineSwitchHostname;
 
 					// Note: generate a passwd in linux: echo 'thePasswd' | openssl enc -aes-128-cbc -a -salt -pass:sybase
 					String asePasswd = OpenSslAesUtil.readPasswdFromFile(aseUser, aseServer);
@@ -687,12 +875,21 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 					if (asePasswd != null)
 					{
 						_logger.info("No DBMS password was specified. But the password '******', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+
 						if (_logger.isDebugEnabled())
 							_logger.info("No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
-						storeConfigProps.setProperty("conn.asePassword", asePasswd, true); // should we encrypt the passwd or not
+
+						if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
+							System.out.println("#### DEBUG ####: No DBMS password was specified. But the password '"+asePasswd+"', for user '"+aseUser+"', DBMS Server '"+aseServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+
+						storeConfigProps.setProperty("conn.dbmsPassword", asePasswd, true); // should we encrypt the passwd or not
 					}
 					else
 						_logger.info("No DBMS password was specified. and NO entry, for user '"+aseUser+"', DBMS Server '"+aseServer+"' was found in the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+				}
+				catch(DecryptionException ex)
+				{
+					_logger.info("Problems decrypting the password, probably a bad passphrase for the encrypted passwd. Caught: "+ex);
 				}
 				catch(FileNotFoundException ex)
 				{
@@ -728,10 +925,10 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				// only when we have a SSH-User name... otherwise we wont do SSH Connect
 				if (storeConfigProps.hasProperty("conn.sshUsername"))
 				{
-					String aseHostPort = storeConfigProps.getProperty("conn.aseHostPort", null);
-					if (StringUtil.hasValue(aseHostPort))
+					String dbmsHostPort = storeConfigProps.getProperty("conn.dbmsHostPort", null);
+					if (StringUtil.hasValue(dbmsHostPort))
 					{
-						String sa[] = aseHostPort.split(":");
+						String sa[] = dbmsHostPort.split(":");
 						String sshHostname = sa[0];
 						storeConfigProps.setProperty("conn.sshHostname", sshHostname);
 						
@@ -759,8 +956,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 					if (sshPasswd != null)
 					{
 						_logger.info("No SSH password was specified. But the password '******', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+
 						if (_logger.isDebugEnabled())
 							_logger.debug("No SSH password was specified. But the password '"+sshPasswd+"', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+
+						if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
+							System.out.println("#### DEBUG ####: No SSH password was specified. But the password '"+sshPasswd+"', for user '"+sshUser+"', SSH Server '"+sshServer+"' was grabbed from the file '"+OpenSslAesUtil.getPasswordFilename()+"'.");
+
 						storeConfigProps.setProperty("conn.sshPassword", sshPasswd, true); // should we encrypt the passwd or not
 					}
 					else
@@ -994,6 +1196,127 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			}
 		}
 
+		// 
+		// Create a file, that will be deleted when the process ends.
+		// This file will hold various configuration about the NO-GUI process
+		// This is used by DBXTUNE Central...
+		//
+		if ( ! _gui )
+		{
+			boolean writeDbxTuneServiceFile = true;
+			if (writeDbxTuneServiceFile)
+			{
+				// file location: ${HOME}/.asetune/info/${dbmsSrvName}.dbxtune
+				String noGuiServiceInfoFile = AppDir.getAppStoreDir() + File.separator + "info" + File.separator + dbmsSrvName + ".dbxtune";
+				File f = new File(noGuiServiceInfoFile);
+
+				_logger.info("Creating DbxTune - NOGUI Service information file '" + f.getAbsolutePath() + "'.");
+
+				// Create the directory structure (if it's not there)
+				if (f.getParentFile() != null)
+					f.getParentFile().mkdirs();
+
+				// Create the file
+				f.createNewFile();
+				
+				// Mark it as to be removed when the JVM ends.
+				f.deleteOnExit();
+
+
+				// Create the configuration
+				Configuration conf = new Configuration(noGuiServiceInfoFile);
+				Configuration.setInstance(DBXTUNE_NOGUI_INFO_CONFIG, conf);
+				
+				// Set some configuartion in the file
+				conf.setProperty("dbxtune.app.name",     Version.getAppName());
+				conf.setProperty("dbxtune.startTime",    new Timestamp(System.currentTimeMillis())+"" );
+				conf.setProperty("dbxtune.pid",          JavaUtils.getProcessId("-1"));
+				conf.setProperty("dbxtune.log.file",     logFilename);
+				conf.setProperty("dbxtune.config.file",  noGuiConfigFile);
+				conf.setProperty("dbxtune.dbms.srvName", dbmsSrvName);
+				conf.setProperty("dbxtune.refresh.rate", storeConfigProps.getProperty("offline.sampleTime", ""));
+
+				// AlarmWriteToFile ACTIVE/LOG properties (so the DBXCENTRAL OverviewServlet can pick it up)
+				String wtoFileActiveFilename = Configuration.getCombinedConfiguration().getPropertyRaw(AlarmWriterToFile.PROPKEY_activeFilename);
+				String wtoFileLogFilename    = Configuration.getCombinedConfiguration().getPropertyRaw(AlarmWriterToFile.PROPKEY_logFilename);
+				if (StringUtil.hasValue(wtoFileActiveFilename))	conf.setProperty(AlarmWriterToFile.PROPKEY_activeFilename, wtoFileActiveFilename);
+				if (StringUtil.hasValue(wtoFileActiveFilename))	conf.setProperty(AlarmWriterToFile.PROPKEY_logFilename,    wtoFileLogFilename);
+				
+				// Save it; with override
+				conf.save(true);
+				
+				// Later of, for instance in the PCS JDBC Writer will write information on where a recording is stored etc.
+			}
+
+			// Start a HTTP Server so DbxTune Central can "talk" to the NOGUI instance
+			boolean startHttpSrv = false;
+			if (startHttpSrv)
+			{
+				// TODO: implement this
+
+				//Configuration conf = Configuration.getInstance(DBXTUNE_NOGUI_INFO_CONFIG);
+				//conf.setProperty("dbxtune.http.url", "http://127.0.0.1:"+portNumber);
+				
+				// Or I may choose to do it via: JMX - Java Management Extensions
+			}
+		}
+		else
+		{
+			// Start a HTTP Server (on the client host) so DbxTune Central web content - can "talk" to the local GUI instance
+			// This can be used for example to issue a "connect to - recorded database" that is managed by 'DbxTune Central' 
+			boolean startHttpSrv = true;
+			if (startHttpSrv)
+			{
+				// TODO: implement this
+				
+				// The port number must be "fixed", so if you have started several asetune GUI clients on your PC, it's only the "first" that will listen on the port
+				// when a command is received on the port, a popup must be displayed - so that the user can accept or decline the command issued on the web page
+				
+				// How this will work.
+				// - you connect to the DbxTune Central server (a web server), That will present high level info...
+				//   If you want to drill down, you need to start AseTune/dbxTune GUI (which will listen on port 9999) 9999 is just an example
+				// - DbxTune Central will present a HTML "link" that points to URL "http://localhost:9999/some-command/param"
+				//   When you click the link, the web browser will try to access that URL (which is your AseTune/DbxTune GUI instance)
+				//   The GUI instance can then "do" what the web browser instructed it to do (for instance: connect to an offline recording on url 'jdbc:h2:tcp://dbxtune-central.acme.com:19092/PROD_ASE_2017-11-09'
+				//   The GUI should show a popup so the user can accept/decline the command issued by the web browser
+				
+				// http://www.eclipse.org/jetty/documentation/9.4.x/embedding-jetty.html
+				
+				// Or we may do this by "drag and drop" --- But lets explore this...
+				
+				try
+				{
+					int port = Configuration.getCombinedConfiguration().getIntProperty("DbxTune.gui.http.listener.port", getGuiWebPort(Version.getAppName()));
+					Server server = new Server();
+
+					ServerConnector http = new ServerConnector(server);
+			        http.setHost("127.0.0.1"); // localhost
+			        http.setPort(port);
+			        http.setIdleTimeout(30000);
+
+			        // Set the connector
+			        server.addConnector(http);
+					
+					// Add a single handler on context "/connect-offline"
+					ContextHandler context = new ContextHandler();
+					context.setContextPath( "/connect-offline" );
+					context.setHandler( new DbxTuneGuiHttpConnectOfflineHandler() );
+
+					server.setHandler( context );
+
+					_logger.info("Starting local Web server at port "+port+".");
+					server.start();
+				}
+				catch(Exception ex)
+				{
+					_logger.warn ("Starting local Web server faild, but I will continue anyway...");
+					_logger.debug("Starting local Web server faild, but I will continue anyway...", ex);
+				}
+			}
+		}
+
+
+		
 		
 		// Create a DBMS Configuration object, note: createDbmsConfig() might return null, then the DBMS Config isn't supported...
 		IDbmsConfig dbmsConfig = createDbmsConfig();
@@ -1031,7 +1354,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 					conf = Configuration.getInstance(Configuration.PCS);
 				
 				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);
-				if (StringUtil.hasValue(alarmWriters))
+				if (StringUtil.hasValue(alarmWriters) || _gui)
 				{
 					//--------------------------------------------------------
 					// User Defined Alarm Handler
@@ -1044,8 +1367,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 					// Initialize the alarm handler
 					AlarmHandler ah = new AlarmHandler();
 					AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
-					ah.init(conf, _gui, true);
+					ah.init(conf, _gui, true, true);
 					ah.start();
+					
+					
+					// In NI-GUI, you can simulate any DummyAlarm, let us know how...
+					if ( ! _gui )
+						_logger.info("To test the alarm subsystem, you can generate an alarm called 'AlarmEventDummy' by creating the file '"+ah.getDymmyAlarmFileName(null)+"'. The file will be deleted after the alarm is raised.");
 				}
 				else
 				{
@@ -1091,6 +1419,11 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 //			CheckForUpdates.blockCheck(10*1000);
 			CheckForUpdates.getInstance().checkForUpdateBlock(10*1000);
 
+			//---------------------------------
+			// Install shutdown hook, that will STOP the collector (and SHUTDOWN H2)
+			// This needs to be done before we start any connections to H2
+			// NOTE: This is done in CounterCollectorThreadNoGui.init()
+			
 			//---------------------------------
 			// Create and Start the "collector" thread
 //			_counterController = new GetCountersNoGui();
@@ -1325,8 +1658,8 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			pw.println();
 		}
 
-		pw.println("usage: "+getAppNameCmd()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] ");
-		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>]");
+		pw.println("usage: "+getAppNameCmd()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] [-a]");
+		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>] [-A <alias>] [-O <urlOptions>]");
 		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] ");
 		pw.println("              [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
 		pw.println("              [-n <cfgFile|cmNames>] [-r] [-l] [-i <seconds>] [-f <hours>]");
@@ -1340,10 +1673,14 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 		pw.println("                            To get available option, do -x list");
+		pw.println("  -a,--createAppDir         Create application dir (~/.dbxtune) and exit.");
 		pw.println("  ");
 		pw.println("  -U,--user <user>          Username when connecting to server.");
 		pw.println("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
 		pw.println("  -S,--server <server>      Server to connect to.");
+		pw.println("  -A,--serverAlias <name>   Server Alias (used by PCS and DbxCentral) for alternate name.");
+		pw.println("                            note: <SRVNAME> will be replaced with the DBMS Instance Name");
+		pw.println("  -O,--urlOptions <server>  jdbc Url options/properties example: 'key1=val;key2=val'");
 		pw.println("  ");
 		pw.println("  -u,--sshUser <user>       SSH Username, used by Host Monitoring subsystem.");
 		pw.println("  -p,--sshPasswd <passwd>   SSH Password, used by Host Monitoring subsystem.");
@@ -1436,9 +1773,13 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		options.addOption( Option.builder("v").longOpt("version"       ).hasArg(false).build() );
 		options.addOption( Option.builder("x").longOpt("debug"         ).hasArg(true ).build() );
 
+		options.addOption( Option.builder("a").longOpt("createAppDir"  ).hasArg(false).build() );
+
 		options.addOption( Option.builder("U").longOpt("user"          ).hasArg(true ).build() );
 		options.addOption( Option.builder("P").longOpt("passwd"        ).hasArg(true ).build() );
 		options.addOption( Option.builder("S").longOpt("server"        ).hasArg(true ).build() );
+		options.addOption( Option.builder("A").longOpt("serverAlias"   ).hasArg(true ).build() );
+		options.addOption( Option.builder("O").longOpt("urlOptions"    ).hasArg(true ).build() );
 
 		options.addOption( Option.builder("u").longOpt("sshUser"       ).hasArg(true ).build() );
 		options.addOption( Option.builder("p").longOpt("sshPasswd"     ).hasArg(true ).build() );
@@ -1614,6 +1955,14 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				System.out.println();
 			}
 			//-------------------------------
+			// CREATE APP DIR
+			//-------------------------------
+			else if ( cmd.hasOption("createAppDir") )
+			{
+				// Create store dir if it did not exists.
+				AppDir.checkCreateAppDir( null, System.out );
+			}
+			//-------------------------------
 			// Check for correct number of cmd line parameters
 			//-------------------------------
 			else if ( cmd.getArgs() != null && cmd.getArgs().length > 0 )
@@ -1642,6 +1991,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 				else if ("OracleTune"   .equalsIgnoreCase(_mainClassName)) _instance = new OracleTune   (cmd);
 				else if ("PostgresTune" .equalsIgnoreCase(_mainClassName)) _instance = new PostgresTune (cmd);
 				else if ("MySqlTune"    .equalsIgnoreCase(_mainClassName)) _instance = new MySqlTune    (cmd);
+				else if ("Db2Tune"      .equalsIgnoreCase(_mainClassName)) _instance = new Db2Tune      (cmd);
 				else
 				{
 					throw new Exception("Unknown Implementor of type '"+_mainClassName+"'.");
@@ -1669,6 +2019,12 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			e.printStackTrace();
 			System.out.println("--------------------------------------------------------------------");
 			System.exit(1);
+		}
+
+		// Did anyone set that we requested a restart, then exit with 8  ( or laying 8 : a lemniscate = infinity symbol)
+		if (ShutdownHandler.wasRestartSpecified())
+		{
+			System.exit(ShutdownHandler.RESTART_EXIT_CODE);
 		}
 	}
 }

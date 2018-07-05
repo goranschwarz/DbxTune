@@ -18,7 +18,6 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -126,70 +125,117 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels_runQueueLength  = new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" };
-		String[] labels_pendingIo       = new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" };
-//		String[] labels_runtimeReplaced = new String[] { "-runtime-replaced-" };
-		String[] labels_runtimeReplaced = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		String[] labels_runQueueLength  = new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" };
+//		String[] labels_pendingIo       = new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" };
+////		String[] labels_runtimeReplaced = new String[] { "-runtime-replaced-" };
+//		String[] labels_runtimeReplaced = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//
+//		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, labels_runQueueLength,  LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, labels_runtimeReplaced, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_PENDING_IO_SUM,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_SUM,       labels_pendingIo,       LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_PENDING_IO_ENG,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_ENG,       labels_runtimeReplaced, LabelType.Dynamic));
 
-		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM, labels_runQueueLength,  LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, new TrendGraphDataPoint(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG, labels_runtimeReplaced, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_PENDING_IO_SUM,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_SUM,       labels_pendingIo,       LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_PENDING_IO_ENG,       new TrendGraphDataPoint(GRAPH_NAME_PENDING_IO_ENG,       labels_runtimeReplaced, LabelType.Dynamic));
+		// GRAPH: Run Queue Length
+		addTrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM,
+			"Runnable Queue Length, Summary", 	                        // Menu CheckBox text
+			"Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)", // Label 
+			new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" },
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			TrendGraph tg = null;
+		// GRAPH: Run Queue Length
+		addTrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG,
+			"Runnable Queue Length, per Scheduler", 	                        // Menu CheckBox text
+			"Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH: Run Queue Length
-			tg = new TrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM,
-				"Runnable Queue Length, Summary", 	                        // Menu CheckBox text
-				"Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)", // Label 
-				labels_runQueueLength, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH: Outstanding IO's
+		addTrendGraph(GRAPH_NAME_PENDING_IO_SUM,
+			"Outstanding IO Requests, Summary", 	                        // Menu CheckBox text
+			"Outstanding IO Requests, Summary (using dm_os_schedulers.pending_disk_io_count)", // Label 
+			new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH: Run Queue Length
-			tg = new TrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG,
-				"Runnable Queue Length, per Scheduler", 	                        // Menu CheckBox text
-				"Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)", // Label 
-				labels_runQueueLength, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH: Outstanding IO's
+		addTrendGraph(GRAPH_NAME_PENDING_IO_ENG,
+			"Outstanding IO Requests, per Scheduler", 	                        // Menu CheckBox text
+			"Outstanding IO Requests, per Scheduler (using dm_os_schedulers.pending_disk_io_count)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH: Outstanding IO's
-			tg = new TrendGraph(GRAPH_NAME_PENDING_IO_SUM,
-				"Outstanding IO Requests, Summary", 	                        // Menu CheckBox text
-				"Outstanding IO Requests, Summary (using dm_os_schedulers.pending_disk_io_count)", // Label 
-				labels_pendingIo, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH: Outstanding IO's
-			tg = new TrendGraph(GRAPH_NAME_PENDING_IO_ENG,
-				"Outstanding IO Requests, per Scheduler", 	                        // Menu CheckBox text
-				"Outstanding IO Requests, per Scheduler (using dm_os_schedulers.pending_disk_io_count)", // Label 
-				labels_pendingIo, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			TrendGraph tg = null;
+//
+//			// GRAPH: Run Queue Length
+//			tg = new TrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM,
+//				"Runnable Queue Length, Summary", 	                        // Menu CheckBox text
+//				"Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)", // Label 
+//				labels_runQueueLength, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH: Run Queue Length
+//			tg = new TrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG,
+//				"Runnable Queue Length, per Scheduler", 	                        // Menu CheckBox text
+//				"Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)", // Label 
+//				labels_runQueueLength, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH: Outstanding IO's
+//			tg = new TrendGraph(GRAPH_NAME_PENDING_IO_SUM,
+//				"Outstanding IO Requests, Summary", 	                        // Menu CheckBox text
+//				"Outstanding IO Requests, Summary (using dm_os_schedulers.pending_disk_io_count)", // Label 
+//				labels_pendingIo, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH: Outstanding IO's
+//			tg = new TrendGraph(GRAPH_NAME_PENDING_IO_ENG,
+//				"Outstanding IO Requests, per Scheduler", 	                        // Menu CheckBox text
+//				"Outstanding IO Requests, per Scheduler (using dm_os_schedulers.pending_disk_io_count)", // Label 
+//				labels_pendingIo, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 		
 	@Override

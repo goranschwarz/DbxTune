@@ -10,12 +10,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cache.XmlPlanCache;
+import com.asetune.cache.XmlPlanCacheAse;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmActiveObjects;
 import com.asetune.cm.ase.CmActiveStatements;
@@ -72,12 +75,15 @@ import com.asetune.cm.ase.CmTableStatistics;
 import com.asetune.cm.ase.CmTempdbActivity;
 import com.asetune.cm.ase.CmThreads;
 import com.asetune.cm.ase.CmThresholdEvent;
+import com.asetune.cm.ase.CmTransactions;
 import com.asetune.cm.ase.CmWorkQueues;
 import com.asetune.cm.ase.CmWorkerThread;
 import com.asetune.cm.ase.ToolTipSupplierAse;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.config.dict.MonTablesDictionaryManager;
@@ -85,10 +91,16 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.TdsConnection;
+import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
+import com.sybase.jdbcx.SybMessageHandler;
 
 public class CounterControllerAse extends CounterControllerAbstract
 {
@@ -343,6 +355,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmProcCallStack    .create(counterController, guiController);
 		CmLocks            .create(counterController, guiController);
 		CmBlocking         .create(counterController, guiController);
+		CmTransactions     .create(counterController, guiController);
 		CmTableCompression .create(counterController, guiController);
 		CmTableStatistics  .create(counterController, guiController);
 		CmMissingStats     .create(counterController, guiController);
@@ -387,6 +400,8 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmOsMpstat         .create(counterController, guiController);
 		CmOsUptime         .create(counterController, guiController);
 		CmOsMeminfo        .create(counterController, guiController);
+		CmOsNwInfo         .create(counterController, guiController);
+		CmOsDiskSpace      .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -421,12 +436,48 @@ public class CounterControllerAse extends CounterControllerAbstract
 			}
 		}
 
+		
 		try
 		{
 			if ( ! isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 //				continue; // goto: while (_running)
 				return null;
-				
+			
+			// Install: message handler
+			//
+			// 1> select getdate(), @@servername, asehostname(), CountersCleared from master..monState
+			//
+			// Msg 937, Level 14, State 1:
+			// Server 'SYS_ASE', Line 1 (script row 3052), Status 0, TranState 1:
+			// Database 'xxx' is unavailable. It is undergoing LOAD DATABASE.
+			//
+			// To workaround the above error, when a ASE is undergoing 'LOAD DATABASE', install a MsgHandler
+			//
+			((TdsConnection)getMonConnection()).setSybMessageHandler(new SybMessageHandler()
+			{
+				@Override
+				public SQLException messageHandler(SQLException sqle)
+				{
+					int    code   = sqle.getErrorCode();
+					String msgStr = sqle.getMessage();
+					
+					// Remove any newlines etc...
+					if (msgStr != null)
+						msgStr = msgStr.trim();
+					
+					// Msg 937: Database 'PML' is unavailable. It is undergoing LOAD DATABASE.
+					if (code == 937)
+					{
+						_logger.info("createPcsHeaderInfo(): Discarding Msg "+code+", Str '"+msgStr+"'.");
+						
+						return null;
+					}
+					
+					return sqle;
+				}
+			});
+
+			
 			Statement stmt = getMonConnection().createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
@@ -496,6 +547,10 @@ public class CounterControllerAse extends CounterControllerAbstract
 			aseServerName    = "unknown";
 			aseHostname      = "unknown";
 			counterClearTime = new Timestamp(0);
+		}
+		finally
+		{
+			((TdsConnection)getMonConnection()).restoreSybMessageHandler();			
 		}
 		
 		return new HeaderInfo(mainSampleTime, aseServerName, aseHostname, counterClearTime);
@@ -640,4 +695,130 @@ public class CounterControllerAse extends CounterControllerAbstract
 	{
 		return new ToolTipSupplierAse(cm);
 	}
+
+	
+	//==================================================================
+	// BEGIN: NO-GUI methods
+	//==================================================================
+	@Override
+	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception
+	{
+		// get a connection
+		try
+		{
+			// FIXME: this doesn't work for OTHER DBMS than Sybase...
+			AseConnectionFactory.setUser(dbmsUsername); // Set this just for SendConnectInfo uses it
+			AseConnectionFactory.setHostPort(dbmsHostPortStr);
+
+			Properties props = new Properties();
+			props.putAll(StringUtil.parseCommaStrToMap(jdbcUrlOptions, "=", ";"));
+			
+			// ENCRYPT_PASSWORD=true
+			if ( ! props.containsKey("ENCRYPT_PASSWORD") )
+			{
+				props.setProperty("ENCRYPT_PASSWORD", "true");
+				_logger.info("Adding jConnect JDBC connection property 'ENCRYPT_PASSWORD=true'");
+			}
+			
+			Connection jdbcConn = AseConnectionFactory.getConnection(dbmsHostPortStr, null, dbmsUsername, dbmsPassword, Version.getAppName()+"-nogui", Version.getVersionStr(), null, props, null);
+			DbxConnection conn = DbxConnection.createDbxConnection(jdbcConn);
+
+			// set the connection props so it can be reused...
+			// FIXME: This is very ASE Specific right now... it needs to be more generic for DbxTune (sqlServerTune, oracleTune, etc)
+			ConnectionProp cp = new ConnectionProp();
+			cp.setLoginTimeout ( 20 );
+			cp.setDriverClass  ( AseConnectionFactory.getDriver() );
+			cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
+//			cp.setUrlOptions   ( jdbcUrlOptions );
+			cp.setUrlOptions   ( props );
+			cp.setUsername     ( dbmsUsername );
+			cp.setPassword     ( dbmsPassword );
+			cp.setAppName      ( Version.getAppName() );
+			cp.setAppVersion   ( Version.getVersionStr() );
+//			cp.setHostPort     ( hosts, ports );
+//			cp.setSshTunnelInfo( sshTunnelInfo );
+
+			DbxConnection.setDefaultConnProp(cp);
+			
+			// ASE: 
+			// XML Plan Cache... maybe it's not the perfect place to initialize this...
+			XmlPlanCache.setInstance( new XmlPlanCacheAse( new ConnectionProvider()
+			{
+				@Override
+				public DbxConnection getNewConnection(String appname)
+				{
+					try 
+					{
+						return DbxConnection.connect(null, appname);
+					} 
+					catch(Exception e) 
+					{
+						_logger.error("Problems getting a new connection. Caught: "+e, e);
+						return null;
+					}
+				}
+				
+				@Override
+				public DbxConnection getConnection()
+				{
+//					return getCounterController().getMonConnection();
+					return getMonConnection();
+				}
+			}) );
+
+			
+			// CHECK the connection for proper configuration.
+			// If failure, go and FIX
+			// FIXME: implement the below "set minimal logging options"
+			if ( ! AseConnectionUtils.checkForMonitorOptions(conn, dbmsUsername, false, null) )
+			{
+				AseConnectionUtils.setBasicAseConfigForMonitoring(conn);
+			}
+
+			// CHECK the connection for proper configuration.
+			// The fix did not work, so lets get out of here
+			if ( ! AseConnectionUtils.checkForMonitorOptions(conn, dbmsUsername, false, null) )
+			{
+				_logger.error("Problems when checking the ASE Server for 'proper monitoring configuration'.");
+
+				// Disconnect, and get out of here...
+				conn.closeNoThrow();
+				
+				// STOP: throw Exception() will case use to "stop/exit"
+				throw new Exception("Problems when checking the ASE Server for 'proper monitoring configuration'.");
+			}
+
+			// Finally return the connection
+			return conn;
+		}
+		catch (SQLException e)
+		{
+			String msg = AseConnectionUtils.getMessageFromSQLException(e, false); 
+			_logger.error("Problems when connecting to a ASE Server. "+msg);
+
+			// JZ00L: Login failed
+			if (e.getSQLState().equals("JZ00L"))
+			{
+				_logger.error("Faulty PASSWORD when connecting to the server '"+dbmsServer+"' at '"+dbmsHostPortStr+"', with user '"+dbmsUsername+"', I cant recover from this... exiting...");
+
+				// STOP: throw Exception() will case use to "stop/exit"
+				throw new Exception("Faulty PASSWORD when connecting to the server '"+dbmsServer+"' at '"+dbmsHostPortStr+"', with user '"+dbmsUsername+"', I cant recover from this... exiting...");
+			}
+			
+			_logger.info("Connection failed, right now... A new connection attempt will done soon...");
+			throw e;
+		}
+		catch (Exception e)
+		{
+			_logger.error("Problems when connecting to a ASE Server. Caught: "+e);
+
+			// STOP: throw Exception() will case use to "stop/exit"
+			throw new Exception("Problems when connecting to a ASE Server. Caught: "+e, e);
+		}
+//		// we should never get here
+//		throw new Exception("We should never get here...");
+	}
+	//==================================================================
+	// END: NO-GUI methods
+	//==================================================================
 }

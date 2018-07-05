@@ -3,8 +3,10 @@ package com.asetune;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -14,6 +16,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.swing.JButton;
@@ -37,6 +40,8 @@ import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.DbmsDataTypeResolver;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
@@ -103,6 +108,9 @@ implements ICounterController
 	/** Statistic field: last sample time */
 	private Timestamp _statLastSampleTime  = null;
 
+	/** Normal sleep time */
+	private int _defaultSleepTimeInSec = 10;
+
 //	public static final String TRANLOG_DISK_IO_TOOLTIP =
 //		  "Below is a table that describes how a fast or slow disk affects number of transactions per second.<br>" +
 //		  "The below description tries to exemplify number of transactions per seconds based on Disk IO responsiveness on the <b>LOG</b> Device.<br>" +
@@ -145,6 +153,8 @@ implements ICounterController
 	{
 		_hasGui = hasGui;
 		_counterCollectorThread = createCounterCollectorThread(hasGui);
+		
+		setDbmsDataTypeResolver( createDbmsDataTypeResolver() );
 	}
 
 	/**
@@ -194,6 +204,15 @@ implements ICounterController
 	@Override
 	public abstract HeaderInfo createPcsHeaderInfo();
 
+
+	/**
+	 * Should the connection monitoring watchdog be started or not (ony for the GUI client)
+	 */
+	@Override
+	public boolean shouldWeStart_connectionWatchDog()
+	{
+		return true;
+	}
 
 	/**
 	 * Start the collector thread
@@ -264,6 +283,18 @@ implements ICounterController
 		return _CmList; 
 	}
 
+	/** */
+	@Override
+	public void setDefaultSleepTimeInSec(int sleepTime)
+	{
+		_defaultSleepTimeInSec = sleepTime;
+	}
+
+	/** */
+	public int getDefaultSleepTimeInSec()
+	{
+		return _defaultSleepTimeInSec;
+	}
 
 	/** 
 	 * Get any <code>CountersModel</code> that depends on a specific ASE configuration 
@@ -283,7 +314,6 @@ implements ICounterController
 
 			for (String cfg : sa)
 			{
-				// remove any default values '=value'
 				int index = cfg.indexOf("=");
 				if (index >= 0)
 					cfg = cfg.substring(0, index).trim();
@@ -1006,6 +1036,7 @@ implements ICounterController
 		String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
 		String  udcGraphName        = conf.getProperty(startKey + "graph.name");
 		String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
+//		String  udcGraphCategory    = conf.getProperty(startKey + "graph.category");
 		String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
 		String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
 		String  udcGraphDataMethods = conf.getProperty(startKey + "graph.data.methods");
@@ -1081,8 +1112,11 @@ implements ICounterController
 				addGraph = false;
 			}
 		}
+		
+		LabelType udcGraphSeriesLabelType = LabelType.Static;
 		if (udcGraphType == TrendGraph.TYPE_BY_ROW)
 		{
+			udcGraphSeriesLabelType = LabelType.Dynamic;
 			if (udcGraphDataColsArr.length > 1)
 			{
 				_logger.warn("Add a graph using type 'byRow' to the User Defined Counter '"+name+"'. Only the first entry in 'graph.data.cols', 'graph.data.labels', 'graph.data.methods' will be used");
@@ -1091,28 +1125,53 @@ implements ICounterController
 
 		if (addGraph)
 		{
+			cm.addTrendGraph(
+				udcGraphName,           // Name of the graph
+				udcGraphMenuLabel,      // Menu Checkbox text
+				udcGraphLabel,          // udcGraphLabel
+				udcGraphDataLabelsArr,  // Labels for each plotline
+				udcGraphSeriesLabelType,// seriesLabelType             LabelType.Static or LabelType.Dynamic
+				TrendGraphDataPoint.Category.OTHER,
+				false,                  // isPercentGraph, 
+				true,                   // visibleAtStart
+				0,                      // needsVersion, 
+				-1);                    // minimumHeight
+
+			// Trend Graph (extras for UserDefined)
 			if (DbxTune.hasGui())
 			{
-				// GRAPH
-				TrendGraph tg = new TrendGraph(
-						udcGraphName,      // Name of the raph
-						udcGraphMenuLabel, // Menu Checkbox text
-						udcGraphLabel,     // Label on the graph
-						udcGraphDataLabelsArr, // Labels for each plotline
-						false,
-						cm, 
-						true, // initial visible
-						0,    // valid from version
-						-1);
-				tg.setGraphType(udcGraphType);
-				tg.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
-				cm.addTrendGraph(udcGraphName, tg, true);
+    			TrendGraph tg = cm.getTrendGraph(udcGraphName);
+    			tg.setGraphType(udcGraphType);
+    			tg.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
 			}
 			
-			// Data Point
+			// Data Point (extras for UserDefined)
 			cm.setGraphType(udcGraphType);
 			cm.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
-			cm.addTrendGraphData(udcGraphName, new TrendGraphDataPoint(udcGraphName, udcGraphDataLabelsArr, LabelType.Static));
+
+			
+//			if (DbxTune.hasGui())
+//			{
+//				// GRAPH
+//				TrendGraph tg = new TrendGraph(
+//						udcGraphName,      // Name of the raph
+//						udcGraphMenuLabel, // Menu Checkbox text
+//						udcGraphLabel,     // Label on the graph
+//						udcGraphDataLabelsArr, // Labels for each plotline
+//						false,
+//						cm, 
+//						true, // initial visible
+//						0,    // valid from version
+//						-1);
+//				tg.setGraphType(udcGraphType);
+//				tg.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
+//				cm.addTrendGraph(udcGraphName, tg, true);
+//			}
+//			
+//			// Data Point
+//			cm.setGraphType(udcGraphType);
+//			cm.setGraphCalculations(udcGraphDataColsArr, udcGraphDataMethodsArr);
+//			cm.addTrendGraphData(udcGraphName, new TrendGraphDataPoint(udcGraphName, udcGraphDataLabelsArr, LabelType.Static));
 		}
 	}
 	
@@ -1653,41 +1712,83 @@ implements ICounterController
 	}
 	// Simulate the _conn.isClosed() functionality, but add a query timeout...
 	// it looks like jConnect isClosed() could hang if you call many simultaneously
-	protected boolean isClosed(Connection conn)
+	protected boolean isClosed(DbxConnection conn)
 	throws SQLException
 	{
-		int timeout = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_isClosed_timeout, DEFAULT_isClosed_timeout);
-		String sql =  getIsClosedSql();
-		try
+		int       timeout = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_isClosed_timeout, DEFAULT_isClosed_timeout);
+		String    sql     =  getIsClosedSql();
+//		Statement stmnt   = null;
+//		ResultSet rs      = null;
+
+		try ( Statement stmnt = conn.createStatement() )
 		{
 //System.out.println("isClosed(): autoCommit="+conn.getAutoCommit()+", sql="+sql);
 			
 			if (_logger.isDebugEnabled())
 				_logger.debug("isClosed(): sql="+sql);
 			
-			Statement stmnt = conn.createStatement();
+//			stmnt = conn.createStatement();
 			stmnt.setQueryTimeout(timeout);
-			ResultSet rs    = stmnt.executeQuery(sql);
 
-			stmnt.setQueryTimeout(5);
+			ResultSet rs = stmnt.executeQuery(sql);
+
 			while (rs.next())
 			{
 				rs.getString(1);
 			}
 			rs.close();
-			stmnt.close();
+//			stmnt.close();
+
+//			if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_ORACLE))
+//			{
+//				String oracleCheck = "select value from V$SESSTAT where STATISTIC# = 4 and SID = sys_context('USERENV','SID')";
+//				rs = stmnt.executeQuery(oracleCheck);
+//				while (rs.next())
+//					System.out.println("isClosed["+Thread.currentThread().getName()+"]:CheckOpenCursorCount="+rs.getInt(1));
+//				rs.close();
+//			}
 
 			// false = connection is alive, NOT Closed
 			return false;
 		}
-		catch (SQLException e)
+		catch (SQLException ex)
 		{
-			if ( ! "JZ0C0".equals(e.getSQLState()) ) // connection is already closed...
-					_logger.warn("isClosed(conn) had problems. sql='"+sql+"'.", e);
+//e.printStackTrace();
+			if (    ex instanceof SQLRecoverableException                                    // Oracle   - java.sql.SQLRecoverableException: Closed Connection
+			     || "JZ0C0".equals(ex.getSQLState())                                         // jConnect - connection is already closed...
+			     || ex.toString().toLowerCase().indexOf("connection is closed") >= 0         // DB2 & SQL-Server
+			     || ex.toString().toLowerCase().indexOf("connection has been closed") >= 0   // Postgres
+			   ) 
+			{
+				// Do nothing for known problems / Exceptions...
+			}
+			else
+			{
+				_logger.warn("isClosed(conn) had problems. sql='"+sql+"'.", ex);
+			}
 
-			throw e;
+			throw ex;
 		}
+//		finally
+//		{
+//			System.out.println("-------------------------------------------------------: "+Thread.currentThread().getName());
+//			if (rs    != null) try { System.out.println("isClosed["+Thread.currentThread().getName()+"]("+(rsCloseCount++)+"):Closing ResultSet"); rs   .close(); } catch(SQLException ex) { ex.printStackTrace(); _logger.debug("Problems closing ResultSet", ex); }
+////			if (stmnt != null) try { System.out.println("isClosed["+Thread.currentThread().getName()+"]("+(stCloseCount++)+"):Closing Statement"); stmnt.close(); } catch(SQLException ex) { ex.printStackTrace(); _logger.debug("Problems closing Statement", ex); }
+//
+////			if ("CounterCollectorThreadGui".equals(Thread.currentThread().getName()))
+////				new Exception("DUMMY").printStackTrace();
+//			
+//			String oracleCheck = "select value from V$SESSTAT where STATISTIC# = 4 and SID = sys_context('USERENV','SID')";
+//			Statement stmnt = conn.createStatement();
+//			rs = stmnt.executeQuery(oracleCheck);
+//			while (rs.next())
+//				System.out.println("isClosed["+Thread.currentThread().getName()+"]:CheckOpenCursorCount="+rs.getInt(1));
+//			if (rs    != null) try { rs   .close(); } catch(SQLException ex) { ex.printStackTrace(); _logger.debug("Problems closing ResultSet", ex); }
+//			if (stmnt != null) try { stmnt.close(); } catch(SQLException ex) { ex.printStackTrace(); _logger.debug("Problems closing Statement", ex); }
+//		}
 	}
+//	static int rsCloseCount=0;
+//	static int stCloseCount=0;
 	
 	/**
 	 * SQL Statement that will be issued when checking if a connection is alive
@@ -2039,4 +2140,132 @@ implements ICounterController
 	// END: CM Demand Refresh List
 	//==================================================================
 
+	
+	//==================================================================
+	// BEGIN: DBMS Datatype Resolver
+	//==================================================================
+	private DbmsDataTypeResolver _dbmsDataTypeResolver = null; 
+
+	@Override
+	public DbmsDataTypeResolver getDbmsDataTypeResolver()
+	{
+		return _dbmsDataTypeResolver;
+	}
+
+	@Override
+	public void setDbmsDataTypeResolver(DbmsDataTypeResolver resolver)
+	{
+		_dbmsDataTypeResolver = resolver;
+	}
+
+	@Override
+	public DbmsDataTypeResolver createDbmsDataTypeResolver()
+	{
+		return null;
+	}
+
+	//==================================================================
+	// END: DBMS Datatype Resolver
+	//==================================================================
+
+	
+	//==================================================================
+	// BEGIN: NO-GUI methods
+	//==================================================================
+	@Override
+	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) 
+	throws SQLException, Exception
+	{
+		String jdbcDriver = "";
+		String jdbcUrl    = "";
+
+		String dbxTune = Version.getAppName();
+		if      ("AseTune"       .equalsIgnoreCase(dbxTune)) { throw new Exception("This is handled in CounterControllerAse"); }
+		else if ("IqTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
+		else if ("RsTune"        .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
+		else if ("RaxTune"       .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sybase.jdbc4.jdbc.SybDriver";              jdbcUrl = "jdbc:sybase:Tds:"     + dbmsHostPortStr; }
+		else if ("SqlServerTune" .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.microsoft.sqlserver.jdbc.SQLServerDriver"; jdbcUrl = "jdbc:sqlserver://"    + dbmsHostPortStr; }
+		else if ("PostgresTune"  .equalsIgnoreCase(dbxTune)) { jdbcDriver = "org.postgresql.Driver";                        jdbcUrl = "jdbc:postgresql://"   + dbmsHostPortStr + "/postgres"; }
+		else if ("MySqlTune"     .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.mysql.jdbc.Driver";                        jdbcUrl = "jdbc:mysql://"        + dbmsHostPortStr; }
+		else if ("Db2Tune"       .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.ibm.db2.jcc.DB2Driver";                    jdbcUrl = "jdbc:db2://"          + dbmsHostPortStr; }
+		else if ("OracleTune"    .equalsIgnoreCase(dbxTune)) { jdbcDriver = "oracle.jdbc.OracleDriver";                     jdbcUrl = "jdbc:oracle:thin:@//" + dbmsHostPortStr; }
+		else if ("HanaTune"      .equalsIgnoreCase(dbxTune)) { jdbcDriver = "com.sap.db.jdbc.Driver";                       jdbcUrl = "jdbc:sap://"          + dbmsHostPortStr; }
+		else throw new Exception(Version.getAppName() + " Do not yet support no-gui mode.");
+
+		// Load the driver
+//		try
+//		{
+//			if (StringUtil.hasValue(jdbcDriver))
+//				Class.forName(jdbcDriver).newInstance();
+//		}
+//		catch (Exception ex)
+//		{
+//			_logger.info("Trying to load JDBC Driver '', the old way, via 'Class.forName(jdbcDriver).newInstance()' and got problems, which we will disregard, and trying with the standard way 'DriverManager.getConnection(jdbcUrl, jdbcProps)'. Caught: "+ex);
+//		}
+
+		Properties jdbcProps = new Properties();
+		jdbcProps.putAll(StringUtil.parseCommaStrToMap(jdbcUrlOptions, "=", ";"));
+		
+		jdbcProps.put("user",     dbmsUsername);
+		jdbcProps.put("password", dbmsPassword);
+
+		// set Application name
+		String jdbcAppNameProp = null;
+		if      ("SqlServerTune" .equalsIgnoreCase(dbxTune)) { jdbcAppNameProp = "applicationName"; }
+		else if ("PostgresTune"  .equalsIgnoreCase(dbxTune)) { jdbcAppNameProp = "ApplicationName"; }
+		else if ("MySqlTune"     .equalsIgnoreCase(dbxTune)) { jdbcAppNameProp = ""; }
+		else if ("Db2Tune"       .equalsIgnoreCase(dbxTune)) { jdbcAppNameProp = ""; }
+		else if ("OracleTune"    .equalsIgnoreCase(dbxTune)) { jdbcAppNameProp = ""; }
+		else if ("HanaTune"      .equalsIgnoreCase(dbxTune)) { jdbcAppNameProp = ""; }
+		
+		if (StringUtil.hasValue(jdbcAppNameProp))
+			jdbcProps.put(jdbcAppNameProp, Version.getAppName());
+
+		
+		// Set some extra connection properties based on DbxApplication
+		// NOTE: Maybe we should try to do this somewhere in DbxConnection by parsing the URL Start...
+		if ("SqlServerTune" .equalsIgnoreCase(dbxTune)) 
+		{
+			int socketTimeout = Configuration.getCombinedConfiguration().getIntProperty("SqlServerTune.jdbc.socketTimeout", 60*1000);
+			jdbcProps.put("socketTimeout", socketTimeout+"");
+			
+			_logger.info("Adding SQL-Server JDBC connection property 'socketTimeout="+socketTimeout+"'");
+		}
+		
+
+		// Make the connection, and create a DbxConnection
+		try
+		{
+			Connection jdbcConn = DriverManager.getConnection(jdbcUrl, jdbcProps);
+			DbxConnection conn = DbxConnection.createDbxConnection(jdbcConn);
+
+			// set the connection props so it can be reused...
+			ConnectionProp cp = new ConnectionProp();
+			cp.setLoginTimeout ( 20 );
+			cp.setDriverClass  ( jdbcDriver );
+			cp.setUrl          ( jdbcUrl );
+			cp.setUrlOptions   ( jdbcProps );
+			cp.setUsername     ( dbmsUsername );
+			cp.setPassword     ( dbmsPassword );
+			cp.setAppName      ( Version.getAppName() );
+			cp.setAppVersion   ( Version.getVersionStr() );
+//			cp.setHostPort     ( hosts, ports );
+//			cp.setSshTunnelInfo( sshTunnelInfo );
+
+			conn.setConnProp(cp);
+			DbxConnection.setDefaultConnProp(cp);
+
+			// Return the connection
+			return conn;
+		}
+		catch(SQLException ex)
+		{
+			jdbcProps.put("password", "*secret*");
+			_logger.info("Connection properties used when tring to connecting using: DriverManager.getConnection(jdbcUrl='"+jdbcUrl+"', jdbcProps='"+jdbcProps+"')");
+			throw ex;
+		}
+	}
+	//==================================================================
+	// END: NO-GUI methods
+	//==================================================================
 }

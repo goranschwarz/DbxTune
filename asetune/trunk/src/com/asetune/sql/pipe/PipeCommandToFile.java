@@ -510,6 +510,7 @@ System.out.println("ROW: "+totalCount+" - Problems reading row "+totalCount+", c
 				if (_progressDialog != null && ((totalCount % 100) == 0) )
 					_progressDialog.setState("Written "+totalCount+" rows to the output file.");
 			}
+			sourceRs.close();
 
 			pipeCmd._message = "Successfully wrote "+totalCount+" row(s) to file '"+_outfile+"'.\n" + 
 			"Using options: append="+_cmdParams._append+", overwrite="+_cmdParams._overwrite+", header="+_cmdParams._header+", fieldTerm='"+_cmdParams._fieldTermReadable+"', rowTerm='"+_cmdParams._rowTermReadable+"', charset='"+_cmdParams._charset+"', trim="+_cmdParams._trimValues+", queryInfo='"+_cmdParams._queryInfo+"', rsInfo='"+_cmdParams._rsInfo+"', noGuiQuestion='"+_cmdParams._noGuiQuestion+"'.";

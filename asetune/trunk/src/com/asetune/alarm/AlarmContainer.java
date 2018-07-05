@@ -63,6 +63,7 @@ implements Serializable
 		{
 			AlarmEvent existing = _alarms.get(pos);
 			existing.incrementReRaiseCount();
+			existing.setReRaiseTime(); // existing.setReRaiseTime(repeatedAlarmEvent.getCrTime());
 			
 			repeatedAlarmEvent.setReRaiseCount(existing.getReRaiseCount());
 

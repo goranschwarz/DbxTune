@@ -72,6 +72,7 @@ extends XmenuActionBase
 			{
 				query_plan = rs.getString(1);
 			}
+			rs.close();
 		}
 		catch (Exception e)
 		{

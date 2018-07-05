@@ -30,7 +30,7 @@ import com.asetune.cm.NoValidRowsInSample;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrameRs;
-import com.asetune.gui.TrendGraph;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.RepServerUtils;
 
 /**
@@ -142,29 +142,41 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "-added-at-runtime-" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_PERF_INDICATOR, new TrendGraphDataPoint(GRAPH_NAME_PERF_INDICATOR, labels, LabelType.Dynamic));
+////		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_PERF_INDICATOR, new TrendGraphDataPoint(GRAPH_NAME_PERF_INDICATOR, labels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
+		//-----
+		addTrendGraph(GRAPH_NAME_PERF_INDICATOR,
+			"Source to Destination - Performance Indicator", // Menu CheckBox text
+			"Source to Destination - Performance Indicator (0: good, <0: DSI is Slow, >0: DSI is Fast)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OTHER,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_PERF_INDICATOR,
-				"Source to Destination - Performance Indicator", // Menu CheckBox text
-				"Source to Destination - Performance Indicator (0: good, <0: DSI is Slow, >0: DSI is Fast)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_PERF_INDICATOR,
+//				"Source to Destination - Performance Indicator", // Menu CheckBox text
+//				"Source to Destination - Performance Indicator (0: good, <0: DSI is Slow, >0: DSI is Fast)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override
@@ -193,7 +205,7 @@ extends CountersModel
 
 	private List<RsDbInfo> _rsDbInfoList = new ArrayList<CmRsSrcToDest.RsDbInfo>();
 	@Override
-	public boolean doSqlInit(Connection conn) 
+	public boolean doSqlInit(DbxConnection conn) 
 	{
 		if (conn == null)
 			throw new IllegalArgumentException("The passed conn is null.");
@@ -308,7 +320,7 @@ extends CountersModel
 //			private int _rateXsec_pos       = -1;
 	
 			@Override
-			public boolean getSample(CountersModel cm, Connection conn, String sql, List<String> pkList) 
+			public boolean getSample(CountersModel cm, DbxConnection conn, String sql, List<String> pkList) 
 			throws SQLException, NoValidRowsInSample
 			{
 				// Get the CmAdminStats which holds all the counter which a Module is based on

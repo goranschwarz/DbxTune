@@ -953,7 +953,41 @@ public class Ver
 		}
 	}
 
+	public static int db2VersionStringToNumber(String versionStr)
+	{
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
 
+		int major       = 0;
+		int minor       = 0;
+		int maint       = 0;
+		int servicePack = 0;
+		int patchLevel  = 0;
+
+		String[] sa = versionStr.split("\\.");
+		if (sa.length == 4)
+		{
+			// Remove any starting "DB2 v"
+			if (sa[0].startsWith("DB2"))
+				sa[0] = sa[0].substring(3).trim();
+			if (sa[0].startsWith("v"))
+				sa[0] = sa[0].substring(1).trim();
+
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			try { maint       = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { maint       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+			try { servicePack = Integer.parseInt(sa[3]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[3]+"'. Setting this to 0. Caught: "+ex); }
+//			try { patchLevel  = Integer.parseInt(sa[4]); } catch(NumberFormatException ex) { patchLevel  = 0; _logger.warn("Problem parsing 'patchLevel' version string with value '"+sa[4]+"'. Setting this to 0. Caught: "+ex); }
+			
+			return Ver.ver(major, minor, maint, servicePack, patchLevel);
+		}
+		else
+		{
+			_logger.error("DB2 Version string '"+versionStr+"' doesn't consist of 4 fields separated be '.', can't parse this version string. returning 0");
+			return 0;
+		}
+	}
+	
 	/**
 	 * Take a "short version int" into a "long version int", which is the "internal" version number used in DbxTune to compare version numbers.<br>
 	 * <b>Note</b>: this might change in the future to use an larger part of the Integer, so we can compare larger minor/mantenance numbers. (today we can only have 1 minor/maintenance digit)<br>
@@ -1140,6 +1174,9 @@ public class Ver
 		testIqVersion(Ver.ver(16,1,0, 1, 0), "SAP IQ/16.1 SP01/20080/P/MS/...");
 		testIqVersion(Ver.ver(16,1,0, 0, 1), "SAP IQ/16.1 PL01/20080/P/MS/...");
 		testIqVersion(Ver.ver(16,1,0, 20,1), "SAP IQ/16.1 SP20 PL01/20080/P/MS/...");
+		
+		
+		testDb2Version(Ver.ver(11,1,2, 2), "DB2 v11.1.2.2");
 	}
 
 	private static boolean testVersion(int expectedIntVer, String verStr)
@@ -1161,6 +1198,22 @@ public class Ver
 	private static boolean testIqVersion(int expectedIntVer, String verStr)
 	{
 		int version = iqVersionStringToNumber(verStr);
+		
+		if (version != expectedIntVer) 
+		{
+			System.out.println("FAILED: version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			return false;
+		}
+		else 
+		{
+			System.out.println("OK    : version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			return true;
+		}
+	}
+
+	private static boolean testDb2Version(int expectedIntVer, String verStr)
+	{
+		int version = db2VersionStringToNumber(verStr);
 		
 		if (version != expectedIntVer) 
 		{

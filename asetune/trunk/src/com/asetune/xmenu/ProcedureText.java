@@ -10,7 +10,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.StringTokenizer;
 
@@ -74,7 +73,7 @@ extends XmenuActionBase
 	}
 
 
-	public void showText(Connection conn, String dbname, String procName, int line, boolean closeConn)
+	public void showText(DbxConnection conn, String dbname, String procName, int line, boolean closeConn)
 	{
 		JPanel textPanel = new JPanel();
 		//final JTextArea procText = new JTextArea();
@@ -142,6 +141,7 @@ extends XmenuActionBase
 //				String textPart = rs.getString(1);
 //				procText.append(textPart);
 //			}
+//			rs.close();
 //		}
 //		catch (Exception e)
 //		{

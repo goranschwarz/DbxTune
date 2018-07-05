@@ -64,6 +64,7 @@ import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.GLabel;
@@ -3120,7 +3121,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-		Configuration conf1 = new Configuration(Version.getAppStoreDir() + "/asetune.save.properties");
+		Configuration conf1 = new Configuration(AppDir.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 		
 		Configuration.setSearchOrder(Configuration.USER_TEMP);

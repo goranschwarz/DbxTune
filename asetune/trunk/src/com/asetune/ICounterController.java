@@ -1,5 +1,6 @@
 package com.asetune;
 
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
@@ -9,6 +10,7 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
+import com.asetune.sql.DbmsDataTypeResolver;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 
@@ -178,4 +180,35 @@ public interface ICounterController
 
 	/** How many milliseconds did we spend in last refresh. diff between setInRefresh(true) -> setInRefresh(false) */
 	public long getLastRefreshTimeInMs();
+	
+	/** Descide if the Connection wachdog should be started or not for GUI mode monitoring */
+	public boolean shouldWeStart_connectionWatchDog();
+
+	/** Resolver to remap datatypes */
+	public DbmsDataTypeResolver getDbmsDataTypeResolver();
+	public void setDbmsDataTypeResolver(DbmsDataTypeResolver resolver);
+	public DbmsDataTypeResolver createDbmsDataTypeResolver();
+	
+	/**
+	 * no-gui: get a new connection and check "stuff"<br>
+	 * This will be called from the CounterCollectorThreadNoGui when a new connection to the DBMS is needed (on startup, or if the connection is lost)
+	 * <p>
+	 * If you want it to reconnect automatically: create a <code>ConnectionProp() & DbxConnection.setDefaultConnProp(cp)</code> and set the desired properties
+	 * <p>
+	 * 
+	 * @param dbmsHostPortStr 
+	 * @param dbmsServer 
+	 * @param dbmsPassword 
+	 * @param dbmsUsername 
+	 * @param jdbcUrlOptions 
+	 * 
+	 * @throws SQLException if Connection was NOT ok, but we want to retry the connection later
+	 * @throws Exception if Connection was NOT ok, and we wont do not want to retry, the application will Exit/STOP
+	 */
+	public DbxConnection noGuiConnect(String dbmsUsername, String dbmsPassword, String dbmsServer, String dbmsHostPortStr, String jdbcUrlOptions) throws SQLException, Exception;
+
+	/** Set the normal sleep time between refresh */
+	void setDefaultSleepTimeInSec(int sleepTime);
+	/** Get the normal sleep time between refresh */
+	int  getDefaultSleepTimeInSec();
 }

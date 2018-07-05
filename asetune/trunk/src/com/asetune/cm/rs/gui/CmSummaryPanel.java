@@ -9,7 +9,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 
@@ -40,7 +39,6 @@ import com.asetune.gui.TrendGraph;
 import com.asetune.gui.TrendGraphDashboardPanel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GTabbedPane;
-import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -1349,18 +1347,29 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		setWatermark();
 
-		if (CounterController.getInstance().isMonConnected())
-		{
-			DbxConnection xconn = CounterController.getInstance().getMonConnection();
+//		if (CounterController.getInstance().isMonConnected())
+//		{
+//			DbxConnection xconn = CounterController.getInstance().getMonConnection();
+//			
+//			try { _atAtServerName_txt.setText(xconn.getDbmsServerName()); } catch(SQLException ex) {}
+//			try { _srvVersion_txt    .setText(xconn.getDbmsVersionStr()); } catch(SQLException ex) {}
+//			_lastSampleTime_txt.setText(""+cm.getSampleTime());
+//			
+//			// Fix the version string a bit and position it at start of the text
+//			_srvVersion_txt.setText( _srvVersion_txt.getText().replace("Replication Server/", "") );
+//			_srvVersion_txt.setCaretPosition(0);
+//		}
+		
+		_atAtServerName_txt.setText(cm.getAbsString (0, "serverName"));
+		_srvVersion_txt    .setText(cm.getAbsString (0, "rsVersion"));
+		_lastSampleTime_txt.setText(""+cm.getSampleTime());
 			
-			try { _atAtServerName_txt.setText(xconn.getDbmsServerName()); } catch(SQLException ex) {}
-			try { _srvVersion_txt    .setText(xconn.getDbmsVersionStr()); } catch(SQLException ex) {}
-			_lastSampleTime_txt.setText(""+cm.getSampleTime());
-			
-			// Fix the version string a bit and position it at start of the text
-			_srvVersion_txt.setText( _srvVersion_txt.getText().replace("Replication Server/", "") );
-			_srvVersion_txt.setCaretPosition(0);
-		}
+		// Fix the version string a bit and position it at start of the text
+		_srvVersion_txt.setText( _srvVersion_txt.getText().replace("Replication Server/", "") );
+		_srvVersion_txt.setCaretPosition(0);
+		
+		
+		
 //		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
 //		_aseVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  _aseVersion_txt.setCaretPosition(0);
 //		_asePageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));

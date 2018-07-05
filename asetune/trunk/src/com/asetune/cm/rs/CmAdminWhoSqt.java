@@ -16,7 +16,6 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -114,95 +113,166 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "-added-at-runtime-" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_CLOSED,  new TrendGraphDataPoint(GRAPH_NAME_CLOSED,  labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_READ,    new TrendGraphDataPoint(GRAPH_NAME_READ,    labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_OPEN,    new TrendGraphDataPoint(GRAPH_NAME_OPEN,    labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_TRUNC,   new TrendGraphDataPoint(GRAPH_NAME_TRUNC,   labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_REMOVED, new TrendGraphDataPoint(GRAPH_NAME_REMOVED, labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_PARSED,  new TrendGraphDataPoint(GRAPH_NAME_PARSED,  labels, LabelType.Dynamic));
+////		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_CLOSED,  new TrendGraphDataPoint(GRAPH_NAME_CLOSED,  labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_READ,    new TrendGraphDataPoint(GRAPH_NAME_READ,    labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_OPEN,    new TrendGraphDataPoint(GRAPH_NAME_OPEN,    labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_TRUNC,   new TrendGraphDataPoint(GRAPH_NAME_TRUNC,   labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_REMOVED, new TrendGraphDataPoint(GRAPH_NAME_REMOVED, labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_PARSED,  new TrendGraphDataPoint(GRAPH_NAME_PARSED,  labels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
+		//-----
+		addTrendGraph(GRAPH_NAME_CLOSED,
+			"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
+			"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_CLOSED,
-				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
-				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		//-----
+		addTrendGraph(GRAPH_NAME_READ,
+			"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
+			"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_READ,
-				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
-				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		//-----
+		addTrendGraph(GRAPH_NAME_OPEN,
+			"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
+			"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_OPEN,
-				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
-				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		//-----
+		addTrendGraph(GRAPH_NAME_TRUNC,
+			"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
+			"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_TRUNC,
-				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
-				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		//-----
+		addTrendGraph(GRAPH_NAME_REMOVED,
+			"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
+			"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_REMOVED,
-				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
-				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		//-----
+		addTrendGraph(GRAPH_NAME_PARSED,
+			"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
+			"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_PARSED,
-				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
-				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_CLOSED,
+//				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Menu CheckBox text
+//				"SQT: Number of committed transactions in the SQT cache (col 'Closed', absolute)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_READ,
+//				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Menu CheckBox text
+//				"SQT: Number of transactions processed, but not yet deleted (col 'Read', absolute)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_OPEN,
+//				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Menu CheckBox text
+//				"SQT: Number of uncommitted or unaborted transactions (col 'Open', absolute)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_TRUNC,
+//				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Menu CheckBox text
+//				"SQT: Number of transactions in the SQT cache, sum of Closed, Read, and Open (col 'Trunc', absolute)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_REMOVED,
+//				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Menu CheckBox text
+//				"SQT: Number of transactions removed from memory (col 'Removed', absolute)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_PARSED,
+//				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Menu CheckBox text
+//				"SQT: Number of transactions that have been parsed (col 'Parsed', per second)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override

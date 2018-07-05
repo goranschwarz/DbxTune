@@ -13,16 +13,18 @@ extends AlarmEvent
 		RANGE_1_MINUTE, RANGE_5_MINUTE, RANGE_15_MINUTE
 	};
 	
-	public AlarmEventOsLoadAverage(CountersModel cm, String hostname, RangeType rangeType, Number avg_1min, Number avg_5min, Number avg_15min)
+	public AlarmEventOsLoadAverage(CountersModel cm, Number threshold, String hostname, RangeType rangeType, Number avg_1min, Number avg_5min, Number avg_15min)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				hostname,             // serviceName
 				cm.getName(),         // serviceInfo
 				rangeType+"",         // extraInfo
+				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Exhausting CPU Scheduling resources at OperatingSystem level on hostname '" + hostname + "'. adjLoadAverage: 1min=" + avg_1min + ", 5min=" + avg_5min + ", 15min=" + avg_15min + ".");
+				"Exhausting CPU Scheduling resources at OperatingSystem level on hostname '" + hostname + "'. adjLoadAverage: 1min=" + avg_1min + ", 5min=" + avg_5min + ", 15min=" + avg_15min + ". (threshold="+threshold+")",
+				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

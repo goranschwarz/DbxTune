@@ -127,6 +127,7 @@ implements DbxConnectionStateInfo
 					_hadrStateStr = "Not Available";
 				}
 			}
+			rs.close();
 
 //			sql = "select count(*) from master.dbo.syslocks where spid = @@spid";
 //			rs = stmnt.executeQuery(sql);

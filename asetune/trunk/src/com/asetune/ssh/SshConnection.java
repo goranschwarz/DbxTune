@@ -674,7 +674,7 @@ public class SshConnection
 	throws IOException
 	{
 		if (_isAuthenticated == false)
-			throw new IOException("Can't do reconnect yet, you need to have a valid connection first. This means that you need to caoonect with a successful authentication first.");
+			throw new IOException("Can't do reconnect yet, you need to have a valid connection first. This means that you need to connect with a successful authentication first.");
 
 		_conn.close();
 
@@ -706,7 +706,9 @@ public class SshConnection
 			return false;
 
 		if (_conn == null)
+		{
 			_isConnected = false;
+		}
 		else
 		{
 			try 
@@ -716,8 +718,21 @@ public class SshConnection
 			}
 			catch (IOException e) 
 			{
-				_logger.info("isConnected() has problems when sending a 'ignore packet' to the SSH Server. The connection will be closed. sendIgnorePacket Caught: "+e);
-				close();
+//				_logger.info("isConnected() has problems when sending a 'ignore packet' to the SSH Server. The connection will be closed. sendIgnorePacket Caught: "+e);
+//				close();
+				// Or poosibly: do reconnect() here instead...
+
+				_logger.warn("isConnected() has problems when sending a 'ignore packet' to the SSH Server. Lets try to re-connect to the server. sendIgnorePacket Caught: "+e);
+				try 
+				{
+					reconnect();
+				}
+				catch(Exception ex)
+				{
+					_logger.warn("isConnected() has problems when trying to re-connect. Caught: "+ex);
+					// Not sure what to do here... leave the connection or close the connection
+					// reconnect() does a close... before it tries to do connect(). hopefully thats good enough...
+				}
 			}
 		}
 

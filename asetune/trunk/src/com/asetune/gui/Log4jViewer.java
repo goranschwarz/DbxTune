@@ -902,9 +902,13 @@ implements ActionListener, TableModelListener
 			{
 				Object obj = _allToLevel_cb.getSelectedItem();
 				//System.out.println("JColorComboBox: objClass="+obj.getClass().getName()+", obj="+obj);
-				for (int r=0; r<_tm.getRowCount(); r++)
+//				for (int r=0; r<_tm.getRowCount(); r++)
+//				{
+//					_tm.setValueAt(obj, r, LogLevelTableModel.LEVEL_COL_POS); //col 1 = Level
+//				}
+				for (int r=0; r<_dataTable.getRowCount(); r++)
 				{
-					_tm.setValueAt(obj, r, LogLevelTableModel.LEVEL_COL_POS); //col 1 = Level
+					_dataTable.setValueAt(obj, r, LogLevelTableModel.LEVEL_COL_POS); //col 1 = Level
 				}
 			}
 			

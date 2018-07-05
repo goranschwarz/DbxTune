@@ -70,12 +70,21 @@ extends CounterModelHostMonitor
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
+		setDataSource(DATA_ABS, false);
+		
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
 	}
 
 
+	@Override 
+	public boolean discardDiffPctHighlighterOnAbsTable() 
+	{
+		// SHOW PCT values as RED even in ABS samples (because we only have ABD rows in this CM)
+		return false; 
+	}
+	
 	@Override
 	protected TabularCntrPanel createGui()
 	{
@@ -101,173 +110,319 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "runtime-replaced" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+////		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_WaitTime,        new TrendGraphDataPoint(GRAPH_NAME_WaitTime,        labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_ReadWaitTime,    new TrendGraphDataPoint(GRAPH_NAME_ReadWaitTime,    labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_WriteWaitTime,   new TrendGraphDataPoint(GRAPH_NAME_WriteWaitTime,   labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_SericeTime,      new TrendGraphDataPoint(GRAPH_NAME_SericeTime,      labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_QueueLength,     new TrendGraphDataPoint(GRAPH_NAME_QueueLength,     labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_BusyPct,         new TrendGraphDataPoint(GRAPH_NAME_BusyPct,         labels, LabelType.Dynamic));
+//
+//		addTrendGraphData(GRAPH_NAME_ReadOp,          new TrendGraphDataPoint(GRAPH_NAME_ReadOp,          labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_WriteOp,         new TrendGraphDataPoint(GRAPH_NAME_WriteOp,         labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_ReadKb,          new TrendGraphDataPoint(GRAPH_NAME_ReadKb,          labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_WriteKb,         new TrendGraphDataPoint(GRAPH_NAME_WriteKb,         labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_AvgReadKbPerIo,  new TrendGraphDataPoint(GRAPH_NAME_AvgReadKbPerIo,  labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_AvgWriteKbPerIo, new TrendGraphDataPoint(GRAPH_NAME_AvgWriteKbPerIo, labels, LabelType.Dynamic));
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WaitTime,
+			"iostat: Wait Time(await) per Device",                                           // Menu CheckBox text
+			"iostat: Wait Time(await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_ReadWaitTime,
+			"iostat: Read Wait Time(r_await) per Device",                                           // Menu CheckBox text
+			"iostat: Read wait Time(r_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WriteWaitTime,
+			"iostat: Write Wait Time(w_await) per Device",                                           // Menu CheckBox text
+			"iostat: Write wait Time(w_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_SericeTime,
+			"iostat: Service Time(svctm) per Device",                                           // Menu CheckBox text
+			"iostat: Service Time(svctm) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_QueueLength,
+			"iostat: Avg Queue Length(avgqu-sz) per Device",                                     // Menu CheckBox text
+			"iostat: Avg Queue Length(avgqu-sz) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_BusyPct,
+			"iostat: Busy Percent(utilPct) per Device",                                     // Menu CheckBox text
+			"iostat: Busy Percent(utilPct) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		
-		addTrendGraphData(GRAPH_NAME_WaitTime,        new TrendGraphDataPoint(GRAPH_NAME_WaitTime,        labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_ReadWaitTime,    new TrendGraphDataPoint(GRAPH_NAME_ReadWaitTime,    labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_WriteWaitTime,   new TrendGraphDataPoint(GRAPH_NAME_WriteWaitTime,   labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_SericeTime,      new TrendGraphDataPoint(GRAPH_NAME_SericeTime,      labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_QueueLength,     new TrendGraphDataPoint(GRAPH_NAME_QueueLength,     labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_BusyPct,         new TrendGraphDataPoint(GRAPH_NAME_BusyPct,         labels, LabelType.Dynamic));
+		
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_ReadOp,
+			"iostat: Read Operations(readsPerSec) per Device & sec",                                     // Menu CheckBox text
+			"iostat: Read Operations(readsPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-		addTrendGraphData(GRAPH_NAME_ReadOp,          new TrendGraphDataPoint(GRAPH_NAME_ReadOp,          labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_WriteOp,         new TrendGraphDataPoint(GRAPH_NAME_WriteOp,         labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_ReadKb,          new TrendGraphDataPoint(GRAPH_NAME_ReadKb,          labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_WriteKb,         new TrendGraphDataPoint(GRAPH_NAME_WriteKb,         labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_AvgReadKbPerIo,  new TrendGraphDataPoint(GRAPH_NAME_AvgReadKbPerIo,  labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_AvgWriteKbPerIo, new TrendGraphDataPoint(GRAPH_NAME_AvgWriteKbPerIo, labels, LabelType.Dynamic));
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WriteOp,
+			"iostat: Write Operations(writesPerSec) per Device & sec",                                     // Menu CheckBox text
+			"iostat: Write Operations(writesPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_WaitTime,
-				"iostat: Wait Time(await) per Device",                                           // Menu CheckBox text
-				"iostat: Wait Time(await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_ReadKb,
+			"iostat: Read KB(kbReadPerSec) per Device & sec",                                     // Menu CheckBox text
+			"iostat: Read KB(kbReadPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_ReadWaitTime,
-				"iostat: Read Wait Time(r_await) per Device",                                           // Menu CheckBox text
-				"iostat: Read wait Time(r_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_WriteKb,
+			"iostat: Write KB(kbWritePerSec) per Device & sec",                                     // Menu CheckBox text
+			"iostat: Write KB(kbWritePerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_WriteWaitTime,
-				"iostat: Write Wait Time(w_await) per Device",                                           // Menu CheckBox text
-				"iostat: Write wait Time(w_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_AvgReadKbPerIo,
+			"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device",                                     // Menu CheckBox text
+			"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_SericeTime,
-				"iostat: Service Time(svctm) per Device",                                           // Menu CheckBox text
-				"iostat: Service Time(svctm) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_AvgWriteKbPerIo,
+			"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device",                                     // Menu CheckBox text
+			"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_QueueLength,
-				"iostat: Avg Queue Length(avgqu-sz) per Device",                                     // Menu CheckBox text
-				"iostat: Avg Queue Length(avgqu-sz) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_BusyPct,
-				"iostat: Busy Percent(utilPct) per Device",                                     // Menu CheckBox text
-				"iostat: Busy Percent(utilPct) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				true, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			
-			
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_ReadOp,
-				"iostat: Read Operations(readsPerSec) per Device & sec",                                     // Menu CheckBox text
-				"iostat: Read Operations(readsPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_WriteOp,
-				"iostat: Write Operations(writesPerSec) per Device & sec",                                     // Menu CheckBox text
-				"iostat: Write Operations(writesPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_ReadKb,
-				"iostat: Read KB(kbReadPerSec) per Device & sec",                                     // Menu CheckBox text
-				"iostat: Read KB(kbReadPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_WriteKb,
-				"iostat: Write KB(kbWritePerSec) per Device & sec",                                     // Menu CheckBox text
-				"iostat: Write KB(kbWritePerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_AvgReadKbPerIo,
-				"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device",                                     // Menu CheckBox text
-				"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_AvgWriteKbPerIo,
-				"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device",                                     // Menu CheckBox text
-				"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_WaitTime,
+//				"iostat: Wait Time(await) per Device",                                           // Menu CheckBox text
+//				"iostat: Wait Time(await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_ReadWaitTime,
+//				"iostat: Read Wait Time(r_await) per Device",                                           // Menu CheckBox text
+//				"iostat: Read wait Time(r_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_WriteWaitTime,
+//				"iostat: Write Wait Time(w_await) per Device",                                           // Menu CheckBox text
+//				"iostat: Write wait Time(w_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_SericeTime,
+//				"iostat: Service Time(svctm) per Device",                                           // Menu CheckBox text
+//				"iostat: Service Time(svctm) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_QueueLength,
+//				"iostat: Avg Queue Length(avgqu-sz) per Device",                                     // Menu CheckBox text
+//				"iostat: Avg Queue Length(avgqu-sz) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_BusyPct,
+//				"iostat: Busy Percent(utilPct) per Device",                                     // Menu CheckBox text
+//				"iostat: Busy Percent(utilPct) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				true, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			
+//			
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_ReadOp,
+//				"iostat: Read Operations(readsPerSec) per Device & sec",                                     // Menu CheckBox text
+//				"iostat: Read Operations(readsPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_WriteOp,
+//				"iostat: Write Operations(writesPerSec) per Device & sec",                                     // Menu CheckBox text
+//				"iostat: Write Operations(writesPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_ReadKb,
+//				"iostat: Read KB(kbReadPerSec) per Device & sec",                                     // Menu CheckBox text
+//				"iostat: Read KB(kbReadPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_WriteKb,
+//				"iostat: Write KB(kbWritePerSec) per Device & sec",                                     // Menu CheckBox text
+//				"iostat: Write KB(kbWritePerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_AvgReadKbPerIo,
+//				"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device",                                     // Menu CheckBox text
+//				"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_AvgWriteKbPerIo,
+//				"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device",                                     // Menu CheckBox text
+//				"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 	
 	@Override

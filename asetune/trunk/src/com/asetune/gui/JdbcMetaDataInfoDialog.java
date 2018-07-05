@@ -231,6 +231,20 @@ extends JDialog
 	private JTextField             _fu_val_txt = new JTextField("%");
 	private JLabel                 _fu_api_lbl = new JLabel("Press button to call getFunctions(catalog, schemaPattern, functionNamePattern)");
 
+	private JLabel                 _fc_filter_lbl = new JLabel("Filter: ");
+	private JTextField             _fc_filter_txt = new JTextField();
+	private JLabel                 _fc_filter_cnt = new JLabel();
+
+	private JLabel                 _fc_cat_lbl = new JLabel("Catalog: ");
+	private JTextField             _fc_cat_txt = new JTextField("null");
+	private JLabel                 _fc_sch_lbl = new JLabel("Schema Pattern: ");
+	private JTextField             _fc_sch_txt = new JTextField("null");
+	private JLabel                 _fc_val_lbl = new JLabel("Function Name Pattern: ");
+	private JTextField             _fc_val_txt = new JTextField("%");
+	private JLabel                 _fc_col_lbl = new JLabel("Columns Name: ");
+	private JTextField             _fc_col_txt = new JTextField("%");
+	private JLabel                 _fc_api_lbl = new JLabel("Press button to call getFunctionColumns(catalog, schemaPattern, functionNamePattern, columnNamePattern)");
+
 	private JLabel                 _ci_filter_lbl = new JLabel("Filter: ");
 	private JTextField             _ci_filter_txt = new JTextField();
 	private JLabel                 _ci_filter_cnt = new JLabel();
@@ -251,6 +265,7 @@ extends JDialog
 	private ExportedKeysTable      _ek_tab  = null;
 	private ProceduresTable        _pr_tab  = null;
 	private FunctionsTable         _fu_tab  = null;
+	private FunctionColumnsTable   _fc_tab  = null;
 	private ConnInfoTable          _ci_tab  = null;
 
 	private JButton                _ok     = new JButton("OK");
@@ -369,6 +384,7 @@ extends JDialog
 		_tabPane.addTab("FK <-",                createExportedKeysPanel());
 		_tabPane.addTab("Procedures",           createProceduresPanel());
 		_tabPane.addTab("Functions",            createFunctionsPanel());
+		_tabPane.addTab("FuncColumns",          createFunctionColumnsPanel());
 		_tabPane.addTab("getClientInfo()",      createClientInfoPanel());
 
 		add(createTopPanel(),        "growx, pushx, wrap");
@@ -392,6 +408,7 @@ extends JDialog
 		_ek_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyEkFilter(); } });
 		_pr_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyPrFilter(); } });
 		_fu_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyFuFilter(); } });
+		_fc_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyFcFilter(); } });
 		_ci_filter_txt.addCaretListener(new CaretListener() { @Override public void caretUpdate(CaretEvent e) { applyCiFilter(); } });
 
 		_ok.addActionListener(new ActionListener()
@@ -1301,6 +1318,84 @@ extends JDialog
 	}
 
 	
+	private JPanel createFunctionColumnsPanel()
+	{
+		_fc_tab = new FunctionColumnsTable(_conn);
+
+		final JButton refresh_but = new JButton("Refresh");
+		refresh_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				_fc_tab.refresh();
+			}
+		});
+		
+		JButton getFunctions_but = new JButton("...");
+		getFunctions_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				ResultSetTableModel rstm = getFunctions(_conn, _fc_cat_txt.getText(), _fc_sch_txt.getText(), _fc_val_txt.getText(), null);
+
+				// Show a list
+				SqlPickList pickList = new SqlPickList(getOwner(), rstm, "getFunctions()", false);
+				pickList.setVisible(true);
+				
+				if (pickList.wasOkPressed())
+				{
+					_fc_cat_txt.setText(pickList.getSelectedValuesAsString("FUNCTION_CAT"));
+					_fc_sch_txt.setText(pickList.getSelectedValuesAsString("FUNCTION_SCHEM"));
+					_fc_val_txt.setText(pickList.getSelectedValuesAsString("FUNCTION_NAME"));
+					refresh_but.doClick();
+				}
+			}
+		});
+
+		String desc = 
+				"<html>"
+				+ "<b>Below information is from <code>Connection.getMetaData().getColumns(catalog, schemaPattern, TablePattern, ColumnPattern)</code></b><br>"
+				+ "</html>";
+		
+		_fc_filter_txt.setToolTipText("Filter that does regular expression on all table cells using this value");
+		_fc_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
+
+		_fc_cat_txt.setToolTipText("<html>a catalog name; must match the catalog name as it is stored in the database; <i>empty string</i> retrieves those without a catalog; <code>null</code> means that the catalog name should not be used to narrow the search</html>");
+		_fc_sch_txt.setToolTipText("<html>a schema name pattern; must match the schema name as it is stored in the database; <i>empty string</i> retrieves those without a schema; <code>null</code> means that the schema name should not be used to narrow the search</html>");
+		_fc_val_txt.setToolTipText("<html>a table name pattern; must match the table name as it is stored in the database (default is %, which means all tables)</html>");
+		_fc_col_txt.setToolTipText("<html>a column name pattern; must match the column name as it is stored in the database</html>");
+
+		JPanel p1 = new JPanel(new MigLayout());
+		p1.add(_fc_cat_lbl,              "");
+		p1.add(_fc_cat_txt,              "growx, pushx, wrap");
+		p1.add(_fc_sch_lbl,              "");
+		p1.add(_fc_sch_txt,              "growx, pushx, wrap");
+		p1.add(_fc_val_lbl,              "");
+		p1.add(_fc_val_txt,              "growx, pushx, split");
+		p1.add(getFunctions_but,         "wrap");
+		p1.add(_fc_col_lbl,              "");
+		p1.add(_fc_col_txt,              "growx, pushx, wrap");
+
+		p1.add(refresh_but,              "skip 1, split");
+		p1.add(_fc_api_lbl,              "wrap 10");
+
+
+		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0"));
+
+		p.add(new JLabel(desc),         "gap 5 5 5 5, growx, pushx, wrap");
+		p.add(p1,                       "growx, pushx, wrap");
+		p.add(_fc_filter_lbl,           "gap 5, split");
+		p.add(_fc_filter_txt,           "growx, pushx");
+		p.add(_fc_filter_cnt,           "gapright 5, wrap 10");
+
+		p.add(new JScrollPane(_fc_tab), "grow, push");
+
+		return p;
+	}
+
+	
 	public void applyKfFilter() { applyFilter(_kf_filter_txt, _kf_tab, _kf_filter_cnt); }
 	public void applyMdFilter() { applyFilter(_md_filter_txt, _md_tab, _md_filter_cnt); }
 	public void applyDtFilter() { applyFilter(_dt_filter_txt, _dt_tab, _dt_filter_cnt); }
@@ -1317,6 +1412,7 @@ extends JDialog
 	public void applyEkFilter() { applyFilter(_ek_filter_txt, _ek_tab, _ek_filter_cnt); }
 	public void applyPrFilter() { applyFilter(_pr_filter_txt, _pr_tab, _pr_filter_cnt); }
 	public void applyFuFilter() { applyFilter(_fu_filter_txt, _fu_tab, _fu_filter_cnt); }
+	public void applyFcFilter() { applyFilter(_fc_filter_txt, _fc_tab, _fc_filter_cnt); }
 	public void applyCiFilter() { applyFilter(_ci_filter_txt, _ci_tab, _ci_filter_cnt); }
 
 	public void applyFilter(JTextField filter_txt, GTable tab, JLabel cnt)
@@ -1381,6 +1477,46 @@ extends JDialog
 		catch(SQLException ex)
 		{
 			SwingUtils.showErrorMessage(getOwner(), "Problems getting tables", "Problems getting tables", ex);
+			return null;
+		}
+	}
+	
+	
+	
+	/**
+	 * 
+	 * @param conn
+	 * @param catalog
+	 * @param schemaPattern
+	 * @param valueNamePattern
+	 * @param tableTypesStr default is to get type of TABLE
+	 * @return
+	 */
+	public ResultSetTableModel getFunctions(Connection conn, String catalog, String schemaPattern, String valueNamePattern, String tableTypesStr)
+	{
+//		String[] tableTypes = new String[] {"TABLE"};
+
+		if (StringUtil.isNullOrBlank(valueNamePattern))
+			valueNamePattern = "";
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+		if (tableTypesStr != null)
+		{
+    		if (tableTypesStr   .equalsIgnoreCase("null")) tableTypesStr    = null;
+//    		if (tableTypesStr   != null)                   tableTypes       = StringUtil.commaStrToArray(tableTypesStr);
+		}
+
+		try
+		{
+    		ResultSet rs = conn.getMetaData().getFunctions(catalog, schemaPattern, valueNamePattern);
+    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.FunctionsModel");
+    		return rstm;
+		}
+		catch(SQLException ex)
+		{
+			SwingUtils.showErrorMessage(getOwner(), "Problems getting functions", "Problems getting functions", ex);
 			return null;
 		}
 	}
@@ -1799,6 +1935,28 @@ extends JDialog
 		public void refresh()
 		{
 			setModel(createFunctionsTableModel(_conn));
+			packAll();
+		}
+	}
+	
+	private class FunctionColumnsTable
+	extends ResultSetTable
+	{
+		private static final long serialVersionUID = 1L;
+		private Connection _conn = null;
+
+		public FunctionColumnsTable(Connection conn)
+		{
+			super();
+			_conn = conn;
+
+			// name of the table
+			setName("JdbcMetaDataInfoDialog.FunctionColumnsTable");
+		}
+		
+		public void refresh()
+		{
+			setModel(createFunctionColumnsTableModel(_conn));
 			packAll();
 		}
 	}
@@ -2492,6 +2650,49 @@ extends JDialog
 			return new DefaultTableModel(rows, cols);
 		}
 	}
+
+	public TableModel createFunctionColumnsTableModel(Connection conn)
+	{
+		String   catalog          = _fc_cat_txt.getText();
+		String   schemaPattern    = _fc_sch_txt.getText();
+		String   valueNamePattern = _fc_val_txt.getText();
+		String   colNamePattern   = _fc_col_txt.getText();
+
+		if (catalog         .equalsIgnoreCase("null")) catalog          = null;
+		if (schemaPattern   .equalsIgnoreCase("null")) schemaPattern    = null;
+//		if (valueNamePattern.equalsIgnoreCase(""))     valueNamePattern = "%";
+
+		String catalogDesc          = catalog          == null ? "null" : '"' + catalog          + '"';
+		String schemaPatternDesc    = schemaPattern    == null ? "null" : '"' + schemaPattern    + '"';
+		String valueNamePatternDesc = valueNamePattern == null ? "null" : '"' + valueNamePattern + '"';
+		String colNamePatternDesc   = colNamePattern   == null ? "null" : '"' + colNamePattern   + '"';
+		
+		String apiCall = "parameters to getFunctionColumns("+catalogDesc+", "+schemaPatternDesc+", "+valueNamePatternDesc+", "+colNamePatternDesc+")";
+		_fc_api_lbl.setText(apiCall);
+
+		try
+		{
+			ResultSet rs = conn.getMetaData().getFunctionColumns(catalog, schemaPattern, valueNamePattern, colNamePattern);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.FunctionColumnsModel");
+			return rstm;
+		}
+		catch (Throwable e)
+		{
+			Vector<String> cols = new Vector<String>();
+			cols.add("Method");
+			cols.add("Problems");
+
+			Vector<Vector<Object>> rows = new Vector<Vector<Object>>();
+			Vector<Object> row = new Vector<Object>();
+
+			row.add("conn.getMetaData().getFunctionColumns()");
+			row.add(e.getMessage());
+			rows.add(row);
+
+			return new DefaultTableModel(rows, cols);
+		}
+	}
+
 
 	public TableModel createMetaDataModel(Connection conn)
 	{

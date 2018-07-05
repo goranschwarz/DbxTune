@@ -20,7 +20,6 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
 
 /**
@@ -113,53 +112,88 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "runtime-replaced" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_EXECUTION_COUNT,          new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_COUNT,          labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME,           new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME,           labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, labels, LabelType.Dynamic));
+////		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_EXECUTION_COUNT,          new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_COUNT,          labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME,           new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME,           labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, new TrendGraphDataPoint(GRAPH_NAME_EXECUTION_TIME_PER_COUNT, labels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_EXECUTION_COUNT,
-				"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
-				"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_EXECUTION_COUNT,
+			"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
+			"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME,
-				"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
-				"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_EXECUTION_TIME,
+			"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
+			"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
-				"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
-				"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
+			"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
+			"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_EXECUTION_COUNT,
+//				"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
+//				"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME,
+//				"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
+//				"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
+//				"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
+//				"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override

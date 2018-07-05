@@ -26,7 +26,6 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
@@ -136,157 +135,288 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_POOL_HIT_RATE,      new TrendGraphDataPoint(GRAPH_NAME_POOL_HIT_RATE,      labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_UTIL,          new TrendGraphDataPoint(GRAPH_NAME_POOL_UTIL,          labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_USED_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_USED_MB,       labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_FREE_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_FREE_MB,       labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_TO_MRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_MRU,        labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_TO_LRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_LRU,        labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_LOGICAL_READ,  new TrendGraphDataPoint(GRAPH_NAME_POOL_LOGICAL_READ,  labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_PHYSICAL_READ, new TrendGraphDataPoint(GRAPH_NAME_POOL_PHYSICAL_READ, labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_APF_READ,      new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_READ,      labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_APF_PCT,       new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_PCT,       labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_POOL_REPLACE_SLIDE, new TrendGraphDataPoint(GRAPH_NAME_POOL_REPLACE_SLIDE, labels, LabelType.Dynamic));
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_POOL_HIT_RATE,      new TrendGraphDataPoint(GRAPH_NAME_POOL_HIT_RATE,      labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_UTIL,          new TrendGraphDataPoint(GRAPH_NAME_POOL_UTIL,          labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_USED_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_USED_MB,       labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_FREE_MB,       new TrendGraphDataPoint(GRAPH_NAME_POOL_FREE_MB,       labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_TO_MRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_MRU,        labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_TO_LRU,        new TrendGraphDataPoint(GRAPH_NAME_POOL_TO_LRU,        labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_LOGICAL_READ,  new TrendGraphDataPoint(GRAPH_NAME_POOL_LOGICAL_READ,  labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_PHYSICAL_READ, new TrendGraphDataPoint(GRAPH_NAME_POOL_PHYSICAL_READ, labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_APF_READ,      new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_READ,      labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_APF_PCT,       new TrendGraphDataPoint(GRAPH_NAME_POOL_APF_PCT,       labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_POOL_REPLACE_SLIDE, new TrendGraphDataPoint(GRAPH_NAME_POOL_REPLACE_SLIDE, labels, LabelType.Dynamic));
+
+		addTrendGraph(GRAPH_NAME_POOL_HIT_RATE,
+			"Cache Pools Hit Rate", 	               // Menu CheckBox text
+			"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			true, // is Percent Graph
+			false,  // visible at start
+			Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_UTIL,
+			"Cache Pools Utilization", 	               // Menu CheckBox text
+			"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			true, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_USED_MB,
+			"Cache Pools Used MB", 	               // Menu CheckBox text
+			"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_FREE_MB,
+			"Cache Pools Free MB", 	               // Menu CheckBox text
+			"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_TO_MRU,
+			"Cache Pools MRU Replacement", 	               // Menu CheckBox text
+			"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_TO_LRU,
+			"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
+			"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
+			"Cache Pools Logical Reads", 	               // Menu CheckBox text
+			"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
+			"Cache Pools Physical Reads", 	               // Menu CheckBox text
+			"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_APF_READ,
+			"Cache Pools APF Reads", 	               // Menu CheckBox text
+			"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false,  // visible at start
+			Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_APF_PCT,
+			"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
+			"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			true, // is Percent Graph
+			false,  // visible at start
+			Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
+			"Cache Pools Replacement Slide", 	               // Menu CheckBox text
+			"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph (this can be more than 100%)
+			false,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 
 		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			TrendGraph tg = null;
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_HIT_RATE,
-				"Cache Pools Hit Rate", 	               // Menu CheckBox text
-				"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				true, // is Percent Graph
-				this, 
-				false,  // visible at start
-				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_UTIL,
-				"Cache Pools Utilization", 	               // Menu CheckBox text
-				"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				true, // is Percent Graph
-				this, 
-				false,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_USED_MB,
-				"Cache Pools Used MB", 	               // Menu CheckBox text
-				"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_FREE_MB,
-				"Cache Pools Free MB", 	               // Menu CheckBox text
-				"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_TO_MRU,
-				"Cache Pools MRU Replacement", 	               // Menu CheckBox text
-				"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_TO_LRU,
-				"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
-				"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
-				"Cache Pools Logical Reads", 	               // Menu CheckBox text
-				"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false,  // visible at start
-				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
-				"Cache Pools Physical Reads", 	               // Menu CheckBox text
-				"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_APF_READ,
-				"Cache Pools APF Reads", 	               // Menu CheckBox text
-				"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false,  // visible at start
-				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_APF_PCT,
-				"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
-				"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				true, // is Percent Graph
-				this, 
-				false,  // visible at start
-				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
-				"Cache Pools Replacement Slide", 	               // Menu CheckBox text
-				"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph (this can be more than 100%)
-				this, 
-				false,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			TrendGraph tg = null;
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_HIT_RATE,
+//				"Cache Pools Hit Rate", 	               // Menu CheckBox text
+//				"Cache Pools Hit Rate Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				true, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_UTIL,
+//				"Cache Pools Utilization", 	               // Menu CheckBox text
+//				"Cache Pools Utilization Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				true, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_USED_MB,
+//				"Cache Pools Used MB", 	               // Menu CheckBox text
+//				"Cache Pools Used MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_FREE_MB,
+//				"Cache Pools Free MB", 	               // Menu CheckBox text
+//				"Cache Pools Free MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_TO_MRU,
+//				"Cache Pools MRU Replacement", 	               // Menu CheckBox text
+//				"Cache Pools MRU Replacement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_TO_LRU,
+//				"Cache Pools LRU fetch-and-discard Placement", 	               // Menu CheckBox text
+//				"Cache Pools LRU fetch-and-discard Placement per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_LOGICAL_READ,
+//				"Cache Pools Logical Reads", 	               // Menu CheckBox text
+//				"Cache Pools Logical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_PHYSICAL_READ,
+//				"Cache Pools Physical Reads", 	               // Menu CheckBox text
+//				"Cache Pools Physical Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_APF_READ,
+//				"Cache Pools APF Reads", 	               // Menu CheckBox text
+//				"Cache Pools APF Reads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_APF_PCT,
+//				"Cache Pools APF Reads Percent", 	               // Menu CheckBox text
+//				"Cache Pools APF Reads Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				true, // is Percent Graph
+//				this, 
+//				false,  // visible at start
+//				Ver.ver(15,7),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_POOL_REPLACE_SLIDE,
+//				"Cache Pools Replacement Slide", 	               // Menu CheckBox text
+//				"Cache Pools Replacement Slide Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph (this can be more than 100%)
+//				this, 
+//				false,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	private String getLabel(int row)

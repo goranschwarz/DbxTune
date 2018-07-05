@@ -51,7 +51,7 @@ extends MainFrame
 
 		options._showAseTab               = false;
 		options._showDbxTuneOptionsInTds  = false;
-		options._showHostmonTab           = false;
+		options._showHostmonTab           = true;
 		options._showOfflineTab           = true;
 		options._showPcsTab               = true;
 
@@ -208,8 +208,8 @@ extends MainFrame
 	{
 		if (TCP_GROUP_REP_AGENT.equals(groupName))
 			return false;
-		if (TCP_GROUP_HOST_MONITOR.equals(groupName))
-			return false;
+//		if (TCP_GROUP_HOST_MONITOR.equals(groupName))
+//			return false;
 		return super.addTabGroup(groupName);
 	}
 }

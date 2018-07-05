@@ -16,6 +16,7 @@
 
 	<path id="project.class.path">
 		<fileset dir="lib" includes="*.jar"/>
+		<fileset dir="lib/jdbc_drivers" includes="jconn4.jar"/>
 <!--
 		<pathelement location="lib/"/>
 		<pathelement path="${java.class.path}/"/>
@@ -81,6 +82,8 @@
 	<!-- - - - - - - - - - - - - - -->
 	<target name="dist" depends="compile" description="generate the distribution" >
 		<!-- Create the distribution directory -->
+		<mkdir dir="${dist}/bin"/>
+		<mkdir dir="${dist}/conf"/>
 		<mkdir dir="${dist}/lib"/>
 		<mkdir dir="${dist}/data"/>
 		<mkdir dir="${dist}/classes"/>
@@ -90,26 +93,82 @@
 
 		<copy file="README.txt"                                         toFile="${dist}/README.txt"/>
 
-		<copy file="perfdemo.bat"                                       toFile="${dist}/perfdemo.bat"/>
+		<copy file="bin/perfdemo.bat"                                   toFile="${dist}/bin/perfdemo.bat"/>
 
-		<copy file="sqlw.bat"                                           toFile="${dist}/sqlw.bat"/>
-		<copy file="sqlw.sh"                                            toFile="${dist}/sqlw.sh"/>
+		<copy file="bin/sqlw.bat"                                       toFile="${dist}/bin/sqlw.bat"/>
+		<copy file="bin/sqlw.sh"                                        toFile="${dist}/bin/sqlw.sh"/>
 
-		<copy file="tailw.bat"                                          toFile="${dist}/tailw.bat"/>
-		<copy file="tailw.sh"                                           toFile="${dist}/tailw.sh"/>
+		<copy file="bin/tailw.bat"                                      toFile="${dist}/bin/tailw.bat"/>
+		<copy file="bin/tailw.sh"                                       toFile="${dist}/bin/tailw.sh"/>
 		<copy file="${src}/com/asetune/images/sqlw_splash.jpg"          toFile="${dist}/lib/sqlw_splash.jpg"/>
 		<copy file="${src}/com/asetune/images/sql_query_window_32.png"  toFile="${dist}/lib/sqlw_icon_32.png"/>
 
-		<copy file="dbxlaunch.bat"                                      toFile="${dist}/dbxlaunch.bat"/>
-		<copy file="asetune.bat"                                        toFile="${dist}/asetune.bat"/>
-		<copy file="asetune.sh"                                         toFile="${dist}/asetune.sh"/>
-		<copy file="dbxtune.properties"                                 toFile="${dist}/dbxtune.properties"/>
+		<copy file="bin/dbxtune.bat"                                    toFile="${dist}/bin/dbxtune.bat"/>
+		<copy file="bin/dbxtune.sh"                                     toFile="${dist}/bin/dbxtune.sh"/>
+
+		<copy file="bin/dbxcentral.bat"                                 toFile="${dist}/bin/dbxcentral.bat"/>
+		<copy file="bin/dbxcentral.sh"                                  toFile="${dist}/bin/dbxcentral.sh"/>
+
+		<copy file="bin/asetune.bat"                                    toFile="${dist}/bin/asetune.bat"/>
+		<copy file="bin/asetune.sh"                                     toFile="${dist}/bin/asetune.sh"/>
 		<copy file="${src}/com/asetune/images/asetune_splash.jpg"       toFile="${dist}/lib/asetune_splash.jpg"/>
 		<copy file="${src}/com/asetune/images/asetune_icon_32.gif"      toFile="${dist}/lib/asetune_icon_32.gif"/>
 		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
-		<copy file="${src}/com/asetune/images/asetune_icon_32.png"      toFile="${dist}/lib/asetune_icon_32.png"/>
+		<copy file="conf/dbxtune.properties"                            toFile="${dist}/conf/dbxtune.properties"/>
 
 
+		<!-- - - - - - - - - - - - - - -->
+		<!-- Some files for DbxCental  -->
+		<!-- - - - - - - - - - - - - - -->
+		<copy file="bin/dbxc_list_ALL.sh"                               toFile="${dist}/bin/dbxc_list_ALL.sh"/>
+		<copy file="bin/dbxc_start_ALL.sh"                              toFile="${dist}/bin/dbxc_start_ALL.sh"/>
+		<copy file="bin/dbxc_stop_ALL.sh"                               toFile="${dist}/bin/dbxc_stop_ALL.sh"/>
+		<copy file="bin/dbxPassword.sh"                                 toFile="${dist}/bin/dbxPassword.sh"/>
+		
+
+		<!-- - - - - - - - - - - - - - -->
+		<!-- And the rest of the tools that are still in beta... but put them in the bin directory -->
+		<!-- - - - - - - - - - - - - - -->
+		<copy file="bin/iqtune.bat"                                     toFile="${dist}/bin/iqtune.bat"/>
+		<copy file="bin/iqtune.sh"                                      toFile="${dist}/bin/iqtune.sh"/>
+		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"        toFile="${dist}/lib/iqtune_splash.jpg"/>
+
+		<copy file="bin/rstune.bat"                                     toFile="${dist}/bin/rstune.bat"/>
+		<copy file="bin/rstune.sh"                                      toFile="${dist}/bin/rstune.sh"/>
+		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/lib/rstune_splash.jpg"/>
+
+		<copy file="bin/raxtune.bat"                                    toFile="${dist}/bin/raxtune.bat"/>
+		<copy file="bin/raxtune.sh"                                     toFile="${dist}/bin/raxtune.sh"/>
+		<copy file="${src}/com/asetune/images/raxtune_splash.jpg"       toFile="${dist}/lib/raxtune_splash.jpg"/>
+
+		<copy file="bin/hanatune.bat"                                   toFile="${dist}/bin/hanatune.bat"/>
+		<copy file="bin/hanatune.sh"                                    toFile="${dist}/bin/hanatune.sh"/>
+		<copy file="${src}/com/asetune/images/hanatune_splash.jpg"      toFile="${dist}/lib/hanatune_splash.jpg"/>
+
+		<copy file="bin/sqlservertune.bat"                              toFile="${dist}/bin/sqlservertune.bat"/>
+		<copy file="bin/sqlservertune.sh"                               toFile="${dist}/bin/sqlservertune.sh"/>
+		<copy file="${src}/com/asetune/images/sqlservertune_splash.jpg" toFile="${dist}/lib/sqlservertune_splash.jpg"/>
+
+		<copy file="bin/oracletune.bat"                                 toFile="${dist}/bin/oracletune.bat"/>
+		<copy file="bin/oracletune.sh"                                  toFile="${dist}/bin/oracletune.sh"/>
+		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/lib/oracletune_splash.jpg"/>
+
+		<copy file="bin/postgrestune.bat"                               toFile="${dist}/bin/postgrestune.bat"/>
+		<copy file="bin/postgrestune.sh"                                toFile="${dist}/bin/postgrestune.sh"/>
+		<copy file="${src}/com/asetune/images/postgrestune_splash.jpg"  toFile="${dist}/lib/postgrestune_splash.jpg"/>
+
+		<copy file="bin/mysqltune.bat"                                  toFile="${dist}/bin/mysqltune.bat"/>
+		<copy file="bin/mysqltune.sh"                                   toFile="${dist}/bin/mysqltune.sh"/>
+		<copy file="${src}/com/asetune/images/mysqltune_splash.jpg"     toFile="${dist}/lib/mysqltune_splash.jpg"/>
+
+		<copy file="bin/db2tune.bat"                                    toFile="${dist}/bin/db2tune.bat"/>
+		<copy file="bin/db2tune.sh"                                     toFile="${dist}/bin/db2tune.sh"/>
+		<copy file="${src}/com/asetune/images/db2tune_splash.jpg"       toFile="${dist}/lib/db2tune_splash.jpg"/>
+
+
+		<!-- - - - - - - - - - - - - - -->
+		<!-- And some extra files -->
+		<!-- - - - - - - - - - - - - - -->
 		<copy file="${src}/com/asetune/history.html"                    toFile="${dist}/history.html"/>
 		<copy todir="${dist}/lib">
 			<fileset dir="lib">
@@ -147,50 +206,6 @@
 		</jar>
 
 
-		<!-- - - - - - - - - - - - - - -->
-		<!-- create a ZIP file with all the BETA (not released) applications -->
-		<!-- - - - - - - - - - - - - - -->
-		<mkdir dir="${dist}/beta"/>
-		<mkdir dir="${dist}/beta/lib"/>
-
-		<copy file="iqtune.bat"                                         toFile="${dist}/beta/iqtune.bat"/>
-<!--		<copy file="iqtune.sh"                                          toFile="${dist}/beta/iqtune.sh"/>-->
-		<copy file="${src}/com/asetune/images/iqtune_splash.jpg"        toFile="${dist}/beta/lib/iqtune_splash.jpg"/>
-
-		<copy file="rstune.bat"                                         toFile="${dist}/beta/rstune.bat"/>
-<!--		<copy file="rstune.sh"                                          toFile="${dist}/beta/rstune.sh"/>-->
-		<copy file="${src}/com/asetune/images/rstune_splash.jpg"        toFile="${dist}/beta/lib/rstune_splash.jpg"/>
-
-		<copy file="raxtune.bat"                                         toFile="${dist}/beta/raxtune.bat"/>
-<!--		<copy file="raxtune.sh"                                          toFile="${dist}/beta/raxtune.sh"/>-->
-		<copy file="${src}/com/asetune/images/raxtune_splash.jpg"        toFile="${dist}/beta/lib/raxtune_splash.jpg"/>
-
-		<copy file="hanatune.bat"                                       toFile="${dist}/beta/hanatune.bat"/>
-<!--		<copy file="hanatune.sh"                                        toFile="${dist}/beta/hanatune.sh"/>-->
-		<copy file="${src}/com/asetune/images/hanatune_splash.jpg"      toFile="${dist}/beta/lib/hanatune_splash.jpg"/>
-
-		<copy file="sqlservertune.bat"                                  toFile="${dist}/beta/sqlservertune.bat"/>
-<!--		<copy file="sqlservertune.sh"                                   toFile="${dist}/beta/sqlservertune.sh"/>-->
-		<copy file="${src}/com/asetune/images/sqlservertune_splash.jpg" toFile="${dist}/beta/lib/sqlservertune_splash.jpg"/>
-
-		<copy file="oracletune.bat"                                     toFile="${dist}/beta/oracletune.bat"/>
-<!--		<copy file="oracletune.sh"                                      toFile="${dist}/beta/oracletune.sh"/>-->
-		<copy file="${src}/com/asetune/images/oracletune_splash.jpg"    toFile="${dist}/beta/lib/oracletune_splash.jpg"/>
-
-		<copy file="postgrestune.bat"                                   toFile="${dist}/beta/postgrestune.bat"/>
-<!--		<copy file="postgrestune.sh"                                    toFile="${dist}/beta/postgrestune.sh"/>-->
-		<copy file="${src}/com/asetune/images/postgrestune_splash.jpg"  toFile="${dist}/beta/lib/postgrestune_splash.jpg"/>
-
-		<copy file="mysqltune.bat"                                      toFile="${dist}/beta/mysqltune.bat"/>
-<!--		<copy file="mysqltune.sh"                                       toFile="${dist}/beta/mysqltune.sh"/>-->
-		<copy file="${src}/com/asetune/images/mysqltune_splash.jpg"  toFile="${dist}/beta/lib/mysqltune_splash.jpg"/>
-
-		<zip destfile="${dist}/dbxtune_beta_tools.zip"
-			basedir="${dist}/beta"
-		/>
-		
-		<delete dir="${dist}/beta"/>
-
 
 		<!-- - - - - - - - - - - - - - -->
 		<!-- make a zip file asetune_${DSTAMP}.jar -->
@@ -211,6 +226,23 @@
 		<echo> ----------------------------------------------------------------</echo>
 		<!-- use: ant -Dpassword=xxx push -->
 		<scp file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" />
+		<!-- <scp file="asetune_${DSTAMP}.zip" todir="gorans@gorans.org:www/asetune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
+
+		<!-- Delete the ${build} and ${dist} directory trees -->
+		<delete dir="${build}"/>
+		<delete dir="${dist}"/>
+	</target>
+
+
+	<!-- - - - - - - - - - - - - - -->
+	<!--  target: push2 (via 443 instead of 22) -->
+	<!-- - - - - - - - - - - - - - -->
+	<target name="push2" depends="init,clean,dist" description="Push a temporary drop" >
+		<echo> ================================================================</echo>
+		<echo> Note: specify password with: ant -Dpassword=theSecretPasswd push</echo>
+		<echo> ----------------------------------------------------------------</echo>
+		<!-- use: ant -Dpassword=xxx push -->
+		<scp port="443" file="asetune_${DSTAMP}.zip" todir="gorans:${password}@gorans.org:www/asetune/tmp/" />
 		<!-- <scp file="asetune_${DSTAMP}.zip" todir="gorans@gorans.org:www/asetune/tmp/" keyfile="${user.home}/.ssh/id_dsa" /> -->
 
 		<!-- Delete the ${build} and ${dist} directory trees -->

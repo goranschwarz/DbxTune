@@ -64,6 +64,7 @@ public class AseSqlScriptReader
 	private int             _totalBatchCount       = -1;
 	
 	private int             _topRows               = -1; // option 'top #'
+	private int             _bottomRows            = -1; // option 'bottom #'
 	private int             _rowCount              = -1; // option 'rowc'
 	private int             _asPlainText           = -1; // option 'plain'
 	private int             _noData                = -1; // option 'nodata'
@@ -592,6 +593,7 @@ public class AseSqlScriptReader
 
 
 	public boolean hasOption_topRows()           { return _topRows           > 0; }
+	public boolean hasOption_bottomRows()        { return _bottomRows        > 0; }
 	public boolean hasOption_rowCount()          { return _rowCount          > 0; }
 	public boolean hasOption_asPlaintText()      { return _asPlainText       > 0; }
 	public boolean hasOption_noData()            { return _noData            > 0; }
@@ -602,6 +604,7 @@ public class AseSqlScriptReader
 
 	// Below boolean methods, yes we use "int opt = -1" as "not specified"
 	public int     getOption_topRows()           { return _topRows; }
+	public int     getOption_bottomRows()        { return _bottomRows; }
 	public boolean getOption_rowCount()          { return _rowCount          > 0; }
 	public boolean getOption_asPlaintText()      { return _asPlainText       > 0; }
 	public boolean getOption_noData()            { return _noData            > 0; }
@@ -638,6 +641,7 @@ public class AseSqlScriptReader
 
 		// Reset some stuff (like options)
 		_topRows           = -1;
+		_bottomRows        = -1;
 		_rowCount          = -1;
 		_asPlainText       = -1;
 		_noData            = -1;
@@ -737,6 +741,7 @@ public class AseSqlScriptReader
 				// go 10 plain
 				// go 10 wait 1000
 				// go 10 top 100
+				// go 10 bottom 100
 				// go 10|pipeCmd
 				// go 10 |pipeCmd
 				// go 10 | pipeCmd
@@ -822,6 +827,14 @@ public class AseSqlScriptReader
 											error = "Sub command 'top #' The parameter '"+word2+"' is not a number.";
 										}
 									}
+									else if ("bottom".equalsIgnoreCase(word1))
+									{
+										try { _bottomRows = Integer.parseInt( word2 ); }
+										catch (NumberFormatException nfe) 
+										{
+											error = "Sub command 'bottom #' The parameter '"+word2+"' is not a number.";
+										}
+									}
 									else if ("rowc".equalsIgnoreCase(word1))
 									{
 										_rowCount = 1;
@@ -881,22 +894,24 @@ public class AseSqlScriptReader
 										String desc = 
 											error +" \n" +
 											"\n" +
-											"Syntax is 'go [#1] [,top #2] [,wait #3] [,plain] [,nodata] [,append] [,psql] [,prsi] [,time]'\n" +
+											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,plain] [,nodata] [,append] [,psql] [,prsi] [,time]'\n" +
 											"\n" +
 											"#1 = Number of times to repeat the command\n" +
 											"#2 = Rows to read from a ResultSet.\n" +
-											"#3 = Ms to sleep after each SQL Batch send/execution.\n" +
+											"#3 = Last rows to display from a ResultSet.\n" +
+											"#4 = Ms to sleep after each SQL Batch send/execution.\n" +
 											"\n" +
 											"Description of sub commands\n" +
-											"top #  - Read only first # rows in the result set\n" +
-											"wait # - Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'\n" +
-											"plain  - Do NOT use a GUI table for result set, instead print as plain text.\n" +
-											"nodata - Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)\n" +
-											"append - Do NOT clear results from previous executions. Append at the end.\n" +
-											"psql   - Print the executed SQL Statement in the output\n" +
-											"prsi   - Print info about the ResultSet data types etc in the output\n" +
-											"time   - Print how long time the SQL Batch took, from the clients perspective\n" +
-											"rowc   - Print the rowcount from JDBC driver, not the number of rows actually returned\n" +
+											"top #    - Read only first # rows in the result set\n" +
+											"bottom # - Only display last # rows in the result set\n" +
+											"wait #   - Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'\n" +
+											"plain    - Do NOT use a GUI table for result set, instead print as plain text.\n" +
+											"nodata   - Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)\n" +
+											"append   - Do NOT clear results from previous executions. Append at the end.\n" +
+											"psql     - Print the executed SQL Statement in the output\n" +
+											"prsi     - Print info about the ResultSet data types etc in the output\n" +
+											"time     - Print how long time the SQL Batch took, from the clients perspective\n" +
+											"rowc     - Print the rowcount from JDBC driver, not the number of rows actually returned\n" +
 											"\n" +
 											"Example:\n" +
 											"select * from tabName where ...\n" +

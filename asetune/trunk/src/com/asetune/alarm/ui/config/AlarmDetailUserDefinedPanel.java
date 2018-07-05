@@ -317,6 +317,10 @@ extends JPanel
 				if ( _create_but.isVisible() )
 					return pr;
 
+				if ( ! UserDefinedAlarmHandler.hasInstance() )
+					return pr;
+
+
 //				String currentCmName = (String) _javaEditor_txt.getClientProperty("currentCmName");
 //				if (currentCmName == null)
 //					return pr;
@@ -328,7 +332,7 @@ extends JPanel
 //					System.out.println("PROBLEMS SAVING FILE.");
 //					e.printStackTrace();
 //				}
-
+				
 				File srcDir = new File(UserDefinedAlarmHandler.getInstance().getSourceDir());
 				File[] srcDirs = new File[]{ srcDir };
 				
@@ -347,7 +351,7 @@ extends JPanel
 					
 					// set the "path" where to find java source code (Resource Finder) 
 					//  - first:  The in-memory HashMap<"pgkname/CmName.java", "source-code-content">
-					//  - second: DIRECTORY: ${DBXTUNE_HOME}/alarm-handler-src
+					//  - second: DIRECTORY: ${DBXTUNE_HOME}/resources/alarm-handler-src
 					List<ResourceFinder> resourceFinders = new ArrayList<>();
 					resourceFinders.add( new MapResourceFinder(srcStrings));
 					resourceFinders.add( new PathResourceFinder(srcDirs) );
@@ -459,6 +463,9 @@ extends JPanel
 	private AlarmEntry _alarmEntry = null;
 	public void setAlarmEntry(AlarmEntry alarmEntry)
 	{
+		if ( ! UserDefinedAlarmHandler.hasInstance() )
+			return;
+
 		_alarmEntry =alarmEntry;
 		String cmName = _alarmEntry._cmName;
 
@@ -676,7 +683,7 @@ extends JPanel
 		}
 		else
 		{
-			File f = new File("C:\\projects\\AseTune\\alarm-handler-src2\\asetune\\CmEngines.txt");
+			File f = new File("C:\\projects\\AseTune\\resources\\alarm-handler-src2\\asetune\\CmEngines.txt");
 			try
 			{
 				String content = FileUtils.readFileToString(f);
@@ -695,7 +702,7 @@ extends JPanel
 	
 	public static void main(String[] args)
 	{
-		File srcDir = new File("C:\\projects\\AseTune\\alarm-handler-src2");
+		File srcDir = new File("C:\\projects\\AseTune\\resources\\alarm-handler-src2");
 		File[] srcDirs = new File[]{ srcDir };
 		
 		String className     = "asetune.CmEngines";

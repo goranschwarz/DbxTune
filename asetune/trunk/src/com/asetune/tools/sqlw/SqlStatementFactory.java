@@ -63,6 +63,7 @@ public class SqlStatementFactory
 					+ "    int       = integer             Types.INTEGER   int=99, int=null\n"
 					+ "    bigint    = long                Types.BIGINT    bigint=9999999999999999999, int=null\n"
 					+ "    numeric   = bigdecimal          Types.NUMERIC   numeric=1.12, numeric=null\n"
+					+ "    double    = double              Types.DOUBLE    double=1.12, double=null\n"
 					+ "    timestamp = 'datetime str'      Types.TIMESTAMP timestamp='2015-01-10 14:20:10', timestamp(dd/MM/yyyy HH.mm)='31/12/2014 14.00', timestamp=null\n"
 					+ "    date      = 'date str'          Types.DATE      date='2015-01-10', date(dd/MM/yyyy)='31/12/2014', date=null\n"
 					+ "    time      = 'time str'          Types.TIME      time='14:20:10', time(HH.mm)='14.00', time=null\n"

@@ -15,7 +15,6 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.OsTable;
 
 public class CmOsMeminfo
@@ -63,6 +62,8 @@ extends CounterModelHostMonitor
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
+		setDataSource(DATA_ABS, false);
+		
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
@@ -72,46 +73,96 @@ extends CounterModelHostMonitor
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_MEM_FREE      = "MemFree";
+	public static final String GRAPH_NAME_MEM_USED      = "MemUsed";
+//	public static final String GRAPH_NAME_MEM_FREE      = "MemFree";
 	public static final String GRAPH_NAME_MEM_AVAILABLE = "MemAvailable";
 
 	private void addTrendGraphs()
 	{
-		String[] labels_MemFree      = new String[] { "MemFree in MB" };
-		String[] labels_MemAvailable = new String[] { "MemAvailable in MB" };
+//		String[] labels_MemUsed      = new String[] { "MemUsed in MB" };
+//		String[] labels_MemFree      = new String[] { "MemFree in MB" };
+//		String[] labels_MemAvailable = new String[] { "MemAvailable in MB" };
+//		
+//		addTrendGraphData(GRAPH_NAME_MEM_USED,      new TrendGraphDataPoint(GRAPH_NAME_MEM_USED,      labels_MemUsed,      LabelType.Static));
+////		addTrendGraphData(GRAPH_NAME_MEM_FREE,      new TrendGraphDataPoint(GRAPH_NAME_MEM_FREE,      labels_MemFree,      LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_MEM_AVAILABLE, new TrendGraphDataPoint(GRAPH_NAME_MEM_AVAILABLE, labels_MemAvailable, LabelType.Static));
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_MEM_USED,
+			"meminfo: Used Memory", 	                                // Menu CheckBox text
+			"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			new String[] { "MemUsed in MB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+//		// GRAPH
+//		addTrendGraph(GRAPH_NAME_MEM_FREE,
+//			"meminfo: Free Memory", 	                                // Menu CheckBox text
+//			"meminfo: Free Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+//			new String[] { "MemFree in MB" }, 
+//			LabelType.Static,
+//			false, // is Percent Graph
+//			false, // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_MEM_AVAILABLE,
+			"meminfo: Available Memory", 	                                // Menu CheckBox text
+			"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			new String[] { "MemAvailable in MB" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.MEMORY,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 		
-		addTrendGraphData(GRAPH_NAME_MEM_FREE,      new TrendGraphDataPoint(GRAPH_NAME_MEM_FREE,      labels_MemFree,      LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_MEM_AVAILABLE, new TrendGraphDataPoint(GRAPH_NAME_MEM_AVAILABLE, labels_MemAvailable, LabelType.Static));
-
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			TrendGraph tg = null;
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_MEM_FREE,
-				"meminfo: Free Memory", 	                                // Menu CheckBox text
-				"meminfo: Free Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-				labels_MemFree, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_MEM_AVAILABLE,
-				"meminfo: Available Memory", 	                                // Menu CheckBox text
-				"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-				labels_MemAvailable, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			TrendGraph tg = null;
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_MEM_USED,
+//				"meminfo: Used Memory", 	                                // Menu CheckBox text
+//				"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+//				labels_MemUsed, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+////			// GRAPH
+////			tg = new TrendGraph(GRAPH_NAME_MEM_FREE,
+////				"meminfo: Free Memory", 	                                // Menu CheckBox text
+////				"meminfo: Free Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+////				labels_MemFree, 
+////				false, // is Percent Graph
+////				this, 
+////				false, // visible at start
+////				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+////				-1);  // minimum height
+////			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_MEM_AVAILABLE,
+//				"meminfo: Available Memory", 	                                // Menu CheckBox text
+//				"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+//				labels_MemAvailable, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 	
 	@Override
@@ -123,16 +174,30 @@ extends CounterModelHostMonitor
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		if (GRAPH_NAME_MEM_FREE.equals(tgdp.getName()))
+		if (GRAPH_NAME_MEM_USED.equals(tgdp.getName()))
 		{
 			Double[] arr = new Double[1];
 
 			// NOTE: only ABS values are present in CounterModelHostMonitor
-			Double val = this.getAbsValueAsDouble("MemFree", "used");
-			arr[0] = (val == null) ? 0 : val / 1024;
+			Double memTotal = this.getAbsValueAsDouble("MemTotal", "used");
+			Double memFree  = this.getAbsValueAsDouble("MemFree",  "used");
+
+			// If no data: -1, otherwise: (memTotal - memFree) / 1024
+			arr[0] = (memTotal == null && memFree == null) ? -1 : (memTotal - memFree) / 1024;
 
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+
+//		if (GRAPH_NAME_MEM_FREE.equals(tgdp.getName()))
+//		{
+//			Double[] arr = new Double[1];
+//
+//			// NOTE: only ABS values are present in CounterModelHostMonitor
+//			Double val = this.getAbsValueAsDouble("MemFree", "used");
+//			arr[0] = (val == null) ? 0 : val / 1024;
+//
+//			tgdp.setDataPoint(this.getTimestamp(), arr);
+//		}
 
 		if (GRAPH_NAME_MEM_AVAILABLE.equals(tgdp.getName()))
 		{
@@ -290,6 +355,10 @@ extends CounterModelHostMonitor
 		return "";
 	}
 
+//-----------------------------------------------------------------------------
+//-- MAYBE: Do alarm when MemAvailable is getting to low... (need algo for this)
+//-- NOTE:  The below is just "taken" from CmOsUptime, and needs to be altered
+//-----------------------------------------------------------------------------
 //	@Override
 //	public void sendAlarmRequest()
 //	{

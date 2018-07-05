@@ -108,6 +108,7 @@ public class Utf8TableSizeChecker
 					}
 				}
 			}
+			rs.close();
 		}
 		catch (Exception e)
 		{

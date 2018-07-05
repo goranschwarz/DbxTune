@@ -568,6 +568,47 @@ implements
 		return _cmDisplay;
 	}
 
+	/** Sets various Options, (this is a subset of setCm(CountersModel cm)), called from CM.onCmInit()  */
+	public void setOptionsOnCmInit(CountersModel cm)
+	{
+//		CountersModel cm = getDisplayCm();
+//System.out.println("setOptionsOnCmInit() ############### "+getName()+" #### "+cm+" #### ");
+		if ( cm != null )
+		{
+			_filterNoZeroCounters_chk       .setSelected(cm.isFilterAllZero());
+			_optionPauseDataPolling_chk     .setSelected(cm.isDataPollingPaused());
+			_optionEnableBgPolling_chk      .setSelected(cm.isBackgroundDataPollingEnabled());
+			_optionHasActiveGraphs_lbl      .setVisible (cm.hasActiveGraphs());
+			_optionTrendGraphs_but          .setVisible (cm.hasTrendGraph());
+			_optionPersistCounters_chk      .setSelected(cm.isPersistCountersEnabled());
+			_optionPersistCountersAbs_chk   .setSelected(cm.isPersistCountersAbsEnabled());
+			_optionPersistCountersDiff_chk  .setSelected(cm.isPersistCountersDiffEnabled());
+			_optionPersistCountersRate_chk  .setSelected(cm.isPersistCountersRateEnabled());
+			_optionNegativeDiffCntToZero_chk.setSelected(cm.isNegativeDiffCountersToZero());
+			setQueryTimeout(cm.getQueryTimeout());
+
+			_optionPersistCountersAbs_chk   .setEnabled(cm.isPersistCountersAbsEditable());
+			_optionPersistCountersDiff_chk  .setEnabled(cm.isPersistCountersDiffEditable());
+			_optionPersistCountersRate_chk  .setEnabled(cm.isPersistCountersRateEditable());
+
+			int dataSource = cm.getDataSource();
+			if ( dataSource == CountersModel.DATA_ABS )  _counterAbs_rb  .setSelected(true);
+			if ( dataSource == CountersModel.DATA_DIFF ) _counterDelta_rb.setSelected(true);
+			if ( dataSource == CountersModel.DATA_RATE ) _counterRate_rb .setSelected(true);
+
+			// Enable/Disable: the what counters we can show
+			if ( cm.isDiffCalcEnabled() )
+				setEnableCounterChoice(true);
+			else
+			{
+				setEnableCounterChoice(false);
+				_counterAbs_rb.setSelected(true);
+			}
+
+			setPostponeTime(cm.getPostponeTime());
+			setPostponeIsEnabled(cm.isPostponeEnabled());
+		}
+	}
 	public void setCm(CountersModel cm)
 	{
 		// Remove old stuff..
@@ -575,51 +616,64 @@ implements
 			_cm.removeTableModelListener(this);
 
 		_cm = cm;
-		if ( _cm != null )
+		if ( cm != null )
 		{
-			_dataTable.setName(_cm.getName());
-//			_dataTable.setSrvVersion(_cm.getServerVersion());
+			_dataTable.setName(cm.getName());
+//			_dataTable.setSrvVersion(cm.getServerVersion());
 
-			_filterNoZeroCounters_chk       .setSelected(_cm.isFilterAllZero());
-			_optionPauseDataPolling_chk     .setSelected(_cm.isDataPollingPaused());
-			_optionEnableBgPolling_chk      .setSelected(_cm.isBackgroundDataPollingEnabled());
-			_optionHasActiveGraphs_lbl      .setVisible (_cm.hasActiveGraphs());
-			_optionTrendGraphs_but          .setVisible (_cm.hasTrendGraph());
-			_optionPersistCounters_chk      .setSelected(_cm.isPersistCountersEnabled());
-			_optionPersistCountersAbs_chk   .setSelected(_cm.isPersistCountersAbsEnabled());
-			_optionPersistCountersDiff_chk  .setSelected(_cm.isPersistCountersDiffEnabled());
-			_optionPersistCountersRate_chk  .setSelected(_cm.isPersistCountersRateEnabled());
-			_optionNegativeDiffCntToZero_chk.setSelected(_cm.isNegativeDiffCountersToZero());
-			setQueryTimeout(_cm.getQueryTimeout());
+			_filterNoZeroCounters_chk       .setSelected(cm.isFilterAllZero());
+			_optionPauseDataPolling_chk     .setSelected(cm.isDataPollingPaused());
+			_optionEnableBgPolling_chk      .setSelected(cm.isBackgroundDataPollingEnabled());
+			_optionHasActiveGraphs_lbl      .setVisible (cm.hasActiveGraphs());
+			_optionTrendGraphs_but          .setVisible (cm.hasTrendGraph());
+			_optionPersistCounters_chk      .setSelected(cm.isPersistCountersEnabled());
+			_optionPersistCountersAbs_chk   .setSelected(cm.isPersistCountersAbsEnabled());
+			_optionPersistCountersDiff_chk  .setSelected(cm.isPersistCountersDiffEnabled());
+			_optionPersistCountersRate_chk  .setSelected(cm.isPersistCountersRateEnabled());
+			_optionNegativeDiffCntToZero_chk.setSelected(cm.isNegativeDiffCountersToZero());
+			setQueryTimeout(cm.getQueryTimeout());
 
-			_optionPersistCountersAbs_chk   .setEnabled(_cm.isPersistCountersAbsEditable());
-			_optionPersistCountersDiff_chk  .setEnabled(_cm.isPersistCountersDiffEditable());
-			_optionPersistCountersRate_chk  .setEnabled(_cm.isPersistCountersRateEditable());
+			_optionPersistCountersAbs_chk   .setEnabled(cm.isPersistCountersAbsEditable());
+			_optionPersistCountersDiff_chk  .setEnabled(cm.isPersistCountersDiffEditable());
+			_optionPersistCountersRate_chk  .setEnabled(cm.isPersistCountersRateEditable());
 
-			int dataSource = _cm.getDataSource();
+			int dataSource = cm.getDataSource();
 			if ( dataSource == CountersModel.DATA_ABS )  _counterAbs_rb  .setSelected(true);
 			if ( dataSource == CountersModel.DATA_DIFF ) _counterDelta_rb.setSelected(true);
 			if ( dataSource == CountersModel.DATA_RATE ) _counterRate_rb .setSelected(true);
 
-			// Disable the what counters we can show
-			if ( !_cm.isDiffCalcEnabled() )
+			// Enable/Disable: the what counters we can show
+			if ( cm.isDiffCalcEnabled() )
+				setEnableCounterChoice(true);
+			else
 			{
 				setEnableCounterChoice(false);
 				_counterAbs_rb.setSelected(true);
 			}
-			setPostponeTime(_cm.getPostponeTime());
-			setPostponeIsEnabled(_cm.isPostponeEnabled());
 
-			_dataTable.setModel(_cm);
-			_cm.addTableModelListener(this);
+			setPostponeTime(cm.getPostponeTime());
+			setPostponeIsEnabled(cm.isPostponeEnabled());
+
+			_dataTable.setModel(cm);
+			cm.addTableModelListener(this);
 			adjustTableColumnWidth();
 
 			// remove the JXTable listener...
 			// it will be called from tableChanged() if we are NOT looking
 			// at at the history...
-			_cm.removeTableModelListener(_dataTable);
+			cm.removeTableModelListener(_dataTable);
 		}
 	}
+
+//	/** When client does connect call this method */  use onCmInit() instead
+//	public void onConnect()
+//	{
+//	}
+
+//	/** When client does dis-connect call this method */
+//	public void onDisconnect()
+//	{
+//	}
 
 	public CountersModel getCm()
 	{
@@ -684,6 +738,8 @@ implements
 		// No need to continue if the CM is not known
 		if (_cm == null)
 			return;
+
+		setOptionsOnCmInit(_cm);
 
 //		if ( _cm.hasActiveGraphs() )
 //		{
@@ -798,6 +854,11 @@ implements
 		
 		// Call other things that might need to be updated.
 		updateExtendedInfoPanel_private();
+	}
+
+	public GTableFilter getFilterFreeText()
+	{
+		return _tableFreetextFilter;
 	}
 
 	public void refreshFilterColumns(TableModel tm)

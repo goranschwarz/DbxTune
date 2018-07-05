@@ -1,13 +1,19 @@
 package com.asetune.cm.rs;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.rs.AlarmEventRsDbQueueSize;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -17,7 +23,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Configuration;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -25,7 +31,7 @@ import com.asetune.gui.TrendGraph;
 public class CmDbQueueSizeInRssd
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminDiskSpace.java.class);
+	private static Logger        _logger          = Logger.getLogger(CmDbQueueSizeInRssd.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmDbQueueSizeInRssd.class.getSimpleName();
@@ -101,29 +107,41 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "-added-at-runtime-" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels, LabelType.Dynamic));
+////		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
+		//-----
+		addTrendGraph(GRAPH_NAME_QUEUE_SIZE,
+			"Queue Size from the RSSD (col 'size', Absolute Value)", // Menu CheckBox text
+			"Queue Size from the RSSD (col 'size', Absolute Value)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
-				"Queue Size from the RSSD (col 'size', Absolute Value)", // Menu CheckBox text
-				"Queue Size from the RSSD (col 'size', Absolute Value)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
+//				"Queue Size from the RSSD (col 'size', Absolute Value)", // Menu CheckBox text
+//				"Queue Size from the RSSD (col 'size', Absolute Value)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override
@@ -434,5 +452,63 @@ extends CountersModel
 		"drop table #queues \n" + 
 		"drop table #subs \n" +
 		"";
+	}
+	
+	
+	//--------------------------------------------------------------
+	// Alarm handling
+	//--------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		CountersModel cm = this;
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		for (int r=0; r<cm.getAbsRowCount(); r++)
+		{
+			String name = cm.getAbsString(r, "name");
+			String type = cm.getAbsString(r, "q_type_str"); // "Inbound" or "Outbound"
+
+			//-------------------------------------------------------
+			// Space Used in Segs (MB)
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("size"))
+			{
+				Double size = cm.getAbsValueAsDouble(r, "size");
+				
+				if (size != null)
+				{
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): name='"+name+"', type='"+type+"', size="+size+".");
+
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_size, DEFAULT_alarm_size);
+					if (size.intValue() > threshold)
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventRsDbQueueSize(cm, threshold, name, type, size.intValue()) );
+					}
+				}
+			}
+		} // end: loop all rows
+	} // end: method
+
+	public static final String  PROPKEY_alarm_size = CM_NAME + ".alarm.system.if.size.gt";
+	public static final int     DEFAULT_alarm_size = 8192;
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("size", PROPKEY_alarm_size, Integer.class,  conf.getIntProperty(PROPKEY_alarm_size, DEFAULT_alarm_size), DEFAULT_alarm_size, "If 'size' is GREATER than ####, send 'AlarmEventRsDbQueueSize'."));
+
+		return list;
 	}
 }

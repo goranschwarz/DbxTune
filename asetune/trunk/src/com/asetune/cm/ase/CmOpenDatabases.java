@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -14,14 +15,22 @@ import javax.naming.NameNotFoundException;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
+import com.asetune.alarm.events.AlarmEventLastBackupFailed;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
+import com.asetune.alarm.events.AlarmEventLowDbFreeSpace;
+import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
+import com.asetune.alarm.events.AlarmEventOldBackup;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.asetune.cm.CmSybMessageHandler;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -34,7 +43,6 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.DbSelectionForGraphsDialog;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -138,7 +146,7 @@ extends CountersModel
 	private static final String  PROP_PREFIX                          = CM_NAME;
 
 	public static final String  PROPKEY_sample_spaceusage            = PROP_PREFIX + ".sample.spaceusage";
-	public static final boolean DEFAULT_sample_spaceusage            = true;
+	public static final boolean DEFAULT_sample_spaceusage            = false;
 
 //	public static final String  PROPKEY_spaceusageInMb               = PROP_PREFIX + ".sample.spaceusageInMb";
 //	public static final boolean DEFAULT_spaceusageInMb               = false;
@@ -156,88 +164,153 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels         = new String[] { "runtime-replaced" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		String[] openTranLabels = new String[] { "Seconds" };
+////		String[] labels         = new String[] { "runtime-replaced" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+////		String[] openTranLabels = new String[] { "Seconds" };
 		
-		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT,  new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT,  labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_LOGSIZE_LEFT_MB,    new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_LEFT_MB,    labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_LOGSIZE_USED_PCT,   new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_USED_PCT,   labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_DATASIZE_LEFT_MB,   new TrendGraphDataPoint(GRAPH_NAME_DATASIZE_LEFT_MB,   labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_DATASIZE_USED_PCT,  new TrendGraphDataPoint(GRAPH_NAME_DATASIZE_USED_PCT,  labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, openTranLabels));
+//		addTrendGraphData(GRAPH_NAME_LOGSEMAPHORE_CONT,  new TrendGraphDataPoint(GRAPH_NAME_LOGSEMAPHORE_CONT,  labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_LOGSIZE_LEFT_MB,    new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_LEFT_MB,    labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_LOGSIZE_USED_PCT,   new TrendGraphDataPoint(GRAPH_NAME_LOGSIZE_USED_PCT,   labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_DATASIZE_LEFT_MB,   new TrendGraphDataPoint(GRAPH_NAME_DATASIZE_LEFT_MB,   labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_DATASIZE_USED_PCT,  new TrendGraphDataPoint(GRAPH_NAME_DATASIZE_USED_PCT,  labels, LabelType.Dynamic));
+////		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, openTranLabels));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
-				"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
-				"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
+			"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
+			"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
-				"DB Transaction Log Space left in MB",        // Menu CheckBox text
-				"DB Transaction Log Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
+			"DB Transaction Log Space left in MB",        // Menu CheckBox text
+			"DB Transaction Log Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
-				"DB Transaction Log Space used in PCT",     // Menu CheckBox text
-				"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				true,  // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
+			"DB Transaction Log Space used in PCT",     // Menu CheckBox text
+			"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
-				"DB Data Space left in MB",        // Menu CheckBox text
-				"DB Data Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
+			"DB Data Space left in MB",        // Menu CheckBox text
+			"DB Data Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
-				"DB Data Space used in PCT",     // Menu CheckBox text
-				"DB Data Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels, 
-				true,  // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
+			"DB Data Space used in PCT",     // Menu CheckBox text
+			"DB Data Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-//			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-//				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-//				"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				openTranLabels, 
+//		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+//			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
+//			"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			new String[] { "Seconds" },
+//			LabelType.Static,
+//			false, // is Percent Graph
+//			false, // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
+//				"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
+//				"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
 //				false, // is Percent Graph
 //				this, 
 //				false, // visible at start
 //				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 //				-1);   // minimum height
 //			addTrendGraph(tg.getName(), tg, true);
-		}
+//
+//			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
+//				"DB Transaction Log Space left in MB",        // Menu CheckBox text
+//				"DB Transaction Log Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
+//				"DB Transaction Log Space used in PCT",     // Menu CheckBox text
+//				"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				true,  // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
+//				"DB Data Space left in MB",        // Menu CheckBox text
+//				"DB Data Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
+//				"DB Data Space used in PCT",     // Menu CheckBox text
+//				"DB Data Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels, 
+//				true,  // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+////			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+////				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
+////				"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+////				openTranLabels, 
+////				false, // is Percent Graph
+////				this, 
+////				false, // visible at start
+////				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+////				-1);   // minimum height
+////			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override
@@ -245,6 +318,24 @@ extends CountersModel
 	{
 		return new CmOpenDatabasesPanel(this);
 	}
+
+	@Override
+	protected CmSybMessageHandler createSybMessageHandler()
+	{
+		CmSybMessageHandler msgHandler = super.createSybMessageHandler();
+
+		// for getServerVersion() the CM needs to be initialized.
+//		if (getServerVersion() >= Ver.ver(16,0,0, 2)) // 16.0 SP2
+//		{
+//		}
+
+		// in 16.0 SP2 when using: query_text(spid)
+		// we might get: Msg=10228, Text=The specified spid value '8' applies to a server internal process, which does not execute a query plan
+		msgHandler.addDiscardMsgNum(10228);
+
+		return msgHandler;
+	}
+
 
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
@@ -538,6 +629,20 @@ extends CountersModel
 //						"<b>Note</b>: if 'Spaceusage in MB' is checked, this will be in MB, check column 'RawSpaceUsage' for the <i>raw</i> values.<br>" +
 					"</html>");
 
+			mtd.addColumn("monOpenDatabases", "LastDbBackupAgeInHours",
+					"<html>" +
+						"Number of hours since last database backup/dump was done.<br>" +
+						"-1 if 'dump database...' has ever been done.<br>" +
+						"<b>Formula</b>: datediff(hour, x.BackupStartTime, getdate())<br>" +
+					"</html>");
+
+			mtd.addColumn("monOpenDatabases", "LastLogBackupAgeInHours",
+					"<html>" +
+						"Number of hours since last transaction log backup/dump was done.<br>" +
+						"-1 if 'dump tran...' has ever been done.<br>" +
+						"<b>Formula</b>: datediff(hour, x.LastTranLogDumpTime, getdate())<br>" +
+					"</html>");
+
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -773,7 +878,8 @@ extends CountersModel
 		         Tables + RowCountSum + OamPages + AllocationUnits + nl_160 + 
 		         DataPages + IndexPages + nl_160 +
 		         DataMb + IndexMb + nl_160 +
-		         "SrvPageSize = @@maxpagesize, od.BackupInProgress, od.LastBackupFailed, od.BackupStartTime, ";
+		         "SrvPageSize = @@maxpagesize, od.BackupInProgress, od.LastBackupFailed, \n" +
+		         "od.BackupStartTime, LastDbBackupAgeInHours = isnull(datediff(hour, od.BackupStartTime, getdate()),-1), \n";
 		cols2 += "";
 		cols3 += QuiesceTag + RawSpaceUsage + nl_160 
 				+ OldestTranSqlText + OldestTranShowPlanText;
@@ -783,7 +889,8 @@ extends CountersModel
 		}
 		if (aseVersion >= Ver.ver(15,0,2,5))
 		{
-			cols2 += "od.LastTranLogDumpTime, od.LastCheckpointTime, ";
+			cols2 += "od.LastTranLogDumpTime, LastLogBackupAgeInHours = isnull(datediff(hour, od.LastTranLogDumpTime, getdate()),-1), \n";
+			cols2 += "od.LastCheckpointTime, ";
 		}
 
 		String cols = cols1 + cols2 + cols3;
@@ -1439,8 +1546,12 @@ extends CountersModel
 	{
 		if ( ! hasDiffData() )
 			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
 
 		CountersModel cm = this;
+		String dbmsSrvName = cm.getServerName();
 
 		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
@@ -1451,7 +1562,7 @@ extends CountersModel
 			//-------------------------------------------------------
 			// Long running transaction
 			//-------------------------------------------------------
-			if (isSystemAlarmsForColumnEnabled("OldestTranInSeconds"))
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("OldestTranInSeconds"))
 			{
 				Double OldestTranInSeconds = cm.getAbsValueAsDouble(r, "OldestTranInSeconds");
 				if (OldestTranInSeconds != null)
@@ -1459,27 +1570,24 @@ extends CountersModel
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', OldestTranInSeconds='"+OldestTranInSeconds+"'.");
 
-					if (AlarmHandler.hasInstance())
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);
+					if (OldestTranInSeconds.intValue() > threshold)
 					{
-						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_OldestTranInSeconds, DEFAULT_alarm_OldestTranInSeconds);
-						if (OldestTranInSeconds.intValue() > threshold)
-						{
-							// Get OldestTranName
-							String OldestTranName = cm.getAbsString(r, "OldestTranName");
-							
-							// Get config 'skip some transaction names'
-							String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranName, DEFAULT_alarm_OldestTranInSecondsSkipTranName);
+						// Get OldestTranName
+						String OldestTranName = cm.getAbsString(r, "OldestTranName");
+						
+						// Get config 'skip some transaction names'
+						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_OldestTranInSecondsSkipTranName, DEFAULT_alarm_OldestTranInSecondsSkipTranName);
 
-							// send alarm, if...
-							if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
-							{
-								if ( ! OldestTranName.matches(skipTranNameRegExp) )
-									AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, dbname, OldestTranInSeconds, OldestTranName) );
-							}
-							else
-							{
-								AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, dbname, OldestTranInSeconds, OldestTranName) );
-							}
+						// send alarm, if...
+						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
+						{
+							if ( ! OldestTranName.matches(skipTranNameRegExp) )
+								AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
+						}
+						else
+						{
+							AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
 						}
 					}
 				}
@@ -1489,7 +1597,7 @@ extends CountersModel
 			//-------------------------------------------------------
 			// Full transaction log
 			//-------------------------------------------------------
-			if (isSystemAlarmsForColumnEnabled("TransactionLogFull"))
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TransactionLogFull"))
 			{
 				Double TransactionLogFull = cm.getAbsValueAsDouble(r, "TransactionLogFull");
 				if (TransactionLogFull != null)
@@ -1497,12 +1605,9 @@ extends CountersModel
 					if (debugPrint || _logger.isDebugEnabled())
 						System.out.println("##### sendAlarmRequest("+cm.getName()+"): dbname='"+dbname+"', TransactionLogFull='"+TransactionLogFull+"'.");
 
-					if (AlarmHandler.hasInstance())
-					{
-						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TransactionLogFull, DEFAULT_alarm_TransactionLogFull);
-						if (TransactionLogFull.intValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, dbname) );
-					}
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TransactionLogFull, DEFAULT_alarm_TransactionLogFull);
+					if (TransactionLogFull.intValue() > threshold)
+						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname) );
 				}
 			}
 
@@ -1523,17 +1628,376 @@ extends CountersModel
 			// - Simular situation as above...
 			// - BUT if we got little LOG Space left we need to alarm quickly - maybe LogSizeUsedPct can be used here
 			//   what about "mixed data and log" should that be considdered.
+
+
+			//-------------------------------------------------------
+			// LastBackupFailed
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastBackupFailed"))
+			{
+				Double val = cm.getAbsValueAsDouble(r, "LastBackupFailed");
+				if (val != null)
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastBackupFailed, DEFAULT_alarm_LastBackupFailed);
+					if (val.intValue() > threshold)
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLastBackupFailed(cm, dbname, threshold) );
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// LastDbBackupAgeInHours
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastDbBackupAgeInHours"))
+			{
+				Double val = cm.getAbsValueAsDouble(r, "LastDbBackupAgeInHours");
+				if (val != null)
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
+					if (val.intValue() > threshold)
+					{
+						// Get config 'skip some transaction names'
+						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs);
+						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs);
+						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
+						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
+
+						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
+						boolean doAlarm = false;
+						doAlarm = (true    && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+
+						// NO match in the SKIP regexp
+						if (doAlarm)
+						{
+							AlarmHandler.getInstance().addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
+						}
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// LastLogBackupAgeInHours
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastLogBackupAgeInHours"))
+			{
+				Double val = cm.getAbsValueAsDouble(r, "LastLogBackupAgeInHours");
+				if (val != null)
+				{
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours, DEFAULT_alarm_LastLogBackupAgeInHours);
+					if (val.intValue() > threshold)
+					{
+						// Get config 'skip some transaction names'
+						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForDbs,  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs);
+						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs);
+						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForSrv,  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv);
+						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv);
+
+						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
+						boolean doAlarm = false;
+						doAlarm = (true    && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+						
+						if (doAlarm)
+						{
+							AlarmHandler.getInstance().addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
+						}
+					}
+				}
+			}
+			
+			//-------------------------------------------------------
+			// LowDbFreeSpaceInMb
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LowDbFreeSpaceInMb"))
+			{
+				Double freeMb     = cm.getAbsValueAsDouble(r, "DataSizeFreeInMb");
+				Double usedPct    = cm.getAbsValueAsDouble(r, "DataSizeUsedPct");
+				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
+				if (usedPct != null && usedPct != null && threshold != null)
+				{
+					if (freeMb.intValue() < threshold.intValue())
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// LowLogFreeSpaceInMb
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LowLogFreeSpaceInMb"))
+			{
+				Double freeMb     = cm.getAbsValueAsDouble(r, "LogSizeFreeInMb");
+				Double usedPct    = cm.getAbsValueAsDouble(r, "LogSizeUsedPct");
+				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
+				if (usedPct != null && usedPct != null && threshold != null)
+				{
+					if (freeMb.intValue() < threshold.intValue())
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
+					}
+				}
+			}
+
+			//-------------------------------------------------------
+			// LowDbFreeSpaceInPct
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LowDbFreeSpaceInPct"))
+			{
+				Double freeMb     = cm.getAbsValueAsDouble(r, "DataSizeFreeInMb");
+				Double usedPct    = cm.getAbsValueAsDouble(r, "DataSizeUsedPct");
+				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
+				if (usedPct != null && usedPct != null && threshold != null)
+				{
+					if (usedPct > threshold.doubleValue())
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
+					}
+				}
+			}
+			
+			//-------------------------------------------------------
+			// LowLogFreeSpaceInPct
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LowLogFreeSpaceInPct"))
+			{
+				Double freeMb     = cm.getAbsValueAsDouble(r, "LogSizeFreeInMb");
+				Double usedPct    = cm.getAbsValueAsDouble(r, "LogSizeUsedPct");
+				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
+				if (usedPct != null && usedPct != null && threshold != null)
+				{
+					if (usedPct > threshold.doubleValue())
+					{
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Helper method to get the Threshold for a specific DB, using direct access to map or by check all key values in map with regexp...
+	 * 
+	 * @param dbname
+	 * @param map
+	 * @return
+	 */
+    private Number getDbFreeSpaceThreshold(String dbname, Map<String, Number> map)
+    {
+    	if (map == null)
+    	{
+    		_logger.warn("getDbFreeSpaceThreshold(dbname=|"+dbname+"|, map=|"+map+"|). map is NULL, which wasn't expected... some initialization must have failed.");
+    		return null;
+    	}
+
+		if (map.isEmpty())
+			return null;
+
+    	if (StringUtil.isNullOrBlank(dbname))
+    		return null;
+
+    	// Lookup the map for DIRECT match
+    	Number num = map.get(dbname);
+    	if (num != null)
+    		return num;
+
+    	// Check all key in the match and check if they match the REGEXP in the key of the map
+    	for (String key : map.keySet())
+		{
+			if (dbname.matches(key))
+				return map.get(key);
+		}
+    	
+    	// no match
+    	return null;
+    }
+
+
+//	private Map<String, Number> _map_alarm_LowDbFreeSpaceInMb   = new HashMap<>();
+//	private Map<String, Number> _map_alarm_LowLogFreeSpaceInMb  = new HashMap<>();
+//	private Map<String, Number> _map_alarm_LowDbFreeSpaceInPct  = new HashMap<>();
+//	private Map<String, Number> _map_alarm_LowLogFreeSpaceInPct = new HashMap<>();
+	private Map<String, Number> _map_alarm_LowDbFreeSpaceInMb;  // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+	private Map<String, Number> _map_alarm_LowLogFreeSpaceInMb; // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+	private Map<String, Number> _map_alarm_LowDbFreeSpaceInPct; // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+	private Map<String, Number> _map_alarm_LowLogFreeSpaceInPct;// Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+	
+	/**
+	 * Initialize stuff that has to do with alarms
+	 */
+	@Override
+	public void initAlarms()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String cfgVal;
+
+		_map_alarm_LowDbFreeSpaceInMb   = new HashMap<>();
+		_map_alarm_LowLogFreeSpaceInMb  = new HashMap<>();
+		_map_alarm_LowDbFreeSpaceInPct  = new HashMap<>();
+		_map_alarm_LowLogFreeSpaceInPct = new HashMap<>();
+		
+		String prefix = "       ";
+		
+		//--------------------------------------
+		// LowDbFreeSpaceInMb
+		cfgVal = conf.getProperty(PROPKEY_alarm_LowDbFreeSpaceInMb, DEFAULT_alarm_LowDbFreeSpaceInMb);
+		if (StringUtil.hasValue(cfgVal))
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
+			if (_logger.isDebugEnabled())
+				_logger.debug(prefix + "Initializing alarm 'LowDbFreeSpaceInMb'. After parseCommaStrToMap, map looks like: "+map);
+			
+			for (String key : map.keySet())
+			{
+				String val = map.get(key);
+				
+				try
+				{
+					int mb = NumberUtils.createNumber(val).intValue();
+					_map_alarm_LowDbFreeSpaceInMb.put(key, mb);
+
+					_logger.info(prefix + "Initializing alarm. Using 'LowDbFreeSpaceInMb', dbname='"+key+"', mb="+mb);
+				}
+				catch (NumberFormatException ex)
+				{
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+				}
+			}
+		}
+		
+		//--------------------------------------
+		// LowLogFreeSpaceInMb
+		cfgVal = conf.getProperty(PROPKEY_alarm_LowLogFreeSpaceInMb, DEFAULT_alarm_LowLogFreeSpaceInMb);
+		if (StringUtil.hasValue(cfgVal))
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
+			if (_logger.isDebugEnabled())
+				_logger.debug(prefix + "Initializing alarm 'LowLogFreeSpaceInMb'. After parseCommaStrToMap, map looks like: "+map);
+			
+			for (String key : map.keySet())
+			{
+				String val = map.get(key);
+				
+				try
+				{
+					int mb = NumberUtils.createNumber(val).intValue();
+					_map_alarm_LowLogFreeSpaceInMb.put(key, mb);
+
+					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInMb', dbname='"+key+"', mb="+mb);
+				}
+				catch (NumberFormatException ex)
+				{
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInMb' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+				}
+			}
+		}
+		
+		//--------------------------------------
+		// LowDbFreeSpaceInPct
+		cfgVal = conf.getProperty(PROPKEY_alarm_LowDbFreeSpaceInPct, DEFAULT_alarm_LowDbFreeSpaceInPct);
+		if (StringUtil.hasValue(cfgVal))
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
+			if (_logger.isDebugEnabled())
+				_logger.debug(prefix + "Initializing alarm 'LowDbFreeSpaceInPct'. After parseCommaStrToMap, map looks like: "+map);
+			
+			for (String key : map.keySet())
+			{
+				String val = map.get(key);
+				
+				try
+				{
+					double pct = NumberUtils.createNumber(val).doubleValue();
+					_map_alarm_LowDbFreeSpaceInPct.put(key, pct);
+
+					_logger.info(prefix + "Initializing alarm. Using 'LowDbFreeSpaceInPct', dbname='"+key+"', pct="+pct);
+				}
+				catch (NumberFormatException ex)
+				{
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowDbFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+				}
+			}
+		}
+		
+		//--------------------------------------
+		// LowLogFreeSpaceInPct
+		cfgVal = conf.getProperty(PROPKEY_alarm_LowLogFreeSpaceInPct, DEFAULT_alarm_LowLogFreeSpaceInPct);
+		if (StringUtil.hasValue(cfgVal))
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(cfgVal);
+			if (_logger.isDebugEnabled())
+				_logger.debug(prefix + "Initializing alarm 'LowLogFreeSpaceInPct'. After parseCommaStrToMap, map looks like: "+map);
+			
+			for (String key : map.keySet())
+			{
+				String val = map.get(key);
+				
+				try
+				{
+					double pct = NumberUtils.createNumber(val).doubleValue();
+					_map_alarm_LowDbFreeSpaceInPct.put(key, pct);
+
+					_logger.info(prefix + "Initializing alarm. Using 'LowLogFreeSpaceInPct', dbname='"+key+"', pct="+pct);
+				}
+				catch (NumberFormatException ex)
+				{
+					_logger.info(prefix + "Initializing alarm. Skipping 'LowLogFreeSpaceInPct' enty dbname='"+key+"', val='"+val+"'. The value is not a number.");
+				}
+			}
 		}
 	}
 
 	public static final String  PROPKEY_alarm_OldestTranInSeconds             = CM_NAME + ".alarm.system.if.OldestTranInSeconds.gt";
-	public static final int     DEFAULT_alarm_OldestTranInSeconds             = 10;
+	public static final int     DEFAULT_alarm_OldestTranInSeconds             = 60;
 	
 	public static final String  PROPKEY_alarm_OldestTranInSecondsSkipTranName = CM_NAME + ".alarm.system.if.OldestTranInSeconds.skip.tranName";
 	public static final String  DEFAULT_alarm_OldestTranInSecondsSkipTranName = "^(DUMP |\\$dmpxact).*";
 	
 	public static final String  PROPKEY_alarm_TransactionLogFull              = CM_NAME + ".alarm.system.if.TransactionLogFull.gt";
 	public static final int     DEFAULT_alarm_TransactionLogFull              = 0;
+
+	public static final String  PROPKEY_alarm_LastBackupFailed                = CM_NAME + ".alarm.system.if.LastBackupFailed.gt";
+	public static final int     DEFAULT_alarm_LastBackupFailed                = 0;
+
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHours          = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.gt";
+	public static final int     DEFAULT_alarm_LastDbBackupAgeInHours          = 24*365*10; // 10 years; more or less disabled
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.dbs";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs    = "";
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.dbs";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs   = "";
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.srv";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv    = "";
+	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.srv";
+	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv   = "";
+
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHours         = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.gt";
+	public static final int     DEFAULT_alarm_LastLogBackupAgeInHours         = 24*365*10; // 10 years; more or less disabled
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.dbs";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs   = "";
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.dbs";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs  = "";
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.srv";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv   = "";
+	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.srv";
+	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv  = "";
+
+	public static final String  PROPKEY_alarm_LowDbFreeSpaceInMb              = CM_NAME + ".alarm.system.if.LowDbFreeSpaceInMb.lt";
+	public static final String  DEFAULT_alarm_LowDbFreeSpaceInMb              = ".*=2, tempdb=100";
+                                                                              
+	public static final String  PROPKEY_alarm_LowLogFreeSpaceInMb             = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInMb.lt";
+	public static final String  DEFAULT_alarm_LowLogFreeSpaceInMb             = "";
+                                                                              
+	public static final String  PROPKEY_alarm_LowDbFreeSpaceInPct             = CM_NAME + ".alarm.system.if.LowDbFreeSpaceInPct.gt";
+	public static final String  DEFAULT_alarm_LowDbFreeSpaceInPct             = "tempdb=80";
+                                                                              
+	public static final String  PROPKEY_alarm_LowLogFreeSpaceInPct            = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInPct.gt";
+	public static final String  DEFAULT_alarm_LowLogFreeSpaceInPct            = "";
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1542,8 +2006,27 @@ extends CountersModel
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
 		list.add(new CmSettingsHelper("OldestTranInSeconds",              PROPKEY_alarm_OldestTranInSeconds             , Integer.class, conf.getIntProperty(PROPKEY_alarm_OldestTranInSeconds             , DEFAULT_alarm_OldestTranInSeconds            ), DEFAULT_alarm_OldestTranInSeconds            , "If 'OldestTranInSeconds' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
-		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName", PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName), DEFAULT_alarm_OldestTranInSecondsSkipTranName, "If 'OldestTranInSeconds' is true, then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'." ));
-		list.add(new CmSettingsHelper("TransactionLogFull",               PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty(PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull             ), DEFAULT_alarm_TransactionLogFull             ,  "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("OldestTranInSeconds SkipTranName", PROPKEY_alarm_OldestTranInSecondsSkipTranName , String .class, conf.getProperty   (PROPKEY_alarm_OldestTranInSecondsSkipTranName , DEFAULT_alarm_OldestTranInSecondsSkipTranName), DEFAULT_alarm_OldestTranInSecondsSkipTranName, "If 'OldestTranInSeconds' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("TransactionLogFull",               PROPKEY_alarm_TransactionLogFull              , Integer.class, conf.getIntProperty(PROPKEY_alarm_TransactionLogFull              , DEFAULT_alarm_TransactionLogFull             ), DEFAULT_alarm_TransactionLogFull             , "If 'TransactionLogFull' is greater than ## then send 'AlarmEventFullTranLog'." ));
+
+		list.add(new CmSettingsHelper("LastBackupFailed",                 PROPKEY_alarm_LastBackupFailed                , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastBackupFailed                , DEFAULT_alarm_LastBackupFailed               ), DEFAULT_alarm_LastBackupFailed               , "If 'LastBackupFailed' is greater than ## then send 'AlarmEventLastBackupFailed'." ));
+
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours",           PROPKEY_alarm_LastDbBackupAgeInHours          , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours          , DEFAULT_alarm_LastDbBackupAgeInHours         ), DEFAULT_alarm_LastDbBackupAgeInHours         , "If 'LastDbBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForDbs",    PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    , DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   ), DEFAULT_alarm_LastDbBackupAgeInHoursForDbs   , "If 'LastDbBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=for-all-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipDbs",   PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs  , "If 'LastDbBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours ForSrv",    PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursForSrv    , DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   ), DEFAULT_alarm_LastDbBackupAgeInHoursForSrv   , "If 'LastDbBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=for-all-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastDbBackupAgeInHours SkipSrv",   PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , String .class, conf.getProperty   (PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv   , DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  ), DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv  , "If 'LastDbBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours",          PROPKEY_alarm_LastLogBackupAgeInHours         , Integer.class, conf.getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours         , DEFAULT_alarm_LastLogBackupAgeInHours        ), DEFAULT_alarm_LastLogBackupAgeInHours        , "If 'LastLogBackupAgeInHours' is greater than ## then send 'AlarmEventOldBackup'." ));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForDbs",   PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   , DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  ), DEFAULT_alarm_LastLogBackupAgeInHoursForDbs  , "If 'LastLogBackupAgeInHours' is true; Only for the databases listed (regexp is used, blank=skip-no-dbs). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipDbs",  PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs , "If 'LastLogBackupAgeInHours' is true; Discard databases listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                     new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours ForSrv",   PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursForSrv   , DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  ), DEFAULT_alarm_LastLogBackupAgeInHoursForSrv  , "If 'LastLogBackupAgeInHours' is true; Only for the servers listed (regexp is used, blank=skip-no-srv). After this rule the 'skip' rule is evaluated.",   new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("LastLogBackupAgeInHours SkipSrv",  PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , String .class, conf.getProperty   (PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv  , DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv ), DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv , "If 'LastLogBackupAgeInHours' is true; Discard servers listed (regexp is used). Before this rule the 'for/keep' rule is evaluated",                       new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("LowDbFreeSpaceInMb",               PROPKEY_alarm_LowDbFreeSpaceInMb              , String.class, conf.getProperty    (PROPKEY_alarm_LowDbFreeSpaceInMb              , DEFAULT_alarm_LowDbFreeSpaceInMb             ), DEFAULT_alarm_LowDbFreeSpaceInMb             , "If 'LowDbFreeSpaceInMb' is greater than ## then send 'AlarmEventLowDbFreeSpace'. format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"        , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowLogFreeSpaceInMb",              PROPKEY_alarm_LowLogFreeSpaceInMb             , String.class, conf.getProperty    (PROPKEY_alarm_LowLogFreeSpaceInMb             , DEFAULT_alarm_LowLogFreeSpaceInMb            ), DEFAULT_alarm_LowLogFreeSpaceInMb            , "If 'LowLogFreeSpaceInMb' is greater than ## then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"       , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowDbFreeSpaceInPct",              PROPKEY_alarm_LowDbFreeSpaceInPct             , String.class, conf.getProperty    (PROPKEY_alarm_LowDbFreeSpaceInPct             , DEFAULT_alarm_LowDbFreeSpaceInPct            ), DEFAULT_alarm_LowDbFreeSpaceInPct            , "If 'LowDbFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowDbFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"   , new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowLogFreeSpaceInPct",             PROPKEY_alarm_LowLogFreeSpaceInPct            , String.class, conf.getProperty    (PROPKEY_alarm_LowLogFreeSpaceInPct            , DEFAULT_alarm_LowLogFreeSpaceInPct           ), DEFAULT_alarm_LowLogFreeSpaceInPct           , "If 'LowLogFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
 
 		return list;
 	}

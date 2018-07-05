@@ -69,6 +69,7 @@ implements ResultSetMetaData
 		boolean _isStatColumn  = false; // is a statistics column
 
 		boolean _isPct         = false; // if this column has Percent data, then it could be presented in another color
+		boolean _isDiff        = false; // If this column is command is a -NON-streamimg-command- and we need to do DIFF calculations on this column
 
 		String  _schemaName    = null;
 		String  _tableName     = null;
@@ -576,6 +577,16 @@ implements ResultSetMetaData
 		}
 	}
 
+	public boolean hasPkCols()
+	{
+		for (ColumnEntry e: _columns)
+		{
+			if (e._isPartOfPk)
+				return true;
+		}
+		return false;
+	}
+
 	/**
 	 * Set specific statuses to a specific column
 	 * @param colname
@@ -611,6 +622,47 @@ implements ResultSetMetaData
 	public boolean isPctColumn(int column)
 	{
 		return getSqlColumn(column)._isPct;
+	}
+
+
+	/**
+	 * Marks this column as it contains DIFF data, then the viewer can present the data in another color
+	 * @param colname names()
+	 * @throws RuntimeException if the column name couldn't be found.
+	 */
+	public void setDiffCol(String... colNames)
+	{
+		for (String colname : colNames)
+		{
+			ColumnEntry entry = getColumn(colname);
+			entry._isDiff = true;
+		}
+	}
+	
+	/**
+	 * Does this column contain DIFF data
+	 * @param column column index: NOTE starts at 1: 1=firstcol, 2=secondcol...
+	 * @return true if its a Percent column
+	 * @throws RuntimeException if the column name couldn't be found.
+	 */
+	public boolean isDiffColumn(int column)
+	{
+		return getSqlColumn(column)._isDiff;
+	}
+
+
+	/**
+	 * If any columns (in non-streaming-mode needs to be diff/rate calculated...
+	 * @return
+	 */
+	public boolean isDiffEnabled()
+	{
+		for (ColumnEntry e: _columns)
+		{
+			if (e._isDiff)
+				return true;
+		}
+		return false;
 	}
 
 	/**

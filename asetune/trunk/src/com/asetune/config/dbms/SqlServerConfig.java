@@ -214,6 +214,7 @@ implements IDbmsConfig
 				ResultSet rs = stmt.executeQuery("select getdate()");
 				while ( rs.next() )
 					_timestamp = rs.getTimestamp(1);
+				rs.close();
 
 				// Then execute the Real query
 				rs = stmt.executeQuery(sql);
@@ -489,6 +490,17 @@ implements IDbmsConfig
 		map.put("user options",                       0);
 		map.put("xp_cmdshell",                        0);
 		
+		// SQL-Server 2017 (probably earlier as well)
+		map.put("backup checksum default",            0);
+		map.put("automatic soft-NUMA disabled",       0);
+		map.put("external scripts enabled",           0);
+		map.put("clr strict security",                1);
+		map.put("contained database authentication",  0);
+		map.put("hadoop connectivity",                0);
+		map.put("polybase network encryption",        1);
+		map.put("remote data archive",                0);
+		map.put("allow polybase export",              0);
+
 		return map;
 	}
 //	-- Server Configuration (find any non-standard settings)
@@ -673,6 +685,17 @@ implements IDbmsConfig
 		map.put("user options",                       SECTION_UNSPECIFIED);
 		map.put("xp_cmdshell",                        SECTION_UNSPECIFIED);
 
+		// SQL-Server 2017 (probably earlier as well)
+		map.put("backup checksum default",            SECTION_UNSPECIFIED);
+		map.put("automatic soft-NUMA disabled",       SECTION_UNSPECIFIED);
+		map.put("external scripts enabled",           SECTION_UNSPECIFIED);
+		map.put("clr strict security",                SECTION_UNSPECIFIED);
+		map.put("contained database authentication",  SECTION_UNSPECIFIED);
+		map.put("hadoop connectivity",                SECTION_UNSPECIFIED);
+		map.put("polybase network encryption",        SECTION_UNSPECIFIED);
+		map.put("remote data archive",                SECTION_UNSPECIFIED);
+		map.put("allow polybase export",              SECTION_UNSPECIFIED);
+
 		return map;
 	}
 	public static final String  SECTION_UNSPECIFIED          = "Unspecified";
@@ -774,6 +797,17 @@ implements IDbmsConfig
 		map.put("user instances enabled",             NO_COMMENT);
 		map.put("user options",                       NO_COMMENT);
 		map.put("xp_cmdshell",                        NO_COMMENT);
+		
+		// SQL-Server 2017 (probably earlier as well)
+		map.put("backup checksum default",            NO_COMMENT);
+		map.put("automatic soft-NUMA disabled",       NO_COMMENT);
+		map.put("external scripts enabled",           NO_COMMENT);
+		map.put("clr strict security",                NO_COMMENT);
+		map.put("contained database authentication",  NO_COMMENT);
+		map.put("hadoop connectivity",                NO_COMMENT);
+		map.put("polybase network encryption",        NO_COMMENT);
+		map.put("remote data archive",                NO_COMMENT);
+		map.put("allow polybase export",              NO_COMMENT);
 
 		return map;
 	}

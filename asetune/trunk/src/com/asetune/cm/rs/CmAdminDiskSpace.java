@@ -1,13 +1,20 @@
 package com.asetune.cm.rs;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.rs.AlarmEventRsSdUsage;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -16,7 +23,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
+import com.asetune.utils.Configuration;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -24,7 +31,7 @@ import com.asetune.gui.TrendGraph;
 public class CmAdminDiskSpace
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminDiskSpace.class);
+	private static Logger        _logger          = Logger.getLogger(CmAdminDiskSpace.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAdminDiskSpace.class.getSimpleName();
@@ -95,33 +102,32 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_QUEUE_SIZE = "SdQueueSize";
+	public static final String GRAPH_NAME_QUEUE_SIZE      = "SdQueueSize";
+	public static final String GRAPH_NAME_QUEUE_USAGE_PCT = "SdQueueUsagePct";
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "-added-at-runtime-" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_QUEUE_SIZE,       new TrendGraphDataPoint(GRAPH_NAME_QUEUE_SIZE,       labels, LabelType.Dynamic));
+		addTrendGraph(GRAPH_NAME_QUEUE_SIZE,
+			"Stable Device Usage in MB, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Menu CheckBox text
+			"Stable Device Usage in MB, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_QUEUE_SIZE,
-				"Stable Device Usage, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Menu CheckBox text
-				"Stable Device Usage, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		addTrendGraph(GRAPH_NAME_QUEUE_USAGE_PCT,
+			"Stable Device Usage in PCT, for all Partitions", // Menu CheckBox text
+			"Stable Device Usage in PCT, for all Partitions", // Label 
+			new String[] {"Percent Used"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.SPACE,
+			true,  // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 
 	@Override
@@ -144,9 +150,24 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
-//			tgdp.setDate(this.getTimestamp());
-//			tgdp.setLabel(lArray);
-//			tgdp.setData(dArray);
+		}
+
+		if (GRAPH_NAME_QUEUE_USAGE_PCT.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[1];
+
+			Double TotalSegs = this.getAbsValueSum("Total Segs");
+			Double UsedSegs  = this.getAbsValueSum("Used Segs");
+			
+			if (TotalSegs == null || UsedSegs == null)
+				return;
+			
+			BigDecimal pct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+			dArray[0] = pct.doubleValue();
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
 		}
 	}
 	
@@ -212,39 +233,158 @@ extends CountersModel
 		String sql = "admin disk_space"; // see below on admin disk_space, MB (which adds 2 columns... but I don't know what version of RS supports that. 15.7.1 SP 305 has it)
 		return sql;
 	}
-}
-/*
-1> admin disk_space
-RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
-RS> ---- ---------- ---------------------- ----------------- ------------
-RS> 1    Partition  java.sql.Types.VARCHAR varchar(255)      -none-      
-RS> 2    Logical    java.sql.Types.VARCHAR varchar(31)       -none-      
-RS> 3    Part.Id    java.sql.Types.INTEGER int               -none-      
-RS> 4    Total Segs java.sql.Types.INTEGER int               -none-      
-RS> 5    Used Segs  java.sql.Types.INTEGER int               -none-      
-RS> 6    State      java.sql.Types.VARCHAR varchar(31)       -none-      
-+-------------------------------+-------+-------+----------+---------+----------+
-|Partition                      |Logical|Part.Id|Total Segs|Used Segs|State     |
-+-------------------------------+-------+-------+----------+---------+----------+
-|/sybdev/devices/rs/PROD_REP.sd1|sd1    |101    |16384     |10       |ON-LINE///|
-+-------------------------------+-------+-------+----------+---------+----------+
-(1 rows affected)
+	/*
+	1> admin disk_space
+	RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
+	RS> ---- ---------- ---------------------- ----------------- ------------
+	RS> 1    Partition  java.sql.Types.VARCHAR varchar(255)      -none-      
+	RS> 2    Logical    java.sql.Types.VARCHAR varchar(31)       -none-      
+	RS> 3    Part.Id    java.sql.Types.INTEGER int               -none-      
+	RS> 4    Total Segs java.sql.Types.INTEGER int               -none-      
+	RS> 5    Used Segs  java.sql.Types.INTEGER int               -none-      
+	RS> 6    State      java.sql.Types.VARCHAR varchar(31)       -none-      
+	+-------------------------------+-------+-------+----------+---------+----------+
+	|Partition                      |Logical|Part.Id|Total Segs|Used Segs|State     |
+	+-------------------------------+-------+-------+----------+---------+----------+
+	|/sybdev/devices/rs/PROD_REP.sd1|sd1    |101    |16384     |10       |ON-LINE///|
+	+-------------------------------+-------+-------+----------+---------+----------+
+	(1 rows affected)
 
-1> admin disk_space,mb
-RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
-RS> ---- ---------- ---------------------- ----------------- ------------
-RS> 1    Partition  java.sql.Types.VARCHAR varchar(255)      -none-      
-RS> 2    Logical    java.sql.Types.VARCHAR varchar(31)       -none-      
-RS> 3    Part.Id    java.sql.Types.INTEGER int               -none-      
-RS> 4    Total Segs java.sql.Types.INTEGER int               -none-      
-RS> 5    Used Segs  java.sql.Types.INTEGER int               -none-      
-RS> 6    Total MBs  java.sql.Types.INTEGER int               -none-      
-RS> 7    Used MBs   java.sql.Types.INTEGER int               -none-      
-RS> 8    State      java.sql.Types.VARCHAR varchar(31)       -none-      
-+-------------------------------+-------+-------+----------+---------+---------+--------+----------+
-|Partition                      |Logical|Part.Id|Total Segs|Used Segs|Total MBs|Used MBs|State     |
-+-------------------------------+-------+-------+----------+---------+---------+--------+----------+
-|/sybdev/devices/rs/PROD_REP.sd1|sd1    |101    |16384     |10       |16384    |10      |ON-LINE///|
-+-------------------------------+-------+-------+----------+---------+---------+--------+----------+
-(1 rows affected)
-*/
+	1> admin disk_space,mb
+	RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
+	RS> ---- ---------- ---------------------- ----------------- ------------
+	RS> 1    Partition  java.sql.Types.VARCHAR varchar(255)      -none-      
+	RS> 2    Logical    java.sql.Types.VARCHAR varchar(31)       -none-      
+	RS> 3    Part.Id    java.sql.Types.INTEGER int               -none-      
+	RS> 4    Total Segs java.sql.Types.INTEGER int               -none-      
+	RS> 5    Used Segs  java.sql.Types.INTEGER int               -none-      
+	RS> 6    Total MBs  java.sql.Types.INTEGER int               -none-      
+	RS> 7    Used MBs   java.sql.Types.INTEGER int               -none-      
+	RS> 8    State      java.sql.Types.VARCHAR varchar(31)       -none-      
+	+-------------------------------+-------+-------+----------+---------+---------+--------+----------+
+	|Partition                      |Logical|Part.Id|Total Segs|Used Segs|Total MBs|Used MBs|State     |
+	+-------------------------------+-------+-------+----------+---------+---------+--------+----------+
+	|/sybdev/devices/rs/PROD_REP.sd1|sd1    |101    |16384     |10       |16384    |10      |ON-LINE///|
+	+-------------------------------+-------+-------+----------+---------+---------+--------+----------+
+	(1 rows affected)
+	*/	
+	
+	
+	
+	//--------------------------------------------------------------
+	// Alarm handling
+	//--------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		CountersModel cm = this;
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		//-------------------------------------------------------
+		// Space Used in Segs (MB)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("SpaceUsedSegs"))
+		{
+			Double TotalSegs = cm.getAbsValueSum("Total Segs");
+			Double UsedSegs  = cm.getAbsValueSum("Used Segs");
+			
+			if (TotalSegs != null && UsedSegs != null)
+			{
+				
+				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				int usedSpaceInMb = UsedSegs.intValue();
+				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedSegs, DEFAULT_alarm_SpaceUsedSegs);
+				if (usedSpaceInMb > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "USED_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );
+				}
+			}
+		}
+
+		//-------------------------------------------------------
+		// Space Free in Segs (MB)
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("SpaceFreeSegs"))
+		{
+			Double TotalSegs = cm.getAbsValueSum("Total Segs");
+			Double UsedSegs  = cm.getAbsValueSum("Used Segs");
+			
+			if (TotalSegs != null && UsedSegs != null)
+			{
+				
+				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				int usedSpaceInMb = UsedSegs.intValue();
+				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs);
+				if (freeSpaceInMb < threshold)
+				{
+					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "FREE_SEGS", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );
+				}
+			}
+		}
+
+		//-------------------------------------------------------
+		// Space Usage in PCT
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("SpaceUsedPct"))
+		{
+			Double TotalSegs = cm.getAbsValueSum("Total Segs");
+			Double UsedSegs  = cm.getAbsValueSum("Used Segs");
+			
+			if (TotalSegs != null && UsedSegs != null)
+			{
+				
+				BigDecimal usedPct = new BigDecimal(UsedSegs / TotalSegs).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				int usedSpaceInMb = UsedSegs.intValue();
+				int freeSpaceInMb = TotalSegs.intValue() - UsedSegs.intValue();
+
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): usedSpaceInMb="+usedSpaceInMb+", freeSpaceInMb="+freeSpaceInMb+", usedPct="+usedPct+".");
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_SpaceUsedPct, DEFAULT_alarm_SpaceUsedPct);
+				if (usedPct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm( new AlarmEventRsSdUsage(cm, threshold, "USED_PCT", usedSpaceInMb, freeSpaceInMb, usedPct.doubleValue()) );
+				}
+			}
+		}
+	} // end: method
+
+	public static final String  PROPKEY_alarm_SpaceUsedSegs                      = CM_NAME + ".alarm.system.if.SpaceUsedSegs.gt";
+	public static final int     DEFAULT_alarm_SpaceUsedSegs                      = 8192;
+	
+	public static final String  PROPKEY_alarm_SpaceFreeSegs                      = CM_NAME + ".alarm.system.if.SpaceFreeSegs.lt";
+	public static final int     DEFAULT_alarm_SpaceFreeSegs                      = 2048;
+	
+	public static final String  PROPKEY_alarm_SpaceUsedPct                       = CM_NAME + ".alarm.system.if.SpaceUsedPct.lt";
+	public static final int     DEFAULT_alarm_SpaceUsedPct                       = 70;
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("SpaceUsedSegs", PROPKEY_alarm_SpaceUsedSegs, Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceUsedSegs, DEFAULT_alarm_SpaceUsedSegs), DEFAULT_alarm_SpaceUsedSegs, "If 'SpaceUsedSegs' is GREATER than ####, send 'AlarmEventRsSdUsage'."));
+		list.add(new CmSettingsHelper("SpaceFreeSegs", PROPKEY_alarm_SpaceFreeSegs, Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs), DEFAULT_alarm_SpaceFreeSegs, "If 'SpaceFreeSegs' is LESS than #### ,send  send 'AlarmEventRsSdUsage'."));
+		list.add(new CmSettingsHelper("SpaceUsedPct",  PROPKEY_alarm_SpaceUsedPct , Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceUsedPct , DEFAULT_alarm_SpaceUsedPct ), DEFAULT_alarm_SpaceUsedPct , "If 'SpaceUsedPct' is LESS than ##, send  send 'AlarmEventRsSdUsage'."));
+
+		return list;
+	}
+}

@@ -648,6 +648,7 @@ extends AlarmWriterAbstract
 		mappedTo = mappedTo.replaceAll( "\\?serviceName\\?", ae.getServiceName() );
 		mappedTo = mappedTo.replaceAll( "\\?serviceInfo\\?", ae.getServiceInfo() );
 		mappedTo = mappedTo.replaceAll( "\\?extraInfo\\?",   ae.getExtraInfo()+"" );
+		mappedTo = mappedTo.replaceAll( "\\?category\\?",    ae.getCategory().toString() );
 		mappedTo = mappedTo.replaceAll( "\\?severity\\?",    ae.getSeverity().toString() );
 		mappedTo = mappedTo.replaceAll( "\\?state\\?",       ae.getState().toString() );
 		mappedTo = mappedTo.replaceAll( "\\?description\\?", ae.getDescription() );

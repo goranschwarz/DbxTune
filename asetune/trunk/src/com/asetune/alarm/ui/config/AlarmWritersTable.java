@@ -35,18 +35,21 @@ public class AlarmWritersTable extends JXTable
 	private   JPopupMenu    _popupMenu             = null;
 	private   JPopupMenu    _headerPopupMenu       = null;
 
-	AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
+//	AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
+	AlarmWriterDetailsPanel  _alarmWriterDetailsPanel;
 	AlarmWritersTableModel   _alarmWritersTableModel;
 	
 	String _currentCmName = "";
 	int    _currentTmRow  = -1;
 
-	public AlarmWritersTable(AlarmWritersTableModel alarmWritersTableModel, AlarmWriterSettingsPanel alarmWriterSettingsPanel)
+//	public AlarmWritersTable(AlarmWritersTableModel alarmWritersTableModel, AlarmWriterSettingsPanel alarmWriterSettingsPanel)
+	public AlarmWritersTable(AlarmWritersTableModel alarmWritersTableModel, AlarmWriterDetailsPanel alarmWriterDetailsPanel)
 	{
 		super();
 		
 		_alarmWritersTableModel   = alarmWritersTableModel;
-		_alarmWriterSettingsPanel = alarmWriterSettingsPanel;
+//		_alarmWriterSettingsPanel = alarmWriterSettingsPanel;
+		_alarmWriterDetailsPanel  = alarmWriterDetailsPanel;
 
 		setModel(_alarmWritersTableModel);
 
@@ -97,7 +100,13 @@ public class AlarmWritersTable extends JXTable
 //				 List<AlarmWriterSettingsEntry> settings = _alarmWritersTableModel.getSettingsForRow(mrow);
 //				_alarmWriterSettingsPanel.setWriterSettings(settings);
 				 List<CmSettingsHelper> settings = _alarmWritersTableModel.getSettingsForRow(mrow);
-				_alarmWriterSettingsPanel.setWriterSettings(settings);
+//				_alarmWriterSettingsPanel.setWriterSettings(settings);
+//				_alarmWriterDetailsPanel.getAlarmWriterSettingsPanel().setWriterSettings(settings);
+				_alarmWriterDetailsPanel.setWriterSettings(settings);
+
+				List<CmSettingsHelper> filters = _alarmWritersTableModel.getFiltersForRow(mrow);
+//				_alarmWriterDetailsPanel.getAlarmWriterFiltersPanel().setWriterFilters(filters);
+				_alarmWriterDetailsPanel.setWriterFilters(filters);
 				 
 //				_alarmWriterSettingsPanel.setWriterName(className);
 			}

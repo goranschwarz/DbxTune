@@ -11,9 +11,7 @@ import org.apache.log4j.Logger;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoRs;
 import com.asetune.utils.AseConnectionUtils;
-import com.asetune.utils.SqlUtils;
 import com.asetune.utils.Ver;
-import com.sybase.jdbcx.EedInfo;
 
 public class RsConnection
 extends TdsConnection

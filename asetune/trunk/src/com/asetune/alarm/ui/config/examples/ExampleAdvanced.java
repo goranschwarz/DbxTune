@@ -115,7 +115,7 @@ implements IUserDefinedAlarmInterrogator
 				{
 					if (LogSizeFreeInMb.intValue() > logSizeThreshold)
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLogSpaceUsage(cm, dbname, LogSizeFreeInMb, LogSizeUsedPct) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventLogSpaceUsage(cm, logSizeThreshold, dbname, LogSizeFreeInMb, LogSizeUsedPct) );
 					}
 				}
 
@@ -128,7 +128,7 @@ implements IUserDefinedAlarmInterrogator
 				{
 					if (DataSizeFreeInMb.intValue() > dbSizeThreshold)
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventDataSpaceUsage(cm, dbname, DataSizeFreeInMb, DataSizeUsedPct) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventDataSpaceUsage(cm, dbSizeThreshold, dbname, DataSizeFreeInMb, DataSizeUsedPct) );
 					}
 				}
 			} // end: if desiredDBName
@@ -138,7 +138,7 @@ implements IUserDefinedAlarmInterrogator
 	/**
 	 * This is a local definition of an AlarmEvent, called 'LogSpaceUsage' <br>
 	 * You can here it here in the file if it's not going to be reused by any other interrorators <br>
-	 * Or create a file AlarmEventLogSpaceUsage.java in ${DBXTUNE_HOME}/alarm-handler-src/asetune/alarms/ <br>
+	 * Or create a file AlarmEventLogSpaceUsage.java in ${DBXTUNE_HOME}/resources/alarm-handler-src/asetune/alarms/ <br>
 	 * so you can reuse the AlarmEventLogSpaceUsage in any other User Defined Alarms <br>
 	 */
 	public class AlarmEventLogSpaceUsage
@@ -146,16 +146,18 @@ implements IUserDefinedAlarmInterrogator
 	{
 		private static final long serialVersionUID = 1L;
 
-		public AlarmEventLogSpaceUsage(CountersModel cm, String dbname, Number freeInMb, Number usedPct)
+		public AlarmEventLogSpaceUsage(CountersModel cm, Number threshold, String dbname, Number freeInMb, Number usedPct)
 		{
 			super(
 					Version.getAppName(), // serviceType
 					cm.getServerName(),   // serviceName
 					cm.getName(),         // serviceInfo
 					dbname,               // extraInfo
+					AlarmEvent.Category.SPACE, 
 					AlarmEvent.Severity.WARNING, 
 					AlarmEvent.ServiceState.UP, 
-					"Found That LOG Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname +"'. freeInMb=" + freeInMb + ", usedPct='"+usedPct+"'.");
+					"Found That LOG Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname +"'. freeInMb=" + freeInMb + ", usedPct='"+usedPct+"'. (threshold="+threshold+")",
+					threshold);
 
 			// Set: Time To Live if postpone is enabled
 			setTimeToLive(cm);
@@ -170,16 +172,18 @@ implements IUserDefinedAlarmInterrogator
 	{
 		private static final long serialVersionUID = 1L;
 
-		public AlarmEventDataSpaceUsage(CountersModel cm, String dbname, Number freeInMb, Number usedPct)
+		public AlarmEventDataSpaceUsage(CountersModel cm, Number threshold, String dbname, Number freeInMb, Number usedPct)
 		{
 			super(
 					Version.getAppName(), // serviceType
 					cm.getServerName(),   // serviceName
 					cm.getName(),         // serviceInfo
 					dbname,               // extraInfo
+					AlarmEvent.Category.SPACE, 
 					AlarmEvent.Severity.WARNING, 
 					AlarmEvent.ServiceState.UP, 
-					"Found That DATA Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname +"'. freeInMb=" + freeInMb + ", usedPct='"+usedPct+"'.");
+					"Found That DATA Space usage is low in '" + cm.getServerName() + "', dbname='" + dbname +"'. freeInMb=" + freeInMb + ", usedPct='"+usedPct+"'. (threshold="+threshold+")",
+					threshold);
 
 			// Set: Time To Live if postpone is enabled
 			setTimeToLive(cm);

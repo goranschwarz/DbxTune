@@ -16,9 +16,11 @@ extends AlarmEvent
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
+				AlarmEvent.Category.DOWN, 
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.DOWN, 
-				"Server is DOWN. Name='" + cm.getServerName() + "'.");
+				"Server is DOWN. Name='" + cm.getServerName() + "'.",
+				null);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
@@ -31,9 +33,11 @@ extends AlarmEvent
 				serverName,           // serviceName
 				url,                  // serviceInfo
 				null,                 // extraInfo
+				AlarmEvent.Category.DOWN, 
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.DOWN, 
-				"Server is DOWN. Name='" + serverName + "', url='"+url+"'.");
+				"Server is DOWN. Name='" + serverName + "', url='"+url+"'.",
+				null);
 		
 		setData( StringUtil.isNullOrBlank(serverName) ? url : serverName );
 	}

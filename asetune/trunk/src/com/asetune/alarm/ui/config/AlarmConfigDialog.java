@@ -9,18 +9,25 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+
 import com.asetune.Version;
+import com.asetune.gui.TextDialog;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
@@ -59,9 +66,10 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 	Configuration            _return;
 
 	// PANEL: OK-CANCEL
-	private JButton          _ok          = new JButton("OK");
-	private JButton          _cancel      = new JButton("Cancel");
-	private JButton          _apply       = new JButton("Apply");
+	private JButton          _ok            = new JButton("OK");
+	private JButton          _cancel        = new JButton("Cancel");
+	private JButton          _apply         = new JButton("Apply");
+	private JButton          _previewConfig = new JButton("Preview Config");
 
 	@SuppressWarnings("unused")
 	private boolean          _madeChanges = false;
@@ -213,7 +221,8 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 //		panel.add(_alarmTablePanel,    "grow, push, height 100%"); // <<-- pu this in a JSplitPanel
 //		panel.add(_alarmDetailsPanel,  "grow, push, height 100%"); // <<-- pu this in a JSplitPanel
 //		panel.add(_splitPaneAlarms,          "grow, push, height 100%"); // <<-- pu this in a JSplitPanel
-		panel.add(_okCancelPanelPanel, "bottom, right, push");
+//		panel.add(_okCancelPanelPanel, "bottom, right, push");
+		panel.add(_okCancelPanelPanel, "bottom, growx, pushx");
 
 		_alarmPanel       .addPropertyChangeListener(this);
 		_alarmWritersPanel.addPropertyChangeListener(this);
@@ -286,15 +295,20 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
+		_previewConfig.setToolTipText("Show current configuration in a text dialog. This to view/copy current config properties...");
+
 		// ADD the OK, Cancel, Apply buttons
-		panel.add(_ok,     "tag ok, right");
-		panel.add(_cancel, "tag cancel");
-		panel.add(_apply,  "tag apply, hidemode 3");
+		panel.add(_previewConfig, "");
+		panel.add(new JLabel(),   "growx, pushx");
+		panel.add(_ok,            "tag ok, right");
+		panel.add(_cancel,        "tag cancel");
+		panel.add(_apply,         "tag apply, hidemode 3");
 
 		_apply.setEnabled(false);
 		_apply.setVisible(false); // LETS NOT USE THIS FOR THE MOMENT
 
 		// ADD ACTIONS TO COMPONENTS
+		_previewConfig.addActionListener(this);
 		_ok           .addActionListener(this);
 		_cancel       .addActionListener(this);
 		_apply        .addActionListener(this);
@@ -333,6 +347,12 @@ implements ActionListener, TableModelListener, PropertyChangeListener
     {
 		Object source = e.getSource();
 
+		// --- BUTTON: PREVIEW CONFIG ---
+		if (_previewConfig.equals(source))
+		{
+			previewConfig();
+		}
+
 		// --- BUTTON: CANCEL ---
 		if (_cancel.equals(source))
 		{
@@ -367,6 +387,40 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 	**---------------------------------------------------
 	*/
 
+	private void previewConfig()
+	{
+		Configuration conf = new Configuration();
+
+		Configuration alarmConfig   = _alarmPanel       .getConfig();
+		Configuration writersConfig = _alarmWritersPanel.getConfig();
+
+		conf.add(alarmConfig);
+		conf.add(writersConfig);
+
+		try
+		{
+//			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//			PrintStream ps = new PrintStream(baos, true, "utf-8");
+//
+//			conf.print(ps, "AlarmConfigDialog.previewConfig(): config:");
+//
+//			String content = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+//			ps.close();
+
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			conf.store(baos, "Alarm Configuration Preview");
+			String content = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+			baos.close();
+
+			
+			TextDialog dialog = new TextDialog(null, "Config Preview", SyntaxConstants.SYNTAX_STYLE_PROPERTIES_FILE, content);
+			dialog.setVisible(true);
+		}
+		catch (IOException ex)
+		{
+			SwingUtils.showErrorMessage(this, "Error when Preview Config", "Problems viewing the configuration", ex);
+		}
+	}
 	private void doApply()
 	{
 		
@@ -378,7 +432,7 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 		conf.add(alarmConfig);
 		conf.add(writersConfig);
 
-conf.print(System.out, "AlarmConfigDialog.doApply(): config:");
+//conf.print(System.out, "AlarmConfigDialog.doApply(): config:");
 		
 		_return = conf;
 		

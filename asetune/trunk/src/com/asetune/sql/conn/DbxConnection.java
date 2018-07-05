@@ -70,6 +70,8 @@ implements Connection
 	protected ConnectionProp _connProp = null;
 	protected static ConnectionProp _defaultConnProp = null;
 	
+	private   long   _connectTime = 0;
+	
 	protected String _databaseProductName    = null;
 	protected String _databaseProductVersion = null;
 	protected String _databaseServerName     = null;
@@ -82,7 +84,14 @@ implements Connection
 	protected String _dbmsSortOrderName      = null;
 	protected String _dbmsSortOrderId        = null;
 	
-//	public String getUsername() { return _username; }
+	protected String _quotedIdentifierChar = null;
+
+	/** When did we connect. 
+	 * @return 0 if no connection has been made, otherwise the 'long' from System.currentTimeMillis()
+	 */
+	public long getConnectTime() { return _connectTime; }
+	
+	//	public String getUsername() { return _username; }
 //	public String getPassword() { return _password; }
 //	public String getServer()   { return _server; }
 //	public String getDbname()   { return _dbname; }
@@ -219,6 +228,14 @@ implements Connection
 					props .put("APPLICATIONNAME", appname);
 				}
 			}
+			// Microsoft SQL-Server
+			if (url.startsWith("jdbc:sqlserver:"))
+			{
+				if (StringUtil.hasValue(appname) &&  ! props.containsKey("applicationName") )
+				{
+					props .put("applicationName", appname);
+				}
+			}
 
 			_logger.debug("getConnection to driver='"+driverClass+"', url='"+url+"', user='"+user+"'.");
 
@@ -337,6 +354,9 @@ implements Connection
 //System.out.println("DbxConnection.connect(): setConnProp: "+connProp);
 			dbxConn.setConnProp(connProp);
 
+			// Set time when the connection was made
+			dbxConn._connectTime = System.currentTimeMillis();
+			
 			return dbxConn;
 		}
 		catch (SQLException ex)
@@ -591,6 +611,10 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		_dbmsCharsetId          = null;
 		_dbmsSortOrderName      = null;
 		_dbmsSortOrderId        = null;
+		
+		_quotedIdentifierChar   = null;
+		
+		_connectTime = 0;
 	}
 
 	/**
@@ -973,6 +997,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		{
 			serverName = AseConnectionUtils.getAseServername(_conn);
 		}
+		// Postgres == overridden in PostgresConnection
 		// UNKNOWN
 		else
 		{
@@ -1323,6 +1348,11 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 //		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
 //		{
 //		}
+		// DB2
+		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX, DbUtils.DB_PROD_NAME_DB2_ZOS))
+		{
+			versionStr = DbUtils.getDb2VersionStr(_conn);
+		}
 		// UNKNOWN
 		else
 		{
@@ -1394,6 +1424,11 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		{
 //			dbmsVersionNumber = DbUtils.getSqlServerVersionNumber(_conn);
 		}
+		// DB2
+		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX, DbUtils.DB_PROD_NAME_DB2_ZOS))
+		{
+			dbmsVersionNumber = DbUtils.getDb2VersionNumber(_conn);
+		}
 		// UNKNOWN
 		else
 		{
@@ -1451,6 +1486,110 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		return null;
 	}
 
+	
+	
+	/**
+	 * Close the connection quitetly
+	 */
+	public void closeNoThrow()
+	{
+		try
+		{
+			close();
+		}
+		catch(SQLException ex)
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("Problems closing connection, Caught: "+ex);
+		}
+	}
+	
+	
+	
+	
+	//#################################################################################
+	//#################################################################################
+	//### BEGIN: Some generic helper methods for executing SQL Statemenets
+	//#################################################################################
+	//#################################################################################
+	
+	/**
+	 * Execute a SQL Statement thats doesnt return any ResultSet, and does not throw any exception
+	 * 
+	 * @param sql SQL To be executed
+	 * @return > 0 on success, -1 on failure
+	 */
+	public int dbExecNoException(String sql)
+	{
+		try
+		{
+			return dbExec(sql, true);
+		}
+		catch (SQLException e)
+		{
+			return -1;
+		}
+	}
+
+	/**
+	 * Execute a SQL Statement thats doesnt return any ResultSet, and does not throw any exception
+	 * 
+	 * @param sql SQL To be executed
+	 * @return true on success, false on failure
+	 * 
+	 * @throws SQLException
+	 */
+	public int dbExec(String sql)
+	throws SQLException
+	{
+		return dbExec(sql, true);
+	}
+
+	/**
+	 * Execute a SQL Statement thats doesnt return any ResultSet, and does not throw any exception
+	 * 
+	 * @param sql           SQL To be executed
+	 * @param printErrors   If we should print errors to the error log
+	 * @return true on success, false on failure
+	 * 
+	 * @throws SQLException
+	 */
+	public int dbExec(String sql, boolean printErrors)
+	throws SQLException
+	{
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("SEND SQL: " + sql);
+		}
+//System.out.println("dbExec(): SEND SQL: " + sql);
+
+		try
+		{
+			int count = 0;
+			Statement s = createStatement();
+			s.execute(sql);
+			count = s.getUpdateCount();
+			s.close();
+			
+			return count;
+		}
+		catch(SQLException e)
+		{
+			if (printErrors)
+				_logger.warn("Problems when executing sql statement: "+sql+" SqlException: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", toString="+e.toString());
+			throw e;
+		}
+	}
+	//#################################################################################
+	//#################################################################################
+	//### END: Some generic helper methods for executing SQL Statemenets
+	//#################################################################################
+	//#################################################################################
+
+	
+	
+	
+	
 	//#################################################################################
 	//#################################################################################
 	//### BEGIN: delegated methods for Connection
@@ -1948,12 +2087,33 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	//#################################################################################
 
 	/**
-	 * If the server handles databases like MS SQL_Server and Sybase ASE
+	 * If the server handles databases like MS SQL_Server and Sybase ASE return true
 	 * @return true or false
 	 */
 	public boolean isDatabaseAware()
 	{
 		return false;
+	}
+
+	public String getQuotedIdentifierChar()
+	{
+		// return at once if the string is cached
+		if (_quotedIdentifierChar != null)
+			return _quotedIdentifierChar;
+
+		// Get the data if it wasn't cached
+		try 
+		{
+			DatabaseMetaData md = getMetaData();
+			_quotedIdentifierChar = md.getIdentifierQuoteString();
+		}
+		catch (SQLException ex) 
+		{
+			_logger.warn("Problems when getting Quoted Identifier. returning char '\"'. DatabaseMetaData.getIdentifierQuoteString() caught: "+ex);
+			return "";
+		}
+		
+		return _quotedIdentifierChar;
 	}
 
 	/**
@@ -2033,6 +2193,112 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	{
 		_connectionMarkers.remove(markType);
 	}
+
+	//-------------------------------------------------
+	// BEGIN: SCHEMA methods
+	//-------------------------------------------------
+	/**
+	 * Just checks if a schema exists
+	 * @param schemaName
+	 * @throws SQLException 
+	 */
+	public boolean checkIfSchemaExists(String schemaName) throws SQLException
+	{
+		boolean exists = false;
+
+		DatabaseMetaData md = getMetaData();
+		
+		String qic = md.getIdentifierQuoteString();
+		if (StringUtil.isNullOrBlank(qic))
+			qic = "\"";
+
+		ResultSet rs = md.getSchemas();
+		while(rs.next())
+		{
+			String schema = rs.getString(1);
+			if (schemaName.equalsIgnoreCase(schema))
+			{
+				exists = true;
+				break;
+			}
+		}
+		rs.close();
+		
+		return exists;
+	}
+
+	/** 
+	 * Create a schema 
+	 * @param schemaName
+	 * @throws SQLException 
+	 */
+	public void createSchema(String schemaName) throws SQLException
+	{
+		String qic = getMetaData().getIdentifierQuoteString();
+		dbExec("create schema "+qic+schemaName+qic);
+	}
+
+	/**
+	 * Create a schema if not already exists<br>
+	 * This will call:
+	 * <ul>
+	 *   <li>checkIfSchemaExists(schemaName)</li>
+	 *   <li>createSchema(schemaName)</li>
+	 * </ul>
+	 * 
+	 * This can typically be overloaded with something like (below if the database supports the syntax)
+	 * <pre>
+	 * public void createSchemaIfNotExists(String schemaName) throws SQLException
+	 * {
+	 * 	String qic = getMetaData().getIdentifierQuoteString();
+	 * 	dbExec("create schema if not exists "+qic+schemaName+qic);
+	 * }
+	 * </pre>
+	 * @param schemaName
+	 * @throws SQLException 
+	 */
+	public void createSchemaIfNotExists(String schemaName) throws SQLException
+	{
+		if (checkIfSchemaExists(schemaName))
+			return;
+		
+		createSchema(schemaName);
+	}
+
+	/** 
+	 * Drop a schema 
+	 * @param schemaName
+	 * @throws SQLException 
+	 */
+	public void dropSchema(String schemaName) throws SQLException
+	{
+		String qic = getMetaData().getIdentifierQuoteString();
+		dbExec("drop schema "+qic+schemaName+qic);
+	}
+
+	//-------------------------------------------------
+	// END: SCHEMA methods
+	//-------------------------------------------------
+
+//	/**
+//	 * Checks if the currect database connection is of the product name<br>
+//	 * This uses: <code>DbUtils.isProductName(this.getDatabaseProductName(), dbProdNameOracle);</code>
+//	 * 
+//	 * @param dbProdNameOracle  
+//	 * @return true or false
+//	 */
+//	public boolean isDatabaseProductName(String dbProdNameOracle)
+//	{
+//		try
+//		{
+//			return DbUtils.isProductName(this.getDatabaseProductName(), dbProdNameOracle);
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.info("isDatabaseProductName() caught: "+ex);
+//			return false;
+//		}
+//	}
 
 	
 //	public abstract int    getDbmsVersionNumber();

@@ -19,29 +19,49 @@ implements PropertyChangeListener
 	private static final long serialVersionUID = 1L;
 
 	AlarmWritersTablePanel   _alarmWritersTablePanel;
-	AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
+//	AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
+	AlarmWriterDetailsPanel _alarmWriterDetailsPanel;
 
 	JSplitPane               _splitPane;
 
 	public static ImageIcon getIcon16() { return SwingUtils.readImageIcon(Version.class, "images/alarm_writer_16.png"); }
 
+//	public AlarmWritersPanel()
+//	{
+//		super(new BorderLayout());
+//
+//		_alarmWriterSettingsPanel  = new AlarmWriterSettingsPanel();
+//		_alarmWritersTablePanel    = new AlarmWritersTablePanel(_alarmWriterSettingsPanel);
+//
+//		_splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+//		_splitPane.setTopComponent(_alarmWritersTablePanel);
+//		_splitPane.setBottomComponent(_alarmWriterSettingsPanel);
+//		_splitPane.setDividerLocation(0.5f);
+//		_splitPane.setResizeWeight   (0.5f);
+//
+//		add(_splitPane, BorderLayout.CENTER);
+//		
+//		_alarmWritersTablePanel  .addPropertyChangeListener("tableChanged", this);
+//		_alarmWriterSettingsPanel.addPropertyChangeListener("tableChanged", this);
+//	}
 	public AlarmWritersPanel()
 	{
 		super(new BorderLayout());
 
-		_alarmWriterSettingsPanel  = new AlarmWriterSettingsPanel();
-		_alarmWritersTablePanel    = new AlarmWritersTablePanel(_alarmWriterSettingsPanel);
+		_alarmWriterDetailsPanel  = new AlarmWriterDetailsPanel();
+//		_alarmWritersTablePanel   = new AlarmWritersTablePanel(_alarmWriterDetailsPanel.getAlarmWriterSettingsPanel());
+		_alarmWritersTablePanel   = new AlarmWritersTablePanel(_alarmWriterDetailsPanel);
 
 		_splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		_splitPane.setTopComponent(_alarmWritersTablePanel);
-		_splitPane.setBottomComponent(_alarmWriterSettingsPanel);
+		_splitPane.setBottomComponent(_alarmWriterDetailsPanel);
 		_splitPane.setDividerLocation(0.5f);
 		_splitPane.setResizeWeight   (0.5f);
 
 		add(_splitPane, BorderLayout.CENTER);
 		
-		_alarmWritersTablePanel  .addPropertyChangeListener("tableChanged", this);
-		_alarmWriterSettingsPanel.addPropertyChangeListener("tableChanged", this);
+		_alarmWritersTablePanel .addPropertyChangeListener("tableChanged", this);
+		_alarmWriterDetailsPanel.addPropertyChangeListener("tableChanged", this);
 	}
 
 	@Override
@@ -76,7 +96,8 @@ implements PropertyChangeListener
 		if (_alarmWritersTablePanel.isDirty())
 			return true;
 
-		if (_alarmWriterSettingsPanel.isDirty())
+//		if (_alarmWriterSettingsPanel.isDirty())
+		if (_alarmWriterDetailsPanel.isDirty())
 			return true;
 		
 		return false;

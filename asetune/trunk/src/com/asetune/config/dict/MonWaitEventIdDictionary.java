@@ -971,6 +971,66 @@ public class MonWaitEventIdDictionary
 
 
 
+		event  = 442;
+		slogan = "waiting for cluster physical lock acquisition";
+		desc   = new String[] {"To fix this situation:",
+		                       "<UL>",
+		                       "<LI>Check the CIPC send and receive queues - the wait time required for look-ups might increase if messages are stuck in the queues and not immediately processed.</LI>",
+		                       "<LI>Check the network - congested networks can slow message transmission.</LI>",
+		                       "<LI>Avoid the badly partitioned setting - enable trace flag 15815 for clusters that have more than two instances if the setting is well partitioned. This trace flag forces the affinity mode for master assignment, so the lock requester and the lock master are on the same instance and the lock request is managed by the current instance.</LI>",
+		                       "</UL>"};
+		action = null;
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 444;
+		slogan = "waiting for cluster physical lock lookup";
+		desc   = new String[] {"To fix this situation:",
+		                       "<UL>",
+		                       "<LI>Physical lock hash bucket size - large hash buckets may increase the amount of time required to look up locks.</LI>",
+		                       "<LI>CIPC send and receive queues - the wait time required for look-ups might increase if messages are stuck in the queues and not immediately processed.</LI>",
+		                       "<LI>Network - congested networks can slow message transmission.</LI>",
+		                       "</UL>"};
+		action = null;
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 449;
+		slogan = "waiting for cluster object lock lookup";
+		desc   = new String[] {"To solve the situation, check the:",
+		                       "<UL>",
+		                       "<LI>Object lock hash bucket size - large hash buckets may increase the amount of time required to look up locks.</LI>",
+		                       "<LI>CIPC send and receive queues - the wait time required for look-ups might increase if messages are stuck in the queues and not immediately processed.</LI>",
+		                       "<LI>Network - congested networks can slow message transmission.</LI>",
+		                       "</UL>"};
+		action = null;
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
+		event  = 454;
+		slogan = "waiting for cluster logical lock lookup";
+		desc   = new String[] {"To solve the situation, check the:",
+		                       "<UL>",
+		                       "<LI>Logical lock (row, page, and table) hash bucket size - large hash buckets may increase the amount of time required to look up locks.</LI>",
+		                       "<LI>CIPC send and receive queues - the wait time required for look-ups might increase if messages are stuck in the queues and not immediately processed.</LI>",
+		                       "<LI>Network - congested networks can slow message transmission.</LI>",
+		                       "</UL>"};
+		action = null;
+		comment= null;
+		mcc    = null;
+		add(new WaitEventIdRecord(event, name, slogan, desc, action, txtsrc, comment, mcc));
+
+
+
 		event  = 483;
 		slogan = "Waiting for ack of a multicast synchronous message";
 		desc   = new String[] {"Although this wait event occurs with some frequency, it is a result of normal activity."};

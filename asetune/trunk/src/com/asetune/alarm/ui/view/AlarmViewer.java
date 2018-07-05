@@ -963,7 +963,7 @@ implements ActionListener
     	try
     	{
 			AlarmHandler ah = new AlarmHandler();
-    		ah.init(Configuration.getCombinedConfiguration(), true, false);
+    		ah.init(Configuration.getCombinedConfiguration(), true, false, true);
     		ah.start();
     		AlarmHandler.setInstance(ah);
 

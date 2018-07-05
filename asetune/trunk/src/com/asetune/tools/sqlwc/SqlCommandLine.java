@@ -400,7 +400,7 @@ public class SqlCommandLine
 ////											_resultCompList.add(new JAseCancelledResultSet(sql));
 //
 ////										if (rstm.wasAbortedAfterXRows())
-////										_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
+////										_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
 //										if (rstm.wasAbortedAfterXRows())
 //											System.out.println("Reading the ResultSet was stopped after "+rstm.getAbortedAfterXRows()+" rows.");
 //									}
@@ -436,7 +436,7 @@ public class SqlCommandLine
 ////											_resultCompList.add(new JAseCancelledResultSet(sql));
 ////
 ////										if (rstm.wasAbortedAfterXRows())
-////											_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
+////											_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
 //									}
 //								} // end: normal read result set
 //			

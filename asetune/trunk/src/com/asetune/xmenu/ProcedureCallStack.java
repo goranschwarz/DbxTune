@@ -82,6 +82,7 @@ extends XmenuActionBase
 				String row = DBName + " " + ObjectName + " " + ObjectType + "\n";
 				procText.append(row);
 			}
+			rs.close();
 		}
 		catch (Exception e)
 		{

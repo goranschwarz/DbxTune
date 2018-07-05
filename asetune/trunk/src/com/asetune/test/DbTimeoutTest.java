@@ -77,6 +77,7 @@ public class DbTimeoutTest
 					row++;
 					System.out.println("reading result set, row "+row);
 				}
+				rs.close();
 			}
 			catch (SQLException e)
 			{
@@ -103,6 +104,7 @@ public class DbTimeoutTest
 					row++;
 					System.out.println("reading result set, row "+row+": spid="+rs.getString(1));
 				}
+				rs.close();
 			}
 			catch (SQLException e)
 			{

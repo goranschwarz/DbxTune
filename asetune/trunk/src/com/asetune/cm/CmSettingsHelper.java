@@ -2,12 +2,19 @@ package com.asetune.cm;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 import com.asetune.utils.StringUtil;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 /**
  * Used by the: Create 'Offline Session' Wizard<br>
@@ -34,6 +41,84 @@ public class CmSettingsHelper
 	{
 		public boolean isValid(CmSettingsHelper sh, String newValueStr) throws ValidationException;
 	}
+
+	/** RegExp - Input validator */
+	public static class RegExpInputValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			try { Pattern.compile(val); }
+			catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '"+val+"' seems to be faulty. Caught: "+ex.getMessage()); }
+			return true;
+		}
+	}
+
+	/** URL - Input validator */
+	public static class UrlInputValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			try { new URL(val); }
+			catch(MalformedURLException ex) { throw new ValidationException("The URL '"+val+"' seems to be malformed. Caught: "+ex.getMessage()); }
+			return true;
+		}
+	}
+	/** JSON - Input validator */
+	public static class JsonInputValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			try { Gson gson = new Gson(); gson.fromJson(val, Object.class); }
+			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: "+ex.getMessage()); }
+			return true;
+		}
+	}
+
+	/** Integer - Input validator */
+	public static class IntegerInputValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			try { Integer.parseInt(val); }
+			catch(NumberFormatException ex) { throw new ValidationException("The value '"+val+"' is not a valid Integer: "+ex.getMessage()); }
+			return true;
+		}
+	}
+
+	/** Map with number - Input validator */
+	public static class MapNumberValidator
+	implements InputValidator
+	{
+		@Override
+		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
+		{
+			Map<String, String> map = StringUtil.parseCommaStrToMap(val);
+			
+			for (String mapKey : map.keySet())
+			{
+				String mapVal = map.get(mapKey);
+
+				// MAP-KEY: Check key (if it passes regexp check) 
+				try { Pattern.compile(mapKey); }
+				catch(PatternSyntaxException ex) { throw new ValidationException("The RegExp '"+mapVal+"' seems to be faulty, for key '"+mapKey+"'. Caught: "+ex.getMessage()); }
+
+				// MAP-VAL: Check number
+				try { NumberUtils.createNumber(mapVal); }
+				catch (NumberFormatException ex) { throw new ValidationException("The number value '"+mapVal+"' is not a number for key '"+mapKey+"'. Caught: "+ex.getMessage()); }
+			}
+			
+			return true;
+		}
+	}
+
 
 	/** ValidationException is thrown when you try to set data to a invalid content */
 	public static class ValidationException extends Exception
@@ -193,8 +278,8 @@ public class CmSettingsHelper
 	/**
 	 * Create a helper
 	 * 
-	 * @param type           If this parameter is mandatory/optional/template
 	 * @param name           Name or Slogan of this setting
+	 * @param type           If this parameter is mandatory/optional/template
 	 * @param propName       Property Name/Key for this setting
 	 * @param dataType       Datatype for this setting
 	 * @param stringValue    Current configuration, or suggested value for this setting
@@ -208,8 +293,8 @@ public class CmSettingsHelper
 		_type           = type;
 		_propName       = propName;
 		_dataType       = dataType;
-		_stringValue    = stringValue == null ? null : stringValue.toString();    // Should we allow null or should we set it to ""
-		_defaultValue   = defaultValue == null ? null : defaultValue.toString();    // Should we allow null or should we set it to "";
+		_stringValue    = stringValue  == null ? null : stringValue.toString();    // Should we allow null or should we set it to ""
+		_defaultValue   = defaultValue == null ? null : defaultValue.toString();   // Should we allow null or should we set it to "";
 		_description    = description;
 		_inputValidator = inputValidator;
 
@@ -223,8 +308,8 @@ public class CmSettingsHelper
 	/**
 	 * Create a helper
 	 * 
-	 * @param type          If this parameter is mandatory/optional/template
 	 * @param name          Name or Slogan of this setting
+	 * @param type          If this parameter is mandatory/optional/template
 	 * @param propName      Property Name/Key for this setting
 	 * @param dataType      Datatype for this setting
 	 * @param stringValue   Current configuration, or suggested value for this setting
@@ -234,6 +319,22 @@ public class CmSettingsHelper
 	public CmSettingsHelper(String name, Type type, String propName, Class<?> dataType, Object stringValue, Object defaultValue, String description)
 	{
 		this(name, type, propName, dataType, stringValue, defaultValue, description, null);
+	}
+
+	/**
+	 * Create a helper
+	 * 
+	 * @param name          Name or Slogan of this setting
+	 * @param propName      Property Name/Key for this setting
+	 * @param dataType      Datatype for this setting
+	 * @param stringValue   Current configuration, or suggested value for this setting
+	 * @param defaultValue  Default value for this setting
+	 * @param description   A longer description of what this setting does
+	 * @param inputValidator If we have an user defined InputValidator
+	 */
+	public CmSettingsHelper(String name, String propName, Class<?> dataType, Object stringValue, Object defaultValue, String description, InputValidator inputValidator)
+	{
+		this(name, Type.NOT_USED, propName, dataType, stringValue, defaultValue, description, inputValidator);
 	}
 
 	/**

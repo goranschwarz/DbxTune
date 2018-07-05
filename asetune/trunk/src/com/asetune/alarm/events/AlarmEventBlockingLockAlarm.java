@@ -8,16 +8,18 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	public AlarmEventBlockingLockAlarm(CountersModel cm, Number count)
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, Number count)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
+				AlarmEvent.Category.LOCK,
 				AlarmEvent.Severity.WARNING, 
-				AlarmEvent.ServiceState.UP, 
-				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ".");
+				AlarmEvent.ServiceState.AFFECTED, 
+				"Found Blocking locks in '" + cm.getServerName() + "'. Count=" + count + ". (threshold="+threshold+")",
+				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

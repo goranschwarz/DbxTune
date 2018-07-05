@@ -27,9 +27,11 @@ import com.asetune.cm.iq.CmSaConnProperties;
 import com.asetune.cm.iq.CmSaDbProperties;
 import com.asetune.cm.iq.CmSaEngProperties;
 import com.asetune.cm.iq.CmSummary;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.MainFrame;
@@ -168,6 +170,8 @@ extends CounterControllerAbstract
 		CmOsMpstat         .create(counterController, guiController);
 		CmOsUptime         .create(counterController, guiController);
 		CmOsMeminfo        .create(counterController, guiController);
+		CmOsNwInfo         .create(counterController, guiController);
+		CmOsDiskSpace      .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);

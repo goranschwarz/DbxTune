@@ -9,9 +9,11 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.sqlserver.CmActiveStatements;
@@ -26,11 +28,13 @@ import com.asetune.cm.sqlserver.CmExecTriggerStats;
 import com.asetune.cm.sqlserver.CmIndexOpStat;
 import com.asetune.cm.sqlserver.CmIndexUsage;
 import com.asetune.cm.sqlserver.CmOptimizer;
+import com.asetune.cm.sqlserver.CmOsLatchStats;
 import com.asetune.cm.sqlserver.CmPerfCounters;
 import com.asetune.cm.sqlserver.CmProcedureStats;
 import com.asetune.cm.sqlserver.CmSchedulers;
 import com.asetune.cm.sqlserver.CmSpinlocks;
 import com.asetune.cm.sqlserver.CmSummary;
+import com.asetune.cm.sqlserver.CmTempdbSpidUsage;
 import com.asetune.cm.sqlserver.CmWaitStats;
 import com.asetune.cm.sqlserver.CmWaitingTasks;
 import com.asetune.cm.sqlserver.CmWho;
@@ -87,9 +91,11 @@ extends CounterControllerAbstract
 		CmWho               .create(counterController, guiController);
 		CmExecSessions      .create(counterController, guiController);
 		CmExecRequests      .create(counterController, guiController);
+		CmTempdbSpidUsage   .create(counterController, guiController);
 		CmSchedulers        .create(counterController, guiController);
 		CmWaitStats         .create(counterController, guiController);
 		CmWaitingTasks      .create(counterController, guiController);
+		CmOsLatchStats      .create(counterController, guiController);
 		CmPerfCounters      .create(counterController, guiController);
 		CmOptimizer         .create(counterController, guiController);
 		CmSpinlocks         .create(counterController, guiController);
@@ -114,6 +120,8 @@ extends CounterControllerAbstract
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
 		CmOsMeminfo         .create(counterController, guiController);
+		CmOsNwInfo          .create(counterController, guiController);
+		CmOsDiskSpace       .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -208,7 +216,7 @@ extends CounterControllerAbstract
 		Timestamp counterClearTime = null;
 
 //		String sql = "select getdate(), @@servername, @@servername, CountersCleared='2000-01-01 00:00:00'";
-		String sql = "select getdate(), convert(varchar(100),SERVERPROPERTY('InstanceName')), convert(varchar(100),SERVERPROPERTY('MachineName')), CountersCleared='2000-01-01 00:00:00'";
+		String sql = "select getdate(), convert(varchar(100),isnull(SERVERPROPERTY('InstanceName'), @@servername)), convert(varchar(100),SERVERPROPERTY('MachineName')), CountersCleared='2000-01-01 00:00:00'";
 
 		try
 		{

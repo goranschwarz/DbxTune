@@ -46,12 +46,12 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"cpu_time",
-		"memory_usage",
-		"reads",
-		"writes",
-		"logical_reads",
-		"row_count"
+		 "cpu_time"
+		,"memory_usage"
+		,"reads"
+		,"writes"
+		,"logical_reads"
+//		,"row_count"        // this is NOT affected rows, it's what 'set rowcount ##' is set to
 		};
 	// RS> Col# Label                       JDBC Type Name           Guessed DBMS type Source Table
 	// RS> ---- --------------------------- ------------------------ ----------------- ------------

@@ -42,6 +42,7 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.events.AlarmEventDummy;
@@ -87,7 +88,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private JButton          _ok          = new JButton("OK");
 	private JButton          _cancel      = new JButton("Cancel");
 	
-	private AlarmEvent       _exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
+	private AlarmEvent       _exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
 	private List<AlarmEvent> _exampleAlarmEventList = new ArrayList<>();
 
 	private static final String DIALOG_TITLE = "AlarmEvent Template Editor";
@@ -102,11 +103,11 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 //		setModal(true);
 
 		// Add some examples, which will be used...
-		_exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
+		_exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
 		_exampleAlarmEventList = new ArrayList<>();
 		for (int i=0; i<10; i++)
 		{
-			AlarmEvent ae = new AlarmEventDummy("GORAN_"+i+"_DS", "SomeCmName-"+i, "SomeExtraInfo-"+i, Severity.WARNING, ServiceState.AFFECTED, -1, 150+i, "This is an Alarm Example with the data value of '"+(150+i)+"'", "Extended Description goes here - "+i);
+			AlarmEvent ae = new AlarmEventDummy("GORAN_"+i+"_DS", "SomeCmName-"+i, "SomeExtraInfo-"+i, Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 150+i, "This is an Alarm Example with the data value of '"+(150+i)+"'", "Extended Description goes here - "+i);
 			_exampleAlarmEventList.add(ae);
 		}
 
@@ -230,7 +231,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 				+ "</html>";
 		
 		String alarmDesc = "<html><code>"
-				+ "new AlarmEventDummy(\"GORAN_1_DS\", \"SomeCmName\", \"SomeExtraInfo\", Severity.WARNING, ServiceState.AFFECTED, -1, 999, \"This is an Alarm Example with the data value of '999'\", \"Extended Description goes here\");"
+				+ "new AlarmEventDummy(\"GORAN_1_DS\", \"SomeCmName\", \"SomeExtraInfo\", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, \"This is an Alarm Example with the data value of '999'\", \"Extended Description goes here\");"
 				+ "</code></html>";
 
 		RTextScrollPane scroll = new RTextScrollPane(_example_lbl, true);

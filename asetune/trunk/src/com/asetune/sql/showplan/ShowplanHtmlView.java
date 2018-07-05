@@ -1,8 +1,10 @@
 package com.asetune.sql.showplan;
 
 import java.awt.Desktop;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -26,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.Version;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.SwingUtils;
 
@@ -268,6 +271,102 @@ public abstract class ShowplanHtmlView
 		return true;
 	}
 
+//	/**
+//	 * Create a HTML file using the XML plan
+//	 * 
+//	 * @param xmlPlan
+//	 * @return The file name created
+//	 * @throws IOException 
+//	 * @throws TransformerException 
+//	 * @throws TransformerConfigurationException 
+//	 * @throws Exception
+//	 */
+//	protected File createHtmlFile(String xmlPlan) 
+//	throws IOException, TransformerConfigurationException, TransformerException 
+//	{
+//		File destDir = new File(getTmpShowplanPath() + getTemplateJarDir());
+//		String xsltFile = getTmpShowplanPath() + getTemplateJarDir() + getXsltFile();
+//
+//		File outputHTML = File.createTempFile("showplan_", ".html", destDir);
+//		outputHTML.deleteOnExit();
+//
+//		// TODO: This can be done better, maybe: 
+//		//       - transform returns a string instead of the File (so we don't have to read the file and then write to it at once)
+//		//       - or: write the SQL-Server showplan into a javascript variable, and then:
+//		//         <div id="container"></div>
+//		//         <script>
+//		//             QP.showPlan(document.getElementById("container"), '<ShowPlanXML...');
+//		//         </script> 
+//		//         like the authur suggest on: https://github.com/JustinPealing/html-query-plan
+//		transform(xmlPlan, xsltFile, outputHTML);
+//		
+//		String fileContent = FileUtils.readFile(outputHTML, null);
+//		
+//		// Write HTML file
+//		BufferedWriter out = null;
+//		try
+//		{
+//			FileWriter fstream = new FileWriter(outputHTML);
+//			out = new BufferedWriter(fstream);
+//			out.write("<html>                                                                    \n");
+//			out.write("                                                                          \n");
+//			out.write("<head>                                                                    \n");
+//			out.write("    <META http-equiv='Content-Type' content='text/html; charset=UTF-8'>   \n");
+//			out.write("    <title>Execution plan</title>                                         \n");
+//			out.write("    <link rel='stylesheet' type='text/css' href='css/qp.css'>             \n");
+//			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
+//			out.write("</head>                                                                   \n");
+//			out.write("                                                                          \n");
+//			out.write("<body onload=\"QP.drawLines(document.getElementById('container'));\">     \n");
+//			out.write("<div id='container'>                                                      \n");
+//
+//			out.write(fileContent);
+//			
+//			out.write("</div>                                                                    \n");
+//			out.write("</body>                                                                   \n");
+//			out.write("                                                                          \n");
+//			out.write("</html>                                                                   \n");
+//		}
+//		catch (IOException e)
+//		{
+//			throw e;
+//		}
+//		finally
+//		{
+//			if(out != null) 
+//				out.close();
+//		}
+//
+//		return outputHTML;
+////		File destDir = new File(getTmpShowplanPath() + getJarDir());
+////		String xsltFile = getTmpShowplanPath() + getTemplateJarDir() + getXsltFile();
+////		try
+////		{
+////			File outputHTML = File.createTempFile("showplan_", ".html", destDir);
+////			outputHTML.deleteOnExit();
+////
+////			transform(xmlPlan, xsltFile, outputHTML);
+////
+////			return outputHTML;
+////		}
+////		catch (TransformerConfigurationException e)
+////		{
+////			System.err.println("TransformerConfigurationException");
+////			System.err.println(e);
+////		}
+////		catch (TransformerException e)
+////		{
+////			System.err.println("TransformerException");
+////			System.err.println(e);
+////		}
+////		catch (IOException e)
+////		{
+////			System.err.println("IOException");
+////			e.printStackTrace();
+////		}
+////		
+////		return null;
+//	}
 	/**
 	 * Create a HTML file using the XML plan
 	 * 
@@ -287,38 +386,88 @@ public abstract class ShowplanHtmlView
 		File outputHTML = File.createTempFile("showplan_", ".html", destDir);
 		outputHTML.deleteOnExit();
 
-		transform(xmlPlan, xsltFile, outputHTML);
+		// TODO: This can be done better, maybe: 
+		//       - transform returns a string instead of the File (so we don't have to read the file and then write to it at once)
+		//       - or: write the SQL-Server showplan into a javascript variable, and then:
+		//         <div id="container"></div>
+		//         <script>
+		//             QP.showPlan(document.getElementById("container"), '<ShowPlanXML...');
+		//         </script> 
+		//         like the authur suggest on: https://github.com/JustinPealing/html-query-plan
+//		transform(xmlPlan, xsltFile, outputHTML);
+		
+//		String fileContent = FileUtils.readFile(outputHTML, null);
+		
+		// Write HTML file
+		BufferedWriter out = null;
+		try
+		{
+			FileWriter fstream = new FileWriter(outputHTML);
+			out = new BufferedWriter(fstream);
+			out.write("<html>                                                                    \n");
+			out.write("                                                                          \n");
+			out.write("<head>                                                                    \n");
+			out.write("    <META http-equiv='Content-Type' content='text/html; charset=UTF-8'>   \n");
+			out.write("    <title>Execution plan</title>                                         \n");
+			out.write("    <link rel='stylesheet' type='text/css' href='css/qp.css'>             \n");
+			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
+			out.write("</head>                                                                   \n");
+			out.write("                                                                          \n");
+			out.write("<body>                                                                    \n");
+			out.write("<h2>" + Version.getAppName() + " - Simple Showplan viewer</h2>            \n");
+			out.write("The query plan is embedded in the HTML Source text...<br>                 \n");
+			out.write("Feel free to copy the shoplan xml and past it into some other tool...<br> \n");
+			out.write("For example the online tool: <a target='_blank' href='http://www.supratimas.com/'>http://www.supratimas.com/</a><br> \n");
+			out.write("<button onclick='copyShowplanToClipboard()'>Copy Showplan</button> <br>   \n");
+			out.write("<br>                                                                      \n");
+			out.write("<hr>                                                                      \n");
+			out.write("<br>                                                                      \n");
+
+			out.write("<div id='container'></div>                                                \n");
+
+			// write the below to the file, note the backtick (`) on the "var showplan = ``" which is EcmaScript6 syntax to escape newlines, single/double quotes etc... 
+			// <script>
+			//     var showplanText = `<ShowPlanXML...`;
+			//     QP.showPlan(document.getElementById("container"), showplanText);
+			// </script> 
+
+			out.write("<script>                                                                  \n");
+			out.write("    var showplanText = `"); // note the backtick char
+			out.write(xmlPlan);
+			out.write("`;\n");                     // note the backtick char
+			out.write("    QP.showPlan(document.getElementById('container'), showplanText);      \n");
+//			out.write("</script>                                                                 \n");
+
+			out.write("                                                                          \n");
+//			out.write("<script>                                                                  \n");
+			out.write("function copyShowplanToClipboard()                                        \n");
+			out.write("{                                                                         \n");
+			out.write("    window.prompt('Copy to clipboard: Ctrl+C, Enter', showplanText);      \n");
+//			out.write("    showplanText.select();                                                \n");
+//			out.write("    document.execCommand('Copy');                                         \n");
+//			out.write("    console.log('Copied the text: ' + copyText.value);                    \n");
+//			out.write("    alert('Copied the text: ' + copyText.value);                          \n");
+			out.write("}                                                                         \n");
+			out.write("</script>                                                                 \n");
+			out.write("                                                                          \n");
+
+			out.write("</body>                                                                   \n");
+			out.write("                                                                          \n");
+			out.write("</html>                                                                   \n");
+		}
+		catch (IOException e)
+		{
+			throw e;
+		}
+		finally
+		{
+			if(out != null) 
+				out.close();
+		}
 
 		return outputHTML;
-//		File destDir = new File(getTmpShowplanPath() + getJarDir());
-//		String xsltFile = getTmpShowplanPath() + getTemplateJarDir() + getXsltFile();
-//		try
-//		{
-//			File outputHTML = File.createTempFile("showplan_", ".html", destDir);
-//			outputHTML.deleteOnExit();
-//
-//			transform(xmlPlan, xsltFile, outputHTML);
-//
-//			return outputHTML;
-//		}
-//		catch (TransformerConfigurationException e)
-//		{
-//			System.err.println("TransformerConfigurationException");
-//			System.err.println(e);
-//		}
-//		catch (TransformerException e)
-//		{
-//			System.err.println("TransformerException");
-//			System.err.println(e);
-//		}
-//		catch (IOException e)
-//		{
-//			System.err.println("IOException");
-//			e.printStackTrace();
-//		}
-//		
-//		return null;
 	}
+
 
 	/**
 	 * Transform XML into HTML
@@ -418,5 +567,6 @@ public abstract class ShowplanHtmlView
             "";
 
 		ShowplanHtmlView.show(Type.SQLSERVER, xmlPlan);
+		try {Thread.sleep(20*1000);} catch(InterruptedException ignore) {} // To make the file stay fore a few seconds...
 	}
 }

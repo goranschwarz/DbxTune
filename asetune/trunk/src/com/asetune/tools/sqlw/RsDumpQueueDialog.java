@@ -69,6 +69,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jdesktop.swingx.JXTable;
 
+import com.asetune.AppDir;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionDialog;
@@ -261,30 +262,25 @@ implements ActionListener
 	throws Exception
 	{
 		Version.setAppName("Dump Queue");
-		
+
 		// Create store dir if it did not exists.
-		File appStoreDir = new File(Version.getAppStoreDir());
-		if ( ! appStoreDir.exists() )
-		{
-			if (appStoreDir.mkdir())
-				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
-		}
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
 
 		
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
-		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "dbxtune.properties");
-		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "rsDumpQueue.user.properties");
-		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "rsDumpQueue.save.properties");
+		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "conf" + File.separatorChar + "dbxtune.properties");
+		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "conf" + File.separatorChar + "rsDumpQueue.user.properties");
+		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "conf" + File.separatorChar + "rsDumpQueue.save.properties");
 		final String RS_DUMP_QUEUE_HOME    = System.getProperty("RS_DUMP_QUEUE_HOME");
 		
-		String defaultPropsFile     = (RS_DUMP_QUEUE_HOME       != null) ? RS_DUMP_QUEUE_HOME       + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (RS_DUMP_QUEUE_HOME      != null) ? RS_DUMP_QUEUE_HOME      + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -393,6 +389,13 @@ implements ActionListener
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+
+		if (crAppDirLog != null && !crAppDirLog.isEmpty())
+		{
+			_logger.info("Below messages was created earlier by 'check/create application directory'.");
+			for (String msg : crAppDirLog)
+				_logger.info(msg);
 		}
 
 		// Do a dummy encryption, this will hopefully speedup, so that the connection dialog wont hang for a long time during initialization

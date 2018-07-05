@@ -1,5 +1,7 @@
 package com.asetune.utils;
 
+import java.math.BigDecimal;
+
 public class MathUtils
 {
 
@@ -24,6 +26,36 @@ public class MathUtils
 		return (val >= baseLow && val <= baseHigh);
 	}
 	
+	/**
+	 * Round a Decimal into some decimals points, using BigDecimal.ROUND_HALF_EVEN
+	 * 
+	 * @param val      The Decimal value to round
+	 * @param scale    To number of decimals
+	 */
+	public static Double round(Double val, int scale)
+	{
+		if (val == null)
+			return null;
+		
+		BigDecimal bd = new BigDecimal( val ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		return bd.doubleValue();
+	}
+	
+	/**
+	 * Round a Float into some decimals points, using BigDecimal.ROUND_HALF_EVEN
+	 * 
+	 * @param val      The Float value to round
+	 * @param scale    To number of decimals
+	 */
+	public static Double round(Float val, int scale)
+	{
+		if (val == null)
+			return null;
+		
+		BigDecimal bd = new BigDecimal( val ).setScale(scale, BigDecimal.ROUND_HALF_EVEN);
+		return bd.doubleValue();
+	}
+	
 	public static void main(String[] args)
 	{
 		System.out.println("near(10, 100, 80 ) == false : " + pctNear(10, 100, 80));
@@ -35,5 +67,8 @@ public class MathUtils
 		System.out.println("near(10, 100, 110) == true  : " + pctNear(10, 100, 110));
 		System.out.println("near(10, 100, 111) == false : " + pctNear(10, 100, 111));
 		System.out.println("near(10, 100, 120) == false : " + pctNear(10, 100, 120));
+
+		System.out.println("round(1.1234d, 1) == 1.1 : " + round(1.1234d, 1));
+		System.out.println("round(1.1234f, 1) == 1.1 : " + round(1.1234f, 1));
 	}
 }

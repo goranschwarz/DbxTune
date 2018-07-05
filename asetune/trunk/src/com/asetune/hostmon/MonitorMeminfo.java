@@ -82,12 +82,12 @@ extends HostMonitor
 
 	public static HostMonitorMetaData[] createOfflineMetaData()
 	{
-		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[4];
+		HostMonitorMetaData[] mdArr = new HostMonitorMetaData[1];
 
-		mdArr[0] = new MonitorUpTimeAllOs().createMetaData();
-		mdArr[1] = new MonitorUpTimeAllOs().createMetaData();
-		mdArr[2] = new MonitorUpTimeAllOs().createMetaData();
-		mdArr[3] = new MonitorUpTimeAllOs().createMetaData();
+		mdArr[0] = new MonitorMeminfoLinux().createMetaData();
+//		mdArr[1] = new MonitorMeminfoLinux().createMetaData();
+//		mdArr[2] = new MonitorMeminfoLinux().createMetaData();
+//		mdArr[3] = new MonitorMeminfoLinux().createMetaData();
 
 		return mdArr;
 	}

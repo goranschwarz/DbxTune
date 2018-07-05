@@ -273,8 +273,8 @@ extends CountersModel
 		         QueryOptimizationTime + ase160_sp3_nl +
 		         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
 		         "P.SecondsWaiting, P.WaitEventID, \n" +
-		         "WaitClassDesc=convert(varchar(50),''), \n" +
-		         "WaitEventDesc=convert(varchar(50),''), \n" +
+		         "WaitClassDesc=convert(varchar(80),''), \n" +
+		         "WaitEventDesc=convert(varchar(80),''), \n" +
 		         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
 		         "S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n";
@@ -358,8 +358,8 @@ extends CountersModel
 		         QueryOptimizationTime_union + ase160_sp3_nl +
 		         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
 		         "P.SecondsWaiting, P.WaitEventID, \n" +
-		         "WaitClassDesc=convert(varchar(50),''), \n" +
-		         "WaitEventDesc=convert(varchar(50),''), \n" +
+		         "WaitClassDesc=convert(varchar(80),''), \n" +
+		         "WaitEventDesc=convert(varchar(80),''), \n" +
 		         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
 		         "MemUsageKB=-1, "+PhysicalReads+", "+LogicalReads+", \n";

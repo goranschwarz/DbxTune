@@ -96,6 +96,7 @@ public class ResultSetTableModel
 	private PipeCommand                  _pipeCmd               = null;
 	private boolean                      _cancelled             = false;
 	private int                          _abortedAfterXRows     = -1;
+	private int                          _discardedXRows        = -1;
 
 	private boolean                      _stringTrim            = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_StringTrim,     DEFAULT_StringTrim);
 	private boolean                      _showRowNumber         = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_ShowRowNumber,  DEFAULT_ShowRowNumber);
@@ -125,7 +126,7 @@ public class ResultSetTableModel
 	private ResultSetTableModel(ResultSetMetaData rsmd) 
 	throws SQLException
 	{
-		this(null, rsmd, false, "getResultSetInfo", -1, false, null, null);
+		this(null, rsmd, false, "getResultSetInfo", -1, -1, false, null, null);
 	}
 
 	/**
@@ -139,14 +140,14 @@ public class ResultSetTableModel
 	public ResultSetTableModel(ResultSet rs, boolean editable, String name) 
 	throws SQLException
 	{
-		this(rs, editable, name, -1, false, null, null);
+		this(rs, editable, name, -1, -1, false, null, null);
 	}
-	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, int onlyLastXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
-		this(rs, rs.getMetaData(), editable, name, stopAfterXrows, noData, pipeCommand, progress);
+		this(rs, rs.getMetaData(), editable, name, stopAfterXrows, onlyLastXrows, noData, pipeCommand, progress);
 	}
-	public ResultSetTableModel(ResultSet rs, ResultSetMetaData rsmd, boolean editable, String name, int stopAfterXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	public ResultSetTableModel(ResultSet rs, ResultSetMetaData rsmd, boolean editable, String name, int stopAfterXrows, int onlyLastXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
 		long startTime = System.currentTimeMillis();
@@ -159,7 +160,8 @@ public class ResultSetTableModel
 		if (getName() != null)
 			setName(getName().replace('\n', ' ')); // remove newlines in name
 
-		int maxDisplaySize = 32768;
+//		int maxDisplaySize = 32768;
+		int maxDisplaySize = 65536;
 		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
 		catch (NumberFormatException ignore) {};
 
@@ -274,6 +276,7 @@ public class ResultSetTableModel
 				sb.append(str);
 				rowCount++;
 			}
+			rs.close();
 			ArrayList<Object> row = new ArrayList<Object>();
 			row.add(sb.toString());
 			_rows.add(row);
@@ -298,6 +301,20 @@ public class ResultSetTableModel
 				{
 					_abortedAfterXRows = _readCount;
 					break;
+				}
+			}
+				
+			if ( onlyLastXrows > 0 )
+			{
+				if (_readCount >= onlyLastXrows)
+				{
+					if (_discardedXRows < 0)
+						_discardedXRows = 0;
+
+					_discardedXRows++;
+					
+					// Remove "first" row in the returned results
+					_rows.remove(0);
 				}
 			}
 				
@@ -389,6 +406,7 @@ public class ResultSetTableModel
 				rowCount++;
 			}			
 		}
+		rs.close();
 
 		// add 2 chars for BINARY types
 		for (int c=0; c<(_numcols-1); c++)
@@ -488,6 +506,15 @@ public class ResultSetTableModel
 	public int getAbortedAfterXRows()
 	{
 		return _abortedAfterXRows;
+	}
+
+	public boolean wasBottomApplied()
+	{
+		return _discardedXRows >= 0;
+	}
+	public int getBottomXRowsDiscarded()
+	{
+		return _discardedXRows;
 	}
     
 	/**
@@ -788,7 +815,7 @@ public class ResultSetTableModel
 		case java.sql.Types.DATALINK:      return "java.sql.Types.DATALINK";
 		case java.sql.Types.BOOLEAN:       return "java.sql.Types.BOOLEAN";
 
-		//------------------------- JDBC 4.0 -----------------------------------
+		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
 		case java.sql.Types.ROWID:         return "java.sql.Types.ROWID";
 		case java.sql.Types.NCHAR:         return "java.sql.Types.NCHAR";
 		case java.sql.Types.NVARCHAR:      return "java.sql.Types.NVARCHAR";
@@ -796,13 +823,112 @@ public class ResultSetTableModel
 		case java.sql.Types.NCLOB:         return "java.sql.Types.NCLOB";
 		case java.sql.Types.SQLXML:        return "java.sql.Types.SQLXML";
 
-		//------------------------- VENDOR SPECIFIC TYPES ---------------------------
-		case -10:                          return "oracle.jdbc.OracleTypes.CURSOR";
+		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+//		case java.sql.Types.REF_CURSOR:              return "java.sql.Types.REF_CURSOR";
+//		case java.sql.Types.TIME_WITH_TIMEZONE:      return "java.sql.Types.TIME_WITH_TIMEZONE";
+//		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return "java.sql.Types.TIMESTAMP_WITH_TIMEZONE";
+		case 2012:                                   return "java.sql.Types.REF_CURSOR";
+		case 2013:                                   return "java.sql.Types.TIME_WITH_TIMEZONE";
+		case 2014:                                   return "java.sql.Types.TIMESTAMP_WITH_TIMEZONE";
+		
+
+		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+		case -100:                         return "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+		case -101:                         return "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+		case -102:                         return "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+		case -103:                         return "oracle.jdbc.OracleTypes.INTERVALYM";
+		case -104:                         return "oracle.jdbc.OracleTypes.INTERVALDS";
+		case  -10:                         return "oracle.jdbc.OracleTypes.CURSOR";
+		case  -13:                         return "oracle.jdbc.OracleTypes.BFILE";
+		case 2007:                         return "oracle.jdbc.OracleTypes.OPAQUE";
+		case 2008:                         return "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+		case  -14:                         return "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+		case  100:                         return "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+		case  101:                         return "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+//		case    2:                         return "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+//		case   -2:                         return "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+		case  999:                         return "oracle.jdbc.OracleTypes.FIXED_CHAR";
 
 		//------------------------- UNHANDLED TYPES  ---------------------------
 		default:
 			return "unknown-jdbc-datatype("+columnType+")";
 		}
+	}
+
+	/**
+	 * The string representation of "java.sql.Types.INTEGER" -> java.sql.Types.INTEGER the java.sql.Types.XXXX value
+	 * @return
+	 */
+	public static int getColumnJavaSqlTypeNameToInt(String name)
+	{
+		if ("java.sql.Types.BIT"           .equals(name)) return java.sql.Types.BIT;
+		if ("java.sql.Types.TINYINT"       .equals(name)) return java.sql.Types.TINYINT;
+		if ("java.sql.Types.SMALLINT"      .equals(name)) return java.sql.Types.SMALLINT;
+		if ("java.sql.Types.INTEGER"       .equals(name)) return java.sql.Types.INTEGER;
+		if ("java.sql.Types.BIGINT"        .equals(name)) return java.sql.Types.BIGINT;
+		if ("java.sql.Types.FLOAT"         .equals(name)) return java.sql.Types.FLOAT;
+		if ("java.sql.Types.REAL"          .equals(name)) return java.sql.Types.REAL;
+		if ("java.sql.Types.DOUBLE"        .equals(name)) return java.sql.Types.DOUBLE;
+		if ("java.sql.Types.NUMERIC"       .equals(name)) return java.sql.Types.NUMERIC;
+		if ("java.sql.Types.DECIMAL"       .equals(name)) return java.sql.Types.DECIMAL;
+		if ("java.sql.Types.CHAR"          .equals(name)) return java.sql.Types.CHAR;
+		if ("java.sql.Types.VARCHAR"       .equals(name)) return java.sql.Types.VARCHAR;
+		if ("java.sql.Types.LONGVARCHAR"   .equals(name)) return java.sql.Types.LONGVARCHAR;
+		if ("java.sql.Types.DATE"          .equals(name)) return java.sql.Types.DATE;
+		if ("java.sql.Types.TIME"          .equals(name)) return java.sql.Types.TIME;
+		if ("java.sql.Types.TIMESTAMP"     .equals(name)) return java.sql.Types.TIMESTAMP;
+		if ("java.sql.Types.BINARY"        .equals(name)) return java.sql.Types.BINARY;
+		if ("java.sql.Types.VARBINARY"     .equals(name)) return java.sql.Types.VARBINARY;
+		if ("java.sql.Types.LONGVARBINARY" .equals(name)) return java.sql.Types.LONGVARBINARY;
+		if ("java.sql.Types.NULL"          .equals(name)) return java.sql.Types.NULL;
+		if ("java.sql.Types.OTHER"         .equals(name)) return java.sql.Types.OTHER;
+		if ("java.sql.Types.JAVA_OBJECT"   .equals(name)) return java.sql.Types.JAVA_OBJECT;
+		if ("java.sql.Types.DISTINCT"      .equals(name)) return java.sql.Types.DISTINCT;
+		if ("java.sql.Types.STRUCT"        .equals(name)) return java.sql.Types.STRUCT;
+		if ("java.sql.Types.ARRAY"         .equals(name)) return java.sql.Types.ARRAY;
+		if ("java.sql.Types.BLOB"          .equals(name)) return java.sql.Types.BLOB;
+		if ("java.sql.Types.CLOB"          .equals(name)) return java.sql.Types.CLOB;
+		if ("java.sql.Types.REF"           .equals(name)) return java.sql.Types.REF;
+		if ("java.sql.Types.DATALINK"      .equals(name)) return java.sql.Types.DATALINK;
+		if ("java.sql.Types.BOOLEAN"       .equals(name)) return java.sql.Types.BOOLEAN;
+
+		//------------------------- JDBC 4.0 -----------------------------------
+		if ("java.sql.Types.ROWID"         .equals(name)) return java.sql.Types.ROWID;
+		if ("java.sql.Types.NCHAR"         .equals(name)) return java.sql.Types.NCHAR;
+		if ("java.sql.Types.NVARCHAR"      .equals(name)) return java.sql.Types.NVARCHAR;
+		if ("java.sql.Types.LONGNVARCHAR"  .equals(name)) return java.sql.Types.LONGNVARCHAR;
+		if ("java.sql.Types.NCLOB"         .equals(name)) return java.sql.Types.NCLOB;
+		if ("java.sql.Types.SQLXML"        .equals(name)) return java.sql.Types.SQLXML;
+
+		//------------------------- JDBC 4.2 -----------------------------------
+//		if ("java.sql.Types.REF_CURSOR"             .equals(name)) return java.sql.Types.REF_CURSOR;
+//		if ("java.sql.Types.TIME_WITH_TIMEZONE"     .equals(name)) return java.sql.Types.TIME_WITH_TIMEZONE;
+//		if ("java.sql.Types.TIMESTAMP_WITH_TIMEZONE".equals(name)) return java.sql.Types.TIMESTAMP_WITH_TIMEZONE;
+		if ("java.sql.Types.REF_CURSOR"             .equals(name)) return 2012;
+		if ("java.sql.Types.TIME_WITH_TIMEZONE"     .equals(name)) return 2013;
+		if ("java.sql.Types.TIMESTAMP_WITH_TIMEZONE".equals(name)) return 2014;
+		
+		
+		//------------------------- VENDOR SPECIFIC TYPES ---------------------------
+		if ("oracle.jdbc.OracleTypes.TIMESTAMPNS"       .equals(name)) return -100;
+		if ("oracle.jdbc.OracleTypes.TIMESTAMPTZ"       .equals(name)) return -101;
+		if ("oracle.jdbc.OracleTypes.TIMESTAMPLTZ"      .equals(name)) return -102;
+		if ("oracle.jdbc.OracleTypes.INTERVALYM"        .equals(name)) return -103;
+		if ("oracle.jdbc.OracleTypes.INTERVALDS"        .equals(name)) return -104;
+		if ("oracle.jdbc.OracleTypes.CURSOR"            .equals(name)) return  -10;
+		if ("oracle.jdbc.OracleTypes.BFILE"             .equals(name)) return  -13;
+		if ("oracle.jdbc.OracleTypes.OPAQUE"            .equals(name)) return 2007;
+		if ("oracle.jdbc.OracleTypes.JAVA_STRUCT"       .equals(name)) return 2008;
+		if ("oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE" .equals(name)) return  -14;
+		if ("oracle.jdbc.OracleTypes.BINARY_FLOAT"      .equals(name)) return  100;
+		if ("oracle.jdbc.OracleTypes.BINARY_DOUBLE"     .equals(name)) return  101;
+		if ("oracle.jdbc.OracleTypes.NUMBER"            .equals(name)) return  java.sql.Types.NUMERIC;
+		if ("oracle.jdbc.OracleTypes.RAW"               .equals(name)) return  java.sql.Types.BINARY;
+		if ("oracle.jdbc.OracleTypes.FIXED_CHAR"        .equals(name)) return  999;
+
+		//------------------------- UNHANDLED TYPES  ---------------------------
+		_logger.warn("The string JDBC Datatype '"+name+"' is unknown, returning Integer.MIN_VALUE = "+ Integer.MIN_VALUE);
+		return Integer.MIN_VALUE;
 	}
 
 // The below has not been tested... probably needs more work
@@ -931,6 +1057,10 @@ public class ResultSetTableModel
 		if (clazz == null)
 			clazz = Object.class;
 		return clazz;
+
+//		if (_rsmdColumnType.get(colid) == Types.TIMESTAMP)
+//			clazz = Timestamp.class;
+//System.out.println("getColumnClass(colid="+colid+"): <<< "+clazz);
 
 		// So maybe the best thing would be to return a hard coded value based on the java.sql.Types
 //		return getColumnJavaSqlClass(colid);

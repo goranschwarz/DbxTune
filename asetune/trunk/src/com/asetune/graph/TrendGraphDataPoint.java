@@ -18,6 +18,11 @@ implements Cloneable
 //	private Timestamp _ts   = null;
 	private Date      _date = null;
 
+	private String    _graphLabel     = null;
+	private Category  _category       = Category.OTHER;
+	private boolean   _isPercentGraph = false;
+	private boolean   _visibleAtStart = false;
+	
 	private String[] _labelArray        = null; //        the label to use for this "line"
 	private String[] _labelDisplayArray = null; // the "real" label to use for this "line", if this isn't null: _labelArray will be the real "key"...
 	private Double[] _dataArray         = null;
@@ -30,12 +35,54 @@ implements Cloneable
 	{
 		Dynamic, Static
 	};
-	
-//	public TrendGraphDataPoint(String name)
+
+	public enum Category
+	{
+		/** Usnspecified */
+		OTHER, 
+		
+		/** CPU Resources */
+		CPU, 
+
+		/** DISK Resources */
+		DISK, 
+
+		/** SPACE utilizarion Resources */
+		SPACE, 
+
+		/** NETWORK Resources */
+		NETWORK, 
+
+		/** Server Configuration */
+		SRV_CONFIG, 
+
+		/** Data Cache */
+		CACHE, 
+
+		/** LOCK */
+		LOCK,
+		
+		/** OPERATIONS */
+		OPERATIONS,
+		
+		/** WAITS */
+		WAITS,
+		
+		/** REPLICATION */
+		REPLICATION, 
+		
+		/** MEMORY */
+		MEMORY,
+		
+	};
+
+
+//	@Deprecated
+//	public TrendGraphDataPoint(String name, String[] labelArray, LabelType labelType)
 //	{
-//		this(name, null);
+//		this(name, "-This-Constructor-Will-Be-Removed-ASAP-", false, labelArray, labelType);
 //	}
-	public TrendGraphDataPoint(String name, String[] labelArray, LabelType labelType)
+	public TrendGraphDataPoint(String name, String graphLabel, TrendGraphDataPoint.Category category, boolean isPercentGraph, boolean visibleAtStart, String[] labelArray, LabelType labelType)
 	{
 		if ( LabelType.Dynamic.equals(labelType) && labelArray == null)
 			_labelArray = RUNTIME_REPLACED_LABELS;
@@ -43,8 +90,12 @@ implements Cloneable
 		if (labelArray == null)
 			throw new RuntimeException("Sorry you can not initialize the TrendGraphDataPoint, named '"+name+"' with a null labelArray. Please use 'TrendGraphDataPoint.RUNTIME_REPLACED_LABELS', if they are not known at initialization time.");
 
-		_name         = name;
-		_labelType    = labelType;
+		_name           = name;
+		_graphLabel     = graphLabel;
+		_category       = category;
+		_isPercentGraph = isPercentGraph;
+		_visibleAtStart = visibleAtStart;
+		_labelType      = labelType;
 		
 		if ( labelArray.equals(RUNTIME_REPLACED_LABELS) )
 		{
@@ -266,6 +317,10 @@ implements Cloneable
 	// Also have a look at setData(Date date, Map<String, Double> map, Map<String, String> displayLabelMap)
 	
 	public String   getName ()                { return _name; }
+	public String   getGraphLabel ()          { return _graphLabel; }
+	public Category getCategory ()            { return _category; }
+	public boolean  isPercentGraph()          { return _isPercentGraph; }
+	public boolean  isVisibleAtStart()        { return _visibleAtStart; }
 	public Date     getDate ()                { return _date; }
 //	public String[] getLabel()                { return _labelDisplayArray; }
 //	public String[] getLabelDisplay()         { return null; }

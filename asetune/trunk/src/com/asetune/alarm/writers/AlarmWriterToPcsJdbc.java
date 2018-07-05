@@ -79,27 +79,47 @@ extends AlarmWriterAbstract
 		_rows.add( new AlarmEventWrapper(entry, action) );
 	}
 
+//	/**
+//	 * Get a List of all entries
+//	 * 
+//	 * @param makeNewList purge the old list (actually returns current list, and creates a new List for new events)
+//	 * @return
+//	 */
+//	public synchronized List<AlarmEventWrapper> getList(boolean makeNewList)
+//	{
+//		// If empty... exit early
+//		if (_rows.isEmpty())
+//			return Collections.emptyList();
+//		
+//		List<AlarmEventWrapper> retList = _rows;
+//
+//		// start a new list
+//		if (makeNewList)
+//			clear();
+//
+//		return retList;
+//	}
 	/**
 	 * Get a List of all entries
 	 * 
-	 * @param makeNewList purge the old list (actually returns current list, and creates a new List for new events)
 	 * @return
 	 */
-	public synchronized List<AlarmEventWrapper> getList(boolean makeNewList)
+	public synchronized List<AlarmEventWrapper> getList()
 	{
 		// If empty... exit early
 		if (_rows.isEmpty())
 			return Collections.emptyList();
 		
-		List<AlarmEventWrapper> retList = _rows;
-
-		// start a new list
-		if (makeNewList)
-			_rows = new ArrayList<>();
-
-		return retList;
+		return _rows;
 	}
 
+	/**
+	 * Clear or start a new list
+	 */
+	public void clear()
+	{
+		_rows = new ArrayList<>();
+	}
 	
 	/*---------------------------------------------------
 	** PRIVATE Methods
@@ -112,6 +132,9 @@ extends AlarmWriterAbstract
 	*/
 	@Override public boolean isCallReRaiseEnabled() { return true; }
 	@Override public void    printConfig() {}
+	@Override public void    printFilterConfig() {}
+	@Override public boolean doAlarm(AlarmEvent ae) { return true; }
+	@Override public List<CmSettingsHelper> getAvailableFilters() { return new ArrayList<CmSettingsHelper>(); }
 
 	@Override
 	public String getDescription()
@@ -189,9 +212,11 @@ extends AlarmWriterAbstract
 				"", // serviceName
 				"", // serviceInfo
 				"", // extraInfo
+				AlarmEvent.Category.INTERNAL,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UNKNOWN, 
-				"EndOfScan activeAlarmSize="+activeAlarmSize);
+				"EndOfScan activeAlarmSize="+activeAlarmSize,
+				null);
 			
 			setData(activeAlarmSize);
 		}

@@ -6,7 +6,7 @@ extends ShowplanHtmlView
 	@Override
 	protected String getXsltFile()
 	{
-		return "qp_page.xslt";
+		return "src/qp.xslt";
 	}
 
 	@Override

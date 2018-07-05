@@ -43,6 +43,7 @@ import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeNode;
@@ -684,8 +685,20 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 		final TrendGraphDashboardPanel tgdp = CounterController.getSummaryPanel().getGraphPanel();
 		if (tgdp != null)
 		{
-			// FIXME: This do not seems to work... maybe do it in a timer with a delay of 500ms instead
-			SwingUtilities.invokeLater(new Runnable() { @Override public void run() { tgdp.reLayout(); } });
+			// FIXME: This do not seems to work... maybe do it in a timer with a delay of ###ms instead
+			//SwingUtilities.invokeLater(new Runnable() { @Override public void run() { tgdp.reLayout(); } });
+			
+			Timer deferedAction = new Timer(500, new ActionListener() 
+			{
+				@Override
+				public void actionPerformed(ActionEvent evt) 
+				{
+					tgdp.reLayout();
+				}    
+			});
+			deferedAction.setInitialDelay(500);
+			deferedAction.setRepeats(false);
+			deferedAction.start();
 		}
 	}
 

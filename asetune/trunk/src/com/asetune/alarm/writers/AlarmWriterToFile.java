@@ -58,11 +58,17 @@ extends AlarmWriterAbstract
 		//------------------------------------------
 		// Check for valid configuration
 		//------------------------------------------
+		checkAlarmActiveFileForWrite();
+		checkAlarmLogFileForWrite();
+	}
 
+	private void checkAlarmActiveFileForWrite()
+	throws Exception
+	{
 		// Check that we can write to the ACTIVE file
 		try
 		{
-			PrintStream writeToFile = new PrintStream( new FileOutputStream(_activeAlarms_writeToFileName) );
+			PrintStream writeToFile = new PrintStream( new FileOutputStream(_activeAlarms_writeToFileName) ); // LEAVE THIS TO OVERWRITE
 			writeToFile.close();
 		}
 		catch (FileNotFoundException e) // If the directory isn't found
@@ -71,7 +77,11 @@ extends AlarmWriterAbstract
 			_logger.error(msg);
 			throw new Exception(msg, e);
 		}
+	}
 
+	private void checkAlarmLogFileForWrite()
+	throws Exception
+	{
 		// Check that we can write to the LOG file
 		if (StringUtil.hasValue(_alarmLog_writeToFileName))
 		{
@@ -81,7 +91,7 @@ extends AlarmWriterAbstract
 			try
 			{
 				// TEST to write to file...
-				PrintStream writeToFile = new PrintStream( new FileOutputStream(_alarmLog_writeToFileName, true) );
+				PrintStream writeToFile = new PrintStream( new FileOutputStream(_alarmLog_writeToFileName, true) ); // THIS SHOULD BE APPEND
 				writeToFile.close();
 			}
 			catch (FileNotFoundException e) // If the directory isn't found
@@ -93,7 +103,7 @@ extends AlarmWriterAbstract
 		}
 	}
 
-	
+
 	private void checkForConfigChanges()
 	{
 		Configuration conf = getConfiguration();
@@ -107,12 +117,20 @@ extends AlarmWriterAbstract
 		{
 			_logger.info("Alarm Writer named '"+getName()+"' detected config change for '"+PROPKEY_activeFilename+"', oldVal='"+_activeAlarms_writeToFileName+"', newVal='"+new_activeAlarms_writeToFileName+"'.");
 			_activeAlarms_writeToFileName = new_activeAlarms_writeToFileName;
+
+			// Check/Create the file, do not care about exceptions
+			try { checkAlarmActiveFileForWrite(); }
+			catch(Exception ignore) {}
 		}
 
 		if ( ! new_alarmLog_writeToFileName.equals(_alarmLog_writeToFileName) )
 		{
 			_logger.info("Alarm Writer named '"+getName()+"' detected config change for '"+PROPKEY_logFilename+"', oldVal='"+_alarmLog_writeToFileName+"', newVal='"+new_alarmLog_writeToFileName+"'.");
 			_alarmLog_writeToFileName = new_alarmLog_writeToFileName;
+
+			// Check/Create the file, do not care about exceptions
+			try { checkAlarmLogFileForWrite(); }
+			catch(Exception ignore) {}
 		}
 	}
 	
@@ -159,13 +177,13 @@ extends AlarmWriterAbstract
 	}
 
 	public static final String  PROPKEY_activeFilename                = "AlarmWriterToFile.active.filename";
-	public static final String  DEFAULT_activeFilename                = "";
+	public static final String  DEFAULT_activeFilename                = "${HOME}/.dbxtune/dbxc/log/ALARM.ACTIVE.${SERVERNAME:-unknown}.txt";
 
 	public static final String  PROPKEY_toActiveTemplate              = "AlarmWriterToFile.active.msg.template";
 	public static final String  DEFAULT_toActiveTemplate              = createActiveTemplate();
 
 	public static final String  PROPKEY_logFilename                   = "AlarmWriterToFile.log.filename";
-	public static final String  DEFAULT_logFilename                   = "";
+	public static final String  DEFAULT_logFilename                   = "${HOME}/.dbxtune/dbxc/log/ALARM.LOG.${SERVERNAME:-unknown}.log";
 
 	public static final String  PROPKEY_toLogTemplate                 = "AlarmWriterToFile.log.msg.template";
 	public static final String  DEFAULT_toLogTemplate                 = createLogTemplate();
@@ -179,16 +197,16 @@ extends AlarmWriterAbstract
 
 	public static String createLogTemplate()
 	{
-		return "${StringUtil.format('%-23s - %-10s - %-40s - %-30s - %-30s - %-30s - %-10s - %-10s - %8.8s - %s', ${crTimeStr}, ${type}, ${alarmClass}, ${serviceName}, ${serviceInfo}, ${extraInfo}, ${severity}, ${state}, ${duration}, ${description})}";
+		return "${StringUtil.format('%-23s - %-10s - %-40s - %-30s - %-30s - %-30s - %-10s - %-10s - %-10s - %8.8s - %s', ${crTimeStr}, ${type}, ${alarmClass}, ${serviceName}, ${serviceInfo}, ${extraInfo}, ${category}, ${severity}, ${state}, ${duration}, ${description})}";
 	}
 
 	public static String createActiveTemplate()
 	{
 		return ""
-			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Severity', 'State', 'Duration', 'Description')}\n"
-			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
+			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', 'AlarmClassAbriviated', 'ServerName', 'CmName', 'ExtraInfo', 'Category', 'Severity', 'State', 'Duration', 'Description')}\n"
+			+ "${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 30)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 10)} ${StringUtils.repeat('-', 8)} ${StringUtils.repeat('-', 80)}\n"
 			+ "#foreach( $alarm in $activeAlarmList )\n"
-			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.severity}, ${alarm.state}, ${alarm.duration}, ${alarm.description})}\n"
+			+ "${StringUtil.format('%-30s %-30s %-30s %-30s %-10s %-10s %-10s %8.8s %s', ${alarm.alarmClassAbriviated}, ${alarm.serviceName}, ${alarm.serviceInfo}, ${alarm.extraInfo}, ${alarm.category}, ${alarm.severity}, ${alarm.state}, ${alarm.duration}, ${alarm.description})}\n"
 			+ "#end"
 			;
 	}
@@ -324,7 +342,7 @@ extends AlarmWriterAbstract
 		PrintStream writeToFile = null;
 		try
 		{
-			writeToFile = new PrintStream( new FileOutputStream(_alarmLog_writeToFileName, true) );
+			writeToFile = new PrintStream( new FileOutputStream(_alarmLog_writeToFileName, true) ); // APPEND MODE
 		}
 		catch (FileNotFoundException e)
 		{
@@ -361,7 +379,7 @@ extends AlarmWriterAbstract
 		try
 		{
 			// TEST to write to file...
-			writeToFile = new PrintStream( new FileOutputStream(_activeAlarms_writeToFileName) );
+			writeToFile = new PrintStream( new FileOutputStream(_activeAlarms_writeToFileName) ); // OVERWRITE MODE
 		}
 		catch (FileNotFoundException e)
 		{

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>DbxTune - Central</title>
+
+  <!-- 
+    =======================================================================
+    == JS imports - JAVA SCRIPTS GOES HERE
+    =======================================================================
+  -->
+  <!-- JS: JQuery -->
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
+  
+  <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
+  <script type="text/javascript" src="/scripts/moment/moment.js"></script>
+  <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
+
+  <!-- JS: Bootstrap -->
+  <script src="/scripts/popper/1.12.9/popper.min.js"></script>
+  <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+
+  <!-- JS: DbxCentral -->
+  <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
+
+  <!-- 
+    =======================================================================
+    == CSS imports - STYLES SHEETS GOES HERE
+    =======================================================================
+  -->
+  <!-- CSS: DbxCentral -->
+  <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
+
+  <!-- CSS: Bootstrap -->
+  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+
+  <!-- CSS: Font Awsome -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+  <!-- Local CSS -->
+  <style type='text/css'>
+    /* table {border-collapse: collapse;}
+    th, td {border: 1px solid black; text-align: left; padding: 2px;}
+    tr:nth-child(even) {background-color: #f2f2f2;} */
+    .dbx-quick-access-tooltip-table table {border-collapse: collapse;}
+    .dbx-quick-access-tooltip-table th, td {border: 1px solid white; text-align: left; padding: 2px;}
+
+    .tooltip-inner { max-width: 1000px; }
+
+    .jumbotron{ margin-top:-30px; }
+  </style>
+
+</head>
+
+<body>
+  <!-- NavBar that works, except for: iphone... -->
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+    <a class="navbar-brand" href="/">DbxCentral</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/overview">Servers</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/admin.html">Admin</a>
+        </li>
+        <li class="nav-item active">
+          <a class="nav-link" href="/desktop_app.html">Desktop App</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
+  <main role="main" class="container">
+    <div class="jumbotron">
+      <h1>DbxTune - Desktop Application</h1>
+      <p class="lead">The native Desktop Application lets you inspect <b>details</b> of a recording.</p>
+      <p></p>
+      Download the public version
+      <div id="dbx-download-public-div">
+        <a class="btn btn-sm btn-primary mb-2" href="http://www.asetune.com/download.html" role="button">Download public version...</a>
+      </div>
+      Download the <i>local</i> version from Dbx Central. <i>This can be a newer/older version than the latest public release</i>
+      <div id="dbx-download-local-div">
+        <a class="btn btn-sm btn-primary mb-2" href="/download-local-dbxtune" role="button">Download local version...</a>
+      </div>
+      <p><br><br></p>
+      <p>
+        <h5>Requirements to run the Native Application</h5>
+        <ul>
+          <li>Java 8 or later installed on your local machine</li>
+          <li>Windows, Mac or Linux (since it's Java it will run <i>anywhere</i>)</li>
+        </ul>
+        <h5>Installation instructions</h5>
+        <ul>
+          <li>Download the ZIP package from above buttons/links</li>
+          <li>unzip it <i>somewhere</i></li>
+          <li>Start: click <code>asetune.bat</code> <i>(for Windows)</i> or <code>asetune.sh</code> <i>(for Mac or Linux)</i><br>
+            <b>Note</b>: Replace <code><b>ase</b>tune</code> with the DBMS flavor you want to view. (ase, iq, rs, rax, sqlserver, postgres, mysql, db2, oracle, hana)
+          </li>
+        </ul>
+        <h5>Connect to a recording (shortcut) <i>Native app needs to be running</i></h5>
+        <ul>
+          <li>In this web page 'nav bar' click <a href="/overview">'Server'</a>, scroll down to <a href="/overview#offline">'Available offline databases'</a></li>
+          <li>Note: To view <i>active/todays</i> recording, click <a href="/overview">'Server'</a>, scroll to <a href="/overview#active">'Active Recordings'</a></li>
+          <li>Click the 'Url' field in the table. <i>This will do: all of the steps in (the long way), which is described below</i></li>
+        </ul>
+        <h5>Connect to a recording (the long way)</h5>
+        <ul>
+          <li>Press: 'Connect', <i>which opens the connection dialog</i></li>
+          <li>Choose Tab: 'Load Recorded Session'.</li>
+          <li>Fill in: 'JDBC Driver', 'JDBC Url', 'Username' and 'Password'. <i>Try: Username='sa', Password=''</i></li>
+          <li>Press: 'OK', <i>Which connect to the recording, and opens a dialog to choose a timespan to view</i></li>
+          <li>Hopefully you are now connected, and you can start to view details...</li>
+          <li>Tip: 'double click' in the graphs to position you in the timeline, then view data in each collector tab.</li>
+        </ul>
+      </p>
+    </div>
+  </main>
+
+
+<script>
+  // Nothing in here yet
+</script>
+
+</body>
+</html>

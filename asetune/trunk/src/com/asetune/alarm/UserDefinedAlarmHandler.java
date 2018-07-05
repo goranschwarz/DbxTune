@@ -20,7 +20,8 @@ public class UserDefinedAlarmHandler
 	private static Logger _logger = Logger.getLogger(UserDefinedAlarmHandler.class);
 
 	public final static String PROPKEY_sourceDir         = "UserDefinedAlarmHandler.source.dir";
-	public final static String DEFAULT_sourceDir         = "alarm-handler-src";
+//	public final static String DEFAULT_sourceDir         = "resources/alarm-handler-src";
+	public final static String DEFAULT_sourceDir         = "${DBXTUNE_UD_ALARM_SOURCE_DIR:-}resources/alarm-handler-src"; // default for ${DBXTUNE_UD_ALARM_SOURCE_DIR} is ''
 	
 	public final static String PROPKEY_packetBaseName    = "UserDefinedAlarmHandler.packet.base.name";
 //	public final static String DEFAULT_packetBaseName    = "com.asetune.cm.alarm";
@@ -74,7 +75,7 @@ public class UserDefinedAlarmHandler
 		_conf = conf; 
 		
 		_logger.info("Initializing User Defined Alarm Handler.");
-		
+
 //        File janinoSourceDirs = new File("janino-src");
 //        File[] srcDirs = new File[]{janinoSourceDirs};
 //        String encoding = null;
@@ -86,6 +87,7 @@ public class UserDefinedAlarmHandler
 
 		// Read configuration.
 		_classSrcDirStr    = conf.getProperty(PROPKEY_sourceDir, DEFAULT_sourceDir);
+		_classSrcDirStr    = StringUtil.envVariableSubstitution(_classSrcDirStr); // resolv any environment variables into a value
 		_classSrcDirFile   = new File(_classSrcDirStr);
 
 		_packetBaseName    = conf.getProperty(PROPKEY_packetBaseName,    DEFAULT_packetBaseName);
@@ -192,7 +194,7 @@ public class UserDefinedAlarmHandler
 		}
 		catch(ClassNotFoundException e)
 		{
-//Caused by: org.codehaus.commons.compiler.CompileException: File 'alarm-handler-src\com\asetune\cm\alarm\ase\Xxx.java', Line 8, Column 11: Cannot determine simple type name "IUserDefinedAlarmInterrogatorXX"
+//Caused by: org.codehaus.commons.compiler.CompileException: File 'resources\alarm-handler-src\com\asetune\cm\alarm\ase\Xxx.java', Line 8, Column 11: Cannot determine simple type name "IUserDefinedAlarmInterrogatorXX"
 			Throwable cause = e.getCause();
 			if (cause instanceof CompileException)
 			{
@@ -200,7 +202,9 @@ public class UserDefinedAlarmHandler
 			}
 			if (cause == null)
 			{
-				_logger.info("User Defined Alarm will NOT be enabled for "+StringUtil.left("'"+cm.getName()+"'.", 25)+" Class-Not-Found when trying to compiling object " + StringUtil.left("'"+className+"'.", 25+Version.getAppName().length()+1) + " Using source directory '" + getSourceDir() + "'. To implement User Defined Alarms for this CM: Create the java file '"+getJavaFileName(cm)+"'.");
+				
+//				_logger.info("User Defined Alarm will NOT be enabled for "+StringUtil.left("'"+cm.getName()+"'.", 25)+" Class-Not-Found when trying to compiling object " + StringUtil.left("'"+className+"'.", 25+Version.getAppName().length()+1) + " Using source directory '" + getSourceDir() + "'. To implement User Defined Alarms for this CM: Create the java file '"+getJavaFileName(cm)+"'.");
+				_logger.info("User   Defined Alarms are NOT enabled for "+StringUtil.left("'"+cm.getName()+"'.", 25)+" Class-Not-Found when trying to compiling object " + StringUtil.left("'"+className+"'.", 25+Version.getAppName().length()+1) + " Using source directory '" + getSourceDir() + "'. To implement User Defined Alarms for this CM: Create the java file '"+getJavaFileName(cm)+"'.");
 				_logger.debug("Class-Not-Found when trying to compiling object '" + className + "' for CM '" + cm.getName() + "'. Using source directory '" + getSourceDir() + "'.");
 			}
 

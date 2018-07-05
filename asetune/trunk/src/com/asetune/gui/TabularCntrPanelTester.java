@@ -444,7 +444,7 @@ public class TabularCntrPanelTester extends JFrame
 				Configuration conf1 = new Configuration("c:\\projects\\asetune\\asetune.save.properties");
 				Configuration.setInstance(Configuration.USER_TEMP, conf1);
 
-				Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
+				Configuration conf2 = new Configuration("c:\\projects\\asetune\\conf\\dbxtune.properties");
 				Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 
 				AseConnectionFactory.setHostPort("goransxp", "5000");

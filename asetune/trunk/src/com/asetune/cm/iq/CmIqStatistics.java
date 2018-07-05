@@ -17,7 +17,6 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -113,52 +112,86 @@ extends CountersModel
 	
 	private void addTrendGraphs()
 	{
-		String[] labels_oper = new String[] { "[Connections Active]", "[Operations Waiting]", "[Operations Active]", "[Active Load Statements]" };
-		String[] labels_disk = new String[] { "[Main Store Disk Reads]",	"[Main Store Disk Writes]", "[Temp Store Disk Reads]", "[Temp Store Disk Writes]", "[Cache Dbspace Disk Reads]", "[Cache Dbspace Disk Writes]"} ;
-		String[] labels_cpus = new String[] { "[Cpu Total Time]", "[Cpu User Time]", "[Cpu System Time]"} ;
-				
-		addTrendGraphData(GRAPH_NAME_STAT_OPER, new TrendGraphDataPoint(GRAPH_NAME_STAT_OPER, labels_oper, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_STAT_DISK, new TrendGraphDataPoint(GRAPH_NAME_STAT_DISK, labels_disk, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_STAT_CPUS, new TrendGraphDataPoint(GRAPH_NAME_STAT_CPUS, labels_cpus, LabelType.Static));
+//		String[] labels_oper = new String[] { "[Connections Active]", "[Operations Waiting]", "[Operations Active]", "[Active Load Statements]" };
+//		String[] labels_disk = new String[] { "[Main Store Disk Reads]",	"[Main Store Disk Writes]", "[Temp Store Disk Reads]", "[Temp Store Disk Writes]", "[Cache Dbspace Disk Reads]", "[Cache Dbspace Disk Writes]"} ;
+//		String[] labels_cpus = new String[] { "[Cpu Total Time]", "[Cpu User Time]", "[Cpu System Time]"} ;
+//				
+//		addTrendGraphData(GRAPH_NAME_STAT_OPER, new TrendGraphDataPoint(GRAPH_NAME_STAT_OPER, labels_oper, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_STAT_DISK, new TrendGraphDataPoint(GRAPH_NAME_STAT_DISK, labels_disk, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_STAT_CPUS, new TrendGraphDataPoint(GRAPH_NAME_STAT_CPUS, labels_cpus, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_STAT_OPER,
-				"Connections, Operations and Load", // Menu CheckBox text
-				"Connections, Operations and Load ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels_oper, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-			
-			tg = new TrendGraph(GRAPH_NAME_STAT_DISK,
-					"Disk activity", // Menu CheckBox text
-					"Disk activity ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					labels_disk, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_STAT_OPER,
+			"Connections, Operations and Load", // Menu CheckBox text
+			"Connections, Operations and Load ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Connections Active", "Operations Waiting", "Operations Active", "Active Load Statements" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+		
+		addTrendGraph(GRAPH_NAME_STAT_DISK,
+			"Disk activity", // Menu CheckBox text
+			"Disk activity ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Main Store Disk Reads",	"Main Store Disk Writes", "Temp Store Disk Reads", "Temp Store Disk Writes", "Cache Dbspace Disk Reads", "Cache Dbspace Disk Writes"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_STAT_CPUS,
-					"CPU usage",                     // Menu CheckBox text
-					"CPU usage (100 per core) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					labels_disk, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		addTrendGraph(GRAPH_NAME_STAT_CPUS,
+			"CPU usage",                     // Menu CheckBox text
+			"CPU usage (100 per core) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Cpu Total Time", "Cpu User Time", "Cpu System Time"}, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+		
+		
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_STAT_OPER,
+//				"Connections, Operations and Load", // Menu CheckBox text
+//				"Connections, Operations and Load ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels_oper, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//			
+//			tg = new TrendGraph(GRAPH_NAME_STAT_DISK,
+//					"Disk activity", // Menu CheckBox text
+//					"Disk activity ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					labels_disk, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_STAT_CPUS,
+//					"CPU usage",                     // Menu CheckBox text
+//					"CPU usage (100 per core) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					labels_disk, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 	
 	@Override

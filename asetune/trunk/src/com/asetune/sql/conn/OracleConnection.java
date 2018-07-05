@@ -159,6 +159,7 @@ extends DbxConnection
 				extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rs.getLong(1), "Estimated rows in the table. Fetched using 'num_rows' from 'all_tables'", null));
 				extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", rs.getLong(2), "Estimated table size in KB. Fetched using 'blocks/128*1024' from 'all_tables'", null));
 			}
+			rs.close();
 		}
 		catch (SQLException ex)
 		{

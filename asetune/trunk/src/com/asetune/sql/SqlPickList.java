@@ -9,6 +9,7 @@ import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -25,10 +26,11 @@ import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.TableModel;
 
+import org.apache.log4j.Logger;
 import org.jdesktop.swingx.sort.RowFilters;
 
-import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.ClickListener;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.SwingUtils;
@@ -43,6 +45,7 @@ import net.miginfocom.swing.MigLayout;
 public class SqlPickList
 extends JDialog
 {
+	private static Logger _logger = Logger.getLogger(SqlPickList.class);
 	private static final long serialVersionUID = 1L;
 
 	@SuppressWarnings("unused")
@@ -56,7 +59,8 @@ extends JDialog
 	protected JLabel            _filter_cnt   = new JLabel();
 
 	private SqlPickListTable    _tab  = null;
-	private ResultSetTableModel _rstm = null;
+//	private ResultSetTableModel _rstm = null;
+	private TableModel _rstm = null;
 	private String              _name = null; 
 
 	private JButton             _ok     = new JButton("OK");
@@ -82,7 +86,8 @@ extends JDialog
 //
 //		setLocationRelativeTo(owner);
 //	}
-	public SqlPickList(Window owner, ResultSetTableModel rstm, String label, boolean showPickMeLabel)
+//	public SqlPickList(Window owner, ResultSetTableModel rstm, String label, boolean showPickMeLabel)
+	public SqlPickList(Window owner, TableModel rstm, String label, boolean showPickMeLabel)
 	{
 		super(owner, (label==null ? "Pick List" : label), ModalityType.APPLICATION_MODAL);
 
@@ -199,13 +204,32 @@ extends JDialog
 			for (int i=0; i<mcols.length; i++)
 				mcols[i] = _tab.convertColumnIndexToModel(i);
 			
-			_tab.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString + ".*", mcols));
+			// If regexp fails, then try to search with "normal" string
+			try
+			{
+				_tab.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString + ".*", mcols));
+			}
+			catch (PatternSyntaxException ex)
+			{
+				// Hmm could not find any "plain" matcher... (didn't have time), so instead strip off '*' chars from search string 
+				// FIXME: create a real "plain" RowFilter
+				
+				// Simply escape * chars and try again...
+				String modSearchString = searchString.replace("*", "\\*");
+				_logger.info("Failed to serach with RegExp, falling back to 'escape' all '*' chars. Current Search String '"+searchString+"', Modified Serach String '"+modSearchString+"', Caught: "+ex);
+				_tab.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, modSearchString + ".*", mcols));
+			}
 		}
 		
 		String rowc = _tab.getRowCount() + "/" + _tab.getModel().getRowCount();
 		_filter_cnt.setText(rowc);
 	}
 
+	public void setFilter(String filter)
+	{
+		_filter_txt.setText(filter);
+		applyFilter();
+	}
 
 //	/**
 //	 * Returns number of rows found 
@@ -250,19 +274,37 @@ extends JDialog
 //	}
 
 
+	public int convertViewRowIndexToModel(int vrow)
+	{
+		return _tab.convertRowIndexToModel(vrow);
+	}
+
 	public boolean wasOkPressed()
 	{
 		return _okWasPressed;
 	}
 
-	public int getSelectedRow()
+	public int getSelectedViewRow()
 	{
 		return _tab.getSelectedRow();
+	}
+
+	public int getSelectedModelRow()
+	{
+		int vrow = _tab.getSelectedRow();
+		if (vrow == -1)
+			return -1;
+
+		return _tab.convertRowIndexToModel(vrow);
 	}
 
 	public int getRowCount()
 	{
 		return _tab.getRowCount();
+	}
+	public int getModelRowCount()
+	{
+		return _tab.getModel().getRowCount();
 	}
 
 	public BigDecimal getSelectedValuesAsBigDecimal(String colName) { return _tab.getSelectedValuesAsBigDecimal(colName, false); }

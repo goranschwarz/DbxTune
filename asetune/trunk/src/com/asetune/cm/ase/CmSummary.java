@@ -23,6 +23,7 @@ import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
 import com.asetune.alarm.events.AlarmEventHighCpuUtilization.CpuType;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -34,6 +35,7 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 /**
@@ -150,231 +152,408 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels_aaCpu            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
-		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" };
-		String[] labels_connRate         = new String[] { "@@connections (rate)" };
-		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
-		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
-		String[] labels_openTran         = new String[] { "Seconds" };
-		String[] labels_lockCount        = new String[] { "Lock Count" };
-
-		String[] labels_transaction      = new String[] { "Transactions", "Rollbacks" };
-		String[] labels_selectOperations = new String[] { "Selects" };
-		String[] labels_iudmOperations   = new String[] { "Inserts", "Updates", "Deletes", "Merges" };
-		String[] labels_tabIndAccess     = new String[] { "TableAccesses", "IndexAccesses" };
-		String[] labels_tempdbAccess     = new String[] { "TempDbObjects", "WorkTables" };
-		String[] labels_ulc              = new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" };
-		String[] labels_ioRw             = new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" };
-		String[] labels_logicalReads     = new String[] { "LogicalReads" };
+//		String[] labels_aaCpu            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
+//		String[] labels_blockingLocks    = new String[] { "Blocking Locks" };
+//		String[] labels_connection       = new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" };
+//		String[] labels_connRate         = new String[] { "@@connections (rate)" };
+//		String[] labels_aaDiskRW         = new String[] { "@@total_read", "@@total_write" };
+//		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+//		String[] labels_openTran         = new String[] { "Seconds" };
+//		String[] labels_lockCount        = new String[] { "Lock Count" };
+//
+//		String[] labels_transaction      = new String[] { "Transactions", "Rollbacks" };
+//		String[] labels_selectOperations = new String[] { "Selects" };
+//		String[] labels_iudmOperations   = new String[] { "Inserts", "Updates", "Deletes", "Merges" };
+//		String[] labels_tabIndAccess     = new String[] { "TableAccesses", "IndexAccesses" };
+//		String[] labels_tempdbAccess     = new String[] { "TempDbObjects", "WorkTables" };
+//		String[] labels_ulc              = new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" };
+//		String[] labels_ioRw             = new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" };
+//		String[] labels_logicalReads     = new String[] { "LogicalReads" };
 		
-		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu,            LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction,      LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_SELECT_OPERATIONS,  new TrendGraphDataPoint(GRAPH_NAME_SELECT_OPERATIONS,  labels_selectOperations, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_IUDM_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_IUDM_OPERATIONS,    labels_iudmOperations,   LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_TAB_IND_ACCESS,     new TrendGraphDataPoint(GRAPH_NAME_TAB_IND_ACCESS,     labels_tabIndAccess,     LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_TEMPDB_ACCESS,      new TrendGraphDataPoint(GRAPH_NAME_TEMPDB_ACCESS,      labels_tempdbAccess,     LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_ULC,                new TrendGraphDataPoint(GRAPH_NAME_ULC,                labels_ulc,              LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_IO_RW,              new TrendGraphDataPoint(GRAPH_NAME_IO_RW,              labels_ioRw,             LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads,     LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks,    LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,       LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate,         LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW,         LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket,       LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,         LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_LOCK_COUNT,         new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT,         labels_lockCount,        LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_AA_CPU,             new TrendGraphDataPoint(GRAPH_NAME_AA_CPU,             labels_aaCpu,            LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_TRANSACTION,        new TrendGraphDataPoint(GRAPH_NAME_TRANSACTION,        labels_transaction,      LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_SELECT_OPERATIONS,  new TrendGraphDataPoint(GRAPH_NAME_SELECT_OPERATIONS,  labels_selectOperations, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_IUDM_OPERATIONS,    new TrendGraphDataPoint(GRAPH_NAME_IUDM_OPERATIONS,    labels_iudmOperations,   LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_TAB_IND_ACCESS,     new TrendGraphDataPoint(GRAPH_NAME_TAB_IND_ACCESS,     labels_tabIndAccess,     LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_TEMPDB_ACCESS,      new TrendGraphDataPoint(GRAPH_NAME_TEMPDB_ACCESS,      labels_tempdbAccess,     LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_ULC,                new TrendGraphDataPoint(GRAPH_NAME_ULC,                labels_ulc,              LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_IO_RW,              new TrendGraphDataPoint(GRAPH_NAME_IO_RW,              labels_ioRw,             LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_LOGICAL_READ,       new TrendGraphDataPoint(GRAPH_NAME_LOGICAL_READ,       labels_logicalReads,     LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_BLOCKING_LOCKS,     new TrendGraphDataPoint(GRAPH_NAME_BLOCKING_LOCKS,     labels_blockingLocks,    LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_CONNECTION,         new TrendGraphDataPoint(GRAPH_NAME_CONNECTION,         labels_connection,       LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_CONNECTION_RATE,    new TrendGraphDataPoint(GRAPH_NAME_CONNECTION_RATE,    labels_connRate,         LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_AA_DISK_READ_WRITE, new TrendGraphDataPoint(GRAPH_NAME_AA_DISK_READ_WRITE, labels_aaDiskRW,         LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket,       LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_OLDEST_TRAN_IN_SEC, new TrendGraphDataPoint(GRAPH_NAME_OLDEST_TRAN_IN_SEC, labels_openTran,         LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_LOCK_COUNT,         new TrendGraphDataPoint(GRAPH_NAME_LOCK_COUNT,         labels_lockCount,        LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_AA_CPU,
-				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Label 
-				labels_aaCpu, 
-				true,  // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_AA_CPU,
+			"CPU Summary, Global Variables", 	                                         // Menu CheckBox text
+			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Graph Label 
+			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
-				"ASE Operations - Transaction per second",                         // Menu CheckBox text
-				"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
-				labels_transaction, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1503030, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,0,3,3), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_TRANSACTION,
+			"ASE Operations - Transaction per second",                         // Menu CheckBox text
+			"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "Transactions", "Rollbacks" },
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,0,3,3), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
-				"ASE Operations - Selects per second", 	                     // Menu CheckBox text
-				"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
-				labels_selectOperations, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
+			"ASE Operations - Selects per second", 	                     // Menu CheckBox text
+			"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "Selects" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
-				"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
-				"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
-				labels_iudmOperations, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
+			"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
+			"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "Inserts", "Updates", "Deletes", "Merges" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
-				"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
-				"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
-				labels_tabIndAccess, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
+			"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
+			"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "TableAccesses", "IndexAccesses" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
-				"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
-				"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
-				labels_tempdbAccess, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
+			"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
+			"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "TempDbObjects", "WorkTables" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_ULC,
-				"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
-				"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
-				labels_ulc, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_ULC,
+			"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
+			"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "ULCFlushes", "ULCFlushFull", "ULCKBWritten" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_IO_RW,
-				"ASE Operations - IO's per second", 	                  // Menu CheckBox text
-				"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
-				labels_ioRw, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_IO_RW,
+			"ASE Operations - IO's per second", 	                  // Menu CheckBox text
+			"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "PagesRead", "PagesWritten", "PhysicalReads", "PhysicalWrites" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_LOGICAL_READ,
-				"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
-				"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
-				labels_logicalReads, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-//				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_LOGICAL_READ,
+			"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
+			"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
+			new String[] { "LogicalReads" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false,   // is Percent Graph
+			false,   // visible at start
+			Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
-				"Blocking Locks", 	                                     // Menu CheckBox text
-				"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
-				labels_blockingLocks, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
+			"Blocking Locks", 	                                     // Menu CheckBox text
+			"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
+			new String[] { "Blocking Locks" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
-				"Connections/Users in ASE", 	          // Menu CheckBox text
-				"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
-				labels_connection, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_CONNECTION,
+			"Connections/Users in ASE", 	          // Menu CheckBox text
+			"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
+			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
-				"Connection Rate in ASE", 	          // Menu CheckBox text
-				"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
-				labels_connRate, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
+			"Connection Rate in ASE", 	          // Menu CheckBox text
+			"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
+			new String[] { "@@connections (rate)" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
-				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
-				"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
-				labels_aaDiskRW, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
+			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
+			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
+			new String[] { "@@total_read", "@@total_write" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-				"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-				"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
-				labels_aaNwPacket, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
+			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
+			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
+			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.NETWORK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
-				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
-				"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
-				labels_openTran, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
+			"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
+			new String[] { "Seconds" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.LOCK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
-				"Lock Count", 	                   // Menu CheckBox text
-				"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
-				labels_lockCount, 
-				false,   // is Percent Graph
-				this, 
-				false,   // visible at start
-				0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);     // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
+			"Lock Count", 	                   // Menu CheckBox text
+			"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
+			new String[] { "Lock Count" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.LOCK,
+			false,   // is Percent Graph
+			false,   // visible at start
+			0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);     // minimum height
+		
 
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_AA_CPU,
+//				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
+//				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) ("+SHORT_NAME+")", // Label 
+//				labels_aaCpu, 
+//				true,  // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_TRANSACTION,
+//				"ASE Operations - Transaction per second",                         // Menu CheckBox text
+//				"ASE Operations - Transaction per Second ("+SHORT_NAME+")", // Label 
+//				labels_transaction, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1503030, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,0,3,3), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_SELECT_OPERATIONS,
+//				"ASE Operations - Selects per second", 	                     // Menu CheckBox text
+//				"ASE Operations - Selects per Second ("+SHORT_NAME+")", // Label 
+//				labels_selectOperations, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_IUDM_OPERATIONS,
+//				"ASE Operations - Ins/Upd/Del/Merge per second", 	                   // Menu CheckBox text
+//				"ASE Operations - Ins/Upd/Del/Merge per Second ("+SHORT_NAME+")", // Label 
+//				labels_iudmOperations, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_TAB_IND_ACCESS,
+//				"ASE Operations - Table/Index Access per second", 	                    // Menu CheckBox text
+//				"ASE Operations - Table/Index Access per Second ("+SHORT_NAME+")", // Label 
+//				labels_tabIndAccess, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_TEMPDB_ACCESS,
+//				"ASE Operations - Tempdb Object, Work Tables per second", 	                        // Menu CheckBox text
+//				"ASE Operations - Tempdb Objects and Work Tables per Second ("+SHORT_NAME+")", // Label 
+//				labels_tempdbAccess, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_ULC,
+//				"ASE Operations - User Log Cache per second", 	                                // Menu CheckBox text
+//				"ASE Operations - User Log Cache Information per Second ("+SHORT_NAME+")", // Label 
+//				labels_ulc, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_IO_RW,
+//				"ASE Operations - IO's per second", 	                  // Menu CheckBox text
+//				"ASE Operations - IO's per Second ("+SHORT_NAME+")", // Label 
+//				labels_ioRw, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_LOGICAL_READ,
+//				"ASE Operations - Logical Reads per second", 	                   // Menu CheckBox text
+//				"ASE Operations - Logical Reads per Second ("+SHORT_NAME+")", // Label 
+//				labels_logicalReads, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+////				1570100, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				Ver.ver(15,7,0,100), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
+//				"Blocking Locks", 	                                     // Menu CheckBox text
+//				"Number of Concurrently Blocking Locks ("+SHORT_NAME+")", // Label 
+//				labels_blockingLocks, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_CONNECTION,
+//				"Connections/Users in ASE", 	          // Menu CheckBox text
+//				"Connections/Users connected to the ASE ("+SHORT_NAME+")", // Label 
+//				labels_connection, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_CONNECTION_RATE,
+//				"Connection Rate in ASE", 	          // Menu CheckBox text
+//				"Connection Attemtps per Second (source @@connections) ("+SHORT_NAME+")", // Label 
+//				labels_connRate, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
+//				"Disk read/write, Global Variables", 	                         // Menu CheckBox text
+//				"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
+//				labels_aaDiskRW, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
+//				"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
+//				"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
+//				labels_aaNwPacket, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
+//				"Oldest Open Transaction in any Databases",     // Menu CheckBox text
+//				"Oldest Open Transaction in any Databases, in Seconds ("+SHORT_NAME+")", // Label 
+//				labels_openTran, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_LOCK_COUNT,
+//				"Lock Count", 	                   // Menu CheckBox text
+//				"Lock Count, number of concurrent locks (from syslocks) ("+SHORT_NAME+")", // Label 
+//				labels_lockCount, 
+//				false,   // is Percent Graph
+//				this, 
+//				false,   // visible at start
+//				0, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);     // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//		}
 	}
 
 	@Override
@@ -481,25 +660,95 @@ extends CountersModel
 				"                        from master..monOpenDatabases od ) \n";
 		}
 		
-		//
-		//
-		//
-//		int default_oldestOpenTranInSecThreshold = 10;
-		int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_oldestOpenTranInSecThreshold, DEFAULT_oldestOpenTranInSecThreshold);
-		String oldestOpenTranInSecThreshold = ", oldestOpenTranInSecThreshold = convert(int, "+default_oldestOpenTranInSecThreshold+") \n";
+		//--------------------------------------------------------------------------------------
+		// oldestOpenTranInSec (special thing that is assigned to a variable, that is assigned before the main SQL statement)
+		//--------------------------------------------------------------------------------------
+//		int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_oldestOpenTranInSecThreshold, DEFAULT_oldestOpenTranInSecThreshold);
+//		String oldestOpenTranInSecThreshold = ", oldestOpenTranInSecThreshold = convert(int, "+default_oldestOpenTranInSecThreshold+") \n";
+//
+//		String oldestOpenTranInSec = 
+//			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) >= 24 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
+//			"                                               THEN -1 \n" +
+//			"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
+//			"                                          END),0) \n" +
+//			"                        from master..syslogshold h \n" +
+//			"                        where h.name != '$replication_truncation_point' ) \n";
+//		if ( ! canDoSelectOnSyslogshold )
+//		{
+//			oldestOpenTranInSec = ", oldestOpenTranInSec  = -99 \n";
+//		}
 
-		String oldestOpenTranInSec = 
-			", oldestOpenTranInSec= (select isnull(max(CASE WHEN datediff(day, h.starttime, getdate()) >= 24 \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
-			"                                               THEN -1 \n" +
-			"                                               ELSE datediff(ss, h.starttime, getdate()) \n" +
-			"                                          END),0) \n" +
-			"                        from master..syslogshold h \n" +
-			"                        where h.name != '$replication_truncation_point' ) \n";
+		// oldestOpenTranInSecThreshold
+		int default_oldestOpenTranInSecThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_oldestOpenTranInSecThreshold, DEFAULT_oldestOpenTranInSecThreshold);
+		String oldestOpenTranInSecThreshold            = ", oldestOpenTranInSecThreshold = @oldestOpenTranInSecThreshold \n";
+		String preDeclare_oldestOpenTranInSecThreshold = "declare @oldestOpenTranInSecThreshold int \n";
+		String preAssign_oldestOpenTranInSecThreshold  = "select @oldestOpenTranInSecThreshold = "+default_oldestOpenTranInSecThreshold+" \n";
+
+		// oldestOpenTranInSec
+		String oldestOpenTranInSec            = ", oldestOpenTranInSec = @oldestOpenTranInSec \n";
+		String preDeclare_oldestOpenTranInSec = "declare @oldestOpenTranInSec int \n";
+		String preAssign_oldestOpenTranInSec  = "    @oldestOpenTranInSec = isnull(CASE WHEN datediff(day, h.starttime, getdate()) >= 24 \n"
+		                                      + "                                       THEN -1 \n"
+		                                      + "                                       ELSE datediff(ss, h.starttime, getdate()) \n"
+		                                      + "                                  END, 0) \n";
+
+
+		//--------------------------------------------------------------------------------------
+		// Oldest Open Tran Name (special thing that is assigned to a variable, that is assigned before the main SQL statement)
+		//--------------------------------------------------------------------------------------
+
+		// oldestOpenTranName
+		String oldestOpenTranName            = ", oldestOpenTranName = @oldestOpenTranName \n";
+
+		String preDeclare_oldestOpenTranName = "declare @oldestOpenTranName varchar(80) \n";
+		String preAssign_oldestOpenTranName  = "   ,@oldestOpenTranName = h.name \n";
+
+
+		// oldestOpenTranDbName
+		String oldestOpenTranDbName            = ", oldestOpenTranDbName = @oldestOpenTranDbName \n";
+
+		String preDeclare_oldestOpenTranDbName = "declare @oldestOpenTranDbName varchar(30) \n";
+		String preAssign_oldestOpenTranDbName  = "   ,@oldestOpenTranDbName = db_name(h.dbid) \n";
+
+		
+		// oldestOpenTranSpid
+		String oldestOpenTranSpid              = ", oldestOpenTranSpid = @oldestOpenTranSpid \n";
+
+		String preDeclare_oldestOpenTranSpid   = "declare @oldestOpenTranSpid int \n";
+		String preAssign_oldestOpenTranSpid    = "   ,@oldestOpenTranSpid = h.spid \n";
+
+		
+		// construct PRE-SQL for: ...
+		String preAssign_oldestOpenXxx       = "select top 1 \n"
+		                                     + preAssign_oldestOpenTranInSec
+		                                     + preAssign_oldestOpenTranName
+		                                     + preAssign_oldestOpenTranDbName
+		                                     + preAssign_oldestOpenTranSpid
+		                                     + "from master..syslogshold h \n"
+		                                     + "where h.name != '$replication_truncation_point' \n"
+		                                     + "order by h.starttime asc \n";
+
 		if ( ! canDoSelectOnSyslogshold )
 		{
-			oldestOpenTranInSec =
-				", oldestOpenTranInSec  = -99 \n";
+			preAssign_oldestOpenXxx  = "select @oldestOpenTranInSec = -99, @oldestOpenTranName = '-', @oldestOpenTranDbName = '-', @oldestOpenTranSpid = -1 --not authorized to select on master.dbo.syslogshold \n";
 		}
+
+		
+		// compose a PRE SQL... 
+		String preSqlDeclareVars = "-- Declare variables that are used to store content that are materialized before the SELECT statement\n"
+		                         + preDeclare_oldestOpenTranInSecThreshold
+		                         + preDeclare_oldestOpenTranInSec
+		                         + preDeclare_oldestOpenTranName
+		                         + preDeclare_oldestOpenTranDbName
+		                         + preDeclare_oldestOpenTranSpid
+		                         + "\n";
+		String preSqlAssignVars  = "-- Assign the above declared variables \n"
+		                         + preAssign_oldestOpenTranInSecThreshold
+		                         + preAssign_oldestOpenXxx
+		                         + "\n";
+
+		String preSql = preSqlDeclareVars + preSqlAssignVars;
+		
 		
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -621,6 +870,9 @@ extends CountersModel
 //				"                        where h.name != '$replication_truncation_point' ) \n" +
 				oldestOpenTranInSec + 
 				oldestOpenTranInSecThreshold +
+				oldestOpenTranName +
+				oldestOpenTranDbName +
+				oldestOpenTranSpid +
 
 				", pack_received      = @@pack_received \n" +
 				", pack_sent          = @@pack_sent \n" +
@@ -643,7 +895,7 @@ extends CountersModel
 			}
 		}
 		
-		String sql = "select " + cols1 + cols2 + cols3 + fromTable;
+		String sql = preSql + "select " + cols1 + cols2 + cols3 + fromTable;
 		
 		return sql;
 	}
@@ -1211,7 +1463,10 @@ extends CountersModel
 		//-------------------------------------------------------
 		// CPU Usage
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabled("TotalCPUTime") || isSystemAlarmsForColumnEnabled("UserCPUTime") || isSystemAlarmsForColumnEnabled("IoCPUTime"))
+		if (    isSystemAlarmsForColumnEnabledAndInTimeRange("TotalCPUTime") 
+		     || isSystemAlarmsForColumnEnabledAndInTimeRange("UserCPUTime") 
+		     || isSystemAlarmsForColumnEnabledAndInTimeRange("IoCPUTime")
+		   )
 		{
 			Double cpuUser        = cm.getDiffValueAsDouble(0, "cpu_busy");
 			Double cpuSystem      = cm.getDiffValueAsDouble(0, "cpu_io");
@@ -1236,25 +1491,25 @@ extends CountersModel
 
 				if (AlarmHandler.hasInstance())
 				{
-					if (isSystemAlarmsForColumnEnabled("TotalCPUTime"))
+					if (isSystemAlarmsForColumnEnabledAndInTimeRange("TotalCPUTime"))
 					{
-						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TotalCPUTime, DEFAULT_alarm_TotalCPUTime);
-						if (pctCPUTime.intValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_TotalCPUTime, DEFAULT_alarm_TotalCPUTime);
+						if (pctCPUTime.doubleValue() > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
 					}
 
-					if (isSystemAlarmsForColumnEnabled("UserCPUTime"))
+					if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserCPUTime"))
 					{
-						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_UserCPUTime, DEFAULT_alarm_UserCPUTime);
-						if (pctUserCPUTime.intValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_UserCPUTime, DEFAULT_alarm_UserCPUTime);
+						if (pctUserCPUTime.doubleValue() > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.USER_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
 					}
 
-					if (isSystemAlarmsForColumnEnabled("IoCPUTime"))
+					if (isSystemAlarmsForColumnEnabledAndInTimeRange("IoCPUTime"))
 					{
-						int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_IoCPUTime, DEFAULT_alarm_IoCPUTime);
-						if (pctSystemCPUTime.intValue() > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
+						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_IoCPUTime, DEFAULT_alarm_IoCPUTime);
+						if (pctSystemCPUTime.doubleValue() > threshold)
+							AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.IO_CPU, pctCPUTime, pctUserCPUTime, pctSystemCPUTime, pctIdleCPUTime) );
 					}
 				}
 			}
@@ -1265,7 +1520,7 @@ extends CountersModel
 		//-------------------------------------------------------
 		// Blocking Locks
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabled("LockWaits"))
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("LockWaits"))
 		{
 			Double LockWaits = cm.getAbsValueAsDouble (0, "LockWaits");
 			if (LockWaits != null)
@@ -1277,7 +1532,7 @@ extends CountersModel
 				{
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LockWaits, DEFAULT_alarm_LockWaits);
 					if (LockWaits.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, LockWaits) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventBlockingLockAlarm(cm, threshold, LockWaits) );
 				}
 			}
 		}
@@ -1286,7 +1541,7 @@ extends CountersModel
 		//-------------------------------------------------------
 		// Long running transaction
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabled("oldestOpenTranInSec"))
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("oldestOpenTranInSec"))
 		{
 			Double oldestOpenTranInSec = cm.getAbsValueAsDouble(0, "oldestOpenTranInSec");
 			if (oldestOpenTranInSec != null)
@@ -1298,7 +1553,27 @@ extends CountersModel
 				{
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_oldestOpenTranInSec, DEFAULT_alarm_oldestOpenTranInSec);
 					if (oldestOpenTranInSec.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, oldestOpenTranInSec) );
+					{
+						// Get OldestTranName
+						String OldestTranName   = cm.getAbsString(0, "oldestOpenTranName");
+						String OldestTranDbName = cm.getAbsString(0, "oldestOpenTranDbName");
+						
+						// Get config 'skip some transaction names'
+						String skipTranNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_oldestOpenTranInSecSkipTranName, DEFAULT_alarm_oldestOpenTranInSecSkipTranName);
+
+						// send alarm, if...
+						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
+						{
+							if ( ! OldestTranName.matches(skipTranNameRegExp) )
+								AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
+						}
+						else
+						{
+							AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, OldestTranDbName, oldestOpenTranInSec, OldestTranName) );
+						}
+						
+						//AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, oldestOpenTranInSec) );
+					}
 				}
 			}
 		}
@@ -1307,7 +1582,7 @@ extends CountersModel
 		//-------------------------------------------------------
 		// Full transaction log in "any" database
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabled("fullTranslogCount"))
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("fullTranslogCount"))
 		{
 			Double fullTranslogCount = cm.getAbsValueAsDouble(0, "fullTranslogCount");
 			if (fullTranslogCount != null)
@@ -1319,29 +1594,32 @@ extends CountersModel
 				{
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_fullTranslogCount, DEFAULT_alarm_fullTranslogCount);
 					if (fullTranslogCount.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, fullTranslogCount) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, fullTranslogCount) );
 				}
 			}
 		}
 	}
 
-	public static final String  PROPKEY_alarm_TotalCPUTime        = CM_NAME + ".alarm.system.if.TotalCPUTime.gt";
-	public static final int     DEFAULT_alarm_TotalCPUTime        = 99;
+	public static final String  PROPKEY_alarm_TotalCPUTime                    = CM_NAME + ".alarm.system.if.TotalCPUTime.gt";
+	public static final double  DEFAULT_alarm_TotalCPUTime                    = 99.9;
+	                                                                          
+	public static final String  PROPKEY_alarm_UserCPUTime                     = CM_NAME + ".alarm.system.if.UserCPUTime.gt";
+	public static final double  DEFAULT_alarm_UserCPUTime                     = 80;
+	                                                                          
+	public static final String  PROPKEY_alarm_IoCPUTime                       = CM_NAME + ".alarm.system.if.IoCPUTime.gt";
+	public static final double  DEFAULT_alarm_IoCPUTime                       = 95;
+	                                                                          
+	public static final String  PROPKEY_alarm_LockWaits                       = CM_NAME + ".alarm.system.if.LockWaits.gt";
+	public static final int     DEFAULT_alarm_LockWaits                       = 5;
+	                                                                          
+	public static final String  PROPKEY_alarm_oldestOpenTranInSec             = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
+	public static final int     DEFAULT_alarm_oldestOpenTranInSec             = 60;
 	
-	public static final String  PROPKEY_alarm_UserCPUTime         = CM_NAME + ".alarm.system.if.UserCPUTime.gt";
-	public static final int     DEFAULT_alarm_UserCPUTime         = 70;
+	public static final String  PROPKEY_alarm_oldestOpenTranInSecSkipTranName = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.skip.tranName";
+	public static final String  DEFAULT_alarm_oldestOpenTranInSecSkipTranName = "^(DUMP |\\$dmpxact).*";
 	
-	public static final String  PROPKEY_alarm_IoCPUTime           = CM_NAME + ".alarm.system.if.IoCPUTime.gt";
-	public static final int     DEFAULT_alarm_IoCPUTime           = 95;
-	
-	public static final String  PROPKEY_alarm_LockWaits           = CM_NAME + ".alarm.system.if.LockWaits.gt";
-	public static final int     DEFAULT_alarm_LockWaits           = 5;
-	
-	public static final String  PROPKEY_alarm_oldestOpenTranInSec = CM_NAME + ".alarm.system.if.oldestOpenTranInSec.gt";
-	public static final int     DEFAULT_alarm_oldestOpenTranInSec = 10;
-	
-	public static final String  PROPKEY_alarm_fullTranslogCount   = CM_NAME + ".alarm.system.if.fullTranslogCount.gt";
-	public static final int     DEFAULT_alarm_fullTranslogCount   = 0;
+	public static final String  PROPKEY_alarm_fullTranslogCount               = CM_NAME + ".alarm.system.if.fullTranslogCount.gt";
+	public static final int     DEFAULT_alarm_fullTranslogCount               = 0;
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -1349,12 +1627,13 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("TotalCPUTime",        PROPKEY_alarm_TotalCPUTime        , Integer.class, conf.getIntProperty(PROPKEY_alarm_TotalCPUTime        , DEFAULT_alarm_TotalCPUTime        ), DEFAULT_alarm_TotalCPUTime       , "If 'TotalCPUTime' (user+io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
-		list.add(new CmSettingsHelper("UserCPUTime",         PROPKEY_alarm_UserCPUTime         , Integer.class, conf.getIntProperty(PROPKEY_alarm_UserCPUTime         , DEFAULT_alarm_UserCPUTime         ), DEFAULT_alarm_UserCPUTime        , "If 'UserCPUTime' (user cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
-		list.add(new CmSettingsHelper("IoCPUTime",           PROPKEY_alarm_IoCPUTime           , Integer.class, conf.getIntProperty(PROPKEY_alarm_IoCPUTime           , DEFAULT_alarm_IoCPUTime           ), DEFAULT_alarm_IoCPUTime          , "If 'IoCPUTime' (io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'. Note: for ASE 15.7 or above, in threaded-kernel-mode. IO counter is incremented a bit faulty (all engines get IO ticks, while the IO-Controller-thread does the IO. This is CR# 757246)" ));
-		list.add(new CmSettingsHelper("LockWaits",           PROPKEY_alarm_LockWaits           , Integer.class, conf.getIntProperty(PROPKEY_alarm_LockWaits           , DEFAULT_alarm_LockWaits           ), DEFAULT_alarm_LockWaits          , "If 'LockWaits' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
-		list.add(new CmSettingsHelper("oldestOpenTranInSec", PROPKEY_alarm_oldestOpenTranInSec , Integer.class, conf.getIntProperty(PROPKEY_alarm_oldestOpenTranInSec , DEFAULT_alarm_oldestOpenTranInSec ), DEFAULT_alarm_oldestOpenTranInSec, "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
-		list.add(new CmSettingsHelper("fullTranslogCount",   PROPKEY_alarm_fullTranslogCount   , Integer.class, conf.getIntProperty(PROPKEY_alarm_fullTranslogCount   , DEFAULT_alarm_fullTranslogCount   ), DEFAULT_alarm_fullTranslogCount  , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("TotalCPUTime",                     PROPKEY_alarm_TotalCPUTime                    , Double .class, conf.getDoubleProperty(PROPKEY_alarm_TotalCPUTime                    , DEFAULT_alarm_TotalCPUTime                   ), DEFAULT_alarm_TotalCPUTime                   , "If 'TotalCPUTime' (user+io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+		list.add(new CmSettingsHelper("UserCPUTime",                      PROPKEY_alarm_UserCPUTime                     , Double .class, conf.getDoubleProperty(PROPKEY_alarm_UserCPUTime                     , DEFAULT_alarm_UserCPUTime                    ), DEFAULT_alarm_UserCPUTime                    , "If 'UserCPUTime' (user cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+		list.add(new CmSettingsHelper("IoCPUTime",                        PROPKEY_alarm_IoCPUTime                       , Double .class, conf.getDoubleProperty(PROPKEY_alarm_IoCPUTime                       , DEFAULT_alarm_IoCPUTime                      ), DEFAULT_alarm_IoCPUTime                      , "If 'IoCPUTime' (io cpu-ticks) is greater than ## then send 'AlarmEventHighCpuUtilization'. Note: for ASE 15.7 or above, in threaded-kernel-mode. IO counter is incremented a bit faulty (all engines get IO ticks, while the IO-Controller-thread does the IO. This is CR# 757246)" ));
+		list.add(new CmSettingsHelper("LockWaits",                        PROPKEY_alarm_LockWaits                       , Integer.class, conf.getIntProperty   (PROPKEY_alarm_LockWaits                       , DEFAULT_alarm_LockWaits                      ), DEFAULT_alarm_LockWaits                      , "If 'LockWaits' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec",              PROPKEY_alarm_oldestOpenTranInSec             , Integer.class, conf.getIntProperty   (PROPKEY_alarm_oldestOpenTranInSec             , DEFAULT_alarm_oldestOpenTranInSec            ), DEFAULT_alarm_oldestOpenTranInSec            , "If 'oldestOpenTranInSec' is greater than ## then send 'AlarmEventLongRunningTransaction'." ));
+		list.add(new CmSettingsHelper("oldestOpenTranInSec SkipTranName", PROPKEY_alarm_oldestOpenTranInSecSkipTranName , String .class, conf.getProperty      (PROPKEY_alarm_oldestOpenTranInSecSkipTranName , DEFAULT_alarm_oldestOpenTranInSecSkipTranName), DEFAULT_alarm_oldestOpenTranInSecSkipTranName, "If 'oldestOpenTranInSec' is true; then we can filter out transaction names using a Regular expression... if (tranName.matches('regexp'))... This to remove alarms of 'DUMP DATABASE' or similar. A good place to test your regexp is 'http://www.regexplanet.com/advanced/java/index.html'.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("fullTranslogCount",                PROPKEY_alarm_fullTranslogCount               , Integer.class, conf.getIntProperty   (PROPKEY_alarm_fullTranslogCount               , DEFAULT_alarm_fullTranslogCount              ), DEFAULT_alarm_fullTranslogCount              , "If 'fullTranslogCount' is greater than ## then send 'AlarmEventFullTranLog'." ));
 
 		return list;
 	}

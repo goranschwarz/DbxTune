@@ -359,6 +359,7 @@ extends ObjectLookupInspectorAbstract
 
 					objectList.add(entry);
 				}
+				rs.close();
 			}
 			catch (SQLException e)
 			{
@@ -856,6 +857,7 @@ extends ObjectLookupInspectorAbstract
 //					
 //					objectList.add(entry);
 //				}
+//				rs.close();
 //			}
 //			catch (SQLException e)
 //			{

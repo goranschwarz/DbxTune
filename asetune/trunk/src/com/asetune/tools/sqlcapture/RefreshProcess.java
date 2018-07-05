@@ -632,6 +632,7 @@ public class RefreshProcess extends Thread
 						_activeBatch.lineNumber    = _activeSqlLine;
 					}
 				}
+				rs.close();
 				// Refresh of the associated JTable will be done at the end, in
 				// the swing thread
 
@@ -740,6 +741,7 @@ public class RefreshProcess extends Thread
 
 					saveLineNumber = atLineNum;
 				}
+				rs.close();
 				// Add the composed string
 				if ( ! sqlText.equals("") )
 					_activeBatch.appendSqlText( sqlText );
@@ -997,6 +999,7 @@ public class RefreshProcess extends Thread
 					}
 					_newHistoryStatements.add(row);
 				}
+				rs.close();
 
 				pdf.setWatermarkHistoryTable("");
 			}
@@ -1098,6 +1101,7 @@ public class RefreshProcess extends Thread
 					// important...
 					lastKey = lKey;
 				}
+				rs.close();
 				// Add any "leftovers" that wasn't added in the loop above
 				if (batch != null)
 				{
@@ -1308,6 +1312,7 @@ public class RefreshProcess extends Thread
 					// important...
 					lastKey = lKey;
 				}
+				rs.close();
 				
 				pdf.setWatermarkPlanText("");
 			}
@@ -1802,6 +1807,7 @@ public class RefreshProcess extends Thread
 ////					dbname   = rs.getString(1)();
 ////					procName = rs.getString(2)();
 ////				}
+//					rs.close();
 ////			}
 ////			catch (Exception e)
 ////			{
@@ -3040,7 +3046,7 @@ public class RefreshProcess extends Thread
 				if (rs.getString(1).equals("sa_role"))
 					has_sa_role = true;
 			}
-
+			rs.close();
 		}
 		catch (SQLException SQLEx)
 		{
@@ -3181,6 +3187,7 @@ public class RefreshProcess extends Thread
 
 					stmt.executeUpdate("use master");
 				}
+				rs.close();
 			}
 			catch (SQLException sqlex)
 			{

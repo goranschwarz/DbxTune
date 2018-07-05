@@ -8,7 +8,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -28,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
@@ -41,6 +41,8 @@ extends CounterTableModel
 	private   static Logger _logger = Logger.getLogger(CounterSample.class);
     private static final long serialVersionUID = 4786911833477005253L;
 
+    public static final String PK_STR_DELIMITER = "|"; 
+    
 	private   boolean            _negativeDiffCountersToZero = true;
 	protected String             _name           = null; // Used for debuging
 	private   String[]           _diffColNames   = null; // if we need to do PK merging...
@@ -416,11 +418,13 @@ extends CounterTableModel
 		Integer i = _keysToRowid.get(pkStr);
 		if (i == null)
 		{
+//System.out.println("XXXXXXX: first pk lookup on '"+pkStr+"' failed, try fallback.");
 			// PK has ':' appended to the END of the str, so lets check for this as well
 			// NOTE: this might change in the future...
-			i = _keysToRowid.get(pkStr+"|");
+			i = _keysToRowid.get(pkStr+PK_STR_DELIMITER);
 			if (i == null)
 			{
+//System.out.println("XXXXXXX: <<< SECOND pk lookup on '"+pkStr+"' FAILED.... RETURNING null");
 				//throw new RuntimeException("Couldn't find pk '"+pkStr+"'.");
 				return -1;
 			}
@@ -428,7 +432,23 @@ extends CounterTableModel
 		if (_logger.isDebugEnabled())
 			_logger.debug(getName()+": getRowNumberForPkValue(pk='"+pkStr+"'), returns="+i);
 
+//System.out.println("<<< "+getName()+"-getRowNumberForPkValue("+pkStr+"): returns="+i);
 		return i;
+	}
+
+	/**
+	 * Helper method to create a PK String/Object, which is used in the HashMap to identify unique rows.<br>
+	 * 
+	 * @param pk
+	 * @return
+	 */
+	public static String createPkStr(String... pk)
+	{
+		StringBuilder sb = new StringBuilder();
+		for (String pkPart : pk)
+			sb.append(pkPart).append(PK_STR_DELIMITER);
+
+		return sb.toString();
 	}
 
 	/** colId starts at 0 */
@@ -483,7 +503,7 @@ extends CounterTableModel
 						hasWarning = false;
 					else
 					{
-						wStr = "AseMsgNum="+w.getErrorCode()+", " + w.toString();
+						wStr = "DbmsMsgNum="+w.getErrorCode()+", " + w.toString();
 						_logger.warn("CounterSample("+getName()+").Warning : " + wStr);
 						sb.append(wStr).append("\n");
 					}
@@ -522,7 +542,7 @@ extends CounterTableModel
 	 * at ...
 	 * </pre>
 	 */
-	private Object getDataValue(ResultSet rs, int col) 
+	private Object getDataValue(ResultSet rs, int col, ResultSetMetaData rsmd) 
 	throws SQLException
 	{
 		// Backward compatibility if the rs.getXXX(col) is not working as expected  
@@ -538,7 +558,7 @@ extends CounterTableModel
 		}
 
 		// Return the "object" via getXXX method for "known" datatypes
-		int objSqlType = _colSqlType.get(col - 1);
+		int objSqlType = rsmd == null ? _colSqlType.get(col - 1) : rsmd.getColumnType(col);
 		switch (objSqlType)
 		{
 		case java.sql.Types.BIT:          return rs.getBoolean(col);
@@ -832,7 +852,7 @@ extends CounterTableModel
 	 * @param cm
 	 * @throws SQLException
 	 */
-	protected void updateSampleTime(Connection conn, CountersModel cm)
+	protected void updateSampleTime(DbxConnection conn, CountersModel cm)
 	throws SQLException
 	{
 		int queryTimeout = cm.getQueryTimeout();
@@ -849,6 +869,8 @@ extends CounterTableModel
 			ResultSet rs = stmnt.executeQuery(srvTimeCmd);
 			while(rs.next())
 				setSampleTime(rs.getTimestamp(1));
+			rs.close();
+			stmnt.close();
 		}
 		else
 		{
@@ -871,12 +893,15 @@ extends CounterTableModel
 	/**
 	 * Get counters...
 	 */
-	public boolean getSample(CountersModel cm, Connection conn, String sql, List<String> pkList)
+	public boolean getSample(CountersModel cm, DbxConnection conn, String sql, List<String> pkList)
 	throws SQLException, NoValidRowsInSample
 	{
 		int queryTimeout = cm.getQueryTimeout();
 		if (_logger.isDebugEnabled())
 			_logger.debug(getName()+": queryTimeout="+queryTimeout);
+
+		Statement stmnt = null;
+		ResultSet rs = null;
 
 		try
 		{
@@ -894,8 +919,7 @@ extends CounterTableModel
 				updateSampleTime(conn, cm);
 			}
 
-			Statement stmnt = conn.createStatement();
-			ResultSet rs;
+			stmnt = conn.createStatement();
 
 			stmnt.setQueryTimeout(queryTimeout); // XX seconds query timeout
 			if (_logger.isDebugEnabled())
@@ -955,6 +979,7 @@ extends CounterTableModel
 						{
 							while(rs.next())
 								setSampleTime(rs.getTimestamp(1));
+							rs.close();
 							
 							setSampleInterval(0);
 							if (_prevSample != null)
@@ -970,11 +995,16 @@ extends CounterTableModel
 						}
 						else
 						{
-							ResultSetMetaData rsmd = rs.getMetaData();
+							ResultSetMetaData originRsmd = rs.getMetaData();
 							if ( ! cm.hasResultSetMetaData() )
-								cm.setResultSetMetaData(rsmd);
-	
-							if (readResultset(cm, rs, rsmd, pkList, rsNum))
+								cm.setResultSetMetaData( cm.createResultSetMetaData(originRsmd) );
+
+							// The above "remapps" some things...
+							//  - Like in Oracle 'NUMBER(0,-127)' is mapped to INTEGER
+							// So we should use this when calling readResultset()...
+							ResultSetMetaData translatedRsmd = cm.getResultSetMetaData();
+
+							if (readResultset(cm, rs, translatedRsmd, originRsmd, pkList, rsNum))
 								rs.close();
 	
 							checkWarnings(stmnt);
@@ -1009,9 +1039,6 @@ extends CounterTableModel
 			}
 			br.close();
 
-			// Close the statement
-			stmnt.close();
-
 			// Set last refresh time
 			_lastLocalSampleTime = System.currentTimeMillis();
 
@@ -1033,20 +1060,32 @@ extends CounterTableModel
 			_logger.error(getName()+": While reading the input SQL 'go' String, caught: "+ex, ex);
 			throw new SQLException(getName()+": While reading the input SQL 'go' String, caught: "+ex, ex);
 		}
+		finally
+		{
+			// Close the statement, and do not raise
+			if (rs != null)
+			{
+				try { rs.close(); }
+				catch(SQLException ex) { _logger.debug("Problems closing ResultSet", ex); }
+			}
+			
+			if (stmnt != null)
+			{
+				try { stmnt.close(); }
+				catch(SQLException ex) { _logger.debug("Problems closing Statement", ex); }
+			}
+		}
 	}
 
 	/**
-	 * NOTE: if you change in this one, do not forger to 
-	 *       replicate the change into method: 	public boolean addRow(List<Object> row)
-	 *       
-	 * @param rs
+	 * Initialize local metadata column information
 	 * @param rsmd
 	 * @param pkList
 	 * @param rsNum
 	 * @return
 	 * @throws SQLException
 	 */
-	protected boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, List<String> pkList, int rsNum)
+	protected boolean initColumnInfo(ResultSetMetaData rsmd, List<String> pkList, int rsNum)
 	throws SQLException
 	{
 		if (_colNames == null)
@@ -1133,7 +1172,6 @@ extends CounterTableModel
 			if (getColumnCount() != cols)
 			{
 				_logger.error(getName()+": ResultSet number "+rsNum+" has "+cols+" while it was expected to have "+getColumnCount()+". Skipping this result set.");
-				rs.close();
 				return false;
 			}
 
@@ -1145,11 +1183,135 @@ extends CounterTableModel
 				if ( ! oldType.equals(newType) )
 				{
 					_logger.error(getName()+": ResultSet number "+rsNum+" column number "+i+" (colName='"+rsmd.getColumnLabel(i)+"') has SQL datatype "+newType+", while we expected datatype "+oldType+".  Skipping this result set.");
-					rs.close();
 					return false;
 				}
 			}
 		}
+		
+		return true;
+	}
+
+	/**
+	 * NOTE: if you change in this one, do not forger to 
+	 *       replicate the change into method: 	public boolean addRow(List<Object> row)
+	 *       
+	 * @param rs
+	 * @param rsmd
+	 * @param pkList
+	 * @param rsNum
+	 * @return
+	 * @throws SQLException
+	 */
+	protected boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, ResultSetMetaData originRsmd, List<String> pkList, int rsNum)
+	throws SQLException
+	{
+		if ( ! initColumnInfo(rsmd, pkList, rsNum) )
+		{
+			rs.close();
+			return false;
+		}
+		
+//		if (_colNames == null)
+//		{
+//			// Initialize column names
+//			_colNames       = new ArrayList<String>();
+//			_colSqlType     = new ArrayList<Integer>();
+//			_colSqlTypeName = new ArrayList<String>();
+//			_colClassName   = new ArrayList<String>();
+//			int colCount    = rsmd.getColumnCount();
+//			_colIsPk        = new boolean[colCount];
+//
+//			_keysToRowid    = new HashMap<String,Integer>();
+//			_rowidToKey     = new ArrayList<String>();
+//
+//			List<Integer> tmpPkPos = new LinkedList<Integer>();
+//
+//			for (int i=1; i<=colCount; i++)
+//			{
+//				String colName      = rsmd.getColumnLabel(i); 
+//				int    colType      = rsmd.getColumnType(i);
+////				String colTypeName  = rsmd.getColumnTypeName(i); // The generic one doesn't handle RepServer due to MetaData issues
+//				String colTypeName  = ResultSetTableModel.getColumnTypeName(rsmd, i); // This one handles RepServer better, NOTE: this delivers length, precision & scale
+//				String colClassName = rsmd.getColumnClassName(i);
+//
+//				_colNames      .add(colName);
+//				_colSqlType    .add(new Integer(colType));
+//				_colSqlTypeName.add(colTypeName);
+//				_colClassName  .add(colClassName);
+//
+//				// pkList could contain the ColumnName
+//				// or a column position
+//				_colIsPk[i-1] = false;
+//				if ( pkList != null && pkList.size() > 0)
+//				{
+//					if ( pkList.contains(colName) ) 
+//						_colIsPk[i-1] = true;
+//					if ( pkList.contains( Integer.toString(i) ) )
+//						_colIsPk[i-1] = true;
+//					
+//					if (_colIsPk[i-1])
+//						tmpPkPos.add(new Integer(i));
+//				}
+//
+//				// Special... if colname is "msgAsColValue", 
+//				// all TDS Msg on the ResultSet should be added to this column
+//				if ( SPECIAL_COLUMN_msgAsColValue.equals(colName) )
+//					_pos_msgAsColValue = i;
+//				// Note on the above:
+//				// It would be nice to do, something like: 
+//				// - strip away the msgAsColValue::theRealColName part and replace it with a "real" column name
+//				// - but since the ResultSetMetaData is not writable, it can't be done
+//				// - and the PersistWriterXXX uses the RSMD to get the column name... so the persist table would be faulty
+//
+//				// Special... if colname is "sampleTimeInMs", 
+//				// Simply substitute/replace with the "last sample sample time" in this column
+//				if ( SPECIAL_COLUMN_sampleTimeInMs.equals(colName) )
+//				{
+//					if (colType == Types.INTEGER)
+//						_pos_sampleTimeInMs = i;
+//					else
+//					{
+//						_logger.warn(getName()+": found column '"+SPECIAL_COLUMN_sampleTimeInMs+"', but it's not a INTEGER, so it will be treated as a normal column.");
+//					}
+//				}
+//			}
+//
+//			if (pkList != null && (pkList.size() != tmpPkPos.size()) )
+//			{
+//				throw new RuntimeException("sample, can't find all the primary keys in the ResultSet. pkList='"+pkList+"', _colNames='"+_colNames+"', tmpPkPos='"+tmpPkPos+"'.");
+//			}
+//				
+//			_pkPosArray = new int[tmpPkPos.size()];
+//			for(int i= 0; i<tmpPkPos.size(); i++)
+//			{
+////				_pkPosArray[i] = ((Integer)tmpPkPos.get(i)).intValue();
+//				_pkPosArray[i] = tmpPkPos.get(i);
+//			}
+//			tmpPkPos = null;
+//		}
+//		else // check previous result set for match
+//		{
+//			int cols = rsmd.getColumnCount();
+//			if (getColumnCount() != cols)
+//			{
+//				_logger.error(getName()+": ResultSet number "+rsNum+" has "+cols+" while it was expected to have "+getColumnCount()+". Skipping this result set.");
+//				rs.close();
+//				return false;
+//			}
+//
+//			// Check data types match for all columns.
+//			for (int i=1; i<=cols; i++)
+//			{
+//				String oldType = _colClassName.get(i-1);
+//				String newType = rsmd.getColumnClassName(i);
+//				if ( ! oldType.equals(newType) )
+//				{
+//					_logger.error(getName()+": ResultSet number "+rsNum+" column number "+i+" (colName='"+rsmd.getColumnLabel(i)+"') has SQL datatype "+newType+", while we expected datatype "+oldType+".  Skipping this result set.");
+//					rs.close();
+//					return false;
+//				}
+//			}
+//		}
 
 		// Load counters in memory
 		int rsRowNum = 0;
@@ -1172,13 +1334,24 @@ extends CounterTableModel
 				if (_pos_msgAsColValue >= 0)
 					msgAsColValue = AseConnectionUtils.getSqlWarningMsgs(sqlwInRs);
 				else
-					_logger.warn(getName()+": Received a Msg while reading the resultset from '"+getName()+"', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The message text: " + AseConnectionUtils.getSqlWarningMsgs(sqlwInRs));
+					_logger.warn(getName()+": Received a Msg while reading the resultset from '"+getName()+"', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The Msg="+sqlwInRs.getErrorCode()+", message text: " + AseConnectionUtils.getSqlWarningMsgs(sqlwInRs));
 			}
 
 			// Get one row
 			for (int i = 1; i <= colCount; i++)
 			{
-				val = getDataValue(rs, i);
+				// Get values... 
+				// - First try with the "fixed/modified" ResultSetMetaData
+				// - If it failes, use the "origin" ResultSetMetaData
+				try
+				{
+					val = getDataValue(rs, i, null);
+				}
+				catch(SQLException ex)
+				{
+					val = getDataValue(rs, i, originRsmd);
+					_logger.warn("Failed reading object for cm='"+cm.getName()+"', row="+_rows.size()+", col="+i+", colName='"+_colNames.get(i)+"'. Trying to read it again but with the ORIGIN ResultSetMetatData. values using Origin rsmd = '"+val+"'.", ex);
+				}
 
 				// Right trim strings
 				if (val != null && val instanceof String)
@@ -1206,7 +1379,7 @@ extends CounterTableModel
 				if (_colIsPk != null && _colIsPk[i-1] )
 				{
 					if (val != null)
-						key.append(val).append("|");
+						key.append(val).append(PK_STR_DELIMITER);
 					else
 						_logger.warn(getName()+": Key containes NULL value, rsNum="+rsNum+", row="+rsRowNum+", col="+i+".");
 				}
@@ -1362,7 +1535,7 @@ extends CounterTableModel
 					Object val = row.get(c);
 					if (val != null)
 					{
-						key.append(val).append("|");
+						key.append(val).append(PK_STR_DELIMITER);
 					}
 				}
 			}
@@ -1416,7 +1589,7 @@ extends CounterTableModel
 			if (_colIsPk != null && _colIsPk[c] )
 			{
 				if (val != null)
-					key.append(val).append("|");
+					key.append(val).append(PK_STR_DELIMITER);
 				else
 					_logger.warn(getName()+": Key containes NULL value, row="+getRowCount()+", col="+c+".");
 			}

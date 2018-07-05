@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.naming.NameNotFoundException;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSample;
@@ -13,6 +15,8 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmWaitStatsPanel;
+import com.asetune.config.dict.MonTablesDictionary;
+import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
@@ -46,7 +50,8 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"waiting_tasks_count",
-		"wait_time_ms"
+		"wait_time_ms",
+		"signal_wait_time_ms"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -149,6 +154,20 @@ extends CountersModel
 
 
 
+
+	@Override
+	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	{
+		try 
+		{
+			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
+			mtd.addColumn("dm_os_wait_stats", "WaitTimePerWait", "<html>" +
+			                                                   "Wait time in ms per wait. <br>" +
+			                                                   "<b>formula</b>: diff.wait_time_ms / diff.waiting_tasks_count<br>" +
+			                                                "</html>");
+		}
+		catch (NameNotFoundException e) {/*ignore*/}
+	}
 
 
 

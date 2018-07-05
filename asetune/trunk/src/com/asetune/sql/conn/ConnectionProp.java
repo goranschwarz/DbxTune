@@ -3,11 +3,15 @@ package com.asetune.sql.conn;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.StringUtil;
 
 public class ConnectionProp
 {
+	private static Logger _logger = Logger.getLogger(ConnectionProp.class);
+
 	protected String _username = null;
 	protected String _password = null;
 	
@@ -111,6 +115,14 @@ public class ConnectionProp
 		setUrlOptions(urlOptions, false);
 	}
 
+	public void setUrlOptions(Properties urlOptions)
+	{
+		_urlOptions = urlOptions;
+
+		if (_urlOptions == null)
+			_urlOptions = new Properties();
+	}
+
 	public void setUrlOptions(String urlOptions, boolean resetAllPrev)
 	{
 		if (_urlOptions == null || resetAllPrev)
@@ -132,7 +144,12 @@ public class ConnectionProp
 	{
 		StringBuilder sb = new StringBuilder();
 		sb.append("_username")     .append("=").append(_username)     .append(", ");
-		sb.append("_password")     .append("=").append(_password)     .append(", ");
+
+		if (_logger.isDebugEnabled())
+			sb.append("_password") .append("=").append(_password)     .append(", ");
+		else
+			sb.append("_password") .append("=").append("*secret*")    .append(", ");
+		
 		sb.append("_server")       .append("=").append(_server)       .append(", ");
 		sb.append("_dbname")       .append("=").append(_dbname)       .append(", ");
 		sb.append("_loginTimeout") .append("=").append(_loginTimeout) .append(", ");
@@ -141,7 +158,7 @@ public class ConnectionProp
 		sb.append("_urlOptions")   .append("=").append(_urlOptions)   .append(", ");
 		sb.append("_appName")      .append("=").append(_appName)      .append(", ");
 		sb.append("_appVersion")   .append("=").append(_appVersion)   .append(", ");
-		sb.append("_sshTunnelInfo").append("=").append(_sshTunnelInfo).append("");
+		sb.append("_sshTunnelInfo").append("={").append(_sshTunnelInfo == null ? null : _sshTunnelInfo.getInfoString() ).append("}");
 
 		return super.toString() + ": " + sb.toString();
 	}

@@ -1,10 +1,13 @@
 package com.asetune;
 
+import java.io.File;
+
 import org.apache.commons.cli.CommandLine;
 
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesOracle;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.OracleConfig;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryDefault;
 import com.asetune.gui.MainFrame;
@@ -45,19 +48,19 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "dbxtune.properties";
+		return "conf" + File.separatorChar + "dbxtune.properties";
 	}
 
 	@Override
 	public String getUserConfigFileName()
 	{
-		return "oracletune.user.properties";
+		return "conf" + File.separatorChar + "oracletune.user.properties";
 	}
 
 	@Override
 	public String getSaveConfigFileName()
 	{
-		return "oracletune.save.properties";
+		return "conf" + File.separatorChar + "oracletune.save.properties";
 	}
 
 	@Override
@@ -106,7 +109,8 @@ extends DbxTune
 	@Override
 	public IDbmsConfig createDbmsConfig()
 	{
-		return null; // null means it's not supported
+//		return null; // null means it's not supported
+		return new OracleConfig();
 	}
 
 	@Override

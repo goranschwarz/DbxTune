@@ -310,6 +310,7 @@ public class CountersModelAppend
 			}
 			_nbRows++;
 		}
+		rs.close();
 		_logger.debug("Number of rows in '"+getName()+"': "+_nbRows);
 		
 		if (row == null)

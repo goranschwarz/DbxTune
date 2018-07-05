@@ -2411,7 +2411,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if      (type == DatabaseMetaData.functionResultUnknown) return "Function (Return-Unknown)";
 		else if (type == DatabaseMetaData.functionNoTable)       return "Function (Return-Value)";
 		else if (type == DatabaseMetaData.functionReturnsTable)  return "Function (Returns-Table)";
-		else return "Procedure";
+		else return "Function (unknown-type="+type+")";
 	}
 
 	protected void enrichCompletionForFunctions(Connection conn, WaitForExecDialog waitDialog)
@@ -2491,13 +2491,14 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			                        fi._funcCat     = StringUtils.trim( rs.getString("FUNCTION_CAT"));
 			                        fi._funcSchema  = StringUtils.trim( rs.getString("FUNCTION_SCHEM"));
 			                        fi._funcName    = removeSystemChars(rs.getString("FUNCTION_NAME"));
-			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions() "); }	}
+			if (getTypeInt) { try { fi._funcTypeInt =                   rs.getInt   ("FUNCTION_TYPE"); } catch(SQLException ex) { getTypeInt = false; if (_logger.isDebugEnabled()) _logger.warn("Problems getting 'FUNCTION_TYPE' in refreshCompletionForFunctions(), Caught: '"+ex+"', for: FUNCTION_CAT='"+fi._funcCat+"', FUNCTION_SCHEM='"+fi._funcSchema+"', FUNCTION_NAME='"+fi._funcName+"'."); }	}
 			                        fi._funcRemark  = StringUtils.trim( rs.getString("REMARKS"));
 //			                        fi._specificName= StringUtils.trim( rs.getString("SPECIFIC_NAME"));
 
 			fi._funcType = decodeFunctionType(fi._funcTypeInt);
 			fi._isTableValuedFunction = (fi._funcTypeInt == DatabaseMetaData.functionReturnsTable);
-//System.out.println("ROW("+counter+")-ADD: fi="+fi);
+			if (_logger.isDebugEnabled())
+				_logger.debug("refreshCompletionForFunctions: ROW("+counter+")-ADD: fi="+fi);
 
 			// add schemas... this is a Set so duplicates is ignored
 			_schemaNames.add(fi._funcSchema);
@@ -2900,7 +2901,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if      (type == DatabaseMetaData.procedureResultUnknown) return "Procedure (Result-Unknown)";
 		else if (type == DatabaseMetaData.procedureNoResult)      return "Procedure (No-Result)";
 		else if (type == DatabaseMetaData.procedureReturnsResult) return "Procedure (Returns-Results)";
-		else return "Procedure";
+		else return "Procedure (unknown-type="+type+")";
 	}
 
 	protected void refreshCompletionForProcedureParameters(Connection conn, WaitForExecDialog waitDialog, List<ProcedureInfo> procedureInfoList, boolean bulkMode )

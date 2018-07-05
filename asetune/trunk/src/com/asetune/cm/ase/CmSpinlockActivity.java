@@ -24,6 +24,7 @@ import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
@@ -213,7 +214,7 @@ extends CountersModel
 	}
 
 	@Override
-	public boolean doSqlInit(Connection conn)
+	public boolean doSqlInit(DbxConnection conn)
 	{
 		boolean superRc = super.doSqlInit(conn);
 

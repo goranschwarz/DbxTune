@@ -22,6 +22,10 @@ public class Memory
 	private static int     _sleepTimeInSec = 3;
 	private static ArrayList<MemoryListener> _memListeners = new ArrayList<Memory.MemoryListener>();
 
+	/** used by evaluateAndWait() to wait for memory evaluation to complete */
+	private static Object _evaluateAndWaitSemaphore = new Object();
+
+	/** Interface used by any listeners */
 	public interface MemoryListener
 	{
 		public void outOfMemoryHandler();
@@ -85,18 +89,57 @@ public class Memory
 	}
 
 	/**
-	 * If the thread is sleeping, simply interrupt it and let it go to work. 
+	 * If the memory checker thread is sleeping, simply interrupt it and let it go to work. <br>
+	 * This is async, so your current thread will continue before the memory chaek has been completed
 	 */
 	public static void evaluate()
 	{
 		if (_checkThread != null)
 		{
-			_logger.info("Received 'evaluate' notification, the memory monitor thread will 'now' evaluate the memory usage.");
+			_logger.info("Received 'evaluate' notification from thread '"+Thread.currentThread().getName()+"', the memory monitor thread will 'now' evaluate the memory usage.");
 			_checkThread.interrupt();
 		}
 		else
 		{
 			_logger.warn("Memory monitor thread, has not been started.");
+		}
+	}
+	
+	/**
+	 * If the memory checker thread is sleeping, simply interrupt it and let it go to work. <br>
+	 * This also waits untill the memory thread has done it's work.
+	 */
+	public static void evaluateAndWait()
+	{
+		evaluateAndWait(-1);
+	}
+	
+	/**
+	 * If the memory checker thread is sleeping, simply interrupt it and let it go to work. <br>
+	 * This also waits untill the memory thread has done it's work.
+	 * 
+	 * @param maxWaitTime maximum wait time before we continue (-1 = wait forever)
+	 */
+	public static void evaluateAndWait(int maxWaitTime)
+	{
+		synchronized (_evaluateAndWaitSemaphore)
+		{
+			try
+			{
+				_logger.info("Waiting for memory evaluater to complete.");
+				long startTime = System.currentTimeMillis();
+
+				if (maxWaitTime < 0)
+					_evaluateAndWaitSemaphore.wait();
+				else
+					_evaluateAndWaitSemaphore.wait(maxWaitTime);
+
+				_logger.info("AFTER-Waiting for memory evaluater to complete. Wait time was: " + TimeUtils.msDiffNowToTimeStr(startTime));
+			}
+			catch (InterruptedException ex)
+			{
+				_logger.info("Memory.evaluateAndWait(maxWaitTime="+maxWaitTime+"): was interupted. ex="+ex);
+			}
 		}
 	}
 
@@ -161,7 +204,15 @@ public class Memory
 							if (mbLeftAfterGc <= _memLimitInMb)
 								fireOutOfMemory();
 						}
-						
+
+						// Notify anyone that called: evaluateAndWait()
+						synchronized (_evaluateAndWaitSemaphore)
+						{
+							_evaluateAndWaitSemaphore.notifyAll();
+						}
+
+						// Sleep until next check
+						// This can be interupted by the method: evaluate(); 
 						Thread.sleep(_sleepTimeInSec * 1000);
 					}
 					catch (InterruptedException ignore)

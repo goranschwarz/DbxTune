@@ -674,7 +674,7 @@ public class StressConnect
 //			System.out.println("spinMonCalculate() SQL: \n"+sql);
 			Statement stmnt = _statDoSpinMonConn.createStatement();
 			ResultSet rs = stmnt.executeQuery(sql);
-			ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "SpinMon", firstXrows, false, null, null);
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "SpinMon", firstXrows, -1, false, null, null);
 //			ResultSetTableModel rstm = new ResultSetTableModel(rs, "SpinMon");
 			stmnt.close();
 			rs.close();

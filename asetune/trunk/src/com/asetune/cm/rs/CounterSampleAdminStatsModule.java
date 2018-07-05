@@ -1,6 +1,5 @@
 package com.asetune.cm.rs;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +9,7 @@ import com.asetune.cm.CounterSample;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.DbxTuneResultSetMetaData;
 import com.asetune.cm.NoValidRowsInSample;
+import com.asetune.sql.conn.DbxConnection;
 
 public class CounterSampleAdminStatsModule
 extends CounterSample
@@ -22,7 +22,7 @@ extends CounterSample
 	}
 	
 	@Override
-	public boolean getSample(CountersModel cm, Connection conn, String sql, List<String> pkList) 
+	public boolean getSample(CountersModel cm, DbxConnection conn, String sql, List<String> pkList) 
 	throws SQLException, NoValidRowsInSample
 	{
 		// Get the CmAdminStats which holds all the counter which a Module is based on

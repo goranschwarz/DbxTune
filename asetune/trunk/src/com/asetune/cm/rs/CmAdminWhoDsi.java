@@ -17,7 +17,6 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -125,56 +124,91 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "-added-at-runtime-" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_XACT_SUCCEEDED,     new TrendGraphDataPoint(GRAPH_NAME_XACT_SUCCEEDED,    labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_CMD_READ,           new TrendGraphDataPoint(GRAPH_NAME_CMD_READ,          labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_CMD_PARSED_BY_SQT,  new TrendGraphDataPoint(GRAPH_NAME_CMD_PARSED_BY_SQT, labels, LabelType.Dynamic));
+////		String[] labels = new String[] { "-added-at-runtime-" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_XACT_SUCCEEDED,     new TrendGraphDataPoint(GRAPH_NAME_XACT_SUCCEEDED,    labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_CMD_READ,           new TrendGraphDataPoint(GRAPH_NAME_CMD_READ,          labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_CMD_PARSED_BY_SQT,  new TrendGraphDataPoint(GRAPH_NAME_CMD_PARSED_BY_SQT, labels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
+		//-----
+		addTrendGraph(GRAPH_NAME_XACT_SUCCEEDED,
+			"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Menu CheckBox text
+			"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_XACT_SUCCEEDED,
-				"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Menu CheckBox text
-				"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		//-----
+		addTrendGraph(GRAPH_NAME_CMD_READ,
+			"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Menu CheckBox text
+			"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_CMD_READ,
-					"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Menu CheckBox text
-					"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			//-----
-			tg = new TrendGraph(GRAPH_NAME_CMD_PARSED_BY_SQT,
-					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Menu CheckBox text
-					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-		}
+		//-----
+		addTrendGraph(GRAPH_NAME_CMD_PARSED_BY_SQT,
+			"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Menu CheckBox text
+			"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+	
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_XACT_SUCCEEDED,
+//				"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Menu CheckBox text
+//				"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_CMD_READ,
+//					"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Menu CheckBox text
+//					"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			//-----
+//			tg = new TrendGraph(GRAPH_NAME_CMD_PARSED_BY_SQT,
+//					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Menu CheckBox text
+//					"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Label 
+//				labels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	private List<Integer> getValidRows()

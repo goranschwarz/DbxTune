@@ -15,8 +15,30 @@ public class OsTableRow
 	/**
 	 * Create a new OsTableRow object
 	 */
-	public OsTableRow()
+	protected OsTableRow()
 	{
+	}
+
+//	/**
+//	 * Create a new OsTableRow object
+//	 */
+//	public OsTableRow(HostMonitorMetaData md)
+//	{
+//		_md = md;
+//		_values = new Object[ _md.getColumnCount() ];
+//	}
+	/**
+	 * Create a new OsTableRow object
+	 */
+	public OsTableRow(OsTableRow ostr)
+	{
+		_md = ostr._md;
+		
+		// Create an empty array
+		_values = new Object[ _md.getColumnCount() ];
+		
+		// Copy the PK from the input row
+		_pkStr = ostr.getPk();
 	}
 
 	/**

@@ -72,6 +72,7 @@ public class DbRpcTest
 					row++;
 					System.out.println("reading result set, row "+row);
 				}
+				rs.close();
 	            int returnStat = stmt.getInt(1);
 	            System.out.println("PROC RC="+returnStat);
 

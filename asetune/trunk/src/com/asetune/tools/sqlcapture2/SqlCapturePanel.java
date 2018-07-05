@@ -94,7 +94,7 @@ extends JPanel
 	public static final boolean      DEFAULT_sqlPlan_samplePlanText         = false;
 	
 	public static final String       PROPKEY_sqlPlan_autoLoadXmlPlanInGui   = PROP_PREFIX + ".sqlPlan.autoLoadXmlPlanInGui";
-	public static final boolean      DEFAULT_sqlPlan_autoLoadXmlPlanInGui   = true;
+	public static final boolean      DEFAULT_sqlPlan_autoLoadXmlPlanInGui   = false;
 
 	// Split panes
 	private   JSplitPane        _split_TopAndMiddle          = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
@@ -140,7 +140,7 @@ extends JPanel
 	// SQL Plan
 	private   JPanel            _sqlPlan_pan;
 	private   JCheckBox         _sqlPlanSample_chk                 = new JCheckBox("Sample showplan text", false);
-	protected JCheckBox         _sqlPlanAutoLoadXmlGui_chk         = new JCheckBox("Automatically load XML Plan in GUI", true);
+	protected JCheckBox         _sqlPlanAutoLoadXmlGui_chk         = new JCheckBox("Automatically load XML Plan in GUI", DEFAULT_sqlPlan_autoLoadXmlPlanInGui);
 	protected JButton           _sqlPlanOpenXmlPlanInGui_but       = new JButton("XML Plan in GUI");
 	private   RSyntaxTextAreaX  _sqlPlan_txt                       = new RSyntaxTextAreaX();
 	private   RTextScrollPane   _sqlPlan_scroll                    = new RTextScrollPane(_sqlPlan_txt);

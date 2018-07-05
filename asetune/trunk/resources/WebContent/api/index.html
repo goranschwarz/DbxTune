@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>API Documentation</title>
+		<!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+		<!--  
+		======================================================================= 
+		== JS imports - JAVA SCRIPTS GOES HERE 
+		======================================================================= 
+		--> 
+		<!-- JS: JQuery --> 
+		<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.min.js'></script> 
+		
+		<!-- JS: Bootstrap --> 
+		<script src='/scripts/popper/1.12.9/popper.min.js'></script> 
+		<script src='/scripts/bootstrap/js/bootstrap.min.js'></script> 
+		
+		<!--  
+		======================================================================= 
+		== CSS imports - STYLES SHEETS GOES HERE 
+		======================================================================= 
+		--> 
+		
+		<!-- CSS: Bootstrap --> 
+		<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> 
+		
+		<!-- CSS: Font Awsome --> 
+		<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css'> 
+	
+
+		<style type='text/css'>
+		  table {border-collapse: collapse;}
+		  th {border: 1px solid black; text-align: left; padding: 2px; background-color:gray; color:white;}
+		  td {border: 1px solid black; text-align: left; padding: 2px; }
+		//  th {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white;}
+		//  td {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; }
+		  tr:nth-child(even) {background-color: #f2f2f2;}
+		</style>
+	</head>
+
+	<body>
+	<div class="container">
+<!--	<div class="container-fluid">-->
+
+		<h2>API interface, description</h2>
+
+
+		<!-- ############################################################################# -->
+		<div id='/api/sessions' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/sessions</h5>
+		<div class='card-body'>
+		What sessions are available, and some basic information about that session.<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>type</td>   <td>
+									<code>last</code> Show info about last available session<br>
+									<code>all</code> Show all available recordings for this server/session<br>
+								</td> </tr>
+			<tr> <td>graphs</td> <td><code>true|false</code> if we should include available graphs for this session in the output</td> </tr>
+			<tr> <td>status</td> <td>Show only with some specific status. </td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+		
+
+		<!-- ############################################################################# -->
+		<div id='/api/graphs' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/graphs</h5>
+		<div class='card-body'>
+		What graphs are available for a specific server/session or profile<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>sessionName     </td> <td>Name of the server/session/profile</td> </tr>
+			<tr> <td>sessionStartTime</td> <td>Specify a specific start time (default is "last session") </td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/api/graph/profiles' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/graph/profiles</h5>
+		<div class='card-body'>
+		What graph profiles are available<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>name       </td> <td>name of the profile we want to get details for</td> </tr>
+			<tr> <td>user       </td> <td>If the profile is for a specific user </td> </tr>
+			<tr> <td>dbxTypeName</td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/api/alarm/active' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/alarm/active</h5>
+		<div class='card-body'>
+		Get info about <b>active</b> alarms<br>
+		An empty JSON array, means that there are no active alarms.<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>srv        </td> <td>name of the server we want to get details for</td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/api/alarm/history' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/alarm/history</h5>
+		<div class='card-body'>
+		Get info about <b>historical</b> alarms, all alarms that has been triggered in the past<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>srv     </td> <td>name of the server we want to get details for</td> </tr>
+			<tr> <td>age     </td> <td>not yet implemented: only within X hours</td> </tr>
+			<tr> <td>type    </td> <td>not yet implemented: only 'RAISE', 'RE-RAISE', 'CANCEL'</td> </tr>
+			<tr> <td>category</td> <td>not yet implemented: only for category 'CPU', 'DISK'...</td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/api/graph/data' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/graph/data</h5>
+		<div class='card-body'>
+		Get graph data<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>sessionName   </td> <td>Name of the server</td> </tr>
+			<tr> <td>cmName        </td> <td>Name of a specific collector</td> </tr>
+			<tr> <td>graphName     </td> <td>Name of a specific graph</td> </tr>
+			<tr> <td>startTime     </td> <td>Optional: From what time: Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) (default=2h)</td> </tr>
+			<tr> <td>endTime       </td> <td>Optional: To what time Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) if startTime is 'date' then #mhd is added to startTime (default='')</td> </tr>
+			<tr> <td>sampleType    </td> <td>Optional: (default=AUTO)<br>
+											<code>ALL             </code> get <b>all</b> saved data points<br>
+											<code>AUTO            </code> Auto switch to MAX_OVER_SAMPLES when there are to many samples<br>
+											<code>MAX_OVER_SAMPLES</code> Only take the MAX value from X samples, this can be used if there are to many samples<br>
+											<code>MAX_OVER_MINUTES</code> Only take the MAX value from a sample over X minutes, this can be used if there are to many samples<br>
+											<code>AVG_OVER_MINUTES</code> Only take the Average value from a sample over X minutes, this can be used if there are to many samples<br>
+										 </td> </tr>
+			<tr> <td>sampleValue   </td> <td>Optional: Used with 'AUTO' to "skip" data-points if there are to many. (default='360', if we find more than 360 data-points, then switch to 'MAX_OVER_SAMPLES')</td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/api/chart/broadcast-ws' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/chart/broadcast-ws</h5>
+		<div class='card-body'>
+		Start to subscribe (using a WebSocket) to graph data (graph data will be "pushed" from DbxCentral to your browser/client)<br>
+		<br>
+		Parameters:
+		<table>
+			<tr> <th>Name</th> <th>Description</th> </tr>
+			<tr> <td>serverList</td> <td>comma separated list of server/session names we want to subscribe to</td> </tr>
+			<tr> <td>graphList </td> <td>comma separated list of graph names we want to subscribe to</td> </tr>
+		</table>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/api/pcs/receiver' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/pcs/receiver</h5>
+		<div class='card-body'>
+		This is where Dbx Central receives data from any DbxTune Collector.<br>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		
+		
+		<h2>Other URL, descriptions</h2>
+
+		<!-- ############################################################################# -->
+		<div id='/admin' class='card border-dark mb-5'>
+		<h5 class='card-header'>/admin</h5>
+		<div class='card-body'>
+		Various admin commands (not published yet).<br>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/admin/shutdown' class='card border-dark mb-5'>
+		<h5 class='card-header'>/admin/shutdown</h5>
+		<div class='card-body'>
+		Shutdown or restart DbxCentral.<br>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/alarmLog' class='card border-dark mb-5'>
+		<h5 class='card-header'>/alarmLog</h5>
+		<div class='card-body'>
+		Get alarm log file
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/log' class='card border-dark mb-5'>
+		<h5 class='card-header'>/log</h5>
+		<div class='card-body'>
+		Get log file
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/conf' class='card border-dark mb-5'>
+		<h5 class='card-header'>/conf</h5>
+		<div class='card-body'>
+		Get configuration file
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/download-local-dbxtune' class='card border-dark mb-5'>
+		<h5 class='card-header'>/download-local-dbxtune</h5>
+		<div class='card-body'>
+		Download the local latest DbxTune ZIP package located at DbxCentral server.<br>
+		This could be a later version than the "public" found at the official download page.
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/overview' class='card border-dark mb-5'>
+		<h5 class='card-header'>/overview</h5>
+		<div class='card-body'>
+		Get an overview page with all managed server and there statuses
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+	</div>
+	</body>
+</html>
+
+

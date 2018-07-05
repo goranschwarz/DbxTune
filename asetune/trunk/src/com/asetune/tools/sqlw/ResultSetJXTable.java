@@ -33,7 +33,9 @@ import org.jdesktop.swingx.table.TableColumnExt;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
+import com.asetune.gui.swing.DeferredMouseMotionListener;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.JavaVersion;
 import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -67,6 +69,24 @@ extends JXTable
 	{
 		super(tm);
 		
+		// if it's java9 there seems to be some problems with repainting... (if the table is not added to a ScrollPane, which takes upp the whole scroll)
+		if (JavaVersion.isJava9orLater())
+		{
+			_logger.info("For Java-9, add a 'repaint' when the mouse moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA 9 RELEASE.");
+
+			// Add a repaint every 50ms (when the mouse stops moving = no more repaint until we start to move it again)
+			// with the second parameter to true: it will only do repaint 50ms after you have stopped moving the mouse.
+			addMouseMotionListener(new DeferredMouseMotionListener(50, false)
+			{
+				@Override
+				public void deferredMouseMoved(MouseEvent e)
+				{
+					//System.out.println("ResultSetJXTable.this.repaint(): "+System.currentTimeMillis());
+					ResultSetJXTable.this.repaint();
+				}
+			});
+		}
+
 		addMouseListener(new MouseListener()
 		{
 			@Override public void mouseReleased(MouseEvent e) {}
