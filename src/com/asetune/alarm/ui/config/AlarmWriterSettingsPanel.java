@@ -168,6 +168,11 @@ implements TableModelListener
 		return _alarmWriterSettingsTable.getModel().getRowCount() > 0;
 	}
 
+	public boolean hasCheckedRows()
+	{
+		return _alarmWriterSettingsTableModel.getSelectedRowCount() > 0;
+	}
+
 	/**
 	 * Save settings
 	 */

@@ -3,7 +3,6 @@ package com.asetune.cm.rs;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -20,6 +19,7 @@ import com.asetune.cm.CounterSample;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.DbxTuneResultSetMetaData;
 import com.asetune.cm.rs.RsStatCounterDictionary.StatCounterEntry;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.StringUtil;
 
@@ -98,7 +98,7 @@ extends CounterSample
 	 *---------------------------------------------------------------------------------------------------
 	 */
 	@Override
-	public boolean getSample(CountersModel cm, Connection conn, String sql, List<String> pkList) throws SQLException
+	public boolean getSample(CountersModel cm, DbxConnection conn, String sql, List<String> pkList) throws SQLException
 	{
 		// Create/Initialize the dictionary if it hasn't been done yet.
 		if ( ! RsStatCounterDictionary.hasInstance() )
@@ -216,7 +216,7 @@ extends CounterSample
 //							if ( ! cm.hasResultSetMetaData() )
 //								cm.setResultSetMetaData(rsmd);
 	
-							if (readResultset(cm, rs, rsmd, pkList, rsNum))
+							if (readResultset(cm, rs, rsmd, rsmd, pkList, rsNum))
 								rs.close();
 	
 							checkWarnings(stmnt);
@@ -392,7 +392,7 @@ extends CounterSample
 	}
 
 	@Override
-	protected boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, List<String> pkList, int rsNum)
+	protected boolean readResultset(CountersModel cm, ResultSet rs, ResultSetMetaData rsmd, ResultSetMetaData originRsmd, List<String> pkList, int rsNum)
 	throws SQLException
 	{
 		String firstColName = rsmd.getColumnName(1);

@@ -119,6 +119,38 @@ public class TablePopupFactory
 		});
 		popup.add(menuItem);
 
+		menuItem = new JMenuItem("Copy Cell to clipboard");
+		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ROW_IS_SELECTED);
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override 
+			public void actionPerformed(ActionEvent e)
+			{
+				Component invoker = getPopupMenuInvoker((JMenuItem)e.getSource());
+				if (invoker instanceof JTable)
+				{
+					JTable table = (JTable)invoker;
+					int[] selectedRows = table.getSelectedRows();
+					int   selectedcol  = table.getSelectedColumn();
+//					String selection = SwingUtils.tableToString(table.getModel(), selectedRow);
+//					String selection = SwingUtils.tableToString(table, selectedRows);
+					String selection = "";
+					
+					for (int r=0; r<selectedRows.length; r++)
+					{
+						Object obj = table.getValueAt(selectedRows[r], selectedcol);
+						selection += (obj == null) ? "NULL" : obj.toString() + "\n";
+					}
+					selection = StringUtil.removeLastNewLine(selection);
+
+					StringSelection data = new StringSelection(selection);
+					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+					clipboard.setContents(data, data);
+				}
+			}
+		});
+		popup.add(menuItem);
+
 		if (addSeparatorAfter)
 			popup.addSeparator();
 

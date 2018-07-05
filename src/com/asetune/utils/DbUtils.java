@@ -934,6 +934,7 @@ public class DbUtils
 			String objType = "";
 			while (rs.next())
 				objType = rs.getString(1);
+			rs.close();
 
 			String sql = null;
 			if      (objType.equalsIgnoreCase("PROCEDURE")) sql = sqlGetProcText;
@@ -949,6 +950,7 @@ public class DbUtils
 			rs = stmnt.executeQuery(sql);
 			while (rs.next())
 				sb.append(rs.getString(1));
+			rs.close();
 
 			return sb.toString();
 		}
@@ -1032,7 +1034,7 @@ public class DbUtils
 		}
 		catch (SQLException e)
 		{
-			_logger.debug("When getting HANA Version Number. sql='"+sql+"', Caught exception.", e);
+			_logger.debug("When getting Oracle Version Number. sql='"+sql+"', Caught exception.", e);
 
 			return UNKNOWN;
 		}
@@ -1279,6 +1281,52 @@ public class DbUtils
 
 			return UNKNOWN;
 		}
+	}
+
+	public static String getDb2VersionStr(Connection conn)
+	{
+		final String UNKNOWN = "UNKNOWN";
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String versionStr = "";
+		String sql        = "SELECT SERVICE_LEVEL FROM SYSIBMADM.ENV_INST_INFO";
+
+		try
+		{
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				versionStr = rs.getString(1).trim();
+			}
+			rs.close();
+			stmt.close();
+
+			return versionStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting DB2 Version String. sql='"+sql+"', Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	public static int getDb2VersionNumber(Connection conn)
+	{
+		final int UNKNOWN = -1;
+
+		// FIXME: move this to DbUtils
+		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+			return UNKNOWN;
+
+		String versionStr = getDb2VersionStr(conn);
+
+		int versionNum = Ver.db2VersionStringToNumber(versionStr);
+		return versionNum;
 	}
 
 	public static String getDb2Charset(Connection conn)
@@ -1528,6 +1576,42 @@ public class DbUtils
 //			return isolationLevelToString(_isolationLevel);
 //		}
 //	}
+
+
+	/**
+	 * Make a string a bit more <i>safe</i>
+	 * <ul>
+	 *    <li>a null object will return the String NULL</li>
+	 *    <li>If it's a Number, Simply call toString() on the Number.</li>
+	 *    <li>For all others objects, make toString, and Quote the it using single ', if the value contains any ' they will be transformed into ''.</li>
+	 * </ul>
+	 * @param obj
+	 * @return
+	 */
+	public static String safeStr(Object obj)
+	{
+		if (obj == null)
+			return "NULL";
+
+		if (obj instanceof Number)
+		{
+			return obj.toString();
+		}
+		else
+		{
+			String str = obj.toString();
+    		StringBuilder sb = new StringBuilder();
+    
+    		// add ' around the string...
+    		// and replace all ' into ''
+    		sb.append("'");
+    		sb.append(str.replace("'", "''"));
+    		sb.append("'");
+    		return sb.toString();
+		}
+	}
+	
+	
 	
 	private static void test(int testCase, int expected, String str)
 	{
@@ -1567,5 +1651,4 @@ public class DbUtils
 		System.out.println("2: " + parseHanaMessageForProcName("SAP DBTech JDBC: [19999]: user-defined error:  [19999] \"SYSTEM\".\"SP_DBMTK_PROC_INSTALL_FINAL\": line 58 col 3 (at pos 1705): [19999] (range 3) user-defined error exception: user-defined error:  [19999] \"SYSTEM\".\"SP_DBMTK_ABORT_SESSION\": line 56 col 3 (at pos 1929): [19999] (range 3) user-defined error exception: *** Error while installing PROCEDURE SYSTEM.GS_P1  Object was not found."));
 		System.out.println("3: " + parseHanaMessageForProcName("[304]: division by zero undefined:  [304] \"SYSTEM\".\"GS_P1\": line 5 col 2 (at pos 54): [304] (range 3) division by zero undefined exception: division by zero undefined:  at function /()"));
 	}
-
 }

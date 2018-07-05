@@ -20,7 +20,7 @@ public class TrendGraphDataPointTest
 	@Test
 	public void testStaticLabels()
 	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", new String[] {"L-1", "L-2", "L-3", "L-4", "L-5"}, LabelType.Static );
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", "dummyGraphLabel", TrendGraphDataPoint.Category.OTHER, false, false, new String[] {"L-1", "L-2", "L-3", "L-4", "L-5"}, LabelType.Static );
 
 		Double[] dArray  = new Double[5];
 		
@@ -49,7 +49,7 @@ public class TrendGraphDataPointTest
 	@Test
 	public void testStaticLabelsWithAdd()
 	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", new String[] {"L-1", "L-2", "L-3", "L-4", "L-5"}, LabelType.Static );
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", "dummyGraphLabel", TrendGraphDataPoint.Category.OTHER, false, false, new String[] {"L-1", "L-2", "L-3", "L-4", "L-5"}, LabelType.Static );
 
 		// Set the values
 		java.util.Date now = new java.util.Date();
@@ -105,7 +105,7 @@ public class TrendGraphDataPointTest
 	@Test
 	public void testRuntimeReplacedLabels()
 	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", "dummyGraphLabel", TrendGraphDataPoint.Category.OTHER, false, false, TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
 
 		// Set the values, with one new label and data
 		tgdp.setDataPoint(new java.util.Date(), new String[] {"L-1", "L-2", "L-3", "L-4", "L-5"}, 
@@ -142,7 +142,7 @@ public class TrendGraphDataPointTest
 	@Test
 	public void testRuntimeReplacedLabelsDisplay()
 	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", "dummyGraphLabel", TrendGraphDataPoint.Category.OTHER, false, false, TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
 
 		// Set the values, with one new label and data
 		tgdp.setDataPoint(new java.util.Date(), new String[] {"L-1", "L-2", "L-3", "L-4", "L-5"}, 
@@ -235,7 +235,7 @@ public class TrendGraphDataPointTest
 	@Test
 	public void testMap()
 	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", "dummyGraphLabel", TrendGraphDataPoint.Category.OTHER, false, false, TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
 
 		//-----------------------------------------------------
 		// Simple
@@ -338,7 +338,7 @@ public class TrendGraphDataPointTest
 	@Test
 	public void testMapLabelDisplay()
 	{
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint("dummyGraph", "dummyGraphLabel", TrendGraphDataPoint.Category.OTHER, false, false, TrendGraphDataPoint.RUNTIME_REPLACED_LABELS, LabelType.Dynamic );
 
 		// Set the values
 		java.util.Date now = new java.util.Date();

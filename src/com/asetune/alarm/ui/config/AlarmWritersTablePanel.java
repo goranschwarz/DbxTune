@@ -31,12 +31,14 @@ implements TableModelListener
 	private AlarmWritersTable      _alarmWritersTable;
 	private AlarmWritersTableModel _alarmWritersTableModel;
 
-	private AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
+//	private AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
+	private AlarmWriterDetailsPanel _alarmWriterDetailsPanel;
 
 	private JLabel _warning_lbl = new JLabel();
 	private JLabel _debug_lbl   = new JLabel();
 
-	public AlarmWritersTablePanel(AlarmWriterSettingsPanel alarmWriterSettingsPanel)
+//	public AlarmWritersTablePanel(AlarmWriterSettingsPanel alarmWriterSettingsPanel)
+	public AlarmWritersTablePanel(AlarmWriterDetailsPanel alarmWriterDetailsPanel)
 	{
 		super();
 		
@@ -46,9 +48,13 @@ implements TableModelListener
 		setLayout(new MigLayout("insets 0 0 0 0", "", ""));
 
 		// Create the table
-		_alarmWriterSettingsPanel = alarmWriterSettingsPanel;
+//		_alarmWriterSettingsPanel = alarmWriterSettingsPanel;
+//		_alarmWritersTableModel   = new AlarmWritersTableModel();
+//		_alarmWritersTable        = new AlarmWritersTable(_alarmWritersTableModel, _alarmWriterSettingsPanel);
+//		_alarmWritersTableModel.addTableModelListener(this); // call this.tableChanged(TableModelEvent) when the table changed
+		_alarmWriterDetailsPanel  = alarmWriterDetailsPanel;
 		_alarmWritersTableModel   = new AlarmWritersTableModel();
-		_alarmWritersTable        = new AlarmWritersTable(_alarmWritersTableModel, _alarmWriterSettingsPanel);
+		_alarmWritersTable        = new AlarmWritersTable(_alarmWritersTableModel, _alarmWriterDetailsPanel);
 		_alarmWritersTableModel.addTableModelListener(this); // call this.tableChanged(TableModelEvent) when the table changed
 
 		GTableFilter filter = new GTableFilter(_alarmWritersTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
@@ -165,6 +171,30 @@ implements TableModelListener
 //					}
 //				}
 				for (CmSettingsHelper awse : awe._settings)
+				{
+					if (awse.isSelected())
+					{
+						String key   = awse.getPropName();
+						String value = awse.getStringValue();
+
+						// encrypt fields with password
+						boolean doEncrypt = false;
+						if (awse.getName() != null && awse.getName().toLowerCase().indexOf("password") != -1)
+							doEncrypt = true;
+
+						conf.setProperty(key, value, doEncrypt);
+					}
+				}
+			}
+		}
+		
+		// Set config for WRITERS FILTERS
+		for (int r=0; r<_alarmWritersTableModel.getRowCount(); r++)
+		{
+			AlarmWriterEntry awe = _alarmWritersTableModel.getWriterEntryForRow(r);
+			if (awe._selected)
+			{
+				for (CmSettingsHelper awse : awe._filters)
 				{
 					if (awse.isSelected())
 					{

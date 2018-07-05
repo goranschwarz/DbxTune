@@ -59,6 +59,9 @@ public class AseConnectionUtils
 //	private static String SQL_SP_VERSION  = "sp_version 'installmontables'";
 
 	
+	public static final String  PROPKEY_getShowplan_useLongOption = "AseConnectionUtils.getShowplan.useLongOption";
+	public static final boolean DEFAULT_getShowplan_useLongOption = true;
+	
 	/**
 	 * What is current working database
 	 * @return database name, null on failure
@@ -85,6 +88,7 @@ public class AseConnectionUtils
 			{
 				cwdb = rs.getString(1);
 			}
+			rs.close();
 			return cwdb;
 		}
 		catch(SQLException e)
@@ -178,7 +182,7 @@ public class AseConnectionUtils
 				case 968: // 968, 16, 2, Database '%S_DBINFO' is not upgraded and hence is not available for access. Please retry your query after database has been upgraded.
 				case 3471://3471, 10, 2, Database '%.*s' cannot be brought online because it has replicated tables that may not be completely transferred. After making sure that your replication is in sync, use dbcc dbrepair to remove the secondary truncpt.
 					String aseMsg = (e.getMessage() == null) ? "-unknown-" : e.getMessage().replaceAll("\n", "");
-					String msg = "It looks like the database '"+dbname+"' is in 'load database', 'recovery mode' or 'offline', still in the database '"+dbNameBeforeChange+"', please try again later. AseMsgNumber="+aseError+", AseMsg="+aseMsg;
+					String msg = "It looks like the database '"+dbname+"' is in 'load database', 'recovery mode' or 'offline', still in the database '"+dbNameBeforeChange+"', please try again later. DbmsMsgNumber="+aseError+", DbmsMsg="+aseMsg;
 					_logger.warn(msg);
 					//throw new DbNotRecoveredException(_servername, dbname, getManagedType(), msg, sqle);
 					return false;
@@ -811,6 +815,7 @@ public class AseConnectionUtils
 
 				listenersStr += ", ";
 			}
+			rs.close();
 			// Take away last ", "
 			listenersStr = StringUtil.removeLastComma(listenersStr);
 			
@@ -2709,9 +2714,13 @@ public class AseConnectionUtils
 	}
 
 
-
 	/**
 	 * execute 'sp_showplan SPID, null, null, null'
+	 * <br>
+	 * Note: sp_showplan in some ASE 16 releases stacktraces...<br>
+	 * Fixed: in ASE 16.0 SP2 PL5, or SP3<br>
+	 * CR: 796763, note: 2321932<br>
+	 * 
 	 * @param conn 
 	 * @param spid The SPID to do showplan on
 	 * @param htmlStartStr
@@ -2736,7 +2745,11 @@ public class AseConnectionUtils
 		if (conn instanceof DbxConnection)
 		{
 			if (((DbxConnection) conn).getDbmsVersionNumber() >= Ver.ver(16, 0))
-				showplanExtraParamInAse16 = ", 'long'";
+			{
+				boolean useLongOption = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getShowplan_useLongOption, DEFAULT_getShowplan_useLongOption);
+				if (useLongOption)
+					showplanExtraParamInAse16 = ", 'long'";
+			}
 		}
 		StringBuilder sb = null;
 		String sql = "exec sp_showplan "+spid+", null, null, null" + showplanExtraParamInAse16;
@@ -3682,13 +3695,16 @@ public class AseConnectionUtils
 	 * @param aseVersion Version of the ASE, if 0, the version will be fetched from ASE
 	 * @return Text of the procedure/view/trigger...
 	 */
-	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int planId, int aseVersion)
+//	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int planId, int aseVersion)
+	public static String getObjectText(DbxConnection conn, String dbname, String objectName, String owner, int planId, int aseVersion)
 	{
 		if (StringUtil.isNullOrBlank(owner) || (owner != null && (owner.equals("-1") || owner.equals("0") || owner.equals("1"))) )
 			owner = "dbo";
 
+//		if (aseVersion <= 0)
+//			aseVersion = getAseVersionNumber(conn);
 		if (aseVersion <= 0)
-			aseVersion = getAseVersionNumber(conn);
+			aseVersion = conn.getDbmsVersionNumber();
 
 		if (planId < 0)
 			planId = 0;
@@ -3894,8 +3910,7 @@ public class AseConnectionUtils
 				else
 				{
 					// Maybe the MetaData is wrong... so if it's "master" and a proc starting with "sp_", lets try to look it up in sybsystemprocs 
-//					if ("master".equals(dbname) && objectName.startsWith("sp_"))
-					if (objectName.startsWith("sp_"))
+					if (objectName.startsWith("sp_") && !"sybsystemprocs".equals(dbname)) // !sybsystemprocs will stop us from possible infinate loop
 						returnText = getObjectText(conn, "sybsystemprocs", objectName, owner, planId, aseVersion);
 				}
 			}

@@ -146,6 +146,7 @@ extends TdsConnection
 //				extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong(1), "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
 				extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getInt(4),  "Physical table size in KB. Note: sp_iqtablesize, column 'KBytes'.", null));
 			}
+			rs.close();
 		}
 		catch (SQLException ex)
 		{

@@ -70,6 +70,9 @@ extends AlarmWriterAbstract
 	*/
 	@Override public boolean isCallReRaiseEnabled() { return true; }
 	@Override public void    printConfig() {}
+	@Override public void    printFilterConfig() {}
+	@Override public boolean doAlarm(AlarmEvent ae) { return true; }
+	@Override public List<CmSettingsHelper> getAvailableFilters() { return new ArrayList<CmSettingsHelper>(); }
 
 	@Override
 	public String getDescription()
@@ -163,9 +166,11 @@ extends AlarmWriterAbstract
 				"", // serviceName
 				"", // serviceInfo
 				"", // extraInfo
+				AlarmEvent.Category.INTERNAL,
 				AlarmEvent.Severity.INFO, 
 				AlarmEvent.ServiceState.UNKNOWN, 
-				"EndOfScan activeAlarmSize="+activeAlarmSize);
+				"EndOfScan activeAlarmSize="+activeAlarmSize,
+				null);
 			
 			setData(activeAlarmSize);
 		}

@@ -1,7 +1,6 @@
 package com.asetune.cm.postgres;
 
 import java.sql.Connection;
-import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -16,9 +15,6 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmSummaryPanel;
-import com.asetune.graph.TrendGraphDataPoint;
-import com.asetune.graph.TrendGraphDataPoint.LabelType;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -100,49 +96,59 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_XXX             = "xxx";
+//	public static final String GRAPH_NAME_XXX             = "xxx";
 //	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 
 	private void addTrendGraphs()
 	{
-		String[] labels_xxx            = new String[] { "Hour", "Minute", "Second"};
-//		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+//		String[] labels_xxx            = new String[] { "Hour", "Minute", "Second"};
+////		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+//		
+//		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx, LabelType.Static));
+////		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
+
+//		// GRAPH
+//		addTrendGraph(GRAPH_NAME_XXX,
+//			"Dummy Graph", 	                        // Menu CheckBox text
+//			"Dummy Graph showing hour, minute, second", // Label 
+//			new String[] { "Hour", "Minute", "Second"}, 
+//			LabelType.Static,
+//			true,  // is Percent Graph
+//			false, // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
 		
-		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx, LabelType.Static));
-//		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,       new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,       labels_aaNwPacket));
-
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			TrendGraph tg = null;
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_XXX,
-//				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-//				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-				"Dummy Graph", 	                        // Menu CheckBox text
-				"Dummy Graph showing hour, minute, second", // Label 
-				labels_xxx, 
-				true,  // is Percent Graph
-				this, 
-				true, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			TrendGraph tg = null;
+//
 //			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-//					"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-//					"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
-//					labels_aaNwPacket, 
-//					false, // is Percent Graph
-//					this, 
-//					false, // visible at start
-//					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					-1);   // minimum height
-//				addTrendGraph(tg.getName(), tg, true);
-
-		}
+//			tg = new TrendGraph(GRAPH_NAME_XXX,
+////				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
+////				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
+//				"Dummy Graph", 	                        // Menu CheckBox text
+//				"Dummy Graph showing hour, minute, second", // Label 
+//				labels_xxx, 
+//				true,  // is Percent Graph
+//				this, 
+//				true, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+////			// GRAPH
+////			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
+////					"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
+////					"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
+////					labels_aaNwPacket, 
+////					false, // is Percent Graph
+////					this, 
+////					false, // visible at start
+////					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+////					-1);   // minimum height
+////				addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override
@@ -186,64 +192,66 @@ extends CountersModel
 	{
 		return 
 				"select \n" + 
-				"    *  \n" +
+//				"    *  \n" +
+				"     cast( split_part(cast(inet_server_addr() as varchar(30)), '/', 1) || ':' || cast(inet_server_port() as varchar(10)) as varchar(30)) as instance_name\n" +
+				"    ,cast( split_part(cast(inet_server_addr() as varchar(30)), '/', 1) || ':' || cast(inet_server_port() as varchar(10)) as varchar(30)) as host\n" +
 				"    ,cast( version() as varchar(255))   as version \n" +
 				"    ,CURRENT_TIMESTAMP                  as time_now \n" + 
 				"    ,cast( extract(epoch from (CURRENT_TIMESTAMP - CURRENT_TIMESTAMP AT TIME ZONE 'UTC'))/60 as INT) as utc_minute_diff \n" +
 				"    ,pg_postmaster_start_time()         as start_time \n" +
-				"from pg_catalog.pg_stat_bgwriter \n" +
+//				"from pg_catalog.pg_stat_bgwriter \n" +
 				"";
 	}
 	
-	@Override
-	public void updateGraphData(TrendGraphDataPoint tgdp)
-	{
-//		int srvVersion = getServerVersion();
-
-		//---------------------------------
-		// GRAPH:
-		//---------------------------------
-		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
-		{	
-			Double[] arr = new Double[3];
-
-			int ms = (int) (System.currentTimeMillis() % 1000l);
-			ms = ms < 0 ? ms+1000 : ms;
-
-			Calendar now = Calendar.getInstance();
-			int hour   = now.get(Calendar.HOUR_OF_DAY);
-			int minute = now.get(Calendar.MINUTE);
-			int second = now.get(Calendar.SECOND);
-			
-//			arr[0] = this.getAbsValueAsDouble (0, "Connections");
-//			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
-//			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-			arr[0] = new Double(hour);
-			arr[1] = new Double(minute);
-			arr[2] = new Double(second);
-			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
-
-			// Set the values
-			tgdp.setDataPoint(this.getTimestamp(), arr);
-		}
-
+//	@Override
+//	public void updateGraphData(TrendGraphDataPoint tgdp)
+//	{
+////		int srvVersion = getServerVersion();
+//
 //		//---------------------------------
 //		// GRAPH:
 //		//---------------------------------
-//		if (GRAPH_NAME_AA_NW_PACKET.equals(tgdp.getName()))
+//		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
 //		{	
-//			Double[] arr = new Double[2];
+//			Double[] arr = new Double[3];
 //
-//			arr[0] = this.getRateValueAsDouble (0, "PacketsReceived");
-//			arr[1] = this.getRateValueAsDouble (0, "PacketsSent");
-////			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
-////			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
-//			_logger.debug("updateGraphData(aaPacketGraph): PacketsReceived='"+arr[0]+"', PacketsSent='"+arr[1]+"'.");
+//			int ms = (int) (System.currentTimeMillis() % 1000l);
+//			ms = ms < 0 ? ms+1000 : ms;
+//
+//			Calendar now = Calendar.getInstance();
+//			int hour   = now.get(Calendar.HOUR_OF_DAY);
+//			int minute = now.get(Calendar.MINUTE);
+//			int second = now.get(Calendar.SECOND);
+//			
+////			arr[0] = this.getAbsValueAsDouble (0, "Connections");
+////			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
+////			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
+//			arr[0] = new Double(hour);
+//			arr[1] = new Double(minute);
+//			arr[2] = new Double(second);
+//			_logger.debug("updateGraphData("+tgdp.getName()+"): hour='"+arr[0]+"', minute='"+arr[1]+"', second='"+arr[2]+"'.");
 //
 //			// Set the values
-//			tgdp.setDate(this.getTimestamp());
-//			tgdp.setData(arr);
+//			tgdp.setDataPoint(this.getTimestamp(), arr);
 //		}
-
-	}
+//
+////		//---------------------------------
+////		// GRAPH:
+////		//---------------------------------
+////		if (GRAPH_NAME_AA_NW_PACKET.equals(tgdp.getName()))
+////		{	
+////			Double[] arr = new Double[2];
+////
+////			arr[0] = this.getRateValueAsDouble (0, "PacketsReceived");
+////			arr[1] = this.getRateValueAsDouble (0, "PacketsSent");
+//////			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
+//////			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
+////			_logger.debug("updateGraphData(aaPacketGraph): PacketsReceived='"+arr[0]+"', PacketsSent='"+arr[1]+"'.");
+////
+////			// Set the values
+////			tgdp.setDate(this.getTimestamp());
+////			tgdp.setData(arr);
+////		}
+//
+//	}
 }

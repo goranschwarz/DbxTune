@@ -1,5 +1,7 @@
 package com.asetune;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -8,15 +10,24 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.postgres.CmPgActivity;
+import com.asetune.cm.postgres.CmPgBgWriter;
 import com.asetune.cm.postgres.CmPgDatabase;
+import com.asetune.cm.postgres.CmPgFunctions;
+import com.asetune.cm.postgres.CmPgIndexes;
+import com.asetune.cm.postgres.CmPgIndexesIo;
+import com.asetune.cm.postgres.CmPgSequencesIo;
 import com.asetune.cm.postgres.CmPgStatements;
+import com.asetune.cm.postgres.CmPgTableSize;
 import com.asetune.cm.postgres.CmPgTables;
+import com.asetune.cm.postgres.CmPgTablesIo;
 import com.asetune.cm.postgres.CmSummary;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
@@ -69,10 +80,17 @@ extends CounterControllerAbstract
 		// Server
 		CmPgActivity        .create(counterController, guiController);
 		CmPgDatabase        .create(counterController, guiController);
+		CmPgBgWriter        .create(counterController, guiController);
 
 		// Object Access
 		CmPgTables          .create(counterController, guiController);
+		CmPgTablesIo        .create(counterController, guiController);
+		CmPgIndexes         .create(counterController, guiController);
+		CmPgIndexesIo       .create(counterController, guiController);
+		CmPgFunctions       .create(counterController, guiController);
+		CmPgSequencesIo     .create(counterController, guiController);
 		CmPgStatements      .create(counterController, guiController);
+		CmPgTableSize       .create(counterController, guiController);
 
 		// Cache
 		// Disk
@@ -83,6 +101,8 @@ extends CounterControllerAbstract
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
 		CmOsMeminfo         .create(counterController, guiController);
+		CmOsNwInfo          .create(counterController, guiController);
+		CmOsDiskSpace       .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -173,7 +193,8 @@ extends CounterControllerAbstract
 		Timestamp counterClearTime = new Timestamp(0);
 
 //		String sql = "select current_timestamp, sys_context('USERENV','INSTANCE_NAME') as Instance, sys_context('USERENV','SERVER_HOST') as onHost from dual";
-		String sql = "select current_timestamp, 'DUMMY_INSTANCE' as Instance, 'DUMMY_HOSTNAME' as onHost";
+//		String sql = "select current_timestamp, 'DUMMY_INSTANCE' as Instance, 'DUMMY_HOSTNAME' as onHost";
+		String sql = "select current_timestamp, inet_server_addr() as onIp, inet_server_port() as portNum";
 
 		try
 		{
@@ -184,10 +205,26 @@ extends CounterControllerAbstract
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				mainSampleTime   = rs.getTimestamp(1);
-				dbmsServerName   = rs.getString(2);
-				dbmsHostname     = rs.getString(3);
+				Timestamp ts   = rs.getTimestamp(1);
+				String    ip   = rs.getString(2).trim();
+				String    port = rs.getString(3).trim();
 //				counterClearTime = rs.getTimestamp(4);
+
+				String hostname = ip;
+				try
+				{
+					InetAddress addr = InetAddress.getByName(ip);
+					hostname = addr.getHostName();
+				}
+				catch(UnknownHostException ex)
+				{
+				}
+
+				mainSampleTime   = ts;
+				dbmsServerName   = DbxTune.stripSrvName(hostname + ":" + port);
+				dbmsHostname     = hostname;
+				
+//System.out.println("createPcsHeaderInfo(): dbmsServerName='"+dbmsServerName+"', dbmsHostname='"+dbmsHostname+"', mainSampleTime='"+mainSampleTime+"'.");
 			}
 			rs.close();
 			stmt.close();

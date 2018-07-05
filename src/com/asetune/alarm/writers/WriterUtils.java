@@ -145,6 +145,7 @@ public class WriterUtils
 			context.put("serviceName"                , StringUtil.toStr( alarmEvent.getServiceName()                ));
 			context.put("serviceInfo"                , StringUtil.toStr( alarmEvent.getServiceInfo()                ));
 			context.put("extraInfo"                  , StringUtil.toStr( alarmEvent.getExtraInfo()                  ));
+			context.put("category"                   , StringUtil.toStr( alarmEvent.getCategory()                   ));
 			context.put("severity"                   , StringUtil.toStr( alarmEvent.getSeverity()                   ));
 			context.put("state"                      , StringUtil.toStr( alarmEvent.getState()                      ));
 			context.put("data"                       , StringUtil.toStr( alarmEvent.getData()                       ));
@@ -154,6 +155,7 @@ public class WriterUtils
 			context.put("duration"                   , StringUtil.toStr( alarmEvent.getDuration()                   ));
 			context.put("reRaiseCount"               , StringUtil.toStr( alarmEvent.getReRaiseCount()               ));
 			context.put("crTimeStr"                  , StringUtil.toStr( alarmEvent.getCrTimeStr()                  ));
+			context.put("reRaiseTimeStr"             , StringUtil.toStr( alarmEvent.getReRaiseTimeStr()             ));
 			context.put("timeToLive"                 , StringUtil.toStr( alarmEvent.getTimeToLive()                 ));
 			context.put("alarmClassAbriviated"       , StringUtil.toStr( alarmEvent.getAlarmClassAbriviated()       ));
 			context.put("extendedDescription"        , StringUtil.toStr( alarmEvent.getExtendedDescription()        ));
@@ -298,16 +300,18 @@ public class WriterUtils
 		                                            + "</html>");
 		desc.put("alarmClass"                 , "<html> <h2>alarmClass                </h2> Class name of the alarm.                                                                                                                             <br><br>Example: <code>AlarmEventHighCpuUtilazation</code>      </html>");
 		desc.put("serviceType"                , "<html> <h2>serviceType               </h2> Type of Service, this would typically be <code>"+Version.getAppName()+"<code> </html>");
-		desc.put("serviceName"                , "<html> <h2>serviceName               </h2> Name of the service, this would be the DBMS Server Name, or possibly the hostname of the server we are monitoring.                                   <br><br>Example: <code>GORAN_1_DS</code> </html>");
+		desc.put("serviceName"                , "<html> <h2>serviceName               </h2> Name of the service, this would be the DBMS Server Name, or possibly the hostname of the server we are monitoring.                                   <br><br>Example: <code>GORAN_1_DS</code>     </html>");
 		desc.put("serviceInfo"                , "<html> <h2>serviceInfo               </h2> Name of the Counter Model that detected the problem.                                                                                                 <br><br>Example: <code>CmSummary</code>      </html>");
-		desc.put("extraInfo"                  , "<html> <h2>extraInfo                 </h2> In some cases a Alarm attches extra parameters/information. For instance CmOpenDatabases puts the database name in here.                             <br><br>Example: <code>PML</code>      </html>");
-		desc.put("severity"                   , "<html> <h2>severity                  </h2> What <b>Severity</b> this alarm has. Known severities are 'INFO', 'WARNING' and 'ERROR'.                                                             <br><br>Example: <code>WARNING</code>      </html>");
-		desc.put("state"                      , "<html> <h2>state                     </h2> What Service <b>State</b> is attached to the alarm. Known states are 'UP', 'AFFECTED' and 'DOWN'.                                                    <br><br>Example: <code>DOWN</code>      </html>");
+		desc.put("extraInfo"                  , "<html> <h2>extraInfo                 </h2> In some cases a Alarm attches extra parameters/information. For instance CmOpenDatabases puts the database name in here.                             <br><br>Example: <code>PML</code>            </html>");
+		desc.put("category"                   , "<html> <h2>category                  </h2> What <b>Category</b> this alarm has. Known severities are 'OTHER', 'CPU', 'SPACE', 'SRV_CONFIG', 'LOCK' and 'DOWN'.                                  <br><br>Example: <code>CPU</code>            </html>");
+		desc.put("severity"                   , "<html> <h2>severity                  </h2> What <b>Severity</b> this alarm has. Known severities are 'INFO', 'WARNING' and 'ERROR'.                                                             <br><br>Example: <code>WARNING</code>        </html>");
+		desc.put("state"                      , "<html> <h2>state                     </h2> What Service <b>State</b> is attached to the alarm. Known states are 'UP', 'AFFECTED' and 'DOWN'.                                                    <br><br>Example: <code>DOWN</code>           </html>");
 		desc.put("data"                       , "<html> <h2>data                      </h2> Raw datapoint the alarm was based on. For Example in a AlarmEventHighCpuUtilazation, it will be the CPU Usage in percent   </html>");
 		desc.put("description"                , "<html> <h2>description               </h2> A Short text description trying to describe the alam, hopefully with some data points in there as well  </html>");
 		desc.put("duration"                   , "<html> <h2>duration                  </h2> In a CANCEL action, this will be for how long the Alarm was active for, in a RE-RAISE it will be the time since the Alarm was originally raised.     <br><br>Example: <code>09:27</code> for 10 minutes and 27 minutes   </html>");
 		desc.put("reRaiseCount"               , "<html> <h2>reRaiseCount              </h2> How many times has this Alarm been re-raised. (a re-raise is sent every time the alars is still <b>above</b> the threshold, you have specified.  </html>");
 		desc.put("crTimeStr"                  , "<html> <h2>crTimeStr                 </h2> When the Alarm was originally Created.                                                                                                               <br><br>Example: <code>2017-09-30 00:34:45.123</code>      </html>");
+		desc.put("reRaiseTimeStr"             , "<html> <h2>reRaiseTimeStr            </h2> When the Alarm was re/raised.                                                                                                                        <br><br>Example: <code>2017-09-30 00:34:45.123</code>      </html>");
 		desc.put("timeToLive"                 , "<html> <h2>timeToLive                </h2> Number of milliseconds an alarm is expected to live. This is used if a Counter Collector/Model has the <i>postpone</i> field set. Then that CounterModel will not be sending an new Alarm for next couple of seconds.  </html>");
 		desc.put("alarmClassAbriviated"       , "<html> <h2>alarmClassAbriviated      </h2> Same as the <code>alarmClass</code> field, but it's abriviated. (removing <cade>AlarmEvent</code>)                                                   <br><br>Example: <code>HighCpuUtilazation</code> instaed of <code>AlarmEventHighCpuUtilazation</code>     </html>");
 		desc.put("extendedDescription"        , "<html> <h2>extendedDescription       </h2> In some cases the Alarm might choose to fill in some <b>extra</b> information, which might be usable for example in the <code>AlarmWriterToMail</code> or similar writers. </html>");
@@ -326,6 +330,7 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "serviceName"                , "${serviceName}"                ,  null, desc.get("serviceName"               )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "serviceInfo"                , "${serviceInfo}"                ,  null, desc.get("serviceInfo"               )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "extraInfo"                  , "${extraInfo}"                  ,  null, desc.get("extraInfo"                 )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "category"                   , "${category}"                   ,  null, desc.get("category"                  )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "severity"                   , "${severity}"                   ,  null, desc.get("severity"                  )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "state"                      , "${state}"                      ,  null, desc.get("state"                     )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "data"                       , "${data}"                       ,  null, desc.get("data"                      )));
@@ -333,6 +338,7 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "duration"                   , "${duration}"                   ,  null, desc.get("duration"                  )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseCount"               , "${reRaiseCount}"               ,  null, desc.get("reRaiseCount"              )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "crTimeStr"                  , "${crTimeStr}"                  ,  null, desc.get("crTimeStr"                 )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "reRaiseTimeStr"             , "${reRaiseTimeStr}"             ,  null, desc.get("reRaiseTimeStr"            )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "timeToLive"                 , "${timeToLive}"                 ,  null, desc.get("timeToLive"                )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "alarmClassAbriviated"       , "${alarmClassAbriviated}"       ,  null, desc.get("alarmClassAbriviated"      )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "extendedDescription"        , "${extendedDescription}"        ,  null, desc.get("extendedDescription"       )));
@@ -361,7 +367,7 @@ public class WriterUtils
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
+		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", AlarmEvent.Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
 
 		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true);
 		System.out.println("OUT: "+str);

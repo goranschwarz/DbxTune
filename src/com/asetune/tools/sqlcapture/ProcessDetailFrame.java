@@ -102,7 +102,7 @@ public class ProcessDetailFrame
 	protected JButton           _activeStmntSqlOrderBy_but     = new JButton("Remove from template");
                                 
 	protected JButton           _viewXmlPlanInGui_but          = new JButton("XML Plan in GUI");
-	protected JCheckBox         _viewXmlPlanInGui_chk          = new JCheckBox("Automatically load XML Plan in GUI", true);
+	protected JCheckBox         _viewXmlPlanInGui_chk          = new JCheckBox("Automatically load XML Plan in GUI", false);
                                 
 	private   int               spid;
 	private   int               kpid;

@@ -4,8 +4,6 @@
 package com.asetune.pcs;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -64,7 +62,6 @@ import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
-import com.asetune.utils.JavaUtils;
 import com.asetune.utils.NetUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -161,6 +158,9 @@ public class PersistWriterJdbc
 	/** If the stopService() timed out, or wiatTime <= 0 */
 	private boolean _shutdownWithNoWait = false;
 	
+	/** used is serviceStart/Stop to check if we already has done stop */
+	private String _servicesStoppedByThread = null;
+
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -375,6 +375,8 @@ public class PersistWriterJdbc
 	public void startServices()
 	throws Exception
 	{
+		_servicesStoppedByThread = null;
+
 		if (_lastUsedUrl == null)
 		{
 			_logger.info("The services will be started later. After A proper database URL has been determened in the open() method.");
@@ -500,44 +502,66 @@ public class PersistWriterJdbc
 				
 				if (writeDbxTuneServiceFile)
 				{
-					try
+					Configuration conf = Configuration.getInstance(DbxTune.DBXTUNE_NOGUI_INFO_CONFIG);
+					H2UrlHelper urlHelper = new H2UrlHelper(_lastUsedUrl);
+
+					conf.setProperty("pcs.last.url", _lastUsedUrl);
+					
+					if (_h2TcpServer != null)
 					{
-						H2UrlHelper urlHelper = new H2UrlHelper(_lastUsedUrl);
-
-						// Create a file like: $DBXTUNE_SAVE_DIR/H2DBNAME.dbxtune
-						File f = new File(baseDir + File.separatorChar + urlHelper.getFile().getName() + ".dbxtune");
-						_logger.info("Creating DbxTune - H2 Service information file '" + f.getAbsolutePath() + "'.");
-
-						f.createNewFile();
-						f.deleteOnExit();
-						_h2ServiceInfoFile = f;
-
-						PrintStream w = new PrintStream( new FileOutputStream(f) );
-						w.println("dbxtune.pid = " + JavaUtils.getProcessId("-1"));
-						w.println("dbxtune.last.url = " + _lastUsedUrl);
-
-						if (_h2TcpServer != null)
-						{
-							w.println("h2.tcp.port = " + _h2TcpServer.getPort());
-							w.println("h2.tcp.url  = " + _h2TcpServer.getURL());
-							w.println("h2.jdbc.url = " + "jdbc:h2:" + _h2TcpServer.getURL() + "/" + urlHelper.getFile().getName() );
-						}
-						if (_h2WebServer != null)
-						{
-							w.println("h2.web.port = " + _h2WebServer.getPort());
-							w.println("h2.web.url  = " + _h2WebServer.getURL());
-						}
-						if (_h2PgServer != null)
-						{
-							w.println("h2.pg.port  = " + _h2PgServer.getPort());
-							w.println("h2.pg.url   = " + _h2PgServer.getURL());
-						}
-						w.close();
+						conf.setProperty("pcs.h2.tcp.port" ,_h2TcpServer.getPort());
+						conf.setProperty("pcs.h2.tcp.url"  ,_h2TcpServer.getURL());
+						conf.setProperty("pcs.h2.jdbc.url" ,"jdbc:h2:" + _h2TcpServer.getURL() + "/" + urlHelper.getFile().getName() );
 					}
-					catch (Exception ex)
+					if (_h2WebServer != null)
 					{
-						_logger.warn("Problems creating DbxTune H2 internal service file, continuing anyway. Caught: "+ex);
+						conf.setProperty("pcs.h2.web.port", _h2WebServer.getPort());
+						conf.setProperty("pcs.h2.web.url",  _h2WebServer.getURL());
 					}
+					if (_h2PgServer != null)
+					{
+						conf.setProperty("pcs.h2.pg.port", _h2PgServer.getPort());
+						conf.setProperty("pcs.h2.pg.url",  _h2PgServer.getURL());
+					}
+					
+					conf.save(true);
+
+//					try
+//					{
+//						// Create a file like: $DBXTUNE_SAVE_DIR/H2DBNAME.dbxtune
+//						File f = new File(baseDir + File.separatorChar + urlHelper.getFile().getName() + ".dbxtune");
+//						_logger.info("Creating DbxTune - H2 Service information file '" + f.getAbsolutePath() + "'.");
+//
+//						f.createNewFile();
+//						f.deleteOnExit();
+//						_h2ServiceInfoFile = f;
+//
+//						PrintStream w = new PrintStream( new FileOutputStream(f) );
+//						w.println("dbxtune.pid = " + JavaUtils.getProcessId("-1"));
+//						w.println("dbxtune.last.url = " + _lastUsedUrl);
+//
+//						if (_h2TcpServer != null)
+//						{
+//							w.println("h2.tcp.port = " + _h2TcpServer.getPort());
+//							w.println("h2.tcp.url  = " + _h2TcpServer.getURL());
+//							w.println("h2.jdbc.url = " + "jdbc:h2:" + _h2TcpServer.getURL() + "/" + urlHelper.getFile().getName() );
+//						}
+//						if (_h2WebServer != null)
+//						{
+//							w.println("h2.web.port = " + _h2WebServer.getPort());
+//							w.println("h2.web.url  = " + _h2WebServer.getURL());
+//						}
+//						if (_h2PgServer != null)
+//						{
+//							w.println("h2.pg.port  = " + _h2PgServer.getPort());
+//							w.println("h2.pg.url   = " + _h2PgServer.getURL());
+//						}
+//						w.close();
+//					}
+//					catch (Exception ex)
+//					{
+//						_logger.warn("Problems creating DbxTune H2 internal service file, continuing anyway. Caught: "+ex);
+//					}
 				}
 			}
 			catch (SQLException e) 
@@ -550,6 +574,13 @@ public class PersistWriterJdbc
 	@Override
 	public void stopServices(int maxWaitTimeInMs)
 	{
+		if ( _servicesStoppedByThread != null )
+		{
+			_logger.info("Services has already been stopped by thread '"+_servicesStoppedByThread+"'... the stopServices() will do nothing.");
+			return;
+		}
+		_servicesStoppedByThread = Thread.currentThread().getName();
+
 		if (maxWaitTimeInMs <= 0)
 			_shutdownWithNoWait = true;
 
@@ -591,27 +622,7 @@ public class PersistWriterJdbc
 		// IF H2, make special shutdown
 		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
 		{
-			// This statement closes all open connections to the database and closes the database. 
-			// This command is usually not required, as the database is closed automatically when 
-			// the last connection to it is closed.
-			//
-			// If no option is used, then the database is closed normally. All connections are 
-			// closed, open transactions are rolled back.
-			// 
-			// SHUTDOWN COMPACT     fully compacts the database (re-creating the database may 
-			//                      further reduce the database size). If the database is closed 
-			//                      normally (using SHUTDOWN or by closing all connections), then 
-			//                      the database is also compacted, but only for at most the time 
-			//                      defined by the database setting h2.maxCompactTime (see there).
-			// SHUTDOWN IMMEDIATELY closes the database files without any cleanup and without compacting.
-			// SHUTDOWN DEFRAG      re-orders the pages when closing the database so that table 
-			//                      scans are faster.
-			//
-			// Admin rights are required to execute this command.
-			
-			String shutdownCmd = "SHUTDOWN COMPACT";
-			_logger.info("Sending "+shutdownCmd+" to H2 database.");
-			dbExecNoException(_mainConn, shutdownCmd);
+			h2Shutdown(H2ShutdownType.COMPACT);
 		}
 
 		if (_h2TcpServer != null)
@@ -641,8 +652,108 @@ public class PersistWriterJdbc
 			_h2ServiceInfoFile.delete();
 			_h2ServiceInfoFile = null;
 		}
-
 	}
+
+
+	public enum H2ShutdownType
+	{
+		/** closes the database files without any cleanup and without compacting. */
+		IMMEDIATELY, 
+		
+		/** fully compacts the database (re-creating the database may further reduce the database size). 
+		 * If the database is closed normally (using SHUTDOWN or by closing all connections), then the database is also compacted, 
+		 * but only for at most the time defined by the database setting h2.maxCompactTime (see there).*/
+		COMPACT, 
+
+		/** re-orders the pages when closing the database so that table scans are faster. */
+		DEFRAG
+	};
+
+	/**
+	 * Helper method to shutdown H2 
+	 */
+	private void h2Shutdown(H2ShutdownType shutdownType)
+	{
+		if (_mainConn == null)
+		{
+			_logger.info("h2ShutdownCompact(): will do nothing, _mainConn was null");
+			return;
+		}
+
+		String currentUrl = null;
+		try { currentUrl = _mainConn.getMetaData().getURL(); }
+		catch(SQLException ex) { _logger.warn("Problems getting current URL from the H2 Connection. Caught: "+ex); }
+		
+		// Try to get the FILES SIZE before we do 'shutdown compact'
+		// Then after 'shutdown compact', we can compare the difference / db file shrinkage
+		H2UrlHelper urlHelper = new H2UrlHelper(currentUrl);
+		File dbFile = urlHelper.getDbFile();
+		long dbFileSizeBefore = -1;
+		if (dbFile != null)
+			dbFileSizeBefore = dbFile.length();
+
+		// This statement closes all open connections to the database and closes the database. 
+		// This command is usually not required, as the database is closed automatically when 
+		// the last connection to it is closed.
+		//
+		// If no option is used, then the database is closed normally. All connections are 
+		// closed, open transactions are rolled back.
+		// 
+		// SHUTDOWN COMPACT     fully compacts the database (re-creating the database may 
+		//                      further reduce the database size). If the database is closed 
+		//                      normally (using SHUTDOWN or by closing all connections), then 
+		//                      the database is also compacted, but only for at most the time 
+		//                      defined by the database setting h2.maxCompactTime (see there).
+		// SHUTDOWN IMMEDIATELY closes the database files without any cleanup and without compacting.
+		// SHUTDOWN DEFRAG      re-orders the pages when closing the database so that table 
+		//                      scans are faster.
+		//
+		// Admin rights are required to execute this command.
+		long startTime = System.currentTimeMillis();
+		
+		String shutdownCmd = "SHUTDOWN " + shutdownType;
+
+		// Issue a dummy command to see if the connection is still alive
+		try (Statement stmnt = _mainConn.createStatement();) {
+			stmnt.execute("select 1111");
+		} catch(SQLException ex) {
+			_logger.error("Problem when executing DUMMY SQL 'select 1111' before "+shutdownCmd+". SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
+		}
+
+		try (Statement stmnt = _mainConn.createStatement();) 
+		{
+			_logger.info("Sending "+shutdownCmd+" to H2 database.");
+			stmnt.execute(shutdownCmd);
+			_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+		} 
+		catch(SQLException ex) 
+		{
+			// during shutdown we would expect: ErrorCode=90121, SQLState=90121, toString=org.h2.jdbc.JdbcSQLException: Database is already closed (to disable automatic closing at VM shutdown, add ";DB_CLOSE_ON_EXIT=FALSE" to the db URL)
+			if ( ex.getErrorCode() == 90121 )
+				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			else
+				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
+		}
+		
+		// Possibly: print information about H2 DB File SIZE information before and after shutdown compress
+		if (dbFileSizeBefore > 0)
+		{
+			long dbFileSizeAfter = dbFile.length();
+			long sizeDiff = dbFileSizeAfter - dbFileSizeBefore;
+			
+			_logger.info("Shutdown H2 database file size info, after '"+shutdownCmd+"'. " 
+					+ "DiffMb="     + String.format("%.1f", (sizeDiff        /1024.0/1024.0))
+					+ ", BeforeMb=" + String.format("%.1f", (dbFileSizeBefore/1024.0/1024.0))
+					+ ", AfterMb="  + String.format("%.1f", (dbFileSizeAfter /1024.0/1024.0))
+					+ ", Filename='"+dbFile.getAbsolutePath()
+					+ "'.");
+		}
+
+		// Close the connection
+		try { _mainConn.close(); } catch(Exception ignore) {}
+		_mainConn = null; 
+	}
+
 
 	/*---------------------------------------------------
 	** Methods
@@ -752,9 +863,6 @@ public class PersistWriterJdbc
 
 		if ( ! _keepConnOpen || force)
 		{
-			try { _mainConn.close(); } catch(Exception ignore) {}
-			_mainConn = null; 
-			
 			if (_ddlStorageConn != null)
 			{
 				try { _ddlStorageConn.close(); } catch(Exception ignore) {}
@@ -766,8 +874,13 @@ public class PersistWriterJdbc
 				try { _sqlCaptureStorageConn.close(); } catch(Exception ignore) {}
 				_sqlCaptureStorageConn = null;
 			}
-			
-			// NOTE: Should we STOP any of the (H2) services???
+
+//			if (_mainConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2) && _keepConnOpen) // Do shutdown on H2 if we have _keepConnOpen=true... then the database needs to be campacted
+//			{
+//				h2ShutdownCompact();
+//			}
+
+			// Shutdown and stop any of the (H2) services
 			stopServices(5000);
 		}
 	}
@@ -882,7 +995,7 @@ public class PersistWriterJdbc
 //				varVal = AseConnectionUtils.getAseServername(conn);
 				varVal = "";
 				if (cont != null)
-					varVal = cont.getServerName();
+					varVal = DbxTune.stripSrvName(cont.getServerNameOrAlias());
 			}
 			else if ( "ASEHOSTNAME".equals(varName) || "SRVHOSTNAME".equals(varName) || "HOSTNAME".equals(varName) )
 			{
@@ -1169,8 +1282,8 @@ public class PersistWriterJdbc
 				if ( ! urlMap.containsKey("WRITE_DELAY") )
 				{
 					change = true;
-					_logger.info("H2 URL add option: WRITE_DELAY=5000");
-					urlMap.put("WRITE_DELAY",  "5000");
+					_logger.info("H2 URL add option: WRITE_DELAY=30000");
+					urlMap.put("WRITE_DELAY",  "30000");
 				}
 
 //				// DATABASE_EVENT_LISTENER mode
@@ -1180,6 +1293,19 @@ public class PersistWriterJdbc
 //					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
 //					urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
 //				}
+
+				// DB_CLOSE_ON_EXIT = if we have our of SHUTDOWN hook thats closing H2
+				boolean isShutdownHookInstalled = System.getProperty("dbxtune.isShutdownHookInstalled", "false").trim().equalsIgnoreCase("true");
+				if (isShutdownHookInstalled)
+				{
+					if ( ! urlMap.containsKey("DB_CLOSE_ON_EXIT") )
+					{
+						change = true;
+						_logger.info("H2 URL add option: DB_CLOSE_ON_EXIT=false  (due to isShutdownHookInstalled="+isShutdownHookInstalled+")");
+						urlMap.put("DB_CLOSE_ON_EXIT", "FALSE");
+					}
+				}
+
 
 				if (change)
 				{
@@ -1294,6 +1420,8 @@ public class PersistWriterJdbc
 					int    getDatabaseMajorVersion   = -1;
 					int    getDatabaseMinorVersion   = -1;
 
+					String getIdentifierQuoteString  = "\"";
+
 					try	{ getDriverName             = dbmd.getDriverName();             } catch (Throwable ignore) {}
 					try	{ getDriverVersion          = dbmd.getDriverVersion();          } catch (Throwable ignore) {}
 					try	{ getDriverMajorVersion     = dbmd.getDriverMajorVersion();     } catch (Throwable ignore) {}
@@ -1305,6 +1433,8 @@ public class PersistWriterJdbc
 					try	{ getDatabaseProductVersion = dbmd.getDatabaseProductVersion(); } catch (Throwable ignore) {}
 					try	{ getDatabaseMajorVersion   = dbmd.getDatabaseMajorVersion();   } catch (Throwable ignore) {}
 					try	{ getDatabaseMinorVersion   = dbmd.getDatabaseMinorVersion();   } catch (Throwable ignore) {}
+
+					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
 
 					_logger.info("Connected using JDBC driver Name='"+getDriverName
 							+"', Version='"         +getDriverVersion
@@ -1321,6 +1451,9 @@ public class PersistWriterJdbc
 
 					// Set what type of database we are connected to.
 					setDatabaseProductName(getDatabaseProductName == null ? "" : getDatabaseProductName);
+
+					// Get and set the QuotedIdentifier Character
+					setQuotedIdentifierChar(getIdentifierQuoteString == null ? "\"" : getIdentifierQuoteString);
 				}
 			}
 
@@ -1791,7 +1924,21 @@ public class PersistWriterJdbc
 			boolean tabExists = rs.next();
 			rs.close();
 	
-			if( ! tabExists )
+			if( tabExists )
+			{
+				_logger.info("Checking table '" + tabName + "'.");
+				
+				List <String> alterList = sqlCapBroker.checkTableDdl(conn, dbmd, tabName);
+				if (alterList != null && !alterList.isEmpty())
+				{
+					for (String sql : alterList)
+					{
+						_logger.info("Altering table '" + tabName + "', using sql: " + sql);
+						dbDdlExec(conn, sql);
+					}
+				}
+			}
+			else
 			{
 				_logger.info("Creating table '" + tabName + "'.");
 				getStatistics().incCreateTables();
@@ -2368,7 +2515,9 @@ public class PersistWriterJdbc
 			return;
 
 		// Get the list... and start a new list...
-		List<AlarmEventWrapper> alarmList = AlarmWriterToPcsJdbc.getInstance().getList(true);
+//		List<AlarmEventWrapper> alarmList = AlarmWriterToPcsJdbc.getInstance().getList(true);
+		List<AlarmEventWrapper> alarmList = AlarmWriterToPcsJdbc.getInstance().getList();
+//		AlarmWriterToPcsJdbc.getInstance().clear();
 		
 		if (alarmList.isEmpty())
 			return;
@@ -2397,6 +2546,7 @@ public class PersistWriterJdbc
 				pst.setString   (i++, ae.getServiceName()                                                 ); // serviceName             - varchar(30) , Nullable = false
 				pst.setString   (i++, ae.getServiceInfo()                                                 ); // serviceInfo             - varchar(80) , Nullable = false
 				pst.setString   (i++, ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()     ); // extraInfo               - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getCategory()+""                                                 ); // category                - varchar(20) , Nullable = false
 				pst.setString   (i++, ae.getSeverity()+""                                                 ); // severity                - varchar(10) , Nullable = false
 				pst.setString   (i++, ae.getState()+""                                                    ); // state                   - varchar(10) , Nullable = false
 				pst.setInt      (i++, ae.getReRaiseCount()                                                ); // repeatCnt               - int         , Nullable = false
@@ -2438,6 +2588,7 @@ public class PersistWriterJdbc
 	public void saveSample(PersistContainer cont)
 	{
 		DbxConnection conn = _mainConn;
+		String qic = getQuotedIdentifierChar();
 		
 		if (conn == null)
 		{
@@ -2459,9 +2610,6 @@ public class PersistWriterJdbc
 
 		try
 		{
-			// Save any alarms
-			saveAlarms(conn, sessionStartTime, sessionSampleTime);
-
 			// START a transaction
 			// This will lower number of IO's to the transaction log
 			if (conn.getAutoCommit() == true)
@@ -2469,6 +2617,9 @@ public class PersistWriterJdbc
 
 			// STATUS, that we are saving right now
 			_inSaveSample = true;
+
+			// Save any alarms
+			saveAlarms(conn, sessionStartTime, sessionSampleTime);
 
 			//
 			// INSERT THE ROW
@@ -2894,6 +3045,7 @@ public class PersistWriterJdbc
 //				
 //				tableInfo.add(colName, colType, colSize);
 //			}
+//			colRs.close();
 //		}
 //		catch (SQLException ignore) { /*ignore*/ }
 
@@ -3087,7 +3239,11 @@ public class PersistWriterJdbc
 			if (label == null)
 				sb.append("NULL, ");
 			else
-				sb.append("'").append(label).append("', ");
+			{
+				// Should we check the length of label and truncate it if above ### (100 for the moment)
+				// Should we do safeStr() to escape single quote as well
+				sb.append("'").append(label).append("', "); 
+			}
 
 			if (data == null)
 				sb.append("NULL");

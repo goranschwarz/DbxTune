@@ -1041,8 +1041,10 @@ finally
 		if (conn == null)
 			return false;
 
+		String expectedProductName = getDesiredProductName();
+
 		// If productName is not set, then there is nothing to check, then simply return TRUE
-		if ( StringUtil.isNullOrBlank(getDesiredProductName()) )
+		if ( StringUtil.isNullOrBlank(expectedProductName) )
 			return true;
 
 		// Get Product NAME and check if it's the Desired Product name
@@ -1050,10 +1052,11 @@ finally
 		{
 			String dbProductStr = ConnectionDialog.getDatabaseProductName(conn);
 			String dbVersionStr = ConnectionDialog.getDatabaseProductVersion(conn);
-
+			
 			_logger.debug("Just connected to Database Product '"+dbProductStr+"', with version string '"+dbVersionStr+"'.");
 
-			if ( ! getDesiredProductName().equals(dbProductStr) )
+//			if ( ! expectedProductName.equals(dbProductStr) )
+			if ( ! DbUtils.isProductName(dbProductStr, expectedProductName))
 			{
 				_logger.warn("Sorry you can only connect to Product named '"+getDesiredProductName()+"'. The connected product name was '"+dbProductStr+"', with the version string '"+dbVersionStr+"'.");
 
@@ -1064,6 +1067,10 @@ finally
 					"<ul>" +
 					"  <li>Product Name: "+dbProductStr+"</li>" +
 					"  <li>Version String: "+dbVersionStr+"</li>" +
+					"</ul>" +
+					"Expected the Following:<br>" +
+					"<ul>" +
+					"  <li>Product Name: "+expectedProductName+"</li>" +
 					"</ul>" +
 					"</html>";
 				SwingUtils.showWarnMessage("Unsupported Database Product", htmlMsg, null);
@@ -1165,6 +1172,12 @@ finally
 						{
 							JdbcUrlParser jdbcUrlParser = JdbcUrlParser.parse(_rawJdbcUrl);
 							hostPortStr = jdbcUrlParser.getHostPortStr();
+							
+							if (StringUtil.isNullOrBlank(hostPortStr))
+							{
+								_logger.error("Parsing JDBC Url for host/port number failed. jdbcUrl='"+_rawJdbcUrl+"', jdbcUrlParser="+jdbcUrlParser);
+								throw new RuntimeException("Parsing JDBC Url for host/port number failed. jdbcUrl='"+_rawJdbcUrl+"', jdbcUrlParser="+jdbcUrlParser);
+							}
 						}
 
 						try
@@ -1584,6 +1597,22 @@ finally
 					props2.put("retrieveMessagesFromServerOnGetMessage", "true");
 				}
 			}
+
+			// set Application name
+			String jdbcAppNameProp = null;
+			if      (url.startsWith("jdbc:sqlserver:"  )) { jdbcAppNameProp = "applicationName"; }
+			else if (url.startsWith("jdbc:postgresql:" )) { jdbcAppNameProp = "ApplicationName"; }
+			else if (url.startsWith("jdbc:mysql:"      )) { jdbcAppNameProp = ""; }
+			else if (url.startsWith("jdbc:db2:"        )) { jdbcAppNameProp = ""; }
+			else if (url.startsWith("jdbc:oracle:thin:")) { jdbcAppNameProp = ""; }
+			else if (url.startsWith("jdbc:sap:"        )) { jdbcAppNameProp = ""; }
+			
+			if (StringUtil.hasValue(jdbcAppNameProp))
+			{
+				props .put(jdbcAppNameProp, Version.getAppName());
+				props2.put(jdbcAppNameProp, Version.getAppName());
+			}
+
 
 			_logger.debug("getConnection to driver='"+driver+"', url='"+url+"', props='"+props+"'.");
 

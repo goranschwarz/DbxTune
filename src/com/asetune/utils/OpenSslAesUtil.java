@@ -11,8 +11,10 @@ import java.nio.file.Paths;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.PropertyConfigurator;
 import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
@@ -34,6 +36,14 @@ public class OpenSslAesUtil
 		this.keyLenBits = nKeyBits;
 	}
 
+	public static class DecryptionException
+	extends Exception
+	{
+		public DecryptionException(String message, Throwable cause)
+		{
+			super(message, cause);
+		}
+	}
 //	public static String encrypt(String key, String toEncrypt) throws Exception
 //	{
 //		Key skeySpec = generateKeySpec(key);
@@ -54,11 +64,16 @@ public class OpenSslAesUtil
 //
 //	private byte[] encipher(byte[] pwd, String sourceString)
 //	{
+//		// openssl non-standard extension: salt embedded at start of encrypted file
+////		byte[] salt = Arrays.copyOfRange(src, 8, 16); // 0..7 is "SALTED__", 8..15 is the salt
+//		byte[] salt = new byte[] {};
+//
 //		try
 //		{
 //			BlockCipherPadding padding = new PKCS7Padding();
 //			BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()), padding);
 //			
+//			CipherParameters params = getCipherParameters(pwd, salt);
 //			cipher.reset();
 //			cipher.init(false, params);
 //		}
@@ -73,6 +88,7 @@ public class OpenSslAesUtil
 	
 	
 	public static String decode(String passwd, String base64Str)
+	throws DecryptionException
 	{
 		OpenSslAesUtil decrypter = new OpenSslAesUtil(128);
 
@@ -81,6 +97,7 @@ public class OpenSslAesUtil
 	}
 
 	public byte[] decipher(byte[] pwd, byte[] src)
+	throws DecryptionException
 	{
 		// openssl non-standard extension: salt embedded at start of encrypted file
 		byte[] salt = Arrays.copyOfRange(src, 8, 16); // 0..7 is "SALTED__", 8..15 is the salt
@@ -110,13 +127,16 @@ public class OpenSslAesUtil
 		}
 		catch (InvalidCipherTextException e)
 		{
-			System.err.println("Error: Decryption failed, Caught: " + e);
-			return null;
+			throw new DecryptionException("Decryption failed, Probably wrong passphrase. Caught: " + e, e);
+
+			//System.err.println("Error: Decryption failed, Caught: " + e);
+			//return null;
 		}
 		catch (RuntimeException e)
 		{
-			System.err.println("Error: Decryption failed, Caught: " + e);
-			return null;
+			throw new DecryptionException("Decryption failed, Caught: " + e, e);
+			//System.err.println("Error: Decryption failed, Caught: " + e);
+			//return null;
 		}
 	}
 
@@ -137,39 +157,19 @@ public class OpenSslAesUtil
 		return cp;
 	}
 
-	public static void main(String[] args)
-	{
-//		OpenSslAesUtil d = new OpenSslAesUtil(128);
-//		String r = new String(d.decipher("mypassword".getBytes(), Base64.decodeBase64("U2FsdGVkX187CGv6DbEpqh/L6XRKON7uBGluIU0nT3w=")));
-//		System.out.println(r);
-//
-//		r = new String(d.decipher("sybase".getBytes(), Base64.decodeBase64("U2FsdGVkX1/2chgTZtP5+b30Hwv1n2prE5CqtWcoH8A=")));
-//		System.out.println(r);
-		System.out.println("decrypted=|" + decode("sybase", "U2FsdGVkX1/2chgTZtP5+b30Hwv1n2prE5CqtWcoH8A=") + "|");
-
-		try
-		{
-			System.out.println("readFromFile=|" + readPasswdFromFile("sa", null, null, null) + "|");
-		}
-		catch(Exception e)
-		{
-			e.printStackTrace();
-		}
-	}
-	
 	
 	public static String readPasswdFromFile(String user)
-	throws Exception
+	throws IOException, DecryptionException
 	{
 		return readPasswdFromFile(user, null, null, null);
 	}
 	public static String readPasswdFromFile(String user, String serverName)
-	throws Exception
+	throws IOException, DecryptionException
 	{
 		return readPasswdFromFile(user, serverName, null, null);
 	}
 	public static String readPasswdFromFile(String user, String serverName, String filename)
-	throws Exception
+	throws IOException, DecryptionException
 	{
 		return readPasswdFromFile(user, serverName, filename, null);
 	}
@@ -201,7 +201,7 @@ public class OpenSslAesUtil
 	 * @throws IOException for example if the password file didn't exist or that we had problems reading the file
 	 */
 	public static String readPasswdFromFile(String user, String serverName, String filename, String encPasswd)
-	throws IOException
+	throws IOException, DecryptionException
 	{
 
 		// If no password was passed: use "sybase" or get from property
@@ -216,8 +216,8 @@ public class OpenSslAesUtil
 		File f = new File(filename);
 		if (f.exists())
 		{
-			String xxxEncPasswd = null;
-			String srvEncPasswd = null;
+			String fallbackEncPasswd = null;
+			String srvMatchEncPasswd = null;
 
 			List<String> lines = Files.readAllLines(Paths.get(filename), Charset.forName("UTF-8"));
 			for (String line : lines)
@@ -250,23 +250,50 @@ public class OpenSslAesUtil
 						if (srvEntry)
 						{
 							if (serverName != null && serverName.equals(fServer))
-								srvEncPasswd = fEncPasswd;
+								srvMatchEncPasswd = fEncPasswd;
 						}
 						else
 						{
-							xxxEncPasswd = fEncPasswd;
+							fallbackEncPasswd = fEncPasswd;
 						}
 					}
 				}
 			}
 			
-			// entry looking like |sa:PROD_A_ASE:encryptedPasswd|
-			if (srvEncPasswd != null)
-				return decode(encPasswd, srvEncPasswd);
+			String rawEncryptedStr = null;
 
+			// Generic password *without* server specification (use this as a FALLBACK)
 			// entry looking like |sa:encryptedPasswd|
-			if (xxxEncPasswd != null)
-				return decode(encPasswd, xxxEncPasswd);
+			if (fallbackEncPasswd != null)
+				rawEncryptedStr = fallbackEncPasswd;
+
+			// password WITH server specification
+			// entry looking like |sa:PROD_A_ASE:encryptedPasswd|
+			if (srvMatchEncPasswd != null) 
+				rawEncryptedStr = srvMatchEncPasswd;
+
+			// DECODE the rawEncryptedStr
+			if (rawEncryptedStr != null)
+			{
+				// First try with the supplied passphrase
+				try
+				{
+					return decode(encPasswd, rawEncryptedStr);
+				}
+				catch(DecryptionException originEx)
+				{
+					// Second try with the "current user" as the passphrase
+					try
+					{
+						String userPassphrase = System.getProperty("user.name");
+						return decode(userPassphrase, rawEncryptedStr);
+					}
+					catch(DecryptionException ex)
+					{
+						throw originEx;
+					}
+				}
+			}
 
 			// Nothing was found...
 			return null;
@@ -283,5 +310,38 @@ public class OpenSslAesUtil
 		String defFilename = homeDir + File.separatorChar + ".passwd.enc";
 
 		return Configuration.getCombinedConfiguration().getProperty("OpenSslAesUtil.readPasswdFromFile.filename", defFilename);
+	}
+
+	
+	
+	
+	
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+//		log4jProps.setProperty("log4j.rootLogger", "TRACE, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+
+//		OpenSslAesUtil d = new OpenSslAesUtil(128);
+//		String r = new String(d.decipher("mypassword".getBytes(), Base64.decodeBase64("U2FsdGVkX187CGv6DbEpqh/L6XRKON7uBGluIU0nT3w=")));
+//		System.out.println(r);
+//
+//		r = new String(d.decipher("sybase".getBytes(), Base64.decodeBase64("U2FsdGVkX1/2chgTZtP5+b30Hwv1n2prE5CqtWcoH8A=")));
+//		System.out.println(r);
+		try { System.out.println("decrypted=|" + decode("sybase", "U2FsdGVkX1/2chgTZtP5+b30Hwv1n2prE5CqtWcoH8A=") + "|"); }
+		catch(Exception e) { e.printStackTrace(); }
+		
+
+		try { System.out.println("readFromFile=|" + readPasswdFromFile("sa", null, null, null) + "|"); }
+		catch(Exception e) { e.printStackTrace(); }
+		
+		try { System.out.println("x1-ok="   + decode("sybase", "U2FsdGVkX1/foj2pv2V24rLfl7RLdcMGdd8jaTngzns=")); } catch(Exception e) { e.printStackTrace(); }
+		try { System.out.println("x2-fail=" + decode("sybase", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
+		try { System.out.println("x3-ok="   + decode("sysopr", "U2FsdGVkX1+4mSAv8/x8TRYx8wPrWUovDh8HBY16ZTY=")); } catch(Exception e) { e.printStackTrace(); }
+		
 	}
 }

@@ -37,8 +37,17 @@ public class JdbcUrlParser
 	public void setPort(int port) { _port = port; }
 	
 	/** Returns the host and port number in the format host:port */
-	public String getHostPortStr()           { return (_hostPortStr != null) ? _hostPortStr : (getHost() + ":" + getPort()); }
 	public void   setHostPortStr(String str) { _hostPortStr = str; }
+	public String getHostPortStr()           
+	{
+		if (StringUtil.hasValue(_hostPortStr))
+			return _hostPortStr;
+		
+		if (StringUtil.hasValue(getHost()))
+			return getHost() + ":" + getPort();
+
+		return null;
+	}
 
 
 	public static JdbcUrlParser parse(String url)
@@ -78,7 +87,13 @@ public class JdbcUrlParser
 
 			try
 			{
-				String cleanURI = url.substring("jdbc:".length());
+				String cleanURI = url;
+				if (url.startsWith("jdbc:"))
+					cleanURI = url.substring("jdbc:".length());
+				
+				// URI.create() do not like 'sqlserver://' so stripping out all '://'
+//				if (cleanURI.indexOf("//") >= 0)
+//					cleanURI = cleanURI.replace("://", ":");
 				
 				URI uri = URI.create(cleanURI);
 

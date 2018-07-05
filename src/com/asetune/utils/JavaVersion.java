@@ -1,6 +1,5 @@
 package com.asetune.utils;
 
-import java.lang.management.ManagementFactory;
 import java.util.StringTokenizer;
 
 /**

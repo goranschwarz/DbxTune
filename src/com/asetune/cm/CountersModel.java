@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.swing.ImageIcon;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -49,10 +50,15 @@ import com.asetune.DbxTune;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.IUserDefinedAlarmInterrogator;
 import com.asetune.alarm.UserDefinedAlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventProcedureCacheOutOfMemory;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.Category;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TabularCntrPanel;
@@ -63,20 +69,26 @@ import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistReader.PcsSavedException;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.DbmsDataTypeResolver;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.CronUtils;
 import com.asetune.utils.NumberUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.gson.stream.JsonWriter;
 import com.sybase.jdbcx.SybConnection;
 import com.sybase.jdbcx.SybMessageHandler;
+
+import it.sauronsoftware.cron4j.InvalidPatternException;
+import it.sauronsoftware.cron4j.SchedulingPattern;
 
 public class CountersModel 
 extends AbstractTableModel
@@ -145,7 +157,7 @@ implements Cloneable, ITableTooltip
 	private String             _sqlClose          = null; // Not used yet
 	private String             _sqlRequest        = null;
 	private String             _sqlWhere          = "";
-	private TabularCntrPanel   tabPanel           = null;
+	private TabularCntrPanel   _tabPanel          = null;
 	private List<String>       _pkCols            = null;
 //	private List<String>       _pkColsOrigin      = null;
 
@@ -381,8 +393,8 @@ implements Cloneable, ITableTooltip
 		_isNewDeltaOrRateRow = null;
 
 		// reset panel, if we got one
-		if (tabPanel != null)
-			tabPanel.reset();
+		if (_tabPanel != null)
+			_tabPanel.reset();
 		
 		// reset trendgraph DATA
 		for (TrendGraphDataPoint tgdp : getTrendGraphData().values())
@@ -541,6 +553,12 @@ implements Cloneable, ITableTooltip
 		loadProps();
 
 		setDataInitialized(false);
+
+		// Initialize alarms
+		initAlarms();
+
+		// Print the alarm configuration.
+		printSystemAlarmConfig();
 	}
 
 	protected void checkInConstructor()
@@ -559,12 +577,14 @@ implements Cloneable, ITableTooltip
 
 	public CountersModel copyForOfflineRead()
 	{
+//System.out.println("CountersModel.copyForOfflineRead(): this="+this);
 		CountersModel cm = copyForStorage();
 		
 		// Remove all the rows in the CM, so that new can be added
 		// if this is not done, all the old rows will still be visible when displaying it in the JTable
 		cm.clearForRead();
 
+//System.out.println("CountersModel.copyForOfflineRead(): return cm="+cm);
 		return cm;
 	}
 	public CountersModel copyForStorage()
@@ -617,7 +637,7 @@ implements Cloneable, ITableTooltip
 		c._sqlClose                   = this._sqlClose;
 		c._sqlRequest                 = this._sqlRequest;
 		c._sqlWhere                   = this._sqlWhere;
-		c.tabPanel                    = this.tabPanel;           // do we really need to copy this one?
+		c._tabPanel                   = this._tabPanel;           // do we really need to copy this one?
 		c._pkCols                     = this._pkCols;              // no need to full copy, static usage
 //		c._pkColsOrigin               = this._pkColsOrigin;
 
@@ -998,26 +1018,10 @@ implements Cloneable, ITableTooltip
 	 * Used to set off-line counter data<br>
 	 * Most likely has to be override to handle local offline data for subclasses
 	 */
-	public void setValueAt(int type, Object value, int row, int col)
+	public void setOfflineColumnNames(int type, List<String> cols)
 	{
-		CounterTableModel data = null;
-		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new CounterSample("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
-		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new CounterSample("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
-		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new CounterSample("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
-		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-
-		// NOTE: this might suffer from performance problems if: fireTableCellUpdated() 
-		//       on the JTable is fired...
-		data.setValueAt(value, row, col);
-	}
-
-	/** 
-	 * Used to set off-line counter data<br>
-	 * Most likely has to be override to handle local offline data for subclasses
-	 */
-	public void setColumnNames(int type, List<String> cols)
-	{
+//new Exception(this+": DUMMY: CounterModel setOfflineColumnNames").printStackTrace();
+//System.out.println("++++++++++++++++++++++++++++++++"+this+"::setOfflineColumnNames(): type="+type+", cols='"+cols+"'.");
 //		CounterTableModel data = null;
 		CounterSample data = null;
 		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new CounterSample("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
@@ -1030,8 +1034,25 @@ implements Cloneable, ITableTooltip
 		initColumnStuff(data);
 	}
 
-	
-	
+	/** 
+	 * Used to set off-line counter data<br>
+	 * Most likely has to be override to handle local offline data for subclasses
+	 */
+	public void setOfflineValueAt(int type, Object value, int row, int col)
+	{
+//System.out.println("++++++++++++++++++++++++++++++++"+this+"::setOfflineValueAt(type="+type+", row="+row+", col="+col+", value='"+value+"')");
+		CounterTableModel data = null;
+		if      (type == DATA_ABS)  { if (_newSample == null) {_newSample = new CounterSample("offline-abs",  false, null, null); data = _newSample;} else data = _newSample;}
+		else if (type == DATA_DIFF) { if (_diffData  == null) {_diffData  = new CounterSample("offline-diff", false, null, null); data = _diffData;}  else data = _diffData;}
+		else if (type == DATA_RATE) { if (_rateData  == null) {_rateData  = new CounterSample("offline-rate", false, null, null); data = _rateData;}  else data = _rateData;}
+		else
+			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
+
+		// NOTE: this might suffer from performance problems if: fireTableCellUpdated() 
+		//       on the JTable is fired...
+		data.setValueAt(value, row, col);
+	}
+
 	/**
 	 * Checks if the name of the CM is acceptable
 	 */
@@ -1580,7 +1601,8 @@ implements Cloneable, ITableTooltip
 	public boolean isDiffColumn(int col)     { return _isDiffCol     == null ? false : _isDiffCol[col]; }
 	public boolean isPctColumn(int col)      { return _isPctCol      == null ? false : _isPctCol[col]; }
 
-	public boolean discardDiffPctHighlighterOnAbsTable() { return _dataSource == DATA_ABS; }
+//	public boolean discardDiffPctHighlighterOnAbsTable() { return _dataSource == DATA_ABS; }
+	public boolean discardDiffPctHighlighterOnAbsTable() { return getDataSource() == DATA_ABS; }
 
 	public List<String> getPk()
 	{
@@ -1648,15 +1670,15 @@ implements Cloneable, ITableTooltip
 
 	public TabularCntrPanel getTabPanel()
 	{
-		return tabPanel;
+		return _tabPanel;
 	}
 	public void setTabPanel(TabularCntrPanel tp)
 	{
-		tabPanel = tp;
+		_tabPanel = tp;
 
-		if (tabPanel != null)
+		if (_tabPanel != null)
 		{
-			tabPanel.setCm(this);
+			_tabPanel.setCm(this);
 		}
 	}
 
@@ -1802,6 +1824,35 @@ implements Cloneable, ITableTooltip
 	{
 		if (_cmToolTipSupplier == null)
 			return null;
+
+		// Check if we are in REFRESH for this CM, then return NULL, otherwise we may get into "strange lock/deadlock" situations with EDT (if we fetch data from the CM using get{abs|diff|rate}xxx)
+		if (isInRefresh())
+		{
+			_logger.info("Skipping tooltip for cm="+getName()+", due to isInRefresh()=true. Otherwise we could run into strange locking situations with the Event Dispatch Thread");
+//			return "Currently refreshing counters, tooltip is not available at this point, retry in a second.";
+			return "Sorry: tooltip isn't available, while counters are refreshed... Retry in a second.";
+		}
+		
+		// OR we can start to use 
+//		Lock lock = new ReentrantLock();
+//		......
+//		if (lock.tryLock())
+//		{
+//			// Got the lock
+//			try
+//			{
+//				// Process record
+//			}
+//			finally
+//			{
+//				// Make sure to unlock so that we don't cause a deadlock
+//				lock.unlock();
+//			}
+//		}
+//		else
+//		{
+//			// Someone else had the lock, abort
+//		}		
 
 		return _cmToolTipSupplier.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
@@ -2016,6 +2067,7 @@ implements Cloneable, ITableTooltip
 //		return null;
 //	}
 
+
 	//-------------------------------------------
 	// BEGIN: TrendGraph
 	//-------------------------------------------
@@ -2067,13 +2119,71 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Add a TrendGraph<br>
+	 * This is used for both GUI and NO-GUI mode (in NO-GUI mode only the TrendGraphDataPoint object is created)
+	 * 
+	 * @param name               Name of the trend graph (probably used in updateGraph() to check what trend graph is about to be updated)
+	 * @param chkboxText         Content of the JCheckbox text in the main menu
+	 * @param graphLabel         The Label of the graph
+	 * @param seriesLabels       An String[] of series labels (that will be deisplaied at the graph bottom). This can be NULL if seriesLabelType is Static
+	 * @param seriesLabelType    If the seriesLabels are static or dynamically added
+	 * @param isPercentGraph     true if the MAX scale of the graph should be 100
+	 * @param visibleAtStart     true if the graph should be visable when starting DbxTune the first time
+	 * @param needsVersion       What DBMS version is this graph valid from. (use com.asetune.utils.Ver to generate a value). 0 = any version
+	 * @param minimumHeight      Minimum height of the graph content in pixels. (-1 = Let the layout manager decide this)
+	 */
+	public void addTrendGraph(String name, String chkboxText, String graphLabel, String[] seriesLabels, LabelType seriesLabelType, TrendGraphDataPoint.Category graphCategory, boolean isPercentGraph, boolean visibleAtStart, int needsVersion, int minimumHeight)
+	{
+		if (LabelType.Dynamic.equals(seriesLabelType))
+			seriesLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+		
+		if (seriesLabels == null)
+			seriesLabels = new String[] {""};
+
+		// Get UserDefined: graph 'category' properties
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String udCategoryProp = this.getClass().getSimpleName()+".graph."+name+".category";
+		String udCategory     = conf.getProperty(udCategoryProp, null);
+		if (StringUtil.hasValue(udCategory))
+		{
+			_logger.info(getName() + ": Overriding/Reading default value of '"+graphCategory+"' for Graph Category using property '"+udCategoryProp+"' with value '"+udCategory+"'.");
+
+			try {
+				graphCategory = Category.valueOf(udCategory);
+			} catch (IllegalArgumentException e) {
+				_logger.error("Problems parsing Graph Category Value '"+udCategory+"' for the property '"+udCategoryProp+"'. known values: "+StringUtil.toCommaStr(Category.values())+". Caught: "+e);
+			}
+		}
+
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint(name, graphLabel, graphCategory, isPercentGraph, visibleAtStart, seriesLabels, seriesLabelType); 
+		addTrendGraphData(name, tgdp);
+		
+		
+		if (getGuiController() != null && getGuiController().hasGUI())
+		{
+			CountersModel cm = this;
+			
+			// GRAPH
+			TrendGraph tg = new TrendGraph(name, chkboxText, graphLabel, 
+				seriesLabels, 
+				isPercentGraph,
+				cm, 
+				visibleAtStart,
+				needsVersion, 
+				minimumHeight);
+			
+			addTrendGraph(name, tg, true);
+		}
+	}
+
+	/**
 	 * Add a TrendGraph to this cm
 	 * 
 	 * @param name Name of the Graph
 	 * @param tg Trend Graph object
 	 * @param addToSummary add this graph to the MainFrame summary panel.
 	 */
-	public void addTrendGraph(String name, TrendGraph tg, boolean addToSummary)
+	private void addTrendGraph(String name, TrendGraph tg, boolean addToSummary)
 	{
 		if (_trendGraphs.containsKey(name))
 			throw new RuntimeException("Sorry the trend graph named '"+name+"' is already used, the name must be unique.");
@@ -2132,6 +2242,15 @@ implements Cloneable, ITableTooltip
 			
 			tg.initializeGraphForVersion(serverVersion);
 		}
+	}
+
+	/**
+	 * Override this to add graph specific menu items
+	 * @param list
+	 */
+	public List<JComponent> createGraphSpecificMenuItems()
+	{
+		return null;
 	}
 
 	//-------------------------------------------
@@ -2290,7 +2409,12 @@ implements Cloneable, ITableTooltip
 					_logger.warn("Graph named '"+graphName+"' has unknown operator '"+op+"' for column '"+colName+"', cm='"+this.getName()+"'.");
 				}
 
-				labelArray[i] = labelObj.toString();
+				 // label: remove any PK delimiter at the end
+				String labelStr = labelObj.toString().trim();
+				if (labelStr.endsWith(CounterSample.PK_STR_DELIMITER))
+					labelStr = labelStr.substring(0, labelStr.length()-1);
+				
+				labelArray[i] = labelStr;
 				dataArray[i]  = data;
 			}
 
@@ -2344,6 +2468,15 @@ implements Cloneable, ITableTooltip
 		}
 	}
 	
+	/**
+	 * Check if we have the DATA MODEL for any graph (this is true for nogui) 
+	 * @return
+	 */
+	public boolean hasTrendGraphData()
+	{
+		return _trendGraphsData.size() > 0;
+	}
+	
 	public TrendGraphDataPoint getTrendGraphData(String name)
 	{
 		return _trendGraphsData.get(name);
@@ -2360,7 +2493,7 @@ implements Cloneable, ITableTooltip
 	 * @param name Name of the data set
 	 * @param tgdp 
 	 */
-	public void addTrendGraphData(String name, TrendGraphDataPoint tgdp)
+	private void addTrendGraphData(String name, TrendGraphDataPoint tgdp)
 	{
 		if (_trendGraphsData.containsKey(name))
 			throw new RuntimeException("Sorry the trend graph named '"+name+"' is already used, the name must be unique.");
@@ -2395,12 +2528,22 @@ implements Cloneable, ITableTooltip
 	// END: TrendGraphDataPoint
 	//-------------------------------------------
 
+	/**
+	 * Helper method to create a PK String/Object, which is used in the HashMap to identify unique rows.<br>
+	 * 
+	 * @param pk
+	 * @return
+	 */
+	public String createPkStr(String... pk)
+	{
+		return CounterSample.createPkStr(pk);
+	}
 
 	public boolean equalsTabPanel(Component comp)
 	{
 		if (comp == null)
 			return false;
-		return comp.equals(tabPanel);
+		return comp.equals(_tabPanel);
 	}
 
 	/** 
@@ -2676,9 +2819,9 @@ implements Cloneable, ITableTooltip
 		if (_problemDesc == null)
 			_problemDesc = "";
 		
-		if (tabPanel != null)
+		if (_tabPanel != null)
 		{
-			tabPanel.setEnabled(state);
+			_tabPanel.setEnabled(state);
 		}
 	}
 	/** */
@@ -2744,7 +2887,7 @@ implements Cloneable, ITableTooltip
 	{
 		return doSqlInit(getCounterController().getMonConnection());
 	}
-	public boolean doSqlInit(Connection conn)
+	public boolean doSqlInit(DbxConnection conn)
 	{
 		if (conn == null)
 			throw new IllegalArgumentException("The passed conn is null.");
@@ -2805,7 +2948,7 @@ implements Cloneable, ITableTooltip
 	{
 		doSqlClose(getCounterController().getMonConnection());
 	}
-	public void doSqlClose(Connection conn)
+	public void doSqlClose(DbxConnection conn)
 	{
 		if (conn == null)
 			throw new IllegalArgumentException("The passed conn is null.");
@@ -3629,6 +3772,7 @@ implements Cloneable, ITableTooltip
 		if (e != null)
 		{
 			if      (e instanceof PcsSavedException)            { /*do nothing*/ }
+			else if (e instanceof LostConnectionException)      { /*do nothing*/ }
 			else if (e instanceof NoValidRowsInSample)          _logger.debug("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
 			else if (e instanceof DependsOnCmPostponeException) _logger.info ("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
 			else if (e instanceof SQLException)                 _logger.info ("setSampleException() for cm '"+getName()+"'. " + e.toString()); // do not pass the "stacktrace" in the errorlog
@@ -3931,6 +4075,35 @@ implements Cloneable, ITableTooltip
 //	public void incSumRowCount() { _sumRowCount += getRowCount(); }
 	public void incSumRowCount(int inc) { _sumRowCount += inc; }
 
+	/** Used as an indicator if we are in refresh() method... Then some operations might not be advisable. A bwtter alternative is to use ReentrantLock() + lock.tryLock() */
+	private boolean _isInRefresh = false;
+	/** Are we in refreh or not */
+	public boolean isInRefresh()
+	{
+		return _isInRefresh;
+		
+		// NOTE: It might be better to solve this using the below code instead...
+//		Lock lock = new ReentrantLock();
+//		......
+//		if (lock.tryLock())
+//		{
+//			// Got the lock
+//			try
+//			{
+//				// Process record
+//			}
+//			finally
+//			{
+//				// Make sure to unlock so that we don't cause a deadlock
+//				lock.unlock();
+//			}
+//		}
+//		else
+//		{
+//			// Someone else had the lock, abort
+//		}
+	}
+
 	/** called from GUI to refresh data */
 	public final synchronized void refresh() throws Exception
 	{
@@ -3986,6 +4159,8 @@ implements Cloneable, ITableTooltip
 		int rowsFetched = 0;
 		try
 		{
+			_isInRefresh = true;
+			
 			// reset some stuff
 			setNonConfiguredMonitoringHappened(false); // also resets the message(s) etc...
 			setSampleException(null);
@@ -4017,6 +4192,7 @@ implements Cloneable, ITableTooltip
 			if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
 			{
 				_logger.warn("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Exception="+e);
+				throw new LostConnectionException("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Caught: "+e, e);
 			}
 
 			throw e;
@@ -4037,6 +4213,8 @@ implements Cloneable, ITableTooltip
 			// Restore old message handler
 			if (conn instanceof TdsConnection)
 				((TdsConnection)conn).restoreSybMessageHandler();
+
+			_isInRefresh = false;
 		}
 
 		// increment counter
@@ -4049,6 +4227,8 @@ implements Cloneable, ITableTooltip
 
 		// Set last refresh time
 		_lastLocalRefreshTime = System.currentTimeMillis();
+
+		_isInRefresh = false;
 	}
 
 	/**
@@ -4150,8 +4330,8 @@ implements Cloneable, ITableTooltip
 		{
 			setSampleException(e);
 
-			if (tabPanel != null)
-				tabPanel.setWatermarkText(e.getMessage());
+			if (_tabPanel != null)
+				_tabPanel.setWatermarkText(e.getMessage());
 
 			// No data should be visible, so reset some structures
 			// NOTE: is this enough or should we do fireXXXXChange as well... 
@@ -4165,8 +4345,8 @@ implements Cloneable, ITableTooltip
 		{
 			setSampleException(e);
 
-			if (tabPanel != null)
-				tabPanel.setWatermarkText(e.getMessage());
+			if (_tabPanel != null)
+				_tabPanel.setWatermarkText(e.getMessage());
 
 			// No data should be visible, so reset some structures
 			// NOTE: is this enough or should we do fireXXXXChange as well... 
@@ -4191,6 +4371,7 @@ implements Cloneable, ITableTooltip
 			{
 				_logger.warn("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Exception="+e);
 				//return -1;
+				throw new LostConnectionException("When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server. Caught: "+e, e);
 			}
 
 			// Msg 10353:               You must have any of the following role(s) to execute this command/procedure: 'mon_role' . Please contact a user with the appropriate role for help.
@@ -4278,6 +4459,18 @@ implements Cloneable, ITableTooltip
 					
 					// Reset the counter...
 					_aseError_2714_count = 0;
+				}
+			}
+
+			// --- ASE ---- 
+			// Error=701, Severity=17, Text=There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.
+			// If we got a AlarmHandler... send alarm about this...
+			if (errorCode == 701)
+			{
+				if (AlarmHandler.hasInstance())
+				{
+					AlarmEvent alrmEvent = new AlarmEventProcedureCacheOutOfMemory(this);
+					AlarmHandler.getInstance().addAlarm(alrmEvent);
 				}
 			}
 
@@ -4583,10 +4776,10 @@ implements Cloneable, ITableTooltip
 				doWork.run();
 		}
 
-//		if (tabPanel != null)
+//		if (_tabPanel != null)
 //		{
 //			// Update dates on panel
-//			tabPanel.setTimeInfo(getCounterClearTime(), getSampleTime(), getSampleInterval());
+//			_tabPanel.setTimeInfo(getCounterClearTime(), getSampleTime(), getSampleInterval());
 //		}
 		
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
@@ -4661,7 +4854,8 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
-	 * Compute the difference between two samples
+	 * Compute the difference between two samples<br>
+	 * NOTE: most of the code is the same in CounterModelHostMonitor.computeDiffCnt(): so if you change this, make sure you get the same logic in CounterModelHostMonitor
 	 * 
 	 * @param oldSample         Previous sample
 	 * @param newSample         Previous sample
@@ -4692,7 +4886,6 @@ implements Cloneable, ITableTooltip
 		List<Object> newRow;
 		List<Object> oldRow;
 		List<Object> diffRow;
-		int oldRowId;
 
 		// Special case, only one row for each sample, no key
 		if ( ! diffCnt.hasPkCols() )
@@ -4702,6 +4895,7 @@ implements Cloneable, ITableTooltip
 			diffRow = new ArrayList<Object>();
 			for (int i = 0; i < newSample.getColumnCount(); i++)
 			{
+				// This looks ugly: should really be done using the same logic as below... But this is really never used...
 				diffRow.add(new Integer(((Integer) (newRow.get(i))).intValue() - ((Integer) (oldRow.get(i))).intValue()));
 			}
 			diffCnt.addRow(diffRow);
@@ -4726,7 +4920,7 @@ implements Cloneable, ITableTooltip
 			String newPk = newSample.getPkValue(newRowId);
 
 			// Retrieve old same row
-			oldRowId = oldSample.getRowNumberForPkValue(newPk);
+			int oldRowId = oldSample.getRowNumberForPkValue(newPk);
 			
 			// if old Row EXISTS, we can do diff calculation
 			if (oldRowId != -1)
@@ -5281,6 +5475,9 @@ implements Cloneable, ITableTooltip
 	public static final String  PROPKEY_ALARM_isSystemAlarmsForColumnEnabled = "<CMNAME>.alarm.system.enabled.<COLNAME>";
 	public static final boolean DEFAULT_ALARM_isSystemAlarmsForColumnEnabled = true;
 
+	public static final String  PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange = "<CMNAME>.alarm.system.enabled.<COLNAME>.timeRange.cron";
+	public static final String  DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange = "* * * * *";
+
 	public static final String  PROPKEY_ALARM_isUserdefinedAlarmsEnabled = "<CMNAME>.alarm.userdefined.enabled";
 	public static final boolean DEFAULT_ALARM_isUserdefinedAlarmsEnabled = true;
 
@@ -5441,6 +5638,88 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
+	 * Initialize stuff that has to do with alarms<br>
+	 * This is empty, and any CM's that need special code for this, can override this method
+	 */
+	public void initAlarms()
+	{
+	}
+
+	/**
+	 * Print how any alarms are configured
+	 */
+	public void printSystemAlarmConfig()
+	{
+		List<CmSettingsHelper> alarms = getLocalAlarmSettings();
+		if (alarms.isEmpty())
+		{
+			_logger.info("System Defined Alarms are NOT enabled for '"+getName()+"'.");
+			return;
+		}
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		
+		boolean isAlarmEnabled        = isAlarmEnabled();
+		boolean isSystemAlarmsEnabled = isSystemAlarmsEnabled();
+		String  prefix = "       ";
+		
+		_logger.info("System Defined Alarms properties are listed below for '"+getName()+"'.");
+
+		_logger.info(prefix + replaceCmName(PROPKEY_ALARM_isAlarmsEnabled) + " = " + isAlarmEnabled + (isAlarmEnabled ? "" : "        ##### NOTE: all Alarms are DISABLED, so below propertirs wont be used."));
+//		if ( ! isAlarmEnabled )
+//			return;
+
+		_logger.info(prefix + replaceCmName(PROPKEY_ALARM_isSystemAlarmsEnabled) + " = " + isSystemAlarmsEnabled + (isSystemAlarmsEnabled ? "" : "        ##### NOTE: System Alarms are DISABLED, so below propertirs wont be used."));
+//		if ( ! isSystemAlarmsEnabled )
+//			return;
+		
+		for (CmSettingsHelper sh : alarms)
+		{
+			String colname = sh.getName();
+			
+			// <CMNAME>.alarm.system.enabled.<COLNAME>
+			// Only for names that do not contin ' ' spaces... FIXME: This is UGGLY, create a type/property which describes if we should write the '*.enable.*' property or not...
+			if ( sh.getName().indexOf(' ') == -1)
+			{
+				String propName = replaceCmAndColName(getName(), PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
+				String propVal  = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled+"");
+
+				// At what times can the alarms be triggered
+				String cronProp = replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname);
+				String cronPat  = Configuration.getCombinedConfiguration().getProperty(cronProp, DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange);
+
+				// Check that the 'cron' sceduling pattern is valid...
+				String cronPatStr = cronPat;
+				boolean negation = false;
+				if (cronPatStr.startsWith("!"))
+				{
+					negation = true;
+					cronPatStr = cronPatStr.substring(1);
+				}
+				if ( ! SchedulingPattern.validate(cronPatStr) )
+					_logger.error("The cron scheduling pattern '"+cronPatStr+"' is NOT VALID. for the property '"+replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname)+"', this will not be used at runtime, furter warnings will also be issued.");
+
+				String cronPatDesc = CronUtils.getCronExpressionDescriptionForAlarms(cronPatStr);
+
+				_logger.info(prefix + propName + " = " + propVal);
+				_logger.info(prefix + cronProp + " = " + cronPat + "   #-- desc: " + cronPatDesc);
+				
+			}
+		}
+		
+		for (CmSettingsHelper sh : alarms)
+		{
+			// Various properties defined by the CounterModel
+			// probably looks like: <CMNAME>.alarm.system.if.<COLNAME>.gt
+			String propName = sh.getPropName();
+			String propVal  = conf.getProperty(propName, sh.getDefaultValue());
+
+			_logger.info(prefix + propName + " = " + propVal);
+		}
+	}
+
+	/**
 	 * Any CM that wants to send Alarm Requests somewhere should implement this
 	 * 
 	 * @param absData
@@ -5478,6 +5757,42 @@ implements Cloneable, ITableTooltip
 	public boolean isSystemAlarmsForColumnEnabled(String colname)
 	{
 		return Configuration.getCombinedConfiguration().getBooleanProperty(replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname), DEFAULT_ALARM_isSystemAlarmsForColumnEnabled);
+	}
+	/** Is SYSTEM Alarms enabled or disabled */
+	public boolean isSystemAlarmsForColumnEnabledAndInTimeRange(String colname)
+	{
+		boolean enabled = isSystemAlarmsForColumnEnabled(colname);
+		if ( ! enabled )
+			return enabled;
+
+		String cronStr = Configuration.getCombinedConfiguration().getProperty(replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname), DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange);
+
+		if (DEFAULT_ALARM_isSystemAlarmsForColumnInTimeRange.equals(cronStr))
+			return enabled;
+
+		// is this a negation/not withing time period...
+		boolean negation = false;
+		if (cronStr.startsWith("!"))
+		{
+			negation = true;
+			cronStr  = cronStr.substring(1);
+		}
+
+		try
+		{
+			SchedulingPattern sp = new SchedulingPattern(cronStr);
+			enabled = sp.match(System.currentTimeMillis());
+
+			// if cron started with a '!' then invert the boolean
+			if (negation)
+				enabled = ! enabled;
+		}
+		catch(InvalidPatternException ex)
+		{
+			_logger.error("The specified 'cron' value '"+cronStr+"' for property '"+replaceCmAndColName(PROPKEY_ALARM_isSystemAlarmsForColumnInTimeRange, colname)+"' is not a valid cron-pattern. This will be disregarded. Caught: "+ex);
+		}
+
+		return enabled;
 	}
 
 	/** Is USER DEFINED Alarms enabled or disabled */
@@ -5573,9 +5888,9 @@ implements Cloneable, ITableTooltip
 			_dataSource = getDefaultDataSource();
 
 		// Clear dates on panel
-		if (tabPanel != null)
+		if (_tabPanel != null)
 		{
-			tabPanel.reset();
+			_tabPanel.reset();
 		}
 
 //		_refreshCounter = 0;
@@ -5663,7 +5978,7 @@ implements Cloneable, ITableTooltip
 
 	public CounterTableModel getCounterData()
 	{
-		return getCounterData(_dataSource);
+		return getCounterData(getDataSource());
 	}
 	protected CounterTableModel getCounterData(int whatData)
 	{
@@ -5745,6 +6060,17 @@ implements Cloneable, ITableTooltip
 		return ctm.getColumnCount();
 	}
 
+
+	public boolean hasData()
+	{
+		int totalRows = 0;
+
+		totalRows += getAbsRowCount();
+		totalRows += getDiffRowCount();
+		totalRows += getRateRowCount();
+		
+		return totalRows > 0;
+	}
 
 	public boolean hasAbsData()
 	{
@@ -6568,23 +6894,56 @@ implements Cloneable, ITableTooltip
 	{
 		return (_rsmd != null);
 	}
+//	public void setResultSetMetaData(ResultSetMetaData rsmd)
+//	throws SQLException
+//	{
+//		// Copy/Clone the ResultSetMetaData some JDBC implementations needs this (otherwise we might get a 'The result set is closed', this was first seen for MS SQL-Server JDBC Driver)
+//		if (rsmd == null)
+//		{
+//			_rsmd = null;
+//		}
+//		else
+//		{
+////			ResultSetMetaDataChangable xe = new ResultSetMetaDataChangable(rsmd);
+////			_rsmd = rsmd;
+//			String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
+//			DbmsDataTypeResolver dataTypeResolver = getCounterController().getDbmsDataTypeResolver();
+//			_rsmd = new ResultSetMetaDataCached(rsmd, dataTypeResolver, productName);
+//		}
+//	}
 	public void setResultSetMetaData(ResultSetMetaData rsmd)
-	throws SQLException
 	{
-		// Copy/Clone the ResultSetMetaData some JDBC implementations needs this (otherwise we might get a 'The result set is closed', this was first seen for MS SQL-Server JDBC Driver)
-		if (rsmd == null)
-			_rsmd = null;
-		else
+		if ( ! (rsmd instanceof ResultSetMetaDataCached) )
 		{
-//			ResultSetMetaDataChangable xe = new ResultSetMetaDataChangable(rsmd);
-//			_rsmd = rsmd;
-			String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
-			_rsmd = new ResultSetMetaDataCached(rsmd, productName);
+			try { rsmd = createResultSetMetaData(rsmd); }
+			catch(SQLException ex)
+			{
+				_logger.warn("Problems creating a Cached ResultSetMetaData, continuing with the passed value.", ex);
+			}
 		}
+		_rsmd = rsmd;
 	}
 	public ResultSetMetaData getResultSetMetaData()
 	{
 		return _rsmd;
+	}
+	public ResultSetMetaData createResultSetMetaData(ResultSetMetaData rsmd)
+	throws SQLException
+	{
+		// Copy/Clone the ResultSetMetaData some JDBC implementations needs this (otherwise we might get a 'The result set is closed', this was first seen for MS SQL-Server JDBC Driver)
+		if (rsmd == null)
+			return null;
+
+		// Get DBMS Product which we are connected to
+		String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
+
+		// Get DBMS DataType "resolver", null if none is installed
+		DbmsDataTypeResolver dataTypeResolver = getCounterController().getDbmsDataTypeResolver();
+
+		// Create the new object
+		ResultSetMetaDataCached ret = new ResultSetMetaDataCached(rsmd, dataTypeResolver, productName);
+
+		return ret;
 	}
 
 
@@ -6719,12 +7078,12 @@ implements Cloneable, ITableTooltip
 		@Override
 		public void actionPerformed(ActionEvent actionevent)
 		{
-			if (tabPanel != null)
+			if (_tabPanel != null)
 			{
 				// maybe use property change listeners instead: firePropChanged("status", "refreshing");
 
 				long timeSpent = System.currentTimeMillis() - _refreshTimerStartTime;
-				tabPanel.setWatermarkText("Refreshing data, passed time "+TimeUtils.msToTimeStr("%MM:%SS.%ms", timeSpent));
+				_tabPanel.setWatermarkText("Refreshing data, passed time "+TimeUtils.msToTimeStr("%MM:%SS.%ms", timeSpent));
 			}
 		}
 	}
@@ -6981,7 +7340,7 @@ implements Cloneable, ITableTooltip
 	/**
 	 * output
 	 * <pre>
-	 * "AbsCounter|DiffCounter|RateCounter" :
+	 * "absCounter|diffCounter|rateCounter" :
 	 * [
 	 *     {
 	 *         "col1" : "somedata",
@@ -7009,9 +7368,9 @@ implements Cloneable, ITableTooltip
 	{
 		// Write the TYPE
 		String counterType;
-		if      (type == DATA_ABS)  counterType = "AbsCounters";
-		else if (type == DATA_DIFF) counterType = "DiffCounters";
-		else if (type == DATA_RATE) counterType = "RateCounters";
+		if      (type == DATA_ABS)  counterType = "absCounters";
+		else if (type == DATA_DIFF) counterType = "diffCounters";
+		else if (type == DATA_RATE) counterType = "rateCounters";
 		else throw new IOException("Unknown type="+type);
 
 		// Set name
@@ -7049,20 +7408,277 @@ implements Cloneable, ITableTooltip
 		}
 		w.endArray();		
 	}
+	private void writeJsonCounterSample(JsonGenerator w, int type)
+			throws IOException
+	{
+		// Write the TYPE
+		String counterType;
+		if      (type == DATA_ABS)  counterType = "absCounters";
+		else if (type == DATA_DIFF) counterType = "diffCounters";
+		else if (type == DATA_RATE) counterType = "rateCounters";
+		else throw new IOException("Unknown type="+type);
+
+		// Set name
+		w.writeFieldName(counterType);
+		
+		// Write an array of row objects: [ 
+		//                                  { "c1":"data", "c2":"data", "c3":"data" }, 
+		//                                  { "c1":"data", "c2":"data", "c3":"data" } 
+		//                                ]  
+		w.writeStartArray();
+		int rowc = getRowCount(type);
+		int colc = getColumnCount(type);
+		for (int r=0; r<rowc; r++)
+		{
+			w.writeStartObject();
+			for (int c=0; c<colc; c++)
+			{
+				Object obj  = getValue(type, r, c);
+				String name = getColumnName(c);  
+				
+				if (name == null)
+					throw new IOException("When writing JSON CM='"+getName()+"', CounterType="+type+", row="+r+", col="+c+", Column Name was 'null' (not set).");
+
+				w.writeFieldName(name);
+				if (obj == null)
+					w.writeNull();
+				else
+				{
+					if      (obj instanceof Number)  w.writeNumber ( obj.toString() );
+					else if (obj instanceof Boolean) w.writeBoolean( (Boolean) obj  );
+					else                             w.writeString ( obj.toString() );
+				}
+			}
+			w.writeEndObject();
+		}
+		w.writeEndArray();		
+	}
 	
+	public static CountersModel parseJson(String json)
+	{
+		throw new RuntimeException("NOT-YET-IMPLEMENTED");
+//		JsonElement je = new JsonParser().parse(json);
+//		if (je.isJsonObject())
+//		{
+//			JsonObject jo = je.getAsJsonObject();
+//			JsonElement cmName = jo.get("cmName");
+//			if (cmName != null)
+//				cmName.
+//			
+//			jo = jo.getAsJsonObject("data");
+//			JsonArray jarray = jo.getAsJsonArray("translations");
+//			jo = jarray.get(0).getAsJsonObject();
+//			String result = jo.get("translatedText").toString();
+//			return result;
+//		}
+	}
+	
+	public void toJson(JsonGenerator w, boolean writeCounters, boolean writeGraphs)
+	throws IOException
+	{
+//		JsonFactory jfactory = new JsonFactory();
+//
+//		Writer writer = new StringWriter();
+//		JsonGenerator w = jfactory.createGenerator(writer);
+		
+		// Check MANDATORY parameters
+		boolean throwOnMissingMandatoryParams = false;
+		if (throwOnMissingMandatoryParams)
+		{
+			if (getSampleTime() == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'sessionSampleTime' value was NULL, which is mandatory.");
+			if (getTimestamp()  == null) throw new NullPointerException("When writing CM '"+getName()+"' to JSON. 'cmSampleTime' value was NULL, which is mandatory.");
+		}
+		else
+		{
+			boolean doReturn = false;
+			if (getSampleTime() == null) { doReturn = true; _logger.warn("When writing CM '"+getName()+"' to JSON. 'sessionSampleTime' value was NULL, which is mandatory, skipping this CM and continue with next.."); }
+			if (getTimestamp()  == null) { doReturn = true; _logger.warn("When writing CM '"+getName()+"' to JSON. 'cmSampleTime' value was NULL, which is mandatory, skipping this CM and continue with next..."); }
+			
+			if (doReturn)
+				return;
+		}
+		
+		w.writeStartObject();
+
+		w.writeStringField("cmName",            getName());
+		w.writeStringField("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
+		w.writeStringField("cmSampleTime",      TimeUtils.toStringIso8601(getTimestamp()));
+		w.writeNumberField("cmSampleMs",        getLastSampleInterval());
+		w.writeStringField("type",              isSystemCm() ? "SYSTEM" : "USER_DEFINED");
+
+		// Write some statistical fields
+		boolean writeStats = true;
+		if (writeStats)
+		{
+			w.writeFieldName("sampleDetails");
+			w.writeStartObject();
+
+			w.writeNumberField ("graphCount",           getTrendGraphData() == null ? 0 : getTrendGraphData().size());
+			w.writeNumberField ("absRows",              getAbsRowCount());
+			w.writeNumberField ("diffRows",             getDiffRowCount());
+			w.writeNumberField ("rateRows",             getRateRowCount());
+
+			w.writeNumberField ("sqlRefreshTime",       getSqlRefreshTime());
+			w.writeNumberField ("guiRefreshTime",       getGuiRefreshTime());
+			w.writeNumberField ("lcRefreshTime",        getLcRefreshTime());
+			w.writeBooleanField("hasNonConfiguredMonitoringHappened",   hasNonConfiguredMonitoringHappened());
+			w.writeStringField ("nonConfiguredMonitoringMissingParams", getNonConfiguredMonitoringMissingParams());
+			w.writeStringField ("nonConfiguredMonitoringMessage",       getNonConfiguredMonitoringMessage(false));
+			w.writeBooleanField("isCountersCleared",    isCountersCleared());
+			w.writeBooleanField("hasValidSampleData",   hasValidSampleData());
+			w.writeStringField ("exceptionMsg",         getSampleException() == null ? null : getSampleException().toString());
+			w.writeStringField ("exceptionFullText",    StringUtil.exceptionToString(getSampleException()));
+			
+			w.writeEndObject(); // END: Counters
+		}
+
+		if (writeCounters)
+		{
+			w.writeFieldName("counters");
+			w.writeStartObject();
+
+			if (hasResultSetMetaData())
+			{
+				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
+				try
+				{
+					w.writeFieldName("metaData");
+					w.writeStartArray(); 
+
+					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
+					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
+					{
+						w.writeStartObject();
+						w.writeStringField ("columnName"     , rsmd.getColumnLabel(c));
+						w.writeStringField ("jdbcTypeName"   , ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
+						w.writeStringField ("javaClassName"  , rsmd.getColumnClassName(c));
+						w.writeStringField ("guessedDbmsType", ResultSetTableModel.getColumnTypeName(rsmd, c));
+						w.writeBooleanField("isDiffColumn"   , isDiffColumn(c-1)); // column pos starts at 0 in the CM
+						w.writeBooleanField("isPctColumn"    , isPctColumn(c-1));  // column pos starts at 0 in the CM
+						w.writeEndObject();
+					}
+					w.writeEndArray(); 
+				}
+				catch (SQLException ex)
+				{
+					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
+				}
+			}
+
+			if (hasAbsData())
+				writeJsonCounterSample(w, DATA_ABS);
+
+			if (hasDiffData())
+				writeJsonCounterSample(w, DATA_DIFF);
+
+			if (hasRateData())
+				writeJsonCounterSample(w, DATA_RATE);
+
+			w.writeEndObject(); // END: Counters
+		}
+
+		if (writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
+		{
+			w.writeFieldName("graphs");
+			w.writeStartArray(); 
+			for (String graphName : getTrendGraphData().keySet())
+			{
+				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
+
+				w.writeStartObject();
+				w.writeStringField ("cmName" ,           getName());
+				w.writeStringField ("sessionSampleTime", TimeUtils.toStringIso8601(getSampleTime()));
+
+				w.writeStringField ("graphName" ,     tgdp.getName());
+				w.writeStringField ("graphLabel",     tgdp.getGraphLabel());
+				w.writeStringField ("graphCategory",  tgdp.getCategory().toString());
+				w.writeBooleanField("percentGraph",   tgdp.isPercentGraph());
+				w.writeBooleanField("visibleAtStart", tgdp.isVisibleAtStart());
+				w.writeFieldName("data");
+//				w.writeStartArray(); 
+//				// loop all data
+//				Double[] dataArr  = tgdp.getData();
+//				String[] labelArr = tgdp.getLabel();
+////				if (dataArr  == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's DATA array.");
+////				if (labelArr == null) throw new IllegalArgumentException("The CM '"+getName()+"', graph '"+tgdp.getName()+"' has a null pointer for it's LABEL array.");
+//				if (dataArr != null && labelArr != null)
+//				{
+//					for (int d=0; d<dataArr.length; d++)
+//					{
+//						Double data  = dataArr[d];
+//						String label = null;
+//						if (d < labelArr.length)
+//							label = labelArr[d];
+//
+//						if (data == null)
+//						{
+//							_logger.warn("Writing JSON Graph, data was null, setting it to 0. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
+//							data = 0d;
+//						}
+//
+//						w.writeStartObject();
+//
+//						w.writeStringField("label",     label);
+//						w.writeNumberField("dataPoint", data);
+//
+//						w.writeEndObject();
+//					}
+//				}
+//				w.writeEndArray(); 
+
+				w.writeStartObject(); // BEGIN: data
+
+				Double[] dataArr  = tgdp.getData();
+				String[] labelArr = tgdp.getLabel();
+				if (dataArr != null && labelArr != null)
+				{
+					for (int d=0; d<dataArr.length; d++)
+					{
+						Double data  = dataArr[d];
+						String label = null;
+						if (d < labelArr.length)
+							label = labelArr[d];
+
+						if (label == null)
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("Writing JSON Graph, LABEL was null, setting it to 'lbl-"+d+"'. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
+							label = "lbl-"+d;
+						}
+
+						if (data == null)
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("Writing JSON Graph, DATA was null, setting it to 0. For cm='"+getName()+"', graphName='"+graphName+"', label='"+label+"', data="+data);
+							data = 0d;
+						}
+
+						w.writeNumberField(label, data);
+					}
+				}
+				w.writeEndObject(); // END: data
+				
+				w.writeEndObject(); // END: GraphName
+			}
+			w.writeEndArray(); 
+		}
+
+		w.writeEndObject(); // END: this CM
+	}
+
 	public void toJson(JsonWriter w, boolean writeCounters, boolean writeGraphs)
 	throws IOException
 	{
 		w.beginObject();
 
-		w.name("CmName")           .value(getName());
-		w.name("CmSampleTime")     .value(getTimestamp()+"");
-		w.name("CmSampleMs")       .value(getLastSampleInterval());
-		w.name("Type")             .value(isSystemCm() ? "SYSTEM" : "USER_DEFINED");
+		w.name("cmName")           .value(getName());
+		w.name("cmSampleTime")     .value(TimeUtils.toStringIso8601(getTimestamp()));
+		w.name("cmSampleMs")       .value(getLastSampleInterval());
+		w.name("type")             .value(isSystemCm() ? "SYSTEM" : "USER_DEFINED");
 
 		if (writeCounters)
 		{
-			w.name("Counters");
+			w.name("counters");
 			w.beginObject();
 
 			if (hasResultSetMetaData())
@@ -7070,16 +7686,17 @@ implements Cloneable, ITableTooltip
 				ResultSetMetaDataCached rsmd = (ResultSetMetaDataCached) getResultSetMetaData();
 				try
 				{
-					w.name("MetaData");
+					w.name("metaData");
 					w.beginArray(); 
 
 					// { "colName" : "someColName", "jdbcTypeName" : "java.sql.Types.DECIMAL", "guessedDbmsType" : "decimal(16,1)" }
 					for (int c=1; c<=rsmd.getColumnCount(); c++) // Note: ResultSetMetaData starts at 1 not 0
 					{
 						w.beginObject();
-						w.name("ColumnName")     .value(rsmd.getColumnLabel(c));
-						w.name("JdbcTypeName")   .value(ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
-						w.name("GuessedDbmsType").value(ResultSetTableModel.getColumnTypeName(rsmd, c));
+						w.name("columnName")     .value(rsmd.getColumnLabel(c));
+						w.name("jdbcTypeName")   .value(ResultSetTableModel.getColumnJavaSqlTypeName(rsmd.getColumnType(c)));
+						w.name("javaClassName")  .value(rsmd.getColumnClassName(c));
+						w.name("guessedDbmsType").value(ResultSetTableModel.getColumnTypeName(rsmd, c));
 						w.name("isDiffColumn")   .value(isDiffColumn(c-1)); // column pos starts at 0 in the CM
 						w.name("isPctColumn")    .value(isPctColumn(c-1));  // column pos starts at 0 in the CM
 						w.endObject();
@@ -7106,15 +7723,16 @@ implements Cloneable, ITableTooltip
 
 		if (writeGraphs && hasTrendGraph())
 		{
-			w.name("Graphs");
+			w.name("graphs");
 			w.beginArray();
 			for (String graphName : getTrendGraphs().keySet())
 			{
 				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
 
 				w.beginObject();
-				w.name("GraphName").value(graphName);
-				w.name("Data");
+				w.name("graphName"       ).value(graphName);
+//				w.name("graphDescription").value(tgdp.getDescription());
+				w.name("data");
 				w.beginArray();
 				// loop all data
 				Double[] dataArr  = tgdp.getData();
@@ -7132,8 +7750,8 @@ implements Cloneable, ITableTooltip
 						if (d < labelArr.length)
 							label = labelArr[d];
 
-						w.name("Label")    .value(label);
-						w.name("DataPoint").value(data);
+						w.name("label")    .value(label);
+						w.name("dataPoint").value(data);
 
 						w.endObject();
 					}

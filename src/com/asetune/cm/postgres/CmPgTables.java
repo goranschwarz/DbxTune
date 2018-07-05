@@ -2,12 +2,15 @@ package com.asetune.cm.postgres;
 
 import java.sql.Connection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CounterSample;
+import com.asetune.cm.CounterSampleCatalogIteratorPostgres;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -42,7 +45,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {};
 	public static final String[] NEED_CONFIG      = new String[] {};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] { "table_scan_pct", "index_usage_pct" };
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			"seq_scan",
 			"seq_tup_read",
@@ -179,11 +182,21 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("relid");
-//		pkCols.add("schemaname");
-//		pkCols.add("relname");
+		pkCols.add("dbname");
+		pkCols.add("schemaname");
+		pkCols.add("relname");
 
 		return pkCols;
+	}
+
+	/**
+	 * Create a special CounterSample, that will iterate over all databases that we will interrogate
+	 */
+	@Override
+	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+	{
+		List<String> fallbackDbList = Arrays.asList( new String[]{"postgres"} );
+		return new CounterSampleCatalogIteratorPostgres(name, negativeDiffCountersToZero, diffColumns, prevSample, fallbackDbList);
 	}
 
 	@Override
@@ -197,6 +210,20 @@ extends CountersModel
 			tabName = "pg_catalog.pg_stat_all_tables";
 		}
 
-		return "select * from "+tabName;
+		return 
+			"select \n" +
+			"    current_database() as dbname, \n" +
+			"    cast(100.0 * coalesce(seq_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) as table_scan_pct, \n" + 
+			"    cast(100.0 * coalesce(idx_scan, 0) / (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) as numeric(5,1)) as index_usage_pct, \n" +
+			"    pg_total_relation_size(relid)/1024 AS total_kb, \n" +
+			"    pg_table_size         (relid)/1024 AS data_kb, \n" +
+			"    pg_indexes_size       (relid)/1024 AS index_kb, \n" +
+			"    cast(CASE WHEN seq_scan > 0 THEN (seq_tup_read  * 1.0) / seq_scan ELSE 0 END as numeric(15,1)) as seq_tup_read_per_scan, \n" +
+			"    cast(CASE WHEN idx_scan > 0 THEN (idx_tup_fetch * 1.0) / idx_scan ELSE 0 END as numeric(15,1)) as idx_tup_fetch_per_scan, \n" +
+			"    * \n" +
+//			"    ,pg_relation_filepath(relid) as table_file_path \n" +
+			"from " + tabName + "\n" +
+			"where (coalesce(seq_scan, 0) + coalesce(idx_scan, 0)) > 0"
+			;
 	}
 }

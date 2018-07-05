@@ -16,7 +16,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.AbstractAction;
@@ -196,16 +198,16 @@ public class WizardOffline
 		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_jdbcPassword,         true, true);
 		fixProp(settings, PersistWriterJdbc.PROPKEY_BASE, PersistWriterJdbc.PROPKEY_PART_startH2NetworkServer, true, false);
 
-		fixProp(settings, "conn.",    "aseHost",     false, false);
-		fixProp(settings, "conn.",    "aseName",     false, false);
-		fixProp(settings, "conn.",    "asePassword", false, true);
-		fixProp(settings, "conn.",    "asePort",     false, false);
-		fixProp(settings, "conn.",    "aseUsername", false, false);
+		fixProp(settings, "conn.",    "dbmsHost",     false, false);
+		fixProp(settings, "conn.",    "dbmsName",     false, false);
+		fixProp(settings, "conn.",    "dbmsPassword", false, true);
+		fixProp(settings, "conn.",    "dbmsPort",     false, false);
+		fixProp(settings, "conn.",    "dbmsUsername", false, false);
 
-		fixProp(settings, "conn.",    "sshHostname", false, false);
-		fixProp(settings, "conn.",    "sshPort",     false, false);
-		fixProp(settings, "conn.",    "sshUsername", false, false);
-		fixProp(settings, "conn.",    "sshPassword", false, true);
+		fixProp(settings, "conn.",    "sshHostname",  false, false);
+		fixProp(settings, "conn.",    "sshPort",      false, false);
+		fixProp(settings, "conn.",    "sshUsername",  false, false);
+		fixProp(settings, "conn.",    "sshPassword",  false, true);
 
 		fixProp(settings, "offline.", "sampleTime",           true,  false);
 		fixProp(settings, "offline.", "startRecordingAtTime", false, false);
@@ -221,6 +223,20 @@ public class WizardOffline
 			writerClass = "com.asetune.pcs.PersistWriterJdbc";
 		settings.put(PersistentCounterHandler.PROPKEY_WriterClass, writerClass);
 
+		// Add any "user defined" PCS Writers (including DbxCentral)
+		String pcsWriterClass = settings.get("to-be-discarded.pcsWriterClassCsv");
+		if (StringUtil.hasValue(pcsWriterClass))
+		{
+			List<String> curWritersList = StringUtil.commaStrToList( settings.get(PersistentCounterHandler.PROPKEY_WriterClass) );
+			List<String> pcsWritersList = StringUtil.commaStrToList( pcsWriterClass );
+
+			List<String> newWritersList = new ArrayList<>();
+			newWritersList.addAll(curWritersList);
+			newWritersList.addAll(pcsWritersList);
+
+			settings.put(PersistentCounterHandler.PROPKEY_WriterClass, StringUtil.toCommaStr(newWritersList));
+		}
+		
 //		settings.put("CM.sysMon.test", "testtest");
 
 		boolean previewFile = false;

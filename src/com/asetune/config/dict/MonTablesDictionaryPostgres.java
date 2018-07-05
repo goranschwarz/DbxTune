@@ -129,8 +129,8 @@ extends MonTablesDictionaryDefault
 			mtd.addColumn("pg_stat_database", "xact_rollback",  "Number of transactions in this database that have been rolled back");
 			mtd.addColumn("pg_stat_database", "blks_read",      "Number of disk blocks read in this database");
 			mtd.addColumn("pg_stat_database", "blks_hit",       "Number of times disk blocks were found already in the buffer cache, so that a read was not necessary (this only includes hits in the PostgreSQL buffer cache, not the operating system's file system cache)");
-			mtd.addColumn("pg_stat_database", "tup_returned",   "Number of rows returned by queries in this database");
-			mtd.addColumn("pg_stat_database", "tup_fetched",    "Number of rows fetched by queries in this database");
+			mtd.addColumn("pg_stat_database", "tup_returned",   "Number of rows returned by queries in this database (rows read from memory/disk)");
+			mtd.addColumn("pg_stat_database", "tup_fetched",    "Number of rows fetched by queries in this database (rows sent to clients)");
 			mtd.addColumn("pg_stat_database", "tup_inserted",   "Number of rows inserted by queries in this database");
 			mtd.addColumn("pg_stat_database", "tup_updated",    "Number of rows updated by queries in this database");
 			mtd.addColumn("pg_stat_database", "tup_deleted",    "Number of rows deleted by queries in this database");

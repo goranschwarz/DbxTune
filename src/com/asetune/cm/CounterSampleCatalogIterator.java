@@ -14,6 +14,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.MainFrame;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.StringUtil;
 
@@ -48,6 +49,7 @@ extends CounterSample
 			String dbname = rs.getString(1);
 			list.add(dbname);
 		}
+		rs.close();
 		return list;
 	}
 
@@ -68,7 +70,7 @@ extends CounterSample
 	 * </ul>
 	 */
 	@Override
-	public boolean getSample(CountersModel cm, Connection conn, String sql, List<String> pkList)
+	public boolean getSample(CountersModel cm, DbxConnection conn, String sql, List<String> pkList)
 	throws SQLException, NoValidRowsInSample
 	{
 		int queryTimeout = cm.getQueryTimeout();
@@ -157,11 +159,21 @@ extends CounterSample
 							rs = stmnt.getResultSet();
 							checkWarnings(stmnt);
 
-							ResultSetMetaData rsmd = rs.getMetaData();
+//							ResultSetMetaData rsmd = rs.getMetaData();
+//							if ( ! cm.hasResultSetMetaData() )
+//								cm.setResultSetMetaData(rsmd);
+
+							ResultSetMetaData originRsmd = rs.getMetaData();
 							if ( ! cm.hasResultSetMetaData() )
-								cm.setResultSetMetaData(rsmd);
+								cm.setResultSetMetaData( cm.createResultSetMetaData(originRsmd) );
+
+							// The above "remapps" some things...
+							//  - Like in Oracle 'NUMBER(0,-127)' is mapped to INTEGER
+							// So we should use this when calling readResultset()...
+							ResultSetMetaData translatedRsmd = cm.getResultSetMetaData();
+
 	
-							if (readResultset(cm, rs, rsmd, pkList, rsNum))
+							if (readResultset(cm, rs, translatedRsmd, originRsmd, pkList, rsNum))
 								rs.close();
 
 							checkWarnings(stmnt);

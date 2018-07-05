@@ -99,7 +99,9 @@ public class AseConfigMonitoringDialog
 	/** Save tool tip in a Map so we can restore them later */
 	private ToolTipStore       _tts              = new ToolTipStore();
 
-	
+	// Keep all configurations (at least from sp_configure 'Monitoring') in a Map, this will be used to enable/disable components
+	private Map<String, Integer> _aseConfigMap = new HashMap<>();
+
 	// PANEL: MONITORING
 	private JPanel             _monitoringPanel_1                = null;
 	private JPanel             _monitoringPanel_2                = null;
@@ -114,79 +116,84 @@ public class AseConfigMonitoringDialog
 	private JCheckBox          _objectLockwaitTiming_chk         = new JCheckBox("Object lockwait timing");
 	private JCheckBox          _processWaitEvents_chk            = new JCheckBox("Process wait events");
 	private JCheckBox          _sqlBatchCapture_chk              = new JCheckBox("SQL batch capture");
+	private JCheckBox          _showDeferredCompilationText_chk  = new JCheckBox("show deferred compilation text");
 	private JCheckBox          _waitEventTiming_chk              = new JCheckBox("Wait event timing");
 
-	private JCheckBox          _lockTimeoutPipeActive_chk     = new JCheckBox("Lock Timeout pipe active");
-	private SpinnerNumberModel _lockTimeoutPipeMaxMessages_spm= new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
-	private JSpinner           _lockTimeoutPipeMaxMessages_sp = new JSpinner(_lockTimeoutPipeMaxMessages_spm);
+	private JCheckBox          _lockTimeoutPipeActive_chk        = new JCheckBox("Lock Timeout pipe active");
+	private SpinnerNumberModel _lockTimeoutPipeMaxMessages_spm   = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
+	private JSpinner           _lockTimeoutPipeMaxMessages_sp    = new JSpinner(_lockTimeoutPipeMaxMessages_spm);
 
-	private JCheckBox          _deadlockPipeActive_chk        = new JCheckBox("Deadlock pipe active");
-	private SpinnerNumberModel _deadlockPipeMaxMessages_spm   = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
-	private JSpinner           _deadlockPipeMaxMessages_sp    = new JSpinner(_deadlockPipeMaxMessages_spm);
+	private JCheckBox          _deadlockPipeActive_chk           = new JCheckBox("Deadlock pipe active");
+	private SpinnerNumberModel _deadlockPipeMaxMessages_spm      = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
+	private JSpinner           _deadlockPipeMaxMessages_sp       = new JSpinner(_deadlockPipeMaxMessages_spm);
 
-	private JCheckBox          _errorlogPipeActive_chk        = new JCheckBox("Errorlog pipe active");
-	private SpinnerNumberModel _errorlogPipeMaxMessages_spm   = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
-	private JSpinner           _errorlogPipeMaxMessages_sp    = new JSpinner(_errorlogPipeMaxMessages_spm);
+	private JCheckBox          _errorlogPipeActive_chk           = new JCheckBox("Errorlog pipe active");
+	private SpinnerNumberModel _errorlogPipeMaxMessages_spm      = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 500); // value, min, max, step
+	private JSpinner           _errorlogPipeMaxMessages_sp       = new JSpinner(_errorlogPipeMaxMessages_spm);
 
-	private JCheckBox          _thresholdEventMonitoring_chk  = new JCheckBox("Threshold event monitoring");
-	private SpinnerNumberModel _thresholdEventMaxMessages_spm = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 2000); // value, min, max, step
-	private JSpinner           _thresholdEventMaxMessages_sp  = new JSpinner(_thresholdEventMaxMessages_spm);
+	private JCheckBox          _thresholdEventMonitoring_chk     = new JCheckBox("Threshold event monitoring");
+	private SpinnerNumberModel _thresholdEventMaxMessages_spm    = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 2000); // value, min, max, step
+	private JSpinner           _thresholdEventMaxMessages_sp     = new JSpinner(_thresholdEventMaxMessages_spm);
 
-	private JCheckBox          _sqlTextPipeActive_chk         = new JCheckBox("SQL text pipe active");
-	private SpinnerNumberModel _sqlTextPipeMaxMessages_spm    = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1000); // value, min, max, step
-	private JSpinner           _sqlTextPipeMaxMessages_sp     = new JSpinner(_sqlTextPipeMaxMessages_spm);
+	private JCheckBox          _sqlTextPipeActive_chk            = new JCheckBox("SQL text pipe active");
+	private SpinnerNumberModel _sqlTextPipeMaxMessages_spm       = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1000); // value, min, max, step
+	private JSpinner           _sqlTextPipeMaxMessages_sp        = new JSpinner(_sqlTextPipeMaxMessages_spm);
 
-	private JCheckBox          _statementPipeActive_chk       = new JCheckBox("Statement pipe active");
-	private SpinnerNumberModel _statementPipeMaxMessages_spm  = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 2000); // value, min, max, step
-	private JSpinner           _statementPipeMaxMessages_sp   = new JSpinner(_statementPipeMaxMessages_spm);
+	private JCheckBox          _statementPipeActive_chk          = new JCheckBox("Statement pipe active");
+	private SpinnerNumberModel _statementPipeMaxMessages_spm     = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 2000); // value, min, max, step
+	private JSpinner           _statementPipeMaxMessages_sp      = new JSpinner(_statementPipeMaxMessages_spm);
 
-	private JCheckBox          _planTextPipeActive_chk        = new JCheckBox("Plan text pipe active");
-	private SpinnerNumberModel _planTextPipeMaxMessages_spm   = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 3000); // value, min, max, step
-	private JSpinner           _planTextPipeMaxMessages_sp    = new JSpinner(_planTextPipeMaxMessages_spm);
+	private JCheckBox          _planTextPipeActive_chk           = new JCheckBox("Plan text pipe active");
+	private SpinnerNumberModel _planTextPipeMaxMessages_spm      = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 3000); // value, min, max, step
+	private JSpinner           _planTextPipeMaxMessages_sp       = new JSpinner(_planTextPipeMaxMessages_spm);
 
-	private JLabel             _maxSqlTextMonitored_lbl       = new JLabel("max SQL text monitored");
-	private SpinnerNumberModel _maxSqlTextMonitored_spm       = new SpinnerNumberModel(0, 0, Short.MAX_VALUE, 512); // value, min, max, step
-	private JSpinner           _maxSqlTextMonitored_sp        = new JSpinner(_maxSqlTextMonitored_spm);
+	private JCheckBox          _nonpushdownPipeActive_chk        = new JCheckBox("nonpushdown pipe active");
+	private SpinnerNumberModel _nonpushdownPipeMaxMessages_spm   = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1000); // value, min, max, step
+	private JSpinner           _nonpushdownPipeMaxMessages_sp    = new JSpinner(_planTextPipeMaxMessages_spm);
 
-	private JLabel             _predefinedConfigs_lbl         = new JLabel("Configuration Templates");
-	private JComboBox<String>  _predefinedConfigs_cbx         = new JComboBox<String>(PDC_OPTIONS_STR);
+	private JLabel             _maxSqlTextMonitored_lbl          = new JLabel("max SQL text monitored");
+	private SpinnerNumberModel _maxSqlTextMonitored_spm          = new SpinnerNumberModel(0, 0, Short.MAX_VALUE, 512); // value, min, max, step
+	private JSpinner           _maxSqlTextMonitored_sp           = new JSpinner(_maxSqlTextMonitored_spm);
 
-	private JLabel             _configurabelMemory_lbl        = new JLabel("#"+default_configurabelMemoryText);
+	private JLabel             _predefinedConfigs_lbl            = new JLabel("Configuration Templates");
+	private JComboBox<String>  _predefinedConfigs_cbx            = new JComboBox<String>(PDC_OPTIONS_STR);
 
-	// PANEL: OTHER
-	private JCheckBox          _cfgCapMissingStatistics_chk   = new JCheckBox("Capture Missing Statistics");
+	private JLabel             _configurabelMemory_lbl           = new JLabel("#"+default_configurabelMemoryText);
 
-	private JCheckBox          _cfgEnableMetricsCapture_chk   = new JCheckBox("Enable QP Metrics Capture");
+	// PANEL: OTHER                                              
+	private JCheckBox          _cfgCapMissingStatistics_chk      = new JCheckBox("Capture Missing Statistics");
 
-	private JLabel             _cfgMetricsElapMax_lbl         = new JLabel("metrics elap max");
-	private SpinnerNumberModel _cfgMetricsElapMax_spm         = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
-	private JSpinner           _cfgMetricsElapMax_sp          = new JSpinner(_cfgMetricsElapMax_spm);
+	private JCheckBox          _cfgEnableMetricsCapture_chk      = new JCheckBox("Enable QP Metrics Capture");
 
-	private JLabel             _cfgMetricsExecMax_lbl         = new JLabel("metrics exec max");
-	private SpinnerNumberModel _cfgMetricsExecMax_spm         = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
-	private JSpinner           _cfgMetricsExecMax_sp          = new JSpinner(_cfgMetricsExecMax_spm);
+	private JLabel             _cfgMetricsElapMax_lbl            = new JLabel("metrics elap max");
+	private SpinnerNumberModel _cfgMetricsElapMax_spm            = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
+	private JSpinner           _cfgMetricsElapMax_sp             = new JSpinner(_cfgMetricsElapMax_spm);
 
-	private JLabel             _cfgMetricsLioMax_lbl          = new JLabel("metrics lio max");
-	private SpinnerNumberModel _cfgMetricsLioMax_spm          = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1000); // value, min, max, step
-	private JSpinner           _cfgMetricsLioMax_sp           = new JSpinner(_cfgMetricsLioMax_spm);
+	private JLabel             _cfgMetricsExecMax_lbl            = new JLabel("metrics exec max");
+	private SpinnerNumberModel _cfgMetricsExecMax_spm            = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
+	private JSpinner           _cfgMetricsExecMax_sp             = new JSpinner(_cfgMetricsExecMax_spm);
 
-	private JLabel             _cfgMetricsPioMax_lbl          = new JLabel("metrics pio max");
-	private SpinnerNumberModel _cfgMetricsPioMax_spm          = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
-	private JSpinner           _cfgMetricsPioMax_sp           = new JSpinner(_cfgMetricsPioMax_spm);
+	private JLabel             _cfgMetricsLioMax_lbl             = new JLabel("metrics lio max");
+	private SpinnerNumberModel _cfgMetricsLioMax_spm             = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1000); // value, min, max, step
+	private JSpinner           _cfgMetricsLioMax_sp              = new JSpinner(_cfgMetricsLioMax_spm);
+
+	private JLabel             _cfgMetricsPioMax_lbl             = new JLabel("metrics pio max");
+	private SpinnerNumberModel _cfgMetricsPioMax_spm             = new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 100); // value, min, max, step
+	private JSpinner           _cfgMetricsPioMax_sp              = new JSpinner(_cfgMetricsPioMax_spm);
 
 	// TODO: Check that the License check WORKS on a 12.5.x server
-	private JCheckBox          _enableFileAccess_chk          = new JCheckBox("Enable ASE to Read OS Files");
+	private JCheckBox          _enableFileAccess_chk             = new JCheckBox("Enable ASE to Read OS Files");
 
 	// PANEL: ON-EXIT
-	private boolean            _showOnExitPanel               = true;
-	private JRadioButton       _onExitDoNotDisable_rb         = new JRadioButton("Do Not Disable", true);
-	private JRadioButton       _onExitAutoDisable_rb          = new JRadioButton("Automatically");
-	private JRadioButton       _onExitAsk_rb                  = new JRadioButton("Prompt");
+	private boolean            _showOnExitPanel                  = true;
+	private JRadioButton       _onExitDoNotDisable_rb            = new JRadioButton("Do Not Disable", true);
+	private JRadioButton       _onExitAutoDisable_rb             = new JRadioButton("Automatically");
+	private JRadioButton       _onExitAsk_rb                     = new JRadioButton("Prompt");
 
 	// PANEL: OK-CANCEL
-	private JButton            _ok                            = new JButton("OK");
-	private JButton            _cancel                        = new JButton("Cancel");
-	private JButton            _apply                         = new JButton("Apply");
+	private JButton            _ok                               = new JButton("OK");
+	private JButton            _cancel                           = new JButton("Cancel");
+	private JButton            _apply                            = new JButton("Apply");
 	
 	
 	/*---------------------------------------------------
@@ -350,6 +357,7 @@ public class AseConfigMonitoringDialog
 		_objectLockwaitTiming_chk        .putClientProperty(ASE_CONFIG, "object lockwait timing"        );
 		_processWaitEvents_chk           .putClientProperty(ASE_CONFIG, "process wait events"           );
 		_sqlBatchCapture_chk             .putClientProperty(ASE_CONFIG, "SQL batch capture"             );
+		_showDeferredCompilationText_chk .putClientProperty(ASE_CONFIG, "show deferred compilation text");
 		_waitEventTiming_chk             .putClientProperty(ASE_CONFIG, "wait event timing"             );
 
 		_lockTimeoutPipeActive_chk       .putClientProperty(ASE_CONFIG, "lock timeout pipe active"      );
@@ -359,6 +367,7 @@ public class AseConfigMonitoringDialog
 		_sqlTextPipeActive_chk           .putClientProperty(ASE_CONFIG, "sql text pipe active"          );
 		_statementPipeActive_chk         .putClientProperty(ASE_CONFIG, "statement pipe active"         );
 		_planTextPipeActive_chk          .putClientProperty(ASE_CONFIG, "plan text pipe active"         );
+		_nonpushdownPipeActive_chk       .putClientProperty(ASE_CONFIG, "nonpushdown pipe active"       );
 
 		_lockTimeoutPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "lock timeout pipe max messages");
 		_deadlockPipeMaxMessages_sp      .putClientProperty(ASE_CONFIG, "deadlock pipe max messages"    );
@@ -367,6 +376,7 @@ public class AseConfigMonitoringDialog
 		_sqlTextPipeMaxMessages_sp       .putClientProperty(ASE_CONFIG, "sql text pipe max messages"    );
 		_statementPipeMaxMessages_sp     .putClientProperty(ASE_CONFIG, "statement pipe max messages"   );
 		_planTextPipeMaxMessages_sp      .putClientProperty(ASE_CONFIG, "plan text pipe max messages"   );
+		_nonpushdownPipeMaxMessages_sp   .putClientProperty(ASE_CONFIG, "nonpushdown pipe max messages" );
 		_maxSqlTextMonitored_sp          .putClientProperty(ASE_CONFIG, "max SQL text monitored"        );
 		
 		_cfgCapMissingStatistics_chk     .putClientProperty(ASE_CONFIG, "capture missing statistics"    );
@@ -397,6 +407,17 @@ public class AseConfigMonitoringDialog
 		_objectLockwaitTiming_chk        .setToolTipText(_tts.add(_objectLockwaitTiming_chk,         "object lockwait timing specifies whether the Adaptive Server will collect timing data on lock requests."));
 		_processWaitEvents_chk           .setToolTipText(_tts.add(_processWaitEvents_chk,            "process event timing specifies whether the Adaptive Server will collect monitoring data on wait events for individual processes."));
 		_sqlBatchCapture_chk             .setToolTipText(_tts.add(_sqlBatchCapture_chk,              "SQL batch capture indicates whether the Adaptive Server will collect sql batch text for each process."));
+		_showDeferredCompilationText_chk .setToolTipText(_tts.add(_showDeferredCompilationText_chk,  "<html>"
+		                                                                                               + "<b>Manage the Behavior of the SQLText in monProcessSQL</b><br>"
+		                                                                                               + "This configuration option show deferred compilation text for monProcessSQLText allows you to manage the behavior of the SQLText in monProcessSQLText.<br>"
+		                                                                                               + "<ul>"
+		                                                                                               + "  <li>For releases 15.7 SP121 and later, the default behavior is that the SQLText in monProcessSQLText shows the procedure itself instead of statement.</li>"
+		                                                                                               + "  <li>Prior to 15.7 SP121, the default behavior was that the SQLText in monProcessSQLText shows the statement inside the procedure.</li>"
+		                                                                                               + "</ul>"
+		                                                                                               + "When show deferred compilation text is enabled, the SQLText in monProcessSQLText will show the compiling statements that <br>"
+		                                                                                               + "reference local variables or temporary tables inside a stored procedure instead of the stored procedure itself. <br>"
+		                                                                                               + "By default, show deferred compilation text is not enabled."
+		                                                                                               + "</html>"));
 		_waitEventTiming_chk             .setToolTipText(_tts.add(_waitEventTiming_chk,              "wait event timing specifies whether the Adaptive Server will collect monitoring data for all wait events."));
 
 		_lockTimeoutPipeActive_chk       .setToolTipText(_tts.add(_lockTimeoutPipeActive_chk,        "<html>lock timeout pipe active controls whether Adaptive Server collects lock timeout messages.<br> If lock timeout pipe active and lock timeout pipe max messages are enabled, Adaptive Server collects the text for each lock timeout.<br> Retrieve the lock timeout messages from the monLockTimeout monitor table.<br><b>Note:</b> This is available in ASE 15.7 and above.</html>"));
@@ -419,6 +440,9 @@ public class AseConfigMonitoringDialog
 
 		_planTextPipeActive_chk          .setToolTipText(_tts.add(_planTextPipeActive_chk,           "<html>plan text pipe active indicates whether the Adaptive Server will collect historical plan text monitoring information.<br> <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
 		_planTextPipeMaxMessages_sp      .setToolTipText(_tts.add(_planTextPipeMaxMessages_sp,       "<html>plan text pipe max messages specifies the maximum number of messages that can be stored for historical plan text.<br>     <b>Note</b>: This may degrade ASE performance up to 25%</html>"));
+
+		_nonpushdownPipeActive_chk       .setToolTipText(_tts.add(_nonpushdownPipeActive_chk,        "<html>nonpushdown pipe active indicates whether the Adaptive Server will collect SQL Text for 'HANA non-pushdown SQL Text' into table 'master.dbo.monHANANonPushdown'.<br></html>"));
+		_nonpushdownPipeMaxMessages_sp   .setToolTipText(_tts.add(_nonpushdownPipeMaxMessages_sp,    "<html>nonpushdown pipe max messages specifies the maximum number of messages that can be stored for 'HANA non-pushdown SQL Text' into table 'master.dbo.monHANANonPushdown'.<br></html>"));
 
 		_maxSqlTextMonitored_lbl         .setToolTipText(_tts.add(_maxSqlTextMonitored_lbl,          "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
 		_maxSqlTextMonitored_sp          .setToolTipText(_tts.add(_maxSqlTextMonitored_sp,           "Restart required: specifies the amount of memory allocated per user connection for saving SQL text to memory shared by Adaptive Server. The default value is 0."));
@@ -453,6 +477,7 @@ public class AseConfigMonitoringDialog
 		panel.add(_objectLockwaitTiming_chk,         "wrap");
 		panel.add(_processWaitEvents_chk,            "wrap");
 		panel.add(_sqlBatchCapture_chk,              "wrap");
+		panel.add(_showDeferredCompilationText_chk,  "wrap");
 		panel.add(_waitEventTiming_chk,              "wrap 15");
 
 		panel.add(_lockTimeoutPipeActive_chk,        "");
@@ -474,7 +499,10 @@ public class AseConfigMonitoringDialog
 		panel.add(_statementPipeMaxMessages_sp,      "right, pushx, wrap");
 
 		panel.add(_planTextPipeActive_chk,           "");
-		panel.add(_planTextPipeMaxMessages_sp,       "right, pushx, wrap 15");
+		panel.add(_planTextPipeMaxMessages_sp,       "right, pushx, wrap");
+
+		panel.add(_nonpushdownPipeActive_chk,        "");
+		panel.add(_nonpushdownPipeMaxMessages_sp,    "right, pushx, wrap 15");
 
 		panel.add(_maxSqlTextMonitored_lbl,          "");
 		panel.add(_maxSqlTextMonitored_sp,           "right, pushx, wrap 10");
@@ -727,7 +755,13 @@ public class AseConfigMonitoringDialog
 			// Check each component inside the JPanel
 			for (int i=0; i<jpanel.getComponentCount(); i++)
 			{
-				Component comp = jpanel.getComponent(i);
+				Component c = jpanel.getComponent(i);
+				if ( ! (c instanceof JComponent) )
+				{
+					_logger.warn("Component num="+i+" is not a JComponent, skipping this and continuing with next component. comp="+c);
+					continue;
+				}
+				JComponent comp = (JComponent) c;
 
 				// Simplifies things if we always set this to FALSE first
 				// and then set the various components to true.
@@ -745,69 +779,70 @@ public class AseConfigMonitoringDialog
 				     || comp.equals(_cfgMetricsPioMax_sp)
 				   )
 				{
-//					if (_aseVersionNum >= 15020)
-//					if (_aseVersionNum >= 1502000)
 					if (_aseVersionNum >= Ver.ver(15,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_enableSpinlockMonitoring_chk) )
 				{
-//					if (_aseVersionNum >= 15702)
-//					if (_aseVersionNum >= 1570020)
 					if (_aseVersionNum >= Ver.ver(15,7,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_executionTimeMonitoring_chk) )
 				{
-//					if (_aseVersionNum >= 1570100)
 					if (_aseVersionNum >= Ver.ver(15,7,0,100))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_statementCacheMonitoring_chk) )
 				{
-//					if (_aseVersionNum >= 15020)
-//					if (_aseVersionNum >= 1502000)
 					if (_aseVersionNum >= Ver.ver(15,0,2))
+						comp.setEnabled(true);
+				}
+				else if ( comp.equals(_showDeferredCompilationText_chk) )
+				{
+				//	if (_aseVersionNum >= Ver.ver(15,7,0, 121)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
+					if (_aseConfigMap.containsKey(comp.getClientProperty(ASE_CONFIG)))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_captureCompressionStatistics_chk) )
 				{
-//					if (_aseVersionNum >= 15700)
-//					if (_aseVersionNum >= 1570000)
 					if (_aseVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_cfgCapMissingStatistics_chk) )
 				{
-//					if (_aseVersionNum >= 15031)
-//					if (_aseVersionNum >= 1503010)
 					if (_aseVersionNum >= Ver.ver(15,0,3,1))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeActive_chk) )
 				{
-//					if (_aseVersionNum >= 15700)
-//					if (_aseVersionNum >= 1570000)
 					if (_aseVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeMaxMessages_sp) )
 				{
-//					if (_aseVersionNum >= 15700)
-//					if (_aseVersionNum >= 1570000)
 					if (_aseVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_thresholdEventMonitoring_chk) )
 				{
-//					if (_aseVersionNum >= 1600000)
 					if (_aseVersionNum >= Ver.ver(16,0))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_thresholdEventMaxMessages_sp) )
 				{
-//					if (_aseVersionNum >= 1600000)
 					if (_aseVersionNum >= Ver.ver(16,0))
+						comp.setEnabled(true);
+				}
+				else if ( comp.equals(_nonpushdownPipeActive_chk) )
+				{
+				//	if (_aseVersionNum >= Ver.ver(m,m)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
+					if (_aseConfigMap.containsKey(comp.getClientProperty(ASE_CONFIG)))
+						comp.setEnabled(true);
+				}
+				else if ( comp.equals(_nonpushdownPipeMaxMessages_sp) )
+				{
+					// if (_aseVersionNum >= Ver.ver(m,m)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
+					if (_aseConfigMap.containsKey(comp.getClientProperty(ASE_CONFIG)))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_enableFileAccess_chk) )
@@ -944,6 +979,7 @@ public class AseConfigMonitoringDialog
 			_objectLockwaitTiming_chk        .setSelected(false);
 			_processWaitEvents_chk           .setSelected(false);
 			_sqlBatchCapture_chk             .setSelected(false);
+			_showDeferredCompilationText_chk .setSelected(false);
 			_waitEventTiming_chk             .setSelected(false);
 
 			_lockTimeoutPipeActive_chk       .setSelected(false);
@@ -953,6 +989,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeActive_chk           .setSelected(false);
 			_planTextPipeActive_chk          .setSelected(false);
 			_statementPipeActive_chk         .setSelected(false);
+			_nonpushdownPipeActive_chk       .setSelected(false);
 
 			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
 			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
@@ -962,6 +999,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
 			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 			
@@ -987,6 +1025,7 @@ public class AseConfigMonitoringDialog
 			_objectLockwaitTiming_chk        .setSelected(false);
 			_processWaitEvents_chk           .setSelected(false);
 			_sqlBatchCapture_chk             .setSelected(false);
+			_showDeferredCompilationText_chk .setSelected(false);
 			_waitEventTiming_chk             .setSelected(true);
 
 			_lockTimeoutPipeActive_chk       .setSelected(false);
@@ -996,6 +1035,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeActive_chk           .setSelected(false);
 			_statementPipeActive_chk         .setSelected(false);
 			_planTextPipeActive_chk          .setSelected(false);
+			_nonpushdownPipeActive_chk       .setSelected(false);
 
 			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
 			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
@@ -1005,6 +1045,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
 			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 
@@ -1030,6 +1071,7 @@ public class AseConfigMonitoringDialog
 			_objectLockwaitTiming_chk        .setSelected(true);
 			_processWaitEvents_chk           .setSelected(true);
 			_sqlBatchCapture_chk             .setSelected(false);
+			_showDeferredCompilationText_chk .setSelected(false);
 			_waitEventTiming_chk             .setSelected(true);
 
 			_lockTimeoutPipeActive_chk       .setSelected(false);
@@ -1039,6 +1081,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeActive_chk           .setSelected(false);
 			_statementPipeActive_chk         .setSelected(false);
 			_planTextPipeActive_chk          .setSelected(false);
+			_nonpushdownPipeActive_chk       .setSelected(false);
 
 			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(0) );
 			_deadlockPipeMaxMessages_spm     .setValue( new Integer(0) );
@@ -1048,6 +1091,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(0) );
 			_statementPipeMaxMessages_spm    .setValue( new Integer(0) );
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(0) );
 
@@ -1073,6 +1117,7 @@ public class AseConfigMonitoringDialog
 			_objectLockwaitTiming_chk        .setSelected(true);
 			_processWaitEvents_chk           .setSelected(true);
 			_sqlBatchCapture_chk             .setSelected(true);
+			_showDeferredCompilationText_chk .setSelected(false);
 			_waitEventTiming_chk             .setSelected(true);
 
 			_lockTimeoutPipeActive_chk       .setSelected(true);
@@ -1082,6 +1127,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeActive_chk           .setSelected(true);
 			_statementPipeActive_chk         .setSelected(true);
 			_planTextPipeActive_chk          .setSelected(false);
+			_nonpushdownPipeActive_chk       .setSelected(false);
 
 			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(500) );
 			_deadlockPipeMaxMessages_spm     .setValue( new Integer(500) );
@@ -1091,6 +1137,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(1000) );
 			_statementPipeMaxMessages_spm    .setValue( new Integer(5000) );
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(2048) );
 
@@ -1116,6 +1163,7 @@ public class AseConfigMonitoringDialog
 			_objectLockwaitTiming_chk        .setSelected(true);
 			_processWaitEvents_chk           .setSelected(true);
 			_sqlBatchCapture_chk             .setSelected(true);
+			_showDeferredCompilationText_chk .setSelected(false);
 			_waitEventTiming_chk             .setSelected(true);
 
 			_lockTimeoutPipeActive_chk       .setSelected(true);
@@ -1125,6 +1173,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeActive_chk           .setSelected(true);
 			_statementPipeActive_chk         .setSelected(true);
 			_planTextPipeActive_chk          .setSelected(false);
+			_nonpushdownPipeActive_chk       .setSelected(false);
 
 			_lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(1000) );
 			_deadlockPipeMaxMessages_spm     .setValue( new Integer(1000) );
@@ -1134,6 +1183,7 @@ public class AseConfigMonitoringDialog
 			_sqlTextPipeMaxMessages_spm      .setValue( new Integer(5000) );
 			_statementPipeMaxMessages_spm    .setValue( new Integer(50000) );
 			_planTextPipeMaxMessages_spm     .setValue( new Integer(0) );
+			_nonpushdownPipeMaxMessages_spm  .setValue( new Integer(0) );
 
 			_maxSqlTextMonitored_spm         .setValue( new Integer(4096) );
 
@@ -1185,12 +1235,58 @@ public class AseConfigMonitoringDialog
 	 * 	 statement statistics active              0           0           1            1 switch               dynamic
 	 * 	 wait event timing                        0           0           1            1 switch               dynamic
 	 * 
+	 * 
+	 * +----------------------------------------------------------------------------------------------------------------------------------------------+
+	 * |SNAP_VERSION                                                                                                                                  |
+	 * +----------------------------------------------------------------------------------------------------------------------------------------------+
+	 * |Adaptive Server Enterprise/16.0 SP02 PL05 HF2/EBF 26895 SMP/P/x86_64/Enterprise Linux/ase160sp02pl05x/2747/64-bit/FBO/Thu Feb 23 01:55:38 2017|
+	 * +----------------------------------------------------------------------------------------------------------------------------------------------+
+	 * (1 rows affected)
+	 * 
+	 * Group: Monitoring
+	 *  
+	 * +------------------------------+-----------+-----------+------------+------------+------+-------+
+	 * |Parameter Name                |Default    |Memory Used|Config Value|Run Value   |Unit  |Type   |
+	 * +------------------------------+-----------+-----------+------------+------------+------+-------+
+	 * |deadlock pipe active          |          0|          0|           1|           1|switch|dynamic|
+	 * |deadlock pipe max messages    |          0|       2149|         500|         500|number|dynamic|
+	 * |enable monitoring             |          0|          0|           1|           1|switch|dynamic|
+	 * |enable spinlock monitoring    |          0|          0|           1|           1|switch|dynamic|
+	 * |enable stmt cache monitoring  |          0|          0|           1|           1|switch|dynamic|
+	 * |errorlog pipe active          |          0|          0|           1|           1|switch|dynamic|
+	 * |errorlog pipe max messages    |          0|        435|         200|         200|number|dynamic|
+	 * |execution time monitoring     |          0|          0|           1|           1|switch|dynamic|
+	 * |lock timeout pipe active      |          0|          0|           1|           1|switch|dynamic|
+	 * |lock timeout pipe max messages|          0|       2646|         500|         500|number|dynamic|
+	 * |max SQL text monitored        |          0|       4870|        4096|        4096|bytes |static |
+	 * |nonpushdown pipe active       |          0|          0|           0|           0|switch|dynamic|
+	 * |nonpushdown pipe max messages |          0|          0|           0|           0|number|dynamic|
+	 * |object lockwait timing        |          0|          0|           1|           1|switch|dynamic|
+	 * |per object statistics active  |          0|          0|           1|           1|switch|dynamic|
+	 * |performance monitoring option |          0|          0|           0|           0|switch|dynamic|
+	 * |plan text pipe active         |          0|          0|           0|           0|switch|dynamic|
+	 * |plan text pipe max messages   |          0|          0|           0|           0|number|dynamic|
+	 * |process wait events           |          0|          0|           1|           1|switch|dynamic|
+	 * |show deferred compilation text|          0|          0|           0|           0|switch|dynamic|
+	 * |SQL batch capture             |          0|          0|           1|           1|switch|dynamic|
+	 * |sql text pipe active          |          0|          0|           0|           0|switch|dynamic|
+	 * |sql text pipe max messages    |          0|       2187|        2000|        2000|number|dynamic|
+	 * |statement pipe active         |          0|          0|           0|           0|switch|dynamic|
+	 * |statement pipe max messages   |          0|       4733|       10000|       10000|number|dynamic|
+	 * |statement statistics active   |          0|          0|           1|           1|switch|dynamic|
+	 * |threshold event max messages  |          0|          0|           0|           0|number|dynamic|
+	 * |threshold event monitoring    |          0|          0|           0|           0|switch|dynamic|
+	 * |wait event timing             |          0|          0|           1|           1|switch|dynamic|
+	 * +------------------------------+-----------+-----------+------------+------------+------+-------+
+	 * (29 rows affected)
 	 */
-
+	
 	public void loadFromAse(Connection conn)
 	{
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, this) )
 			return;
+
+		_aseConfigMap.clear();
 
 		Statement stmt = null;
 		ResultSet rs = null;
@@ -1206,32 +1302,37 @@ public class AseConfigMonitoringDialog
 //				String typeVal = rs.getString(7).trim();
 //				boolean isStatic = typeVal.equals("static");
 
-				if      ( config.equals("enable monitoring") )              _enableMonitoring_chk            .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("per object statistics active") )   _perObjectStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("statement statistics active") )    _statementStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("enable spinlock monitoring") )     _enableSpinlockMonitoring_chk    .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("execution time monitoring") )      _executionTimeMonitoring_chk     .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("enable stmt cache monitoring") )   _statementCacheMonitoring_chk    .setSelected( runVal == 1 ? true : false);
+				_aseConfigMap.put(config, runVal);
+
+				if      ( config.equals("enable monitoring"             ) ) _enableMonitoring_chk            .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("per object statistics active"  ) ) _perObjectStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("statement statistics active"   ) ) _statementStatisticsActive_chk   .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("enable spinlock monitoring"    ) ) _enableSpinlockMonitoring_chk    .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("execution time monitoring"     ) ) _executionTimeMonitoring_chk     .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("enable stmt cache monitoring"  ) ) _statementCacheMonitoring_chk    .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("capture compression statistics") ) _captureCompressionStatistics_chk.setSelected( runVal == 1 ? true : false); // but this is for the moment not part of sp_configure 'Monitoring'
-				else if ( config.equals("object lockwait timing") )         _objectLockwaitTiming_chk        .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("process wait events") )            _processWaitEvents_chk           .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("SQL batch capture") )              _sqlBatchCapture_chk             .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("wait event timing") )              _waitEventTiming_chk             .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("lock timeout pipe active") )       _lockTimeoutPipeActive_chk       .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("object lockwait timing"        ) ) _objectLockwaitTiming_chk        .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("process wait events"           ) ) _processWaitEvents_chk           .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("SQL batch capture"             ) ) _sqlBatchCapture_chk             .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("show deferred compilation text") ) _showDeferredCompilationText_chk .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("wait event timing"             ) ) _waitEventTiming_chk             .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("lock timeout pipe active"      ) ) _lockTimeoutPipeActive_chk       .setSelected( runVal == 1 ? true : false);
 				else if ( config.equals("lock timeout pipe max messages") ) _lockTimeoutPipeMaxMessages_spm  .setValue( new Integer(runVal) );
-				else if ( config.equals("deadlock pipe active") )           _deadlockPipeActive_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("deadlock pipe max messages") )     _deadlockPipeMaxMessages_spm     .setValue( new Integer(runVal) );
-				else if ( config.equals("errorlog pipe active") )           _errorlogPipeActive_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("errorlog pipe max messages") )     _errorlogPipeMaxMessages_spm     .setValue( new Integer(runVal) );
-				else if ( config.equals("threshold event monitoring") )     _thresholdEventMonitoring_chk    .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("threshold event max messages") )   _thresholdEventMaxMessages_spm   .setValue( new Integer(runVal) );
-				else if ( config.equals("sql text pipe active") )           _sqlTextPipeActive_chk           .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("sql text pipe max messages") )     _sqlTextPipeMaxMessages_spm      .setValue( new Integer(runVal) );
-				else if ( config.equals("statement pipe active") )          _statementPipeActive_chk         .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("statement pipe max messages") )    _statementPipeMaxMessages_spm    .setValue( new Integer(runVal) );
-				else if ( config.equals("plan text pipe active") )          _planTextPipeActive_chk          .setSelected( runVal == 1 ? true : false);
-				else if ( config.equals("plan text pipe max messages") )    _planTextPipeMaxMessages_spm     .setValue( new Integer(runVal) );
-				else if ( config.equals("max SQL text monitored") )
+				else if ( config.equals("deadlock pipe active"          ) ) _deadlockPipeActive_chk          .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("deadlock pipe max messages"    ) ) _deadlockPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("errorlog pipe active"          ) ) _errorlogPipeActive_chk          .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("errorlog pipe max messages"    ) ) _errorlogPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("threshold event monitoring"    ) ) _thresholdEventMonitoring_chk    .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("threshold event max messages"  ) ) _thresholdEventMaxMessages_spm   .setValue( new Integer(runVal) );
+				else if ( config.equals("sql text pipe active"          ) ) _sqlTextPipeActive_chk           .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("sql text pipe max messages"    ) ) _sqlTextPipeMaxMessages_spm      .setValue( new Integer(runVal) );
+				else if ( config.equals("statement pipe active"         ) ) _statementPipeActive_chk         .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("statement pipe max messages"   ) ) _statementPipeMaxMessages_spm    .setValue( new Integer(runVal) );
+				else if ( config.equals("plan text pipe active"         ) ) _planTextPipeActive_chk          .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("plan text pipe max messages"   ) ) _planTextPipeMaxMessages_spm     .setValue( new Integer(runVal) );
+				else if ( config.equals("nonpushdown pipe active"       ) ) _nonpushdownPipeActive_chk       .setSelected( runVal == 1 ? true : false);
+				else if ( config.equals("nonpushdown pipe max messages" ) ) _nonpushdownPipeMaxMessages_spm  .setValue( new Integer(runVal) );
+				else if ( config.equals("max SQL text monitored"        ) )
 				{
 					if (cfgVal != runVal)
 					{
@@ -1261,13 +1362,9 @@ public class AseConfigMonitoringDialog
 			}
 			rs.close();
 
-//			if (_aseVersionNum >= 15031) 
-//			if (_aseVersionNum >= 1503010)
 			if (_aseVersionNum >= Ver.ver(15,0,3,1))
 				_cfgCapMissingStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture missing statistics") > 0 );
 
-//			if (_aseVersionNum >= 15020) 
-//			if (_aseVersionNum >= 1502000) 
 			if (_aseVersionNum >= Ver.ver(15,0,2)) 
 			{
 				_cfgEnableMetricsCapture_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "enable metrics capture") > 0 );
@@ -1277,8 +1374,6 @@ public class AseConfigMonitoringDialog
 				_cfgMetricsPioMax_spm       .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics pio max") );
 			}
 
-//			if (_aseVersionNum >= 15700) 
-//			if (_aseVersionNum >= 1570000) 
 			if (_aseVersionNum >= Ver.ver(15,7)) 
 			{
 				_captureCompressionStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture compression statistics") > 0 );
@@ -1338,6 +1433,7 @@ public class AseConfigMonitoringDialog
 			{
 				enabled = rs.getInt(1);
 			}
+			rs.close();
 		}
 		catch (SQLException e)
 		{
@@ -1607,6 +1703,7 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "object lockwait timing",         _objectLockwaitTiming_chk);
 		checkAndSetAseConfig(conn, "process wait events",            _processWaitEvents_chk);
 		checkAndSetAseConfig(conn, "SQL batch capture",              _sqlBatchCapture_chk);
+		checkAndSetAseConfig(conn, "show deferred compilation text", _showDeferredCompilationText_chk);
 		checkAndSetAseConfig(conn, "wait event timing",              _waitEventTiming_chk);
 
 		checkAndSetAseConfig(conn, "lock timeout pipe active",       _lockTimeoutPipeActive_chk);
@@ -1616,6 +1713,7 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "sql text pipe active",           _sqlTextPipeActive_chk);
 		checkAndSetAseConfig(conn, "statement pipe active",          _statementPipeActive_chk);
 		checkAndSetAseConfig(conn, "plan text pipe active",          _planTextPipeActive_chk);
+		checkAndSetAseConfig(conn, "nonpushdown pipe active",        _nonpushdownPipeActive_chk);
 
 		checkAndSetAseConfig(conn, "lock timeout pipe max messages", _lockTimeoutPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "deadlock pipe max messages",     _deadlockPipeMaxMessages_sp);
@@ -1624,6 +1722,7 @@ public class AseConfigMonitoringDialog
 		checkAndSetAseConfig(conn, "sql text pipe max messages",     _sqlTextPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "statement pipe max messages",    _statementPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "plan text pipe max messages",    _planTextPipeMaxMessages_sp);
+		checkAndSetAseConfig(conn, "nonpushdown pipe max messages",  _nonpushdownPipeMaxMessages_sp);
 		checkAndSetAseConfig(conn, "max SQL text monitored",         _maxSqlTextMonitored_sp);
 
 		checkAndSetAseConfig(conn, "enable file access",             _enableFileAccess_chk);
@@ -1919,7 +2018,7 @@ public class AseConfigMonitoringDialog
 		Configuration conf1 = new Configuration("c:\\projects\\asetune\\asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 
-		Configuration conf2 = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
+		Configuration conf2 = new Configuration("c:\\projects\\asetune\\conf\\dbxtune.properties");
 		Configuration.setInstance(Configuration.SYSTEM_CONF, conf2);
 
 

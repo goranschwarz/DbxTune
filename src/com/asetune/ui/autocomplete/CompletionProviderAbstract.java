@@ -29,7 +29,7 @@ import org.fife.ui.autocomplete.DefaultCompletionProvider;
 import org.fife.ui.autocomplete.Util;
 import org.fife.ui.rtextarea.RTextArea;
 
-import com.asetune.Version;
+import com.asetune.AppDir;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.ui.autocomplete.completions.AbstractCompletionX;
 import com.asetune.ui.autocomplete.completions.CompletionTemplate;
@@ -204,7 +204,7 @@ extends DefaultCompletionProvider
 		// Keep only A-Z, a-z so no strange chars will be part of the filename
 		instanceName = instanceName.replaceAll("[^A-Za-z0-9_.-]", "");
 		
-		String filename = Version.getAppStoreDir() + File.separator + TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
+		String filename = AppDir.getAppStoreDir() + File.separator + TEMPLATE_CODE_COMP_saveCacheFileName.replace("{INSTANCE}", instanceName);
 		_codeCompletionCacheSavedFile = filename;
 	}
 
@@ -472,14 +472,18 @@ extends DefaultCompletionProvider
 		// search
 		for (Completion c : completions)
 		{
+			String inputText = c.getInputText();
+			if (inputText == null)
+				continue;
+			
 			if (useRegExp)
 			{
-				if (startsWithIgnoreCaseOrRegExp(c.getInputText(), text))
+				if (startsWithIgnoreCaseOrRegExp(inputText, text))
 					retList.add(c);
 			}
 			else
 			{
-				if (Util.startsWithIgnoreCase(c.getInputText(), text))
+				if (Util.startsWithIgnoreCase(inputText, text))
 					retList.add(c);
 			}
 		}
@@ -556,6 +560,9 @@ extends DefaultCompletionProvider
 	 */
 	protected boolean startsWithIgnoreCaseOrRegExp(String str, String start) 
 	{
+		if (str == null || start == null)
+			return false;
+
 		if (start.indexOf('*') >= 0)
 		{
 			// (?i) = case-insensitive after this char.

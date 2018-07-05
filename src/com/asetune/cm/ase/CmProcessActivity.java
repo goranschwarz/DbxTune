@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -27,7 +28,7 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -138,9 +139,41 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	//------------------------------------------------------------
-	// Implementation
-	//------------------------------------------------------------
+	private int _asePageSizeInBytes = -1; // dbxConn.getDbmsPageSizeInKb();
+	
+	@Override
+	public boolean doSqlInit(DbxConnection conn)
+	{
+		// Call super
+		boolean superRc = super.doSqlInit(conn);
+		
+		// Get page size...
+		try
+		{
+			String pgSizeStr = conn.getDbmsPageSizeInKb();
+			_asePageSizeInBytes = StringUtil.parseInt(pgSizeStr, -1);
+			if (_asePageSizeInBytes > 0)
+				_asePageSizeInBytes = _asePageSizeInBytes * 1024; 
+			
+			_logger.info("Initializing '"+getName()+"', the ASE Page size is: "+_asePageSizeInBytes);
+		}
+		catch(SQLException ex)
+		{
+			_logger.info("Problems getting ASE Page Size. Caught: "+ex);
+		}
+
+		return superRc;
+	}
+	@Override
+	public void doSqlClose(DbxConnection conn)
+	{
+		// Call super
+		super.doSqlClose(conn);
+
+		// reset: Get page size...
+		_asePageSizeInBytes = -1;
+	}
+	
 	private static final String  PROP_PREFIX                        = CM_NAME;
 
 	public static final String  PROPKEY_sample_systemThreads        = PROP_PREFIX + ".sample.systemThreads";
@@ -166,74 +199,134 @@ extends CountersModel
 	public static final String GRAPH_NAME_BATCH_COUNT = "BatchCountGraph";
 	public static final String GRAPH_NAME_EXEC_TIME   = "ExecTimeGraph";
 	public static final String GRAPH_NAME_EXEC_COUNT  = "ExecCountGraph";
+	public static final String GRAPH_NAME_TEMPDB_SUM  = "TempdbSumGraph";
 
 	private void addTrendGraphs()
 	{
-		String[] labels_chkptHk   = new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" };
-		String[] labels_batch     = new String[] { "SQL Batch/Statement Count" };
-		String[] labels_execTime  = new String[] { "Max Active SQL Execution Time In Seconds" };
-		String[] labels_execCount = new String[] { "Active/Concurrent SQL Statement Execution Count" };
-		
-		addTrendGraphData(GRAPH_NAME_CHKPT_HK,    new TrendGraphDataPoint(GRAPH_NAME_CHKPT_HK,    labels_chkptHk,   LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_BATCH_COUNT, new TrendGraphDataPoint(GRAPH_NAME_BATCH_COUNT, labels_batch,     LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_EXEC_TIME,   new TrendGraphDataPoint(GRAPH_NAME_EXEC_TIME,   labels_execTime,  LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_EXEC_COUNT,  new TrendGraphDataPoint(GRAPH_NAME_EXEC_COUNT,  labels_execCount, LabelType.Static));
+//		String[] labels_chkptHk   = new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" };
+//		String[] labels_batch     = new String[] { "SQL Batch/Statement Count" };
+//		String[] labels_execTime  = new String[] { "Max Active SQL Execution Time In Seconds" };
+//		String[] labels_execCount = new String[] { "Active/Concurrent SQL Statement Execution Count" };
+//		
+//		addTrendGraphData(GRAPH_NAME_CHKPT_HK,    new TrendGraphDataPoint(GRAPH_NAME_CHKPT_HK,    labels_chkptHk,   LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_BATCH_COUNT, new TrendGraphDataPoint(GRAPH_NAME_BATCH_COUNT, labels_batch,     LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_EXEC_TIME,   new TrendGraphDataPoint(GRAPH_NAME_EXEC_TIME,   labels_execTime,  LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_EXEC_COUNT,  new TrendGraphDataPoint(GRAPH_NAME_EXEC_COUNT,  labels_execCount, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_CHKPT_HK,
-				"Checkpoint and HK Writes",                     // Menu CheckBox text
-				"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels_chkptHk, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_CHKPT_HK,
+			"Checkpoint and HK Writes",                     // Menu CheckBox text
+			"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Checkpoint Writes", "HK Wash Writes", "HK GC Writes", "HK Chores Writes" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = null;
-			tg = new TrendGraph(GRAPH_NAME_BATCH_COUNT,
-				"SQL Batch/Statement Count",                   // Menu CheckBox text
-				"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels_batch, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_BATCH_COUNT,
+			"SQL Batch/Statement Count",                   // Menu CheckBox text
+			"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "SQL Batch/Statement Count" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = null;
-			tg = new TrendGraph(GRAPH_NAME_EXEC_TIME,
-				"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
-				"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels_execTime, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_EXEC_TIME,
+			"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
+			"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Max Active SQL Execution Time In Seconds" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = null;
-			tg = new TrendGraph(GRAPH_NAME_EXEC_COUNT,
-				"Active SQL Statement Execution Count",                   // Menu CheckBox text
-				"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels_execCount, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_EXEC_COUNT,
+			"Active SQL Statement Execution Count",                   // Menu CheckBox text
+			"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Active/Concurrent SQL Statement Execution Count" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH pssinfo(SP.spid, 'tempdb_pages')
+		addTrendGraph(GRAPH_NAME_TEMPDB_SUM,
+			"Tempdb Usage in MB, using pssinfo",                   // Menu CheckBox text
+			"Tempdb Usage in MB, using pssinfo ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Tempdb usage: sum(pssinfo_tempdb_pages) in MB" }, // pssinfo(SP.spid, 'tempdb_pages') 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_CHKPT_HK,
+//				"Checkpoint and HK Writes",                     // Menu CheckBox text
+//				"Checkpoint and Housekeeper Writes Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels_chkptHk, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_BATCH_COUNT,
+//				"SQL Batch/Statement Count",                   // Menu CheckBox text
+//				"SQL Batches/Statements Processed Per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels_batch, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_EXEC_TIME,
+//				"Max Active SQL Execution Time In Seconds",                   // Menu CheckBox text
+//				"Max Active SQL Execution Time In Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels_execTime, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_EXEC_COUNT,
+//				"Active SQL Statement Execution Count",                   // Menu CheckBox text
+//				"Active SQL Statement Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels_execCount, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 	// GRAPH
 
@@ -404,8 +497,8 @@ extends CountersModel
 		
 		cols1+=" MP.FamilyID, MP.SPID, MP.KPID, MP.NumChildren, \n"
 			+ "  SP.status, MP.WaitEventID, \n"
-			+ "  WaitClassDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
-			+ "  WaitEventDesc=convert(varchar(50),''), " // value will be replaced in method localCalculation()
+			+ "  WaitClassDesc=convert(varchar(80),''), " // value will be replaced in method localCalculation()
+			+ "  WaitEventDesc=convert(varchar(80),''), " // value will be replaced in method localCalculation()
 			+ "  MP.SecondsWaiting, MP.BlockingSPID, \n"
 			+ "  StatementStartTime = ST.StartTime, \n"
 //			+ "  StatementExecInMs = datediff(ms, ST.StartTime, getdate()), \n"
@@ -1141,6 +1234,73 @@ extends CountersModel
 
 			if (_logger.isDebugEnabled())
 				_logger.debug("updateGraphData("+tgdp.getName()+"): StatementExecInMs_count='"+count+"'.");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+		
+
+		if (GRAPH_NAME_TEMPDB_SUM.equals(tgdp.getName()))
+		{
+			int asePageSizeInBytes = _asePageSizeInBytes;
+			if (_asePageSizeInBytes < 0)
+			{
+				_logger.info("ASE Page size was not found... ASUMIMG 4k, otherwise calculation of TempDB space will be faulty..");
+				asePageSizeInBytes = 4096;
+			}
+			double pagesToMbDivider = 1024.0 * 1024.0 / asePageSizeInBytes;
+			
+			int pos_pssinfo_tempdb_pages = -1;
+
+			CounterTableModel counters = getCounterData(DATA_RATE);
+			if (counters == null) 
+				return;
+
+			// Find column Id's
+			List<String> colNames = counters.getColNames();
+			if (colNames == null) 
+				return;
+
+			for (int colId=0; colId < colNames.size(); colId++) 
+			{
+				String colName = colNames.get(colId);
+				if (colName.equals("pssinfo_tempdb_pages")) pos_pssinfo_tempdb_pages = colId;
+
+				// No need to continue, we got all our columns
+				if (pos_pssinfo_tempdb_pages >= 0)
+					break;
+			}
+
+			if (pos_pssinfo_tempdb_pages < 0)
+			{
+				_logger.debug("Can't find the position for column ('pssinfo_tempdb_pages'="+pos_pssinfo_tempdb_pages+")");
+				return;
+			}
+			
+			
+//			int count = 0;
+			int sum_pssinfo_tempdb_pages = 0;
+
+			// Loop rows
+			for (int rowId=0; rowId < counters.getRowCount(); rowId++)
+			{
+				Object o_pssinfo_tempdb_pages = counters.getValueAt(rowId, pos_pssinfo_tempdb_pages);
+
+				if (o_pssinfo_tempdb_pages != null && o_pssinfo_tempdb_pages instanceof Number)
+				{
+					int val = ((Number)o_pssinfo_tempdb_pages).intValue();
+					if (val > 0)
+						sum_pssinfo_tempdb_pages += val;
+				}
+			} // end loop rows
+
+			// Now fix the values into a structure and send it of to the graph
+			Double[] arr = new Double[1];
+
+			arr[0] = new Double(sum_pssinfo_tempdb_pages / pagesToMbDivider);
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("updateGraphData("+tgdp.getName()+"): sum_pssinfo_tempdb_pages='"+sum_pssinfo_tempdb_pages+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

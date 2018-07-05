@@ -117,6 +117,11 @@ extends Properties
 	{
 		load(filename);
 	}
+	public Configuration(String confName, String filename)
+	{
+		setConfName(confName);
+		load(filename);
+	}
 
 	/*---------------------------------------------------
 	** Methods
@@ -164,6 +169,12 @@ extends Properties
 	public String getConfName()
 	{
 		return _confName;
+	}
+	public String setConfName(String confName)
+	{
+		String oldName = _confName;
+		_confName = confName;
+		return oldName;
 	}
 
 	public String getFilename()
@@ -347,10 +358,52 @@ extends Properties
 			super.load(in);
 			//super.loadFromXML(in);
 			in.close();
+			
+			// get "include.xxx" files
+			for (String inclKey : getKeys("include."))
+			{
+			//	String inclFileName = getPropertyRaw(inclKey);
+				String inclFileName = getProperty(inclKey);
+
+				_logger.info("Configuration '"+getConfName()+"'. Reading configuration file '"+inclFileName+"' for the key '"+inclKey+"'.");
+				try
+				{
+					// Load the file into a new property (which gives us better controll, if we want to check for "duplicates" etc...
+					FileInputStream includeFis = new FileInputStream(inclFileName);
+					Properties includeProps = new Properties();
+					includeProps.load(includeFis);
+					//super.load(includeFis);
+					includeFis.close();
+					
+
+					// loop the new property and set then localy, if it was already set... handle it.
+					for (Entry<Object, Object> entry : includeProps.entrySet())
+					{
+						String incKey = String.valueOf(entry.getKey());
+						String incVal = String.valueOf(entry.getValue());
+						
+						if (this.containsKey(incKey))
+						{
+							_logger.warn("Configuration '"+getConfName()+"'. include directive issue: property value already exists, skipping this property. Origin Config File '"+filename+"', includeKey='"+inclKey+"', includeFile='"+inclFileName+"', key='"+incKey+"', skippedValue='"+incVal+"', keepingCurrentValue='"+this.getProperty(incKey)+"'.");
+						}
+						else
+						{
+							this.setProperty(incKey, incVal);
+						}
+					}
+				}
+				catch (FileNotFoundException e)
+				{
+					_logger.error("Configuration '"+getConfName()+"'. While reading the configuration file '"+filename+"' found a 'include' key '"+inclKey+"', however this file '"+inclFileName+"' was not possible to read. continuing anyway. Caught: "+e);
+				}
+				
+				// Remove the "include" key from the props (this so we dont save the kay, and potentially include it twice...)
+				this.remove(inclKey);
+			}
 		}
 		catch (FileNotFoundException e)
 		{
-			_logger.warn("The file '"+filename+"' could not be loaded, continuing anyway.");
+			_logger.warn("Configuration '"+getConfName()+"'. The file '"+filename+"' could not be loaded, continuing anyway.");
 		}
 		catch (Exception e)
 		{
@@ -761,6 +814,17 @@ extends Properties
 	{
 		String val = getProperty(propName);
 		return val != null ? val : defaultValue;
+
+		// FIXME: for default values, environment variables etc are NOT resolved for the moment
+		//        check if we can add this here for default values
+		//        return val != null ? val : parseProperty( propName, defaultValue );
+		// BUT: This needs to be tested/check in the code everywhere so we dont expect it to return ${VAR_NAME} instead of the variable-content (which I do not have time before my vaccation in 1 day)
+		//
+		// Below is how we typically would work around that...
+		// Resolv environment variables etc... everything we do in parseProperty( propName, val );
+		// _classSrcDirStr    = conf.getProperty("UserDefinedAlarmHandler.source.dir", "${DBXTUNE_UD_ALARM_SOURCE_DIR:-}resources/alarm-handler-src");
+		// _classSrcDirStr    = StringUtil.envVariableSubstitution(_classSrcDirStr); // resolv any environment variables into a value
+
 	}
 
 	
@@ -933,6 +997,12 @@ extends Properties
 		{
 			if (regDefVal.equals(str))
 				str = USE_DEFAULT + str;
+		}
+
+		if (str == null)
+		{
+			_logger.warn("Setting a property value to NULL, which is a faulty value. I will change this to '' (an empty string) for the key/property-name '"+propName+"', in config '"+getConfName()+"', using file '"+getFilename()+"'.");
+			str = "";
 		}
 
 		// set the property in super object

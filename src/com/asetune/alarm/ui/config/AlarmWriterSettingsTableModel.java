@@ -169,7 +169,8 @@ public class AlarmWriterSettingsTableModel extends AbstractTableModel
 		}
 		catch (ValidationException ex)
 		{
-			SwingUtils.showTimedBalloonTip(this, row, col, 10*1000, true, "Validation error: "+ex.getMessage());
+//			SwingUtils.showTimedBalloonTip(this, row, col, 10*1000, true, "Validation error: "+ex.getMessage());
+			SwingUtils.showTimedBalloonTip(this, row, col, 10*1000, true, "<html>Validation error: <b>Value will be discarded</b><br><pre>"+ex.getMessage()+"</pre></html>");
 			return;
 		}
 
@@ -339,6 +340,17 @@ public class AlarmWriterSettingsTableModel extends AbstractTableModel
 		for (CmSettingsHelper s : _settings)
 		{
 			if (s.isModified())
+				count++;
+		}
+		return count;
+	}
+
+	public int getSelectedRowCount()
+	{
+		int count = 0;
+		for (CmSettingsHelper s : _settings)
+		{
+			if (s.isSelected())
 				count++;
 		}
 		return count;

@@ -2,15 +2,23 @@ package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -19,11 +27,11 @@ import com.asetune.utils.StringUtil;
 public class CmPgStatements
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmPgActivity.class);
+	private static Logger        _logger          = Logger.getLogger(CmPgStatements.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmPgStatements.class.getSimpleName();
-	public static final String   SHORT_NAME       = "Statemets";
+	public static final String   SHORT_NAME       = "Statements";
 	public static final String   HTML_DESC        = 
 		"<html>" +
 		"The pg_stat_statements module provides a means for tracking execution statistics of all SQL statements executed by a server." +
@@ -125,9 +133,34 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	public static final String GRAPH_NAME_SQL_STATEMENTS = "SqlStatements";
 	
 	private void addTrendGraphs()
 	{
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENTS,
+			"SQL Statement Calls", 	                           // Menu CheckBox text
+			"SQL Statement Calls per second ("+SHORT_NAME+")", // Graph Label 
+			new String[] {"calls"}, 
+			LabelType.Static, 
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+	}
+
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_SQL_STATEMENTS.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getRateValueSum("calls");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 
 //	@Override
@@ -151,8 +184,19 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
-//		return "select * from public.pg_stat_statements";
-		return "select * from pg_stat_statements";
+		// TODO: calculate the per_xxx for diff values... localCalculation()...
+		return  "select \n" +
+				"    CASE WHEN s.calls > 0 THEN s.total_time      / s.calls ELSE 0 END as avg_time_per_call, \n" +
+				"    CASE WHEN s.calls > 0 THEN s.rows            / s.calls ELSE 0 END as avg_rows_per_call, \n" +
+				"    CASE WHEN s.rows  > 0 THEN s.shared_blks_hit / s.rows  ELSE 0 END as shared_blks_hit_per_row, \n" +
+				"    d.datname, \n" +
+				"    u.usename, \n" +
+				"    s.* \n" +
+				"from pg_stat_statements s \n" +
+				"left outer join pg_catalog.pg_database d ON s.dbid   = d.oid      \n" +
+				"left outer join pg_catalog.pg_user     u ON s.userid = u.usesysid \n" +
+				"where s.calls > 1 \n" +
+				"";
 
 // If PostgreSQL version earlier than 9.4, try to emulate the queryid using md5() or something similar
 //		select cast(md5(query) as varchar(30)) as ID, char_length(query) as query_length, * from public.pg_stat_statements
@@ -177,5 +221,31 @@ extends CountersModel
 		if (in.indexOf("<html>")>=0 || in.indexOf("<HTML>")>=0)
 			return str;
 		return "<html><pre>" + str + "</pre></html>";
+	}
+	
+	@Override
+	public boolean checkDependsOnOther(Connection conn)
+	{
+		// Check if the table exists, since it's optional and needs to be installed
+		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("SELECT * FROM pg_stat_statements where dbid = -999"); )
+		{
+			while(rs.next())
+				;
+			return true;
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("When trying to initialize Counters Model '"+getName()+"', named '"+getDisplayName()+"' The table 'pg_stat_statements' do not exists. This is an optional component. Caught: "+ex);
+
+			setActive(false, "The table 'pg_stat_statements' do not exists.\nTo enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html\n\n"+ex.getMessage());
+
+			TabularCntrPanel tcp = getTabPanel();
+			if (tcp != null)
+			{
+				tcp.setToolTipText("<html>The table 'pg_stat_statements' do not exists.<br>To enable this see: https://www.postgresql.org/docs/current/static/pgstatstatements.html<br><br>"+ex.getMessage()+"</html>");
+			}
+			return false;
+			
+		}
 	}
 }

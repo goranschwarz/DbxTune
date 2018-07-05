@@ -118,77 +118,132 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] avgLabels = new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" };
-		String[] sumLabels = new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" };
-//		String[] engLabels = new String[] { "-runtime-replaced-" };
-		String[] engLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    new TrendGraphDataPoint(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    avgLabels, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, engLabels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_SUM_OUTSTAND_IO,        new TrendGraphDataPoint(GRAPH_NAME_SUM_OUTSTAND_IO,        sumLabels, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, engLabels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  new TrendGraphDataPoint(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  engLabels, LabelType.Dynamic));
+//		String[] avgLabels = new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" };
+//		String[] sumLabels = new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" };
+////		String[] engLabels = new String[] { "-runtime-replaced-" };
+//		String[] engLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    new TrendGraphDataPoint(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,    avgLabels, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH, engLabels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_SUM_OUTSTAND_IO,        new TrendGraphDataPoint(GRAPH_NAME_SUM_OUTSTAND_IO,        sumLabels, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, new TrendGraphDataPoint(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO, engLabels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  new TrendGraphDataPoint(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,  engLabels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
-				"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
-				"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				avgLabels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
+			"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
+			"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15, 5), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
-				"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
-				"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				engLabels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
+			"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
+			"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
-				"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
-				"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				sumLabels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
+			"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
+			"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15, 5), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
-				"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
-				"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				engLabels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
+			"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
+			"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15, 5), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
-				"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
-				"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				engLabels, 
-				false, // is Percent Graph
-				this, 
-				true, // visible at start
-				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		addTrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
+			"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
+			"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			true, // visible at start
+			Ver.ver(15, 5), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
+//				"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
+//				"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				avgLabels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
+//				"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
+//				"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				engLabels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
+//				"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
+//				"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				sumLabels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
+//				"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
+//				"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				engLabels, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
+//				"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
+//				"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				engLabels, 
+//				false, // is Percent Graph
+//				this, 
+//				true, // visible at start
+//				15500, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 //	@Override
@@ -510,7 +565,10 @@ extends CountersModel
 		//-------------------------------------------------------
 		// Run Queue Length, Avg Last Minute 
 		//-------------------------------------------------------
-		if (isSystemAlarmsForColumnEnabled("RunQueueLengthAvg1min"))
+		if (    isSystemAlarmsForColumnEnabledAndInTimeRange("RunQueueLengthAvg1min") 
+		     || isSystemAlarmsForColumnEnabledAndInTimeRange("RunQueueLengthAvg5min") 
+		     || isSystemAlarmsForColumnEnabledAndInTimeRange("RunQueueLengthAvg15min") 
+		   )
 		{
 			int[] rqRows = this.getAbsRowIdsWhere("Statistic", "run queue length");
 			if (rqRows == null)
@@ -523,42 +581,51 @@ extends CountersModel
 				Double Avg_5min  = NumberUtils.round( cm.getAbsValueAvg(rqRows, "Avg_5min"),  decimals);
 				Double Avg_15min = NumberUtils.round( cm.getAbsValueAvg(rqRows, "Avg_15min"), decimals);
 
-				if (Avg_1min != null)
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("RunQueueLengthAvg1min"))
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
-
-					if (AlarmHandler.hasInstance())
+					if (Avg_1min != null)
 					{
-						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
-						if (Avg_1min > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+
+						if (AlarmHandler.hasInstance())
+						{
+							double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
+							if (Avg_1min > threshold)
+								AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_1_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						}
 					}
 				}
 
-				if (Avg_5min != null)
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("RunQueueLengthAvg5min"))
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
-
-					if (AlarmHandler.hasInstance())
+					if (Avg_5min != null)
 					{
-						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
-						if (Avg_5min > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+
+						if (AlarmHandler.hasInstance())
+						{
+							double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min, DEFAULT_alarm_RunQueueLengthAvg5min);
+							if (Avg_5min > threshold)
+								AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_5_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						}
 					}
 				}
 
-				if (Avg_15min != null)
+				if (isSystemAlarmsForColumnEnabledAndInTimeRange("RunQueueLengthAvg15min"))
 				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
-
-					if (AlarmHandler.hasInstance())
+					if (Avg_15min != null)
 					{
-						double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min, DEFAULT_alarm_RunQueueLengthAvg1min);
-						if (Avg_15min > threshold)
-							AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						if (debugPrint || _logger.isDebugEnabled())
+							System.out.println("##### sendAlarmRequest("+cm.getName()+"): RunQueueLength: avg_1min=" + Avg_1min + ", avg_5min="+Avg_5min+", avg_15min="+Avg_15min+".");
+
+						if (AlarmHandler.hasInstance())
+						{
+							double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min);
+							if (Avg_15min > threshold)
+								AlarmHandler.getInstance().addAlarm( new AlarmEventRunQueueLength(cm, threshold, RangeType.RANGE_15_MINUTE, Avg_1min, Avg_5min, Avg_15min) );
+						}
 					}
 				}
 			}
@@ -566,13 +633,16 @@ extends CountersModel
 	}
 
 	public static final String  PROPKEY_alarm_RunQueueLengthAvg1min = PROP_PREFIX + ".alarm.system.if.RunQueueLengthAvg1min.gt";
-	public static final double  DEFAULT_alarm_RunQueueLengthAvg1min = 1.7;
+//	public static final double  DEFAULT_alarm_RunQueueLengthAvg1min = 1.7;
+	public static final double  DEFAULT_alarm_RunQueueLengthAvg1min = 3.0;
 
 	public static final String  PROPKEY_alarm_RunQueueLengthAvg5min = PROP_PREFIX + ".alarm.system.if.RunQueueLengthAvg5min.gt";
-	public static final double  DEFAULT_alarm_RunQueueLengthAvg5min = 1.4;
+//	public static final double  DEFAULT_alarm_RunQueueLengthAvg5min = 1.4;
+	public static final double  DEFAULT_alarm_RunQueueLengthAvg5min = 2.0;
 
 	public static final String  PROPKEY_alarm_RunQueueLengthAvg15min = PROP_PREFIX + ".alarm.system.if.RunQueueLengthAvg15min.gt";
-	public static final double  DEFAULT_alarm_RunQueueLengthAvg15min = 1.0;
+//	public static final double  DEFAULT_alarm_RunQueueLengthAvg15min = 1.0;
+	public static final double  DEFAULT_alarm_RunQueueLengthAvg15min = 1.5;
 
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -580,7 +650,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("RunQueueLengthAvg1min", PROPKEY_alarm_RunQueueLengthAvg1min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min , DEFAULT_alarm_RunQueueLengthAvg1min), DEFAULT_alarm_RunQueueLengthAvg1min, "If 'RunQueueLength: Avg_1min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
+		list.add(new CmSettingsHelper("RunQueueLengthAvg1min" , PROPKEY_alarm_RunQueueLengthAvg1min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min , DEFAULT_alarm_RunQueueLengthAvg1min) , DEFAULT_alarm_RunQueueLengthAvg1min , "If 'RunQueueLength: Avg_1min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
+		list.add(new CmSettingsHelper("RunQueueLengthAvg5min" , PROPKEY_alarm_RunQueueLengthAvg5min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min , DEFAULT_alarm_RunQueueLengthAvg5min) , DEFAULT_alarm_RunQueueLengthAvg5min , "If 'RunQueueLength: Avg_5min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
+		list.add(new CmSettingsHelper("RunQueueLengthAvg15min", PROPKEY_alarm_RunQueueLengthAvg15min, Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min), DEFAULT_alarm_RunQueueLengthAvg15min, "If 'RunQueueLength: Avg_15min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
 
 		return list;
 	}

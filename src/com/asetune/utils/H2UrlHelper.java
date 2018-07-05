@@ -9,8 +9,6 @@ import java.util.Properties;
 import org.apache.log4j.PropertyConfigurator;
 import org.h2.engine.SysProperties;
 
-import com.asetune.sql.JdbcUrlParser;
-
 public class H2UrlHelper
 {
 //	private static Logger _logger = Logger.getLogger(H2UrlHelper.class);
@@ -256,6 +254,28 @@ public class H2UrlHelper
 	public String getFilename()
 	{
 		return _extractedFileName;
+	}
+
+	/**
+	 * Get FULL name of the parsed file part of the URL<br>
+	 * This is the full path including file <b>extention</b>
+	 * 
+	 * @return null if no file was passed or the file didn't exist.
+	 */
+	public File getDbFile()
+	{
+		File f = getFile();
+		if (f == null)
+			return null;
+
+		if (f.exists())
+			return f;
+
+		f = new File(f.getAbsolutePath() + ".mv.db");
+		if (f.exists())
+			return f;
+		
+		return null;
 	}
 
 //	/**

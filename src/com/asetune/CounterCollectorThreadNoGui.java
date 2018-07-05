@@ -1,17 +1,15 @@
 package com.asetune;
 
-import java.awt.event.ActionEvent;
 import java.io.Console;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Properties;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -20,13 +18,15 @@ import javax.script.ScriptException;
 import org.apache.log4j.Logger;
 
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cache.XmlPlanCache;
-import com.asetune.cache.XmlPlanCacheAse;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.LostConnectionException;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -38,18 +38,16 @@ import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
-import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
-import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.Memory;
 import com.asetune.utils.MemoryWarningSystem;
 import com.asetune.utils.PropPropEntry;
+import com.asetune.utils.ShutdownHandler;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
@@ -61,13 +59,16 @@ implements Memory.MemoryListener
 	/** Log4j logging. */
 	private static Logger _logger = Logger.getLogger(CounterCollectorThreadNoGui.class);
 
+	public static final String THREAD_NAME = "GetCountersNoGui";
+
 
 	public CounterCollectorThreadNoGui(CounterControllerAbstract counterController)
 	{
 		super(counterController);
 	}
 
-	/** a connection to the ASE server to monitor */
+	
+	/** a connection to the DBMS server to monitor */
 //	private Connection _monConn     = null;
 
 	/** sleep time between samples */
@@ -82,26 +83,28 @@ implements Memory.MemoryListener
 	/** if != null, then delay the start until this time HHMM */
 	private String     _deferedStartTime = null;
 
-	/** If no connection can be made to the ASE server, sleep time before retry */
+	/** If no connection can be made to the DBMS server, sleep time before retry */
 	private int        _sleepOnFailedConnectTime = 60;
 
 	/** Connection information */
-	private String     _aseUsername = null;
-	private String     _asePassword = null; 
-	private String     _aseServer   = null;
-//	private String     _aseHostname = null;
-//	private String     _asePort     = null;
-	private String     _aseHostPortStr = null;
+	private String     _dbmsUsername    = null;
+	private String     _dbmsPassword    = null; 
+	private String     _dbmsServer      = null;
+	private String     _dbmsServerAlias = null;
+//	private String     _dbmsHostname    = null;
+//	private String     _dbmsPort        = null;
+	private String     _dbmsHostPortStr = null;
+	private String     _jdbcUrlOptions  = null;
 
-	private String     _sshUsername    = null;
-	private String     _sshPassword    = null; 
-	private String     _sshHostname    = null;
-	private String     _sshPortStr     = null;
-	private int        _sshPort        = 22;
+	private String     _sshUsername     = null;
+	private String     _sshPassword     = null; 
+	private String     _sshHostname     = null;
+	private String     _sshPortStr      = null;
+	private int        _sshPort         = 22;
 	
-	private Configuration _storeProps = null;
+	private Configuration _storeProps   = null;
 	
-	private boolean       _running = true;
+	private boolean       _running      = true;
 
 	public static boolean checkValidCmShortcuts(String options)
 	{
@@ -128,7 +131,7 @@ implements Memory.MemoryListener
 	{
 		String offlinePrefix = "offline.";
 //		String CMpropPrefix  = "CM.";
-		String connPrefix    = "conn.";
+//		String connPrefix    = "conn.";
 
 		_storeProps = Configuration.getInstance(Configuration.PCS);
 		if ( _storeProps == null || (_storeProps != null && _storeProps.size() == 0) )
@@ -146,11 +149,17 @@ implements Memory.MemoryListener
 
 		// Reset the search order to be "just" Configuration.PCS
 		// should we do this or not (or ONLY when using props file, an NOT for templates)
-		Configuration.setSearchOrder( Configuration.PCS );
-		String userConfigFile    = Configuration.getInstance(Configuration.USER_CONF) == null ? "not set"                    : Configuration.getInstance(Configuration.USER_CONF).getFilename();
-		String userTmpConfigFile = Configuration.getInstance(Configuration.USER_TEMP) == null ? "not set"                    : Configuration.getInstance(Configuration.USER_TEMP).getFilename();
-		String pcsConfigFile     = cmTemplateOption                                   != null ? "template="+cmTemplateOption : _storeProps.getFilename();
-		_logger.info("Combined Configuration Search Order has been changed to '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'. This means that USER_CONF='"+userConfigFile+"' and USER_TEMP='"+userTmpConfigFile+"' wont be used for as fallback configurations. Only the PCS='"+pcsConfigFile+"' config will be used.");
+//		Configuration.setSearchOrder( Configuration.PCS );
+//		String userConfigFile    = Configuration.getInstance(Configuration.USER_CONF) == null ? "not set"                    : Configuration.getInstance(Configuration.USER_CONF).getFilename();
+//		String userTmpConfigFile = Configuration.getInstance(Configuration.USER_TEMP) == null ? "not set"                    : Configuration.getInstance(Configuration.USER_TEMP).getFilename();
+//		String pcsConfigFile     = cmTemplateOption                                   != null ? "template="+cmTemplateOption : _storeProps.getFilename();
+//		_logger.info("Combined Configuration Search Order has been changed to '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'. This means that USER_CONF='"+userConfigFile+"' and USER_TEMP='"+userTmpConfigFile+"' wont be used for as fallback configurations. Only the PCS='"+pcsConfigFile+"' config will be used.");
+
+		_logger.info("NO-GUI Init - Combined Configuration Search Order is '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+		_logger.info("              PCS         Using Configuration file '"+(Configuration.getInstance(Configuration.PCS)         == null ? "-no-instance-" : Configuration.getInstance(Configuration.PCS        ).getFilename())+"'.");
+		_logger.info("              USER_TEMP   Using Configuration file '"+(Configuration.getInstance(Configuration.USER_TEMP)   == null ? "-no-instance-" : Configuration.getInstance(Configuration.USER_TEMP  ).getFilename())+"'.");
+		_logger.info("              USER_CONF   Using Configuration file '"+(Configuration.getInstance(Configuration.USER_CONF)   == null ? "-no-instance-" : Configuration.getInstance(Configuration.USER_CONF  ).getFilename())+"'.");
+		_logger.info("              SYSTEM_CONF Using Configuration file '"+(Configuration.getInstance(Configuration.SYSTEM_CONF) == null ? "-no-instance-" : Configuration.getInstance(Configuration.SYSTEM_CONF).getFilename())+"'.");
 
 		// PROPERTY: sleepTime
 		_sleepTime               = _storeProps.getIntMandatoryProperty(offlinePrefix + "sampleTime");
@@ -178,25 +187,32 @@ implements Memory.MemoryListener
 
 		
 		// PROPERTY: username, password, server
-		_aseUsername    = _storeProps.getProperty(connPrefix+"aseUsername");
-		_asePassword    = _storeProps.getProperty(connPrefix+"asePassword"); 
-		_aseServer      = _storeProps.getProperty(connPrefix+"aseName");
-		String aseHosts = _storeProps.getProperty(connPrefix+"aseHost");
-		String asePorts = _storeProps.getProperty(connPrefix+"asePort");
-		_aseHostPortStr = _storeProps.getProperty(connPrefix+"aseHostPort");
+		_dbmsUsername    = _storeProps.getProperty("conn.dbmsUsername");
+		_dbmsPassword    = _storeProps.getProperty("conn.dbmsPassword"); 
+		_dbmsServer      = _storeProps.getProperty("conn.dbmsName");
+		_dbmsServerAlias = _storeProps.getProperty("conn.dbmsServerAlias");
+		String dbmsHosts = _storeProps.getProperty("conn.dbmsHost");
+		String dbmsPorts = _storeProps.getProperty("conn.dbmsPort");
+		_dbmsHostPortStr = _storeProps.getProperty("conn.dbmsHostPort");
+		_jdbcUrlOptions  = _storeProps.getProperty("conn.jdbcUrlOptions");
 
-		_sshUsername    = _storeProps.getProperty(connPrefix+"sshUsername");
-		_sshPassword    = _storeProps.getProperty(connPrefix+"sshPassword"); 
-		_sshHostname    = _storeProps.getProperty(connPrefix+"sshHostname");
-		_sshPortStr     = _storeProps.getProperty(connPrefix+"sshPort");
+		_sshUsername     = _storeProps.getProperty("conn.sshUsername");
+		_sshPassword     = _storeProps.getProperty("conn.sshPassword"); 
+		_sshHostname     = _storeProps.getProperty("conn.sshHostname");
+		_sshPortStr      = _storeProps.getProperty("conn.sshPort");
 		if (_sshPortStr != null && ! _sshPortStr.equals(""))
 			_sshPort = Integer.parseInt(_sshPortStr);
+
+		// typically faulty initialized may be: "null:-1", then unset the value
+		if (_dbmsHostPortStr != null && _dbmsHostPortStr.equals("null:-1"))
+			_dbmsHostPortStr = null;
+		
 		
 		// Override prop values with the Command line parameters if any. 
 //		CommandLine cmd = AseTune.getCmdLineParams();
-//		if (cmd.hasOption('U'))	_aseUsername = cmd.getOptionValue('U');
-//		if (cmd.hasOption('P'))	_asePassword = cmd.getOptionValue('P');
-//		if (cmd.hasOption('S'))	_aseServer   = cmd.getOptionValue('S');
+//		if (cmd.hasOption('U'))	_dbmsUsername = cmd.getOptionValue('U');
+//		if (cmd.hasOption('P'))	_dbmsPassword = cmd.getOptionValue('P');
+//		if (cmd.hasOption('S'))	_dbmsServer   = cmd.getOptionValue('S');
 //		
 //		// -i, --interval: Offline: time between samples.
 //		if (cmd.hasOption('i'))
@@ -211,101 +227,121 @@ implements Memory.MemoryListener
 //			}
 //		}
 
-		if (_aseUsername == null) throw new Exception("No ASE User has been specified. Not by commandLine parameters '-U', or by property 'conn.aseUsername' in the file '"+_storeProps.getFilename()+"'.");
-		if (_aseServer == null)   throw new Exception("No ASE Server has been specified. Not by commandLine parameters '-S', or by property 'conn.aseName' in the file '"+_storeProps.getFilename()+"'.");
+		if (_dbmsUsername == null) throw new Exception("No DBMS User has been specified. Not by commandLine parameters '-U', or by property 'conn.dbmsUsername' in the file '"+_storeProps.getFilename()+"'.");
+		if (_dbmsServer == null)   throw new Exception("No DBMS Server has been specified. Not by commandLine parameters '-S', or by property 'conn.dbmsName' in the file '"+_storeProps.getFilename()+"'.");
 
-		// If aseHostPort wasn't found, use aseHost & asePort
-		if (_aseHostPortStr == null && aseHosts != null && asePorts != null)
-			_aseHostPortStr = AseConnectionFactory.toHostPortStr(aseHosts, asePorts);
 		
-		// If aseServerName is specified in "server name" format (not in host:port)
-		// Then go and grab host:port from the local interfaces file.
-		// Meaning serverName overrides host/port specifications.
-		// BUT if the serverName can't be found in the local interfaces file then use 
-		// the specified properties aseHost + asePort or aseHostPort
-		String aseServerStr = _aseServer;
-		if ( aseServerStr.indexOf(":") == -1 )
+		// TODO: maybe break this out into the counterCollector, so we can adapt to other DBMS types
+		if (    "AseTune".equalsIgnoreCase(Version.getAppName())
+			 || "IqTune" .equalsIgnoreCase(Version.getAppName())
+			 || "RsTune" .equalsIgnoreCase(Version.getAppName())
+			 || "RaxTune".equalsIgnoreCase(Version.getAppName())
+		   )
 		{
-			aseServerStr = AseConnectionFactory.getIHostPortStr(_aseServer);
-			if (aseServerStr == null)
+			// If aseHostPort wasn't found, use aseHost & asePort
+			if (_dbmsHostPortStr == null && dbmsHosts != null && dbmsPorts != null)
+				_dbmsHostPortStr = AseConnectionFactory.toHostPortStr(dbmsHosts, dbmsPorts);
+			
+			// If aseServerName is specified in "server name" format (not in host:port)
+			// Then go and grab host:port from the local interfaces file.
+			// Meaning serverName overrides host/port specifications.
+			// BUT if the serverName can't be found in the local interfaces file then use 
+			// the specified properties aseHost + asePort or aseHostPort
+			String aseServerStr = _dbmsServer;
+			if ( aseServerStr.indexOf(":") == -1 )
 			{
-				_logger.info("Can't resolve or find ASE Server named '"+_aseServer+"' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '"+_aseHostPortStr+"'.");
-				throw new Exception("Can't resolve or find ASE Server named '"+_aseServer+"' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '"+_aseHostPortStr+"'.");
-				//aseServerStr = _aseHostPortStr;
+				aseServerStr = AseConnectionFactory.getIHostPortStr(_dbmsServer);
+				if (aseServerStr == null)
+				{
+					_logger.info("Can't resolve or find ASE Server named '"+_dbmsServer+"' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '"+_dbmsHostPortStr+"'.");
+					throw new Exception("Can't resolve or find ASE Server named '"+_dbmsServer+"' in the interfaces/sql.ini file. Fallback on 'aseHostPort', which is '"+_dbmsHostPortStr+"'.");
+					//aseServerStr = _dbmsHostPortStr;
+				}
 			}
+			else
+			{
+				if (_dbmsHostPortStr != null)
+					aseServerStr = _dbmsHostPortStr;
+			}
+
+			// Check input if it looks like: host:port[, host2:port2[, hostN:portN]]
+			if ( ! AseConnectionFactory.isHostPortStrValid(aseServerStr) )
+			{
+				String error = AseConnectionFactory.isHostPortStrValidReason(aseServerStr);
+				throw new Exception("The ASE Server connection specification '"+aseServerStr+"' is in a faulty format. The format should be 'hostname:port[,hostname2:port2[,hostnameN:portN]]', error='"+error+"'.");
+			}
+			_dbmsHostPortStr = aseServerStr;
+
+			// check that aseHostPort or aseHost,asePort are set
+			if (_dbmsHostPortStr == null && (dbmsHosts == null || dbmsPorts == null))
+				throw new MandatoryPropertyException("If the properties 'conn.dbmsName' or 'conn.dbmsHostPort' or cmdLine switch -S, is not specified. Then 'conn.dbmsHost' and 'conn.dbmsPort' must be specified.");
 		}
 		else
 		{
-			if (_aseHostPortStr != null)
-				aseServerStr = _aseHostPortStr;
+			// If aseHostPort wasn't found, use aseHost & asePort
+			if (_dbmsHostPortStr == null && dbmsHosts != null && dbmsPorts != null)
+				_dbmsHostPortStr = dbmsHosts + ":" + dbmsPorts;
+
+			if (_dbmsHostPortStr == null)
+				_dbmsHostPortStr = _dbmsServer;
 		}
-
-		// Check input if it looks like: host:port[, host2:port2[, hostN:portN]]
-		if ( ! AseConnectionFactory.isHostPortStrValid(aseServerStr) )
-		{
-			String error = AseConnectionFactory.isHostPortStrValidReason(aseServerStr);
-			throw new Exception("The ASE Server connection specification '"+aseServerStr+"' is in a faulty format. The format should be 'hostname:port[,hostname2:port2[,hostnameN:portN]]', error='"+error+"'.");
-		}
-		_aseHostPortStr = aseServerStr;
-
-		// check that aseHostPort or aseHost,asePort are set
-		if (_aseHostPortStr == null && (aseHosts == null || asePorts == null))
-			throw new MandatoryPropertyException("If the properties '"+connPrefix+"aseName' or '"+connPrefix+"aseHostPort' or cmdLine switch -S, is not specified. Then '"+connPrefix+"aseHost' and '"+connPrefix+"asePort' must be specified.");
-
 
 		
 		//-----------------------------------
 		// Still no password, read it from the STDIN
-		if (_asePassword == null)
+		if (_dbmsPassword == null)
 		{
 			Console cons = System.console();
 			if (cons != null)
 			{
 				System.out.println("-----------------------------------------------------------------------------");
-				System.out.println("No password for ASE was specified use command line parameter -P or property '"+connPrefix+"asePassword' in the file '"+_storeProps.getFilename()+"'.");
-				System.out.println("Connecting to server '"+_aseServer+"' at '"+_aseHostPortStr+"' with the user name '"+_aseUsername+"'.");
+				System.out.println("No password for DBMS was specified use command line parameter -P or property 'conn.dbmsPassword' in the file '"+_storeProps.getFilename()+"'.");
+				System.out.println("Connecting to server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"' with the user name '"+_dbmsUsername+"'.");
 				System.out.println("-----------------------------------------------------------------------------");
 				char[] passwd = cons.readPassword("Password: ");
-				_asePassword = new String(passwd);
-				//System.out.println("Read ASE password from Console '"+_asePassword+"'.");
+				_dbmsPassword = new String(passwd);
+				//System.out.println("Read DBMS password from Console '"+_dbmsPassword+"'.");
 			}
 		}
 		// if we started in background... stdin is not available
-		if (_asePassword == null)
+		if (_dbmsPassword == null)
 		{
 			throw new MandatoryPropertyException("No Password for the DBMS could be retrived.");
 		}
 		// treat "null" password, and set it to blank
-		if (_asePassword.equalsIgnoreCase("null"))
-			_asePassword = "";
+		if (_dbmsPassword.equalsIgnoreCase("null"))
+			_dbmsPassword = "";
 
 		
 		//-----------------------------------
 		// read PASSWORD FOR SSH...
-		if (_sshHostname != null && _sshPassword == null)
+//		if (_sshHostname != null && _sshPassword == null)
+		if (StringUtil.hasValue(_sshHostname) && StringUtil.hasValue(_sshUsername) && _sshPassword == null)
 		{
 			Console cons = System.console();
 			if (cons != null)
 			{
 				System.out.println("-----------------------------------------------------------------------------");
-				System.out.println("No SSH password was specified use command line parameter -p or property '"+connPrefix+"sshPassword' in the file '"+_storeProps.getFilename()+"'.");
+				System.out.println("No SSH password was specified use command line parameter -p or property 'conn.sshPassword' in the file '"+_storeProps.getFilename()+"'.");
 				System.out.println("Connecting to host name '"+_sshHostname+"' with the user name '"+_sshUsername+"'.");
 				System.out.println("-----------------------------------------------------------------------------");
 				char[] passwd = cons.readPassword("Password: ");
 				_sshPassword = new String(passwd);
 				//System.out.println("Read SSH password from Console '"+_sshPassword+"'.");
 			}
-		}
-		// if we started in background... stdin is not available
-		if (_sshPassword == null)
-		{
-			throw new MandatoryPropertyException("No Password for SSH could be retrived.");
+
+			// if we started in background... stdin is not available
+			if (_sshPassword == null)
+			{
+				throw new MandatoryPropertyException("No Password for SSH could be retrived.");
+			}
 		}
 		// treat "null" password, and set it to blank
 		if (_sshPassword != null && _sshPassword.equalsIgnoreCase("null"))
 			_sshPassword = "";
 
-		
+		getCounterController().setDefaultSleepTimeInSec(_sleepTime);
+
 		String configStr = 
 			"sleepTime='"+_sleepTime+"', " +
 			"scriptWaitForNextSample='"+(_scriptWaitForNextSample == null ? "using sleepTime" : "using JavaScript")+"', " +
@@ -313,9 +349,9 @@ implements Memory.MemoryListener
 			"shutdownAfterXHours='"+_shutdownAtTimeStr+"', " +
 			"startRecordingAtTime='"+_deferedStartTime+"', " +
 			"sleepOnFailedConnectTime='"+_sleepOnFailedConnectTime+"', " +
-			"_aseUsername='"+_aseUsername+"', " +
-			"_asePassword='*hidden*', " +
-			"_aseServer='"+_aseServer+"("+_aseHostPortStr+")', " +
+			"_dbmsUsername='"+_dbmsUsername+"', " +
+			"_dbmsPassword='*hidden*', " +
+			"_dbmsServer='"+_dbmsServer+"("+_dbmsHostPortStr+")', " +
 			"_sshUsername='"+_sshUsername+"', " +
 			"_sshPassword='*hidden*', " +
 			"_sshHostname='"+_sshHostname+"', " +
@@ -328,22 +364,24 @@ implements Memory.MemoryListener
 
 		// Setting internal "system property" variable 'SERVERNAME' to "specified server name" or the "hostName.portNum" 
 		// This might be used by the AlarmWriterToFile or similar
-		if (StringUtil.hasValue(_aseServer) || StringUtil.hasValue(_aseHostPortStr))
+		if (StringUtil.hasValue(_dbmsServer) || StringUtil.hasValue(_dbmsHostPortStr))
 		{
 			String servername = null;
 			
-			if (StringUtil.hasValue(_aseServer))
-				servername = _aseServer;
+			if (StringUtil.hasValue(_dbmsServer))
+				servername = _dbmsServer;
 			else
-				servername = _aseHostPortStr;
+				servername = _dbmsHostPortStr;
 
 			if (StringUtil.hasValue(servername))
 			{
 				// change any ':' to '.'   ... due to windows can't handle ':' to good in files
 				// I choosed char '.' because '-' is probably in any hostnames, and '_' is usualy within any ASE-Servername
 				// So if we want to have some logic when looking at a filename, then '.' made "best sence"
-				servername = servername.replace(':', '.');
+				//servername = servername.replace(':', '.');
+				servername = DbxTune.stripSrvName(servername);
 
+				// Note this is also set later on when we got a connection... which means that it may change...
 				System.setProperty("SERVERNAME", servername);
 			}
 		}
@@ -496,10 +534,142 @@ implements Memory.MemoryListener
 			@Override
 			public void memoryUsageLow(long usedMemory, long maxMemory)
 			{
-				double percentageUsed = ((double) usedMemory) / maxMemory;
-				_logger.warn("Low on memory usage ?... percentageUsed="+percentageUsed);
+				double percentageUsed    = (((double) usedMemory) / maxMemory) * 100.0;
+				String percentageUsedStr = String.format("%.1f",percentageUsed);
+				long freeMem = maxMemory - usedMemory;
+				_logger.warn("Low on memory usage ? ... percentageUsed="+percentageUsedStr+", maxMemoryMb="+(maxMemory/1024/1024)+", usedMemoryMb="+(usedMemory/1024/1024)+", freeMemoryMb="+(freeMem/1024/1024));
 			}
 		});
+		
+		//---------------------------------
+		// Install shutdown hook, that will STOP the collector (and SHUTDOWN H2)
+		// This needs to be done before we start any connections to H2
+		_logger.info("Installing shutdown hook, which will help us stop the system gracefully if we are killed.");
+
+		// Setting this property so that CentralPersistenWriter can append DB_CLOSE_ON_EXIT on the URL when connectiong to H2
+		System.setProperty("dbxtune.isShutdownHookInstalled", "true");
+
+		// Add a shutdown handler (called when we recive ctrl-c or kill -15 */
+		ShutdownHandler.addShutdownHandler(new ShutdownHandler.Shutdownable()
+		{
+			@Override
+			public List<String> systemShutdown()
+			{
+				shutdown();
+				
+				return Arrays.asList(new String[]{THREAD_NAME});
+			}
+		});
+
+//		// Setting this property so that CentralPersistenWriter can append DB_CLOSE_ON_EXIT on the URL when connectiong to H2
+//		System.setProperty("dbxtune.isShutdownHookInstalled", "true");
+//
+//		Thread noGuiShutdownHook = new Thread("ShutdownHook-"+Version.getAppName()+"-NoGui")
+//		{
+//			@Override
+//			public void run()
+//			{
+//				_logger.info("Shutdown-hook: Starting to do 'shutdown'...");
+//
+//				// DEBUG: write some thread info
+//				if (_logger.isDebugEnabled())
+//				{
+//					_logger.debug("--------------------------------------------------");
+//					for (Thread th : Thread.getAllStackTraces().keySet()) 
+//						_logger.debug("1-shutdownHook: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+//				}
+//
+//				//----------------------------------------------------------------------------------
+//				// Signal the collector to stop, and at the end it will stop the PCS if we got one
+//				//----------------------------------------------------------------------------------
+//				shutdown();
+//
+//				
+//				// Wait for thread "GetCountersNoGui" has terminated
+//				String waitForThreadName = THREAD_NAME;
+//				long sleepTime   = 500;
+//				long maxWaitTime = 40*1000; // 40 sec
+//				long startTime   = System.currentTimeMillis();
+//				while (true) // break on: notFound or  timeout
+//				{
+//					Thread waitForThread = null;
+//					for (Thread th : Thread.getAllStackTraces().keySet())
+//					{
+//						if (waitForThreadName.equals(th.getName()))
+//							waitForThread = th;
+//					}
+//
+//					// The thread was found: So WAIT
+//					if (waitForThread != null)
+//					{
+//						// But dont wait invane... onnor the timeout
+//						if (TimeUtils.msDiffNow(startTime) > maxWaitTime)
+//						{
+//							_logger.warn("Shutdown-hook: Waited for thread '"+waitForThreadName+"' to terminate. maxWaitTime="+maxWaitTime+" ms has been expired. STOP WAITING.");
+//							_logger.warn("Shutdown-hook: Here is a stacktrace of the thread '"+waitForThreadName+"' we are waiting for:" 
+//									+ StringUtil.stackTraceToString(waitForThread.getStackTrace()));
+//
+//							_logger.warn("Shutdown-hook: For completeness, lets stacktrace all other threads that are not part of the 'system' Thread Group.");
+//							for (Thread th : Thread.getAllStackTraces().keySet()) 
+//							{
+//								ThreadGroup thg = th.getThreadGroup();
+//								boolean isSystem = thg == null ? false : "system".equalsIgnoreCase(thg.getName());
+//								String  thgName  = thg == null ? "null" : thg.getName();
+//								String  thName   = th.getName();
+//
+//								// Do not print System threads or the wait thread, which we already has printed
+//								if (isSystem || waitForThreadName.equals(thName) || "DestroyJavaVM".equals(thName) || th == Thread.currentThread())
+//									continue;
+//								
+//								_logger.info("Shutdown-hook: Stacktrace for threadName='"+th.getName()+"', isDaemon="+th.isDaemon()+", threadGroupName='"+thgName+"':"
+//									+ StringUtil.stackTraceToString(th.getStackTrace()));
+//							}
+//							break; // ON TIMEOUT: get out of the while(true)
+//						}
+//
+//						_logger.info("Shutdown-hook: Still waiting for thread '"+waitForThreadName+"' to terminate... sleepTime="+sleepTime+", TotalWaitTime="+TimeUtils.msDiffNow(startTime)+", maxWaitTime="+maxWaitTime);
+//
+//						// Sleep for X ms
+//						try { Thread.sleep(sleepTime); }
+//						catch (InterruptedException ignore) {}
+//					}
+//					else
+//					{
+//						break;  // ON NOT-FOUND: get out of the while(true)
+//					}
+//				}
+//
+////TODO 1: ssh connection ()
+////    sybase@gorans-ub2:~/asetune$ ssh gorans@gorans-ub2
+////    The authenticity of host 'gorans-ub2 (192.168.0.110)' can't be established.
+////>>  ECDSA key fingerprint is SHA256:SvrXUiR6K9XhHVK4R5u14/pcbVSQOU0qCe2aNop7LVk.
+////>>  Are you sure you want to continue connecting (yes/no)? yes
+////>>  Warning: Permanently added 'gorans-ub2,192.168.0.110' (ECDSA) to the list of known hosts.
+////    gorans@gorans-ub2's password:
+////    Welcome to Ubuntu 16.04.3 LTS (GNU/Linux 4.4.0-53-generic x86_64)
+////
+////TODO 2: HostMonitoring... 
+////Also check if the host is "local" then we dont need the SSH (but that might be harder to implement, mabe borrow something from com.asetune.utils.FileTail.FileTail.java)
+//
+//
+//// TEST THE ABOVE CODE;
+//// ALSO SQL Window:
+////	- check H2 reconnect (not working)
+////	- possibly: getServerName() and set that in the window title.
+//
+//				// DEBUG: write some thread info
+//				if (_logger.isDebugEnabled())
+//				{
+//					_logger.debug("--------------------------------------------------");
+//					for (Thread th : Thread.getAllStackTraces().keySet()) 
+//						_logger.debug("2-shutdownHook: isDaemon="+th.isDaemon()+", threadName=|"+th.getName()+"|, th.getClass().getName()=|"+th.getClass().getName()+"|.");
+//				}
+//
+//				_logger.info("Shutdown-hook: Shutdown finished.");
+//			}
+//		};
+//		Runtime.getRuntime().addShutdownHook(noGuiShutdownHook);
+
 	}
 	
 	/*---------------------------------------------------
@@ -723,7 +893,7 @@ implements Memory.MemoryListener
 	{
 		// Set the Thread name
 		_thread = Thread.currentThread();
-		_thread.setName("GetCountersNoGui");
+		_thread.setName(THREAD_NAME);
 		
 		_running = true;
 		
@@ -735,7 +905,7 @@ implements Memory.MemoryListener
 		}
 
 		// If you want to start a new session in the Persistent Storage, just set this to true...
-		// This could for instance be used when you connect to a new ASE Server
+		// This could for instance be used when you connect to a new DBMS Server
 		boolean startNewPcsSession = false;
 
 		// loop
@@ -776,7 +946,10 @@ implements Memory.MemoryListener
 		// This so we can debug what's happening on the system. 
 		// This is used if the collector thread get "stuck" or "freezes" for some reason
 		//---------------------------
-		HeartbeatMonitor.setAlarmTime(_sleepTime * 3); // Dump threads if no Heartbeat has been issued for a while (3 times the sleep time)
+		HeartbeatMonitor.setRestartEnabled(true);
+		HeartbeatMonitor.setRestartTime(30*60); // After 30 minutes of "no heartbeat" -->> restart the system by doing: System.exit(8)
+		
+		HeartbeatMonitor.setAlarmTime(_sleepTime * 4); // Dump threads if no Heartbeat has been issued for a while (4 times the sleep time)
 		HeartbeatMonitor.setSleepTime(_sleepTime / 2); // check every now and then... (half the sleep time seems resonable)
 		HeartbeatMonitor.start();
 
@@ -795,7 +968,7 @@ implements Memory.MemoryListener
 			// This is also done right before we go to sleep (waiting for next data collection)
 			HeartbeatMonitor.doHeartbeat();
 			
-			// Check if current MONITOR-ASE connection is lost
+			// Check if current MONITOR-DBMS connection is lost
 //			if (_monConn != null)
 //			{
 //				try
@@ -814,121 +987,173 @@ implements Memory.MemoryListener
 //			if (_monConn == null)
 			if ( ! getCounterController().isMonConnected(true, true))
 			{
-				_logger.debug("Connecting to ASE server using. user='"+_aseUsername+"', passwd='"+_asePassword+"', hostPortStr='"+_aseHostPortStr+"'. aseServer='"+_aseServer+"'");
-				_logger.info( "Connecting to ASE server using. user='"+_aseUsername+"', passwd='"+ "*hidden*" +"', hostPortStr='"+_aseHostPortStr+"'. aseServer='"+_aseServer+"'");
+				_logger.debug("Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
+				_logger.info( "Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+ "*hidden*" +"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
+
+//				// get a connection
+//				try
+//				{
+//					// FIXME: this doesn't work for OTHER DBMS than Sybase...
+//					AseConnectionFactory.setUser(_dbmsUsername); // Set this just for SendConnectInfo uses it
+//					AseConnectionFactory.setHostPort(_dbmsHostPortStr);
+//
+//					Connection conn = AseConnectionFactory.getConnection(_dbmsHostPortStr, null, _dbmsUsername, _dbmsPassword, Version.getAppName()+"-nogui", Version.getVersionStr(), null, (Properties)null, null);
+////					getCounterController().setMonConnection( conn);
+//					getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
+////					getCounterController().getMonConnection().reConnect();
+//
+//					// set the connection props so it can be reused...
+//					// FIXME: This is very ASE Specific right now... it needs to be more generic for DbxTune (sqlServerTune, oracleTune, etc)
+////					ConnectionProp cp = new ConnectionProp();
+//					cp.setLoginTimeout ( 20 );
+//					cp.setDriverClass  ( AseConnectionFactory.getDriver() );
+//					cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
+////					cp.setUrlOptions   ( tdsUrlOptions );
+//					cp.setUsername     ( _dbmsUsername );
+//					cp.setPassword     ( _dbmsPassword );
+//					cp.setAppName      ( Version.getAppName() );
+//					cp.setAppVersion   ( Version.getVersionStr() );
+////					cp.setHostPort     ( hosts, ports );
+////					cp.setSshTunnelInfo( sshTunnelInfo );
+//
+//					DbxConnection.setDefaultConnProp(cp);
+//					
+//					// ASE: 
+//					// XML Plan Cache... maybe it's not the perfect place to initialize this...
+//					XmlPlanCache.setInstance( new XmlPlanCacheAse( new ConnectionProvider()
+//					{
+//						@Override
+//						public DbxConnection getNewConnection(String appname)
+//						{
+//							try 
+//							{
+//								return DbxConnection.connect(null, appname);
+//							} 
+//							catch(Exception e) 
+//							{
+//								_logger.error("Problems getting a new connection. Caught: "+e, e);
+//								return null;
+//							}
+//						}
+//						
+//						@Override
+//						public DbxConnection getConnection()
+//						{
+//							return getCounterController().getMonConnection();
+//						}
+//					}) );
+//
+//					
+//					// CHECK the connection for proper configuration.
+//					// If failure, go and FIX
+//					// FIXME: implement the below "set minimal logging options"
+//					if ( ! AseConnectionUtils.checkForMonitorOptions(getCounterController().getMonConnection(), _dbmsUsername, false, null) )
+//					{
+//						AseConnectionUtils.setBasicAseConfigForMonitoring(getCounterController().getMonConnection());
+//					}
+//
+//					// CHECK the connection for proper configuration.
+//					// The fix did not work, so lets get out of here
+//					if ( ! AseConnectionUtils.checkForMonitorOptions(getCounterController().getMonConnection(), _dbmsUsername, false, null) )
+//					{
+//						_logger.error("Problems when checking the ASE Server for 'proper monitoring configuration'.");
+//
+//						// Disconnect, and get out of here...
+//						getCounterController().closeMonConnection();
+//						
+//						// THE LOOP WILL BE FALSE (_running = false)
+//						_running = false;
+//
+//						// START AT THE TOP AGAIN
+//						continue;
+//					}
+//
+//					// Do this later, when the MonTablesDictionary is initialized
+//					//CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
+//				}
+//				catch (SQLException e)
+//				{
+//					String msg = AseConnectionUtils.getMessageFromSQLException(e, false); 
+//					_logger.error("Problems when connecting to a ASE Server. "+msg);
+//
+//					// JZ00L: Login failed
+//					if (e.getSQLState().equals("JZ00L"))
+//					{
+//						// THE LOOP WILL BE FALSE (_running = false)
+//						_running = false;
+//
+//						_logger.error("Faulty PASSWORD when connecting to the server '"+_dbmsServer+"' at '"+_dbmsHostPortStr+"', with user '"+_dbmsUsername+"', I cant recover from this... exiting...");
+//
+//						// GET OUT OF THE LOOP, causing us to EXIT
+//						break;
+//					}
+//				}
+//				catch (Exception e)
+//				{
+//					_logger.error("Problems when connecting to a ASE Server. "+e);
+//				}
 
 				// get a connection
 				try
 				{
-					// FIXME: this doesn't work for OTHER DBMS than Sybase...
-					AseConnectionFactory.setUser(_aseUsername); // Set this just for SendConnectInfo uses it
-					AseConnectionFactory.setHostPort(_aseHostPortStr);
-
-					Connection conn = AseConnectionFactory.getConnection(_aseHostPortStr, null, _aseUsername, _asePassword, Version.getAppName()+"-nogui", Version.getVersionStr(), null, (Properties)null, null);
-//					getCounterController().setMonConnection( conn);
-					getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
-//					getCounterController().getMonConnection().reConnect();
-
-					// set the connection props so it can be reused...
-					// FIXME: This is very ASE Specific right now... it needs to be more generic for DbxTune (sqlServerTune, oracleTune, etc)
-					ConnectionProp cp = new ConnectionProp();
-					cp.setLoginTimeout ( 20 );
-					cp.setDriverClass  ( AseConnectionFactory.getDriver() );
-					cp.setUrl          ( AseConnectionFactory.getUrlTemplateBase() + AseConnectionFactory.getHostPortStr() );
-//					cp.setUrlOptions   ( tdsUrlOptions );
-					cp.setUsername     ( _aseUsername );
-					cp.setPassword     ( _asePassword );
-					cp.setAppName      ( Version.getAppName() );
-					cp.setAppVersion   ( Version.getVersionStr() );
-//					cp.setHostPort     ( hosts, ports );
-//					cp.setSshTunnelInfo( sshTunnelInfo );
-
-					DbxConnection.setDefaultConnProp(cp);
-					
-					// ASE: 
-					// XML Plan Cache... maybe it's not the perfect place to initialize this...
-					XmlPlanCache.setInstance( new XmlPlanCacheAse( new ConnectionProvider()
-					{
-						@Override
-						public DbxConnection getNewConnection(String appname)
-						{
-							try 
-							{
-								return DbxConnection.connect(null, appname);
-							} 
-							catch(Exception e) 
-							{
-								_logger.error("Problems getting a new connection. Caught: "+e, e);
-								return null;
-							}
-						}
+					// Should we try to do a "re-connect"...
+//					if ( DbxConnection.hasDefaultConnProp() )
+//					{
+//					}
 						
-						@Override
-						public DbxConnection getConnection()
-						{
-							return getCounterController().getMonConnection();
-						}
-					}) );
+					if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
+						System.out.println("#### DEBUG ####: Connecting to DBMS server using. user='"+_dbmsUsername+"', passwd='"+_dbmsPassword+"', hostPortStr='"+_dbmsHostPortStr+"'. dbmsServer='"+_dbmsServer+"'");
 
+					// Make a connection using any specific implementation for the installed counter controller
+					DbxConnection conn = getCounterController().noGuiConnect(_dbmsUsername, _dbmsPassword, _dbmsServer, _dbmsHostPortStr, _jdbcUrlOptions);
+
+					// Set the connection to be used
+					//getCounterController().setMonConnection( DbxConnection.createDbxConnection(conn) );
+					getCounterController().setMonConnection(conn);
+
+					// Check "stuff"
+					if ( ! DbxConnection.hasDefaultConnProp() )
+						_logger.warn("No Default Connection Properties was specified...");
+
+					// Special thing for AlrmWriters, set SERVERNAME
+					try {
+						String dbmsServerName = conn.getDbmsServerName();
+						if (StringUtil.hasValue(dbmsServerName))
+							System.setProperty("SERVERNAME", DbxTune.stripSrvName(dbmsServerName));
+					} catch (Exception ignore) {}
+				}
+				catch (SQLException ex)
+				{
+					// connection failed, and we should retry
+					// Do nothing here, later on in the code will will (send alarms), and start at the top again
 					
-					// CHECK the connection for proper configuration.
-					// If failure, go and FIX
-					// FIXME: implement the below "set minimal logging options"
-					if ( ! AseConnectionUtils.checkForMonitorOptions(getCounterController().getMonConnection(), _aseUsername, false, null) )
-					{
-						AseConnectionUtils.setBasicAseConfigForMonitoring(getCounterController().getMonConnection());
-					}
-
-					// CHECK the connection for proper configuration.
-					// The fix did not work, so lets get out of here
-					if ( ! AseConnectionUtils.checkForMonitorOptions(getCounterController().getMonConnection(), _aseUsername, false, null) )
-					{
-						_logger.error("Problems when checking the ASE Server for 'proper monitoring configuration'.");
-
-						// Disconnect, and get out of here...
-						getCounterController().closeMonConnection();
-						
-						// THE LOOP WILL BE FALSE (_running = false)
-						_running = false;
-
-						// START AT THE TOP AGAIN
-						continue;
-					}
-
-					// Do this later, when the MonTablesDictionary is initialized
-					//CheckForUpdates.sendConnectInfoNoBlock(ConnectionDialog.TDS_CONN, null);
+					// But at least, log the exception...
+					_logger.info ("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
+					_logger.debug("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ _dbmsPassword +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
 				}
-				catch (SQLException e)
+				catch (Exception ex)
 				{
-					String msg = AseConnectionUtils.getMessageFromSQLException(e, false); 
-					_logger.error("Problems when connecting to a ASE Server. "+msg);
+					// Disconnect, and get out of here...
+					getCounterController().closeMonConnection();
+					
+					// THE LOOP WILL BE FALSE (_running = false)
+					_running = false;
 
-					// JZ00L: Login failed
-					if (e.getSQLState().equals("JZ00L"))
-					{
-						// THE LOOP WILL BE FALSE (_running = false)
-						_running = false;
-
-						_logger.error("Faulty PASSWORD when connecting to the server '"+_aseServer+"' at '"+_aseHostPortStr+"', with user '"+_aseUsername+"', I cant recover from this... exiting...");
-
-						// GET OUT OF THE LOOP, causing us to EXIT
-						break;
-					}
-				}
-				catch (Exception e)
-				{
-					_logger.error("Problems when connecting to a ASE Server. "+e);
+					// GET OUT OF THE LOOP, causing us to EXIT
+					break;
 				}
 
 
 				if ( ! getCounterController().isMonConnected(true, true) )
 				{
-					_logger.error("Problems connecting to ASE server. sleeping for "+_sleepOnFailedConnectTime+" seconds before retry...");
+					_logger.error("Problems connecting to DBMS server. sleeping for "+_sleepOnFailedConnectTime+" seconds before retry...");
+//					_logger.error("Problems connecting to DBMS server. sleeping for "+_sleepTime+" seconds before retry...");
 
-					// Send ALARM: Server is down
-					sendAlarmServerIsDown(_aseHostPortStr);
+					// Send ALARM: Server is down (note this will also issue and endOfScan in the AlarmHandler)
+					sendAlarmServerIsDown(_dbmsHostPortStr);
 
-					getCounterController().sleep(_sleepTime * 1000);
+					getCounterController().sleep(_sleepOnFailedConnectTime * 1000);
+//					getCounterController().sleep(_sleepTime * 1000);
 //					try { Thread.sleep( _sleepTime * 1000 ); }
 //					catch (InterruptedException ignore) {}
 
@@ -941,31 +1166,8 @@ implements Memory.MemoryListener
 				if ( ! mtd.isInitialized() )
 				{
 					mtd.initialize(getCounterController().getMonConnection(), false);
-//					CounterControllerAse.initExtraMonTablesDictionary(); // Now done inside: MonTablesDictionaryManager.getInstance().initialize(conn, true);
 				}
-//				System.out.println("aseServerName() = "+mtd.aseServerName);
-//				System.out.println("aseVersionNum() = "+mtd.aseVersionNum);
-//				System.out.println("aseVersionStr() = "+mtd.aseVersionStr);
-//				System.out.println("aseSortId() = "+mtd.aseSortId);
-//				System.out.println("aseSortName() = "+mtd.aseSortName);
 				
-//				// initialize ASE Config Dictionary
-//				IDbmsConfig aseCfg = AseConfig.getInstance();
-//				if ( ! aseCfg.isInitialized() )
-//				{
-//					aseCfg.initialize(getCounterController().getMonConnection(), false, false, null);
-//				}
-//
-////				// initialize ASE Cache Config Dictionary
-////				AseCacheConfig aseCacheCfg = AseCacheConfig.getInstance();
-////				if ( ! aseCacheCfg.isInitialized() )
-////				{
-////					aseCacheCfg.initialize(getCounterController().getMonConnection(), false, false, null);
-////				}
-//
-//				// initialize ASE Config Text Dictionary
-//				AseConfigText.initializeAll(getCounterController().getMonConnection(), false, false, null);
-
 				try
 				{
 					// initialize DBMS Config Dictionary
@@ -987,11 +1189,13 @@ implements Memory.MemoryListener
 			}
 
 			// HOST Monitoring connection
-			if ( ! getCounterController().isHostMonConnected())
+			if ( ! getCounterController().isHostMonConnected() )
 			{
 				if (_sshHostname != null && _sshUsername != null && _sshPassword != null)
 				{
 					_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"'");
+					if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
+						System.out.println("#### DEBUG ####: Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ _sshPassword +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"'");
 	
 					// get a connection
 					try
@@ -1053,7 +1257,7 @@ implements Memory.MemoryListener
 					continue;
 				}
 
-				// Do various other checks in the system, for instance in ASE do: checkForFullTransLogInMaster()
+				// Do various other checks in the system, for instance in DBMS do: checkForFullTransLogInMaster()
 				getCounterController().checkServerSpecifics();
 
 				// Get some Header information that will be used by the PersistContainer sub system
@@ -1061,17 +1265,25 @@ implements Memory.MemoryListener
 				if (headerInfo == null)
 					continue;
 				
-//				PersistContainer pc = new PersistContainer(mainSampleTime, aseServerName, aseHostname);
+				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
+				if (StringUtil.hasValue(_dbmsServerAlias))
+					headerInfo.setServerNameAlias(_dbmsServerAlias);
+
+				
+				// PCS
 				PersistContainer pc = new PersistContainer(headerInfo);
 				if (startNewPcsSession)
 					pc.setStartNewSample(true);
 				startNewPcsSession = false;
 
 				// add some statistics on the "main" sample level
-				getCounterController().setStatisticsTime(headerInfo._mainSampleTime);
+				getCounterController().setStatisticsTime(headerInfo.getMainSampleTime());
 
 				// Set SERVERNAME to where we are currently connected 
-				System.setProperty("DBMS_SERVERNAME", headerInfo.getServerName());
+				if ( StringUtil.isNullOrBlank(headerInfo.getServerNameOrAlias()) )
+					_logger.warn("DBMS Server Name is null. Please set the server in ICounterController method: createPcsHeaderInfo()");
+				else
+					System.setProperty("SERVERNAME", DbxTune.stripSrvName(headerInfo.getServerNameOrAlias()));
 				
 
 				// Keep a list of all the CM's that are refreshed during this loop
@@ -1089,9 +1301,9 @@ implements Memory.MemoryListener
 				{
 					if (cm != null && cm.isRefreshable())
 					{
-						cm.setServerName(      headerInfo._serverName);
-						cm.setSampleTimeHead(  headerInfo._mainSampleTime);
-						cm.setCounterClearTime(headerInfo._counterClearTime);
+						cm.setServerName(      headerInfo.getServerNameOrAlias()); // or should we just use getServerName()
+						cm.setSampleTimeHead(  headerInfo.getMainSampleTime());
+						cm.setCounterClearTime(headerInfo.getCounterClearTime());
 
 						try
 						{
@@ -1108,6 +1320,33 @@ implements Memory.MemoryListener
 							// Add the CM to the container, which will 
 							// be posted to persister thread later.
 							pc.add(cm);
+						}
+						catch (LostConnectionException ex)
+						{
+							cm.setSampleException(ex);
+
+							// Try to re-connect, otherwise we might "cancel" some ongoing alarms (due to the fact that we do 'end-of-scan' at the end of the loop)
+							_logger.info("Try reconnect. When refreshing the data for cm '"+cm.getName()+"', we got 'LostConnectionException'.");
+							DbxConnection conn = getCounterController().getMonConnection();
+							if (conn != null)
+							{
+								try
+								{
+									conn.close();
+									conn.reConnect(null);
+									_logger.info("Succeeded: reconnect. continuing to refresh data for next CM.");
+								}
+								catch(Exception reconnectEx)
+								{
+									_logger.error("Problem when reconnecting. Caught: "+reconnectEx);
+								}
+							}
+							// If we got an exception, go and check if we are still connected
+							if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+							{
+								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server.");
+								break; // break: LOOP CM's
+							}
 						}
 						catch (Exception ex)
 						{
@@ -1143,24 +1382,48 @@ implements Memory.MemoryListener
 				}
 
 				
-				// POST the container to the Persistent Counter Handler
-				// That thread will store the information in any Storage.
-				pch.add(pc);
-
-
 				//-----------------
 				// AlarmHandler: end-of-scan: Cancel any alarms that has not been repeated
 				//-----------------
 				if (AlarmHandler.hasInstance())
 				{
-//					AlarmHandler.getInstance().endOfScan();           // This is synchronous operation
-					AlarmHandler.getInstance().addEndOfScanToQueue(); // This is async operation
+					// Get the Alarm Handler
+					AlarmHandler ah = AlarmHandler.getInstance();
+					
+					// Generate a DummyAlarm if the file '/tmp/${SRVNAME}.dummyAlarm.deleteme exists' exists.
+					ah.checkSendDummyAlarm(pc.getServerNameOrAlias());
+
+					ah.endOfScan();           // This is synchronous operation (if we want to stuff Alarms in the PersistContainer before it's called/sent)
+//					ah.addEndOfScanToQueue(); // This is async operation
+
+					// Add any alarms to the Persist Container.
+					pc.addActiveAlarms(ah.getAlarmList());
+
+					// Add Alarm events that has happened in this sample. (RASIE/RE-RAISE/CANCEL)
+					if ( AlarmWriterToPcsJdbc.hasInstance() )
+					{
+						List<AlarmEventWrapper> alarmEvents = AlarmWriterToPcsJdbc.getInstance().getList();
+						pc.addAlarmEvents(alarmEvents);
+						// Note: AlarmWriterToPcsJdbc.getInstance().clear(); is done in PersistContainerHandler after each container entry is handled
+					}
 				}
+
+				//-----------------
+				// POST the container to the Persistent Counter Handler
+				// That thread will store the information in any Storage.
+				//-----------------
+				pch.add(pc);
 
 			}
 			catch (Throwable t)
 			{
 				_logger.error(Version.getAppName()+": error in GetCounters loop.", t);
+
+				if (t instanceof OutOfMemoryError)
+				{
+					_logger.error(Version.getAppName()+": in GetCounters loop, caught 'OutOfMemoryError'. Calling: Memory.fireOutOfMemory(), which hopefully will release some memory.");
+					Memory.fireOutOfMemory();
+				}
 			}
 			finally
 			{
@@ -1250,13 +1513,21 @@ implements Memory.MemoryListener
 
 		} // END: while(_running)
 
-		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending...");
-
 		// so lets stop the Persistent Counter Handler and it's services as well
 		if (pch != null)
-			pch.stop(true, 10*1000);
+		{
+			int maxWaitTimeInMs = 10 * 1000;
+			_logger.info("Stopping the PCS Thread (and it's sub threads). maxWaitTimeInMs="+maxWaitTimeInMs);
+			pch.stop(true, maxWaitTimeInMs);
+		}
+
+		_logger.info("Thread '"+Thread.currentThread().getName()+"' ending, this should lead to a server STOP.");
+		
+//		_logger.info("DUMMY WHICH SHOULD BE REMOVED... ONLY FOR TESTING PURPOSES OF ShutdownHook TIMEOUT... sleeping for 99 sec...");
+//		try { Thread.sleep(99 * 1000); }
+//		catch(InterruptedException ex) { ex.printStackTrace(); }
 	}
-	
+
 	/**
 	 * User defined exit, to wait for next "data refresh" to happen
 	 * <p>  

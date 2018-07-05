@@ -3,14 +3,18 @@
  */
 package com.asetune.utils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.Enumeration;
 import java.util.Properties;
 
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 
 
@@ -22,6 +26,7 @@ public class Logging
 
 	public static String _propFile;
 	public static Properties _props;
+	private static String _logfile = null;
 
 	//static long mainThreadId = -1;
 
@@ -82,7 +87,7 @@ public class Logging
 				String key = (String) e.nextElement();
 				Object val = props.get(key);
 
-				// hhhmmmmm fix ENV VARIABLE SUBSTITUTION OFR SOME KEYS
+				// hhhmmmmm fix ENV VARIABLE SUBSTITUTION OF SOME KEYS
 				if (key.matches("log4j\\.appender\\..*\\.File"))
 				{
 					//System.out.println("======================= BEFORE: val='"+val+"'.");
@@ -133,7 +138,9 @@ public class Logging
 			{
 				_props.setProperty("log4j.rootLogger", "INFO, console, logfile");
 //				_props.setProperty("log4j.rootLogger", "INFO, console, asetune");
-//				_props.setProperty("log4j.rootLogger", "DEBUG, console");
+				
+				if (System.getProperty("log.console.debug", "false").equalsIgnoreCase("true"))
+					_props.setProperty("log4j.rootLogger", "DEBUG, console");
 			}
 			else
 			{
@@ -149,15 +156,17 @@ public class Logging
 			if (_props.getProperty("log4j.appender.console.layout") == null)
 				_props.setProperty("log4j.appender.console.layout", "org.apache.log4j.PatternLayout");
 			if (_props.getProperty("log4j.appender.console.layout.ConversionPattern") == null)
-				_props.setProperty("log4j.appender.console.layout.ConversionPattern", "%d - %-5p - %-30t - %-30c{1} - %m%n");
+				_props.setProperty("log4j.appender.console.layout.ConversionPattern", DEFAULT_LOG_CONSOLE_PATTERN);
 
 			// logfile, add / or \ if it's not at the end.
 			if (logfile == null)
 			{
-    			logfile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() : System.getProperty("user.home");
+    			logfile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : System.getProperty("user.home");
     			if ( logfile != null && ! (logfile.endsWith("/") || logfile.endsWith("\\")) )
-    				logfile += System.getProperty("file.separator");
+    				logfile += File.separatorChar;
     
+				logfile += "log" + File.separatorChar;
+
     			if (prefix != null  && !prefix.equals("") )
     				logfile += Version.getAppName()+"."+prefix+"log";
     			else
@@ -175,7 +184,7 @@ public class Logging
 			if (_props.getProperty("log4j.appender.logfile.layout") == null)
 				_props.setProperty("log4j.appender.logfile.layout", "org.apache.log4j.PatternLayout");
 			if (_props.getProperty("log4j.appender.logfile.layout.ConversionPattern") == null)
-				_props.setProperty("log4j.appender.logfile.layout.ConversionPattern", "%d - %-5p - %-30t - %-4L:%-30F - %m%n");
+				_props.setProperty("log4j.appender.logfile.layout.ConversionPattern", DEFAULT_LOG_FILE_PATTERN);
 
 			//if ( asetuneProps.getProperty("log4j.logger.asetune") == null)
 			//	 logProps.setProperty("log4j.logger.asetune", "INFO");
@@ -190,9 +199,60 @@ public class Logging
 
 		// Print the Rolling log filename
 		if (logfile != null)
+		{
+			_logfile = logfile;
 			_logger.info("Logfile used for "+Version.getAppName()+" will be '"+logfile+"'.");
+		}
 
 		// Print out the memory configuration
 		_logger.debug("Total memory that can be used by this JVM is " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB. This can be changed with the JVM flag -Xmx###m (where ### is number of MB)");
 	}
+	
+	public static final String DEFAULT_LOG_CONSOLE_PATTERN = "%d - %-5p - %-30t - %-30c{1} - %m%n";
+	public static final String DEFAULT_LOG_FILE_PATTERN    = "%d - %-5p - %-30t - %-4L:%-30F - %m%n";
+
+	/**
+	 * Get name of FIRST FILE log file name and append the 'appendName' to the log file:
+	 * "c:\xxxx\yyy.log" returns "c:\xxxx\yyy${appendName} 
+	 * @param appendName
+	 * @return NULL if no log append was found, else current logname + ${appendName}
+	 */
+	public static File getBaseLogFile(String appendName)
+	{
+		String logfile = _logfile;
+
+		// if no log file check for any log files in the Log4j
+		if (logfile == null)
+		{
+			Enumeration<Appender> e = Logger.getRootLogger().getAllAppenders();
+			while ( e.hasMoreElements() )
+			{
+				Appender app = (Appender)e.nextElement();
+				if ( app instanceof FileAppender )
+				{
+					logfile = ((FileAppender)app).getFile();
+					if (StringUtil.hasValue(logfile))
+					{
+						_logger.info("Extracted log file from Appender '"+app.getName()+"', filename '"+logfile+"'.");
+						break;
+					}
+				}
+			}
+		}
+		
+		if (StringUtil.hasValue(logfile))
+		{
+			File f = new File(logfile);
+			String newBaseFileName = f.getName();
+			if (newBaseFileName.endsWith(".log"))
+				newBaseFileName = newBaseFileName.replace(".log", "");
+			
+			String newLogDirName = f.getAbsoluteFile().getParentFile() + "";
+			String newLogfileName = newLogDirName + File.separatorChar + newBaseFileName + appendName;
+			return new File(newLogfileName);
+		}
+
+		return null;
+	}
+
 }

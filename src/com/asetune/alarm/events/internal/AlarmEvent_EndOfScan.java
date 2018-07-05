@@ -17,9 +17,11 @@ extends AlarmEvent
 				"EndOfScan",    // serviceName, 
 				"EndOfScan",    // serviceInfo,
 				null,
+				AlarmEvent.Category.INTERNAL,
 				AlarmEvent.Severity.UNKNOWN, 
 				AlarmEvent.ServiceState.UNKNOWN, 
-				"EndOfScan"     // description
+				"EndOfScan",    // description
+				null
 			); 
 	}
 }

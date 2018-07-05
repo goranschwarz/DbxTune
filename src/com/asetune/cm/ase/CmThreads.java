@@ -118,55 +118,88 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-////		String[] sumLabels    = new String[] { "BusyTicksPct", "SleepTicksPct" };
-//		String[] sumLabels    = new String[] { "-runtime-replaced-" };
-//		String[] threadLabels = new String[] { "-runtime-replaced-" };
-		String[] sumLabels    = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		String[] threadLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		String[] tasksLabels  = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//////		String[] sumLabels    = new String[] { "BusyTicksPct", "SleepTicksPct" };
+////		String[] sumLabels    = new String[] { "-runtime-replaced-" };
+////		String[] threadLabels = new String[] { "-runtime-replaced-" };
+//		String[] sumLabels    = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		String[] threadLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		String[] tasksLabels  = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//
+//		addTrendGraphData(GRAPH_NAME_BUSY_AVG,    new TrendGraphDataPoint(GRAPH_NAME_BUSY_AVG,    sumLabels,    LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_BUSY_THREAD, new TrendGraphDataPoint(GRAPH_NAME_BUSY_THREAD, threadLabels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_TASKS,       new TrendGraphDataPoint(GRAPH_NAME_TASKS,       tasksLabels,  LabelType.Dynamic));
 
-		addTrendGraphData(GRAPH_NAME_BUSY_AVG,    new TrendGraphDataPoint(GRAPH_NAME_BUSY_AVG,    sumLabels,    LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_BUSY_THREAD, new TrendGraphDataPoint(GRAPH_NAME_BUSY_THREAD, threadLabels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_TASKS,       new TrendGraphDataPoint(GRAPH_NAME_TASKS,       tasksLabels,  LabelType.Dynamic));
+		addTrendGraph(GRAPH_NAME_BUSY_AVG,
+			"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
+			"CPU Thread BusyTicksPct Average per Pool Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true,  // is Percent Graph
+			true,  // visible at start
+			Ver.ver(15,7), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_BUSY_AVG,
-					"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
-					"CPU Thread BusyTicksPct Average per Pool Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					sumLabels, 
-					true,  // is Percent Graph
-					this, 
-					true,  // visible at start
-					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_BUSY_THREAD,
+			"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
+			"CPU Thread BusyTicksPct Usage per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true,  // is Percent Graph
+			true,  // visible at start
+			Ver.ver(15,7), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_BUSY_THREAD,
-					"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
-					"CPU Thread BusyTicksPct Usage per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					threadLabels, 
-					true,  // is Percent Graph
-					this, 
-					true,  // visible at start
-					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_TASKS,
+			"Tasks Executed per Thread",                  // Menu CheckBox text
+			"Tasks Executed per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			false, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15,7), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_TASKS,
-					"Tasks Executed per Thread",                  // Menu CheckBox text
-					"Tasks Executed per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					tasksLabels, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_BUSY_AVG,
+//					"CPU Thread BusyTicksPct Average per Pool Type",                  // Menu CheckBox text
+//					"CPU Thread BusyTicksPct Average per Pool Type ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					sumLabels, 
+//					true,  // is Percent Graph
+//					this, 
+//					true,  // visible at start
+//					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_BUSY_THREAD,
+//					"CPU Thread BusyTicksPct Usage per Thread",                  // Menu CheckBox text
+//					"CPU Thread BusyTicksPct Usage per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					threadLabels, 
+//					true,  // is Percent Graph
+//					this, 
+//					true,  // visible at start
+//					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_TASKS,
+//					"Tasks Executed per Thread",                  // Menu CheckBox text
+//					"Tasks Executed per Thread ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					tasksLabels, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					15700, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 	
 	@Override

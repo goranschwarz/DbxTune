@@ -383,6 +383,7 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			_tabColumns.add(rs.getString(4));
 			_tabDatatype.add(rs.getInt(5));
 		}
+		rs.close();
 
 		System.out.println("Result from: RSMD.getTables(); count="+count);
 		if (_tabColumns.size() == 0)

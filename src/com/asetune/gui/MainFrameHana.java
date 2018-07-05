@@ -90,6 +90,7 @@ extends MainFrame
 //                            }
 //                    		catch (NameNotFoundException e) {/*ignore*/ e.printStackTrace();}
 //						}
+//						rs.close();
 //					}
 //				}
 

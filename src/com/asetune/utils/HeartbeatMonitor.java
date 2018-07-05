@@ -20,7 +20,10 @@ public class HeartbeatMonitor
 	private static int  _alarmAfterSec   = 60;
 	private static int  _reAlarmAfterSec = 120;
 	
-//	private static String _lastOkStackDump = ""; // used to save how it looked "a while ago"
+	private static boolean _restartIsEnabled = false;
+	private static int     _restartAfterSec  = 30*60; // 30 minutes
+
+	//	private static String _lastOkStackDump = ""; // used to save how it looked "a while ago"
 //	private static long   _lastOkStackDumpTime = -1;
 
 //	private static String _lastWarnStackDump = "";
@@ -57,6 +60,30 @@ public class HeartbeatMonitor
 	public static int getSleepTime()
 	{
 		return _sleepTimeInSec;
+	}
+
+	/** After X seconds, we should "signal" restart the system... */ 
+	public static void setRestartTime(int time)
+	{
+		_restartAfterSec = time;
+	}
+
+	/** Get the threshold for restart time in seconds */
+	public static int getRestartTime()
+	{
+		return _restartAfterSec;
+	}
+
+	/** Check if the Restart is enabled */
+	public static boolean isRestartEnabled()
+	{
+		return _restartIsEnabled;
+	}
+
+	/** Set if the Restart is enabled */
+	public static void setRestartEnabled(boolean enable)
+	{
+		_restartIsEnabled = enable;
 	}
 
 	/**
@@ -131,6 +158,18 @@ public class HeartbeatMonitor
 							//	_lastWarnStackDump     = stackDump;
 								_lastWarnStackDumpTime = System.currentTimeMillis();
 							}
+						}
+						
+						// should we restart the system
+						if (isRestartEnabled())
+						{
+    						if (msSinceLastBeat > _restartAfterSec*1000)
+    						{
+								_logger.warn("No heartbeat has been issued for "+(msSinceLastBeat/1000)+" seconds. Restart After "+_reAlarmAfterSec+" Seconds is enabled and has been reached.");
+								_logger.warn("RESTARTING SYSTEM. Exit code will be "+ShutdownHandler.RESTART_EXIT_CODE+". And the outer shellscript that started the system has to start it up again.");
+    							
+    							System.exit(ShutdownHandler.RESTART_EXIT_CODE);
+    						}
 						}
 
 						if (_logger.isDebugEnabled())

@@ -1,5 +1,7 @@
 package com.asetune.sql.conn;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -100,6 +102,7 @@ public class PostgresConnection extends DbxConnection
 				extraInfo.put(TableExtraInfo.TableIndexSizeInKb,  new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,  "Index Size",      rs.getString(4), "Index size (all indexes). Note: pg_size_pretty(pg_indexes_size(oid))", null));
 				extraInfo.put(TableExtraInfo.TableLobSizeInKb,    new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,    "Toast Size",      rs.getString(5), "Toast Size. Note: pg_size_pretty(pg_total_relation_size(reltoastrelid))", null));
 			}
+			rs.close();
 		}
 		catch (SQLException ex)
 		{
@@ -111,4 +114,59 @@ public class PostgresConnection extends DbxConnection
 		return extraInfo;
 	}
 
+	/**
+	 * Get the connected database server/instance name.
+	 * @return null if not connected else: Retrieves the name of this database server/instance name.
+	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
+	 */
+	@Override
+	public String getDbmsServerName() 
+	throws SQLException
+	{
+		if (_databaseServerName != null)
+			return _databaseServerName;
+		
+		if (_conn == null)
+			return null;
+		
+		String serverName = "";
+
+//		String sql = "select inet_server_addr() as onIp, inet_server_port() as portNum, current_database() as dbname";
+		String sql = "select inet_server_addr() as onIp, inet_server_port() as portNum";
+		try
+		{
+			Statement stmt = _conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				String ip     = rs.getString(1).trim();
+				String port   = rs.getString(2).trim();
+//				String dbname = rs.getString(3).trim();
+
+				String hostname = ip;
+				try
+				{
+					InetAddress addr = InetAddress.getByName(ip);
+					hostname = addr.getHostName();
+				}
+				catch(UnknownHostException ex)
+				{
+				}
+
+//				serverName = DbxTune.stripSrvName(hostname + ":" + port);
+//				serverName = hostname + ":" + port + "/" + dbname;
+				serverName = hostname + ":" + port;
+			}
+			rs.close();
+			stmt.close();
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problem getting Postgres DBMS Server Name, setting this to 'unknown'. SQL='"+sql+"', caught: "+ex);
+			serverName = "unknown";
+		}
+		
+		_databaseServerName = serverName;
+		return serverName;
+	}
 }

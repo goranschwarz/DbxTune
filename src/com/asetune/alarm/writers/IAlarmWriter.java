@@ -115,4 +115,24 @@ public interface IAlarmWriter
 	 * Stop any internal threads etc that this service needs
 	 */
 	public void stopService();
+
+	/**
+	 * Should we continue with processing of this alarms or is it filtered out by some configuration
+	 * 
+	 * @param AlarmEvent
+	 * @return true=continue, false=skip
+	 */
+	boolean doAlarm(AlarmEvent ae);
+
+	/**
+	 * Used by any GUI Configuration Helper/Setter that will configure the AlarmWriter
+	 * @return
+	 */
+	public List<CmSettingsHelper> getAvailableFilters(); //getLocalAlarmWriterFilterSettings();
+
+	/**
+	 * If you want to print some configuration into the log, this can be done in init() or in this method.
+	 */
+	public void printFilterConfig();
+
 }

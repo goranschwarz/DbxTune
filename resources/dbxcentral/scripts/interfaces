@@ -1,0 +1,15 @@
+##--------------------------------------------------------------
+## Sybase/SAP Directory Service for Sybase instances
+## This is a local file just used by AseTune, IqTune, RsTune, RaxTune
+##--------------------------------------------------------------
+## Format of the file is: (note only the 'query' row is needed)
+##
+## ASE_NAME
+## <tab>query tcp ether <hostname> <port>
+##
+## ASE_NAME
+##  	query tcp ether asehostname2.acme.com 5000
+##
+##--------------------------------------------------------------
+
+

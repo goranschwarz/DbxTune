@@ -3,7 +3,6 @@ package com.asetune.cm.ase;
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -235,10 +234,26 @@ extends CountersModel
 		return sql;
 	}
 
+//	@Override
+//	/** override this so we can change datatype for column 'qtext' from varchar(255) -> text */
+//	public void setResultSetMetaData(ResultSetMetaData rsmd)
+//	throws SQLException
+//	{
+//		int qtext_pos = AseConnectionUtils.findColumn(rsmd, "qtext");
+//		if (qtext_pos == -1)
+//		{
+//			super.setResultSetMetaData(rsmd);
+//		}
+//		else
+//		{
+//			ResultSetMetaDataChangable xe = new ResultSetMetaDataChangable(rsmd);
+//			xe.setExtendedEntry(qtext_pos, java.sql.Types.CLOB);
+//			super.setResultSetMetaData(xe);
+//		}
+//	}
 	@Override
 	/** override this so we can change datatype for column 'qtext' from varchar(255) -> text */
 	public void setResultSetMetaData(ResultSetMetaData rsmd)
-	throws SQLException
 	{
 		int qtext_pos = AseConnectionUtils.findColumn(rsmd, "qtext");
 		if (qtext_pos == -1)

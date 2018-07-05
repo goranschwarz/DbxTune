@@ -23,16 +23,18 @@ extends AlarmEvent
 	 * @param cm                    CounterModel which this happened on
 	 * @param totalCpuUsagePct      Total CPU Usage Percent (user + system [+ IO])
 	 */
-	public AlarmEventHighCpuUtilization(CountersModel cm, Number totalCpuUsagePct)
+	public AlarmEventHighCpuUtilization(CountersModel cm, Number threshold, Number totalCpuUsagePct)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
+				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ".");
+				"High CPU Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + ". (threshold="+threshold+")",
+				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
@@ -51,16 +53,18 @@ extends AlarmEvent
 	 * @param systemCpuUsagePct     System CPU Percent
 	 * @param idleCpuUsagePct       Idle CPU Percent
 	 */
-	public AlarmEventHighCpuUtilization(CountersModel cm, CpuType cpuType, Number totalCpuUsagePct, Number userCpuUsagePct, Number systemCpuUsagePct, Number idleCpuUsagePct)
+	public AlarmEventHighCpuUtilization(CountersModel cm, Number threshold, CpuType cpuType, Number totalCpuUsagePct, Number userCpuUsagePct, Number systemCpuUsagePct, Number idleCpuUsagePct)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				cpuType+"",           // extraInfo
+				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"High " + cpuType + " Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + " percent (total="+totalCpuUsagePct+"%, user="+userCpuUsagePct+"%, system="+systemCpuUsagePct+"%, idle="+idleCpuUsagePct+"%).");
+				"High " + cpuType + " Utilization in '" + cm.getServerName() + "'. CPU at " + totalCpuUsagePct + " percent (total="+totalCpuUsagePct+"%, user="+userCpuUsagePct+"%, system="+systemCpuUsagePct+"%, idle="+idleCpuUsagePct+"%). (threshold="+threshold+")",
+				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

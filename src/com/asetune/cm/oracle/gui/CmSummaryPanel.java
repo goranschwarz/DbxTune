@@ -1543,28 +1543,28 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	{
 		setWatermark();
 
-//		_dbmsServerName_txt         .setText(cm.getAbsString (0, "INSTANCE_NAME"));
-//		_dbmsListeners_txt          .setText(cm.getAbsString (0, "HOST_NAME"));
-//		_dbmsVersion_txt            .setText(cm.getAbsString (0, "VERSION"));
-//		_lastSampleTime_txt         .setText(cm.getAbsString (0, "TIME_NOW"));
-//		_utcTimeDiff_txt            .setText(cm.getAbsString (0, "UTC_MINUTE_DIFF"));
-//		_startDate_txt              .setText(cm.getAbsString (0, "STARTUP_TIME"));
-//		_daysRunning_txt            .setText(cm.getAbsString (0, "DAYS_RUNNING"));
-//		_connectionsAbs_txt         .setText(cm.getAbsString (0, "CONNECTED_USERS"));
-//		_connectionsDiff_txt        .setText(cm.getDiffString(0, "CONNECTED_USERS"));
-//		_distinctLoginsAbs_txt      .setText(cm.getAbsString (0, "DISTINCT_LOGINS"));
-//		_distinctLoginsDiff_txt     .setText(cm.getDiffString(0, "DISTINCT_LOGINS"));
-//		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC_TH"));
-//		_oldestOpenTranSec_txt      .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC"));
-//		_oldestOpenTranTime_txt     .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_TIME"));
-//		_blockingWaitThreshold_txt  .setText(cm.getAbsString (0, "BLOCKING_WAIT_IN_SEC_TH"));
-//		_blockingWaitCount_txt      .setText(cm.getAbsString (0, "COUNT_BLOCKING_WAIT"));
-//		_blockingWaitCountDiff_txt  .setText(cm.getDiffString(0, "COUNT_BLOCKING_WAIT"));
-//		_blockingWaitMaxSec_txt     .setText(cm.getAbsString (0, "MAX_BLOCKING_WAIT_IN_SEC"));
-//		_blockingWaitMaxSecDiff_txt .setText(cm.getDiffString(0, "MAX_BLOCKING_WAIT_IN_SEC"));
-//
-//		setFieldAbsDiffRate(cm, "TRANSACTIONS",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
-//		setFieldAbsDiffRate(cm, "ROLLBACKS",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
+		_dbmsServerName_txt         .setText(cm.getAbsString (0, "INSTANCE_NAME"));
+		_dbmsListeners_txt          .setText(cm.getAbsString (0, "HOST_NAME"));
+		_dbmsVersion_txt            .setText(cm.getAbsString (0, "VERSION"));
+		_lastSampleTime_txt         .setText(cm.getAbsString (0, "TIME_NOW"));
+		_utcTimeDiff_txt            .setText(cm.getAbsString (0, "UTC_MINUTE_DIFF"));
+		_startDate_txt              .setText(cm.getAbsString (0, "STARTUP_TIME"));
+		_daysRunning_txt            .setText(cm.getAbsString (0, "DAYS_RUNNING"));
+		_connectionsAbs_txt         .setText(cm.getAbsString (0, "CONNECTED_USERS"));
+		_connectionsDiff_txt        .setText(cm.getDiffString(0, "CONNECTED_USERS"));
+		_distinctLoginsAbs_txt      .setText(cm.getAbsString (0, "DISTINCT_LOGINS"));
+		_distinctLoginsDiff_txt     .setText(cm.getDiffString(0, "DISTINCT_LOGINS"));
+		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC_TH"));
+		_oldestOpenTranSec_txt      .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_IN_SEC"));
+		_oldestOpenTranTime_txt     .setText(cm.getAbsString (0, "OLDEST_OPEN_TRAN_TIME"));
+		_blockingWaitThreshold_txt  .setText(cm.getAbsString (0, "BLOCKING_WAIT_IN_SEC_TH"));
+		_blockingWaitCount_txt      .setText(cm.getAbsString (0, "COUNT_BLOCKING_WAIT"));
+		_blockingWaitCountDiff_txt  .setText(cm.getDiffString(0, "COUNT_BLOCKING_WAIT"));
+		_blockingWaitMaxSec_txt     .setText(cm.getAbsString (0, "MAX_BLOCKING_WAIT_IN_SEC"));
+		_blockingWaitMaxSecDiff_txt .setText(cm.getDiffString(0, "MAX_BLOCKING_WAIT_IN_SEC"));
+
+		setFieldAbsDiffRate(cm, "TRANSACTIONS",   _Transactions_lbl,   _Transactions_Abs_txt,   _Transactions_Diff_txt,   _Transactions_Rate_txt);
+		setFieldAbsDiffRate(cm, "ROLLBACKS",      _Rollbacks_lbl,      _Rollbacks_Abs_txt,      _Rollbacks_Diff_txt,      _Rollbacks_Rate_txt);
 
 		
 		

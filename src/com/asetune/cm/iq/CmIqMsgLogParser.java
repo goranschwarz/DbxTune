@@ -464,7 +464,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 //	 * Used to set off-line counter data 
 //	 */
 //	@Override
-//	public void setColumnNames(int type, List<String> cols)
+//	public void setOfflineColumnNames(int type, List<String> cols)
 //	{
 ////		System.out.println("setColumnNames(): type="+type+", cols='"+cols+"'.");
 //		if (_offlineMetadataArr == null)
@@ -493,7 +493,7 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 	 * Used to set off-line counter data 
 	 */
 	@Override
-	public void setValueAt(int type, Object value, int row, int col)
+	public void setOfflineValueAt(int type, Object value, int row, int col)
 	{
 //		System.out.println("setValueAt(type='"+type+"', value='"+value+"', row='"+row+"', col='"+col+"').");
 		if (type != DATA_ABS)

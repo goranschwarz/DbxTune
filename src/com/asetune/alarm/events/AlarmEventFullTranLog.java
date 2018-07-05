@@ -13,16 +13,18 @@ extends AlarmEvent
 	 * @param cm
 	 * @param val
 	 */
-	public AlarmEventFullTranLog(CountersModel cm, Number val)
+	public AlarmEventFullTranLog(CountersModel cm, Number threshold, Number val)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				null,                 // extraInfo
+				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Full transaction log in some database(s) in '" + cm.getServerName() + "'. Count=" + val + ".");
+				"Full transaction log in some database(s) in '" + cm.getServerName() + "'. Count=" + val + ". (threshold="+threshold+")",
+				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);
@@ -36,16 +38,18 @@ extends AlarmEvent
 	 * @param cm
 	 * @param dbname
 	 */
-	public AlarmEventFullTranLog(CountersModel cm, String dbname)
+	public AlarmEventFullTranLog(CountersModel cm, Number threshold, String dbname)
 	{
 		super(
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo
 				dbname,               // extraInfo
+				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.AFFECTED, 
-				"Full transaction log in '" + cm.getServerName() + "', dbname='" + dbname + "'.");
+				"Full transaction log in '" + cm.getServerName() + "', dbname='" + dbname + "'. (threshold="+threshold+")",
+				threshold);
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(cm);

@@ -187,7 +187,8 @@ extends CountersModel
 			"    des.[HOST_NAME], \n" +
 			"    HasSqlText   = convert(bit,0), \n" +
 			"    HasQueryplan = convert(bit,0), \n" +
-			"    DB_NAME(der.database_id) AS database_name, \n" +
+//			"    DB_NAME(der.database_id) AS database_name, \n" +
+			"    (select db.name from sys.databases db where db.database_id = der.database_id) AS database_name, \n" +
 			"    des.cpu_time, \n" +
 			"    des.reads, \n" +
 			"    des.logical_reads, \n" +
@@ -209,7 +210,7 @@ extends CountersModel
 			"        WHEN 4 THEN 'Serializable' \n" +
 			"        WHEN 5 THEN 'Snapshot' \n" +
 			"    END AS transaction_isolation_level, \n" +
-			"    OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME, \n" +
+//			"    OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME, \n" +
 			"    SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
 			"        ( CASE WHEN der.statement_end_offset = -1  \n" +
 			"               THEN DATALENGTH(dest.text)  \n" +
@@ -236,7 +237,8 @@ extends CountersModel
 			"    p1.hostname, --des.[HOST_NAME] \n" +
 			"    HasSqlText   = convert(bit,0),  \n" +
 			"    HasQueryplan = convert(bit,0),  \n" +
-			"    DB_NAME(p1.dbid) AS database_name,  \n" +
+//			"    DB_NAME(p1.dbid) AS database_name,  \n" +
+			"    (select db.name from sys.databases db where db.database_id = p1.dbid) AS database_name, \n" +
 			"    p1.cpu, --des.cpu_time, \n" +
 			"    999999, --des.reads ,  \n" +
 			"    999999, --des.logical_reads ,  \n" +
@@ -258,7 +260,7 @@ extends CountersModel
 			"--        WHEN 4 THEN 'Serializable'  \n" +
 			"--        WHEN 5 THEN 'Snapshot'  \n" +
 			"--    END AS transaction_isolation_level ,  \n" +
-			"    'unknown', --OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME ,  \n" +
+//			"    'unknown', --OBJECT_NAME(dest.objectid, der.database_id) AS OBJECT_NAME ,  \n" +
 			"--    SUBSTRING(dest.text, der.statement_start_offset / 2,   \n" +
 			"--        ( CASE WHEN der.statement_end_offset = -1   \n" +
 			"--               THEN DATALENGTH(dest.text)   \n" +

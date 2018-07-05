@@ -83,7 +83,7 @@ extends AbstractTableModel
 			_dateAdded  = _dateFormater.format( new Date(System.currentTimeMillis()) );
 		}
 	}
-	private static final String[] TAB_HEADER = {"Event Time", "Action", "isActive", "AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "severity", "state", "repeatCnt", "duration", "createTime", "cancelTime", "timeToLive", "Data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"Event Time", "Action", "isActive", "AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "Data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
 	public static final int TAB_POS_EVENT_TIME                = 0;
 	public static final int TAB_POS_ACTION                    = 1;
 	public static final int TAB_POS_IS_ACTIVE                 = 2;
@@ -92,19 +92,21 @@ extends AbstractTableModel
 	public static final int TAB_POS_SERVICE_NAME              = 5;
 	public static final int TAB_POS_SERVICE_INFO              = 6;
 	public static final int TAB_POS_EXTRA_INFO                = 7;
-	public static final int TAB_POS_SEVERITY                  = 8;
-	public static final int TAB_POS_STATE                     = 9;
-	public static final int TAB_POS_REPEAT_COUNT              = 10;
-	public static final int TAB_POS_DURATION                  = 11;
-	public static final int TAB_POS_CR_TIME                   = 12;
-	public static final int TAB_POS_CANCEL_TIME               = 13;
-	public static final int TAB_POS_TIME_TO_LIVE              = 14;
-	public static final int TAB_POS_DATA                      = 15;
-	public static final int TAB_POS_LAST_DATA                 = 16;
-	public static final int TAB_POS_DESCRIPTION               = 17;
-	public static final int TAB_POS_LAST_DESCRIPTION          = 18;
-	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 19;
-	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 20;
+	public static final int TAB_POS_CATEGORY                  = 8;
+	public static final int TAB_POS_SEVERITY                  = 9;
+	public static final int TAB_POS_STATE                     = 10;
+	public static final int TAB_POS_REPEAT_COUNT              = 11;
+	public static final int TAB_POS_DURATION                  = 12;
+	public static final int TAB_POS_CR_TIME                   = 13;
+	public static final int TAB_POS_RE_RAISE_TIME             = 14;
+	public static final int TAB_POS_CANCEL_TIME               = 15;
+	public static final int TAB_POS_TIME_TO_LIVE              = 16;
+	public static final int TAB_POS_DATA                      = 17;
+	public static final int TAB_POS_LAST_DATA                 = 18;
+	public static final int TAB_POS_DESCRIPTION               = 19;
+	public static final int TAB_POS_LAST_DESCRIPTION          = 20;
+	public static final int TAB_POS_EXTENDED_DESCRIPTION      = 21;
+	public static final int TAB_POS_LAST_EXTENDED_DESCRIPTION = 22;
 
 	private ArrayList<AlarmEventWrapper> _rows = new ArrayList<>();
 	private boolean _hasChanged = false;
@@ -200,11 +202,13 @@ extends AbstractTableModel
 		case TAB_POS_SERVICE_NAME              : return entry._alarmEvent.getServiceName();
 		case TAB_POS_SERVICE_INFO              : return entry._alarmEvent.getServiceInfo();
 		case TAB_POS_EXTRA_INFO                : return entry._alarmEvent.getExtraInfo();
+		case TAB_POS_CATEGORY                  : return entry._alarmEvent.getCategory();
 		case TAB_POS_SEVERITY                  : return entry._alarmEvent.getSeverity();
 		case TAB_POS_STATE                     : return entry._alarmEvent.getState();
 		case TAB_POS_REPEAT_COUNT              : return entry._alarmEvent.getReRaiseCount();
 		case TAB_POS_DURATION                  : return entry._alarmEvent.getDuration();
 		case TAB_POS_CR_TIME                   : return entry._alarmEvent.getCrTimeStr();
+		case TAB_POS_RE_RAISE_TIME             : return entry._alarmEvent.getReRaiseTimeStr();
 		case TAB_POS_CANCEL_TIME               : return entry._alarmEvent.getCancelTimeStr();
 		case TAB_POS_TIME_TO_LIVE              : return entry._alarmEvent.getTimeToLive();
 		case TAB_POS_DATA                      : return entry._alarmEvent.getData();
@@ -236,6 +240,7 @@ extends AbstractTableModel
 		case TAB_POS_REPEAT_COUNT              : return Number.class;
 //		case TAB_POS_DURATION                  : return Number.class;
 //		case TAB_POS_CR_TIME                   : return String.class;
+//		case TAB_POS_RE_RAISE_TIME             : return String.class;
 //		case TAB_POS_CANCEL_TIME               : return String.class;
 		case TAB_POS_TIME_TO_LIVE              : return Number.class;
 //		case TAB_POS_DATA                      : return Object.class;

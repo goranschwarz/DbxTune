@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Graph/Chart Subscribe 2</title>
+
+    <style>
+        canvas {
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            /* width: 100% !important; */
+            /* height: auto !important; */
+        }
+
+        #active-alarms {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            overflow: scroll;
+            /* background-color: rgb(255, 195, 83); */
+            background-color: rgba(255, 195, 83, 0.5);
+        }
+
+        /* Show "navbar" fixed to the top */
+        /*body {
+            min-height: 75rem;
+            padding-top: 4.5rem;
+        }*/
+        .dbx-nav-button {
+            border: none;
+            /* padding: 0; */
+            background: none;
+            color: rgb(182, 187, 255)
+        }
+        /*
+         .dbx-nav-button:hover {
+            background-color:white;
+            color:black;
+        }
+        */
+
+        .dbx-nav-text {
+            color: white
+        }
+        /*
+        .dbx-nav-text:hover {
+            background-color:white;
+            color:black;
+        }
+        */
+    </style>
+
+    <!-- 
+      =======================================================================
+      == JS imports - JAVA SCRIPTS GOES HERE
+      =======================================================================
+    -->
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> -->
+    <!-- Custom styles for this template -->
+    <!-- <link href="/scripts/bootstrap/css/navbar-top-fixed.css" rel="stylesheet"> -->
+    <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
+    
+    <!--
+<script type="text/javascript" src="http://www.chartjs.org/dist/2.7.1/Chart.bundle.js"></script>
+<script type="text/javascript" src="http://www.chartjs.org/samples/latest/utils.js"></script>
+-->
+    <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
+    <script type="text/javascript" src="/scripts/moment/moment.js"></script>
+
+    <!-- JS: Chart JS -->
+    <script type="text/javascript" src="/scripts/chartjs/Chart.bundle.js"></script>
+    <script type="text/javascript" src="/scripts/chartjs/samples/utils.js"></script>
+    <script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-zoom.js"></script>
+    <script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-annotation.js"></script>
+
+    <!-- JS: DbxCentral -->
+    <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
+    <script type="text/javascript" src="/scripts/dbxcentral.graph.js"></script>
+
+    <!-- JS: Bootstrap -->
+    <!-- <link href="/scripts/bootstrap/css/bootstrap.min.css" rel="stylesheet"> -->
+    <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/scripts/popper/1.12.9/popper.min.js"></script>
+
+    <!-- JS: DateRangePicker -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-daterangepicker/2.1.27/daterangepicker.js"></script>
+
+    <!-- 
+      =======================================================================
+      == CSS imports - STYLES SHEETS GOES HERE
+      =======================================================================
+    -->
+    <!-- CSS: DbxCentral -->
+    <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
+
+    <!-- CSS: iota - layout -->
+    <link rel="stylesheet" href="/scripts/css/iota.css" type="text/css">
+
+    <!-- CSS: Bootstrap -->
+    <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+
+    <!-- CSS: DateRangePicker -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-daterangepicker/2.1.27/daterangepicker.css">
+
+    <!-- CSS: Font Awsome -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+    <!-- CSS: W2UI -->
+    <!-- <link rel="stylesheet" href="scripts/w2ui/w2ui-1.5.rc1.css" type="text/css"> -->
+    <!-- <script src="scripts/w2ui/w2ui-1.5.rc1.js" type="text/javascript"></script> -->
+
+
+</head>
+
+<body>
+    <!-- <div id="toolbar" style="padding: 4px; border: 1px solid #dfdfdf; border-radius: 3px"></div> -->
+    <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+        <a class="navbar-brand" href="/">DbxCentral</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/overview">Servers</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/admin.html">Admin</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/desktop_app.html">Desktop App</a>
+                </li>
+            </ul>
+        
+            <div id="dbx-report-range" class="dbx-nav-text btn btn-outline-light mr-2">
+                <i class="glyphicon glyphicon-calendar fa fa-calendar"></i>&nbsp;
+                <span>Time Span</span> <b class="caret"></b>
+            </div>
+
+<!-- 
+            <div id="dbx-report-range" 
+                <input type="text" class="form-control dbx-nav-text mr-2">
+                <i class="glyphicon glyphicon-calendar fa fa-calendar"></i>
+                <span>Time Span</span> <b class="caret"></b>
+            </div>
+ -->
+            <!-- <div    id="dbx-start-time"          class="dbx-nav-text">2018-??-?? ??:??</div> -->
+            <div class="btn px-0 btn-outline-light">
+                <button id="dbx-prev-time"           class="dbx-nav-button" type="button"><i class="glyphicon fa fa-arrow-circle-left"></i></button>
+                <!-- <a id="dbx-prev-time"           class="dbx-nav-button" type="button"><i class="glyphicon fa fa-arrow-circle-left"></i></a> -->
+                <span   id="dbx-sample-time"         class="">?h</span>
+                <button id="dbx-next-time"           class="dbx-nav-button" type="button"><i class="glyphicon fa fa-arrow-circle-right"></i></button>
+                <!-- <a id="dbx-next-time"           class="dbx-nav-button" type="button"><i class="glyphicon fa fa-arrow-circle-right"></i></a> -->
+            </div>
+            <!-- <div    id="dbx-end-time"            class="dbx-nav-text">2018-??-?? ??:??</div> -->
+            <button id="dbx-config"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Config</button>
+            <div    id="subscribe-feedback-msg"  class="dbx-nav-text"></div>
+            <div    id="subscribe-feedback-time" class="dbx-nav-text"></div>
+        </div>
+    </nav>
+
+<!-- not used anymore, I think
+    <div>
+        <ul id="messages"></ul>
+    </div>
+-->
+
+    <div id="progressDiv" class="progress">
+        <div id="progressBar" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0"
+            aria-valuemax="100" style="width:0%; min-width:25px">
+            0%
+        </div>
+    </div>
+
+    <!--<div id="api-feedback"></div>-->
+    <div id="dbx-feedback">
+        <table style='border-spacing: 0; width: 100%'>
+            <tr>
+                <td nowrap id='api-feedback'></td>
+                <td nowrap style="width: 100%"></td>
+                <td nowrap id='subscribe-feedback-msgXXX'></td>
+                <td nowrap id='subscribe-feedback-timeXXX'></td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
+    </div>
+
+    <!-- <div id="graphs" class="grid" style="grid-gap: 0px; --cols-xl: auto-fit; --cols-size-xl: minmax(700px, 1fr);"></div> -->
+    <!-- grid thresholds: xs > 0px, sm > 640px, md > 860px, lg > 1080px, xl > 1300px -->
+    <!-- <div id="graphs" class="grid" style="grid-gap: 0px; --cols-xs: 1; --cols-sm: 1; --cols-md: 1; --cols-lg: 2; --cols-xl: auto-fit; --cols-size-xl: minmax(650px, 1fr);"></div> -->
+
+    <!-- Set the style later on in javascript -->
+    <div id="graphs" class="grid" ></div> 
+
+    <!-- end-of-page: just add some extra space so we can scroll up a bit (in case there are alarms at the bottom) -->
+    <div id="end-of-page">
+        <br>
+        <!--end-of-graphs-and-page<br>-->
+        <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+    </div> 
+
+<!--     
+    <div id="graphs_xxxxxxxxxxxxxx">
+        <div id="chart_cpu">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+-->
+
+
+    <!-- JAVA SCRIPT - INIT PAGE -->
+    <script type="application/javascript">
+        window.onload = function () 
+        {
+            // Do we support the browser...
+            // Get version of MS: IE or Edge
+            // IE or EDGE are not supported
+            var ieVersion = detectIE();
+            if (ieVersion !== false) 
+            {
+                var browserVersion = ((ieVersion >= 12) ? 'Edge ' : 'IE ') + ieVersion;
+                document.getElementById('api-feedback').innerHTML = "Current Browser: <b>" + browserVersion + "</b> may not work as expected. Please use Chrome, Firefox or Safari";
+                // document.getElementById('api-feedback').innerHTML = "Current Browser: <b>" + browserVersion + "</b> is not supported. Please use Chrome, Firefox or Safari";
+                // alert("Current Browser: " + browserVersion + " is not supported. Please use Chrome, Firefox or Safari");
+                //return;
+                if (ieVersion < 12)
+                {
+                    document.getElementById('api-feedback').innerHTML = "<font color='red'>Current Browser: <b>" + browserVersion + "</b> is not supported. Please use Chrome, Firefox or Safari</font>";
+                    alert("Current Browser: " + browserVersion + " is not supported. Please use Chrome, Firefox or Safari");
+                    // return;
+                }
+            }
+
+            // Get browsers window size
+            console.log("Browser Window size: width="+$(window).width()+", height="+$(window).height());
+
+            // handle parameters: gwidth & gcols
+            // gwidth = is set as a approx width for the graphs, and then lets the grid-layout handler decide "how" it will be displayed
+            // gcols  = on the current browser size, calculate what 'gwidth' should be be (gwidth = browserWindowWidth / gcols)
+            var gwidth = getParameter("gwidth", 650);
+            var gcols  = getParameter("gcols");
+            if (gcols !== undefined)
+            {
+                console.log("gcols="+gcols);
+                gwidth = $(window).width() / gcols -10;
+            }
+            console.log("gwidth="+gwidth);
+
+            // grid thresholds: xs > 0px, sm > 640px, md > 860px, lg > 1080px, xl > 1300px
+            // $('#graphs').css({
+            //     "grid-gap": "0px", 
+            //     "--cols-xs": "1", 
+            //     "--cols-sm": "1", 
+            //     "--cols-md": "1", 
+            //     "--cols-lg": "2", 
+            //     "--cols-xl": "auto-fit", "--cols-size-xl": "minmax("+gwidth+"px, 1fr)"
+            // });
+            $('#graphs').css({
+                "grid-gap": "0px", 
+                "--cols-xs": "1", 
+                "--cols-sm": "auto-fit", "--cols-size-sm": "minmax("+gwidth+"px, 1fr)",
+                "--cols-md": "auto-fit", "--cols-size-md": "minmax("+gwidth+"px, 1fr)",
+                "--cols-lg": "auto-fit", "--cols-size-lg": "minmax("+gwidth+"px, 1fr)",
+                "--cols-xl": "auto-fit", "--cols-size-xl": "minmax("+gwidth+"px, 1fr)"
+            });
+
+
+
+            /**
+             * Initialize: Date Range Picker
+             */
+            // var start = moment().subtract(2, 'hours');
+            // var end = moment();
+        
+            function dateRangePickerCb(start, end, label) 
+            {
+                console.log("CALLBACK: start="+start+", end="+end+", label="+label);
+                // alert("CALLBACK: start="+start+", end="+end+", label="+label);
+
+                if (label === "Last 2 Hours" || label === "Last 4 Hours" || label === "Last 6 Hours" || label === "Last 8 Hours" || label === "Last 12 Hours" || label === "Last 24 Hours" || label === "Today")
+                {
+                    const url = new URL(window.location.href);
+                    var   startTime = "2h";
+
+                    if      (label === "Last 2 Hours")  startTime = "2h";
+                    else if (label === "Last 4 Hours")  startTime = "4h";
+                    else if (label === "Last 6 Hours")  startTime = "6h";
+                    else if (label === "Last 8 Hours")  startTime = "8h";
+                    else if (label === "Last 12 Hours") startTime = "12h";
+                    else if (label === "Last 24 Hours") startTime = "24h";
+                    else if (label === "Today")         startTime = start.format('YYYY-MM-DD HH:mm');
+
+                    url.searchParams.set("startTime", startTime);
+                    url.searchParams.set("subscribe", true);
+                    url.searchParams.delete("endTime");
+
+                    console.log("window.location.ref: "+url);
+                    window.location.assign(url);
+                }
+                else
+                {
+                    const url = new URL(window.location.href);
+                    var   startTime = start.format('YYYY-MM-DD HH:mm');
+                    var   endTime   = end  .format('YYYY-MM-DD HH:mm');
+
+                    url.searchParams.set("startTime", startTime);
+                    url.searchParams.set("endTime",   endTime);
+                    url.searchParams.set("subscribe", false);
+
+                    console.log("window.location.ref: "+url);
+                    window.location.assign(url);
+                }
+                $('#dbx-report-range span').html(start.format('YYYY-MM-DD HH:mm') + ' - ' + end.format('YYYY-MM-DD HH:mm'));
+            }
+  
+            $('#dbx-report-range').daterangepicker({
+                // startDate: start,
+                // endDate: end,
+                startDate: moment().subtract(2, 'hours'),
+                endDate:   moment(),
+                timePicker: true,
+                timePicker24Hour: true,
+                timePickerIncrement: 5,
+                ranges: {
+                    'Last 2 Hours':  [moment().subtract(2,  'hours'), moment()],
+                    'Last 4 Hours':  [moment().subtract(4,  'hours'), moment()],
+                    'Last 6 Hours':  [moment().subtract(6,  'hours'), moment()],
+                    'Last 8 Hours':  [moment().subtract(8,  'hours'), moment()],
+                    'Last 12 Hours': [moment().subtract(12, 'hours'), moment()],
+                    'Last 24 Hours': [moment().subtract(24, 'hours'), moment()],
+                    'Today':         [moment().startOf('day'), moment().endOf('day')],
+                    'Yesterday':     [moment().startOf('day').subtract(1,  'days'), moment().endOf('day').subtract(1, 'days')],
+                    'This Week':     [moment().startOf('isoWeek'), moment().endOf('isoWeek')],
+                    'Last 7 Days':   [moment().startOf('day').subtract(7,  'days'), moment().endOf('day')],
+                    'Last 2 Weeks':  [moment().startOf('day').subtract(14, 'days'), moment().endOf('day')],
+                    'Last 4 Weeks':  [moment().startOf('day').subtract(28, 'days'), moment().endOf('day')],
+                    'Last 30 Days':  [moment().startOf('day').subtract(30, 'days'), moment().endOf('day')],
+                    'This Month':    [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month':    [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                }
+            });
+            // }, dateRangePickerCb); // Using the callback caused "callback to be called" when user clickes "outside the picker"... su use elow 'apply.daterangepicker' instead
+
+            // On daterangepicker-APPLY
+            $('#dbx-report-range').on('apply.daterangepicker', function(ev, picker) {
+                dateRangePickerCb(picker.startDate, picker.endDate, picker.chosenLabel);
+            });
+
+            // On daterangepicker-OPEN, set some start/end date
+            $('#dbx-report-range').on('show.daterangepicker', function(ev, picker) {
+                var startEndDate = $('#dbx-report-range span').html().split(" - ");
+                if (startEndDate.length === 2)
+                {
+                    console.log("on 'dbx-report-range': show(): setting: startDate=|"+startEndDate[0]+"|, endDate=|"+startEndDate[1]+"|.");
+                    picker.startDate = moment(startEndDate[0]);
+                    picker.endDate   = moment(startEndDate[1]);
+                }
+
+                // TODO: if graph[0] has a "timeline marker", then set the surounding time of 2 hours...
+            });
+
+            // dateRangePickerCb(start, end);
+
+            // Install functions for buttons: dbx-prev-time, dbx-next-time
+            $("#dbx-prev-time").click( function() {
+                setNextPrevTime('prev');
+            });
+            $("#dbx-next-time").click( function() {
+                setNextPrevTime('next');
+            });
+            function setNextPrevTime(type)
+            {
+                var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
+                if (isNaN(currentHourSpan))
+                    return;
+                if (currentHourSpan === 0)
+                    currentHourSpan = 1;
+
+                var startEndDate = $('#dbx-report-range span').html().split(" - ");
+                if (startEndDate.length === 2)
+                {
+                    console.log("button: "+type+"-time: currentHourSpan=|"+currentHourSpan+"|, startDate=|"+startEndDate[0]+"|, endDate=|"+startEndDate[1]+"|.");
+                    var startDate = moment(startEndDate[0]);
+                    var endDate   = moment(startEndDate[1]);
+
+                    if (type === "prev") {
+                        startDate = startDate.subtract(currentHourSpan, 'hours');
+                        endDate   = endDate  .subtract(currentHourSpan, 'hours');
+                    }
+                    else if (type === "next") {
+                        startDate = startDate.add(currentHourSpan, 'hours');
+                        endDate   = endDate  .add(currentHourSpan, 'hours');
+                    }
+                    console.log("button: "+type+"-time: AFTER adjust: currentHourSpan=|"+currentHourSpan+"|, startDate=|"+startDate.format('YYYY-MM-DD HH:mm')+"|, endDate=|"+endDate.format('YYYY-MM-DD HH:mm')+"|.");
+
+                    // USE: the daterangepicker callback to set START/END time
+                    dateRangePickerCb(startDate, endDate, type);
+                }
+            }
+
+
+        
+
+            /**
+             * LOAD DBXTUNE GRAPHS/CHARTS
+             */
+            dbxTuneLoadCharts("graphs");
+
+           	// Check if we got any alarms that are active
+        	dbxTuneCheckActiveAlarms();
+
+            /* Start to subscribe to data, sent by the backend-server */
+            dbxTuneGraphSubscribe();
+        }
+    </script>
+
+</body>
+
+</html>

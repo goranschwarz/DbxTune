@@ -53,7 +53,8 @@ extends XmenuActionBase
 		
 		for (String pv : paramValues.keySet())
 		{
-			sql = sql.replaceAll("\\$\\{"+pv+"\\}", getParamValue(pv));
+//			sql = sql.replaceAll("\\$\\{"+pv+"\\}", getParamValue(pv));
+			sql = sql.replace("${"+pv+"}", getParamValue(pv));
 		}
 
 		// NOTE:

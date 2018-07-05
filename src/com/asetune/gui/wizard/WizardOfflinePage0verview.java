@@ -38,9 +38,9 @@ extends WizardPage
 			"<br>" +
 			"The file contains information about <b>what</b> Performance Counter you want to sample.<br>" +
 			"Example of how to start "+Version.getAppName()+" in no-gui mode:<br>" +
-			"<code>asetune --noGui theFilenameProducedByThisWizard</code><br>" +
+			"<code>"+Version.getAppName().toLowerCase()+" --noGui theFilenameProducedByThisWizard</code><br>" +
 			"<br>" +
-			"Type '<code>asetune --help</code>' to get information about all start options.<br>" +
+			"Type '<code>"+Version.getAppName().toLowerCase()+" --help</code>' to get information about all start options.<br>" +
 			"For example '<code>-Uuser -Ppasswd -Sserver -dsampleDB</code>' overrides the ones specified in the in-file.<br>" +
 			"<br>" +
 			"This feature can for example be used by You or any TechSupport personnel<br>" +
@@ -63,7 +63,7 @@ extends WizardPage
 			"sitting on, and start to do your analysis.<br>" +
 			"<br>" +
 			"But if you want to store counters in a Sybase database, or somewhere else; " +
-			"just specify a JDBC Driver and a URL, hopefully tables " +
+			"just specify a JDBC Driver and a URL, and it hopefully works..." +
 			"</html>";
 
 		add( new MultiLineLabel(text), "grow, wrap 15" );

@@ -8,9 +8,11 @@ import java.sql.Timestamp;
 import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.rs.CmAdminDiskSpace;
@@ -39,8 +41,10 @@ import com.asetune.cm.rs.CmAdminWhoRsi;
 import com.asetune.cm.rs.CmAdminWhoSqm;
 import com.asetune.cm.rs.CmAdminWhoSqt;
 import com.asetune.cm.rs.CmDbQueueSizeInRssd;
+import com.asetune.cm.rs.CmRsMemory;
 import com.asetune.cm.rs.CmRsSrcToDest;
 import com.asetune.cm.rs.CmSummary;
+import com.asetune.cm.rs.CmWsRepLatency;
 import com.asetune.gui.MainFrame;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
@@ -95,6 +99,10 @@ extends CounterControllerAbstract
 		CmAdminWhoDist      .create(counterController, guiController);
 		CmAdminWhoDsi       .create(counterController, guiController);
 		CmAdminWhoRsi       .create(counterController, guiController);
+
+		CmRsMemory          .create(counterController, guiController);
+		CmWsRepLatency      .create(counterController, guiController);
+		
 		CmAdminStats        .create(counterController, guiController);
 		CmRsSrcToDest       .create(counterController, guiController);
 		CmAdminStatsRepAgent.create(counterController, guiController);
@@ -125,6 +133,8 @@ extends CounterControllerAbstract
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
 		CmOsMeminfo         .create(counterController, guiController);
+		CmOsNwInfo          .create(counterController, guiController);
+		CmOsDiskSpace       .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);

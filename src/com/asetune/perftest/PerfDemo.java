@@ -47,7 +47,7 @@ import org.jdesktop.swingx.JXMultiSplitPane;
 import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.MultiSplitLayout;
 
-import com.asetune.Version;
+import com.asetune.AppDir;
 import com.asetune.cm.CountersModel;
 import com.asetune.sql.conn.AseConnection;
 import com.asetune.sql.conn.DbxConnection;
@@ -79,7 +79,7 @@ implements ActionListener
 
 	
 	JXMultiSplitPane _multiSplitPane = new JXMultiSplitPane(); 
-	String _splitPaneLayoutFilename = Version.getAppStoreDir() + "/perfDemo.layout.save.xml";
+	String _splitPaneLayoutFilename = AppDir.getAppStoreDir() + "/perfDemo.layout.save.xml";
 
 	// JDBC PANEL
 	private JComboBox<String>   _aseName	    = new JComboBox<String>();
@@ -1238,6 +1238,7 @@ implements ActionListener
 									}
 								}
 							}
+							rs.close();
 
 							// jConnect will return #Rows selected at
 							// the end of a result set and before the

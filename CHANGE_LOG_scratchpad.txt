@@ -1,6 +1,10 @@
+
+
+
+
 ##########################################################################################################
 ##########################################################################################################
-## RELEASE: 2017-11-xx
+## RELEASE: 2018-09-xx
 ##########################################################################################################
 ##########################################################################################################
 
@@ -14,6 +18,7 @@ General
 * Exception text are now stored in a recording so it can be displayed when we view the data later
 * CM Dependencies has been improved: if we view a tab that depends on some else CM, the dependant CM will be refreshed...
 * Warning popups on 'Full Translog', 'Oldest Open Tran', 'Lock Waits' will only popup on *new* occations (so we can dismiss them, and get a new popup next time we got problems)
+* DDL View: Added search field/dialog
 * A Alarm system has been implemeted, where you can have AlarmWriters, which sends Alarms to various implementations.
   You can set Alarm Thresholds at: menu-&gt;View-&gt;Change Alarm Options... and in the Wizard 'Create record session - template file Wizard...'
   In the above dialog you can create "user defined alarm logic", which consists of java code that is compiled "on the fly" (so it's java as a script language)
@@ -28,6 +33,33 @@ General
 	* ToStdout
 	* ToSunMcFile
 	* ToSyslog
+* Below is a list of Alarms that currently available... But more will come...
+	* BlockingLockAlarm              - Found Blocking locks in '${servername}'. Count=${cnt}.
+	* FullTranLog                    - Full transaction log in some database(s) in '${servername}'. Count=${cnt}.
+	* FullTranLog                    - Full transaction log in '${servername}', dbname='${dbname}'.
+	* HighCpuUtilization             - High CPU Utilization in '${servername}'. CPU at ${totalCpuUsagePct}.
+	* HighCpuUtilization             - High ${cpuType} Utilization in '${servername}'. CPU at ${totalCpuUsagePct} percent (total=${totalCpuUsagePct}%, user=${userCpuUsagePct}%, system=${systemCpuUsagePct}%, idle=${idleCpuUsagePct}%).
+	* LastBackupFailed               - Last Backup FAILED in Server '${servername}' and dbname '${dbname}'.
+	* LongRunningDetachedTransaction - Found Long running transaction, with state 'Detached' in '${servername}', dbname='${dbname}'. Seconds=${seconds}, TranName='${tranName}'.
+	* LongRunningTransaction         - Found Long running transaction in '${servername}'. Seconds=${sec}.
+	* LongRunningTransaction         - Found Long running transaction in '${servername}', dbname='${dbname}'. Seconds=${sec}, TranName='${oldestTranName}'.
+	* LowDbFreeSpace                 - Low DB DATA Free Space in Server '${servername}' and dbname '${dbname}', FreeSpaceInMB=###, UsedSpaceInPcs=###. 
+	* LowLogFreeSpace                - Low LOG DATA Free Space in Server '${servername}' and dbname '${dbname}', FreeSpaceInMB=###, UsedSpaceInPcs=###. 
+	* LowOsDiskFreeSpace             - Low Operating System Disk Free Space in Server '${servername}' at MountPoint '${mountPoint}', FreeSpaceInMB=###, UsedSpaceInPcs=###.
+	* OldBackup                      - Old or No backup found in '${servername}', dbname='${dbname}', for backup type '${dumpType}', Backup Age in Hours '###'.
+	* ProcedureCacheLowOnMemory      - Stored Procedure Cache Memory is getting low in server '${servername}'. FreeSpaceInMB=###, UsedSpaceInPcs=###. 
+	* ProcedureCacheOutOfMemory      - Out Of Stored Procedure Cache Memory in server '${servername}'. 
+	* OsLoadAverage                  - Exhausting CPU Scheduling resources at OperatingSystem level on hostname '${hostname}'. adjLoadAverage: 1min=${avg_1min}, 5min=${avg_5min}, 15min=${avg_15min}.
+	* RunQueueLength                 - Exhausting CPU Scheduling resources in '${servername}'. RunQueueLength: avg_1min=${avg_1min}, avg_5min=${avg_5min}, avg_15min=${avg_15min}.
+	* SrvDown                        - Server is DOWN. Name='${servername}'
+	* SrvDown                        - Server is DOWN. Name='${servername}', url='${url}'
+	* StatementCacheAboveConfig      - Statement Cache is above the configured value in server '${servername}'. configuredSpaceInMb=###, usedSpaceInMb=###, usedSpaceInPct=###, usedPercentOfProcedurMemory=###.
+* Some alarms specific for RepServer
+	* RsDbQueueSize
+	* RsMemoryUsage
+	* RsReplicationAge
+	* RsSdUsage
+	* RsWsState
 * no-gui mode grab DBMS/SSH Password from the file $HOME/.passwd.enc (which is encrypted passwords using opensll)
 * All Graphs now has from where the information originates (TabName-&gt;CmName)
 * JVM Memory settings (Max Memory and Garbage Collection). This is a dialog where you can specify your own values.
@@ -35,6 +67,24 @@ General
 * Host Monitoring (on Linux) now handles different versions of for example iostat (depending on the version it delivers different output), also better internationalization for numbers and time. On startup it will print the utility version.
 * Tail of log files, now has filters that you can apply to discard some records (good for RepServer and other log files, which generates a lot of output)
 * HostMonitoring (for Linux), new Counter Collector - Memory Info, which gets information from /proc/meminfo
+* Changing local home directory from '~/.asetune' to '~/.dbxtune'
+* config and log files changed from '~/.asetune' to '~/.dbxtune/conf' and '~/.dbxtune/log'
+* Some new command line switches: '-a|--createAppDir', '-A|--serverAlias', '-O|--urlOptions'... mainly for no-gui
+
+DbxCentral
+-------------------------------------------------------------------------------
+* This is a total new functionality
+* All dbxTune collectors can now send the "trend graph" information to a Central Server, which can/will store the data for a longer time.
+  The default retention period is 1 year.
+* Trend Graphs can be viewed from "any" web browser, by "anyone" (except the old Microsoft Internet Explorer)
+  This will enable developers to find potential performance problems while testing/developing.
+* Trend graph updates are "pushed" from the web server to the browser via web sockets (so no need to refresh every x second)
+* To view all *details* about a recording you will still have to use the "fat" GUI,  the current GUI implementation
+  (but you can remote-connect to the recorded database, which is stored on the DbxCentral host)
+* If all collectors are also running on the same host as DbxCentral, it will also delete old recordings based on how 
+  much space we got left on the file system, and prediction of how much recording space we will need for next 2 days.
+* Alarm information is also sent from the collectors to DbxCentral, so we can see if we are having active alarms for specific servers
+* The Alarm information is also stored, so we can later on check what alarms we had, and for how long they were active
 
 AseTune
 -------------------------------------------------------------------------------
@@ -54,6 +104,9 @@ AseTune
 * Show DBMS Configuration, added Configuration History tab (for ASE 16)
 * Show DBMS Configuration, changed from "isql" column layout to "sqlw" layout
 * Show application name in the titlebar can be enabled or disabled. Under preferences.
+* Configure monitoring Dialog, added 'nonpushdown pipe active', and 'show deferred compilation text'.
+* Capture SQL when recording a session (and the below dialog to view Captured SQL - in offline mode)
+* Added dialog so we can view 'Capture SQL, Offline view'.
 * CmSummary: Changed the default value of 'CmSummary.sample.lockCount' from false to true
 * CmDeviceIo: local graphs added: 'Read/Write Pct' and 'Read/APF Pct'
 * CmStmntCacheDetails: added 'Remark' SkewedExecPlan-Abs and SkewedExecPlan-Diff
@@ -80,6 +133,13 @@ AseTune
 	* Added columns 'nproc', 'adjLoadAverage_1Min', 'adjLoadAverage_5Min', 'adjLoadAverage_15Min'
 	  where nproc is number of available processing units. and adjLoadAverage* is LoadAverage/nproc to average out the LoadAverage value to a more sensible value
 
+* New Counter Collectors:
+	* CmTransactions - List current Transactions in the system - mostly to check if we have long running distributed transactions
+	* CmOsNwInfo - Checks The Network activity from the OS
+		This also has 7 graphs attached to it.
+	* CmOsDiskSpace - Does 'df' on the OS, so we can check for full or near-full disk systems (more important for PostgresTune MySqlTune etc)
+	
+
 * New Graphs:
 	* CmCachePools
 		* Cache Pools Hit Rate
@@ -104,6 +164,14 @@ AseTune
 	* CmSpMonitorConfig
 		* Procedure Cache Usage in Percent
 		* Procedure Cache Usage in MB
+		* MetaData Cache Usage in Percent
+		* MetaData Cache Active Count (number of: open objects, open index, open partitions, locks, sort buffers, user connections, worker processes)
+	* CmPCacheModuleUsage
+		* Procedure Cache Module Usage (in MB)
+	* CmPCacheModuleUsage
+		* Procedure Cache Module Usage (in MB)
+	* CmProcessActivity
+		* Tempdb Usage in MB, using pssinfo
 	* CmRaLogActivity
 		* RA LogScan Records Sum, per second
 		* RA Log Transaction Records Sum, per second
@@ -159,14 +227,100 @@ SqlServerTune
 * DBMS Configurations: 'sp_helpdb' and 'sys.databases'
 * Added Host Monitoring iostat/vmstat/mpstat/uptime/meminfo for Linux (since SQL-Server now can run on Linux)
 * CmWho Extended PK to 'spid', 'kpid'
+* new collector: CmTempdbSpidUsage - What session_id's are using the tempdb.
+* new collector: CmOsLatchStats - Show information about LATCH, from table 'sys.dm_os_latch_stats'.
+* DBMS Configuration, enhanced to include/save: HelpSort, HostInfo, SysInfo, ClusterNodes
+* Help text for 'CmPerfCounters', to describe what the different values are.
+* new graphs
+  * CmPerfCounters
+     * CPU Usage in Percent
+     * CPU Usage Effective in Percent
+     * SQL Batches Received per Sec
+     * SQL Batches (all) In Time Span Received per Sec
+     * SQL Batches (0-10ms) In Time Span Received per Sec
+     * SQL Batches (10ms-100ms) In Time Span Received per Sec
+     * SQL Batches (100ms-1s) In Time Span Received per Sec
+     * SQL Batches (1s-10s) In Time Span Received per Sec
+     * SQL Batches (>10s) In Time Span Received per SAMPLE
+     * Buffer Cache Hit Rate, in Percent
+     * Page Life Expectancy
+     * Buffer Cache Reads per Sec
+     * Buffer Cache Physical Reads per Sec
+     * Buffer Cache Writes per Sec
+     * Temp Table Stats
+     * Tempdb Free Space
+     * Version Store in Tempdb
+     * Snapshot Isolation
+     * Log Cache Hit Rate, in Percent
+     * Log Cache Reads per Sec
+     * Log Pool Requets per Sec
+     * Transactions per Sec
+     * Active Transactions
+     * SQL Compilations per Sec
+     * SQL Re-Compilations per Sec
+     * Blocked Processes
+     * Page Splits per Sec
+     * Forwarded Records per Sec
+     * Access Methods per Sec
+     * Latch Waits per Sec
+     * Average Latch Wait Time
+  * CmSummary
+     * Max Active SQL Execution Time In Seconds
+
+PostgresTune
+-------------------------------------------------------------------------------
+* new collector: BgWriter        - One row only, showing statistics about the background writer process's activity.
+* new collector: CmPgTablesIo    - One row for each table in the current database, showing statistics about accesses to that specific table.
+* new collector: CmPgIndexes     - One row for each index in the current database, showing statistics about accesses to that specific index.
+* new collector: CmPgIndexesIo   - One row for each index in the current database, showing statistics about accesses to that specific index.
+* new collector: CmPgFunctions   - One row for each tracked function, showing statistics about executions of that function.
+* new collector: CmPgSequencesIo - One row for each index in the current database, showing statistics about accesses to that specific sequence.
+* new collector: CmPgTableSize   - Show how large tables are (rows, total, data, index & toast).
+* new graphs
+  * CmPgDatabases
+     * Row Fetch Efficiency (tup_fetched/tup_returned) in Percent
+     * Row Fetch Efficiency ABS (tup_fetched/tup_returned) in Percent
+     * Row Fetch Efficiency SUM [tup_returned, tup_fetched]
+     * Connections
+     * Connections Sum
+     * Commits per second
+     * Rollbacks per second
+     * Reads per second
+     * Cache Hits per second
+     * Rows Returned per second
+     * Rows Fetched per second
+     * Rows Inserted per second
+     * Rows Updated per second
+     * Rows Deleted per second
+     * Conflicting Statements per second
+     * Temp Files Created per second
+     * Temp Bytes per second
+     * Deadlocks per second
+     * Read Time per second
+     * Write Time per second
+     * DB Size in MB
+  * CmPgStatements
+     * SQL Statement Calls per second
+
+OracleTune
+-------------------------------------------------------------------------------
+* Capture DBMS Configuration (from v$parameter & v$nls_parameters)
+* Enhanced some generic DbxTune code to always close the ResultSet's
+* Added some Oracle specific datatypes
 
 MySqlTune
 -------------------------------------------------------------------------------
 * New tool for MySQL (only for Version 5.7 and later)
 
+Db2Tune
+-------------------------------------------------------------------------------
+* New tool for DB2 LWU (LWU = Linux Windows Unix)
+
 Connection Dialog
 -------------------------------------------------------------------------------
 * set/change the DBXTUNE_SAVE_DIR in the dialog
+* button to create a new Profile
+* Made number of items before scroll, in the JDBC Driver drop-down larger.
 
 -------------------------------------------------------------------------------
 SQL Window

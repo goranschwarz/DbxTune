@@ -1,5 +1,7 @@
 package com.asetune;
 
+import java.io.File;
+
 import org.apache.commons.cli.CommandLine;
 
 import com.asetune.check.CheckForUpdates;
@@ -45,19 +47,19 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "dbxtune.properties";
+		return "conf" + File.separatorChar + "dbxtune.properties";
 	}
 
 	@Override
 	public String getUserConfigFileName()
 	{
-		return "mysqltune.user.properties";
+		return "conf" + File.separatorChar + "mysqltune.user.properties";
 	}
 
 	@Override
 	public String getSaveConfigFileName()
 	{
-		return "mysqltune.save.properties";
+		return "conf" + File.separatorChar + "mysqltune.save.properties";
 	}
 
 	@Override
@@ -70,7 +72,7 @@ extends DbxTune
 	public int getSplashShreenSteps()
 	{
 		// TODO Auto-generated method stub
-		return CounterControllerPostgres.NUMBER_OF_PERFORMANCE_COUNTERS;
+		return CounterControllerMySql.NUMBER_OF_PERFORMANCE_COUNTERS;
 	}
 
 	@Override

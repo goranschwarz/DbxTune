@@ -17,9 +17,11 @@ extends AlarmEvent
 				"Stop",    // serviceName, 
 				"Stop",    // serviceInfo,
 				null,
+				AlarmEvent.Category.INTERNAL,
 				AlarmEvent.Severity.UNKNOWN, 
 				AlarmEvent.ServiceState.UNKNOWN, 
-				"Stop"     // description
+				"Stop",    // description
+				null
 			); 
 	}
 }

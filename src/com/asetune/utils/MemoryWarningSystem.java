@@ -1,8 +1,17 @@
 package com.asetune.utils;
 
-import javax.management.*;
-import java.lang.management.*;
-import java.util.*;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryNotificationInfo;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryType;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
 
 /**
  * http://www.javaspecialists.eu/archive/Issue092.html

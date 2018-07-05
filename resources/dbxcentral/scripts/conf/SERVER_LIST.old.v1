@@ -1,0 +1,18 @@
+##===========================================================================
+## Fields in this file
+## 1 - ASE SERVERNAME
+## 2 - 1=Enabled, 0=Disabled
+## 3 - Some explanation for the role of this server
+## 4 - Script that will be used to start the server.
+##     NOTE: <SRVNAME> is replaced with the servername in field 1
+##===========================================================================
+
+PROD_A1_ASE       ; 1 ; PROD Active Side   ; start_asetune.sh <SRVNAME>
+PROD_B1_ASE       ; 1 ; PROD Standby Side  ; start_asetune.sh <SRVNAME>
+PROD_REP          ; 1 ; PROD RepServer     ; start_rstune.sh <SRVNAME>
+prod-psql1        ; 1 ; PROD Postgres      ; start_postgrestune.sh <SRVNAME>
+DEV_ASE           ; 1 ; DEV                ; start_asetune.sh <SRVNAME>
+SYS_ASE           ; 1 ; SYS                ; start_asetune.sh <SRVNAME>
+INT_ASE           ; 1 ; INT                ; start_asetune.sh <SRVNAME>
+STAGE_ASE         ; 1 ; STAGE              ; start_asetune.sh <SRVNAME>
+hostname\instname ; 1 ; TEST MS SQL-Server ; start_sqlservertune.sh <SRVNAME>

@@ -215,6 +215,7 @@ implements IDbmsConfig
 				ResultSet rs = stmt.executeQuery("ra_date");
 				while ( rs.next() )
 					_timestamp = rs.getTimestamp(1);
+				rs.close();
 
 				// Then execute the Real query
 				rs = stmt.executeQuery(sql);

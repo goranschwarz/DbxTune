@@ -1,0 +1,23 @@
+##===========================================================================
+## Fields in this file
+## 1 - ASE SERVERNAME
+## 2 - 1=Enabled, 0=Disabled
+## 3 - Some explanation for the role of this server
+## 4 - Script that will be used to start the server.
+##     NOTE: <SRVNAME> is replaced with the servername in field 1
+##===========================================================================
+## NOTE about field 4 / Script...
+## ${DBXTUNE_CENTRAL_BASE} is normally: ${HOME}/.dbxtune/dbxc
+## In that script you can specialize how to start the various collectors
+## You CAN also put everything (all cmdline switches) in here as well, but the row will be very long...
+##===========================================================================
+
+PROD_A1_ASE       ; 1 ; PROD Active Side   ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+PROD_B1_ASE       ; 1 ; PROD Standby Side  ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+PROD_REP          ; 1 ; PROD RepServer     ; ${DBXTUNE_CENTRAL_BASE}/bin/start_rstune.sh <SRVNAME>
+prod-psql1        ; 1 ; PROD Postgres      ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>
+DEV_ASE           ; 1 ; DEV                ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+SYS_ASE           ; 1 ; SYS                ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+INT_ASE           ; 1 ; INT                ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+STAGE_ASE         ; 1 ; STAGE              ; ${DBXTUNE_CENTRAL_BASE}/bin/start_asetune.sh <SRVNAME>
+hostname\instname ; 1 ; TEST MS SQL-Server ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>

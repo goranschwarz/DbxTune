@@ -44,6 +44,7 @@ import org.jdesktop.swingx.treetable.AbstractMutableTreeTableNode;
 import org.jdesktop.swingx.treetable.TreeTableModel;
 import org.jdesktop.swingx.treetable.TreeTableNode;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.gui.DdlViewerModel2.DbEntry;
 import com.asetune.gui.DdlViewerModel2.ObjectEntry;
@@ -80,6 +81,9 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 	private JPanel          _optDiag_panel     = null;
 	private JPanel          _depends_panel     = null;
 	private JPanel          _extraInfo_panel   = null;
+
+	private JLabel          _searchFor_lbl     = new JLabel("Search");
+	private JTextField      _searchFor_txt     = new JTextField();
 
 	private JLabel          _dependParent_lbl  = new JLabel("Parent");
 	private JTextField      _dependParent_txt  = new JTextField();
@@ -196,7 +200,32 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 //		JScrollPane scroll = new JScrollPane(createTreeSpSysmon());
 		JScrollPane scroll = new JScrollPane(createTreeTable());
 		
-		panel.add(scroll,    "push, grow, wrap");
+		panel.add(_searchFor_lbl, "gap 5 5 5 0, split");
+		panel.add(_searchFor_txt, "pushx, growx, wrap");
+		
+		panel.add(scroll, "push, grow, wrap");
+		
+		_searchFor_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				TreeTableModel ttm = _treeTable.getTreeTableModel();
+				if (ttm != null && ttm instanceof DdlViewerModel2)
+				{
+					DdlViewerModel2 model = (DdlViewerModel2) ttm;
+
+					String text = _searchFor_txt.getText().trim();
+					DdlDetails ddlDetails = DdlViewerSearchForDialog.open(DdlViewer.this, model.getDdlDetails(), text);
+					if (ddlDetails != null)
+						setViewEntry(ddlDetails.getDbname(), ddlDetails.getObjectName());
+				}
+				else
+				{
+					throw new RuntimeException("DdlViewer: 'Search for' expected TreeTableModel of 'DdlViewerModel2'.");
+				}
+			}
+		});
 		
 		return panel;
 	}
@@ -285,6 +314,25 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		
 		_extraInfo_txt.setSyntaxEditingStyle(AsetuneSyntaxConstants.SYNTAX_STYLE_SYBASE_TSQL);
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(_extraInfo_scroll, this);
+		
+		// Add "Right click menu options"
+		JPopupMenu menu = _extraInfo_txt.getPopupMenu();
+
+		JMenuItem mi = new JMenuItem("Open in 'ASE Showplan Viewer'...");
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String planText = _extraInfo_txt.getText();
+				AsePlanViewer.getInstance().loadXmlDeferred(planText);
+			}
+		});
+
+		menu.addSeparator();
+		menu.add(mi);
+
+
 
 		panel.add(_extraInfo_scroll, "push, grow, wrap");
 
@@ -447,15 +495,41 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		_logger.debug("createDataTablePopupMenu(): called.");
 
 		JPopupMenu popup        = new JPopupMenu();
+		JMenuItem searchFor     = new JMenuItem("Search for...");
 		JMenuItem show          = new JMenuItem("Show");
 		JMenuItem showParent    = new JMenuItem("Show Parent Object");
 		JMenuItem dependsList   = new JMenuItem("Get Dependent List...");
 		JMenuItem captureSource = new JMenuItem("Get what component that was responsible for this capture");
 
+		popup.add(searchFor);
 		popup.add(show);
 		popup.add(showParent);
 //		popup.add(cfgView);
 //		popup.add(pcsDbInfo);
+
+		searchFor.addActionListener(new ActionListener()
+		{
+			@Override 
+			public void actionPerformed(ActionEvent e)
+			{
+//				DdlViewerModel2 model = new DdlViewerModel2(ddlObjects);
+				TreeTableModel ttm = _treeTable.getTreeTableModel();
+				if (ttm != null && ttm instanceof DdlViewerModel2)
+				{
+					DdlViewerModel2 model = (DdlViewerModel2) ttm;
+
+					DdlDetails ddlDetails = DdlViewerSearchForDialog.open(DdlViewer.this, model.getDdlDetails(), "");
+					if (ddlDetails != null)
+					{
+						setViewEntry(ddlDetails.getDbname(), ddlDetails.getObjectName());
+					}
+				}
+				else
+				{
+					throw new RuntimeException("DdlViewer: 'Search for' expected TreeTableModel of 'DdlViewerModel2'.");
+				}
+			}
+		});
 
 		show.addActionListener(new ActionListener()
 		{
@@ -516,11 +590,6 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 	}
 
 
-
-
-	
-	
-	
 	//------------------------------------------------------------
 	//------------------------------------------------------------
 	//------------------------------------------------------------
@@ -565,6 +634,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 			{
 				String htmlMsg = "<html>The object '"+objectName+"' wasn't found in the DDL View storage.</html>";
 				SwingUtils.showInfoMessageExt(this, "Object not found", htmlMsg, null, (JPanel)null);
+
+				return false;
 			}
 			else
 			{
@@ -590,6 +661,8 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 //				_tree.setSelectionPath(currentPath);
 //				_tree.expandPath(currentPath);
 //				_tree.scrollPathToVisible(currentPath);
+
+				return true;
 			}
 		}
 //		System.out.println("END:setViewEntry(dbname='"+dbname+"', objectname='"+objectName+"')");
@@ -916,7 +989,7 @@ implements ActionListener, TreeTableNavigationEnhancer.ActionExecutor
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
-		Configuration conf1 = new Configuration(Version.getAppStoreDir() + "/asetune.save.properties");
+		Configuration conf1 = new Configuration(AppDir.getAppStoreDir() + "/asetune.save.properties");
 		Configuration.setInstance(Configuration.USER_TEMP, conf1);
 		
 		Configuration.setSearchOrder(Configuration.USER_TEMP);

@@ -10,6 +10,8 @@ import org.netbeans.spi.wizard.Summary;
 import org.netbeans.spi.wizard.WizardException;
 import org.netbeans.spi.wizard.WizardPage.WizardResultProducer;
 
+import com.asetune.Version;
+
 /**
  * @author qlarrei
  *
@@ -50,15 +52,15 @@ public class WizardOffllinePageSummary implements WizardResultProducer {
 		         "The file '" + (fnDir!=null?fnDir:fn) + "' is now produced.\n"
 		       + "\n"
 		       + "To start collect counter data without the GUI, as a background process, execute:\n"
-		       + "asetune --noGui "+ (fnDir!=null?fnDir:fn) +  "\n"
+		       + Version.getAppName().toLowerCase() + " --noGui "+ (fnDir!=null?fnDir:fn) +  "\n"
 		       + "\n"
 		       + "This config file, along with the runtime jars, can now be shipped to a remote \n"
-		       + "site where the ASE is located, which you want to collect counter data from.\n"
+		       + "site where the DBMS is located, which you want to collect counter data from.\n"
 		       + "\n"
 		       + "The h2 database files can later be zipped and sent back for analysis.\n"
 		       + "\n"
 		       + "To view the data in the database:\n"
-		       + "- Start asetune in normal mode\n"
+		       + "- Start "+Version.getAppName().toLowerCase()+" in normal mode\n"
 		       + "- Press the connect buttom\n"
 		       + "- Choose tab 'Offline Connect'\n"
 		       + "- Specify the file in 'JDBC Url' or use buttom '...' to locate the file\n" 

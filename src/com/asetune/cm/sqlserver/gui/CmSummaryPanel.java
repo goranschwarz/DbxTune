@@ -92,10 +92,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _utcTimeDiff_txt              = new JTextField();
 	private JLabel           _utcTimeDiff_lbl              = new JLabel();
 
-//	private JTextField       _startDate_txt                = new JTextField();
-//	private JLabel           _startDate_lbl                = new JLabel();
-//	private JTextField       _daysRunning_txt              = new JTextField();
-//	private JLabel           _daysRunning_lbl              = new JLabel();
+	private JTextField       _startDate_txt                = new JTextField();
+	private JLabel           _startDate_lbl                = new JLabel();
+	private JTextField       _daysRunning_txt              = new JTextField();
+	private JLabel           _daysRunning_lbl              = new JLabel();
 //	private JTextField       _countersCleared_txt          = new JTextField();
 //	private JLabel           _countersCleared_lbl          = new JLabel();
 //	private JTextField       _checkPoints_txt              = new JTextField();
@@ -200,6 +200,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JTextField       _oldestOpenTran_txt           = new JTextField();
 	private JLabel           _oldestOpenTranThreshold_lbl  = new JLabel();
 	private JTextField       _oldestOpenTranThreshold_txt  = new JTextField();
+	private JLabel           _maxSqlExecTimeInSec_lbl      = new JLabel();
+	private JTextField       _maxSqlExecTimeInSec_txt      = new JTextField();
 
 //	private JLabel           _bootcount_lbl                = new JLabel();
 //	private JTextField       _bootcount_txt                = new JTextField();
@@ -437,18 +439,18 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		
 		
-//		tooltip = "Date and time that the SQL-Server was started.";
-//		_startDate_lbl        .setText("Start date");
-//		_startDate_lbl        .setToolTipText(tooltip);
-//		_startDate_txt        .setToolTipText(tooltip);
-//		_startDate_txt        .setEditable(false);
-//
-//		tooltip = "Number of days that the SQL-Server has been running for.";
-//		_daysRunning_lbl      .setText("Days running");
-//		_daysRunning_lbl      .setToolTipText(tooltip);
-//		_daysRunning_txt      .setToolTipText(tooltip);
-//		_daysRunning_txt      .setEditable(false);
-//
+		tooltip = "Date and time that the SQL-Server was started.";
+		_startDate_lbl        .setText("Start date");
+		_startDate_lbl        .setToolTipText(tooltip);
+		_startDate_txt        .setToolTipText(tooltip);
+		_startDate_txt        .setEditable(false);
+
+		tooltip = "Number of days that the SQL-Server has been running for.";
+		_daysRunning_lbl      .setText("Days running");
+		_daysRunning_lbl      .setToolTipText(tooltip);
+		_daysRunning_txt      .setToolTipText(tooltip);
+		_daysRunning_txt      .setEditable(false);
+
 //		tooltip = "Date and time at which the monitor counters were last cleared.";
 //		_countersCleared_lbl  .setText("Counters clear date");
 //		_countersCleared_lbl  .setToolTipText(tooltip);
@@ -802,6 +804,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_oldestOpenTranThreshold_txt.setToolTipText(tooltip);
 		_oldestOpenTranThreshold_txt.setEditable(false);
 
+		tooltip = "Max Active SQL Execution Time In Seconds in this SQL-Server";
+		_maxSqlExecTimeInSec_lbl.setText("Max SQL Exec in Sec");
+		_maxSqlExecTimeInSec_lbl.setToolTipText(tooltip);
+		_maxSqlExecTimeInSec_txt.setToolTipText(tooltip);
+		_maxSqlExecTimeInSec_txt.setEditable(false);
+
 		
 		
 //		tooltip = "How many times has this SQL-Server been rebooted.";
@@ -935,12 +943,12 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 
 
-//		panel.add(_startDate_lbl,           "gapy 20");
-//		panel.add(_startDate_txt,           "growx, wrap");
-//		
-//		panel.add(_daysRunning_lbl,         "");
-//		panel.add(_daysRunning_txt,         "growx, wrap");
-//		
+		panel.add(_startDate_lbl,           "gapy 20");
+		panel.add(_startDate_txt,           "growx, wrap");
+		
+		panel.add(_daysRunning_lbl,         "");
+		panel.add(_daysRunning_txt,         "growx, wrap");
+		
 //		panel.add(_countersCleared_lbl,     "");
 //		panel.add(_countersCleared_txt,     "growx, wrap");
 //		
@@ -1075,6 +1083,9 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		panel.add(_oldestOpenTranThreshold_lbl, "");
 		panel.add(_oldestOpenTranThreshold_txt, "growx, wrap");
+		
+		panel.add(_maxSqlExecTimeInSec_lbl, "");
+		panel.add(_maxSqlExecTimeInSec_txt, "growx, wrap");
 		
 
 		
@@ -1379,8 +1390,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
 		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
 
-//		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
-//		_daysRunning_txt       .setText(cm.getAbsString (0, "DaysRunning"));
+		_startDate_txt         .setText(cm.getAbsString (0, "StartDate"));
+		_daysRunning_txt       .setText(cm.getAbsString (0, "DaysRunning"));
 //		_countersCleared_txt   .setText(cm.getAbsString (0, "CountersCleared"));
 //		_checkPoints_txt       .setText(cm.getAbsString (0, "CheckPoints"));
 //		_numDeadlocks_txt      .setText(cm.getAbsString (0, "NumDeadlocks"));
@@ -1430,6 +1441,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt           .setText(cm.getAbsString (0, "fullTranslogCount"));
 		_oldestOpenTran_txt         .setText(cm.getAbsString (0, "oldestOpenTranInSec"));
 		_oldestOpenTranThreshold_txt.setText(cm.getAbsString (0, "oldestOpenTranInSecThreshold"));
+		_maxSqlExecTimeInSec_txt    .setText(cm.getAbsString (0, "maxSqlExecTimeInSec"));
 
 //		_bootcount_txt        .setText(cm.getAbsString (0, "bootcount"));
 //		_recoveryState_txt    .setText(cm.getAbsString (0, "recovery_state"));
@@ -1616,8 +1628,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lastSampleTime_txt     .setText("");
 		_utcTimeDiff_txt        .setText("");
 
-//		_startDate_txt          .setText("");
-//		_daysRunning_txt        .setText("");
+		_startDate_txt          .setText("");
+		_daysRunning_txt        .setText("");
 //		_countersCleared_txt    .setText("");
 //		_checkPoints_txt        .setText("");
 //		_numDeadlocks_txt       .setText("");
@@ -1711,6 +1723,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_fullTranslog_txt       .setText("");
 		_oldestOpenTran_txt     .setText("");
 		_oldestOpenTranThreshold_txt.setText("");
+		_maxSqlExecTimeInSec_txt.setText("");
 		
 //		_bootcount_txt          .setText("");
 //		_recoveryState_txt      .setText("");

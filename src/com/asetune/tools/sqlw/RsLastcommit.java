@@ -139,6 +139,10 @@ public class RsLastcommit
 		if (trustSecondaryQid)
 			ret = (diff < 0);
 		
+		//FIXME: above we need to do more... In some cases the LAST system transaction is SKIPPED from the output
+		//       so some more investigations has to be done... (probably that when it's a system transaction it should be EQUAL to OQID (or SecondaryQID) and not smaller...
+		//       but when this happened I didn't have a test system available
+		
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug("hasOqidBeenApplied: trustSecondaryQid="+trustSecondaryQid+", returns "+(ret ? "TRUE":"false")+", origin="+origin + "   " + (ret ? "--- DISCARD":" +++ keep") );

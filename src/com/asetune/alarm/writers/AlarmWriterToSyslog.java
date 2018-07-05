@@ -109,6 +109,7 @@ extends AlarmWriterAbstract
 				new SDParam("serviceInfo", alarmEvent.getServiceInfo() + ""), 
 				new SDParam("serviceInfo", alarmEvent.getServiceInfo() + ""), 
 				new SDParam("extraInfo",   alarmEvent.getExtraInfo()   + ""), 
+				new SDParam("category",    alarmEvent.getCategory()    + ""), 
 				new SDParam("severity",    alarmEvent.getSeverity()    + ""), 
 				new SDParam("state",       alarmEvent.getState()       + ""), 
 				new SDParam("description", alarmEvent.getDescription() + ""), 

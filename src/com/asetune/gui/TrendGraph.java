@@ -1096,15 +1096,15 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 			return popup;
 	}
 
-	/**
-	 * Override this to add graph specific menu items
-	 * @param list
-	 */
-	public List<JComponent> createGraphSpecificMenuItems()
-	{
-		return null;
-	}
-
+//	/**
+//	 * Override this to add graph specific menu items
+//	 * @param list
+//	 */
+//	public List<JComponent> createGraphSpecificMenuItems()
+//	{
+//		return null;
+//	}
+//
 	/**
 	 * Create the Menu components that can be used my a JMenu or a JPopupMenu
 	 * @return a List of Menu components (null is never returned, instead a empty List)
@@ -1113,7 +1113,8 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 	{
 		ArrayList<JComponent> list = new ArrayList<JComponent>();
 
-		List<JComponent> userList = createGraphSpecificMenuItems();
+//		List<JComponent> userList = createGraphSpecificMenuItems();
+		List<JComponent> userList = _cm.createGraphSpecificMenuItems();
 		if (userList != null)
 		{
 			for (JComponent comp : userList)

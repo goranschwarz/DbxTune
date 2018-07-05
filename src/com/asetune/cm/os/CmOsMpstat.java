@@ -59,12 +59,21 @@ extends CounterModelHostMonitor
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
+		setDataSource(DATA_ABS, false);
+		
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
 	}
 
 
+	@Override 
+	public boolean discardDiffPctHighlighterOnAbsTable() 
+	{
+		// SHOW PCT values as RED even in ABS samples (because we only have ABD rows in this CM)
+		return false; 
+	}
+	
 	@Override
 	protected TabularCntrPanel createGui()
 	{
@@ -79,40 +88,64 @@ extends CounterModelHostMonitor
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "runtime-replaced" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+////		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//
+//		addTrendGraphData(GRAPH_NAME_MpSum, new TrendGraphDataPoint(GRAPH_NAME_MpSum, labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_MpCpu, new TrendGraphDataPoint(GRAPH_NAME_MpCpu, labels, LabelType.Dynamic));
 
-		addTrendGraphData(GRAPH_NAME_MpSum, new TrendGraphDataPoint(GRAPH_NAME_MpSum, labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_MpCpu, new TrendGraphDataPoint(GRAPH_NAME_MpCpu, labels, LabelType.Dynamic));
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_MpSum,
+			"mpstat: CPU usage Summary",                 // Menu CheckBox text
+			"mpstat: CPU usage Summary ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_MpSum,
-				"mpstat: CPU usage Summary",                 // Menu CheckBox text
-				"mpstat: CPU usage Summary ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				true, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_MpCpu,
-				"mpstat: CPU usage per core",                 // Menu CheckBox text
-				"mpstat: CPU usage per core (usr+sys+iowait) ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
-				labels, 
-				true, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_MpCpu,
+			"mpstat: CPU usage per core",                 // Menu CheckBox text
+			"mpstat: CPU usage per core (usr+sys+iowait) ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+		
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_MpSum,
+//				"mpstat: CPU usage Summary",                 // Menu CheckBox text
+//				"mpstat: CPU usage Summary ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				true, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_MpCpu,
+//				"mpstat: CPU usage per core",                 // Menu CheckBox text
+//				"mpstat: CPU usage per core (usr+sys+iowait) ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+//				labels, 
+//				true, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	} // end: method
 	
 	@Override

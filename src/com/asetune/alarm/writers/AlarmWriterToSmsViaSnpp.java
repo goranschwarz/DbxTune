@@ -167,7 +167,7 @@ extends AlarmWriterAbstract
 	public static final int     DEFAULT_port             = -1;
 	
 	public static final String  PROPKEY_msgBodyTemplate  = "AlarmWriterToSmsViaSnpp.msg.template";
-	public static final String  DEFAULT_msgBodyTemplate  = "${type}: ${alarmClassAbriviated} - ${serviceName} - ${extraInfo} - ${state} - ${severity} - ${description}";
+	public static final String  DEFAULT_msgBodyTemplate  = "${type}: ${alarmClassAbriviated} - ${serviceName} - ${extraInfo} - ${state} - ${severity} - ${category} - ${description}";
 
 	public static final String  PROPKEY_username         = "AlarmWriterToSmsViaSnpp.username";
 	public static final String  DEFAULT_username         = null;

@@ -100,6 +100,7 @@ public class DbRpcTest2
 						row++;
 						System.out.println("reading result set, row "+row);
 					}
+					rs.close();
 //					cstmt.executeUpdate();
 
 					int returnStat = cstmt.getInt(1);
@@ -144,6 +145,7 @@ public class DbRpcTest2
 						row++;
 						System.out.println("reading result set, row "+row);
 					}
+					rs.close();
 //					cstmt.executeUpdate();
 
 					int returnStat = cstmt.getInt(1);

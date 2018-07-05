@@ -64,6 +64,7 @@ public class H2Connection extends DbxConnection
 			{
 				extraInfo.put(TableExtraInfo.TableRowCount, new TableExtraInfo(TableExtraInfo.TableRowCount, "Row Count", rs.getLong(1), "Number of rows in the table. 'ROW_COUNT_ESTIMATE' from 'INFORMATION_SCHEMA.TABLES'", null));
 			}
+			rs.close();
 		}
 		catch (SQLException ex)
 		{
@@ -75,4 +76,15 @@ public class H2Connection extends DbxConnection
 		return extraInfo;
 	}
 
+//	/**
+//	 * Create a schema if not already exists
+//	 * @param schemaName
+//	 * @throws SQLException 
+//	 */
+//	@Override
+//	public void createSchemaIfNotExists(String schemaName) throws SQLException
+//	{
+//		String qic = getMetaData().getIdentifierQuoteString();
+//		dbExec("create schema if not exists "+qic+schemaName+qic);
+//	}
 }

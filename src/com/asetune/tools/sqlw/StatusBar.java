@@ -275,7 +275,8 @@ public class StatusBar extends JPanel
 					"<html>" +
 					"Connected to:<br>" +
 					"<ul>" +
-					(StringUtil.isNullOrBlank(si.getServerName()) ? "" : "<li>Server Name: <b>" + si.getServerName() + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getServerName()) ? "" : "<li>Server Name:     <b>" + si.getServerName()     + "</b></li>") +
+					(StringUtil.isNullOrBlank(si.getServerName()) ? "" : "<li>Initial Catalog: <b>" + si.getInitialCatalog() + "</b></li>") +
 					"    <li>Product Name:    <b>" + si.getProductName()    + "</b></li>" +
 					"    <li>Product Version: <b>" + si.getProductVersion() + "</b></li>" +
 					listeners +
@@ -485,6 +486,7 @@ public class StatusBar extends JPanel
 		public String _productName;
 		public String _productVersion;
 		public String _serverName;
+		public String _initialCatalog;
 		public String _username;
 		public String _withUrl;
 		public String _sysListeners;
@@ -497,7 +499,7 @@ public class StatusBar extends JPanel
 		public String _clientCharsetDesc;
 		
 		public ServerInfo(String srvName, String productName, String productVersion, 
-				String serverName, String username, String withUrl, String sysListeners, 
+				String serverName, String initialCatalog, String username, String withUrl, String sysListeners, 
 				String srvPageSizeInKb, String srvCharset, String srvSortorder,
 				String clientCharsetId, String clientCharsetName, String clientCharsetDesc)
 		{
@@ -505,6 +507,7 @@ public class StatusBar extends JPanel
 			_productName       = productName;
 			_productVersion    = productVersion;
 			_serverName        = serverName;
+			_initialCatalog    = initialCatalog;
 			_username          = username;
 			_withUrl           = withUrl;
 			_sysListeners      = sysListeners;
@@ -521,6 +524,7 @@ public class StatusBar extends JPanel
 		public String getProductName()       { return _productName       != null ? _productName    : ""; }
 		public String getProductVersion()    { return _productVersion    != null ? _productVersion : ""; }
 		public String getServerName()        { return _serverName        != null ? _serverName     : ""; }
+		public String getInitialCatalog()    { return _initialCatalog    != null ? _initialCatalog : ""; }
 		public String getUsername()          { return _username          != null ? _username       : ""; }
 		public String getWithUrl()           { return _withUrl           != null ? _withUrl        : ""; }
 		public String getSysListeners()      { return _sysListeners      != null ? _sysListeners   : ""; }
@@ -565,6 +569,7 @@ public class StatusBar extends JPanel
 		public void   setProductName      (String productName)       { _productName       = productName; }
 		public void   setProductVersion   (String productVersion)    { _productVersion    = productVersion; }
 		public void   setServerName       (String serverName)        { _serverName        = serverName; }
+		public void   setInitialCatalog   (String initialCatalog)    { _initialCatalog    = initialCatalog; }
 		public void   setUsername         (String username)          { _username          = username; }
 		public void   setWithUrl          (String withUrl)           { _withUrl           = withUrl; }
 		public void   setSysListeners     (String sysListeners)      { _sysListeners      = sysListeners; }

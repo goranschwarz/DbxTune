@@ -58,6 +58,7 @@ public class AlarmWritersTableModel extends AbstractTableModel
 		
 //		List<AlarmWriterSettingsEntry> _settings = new ArrayList<>();
 		List<CmSettingsHelper> _settings = new ArrayList<>();
+		List<CmSettingsHelper> _filters = new ArrayList<>();
 		
 		public boolean checkSettingsForMandatoryData()
 		{
@@ -234,10 +235,11 @@ public class AlarmWritersTableModel extends AbstractTableModel
 			Set<Class<? extends IAlarmWriter>> subTypes = reflections.getSubTypesOf(IAlarmWriter.class);
 			for (Class<? extends IAlarmWriter> clazz : subTypes)
 			{
-				if (    ! "IAlarmWriter"           .equals(clazz.getSimpleName())
-				     && ! "AlarmWriterAbstract"    .equals(clazz.getSimpleName())
-				     && ! "AlarmWriterToTableModel".equals(clazz.getSimpleName())
-				     && ! "AlarmWriterToPcsJdbc"   .equals(clazz.getSimpleName())
+				if (    ! "IAlarmWriter"               .equals(clazz.getSimpleName())
+				     && ! "AlarmWriterAbstract"        .equals(clazz.getSimpleName())
+				     && ! "AlarmWriterToTableModel"    .equals(clazz.getSimpleName())
+				     && ! "AlarmWriterToPcsJdbc"       .equals(clazz.getSimpleName())
+				     && ! "AlarmWriterToApplicationLog".equals(clazz.getSimpleName())
 				   )
 					writerClasses.add(clazz);
 			}
@@ -251,10 +253,11 @@ public class AlarmWritersTableModel extends AbstractTableModel
 //			{
 //				if (IAlarmWriter.class.isAssignableFrom(clazz)) 
 //				{
-//					if (    ! "IAlarmWriter"           .equals(clazz.getSimpleName())
-//					     && ! "AlarmWriterAbstract"    .equals(clazz.getSimpleName())
-//					     && ! "AlarmWriterToTableModel".equals(clazz.getSimpleName())
-//					     && ! "AlarmWriterToPcsJdbc"   .equals(clazz.getSimpleName())
+//					if (    ! "IAlarmWriter"               .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterAbstract"        .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterToTableModel"    .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterToPcsJdbc"       .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterToApplicationLog".equals(clazz.getSimpleName())
 //					   )
 //						writerClasses.add(clazz);
 //				}
@@ -287,6 +290,7 @@ public class AlarmWritersTableModel extends AbstractTableModel
 				awe._description = inst.getDescription();
 
 				awe._settings = inst.getAvailableSettings();
+				awe._filters  = inst.getAvailableFilters();
 				
 				// Set as SELECTED setting
 				// - mandatory values is set by the CmSettingsHelper itself
@@ -353,6 +357,12 @@ public class AlarmWritersTableModel extends AbstractTableModel
 		return e._settings;
 	}
 
+	public List<CmSettingsHelper> getFiltersForRow(int row)
+	{
+		AlarmWriterEntry e = _entries.get(row);
+		return e._filters;
+	}
+
 	/** Check if this model has changed */
 	public boolean isDirty()
 	{
@@ -367,6 +377,11 @@ public class AlarmWritersTableModel extends AbstractTableModel
 //					return true;
 //			}
 			for (CmSettingsHelper awse : awe._settings)
+			{
+				if (awse.isModified())
+					return true;
+			}
+			for (CmSettingsHelper awse : awe._filters)
 			{
 				if (awse.isModified())
 					return true;
@@ -467,9 +482,10 @@ public class AlarmWritersTableModel extends AbstractTableModel
 //			{
 //				if (IAlarmWriter.class.isAssignableFrom(clazz)) 
 //				{
-//					if (    ! "IAlarmWriter"           .equals(clazz.getSimpleName())
-//					     && ! "AlarmWriterToTableModel".equals(clazz.getSimpleName())
-//					     && ! "AlarmWriterToPcsJdbc"   .equals(clazz.getSimpleName())
+//					if (    ! "IAlarmWriter"               .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterToTableModel"    .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterToPcsJdbc"       .equals(clazz.getSimpleName())
+//					     && ! "AlarmWriterToApplicationLog".equals(clazz.getSimpleName())
 //					   )
 //						writerClasses.add(clazz);
 //				}

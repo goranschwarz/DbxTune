@@ -89,7 +89,7 @@ public abstract class CheckForUpdates
 	
 	private boolean _sendConnectInfo      = true;
 	private boolean _sendMdaInfo          = true;
-	private int     _sendMdaInfoBatchSize = 10;
+	private int     _sendMdaInfoBatchSize = 5;
 	private boolean _sendUdcInfo          = true;
 	private boolean _sendCounterUsageInfo = true;
 	private boolean _sendLogInfoWarning   = false;

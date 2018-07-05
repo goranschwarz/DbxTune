@@ -11,11 +11,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEvent.Category;
+import com.asetune.alarm.events.AlarmEvent.ServiceState;
+import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.events.internal.AlarmEvent_EndOfScan;
 import com.asetune.alarm.events.internal.AlarmEvent_Stop;
 import com.asetune.alarm.writers.AlarmWriterAbstract;
+import com.asetune.alarm.writers.AlarmWriterToApplicationLog;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToTableModel;
 import com.asetune.alarm.writers.IAlarmWriter;
@@ -23,6 +28,7 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Logging;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 
 /**
@@ -49,7 +55,7 @@ implements Runnable
 	public static final boolean DEFAULT_persistAlarmsEnabled  = false; // no default
 
 	public static final String  PROPKEY_persistAlarmsFilename = "AlarmHandler.persist.alarms.filename";
-	public static final String  DEFAULT_persistAlarmsFilename = Version.getAppStoreDir() + File.separator + Version.getAppName() + ".AlarmHandler.jso";
+	public static final String  DEFAULT_persistAlarmsFilename = AppDir.getAppStoreDir() + File.separator + Version.getAppName() + ".AlarmHandler.jso";
 
 	/*---------------------------------------------------
 	** Constants
@@ -83,9 +89,13 @@ implements Runnable
 	private boolean _persistActiveAlarms = true; 
 	
 	/** a list of AlarmHandlerEntry */
-	private AlarmContainer _alarmContActive = null; // gets created in the init();
-	private AlarmContainer _alarmContThisScan = new AlarmContainer();;
+	private AlarmContainer _alarmContActive   = null; // gets created in the init();
+	private AlarmContainer _alarmContThisScan = new AlarmContainer();
 
+//	private AlarmContainer _delayedAlarms     = new AlarmContainer();
+	private AlarmContainer _delayedAlarmsActive   = new AlarmContainer();
+	private AlarmContainer _delayedAlarmsThisScan = new AlarmContainer();
+			
 	/** a list of installed AlarmWriters */
 	private List<IAlarmWriter> _writerClasses = new LinkedList<>();
 
@@ -101,10 +111,10 @@ implements Runnable
 	{
 	}
 
-	public AlarmHandler(Configuration props, boolean createTableModelWriter, boolean createPcsWriter)
+	public AlarmHandler(Configuration props, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
 	throws Exception
 	{
-		init(props, createTableModelWriter, createPcsWriter);
+		init(props, createTableModelWriter, createPcsWriter, createToApplicationLog);
 	}
 
 
@@ -159,6 +169,7 @@ implements Runnable
 
 		// Now initialize the User Defined AlarmWriter
 		alarmWriterClass.init(_conf);
+		alarmWriterClass.printFilterConfig();
 		alarmWriterClass.printConfig();
 		alarmWriterClass.startService();
 	}
@@ -177,8 +188,17 @@ implements Runnable
 		}
 	}
 		
-	/** Initialize various member of the class */
-	public void init(Configuration conf, boolean createTableModelWriter, boolean createPcsWriter)
+	/** 
+	 * Initialize various member of the class
+	 * 
+	 * @param conf                    Configuration than can be used by the various writers
+	 * @param createTableModelWriter  Create A GUI model, which DbxTune can look at current/historical alarms
+	 * @param createPcsWriter         Create Writer which sends, current/historical alarms to the Percistent  Conter Storage
+	 * @param createToApplicationLog  Create Writer which sends, current/historical alarms the applications errorlog
+	 * 
+	 * @throws Exception When there is a problem with the initialization...
+	 */
+	public void init(Configuration conf, boolean createTableModelWriter, boolean createPcsWriter, boolean createToApplicationLog)
 	throws Exception
 	{
 		_conf = conf; 
@@ -189,6 +209,7 @@ implements Runnable
 		{
 			AlarmWriterToTableModel alarmClass = new AlarmWriterToTableModel();
 			alarmClass.init(_conf);
+			alarmClass.printFilterConfig();
 			alarmClass.printConfig();
 
 			AlarmWriterToTableModel.setInstance(alarmClass);
@@ -199,9 +220,21 @@ implements Runnable
 		{
 			AlarmWriterToPcsJdbc alarmClass = new AlarmWriterToPcsJdbc();
 			alarmClass.init(_conf);
+			alarmClass.printFilterConfig();
 			alarmClass.printConfig();
 
 			AlarmWriterToPcsJdbc.setInstance(alarmClass);
+			_writerClasses.add( alarmClass );
+		}
+		
+		//boolean createToApplicationLog = true;
+		if (createToApplicationLog)
+		{
+			AlarmWriterToApplicationLog alarmClass = new AlarmWriterToApplicationLog();
+			alarmClass.init(_conf);
+			alarmClass.printFilterConfig();
+			alarmClass.printConfig();
+
 			_writerClasses.add( alarmClass );
 		}
 		
@@ -355,7 +388,7 @@ implements Runnable
 		for (IAlarmWriter aw : _writerClasses)
 		{
 			// Skip internal AlarmWriters
-			if (aw instanceof AlarmWriterToTableModel || aw instanceof AlarmWriterToPcsJdbc)
+			if (aw instanceof AlarmWriterToTableModel || aw instanceof AlarmWriterToPcsJdbc || aw instanceof AlarmWriterToApplicationLog)
 				continue;
 			
 			list.add(aw);
@@ -369,7 +402,7 @@ implements Runnable
 		for (IAlarmWriter aw : _writerClasses)
 		{
 			// Skip internal AlarmWriters
-			if (aw instanceof AlarmWriterToTableModel || aw instanceof AlarmWriterToPcsJdbc)
+			if (aw instanceof AlarmWriterToTableModel || aw instanceof AlarmWriterToPcsJdbc || aw instanceof AlarmWriterToApplicationLog)
 				continue;
 			
 			list.add(aw.getClass().getName());
@@ -429,6 +462,75 @@ implements Runnable
 			return;
 		}
 
+		// normal alarm, just pass it on 
+		if (alarmEvent.getRaiseDelayInSec() <= 0)
+		{
+			raiseInternal(alarmEvent);
+		}
+		// If "delay" is enabled... put it in a special queue (if not already there)
+		else
+		{
+			// if the alarms is already in active state, send it again (for potential re-raise)
+			if (_alarmContActive.contains(alarmEvent))
+			{
+//				System.out.println("raise(): DELAY-but-already-in-active-do-raise(for RE-RAISE-PURPOSE): ae='"+alarmEvent.getAlarmClassAbriviated()+"', xxx="+alarmEvent.getRaiseDelayInSec());
+				raiseInternal(alarmEvent);
+			}
+			else
+			{
+				// Always add alarms to "this scan"
+				// This so we can cancel alarms later on... in the endOfScan()... 
+				// in endOfScan() we can intersect alarms that 
+				//     - overlaps   = action: increment repeat count
+				//     - no-overlap = action: cancel-the-alarm if TimeToLive has expired
+				_delayedAlarmsThisScan.add(alarmEvent);
+
+				if ( ! _delayedAlarmsActive.contains(alarmEvent) )
+				{
+//					System.out.println("raise(): DELAY: ae='"+alarmEvent.getAlarmClassAbriviated()+"', xxx="+alarmEvent.getRaiseDelayInSec());
+					_delayedAlarmsActive.add(alarmEvent);
+					
+					_logger.info("Received an AlarmEvent with deferred/delayed activation. RaiseDelayInSec="+alarmEvent.getRaiseDelayInSec()+" for: "+alarmEvent.getMessage());
+				}
+				else
+				{
+//					System.out.println("raise(): DELAY-ALREADY-ADDED: ae='"+alarmEvent.getAlarmClassAbriviated()+"', xxx="+alarmEvent.getRaiseDelayInSec());
+				}
+			}
+		}
+		
+		// now iterate the queue and check for entries that has passed the "delay" time
+		checkAndPostDelayedAlarms();
+	}
+
+	/**
+	 * if the "raise delay" has expired, raise the event (and delete it from the "deleayed queue"
+	 */
+	private void checkAndPostDelayedAlarms()
+	{
+		// now iterate the queue and check for entries that has passed the "delay" time
+		for (AlarmEvent alarmEvent : _delayedAlarmsActive.getAlarmList())
+		{
+			//long timeToExpireMs = (alarmEvent.getRaiseDelayInSec()*1000) - alarmEvent.getCrAgeInMs();
+			//System.out.println("checkAndPostDelayedAlarms: hasRaiseDelayExpired="+alarmEvent.hasRaiseDelayExpired() + ", timeToExpireMs="+timeToExpireMs);
+			
+			if (alarmEvent.hasRaiseDelayExpired())
+			{
+				_delayedAlarmsActive.remove(alarmEvent);
+				raiseInternal(alarmEvent);
+			}
+		}
+	}
+
+	private void raiseInternal(AlarmEvent alarmEvent)
+	{
+//		isInitialized();
+//		if (isSendAlarmsDisabled())
+//		{
+//			_logger.debug("AlarmHandler.raise() is DISABLED. isSendAlarmsDisabled()=true.");
+//			return;
+//		}
+		
 		// Always add alarms to "this scan"
 		// This so we can cancel alarms later on... in the endOfScan()... 
 		// in endOfScan() we can intersect alarms that 
@@ -454,7 +556,8 @@ implements Runnable
 					// AND catch all runtime errors that might come
 					try 
 					{
-						aw.reRaise(alarmEvent);
+						if (aw.doAlarm(alarmEvent))
+							aw.reRaise(alarmEvent);
 					}
 					catch (Throwable t)
 					{
@@ -480,7 +583,8 @@ implements Runnable
 			// AND catch all runtime errors that might come
 			try 
 			{
-				aw.raise(alarmEvent);
+				if (aw.doAlarm(alarmEvent))
+					aw.raise(alarmEvent);
 			}
 			catch (Throwable t)
 			{
@@ -520,6 +624,13 @@ implements Runnable
 	 */
 	public void endOfScan()
 	{
+		// Remove any alarms in the "delayd alarms" when TimeToLive has expired and no "repeat" has been sent
+		checkForCancelationsDelayedAlarms();
+		
+		// Check if there are any delayed alarms that we need to handle/raise
+		checkAndPostDelayedAlarms();
+
+		// check for cancels
 		checkForCancelations();
 		
 		// Call endOfScan() for all writers
@@ -563,6 +674,38 @@ implements Runnable
 	/**
 	 * 
 	 */
+	private void checkForCancelationsDelayedAlarms()
+	{
+		isInitialized();
+		if (isSendAlarmsDisabled())
+		{
+			_logger.debug("AlarmHandler.checkForCancelationsDelayedAlarms() is DISABLED. isSendAlarmsDisabled()=true.");
+			return;
+		}
+
+		// get all alarms from the "saved/history" which is NOT part of ThisScan  
+		List<AlarmEvent> cancelList = _delayedAlarmsActive.getCancelList(_delayedAlarmsThisScan);
+
+		// remove cancelations from the _delayedAlarmsActive
+		for (AlarmEvent alarmEvent : cancelList)
+		{
+			long timeToExpireMs = (alarmEvent.getRaiseDelayInSec()*1000) - alarmEvent.getCrAgeInMs();
+			_logger.info("Remove/Cancel AlarmEvent with deferred/delayed activation due to no overlap/repeat at end-of-scan. " + 
+					"RaiseDelayInSec="  + alarmEvent.getRaiseDelayInSec() + 
+					", crAgeInMs="      + TimeUtils.msToTimeStr( alarmEvent.getCrAgeInMs() ) + 
+					", timeToExpireMs=" + TimeUtils.msToTimeStr( timeToExpireMs ) + 
+					". AlarmEvent: "    + alarmEvent.getMessage());
+
+			_delayedAlarmsActive.remove(alarmEvent);
+		}
+
+		// empty "this scan"
+		_delayedAlarmsThisScan = new AlarmContainer();
+	}
+	
+	/**
+	 * 
+	 */
 	private void checkForCancelations()
 	{
 		isInitialized();
@@ -593,7 +736,8 @@ implements Runnable
 				// AND catch all runtime errors that might come
 				try 
 				{
-					aw.cancel(alarmEvent);
+					if (aw.doAlarm(alarmEvent))
+						aw.cancel(alarmEvent);
 				}
 				catch (Throwable t)
 				{
@@ -844,6 +988,47 @@ implements Runnable
 	}
 	
 
+	public static String getDymmyAlarmFileName(String srvName)
+	{
+		String tmpDir = System.getProperty("java.io.tmpdir", "/tmp/");
+		if ( ! (tmpDir.endsWith("/") || tmpDir.endsWith("\\")) )
+			tmpDir += File.separatorChar;
+		
+//		if (StringUtil.isNullOrBlank(srvName))
+//			srvName = "SERVER_NAME";
+		if (StringUtil.isNullOrBlank(srvName))
+			srvName = "${srvName}";
+		
+		return tmpDir + "DbxTune.dummyAlarm." + srvName + ".deleteme";
+	}
+
+	/**
+	 * Send dummy alarm if file /tmp/SRVNAME.dummyAlarm.deleteme exists
+	 */
+	public void checkSendDummyAlarm(String srvName)
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		//---------------------------------------------------------------
+		// For ALARM testing: generate a dummy alarm...
+		// create the below file...
+		//---------------------------------------------------------------
+		String tmpFilename = getDymmyAlarmFileName(srvName);
+		File probeFile1 = new File(tmpFilename);
+		if (probeFile1.exists())
+		{
+			_logger.info("DUMMY-FORCE-DUMMY-ALARM: found-file('"+probeFile1+"'), Sending alarm 'AlarmEventDummy'...");
+
+			AlarmEvent dummyAlarm = new com.asetune.alarm.events.AlarmEventDummy(srvName, "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.INFO, ServiceState.UP, -1, 999, "Dummy alarm, just to test if the alarm handler is working", "Extended Description goes here");
+			AlarmHandler.getInstance().addAlarm( dummyAlarm );
+
+			_logger.info("DUMMY-FORCE-DUMMY-ALARM: removing file('"+probeFile1+"').");
+			try { probeFile1.delete(); }
+			catch(Exception ex) { _logger.error("DUMMY-FORCE-DUMMY-ALARM: Problems removing file '"+probeFile1+"'. Caught: "+ex);}
+		}
+	}
+
 
 
 	//////////////////////////////////////////////////////////////////////
@@ -857,7 +1042,7 @@ implements Runnable
 		private static final long serialVersionUID = 1L;
 		public AlarmEventDummy(String info, int ttl)
 		{
-			super("dummy-dbmsVendor", "dummy-serviceName", "dummy-serviceInfo-"+info, "dummy-config", AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, "Dummy description"); 
+			super("dummy-dbmsVendor", "dummy-serviceName", "dummy-serviceInfo-"+info, "dummy-config", AlarmEvent.Category.OTHER, AlarmEvent.Severity.INFO, AlarmEvent.ServiceState.UP, "Dummy description", null); 
 			setTimeToLive(ttl);
 		}
 	}
@@ -971,6 +1156,8 @@ implements Runnable
 
 		PropertyConfigurator.configure(log4jProps);
 
+		System.out.println("DUMMY ALARM FILE: " + AlarmHandler.getDymmyAlarmFileName(null));
+		
 		try 
 		{
 			Logging.init();
@@ -995,7 +1182,8 @@ implements Runnable
 			System.out.println("#### Test program: Initializing the alarm handler.");
 			System.out.println("#### Test program: useQueueImpl="+useQueueImpl);
 			AlarmHandler alarmHandler = new AlarmHandler();
-			alarmHandler.init(config, false, false);
+			alarmHandler.init(config, false, false, true);
+
 			if (useQueueImpl) 
 				alarmHandler.start();
 			AlarmHandler.setInstance(alarmHandler);

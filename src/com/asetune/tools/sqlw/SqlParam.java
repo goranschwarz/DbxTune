@@ -156,6 +156,18 @@ public class SqlParam
 				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a BigDecimal.", e);}
 			}
 		}
+		// DOUBLE
+		else if ("double".equals(type)) 
+		{
+			p._sqlType = Types.DOUBLE;
+			if (isNull)
+				p._val = null;
+			else
+			{
+				try { p._val = new Double(val); }
+				catch(NumberFormatException e) {throw new RuntimeException(" Problems parsing value '"+val+"' to a Double.", e);}
+			}
+		}
 		// TIMESTAMP
 		else if ("timestamp".equals(type)) 
 		{
@@ -297,7 +309,7 @@ public class SqlParam
 
 		List<String> tmp = StringUtil.splitOnCommasAllowQuotes(rpcParamsStr, true);
 		if ( tmp.size() == 0 && StringUtil.isNullOrBlank(tmp.get(0)) )
-			throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob = value' or 'ora_rs'.");
+			throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|bigint|string|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob = value' or 'ora_rs'.");
 		
 		for (int i=0; i<tmp.size(); i++)
 		{

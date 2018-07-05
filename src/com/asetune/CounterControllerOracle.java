@@ -14,9 +14,11 @@ import com.asetune.cm.oracle.CmSessions;
 import com.asetune.cm.oracle.CmSummary;
 import com.asetune.cm.oracle.CmSysStat;
 import com.asetune.cm.oracle.CmSystemEvent;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.MainFrame;
@@ -109,6 +111,8 @@ extends CounterControllerAbstract
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
 		CmOsMeminfo         .create(counterController, guiController);
+		CmOsNwInfo          .create(counterController, guiController);
+		CmOsDiskSpace       .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -135,8 +139,9 @@ extends CounterControllerAbstract
 	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
 	throws Exception
 	{
+//System.out.println(">>>>>>>>>> initCounters(): hasGui="+hasGui+", srvVersion="+srvVersion+", isClusterEnabled="+isClusterEnabled+", monTablesVersion="+monTablesVersion+".");
 		if (isInitialized())
-		return;
+			return;
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
 			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
@@ -241,6 +246,14 @@ extends CounterControllerAbstract
 		return new HeaderInfo(mainSampleTime, dbmsServerName, dbmsHostname, counterClearTime);
 	}
 
+//	/**
+//	 * Should the connection monitoring watchdog be started or not (ony for the GUI client)
+//	 */
+//	@Override
+//	public boolean shouldWeStart_connectionWatchDog()
+//	{
+//		return false;
+//	}
 	
 	@Override
 	public String getServerTimeCmd()

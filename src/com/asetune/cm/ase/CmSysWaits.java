@@ -217,8 +217,8 @@ extends CountersModel
 			cols1 += "InstanceID, \n";
 		}
 
-		cols1 += "WaitClassDesc = convert(varchar(50),''), -- runtime replaced with cached values from monWaitClassInfo \n";
-		cols1 += "WaitEventDesc = convert(varchar(50),''), -- runtime replaced with cached values from monWaitEventInfo \n";
+		cols1 += "WaitClassDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitClassInfo \n";
+		cols1 += "WaitEventDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitEventInfo \n";
 		cols1 += "W.WaitEventID, WaitTime, Waits \n";
 //		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 //		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
@@ -372,114 +372,178 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-//		String[] labels = new String[] { "runtime-replaced" };
-		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_EVENT_NAME, new TrendGraphDataPoint(GRAPH_NAME_EVENT_NAME, labels, LabelType.Dynamic));
-		addTrendGraphData(GRAPH_NAME_CLASS_NAME, new TrendGraphDataPoint(GRAPH_NAME_CLASS_NAME, labels, LabelType.Dynamic));
+////		String[] labels = new String[] { "runtime-replaced" };
+//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_EVENT_NAME, new TrendGraphDataPoint(GRAPH_NAME_EVENT_NAME, labels, LabelType.Dynamic));
+//		addTrendGraphData(GRAPH_NAME_CLASS_NAME, new TrendGraphDataPoint(GRAPH_NAME_CLASS_NAME, labels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new WaitTrendGraph(GRAPH_NAME_EVENT_NAME,
-					"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
-					"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					labels, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					160);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_EVENT_NAME,
+			"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
+			"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			160);  // minimum height
 
-			// GRAPH
-			tg = new WaitTrendGraph(GRAPH_NAME_CLASS_NAME,
-					"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
-					"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					labels, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
-	}
-	
-	/**
-	 * Local class which extends TrendGraph so we can create an extended menu set...
-	 */
-	private class WaitTrendGraph
-	extends TrendGraph
-	{
-		public WaitTrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
-		{
-			super(name, chkboxText, label, seriesNames, pct, cm, initialVisible, validFromVersion, panelMinHeight);
-		}
-		
-		@Override
-		public List<JComponent> createGraphSpecificMenuItems()
-		{
-			ArrayList<JComponent> list = new ArrayList<JComponent>();
-			
-			//------------------------------------------------------------
-			JMenuItem  mi = new JMenuItem("Edit Skip WaitEvents...");
-			list.add(mi);
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					CmSysWaitsPanel.openPropertiesEditor();
-				}
-			});
-			
-			//------------------------------------------------------------
-			mi = new JMenuItem("Change DataSource/Column...");
-			list.add(mi);
-			mi.addActionListener(new ActionListener()
-			{
-				@Override
-				public void actionPerformed(ActionEvent e)
-				{
-					String before = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_CLASS_NAME,
+			"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
+			"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 
-					WaitCounterSummary.openDataSourceDialog(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
-
-					String after = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
-					if ( ! before.equals(after) )
-					{
-						for (TrendGraph tg : getTrendGraphs().values())
-							tg.resetGraph();
-					}
-				}
-			});
-			
-			return list;
-		}
-		
-//		@Override
-//		public void resetGraph()
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
 //		{
-//			getTrendGraphData(getName()).clear();
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new WaitTrendGraph(GRAPH_NAME_EVENT_NAME,
+//					"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
+//					"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					labels, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					160);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
 //
-////			if (GRAPH_NAME_EVENT_NAME.equals(getName()))
-////			{
-////				_labelOrder_eventId         = new LinkedHashMap<Integer, Integer>();
-////				_labelOrder_aPosToEventName = new LinkedHashMap<Integer, String>();
-////			}
-////
-////			if (GRAPH_NAME_CLASS_NAME.equals(getName()))
-////			{
-////				_labelOrder_className       = new LinkedHashMap<String,  Integer>();
-////				_labelOrder_aPosToClassName = new LinkedHashMap<Integer, String>();
-////			}
-//
-//			super.resetGraph();
+//			// GRAPH
+//			tg = new WaitTrendGraph(GRAPH_NAME_CLASS_NAME,
+//					"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
+//					"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					labels, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
 //		}
 	}
+	
+	@Override
+	public List<JComponent> createGraphSpecificMenuItems()
+	{
+		ArrayList<JComponent> list = new ArrayList<JComponent>();
+		
+		//------------------------------------------------------------
+		JMenuItem  mi = new JMenuItem("Edit Skip WaitEvents...");
+		list.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				CmSysWaitsPanel.openPropertiesEditor();
+			}
+		});
+		
+		//------------------------------------------------------------
+		mi = new JMenuItem("Change DataSource/Column...");
+		list.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String before = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+
+				WaitCounterSummary.openDataSourceDialog(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+
+				String after = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+				if ( ! before.equals(after) )
+				{
+					for (TrendGraph tg : getTrendGraphs().values())
+						tg.resetGraph();
+				}
+			}
+		});
+		
+		return list;
+	}
+
+//	/**
+//	 * Local class which extends TrendGraph so we can create an extended menu set...
+//	 */
+//	private class WaitTrendGraph
+//	extends TrendGraph
+//	{
+//		public WaitTrendGraph(String name, String chkboxText, String label, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
+//		{
+//			super(name, chkboxText, label, seriesNames, pct, cm, initialVisible, validFromVersion, panelMinHeight);
+//		}
+//		
+//		@Override
+//		public List<JComponent> createGraphSpecificMenuItems()
+//		{
+//			ArrayList<JComponent> list = new ArrayList<JComponent>();
+//			
+//			//------------------------------------------------------------
+//			JMenuItem  mi = new JMenuItem("Edit Skip WaitEvents...");
+//			list.add(mi);
+//			mi.addActionListener(new ActionListener()
+//			{
+//				@Override
+//				public void actionPerformed(ActionEvent e)
+//				{
+//					CmSysWaitsPanel.openPropertiesEditor();
+//				}
+//			});
+//			
+//			//------------------------------------------------------------
+//			mi = new JMenuItem("Change DataSource/Column...");
+//			list.add(mi);
+//			mi.addActionListener(new ActionListener()
+//			{
+//				@Override
+//				public void actionPerformed(ActionEvent e)
+//				{
+//					String before = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+//
+//					WaitCounterSummary.openDataSourceDialog(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+//
+//					String after = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+//					if ( ! before.equals(after) )
+//					{
+//						for (TrendGraph tg : getTrendGraphs().values())
+//							tg.resetGraph();
+//					}
+//				}
+//			});
+//			
+//			return list;
+//		}
+//		
+////		@Override
+////		public void resetGraph()
+////		{
+////			getTrendGraphData(getName()).clear();
+////
+//////			if (GRAPH_NAME_EVENT_NAME.equals(getName()))
+//////			{
+//////				_labelOrder_eventId         = new LinkedHashMap<Integer, Integer>();
+//////				_labelOrder_aPosToEventName = new LinkedHashMap<Integer, String>();
+//////			}
+//////
+//////			if (GRAPH_NAME_CLASS_NAME.equals(getName()))
+//////			{
+//////				_labelOrder_className       = new LinkedHashMap<String,  Integer>();
+//////				_labelOrder_aPosToClassName = new LinkedHashMap<Integer, String>();
+//////			}
+////
+////			super.resetGraph();
+////		}
+//	}
 
 	/** 
 	 * Main method to calculate graph data for ALL GRAPHS (you need to loop all the graphs yourself)

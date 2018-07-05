@@ -53,6 +53,17 @@ public interface ISqlCaptureBroker
 	public String getTableDdlString(DatabaseMetaData dbmd, String tabName);
 	public List<String> getIndexDdlString(DatabaseMetaData dbmd, String tabName);
 
+	/**
+	 * Check if table columns are ok, or if we need to alter table, returns a list of alter statements to execute
+	 * 
+	 * @param conn
+	 * @param dbmd
+	 * @param tabName
+	 * 
+	 * @return a list of alter statements to execute
+	 */
+	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
+
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler persistentCounterHandler);
 
 	public String getInsertStatement(String tabName);

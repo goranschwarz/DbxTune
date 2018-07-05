@@ -62,7 +62,7 @@ public abstract class PersistWriterBase
 	public static final int SESSION_PARAMS_VAL_MAXLEN = 4096;
 
 	/** Character used for quoted identifier */
-	public static String  qic = "\"";
+	public static String  _qic = "\"";
 	
 	/**	what are we connected to: DatabaseMetaData.getDatabaseProductName() */
 	private String _databaseProductName = "";
@@ -141,7 +141,8 @@ public abstract class PersistWriterBase
 	@Override
 	public void resetCounters()
 	{ 
-		_writerStatistics.clear();
+		if (_writerStatistics != null)
+			_writerStatistics.clear();
 	}
 	
 //	@Override public void incInserts() { _writerStatistics.incInserts(); }
@@ -208,10 +209,11 @@ public abstract class PersistWriterBase
 		_isSessionStarted = isSessionStarted;
 	}
 
-	/** Empty implementation */
+	/** just sets session as started */
 	@Override
 	public void startSession(PersistContainer cont)
 	{
+		setSessionStarted(true);
 	}
 
 	/**
@@ -337,6 +339,15 @@ public abstract class PersistWriterBase
 	** HELPER Methods that subclasses can use
 	**---------------------------------------------------
 	*/
+	public static  void setQuotedIdentifierChar(String qic)
+	{
+		_qic = qic;
+	}
+	public static String getQuotedIdentifierChar()
+	{
+		return _qic;
+	}
+
 	public void setDatabaseProductName(String databaseProductName)
 	{
 		_databaseProductName = databaseProductName;
@@ -484,6 +495,11 @@ public abstract class PersistWriterBase
 			prec    = 10;
 			scale   = 1;
 
+			// If the source datatype is 'bigint', then lets make the Delta/Pct a bit bigger
+			String srcType  = ResultSetTableModel.getColumnTypeName(rsmd, col);
+			if (srcType.toLowerCase().equals("bigint"))
+				prec = 18;
+
 			return getDatatype(type, length, prec, scale);
 		}
 		else
@@ -491,7 +507,7 @@ public abstract class PersistWriterBase
 			type  = ResultSetTableModel.getColumnTypeName(rsmd, col);
 
 			// Most databases doesn't have unsigned datatypes, so lets leave "unsigned int" as "int"
-			if ( type.startsWith("unsigned ") )
+			if ( type.toLowerCase().startsWith("unsigned ") )
 			{
 				String newType = type.substring("unsigned ".length());
 				_logger.info("Found the uncommon data type '"+type+"', instead the data type '"+newType+"' will be used.");
@@ -524,7 +540,7 @@ public abstract class PersistWriterBase
 	{
 		String q = "";
 		if (addQuotedIdentifierChar)
-			q = qic;
+			q = getQuotedIdentifierChar();
 
 		switch (type)
 		{
@@ -556,7 +572,7 @@ public abstract class PersistWriterBase
 	{
 		String q = "";
 		if (addQuotedIdentifierChar)
-			q = qic;
+			q = getQuotedIdentifierChar();
 
 		String tabName = q + cm.getName() + "_" + tgdp.getName() + q;
 		return tabName;
@@ -568,6 +584,8 @@ public abstract class PersistWriterBase
 	{
 		String tabName = getTableName(type, cm, true);
 		StringBuffer sbSql = new StringBuffer();
+		
+		String qic = getQuotedIdentifierChar();
 
 		try
 		{
@@ -818,6 +836,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"serviceName"                +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"serviceInfo"                +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"extraInfo"                  +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"category"                   +qic,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"severity"                   +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"state"                      +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"repeatCnt"                  +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
@@ -898,6 +917,8 @@ public abstract class PersistWriterBase
 		List<String> list = new ArrayList<String>();
 
 		ResultSetMetaData rsmd = cm.getResultSetMetaData();
+
+		String qic = getQuotedIdentifierChar();
 		
 		if ( rsmd == null )
 			throw new SQLException("ResultSetMetaData for CM '"+cm.getName()+"' was null.");
@@ -961,6 +982,7 @@ public abstract class PersistWriterBase
 	{
 		String tabName = getTableName(type, cm, true);
 		StringBuffer sbSql = new StringBuffer();
+		String qic = getQuotedIdentifierChar();
 
 		if (type == VERSION_INFO)
 		{
@@ -1184,6 +1206,7 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("serviceName"            ).append(qic).append(", ");
 			sbSql.append(qic).append("serviceInfo"            ).append(qic).append(", ");
 			sbSql.append(qic).append("extraInfo"              ).append(qic).append(", ");
+			sbSql.append(qic).append("category"               ).append(qic).append(", ");
 			sbSql.append(qic).append("severity"               ).append(qic).append(", ");
 			sbSql.append(qic).append("state"                  ).append(qic).append(", ");
 			sbSql.append(qic).append("repeatCnt"              ).append(qic).append(", ");
@@ -1199,8 +1222,8 @@ public abstract class PersistWriterBase
 			sbSql.append(qic).append("LastExtendedDescription").append(qic).append("");
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
@@ -1258,6 +1281,7 @@ public abstract class PersistWriterBase
 	public String getTableInsertStr(CountersModel cm, TrendGraphDataPoint tgdp, boolean addPrepStatementQuestionMarks)
 	{
 		String tabName = cm.getName() + "_" + tgdp.getName();
+		String qic = getQuotedIdentifierChar();
 
 		StringBuilder sb = new StringBuilder();
 
@@ -1303,6 +1327,8 @@ public abstract class PersistWriterBase
 	/** Helper method to generate a DDL string, to get the 'create index' */
 	public String getIndexDdlString(int type, CountersModel cm)
 	{
+		String qic = getQuotedIdentifierChar();
+
 		if (type == VERSION_INFO)
 		{
 			return null;
@@ -1389,6 +1415,7 @@ public abstract class PersistWriterBase
 
 	public String getGraphTableDdlString(String tabName, TrendGraphDataPoint tgdp)
 	{
+		String qic = getQuotedIdentifierChar();
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("create table " + qic+tabName+qic + "\n");
@@ -1403,7 +1430,7 @@ public abstract class PersistWriterBase
 		for (int d=0; d<dataArr.length; d++)
 		{
 			sb.append("   ,"+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",100,-1,-1),20)+" "+getNullable(true)+"\n");
-			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric", -1,16, 1),20)+" "+getNullable(true)+"\n");
+			sb.append("   ,"+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric", -1,16, 2),20)+" "+getNullable(true)+"\n");
 		}
 		sb.append(") \n");
 
@@ -1413,6 +1440,8 @@ public abstract class PersistWriterBase
 
 	public String getGraphIndexDdlString(String tabName, TrendGraphDataPoint tgdp)
 	{
+		String qic = getQuotedIdentifierChar();
+		
 //		String sql = "create index " + qic+tgdp.getName()+"_ix1"+qic + " on " + qic+tabName+qic + "("+qic+"SampleTime"+qic+", "+qic+"SessionSampleTime"+qic+")\n"; 
 		if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(getDatabaseProductName()) )
 			return "create index " +     tgdp.getName()+"_ix1"     + " on " + qic+tabName+qic + "("+qic+"SessionSampleTime"+qic+")\n";
@@ -1462,6 +1491,8 @@ public abstract class PersistWriterBase
 	public List<String> getGraphAlterTableDdlString(Connection conn, String tabName, TrendGraphDataPoint tgdp)
 	throws SQLException
 	{
+		String qic = getQuotedIdentifierChar();
+
 		// Obtain a DatabaseMetaData object from our current connection
 		DatabaseMetaData dbmd = conn.getMetaData();
 
@@ -1484,8 +1515,8 @@ public abstract class PersistWriterBase
 			{
 				for (int d=colCounter; d<dataArr.length; d++)
 				{
-					list.add("alter table " + qic+tabName+qic + " add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",60,-1,-1),20)+" "+getNullable(true)+" \n");
-					list.add("alter table " + qic+tabName+qic + " add  "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric",-1,10, 1),20)+" "+getNullable(true)+" \n");
+					list.add("alter table " + qic+tabName+qic + " add  "+fill(qic+"label_"+d+qic,40)+" "+fill(getDatatype("varchar",100,-1,-1),20)+" "+getNullable(true)+" \n");
+					list.add("alter table " + qic+tabName+qic + " add  "+fill(qic+"data_" +d+qic,40)+" "+fill(getDatatype("numeric", -1,16, 2),20)+" "+getNullable(true)+" \n");
 				}
 			}
 		}

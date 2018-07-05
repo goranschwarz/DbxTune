@@ -30,6 +30,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.MathUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -153,40 +154,62 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] sumLabels = new String[] { "System+User CPU", "System CPU", "User CPU" };
-//		String[] engLabels = new String[] { "eng-0" };
-		String[] engLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-		
-		addTrendGraphData(GRAPH_NAME_CPU_SUM, new TrendGraphDataPoint(GRAPH_NAME_CPU_SUM, sumLabels, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_CPU_ENG, new TrendGraphDataPoint(GRAPH_NAME_CPU_ENG, engLabels, LabelType.Dynamic));
+//		String[] sumLabels = new String[] { "System+User CPU", "System CPU", "User CPU" };
+////		String[] engLabels = new String[] { "eng-0" };
+//		String[] engLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
+//		
+//		addTrendGraphData(GRAPH_NAME_CPU_SUM, new TrendGraphDataPoint(GRAPH_NAME_CPU_SUM, sumLabels, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_CPU_ENG, new TrendGraphDataPoint(GRAPH_NAME_CPU_ENG, engLabels, LabelType.Dynamic));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_CPU_SUM,
-					"CPU Summary", 	                                 // Menu CheckBox text
-					"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					sumLabels, 
-					true, // is Percent Graph
-					this, 
-					true, // visible at start
-					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_CPU_SUM,
+			"CPU Summary", 	                                 // Menu CheckBox text
+			"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CPU,
+			true, // is Percent Graph
+			true, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 
-			tg = new TrendGraph(GRAPH_NAME_CPU_ENG,
-					"CPU per Engine",                       // Menu CheckBox text
-					"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					engLabels, 
-					true, // is Percent Graph
-					this, 
-					true, // visible at start
-					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		addTrendGraph(GRAPH_NAME_CPU_ENG,
+			"CPU per Engine",                       // Menu CheckBox text
+			"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true, // is Percent Graph
+			true, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_CPU_SUM,
+//					"CPU Summary", 	                                 // Menu CheckBox text
+//					"CPU Summary for all Engines ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					sumLabels, 
+//					true, // is Percent Graph
+//					this, 
+//					true, // visible at start
+//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			tg = new TrendGraph(GRAPH_NAME_CPU_ENG,
+//					"CPU per Engine",                       // Menu CheckBox text
+//					"CPU Usage per Engine (System + User) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					engLabels, 
+//					true, // is Percent Graph
+//					this, 
+//					true, // visible at start
+//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override
@@ -670,13 +693,13 @@ extends CountersModel
 //				}
 //			}
 //		}
-		if (isSystemAlarmsForColumnEnabled("CPUTime"))
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CPUTime"))
 		{
-			Double NonIdleCPUTimePct = cm.getRateValueAvg("NonIdleCPUTimePct");
-			Double SystemCPUTimePct  = cm.getRateValueAvg("SystemCPUTimePct");
-			Double UserCPUTimePct    = cm.getRateValueAvg("UserCPUTimePct");
-//			Double IOCPUTimePct      = cm.getRateValueAvg("IOCPUTimePct");
-			Double IdleCPUTimePct    = cm.getRateValueAvg("IdleCPUTimePct");
+			Double NonIdleCPUTimePct = MathUtils.round( cm.getRateValueAvg("NonIdleCPUTimePct"), 1);
+			Double SystemCPUTimePct  = MathUtils.round( cm.getRateValueAvg("SystemCPUTimePct"),  1);
+			Double UserCPUTimePct    = MathUtils.round( cm.getRateValueAvg("UserCPUTimePct"),    1);
+//			Double IOCPUTimePct      = MathUtils.round( cm.getRateValueAvg("IOCPUTimePct"),      1);
+			Double IdleCPUTimePct    = MathUtils.round( cm.getRateValueAvg("IdleCPUTimePct"),    1);
 
 			if (NonIdleCPUTimePct != null)
 			{
@@ -687,14 +710,14 @@ extends CountersModel
 				{
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CPUTime, DEFAULT_alarm_CPUTime);
 					if (NonIdleCPUTimePct.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct) );
+						AlarmHandler.getInstance().addAlarm( new AlarmEventHighCpuUtilization(cm, threshold, CpuType.TOTAL_CPU, NonIdleCPUTimePct, UserCPUTimePct, SystemCPUTimePct, IdleCPUTimePct) );
 				}
 			}
 		}
 	}
 
 	public static final String  PROPKEY_alarm_CPUTime             = CM_NAME + ".alarm.system.if.CPUTime.gt";
-	public static final int     DEFAULT_alarm_CPUTime             = 85;
+	public static final int     DEFAULT_alarm_CPUTime             = 90;
 	
 	
 	@Override

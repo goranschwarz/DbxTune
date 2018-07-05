@@ -80,6 +80,7 @@ import javax.swing.event.TableModelListener;
 import org.apache.log4j.Logger;
 import org.apache.log4j.lf5.LogLevel;
 
+import com.asetune.AppDir;
 import com.asetune.CounterCollectorThreadAbstract;
 import com.asetune.CounterCollectorThreadGui;
 import com.asetune.CounterController;
@@ -230,7 +231,7 @@ public abstract class MainFrame
 	public static final boolean   DEFAULT_summaryOperations_showRate   = true;
 
 	public static final String    PROPKEY_setStatus_invokeAndWait      = "MainFrame.notInEdt.setStatus.invokeAndWait";
-	public static final boolean   DEFAULT_setStatus_invokeAndWait      = true;
+	public static final boolean   DEFAULT_setStatus_invokeAndWait      = true; // Note this can cause "strange locking/blocking situations with the EDT thread
 
 	static
 	{
@@ -311,6 +312,9 @@ public abstract class MainFrame
 	public static final String ACTION_SLIDER_RIGHT_RIGHT                = "SLIDER_RIGHT_RIGHT";
 	public static final String ACTION_SLIDER_LEFT_NEXT                  = "SLIDER_LEFT_NEXT";
 	public static final String ACTION_SLIDER_RIGHT_NEXT                 = "SLIDER_RIGHT_NEXT";
+
+	public static final int EVENT_ID_OPEN_OFFLINE_MODE    = 98;
+	public static final int EVENT_ID_CONNECT_OFFLINE_MODE = 99;
 
 	private String _inActionCommand = null;
 	private PersistContainer _currentPc      = null;
@@ -2450,13 +2454,13 @@ public abstract class MainFrame
 			String extraInfo = Version.getAppName() + ", Version: "+ Version.getVersionStr();
 			
 			// Main window
-			String main = Screenshot.windowScreenshot(this, Version.getAppStoreDir(), appName+".main", true, extraInfo);
+			String main = Screenshot.windowScreenshot(this, AppDir.getAppStoreDir(), appName+".main", true, extraInfo);
 			fileList += main + NL;
 
 			// ALL Summary graphs (even hidden ones, eg the ones outside of the ScrollPane)
 			// Note: the Header/Labels on the graphs are not there, this is due to the fact that they are printed "later" with the Watermark stuff that uses the AbstractComponentDecorator...
 			Component summaryComp = CounterController.getSummaryPanel().getGraphPanel().getGraphPanelNoScroll();
-			String summaryPanel = Screenshot.windowScreenshot(summaryComp, Version.getAppStoreDir(), appName+".graphs", true, extraInfo);
+			String summaryPanel = Screenshot.windowScreenshot(summaryComp, AppDir.getAppStoreDir(), appName+".graphs", true, extraInfo);
 			fileList += summaryPanel + NL;
 
 			// LOOP all CounterModels, and check if they got any windows open, then screenshot that also
@@ -2471,7 +2475,7 @@ public abstract class MainFrame
 					if (tp.isTabUnDocked(cm.getDisplayName()))
 					{
 						JFrame frame = tp.getTabUnDockedFrame(cm.getDisplayName());
-						String fn = Screenshot.windowScreenshot(frame, Version.getAppStoreDir(), appName+"."+cm.getName(), true, extraInfo);
+						String fn = Screenshot.windowScreenshot(frame, AppDir.getAppStoreDir(), appName+"."+cm.getName(), true, extraInfo);
 						fileList += fn + NL;
 					}
 				}
@@ -3004,8 +3008,9 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	
 	public void action_connect(ActionEvent e)
 	{
-		Object source = e.getSource();
-		String action = e.getActionCommand();
+		Object source  = e.getSource();
+		String action  = e.getActionCommand();
+		int    eventId = e.getID();
 
 //		if (AseTune.getCounterCollector().isMonConnected())
 		if (CounterController.getInstance().isMonConnected())
@@ -3060,7 +3065,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		System.getProperties().remove("SERVERNAME");
 
 
-		ConnectionDialog connDialog = new ConnectionDialog(this, connDialogOptions);
+		final ConnectionDialog connDialog = new ConnectionDialog(this, connDialogOptions);
 		if (source instanceof CounterCollectorThreadGui && connDialogOptions._showAseTab)
 		{
 			if ( action != null && action.startsWith(ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP) )
@@ -3068,20 +3073,20 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				try
 				{
 					// user, passwd commes as the String:
-					// conn.onStartup={aseUsername=user, asePassword=pass, ...} see below for props
+					// conn.onStartup={dbmsUsername=user, dbmsPassword=pass, ...} see below for props
 					// PropPropEntry parses the entries and then we can query the PPE object
 					_logger.debug(action);
 					PropPropEntry ppe = new PropPropEntry(action);
 					String key = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP;
 
-					if (!isNull(ppe.getProperty(key, "aseUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "aseUsername"));
-					if (!isNull(ppe.getProperty(key, "asePassword"))) connDialog.setAsePassword(ppe.getProperty(key, "asePassword"));
-					if (!isNull(ppe.getProperty(key, "aseServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "aseServer"));
+					if (!isNull(ppe.getProperty(key, "dbmsUsername"))) connDialog.setAseUsername(ppe.getProperty(key, "dbmsUsername"));
+					if (!isNull(ppe.getProperty(key, "dbmsPassword"))) connDialog.setAsePassword(ppe.getProperty(key, "dbmsPassword"));
+					if (!isNull(ppe.getProperty(key, "dbmsServer"))  ) connDialog.setAseServer  (ppe.getProperty(key, "dbmsServer"));
 
-					if (!isNull(ppe.getProperty(key, "sshUsername"))) connDialog.setSshUsername(ppe.getProperty(key, "sshUsername"));
-					if (!isNull(ppe.getProperty(key, "sshPassword"))) connDialog.setSshPassword(ppe.getProperty(key, "sshPassword"));
-					if (!isNull(ppe.getProperty(key, "sshHostname"))) connDialog.setSshHostname(ppe.getProperty(key, "sshHostname"));
-					if (!isNull(ppe.getProperty(key, "sshPort"))    ) connDialog.setSshPort    (ppe.getProperty(key, "sshPort"));
+					if (!isNull(ppe.getProperty(key, "sshUsername")))  connDialog.setSshUsername(ppe.getProperty(key, "sshUsername"));
+					if (!isNull(ppe.getProperty(key, "sshPassword")))  connDialog.setSshPassword(ppe.getProperty(key, "sshPassword"));
+					if (!isNull(ppe.getProperty(key, "sshHostname")))  connDialog.setSshHostname(ppe.getProperty(key, "sshHostname"));
+					if (!isNull(ppe.getProperty(key, "sshPort"))    )  connDialog.setSshPort    (ppe.getProperty(key, "sshPort"));
 
 //					String[] sa = action.split(":");
 //					if (sa.length >= 4) connDialog.setAseServer  (sa[3]); // THIS MUST BE FIRST
@@ -3100,7 +3105,28 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		else // Show the dialog and wait for response
 		{
-			connDialog.setDesiredProductName(CounterController.getInstance().getSupportedProductName());
+			if (eventId == EVENT_ID_OPEN_OFFLINE_MODE || eventId == EVENT_ID_CONNECT_OFFLINE_MODE) // open/connect in "load Offline Connection" mode
+			{
+				connDialog.setSelectedTab(ConnectionDialog.OFFLINE_CONN);
+				connDialog.setOffflineJdbcUrl(action);
+				
+				// if CONNECT -> Press the OK button
+				if (eventId == EVENT_ID_CONNECT_OFFLINE_MODE) // connect in "load Offline Connection" mode
+				{
+					SwingUtilities.invokeLater(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
+						}
+					});
+				}
+			}
+			else
+			{
+    			connDialog.setDesiredProductName(CounterController.getInstance().getSupportedProductName());
+			}
 			connDialog.setVisible(true);
 			connDialog.dispose();
 		}
@@ -3151,7 +3177,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			try {
     			String dbmsServerName = CounterController.getInstance().getMonConnection().getDbmsServerName();
     			if (StringUtil.hasValue(dbmsServerName))
-    				System.setProperty("SERVERNAME", dbmsServerName);
+    				System.setProperty("SERVERNAME", DbxTune.stripSrvName(dbmsServerName));
 			} catch (Exception ignore) {}
 			
 		} // end: TDS_CONN
@@ -3194,7 +3220,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			try {
     			String dbmsServerName = CounterController.getInstance().getMonConnection().getDbmsServerName();
     			if (StringUtil.hasValue(dbmsServerName))
-    				System.setProperty("SERVERNAME", dbmsServerName);
+    				System.setProperty("SERVERNAME", DbxTune.stripSrvName(dbmsServerName));
 			} catch (Exception ignore) {}
 			
 		} // end: JDBC
@@ -3655,6 +3681,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					}
 				}
 			}
+			
+			// Re-initialize the alarms
+			if (CounterController.hasInstance())
+			{
+				for (CountersModel cm : CounterController.getInstance().getCmList())
+				{
+					cm.initAlarms();
+				}
+			}
 		}
 	}
 	
@@ -3773,7 +3808,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		if (CounterController.getInstance().isMonConnectedStatus())
 		{
-			SwingUtils.showInfoMessage("DDL Viewer", 
+			SwingUtils.showInfoMessage(this, "DDL Viewer", 
 				"<html>" +
 				    "Only supported in 'offline' mode<br>" +
 				    "meaning: when you view a recorded session.<br>" +
@@ -3857,6 +3892,57 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 		}
 		return null;
 	}
+
+	public static final String TIMELINE_TS_CURRENT  = "current";
+	public static final String TIMELINE_TS_PREVIOUS = "previous";
+	public static final String TIMELINE_TS_NEXT     = "next";
+	/**
+	 * Get current  Timestamp for the slider position<br>
+	 * Get previous Timestamp for the slider position<br>
+	 * Get next     Timestamp for the slider position<br>
+	 * 
+	 * @return a Map: key=String("current|previous|next"), value=Timestamp <br>
+	 * The map itself will never be null, bit the content/value of the keys "current|previous|next" might be null
+	 */
+	public Map<String, Timestamp> getTimelineSliderTsMap()
+	{
+		Timestamp currTs = null;
+		Timestamp prevTs = null;
+		Timestamp nextTs = null;
+		Map<String, Timestamp> map = new HashMap<>();
+
+		if (_offlineSlider.isVisible())
+		{
+			int listPos = _offlineSlider.getValue(); 
+			currTs      = _offlineTsList.get(listPos);
+
+			if (currTs != null)
+			{
+				if (listPos > 0 )                         prevTs = _offlineTsList.get(listPos - 1);
+				if (listPos + 1 < _offlineTsList.size() ) nextTs = _offlineTsList.get(listPos + 1);
+			}
+		}
+		else if (_readSlider.isVisible())
+		{
+			InMemoryCounterHandler imch = InMemoryCounterHandler.getInstance();
+			if (imch != null)
+			{
+				int listPos = _readSlider.getValue(); 
+				currTs      = imch.getTs(listPos);
+
+				if (currTs != null)
+				{
+					if (listPos > 0 )                         prevTs = imch.getTs(listPos - 1);
+					if (listPos + 1 < _offlineTsList.size() ) nextTs = imch.getTs(listPos + 1);
+				}
+			}
+		}
+		map.put(TIMELINE_TS_CURRENT , currTs);
+		map.put(TIMELINE_TS_PREVIOUS, prevTs);
+		map.put(TIMELINE_TS_NEXT    , nextTs);
+
+		return map;
+	}
 	/**
 	 * reset the offline timeline slider
 	 */
@@ -3864,6 +3950,16 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	{
 		_offlineTsList = new ArrayList<Timestamp>();
 	}
+	
+	/**
+	 * Get the Offline TimeStamp List
+	 * @return
+	 */
+	public List<Timestamp> getOfflineSliderTsList()
+	{
+		return _offlineTsList;
+	}
+	
 	/**
 	 * Add a Timestamp to the offline slider
 	 */
@@ -6062,5 +6158,82 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 			} // end: loop tabs on mainTabbedPane
 		} // end: paintSpecial()
 	} // end: XGTabbedPane
+
+	
+	
+	
+	/* fix from: https://stackoverflow.com/questions/309023/how-to-bring-a-window-to-the-front */
+	public @Override void toFront()
+	{
+		int sta = super.getExtendedState() & ~JFrame.ICONIFIED & JFrame.NORMAL;
+
+		super.setExtendedState(sta);
+		super.setAlwaysOnTop(true);
+		super.toFront();
+		super.requestFocus();
+		super.setAlwaysOnTop(false);
+	}
+
+	public void doExternalOfflineConnectRequest(final String url)
+	{
+		final MainFrame mf = this;
+		Runnable doRun = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				// Bring the window to front
+				mf.toFront();
+				mf.repaint();
+				
+				// Show a message
+				String htmlMsg = "<html>"
+						+ "<h3>External request - Open offline recording</h3>"
+						+ "To URL: <code>"+url+"</code><br>"
+						+ "<br>"
+						+ "Click <i>Connect</i> will do the following:"
+						+ "<ul>"
+						+ "  <li>Disconnected to current server (if you are connected)</li>"
+						+ "  <li>Connects to the above URL, using last used user/password</li>"
+						+ "</ul>"
+						+ "Click <i>Open</i> will do the following:"
+						+ "<ul>"
+						+ "  <li>Disconnected to current server (if you are connected)</li>"
+						+ "  <li>Open the Connection Dialog:<br>"
+						+ "      o In Offline tab<br>"
+						+ "      o With the above URL filled in"
+						+ "  </li>"
+						+ "  <li>Then you need to fill in user/password and press <i>OK</i>.</li>"
+						+ "</ul>"
+						+ "</html>";
+
+				Object[] options = {
+						"Connect",
+						"Open",
+						"Cancel"
+						};
+
+				int answer = JOptionPane.showOptionDialog(MainFrame.this, 
+						htmlMsg,
+						"Offline Connect", // title
+						JOptionPane.YES_NO_CANCEL_OPTION,
+						JOptionPane.QUESTION_MESSAGE,
+						null,     //do not use a custom Icon
+						options,  //the titles of buttons
+						options[0]); //default button title
+
+				if (answer == 0 || answer == 1) // CONNECT, OPEN
+				{
+					                        // CONNECT                         OPEN
+					int type = (answer == 0) ? EVENT_ID_CONNECT_OFFLINE_MODE : EVENT_ID_OPEN_OFFLINE_MODE;
+					action_disconnect();
+
+					ActionEvent ae = new ActionEvent(MainFrame.this, type, url);
+					action_connect(ae);
+				}
+			}
+		};
+		SwingUtilities.invokeLater(doRun);
+	}
 
 } // END: MAIN CLASS

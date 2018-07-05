@@ -12,7 +12,6 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -96,26 +95,16 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels = new String[] { "XXX", "YYY", "ZZZ" };
-		
-		addTrendGraphData(GRAPH_NAME_XXX, new TrendGraphDataPoint(GRAPH_NAME_XXX, labels, LabelType.Static));
-
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_XXX,
-				"MenuTextXXX", 	                                 // Menu CheckBox text
-				"GrapgLabelXXX", // Label 
-				labels, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		addTrendGraph(GRAPH_NAME_XXX,
+			"MenuTextXXX", 	                                 // Menu CheckBox text
+			"GrapgLabelXXX", // Label 
+			new String[] { "XXX", "YYY", "ZZZ" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OTHER,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);
 	}
 
 	@Override

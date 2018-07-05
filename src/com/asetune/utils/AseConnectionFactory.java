@@ -28,6 +28,7 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionProgressCallback;
 import com.asetune.gui.ConnectionProgressDialog;
@@ -187,7 +188,7 @@ public class AseConnectionFactory
 	public static String getPrivateInterfacesFile(boolean setSybaseHome)
 	{
 		String file = null;
-		String tmpSybaseEnvLocation = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() : ""; // points to: getProperty("user.home") + File.separator + ".asetune"
+		String tmpSybaseEnvLocation = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() : "";
 
 		if ( PlatformUtils.getCurrentPlattform() == PlatformUtils.Platform_WIN )
 			file = tmpSybaseEnvLocation + "\\sql.ini";
@@ -1421,7 +1422,27 @@ public class AseConnectionFactory
 		// Look up the JDBC driver by class name.  When the class loads, it
 		// automatically registers itself with the DriverManager used in
 		// the next step.
-		Class.forName(driverClassName);
+//		Class.forName(driverClassName);
+		// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
+		try
+		{
+//System.out.println("AseConnectionFactory.getConnection(driverClassName='"+driverClassName+"', url='"+url+"')");
+			Driver jdbcDriver = DriverManager.getDriver(url);
+			if (jdbcDriver == null)
+				Class.forName(driverClassName).newInstance();
+		}
+		catch (Throwable ex)
+		{
+			_logger.warn( "Can't locate JDBC driver '"+driverClassName+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClassName+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex);
+			_logger.debug("Can't locate JDBC driver '"+driverClassName+"' for URL='"+url+"' using 'DriverManager.getDriver(url)' Lets continue, but first try to load the class '"+driverClassName+"' using 'Class.forName(driver).newInstance()' then connect to it using: DriverManager.getConnection(url, props); Caught="+ex, ex);
+
+			try { Class.forName(driverClassName).newInstance(); }
+			catch( Throwable ex2 )
+//			catch( ClassNotFoundException | InstantiationException | IllegalAccessException ex2 )
+			{
+				_logger.warn("DriverManager.getDriver(url), threw Exception '"+ex+"', so we did 'Class.forName(driverClass).newInstance()', and that caused: "+ex2);
+			}
+		}
 
 		// Get some configuration....
 		boolean emulateMultipleQueryRowSupport = true;
@@ -1503,6 +1524,7 @@ public class AseConnectionFactory
 					//-----------------------------------------------------
 					// Now use that driver to connect to the database
 					//-----------------------------------------------------
+//System.out.println("getConnection(MULTY_QUERY_ROWS): driverClassName='"+driverClassName+"', url='"+urlEntry+"', props='"+debugProps+"'");
 					DriverManager.setLoginTimeout(loginTimeout);
 					conn = DriverManager.getConnection(urlEntry, props);
 
@@ -1584,21 +1606,39 @@ public class AseConnectionFactory
 			catch (SQLException ignore) {}
 		}
 
-		// make strings unaware of quotation ""
-		// meaning SQL statements like: print "some string" will work...
-		try
-		{
-			if (conn.getAutoCommit() == false)
-			{
-				_logger.info("AutoCommit was turned 'off'. I will turn this to 'on' for this connection.");
-				conn.setAutoCommit(true);
-			}
-
+		// Get the product name
+		// Note: RepServer and possibly other OpenServer/JTDS implementetions will throw: JZ0SJ: Metadata accessor information was not found on this database. Please install the required tables as mentioned in the jConnect documentation.
+		String productName = "";
+		try { 
 			DatabaseMetaData dbmd = conn.getMetaData();
 			if (dbmd != null)
+				productName = dbmd.getDatabaseProductName();
+		}
+		catch(SQLException ex) {}
+
+		// Only try the below if we have a volid product name
+		if (StringUtil.hasValue(productName))
+		{
+			// auto commit ceheck/set
+			try 
 			{
-				String productName = dbmd.getDatabaseProductName();
-				if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName))
+				if (conn.getAutoCommit() == false)
+				{
+					_logger.info("AutoCommit was turned 'off'. I will turn this to 'on' for this connection.");
+					conn.setAutoCommit(true);
+				}
+			}
+			catch(SQLException ex) 
+			{
+				_logger.info("Problems getting/setting AutoCommit. Caught: "+ex);
+			}
+				
+			// Only for Sybase ASE
+			if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(productName))
+			{
+				// make strings unaware of quotation ""
+				// meaning SQL statements like: print "some string" will work...
+				try
 				{
 					// If this is not set to 'off', things like (print "any string") wont work
 					conn.createStatement().execute("set quoted_identifier off");
@@ -1618,18 +1658,18 @@ public class AseConnectionFactory
 							conn.createStatement().execute(aseSetStr);
 					}
 				}
-			}
-		}
-		catch (SQLException sqle)
-		{
-			String errStr = "";
-			while (sqle != null)
-			{
-				errStr += sqle.getMessage() + " ";
-				sqle = sqle.getNextException();
-			}
-			_logger.warn("Failed to execute 'set quoted_identifier off' when connecting. Problem: "+errStr);
-		}
+				catch (SQLException sqle)
+				{
+					String errStr = "";
+					while (sqle != null)
+					{
+						errStr += sqle.getMessage() + " ";
+						sqle = sqle.getNextException();
+					}
+					_logger.warn("Failed to execute 'set quoted_identifier off' when connecting. Problem: "+errStr);
+				}
+			} // end: SYBASE_ASE
+		} // end: hasValue(productName)
 
 		return conn;
 	}

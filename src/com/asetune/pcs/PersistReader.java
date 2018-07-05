@@ -38,6 +38,7 @@ import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTabbedPane;
@@ -1166,7 +1167,7 @@ implements Runnable, ConnectionProvider
 //			System.out.println("getStoredCms()-3\n" + tab.toTableString());
 			rs.close();
 
-			// Sort the information according to the Counter Tab's in MainFarme
+			// Sort the information according to the Counter Tab's in MainFrame
 			sortOfflineCm();
 
 			if (_logger.isDebugEnabled())
@@ -1376,6 +1377,15 @@ implements Runnable, ConnectionProvider
 			return 0;
 		}
 		tg.clearGraph();
+		
+		// If the Grpah is NOT enabled/visible, do not load it...
+//		if ( ! (tg.isGraphEnabled() || tg.isVisible()) )
+		if ( ! tg.isGraphEnabled() )
+		{
+			_logger.info("Skipping load of graph (not enabled/visible in GUI) for CM '"+cmName+"', graphName '"+graphName+"'.");
+			return 0;
+		}
+
 
 		// When doing dbAccess we need the database names
 		cmName    = getNameTranslateCmToDb(cmName);
@@ -1771,11 +1781,16 @@ implements Runnable, ConnectionProvider
 				colHead.add(rsmd.getColumnLabel(c));
 				colSqlDataType[c-1] = rsmd.getColumnType(c);
 			}
-			cm.setColumnNames(type, colHead);
+//System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR PersistReader: cm["+cm+"].setOfflineColumnNames(type="+type+", colHead="+colHead+")");
+			cm.setOfflineColumnNames(type, colHead);
 
+//System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR PersistReader: sql2="+sql2);
+//int r=0;
 			// Get Rows
 			while (rs.next())
 			{
+//r++;
+//System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR PersistReader: read row="+r+", cols="+cols+", cm="+cm);
 				Timestamp sessionStartTime  = rs.getTimestamp(1);
 				Timestamp sessionSampleTime = rs.getTimestamp(2);
 				Timestamp sampleTime        = rs.getTimestamp(3);
@@ -1795,9 +1810,17 @@ implements Runnable, ConnectionProvider
 					
 					// Some datatypes we need to take extra care of
 					if (colSqlDataType[c-1] == Types.CLOB)
+					{
 						colVal = rs.getString(c);
-
-					cm.setValueAt(type, colVal, row, col);
+					}
+					else if (colSqlDataType[c-1] == Types.BINARY || colSqlDataType[c-1] == Types.VARBINARY || colSqlDataType[c-1] == Types.LONGVARBINARY)
+					{
+						byte[] binVal = rs.getBytes(c);
+						// null values is handled in StringUtil.bytesToHex()
+						colVal = StringUtil.bytesToHex(BINARY_PREFIX, binVal, BINARY_TOUPPER);
+					}
+					
+					cm.setOfflineValueAt(type, colVal, row, col);
 				}
 				
 				row++;
@@ -1821,6 +1844,8 @@ implements Runnable, ConnectionProvider
 			_logger.error("Problems loading cm='"+cmName+"', type='"+typeStr+"'.", e);
 		}
 	}
+	private static final String  BINARY_PREFIX  = Configuration.getCombinedConfiguration().getProperty(       ResultSetTableModel.PROPKEY_BINERY_PREFIX,  ResultSetTableModel.DEFAULT_BINERY_PREFIX);
+	private static final boolean BINARY_TOUPPER = Configuration.getCombinedConfiguration().getBooleanProperty(ResultSetTableModel.PROPKEY_BINARY_TOUPPER, ResultSetTableModel.DEFAULT_BINARY_TOUPPER);
 
 	
 	private void execLoadSummaryCm(Timestamp sampleTs)
@@ -2077,7 +2102,10 @@ implements Runnable, ConnectionProvider
 
 		// Make a new object, which the data will be attached to
 		// current CM is reused, then the fireXXX will be done and TableModel.get* will fail.
-		cm = cm.copyForOfflineRead();
+//System.out.println("PersistReaderloadSessionCm(): BEFORE copy cm="+cm);
+		cm = cm.copyForOfflineRead(); // NOTE: This causes A LOT OF TROUBLE (since a new instance/object is created every time... PLEASE: make a better solution...
+//		cm.clearForRead(); // NOTE: When we use a "single" CM (or single offline-cm) then it should be enough to clear/reset some fields in the offline-cm
+//System.out.println("PersistReaderloadSessionCm(): AFTER  copy cm="+cm);
 //System.out.println("loadSessionCm()|absRows="+cmInd._absRows+",diffRows="+cmInd._absRows+",rateRows="+cmInd._absRows+"| cm.getName()='"+cm.getName()+"', cmName='"+cmName+"'.");
 
 		if (cmInd._absRows  > 0) loadSessionCm(cm, CountersModel.DATA_ABS,  sampleTs);

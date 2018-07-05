@@ -14,10 +14,12 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import org.apache.log4j.Logger;
 import org.netbeans.spi.wizard.Wizard;
 import org.netbeans.spi.wizard.WizardPage;
 import org.netbeans.spi.wizard.WizardPanelNavResult;
 
+import com.asetune.Version;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.SwingUtils;
@@ -32,7 +34,14 @@ implements ActionListener
     private static final long serialVersionUID = 1L;
 	private static final String WIZ_NAME = "sql-capture";
 	private static final String WIZ_DESC = "Capture DDL/SQL";
-	private static final String WIZ_HELP = "Should individual DDL/SQL Statements be captured.";
+	private static final String WIZ_HELP = ""
+			+ "<html>"
+			+ "Should individual DDL/SQL Statements be captured.<br>"
+			+ "<br>"
+			+ "<b>Note:</b> This is only available for AseTune and SqlServerTune<br>"
+			+ "</html>";
+
+	private static Logger _logger = Logger.getLogger(WizardOfflinePage6.class);
 
 	//---- PCS:DDL Lookup & Store
 	private JCheckBox            _pcsDdl_doDdlLookupAndStore_chk             = new JCheckBox("Do DDL lookup and Store", PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore);
@@ -249,23 +258,29 @@ implements ActionListener
 
 	private void saveWizardData()
 	{
-		putWizardData(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore                 , _pcsDdl_doDdlLookupAndStore_chk             .isSelected() +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs         , _pcsDdl_afterDdlLookupSleepTimeInMs_txt     .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue     , _pcsDdl_addDependantObjectsToDdlInQueue_chk .isSelected() +"");
+		if ("AseTune".equals(Version.getAppName()) || "SqlServerTune".equals(Version.getAppName()))
+		{
+			putWizardData(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore                 , _pcsDdl_doDdlLookupAndStore_chk             .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs         , _pcsDdl_afterDdlLookupSleepTimeInMs_txt     .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue     , _pcsDdl_addDependantObjectsToDdlInQueue_chk .isSelected() +"");
 
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected() +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected() +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected() +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected() +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , _pcsCapSql_saveStatement_execTime_txt       .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , _pcsCapSql_saveStatement_logicalRead_txt    .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , _pcsCapSql_saveStatement_physicalRead_txt   .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected() +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText()    +"");
-		putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText()    +"");
-
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doSqlCaptureAndStore             , _pcsCapSql_doSqlCaptureAndStore_chk         .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sleepTimeInMs                    , _pcsCapSql_sleepTimeInMs_txt                .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doSqlText                        , _pcsCapSql_doSqlText_chk                    .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doStatementInfo                  , _pcsCapSql_doStatementInfo_chk              .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_doPlanText                       , _pcsCapSql_doPlanText_chk                   .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_execTime        , _pcsCapSql_saveStatement_execTime_txt       .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_logicalReads    , _pcsCapSql_saveStatement_logicalRead_txt    .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_gt_physicalReads   , _pcsCapSql_saveStatement_physicalRead_txt   .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup                 , _pcsCapSql_sendDdlForLookup_chk             .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_execTime     , _pcsCapSql_sendDdlForLookup_execTime_txt    .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads , _pcsCapSql_sendDdlForLookup_logicalRead_txt .getText()    +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, _pcsCapSql_sendDdlForLookup_physicalRead_txt.getText()    +"");
+		}
+		else
+		{
+			_logger.info("Functionality for '" + WIZ_DESC + "' is not supported for '"+Version.getAppName()+"'. No properties will be written for this wizard page.");
+		}
 	}
 
 	@SuppressWarnings("rawtypes")

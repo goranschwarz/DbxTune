@@ -9,11 +9,18 @@ import org.apache.log4j.Logger;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.mysql.CmGlobalStatus;
+import com.asetune.cm.mysql.CmInnodbBpStats;
 import com.asetune.cm.mysql.CmSummary;
+import com.asetune.cm.mysql.CmSysDiskIo;
+import com.asetune.cm.mysql.CmSysIndexStats;
+import com.asetune.cm.mysql.CmSysSession;
+import com.asetune.cm.mysql.CmSysTableStats;
 import com.asetune.cm.mysql.CmUserStatus;
+import com.asetune.cm.os.CmOsDiskSpace;
 import com.asetune.cm.os.CmOsIostat;
 import com.asetune.cm.os.CmOsMeminfo;
 import com.asetune.cm.os.CmOsMpstat;
+import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.gui.MainFrame;
@@ -62,18 +69,24 @@ extends CounterControllerAbstract
 		ICounterController counterController = this;
 		MainFrame          guiController     = hasGui ? MainFrame.getInstance() : null;
 
+		// Summary panel (the counters/values on the left side)
 		CmSummary           .create(counterController, guiController);
 
 		// Server
+		CmSysSession        .create(counterController, guiController);
 		CmGlobalStatus      .create(counterController, guiController);
 		CmUserStatus        .create(counterController, guiController);
 
 		// Object Access
-//		CmPgTables          .create(counterController, guiController);
-//		CmPgStatements      .create(counterController, guiController);
+		CmSysTableStats     .create(counterController, guiController);
+		CmSysIndexStats     .create(counterController, guiController);
+		
 
 		// Cache
+		CmInnodbBpStats     .create(counterController, guiController);
+
 		// Disk
+		CmSysDiskIo         .create(counterController, guiController);
 
 		// OS HOST Monitoring
 		CmOsIostat          .create(counterController, guiController);
@@ -81,6 +94,8 @@ extends CounterControllerAbstract
 		CmOsMpstat          .create(counterController, guiController);
 		CmOsUptime          .create(counterController, guiController);
 		CmOsMeminfo         .create(counterController, guiController);
+		CmOsNwInfo          .create(counterController, guiController);
+		CmOsDiskSpace       .create(counterController, guiController);
 
 		// USER DEFINED COUNTERS
 		createUserDefinedCounterModels(counterController, guiController);
@@ -171,7 +186,9 @@ extends CounterControllerAbstract
 		Timestamp counterClearTime = new Timestamp(0);
 
 //		String sql = "select current_timestamp, sys_context('USERENV','INSTANCE_NAME') as Instance, sys_context('USERENV','SERVER_HOST') as onHost from dual";
-		String sql = "select current_timestamp, 'DUMMY_INSTANCE' as Instance, 'DUMMY_HOSTNAME' as onHost";
+//		String sql = "select current_timestamp, 'DUMMY_INSTANCE' as Instance, 'DUMMY_HOSTNAME' as onHost";
+//		String sql = "select current_timestamp, @@hostname as Instance, @@hostname as onHost";
+		String sql = "select current_timestamp, @@hostname as onHost, @@port as portNum";
 
 		try
 		{
@@ -182,10 +199,14 @@ extends CounterControllerAbstract
 			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next())
 			{
-				mainSampleTime   = rs.getTimestamp(1);
-				dbmsServerName   = rs.getString(2);
-				dbmsHostname     = rs.getString(3);
+				Timestamp ts   = rs.getTimestamp(1);
+				String    host = rs.getString(2).trim();
+				String    port = rs.getString(3).trim();
 //				counterClearTime = rs.getTimestamp(4);
+
+				mainSampleTime   = ts;
+				dbmsServerName   = DbxTune.stripSrvName(host + ":" + port);
+				dbmsHostname     = host;
 			}
 			rs.close();
 			stmt.close();

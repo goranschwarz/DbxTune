@@ -59,6 +59,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
@@ -107,6 +108,7 @@ import javax.swing.UIManager;
 import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.PopupMenuEvent;
@@ -133,6 +135,7 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
+import com.asetune.AppDir;
 import com.asetune.DebugOptions;
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
@@ -147,6 +150,7 @@ import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dbms.OracleConfig;
 import com.asetune.config.dbms.PostgresConfig;
 import com.asetune.config.dbms.RaxConfig;
 import com.asetune.config.dbms.RsConfig;
@@ -174,6 +178,7 @@ import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.AbstractComponentDecorator;
+import com.asetune.gui.swing.DeferredChangeListener;
 import com.asetune.gui.swing.EventQueueProxy;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTableFilter;
@@ -203,7 +208,8 @@ import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.ResultSetJXTable.DmlOperation;
 import com.asetune.tools.sqlw.StatusBar.ServerInfo;
 import com.asetune.tools.sqlw.msg.JAseCancelledResultSet;
-import com.asetune.tools.sqlw.msg.JAseLimitedResultSet;
+import com.asetune.tools.sqlw.msg.JAseLimitedResultSetBottom;
+import com.asetune.tools.sqlw.msg.JAseLimitedResultSetTop;
 import com.asetune.tools.sqlw.msg.JAseMessage;
 import com.asetune.tools.sqlw.msg.JAseProcRetCode;
 import com.asetune.tools.sqlw.msg.JAseRowCount;
@@ -380,13 +386,13 @@ public class QueryWindow
 	public final static int     DEFAULT_lastFileNameSaveMax    = 20;
 
 	public final static String  PROPKEY_historyFileName        = PROPKEY_APP_PREFIX + "CommandHistory.filename";
-	public final static String  DEFAULT_historyFileName        = Version.getAppStoreDir() + File.separator + APP_NAME + ".command.history.xml";
+	public final static String  DEFAULT_historyFileName        = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".command.history.xml";
 
 	public final static String  PROPKEY_favoriteCmdFileNameSql = PROPKEY_APP_PREFIX + "FavoritCommands.filename.sql";
-	public final static String  DEFAULT_favoriteCmdFileNameSql = Version.getAppStoreDir() + File.separator + APP_NAME + ".favorite.sql.commands.xml";
+	public final static String  DEFAULT_favoriteCmdFileNameSql = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".favorite.sql.commands.xml";
 
 	public final static String  PROPKEY_favoriteCmdFileNameRcl = PROPKEY_APP_PREFIX + "FavoritCommands.filename.rcl";
-	public final static String  DEFAULT_favoriteCmdFileNameRcl = Version.getAppStoreDir() + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
+	public final static String  DEFAULT_favoriteCmdFileNameRcl = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".favorite.rcl.commands.xml";
 
 	public final static String  PROPKEY_restoreWinSizeForConn  = PROPKEY_APP_PREFIX + "restoreWinSizeForConn";
 	public final static boolean DEFAULT_restoreWinSizeForConn  = false;
@@ -395,7 +401,7 @@ public class QueryWindow
 	public final static String  DEFAULT_sqlBatchTerminator     = AseSqlScriptReader.DEFAULT_sqlBatchTerminator;
 
 	public final static String  PROPKEY_untitledFileName       = PROPKEY_APP_PREFIX + "editor.untitled.filename";
-	public final static String  DEFAULT_untitledFileName       = Version.getAppStoreDir() + File.separator + APP_NAME + ".editor.untitled.txt";
+	public final static String  DEFAULT_untitledFileName       = AppDir.getAppStoreDir() + File.separator + APP_NAME + ".editor.untitled.txt";
 
 	public final static String  PROPKEY_rsFilterRowThresh      = PROPKEY_APP_PREFIX + "resultset.filter.threshold.rowcount";
 	public final static int     DEFAULT_rsFilterRowThresh      = 5;
@@ -551,6 +557,7 @@ public class QueryWindow
 	private String      _connectedToProductName           = null;
 	private String      _connectedToProductVersion        = null;
 	private String      _connectedToServerName            = null;
+	private String      _connectedInitialCatalog          = null;
 	private String      _connectedToSysListeners          = null;
 	private String      _connectedSrvPageSizeInKb         = null;
 	private String      _connectedSrvCharset              = null;
@@ -690,12 +697,8 @@ public class QueryWindow
 		Version.setAppName(APP_NAME);
 		
 		// Create store dir if it did not exists.
-		File appStoreDir = new File(Version.getAppStoreDir());
-		if ( ! appStoreDir.exists() )
-		{
-			if (appStoreDir.mkdir())
-				System.out.println("Creating directory '"+appStoreDir+"' to hold various files for "+Version.getAppName());
-		}
+		List<String> crAppDirLog = AppDir.checkCreateAppDir( null, System.out );
+
 
 		// Initialize the "Check For Updates" subsystem
 		CheckForUpdates.setInstance( new CheckForUpdatesSqlw() );
@@ -703,18 +706,18 @@ public class QueryWindow
 		// -----------------------------------------------------------------
 		// CHECK/SETUP information from the CommandLine switches
 		// -----------------------------------------------------------------
-		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "dbxtune.properties");
-		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "dbxtune.user.properties");
-		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "sqlw.save.properties");
+		final String CONFIG_FILE_NAME      = System.getProperty("CONFIG_FILE_NAME",      "conf" + File.separatorChar + "dbxtune.properties");
+		final String USER_CONFIG_FILE_NAME = System.getProperty("USER_CONFIG_FILE_NAME", "conf" + File.separatorChar + "dbxtune.user.properties");
+		final String TMP_CONFIG_FILE_NAME  = System.getProperty("TMP_CONFIG_FILE_NAME",  "conf" + File.separatorChar + "sqlw.save.properties");
 		final String SQLW_HOME             = System.getProperty("SQLW_HOME");
 		
-		String defaultPropsFile     = (SQLW_HOME                != null) ? SQLW_HOME                + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
-		String defaultUserPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
-		String defaultTmpPropsFile  = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile     = (SQLW_HOME               != null) ? SQLW_HOME               + File.separator + CONFIG_FILE_NAME      : CONFIG_FILE_NAME;
+		String defaultUserPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + USER_CONFIG_FILE_NAME : USER_CONFIG_FILE_NAME;
+		String defaultTmpPropsFile  = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME  : TMP_CONFIG_FILE_NAME;
 		String defaultTailPropsFile = LogTailWindow.getDefaultPropFile();
 
 		// Compose MAIN CONFIG file (first USER_HOME then ASETUNE_HOME)
-		String filename = Version.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
+		String filename = AppDir.getAppStoreDir() + File.separator + CONFIG_FILE_NAME;
 		if ( (new File(filename)).exists() )
 			defaultPropsFile = filename;
 
@@ -878,6 +881,13 @@ public class QueryWindow
 		_logger.info("User configuration file is '"+userPropFile+"'.");
 		_logger.info("Storing temporary configurations in file '"+tmpPropFile+"'.");
 		_logger.info("Combined Configuration Search Order '"+StringUtil.toCommaStr(Configuration.getSearchOrder())+"'.");
+
+		if (crAppDirLog != null && !crAppDirLog.isEmpty())
+		{
+			_logger.info("Below messages was created earlier by 'check/create application directory'.");
+			for (String msg : crAppDirLog)
+				_logger.info(msg);
+		}
 
 
 		// Do a dummy encryption, this will hopefully speedup, so that the connection dialog wont hang for a long time during initialization
@@ -1512,7 +1522,7 @@ public class QueryWindow
 			getDbmsProductInfoAfterConnect(conn, null);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(_connectedToServerName, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(_connectedToServerName, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 		}
 
@@ -1940,6 +1950,20 @@ public class QueryWindow
 
 		_resPanelScroll.getVerticalScrollBar()  .setUnitIncrement(16);
 		_resPanelScroll.getHorizontalScrollBar().setUnitIncrement(16);
+		
+		if (JavaVersion.isJava9orLater())
+		{
+			_logger.info("For Java-9, add a 'repaint' when the scrollbar moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA 9 RELEASE.");
+
+			_resPanelScroll.getViewport().addChangeListener(new DeferredChangeListener(50, false)
+			{
+				@Override
+				public void deferredStateChanged(ChangeEvent e)
+				{
+					_resPanelScroll.repaint();
+				}
+			});
+		}
 
 		_resPanelScroll    .setVisible(true);
 		_resPanelTextScroll.setVisible(false);
@@ -2976,13 +3000,10 @@ public class QueryWindow
 	** END: implementing DocumentListener
 	**--------------------------------------------------*/
 
-	/**
-	 * Called after a succesfully connection has been made
-	 * @param connType TDS, OFFLINE or JDBC
-	 * @param connDialog 
-	 */
-	private void setVariousInfoAfterConnect(int connType, ConnectionDialog connDialog, boolean sendConnectionStatistics)
+	/** used in: setVariousInfoAfterConnect() */
+	private String getServernameToDisplayInTitle(int connType)
 	{
+		// TDS
 		if (connType == ConnectionDialog.TDS_CONN)
 		{
 			// Grab a "servername"
@@ -3000,12 +3021,73 @@ public class QueryWindow
 				else
 					srvStr = aseHostPort + "";
 			}
+			return srvStr;
+		}
+		// OFFLINE, JDBC
+		else if (connType == ConnectionDialog.OFFLINE_CONN || connType == ConnectionDialog.JDBC_CONN)
+		{
+			String srvStr = _conn.toString();
+			if (StringUtil.hasValue(_connectedToServerName))
+				srvStr = _connectedToServerName;
+
+			if (StringUtil.hasValue(_connectedInitialCatalog))
+			{
+				// For DBMS Vendors that you can't "move" around from database to database (use dbname), lets print the initial connected catalog 
+				if (DbUtils.isProductName(_connectedToProductName, 
+						DbUtils.DB_PROD_NAME_DB2_UX,
+						DbUtils.DB_PROD_NAME_DERBY,
+						DbUtils.DB_PROD_NAME_H2, 
+						DbUtils.DB_PROD_NAME_HANA,
+						DbUtils.DB_PROD_NAME_HSQL,
+						DbUtils.DB_PROD_NAME_MAXDB,
+						DbUtils.DB_PROD_NAME_ORACLE,
+						DbUtils.DB_PROD_NAME_POSTGRES
+				    ))
+				{
+					srvStr += "/" + _connectedInitialCatalog;
+				}
+			}
+			
+			
+			return srvStr;
+		}
+		else
+		{
+			_logger.error("Unknown connection type '"+connType+"' in getServernameToDisplayInTitle(connType)");
+			return "unknownConnType("+connType+")";
+		}
+	}
+	/**
+	 * Called after a succesfully connection has been made
+	 * @param connType TDS, OFFLINE or JDBC
+	 * @param connDialog 
+	 */
+	private void setVariousInfoAfterConnect(int connType, ConnectionDialog connDialog, boolean sendConnectionStatistics)
+	{
+		if (connType == ConnectionDialog.TDS_CONN)
+		{
+			// Grab a "servername"
+//			String interfaceEntry = AseConnectionFactory.getServer();
+//			String aseHostPort    = AseConnectionFactory.getHostPortStr();
+//			String srvStr         = "";
+//			if (StringUtil.hasValue(interfaceEntry))
+//			{
+//				srvStr = interfaceEntry;
+//			}
+//			else
+//			{
+//				if (StringUtil.hasValue(_connectedToServerName))
+//					srvStr = _connectedToServerName + " (" + aseHostPort + ")";
+//				else
+//					srvStr = aseHostPort + "";
+//			}
+			String srvStr = getServernameToDisplayInTitle(connType);
 
 			// Set server name in windows - title
 			setSrvInTitle(srvStr, _connectedToProductName);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 			
 			// Load Windown Props for this TDS Server
@@ -3057,15 +3139,16 @@ public class QueryWindow
 		else if (connType == ConnectionDialog.OFFLINE_CONN)
 		{
 			// Grab a "servername"
-			String srvStr = _conn.toString();
-			if (StringUtil.hasValue(_connectedToServerName))
-				srvStr = _connectedToServerName;
+//			String srvStr = _conn.toString();
+//			if (StringUtil.hasValue(_connectedToServerName))
+//				srvStr = _connectedToServerName;
+			String srvStr = getServernameToDisplayInTitle(connType);
 
 			// Set server name in windows - title
 			setSrvInTitle(srvStr, _connectedToProductName);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 
 			// Load Windown Props for this OFFLINE Server
@@ -3117,15 +3200,16 @@ public class QueryWindow
 		else if (connType == ConnectionDialog.JDBC_CONN)
 		{
 			// Grab a "servername"
-			String srvStr = _connectedWithUrl;
-			if (StringUtil.hasValue(_connectedToServerName))
-				srvStr = _connectedToServerName;
+//			String srvStr = _connectedWithUrl;
+//			if (StringUtil.hasValue(_connectedToServerName))
+//				srvStr = _connectedToServerName;
+			String srvStr = getServernameToDisplayInTitle(connType);
 
 			// Set server name in windows - title
 			setSrvInTitle(srvStr, _connectedToProductName);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
 			_statusBar.setServerInfo(srvInfo);
 
 			// Load Windown Props for this JDBC Server
@@ -3268,10 +3352,11 @@ public class QueryWindow
 			_connectedClientCharsetId   = null;
 			_connectedClientCharsetName = null;
 			_connectedClientCharsetDesc = null;
+			try { _connectedInitialCatalog    = conn.getCatalog(); } catch (SQLException ex) {}
 
 			SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
 			
-			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
+			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
 		} 
 		catch (Throwable ex) 
 		{
@@ -3325,6 +3410,7 @@ public class QueryWindow
 		_connectedToProductName     = null;
 		_connectedToProductVersion  = null;
 		_connectedToServerName      = null;
+		_connectedInitialCatalog    = null;
 		_connectedToSysListeners    = null;
 		_connectedSrvPageSizeInKb   = null;
 		_connectedSrvCharset        = null;
@@ -3754,6 +3840,9 @@ public class QueryWindow
 				// Sortorder & charset
 				_connectedSrvCharset   = DbUtils.getOracleCharset(_conn);
 				_connectedSrvSortorder = DbUtils.getOracleSortorder(_conn);
+
+				// DBMS Configuration
+				DbmsConfigManager.setInstance( new OracleConfig() );
 
 				// Tooltip supplier
 				_tooltipProviderAbstract = new ToolTipSupplierOracle(_window, _compleationProviderAbstract, this);
@@ -4189,6 +4278,7 @@ public class QueryWindow
 		_connectedToProductName     = null;
 		_connectedToProductVersion  = null;
 		_connectedToServerName      = null;
+		_connectedInitialCatalog    = null;
 		_connectedAsUser            = null;
 		_connectedWithUrl           = null;
 		_connectedToSysListeners    = null;
@@ -5023,7 +5113,7 @@ public class QueryWindow
 		final String SQLW_HOME = System.getProperty("SQLW_HOME", "");
 		if (currentFilePath != null && currentFilePath.toString().equals(SQLW_HOME))
 		{
-			File defaultSaveAsDir = new File(Version.getAppStoreDir() + File.separator + "saved_files");
+			File defaultSaveAsDir = new File(AppDir.getAppStoreDir() + File.separator + "saved_files");
 			if ( ! defaultSaveAsDir.exists() )
 			{
 				if (defaultSaveAsDir.mkdir())
@@ -5879,6 +5969,7 @@ public class QueryWindow
 //			{
 //				cwdb = rs.getString(1);
 //			}
+//			rs.close();
 //			_currentDbName = cwdb;
 //
 //			String currentSelectedDb = (String) _dbnames_cbx.getSelectedItem();
@@ -5918,6 +6009,7 @@ public class QueryWindow
 //				cbm.addElement(rs.getString(1));
 //				cwdb = rs.getString(2);
 //			}
+//			rs.close();
 //			_currentDbName = cwdb;
 //
 //			// Check if number of databases has changed
@@ -6026,6 +6118,7 @@ public class QueryWindow
 //			{
 //				cbm.addElement(rs.getString(1));
 //			}
+//			rs.close();
 //			_currentDbName = getCurrentDb();
 //
 //			// Check if number of databases has changed
@@ -6093,6 +6186,7 @@ public class QueryWindow
 				{
 					cbm.addElement(rs.getString(1));
 				}
+				rs.close();
 
 				// Get current dbname
 				currentDb = conn.getCatalog();
@@ -6348,13 +6442,13 @@ public class QueryWindow
 			public void actionPerformed(ActionEvent e)
 			{
 				Component invoker = TablePopupFactory.getPopupMenuInvoker((JMenuItem)e.getSource());
-System.out.println("DML.actionPerformed.invoker=|"+invoker+"|");
+//System.out.println("DML.actionPerformed.invoker=|"+invoker+"|");
 				if (invoker instanceof ResultSetJXTable)
 				{
 					ResultSetJXTable table = (ResultSetJXTable)invoker;
 					String dmlText = table.getDmlForSelectedRows(DmlOperation.Insert);
 
-System.out.println("DML=|"+dmlText+"|");
+//System.out.println("DML=|"+dmlText+"|");
 					SwingUtils.setClipboardContents(dmlText);
 				}
 			}
@@ -6362,7 +6456,21 @@ System.out.println("DML=|"+dmlText+"|");
 
 		ddlGenMenuInsert.add(toClipboard);
 		
+		//------------------------------------------------------------------------------------
+		// Generate Text using template from the ResultSet
+		//------------------------------------------------------------------------------------
+		JMenuItem generateTextFromTemplate = new JMenuItem("Generate Text/Code Using Templates...");
+		popup.add(generateTextFromTemplate);
 		
+		generateTextFromTemplate.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				SwingUtils.showInfoMessage(_window, "Not Yet Implemented", "Sorry, Not Yet Implemented");
+			}
+		});
+
 
 		// create pupup depending on what we are connected to
 		String propPostfix = "";
@@ -6494,6 +6602,7 @@ System.out.println("DML=|"+dmlText+"|");
 //    		ResultSet rs    = stmnt.executeQuery("select @@tranchained");
 //    		while (rs.next())
 //    			atatTranChained = rs.getInt(1);
+//			rs.close();
 //    		
 //    		if (atatTranChained != -1)
 //    			isAutoCommit = (atatTranChained == 0 ? true : false);
@@ -7351,6 +7460,10 @@ ex.printStackTrace();
 									if (sr.hasOption_topRows())
 										limitRsRowsCount = sr.getOption_topRows();
 									
+									int bottomRsRowsCount = -1; // do not limit
+									if (sr.hasOption_bottomRows())
+										bottomRsRowsCount = sr.getOption_bottomRows();
+									
 									boolean asPlainText = _asPlainText_chk.isSelected();
 									if (sr.hasOption_asPlaintText())
 										asPlainText = sr.getOption_asPlaintText();
@@ -7361,7 +7474,7 @@ ex.printStackTrace();
 									
 									if (asPlainText)
 									{
-										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, noData, sr.getPipeCmd(), progress);
+										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 
 										execReadRsSum += rstm.getResultSetReadTime();
@@ -7376,12 +7489,15 @@ ex.printStackTrace();
 											_resultCompList.add(new JAseCancelledResultSet(sql));
 
 										if (rstm.wasAbortedAfterXRows())
-											_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
+											_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
+
+										if (rstm.wasBottomApplied())
+											_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
 									}
 									else
 									{
 										// Convert the ResultSet into a TableModel, which fits on a JTable
-										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, noData, sr.getPipeCmd(), progress);
+										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 					
 										execReadRsSum += rstm.getResultSetReadTime();
@@ -7410,7 +7526,10 @@ ex.printStackTrace();
 											_resultCompList.add(new JAseCancelledResultSet(sql));
 
 										if (rstm.wasAbortedAfterXRows())
-											_resultCompList.add(new JAseLimitedResultSet(rstm.getAbortedAfterXRows(), sql));
+											_resultCompList.add(new JAseLimitedResultSetTop(rstm.getAbortedAfterXRows(), sql));
+
+										if (rstm.wasBottomApplied())
+											_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
 									}
 								} // end: normal read result set
 			
@@ -8425,6 +8544,7 @@ checkPanelSize(_resPanel, comp);
 //					resultCompList.add( new JOracleMessage(owner, name, type, sequence, line, position, text, attribute, message_number, 
 //							xxxLine, originSql, _query_txt) );
 //				}
+//				rs.close();
 //			}
 //			catch(SQLException e)
 //			{
@@ -8527,6 +8647,7 @@ checkPanelSize(_resPanel, comp);
 					_logger.info("Oracle: non matching row in ALL_ERRORS table found (ddlType='"+ddlType+"', ddlOwner='"+ddlOwner+"', ddlName='"+ddlName+"'): type='"+type+"', owner='"+owner+"', name='"+name+"', sequence="+sequence+", line="+line+", position="+position+", attribute='"+attribute+"', message_number="+message_number+", text="+text.replace('\n', ' '));
 				}
 			}
+			rs.close();
 		}
 		catch(SQLException e)
 		{
@@ -12139,7 +12260,7 @@ checkPanelSize(_resPanel, comp);
 		PropertyConfigurator.configure(log4jProps);
 
 		// Set configuration, right click menus are in there...
-		Configuration conf = new Configuration("c:\\projects\\asetune\\dbxtune.properties");
+		Configuration conf = new Configuration("c:\\projects\\asetune\\conf\\dbxtune.properties");
 		Configuration.setInstance(Configuration.SYSTEM_CONF, conf);
 
 		// Create the factory object that holds the database connection using
@@ -12232,6 +12353,7 @@ checkPanelSize(_resPanel, comp);
 		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 		pw.println("                            To get available option, do -x list");
+		pw.println("  -a,--createAppDir         Create application dir (~/.dbxtune) and exit.");
 		pw.println("  ");
 		pw.println("  -U,--user <user>          Username when connecting to server.");
 		pw.println("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd");
@@ -12265,6 +12387,8 @@ checkPanelSize(_resPanel, comp);
 		options.addOption( "h", "help",        false, "Usage information." );
 		options.addOption( "v", "version",     false, "Display "+Version.getAppName()+" and JVM Version." );
 		options.addOption( "x", "debug",       true,  "Debug options: a comma separated string dbg1,dbg2,dbg3" );
+
+		options.addOption( "a", "createAppDir",false, "create application directory and exit");
 
 		options.addOption( "U", "user",        true, "Username when connecting to server." );
 		options.addOption( "P", "passwd",      true, "Password when connecting to server. (null=noPasswd)" );
@@ -12358,6 +12482,14 @@ checkPanelSize(_resPanel, comp);
 				System.out.println();
 				System.out.println(Version.getAppName()+" Version: " + Version.getVersionStr() + " JVM: " + System.getProperty("java.version"));
 				System.out.println();
+			}
+			//-------------------------------
+			// CREATE APP DIR
+			//-------------------------------
+			else if ( cmd.hasOption("createAppDir") )
+			{
+				// Create store dir if it did not exists.
+				AppDir.checkCreateAppDir( null, System.out );
 			}
 			//-------------------------------
 			// Check for correct number of cmd line parameters

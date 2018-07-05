@@ -15,13 +15,12 @@ import org.apache.log4j.Logger;
 
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CmSettingsHelper;
-import com.asetune.cm.CmSettingsHelper.InputValidator;
+import com.asetune.cm.CmSettingsHelper.JsonInputValidator;
 import com.asetune.cm.CmSettingsHelper.Type;
-import com.asetune.cm.CmSettingsHelper.ValidationException;
+import com.asetune.cm.CmSettingsHelper.UrlInputValidator;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.HttpUtils;
 import com.asetune.utils.StringUtil;
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonWriter;
 
 public class AlarmWriterToNagiosRest
@@ -116,7 +115,7 @@ extends AlarmWriterAbstract
 			}
 			else
 			{
-				_logger.info("Responce code "+responceCode+" ("+AlarmWriterToRest.htmlResponceCodeToText(responceCode)+"). From URL '"+_url+"'. Sent JSON content: "+jsonMessage);
+				_logger.info("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+_url+"'. Sent JSON content: "+jsonMessage);
 			}
 
 			// Read responce and print the output...
@@ -143,31 +142,6 @@ extends AlarmWriterAbstract
 		return "Write Alarms to Nagios as a REST call with JSON content.";
 	}
 
-	/** Input validator */
-	private static class UrlInputValidator
-	implements InputValidator
-	{
-		@Override
-		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
-		{
-			try { new URL(val); }
-			catch(MalformedURLException ex) { throw new ValidationException("The URL '"+val+"' seems to be malformed. Caught: "+ex.getMessage()); }
-			return true;
-		}
-	}
-	/** Input validator */
-	private static class JsonInputValidator
-	implements InputValidator
-	{
-		@Override
-		public boolean isValid(CmSettingsHelper sh, String val) throws ValidationException
-		{
-			try { Gson gson = new Gson(); gson.fromJson(val, Object.class); }
-			catch(JsonSyntaxException ex) { throw new ValidationException("The JSON content seems to be faulty. Caught: "+ex.getMessage()); }
-			return true;
-		}
-	}
-	
 	@Override
 	public List<CmSettingsHelper> getAvailableSettings()
 	{
@@ -333,6 +307,7 @@ throw new Exception("############################### This is NOT ready yet... it
 				w.name("serviceName") .value("${serviceName}");
 				w.name("serviceInfo") .value("${serviceInfo}");
 				w.name("extraInfo")   .value("${extraInfo}");
+				w.name("category")    .value("${category}");
 				w.name("severity")    .value("${severity}");
 				w.name("state")       .value("${state}");
 				w.name("data")        .value("${data}");

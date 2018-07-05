@@ -1,7 +1,9 @@
 package com.asetune.utils;
 
+import java.lang.management.LockInfo;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
+import java.lang.management.MonitorInfo;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
@@ -99,7 +101,7 @@ public class JavaUtils
 				                 + "\t   + lockName='" + ti.getLockName() + "', ownedBy='" + ti.getLockOwnerName() + "', LockOwnerId=" + ti.getLockOwnerId() + "\n"
 				                 + "\t   + thread Cpu Time Ms: Total=" + totalCpuTime + ", User=" + userCpuTime + " (" + userCpuPct + "%), System=" + systemCpuTime + "(" + systemCpuPct + "%)\n";
 
-				StringBuilder sb = new StringBuilder(ti.toString());
+				StringBuilder sb = new StringBuilder(threadInfoToString(ti, -1));
 		
 				int firstTab = sb.indexOf("\t");
 				if (firstTab != -1)
@@ -108,9 +110,95 @@ public class JavaUtils
 			}
 			else
 			{
-				out.append(ti);
+				out.append(threadInfoToString(ti, -1));
 			}
 		}
 		return out.toString();
+	}
+
+	/**
+	 * This method is grabbed from java.lang.management.ThreadInfo.toString() <br>
+	 * But in here we can decide the stackDepth, which is default to 512 instead of 8
+	 * <p>
+	 * Returns a string representation of this thread info.
+	 * The format of this string depends on the implementation.
+	 * The returned string will typically include
+	 * the {@linkplain #getThreadName thread name},
+	 * the {@linkplain #getThreadId thread ID},
+	 * its {@linkplain #getThreadState state},
+	 * and a {@linkplain #getStackTrace stack trace} if any.
+	 *
+	 * @return a string representation of this thread info.
+	 */
+	public static String threadInfoToString(ThreadInfo ti, int maxFrames) 
+	{
+		if (maxFrames < 0 )
+			maxFrames = 512;
+
+		StringBuilder sb = new StringBuilder("\"" + ti.getThreadName() + "\"" +
+		                                     " Id=" + ti.getThreadId() + " " +
+		                                     ti.getThreadState());
+		if (ti.getLockName() != null) {
+			sb.append(" on " + ti.getLockName());
+		}
+		if (ti.getLockOwnerName() != null) {
+			sb.append(" owned by \"" + ti.getLockOwnerName() +
+			          "\" Id=" + ti.getLockOwnerId());
+		}
+		if (ti.isSuspended()) {
+			sb.append(" (suspended)");
+		}
+		if (ti.isInNative()) {
+			sb.append(" (in native)");
+		}
+		sb.append('\n');
+		int i = 0;
+		StackTraceElement[] stackTrace = ti.getStackTrace();
+		for (; i < stackTrace.length && i < maxFrames; i++) {
+			StackTraceElement ste = stackTrace[i];
+			sb.append("\tat " + ste.toString());
+			sb.append('\n');
+			if (i == 0 && ti.getLockInfo() != null) {
+				Thread.State ts = ti.getThreadState();
+				switch (ts) {
+					case BLOCKED:
+						sb.append("\t-  blocked on " + ti.getLockInfo());
+						sb.append('\n');
+						break;
+					case WAITING:
+						sb.append("\t-  waiting on " + ti.getLockInfo());
+						sb.append('\n');
+						break;
+					case TIMED_WAITING:
+						sb.append("\t-  waiting on " + ti.getLockInfo());
+						sb.append('\n');
+						break;
+					default:
+				}
+			}
+
+			for (MonitorInfo mi : ti.getLockedMonitors()) {
+				if (mi.getLockedStackDepth() == i) {
+					sb.append("\t-  locked " + mi);
+					sb.append('\n');
+				}
+			}
+		}
+		if (i < stackTrace.length) {
+			sb.append("\t...");
+			sb.append('\n');
+		}
+
+		LockInfo[] locks = ti.getLockedSynchronizers();
+		if (locks.length > 0) {
+			sb.append("\n\tNumber of locked synchronizers = " + locks.length);
+			sb.append('\n');
+			for (LockInfo li : locks) {
+				sb.append("\t- " + li);
+				sb.append('\n');
+			}
+		}
+		sb.append('\n');
+		return sb.toString();
 	}
 }

@@ -1,6 +1,9 @@
 package com.asetune.cm.rs;
 
 import java.sql.Connection;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,13 +14,15 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.NoValidRowsInSample;
 import com.asetune.cm.rs.gui.CmSummaryPanel;
 import com.asetune.graph.TrendGraphDataPoint;
-import com.asetune.graph.TrendGraphDataPoint.LabelType;
-import com.asetune.gui.TrendGraph;
+import com.asetune.sql.ResultSetMetaDataCached;
+import com.asetune.sql.conn.DbxConnection;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -99,46 +104,67 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_XXX             = "xxx";
-	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
+//	public static final String GRAPH_NAME_XXX             = "xxx";
+//	public static final String GRAPH_NAME_AA_NW_PACKET       = "aaPacketGraph";      // String x=GetCounters.CM_GRAPH_NAME__SUMMARY__AA_NW_PACKET;
 
 	private void addTrendGraphs()
 	{
-		String[] labels_xxx            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
-		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
-		
-		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx,        LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,    new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,    labels_aaNwPacket, LabelType.Static));
+//		String[] labels_xxx            = new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" };
+//		String[] labels_aaNwPacket       = new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" };
+//		
+//		addTrendGraphData(GRAPH_NAME_XXX,             new TrendGraphDataPoint(GRAPH_NAME_XXX,             labels_xxx,        LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_AA_NW_PACKET,    new TrendGraphDataPoint(GRAPH_NAME_AA_NW_PACKET,    labels_aaNwPacket, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_XXX,
-				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
-				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
-				labels_xxx, 
-				true,  // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+//		// GRAPH
+//		addTrendGraph(GRAPH_NAME_XXX,
+//			"CPU Summary, Global Variables", 	                        // Menu CheckBox text
+//			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
+//			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
+//			LabelType.Static,
+//			true,  // is Percent Graph
+//			false, // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+//
+//		// GRAPH
+//		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
+//			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
+//			"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
+//			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" },
+//			LabelType.Static,
+//			false, // is Percent Graph
+//			false, // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
-					"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
-					"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
-					labels_aaNwPacket, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);   // minimum height
-				addTrendGraph(tg.getName(), tg, true);
-
-		}
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_XXX,
+//				"CPU Summary, Global Variables", 	                        // Menu CheckBox text
+//				"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
+//				labels_xxx, 
+//				true,  // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_AA_NW_PACKET,
+//					"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
+//					"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
+//					labels_aaNwPacket, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);   // minimum height
+//				addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override
@@ -192,7 +218,73 @@ extends CountersModel
 //		
 //		return sql;
 
-		return "admin pid";
+//		return "admin pid";
+		return "-- Sorry, this is hardcoded in the Performance Counter";
+	}
+
+	@Override
+	public CounterSample createCounterSample(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+	{
+		return new CounterSampleRsSummary(name, negativeDiffCountersToZero, diffColumns, prevSample);
+	}
+
+	/**
+	 * Special class for collecting summary data... which isn't really accessing RepServer
+	 * instead it takes data from this cm and the DbxConnection
+	 */
+	private static class CounterSampleRsSummary
+	extends CounterSample
+	{
+		private static final long serialVersionUID = 1L;
+
+		public CounterSampleRsSummary(String name, boolean negativeDiffCountersToZero, String[] diffColumns, CounterSample prevSample)
+		{
+			super(name, negativeDiffCountersToZero, diffColumns, prevSample);
+		}
+		
+		@Override
+		public boolean getSample(CountersModel cm, DbxConnection conn, String sql, List<String> pkList) 
+		throws SQLException, NoValidRowsInSample
+		{
+			// TODO Auto-generated method stub
+			//return super.getSample(cm, conn, sql, pkList);
+
+			updateSampleTime(conn, cm);
+			
+			_rows = new ArrayList<List<Object>>();
+
+			// Set ResultSet MetaData
+			ResultSetMetaData rsmd = cm.getResultSetMetaData();
+			if ( rsmd == null )
+			{
+				ResultSetMetaDataCached rsmdCached = new ResultSetMetaDataCached();
+
+				//             columnName,            columnType,               columnTypeName, nullable, columnClassName             columnDisplaySize 
+				rsmdCached.addColumn("serverName",          java.sql.Types.VARCHAR,   "varchar",      false,    String   .class.getName(),  30);
+				rsmdCached.addColumn("rsVersion",           java.sql.Types.VARCHAR,   "varchar",      false,    String   .class.getName(),  255);
+//				rsmdCached.addColumn("sampleTime",          java.sql.Types.TIMESTAMP, "datetime",     false,    Timestamp.class.getName(),  30);
+
+				cm.setResultSetMetaData( rsmdCached );
+				rsmd = rsmdCached;
+			}
+			
+			if ( ! initColumnInfo(rsmd, pkList, 1) )
+				return false;
+			
+
+			// set data
+			List<Object> row = new ArrayList<>();
+			row.add(conn.getDbmsServerName());
+			row.add(conn.getDbmsVersionStr());
+//			row.add(cm.getSampleTime());
+
+			_rows.add(row);
+
+			// Set last refresh time
+			_lastLocalSampleTime = System.currentTimeMillis();
+
+			return true;
+		}
 	}
 	
 	@Override
@@ -203,24 +295,24 @@ extends CountersModel
 		//---------------------------------
 		// GRAPH:
 		//---------------------------------
-		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
-		{	
-			Double[] arr = new Double[3];
-
-			int ms = (int) (System.currentTimeMillis() % 1000l);
-			ms = ms < 0 ? ms+1000 : ms;
-
-//			arr[0] = this.getAbsValueAsDouble (0, "Connections");
-//			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
-//			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
-			arr[0] = new Double(5.1  * ms);
-			arr[1] = new Double(10.2 * ms);
-			arr[2] = new Double(15.5 * ms);
-			_logger.debug("updateGraphData("+GRAPH_NAME_XXX+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"'.");
-
-			// Set the values
-			tgdp.setDataPoint(this.getTimestamp(), arr);
-		}
+//		if (GRAPH_NAME_XXX.equals(tgdp.getName()))
+//		{	
+//			Double[] arr = new Double[3];
+//
+//			int ms = (int) (System.currentTimeMillis() % 1000l);
+//			ms = ms < 0 ? ms+1000 : ms;
+//
+////			arr[0] = this.getAbsValueAsDouble (0, "Connections");
+////			arr[1] = this.getAbsValueAsDouble (0, "distinctLogins");
+////			arr[2] = this.getDiffValueAsDouble(0, "aaConnections");
+//			arr[0] = new Double(5.1  * ms);
+//			arr[1] = new Double(10.2 * ms);
+//			arr[2] = new Double(15.5 * ms);
+//			_logger.debug("updateGraphData("+GRAPH_NAME_XXX+"): Connections(Abs)='"+arr[0]+"', distinctLogins(Abs)='"+arr[1]+"', aaConnections(Diff)='"+arr[2]+"'.");
+//
+//			// Set the values
+//			tgdp.setDataPoint(this.getTimestamp(), arr);
+//		}
 
 //		//---------------------------------
 //		// GRAPH:

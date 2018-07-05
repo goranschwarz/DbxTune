@@ -159,7 +159,6 @@ extends AlarmWriterAbstract
 
 	private List<String> _toList     = new ArrayList<>();
 	private List<String> _ccList     = new ArrayList<>();
-
 	//-------------------------------------------------------
 
 	@Override
@@ -233,7 +232,7 @@ extends AlarmWriterAbstract
 	public static final String  DEFAULT_from               = "";
 	
 	public static final String  PROPKEY_subjectTemplate    = "AlarmWriterToMail.msg.subject.template";
-	public static final String  DEFAULT_subjectTemplate    = "${type}: ${alarmClass} - ${serviceInfo} - ${extraInfo}";
+	public static final String  DEFAULT_subjectTemplate    = "${type}: ${alarmClassAbriviated} - ${serviceInfo} - ${extraInfo}";
 	
 	public static final String  PROPKEY_msgBodyTemplate    = "AlarmWriterToMail.msg.body.template";
 	public static final String  DEFAULT_msgBodyTemplate    = createMsgBodyTemplate();
@@ -265,11 +264,13 @@ extends AlarmWriterAbstract
 		return ""
 			+ "Type:     ${type}  (${duration})\n"
 			+ "\n"
+			+ "Server:   ${serviceName}\n"
+			+ "Alarm:    ${alarmClassAbriviated}\n"
+			+ "\n"
+			+ "Category: ${category}\n"
 			+ "Severity: ${severity}\n"
 			+ "State:    ${state}\n"
 			+ "\n"
-			+ "Alarm:    ${alarmClass}\n"
-			+ "Server:   ${serviceName}\n"
 			+ "Info:     ${extraInfo}\n"
 			+ "Time:     ${crTimeStr}\n"
 			+ "\n"

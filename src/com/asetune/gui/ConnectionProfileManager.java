@@ -50,6 +50,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.gui.ConnectionProfile.ConnProfileEntry;
 import com.asetune.gui.ConnectionProfile.JdbcEntry;
@@ -95,7 +96,7 @@ public class ConnectionProfileManager
 
 	/** default file name where the connection profiles are stored */
 	public  final static String  PROPKEY_STORAGE_FILE = "ConnectionProfileManager.storage.filename";
-	public  final static String  DEFAULT_STORAGE_FILE = Version.getAppStoreDir() + File.separator + "ConnectionProfiles.xml";
+	public  final static String  DEFAULT_STORAGE_FILE = AppDir.getAppStoreDir() + File.separator + "ConnectionProfiles.xml";
 
 	public static final String   PROPKEY_connProfile_serverAdd_showDialog_H2_offline = "ConnectionProfileManager.connProfile.serverAdd.showDialog.h2.offline";
 	public static final boolean  DEFAULT_connProfile_serverAdd_showDialog_H2_offline = false;
@@ -1061,7 +1062,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 	 * @param selectedProfileName  currently selected profile name (could be null)
 	 * @param owner                GUI Owner/Caller
 	 */
-	public void possiblyAddChange(String key, boolean afterSuccessfulConnect, String productName, String dbServerName, ConnProfileEntry connProfileEntry, String selectedProfileName, JDialog owner)
+	public void possiblyAddChange(String key, boolean afterSuccessfulConnect, String productName, String dbServerName, ConnProfileEntry connProfileEntry, String selectedProfileName, JDialog owner, boolean showProfileOverride)
 	{
 		ConnectionProfile connProfile = getProfile(key);
 
@@ -1079,7 +1080,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			if ( ! afterSuccessfulConnect )
 				connProfile.setSrvTypeUnknown();
 
-			SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfile, afterSuccessfulConnect);
+			SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfile, afterSuccessfulConnect, showProfileOverride);
 			saveAs.showPossibly();
 		}
 		else 
@@ -1111,7 +1112,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 
 			if ( ! connProfile.equals(connProfileEntry) )
 			{
-				saveChangesDialog(key, connProfile, connProfileEntry, dbServerName, afterSuccessfulConnect, owner);
+				saveChangesDialog(key, connProfile, connProfileEntry, dbServerName, afterSuccessfulConnect, owner, showProfileOverride);
 			}
 		}
 
@@ -1157,7 +1158,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 		private JButton           _ok_but     = new JButton("OK");
 		private JButton           _cancel_but = new JButton("Cancel");
 
-		public SaveAsDialog(JDialog owner, String dbServerName, ConnectionProfile connProfile, boolean afterSuccessfulConnect)
+		public SaveAsDialog(JDialog owner, String dbServerName, ConnectionProfile connProfile, boolean afterSuccessfulConnect, boolean showProfileOverride)
 		{
 			super(owner, "Add Server", true);
 			
@@ -1167,7 +1168,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			_connProfile  = connProfile;
 			_afterSuccessfulConnect = afterSuccessfulConnect;
 			
-			init();
+			init(showProfileOverride);
 			pack();
 			setLocationRelativeTo(owner);
 
@@ -1178,12 +1179,14 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			SwingUtils.setFocus(_ok_but);
 		}
 		
-		private void init()
+		private void init(boolean showProfileOverride)
 		{
 			boolean showInterfacesPanel  = false;
 			boolean showConnProfilePanel = true;
 
 			showConnProfilePanel = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_connProfile_serverAdd_showDialog, DEFAULT_connProfile_serverAdd_showDialog);
+			if (showProfileOverride)
+				showConnProfilePanel = true;
 
 			// If it's a OFFLINE session and its a H2 URL, then: DO NOT SHOW THE save panel
 			if (_connProfile.isType(ConnectionProfile.Type.OFFLINE) && _connProfile.getOfflineEntry()._jdbcUrl.startsWith("jdbc:h2:"))
@@ -1495,10 +1498,14 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 		{
 			if (_interfacesName_pan.isVisible() || _profileName_pan.isVisible())
 				setVisible(true);
+			else
+			{
+				_logger.info("Save Dialog will NOT be opened... _interfacesName_pan.isVisible()="+_interfacesName_pan.isVisible()+", _profileName_pan.isVisible()="+_profileName_pan.isVisible());
+			}
 		}
 	}
 
-	private boolean saveChangesDialog(String key, ConnectionProfile connProfile, ConnProfileEntry newConnProfileEntry, String dbServerName, boolean afterSuccessfulConnect, JDialog owner)
+	private boolean saveChangesDialog(String key, ConnectionProfile connProfile, ConnProfileEntry newConnProfileEntry, String dbServerName, boolean afterSuccessfulConnect, JDialog owner, boolean showProfileOverride)
 	{
 		boolean showDialog = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_connProfile_changed_showDialog, DEFAULT_connProfile_changed_showDialog);
 		boolean alwaysSave = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_connProfile_changed_alwaysSave, DEFAULT_connProfile_changed_alwaysSave);
@@ -1554,7 +1561,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			connProfileCopy.setEntry(newConnProfileEntry);
 //			setProfileEntry(connProfileCopy, newConnProfileEntry);
 
-    		SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfileCopy, afterSuccessfulConnect);
+    		SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfileCopy, afterSuccessfulConnect, showProfileOverride);
     		saveAs.showPossibly();
     		return false;
 		}

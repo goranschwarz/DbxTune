@@ -18,8 +18,11 @@ extends DefaultTreeTableModel
 	
 //	private ArrayList<DbEntry> _dblist = new ArrayList<DbEntry>();
 //	private DbList _dblist = new DbList();
-	private DefaultMutableTreeTableNode _dblist = new DefaultMutableTreeTableNode();
+	private DefaultMutableTreeTableNode _dblist  = new DefaultMutableTreeTableNode();
+	private List<DdlDetails>            _ddlList = null;
 
+	public List<DdlDetails> getDdlDetails() { return _ddlList; };
+	
 	/**
 	 * 
 	 */
@@ -31,6 +34,8 @@ extends DefaultTreeTableModel
 
 	public void init(List<DdlDetails> ddlList)
 	{
+		_ddlList = ddlList;
+
 		DbEntry   dbe = new DbEntry("");
 		TypeEntry te  = new TypeEntry("");
 		String dbname = "";

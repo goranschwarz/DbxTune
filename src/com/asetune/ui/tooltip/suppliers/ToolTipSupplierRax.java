@@ -83,6 +83,7 @@ extends ToolTipSupplierAbstractSql
 				
 				list.add(e);
 			}
+			rs.close();
 			
 			return list;
 		}

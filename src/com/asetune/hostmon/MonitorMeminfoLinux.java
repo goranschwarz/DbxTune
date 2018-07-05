@@ -1,10 +1,9 @@
 package com.asetune.hostmon;
 
 import com.asetune.ssh.SshConnection;
-import com.asetune.utils.StringUtil;
 
 public class MonitorMeminfoLinux
-extends MonitorUpTime
+extends HostMonitor
 {
 //	private static Logger _logger = Logger.getLogger(MonitorMeminfoLinux.class);
 

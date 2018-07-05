@@ -1779,6 +1779,7 @@ public class AseStackTraceAnalyzer
 				_table.getSelectionModel().addListSelectionListener(this);                   // Change ROW
 				_table.getColumnModel().getSelectionModel().addListSelectionListener(this);  // CHange CELL
 //				setModel(_tm);
+				_table.setNullValueDisplay("");
 
 				_table.addHighlighter(new ColorHighlighter(new HighlightPredicate()
 				{

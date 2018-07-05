@@ -12,7 +12,6 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Formatter;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -130,6 +129,100 @@ public class StringUtil
 	 * <p>
 	 * Example 1:
 	 * <pre>
+	 * toCommaStrQuoted("a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(Collection<String> collection)
+	{
+		return toCommaStrQuoted('"', '"', collection);
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted('"', "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted('|', "a", "b", "c")
+	 * Returns: |a|, |b|, |c|
+	 * </pre>
+	 * 
+	 * @param quoteChar chars/str that will be used to suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(char quoteChar, Collection<String> collection)
+	{
+		return toCommaStrQuoted(quoteChar, quoteChar, collection);
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted('"', '"', "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted('<', '>', "a", "b", "c")
+	 * Returns: &lt;a&gt;, &lt;b&gt;, &lt;c&gt;
+	 * </pre>
+	 * 
+	 * @param startQuoteChar chars/str that will be used to start-suround all the input strings...
+	 * @param endQuoteChar chars/str that will be used to end-suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(char startQuoteChar, char endQuoteChar, Collection<String> collection)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		for (String name : collection)
+		{
+			sb.append(startQuoteChar).append(name).append(endQuoteChar).append(", ");
+		}
+		// Remove last ", "
+		sb.delete(sb.length()-2, sb.length());
+
+		return sb.toString();
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted("a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(String...names)
+	{
+		return toCommaStrQuoted('"', '"', names);
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
 	 * toCommaStrQuoted('"', "a", "b", "c")
 	 * Returns: "a", "b", "c"
 	 * </pre>
@@ -163,7 +256,7 @@ public class StringUtil
 	 * Example 2:
 	 * <pre>
 	 * toCommaStrQuoted('<', '>', "a", "b", "c")
-	 * Returns: <a>, <b>, <c>
+	 * Returns: &lt;a&gt;, &lt;b&gt;, &lt;c&gt;
 	 * </pre>
 	 * 
 	 * @param startQuoteChar chars/str that will be used to start-suround all the input strings...
@@ -629,6 +722,13 @@ public class StringUtil
 	/**
 	 * Left justify a string and fill extra spaces to the right
 	 */
+	public static String left(String str, int expandToSize, String quoteStr)
+	{
+		return left(str, expandToSize, true, quoteStr, quoteStr);
+	}
+	/**
+	 * Left justify a string and fill extra spaces to the right
+	 */
 	public static String left(String str, int expandToSize, boolean allowGrow, String quoteStr)
 	{
 		return left(str, expandToSize, true, quoteStr, quoteStr);
@@ -712,6 +812,8 @@ public class StringUtil
 	 */
 	public static String envVariableSubstitution(String str)
 	{
+		// NOTE: Deprecated. as of 3.6, use commons-text StrSubstitutor instead
+		//       but that requres java 1.8, so switch this in next release instead
 		return StrSubstitutor.replaceSystemProperties(str);
 	}
 
@@ -725,6 +827,8 @@ public class StringUtil
 	 */
 	public static String variableSubstitution(String templateString, Map<String, String> valuesMap)
 	{
+		// NOTE: Deprecated. as of 3.6, use commons-text StrSubstitutor instead
+		//       but that requres java 1.8, so switch this in next release instead
 		StrSubstitutor sub = new StrSubstitutor(valuesMap);
 		return sub.replace(templateString);
 	}
@@ -1326,16 +1430,20 @@ public class StringUtil
 	}
 
 	/**
-	 * Simply do Integer.parseInt(str), but if it fails (NumberFormatException), then return the default value
+	 * Simply do Integer.parseInt(str), but if it fails (NumberFormatException or input is null), then return the default value
 	 * @param str           String to be converted
-	 * @param defaultValue  if "str" can't be converted (NumberFormatException), then return this value
+	 * @param defaultValue  if "str" can't be converted (NumberFormatException or input is null), then return this value
 	 * @return a integer value
 	 */
 	public static int parseInt(String str, int defaultValue)
 	{
+		if (str == null)
+			return defaultValue;
+//			throw new NullPointerException("parseInt(str) expects a string value not a null");
+
 		try
 		{
-			return Integer.parseInt(str);
+			return Integer.parseInt(str.trim());
 		}
 		catch (NumberFormatException nfe)
 		{
@@ -2350,11 +2458,13 @@ public class StringUtil
 
 	
 	/** 
-	 *  Translates<br>
-	 *  & to &amp;amp;   <br>
-	 *  < to &amp;lt;    <br>
-	 *  > to &amp;gt;    <br>
-	 *  \n to &lt;br&gt;
+	 *  Translates:
+	 *  <ul>
+	 *    <li>'&' to '&amp;amp;'   </li>
+	 *    <li>'<' to '&amp;lt;'    </li>
+	 *    <li>'>' to '&amp;gt;'    </li>
+	 *    <li>'\n' to '&lt;br&gt;' </li>
+	 *  </ul>
 	 */
 	public static String toHtmlString(Object o)
 	{
@@ -2370,6 +2480,28 @@ public class StringUtil
 		return str;
 	}
 	
+	/** 
+	 * Same as toHtmlString() but do NOT translate '\n' newline into '&lt;br&gt;'
+	 * <p>
+	 *  Translates:
+	 *  <ul>
+	 *    <li>'&' to '&amp;amp;'   </li>
+	 *    <li>'<' to '&amp;lt;'    </li>
+	 *    <li>'>' to '&amp;gt;'    </li>
+	 *  </ul>
+	 */
+	public static String toHtmlStringExceptNl(Object o)
+	{
+		if (o == null)
+			return null;
+
+		String str = o.toString();
+		str = str.replace("&", "&amp;");
+		str = str.replace("<", "&lt;");
+		str = str.replace(">", "&gt;");
+
+		return str;
+	}
 	
 	
 	
@@ -2733,6 +2865,24 @@ public class StringUtil
 		
 		return sw.getBuffer().toString();
 	}
+	
+	public static String stackTraceToString(final StackTraceElement[] stea)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		String PREFIX   = "\tat ";
+		String NEW_LINE = System.getProperty("line.separator");
+		sb.append(NEW_LINE);
+
+		//add each element of the stack trace
+		for (StackTraceElement ste : stea)
+		{
+			sb.append(PREFIX);
+			sb.append(ste);
+			sb.append(NEW_LINE);
+		}
+		return sb.toString();
+	}
 
 	/** 
 	 * Simply do toString() on non null object, and "" on null objects 
@@ -2766,6 +2916,21 @@ public class StringUtil
 
 	public static void main(String[] args)
 	{
+		// Check if envVariableSubstitution() works with having a default value of another variable name, which does NOT seems to work...
+		System.setProperty("DBXTUNE_ALARM_SOURCE_DIR", "-dbxtune-alarm-source-dir-");
+		System.setProperty("DBXTUNE_HOME",             "-dbxtune-home-");
+		System.out.println("envVariableSubstitution: ${DBXTUNE_ALARM_SOURCE_DIR:-${DBXTUNE_HOME}}/resources/alarm-handler-src = |" + envVariableSubstitution("${DBXTUNE_ALARM_SOURCE_DIR:-${DBXTUNE_HOME}}/resources/alarm-handler-src")+"|");
+
+		System.setProperty("XXX", "-xxx-");
+		System.setProperty("YYY", "-yyy-");
+		System.out.println("envVariableSubstitution: ${XXX} = |" + envVariableSubstitution("${XXX}")+"|");
+		System.out.println("envVariableSubstitution: ${YYY} = |" + envVariableSubstitution("${YYY}")+"|");
+		System.out.println("envVariableSubstitution: ${ZZZ} = |" + envVariableSubstitution("${ZZZ}")+"|");
+		System.out.println("envVariableSubstitution: ${ZZZ:-} = |" + envVariableSubstitution("${ZZZ:-}")+"|");
+		System.out.println("envVariableSubstitution: ${XXX:-${YYY}} = |" + envVariableSubstitution("${XXX:-${YYY}}")+"|");
+		System.out.println("envVariableSubstitution: ${AAA:-${BBB}} = |" + envVariableSubstitution("${AAA:-${BBB}}")+"|");
+		System.exit(0);
+
 		System.out.println("stripHtmlStartEnd(): |" + StringUtil.stripHtmlStartEnd("<html>12345</html>") + "|");
 		System.out.println("stripHtmlStartEnd(): |" + StringUtil.stripHtmlStartEnd("<html> 1 2 3 4 5 </html>") + "|");
 		System.exit(0);

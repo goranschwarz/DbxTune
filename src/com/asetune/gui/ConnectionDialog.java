@@ -24,8 +24,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -34,7 +32,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -103,6 +100,7 @@ import org.jdesktop.swingx.JXTable;
 import org.jdesktop.swingx.autocomplete.AutoCompleteDecorator;
 import org.jdesktop.swingx.table.TableColumnModelExt;
 
+import com.asetune.AppDir;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.Version;
@@ -137,7 +135,6 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.H2UrlHelper;
-import com.asetune.utils.JavaVersion;
 import com.asetune.utils.JdbcDriverHelper;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.RepServerUtils;
@@ -257,6 +254,7 @@ public class ConnectionDialog
 	private ProfileTypeComboBoxModel _aseProfileType_mod = new ProfileTypeComboBoxModel();
 	private JComboBox<ProfileType>   _aseProfileType_cbx = new JComboBox<ProfileType>(_aseProfileType_mod);
 	private JButton              _aseProfileSave_but = new JButton("Save Profile...");
+	private JButton              _aseProfileNew_but  = new JButton("New");
 	private ImageIcon            _aseLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
 	private JLabel               _aseLoginIcon       = new JLabel(_aseLoginImageIcon);
 	private MultiLineLabel       _aseLoginHelp       = new MultiLineLabel("Identify yourself to the server with user name and password");
@@ -431,6 +429,7 @@ public class ConnectionDialog
 	private ProfileTypeComboBoxModel _offlineProfileType_mod       = new ProfileTypeComboBoxModel();
 	private JComboBox<ProfileType>   _offlineProfileType_cbx       = new JComboBox<ProfileType>(_offlineProfileType_mod);
 	private JButton              _offlineProfileSave_but           = new JButton("Save Profile...");
+	private JButton              _offlineProfileNew_but            = new JButton("New");
 	private JLabel               _offlineJdbcDriver_lbl            = new JLabel("JDBC Driver");
 	private JComboBox<String>    _offlineJdbcDriver_cbx            = new JComboBox<String>();
 	private JLabel               _offlineJdbcUrl_lbl               = new JLabel("JDBC Url"); 
@@ -473,6 +472,7 @@ public class ConnectionDialog
 	private ProfileTypeComboBoxModel _jdbcProfileType_mod = new ProfileTypeComboBoxModel();
 	private JComboBox<ProfileType>   _jdbcProfileType_cbx = new JComboBox<ProfileType>(_jdbcProfileType_mod);
 	private JButton              _jdbcProfileSave_but  = new JButton("Save Profile...");
+	private JButton              _jdbcProfileNew_but   = new JButton("New");
 	private JLabel               _jdbcDriver_lbl       = new JLabel("JDBC Driver");
 	private JComboBox<String>    _jdbcDriver_cbx       = new JComboBox<String>();
 	private JLabel               _jdbcUrl_lbl          = new JLabel("JDBC Url"); 
@@ -1255,6 +1255,21 @@ public class ConnectionDialog
 	public String getOfflineJdbcUser()   { return _offlineJdbcUsername_txt.getText(); }
 	public String getOfflineJdbcPasswd() { return _offlineJdbcPassword_txt.getText(); }
 
+	public void setOffflineJdbcDriver(String driver)   { addAndSelectItem(_offlineJdbcDriver_cbx, driver); }
+	public void setOffflineJdbcUser  (String username) { _offlineJdbcUsername_txt.setText(username); }
+	public void setOffflineJdbcPasswd(String password) { _offlineJdbcPassword_txt.setText(password); }
+	public void setOffflineJdbcUrl   (String url)      
+	{ 
+		// Set the driver name if it's not set.
+		if (StringUtil.isNullOrBlank(getOfflineJdbcDriver()))
+		{
+			String driver = JdbcDriverHelper.guessDriverForUrl(url);
+			setOffflineJdbcDriver(driver);
+		}
+		// AFTER the driver, set the URL (other way around: when setting driver, a default template will be choosen)
+		addAndSelectItem(_offlineJdbcUrl_cbx, url); 
+	}
+
 	public String getJdbcDriver() { return _jdbcDriver_cbx  .getEditor().getItem().toString(); }
 	public String getJdbcUrl()    { return _jdbcUrl_cbx     .getEditor().getItem().toString(); }
 	public String getJdbcUser()   { return _jdbcUsername_txt.getText(); }
@@ -1766,6 +1781,9 @@ public class ConnectionDialog
 		filter_lbl.setToolTipText("Show only profile names that matches the filter.");
 		filter_txt.setToolTipText(filter_lbl.getToolTipText());
 
+		if ( StringUtil.hasValue(ConnectionProfileManager.getInstance().getTreeModelFilterOnProfileName()) )
+			filter_txt.setText( ConnectionProfileManager.getInstance().getTreeModelFilterOnProfileName() );
+		
 		filter_txt.addKeyListener(new KeyListener()
 		{
 			@Override public void keyTyped(KeyEvent e) {}
@@ -2011,6 +2029,7 @@ public class ConnectionDialog
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
 				+ "</ul></html>");
+		_aseProfileNew_but  .setToolTipText("<html>Clears all fields to create a new Profile</html>");
 		_aseIfile_lbl       .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving DB Server name into hostname and port number");
 		_aseIfile_txt       .setToolTipText("Directory Service file (sql.ini or interfaces) to use for resolving DB Server name into hostname and port number");
 		_aseIfile_but       .setToolTipText("Open a File Dialog to locate a Directory Service file.");
@@ -2058,7 +2077,8 @@ public class ConnectionDialog
 		panel.add(_aseProfile_lbl,       "");
 		panel.add(_aseProfile_cbx,       "push, grow, split");
 		panel.add(_aseProfileType_cbx,   "");
-		panel.add(_aseProfileSave_but,   "wrap");
+		panel.add(_aseProfileSave_but,   "");
+		panel.add(_aseProfileNew_but,    "wrap");
 		_aseProfile_cbx.setEditable(false);
 		_aseProfileType_cbx.setEditable(false);
 
@@ -2113,6 +2133,7 @@ public class ConnectionDialog
 		_aseProfile_cbx      .addActionListener(this);
 		_aseProfileType_cbx  .addActionListener(this);
 		_aseProfileSave_but  .addActionListener(this);
+		_aseProfileNew_but   .addActionListener(this);
 		_aseServer_cbx       .addActionListener(this);
 		_aseOptions_txt      .addActionListener(this);
 		_aseOptions_but      .addActionListener(this);
@@ -2408,7 +2429,7 @@ public class ConnectionDialog
 		    "Also if you want to change the parameters/flags to the OS Commands, to get better Performance Counters, kick me and I'll fix it!<br>" +
 		    "<br>" +
 		    "The only thing that can change by ourself is the OS Commands sleep interval<br>" +
-		    "This is done by adding the below information to the configuration file. (dbxtune.properties)" +
+		    "This is done by adding the below information to the configuration file. (conf/dbxtune.properties)" +
 			"<ul>" +
 			"  <li> for iostat: <code>MonitorIoSolaris.sleep=5</code></li>" +
 			"  <li> for mpstat: <code>MonitorVmstatAix.sleep=5</code></li>" +
@@ -2639,6 +2660,11 @@ public class ConnectionDialog
 		_pcsWriter_cbx    .setEditable(true);
 		_pcsJdbcDriver_cbx.setEditable(true);
 		_pcsJdbcUrl_cbx   .setEditable(true);
+		
+		// Set how many items the "dropdown" can have before a JScrollBar is visible
+		_pcsWriter_cbx    .setMaximumRowCount(30);
+		_pcsJdbcDriver_cbx.setMaximumRowCount(30);
+		_pcsJdbcUrl_cbx   .setMaximumRowCount(30);
 		
 		_pcsJdbcDriver_cbx.setRenderer(new JdbcDriverHelper.JdbcDriverComboBoxRender());
 
@@ -2909,6 +2935,7 @@ public class ConnectionDialog
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
 				+ "</ul></html>");
+		_offlineProfileNew_but  .setToolTipText("<html>Clears all fields to create a new Profile</html>");
 		_offlineJdbcDriver_lbl  .setToolTipText("JDBC drivername to be used by the Persistent Counter Storage to READ Counter Data");
 		_offlineJdbcDriver_cbx  .setToolTipText("JDBC drivername to be used by the Persistent Counter Storage to READ Counter Data");
 		_offlineJdbcUrl_lbl     .setToolTipText("URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver");
@@ -2931,8 +2958,9 @@ public class ConnectionDialog
 
 		panel.add(_offlineProfile_lbl,      "");
 		panel.add(_offlineProfile_cbx,      "push, grow, split");
-		panel.add(_offlineProfileType_cbx,   "");
-		panel.add(_offlineProfileSave_but,  "wrap");
+		panel.add(_offlineProfileType_cbx,  "");
+		panel.add(_offlineProfileSave_but,  "");
+		panel.add(_offlineProfileNew_but,   "wrap");
 
 		panel.add(_offlineJdbcDriver_lbl,   "");
 		panel.add(_offlineJdbcDriver_cbx,   "push, grow, wrap");
@@ -2959,6 +2987,12 @@ public class ConnectionDialog
 		_offlineProfileType_cbx.setEditable(false);
 		_offlineJdbcDriver_cbx .setEditable(true);
 		_offlineJdbcUrl_cbx    .setEditable(true);
+		
+		// Set how many items the "dropdown" can have before a JScrollBar is visible
+		_offlineProfile_cbx    .setMaximumRowCount(30);
+		_offlineProfileType_cbx.setMaximumRowCount(30);
+		_offlineJdbcDriver_cbx .setMaximumRowCount(30);
+		_offlineJdbcUrl_cbx    .setMaximumRowCount(30);
 		
 //		_offlineJdbcDriver_cbx.addItem("org.h2.Driver");
 //		_offlineJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
@@ -3007,6 +3041,7 @@ public class ConnectionDialog
 		_offlineProfile_cbx     .addActionListener(this);
 		_offlineProfileType_cbx .addActionListener(this);
 		_offlineProfileSave_but .addActionListener(this);
+		_offlineProfileNew_but  .addActionListener(this);
 		_offlineJdbcDriver_cbx  .addActionListener(this);
 		_offlineTestConn_but    .addActionListener(this);
 		_offlineJdbcUrl_cbx     .getEditor().getEditorComponent().addKeyListener(this);
@@ -3028,8 +3063,9 @@ public class ConnectionDialog
 		_sendOfflinePanel = panel;
 		
 		_sendOfflineHelp.setText("If you want a recorded session to be analyzed by a skilled person...\n" +
+			"\n" +
 			"This would be available as an extra service, which you will have to pay for! \n" +
-			"To get this extra service you need to contact goran_schwarz@hotmail.com\n");
+			"To get this extra service you need to contact: goran_schwarz@hotmail.com\n");
 
 		_sendOfflineNotYetImpl2_lbl.setText("<html>" +
 				"This functionality is <i>NOT YET IMPLEMETED</i>, sorry...<br>" +
@@ -3045,7 +3081,7 @@ public class ConnectionDialog
 		panel.add(_sendOfflineIcon,            "");
 		panel.add(_sendOfflineHelp,            "wmin 100, push, grow, wrap 15");
 
-		panel.add(_sendOfflineNotYetImpl2_lbl, "skip 1, wrap");
+//		panel.add(_sendOfflineNotYetImpl2_lbl, "skip 1, wrap");
 
 		panel.add(_sendOfflineTestConn_but,    "skip 1, split 3");
 		panel.add(_sendOfflineNotYetImpl1_lbl, "pushx, growx");
@@ -3081,6 +3117,7 @@ public class ConnectionDialog
 				+ "<li>If <b>no</b> profile name has been choosen: A dialog will ask you what name to choose</li>"
 				+ "<li>If <b>a profile name <b>has</b> been choosen</b>: A dialog will ask you if you want to save it as a new name or just save it.</li>"
 				+ "</ul></html>");
+		_jdbcProfileNew_but.setToolTipText("<html>Clears all fields to create a new Profile</html>");
 		_jdbcDriver_lbl    .setToolTipText("JDBC drivername to be used when creating the connection");
 		_jdbcDriver_cbx    .setToolTipText("JDBC drivername to be used when creating the connection");
 		_jdbcUrl_lbl       .setToolTipText("URL for the above JDBC drivername to connect to a datastore, a couple of template URL for H2 and Sybase JDBC driver");
@@ -3122,7 +3159,8 @@ public class ConnectionDialog
 		panel.add(_jdbcProfile_lbl,      "");
 		panel.add(_jdbcProfile_cbx,      "push, grow, split");
 		panel.add(_jdbcProfileType_cbx,  "");
-		panel.add(_jdbcProfileSave_but,  "wrap");
+		panel.add(_jdbcProfileSave_but,  "");
+		panel.add(_jdbcProfileNew_but,   "wrap");
 
 		panel.add(_jdbcDriver_lbl,       "");
 		panel.add(_jdbcDriver_cbx,       "push, grow, wrap");
@@ -3162,6 +3200,12 @@ public class ConnectionDialog
 		_jdbcDriver_cbx     .setEditable(true);
 		_jdbcUrl_cbx        .setEditable(true);
 
+		// Set how many items the "dropdown" can have before a JScrollBar is visible
+		_jdbcProfile_cbx    .setMaximumRowCount(30);
+		_jdbcProfileType_cbx.setMaximumRowCount(30);
+		_jdbcDriver_cbx     .setMaximumRowCount(30);
+		_jdbcUrl_cbx        .setMaximumRowCount(30);
+		
 //		_jdbcSqlServerUseWindowsAuthentication_chk.setVisible(false);
 		setSqlServerUseWindowsAuthenticationVisible(false);
 
@@ -3211,6 +3255,7 @@ public class ConnectionDialog
 		_jdbcProfile_cbx    .addActionListener(this);
 		_jdbcProfileType_cbx.addActionListener(this);
 		_jdbcProfileSave_but.addActionListener(this);
+		_jdbcProfileNew_but .addActionListener(this);
 		_jdbcDriver_cbx     .addActionListener(this);
 		_jdbcTestConn_but   .addActionListener(this);
 		_jdbcUrl_cbx        .getEditor().getEditorComponent().addKeyListener(this);
@@ -4844,7 +4889,7 @@ public class ConnectionDialog
 		cp.setLoginTimeout ( -1 );
 		cp.setDriverClass  ( jdbcDriver );
 		cp.setUrl          ( jdbcUrl );
-		cp.setUrlOptions   ( null );
+		cp.setUrlOptions   ( (String) null );
 		cp.setUsername     ( jdbcUser );
 		cp.setPassword     ( jdbcPasswd );
 		cp.setAppName      ( Version.getAppName() );
@@ -6244,7 +6289,16 @@ if ( ! jdbcSshTunnelUse )
 		}
 		if (_aseProfileSave_but.equals(source))
 		{
-			updateConnectionProfile(TDS_CONN, false, StringUtil.getSelectedItemString(_aseProfile_cbx), null);
+			updateConnectionProfile(TDS_CONN, false, StringUtil.getSelectedItemString(_aseProfile_cbx), null, true);
+		}
+		if (_aseProfileNew_but.equals(source))
+		{
+			_aseProfile_cbx.setSelectedItem(NO_PROFILE_IS_SELECTED);
+			_aseServer_cbx.setSelectedItem(LocalSrvComboBox.SERVER_FIRST_ENTRY);
+			_aseUser_txt  .setText("");
+			_asePasswd_txt.setText("");
+			_aseHost_txt  .setText("");
+			_asePort_txt  .setText("");
 		}
 		
 		// --- JDBC: Profile ---
@@ -6263,7 +6317,18 @@ if ( ! jdbcSshTunnelUse )
 		}
 		if (_jdbcProfileSave_but.equals(source))
 		{
-			updateConnectionProfile(JDBC_CONN, false, StringUtil.getSelectedItemString(_jdbcProfile_cbx), null);
+			updateConnectionProfile(JDBC_CONN, false, StringUtil.getSelectedItemString(_jdbcProfile_cbx), null, true);
+		}
+		if (_jdbcProfileNew_but.equals(source))
+		{
+			_jdbcProfile_cbx   .setSelectedItem(NO_PROFILE_IS_SELECTED);
+			_jdbcDriver_cbx    .setSelectedItem("");;
+			_jdbcUrl_cbx       .setSelectedItem("");;
+			_jdbcUsername_txt  .setText("");
+			_jdbcPassword_txt  .setText("");
+			_jdbcSshTunnel_chk .setSelected(false);
+			_jdbcSqlInit_txt   .setText("");
+			_jdbcUrlOptions_txt.setText("");
 		}
 		
 		// --- OFFLINE: Profile ---
@@ -6282,7 +6347,15 @@ if ( ! jdbcSshTunnelUse )
 		}
 		if (_offlineProfileSave_but.equals(source))
 		{
-			updateConnectionProfile(OFFLINE_CONN, false, StringUtil.getSelectedItemString(_offlineProfile_cbx), null);
+			updateConnectionProfile(OFFLINE_CONN, false, StringUtil.getSelectedItemString(_offlineProfile_cbx), null, true);
+		}
+		if (_offlineProfileNew_but.equals(source))
+		{
+			_offlineProfile_cbx.setSelectedItem(NO_PROFILE_IS_SELECTED);
+			_offlineJdbcDriver_cbx    .setSelectedItem("");;
+			_offlineJdbcUrl_cbx       .setSelectedItem("");;
+			_offlineJdbcUsername_txt  .setText("");
+			_offlineJdbcPassword_txt  .setText("");
 		}
 		
 		// ALWAYS: do stuff for URL
@@ -6448,7 +6521,7 @@ if ( ! jdbcSshTunnelUse )
 			}
 
 			// Update Connection Profile
-			updateConnectionProfile(OFFLINE_CONN, true, StringUtil.getSelectedItemString(_offlineProfile_cbx), connProfile);
+			updateConnectionProfile(OFFLINE_CONN, true, StringUtil.getSelectedItemString(_offlineProfile_cbx), connProfile, false);
 
 			_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_offlineProfileType_cbx) : connProfile.getProfileTypeName();
 			
@@ -6995,13 +7068,13 @@ if ( ! jdbcSshTunnelUse )
     			// Update Connection Profile
     			if (TDS_CONN == connType)
     			{
-    				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile);
+    				updateConnectionProfile(TDS_CONN, true, StringUtil.getSelectedItemString(_aseProfile_cbx), connProfile, false);
     				
     				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_aseProfileType_cbx) : connProfile.getProfileTypeName();
     			}
     			else if (JDBC_CONN == connType)
     			{
-    				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile);
+    				updateConnectionProfile(JDBC_CONN, true, StringUtil.getSelectedItemString(_jdbcProfile_cbx), connProfile, false);
     
     				_usedConnectionProfileTypeName = (connProfile == null) ? ProfileTypeComboBoxModel.getSelectedProfileTypeName(_jdbcProfileType_cbx) : connProfile.getProfileTypeName();
     			}
@@ -7020,7 +7093,7 @@ if ( ! jdbcSshTunnelUse )
 		} // END: ASE & PCS CONNECT
 	}
 
-	private void updateConnectionProfile(int connType, boolean afterSuccessfulConnect, String selectedProfileName, ConnectionProfile connProfile)
+	private void updateConnectionProfile(int connType, boolean afterSuccessfulConnect, String selectedProfileName, ConnectionProfile connProfile, boolean showProfileOverride)
 	{
 		// Check if it's "<choose a profile>" and if so; return null
 		selectedProfileName = ProfileComboBoxModel.notSelectedValueToNull(selectedProfileName);
@@ -7126,7 +7199,7 @@ if ( ! jdbcSshTunnelUse )
 //				}
 			}
 
-			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, tds, selectedProfileName, ConnectionDialog.this);
+			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, tds, selectedProfileName, ConnectionDialog.this, showProfileOverride);
 			//_tdsProfile_mod.refresh();
 		}
 		else if (connType == OFFLINE_CONN)
@@ -7145,7 +7218,7 @@ if ( ! jdbcSshTunnelUse )
 			offline._checkForNewSessions   = _offlineCheckForNewSessions_chk  .isSelected();
 			offline._H2Option_startH2NwSrv = _offlineH2Option_startH2NwSrv_chk.isSelected();
 
-			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, offline, selectedProfileName, ConnectionDialog.this);
+			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, offline, selectedProfileName, ConnectionDialog.this, showProfileOverride);
 			_offlineProfile_mod.refresh();
 		}
 		else if (connType == JDBC_CONN)
@@ -7172,7 +7245,7 @@ if ( ! jdbcSshTunnelUse )
 //System.out.println("xxxxx: jdbc._dbxtuneParams="+jdbc._dbxtuneParams);
 			}
 			
-			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, jdbc, selectedProfileName, ConnectionDialog.this);
+			ConnectionProfileManager.getInstance().possiblyAddChange(key, afterSuccessfulConnect, dbProduct, dbServerName, jdbc, selectedProfileName, ConnectionDialog.this, showProfileOverride);
 			_jdbcProfile_mod.refresh();
 		}
 		else
@@ -9757,12 +9830,12 @@ if ( ! jdbcSshTunnelUse )
 	//--------------------------------------------------
 	public static void main(String[] args)
 	{
-		final String CONFIG_FILE_NAME     = System.getProperty("CONFIG_FILE_NAME",     "dbxtune.properties");
+		final String CONFIG_FILE_NAME     = System.getProperty("CONFIG_FILE_NAME",     "conf" + File.separatorChar + "dbxtune.properties");
 		final String TMP_CONFIG_FILE_NAME = System.getProperty("TMP_CONFIG_FILE_NAME", "asetune.save.properties");
 		final String ASETUNE_HOME         = System.getProperty("ASETUNE_HOME");
 		
-		String defaultPropsFile    = (ASETUNE_HOME             != null) ? ASETUNE_HOME             + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
-		String defaultTmpPropsFile = (Version.getAppStoreDir() != null) ? Version.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
+		String defaultPropsFile    = (ASETUNE_HOME            != null) ? ASETUNE_HOME            + File.separator + CONFIG_FILE_NAME     : CONFIG_FILE_NAME;
+		String defaultTmpPropsFile = (AppDir.getAppStoreDir() != null) ? AppDir.getAppStoreDir() + File.separator + TMP_CONFIG_FILE_NAME : TMP_CONFIG_FILE_NAME;
 		try
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

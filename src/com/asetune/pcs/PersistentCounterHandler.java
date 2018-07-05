@@ -19,6 +19,7 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.Version;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.cm.CountersModel;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
@@ -1268,6 +1269,11 @@ implements Runnable
 		// For the moment: copy/restore the cont.sessionStartTime...
 		Timestamp initialSessionStartTime = cont.getSessionStartTime();
 		
+		// NOTE: 
+		// SessionStartTime IS SET and dictaded by the writer (at start the above 'cont.getSessionStartTime()' is most likly NULL
+		// and it's the Writer instance that saves/handles the SessionStartDate and does a new startSession()
+		//
+		
 		// loop all writer classes
 		for (IPersistWriter pw : _writerClasses)
 		{
@@ -1301,6 +1307,8 @@ implements Runnable
 					pw.setSessionStartTime(newTs);
 
 					pw.startSession(cont);
+					// note: the above pw.startSession() must call: pw.setSessionStarted(true);
+					// otherwise we will run this everytime
 				}
 
 				// Set the Session Start Time in the container.
@@ -1337,12 +1345,9 @@ implements Runnable
 				pw.endOfSample(cont, false);
 
 				// Stop clock and print statistics.
-				long stopTime = System.currentTimeMillis();
-				long execTime = stopTime-startTime;
+				long execTime = TimeUtils.msDiffNow(startTime);
 
-//				firePcsConsumeInfo(pw.getName(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getInserts(), pw.getUpdates(), pw.getDeletes(), pw.getCreateTables(), pw.getAlterTables(), pw.getDropTables(), pw.getDdlSaveCount(), pw.getDdlSaveCountSum());
-				firePcsConsumeInfo(pw.getName(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics());
-//				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', mainSampleTime='"+cont.getMainSampleTime()+"'. This persist took "+execTime+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
+				firePcsConsumeInfo(pw.getName(), cont.getServerNameOrAlias(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics());
 
 				// Reset the statistics
 				pw.resetCounters();
@@ -1372,7 +1377,7 @@ implements Runnable
 			// AND catch all runtime errors that might come
 			try 
 			{
-				_logger.info("Starting Counters Storage Session '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', server='"+cont.getServerName()+"'.");
+				_logger.info("Starting Counters Storage Session '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', server='"+cont.getServerName()+"', with serverAlias='"+cont.getServerNameAlias()+"'.");
 
 				pw.startSession(cont);
 			}
@@ -1616,6 +1621,9 @@ implements Runnable
 				prevConsumeTimeMs = stopTime-startTime;
 				_logger.debug("It took "+prevConsumeTimeMs+" ms to persist the above information (using all writers).");
 				
+				// Clear some stuff after each container.
+				if ( AlarmWriterToPcsJdbc.hasInstance() ) 
+					AlarmWriterToPcsJdbc.getInstance().clear();
 			} 
 			catch (InterruptedException ex) 
 			{
@@ -2032,20 +2040,13 @@ implements Runnable
 
 	/** Kicked off when consume is done 
 	 * @param ddlSaveCount */
-//	public void firePcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, int inserts, int updates, int deletes, int createTables, int alterTables, int dropTables, int ddlSaveCount, int ddlSaveCountSum)
-//	{
-//		_logger.info("Persisting Counters using '"+persistWriterName+"' for sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. inserts="+inserts+", updates="+updates+", deletes="+deletes+", createTables="+createTables+", alterTables="+alterTables+", dropTables="+dropTables+", ddlSaveCount="+ddlSaveCount+", ddlSaveCountSum="+ddlSaveCountSum+".");
-//
-//		for (PcsQueueChange l : _queueChangeListeners)
-//			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, inserts, updates, deletes, createTables, alterTables, dropTables, ddlSaveCount, ddlSaveCountSum);
-//	}
-	public void firePcsConsumeInfo(String persistWriterName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics)
+	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics)
 	{
 		String longTimeStr = "";
 		if (persistTimeInMs > 30000) // more than 30 seconds, write it if format HH:MM:SS.ms
 			longTimeStr = "(" + TimeUtils.msToTimeStr(persistTimeInMs) + "). ";
 		
-		_logger.info("Persisting Counters using '"+persistWriterName+"' for sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. jvmMemoryLeftInMB="+Memory.getMemoryLeftInMB()+". "+ longTimeStr + writerStatistics.getStatisticsString() );
+		_logger.info("Persisting Counters using '"+persistWriterName+"' for serverName='"+serverName+"', sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. jvmMemoryLeftInMB="+Memory.getMemoryLeftInMB()+". "+ longTimeStr + writerStatistics.getStatisticsString() );
 
 		for (PcsQueueChange l : _queueChangeListeners)
 			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, writerStatistics);

@@ -16,7 +16,6 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -110,27 +109,37 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels_memo = new String[] { "MemoryAllocated", "MemoryMaxAllocated", "MainCacheCurrentSize", "TempCacheCurrentSize", "CurrentCacheSize", "MaxCacheSize", "MinCacheSize"} ;
-		
-		addTrendGraphData(GRAPH_NAME_CACHE2, new TrendGraphDataPoint(GRAPH_NAME_CACHE2, labels_memo, LabelType.Static));
+//		String[] labels_memo = new String[] { "MemoryAllocated", "MemoryMaxAllocated", "MainCacheCurrentSize", "TempCacheCurrentSize", "CurrentCacheSize", "MaxCacheSize", "MinCacheSize"} ;
+//		
+//		addTrendGraphData(GRAPH_NAME_CACHE2, new TrendGraphDataPoint(GRAPH_NAME_CACHE2, labels_memo, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_CACHE2,
-				"Memory overview",                     // Menu CheckBox text
-				"Memory overview ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labels_memo, 
-				false, // is Percent Graph
-				this, 
-				false, // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-				
-		}
+		addTrendGraph(GRAPH_NAME_CACHE2,
+			"Memory overview",                     // Menu CheckBox text
+			"Memory overview ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "MemoryAllocated", "MemoryMaxAllocated", "MainCacheCurrentSize", "TempCacheCurrentSize", "CurrentCacheSize", "MaxCacheSize", "MinCacheSize"},
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_CACHE2,
+//				"Memory overview",                     // Menu CheckBox text
+//				"Memory overview ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labels_memo, 
+//				false, // is Percent Graph
+//				this, 
+//				false, // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 	
 	@Override

@@ -15,7 +15,7 @@ extends XmenuActionBase
 {
 //	private static Logger _logger = Logger.getLogger(SqlServerHtmlPlan.class);
 	private Connection _conn = null;
-	private String     _planHandle = null;
+//	private String     _planHandle = null;
 //	private boolean    _closeConnOnExit;
 
 	/**
@@ -33,10 +33,22 @@ extends XmenuActionBase
 	public void doWork() 
 	{
 		_conn = getConnection();
-		_planHandle = getParamValue(0);
+		String inputText = getParamValue(0);
 //		_closeConnOnExit = isCloseConnOnExit();
 
-		String queryPlan = getPlan();
+		String queryPlan = null;
+		if (StringUtil.hasValue(inputText))
+		{
+			if (inputText.startsWith("<ShowPlanXML "))
+			{
+				queryPlan = inputText;
+			}
+			else
+			{
+				queryPlan = getPlan(inputText);
+			}
+		}
+
 		if (StringUtil.hasValue(queryPlan))
 		{
 			ShowplanHtmlView.show(Type.SQLSERVER, queryPlan);
@@ -44,9 +56,9 @@ extends XmenuActionBase
 	}
 
 
-	public String getPlan()
+	public String getPlan(String planHandle)
 	{
-		String sqlStatement = "select query_plan from sys.dm_exec_query_plan("+_planHandle+")";
+		String sqlStatement = "select query_plan from sys.dm_exec_query_plan("+planHandle+")";
 
 		String query_plan = null;
 		
@@ -64,6 +76,7 @@ extends XmenuActionBase
 
 				query_plan = rs.getString("query_plan");
 			}
+			rs.close();
 		}
 		catch (Exception e)
 		{

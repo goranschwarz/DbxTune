@@ -13,7 +13,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -22,6 +21,7 @@ import javax.swing.SwingUtilities;
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEvent.Category;
 import com.asetune.alarm.events.AlarmEvent.ServiceState;
 import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.events.AlarmEventDummy;
@@ -57,6 +57,9 @@ implements ActionListener, FocusListener
 	private JLabel               _extraInfo_lbl           = new JLabel("<html><b>Extra Info</b></html>");
 	private JTextField           _extraInfo_txt           = new JTextField();
 
+	private JLabel               _category_lbl            = new JLabel("<html><b>Category</b></html>");
+	private JComboBox<AlarmEvent.Category> _category_cbx  = new JComboBox<>();
+
 	private JLabel               _severity_lbl            = new JLabel("<html><b>Severity</b></html>");
 	private JComboBox<AlarmEvent.Severity> _severity_cbx  = new JComboBox<>();
 
@@ -65,6 +68,9 @@ implements ActionListener, FocusListener
 
 	private JLabel               _timeToLive_lbl          = new JLabel("Time To Live");
 	private JTextField           _timeToLive_txt          = new JTextField();
+
+	private JLabel               _raiseDelay_lbl          = new JLabel("Raise Delay");
+	private JTextField           _raiseDelay_txt          = new JTextField();
 
 	private JLabel               _data_lbl                = new JLabel("Data");
 	private JTextField           _data_txt                = new JTextField();
@@ -192,6 +198,9 @@ implements ActionListener, FocusListener
 		panel.add(_extraInfo_lbl,     "");
 		panel.add(_extraInfo_txt,     "pushx, growx, wrap");
 
+		panel.add(_category_lbl,      "");
+		panel.add(_category_cbx,      "pushx, growx, wrap");
+
 		panel.add(_severity_lbl,      "");
 		panel.add(_severity_cbx,      "pushx, growx, wrap");
 
@@ -200,6 +209,9 @@ implements ActionListener, FocusListener
 
 		panel.add(_timeToLive_lbl,    "");
 		panel.add(_timeToLive_txt,    "pushx, growx, wrap");
+
+		panel.add(_raiseDelay_lbl,    "");
+		panel.add(_raiseDelay_txt,    "pushx, growx, wrap");
 
 		panel.add(_data_lbl,          "");
 		panel.add(_data_txt,          "pushx, growx, wrap");
@@ -226,6 +238,14 @@ implements ActionListener, FocusListener
 		_className_txt  .setText("AlarmEventDummy");
 		_serviceType_txt.setText(Version.getAppName());
 		
+		_category_cbx.addItem(Category.OTHER);
+		_category_cbx.addItem(Category.CPU);
+		_category_cbx.addItem(Category.DOWN);
+//		_category_cbx.addItem(Category.INTERNAL);
+		_category_cbx.addItem(Category.LOCK);
+		_category_cbx.addItem(Category.SPACE);
+		_category_cbx.addItem(Category.SRV_CONFIG);
+
 		_severity_cbx.addItem(Severity.INFO);
 		_severity_cbx.addItem(Severity.WARNING);
 		_severity_cbx.addItem(Severity.ERROR);
@@ -237,6 +257,7 @@ implements ActionListener, FocusListener
 		_serviceName_txt  .setText(StringUtil.getHostname());
 		_serviceInfo_txt  .setText("CmDummy");
 		_timeToLive_txt   .setText("-1");
+		_raiseDelay_txt   .setText("0");
 		_description_txt  .setText("A Dummy Description");
 
 		// ADD KEY listeners
@@ -257,6 +278,7 @@ implements ActionListener, FocusListener
 		_serviceInfo_txt  .addFocusListener(this);
 		_extraInfo_txt    .addFocusListener(this);
 		_timeToLive_txt   .addFocusListener(this);
+		_raiseDelay_txt   .addFocusListener(this);
 		_data_txt         .addFocusListener(this);
 		_description_txt  .addFocusListener(this);
 		_extendedDesc_txt .addFocusListener(this);
@@ -296,15 +318,20 @@ implements ActionListener, FocusListener
 			String serviceName                   = _serviceName_txt .getText();
 			String serviceInfo                   = _serviceInfo_txt .getText();
 			String extraInfo                     = _extraInfo_txt   .getText();
+			AlarmEvent.Category     category     = (AlarmEvent.Category)    _category_cbx.getSelectedItem();
 			AlarmEvent.Severity     severity     = (AlarmEvent.Severity)    _severity_cbx.getSelectedItem();
 			AlarmEvent.ServiceState state        = (AlarmEvent.ServiceState)_state_cbx   .getSelectedItem();
 			int    timeToLive                    = StringUtil.parseInt(_timeToLive_txt.getText(), -1);
+			int    raiseDelay                    = StringUtil.parseInt(_raiseDelay_txt.getText(), -1);
 			String data                          = _data_txt        .getText();
 			String description                   = _description_txt .getText();
 			String extendedDesc                  = _extendedDesc_txt.getText();
 
-			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, severity, state, timeToLive, data, description, extendedDesc);
+			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc);
 
+			if (raiseDelay > 0)
+				alarmEvent.setRaiseDelayInSec(raiseDelay);
+			
 			_callback.setAlarmEvent(alarmEvent);
 		}
 
@@ -314,14 +341,20 @@ implements ActionListener, FocusListener
 			String serviceName                   = _serviceName_txt .getText();
 			String serviceInfo                   = _serviceInfo_txt .getText();
 			String extraInfo                     = _extraInfo_txt   .getText();
+			AlarmEvent.Category     category     = (AlarmEvent.Category)    _category_cbx.getSelectedItem();
 			AlarmEvent.Severity     severity     = (AlarmEvent.Severity)    _severity_cbx.getSelectedItem();
 			AlarmEvent.ServiceState state        = (AlarmEvent.ServiceState)_state_cbx   .getSelectedItem();
 			int    timeToLive                    = StringUtil.parseInt(_timeToLive_txt.getText(), -1);
+			int    raiseDelay                    = StringUtil.parseInt(_raiseDelay_txt.getText(), -1);
 			String data                          = _data_txt        .getText();
 			String description                   = _description_txt .getText();
 			String extendedDesc                  = _extendedDesc_txt.getText();
 
-			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, severity, state, timeToLive, data, description, extendedDesc);
+			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc);
+
+			if (raiseDelay > 0)
+				alarmEvent.setRaiseDelayInSec(raiseDelay);
+			
 //			AlarmHandler.getInstance().addAlarmToQueue(alarmEvent);
 			AlarmHandler.getInstance().addAlarm(alarmEvent);
 		}

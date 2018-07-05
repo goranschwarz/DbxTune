@@ -28,7 +28,7 @@ implements IDbmsConfig
 	private static final long serialVersionUID = 1L;
 
 	/** Log4j logging. */
-	private static Logger _logger          = Logger.getLogger(PostgresConfig.class);
+	private static Logger _logger = Logger.getLogger(PostgresConfig.class);
 
 	private boolean   _offline   = false;
 	private boolean   _hasGui    = false;
@@ -163,9 +163,9 @@ implements IDbmsConfig
 //		{DESCRIPTION,          true,     String .class, "varchar(255)", "Description of the configuration."}
 
 		{NON_DEFAULT,          false,    Boolean.class, "bit",           "True if the value is not configured to the default value."},
-		{SECTION_NAME,         true,     String .class, "varchar(60)",   "Configuration Group"},
-		{CONFIG_NAME,          true,     String .class, "varchar(60)",   "Run-time configuration parameter name."},
-		{CONFIG_TYPE,          true,     String .class, "varchar(30)",   "What type of parameter is this."},
+		{SECTION_NAME,         true,     String .class, "varchar(128)",  "Configuration Group"},
+		{CONFIG_NAME,          true,     String .class, "varchar(128)",  "Run-time configuration parameter name."},
+		{CONFIG_TYPE,          true,     String .class, "varchar(128)",  "What type of parameter is this."},
 		{CURENT_VALUE,         false,    String .class, "varchar(255)",  "Value of the configuration."},
 //		{PENDING,              false,    Boolean.class, "bit",           "The Configuration has not yet taken effect, probably needs restart to take effect."},
 //		{PENDING_VALUE,        false,    String .class, "varchar(255)",  "The value which will be configured on next restart, if PENDING is true."},
@@ -173,14 +173,14 @@ implements IDbmsConfig
 //		{RESTART_IS_REQ,       false,    Boolean.class, "bit",           "ASE needs to be rebooted for the configuration to take effect."},
 //		{LEGAL_VALUES,         true,     String .class, "varchar(60)",   "What legal values can this configuration hold"},
 
-		{CONTEXT,              false,    String .class, "varchar(100)",  CONTEXT_TOOLTIP},
-		{VARTYPE,              false,    String .class, "varchar(100)",  "Parameter type (bool, enum, integer, real, or string)"},
-		{SOURCE,               false,    String .class, "varchar(100)",  "Source of the current parameter value"},
-		{MIN_VALUE,            false,    String .class, "varchar(100)",  "Minimum value of the configuration"},
-		{MAX_VALUE,            false,    String .class, "varchar(100)",  "Maximum value of the configuration"},
-		{ENUMVALS,             false,    String .class, "varchar(100)",  "Allowed values of an enum parameter"},
-		{BOOT_VAL,             false,    String .class, "varchar(100)",  "Parameter value assumed at server startup if the parameter is not otherwise set"},
-		{RESET_VAL,            false,    String .class, "varchar(100)",  "Value that RESET would reset the parameter to in the current session"},
+		{CONTEXT,              false,    String .class, "varchar(128)",  CONTEXT_TOOLTIP},
+		{VARTYPE,              false,    String .class, "varchar(128)",  "Parameter type (bool, enum, integer, real, or string)"},
+		{SOURCE,               false,    String .class, "varchar(128)",  "Source of the current parameter value"},
+		{MIN_VALUE,            false,    String .class, "varchar(128)",  "Minimum value of the configuration"},
+		{MAX_VALUE,            false,    String .class, "varchar(128)",  "Maximum value of the configuration"},
+		{ENUMVALS,             false,    String .class, "varchar(128)",  "Allowed values of an enum parameter"},
+		{BOOT_VAL,             false,    String .class, "varchar(128)",  "Parameter value assumed at server startup if the parameter is not otherwise set"},
+		{RESET_VAL,            false,    String .class, "varchar(128)",  "Value that RESET would reset the parameter to in the current session"},
 
 		{DESCRIPTION,          true,     String .class, "varchar(255)",  "Description of the configuration."},
 		{EXTRA_DESCRIPTION,    true,     String .class, "varchar(1024)", "Extra Description of the configuration."},
@@ -420,6 +420,7 @@ implements IDbmsConfig
 				ResultSet rs = stmt.executeQuery("select localtimestamp");
 				while ( rs.next() )
 					_timestamp = rs.getTimestamp(1);
+				rs.close();
 
 				// Then execute the Real query
 				rs = stmt.executeQuery(sql);

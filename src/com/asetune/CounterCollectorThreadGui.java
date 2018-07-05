@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -13,7 +14,10 @@ import org.apache.log4j.Logger;
 import org.h2.util.Profiler;
 
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
+import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.LostConnectionException;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.MainFrame;
@@ -27,6 +31,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
 
@@ -34,6 +39,8 @@ public class CounterCollectorThreadGui
 extends CounterCollectorThreadAbstract
 {
 	private static Logger _logger = Logger.getLogger(CounterCollectorThreadGui.class);
+
+	public static final String THREAD_NAME = "CounterCollectorThreadGui";
 
 	private long _lastJavaGcWasDoneAt = System.currentTimeMillis();
 
@@ -90,16 +97,16 @@ extends CounterCollectorThreadAbstract
 		// Override prop values with the Command line parameters if any. 
 //		CommandLine cmd = AseTune.getCmdLineParams();
 		String cmdLineUsername = null, cmdLinePassword = null, cmdLineServer = null;
-		cmdLineUsername = conf.getProperty("cmdLine.aseUsername");
-		cmdLinePassword = conf.getProperty("cmdLine.asePassword");
-		cmdLineServer   = conf.getProperty("cmdLine.aseServer");
+		cmdLineUsername = conf.getProperty("cmdLine.dbmsUsername");
+		cmdLinePassword = conf.getProperty("cmdLine.dbmsPassword");
+		cmdLineServer   = conf.getProperty("cmdLine.dbmsServer");
 
 		if (cmdLineUsername != null || cmdLinePassword != null || cmdLineServer != null)
 		{
 			String ppeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + 
-				"={aseUsername="+ conf.getProperty("cmdLine.aseUsername") + 
-				",asePassword=" + conf.getProperty("cmdLine.asePassword") + 
-				",aseServer="   + conf.getProperty("cmdLine.aseServer") + 
+				"={dbmsUsername="+ conf.getProperty("cmdLine.dbmsUsername") + 
+				",dbmsPassword=" + conf.getProperty("cmdLine.dbmsPassword") + 
+				",dbmsServer="   + conf.getProperty("cmdLine.dbmsServer") + 
 				",sshUsername=" + conf.getProperty("cmdLine.sshUsername") + 
 				",sshPassword=" + conf.getProperty("cmdLine.sshPassword") +
 				",sshHostname=" + conf.getProperty("cmdLine.sshHostname") +
@@ -158,7 +165,9 @@ extends CounterCollectorThreadAbstract
 		boolean startNewPcsSession = false;
 
 		// Set the Thread name
-		setName("CounterCollectorThreadGui");
+//		setName("CounterCollectorThreadGui");
+		setName(THREAD_NAME);
+
 		_thread = Thread.currentThread();
 
 		_running = true;
@@ -185,7 +194,9 @@ extends CounterCollectorThreadAbstract
 			// Start it
 			imch.start();
 			
-			startIsMonConnectedWatchDog();
+			// Start a watchdog for connection (issues isConnected() all the time...)
+			if (getCounterController().shouldWeStart_connectionWatchDog())
+				startIsMonConnectedWatchDog();
 		}
 		catch (Exception e)
 		{
@@ -330,6 +341,7 @@ extends CounterCollectorThreadAbstract
 						doJavaGcAfterRefreshShowGui = false;
 						
 					int sleepTime = MainFrame.getRefreshInterval();
+					getCounterController().setDefaultSleepTimeInSec(sleepTime);
 
 					// First loop, we might want to be more responsive (not sleeping as long as we normally do)
 					// This so we get some info at the graphs...
@@ -524,6 +536,8 @@ extends CounterCollectorThreadAbstract
 
 				getCounterController().setInRefresh(true);
 
+				getCounterController().setDefaultSleepTimeInSec(MainFrame.getRefreshInterval());
+
 				//Component comp = MainFrame.getActiveTab();
 				MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Refreshing...");
 
@@ -548,6 +562,11 @@ extends CounterCollectorThreadAbstract
 				PersistContainer.HeaderInfo headerInfo = getCounterController().createPcsHeaderInfo();
 				if (headerInfo == null)
 					continue;
+
+				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
+//				if (StringUtil.hasValue(_dbmsServerAlias))
+//					headerInfo.setServerNameAlias(_dbmsServerAlias);
+				
 				
 				// PCS
 				PersistContainer pc = null;
@@ -561,10 +580,13 @@ extends CounterCollectorThreadAbstract
 				}
 				
 				// add some statistics on the "main" sample level
-				getCounterController().setStatisticsTime(headerInfo._mainSampleTime);
+				getCounterController().setStatisticsTime(headerInfo.getMainSampleTime());
 
 				// Set SERVERNAME to where we are currently connected 
-				System.setProperty("DBMS_SERVERNAME", headerInfo.getServerName());
+				if ( StringUtil.isNullOrBlank(headerInfo.getServerNameOrAlias()) )
+					_logger.warn("DBMS Server Name is null. Please set the server in ICounterController method: createPcsHeaderInfo()");
+				else
+					System.setProperty("SERVERNAME", DbxTune.stripSrvName(headerInfo.getServerNameOrAlias()));
 				
 				//-----------------
 				// Update data in tabs
@@ -604,9 +626,9 @@ extends CounterCollectorThreadAbstract
 					{
 						if (headerInfo != null)
 						{
-							cm.setServerName(      headerInfo._serverName);
-							cm.setSampleTimeHead(  headerInfo._mainSampleTime);
-							cm.setCounterClearTime(headerInfo._counterClearTime);
+							cm.setServerName(      headerInfo.getServerNameOrAlias()); // or should we just use getServerName()
+							cm.setSampleTimeHead(  headerInfo.getMainSampleTime());
+							cm.setCounterClearTime(headerInfo.getCounterClearTime());
 						}
 
 						try
@@ -627,6 +649,33 @@ extends CounterCollectorThreadAbstract
 							if ( (pc != null && cm.isPersistCountersEnabled()) || imch != null )
 							{
 								pc.add(cm);
+							}
+						}
+						catch (LostConnectionException ex)
+						{
+							cm.setSampleException(ex);
+
+							// Try to re-connect, otherwise we might "cancel" some ongoing alarms (due to the fact that we do 'end-of-scan' at the end of the loop)
+							_logger.info("Try reconnect. When refreshing the data for cm '"+cm.getName()+"', we got 'LostConnectionException'.");
+							DbxConnection conn = getCounterController().getMonConnection();
+							if (conn != null)
+							{
+								try
+								{
+									conn.close();
+									conn.reConnect(null);
+									_logger.info("Succeeded: reconnect. continuing to refresh data for next CM.");
+								}
+								catch(Exception reconnectEx)
+								{
+									_logger.error("Problem when reconnecting. Caught: "+reconnectEx);
+								}
+							}
+							// If we got an exception, go and check if we are still connected
+							if ( ! getCounterController().isMonConnected(true, true) ) // forceConnectionCheck=true, closeConnOnFailure=true
+							{
+								_logger.warn("Breaking check loop, due to 'not-connected' (after trying to re-connect). Next check loop will do new connection. When refreshing the data for cm '"+getName()+"', we Caught an Exception and we are no longer connected to the monitored server.");
+								break; // break: LOOP CM's
 							}
 						}
 						catch (Exception ex)
@@ -670,16 +719,6 @@ extends CounterCollectorThreadAbstract
 				}
 
 				
-				// POST the container to the Persistent Counter Handler
-				// That thread will store the information in any Storage.
-				if (pcs != null)
-					pcs.add(pc);
-
-				// POST/Add to the history queue
-				if (imch != null)
-					imch.add(pc);
-
-
 				//-----------------
 				// Update SUMMARY GRAPHS
 				//-----------------
@@ -716,8 +755,10 @@ extends CounterCollectorThreadAbstract
 				//-----------------
 				if (AlarmHandler.hasInstance())
 				{
-//					AlarmHandler.getInstance().endOfScan();           // This is synchronous operation
-					AlarmHandler.getInstance().addEndOfScanToQueue(); // This is async operation
+					AlarmHandler ah = AlarmHandler.getInstance();
+
+					ah.endOfScan();           // This is synchronous operation (if we want to stuff Alarms in the PersistContainer before it's called/sent)
+//					ah.addEndOfScanToQueue(); // This is async operation
 
 					// Wait for the above end-of-schan to be executed, but wait for max 100ms
 					// Note: This will block the Event Dispatch Thread from updating the GUI in 100ms
@@ -725,9 +766,30 @@ extends CounterCollectorThreadAbstract
 //
 //					if (_logger.isDebugEnabled())
 //						_logger.debug("waitForQueueEndOfScan(): waitTime="+waitTime);
+
+					// Add Active alarms to the Persist Container.
+					pc.addActiveAlarms(ah.getAlarmList());
+					
+					// Add Alarm events that has happened in this sample. (RASIE/RE-RAISE/CANCEL)
+					if ( AlarmWriterToPcsJdbc.hasInstance() )
+					{
+						List<AlarmEventWrapper> alarmEvents = AlarmWriterToPcsJdbc.getInstance().getList();
+						pc.addAlarmEvents(alarmEvents);
+						// Note: AlarmWriterToPcsJdbc.getInstance().clear(); is done in PersistContainerHandler after each container entry is handled
+					}
 				}
-//				// FIXME: in MainFrame: instead of the below call... use some kind of listener from the AlarmHandler which will notify on changes
-//				MainFrame.getInstance().setActiveAlarms();
+
+				//-----------------
+				// POST the container to the Persistent Counter Handler
+				// That thread will store the information in any Storage.
+				//-----------------
+				if (pcs != null)
+					pcs.add(pc);
+
+				// POST/Add to the history queue
+				if (imch != null)
+					imch.add(pc);
+
 
 				// NO Longer in refresh mode
 				getCounterController().setInRefresh(false);
@@ -775,48 +837,49 @@ extends CounterCollectorThreadAbstract
 	private Thread _isMonConnectedWatchDog = null;
 	private void startIsMonConnectedWatchDog()
 	{
-		boolean startIsMonConnectedWatchDog = Configuration.getCombinedConfiguration().getBooleanProperty("startIsMonConnectedWatchDog", true);
-		if (startIsMonConnectedWatchDog)
+//		boolean startIsMonConnectedWatchDog = Configuration.getCombinedConfiguration().getBooleanProperty("startIsMonConnectedWatchDog", true);
+//		if (startIsMonConnectedWatchDog)
+//		{
+//		}
+//		}
+//		else
+//		{
+//			_logger.info("NO START OF 'isMonConnectedWatchDog' thread.");
+//		}
+		_isMonConnectedWatchDog = new Thread()
 		{
-			_isMonConnectedWatchDog = new Thread()
+			@Override
+			public void run() 
 			{
-				@Override
-				public void run() 
+				_logger.info("Starting up 'is monitor connected' background thread...");
+				
+				while(true)
 				{
-					_logger.info("Starting up 'is monitor connected' background thread...");
-					
-					while(true)
+					try
 					{
-						try
+						// If the monitor is "in refresh", we don't need/want to check
+						// It might cause blocking things if _conn.isClosed() is called
+						// but right now, I'm doing 'select 1' in my own isClosed(conn) check...
+						if ( ! getCounterController().isRefreshing() )
 						{
-							// If the monitor is "in refresh", we don't need/want to check
-							// It might cause blocking things if _conn.isClosed() is called
-							// but right now, I'm doing 'select 1' in my own isClosed(conn) check...
-							if ( ! getCounterController().isRefreshing() )
-							{
-								getCounterController().isMonConnected(true, true); // forceConnectionCheck, closeConnOnFailure
+							getCounterController().isMonConnected(true, true); // forceConnectionCheck, closeConnOnFailure
 //								_isMonConnectedWatchDogLastCheck = System.currentTimeMillis();
-							}
+						}
 
-							Thread.sleep(1000);
-						}
-						catch(Throwable t)
-						{
-							_logger.info("isMonConnectedWatchDog: caught: "+t);
-						}
+						Thread.sleep(1000);
 					}
-				};
+					catch(Throwable t)
+					{
+						_logger.info("isMonConnectedWatchDog: caught: "+t);
+					}
+				}
 			};
-			
-			_isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
-			_isMonConnectedWatchDog.setDaemon(true);
-	
-			_isMonConnectedWatchDog.start();
-		}
-		else
-		{
-			_logger.info("NO START OF 'isMonConnectedWatchDog' thread.");
-		}
+		};
+		
+		_isMonConnectedWatchDog.setName("isMonConnectedWatchDog");
+		_isMonConnectedWatchDog.setDaemon(true);
+
+		_isMonConnectedWatchDog.start();
 	}
 
 	/** called when GetCounters.closeMonConnection() */

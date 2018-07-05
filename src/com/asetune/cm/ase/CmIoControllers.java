@@ -14,7 +14,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Ver;
 
 /**
@@ -105,40 +104,63 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labels1 = new String[] { "Pending" };
-		String[] labels2 = new String[] { "Completed" };
-		
-		addTrendGraphData(GRAPH_NAME_PENDING_DISK_IO,   new TrendGraphDataPoint(GRAPH_NAME_PENDING_DISK_IO,   labels1, LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_COMPLETED_DISK_IO, new TrendGraphDataPoint(GRAPH_NAME_COMPLETED_DISK_IO, labels2, LabelType.Static));
+//		String[] labels1 = new String[] { "Pending" };
+//		String[] labels2 = new String[] { "Completed" };
+//		
+//		addTrendGraphData(GRAPH_NAME_PENDING_DISK_IO,   new TrendGraphDataPoint(GRAPH_NAME_PENDING_DISK_IO,   labels1, LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_COMPLETED_DISK_IO, new TrendGraphDataPoint(GRAPH_NAME_COMPLETED_DISK_IO, labels2, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_PENDING_DISK_IO,
-					"Pending DiskIO's", 	                                 // Menu CheckBox text
-					"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					labels1, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_PENDING_DISK_IO,
+			"Pending DiskIO's", 	                                 // Menu CheckBox text
+			"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Pending" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
-					"Completed DiskIO's", 	                                 // Menu CheckBox text
-					"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-					labels2, 
-					false, // is Percent Graph
-					this, 
-					false, // visible at start
-					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-					-1);  // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
+			"Completed DiskIO's", 	                                 // Menu CheckBox text
+			"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "Completed" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_PENDING_DISK_IO,
+//					"Pending DiskIO's", 	                                 // Menu CheckBox text
+//					"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					labels1, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
+//					"Completed DiskIO's", 	                                 // Menu CheckBox text
+//					"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//					labels2, 
+//					false, // is Percent Graph
+//					this, 
+//					false, // visible at start
+//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//					-1);  // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 	@Override

@@ -44,19 +44,21 @@ implements ActionListener
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger          = Logger.getLogger(WizardOfflinePage1.class);
 
-	private static final String WIZ_NAME = "ase-info";
-	private static final String WIZ_DESC = "ASE information";
-	private static final String WIZ_HELP = "Connection information about the ASE server to sample statistics from.";
+	private static final String WIZ_NAME = "dbms-info";
+	private static final String WIZ_DESC = "DBMS information";
+	private static final String WIZ_HELP = "Connection information about the DBMS server to sample statistics from.";
 	
 	private JCheckBox         _cmdLine_chk = new JCheckBox("Use Command Line Switches for the below information", false);
-	private JComboBox<String> _aseName	    = new JComboBox<String>();
-//	private JTextField        _aseName     = new JTextField("");
-	private JTextField        _aseHost     = new JTextField("");
-	private JTextField        _asePort     = new JTextField("");
-	private JTextField        _aseUsername = new JTextField("");
-	private JTextField        _asePassword = new JPasswordField();
+	private JComboBox<String> _dbmsName	    = new JComboBox<String>();
+//	private JTextField        _dbmsName     = new JTextField("");
+	private JTextField        _dbmsHost     = new JTextField("");
+	private JTextField        _dbmsPort     = new JTextField("");
+	private JTextField        _dbmsUsername = new JTextField("");
+	private JTextField        _dbmsPassword = new JPasswordField();
 
 	private SyInterfacesDriver _interfacesDriver = null;
+
+	boolean _isInterfacesAware = false;
 
 	public static String getDescription() { return WIZ_DESC; }
 	@Override public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
@@ -67,11 +69,18 @@ implements ActionListener
 
 		setLayout(new MigLayout(WizardOffline.MigLayoutConstraints1, WizardOffline.MigLayoutConstraints2, WizardOffline.MigLayoutConstraints3));
 
-		_aseName    .setName("aseName");
-		_aseHost    .setName("aseHost");
-		_asePort    .setName("asePort");
-		_aseUsername.setName("aseUsername");
-		_asePassword.setName("asePassword");
+		if (Version.getAppName().toLowerCase().equals("asetune")) _isInterfacesAware = true;
+		if (Version.getAppName().toLowerCase().equals("iqtune"))  _isInterfacesAware = true;
+		if (Version.getAppName().toLowerCase().equals("rstune"))  _isInterfacesAware = true;
+		if (Version.getAppName().toLowerCase().equals("raxtune")) _isInterfacesAware = true;
+
+		
+		if (_isInterfacesAware)
+			_dbmsName.setName("dbmsName");
+		_dbmsHost    .setName("dbmsHost");
+		_dbmsPort    .setName("dbmsPort");
+		_dbmsUsername.setName("dbmsUsername");
+		_dbmsPassword.setName("dbmsPassword");
 
 		_cmdLine_chk.setToolTipText("<html>" +
 				"Command Line Switches '-Uuser -Ppasswd -Ssrvname' will override information in this wizard.<br>" +
@@ -83,27 +92,41 @@ implements ActionListener
 
 		add(_cmdLine_chk, "skip, wrap");
 
-		add(new JLabel("ASE Name"));
-		add(_aseName, "growx, wrap");
-		_aseName.putClientProperty("NAME", "ASE_NAME");
-		_aseName.addActionListener(this);
+		if (_isInterfacesAware)
+		{
+			String label = "DBMS";
+			if (Version.getAppName().toLowerCase().equals("asetune")) label = "ASE";
+			if (Version.getAppName().toLowerCase().equals("iqtune"))  label = "IQ";
+			if (Version.getAppName().toLowerCase().equals("rstune"))  label = "RS";
+			if (Version.getAppName().toLowerCase().equals("raxtune")) label = "RAX";
+			
+			add(new JLabel(label + " Name"));
+			add(_dbmsName, "growx, wrap");
+			_dbmsName.putClientProperty("NAME", "ASE_NAME");
+			_dbmsName.addActionListener(this);
+		}
 
 		add(new JLabel("Host Name"));
-		add(_aseHost, "growx, wrap");
+		add(_dbmsHost, "growx, wrap");
 
 		add(new JLabel("Port Number"));
-		add(_asePort, "growx, wrap");
+		add(_dbmsPort, "growx, wrap");
 
 		add(new JLabel("Username"));
-		add(_aseUsername, "growx, wrap");
+		add(_dbmsUsername, "growx, wrap");
 
 		add(new JLabel("Password"));
-		add(_asePassword, "growx, wrap");
+		add(_dbmsPassword, "growx, wrap");
 
 		JButton button = new JButton("Test Connection");
 		button.addActionListener(this);
 		button.putClientProperty("NAME", "BUTTON_CONN_TEST_ASE");
 		add(button, "span, align right");
+		
+		if (_isInterfacesAware)
+			button.setEnabled(true);
+		else
+			button.setEnabled(false);
 
 		// Command line switches
 		String cmdLineSwitched = 
@@ -123,59 +146,62 @@ implements ActionListener
 
 	private void initData()
 	{
-		try 
+		if (_isInterfacesAware)
 		{
-			String interfacesFile = System.getProperty("interfaces.file");
-			if (interfacesFile != null)
-			{
-				_interfacesDriver = new SyInterfacesDriver(interfacesFile);
-				_interfacesDriver.open(interfacesFile);
-			}
-			else
-			{
-				_interfacesDriver = new SyInterfacesDriver();
-				_interfacesDriver.open();
-			}
-		}
-		catch(Exception ex)
-		{
-			_logger.error("Problems reading interfaces or sql.ini file.", ex);
-		}
-
-		if (_interfacesDriver != null)
-		{
-			_logger.debug("Just opened the interfaces file '"+ _interfacesDriver.getBundle() +"'.");
-			
-			String[] servers = _interfacesDriver.getServers();
-			if (servers != null)
-			{
-				Arrays.sort(servers);
-				for (int i=0; i<servers.length; i++)
-				{
-					_logger.debug("Adding server '"+ servers[i] +"' to serverListCB.");
-					_aseName.addItem(servers[i]);
-				}
-			}
-		}
-		
-//		if (AseTune.getCounterCollector().isMonConnected())
-		if (CounterController.getInstance().isMonConnected())
-		{
-			String servername = "";
 			try 
 			{
-				servername = AseConnectionFactory.getServer();
-				_aseName.setSelectedItem( servername ); 
-			} 
-			catch(RuntimeException e)
-			{
-				_logger.warn("Problems getting info about server '"+servername+"' from the interfaces or sql.ini file.");
+				String interfacesFile = System.getProperty("interfaces.file");
+				if (interfacesFile != null)
+				{
+					_interfacesDriver = new SyInterfacesDriver(interfacesFile);
+					_interfacesDriver.open(interfacesFile);
+				}
+				else
+				{
+					_interfacesDriver = new SyInterfacesDriver();
+					_interfacesDriver.open();
+				}
 			}
-//			_aseName.setText("");
-//			_aseHost.setText("");
-//			_asePort.setText("");
-			_aseUsername.setText( AseConnectionFactory.getUser() );
-			_asePassword.setText( AseConnectionFactory.getPassword() );
+			catch(Exception ex)
+			{
+				_logger.error("Problems reading interfaces or sql.ini file.", ex);
+			}
+
+			if (_interfacesDriver != null)
+			{
+				_logger.debug("Just opened the interfaces file '"+ _interfacesDriver.getBundle() +"'.");
+				
+				String[] servers = _interfacesDriver.getServers();
+				if (servers != null)
+				{
+					Arrays.sort(servers);
+					for (int i=0; i<servers.length; i++)
+					{
+						_logger.debug("Adding server '"+ servers[i] +"' to serverListCB.");
+						_dbmsName.addItem(servers[i]);
+					}
+				}
+			}
+			
+//			if (AseTune.getCounterCollector().isMonConnected())
+			if (CounterController.getInstance().isMonConnected())
+			{
+				String servername = "";
+				try 
+				{
+					servername = AseConnectionFactory.getServer();
+					_dbmsName.setSelectedItem( servername ); 
+				} 
+				catch(RuntimeException e)
+				{
+					_logger.warn("Problems getting info about server '"+servername+"' from the interfaces or sql.ini file.");
+				}
+//				_dbmsName.setText("");
+//				_dbmsHost.setText("");
+//				_dbmsPort.setText("");
+				_dbmsUsername.setText( AseConnectionFactory.getUser() );
+				_dbmsPassword.setText( AseConnectionFactory.getPassword() );
+			}
 		}
 	}
 
@@ -184,20 +210,20 @@ implements ActionListener
 	{
 		if (_cmdLine_chk.isSelected())
 		{
-			_aseName    .setEnabled(false);
-			_aseHost    .setEnabled(false);
-			_asePort    .setEnabled(false);
-			_aseUsername.setEnabled(false);
-			_asePassword.setEnabled(false);
+			_dbmsName    .setEnabled(false);
+			_dbmsHost    .setEnabled(false);
+			_dbmsPort    .setEnabled(false);
+			_dbmsUsername.setEnabled(false);
+			_dbmsPassword.setEnabled(false);
 			return null;
 		}
 		else
 		{
-			_aseName    .setEnabled(true);
-			_aseHost    .setEnabled(true);
-			_asePort    .setEnabled(true);
-			_aseUsername.setEnabled(true);
-			_asePassword.setEnabled(true);
+			_dbmsName    .setEnabled(true);
+			_dbmsHost    .setEnabled(true);
+			_dbmsPort    .setEnabled(true);
+			_dbmsUsername.setEnabled(true);
+			_dbmsPassword.setEnabled(true);
 		}
 
 //		String name = null;
@@ -207,15 +233,15 @@ implements ActionListener
 		//System.out.println("validateContents: name='"+name+"',\n\ttoString='"+comp+"'\n\tcomp='"+comp+"',\n\tevent='"+event+"'.");
 
 		String problem = "";
-//		if ( _aseName    .getText().trim().length() <= 0) problem += "ASE Name, ";
-		if ( _aseHost    .getText().trim().length() <= 0) problem += "Host Name, ";
-		if ( _asePort    .getText().trim().length() <= 0) problem += "Port Number, ";
-		if ( _aseUsername.getText().trim().length() <= 0) problem += "Username, ";
+//		if ( _dbmsName    .getText().trim().length() <= 0) problem += "ASE Name, ";
+		if ( _dbmsHost    .getText().trim().length() <= 0) problem += "Host Name, ";
+		if ( _dbmsPort    .getText().trim().length() <= 0) problem += "Port Number, ";
+		if ( _dbmsUsername.getText().trim().length() <= 0) problem += "Username, ";
 
 		// Check if PORT_NUMBER is an integer
-		if (_asePort.getText().trim().length() > 0)
+		if (_dbmsPort.getText().trim().length() > 0)
 		{
-			String portStr = _asePort.getText();
+			String portStr = _dbmsPort.getText();
 			String[] sa = StringUtil.commaStrToArray(portStr);
 			for (int i=0; i<sa.length; i++)
 			{
@@ -226,7 +252,7 @@ implements ActionListener
 				}
 			}
 			
-//			try { Integer.parseInt( _asePort.getText().trim() ); }
+//			try { Integer.parseInt( _dbmsPort.getText().trim() ); }
 //			catch (NumberFormatException e)
 //			{
 //				problem = "Port Number needs to be a number, ";
@@ -254,9 +280,9 @@ implements ActionListener
 
 		if (name.equals("ASE_NAME"))
 		{
-			String srv = (String) _aseName.getSelectedItem();
-			_aseHost.setText(AseConnectionFactory.getIHosts(srv));
-			_asePort.setText(AseConnectionFactory.getIPorts(srv));
+			String srv = (String) _dbmsName.getSelectedItem();
+			_dbmsHost.setText(AseConnectionFactory.getIHosts(srv));
+			_dbmsPort.setText(AseConnectionFactory.getIPorts(srv));
 			
 //			SyInterfacesEntry interfaceEntry = null;
 //			if ( srv != null &&  ! srv.trim().equals("") )
@@ -269,8 +295,8 @@ implements ActionListener
 //	
 //			if (interfaceEntry != null)
 //			{
-//				_aseHost.setText( interfaceEntry.getHost() );
-//				_asePort.setText( interfaceEntry.getPort() );
+//				_dbmsHost.setText( interfaceEntry.getHost() );
+//				_dbmsPort.setText( interfaceEntry.getPort() );
 //			}
 //			else
 //			{
@@ -280,10 +306,10 @@ implements ActionListener
 		if (name.equals("BUTTON_CONN_TEST_ASE"))
 		{
 			testAseConnection("testConnect", 
-				_aseUsername.getText(), 
-				_asePassword.getText(), 
-				_aseHost.getText(), 
-				_asePort.getText());
+				_dbmsUsername.getText(), 
+				_dbmsPassword.getText(), 
+				_dbmsHost.getText(), 
+				_dbmsPort.getText());
 		}
 	}
 	
@@ -348,20 +374,21 @@ implements ActionListener
 		if (_cmdLine_chk.isSelected())
 		{
 			Map<String, Object> wizData = getWizardDataMap();
-			wizData.remove(_aseName    .getName());
-			wizData.remove(_aseHost    .getName());
-			wizData.remove(_asePort    .getName());
-			wizData.remove(_aseUsername.getName());
-			wizData.remove(_asePassword.getName());
+			wizData.remove(_dbmsName    .getName());
+			wizData.remove(_dbmsHost    .getName());
+			wizData.remove(_dbmsPort    .getName());
+			wizData.remove(_dbmsUsername.getName());
+			wizData.remove(_dbmsPassword.getName());
 		}
 		else
 		{
 			Map<String, Object> wizData = getWizardDataMap();
-			wizData.put(_aseName    .getName(), _aseName    .getSelectedItem());
-			wizData.put(_aseHost    .getName(), _aseHost    .getText());
-			wizData.put(_asePort    .getName(), _asePort    .getText());
-			wizData.put(_aseUsername.getName(), _aseUsername.getText());
-			wizData.put(_asePassword.getName(), _asePassword.getText());
+			if (_isInterfacesAware)
+				wizData.put(_dbmsName    .getName(), _dbmsName    .getSelectedItem());
+			wizData.put(_dbmsHost    .getName(), _dbmsHost    .getText());
+			wizData.put(_dbmsPort    .getName(), _dbmsPort    .getText());
+			wizData.put(_dbmsUsername.getName(), _dbmsUsername.getText());
+			wizData.put(_dbmsPassword.getName(), _dbmsPassword.getText());
 		}
 	}
 

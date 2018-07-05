@@ -16,7 +16,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
-import com.asetune.gui.TrendGraph;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -149,40 +148,63 @@ extends CountersModel
 
 	private void addTrendGraphs()
 	{
-		String[] labelsPerSec  = new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" };
-		String[] labelsHitRate = new String[] { "Hit rate percent" };
-		
-		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec,  LabelType.Static));
-		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate, LabelType.Static));
+//		String[] labelsPerSec  = new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" };
+//		String[] labelsHitRate = new String[] { "Hit rate percent" };
+//		
+//		addTrendGraphData(GRAPH_NAME_REQUEST_PER_SEC, new TrendGraphDataPoint(GRAPH_NAME_REQUEST_PER_SEC, labelsPerSec,  LabelType.Static));
+//		addTrendGraphData(GRAPH_NAME_HIT_RATE_PCT,    new TrendGraphDataPoint(GRAPH_NAME_HIT_RATE_PCT,    labelsHitRate, LabelType.Static));
 
-		// if GUI
-		if (getGuiController() != null && getGuiController().hasGUI())
-		{
-			// GRAPH
-			TrendGraph tg = null;
-			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
-				"Statement Cache Requests", 	                           // Menu CheckBox text
-				"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-				labelsPerSec, 
-				false, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
+		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
+			"Statement Cache Requests", 	                           // Menu CheckBox text
+			"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "NumSearches", "HitCount", "NumInserts", "NumRemovals" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			false, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
-			// GRAPH
-			tg = new TrendGraph(GRAPH_NAME_HIT_RATE_PCT,
-				"Statement Cache Hit Rate", 	                           // Menu CheckBox text
-				"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
-				labelsHitRate, 
-				true, // is Percent Graph
-				this, 
-				true,  // visible at start
-				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-				-1);   // minimum height
-			addTrendGraph(tg.getName(), tg, true);
-		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_HIT_RATE_PCT,
+			"Statement Cache Hit Rate", 	                           // Menu CheckBox text
+			"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+			new String[] { "Hit rate percent" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.CACHE,
+			true, // is Percent Graph
+			true,  // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+//		// if GUI
+//		if (getGuiController() != null && getGuiController().hasGUI())
+//		{
+//			// GRAPH
+//			TrendGraph tg = null;
+//			tg = new TrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
+//				"Statement Cache Requests", 	                           // Menu CheckBox text
+//				"Number of Requests from the Statement Cache, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//				labelsPerSec, 
+//				false, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//
+//			// GRAPH
+//			tg = new TrendGraph(GRAPH_NAME_HIT_RATE_PCT,
+//				"Statement Cache Hit Rate", 	                           // Menu CheckBox text
+//				"Statement Cache Hit Rate, in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")",                    // Label 
+//				labelsHitRate, 
+//				true, // is Percent Graph
+//				this, 
+//				true,  // visible at start
+//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//				-1);   // minimum height
+//			addTrendGraph(tg.getName(), tg, true);
+//		}
 	}
 
 //	@Override

@@ -97,6 +97,7 @@ extends ToolTipSupplierAbstractSql
 
 				list.add(e);
 			}
+			rs.close();
 			
 			return list;
 		}
@@ -143,6 +144,7 @@ extends ToolTipSupplierAbstractSql
 //					sb.append("<pre>")               .append(rs.getString(3)).append("</pre><br>");
 //					sb.append("\n");
 //				}
+//				rs.close();
 //				if (rows > 0)
 //				{
 //					sb.append("<hr>");

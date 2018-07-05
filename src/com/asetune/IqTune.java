@@ -1,5 +1,7 @@
 package com.asetune;
 
+import java.io.File;
+
 import org.apache.commons.cli.CommandLine;
 
 import com.asetune.check.CheckForUpdates;
@@ -45,19 +47,19 @@ extends DbxTune
 	@Override
 	public String getConfigFileName()
 	{
-		return "dbxtune.properties";
+		return "conf" + File.separatorChar + "dbxtune.properties";
 	}
 
 	@Override
 	public String getUserConfigFileName()
 	{
-		return "iqtune.user.properties";
+		return "conf" + File.separatorChar + "iqtune.user.properties";
 	}
 
 	@Override
 	public String getSaveConfigFileName()
 	{
-		return "iqtune.save.properties";
+		return "conf" + File.separatorChar + "iqtune.save.properties";
 	}
 
 	@Override

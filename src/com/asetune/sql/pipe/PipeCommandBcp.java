@@ -427,6 +427,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 				int count = 0;
 				while (rs.next())
 					count++;
+				rs.close();
 
 				System.out.println("Result from: RSMD.getTables(); count="+count);
 				if (count == 0)

@@ -10,6 +10,8 @@ public class TableExtraInfo
 	public static final String TableIndexSizeInKb  = "TableIndexSizeInKb";
 	public static final String TableLobSizeInKb    = "TableLobSizeInKb";
 
+	public static final String TableLockScheme     = "TableLockScheme";
+
 	public static final String TablePartitionCount = "TablePartitionCount";
 
 	public static final String IndexExtraInfo      = "IndexExtraInfo";

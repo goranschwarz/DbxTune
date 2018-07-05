@@ -13,7 +13,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -24,6 +26,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JSplitPane;
@@ -32,8 +35,11 @@ import javax.swing.JTextField;
 import javax.swing.SortOrder;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.AbstractTableModel;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -45,6 +51,7 @@ import com.asetune.cache.XmlPlanCache;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.gui.swing.DateTimePicker;
 import com.asetune.gui.swing.GButton;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.gui.swing.GTable;
@@ -55,6 +62,9 @@ import com.asetune.pcs.PersistReader;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
+import com.asetune.sql.SqlPickList;
+import com.asetune.sql.StatementNormalizer;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.WindowType;
 import com.asetune.tools.sqlw.QueryWindow;
@@ -63,12 +73,15 @@ import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
+import com.asetune.xmenu.TablePopupFactory;
+import com.jidesoft.swing.RangeSlider;
 
 import net.miginfocom.swing.MigLayout;
 
 public class SqlCaptureOfflineView
 extends JFrame
-implements ActionListener//, MouseListener
+implements ActionListener, ChangeListener//, MouseListener
 {
 	private static final long serialVersionUID = 1L;
 	private static Logger _logger = Logger.getLogger(SqlCaptureOfflineView.class);
@@ -83,43 +96,52 @@ implements ActionListener//, MouseListener
 
 	// Search Panel 
 	private JPanel             _search_panel           = null;
+	private List<Timestamp>    _searchRange_list       = null;
+	private JLabel             _searchRange_lbl        = new JLabel("Range");
+	private RangeSlider        _searchRange_rsl        = new RangeSlider();
 	private JLabel             _searchFrom_lbl         = new JLabel("From Period");
-	private JTextField         _searchFrom_txt         = new JTextField();
+//	private JTextField         _searchFrom_dtp         = new JTextField();
+	private DateTimePicker     _searchFrom_dtp         = new DateTimePicker();
 	private JButton            _searchFrom_but         = new JButton("...");
 	private JLabel             _searchTo_lbl           = new JLabel("Until Period");
-	private JTextField         _searchTo_txt           = new JTextField();
+//	private JTextField         _searchTo_dtp           = new JTextField();
+	private DateTimePicker     _searchTo_dtp           = new DateTimePicker();
 	private JButton            _searchTo_but           = new JButton("...");
 	private JCheckBox          _searchAuto_chk         = new JCheckBox("Auto Load Period");
 	private GButton            _search_but             = new GButton("Load");
+	private JLabel             _queryTimeout_lbl       = new JLabel("Query Timeout");
+	private JTextField         _queryTimeout_txt       = new JTextField("0", 5);
+	private JLabel             _selectedRange_lbl      = new JLabel("Selected Range Span");
+	private JLabel             _selectedRange_txt      = new JLabel("-");
 	private JButton            _changeSqlCapProp_but   = new JButton("Change SQL Capture Settings");
                                
 	private GTabbedPane        _tabbedPane             = new GTabbedPane("StatementAndSql");
                                
 	// PANEL: Stataments Tab 
 	private JPanel             _statements_panel       = null;
-	private GTable             _statements_tab         = new GTable();
+	private GTableLocal        _statements_tab         = new GTableLocal();
 	private JScrollPane        _statements_scroll      = new JScrollPane(_statements_tab);
 	private GTableFilter       _statementsFilter       = new GTableFilter(_statements_tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 	private GButton            _statementsExec_but     = new GButton("Execute")
 	{
 		private static final long serialVersionUID = 1L;
-		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + getSqlFor_StatementsTab() + "</pre></html>"); return super.getToolTipText(event); };
+		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + StringUtil.toHtmlStringExceptNl(getSqlFor_StatementsTab()) + "</pre></html>"); return super.getToolTipText(event); };
 	};
 
 	// PANEL: SQL Tab
 	private JPanel             _sql_panel              = null;
-	private GTable             _sql_tab                = new GTable();
+	private GTableLocal        _sql_tab                = new GTableLocal();
 	private JScrollPane        _sql_scroll             = new JScrollPane(_sql_tab);
 	private GTableFilter       _sqlFilter              = new GTableFilter(_sql_tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 	private GButton            _sqlExec_but            = new GButton("Execute")
 	{
 		private static final long serialVersionUID = 1L;
-		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + getSqlFor_SqlTextTab() + "</pre></html>"); return super.getToolTipText(event); };
+		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + StringUtil.toHtmlStringExceptNl(getSqlFor_SqlTextTab()) + "</pre></html>"); return super.getToolTipText(event); };
 	};
 
 	// PANEL: Statements SUM Tab
 	private JPanel             _statementsSum_panel    = null;
-	private GTable             _statementsSum_tab      = new GTable();
+	private GTableLocal        _statementsSum_tab      = new GTableLocal();
 	private JScrollPane        _statementsSum_scroll   = new JScrollPane(_statementsSum_tab);
 	private GTableFilter       _statementsSumFilter    = new GTableFilter(_statementsSum_tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 	private JLabel             _statementsSum_lbl      = new JLabel("Max Rows");
@@ -128,12 +150,12 @@ implements ActionListener//, MouseListener
 	private GButton            _statementsSumExec_but  = new GButton("Execute")
 	{
 		private static final long serialVersionUID = 1L;
-		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + getSqlFor_SumStatementsTab() + "</pre></html>"); return super.getToolTipText(event); };
+		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + StringUtil.toHtmlStringExceptNl(getSqlFor_SumStatementsTab()) + "</pre></html>"); return super.getToolTipText(event); };
 	};
 
 	// PANEL: SQL SUM Tab
 	private JPanel             _sqlSum_panel           = null;
-	private GTable             _sqlSum_tab             = new GTable();
+	private GTableLocal        _sqlSum_tab             = new GTableLocal();
 	private JScrollPane        _sqlSum_scroll          = new JScrollPane(_sqlSum_tab);
 	private GTableFilter       _sqlSumFilter           = new GTableFilter(_sqlSum_tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 	private JLabel             _sqlSum_lbl             = new JLabel("Max Rows");
@@ -142,12 +164,12 @@ implements ActionListener//, MouseListener
 	private GButton            _sqlSumExec_but         = new GButton("Execute")
 	{
 		private static final long serialVersionUID = 1L;
-		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + getSqlFor_SumSqlTextTab() + "</pre></html>"); return super.getToolTipText(event); };
+		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + StringUtil.toHtmlStringExceptNl(getSqlFor_SumSqlTextTab()) + "</pre></html>"); return super.getToolTipText(event); };
 	};
 
 	// PANEL: UserDefined SQL Query
 	private JPanel             _udq_panel           = null;
-	private GTable             _udq_tab             = new GTable();
+	private GTableLocal        _udq_tab             = new GTableLocal();
 	private JScrollPane        _udq_scroll          = new JScrollPane(_udq_tab);
 	private GTableFilter       _udqFilter           = new GTableFilter(_udq_tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 //	private JLabel             _udq_lbl             = new JLabel("Max Rows");
@@ -156,7 +178,7 @@ implements ActionListener//, MouseListener
 	private GButton            _udqExec_but         = new GButton("Execute")
 	{
 		private static final long serialVersionUID = 1L;
-		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + getSqlFor_UserDefinedQueryTab() + "</pre></html>"); return super.getToolTipText(event); };
+		@Override public String getToolTipText(MouseEvent event) { setToolTipText("<html><pre>" + StringUtil.toHtmlStringExceptNl(getSqlFor_UserDefinedQueryTab()) + "</pre></html>"); return super.getToolTipText(event); };
 	};
 	private JButton            _udqSqlw_but         = new JButton("Start SQL Window");
 	private JSplitPane         _udq_splitpane       = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -172,6 +194,8 @@ implements ActionListener//, MouseListener
 	private JCheckBox          _sqlTextFormatAuto_chk   = new JCheckBox("Auto Format SQL");
 	private JLabel             _sqlTextCurSpid_lbl1     = new JLabel("Current SPID:");
 	private JLabel             _sqlTextCurSpid_lbl2     = new JLabel("---");
+	private JLabel             _sqlTextCurKpid_lbl1     = new JLabel("KPID:");
+	private JLabel             _sqlTextCurKpid_lbl2     = new JLabel("---");
 	private JLabel             _sqlTextCurBatchId_lbl1  = new JLabel("BatchID:");
 	private JLabel             _sqlTextCurBatchId_lbl2  = new JLabel("---");
 	private JLabel             _sqlTextCurProcName_lbl1 = new JLabel("ProcName:");
@@ -270,44 +294,109 @@ implements ActionListener//, MouseListener
 //		setSize(1024, 768);
 	}
 
+	/**
+	 * Local GTable object so we can change some properties in an easy way, like adding right click menu... 
+	 */
+	private static class GTableLocal 
+	extends GTable
+	{
+		private static final long serialVersionUID = 1L;
+
+		public GTableLocal()
+		{
+			super();
+		}
+
+		public void createDataTablePopupMenu()
+		{
+			JPopupMenu popup = new JPopupMenu();
+
+			// Create COPY entries
+			TablePopupFactory.createCopyTable(popup);
+
+			// Add a popup menu
+			setComponentPopupMenu( popup );
+		}
+	}
+
 	private JPanel createTopPanel()
 	{
 		JPanel panel = SwingUtils.createPanel("Search Information", true);
 //		panel.setLayout(new MigLayout("debug, insets 0 0 0 0"));
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_searchFrom_lbl.setToolTipText("<html></html>");
-		_searchFrom_txt.setToolTipText("<html></html>");
-		_searchFrom_but.setToolTipText("<html></html>");
-		_searchTo_lbl  .setToolTipText("<html></html>");
-		_searchTo_txt  .setToolTipText("<html></html>");
-		_searchTo_but  .setToolTipText("<html></html>");
-		_search_but    .setToolTipText("<html></html>");
-		_searchAuto_chk.setToolTipText("<html></html>");
+		_searchFrom_lbl   .setToolTipText("<html>Search data from this data, in the format 'YYYY-MM-DD hh:mm:ss'</html>");
+		_searchFrom_dtp   .setToolTipText(_searchFrom_lbl.getToolTipText());
+		_searchFrom_but   .setToolTipText("<html>Open a dialog where you can choose a start date</html>");
+		_searchTo_lbl     .setToolTipText("<html>Search data until this data, in the format 'YYYY-MM-DD hh:mm:ss'</html>");
+		_searchTo_dtp     .setToolTipText(_searchTo_lbl.getToolTipText());
+		_searchTo_but     .setToolTipText("<html>Open a dialog where you can choose a end date</html>");
+		_selectedRange_lbl.setToolTipText("How long is the persiod you have selected, in HH:MM:SS.millisec");
+		_selectedRange_txt.setToolTipText(_selectedRange_lbl.getToolTipText());
+		_search_but       .setToolTipText("<html>Load the desired period from the storage.<br>Note: Check the 'Auto Load Period' if you want the data to be loaded whenever you change period in the Main Windows timeline.</html>");
+		_searchAuto_chk   .setToolTipText("<html>When you move the position in the timeline, automatically fill in the 'from' and 'Until' period, and 'load' the data.</html>");
 
+		_searchFrom_dtp.setFormats("yyyy-MM-dd HH:mm:ss.SSS", "yyyy-MM-dd", "yyyy-MM-dd HH", "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss");
+		_searchTo_dtp  .setFormats("yyyy-MM-dd HH:mm:ss.SSS", "yyyy-MM-dd", "yyyy-MM-dd HH", "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss");
+//		_searchFrom_dtp.setTimeFormat( new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS") );
+//		_searchTo_dtp  .setTimeFormat( new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS") );
+		_searchFrom_dtp.setTimeFormat( new SimpleDateFormat("HH:mm:ss") );
+		_searchTo_dtp  .setTimeFormat( new SimpleDateFormat("HH:mm:ss") );
+
+		panel.add(_searchRange_lbl,       "");
+		panel.add(_searchRange_rsl,       "span, growx, pushx, wrap");
+		
 		panel.add(_searchFrom_lbl,        "");
-		panel.add(_searchFrom_txt,        "growx, pushx");
+		panel.add(_searchFrom_dtp,        "split, width 45mm");
 		panel.add(_searchFrom_but,        "wrap");
 
 		panel.add(_searchTo_lbl,          "");
-		panel.add(_searchTo_txt,          "growx, pushx");
-		panel.add(_searchTo_but,          "wrap");
+		panel.add(_searchTo_dtp,          "split, width 45mm");
+		panel.add(_searchTo_but,          "");
+		panel.add(_selectedRange_lbl,     "gapleft 20");
+		panel.add(_selectedRange_txt,     "wrap");
 
 		panel.add(_search_but,            "span, split");
 		panel.add(_searchAuto_chk,        "");
+		panel.add(_queryTimeout_lbl,      "gapleft 20");
+		panel.add(_queryTimeout_txt,      "");
 		panel.add(new JLabel(),           "growx");
 		panel.add(_changeSqlCapProp_but,  "right, hidemode 3, wrap");
 		
 		// Add action listener
-		_searchFrom_txt      .addActionListener(this);
+		_searchFrom_dtp      .addActionListener(this);
 		_searchFrom_but      .addActionListener(this);
-		_searchTo_txt        .addActionListener(this);
+		_searchTo_dtp        .addActionListener(this);
 		_searchTo_but        .addActionListener(this);
 		_search_but          .addActionListener(this);
 		_changeSqlCapProp_but.addActionListener(this);
 
 		// Focus action listener
 
+		// Change Listerner
+		_searchRange_rsl.addChangeListener(this);
+
+		_searchRange_rsl.setToolTipText("Move the sliders to a start/stop time range");
+		_searchRange_rsl.setMinimum(0);
+		_searchRange_rsl.setMaximum(0);
+//		_searchRange_rsl.setPaintLabels(true);
+		_searchRange_rsl.setPaintTicks(true);
+		_searchRange_rsl.setPaintTrack(true);
+		_searchRange_rsl.setMajorTickSpacing(10);
+		_searchRange_rsl.setMinorTickSpacing(1);
+		
+		if (MainFrame.hasInstance())
+		{
+			_searchRange_list = MainFrame.getInstance().getOfflineSliderTsList();
+			if (_searchRange_list != null)
+			{
+				_searchRange_rsl.setMinimum(0);
+				_searchRange_rsl.setMaximum(_searchRange_list.size()-1);
+			}
+
+		}
+
+		
 		// Default visability
 		_changeSqlCapProp_but.setVisible(false);
 		if (PersistentCounterHandler.hasInstance())
@@ -332,6 +421,8 @@ implements ActionListener//, MouseListener
 //		_statements_tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_statements_tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
+		_statements_tab.createDataTablePopupMenu();
+		
 		panel.add(_statementsExec_but,      "split");
 		panel.add(_statementsFilter,        "growx, pushx, wrap");
 		panel.add(_statements_scroll,       "grow, push");
@@ -349,13 +440,28 @@ implements ActionListener//, MouseListener
 			{
 				if (e.getValueIsAdjusting())
 					return;
-//				int vrow = _statements_tab.getSelectedRow();
-				Integer spid     = _statements_tab.getSelectedValuesAsInteger("SPID");
-				Integer batchId  = _statements_tab.getSelectedValuesAsInteger("BatchID");
-				String  procName = _statements_tab.getSelectedValuesAsString ("ProcName");
-				
-				if (spid != null && batchId != null)
-					loadSqlTextAndPlanText(spid, batchId, procName);
+
+				GTable table = _statements_tab;
+
+				int     vrow     = table.getSelectedRow();
+				Integer spid     = null;
+				Integer kpid     = null;
+				Integer batchId  = null;
+				String  procName = null;
+
+				try { spid     = table.getSelectedValuesAsInteger("SPID");     } catch(RuntimeException ignore) { /* ignore */ }
+				try { kpid     = table.getSelectedValuesAsInteger("KPID");     } catch(RuntimeException ignore) { /* ignore */ }
+				try { batchId  = table.getSelectedValuesAsInteger("BatchID");  } catch(RuntimeException ignore) { /* ignore */ }
+				try { procName = table.getSelectedValuesAsString ("ProcName"); } catch(RuntimeException ignore) { /* ignore */ }
+
+				if (spid == null || kpid == null || batchId == null)
+				{
+					_logger.info("The "+table.getName()+" ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row ("+vrow+").");
+				}
+				else
+				{
+					loadSqlTextAndPlanText(spid, kpid, batchId, procName);
+				}
 			}
 		});
 		
@@ -375,6 +481,8 @@ implements ActionListener//, MouseListener
 //		_sql_tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_sql_tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
+		_sql_tab.createDataTablePopupMenu();
+		
 		panel.add(_sqlExec_but,      "split");
 		panel.add(_sqlFilter,        "growx, pushx, wrap");
 		panel.add(_sql_scroll,       "grow, push");
@@ -392,15 +500,28 @@ implements ActionListener//, MouseListener
 			{
 				if (e.getValueIsAdjusting())
 					return;
-//				int vrow = _statements_tab.getSelectedRow();
-				Integer spid     = _sql_tab.getSelectedValuesAsInteger("SPID");
-				Integer batchId  = _sql_tab.getSelectedValuesAsInteger("BatchID");
+
+				GTable table = _sql_tab;
+
+				int     vrow     = table.getSelectedRow();
+				Integer spid     = null;
+				Integer kpid     = null;
+				Integer batchId  = null;
 				String  procName = null;
 
-				if (spid != null && batchId != null)
+				try { spid     = table.getSelectedValuesAsInteger("SPID");     } catch(RuntimeException ignore) { /* ignore */ }
+				try { kpid     = table.getSelectedValuesAsInteger("KPID");     } catch(RuntimeException ignore) { /* ignore */ }
+				try { batchId  = table.getSelectedValuesAsInteger("BatchID");  } catch(RuntimeException ignore) { /* ignore */ }
+				//try { procName = table.getSelectedValuesAsString ("ProcName"); } catch(RuntimeException ignore) { /* ignore */ }
+
+				if (spid == null || kpid == null || batchId == null)
 				{
-					_statementsFilter.setFilterText("WHERE SPID = "+spid+" and BatchID = "+batchId);
-					loadSqlTextAndPlanText(spid, batchId, procName);
+					_logger.info("The "+table.getName()+" ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row ("+vrow+").");
+				}
+				else
+				{
+					_statementsFilter.setFilterText("WHERE SPID = "+spid+" and KPID = "+kpid+" and BatchID = "+batchId);
+					loadSqlTextAndPlanText(spid, kpid, batchId, procName);
 				}
 			}
 		});
@@ -421,6 +542,8 @@ implements ActionListener//, MouseListener
 //		_statementsSum_tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_statementsSum_tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
+		_statementsSum_tab.createDataTablePopupMenu();
+		
 		panel.add(_statementsSumExec_but,      "split");
 		panel.add(_statementsSum_lbl,          "");
 		panel.add(_statementsSum_sp,           "wrap");
@@ -477,6 +600,8 @@ implements ActionListener//, MouseListener
 //		_sqlSum_tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_sqlSum_tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
+		_sqlSum_tab.createDataTablePopupMenu();
+		
 		panel.add(_sqlSumExec_but,      "split");
 		panel.add(_sqlSum_lbl,          "");
 		panel.add(_sqlSum_sp,           "wrap");
@@ -512,6 +637,8 @@ implements ActionListener//, MouseListener
 //		_udq_tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		_udq_tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
+		_udq_tab.createDataTablePopupMenu();
+		
 		// LEFT Panel
 		panelLeft.add(_udqFilter,        "growx, pushx, wrap");
 		panelLeft.add(_udq_scroll,       "grow, push");
@@ -541,13 +668,28 @@ implements ActionListener//, MouseListener
 			{
 				if (e.getValueIsAdjusting())
 					return;
-//				int vrow = _statements_tab.getSelectedRow();
-				Integer spid     = _udq_tab.getSelectedValuesAsInteger("SPID");
-				Integer batchId  = _udq_tab.getSelectedValuesAsInteger("BatchID");
-				String  procName = _udq_tab.getSelectedValuesAsString ("ProcName");
-				
-				if (spid != null && batchId != null)
-					loadSqlTextAndPlanText(spid, batchId, procName);
+
+				GTable table = _udq_tab;
+
+				int     vrow     = table.getSelectedRow();
+				Integer spid     = null;
+				Integer kpid     = null;
+				Integer batchId  = null;
+				String  procName = null;
+
+				try { spid     = table.getSelectedValuesAsInteger("SPID");     } catch(RuntimeException ignore) { /* ignore */ }
+				try { kpid     = table.getSelectedValuesAsInteger("KPID");     } catch(RuntimeException ignore) { /* ignore */ }
+				try { batchId  = table.getSelectedValuesAsInteger("BatchID");  } catch(RuntimeException ignore) { /* ignore */ }
+				try { procName = table.getSelectedValuesAsString ("ProcName"); } catch(RuntimeException ignore) { /* ignore */ }
+
+				if (spid == null || kpid == null || batchId == null)
+				{
+					_logger.info("The "+table.getName()+" ResultSet Table do not contain columns 'SPID', 'KPID' and 'BatchID'. Can't load SQL and Plan Text for current selected row ("+vrow+").");
+				}
+				else
+				{
+					loadSqlTextAndPlanText(spid, kpid, batchId, procName);
+				}
 			}
 		});
 		
@@ -562,8 +704,8 @@ implements ActionListener//, MouseListener
 		JPanel panel = SwingUtils.createPanel("SQL Text", true);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_sqlTextFormat_but    .setToolTipText("<html></html>");
-		_sqlTextFormatAuto_chk.setToolTipText("<html></html>");
+		_sqlTextFormat_but    .setToolTipText("<html>Format the SQL Statement, using a <i>pretty print</i> formater.</html>");
+		_sqlTextFormatAuto_chk.setToolTipText("<html>Automatically Format the SQL Statement, using a <i>pretty print</i> formater.</html>");
 
 		_sqlText_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(_sqlText_txt, _sqlText_scroll, this);
@@ -572,6 +714,8 @@ implements ActionListener//, MouseListener
 		panel.add(_sqlTextFormat_but,       "");
 		panel.add(_sqlTextCurSpid_lbl1,     "");
 		panel.add(_sqlTextCurSpid_lbl2,     "");
+		panel.add(_sqlTextCurKpid_lbl1,     "");
+		panel.add(_sqlTextCurKpid_lbl2,     "");
 		panel.add(_sqlTextCurBatchId_lbl1,  "");
 		panel.add(_sqlTextCurBatchId_lbl2,  "");
 		panel.add(_sqlTextCurProcName_lbl1, "");
@@ -581,6 +725,7 @@ implements ActionListener//, MouseListener
 		// Make the font BOLD
 		Font f = _sqlTextCurSpid_lbl2.getFont();
 		_sqlTextCurSpid_lbl2    .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
+		_sqlTextCurKpid_lbl2    .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_sqlTextCurBatchId_lbl2 .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_sqlTextCurProcName_lbl2.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 
@@ -603,8 +748,8 @@ implements ActionListener//, MouseListener
 		JPanel panel = SwingUtils.createPanel("Showplan", true);
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_showplanXmlGui_but    .setToolTipText("<html></html>");
-		_showplanXmlGuiAuto_chk.setToolTipText("<html></html>");
+		_showplanXmlGui_but    .setToolTipText("<html>Load XML Plan in a special GUI that will visualize the execution plan i a tree like structure</html>");
+		_showplanXmlGuiAuto_chk.setToolTipText("<html>Automatically Load XML Plan in a special GUI that will visualize the execution plan i a tree like structure</html>");
 
 		_showplan_txt.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_SQL);
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(_showplan_txt, _showplan_scroll, this);
@@ -622,12 +767,61 @@ implements ActionListener//, MouseListener
 	}
 
 	
-	public void setFromToTime(Timestamp from, Timestamp to)
+	@Override
+	public void stateChanged(ChangeEvent e)
 	{
+		int lowVal  = _searchRange_rsl.getLowValue();
+		int highVal = _searchRange_rsl.getHighValue();
+
+		if (_searchRange_list != null)
+		{
+			Timestamp from = _searchRange_list.get(lowVal);
+			Timestamp to   = _searchRange_list.get(highVal);
+
+			_searchFrom_dtp.setDate(from == null ? null : new Date(from.getTime()));
+    		_searchTo_dtp  .setDate(to   == null ? null : new Date(to  .getTime()));
+    		
+    		if (from != null && to != null)
+    			_selectedRange_txt.setText(TimeUtils.msToTimeStr(to.getTime()-from.getTime()));
+
+    		if (_searchAuto_chk.isSelected() && !_searchRange_rsl.getValueIsAdjusting())
+        		_search_but.doClick();
+		}
+	}
+
+	public void setFromToTime(Timestamp from, Timestamp to, List<Timestamp> list)
+	{
+		if (list != null)
+		{
+			if (_searchRange_list == null)
+				_searchRange_list = list;
+
+			if (_searchRange_rsl.getMaximum() != list.size()-1)
+			{
+				_searchRange_list = list;
+				_searchRange_rsl.setMinimum(0);
+				_searchRange_rsl.setMaximum(list.size()-1);
+			}
+		}
+
+		if (_searchRange_list != null && _searchAuto_chk.isSelected())
+		{
+			int fromPos = _searchRange_list.indexOf(from);
+			int toPos   = _searchRange_list.indexOf(to);
+
+			_searchRange_rsl.setLowValue(fromPos);
+			_searchRange_rsl.setHighValue(toPos);
+		}
+
 		if (_searchAuto_chk.isSelected())
 		{
-    		_searchFrom_txt.setText(from == null ? "" : from.toString());
-    		_searchTo_txt  .setText(to   == null ? "" : to  .toString());
+//    		_searchFrom_dtp.setText(from == null ? "" : from.toString());
+//    		_searchTo_dtp  .setText(to   == null ? "" : to  .toString());
+    		_searchFrom_dtp.setDate(from == null ? null : new Date(from.getTime()));
+    		_searchTo_dtp  .setDate(to   == null ? null : new Date(to  .getTime()));
+
+    		if (from != null && to != null)
+    			_selectedRange_txt.setText(TimeUtils.msToTimeStr(to.getTime()-from.getTime()));
     		
     		_search_but.doClick();
 		}
@@ -675,7 +869,7 @@ implements ActionListener//, MouseListener
 		if (selectedTab == 1 ||_tabbedPane.isTabUnDocked(1)) loadSqlTextTab();
 	}
 
-	private void loadSqlTextAndPlanText(int spid, int batchId, String procName)
+	private void loadSqlTextAndPlanText(int spid, int kpid, int batchId, String procName)
 	{
 //		PersistReader reader = PersistReader.getInstance();
 //		if (reader == null)
@@ -688,16 +882,17 @@ implements ActionListener//, MouseListener
 			ResultSet rs;
 			RSyntaxTextAreaX ta;
 
-			String where = " where \"SPID\" = "+spid+" and \"BatchID\" = "+batchId;
+			String where = " where \"SPID\" = "+spid+" and KPID = "+kpid+" and \"BatchID\" = "+batchId;
 			
 			DbxConnection conn = getConnection();
 			Statement stmnt = conn.createStatement();
+			stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
 			// GET SQL TEXT
 			ta = _sqlText_txt;
 			tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
 			sql = "select \"SQLText\" from " + tabName + where;
-//System.out.println("Executing: "+sql);
+
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
 			boolean foundSqlText = false;
@@ -719,7 +914,7 @@ implements ActionListener//, MouseListener
 			ta = _showplan_txt;
 			tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_PLANS, null, true);
 			sql = "select \"PlanText\" from " + tabName + where;
-//System.out.println("Executing: "+sql);
+
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
 			boolean foundShowPlan = false;
@@ -735,6 +930,7 @@ implements ActionListener//, MouseListener
 			ta.setCaretPosition(0);
 			
 			_sqlTextCurSpid_lbl2    .setText(Integer.toString( spid    ));
+			_sqlTextCurKpid_lbl2    .setText(Integer.toString( kpid    ));
 			_sqlTextCurBatchId_lbl2 .setText(Integer.toString( batchId ));
 			_sqlTextCurProcName_lbl2.setText(procName);
 			_showplanSsName_txt     .setText("");
@@ -763,6 +959,7 @@ implements ActionListener//, MouseListener
 		catch(SQLException ex)
 		{
 			_sqlTextCurSpid_lbl2    .setText("---");
+			_sqlTextCurKpid_lbl2    .setText("---");
 			_sqlTextCurBatchId_lbl2 .setText("---");
 			_sqlTextCurProcName_lbl2.setText("---");
 
@@ -790,14 +987,14 @@ implements ActionListener//, MouseListener
 					
 					DbxConnection conn = getConnection();
 					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
 					wait.setState("Getting Statement Info");
 
 					sql = getSqlFor_StatementsTab();
 
-//System.out.println("Executing: "+sql);
 					rs = stmnt.executeQuery(sql);
-					_statements_tab.setModel(new ResultSetTableModel(rs, true, "_statements_tab"));
+					_statements_tab.setModel(enrichRstm(new ResultSetTableModel(rs, true, "_statements_tab")));
 					_statements_tab.packAllGrowOnly();
 					_statementsFilter.updateRowCount();
 					_statementsFilter.refreshCompletion();
@@ -815,6 +1012,40 @@ implements ActionListener//, MouseListener
 
 		// Now Execute and wait for it to finish
 		wait.execAndWait(doWork, 200); // 200ms in GraceTime before the GUI popup is raised
+	}
+	
+	/** if NormSQLText is empty, and SQLText has Value... create the NormSQLText content "on the fly" */
+	private ResultSetTableModel enrichRstm(ResultSetTableModel rstm)
+	{
+		boolean disabled = true;
+		if (disabled)
+			return rstm;
+
+		int SQLText_pos     = rstm.findColumn("SQLText");
+		int NormSQLText_pos = rstm.findColumn("NormSQLText");
+		
+		if (SQLText_pos == -1 || NormSQLText_pos == -1)
+		{
+			_logger.info("Enriching Statements information was skipped due to: SQLText_pos="+SQLText_pos+", NormSQLText_pos="+NormSQLText_pos);
+			return rstm;
+		}
+
+		// Used to anonymize or remove-constants in where clauses etc...
+		StatementNormalizer stmntNorm = new StatementNormalizer();
+
+		int rowCount = rstm.getRowCount();
+		for (int r=0; r<rowCount; r++)
+		{
+			String sqlText     = (String) rstm.getValueAt(r, SQLText_pos);
+			String normSqlText = (String) rstm.getValueAt(r, NormSQLText_pos);
+			if (StringUtil.hasValue(sqlText) && StringUtil.isNullOrBlank(normSqlText))
+			{
+				normSqlText = stmntNorm.normalizeStatementNoThrow(SqlCaptureBrokerAse.removeKnownPrefixes(sqlText));
+				rstm.setValueAt(normSqlText, r, NormSQLText_pos);
+			}
+		}
+
+		return rstm;
 	}
 
 
@@ -835,12 +1066,12 @@ implements ActionListener//, MouseListener
 					
 					DbxConnection conn = getConnection();
 					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
 					wait.setState("Getting SQL Text");
 
 					sql = getSqlFor_SqlTextTab();
 
-//System.out.println("Executing: "+sql);
 					rs = stmnt.executeQuery(sql);
 					_sql_tab.setModel(new ResultSetTableModel(rs, true, "_sql_tab"));
 					_sql_tab.packAllGrowOnly();
@@ -879,6 +1110,7 @@ implements ActionListener//, MouseListener
 					ResultSet rs;
 					DbxConnection conn = getConnection();
 					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
 					wait.setState("Getting Statement Info");
 
@@ -920,6 +1152,7 @@ implements ActionListener//, MouseListener
 					ResultSet rs;
 					DbxConnection conn = getConnection();
 					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
 					wait.setState("Getting SQL Text Info");
 
@@ -961,6 +1194,7 @@ implements ActionListener//, MouseListener
 					ResultSet rs;
 					DbxConnection conn = getConnection();
 					Statement stmnt = conn.createStatement();
+					stmnt.setQueryTimeout( getQueryTimeoutSetting() );
 
 					wait.setState("Executing...");
 
@@ -1003,18 +1237,66 @@ implements ActionListener//, MouseListener
 	private String getSqlFor_StatementsTab()
 	{
 		// Build where clause
-		String fromDate = _searchFrom_txt.getText();
-		String toDate   = _searchTo_txt.getText();
-		String where    = " where 1=1 ";
-		if (StringUtil.hasValue(fromDate))
-			where += " and \"sampleTime\" >= '"+fromDate+"' ";
-		if (StringUtil.hasValue(toDate))
-			where += " and \"sampleTime\" <= '"+toDate+"' ";
+		String fromDate = _searchFrom_dtp.getText();
+		String toDate   = _searchTo_dtp.getText();
+		String where    = " where 1=1 \n";
+		String columns  = "  CASE WHEN t.\"SQLText\" is NULL THEN convert(0, bit) ELSE convert(1, bit) END as \"hasSqlText\", \n" +
+		                  "  s.\"sampleTime\", s.\"StartTime\", s.\"EndTime\", s.\"Elapsed_ms\", s.\"SPID\", s.\"KPID\", s.\"BatchID\", s.\"LineNumber\", s.\"DBName\", s.\"ProcName\", \n" + 
+		                  "  s.\"CpuTime\", s.\"WaitTime\", s.\"MemUsageKB\", s.\"PhysicalReads\", s.\"LogicalReads\", s.\"RowsAffected\", s.\"ErrorStatus\", s.\"ProcNestLevel\",  \n" + 
+		                  "  s.\"StatementNumber\", s.\"QueryOptimizationTime\", s.\"PagesModified\", s.\"PacketsSent\", s.\"PacketsReceived\", s.\"NetworkPacketSize\",  \n" + 
+		                  "  s.\"PlansAltered\", s.\"ContextID\", s.\"HashKey\", s.\"SsqlId\", s.\"ObjOwnerID\", s.\"InstanceID\", s.\"DBID\", s.\"ProcedureID\", s.\"PlanID\", \n" +
+		                  "  s.\"NormJavaSqlHashCode\", s.\"JavaSqlHashCode\", t.\"SQLText\", t.\"NormSQLText\" ";
+
+//		if (StringUtil.hasValue(fromDate))
+//			where += " and \"sampleTime\" >= '"+fromDate+"' \n";
+//		if (StringUtil.hasValue(toDate))
+//			where += " and \"sampleTime\" <= '"+toDate+"' \n";
+		if (StringUtil.hasValue(fromDate) && StringUtil.hasValue(toDate))
+		{
+			where = "WHERE s.\"StartTime\" between '" + fromDate + "' and '" + toDate + "' \n" +
+			        "   OR s.\"EndTime\"   between '" + fromDate + "' and '" + toDate + "' \n" +
+			        "   OR '" + fromDate + "' between s.\"StartTime\" and s.\"EndTime\" \n " +
+			        "ORDER BY s.\"StartTime\"";
+			
+			columns = 
+				"\n" +
+				"  CASE \n" +
+				"    -- Execution WITHIN current time limit \n" + 
+				"    WHEN s.\"StartTime\" between '" + fromDate + "' and '" + toDate + "' AND s.\"EndTime\" between '" + fromDate + "' and '" + toDate + "' \n"+
+				"    THEN '<html><b><font color=\"green\" face=\"monospace\">&gt;&lt;</font></b> -- <i>Exec-Within</i></html>'  \n" +
+				"\n" +
+				"    -- Execution started BEFORE and ended WITHIN current time limit \n" + 
+				"    WHEN s.\"StartTime\" < '" + fromDate + "' AND s.\"EndTime\" between '" + fromDate + "' and '" + toDate + "' \n"+
+				"    THEN '<html><b><font color=\"orange\" face=\"monospace\">&lt;!</font></b> -- <i>Start-Before</i></html>'  \n" +
+				"\n" +
+				"    -- Execution started AFTER  and ended WITHIN current time limit \n" + 
+				"    WHEN s.\"StartTime\" > '" + fromDate + "' AND s.\"EndTime\" > '" + toDate + "' \n"+
+				"    THEN '<html><b><font color=\"orange\" face=\"monospace\">!&gt;</font></b> -- <i>End-After</i></html>'  \n" +
+				"\n" +
+				"    -- Execution started BEFORE and are STILL_RUNNING (not finished within current time limit) \n" + 
+				"    WHEN s.\"StartTime\" < '" + fromDate + "' AND s.\"EndTime\" > '" + toDate + "' \n" +
+				"    THEN '<html><b><font color=\"red\" face=\"monospace\">&lt;&gt;</font></b> -- <i>StartEnd-Outside</i></html>'  \n" +
+				"\n" +
+				"    -- This should not happen... \n" + 
+				"    ELSE '<html><b><font face=\"monospace\">??</font></b> -- <i>???</i></html>'  \n" +
+				"  END as \"Indicator\", \n" +
+				columns
+				;
+		}
+		else if (StringUtil.hasValue(fromDate) || StringUtil.hasValue(toDate))
+		{
+			if (StringUtil.hasValue(fromDate))
+				where += " and s.\"sampleTime\" >= '"+fromDate+"' \n";
+			if (StringUtil.hasValue(toDate))
+				where += " and s.\"sampleTime\" <= '"+toDate+"' \n";
+		}
 
 		// Build SELECT
-		String tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
-		String sql = "select * \n"
-				+ "from " + tabName + "\n"
+		String tabNameStmnt   = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+		String tabNameSqlText = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, true);
+		String sql = "SELECT " + columns + " \n"
+				+ "FROM " + tabNameStmnt + " s \n"
+				+ "LEFT OUTER JOIN "+tabNameSqlText+" t ON s.\"SPID\" = t.\"SPID\" AND s.\"KPID\" = t.\"KPID\" AND s.\"BatchID\" = t.\"BatchID\" \n"
 				+ where;
 		return sql;
 	}
@@ -1022,13 +1304,14 @@ implements ActionListener//, MouseListener
 	private String getSqlFor_SqlTextTab()
 	{
 		// Build where clause
-		String fromDate = _searchFrom_txt.getText();
-		String toDate   = _searchTo_txt.getText();
-		String where    = " where 1=1 ";
+		String fromDate = _searchFrom_dtp.getText();
+		String toDate   = _searchTo_dtp.getText();
+		String where    = " where 1=1 \n";
+
 		if (StringUtil.hasValue(fromDate))
-			where += " and \"sampleTime\" >= '"+fromDate+"' ";
+			where += " and \"sampleTime\" >= '"+fromDate+"' \n";
 		if (StringUtil.hasValue(toDate))
-			where += " and \"sampleTime\" <= '"+toDate+"' ";
+			where += " and \"sampleTime\" <= '"+toDate+"' \n";
 		
 		// Build SELECT
 		String tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
@@ -1069,7 +1352,8 @@ implements ActionListener//, MouseListener
 				+ "order by \"records\" desc \n"
 				+ " \n"
 				+ "------------------------------------------------------------- \n"
-				+ "-- Get Statements... NOT IN PROCS or STATEMENT-CACHE \n"
+				+ "-- Get Statements... NOT IN PROCS or STATEMENT-CACHE, by: JavaSqlHashCode \n"
+				+ "-- to execute below: Copy it to 'User Defined Query' \n"
 				+ "------------------------------------------------------------- \n"
 				+ "/* \n"
 				+ "select top " + _statementsSum_spm.getNumber().intValue() + " \n"
@@ -1089,6 +1373,31 @@ implements ActionListener//, MouseListener
 				+ "from " + tabName + " \n"
 				+ "where \"ProcName\" is NULL \n"
 				+ "group by \"JavaSqlHashCode\" \n"
+//				+ "having count(*) " + _statementsSum_spm.getNumber().intValue() + " \n"
+				+ "order by \"records\" desc \n"
+				+ "*/ \n"
+				+ "------------------------------------------------------------- \n"
+				+ "-- Get Statements... NOT IN PROCS or STATEMENT-CACHE, by: NormJavaSqlHashCode \n"
+				+ "-- to execute below: Copy it to 'User Defined Query' \n"
+				+ "------------------------------------------------------------- \n"
+				+ "/* \n"
+				+ "select top " + _statementsSum_spm.getNumber().intValue() + " \n"
+				+ "    \"NormJavaSqlHashCode\" \n"
+				+ "   ,count(*)                       as \"records\" \n"
+				+ "   ,avg(\"Elapsed_ms\")            as \"avgElapsed_ms\" \n"
+				+ "   ,avg(\"CpuTime\")               as \"avgCpuTime\" \n"
+				+ "   ,avg(\"WaitTime\")              as \"avgWaitTime\" \n"
+				+ "   ,avg(\"MemUsageKB\")            as \"avgMemUsageKB\" \n"
+				+ "   ,avg(\"PhysicalReads\")         as \"avgPhysicalReads\" \n"
+				+ "   ,avg(\"LogicalReads\")          as \"avgLogicalReads\" \n"
+				+ "   ,avg(\"RowsAffected\")          as \"avgRowsAffected\" \n"
+				+ "   ,avg(\"QueryOptimizationTime\") as \"avgQueryOptimizationTime\" \n"
+				+ "   ,avg(\"PagesModified\")         as \"avgPagesModified\" \n"
+				+ "   ,avg(\"PacketsSent\")           as \"avgPacketsSent\" \n"
+				+ "   ,avg(\"PacketsReceived\")       as \"avgPacketsReceived\" \n"
+				+ "from " + tabName + " \n"
+				+ "where \"ProcName\" is NULL \n"
+				+ "group by \"NormJavaSqlHashCode\" \n"
 //				+ "having count(*) " + _statementsSum_spm.getNumber().intValue() + " \n"
 				+ "order by \"records\" desc \n"
 				+ "*/ \n"
@@ -1113,7 +1422,9 @@ implements ActionListener//, MouseListener
 				+ "order by \"records\" desc \n"
 				+ "\n"
 				+ "\n"
-				+ "/*------------------------- \n"
+				+ "/*----------------------------------------------------------- \n"
+				+ " *---- to execute below: Copy it to 'User Defined Query' \n"
+				+ " *----------------------------------------------------------- \n"
 				+ "select top " + _sqlSum_spm.getNumber().intValue() + " \n"
 				+ "    \"JavaSqlHashCode\" \n"
 				+ "   ,count(*) as \"records\" \n"
@@ -1122,7 +1433,20 @@ implements ActionListener//, MouseListener
 				+ "group by \"JavaSqlHashCode\" \n"
 //				+ "having count(*) > " + _sqlSum_spm.getNumber().intValue() + " \n"
 				+ "order by \"records\" desc \n"
-				+ "--------------------------- */ \n"
+				+ "------------------------------------------------------------- */ \n"
+				+ "\n"
+				+ "/*----------------------------------------------------------- \n"
+				+ "  ---- to execute below: Copy it to 'User Defined Query' \n"
+				+ "  ----------------------------------------------------------- \n"
+				+ "select top " + _sqlSum_spm.getNumber().intValue() + " \n"
+				+ "    \"NormJavaSqlHashCode\" \n"
+				+ "   ,count(*) as \"records\" \n"
+				+ "from " + tabName + " \n"
+				+ "where 1 = 1 \n"
+				+ "group by \"NormJavaSqlHashCode\" \n"
+//				+ "having count(*) > " + _sqlSum_spm.getNumber().intValue() + " \n"
+				+ "order by \"records\" desc \n"
+				+ "------------------------------------------------------------- */ \n"
 				+ "";
 		return sql;
 	}
@@ -1146,7 +1470,6 @@ implements ActionListener//, MouseListener
 	@Override
 	public void actionPerformed(ActionEvent e)
 	{
-		System.out.println("actionPerformed: e="+e);
 		Object source = e.getSource();
 		
 		// LOAD/SEARCH
@@ -1156,14 +1479,37 @@ implements ActionListener//, MouseListener
 		}
 
 		// FROM DATE
-		if (_searchFrom_txt.equals(source))
+		if (_searchFrom_dtp.equals(source))
 		{
 			_search_but.doClick();
 		}
 		// TO DATE
-		if (_searchTo_txt.equals(source))
+		if (_searchTo_dtp.equals(source))
 		{
 			_search_but.doClick();
+		}
+		
+		// FROM DATE: Button ...
+		if (_searchFrom_but.equals(source))
+		{
+			if (_searchRange_list != null)
+			{
+				TimestampPickList pl = new TimestampPickList(this, _searchRange_list, "From: Date and Time");
+				Timestamp ts = pl.getTimestamp();
+				if (ts != null)
+					_searchFrom_dtp.setDate( new Date(ts.getTime()) );
+			}
+		}
+		// TO DATE Button ...
+		if (_searchTo_but.equals(source))
+		{
+			if (_searchRange_list != null)
+			{
+				TimestampPickList pl = new TimestampPickList(this, _searchRange_list, "To: Date and Time");
+				Timestamp ts = pl.getTimestamp();
+				if (ts != null)
+					_searchTo_dtp.setDate( new Date(ts.getTime()) );
+			}
 		}
 		
 		// BUTTON: SQL Exec
@@ -1259,11 +1605,24 @@ implements ActionListener//, MouseListener
 	**---------------------------------------------------
 	*/
 
+	private int getQueryTimeoutSetting()
+	{
+		String str = _queryTimeout_txt.getText();
+		int timeout = StringUtil.parseInt(str, DEFAULT_queryTimeout);
+		if (timeout < 0)
+			timeout = 0;
+		
+		_queryTimeout_txt.setText( Integer.toString(timeout) );
+		return timeout;
+	}
 	
 	/*---------------------------------------------------
 	** BEGIN: implementing saveProps & loadProps
 	**---------------------------------------------------
-	*/	
+	*/
+	private static final String PROPKEY_queryTimeout = PROPKEY_BASE + "query.timeout";
+	private static final int    DEFAULT_queryTimeout = 0;
+	
 	private void saveProps()
 	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
@@ -1277,8 +1636,9 @@ implements ActionListener//, MouseListener
 		// Settings
 		//----------------------------------
 		conf.setProperty(PROPKEY_BASE + "search.auto",                       _searchAuto_chk          .isSelected());
-		conf.setProperty(PROPKEY_BASE + "search.from",                       _searchTo_txt            .getText());
-		conf.setProperty(PROPKEY_BASE + "search.to",                         _searchFrom_txt          .getText());
+		conf.setProperty(PROPKEY_BASE + "search.from",                       _searchTo_dtp            .getText());
+		conf.setProperty(PROPKEY_BASE + "search.to",                         _searchFrom_dtp          .getText());
+		conf.setProperty(PROPKEY_queryTimeout,                               _queryTimeout_txt        .getText());
                                                                                                      
 		conf.setProperty(PROPKEY_BASE + "statements.tab.filter.selected",    _statementsFilter       .isFilterChkboxSelected());
 		conf.setProperty(PROPKEY_BASE + "statements.tab.filter.text",        _statementsFilter       .getText());
@@ -1332,8 +1692,9 @@ implements ActionListener//, MouseListener
 		// Settings
 		//----------------------------------
 		_searchAuto_chk         .setSelected(            conf.getBooleanProperty(PROPKEY_BASE + "search.auto",                       _searchAuto_chk.isSelected()));
-		_searchTo_txt           .setText(                conf.getProperty(       PROPKEY_BASE + "search.from",                       ""));
-		_searchFrom_txt         .setText(                conf.getProperty(       PROPKEY_BASE + "search.to",                         ""));
+		_searchTo_dtp           .setText(                conf.getProperty(       PROPKEY_BASE + "search.from",                       ""));
+		_searchFrom_dtp         .setText(                conf.getProperty(       PROPKEY_BASE + "search.to",                         ""));
+		_queryTimeout_txt       .setText(                conf.getProperty(       PROPKEY_queryTimeout,                               "0"));
 
 		_statementsFilter       .setFilterChkboxSelected(conf.getBooleanProperty(PROPKEY_BASE + "statements.tab.filter.selected",    true));
 		_statementsFilter       .setText(                conf.getProperty(       PROPKEY_BASE + "statements.tab.filter.text",        ""));
@@ -1401,7 +1762,48 @@ implements ActionListener//, MouseListener
 	**---------------------------------------------------
 	*/
 
+	private static class TimestampPickList
+	{
+		private List<Timestamp> _list;
+		private Window          _owner;
+		private String          _label;
 
+		public TimestampPickList(Window owner, List<Timestamp> list, String label)
+		{
+			_owner = owner;
+			_list  = list;
+			_label = label;
+		}
+
+		AbstractTableModel tm = new AbstractTableModel()
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override public int    getRowCount()          { return _list.size(); }
+			@Override public int    getColumnCount()       { return 2; }
+			@Override public String getColumnName(int col) { return col==0 ? "Date" : "Time"; }
+			@Override public Object getValueAt(int row, int col) 
+			{ 
+				String ts = "" + _list.get(row);
+				return col==0 ? ts.substring(0, 10) : ts.substring(11);
+			}
+		};
+		
+		public Timestamp getTimestamp()
+		{
+			SqlPickList pl = new SqlPickList(_owner, tm, _label, true);
+			pl.setVisible(true);
+			if (pl.wasOkPressed())
+			{
+				Timestamp ts = _list.get(pl.getSelectedModelRow());
+				return ts;
+			}
+			else
+			{
+				return null;
+			}
+		}
+	}
 	//------------------------------------------------------------
 	//------------------------------------------------------------
 	//------------------------------------------------------------
@@ -1439,6 +1841,5 @@ implements ActionListener//, MouseListener
 		
 		SqlCaptureOfflineView view = new SqlCaptureOfflineView(null);
 		view.setVisible(true);
-
 	}
 }
