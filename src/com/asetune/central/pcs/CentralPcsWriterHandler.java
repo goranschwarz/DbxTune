@@ -612,6 +612,15 @@ implements Runnable
 			try 
 			{
 				String sessionName = cont.getServerName();
+
+				// Session name should NOT be 'unknown', then we had some issue when generating the container header in the collector
+				// if we allow this, then we will create a schema named 'unknown', which isn't a good idea...
+				if ("unknown".equals(sessionName))
+				{
+					_logger.warn("The sessioName in the container is 'unknown', which is not a valid session name. Discarding this consume(ObjectLookupQueueEntry:Input) queue entry.");
+					continue;
+				}
+					
 				
 //				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', sessionSampleTime='"+cont.getSessionSampleTime()+"'. Previous persist took "+prevConsumeTimeMs+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
 
@@ -624,7 +633,9 @@ implements Runnable
 				    &&   pw.getSessionStartTime(sessionName) != null
 				    && cont.getSessionStartTime().getTime()  != pw.getSessionStartTime(sessionName).getTime()
 				   )
+				{
 					startNewSession = true;
+				}
 
 				// If a Session has not yet been started (or you need to "restart" one), go and do that.
 //				if ( ! pw.isSessionStarted() || cont.getStartNewSample() )

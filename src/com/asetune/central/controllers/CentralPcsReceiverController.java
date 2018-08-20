@@ -84,6 +84,7 @@ extends HttpServlet
 		catch(IOException ex) { ex.printStackTrace(); }
 		
 		// FIXME: send some error
+		// sample can be null, if serverName is "unknown"
 		if (sample == null)
 			return;
 

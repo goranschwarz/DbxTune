@@ -604,6 +604,9 @@ extends PersistWriterBase
 		_logger.info("Initializing the PersistWriter component named '"+getName()+"'.");
 
 		_confSlot0._url            = conf.getProperty       (key(PROPKEY_url           ), DEFAULT_url);
+		_confSlot0._cfgName        = "slot0";
+		if (_confSlot0._cfgName.endsWith("/api/pcs/receiver"))
+			_confSlot0._cfgName    = "dbxCentral";
 
 		_confSlot0._errorQueueSize = conf.getIntProperty    (key(PROPKEY_errorQueueSize), DEFAULT_errorQueueSize);
 

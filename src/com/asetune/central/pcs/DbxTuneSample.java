@@ -781,6 +781,13 @@ public class DbxTuneSample
 			if (StringUtil.hasValue(serverNameAlias))
 				serverNameOrAlias = serverNameAlias;
 			
+			// skip serverName "unknown" 
+			if ("unknown".equals(serverName))
+			{
+				String headerInfo = "appName='"+appName+"', appVersion='"+appVersion+"', appBuildString='"+appBuildString+"', collectorHostname='"+collectorHostname+"', collectorSampleInterval="+collectorSampleInterval+", collectorCurrentUrl='"+collectorCurrentUrl+"', collectorInfoFile='"+collectorInfoFile+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"', serverName='"+serverName+"', onHostname='"+onHostname+"', serverNameAlias='"+serverNameAlias+"'.";
+				_logger.warn("Recieved a JSON massage with serverName='unknown'. Skipping this entry. headerInfo: "+headerInfo);
+				return null;
+			}
 
 			DbxTuneSample sample = new DbxTuneSample(appName, appVersion, appBuildString, collectorHostname, collectorSampleInterval, collectorCurrentUrl, collectorInfoFile, sessionStartTime, sessionSampleTime, serverNameOrAlias, onHostname);
 

@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import org.apache.log4j.Logger;
 
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
 public class DbxConnectionPool
@@ -20,7 +21,7 @@ public class DbxConnectionPool
 
 	private ConnectionProp _connProp = null;
 	private int    _maxSize = 30;
-	private String _name    = ""; // Name of the connection pool 
+	private String _name    = "noname"; // Name of the connection pool 
 
 	public ConnectionProp getConnectionProp()   { return _connProp; }
 //	public String getDriver()   { return _connProp.getDriverClass(); }
@@ -74,6 +75,10 @@ public class DbxConnectionPool
 		cp.setPassword(password);
 		cp.setAppName(appName);
 
+		_name = name;
+		if (StringUtil.isNullOrBlank(_name))
+			_name = "noname";
+
 		_connProp = cp;
 		_maxSize  = maxSize;
 	}
@@ -85,6 +90,10 @@ public class DbxConnectionPool
 	 */
 	public DbxConnectionPool(String name, ConnectionProp connProp, int maxSize)
 	{
+		_name = name;
+		if (StringUtil.isNullOrBlank(_name))
+			_name = "noname";
+
 		_connProp = connProp;
 		_maxSize  = maxSize;
 	}
@@ -114,16 +123,28 @@ public class DbxConnectionPool
 		{
 			DbxConnection conn = _free.getFirst();
 			_free.removeFirst();
+
+			// Maybe: check if the connection is valid before using it
+			if ( ! conn.isValid(1) )
+			{
+				_logger.warn("When getting a connection '"+conn+"' from the connection pool '"+_name+"', the connection was no longer valid.");
+				conn.closeNoThrow();
+				throw new SQLException("When getting a connection '"+conn+"' from the connection pool '"+_name+"', the connection was no longer valid.");
+			}
 			
 			_bussy.addLast(conn);
 			return conn;
 		}
 		
+		String connPropUrl = "";
+		if (_connProp != null)
+			connPropUrl = _connProp.getUrl();
+
 		// If all connections are bussy... throw exception
 		int bussySize = _bussy.size();
 		if (bussySize > _maxSize)
 		{
-			throw new SQLException("All connection in the pool '"+_name+"' are used. MaxSize="+_maxSize);
+			throw new SQLException("All connection in the pool '"+_name+"' are used. MaxSize="+_maxSize+", URL="+connPropUrl);
 		}
 		
 		// Create a new connection
@@ -131,6 +152,9 @@ public class DbxConnectionPool
 		{
 			DbxConnection conn = DbxConnection.connect(guiOwner, _connProp);
 			_bussy.addLast(conn);
+
+			_logger.info("Created a new connection for the pool '"+_name+"'. bussy="+_bussy.size()+", free="+_free.size()+", MaxSize="+_maxSize+", URL="+connPropUrl);
+			
 			return conn;
 		}
 		catch (SQLException ex) 
@@ -139,7 +163,7 @@ public class DbxConnectionPool
 		}
 		catch (Exception ex) 
 		{
-			throw new SQLException("Problems creating a new connection for the pool '"+_name+"'. Caught: "+ex, ex);
+			throw new SQLException("Problems creating a new connection for the pool '"+_name+"', URL="+connPropUrl+". Caught: "+ex, ex);
 		}
 	}
 
@@ -160,7 +184,7 @@ public class DbxConnectionPool
 		{
 			if ( ! conn.isValid(1) )
 			{
-				_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was no longer valid.");
+				_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was no longer valid, closing the connection.");
 				conn.closeNoThrow();
 				return;				
 			}
