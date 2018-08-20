@@ -97,6 +97,104 @@ extends CounterSample
 		return AdminLogicalStatusList.getList(conn);
 	}
 
+//	private DbxConnection getConnection(CountersModel cm, DbxConnection srvConn, String name)
+//	throws SQLException
+//	{
+//		if (srvConn == null)
+//			throw new RuntimeException("The 'template' Connection can not be null.");
+//		
+//		if (_cpm == null)
+//			throw new RuntimeException("Connection pool Map is not initialized");
+//
+//		// If not a valid name, return null
+//		if (StringUtil.isNullOrBlank(name))
+//			throw new RuntimeException("Not a valid name");
+//		
+//		// Are we in GUI mode or not (connections can then use)
+//		Window guiOwner = null;
+////		guiOwner = cm.getGuiController().getGuiHandle();
+//		if (MainFrame.hasInstance())
+//			guiOwner = MainFrame.getInstance();
+//
+//		// reuse a connction if one exists
+//		if (_cpm.hasMapping(name))
+//		{
+//			// Set status
+//			if (cm != null && cm.getGuiController() != null)
+//				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to WS '"+name+"'");
+//			
+////			return _cpm.getPool(name).getConnection(guiOwner);
+//			// FIXME: we can NOT return here, we first need to check in some way if we are in a Gateway connection... otherwise we need to create a GW connection.
+//			DbxConnection connPoolConn = _cpm.getPool(name).getConnection(guiOwner);
+//			return connPoolConn;
+//		}
+//
+//		// Grab the ConnectionProperty from the template Connection
+//		ConnectionProp connProp = srvConn.getConnProp();
+//		if (connProp == null)
+//			throw new SQLException("No ConnectionProperty object could be found at the template connection.");
+//		
+//		// Clone the ConnectionProp
+//		connProp = new ConnectionProp(connProp);
+//
+////		// Set the new database name
+////		String url = connProp.getUrl();
+////		if (url.indexOf("/postgres") == -1)
+////			throw new SQLException("Initial connection 'template' has to be made to the 'postgres' database");
+////			
+////		url = url.replace("/postgres", "/"+name);
+////		connProp.setUrl(url);
+//		
+//		// Create a new connection pool for this DB
+//		DbxConnectionPool cp = new DbxConnectionPool(this.getClass().getSimpleName(), connProp, 5); // Max size = 5
+//
+//		// Set status in GUI if available
+//		if (cm != null && cm.getGuiController() != null)
+//			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to WS '"+name+"'");
+//
+//		// grab a new connection.
+//		DbxConnection dbConn = cp.getConnection(guiOwner);
+//
+//		_logger.info("Created a new Connection for WS '"+name+"', which will be cached in a connection pool. with maxSize=5, connProp="+connProp);
+//
+//		String sql = "connect to "+name;
+//		_logger.info("Issuing a Gateway connection for WS '"+name+"', rcl cmd: "+sql);
+//
+//		try (Statement stmnt = dbConn.createStatement())
+//		{
+//			stmnt.executeUpdate(sql);
+//		}
+//		catch (SQLException ex)
+//		{
+//			int error = ex.getErrorCode(); 
+//			if (error == 15539 || error == 15540)
+//			{
+//				// Skipping messages
+//				// 15539 - Gateway connection to 'SRV.db' is created.
+//				// 15540 - Gateway connection to 'SRV.db' is dropped.
+//				_logger.info(ex.getMessage());
+//			}
+//			else
+//			{
+//				throw ex;
+//			}
+//		}
+//		
+//		// when first connection is successfull, add the connection pool to the MAP
+//		_cpm.setPool(name, cp);
+//		
+//		return dbConn;
+//	}
+
+	/**
+	 * Get a connection 
+	 * 
+	 * @param cm
+	 * @param srvConn
+	 * @param name
+	 * @return
+	 * @throws SQLException
+	 */
 	private DbxConnection getConnection(CountersModel cm, DbxConnection srvConn, String name)
 	throws SQLException
 	{
@@ -116,45 +214,53 @@ extends CounterSample
 		if (MainFrame.hasInstance())
 			guiOwner = MainFrame.getInstance();
 
-		// reuse a connction if one exists
-		if (_cpm.hasMapping(name))
+		// Get the Connection pool, if it do not exists: create one
+		DbxConnectionPool cp = _cpm.getPool(name);
+		if (cp == null)
 		{
-			// Set status
-			if (cm != null && cm.getGuiController() != null)
-				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to WS '"+name+"'");
+			// Grab the ConnectionProperty from the template Connection
+			ConnectionProp connProp = srvConn.getConnProp();
+			if (connProp == null)
+				throw new SQLException("No ConnectionProperty object could be found at the template connection.");
 			
-			return _cpm.getPool(name).getConnection(guiOwner);
+			// Clone the ConnectionProp
+			connProp = new ConnectionProp(connProp);
+
+			// Create a new connection pool for this DB
+			cp = new DbxConnectionPool(this.getClass().getSimpleName(), connProp, 5); // Max size = 5
+
+			// set the new connection pool in the map
+			_cpm.setPool(name, cp);
+
+			_logger.info("Created a new Connection Pool for WS '"+name+"', with maxSize=5, connProp="+connProp);
 		}
-
-		// Grab the ConnectionProperty from the template Connection
-		ConnectionProp connProp = srvConn.getConnProp();
-		if (connProp == null)
-			throw new SQLException("No ConnectionProperty object could be found at the template connection.");
-		
-		// Clone the ConnectionProp
-		connProp = new ConnectionProp(connProp);
-
-//		// Set the new database name
-//		String url = connProp.getUrl();
-//		if (url.indexOf("/postgres") == -1)
-//			throw new SQLException("Initial connection 'template' has to be made to the 'postgres' database");
-//			
-//		url = url.replace("/postgres", "/"+name);
-//		connProp.setUrl(url);
-		
-		// Create a new connection pool for this DB
-		DbxConnectionPool cp = new DbxConnectionPool(this.getClass().getSimpleName(), connProp, 5); // Max size = 5
 
 		// Set status in GUI if available
 		if (cm != null && cm.getGuiController() != null)
-			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to WS '"+name+"'");
-
-		// grab a new conntion.
+			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to WS '"+name+"'");
+			
+		// Get a connection from the connection pool (it could be new; or reused, so we need to check if it's in a RS-GateWay-Connection or not)
 		DbxConnection dbConn = cp.getConnection(guiOwner);
 
-		_logger.info("Created a new Connection for WS '"+name+"', which will be cached in a connection pool. with maxSize=5, connProp="+connProp);
+		// Should we check the connection if it's ok...
+		// and if it's in a Gateway Connection
+		//      RCL 'show server'
+		//      if in a GW Connection it returns something:
+		//                         PROD_REP_RSSD.PROD_REP_RSSD
+		//      if it's NOT GW Connected yet, then we get "error": 
+		//                         Msg 2056, Level 12, State 0:
+		//                         Server 'PROD_REP', Line 0 (script row 4322), Status 0, TranState 0:
+		//                         Line 1, character 1: Incorrect syntax with 'show'.
+		
+		// If we already has a RepServer Gateway Connection to the destination database, THEN no more needs to be done.
+		if (dbConn.hasProperty("GW-CONNECTION"))
+		{
+			return dbConn;
+		}
 
+		// If we havent created a Gateway Connection to the Destination SRV... issue 'connect to SRV.db'
 		String sql = "connect to "+name;
+
 		_logger.info("Issuing a Gateway connection for WS '"+name+"', rcl cmd: "+sql);
 
 		try (Statement stmnt = dbConn.createStatement())
@@ -176,9 +282,9 @@ extends CounterSample
 				throw ex;
 			}
 		}
-		
-		// when first connection is successfull, add the connection pool to the MAP
-		_cpm.setPool(name, cp);
+
+		// Mark this connection as
+		dbConn.setProperty("GW-CONNECTION", true);
 		
 		return dbConn;
 	}

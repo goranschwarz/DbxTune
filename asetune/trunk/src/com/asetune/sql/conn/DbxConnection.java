@@ -2280,6 +2280,40 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	// END: SCHEMA methods
 	//-------------------------------------------------
 
+	
+	
+	
+	//-------------------------------------------------
+	// BEGIN: PROPERTIES methods
+	//-------------------------------------------------
+	private HashMap<String, Object> _props = new HashMap<>();
+
+	/** Check if a Property exists */
+	public boolean hasProperty(String key)
+	{
+		return _props.containsKey(key);
+	}
+	
+	/** set/assign a property value */
+	public void setProperty(String key, Object value)
+	{
+		_props.put(key, value);
+	}
+	
+	/** get a property value */
+	public Object getProperty(String key, Object defaultValue)
+	{
+		if (_props.containsKey(key))
+			return _props.get(key);
+		else
+			return defaultValue;
+	}
+	
+	//-------------------------------------------------
+	// END: PROPERTIES methods
+	//-------------------------------------------------
+	
+	
 //	/**
 //	 * Checks if the currect database connection is of the product name<br>
 //	 * This uses: <code>DbUtils.isProductName(this.getDatabaseProductName(), dbProdNameOracle);</code>

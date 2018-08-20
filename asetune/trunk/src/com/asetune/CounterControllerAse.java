@@ -119,6 +119,9 @@ public class CounterControllerAse extends CounterControllerAbstract
 	/** A list of roles which the connected user has */
 	protected List<String> _activeRoleList = null;
 
+	protected String _savedAseServerName = null;
+	protected String _savedAseHostName   = null;
+
 
 	public static final String TRANLOG_DISK_IO_TOOLTIP =
 		  "Below is a table that describes how a fast or slow disk affects number of transactions per second.<br>" +
@@ -178,6 +181,10 @@ public class CounterControllerAse extends CounterControllerAbstract
 		
 		// A list of roles which the connected user has
 		_activeRoleList = null;
+		
+		_savedAseServerName = null;
+		_savedAseHostName   = null;
+
 	}
 
 	/**
@@ -489,6 +496,10 @@ public class CounterControllerAse extends CounterControllerAbstract
 			}
 			rs.close();
 		//	stmt.close();
+
+			_savedAseServerName = aseServerName;
+			_savedAseHostName   = aseHostname;
+
 			
 			// CHECK IF ASE is in SHUTDOWN mode...
 			boolean aseInShutdown = false;
@@ -544,9 +555,12 @@ public class CounterControllerAse extends CounterControllerAbstract
 			
 			_logger.warn("Problems getting basic status info in 'Counter get loop', reverting back to 'static values'. SQL '"+sql+"', Caught: " + sqlex.toString() );
 			mainSampleTime   = new Timestamp(System.currentTimeMillis());
-			aseServerName    = "unknown";
-			aseHostname      = "unknown";
+			aseServerName    = _savedAseServerName;
+			aseHostname      = _savedAseHostName;
 			counterClearTime = new Timestamp(0);
+			
+			if (StringUtil.isNullOrBlank(aseServerName)) aseServerName = "unknown";
+			if (StringUtil.isNullOrBlank(aseHostname))   aseHostname   = "unknown";
 		}
 		finally
 		{

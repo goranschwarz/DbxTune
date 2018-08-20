@@ -862,12 +862,15 @@ extends CentralPersistWriterBase
 
 				// The database has been closed == 90098
 				// MVStore: This map is closed == 90028
-				if (error == 90098 || error == 90028)
+				// IllegalExceptionState: Transaction is closed == 50000
+				if (error == 90098 || error == 90028 || error == 50000)
 				{
 					// What should we do here... close the connection or what...
 					// Meaning closing the connection would result in a "reopen" on next save!
 					if (conn != null)
 					{
+						_logger.error("checking for connection errors in: 'isSevereProblem()'. Caught error="+error+", rootCauseMsg='"+rootCauseMsg+"'. which is mapped to 'close-connection'. A new connection will be opened on next save attempt.");
+						
 						try { conn.close(); }
 						catch (SQLException closeEx)
 						{
@@ -1579,34 +1582,59 @@ extends CentralPersistWriterBase
 //			}
 
 			String sql = "";
+			StringBuffer sbSql;
 
-			StringBuffer sbSql = new StringBuffer();
-			sbSql.append(getTableInsertStr(schemaName, Table.CENTRAL_SESSIONS, null, false));
-			sbSql.append(" values(");
-			sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()       ));
-			sbSql.append(", ").append(DbUtils.safeStr(0                                )); // Status is not in the container, so always add 0
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getAppBuildStr()            ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorHostname()      ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorSampleInterval()));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorCurrentUrl()    ));
-			sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorInfoFile()      ));
-			sbSql.append(", 0");     // NumOfSamples   always starts at 0
-			sbSql.append(", null"); // LastSampleTime is null at start
-			sbSql.append(")"); // end-of-values
+			// First check if the value exists in CENTRAL_SESSIONS... THEN do the Insert...
+			// This because if the Central Instance restarts and the collector has not been restarted, a valid session already exists
+			boolean sessionExists = false;
+			sbSql = new StringBuffer();
+			sbSql.append(" select * \n");
+			sbSql.append(" from ").append(getTableName(schemaName, Table.CENTRAL_SESSIONS, null, true)).append("\n");
+			sbSql.append(" where ").append(_qic).append("SessionStartTime").append(_qic).append(" = '").append(cont.getSessionStartTime()).append("'").append("\n");
+
 			sql = sbSql.toString();
-			
-			try
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 			{
-				conn.dbExec(sql);
-				getStatistics().incInserts();
+				while(rs.next())
+					sessionExists = true;
 			}
 			catch(SQLException ex)
 			{
-				_logger.warn("Problems inserting values to '"+getTableName(schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+				_logger.warn("Problems getting/checking existence from table '"+getTableName(schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+			}
+			
+			// Now insert the record to CENTRAL_SESSIONS if it do NOT exist
+			if ( ! sessionExists )
+			{
+				//StringBuffer sbSql = new StringBuffer();
+				sbSql = new StringBuffer();
+				sbSql.append(getTableInsertStr(schemaName, Table.CENTRAL_SESSIONS, null, false));
+				sbSql.append(" values(");
+				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()       ));
+				sbSql.append(", ").append(DbUtils.safeStr(0                                )); // Status is not in the container, so always add 0
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getServerName()             ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getOnHostname()             ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppName()                ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppVersion()             ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getAppBuildStr()            ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorHostname()      ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorSampleInterval()));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorCurrentUrl()    ));
+				sbSql.append(", ").append(DbUtils.safeStr(cont.getCollectorInfoFile()      ));
+				sbSql.append(", 0");     // NumOfSamples   always starts at 0
+				sbSql.append(", null"); // LastSampleTime is null at start
+				sbSql.append(")"); // end-of-values
+				sql = sbSql.toString();
+				
+				try
+				{
+					conn.dbExec(sql);
+					getStatistics().incInserts();
+				}
+				catch(SQLException ex)
+				{
+					_logger.warn("Problems inserting values to '"+getTableName(schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+				}
 			}
 			
 
@@ -2651,7 +2679,7 @@ return -1;
 			if( ! tabExists )
 			{
 //System.out.println("########################################## saveGraphDataDdl(): ---NOT-EXISTS--- schemaName='"+schemaName+"', tabName='"+tabName+"', GraphEntry='"+ge+"'.");
-				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+schemaName+"."+tabName+"'", schemaName.length()+45, true)+" for CounterModel graph '" + ge.getName() + "'.");
+				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+schemaName+"."+tabName+"'", schemaName.length()+50, true)+" for CounterModel graph '" + ge.getName() + "'.");
 
 				String sqlTable = getGraphTableDdlString(schemaName, tabName, ge);
 				String sqlIndex = getGraphIndexDdlString(schemaName, tabName, ge);

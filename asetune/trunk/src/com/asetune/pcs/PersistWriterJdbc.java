@@ -2723,12 +2723,12 @@ public class PersistWriterJdbc
 			// Lets alter the table and add them
 			if (missingCols.size() > 0)
 			{
-				_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel '" + cm.getName() + "' The following "+missingCols.size()+" column(s) where missing '"+missingCols+"', so lets add them.");
+				_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "' The following "+missingCols.size()+" column(s) where missing '"+missingCols+"', so lets add them.");
 
 				List<String> alterTableDdlList = getAlterTableDdlString(conn, tabName, missingCols, type, cm);
 				for (String sqlAlterTable : alterTableDdlList)
 				{
-					_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel '" + cm.getName() + "'. Executing SQL: "+sqlAlterTable);
+					_logger.info("Persistent Counter DB: Altering table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'. Executing SQL: "+sqlAlterTable);
 
 					dbDdlExec(conn, sqlAlterTable);
 
@@ -2738,7 +2738,7 @@ public class PersistWriterJdbc
 		}
 		else
 		{
-			_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel '" + cm.getName() + "'.");
+			_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'.");
 
 			String sqlTable = getTableDdlString(type, cm);
 			String sqlIndex = getIndexDdlString(type, cm);
@@ -3328,7 +3328,7 @@ public class PersistWriterJdbc
 
 			if( ! tabExists )
 			{
-				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 32, true)+" for CounterModel graph '" + tgdp.getName() + "'.");
+				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel graph '" + tgdp.getName() + "'.");
 
 				String sqlTable = getGraphTableDdlString(tabName, tgdp);
 				String sqlIndex = getGraphIndexDdlString(tabName, tgdp);

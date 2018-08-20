@@ -107,7 +107,9 @@
       Restart DbxCentral
       <div id="dbx-restart-server-div">
         <!-- <a class="btn btn-sm btn-primary mb-2" onclick="restartServer()" role="button">Restart</a> -->
-        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, no collectors will be restarted." onclick="restartServer()">Restart</button>
+        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance. no collectors will be restarted." onclick="restartServer('normal')">Restart</button>
+        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'compact'. no collectors will be restarted." onclick="restartServer('compact')">Restart (with compact)</button>
+        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'defrag'. no collectors will be restarted." onclick="restartServer('defrag')">Restart (with defrag)</button>
         <!-- <span id="dbx-server-restart-spinner"><img src="/images/busy_spinner.gif" height="32" width="32"></span> -->
         <span id="dbx-server-restart-feedback"></span>
         <span id="dbx-server-restart-spinner"><img src="/images/ajax-loader.gif"></span>
@@ -215,11 +217,21 @@
   /**
    * Restart server
    */
-  function restartServer() 
+  function restartServer(restartType) 
   {
+    var urlParams="";
+    if (restartType === "compact")
+    {
+      urlParams="&compact";
+    }
+    if (restartType === "defrag")
+    {
+      urlParams="&defrag";
+    }
+
     $.ajax(
     {
-      url: "/admin/shutdown?password=secret&restart",
+      url: "/admin/shutdown?password=secret&restart"+urlParams,
       type: 'get',
       //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
       
