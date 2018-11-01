@@ -7,9 +7,12 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.util.Map;
 
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
@@ -46,6 +49,8 @@ implements ActionListener
 	private JTextField _sshPort     = new JTextField(); 
 	private JTextField _sshUsername = new JTextField();
 	private JTextField _sshPassword = new JPasswordField();
+	private JTextField _sshKeyFile  = new JTextField();
+	private JButton    _sshKeyFile_but  = new JButton("...");
 
 	public static String getDescription() { return WIZ_DESC; }
 	@Override
@@ -66,12 +71,14 @@ implements ActionListener
 		_sshPort    .setName("sshPort");
 		_sshUsername.setName("sshUsername");
 		_sshPassword.setName("sshPassword");
+		_sshKeyFile .setName("sskKeyFile");
 
 		// tool tip
 		_sshHostname.setToolTipText("What host name should we connect to when polling for Performance Counters.");
 		_sshPort    .setToolTipText("Port number, the SSH server runs on.");
 		_sshUsername.setToolTipText("User name to be used when logging on the the above host name.");
 		_sshPassword.setToolTipText("Password, you can override this with the '-p' command line switch when starting "+Version.getAppName()+" in no-gui mode, and yes the stored value is encrypted.");
+		_sshKeyFile .setToolTipText("SSH Private Key File, you can override this with the '-k' command line switch when starting "+Version.getAppName()+" in no-gui mode.");
 		_noHostMonWasSelected.setToolTipText("");
 
 		_noHostMonWasSelected.setVisible(false);
@@ -94,18 +101,40 @@ implements ActionListener
 		add(new JLabel("Password"));
 		add(_sshPassword, "growx, wrap");
 
+		add(new JLabel("SSH Key File"));
+		add(_sshKeyFile,     "split, growx");
+		add(_sshKeyFile_but, "wrap");
+
 		// Command line switches
 		String cmdLineSwitched = 
 			"<html>" +
 			"The above options can be overridden or specified using the following command line switches" +
 			"<table>" +
-			"<tr><code>-u,--sshUser &lt;user&gt;    </code><td></td>SSH Username, used by Host Monitoring subsystem</tr>" +
-			"<tr><code>-p,--sshPasswd &lt;passwd&gt;</code><td></td>SSH Password, used by Host Monitoring subsystem</tr>" +
-			"<tr><code>-s,--sshServer &lt;host&gt;  </code><td></td>SSH Hostname, used by Host Monitoring subsystem</tr>" +
+			"<tr><code>-u,--sshUser    &lt;user&gt;      </code><td></td>SSH Username, used by Host Monitoring subsystem</tr>" +
+			"<tr><code>-p,--sshPasswd  &lt;passwd&gt;    </code><td></td>SSH Password, used by Host Monitoring subsystem</tr>" +
+			"<tr><code>-s,--sshServer  &lt;host&gt;      </code><td></td>SSH Hostname, used by Host Monitoring subsystem</tr>" +
+			"<tr><code>-k,--sshKeyFile &lt;filename&gt;  </code><td></td>SSH KeyFile,  used by Host Monitoring subsystem</tr>" +
 			"</table>" +
 			"</html>";
 		add( new JLabel(""), "span, wrap 30" );
 		add( new MultiLineLabel(cmdLineSwitched), "span, wrap" );
+
+		_sshKeyFile_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				String dir = System.getProperty("user.home") + File.separatorChar + ".ssh";
+
+				JFileChooser fc = new JFileChooser(dir);
+				int returnVal = fc.showOpenDialog(WizardOfflinePage5.this);
+				if(returnVal == JFileChooser.APPROVE_OPTION) 
+				{
+					String filename = fc.getSelectedFile().getAbsolutePath();
+					_sshKeyFile.setText(filename);
+				}
+			}
+		});
 
 		initData();
 	}
@@ -130,6 +159,7 @@ implements ActionListener
 			_sshPort    .setEnabled(true);
 			_sshUsername.setEnabled(true);
 			_sshPassword.setEnabled(true);
+			_sshKeyFile .setEnabled(true);
 
 			if (_sshHostname.getText().trim().length() == 0)
 			{
@@ -160,6 +190,7 @@ implements ActionListener
 			_sshPort    .setEnabled(false);
 			_sshUsername.setEnabled(false);
 			_sshPassword.setEnabled(false);
+			_sshKeyFile .setEnabled(false);
 		}
 
 //	    _firtsTimeRender = false;
@@ -178,6 +209,7 @@ implements ActionListener
 			_sshPort    .setEnabled(false);
 			_sshUsername.setEnabled(false);
 			_sshPassword.setEnabled(false);
+			_sshKeyFile .setEnabled(false);
 
 			return null; // NO Need to continue
 		}
@@ -187,6 +219,7 @@ implements ActionListener
 			_sshPort    .setEnabled(true);
 			_sshUsername.setEnabled(true);
 			_sshPassword.setEnabled(true);
+			_sshKeyFile .setEnabled(true);
 		}
 		
 		// CHECK required fields
@@ -194,7 +227,7 @@ implements ActionListener
 		if ( _sshHostname.getText().trim().length() <= 0) problem += "Hostname, ";
 		if ( _sshPort    .getText().trim().length() <= 0) problem += "Port, ";
 		if ( _sshUsername.getText().trim().length() <= 0) problem += "User, ";
-		if ( _sshPassword.getText().trim().length() <= 0) problem += "Password, ";
+		if ( _sshPassword.getText().trim().length() <= 0 && _sshKeyFile.getText().trim().length() <= 0) problem += "Password AND SSH Key File, ";
 
 		if (problem.length() > 0  &&  problem.endsWith(", "))
 		{
@@ -225,6 +258,7 @@ implements ActionListener
 			wizData.remove(_sshPort    .getName());
 			wizData.remove(_sshUsername.getName());
 			wizData.remove(_sshPassword.getName());
+			wizData.remove(_sshKeyFile .getName());
 		}
 		else
 		{
@@ -233,6 +267,7 @@ implements ActionListener
 			wizData.put(_sshPort    .getName(), _sshPort    .getText());
 			wizData.put(_sshUsername.getName(), _sshUsername.getText());
 			wizData.put(_sshPassword.getName(), _sshPassword.getText());
+			wizData.put(_sshKeyFile .getName(), _sshKeyFile .getText());
 		}
 	}
 

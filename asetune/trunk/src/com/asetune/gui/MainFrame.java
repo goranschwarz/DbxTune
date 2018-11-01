@@ -3306,7 +3306,7 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	public abstract void    disconnectHookin(WaitForExecDialog waitDialog);
 
 	/**
-	 * Get the default GUI refresh interval for this specific implementation of the DbXTune tool
+	 * Get the default GUI refresh interval for this specific implementation of the DbxTune tool
 	 * @return
 	 */
 	public abstract int getDefaultRefreshInterval();

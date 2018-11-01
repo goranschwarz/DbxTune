@@ -91,7 +91,7 @@ go [#1 [wait #2]] [ | {grep | egrep | bcp} ]
    </LI>
    <LI>
        <B>Example 2</B>: Insert a picture into a table with a BLOB column, fetch the image from the Network.<BR>
-       <CODE>\prep insert into t1 values(?,?,?) :(int=98, string='some str', blob='http://www.asemon.se/images/sample3.png')</CODE><br><br>
+       <CODE>\prep insert into t1 values(?,?,?) :(int=98, string='some str', blob='http://www.dbxtune.com/images/sample3.png')</CODE><br><br>
    </LI>
 </UL>
 ]]>

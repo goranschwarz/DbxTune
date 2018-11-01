@@ -21,6 +21,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
 import com.asetune.alarm.events.AlarmEventLastBackupFailed;
 import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
@@ -161,6 +162,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_DATASIZE_LEFT_MB   = "DbDataSizeLeftMbGraph";
 	public static final String GRAPH_NAME_DATASIZE_USED_PCT  = "DbDataSizeUsedPctGraph";
 //	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
+	public static final String GRAPH_NAME_TEMPDB_USED_MB     = "TempdbUsedMbGraph";
 
 	private void addTrendGraphs()
 	{
@@ -239,6 +241,17 @@ extends CountersModel
 //			false, // visible at start
 //			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 //			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
+			"TempDB Space used in MB",     // Menu CheckBox text
+			"TempDB Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
 //		// if GUI
 //		if (getGuiController() != null && getGuiController().hasGUI())
@@ -790,6 +803,7 @@ extends CountersModel
 		String DbSizeInMb_extraWhere = aseVersion >= Ver.ver(15, 0) ? " and u.vdevno >= 0" : "";
 		String DbSizeInMb             = "DbSizeInMb             = (select sum(u.size/(1024*1024/@@maxpagesize)) from master.dbo.sysusages u readpast where u.dbid = od.DBID" + DbSizeInMb_extraWhere + "), \n";
 		String LogDataIsMixed         = "LogDataIsMixed         = (select convert(bit,(db.status2 & 32768)) from master.dbo.sysdatabases db readpast where db.dbid = od.DBID), \n";
+		String IsUserTempdb           = "IsUserTempdb           = (select convert(bit,(db.status3 & 256))   from master.dbo.sysdatabases db readpast where db.dbid = od.DBID), \n";
                                                                 
 		String LogSizeInMb            = "LogSizeInMb            = (select sum(u.size/(1024*1024/@@maxpagesize)) from master.dbo.sysusages u readpast where u.dbid = od.DBID and (u.segmap & 4) = 4), \n";
 //		String LogSizeFreeInMb        = "LogSizeFreeInMb        = convert(numeric(10,1), (lct_admin('logsegment_freepages',od.DBID)-lct_admin('reserved_for_rollbacks',od.DBID)) / (1024.0*1024.0/@@maxpagesize)), \n";
@@ -854,6 +868,7 @@ extends CountersModel
 		         "                   END, \n" +
 		         DbSizeInMb + 
 		         LogDataIsMixed + 
+		         IsUserTempdb +
 		         LogSizeInMb  + LogSizeUsedInMb + LogSizeFreeInMb + LogSizeUsedInMbDiff + LogSizeFreeInMbDiff  +  
 		         LogSizeUsedPct + DataSizeUsedPct +
 		         DataSizeInMb + DataSizeUsedInMb + DataSizeFreeInMb + DataSizeUsedInMbDiff + DataSizeFreeInMbDiff + 
@@ -1363,6 +1378,12 @@ extends CountersModel
 		// Get what databases should be part of the graphs
 		Map<String, Integer> dbMap = DbSelectionForGraphsDialog.getDbsInGraphList(this);
 
+		if (dbMap.isEmpty())
+		{
+			_logger.info("updateGraphData(): Skipping the graphName='"+tgdp.getName()+"' for cm='"+getName()+"', reason: No DB names are availiable in the mapped list. dbMap.isEmpty() == true");
+			return;
+		}
+		
 		if (GRAPH_NAME_LOGSEMAPHORE_CONT.equals(tgdp.getName()))
 		{
 			// Write 1 "line" for every database
@@ -1475,6 +1496,45 @@ extends CountersModel
 //			tgdp.setDate(this.getTimestamp());
 //			tgdp.setData(arr);
 //		}
+
+		if (GRAPH_NAME_TEMPDB_USED_MB.equals(tgdp.getName()))
+		{
+			int tempdbCount = 0;
+			for (int row = 0; row < this.size(); row++) // NOTE: loop all table rows (no filters here, since we need to find all tempdb's)
+			{
+				boolean isUserTempdb = "true".equalsIgnoreCase(this.getAbsString(row, "IsUserTempdb"));
+				String  dbname       = this.getAbsString(row, "DBName");
+
+				if (isUserTempdb || dbname.equals("tempdb"))
+					tempdbCount++;
+			}
+
+			// no databases found... do not do anything
+			if (tempdbCount > 0)
+			{
+				// Write 1 "line" for every 'tempdb' database
+				Double[] dArray = new Double[tempdbCount];
+				String[] lArray = new String[tempdbCount];
+				int d = 0;
+				for (int row = 0; row < this.size(); row++)
+				{
+					boolean isUserTempdb = "true".equalsIgnoreCase(this.getAbsString(row, "IsUserTempdb"));
+					String  dbname       = this.getAbsString(row, "DBName");
+
+					if (isUserTempdb || dbname.equals("tempdb"))
+					{
+						Double dvalue = this.getAbsValueAsDouble(row, "DataSizeUsedInMb");
+
+						lArray[d] = dbname;
+						dArray[d] = dvalue;
+						d++;
+					}
+				}
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
+		}
 	}
 
 	@Override
@@ -1550,6 +1610,8 @@ extends CountersModel
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
 		CountersModel cm = this;
 		String dbmsSrvName = cm.getServerName();
 
@@ -1583,11 +1645,25 @@ extends CountersModel
 						if (StringUtil.hasValue(skipTranNameRegExp) && StringUtil.hasValue(OldestTranName))
 						{
 							if ( ! OldestTranName.matches(skipTranNameRegExp) )
-								AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
+							{
+								String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+								String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+								AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
+								ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+								
+								alarmHandler.addAlarm( ae );
+								//alarmHandler.addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
+							}
 						}
 						else
 						{
-							AlarmHandler.getInstance().addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
+							String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+							String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+							AlarmEvent ae = new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName);
+							ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+							
+							alarmHandler.addAlarm( ae );
+							//alarmHandler.addAlarm( new AlarmEventLongRunningTransaction(cm, threshold, dbname, OldestTranInSeconds, OldestTranName) );
 						}
 					}
 				}
@@ -1607,7 +1683,15 @@ extends CountersModel
 
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_TransactionLogFull, DEFAULT_alarm_TransactionLogFull);
 					if (TransactionLogFull.intValue() > threshold)
-						AlarmHandler.getInstance().addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname) );
+					{
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventFullTranLog(cm, threshold, dbname);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+						//alarmHandler.addAlarm( new AlarmEventFullTranLog(cm, threshold, dbname) );
+					}
 				}
 			}
 
@@ -1641,7 +1725,7 @@ extends CountersModel
 					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastBackupFailed, DEFAULT_alarm_LastBackupFailed);
 					if (val.intValue() > threshold)
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLastBackupFailed(cm, dbname, threshold) );
+						alarmHandler.addAlarm( new AlarmEventLastBackupFailed(cm, dbname, threshold) );
 					}
 				}
 			}
@@ -1663,9 +1747,10 @@ extends CountersModel
 						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
 						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
 
-						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
-						boolean doAlarm = false;
-						doAlarm = (true    && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
@@ -1673,7 +1758,7 @@ extends CountersModel
 						// NO match in the SKIP regexp
 						if (doAlarm)
 						{
-							AlarmHandler.getInstance().addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
+							alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
 						}
 					}
 				}
@@ -1696,16 +1781,17 @@ extends CountersModel
 						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForSrv,  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv);
 						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv);
 
-						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
-						boolean doAlarm = false;
-						doAlarm = (true    && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
 						
 						if (doAlarm)
 						{
-							AlarmHandler.getInstance().addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
+							alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
 						}
 					}
 				}
@@ -1723,7 +1809,13 @@ extends CountersModel
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+						//alarmHandler.addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
 					}
 				}
 			}
@@ -1740,7 +1832,13 @@ extends CountersModel
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+						//alarmHandler.addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.intValue()) );
 					}
 				}
 			}
@@ -1757,7 +1855,13 @@ extends CountersModel
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+						//alarmHandler.addAlarm( new AlarmEventLowDbFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
 					}
 				}
 			}
@@ -1774,7 +1878,13 @@ extends CountersModel
 				{
 					if (usedPct > threshold.doubleValue())
 					{
-						AlarmHandler.getInstance().addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue());
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+						//alarmHandler.addAlarm( new AlarmEventLowLogFreeSpace(cm, dbname, freeMb.intValue(), usedPct, threshold.doubleValue()) );
 					}
 				}
 			}

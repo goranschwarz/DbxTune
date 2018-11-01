@@ -114,8 +114,8 @@ implements SqlStatement
 					+ "    timestamp = 'datetime str'      Types.TIMESTAMP timestamp='2015-01-10 14:20:10', timestamp(dd/MM/yyyy HH.mm)='31/12/2014 14.00', timestamp=null\n"
 					+ "    date      = 'date str'          Types.DATE      date='2015-01-10', date(dd/MM/yyyy)='31/12/2014', date=null\n"
 					+ "    time      = 'time str'          Types.TIME      time='14:20:10', time(HH.mm)='14.00', time=null\n"
-					+ "    clob      = 'filename|url'      Types.CLOB      clob='c:\\xxx.txt, clob='http://asetune.com'\n"
-					+ "    blob      = 'filename|url'      Types.BLOB      blob='c:\\xxx.jpg, blob='http://www.asemon.se/images/sample3.png'\n"
+					+ "    clob      = 'filename|url'      Types.CLOB      clob='c:\\xxx.txt, clob='http://dbxtune.com'\n"
+					+ "    blob      = 'filename|url'      Types.BLOB      blob='c:\\xxx.jpg, blob='http://www.dbxtune.com/images/sample3.png'\n"
 					+ "    ora_rs                          -10             a ResultSet OUTPUT parameter, from an Oracle Procedure\n"
 					+ "                                                    ora_rs will simply be treated as a ResultSet for SQL Window.\n"
 					+ "Examples: \n"
@@ -123,8 +123,8 @@ implements SqlStatement
 					+ "    \\call procName2(?,?)   :(int=99, string=null out) -- calls a procedure where last parameter is an output variable\n"
 					+ "    \\call oracleProc(?)    :(ora_rs) -- calls a Oracle procedure which has a SYS_REFCURSOR as output parameter\n"
 					+ "\n"
-					+ "    \\prep insert into t1 values(?,?,?)     :(int=98, string=null, blob='http://www.asemon.se/images/sample3.png') \n"
-					+ "    \\prep insert into t1 values(99,NULL,?) :(blob='http://www.asemon.se/images/sample3.png') \n"
+					+ "    \\prep insert into t1 values(?,?,?)     :(int=98, string=null, blob='http://www.dbxtune.com/images/sample3.png') \n"
+					+ "    \\prep insert into t1 values(99,NULL,?) :(blob='http://www.dbxtune.com/images/sample3.png') \n"
 					+ "";
 				throw new SQLException(msg);
 			}

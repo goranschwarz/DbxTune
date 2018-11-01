@@ -20,7 +20,7 @@ extends AlarmEvent
 				description,
 				null);
 
-		setExtendedDescription(extendedDesc);
+		setExtendedDescription(extendedDesc, "");
 
 		// Set: Time To Live if postpone is enabled
 		setTimeToLive(timeToLive);

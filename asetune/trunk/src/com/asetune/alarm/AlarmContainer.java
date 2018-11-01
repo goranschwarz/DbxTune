@@ -68,7 +68,7 @@ implements Serializable
 			repeatedAlarmEvent.setReRaiseCount(existing.getReRaiseCount());
 
 			existing.setReRaiseDescription        (repeatedAlarmEvent.getDescription());
-			existing.setReRaiseExtendedDescription(repeatedAlarmEvent.getExtendedDescription());
+			existing.setReRaiseExtendedDescription(repeatedAlarmEvent.getExtendedDescription(), repeatedAlarmEvent.getExtendedDescriptionHtml());
 			existing.setReRaiseData               (repeatedAlarmEvent.getData());
 		}
 	}

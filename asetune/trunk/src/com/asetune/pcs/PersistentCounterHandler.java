@@ -254,6 +254,11 @@ implements Runnable
 		return _sqlCaptureBroker;
 	}
 
+	public Configuration getConfig()
+	{
+		return _props;
+	}
+
 	/**
 	 * Get a "public" string of how all writer are configured, no not reveal
 	 * passwords or sensitive information.
@@ -1316,7 +1321,7 @@ implements Runnable
 				cont.setSessionStartTime(newTs);
 
 				// CREATE-DDL
-				for (CountersModel cm : cont._counterObjects)
+				for (CountersModel cm : cont.getCounterObjects())
 				{
 					// only call saveDdl() the first time...
 					if ( ! pw.isDdlCreated(cm) )
@@ -1335,7 +1340,7 @@ implements Runnable
 
 				
 				// SAVE-COUNTERS
-				for (CountersModel cm : cont._counterObjects)
+				for (CountersModel cm : cont.getCounterObjects())
 				{
 					pw.saveCounters(cm);
 				}
@@ -1600,9 +1605,8 @@ implements Runnable
 				fireQueueSizeChange();
 
 				// Make sure the container isn't empty.
-				if (cont == null)                     continue;
-				if (cont._counterObjects == null)	  continue;
-				if (cont._counterObjects.size() <= 0) continue;
+				if (cont == null || (cont != null && cont.isEmpty()) )
+					continue;
 
 				// if we are about to STOP the service
 				if ( ! isRunning() )

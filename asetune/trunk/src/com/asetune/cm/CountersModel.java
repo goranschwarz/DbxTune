@@ -43,6 +43,7 @@ import javax.swing.Timer;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
@@ -225,7 +226,7 @@ implements Cloneable, ITableTooltip
 	 *  The graph data should still be calculated even in a non-gui environment
 	 *  so it can be persisted, This makes it <b>much</b> easier to redraw a
 	 *  graph when the off-line data is viewed in a later stage */
-	private Map<String,TrendGraphDataPoint> _trendGraphsData = new HashMap<String,TrendGraphDataPoint>();
+	private Map<String,TrendGraphDataPoint> _trendGraphsData = new LinkedHashMap<String,TrendGraphDataPoint>();
 
 	private boolean            _filterAllZeroDiffCounters = false;
 	private boolean            _sampleDataIsPaused        = false;
@@ -675,7 +676,7 @@ implements Cloneable, ITableTooltip
 
 		c._trendGraphs                = new LinkedHashMap<String,TrendGraph>(_trendGraphs);
 		// needs to be copied/cloned, since the TrendGraphDataPoint is reused.
-		c._trendGraphsData = new HashMap<String,TrendGraphDataPoint>(_trendGraphsData);
+		c._trendGraphsData = new LinkedHashMap<String,TrendGraphDataPoint>(_trendGraphsData);
 
 		c._filterAllZeroDiffCounters  = this._filterAllZeroDiffCounters;
 		c._sampleDataIsPaused         = this._sampleDataIsPaused;
@@ -1809,6 +1810,111 @@ implements Cloneable, ITableTooltip
 	{
 		return null;
 	}
+
+	/**
+	 * Get 1 rows as a HTML Table. <br>
+	 * Left column is column names (in bold)<br>
+	 * Right column is row content
+	 * 
+	 * @param whatData          DATA_ABS, DATA_DIFF, DATA_RATE
+	 * @param mrow              row in the CounterModel
+	 * @param borders           
+	 * @param stripedRows
+	 * @param addOuterHtmlTags
+	 * @return
+	 */
+	public String toHtmlTableString(int whatData, int mrow, boolean borders, boolean stripedRows, boolean addOuterHtmlTags)
+	{
+		StringBuilder sb = new StringBuilder(1024);
+
+		if (addOuterHtmlTags)
+			sb.append("<html>\n");
+
+		int cols = getColumnCount();
+		String border      = borders ? " border=1"      : " border=0";
+		String cellPadding = borders ? ""               : " cellpadding=1";
+		String cellSpacing = borders ? ""               : " cellspacing=0";
+
+		String stripeColor = "#f2f2f2"; // Light gary; //Configuration.getCombinedConfiguration().getProperty(   PROPKEY_HtmlToolTip_stripeColor,   DEFAULT_HtmlToolTip_stripeColor);
+		int    maxStrLen   = Integer.MAX_VALUE;        //Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_HtmlToolTip_maxCellLength, DEFAULT_HtmlToolTip_maxCellLength);
+		
+		// One row for every column
+		sb.append("<table").append(border).append(cellPadding).append(cellSpacing).append(">\n");
+		for (int c=0; c<cols; c++)
+		{
+			String stripeTag = "";
+			if (stripedRows && ((c % 2) == 0) )
+				stripeTag = " bgcolor='" + stripeColor + "'";
+			
+			Object objVal = getValue(whatData, mrow,c); // DATA_ABS, DATA_DIFF, DATA_RATE
+			String strVal = "";
+			if (objVal != null)
+			{
+				strVal = objVal.toString();
+
+				// Remove any leading/ending HTML tags
+				if (StringUtils.startsWithIgnoreCase(strVal, "<html>"))
+				{
+					strVal = strVal.substring("<html>".length());
+					strVal = strVal.trim();
+					if (StringUtils.endsWithIgnoreCase(strVal, "</html>"))
+						strVal = strVal.substring(0, strVal.length() - "</html>".length() );
+				}
+				
+				// If it's a LONG String, only display first 'maxStrLen' characters...
+				int strValLen = strVal.length(); 
+				if (strValLen > maxStrLen)
+				{
+					strVal =  strVal.substring(0, maxStrLen);
+					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+").</i></font>";
+				}
+			}
+			
+			sb.append("<tr").append(stripeTag).append(">\n");
+			sb.append("  <td nowrap><b>").append(getColumnName(c)).append("</b>&nbsp;</td>\n");
+			sb.append("  <td nowrap>")   .append(strVal)          .append("</td>\n");
+			sb.append("</tr>\n");
+		}
+		sb.append("</table>\n");
+
+		if (addOuterHtmlTags)
+			sb.append("</html>\n");
+
+		return sb.toString();
+	}
+	
+
+	/**
+	 * Get 1 rows as a Text Table. <br>
+	 * Left column is column names (in bold)<br>
+	 * Right column is row content
+	 * 
+	 * @param whatData          DATA_ABS, DATA_DIFF, DATA_RATE
+	 * @param mrow              row in the CounterModel
+	 * @return
+	 */
+	public String toTextTableString(int whatData, int mrow)
+	{
+		StringBuilder sb = new StringBuilder(1024);
+
+		List<String> colNames = getColNames(whatData);
+		int cols = getColumnCount();
+		int maxColLen = 0;
+		for (String col : colNames)
+			maxColLen = Math.max(maxColLen, col.length());
+
+		// One row for every column
+		for (int c=0; c<cols; c++)
+		{
+			Object objVal = getValue(whatData, mrow,c); // DATA_ABS, DATA_DIFF, DATA_RATE
+			
+			sb.append(StringUtil.left(getColumnName(c),maxColLen)).append(": ");
+			sb.append(objVal).append("\n");
+		}
+
+		return sb.toString();
+	}
+	
 
 	/**
 	 * Used by the TabularCntrPanel.JTable to get tool tip on a cell level.
@@ -5900,7 +6006,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	/**
-	 * Reset statistical counters that will be sent to www.asetune.com<br>
+	 * Reset statistical counters that will be sent to www.dbxtune.com<br>
 	 * This is called from CheckForUpdates.sendCounterUsageInfo(), which will send of the statistics.
 	 */
 	public void resetStatCounters()

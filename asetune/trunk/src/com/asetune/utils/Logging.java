@@ -205,7 +205,7 @@ public class Logging
 		}
 
 		// Print out the memory configuration
-		_logger.debug("Total memory that can be used by this JVM is " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB. This can be changed with the JVM flag -Xmx###m (where ### is number of MB)");
+		_logger.info("Total memory that can be used by this JVM is " + (Runtime.getRuntime().maxMemory() / 1024 / 1024) + " MB. This can be changed with the JVM flag -Xmx###m (where ### is number of MB)");
 	}
 	
 	public static final String DEFAULT_LOG_CONSOLE_PATTERN = "%d - %-5p - %-30t - %-30c{1} - %m%n";

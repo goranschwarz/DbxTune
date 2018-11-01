@@ -164,11 +164,15 @@ implements IAlarmWriter
 	{
 		Configuration conf = getConfiguration();
 		
-		String alarmClass = ae.getAlarmClass()  + "";
-		String serverName = ae.getServiceName() + "";
-		String category   = ae.getCategory()    + "";
-		String severity   = ae.getSeverity()    + "";
-		String state      = ae.getState()       + "";
+		// if we ALWAYS should send alarm for this AlarmEvent, exit early...
+		if (ae.alwaysSend())
+			return true;
+			
+		String alarmClass = ae.getAlarmClassAbriviated()  + "";
+		String serverName = ae.getServiceName()           + "";
+		String category   = ae.getCategory()              + "";
+		String severity   = ae.getSeverity()              + "";
+		String state      = ae.getState()                 + "";
 
 		// 
 		String keep_alarmClass_regExp = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_alarmClass), DEFAULT_filter_keep_alarmClass);
@@ -182,25 +186,12 @@ implements IAlarmWriter
 		String keep_state_regExp      = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_state     ), DEFAULT_filter_keep_state);
 		String skip_state_regExp      = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_state     ), DEFAULT_filter_skip_state);
 		
-		// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
-		boolean doAlarm = false;
-
-//		// Keep rules
-//		doAlarm = (true    && (StringUtil.isNullOrBlank(keep_alarmClass_regExp) ||   alarmClass.matches(keep_alarmClass_regExp ))); //     matches the KEEP alarmClass regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_servername_regExp) ||   serverName.matches(keep_servername_regExp ))); //     matches the KEEP serverName regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_category_regExp)   ||   category  .matches(keep_category_regExp   ))); //     matches the KEEP category   regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_severity_regExp)   ||   severity  .matches(keep_severity_regExp   ))); //     matches the KEEP severity   regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_state_regExp)      ||   state     .matches(keep_state_regExp      ))); //     matches the KEEP state      regexp
-//
-//		// Skip rules
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_alarmClass_regExp) || ! alarmClass.matches(skip_alarmClass_regExp ))); // NO match in the SKIP alarmClass regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_servername_regExp) || ! serverName.matches(skip_servername_regExp ))); // NO match in the SKIP serverName regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_category_regExp)   || ! category  .matches(skip_category_regExp   ))); // NO match in the SKIP category   regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_severity_regExp)   || ! severity  .matches(skip_severity_regExp   ))); // NO match in the SKIP severity   regexp
-//		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_state_regExp)      || ! state     .matches(skip_state_regExp      ))); // NO match in the SKIP state      regexp
+		// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+		// Below is more readable, from a variable context point-of-view, but HARDER to understand
+		boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
 
 		// alarmClass: Keep & Skip rules
-		doAlarm = (true    && (StringUtil.isNullOrBlank(keep_alarmClass_regExp) ||   alarmClass.matches(keep_alarmClass_regExp ))); //     matches the KEEP alarmClass regexp
+		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_alarmClass_regExp) ||   alarmClass.matches(keep_alarmClass_regExp ))); //     matches the KEEP alarmClass regexp
 		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_alarmClass_regExp) || ! alarmClass.matches(skip_alarmClass_regExp ))); // NO match in the SKIP alarmClass regexp
 
 		// servername: Keep & Skip rules

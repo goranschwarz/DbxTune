@@ -25,13 +25,13 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 //	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
 //	@Override protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
-//	private static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
-//	private static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
-//	private static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
-	private static final String ASETUNE_MDA_INFO_URL           = "http://www.asetune.com/mda_info.php";
-//	private static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
-//	private static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
-//	private static final String ASETUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
+//	private static final String ASETUNE_HOME_URL               = "http://www.dbxtune.com";
+//	private static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.dbxtune.com/check_for_update.php";
+//	private static final String ASETUNE_CONNECT_INFO_URL       = "http://www.dbxtune.com/connect_info.php";
+	private static final String ASETUNE_MDA_INFO_URL           = "http://www.dbxtune.com/mda_info.php";
+//	private static final String ASETUNE_UDC_INFO_URL           = "http://www.dbxtune.com/udc_info.php";
+//	private static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.dbxtune.com/counter_usage_info.php";
+//	private static final String ASETUNE_ERROR_INFO_URL         = "http://www.dbxtune.com/error_info.php";
 
 	public CheckForUpdatesAse()
 	{

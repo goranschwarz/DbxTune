@@ -998,6 +998,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			serverName = AseConnectionUtils.getAseServername(_conn);
 		}
 		// Postgres == overridden in PostgresConnection
+		// MySQL == overridden in MySqlConnection
 		// UNKNOWN
 		else
 		{
@@ -1458,6 +1459,16 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		return dbmsVersionNumber;
 	}
 
+	/**
+	 * Returns a LinkedHashMap<key=String, val=Object> with "extra" information from the dbms instance
+	 * @return
+	 */
+	public Map<String, Object> getDbmsExtraInfo()
+	{
+		return null;
+	}
+	
+	
 	/**
 	 * Return various extra information about a Table<br>
 	 * This information can for example be used by a ToolTip when displaying information on the table.<br>
@@ -2286,34 +2297,38 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	//-------------------------------------------------
 	// BEGIN: PROPERTIES methods
 	//-------------------------------------------------
-	private HashMap<String, Object> _props = new HashMap<>();
+	private HashMap<String, Object> _propsMap = new HashMap<>();
 
 	/** Check if a Property exists */
 	public boolean hasProperty(String key)
 	{
-		return _props.containsKey(key);
+		return _propsMap.containsKey(key);
 	}
 	
 	/** set/assign a property value */
 	public void setProperty(String key, Object value)
 	{
-		_props.put(key, value);
+		_propsMap.put(key, value);
 	}
 	
 	/** get a property value */
 	public Object getProperty(String key, Object defaultValue)
 	{
-		if (_props.containsKey(key))
-			return _props.get(key);
+		if (_propsMap.containsKey(key))
+			return _propsMap.get(key);
 		else
 			return defaultValue;
 	}
 	
+	/** get the Map that holds "properties" used by hasProperty(), setProperty(), getProperty() */
+	public Map<String, Object> getPropertyMap()
+	{
+		return _propsMap;
+	}
 	//-------------------------------------------------
 	// END: PROPERTIES methods
 	//-------------------------------------------------
-	
-	
+
 //	/**
 //	 * Checks if the currect database connection is of the product name<br>
 //	 * This uses: <code>DbUtils.isProductName(this.getDatabaseProductName(), dbProdNameOracle);</code>

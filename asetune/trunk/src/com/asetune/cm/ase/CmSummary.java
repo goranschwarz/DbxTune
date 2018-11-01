@@ -824,7 +824,7 @@ extends CountersModel
 				", hadrStateStr       = " + (isHaDrSupported  ? "hadr_state()"                          : "'Not Supported'") + " \n" +
 				", timeIsNow          = getdate() \n" +
 				utcTimeDiff +
-				", NetworkAddressInfo = " + nwAddrInfo + " \n" +
+				", NetworkAddressInfo = convert(varchar(60), " + nwAddrInfo + ") \n" +
 				", asePageSize        = @@maxpagesize \n" +
 
 				", bootcount          = @@bootcount \n" + // from 12.5.0.3

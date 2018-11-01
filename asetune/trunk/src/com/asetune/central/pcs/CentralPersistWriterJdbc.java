@@ -1,6 +1,8 @@
 package com.asetune.central.pcs;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -9,8 +11,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -18,12 +20,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.asetune.DbxTune;
 import com.asetune.Version;
+import com.asetune.central.DbxTuneCentral;
+import com.asetune.central.cleanup.CentralH2Defrag;
+import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.asetune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.asetune.central.pcs.DbxTuneSample.AlarmEntryWrapper;
@@ -66,9 +72,16 @@ extends CentralPersistWriterBase
 	public static final String PROPKEY_ALARM_EVENTS_STORE = "CentralPersistWriterJdbc.alarm.events.store";
 	public static final String DEFAULT_ALARM_EVENTS_STORE = "RAISE, CANCEL";
 	
-	public static final String  PROPKEY_H2_AUTO_DEFRAG_TIME = "CentralPersistWriterJdbc.h2.auto.defrag.time";
-//	public static final int     DEFAULT_H2_AUTO_DEFRAG_TIME = 400; // 400 = 04:00 == 4 in the morning (NOTE: do not specify 0400, then it will be in "octal" and the value 256 )
-	public static final int     DEFAULT_H2_AUTO_DEFRAG_TIME = -1; // -1 == DISABLED
+//	public static final String  PROPKEY_H2_AUTO_DEFRAG_TIME = "CentralPersistWriterJdbc.h2.auto.defrag.time";
+////	public static final int     DEFAULT_H2_AUTO_DEFRAG_TIME = 400; // 400 = 04:00 == 4 in the morning (NOTE: do not specify 0400, then it will be in "octal" and the value 256 )
+//	public static final int     DEFAULT_H2_AUTO_DEFRAG_TIME = -1; // -1 == DISABLED
+	
+	public static final String  PROPKEY_H2_CLEANUP_THRESHOLD_MB = "CentralPersistWriterJdbc.h2.cleanup.threshold.mb";
+	public static final int     DEFAULT_H2_CLEANUP_THRESHOLD_MB = 250;
+
+	public static final String  PROPKEY_SAVE_SESSION_SAMPLE_DETAILS = "CentralPersistWriterJdbc.save.SESSION_SAMPLE_DETAILS";
+	public static final boolean DEFAULT_SAVE_SESSION_SAMPLE_DETAILS = true;
+
 	
 	private String        _jdbcDriver   = null;
 	private String        _jdbcUrl      = null;
@@ -87,12 +100,16 @@ extends CentralPersistWriterBase
 	private boolean _saveCounterData = false;
 
 	private boolean _shutdownWithNoWait;
+//	private boolean _isSevereProblem = false;
 	
-	private int    _h2AutoDefragTime   = DEFAULT_H2_AUTO_DEFRAG_TIME;
-	private Thread _h2AutoDefragThread = null;
+//	private int    _h2AutoDefragTime   = DEFAULT_H2_AUTO_DEFRAG_TIME;
+//	private Thread _h2AutoDefragThread = null;
 
+	private int    _h2CleanupThresholdMb = DEFAULT_H2_CLEANUP_THRESHOLD_MB;
+	
 	/** use to check if Graph Properties exists for a specific session */
-	private Set<String> _graphPropertiesSet = new HashSet<>();
+//	private Set<String> _graphPropertiesSet = new HashSet<>();
+	private Map<String, Integer> _graphPropertiesCountMap = new HashMap<>();
 
 	/** A set of actions which we want to store, for example "RAISE", "CANCEL", "END-OF-SCAN" or "RE-RAISE", the default is only "RAISE", "CANCEL" */
 	Set<String> _alarmEventActionStore = new HashSet<>();
@@ -139,7 +156,9 @@ extends CentralPersistWriterBase
 		
 		_alarmEventActionStore = StringUtil.commaStrToSet( conf.getProperty(PROPKEY_ALARM_EVENTS_STORE, DEFAULT_ALARM_EVENTS_STORE) );
 		
-		_h2AutoDefragTime = conf.getIntProperty(PROPKEY_H2_AUTO_DEFRAG_TIME, DEFAULT_H2_AUTO_DEFRAG_TIME);
+//		_h2AutoDefragTime = conf.getIntProperty(PROPKEY_H2_AUTO_DEFRAG_TIME, DEFAULT_H2_AUTO_DEFRAG_TIME);
+		
+		_h2CleanupThresholdMb = conf.getIntProperty(PROPKEY_H2_CLEANUP_THRESHOLD_MB, DEFAULT_H2_CLEANUP_THRESHOLD_MB);
 		
 		// Create common tables (which for example: is used by the reader)
 		checkAndCreateCommonTables();
@@ -164,6 +183,15 @@ extends CentralPersistWriterBase
 	private DbxConnection open(DbxTuneSample cont)
 	{
 //		Timestamp newDate = (cont != null) ? cont.getSessionSampleTime() : new Timestamp(System.currentTimeMillis());
+
+		// Reset the severe problem flag
+//		_isSevereProblem = false;
+		
+		// for H2 Databases: check DATA_DIR for enough space
+		if ( _jdbcUrl.startsWith("jdbc:h2:"))
+		{
+			checkH2DataDirSpace();
+		}
 
 		// If we already has a valid connection, lets reuse it...
 		if (_keepConnOpen && _mainConn != null)
@@ -207,6 +235,9 @@ extends CentralPersistWriterBase
 			}
 		}
 		
+		// Get a URL which might be changed or not...
+		String localJdbcUrl = _lastUsedUrl == null ? _jdbcUrl : _lastUsedUrl;
+
 		try
 		{
 			_connStatus_inProgress = true;
@@ -219,7 +250,7 @@ extends CentralPersistWriterBase
 				_logger.info("Open a new connection to the Persistent Counter Storage. 'keep conn open=true'");
 
 			// Get a URL which might be changed or not...
-			String localJdbcUrl = _lastUsedUrl == null ? _jdbcUrl : _lastUsedUrl;
+			//String localJdbcUrl = _lastUsedUrl == null ? _jdbcUrl : _lastUsedUrl;
 
 //			// Look for variables in the URL and change them into runtime
 //			if ( localJdbcUrl.indexOf("${") >= 0)
@@ -464,33 +495,46 @@ extends CentralPersistWriterBase
 		}
 		catch (SQLException ev)
 		{
-			boolean h2IsServerAlreadyRunning = false;
+			boolean h2DbIsAlreadyOpen = false;
 			
 			StringBuffer sb = new StringBuffer();
 			while (ev != null)
 			{
 				// DATABASE_ALREADY_OPEN_1 = 90020
 				if (ev.getErrorCode() == 90020)
-					h2IsServerAlreadyRunning = true;
+					h2DbIsAlreadyOpen = true;
 
-				sb.append( "\n" );
 				sb.append("ErrorCode=").append( ev.getErrorCode() ).append(", ");
 				sb.append("SQLState=" ).append( ev.getSQLState()  ).append(", ");
 				sb.append("Message="  ).append( ev.getMessage()   );
+				sb.append( "\n" );
 				ev = ev.getNextException();
 			}
-			_logger.error("Problems when connecting to a datastore Server. "+sb.toString());
+			String errorMessages = sb.toString().trim();
+			
+			_logger.error("Problems when connecting to a datastore Server. "+errorMessages);
 			_mainConn = closeConn(_mainConn);
 
 			// IF H2, make special things
 			if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
 			{
 				// Try to close ALL H2 servers, many might be active due to AUTO_SERVER=true
-				if (h2IsServerAlreadyRunning)
+				if (h2DbIsAlreadyOpen)
 				{
 					// param 1: 0 = all servers
 					// param 3: 0 = SHUTDOWN_NORMAL, 1 = SHUTDOWN_FORCE
 //					TcpServer.stopServer(0, _jdbcPassword, 1);
+					
+					// Can we try to restart the DbxCentral...
+					//_logger.error("FIXME: RESTART DbxCentral: -NOT-YET-IMPLEMENTED-");
+					
+					// Lets try to RESTART DbxCentral... and hope that it clears the error...
+					Configuration shutdownConfig = new Configuration();
+					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());  // IMMEDIATELY, COMPACT, DEFRAG
+
+					String reason = "Restart Requested from CentralPersistWriterJdbc.open(): DATABASE_ALREADY_OPEN_1(90020), url='"+localJdbcUrl+"', errors='"+errorMessages+"'.";
+					boolean doRestart = true;
+					ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);
 				}
 			}
 		}
@@ -508,70 +552,70 @@ extends CentralPersistWriterBase
 		// Set some specific stuff
 		if ( _mainConn != null && _mainConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2) )
 		{
-			if (_h2AutoDefragTime >= 0 && _h2AutoDefragThread == null)
-			{
-				createH2AutoDefragThread();
-			}
+//			if (_h2AutoDefragTime >= 0 && _h2AutoDefragThread == null)
+//			{
+//				createH2AutoDefragThread();
+//			}
 		}
 
 		
 		return _mainConn;
 	}
 
-	/**
-	 * This is <b>probably</b> better to do with <code>ScheduledExecutorService</code> but... I did it "quick and dirty"
-	 */
-	protected void createH2AutoDefragThread()
-	{
-		if (_h2AutoDefragThread != null)
-		{
-			_logger.info("H2 'auto defrag' wont be installed. Reason: It's already installed.");
-			return;
-		}
-		if (_h2AutoDefragTime < 0 || _h2AutoDefragTime > 2359 || (_h2AutoDefragTime%100) >= 60)
-		{
-			_logger.info("H2 'auto defrag' wont be installed. Reason: config parameter '"+PROPKEY_H2_AUTO_DEFRAG_TIME+"' must be between '0000' and '2359'. current values is '"+_h2AutoDefragTime+"'.");
-			return;
-		}
-
-		_logger.info("Installing H2 'auto defrag' thread, which will 'defrag' the database at '"+_h2AutoDefragTime+"' every day.");
-		_h2AutoDefragThread = new Thread()
-		{
-			@Override
-			public void run()
-			{
-				boolean running = true;
-				_logger.info("Started H2 'auto defrag' thread, which will 'defrag' the database at '"+_h2AutoDefragTime+"' every day.");
-				while(running)
-				{
-					try
-					{
-						int atHour   = _h2AutoDefragTime / 100;
-						int atMinute = _h2AutoDefragTime % 100;
-						Calendar now = Calendar.getInstance();
-						if (now.get(Calendar.HOUR_OF_DAY) == atHour && now.get(Calendar.MINUTE) == atMinute)
-						{
-							// Do "shutdown defrag"
-							// - The inbound queue will hold entries while the "defrag"
-							// - next open() will open a new connection... 
-							// - Then the queue is drained... (and inserted into the database)
-							_logger.info("Waking up to do 'H2 defrag'.");
-							h2Shutdown(H2ShutdownType.DEFRAG);
-						}
-						Thread.sleep(60*1000);
-					}
-					catch (Throwable t)
-					{
-						_logger.error("Auto-Defrag-Thread. Excpeption, but continuing... Caught: "+t);
-					}
-				}
-				_logger.info("Ending H2 'auto defrag' thread.");
-			}
-		};
-		_h2AutoDefragThread.setName("DbxTune-H2-auto-defrag-thread");
-		_h2AutoDefragThread.setDaemon(true);
-		_h2AutoDefragThread.start();
-	}
+//	/**
+//	 * This is <b>probably</b> better to do with <code>ScheduledExecutorService</code> but... I did it "quick and dirty"
+//	 */
+//	protected void createH2AutoDefragThread()
+//	{
+//		if (_h2AutoDefragThread != null)
+//		{
+//			_logger.info("H2 'auto defrag' wont be installed. Reason: It's already installed.");
+//			return;
+//		}
+//		if (_h2AutoDefragTime < 0 || _h2AutoDefragTime > 2359 || (_h2AutoDefragTime%100) >= 60)
+//		{
+//			_logger.info("H2 'auto defrag' wont be installed. Reason: config parameter '"+PROPKEY_H2_AUTO_DEFRAG_TIME+"' must be between '0000' and '2359'. current values is '"+_h2AutoDefragTime+"'.");
+//			return;
+//		}
+//
+//		_logger.info("Installing H2 'auto defrag' thread, which will 'defrag' the database at '"+_h2AutoDefragTime+"' every day.");
+//		_h2AutoDefragThread = new Thread()
+//		{
+//			@Override
+//			public void run()
+//			{
+//				boolean running = true;
+//				_logger.info("Started H2 'auto defrag' thread, which will 'defrag' the database at '"+_h2AutoDefragTime+"' every day.");
+//				while(running)
+//				{
+//					try
+//					{
+//						int atHour   = _h2AutoDefragTime / 100;
+//						int atMinute = _h2AutoDefragTime % 100;
+//						Calendar now = Calendar.getInstance();
+//						if (now.get(Calendar.HOUR_OF_DAY) == atHour && now.get(Calendar.MINUTE) == atMinute)
+//						{
+//							// Do "shutdown defrag"
+//							// - The inbound queue will hold entries while the "defrag"
+//							// - next open() will open a new connection... 
+//							// - Then the queue is drained... (and inserted into the database)
+//							_logger.info("Waking up to do 'H2 defrag'.");
+//							h2Shutdown(H2ShutdownType.DEFRAG);
+//						}
+//						Thread.sleep(60*1000);
+//					}
+//					catch (Throwable t)
+//					{
+//						_logger.error("Auto-Defrag-Thread. Excpeption, but continuing... Caught: "+t);
+//					}
+//				}
+//				_logger.info("Ending H2 'auto defrag' thread.");
+//			}
+//		};
+//		_h2AutoDefragThread.setName("DbxTune-H2-auto-defrag-thread");
+//		_h2AutoDefragThread.setDaemon(true);
+//		_h2AutoDefragThread.start();
+//	}
 
 	private DbxConnection closeConn(DbxConnection conn)
 	{
@@ -815,12 +859,13 @@ extends CentralPersistWriterBase
 	 * @return true if a severe problem
 	 */
 	protected boolean isSevereProblem(DbxConnection conn, SQLException e)
+	throws SQLException
 	{
 		SQLException originException = e;
 
 		if (e == null)
 			return false;
-		boolean retCode    = false;
+		boolean doThrow    = false;
 		boolean doShutdown = false;
 		boolean dbIsFull   = false;
 
@@ -846,25 +891,40 @@ extends CentralPersistWriterBase
 					// Mark it for shutdown
 					doShutdown = true;
 					dbIsFull   = true;
-					retCode    = true;
+					doThrow    = true;
 				}
 
 				// The MVStore doesn't give the same error on "disk full"
 				// Lets examine the Exception chain, and look for "There is not enough space on the disk"
 				String rootCauseMsg = ExceptionUtils.getRootCauseMessage(e);
-				if (rootCauseMsg.indexOf("There is not enough space") >= 0)
+				if (    rootCauseMsg.indexOf("There is not enough space") >= 0
+					 || rootCauseMsg.indexOf("No space left on device")   >= 0
+				   )
 				{
 					// Mark it for shutdown
 					doShutdown = true;
 					dbIsFull   = true;
-					retCode    = true;
+					doThrow    = true;
 				}
 
+				// Check if it looks like a CORRUPT H2 database
+				Throwable rootCauseEx = ExceptionUtils.getRootCause(e);
+				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
+				{
+					_logger.error("ATTENTION: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", ex.toString="+e.toString()+", rootCauseEx="+rootCauseEx);
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+
+					doThrow = true;
+				}
+				
+				// The object is already closed == 90007
 				// The database has been closed == 90098
 				// MVStore: This map is closed == 90028
 				// IllegalExceptionState: Transaction is closed == 50000
-				if (error == 90098 || error == 90028 || error == 50000)
+				if (error == 90007 || error == 90098 || error == 90028 || error == 50000)
 				{
+					doThrow = true;
+
 					// What should we do here... close the connection or what...
 					// Meaning closing the connection would result in a "reopen" on next save!
 					if (conn != null)
@@ -889,16 +949,32 @@ extends CentralPersistWriterBase
 					// Mark it for shutdown
 					doShutdown = true;
 					dbIsFull   = true;
-					retCode    = true;
+					doThrow    = true;
 				}
 			}
 
 			e = e.getNextException();
 		}
 
-		_logger.debug("isSevereProblem(): doShutdown='"+doShutdown+"', dbIsFull='"+dbIsFull+"', retCode='"+retCode+"', _shutdownWithNoWait='"+_shutdownWithNoWait+"'.");
+		_logger.debug("isSevereProblem(): doShutdown='"+doShutdown+"', dbIsFull='"+dbIsFull+"', retCode='"+doThrow+"', _shutdownWithNoWait='"+_shutdownWithNoWait+"'.");
 
 		// Actions
+		if (dbIsFull)
+		{
+			if ( DbUtils.DB_PROD_NAME_H2.equals(getDatabaseProductName()) )
+			{
+				_logger.warn("No disk space available for the H2 Database... Trying to cleanup...");
+				boolean freedSpace = checkH2DataDirSpace();
+
+				// Check AFTER the cleanup, if we got more space...
+				if (freedSpace)
+				{
+					_logger.info("Cleanup looked like it freed up some space. disable the shutdown flag and continuing.");
+					doShutdown = false;
+				}
+			}
+		}
+
 		if (doShutdown)
 		{
 			if ( ! _shutdownWithNoWait)
@@ -939,7 +1015,79 @@ extends CentralPersistWriterBase
 				}
 			}
 		}
-		return retCode;
+
+//		_isSevereProblem = retCode;
+		if (doThrow)
+			throw originException;
+
+		return doThrow;
+	}
+
+	private boolean checkH2DataDirSpace()
+	{
+		boolean didCleanup = false;
+//		String localJdbcUrl = _lastUsedUrl == null ? _jdbcUrl : _lastUsedUrl;
+//		H2UrlHelper urlHelper = new H2UrlHelper(localJdbcUrl);
+//		File dbFile = urlHelper.getDbFile();
+
+		File dataDir = new File(DbxTuneCentral.getAppDataDir());
+		File dataDirRes = null;
+		try { dataDirRes = dataDir.toPath().toRealPath().toFile(); } catch(IOException ex) { _logger.warn("Problems resolving File->Path->File");}
+		
+		double freeGb   = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
+//		double freeGb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0 / 1024.0;
+//		double usableGb = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
+		double totalGb  = dataDir.getTotalSpace()  / 1024.0 / 1024.0 / 1024.0;
+		double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
+
+//		double freeMb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0;
+////		double usableMb = dataDir.getUsableSpace() / 1024.0 / 1024.0;
+//		double totalMb  = dataDir.getTotalSpace()  / 1024.0 / 1024.0;
+
+		long thresholdInMb    = _h2CleanupThresholdMb;
+		long thresholdInBytes = thresholdInMb * 1024 * 1024; // 100 MB
+
+//		dataDir.toPath().toRealPath().toFile()
+		boolean doCleanup = false;
+//		long freeSpaceBefore = dataDir.getFreeSpace();
+		long freeSpaceBefore = dataDir.getUsableSpace();
+		if (freeSpaceBefore < thresholdInBytes)
+		{
+			doCleanup = true;
+		}
+		
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug(String.format("checkH2DataDirSpace: doCleanup="+doCleanup+", Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%, thresholdInMb = %d, dir='%s', resolvedDir='%s'", freeGb, totalGb, pctUsed, thresholdInMb, dataDir, dataDirRes));
+		}
+
+		if (doCleanup)
+		{
+			_logger.warn("Low on disk space available for the H2 Database... at '"+dataDir+"', resolved to '"+dataDirRes+"'.");
+			_logger.warn(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%, thresholdInMb = %d", freeGb, totalGb, pctUsed, thresholdInMb));
+			
+			_logger.info("Trying to cleanup older H2 Database files, by calling DataDirectoryCleaner.execute(null)");
+			
+			// TRY TO: CLEANUP OLDER H2 DATABASES
+			DataDirectoryCleaner ddc = new DataDirectoryCleaner();
+			ddc.execute(null);
+
+			// TRY TO: "shutdown defrag" of DBX_CENTRAL and see if that helps...
+
+			
+			// Check AFTER the cleanup, if we got more space...
+//			long freeSpaceAfter = dataDir.getFreeSpace();
+			long freeSpaceAfter = dataDir.getUsableSpace();
+			if (freeSpaceAfter > thresholdInBytes)
+			{
+				didCleanup = true;
+				double freedMb = (freeSpaceAfter - freeSpaceBefore) / 1024.0 / 1024.0;
+				double freedGb = freedMb / 1024.0;
+				_logger.info("Cleanup looked like it freed up some space. "+String.format("%.1f GB, %.1f MB", freedGb, freedMb));
+			}
+		}
+
+		return didCleanup;
 	}
 
 	private boolean dbExecSetting(DbxConnection conn, String sql, boolean logInfo)
@@ -992,6 +1140,7 @@ extends CentralPersistWriterBase
 		catch(SQLException e)
 		{
 			_logger.warn("Problems when executing DDL sql statement: "+sql);
+			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 			throw e;
 		}
@@ -1044,6 +1193,7 @@ extends CentralPersistWriterBase
 //		catch (SQLException e)
 //		{
 //			_logger.warn("Error in insertSessionParam() writing to Persistent Counter Store. insertSessionParam(sessionsStartTime='"+sessionsStartTime+"', type='"+type+"', key='"+key+"', val='"+val+"')", e);
+// 			// throws Exception if it's a severe problem
 //			if (isSevereProblem(conn, e))
 //				throw e;
 //		}
@@ -1479,6 +1629,7 @@ extends CentralPersistWriterBase
 	 */
 	@Override
 	public void startSession(String sessionName, DbxTuneSample cont)
+	throws Exception
 	{
 		// Open connection to db
 		open(cont);
@@ -1729,6 +1880,7 @@ extends CentralPersistWriterBase
 		catch (SQLException e)
 		{
 			_logger.warn("Error when startSession() writing to Persistent Counter Store.", e);
+			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
 		
@@ -1742,8 +1894,22 @@ extends CentralPersistWriterBase
 	@Override
 	public void close()
 	{
-		// TODO Auto-generated method stub
-		
+		// Check if we have a connection, and if it's OK
+		// On errors simply close/invalidate the connection
+		if (_mainConn != null)
+		{
+			if (_mainConn.isConnectionOk())
+			{
+				// OK: Do nothing
+			}
+			else
+			{
+				// PROBLEM: close & set to null... a new connection will be attempted on next open()
+				_logger.info("Closing the PCS Storage connection, since it's no longer valid.");
+				_mainConn.closeNoThrow();
+				_mainConn = null;
+			}
+		}
 	}
 
 	@Override
@@ -1779,6 +1945,7 @@ extends CentralPersistWriterBase
 
 	@Override
 	public void saveSample(DbxTuneSample cont)
+	throws Exception
 	{
 		DbxConnection conn = _mainConn;
 		String qic = getQuotedIdentifierChar();
@@ -1805,72 +1972,88 @@ extends CentralPersistWriterBase
 
 		try
 		{
-			// START a transaction
-			// This will lower number of IO's to the transaction log
-			if (conn.getAutoCommit() == true)
-				conn.setAutoCommit(false);
-
 			// STATUS, that we are saving right now
 			_inSaveSample = true;
 
 			// Save any alarms
 			saveAlarms(conn, schemaName, sessionStartTime, sessionSampleTime, cont);
 
-			//
-			// INSERT THE ROW
-			//
-			sbSql = new StringBuffer();
-			sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLES, null, false));
-			sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
-
-			conn.dbExec(sbSql.toString());
-			getStatistics().incInserts();
-
-			// Increment the "counter" column and set LastSampleTime in the SESSIONS table
-			String tabName = getTableName(schemaName, Table.CENTRAL_SESSIONS, null, true);
-			sbSql = new StringBuffer();
-			sbSql.append(" update ").append(tabName).append("\n");
-			sbSql.append("    set  ").append(qic).append("NumOfSamples")       .append(qic).append(" = ").append(qic).append("NumOfSamples").append(qic).append(" + 1").append("\n");
-			sbSql.append("        ,").append(qic).append("LastSampleTime")     .append(qic).append(" = '").append(sessionSampleTime).append("'").append("\n");
-
-			if (StringUtil.hasValue(collectorCurrentUrl))
-				sbSql.append("        ,").append(qic).append("CollectorCurrentUrl").append(qic).append(" = '").append(collectorCurrentUrl).append("'").append("\n");
-
-			sbSql.append("  where ").append(qic).append("SessionStartTime")   .append(qic).append(" = '").append(sessionStartTime).append("'").append("\n");
-
-			conn.dbExec(sbSql.toString());
-			getStatistics().incUpdates();
-
-			//--------------------------------------
-			// COUNTERS
-			//--------------------------------------
-//			for (CountersModel cm : cont._counterObjects)
-//			{
-//				saveCounterData(conn, cm, sessionStartTime, sessionSampleTime);
-//			}
-			for (CmEntry cme : cont._collectors)
+			// In case the DbxTuneSample/container only contains alarms (which only happends if it's a SrvDown Alarm)
+			// Then: the collectors List is EMPTY, so do not try to save stuff
+			// ----
+			// SO: only save "stuff" in the DbxTune MetaData tables if we have any actual data to save...
+			if ( ! cont.getCollectors().isEmpty() )
 			{
-				saveCounterData(conn, cme, schemaName, sessionStartTime, sessionSampleTime);
-			}
+				// START a transaction
+				// This will lower number of IO's to the transaction log
+				if (conn.getAutoCommit() == true)
+					conn.setAutoCommit(false);
 
-			// CLOSE the transaction
-			conn.commit();
+				//
+				// INSERT THE ROW
+				//
+				sbSql = new StringBuffer();
+				sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLES, null, false));
+				sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
+
+				conn.dbExec(sbSql.toString());
+				getStatistics().incInserts();
+
+				// Increment the "counter" column and set LastSampleTime in the SESSIONS table
+				String tabName = getTableName(schemaName, Table.CENTRAL_SESSIONS, null, true);
+				sbSql = new StringBuffer();
+				sbSql.append(" update ").append(tabName).append("\n");
+				sbSql.append("    set  ").append(qic).append("NumOfSamples")       .append(qic).append(" = ").append(qic).append("NumOfSamples").append(qic).append(" + 1").append("\n");
+				sbSql.append("        ,").append(qic).append("LastSampleTime")     .append(qic).append(" = '").append(sessionSampleTime).append("'").append("\n");
+
+				if (StringUtil.hasValue(collectorCurrentUrl))
+					sbSql.append("        ,").append(qic).append("CollectorCurrentUrl").append(qic).append(" = '").append(collectorCurrentUrl).append("'").append("\n");
+
+				sbSql.append("  where ").append(qic).append("SessionStartTime")   .append(qic).append(" = '").append(sessionStartTime).append("'").append("\n");
+
+				conn.dbExec(sbSql.toString());
+				getStatistics().incUpdates();
+
+				//--------------------------------------
+				// COUNTERS
+				//--------------------------------------
+//				for (CountersModel cm : cont._counterObjects)
+//				{
+//					saveCounterData(conn, cm, sessionStartTime, sessionSampleTime);
+//				}
+				for (CmEntry cme : cont._collectors)
+				{
+					saveCounterData(conn, cme, schemaName, sessionStartTime, sessionSampleTime);
+				}
+
+				// check and save graph properties (like Graphs Order and Graph Headings/labels)
+				// if we send more graphs than previously: then remove and insert the latest properties
+				checkSaveGraphProperties(conn, cont, schemaName, sessionStartTime, sessionSampleTime);
+
+				// CLOSE the transaction
+				conn.commit();
+			}
 		}
 		catch (SQLException e)
 		{
 			try 
 			{
-				if (conn.getAutoCommit() == true)
+				if (conn.isConnectionOk() && conn.getAutoCommit() == true)
 					conn.rollback();
 			}
 			catch (SQLException e2) {}
 
-			isSevereProblem(conn, e);
 			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			// throws Exception if it's a severe problem
+			isSevereProblem(conn, e);
 		}
 		finally
 		{
-			try { conn.setAutoCommit(true); }
+			try 
+			{
+				if (conn.isConnectionOk())
+					conn.setAutoCommit(true); 
+			}
 			catch (SQLException e2) { _logger.error("Problems when setting AutoCommit to true.", e2); }
 
 			_inSaveSample = false;
@@ -1878,8 +2061,9 @@ extends CentralPersistWriterBase
 	}
 
 	private void saveAlarms(DbxConnection conn, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime, DbxTuneSample cont)
+	throws SQLException
 	{
-//		System.out.println("saveAlarms(schemaName='"+schemaName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'): -NOT-YET-IMPLEMETED-");
+//		System.out.println("saveAlarms(schemaName='"+schemaName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'): ActiveAlarmCnt="+cont.getActiveAlarms().size()+", AlarmEntriesCnt="+cont.getAlarmEntries().size());
 
 		// Delete all ACTIVE alarms
 		String sql = "delete from " + getTableName(schemaName, Table.ALARM_ACTIVE, null, true);
@@ -1891,6 +2075,7 @@ extends CentralPersistWriterBase
 		catch (SQLException e)
 		{
 			_logger.warn("Error deleting Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
 
@@ -1935,6 +2120,7 @@ extends CentralPersistWriterBase
 				catch (SQLException e)
 				{
 					_logger.warn("Error writing Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+					// throws Exception if it's a severe problem
 					isSevereProblem(conn, e);
 				}
 			}
@@ -1993,6 +2179,7 @@ extends CentralPersistWriterBase
 				catch (SQLException e)
 				{
 					_logger.warn("Error writing History Alarm Event(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+					// throws Exception if it's a severe problem
 					isSevereProblem(conn, e);
 				}
 			}
@@ -2050,6 +2237,7 @@ extends CentralPersistWriterBase
 	}
 
 	private void saveCounterData(DbxConnection conn, CmEntry cme, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	throws SQLException
 	{
 		String q = getQuotedIdentifierChar();
 
@@ -2116,6 +2304,7 @@ extends CentralPersistWriterBase
 				}
 			}
 		}
+		
 
 		if (_shutdownWithNoWait)
 		{
@@ -2126,40 +2315,45 @@ extends CentralPersistWriterBase
 		// Store some info
 		StringBuilder sbSql = new StringBuilder();
 
-		try
+		boolean save_SESSION_SAMPLE_DETAILS = getConfig().getBooleanProperty(PROPKEY_SAVE_SESSION_SAMPLE_DETAILS, DEFAULT_SAVE_SESSION_SAMPLE_DETAILS);;
+		if (save_SESSION_SAMPLE_DETAILS)
 		{
-			sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLE_DETAILS, null, false));
-			sbSql.append(" values('").append(sessionStartTime).append("'");
-			sbSql.append(", '").append(sessionSampleTime).append("'");
-			sbSql.append(", '").append(cme.getName()).append("'");
-			sbSql.append(", ") .append(counterType);
-			sbSql.append(", ") .append(graphRecvCount);
-			sbSql.append(", ") .append(absRecvRows);
-			sbSql.append(", ") .append(diffRecvRows);
-			sbSql.append(", ") .append(rateRecvRows);
-			sbSql.append(", ") .append(graphSaveCount);
-			sbSql.append(", ") .append(absSaveRows);
-			sbSql.append(", ") .append(diffSaveRows);
-			sbSql.append(", ") .append(rateSaveRows);
-			sbSql.append(", ") .append(cme.getSqlRefreshTime());
-			sbSql.append(", ") .append(cme.getGuiRefreshTime());
-			sbSql.append(", ") .append(cme.getLcRefreshTime());
-			sbSql.append(", ") .append(cme.hasNonConfiguredMonitoringHappened() ? 1 : 0);
-			sbSql.append(", ") .append(safeStr(cme.getNonConfiguredMonitoringMissingParams()));
-			sbSql.append(", ") .append(safeStr(cme.getNonConfiguredMonitoringMessage()));
-			sbSql.append(", ") .append(cme.isCountersCleared() ? 1 : 0);
-			sbSql.append(", ") .append(cme.hasValidSampleData() ? 1 : 0);
-			sbSql.append(", ") .append(safeStr(cme.getSampleExceptionMsg()));
-			sbSql.append(", ") .append(safeStr(cme.getSampleExceptionFullText())); 
-			sbSql.append(")");
+			try
+			{
+				sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLE_DETAILS, null, false));
+				sbSql.append(" values('").append(sessionStartTime).append("'");
+				sbSql.append(", '").append(sessionSampleTime).append("'");
+				sbSql.append(", '").append(cme.getName()).append("'");
+				sbSql.append(", ") .append(counterType);
+				sbSql.append(", ") .append(graphRecvCount);
+				sbSql.append(", ") .append(absRecvRows);
+				sbSql.append(", ") .append(diffRecvRows);
+				sbSql.append(", ") .append(rateRecvRows);
+				sbSql.append(", ") .append(graphSaveCount);
+				sbSql.append(", ") .append(absSaveRows);
+				sbSql.append(", ") .append(diffSaveRows);
+				sbSql.append(", ") .append(rateSaveRows);
+				sbSql.append(", ") .append(cme.getSqlRefreshTime());
+				sbSql.append(", ") .append(cme.getGuiRefreshTime());
+				sbSql.append(", ") .append(cme.getLcRefreshTime());
+				sbSql.append(", ") .append(cme.hasNonConfiguredMonitoringHappened() ? 1 : 0);
+				sbSql.append(", ") .append(safeStr(cme.getNonConfiguredMonitoringMissingParams()));
+				sbSql.append(", ") .append(safeStr(cme.getNonConfiguredMonitoringMessage()));
+				sbSql.append(", ") .append(cme.isCountersCleared() ? 1 : 0);
+				sbSql.append(", ") .append(cme.hasValidSampleData() ? 1 : 0);
+				sbSql.append(", ") .append(safeStr(cme.getSampleExceptionMsg()));
+				sbSql.append(", ") .append(safeStr(cme.getSampleExceptionFullText())); 
+				sbSql.append(")");
 
-			conn.dbExec(sbSql.toString());
-			getStatistics().incInserts();
-		}
-		catch (SQLException e)
-		{
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
-			isSevereProblem(conn, e);
+				conn.dbExec(sbSql.toString());
+				getStatistics().incInserts();
+			}
+			catch (SQLException e)
+			{
+				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+				// throws Exception if it's a severe problem
+				isSevereProblem(conn, e); 
+			}
 		}
 
 
@@ -2209,6 +2403,7 @@ extends CentralPersistWriterBase
 		catch (SQLException e)
 		{
 			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			// throws Exception if it's a severe problem
 			isSevereProblem(conn, e);
 		}
 	}
@@ -2443,6 +2638,7 @@ return -1;
 //		catch (SQLException e)
 //		{
 //			_logger.warn("Error writing to Persistent Counter Store. to table name '"+tabName+"'. getErrorCode()="+e.getErrorCode()+" SQL="+sql, e);
+//			// throws Exception if it's a severe problem
 //			isSevereProblem(conn, e);
 //			return -1;
 //		}
@@ -2460,6 +2656,7 @@ return -1;
 	}
 
 	private int saveGraphData(DbxConnection conn, CmEntry cme, GraphEntry ge, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	throws SQLException
 	{
 		if (cme == null) throw new IllegalArgumentException("The passed CmEntry can't be null");
 		if (ge  == null) throw new IllegalArgumentException("The passed GraphEntry can't be null");
@@ -2522,12 +2719,13 @@ return -1;
 		}
 		catch (SQLException e)
 		{
-			isSevereProblem(conn, e);
 			_logger.info("Problems writing Graph '"+ge.getName()+"' information to table '"+fullTabName+"', Problems when creating the table or checked if it existed. Caught: "+e);
+			// throws Exception if it's a severe problem
+			isSevereProblem(conn, e);
 		}
 
 		// this call is self handled and do not throw any exception
-		saveGraphProperties(conn, schemaName, sessionStartTime, cme, ge);
+//		saveGraphProperties(conn, schemaName, sessionStartTime, cme, ge);
 
 		// Add rows...
 		try
@@ -2550,96 +2748,218 @@ return -1;
 			}
 			catch (SQLException e2)
 			{
-				isSevereProblem(conn, e2);
 				_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e2.getErrorCode()+", getSQLState()="+e2.getSQLState()+", ex.toString='"+e2.toString()+"', SQL: "+sb.toString(), e2);
+				// throws Exception if it's a severe problem
+				isSevereProblem(conn, e2);
 				return 0;
 			}
 		}
 	}
 
-	private void saveGraphProperties(DbxConnection conn, String schemaName, Timestamp sessionStartTime, CmEntry cme, GraphEntry ge)
+//	private void saveGraphProperties(DbxConnection conn, String schemaName, Timestamp sessionStartTime, CmEntry cme, GraphEntry ge)
+//	{
+//		// key = schemaName|############|cmName_graphName
+//		String key = new StringBuffer().append(schemaName).append("|").append(sessionStartTime == null ? 0 : sessionStartTime.getTime()).append("|").append(cme.getName()).append("_").append(ge.getName()).toString();
+//		if (_graphPropertiesSet.contains(key))
+//			return;
+//		
+//		// Then add some "properties" like Graph Label etc...
+//		String sql = "";
+//		try
+//		{
+//			StringBuilder sb = new StringBuilder();
+//
+//			// Check if we need to do insert
+//			String q = getQuotedIdentifierChar();
+//
+//			String tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
+//			sb.append("select count(*)");
+//			sb.append(" from ").append(tabName);
+//			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
+//			sb.append("   and ").append(q).append("CmName")          .append(q).append(" = '").append(cme.getName()   ).append("' ");
+//			sb.append("   and ").append(q).append("GraphName")       .append(q).append(" = '").append(ge.getName()    ).append("' ");
+//			sql = sb.toString();
+//
+//			Statement stmnt = conn.createStatement();
+//			ResultSet rs = stmnt.executeQuery(sql);
+//			int exists = -1;
+//			while (rs.next())
+//				exists = rs.getInt(1);
+//			rs.close();
+//			stmnt.close();
+//
+//			// If the record do not exists, add it (yes there is a "race condition", but I dont care about that)
+//			if ( exists <= 0 )
+//			{
+//    			//--------------------------
+//    			// first get current count of graphs in session...
+//				// This to determen 'initialOrder' value
+//    			//--------------------------
+//    			sb = new StringBuilder();
+//    			tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
+//    			sb.append("select count(*)");
+//    			sb.append(" from ").append(tabName);
+//    			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
+//    			sql = sb.toString();
+//
+//    			stmnt = conn.createStatement();
+//    			rs = stmnt.executeQuery(sql);
+//    			int initialOrder = 0;
+//    			while (rs.next())
+//    				initialOrder = rs.getInt(1);
+//    			rs.close();
+//    			stmnt.close();
+//
+//    			//--------------------------
+//    			// Insert
+//    			//--------------------------
+//    			sb = new StringBuilder();
+//    			sb.append(getTableInsertStr(schemaName, Table.GRAPH_PROPERTIES, null, false));
+//    			sb.append(" values('").append(sessionStartTime).append("'");
+//    			sb.append(", '").append(cme.getName()).append("'");
+//    			sb.append(", '").append(ge.getName()).append("'");
+//    			sb.append(", '").append(cme.getName()).append("_").append(ge.getName()).append("'"); // cmName_graphName
+//    			sb.append(", ") .append(safeStr(ge.getGraphLabel()));
+//    			sb.append(", ") .append(safeStr(ge.getGraphCategory()));
+//    			sb.append(", ") .append(ge.isPercentGraph());
+//    			sb.append(", ") .append(ge.isVisibleAtStart());
+//    			sb.append(", ") .append(initialOrder);
+//    			sb.append(")");
+//    
+//    			sql = sb.toString();
+//    			
+//    			conn.dbExec(sql, false);
+//    			getStatistics().incInserts();
+//			}
+//			
+//			_graphPropertiesSet.add(key);
+//		}
+//		catch(SQLException ex)
+//		{
+//			_logger.warn("Problems saving Graph Properties for cm='"+cme.getName()+"', graphName='"+ge.getName()+"', sql='"+sql+"', Caught: "+ex);
+//		}
+//	}
+	
+	private void checkSaveGraphProperties(DbxConnection conn, DbxTuneSample cont, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)
+	throws SQLException
 	{
-		// key = schemaName|############|cmName_graphName
-		String key = new StringBuffer().append(schemaName).append("|").append(sessionStartTime == null ? 0 : sessionStartTime.getTime()).append("|").append(cme.getName()).append("_").append(ge.getName()).toString();
-		if (_graphPropertiesSet.contains(key))
-			return;
-		
-		// Then add some "properties" like Graph Label etc...
-		String sql = "";
-		try
+		if (_shutdownWithNoWait)
 		{
-			StringBuilder sb = new StringBuilder();
+			_logger.info("checkSaveGraphProperties: Discard entry due to 'ShutdownWithNoWait'.");
+			return;
+		}
 
-			// Check if we need to do insert
-			String q = getQuotedIdentifierChar();
+		StringBuilder sb = new StringBuilder();
+		String q = getQuotedIdentifierChar();
 
+		// Get number of graphs in the container
+		int receivedGraphCount = 0;
+		for (CmEntry cme : cont._collectors)
+		{
+			if ( ! cme.hasValidSampleData() )
+				continue;
+
+			Map<String, GraphEntry> tgdMap = cme._graphMap;
+			if (tgdMap != null)
+				receivedGraphCount += tgdMap.size();
+		}
+
+		// Get SAVED number of graphs in PCS (from cachedMap or the PCS DB)
+		int savedGraphPropsCount = 0;
+		
+		String key = new StringBuffer().append(schemaName).append("|").append(sessionStartTime == null ? 0 : sessionStartTime.getTime()).append("|").toString();
+		if (_graphPropertiesCountMap.get(key) == null)
+		{
+			sb = new StringBuilder();
 			String tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
 			sb.append("select count(*)");
 			sb.append(" from ").append(tabName);
 			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
-			sb.append("   and ").append(q).append("CmName")          .append(q).append(" = '").append(cme.getName()   ).append("' ");
-			sb.append("   and ").append(q).append("GraphName")       .append(q).append(" = '").append(ge.getName()    ).append("' ");
-			sql = sb.toString();
+			String sql = sb.toString();
 
-			Statement stmnt = conn.createStatement();
-			ResultSet rs = stmnt.executeQuery(sql);
-			int exists = -1;
-			while (rs.next())
-				exists = rs.getInt(1);
-			rs.close();
-			stmnt.close();
-
-			// If the record do not exists, add it (yes there is a "race condition", but I dont care about that)
-			if ( exists <= 0 )
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql);)
 			{
-    			//--------------------------
-    			// first get current count of graphs in session...
-				// This to determen 'initialOrder' value
-    			//--------------------------
-    			sb = new StringBuilder();
-    			tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
-    			sb.append("select count(*)");
-    			sb.append(" from ").append(tabName);
-    			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
-    			sql = sb.toString();
-
-    			stmnt = conn.createStatement();
-    			rs = stmnt.executeQuery(sql);
-    			int initialOrder = 0;
-    			while (rs.next())
-    				initialOrder = rs.getInt(1);
-    			rs.close();
-    			stmnt.close();
-
-    			//--------------------------
-    			// Insert
-    			//--------------------------
-    			sb = new StringBuilder();
-    			sb.append(getTableInsertStr(schemaName, Table.GRAPH_PROPERTIES, null, false));
-    			sb.append(" values('").append(sessionStartTime).append("'");
-    			sb.append(", '").append(cme.getName()).append("'");
-    			sb.append(", '").append(ge.getName()).append("'");
-    			sb.append(", '").append(cme.getName()).append("_").append(ge.getName()).append("'"); // cmName_graphName
-    			sb.append(", ") .append(safeStr(ge.getGraphLabel()));
-    			sb.append(", ") .append(safeStr(ge.getGraphCategory()));
-    			sb.append(", ") .append(ge.isPercentGraph());
-    			sb.append(", ") .append(ge.isVisibleAtStart());
-    			sb.append(", ") .append(initialOrder);
-    			sb.append(")");
-    
-    			sql = sb.toString();
-    			
-    			conn.dbExec(sql, false);
-    			getStatistics().incInserts();
+				while (rs.next())
+					savedGraphPropsCount = rs.getInt(1);
 			}
-			
-			_graphPropertiesSet.add(key);
+			if (_logger.isDebugEnabled())
+				_logger.debug("checkSaveGraphProperties(): GET rowcount from PCS: savedGraphPropsCount="+savedGraphPropsCount+", sql="+sql);
 		}
-		catch(SQLException ex)
+		else
 		{
-			_logger.warn("Problems saving Graph Properties for cm='"+cme.getName()+"', graphName='"+ge.getName()+"', sql='"+sql+"', Caught: "+ex);
+			savedGraphPropsCount = _graphPropertiesCountMap.get(key);
+			if (_logger.isDebugEnabled())
+				_logger.debug("checkSaveGraphProperties(): GET MAP: key='"+key+"', value(savedGraphPropsCount)="+savedGraphPropsCount);
 		}
-	}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("checkSaveGraphProperties(): receivedGraphCount="+receivedGraphCount+", savedGraphPropsCount="+savedGraphPropsCount);
+
+		// DELETE old records and INSERT new records
+		if (receivedGraphCount > savedGraphPropsCount)
+		{
+			// DELETE old records
+			sb = new StringBuilder();
+			String tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
+			sb.append("delete from ").append(tabName);
+			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
+			String sql = sb.toString();
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("checkSaveGraphProperties(): DELETE PCS RECORD: sql="+sql);
+
+			int delCount = conn.dbExec(sql, false);
+			getStatistics().incDeletes(delCount);
+
+			// INSERT new records
+			int initialOrder = 0;
+			for (CmEntry cme : cont._collectors)
+			{
+				if ( ! cme.hasValidSampleData() )
+					continue;
+
+				Map<String, GraphEntry> tgdMap = cme._graphMap;
+				if (tgdMap != null)
+				{
+					for (GraphEntry ge : tgdMap.values()) 
+					{
+						sb = new StringBuilder();
+						sb.append(getTableInsertStr(schemaName, Table.GRAPH_PROPERTIES, null, false));
+						sb.append(" values('").append(sessionStartTime).append("'");
+						sb.append(", '").append(cme.getName()).append("'");
+						sb.append(", '").append(ge.getName()).append("'");
+						sb.append(", '").append(cme.getName()).append("_").append(ge.getName()).append("'"); // cmName_graphName
+						sb.append(", ") .append(safeStr(ge.getGraphLabel()));
+						sb.append(", ") .append(safeStr(ge.getGraphCategory()));
+						sb.append(", ") .append(ge.isPercentGraph());
+						sb.append(", ") .append(ge.isVisibleAtStart());
+						sb.append(", ") .append(initialOrder);
+						sb.append(")");
+
+						sql = sb.toString();
+						
+						if (_logger.isTraceEnabled())
+							_logger.trace("checkSaveGraphProperties(): INSERT PCS RECORD: sql="+sql);
+						
+						conn.dbExec(sql, false);
+						getStatistics().incInserts();
+
+						initialOrder++;
+					} // end: graphEntry
+				} // end: has tgdMap
+			} // end: loop Collectors
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("checkSaveGraphProperties(): INSERTED PCS RECORD: count="+initialOrder);
+			
+			// save the receivedGraphCount in the cached Map
+			_graphPropertiesCountMap.put(key, receivedGraphCount);
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("checkSaveGraphProperties(): PUT MAP: key='"+key+"', value(receivedGraphCount)="+receivedGraphCount);
+			
+		} // end: DELETE old records and INSERT new records
+	} // end: method
 
 	private void saveGraphDataDdl(DbxConnection conn, String schemaName, String tabName, GraphEntry ge)
 	throws SQLException
@@ -2724,7 +3044,8 @@ return -1;
 			if (inTransaction)
 			{
 				_logger.debug("Looks like we are in a transaction. Done with creating the table, so starting a transaction again.");
-				conn.setAutoCommit(false);
+				if (conn.isConnectionOk())
+					conn.setAutoCommit(false);
 			}
 		}
 	}
@@ -2759,9 +3080,10 @@ return -1;
 	}
 
 	@Override
-	public void beginOfSample(DbxTuneSample cont)
+	public boolean beginOfSample(DbxTuneSample cont)
 	{
-		open(cont);
+		DbxConnection conn = open(cont); 
+		return conn != null;
 	}
 
 	@Override
@@ -2828,22 +3150,35 @@ return -1;
 		// IF H2, make special shutdown
 		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
 		{
-			// TODO: Probably better to use 'shutdownConfig' that the File 'H2_SHUTDOWN_WITH_DEFRAG_FILENAME'
+			// TODO: Probably better to use 'shutdownConfig' than the File 'H2_SHUTDOWN_WITH_DEFRAG_FILENAME'
 			Configuration shutdownConfig = ShutdownHandler.getShutdownConfiguration();
 			
+//			H2ShutdownType h2ShutdownType  = H2ShutdownType.valueOf( shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString()) );
+			H2ShutdownType h2ShutdownType = H2ShutdownType.IMMEDIATELY;
+			String h2ShutdownTypeStr = shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());
+			_logger.info("Received a H2 database shutdown request with 'h2.shutdown.type' of '"+h2ShutdownTypeStr+"'.");
+			try { 
+				h2ShutdownType = H2ShutdownType.valueOf( h2ShutdownTypeStr ); 
+			} catch(RuntimeException ex) { 
+				_logger.info("Shutdown type '"+h2ShutdownTypeStr+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ex="+ex);
+			}
+			
 			File shutdownWithDefrag = new File(H2_SHUTDOWN_WITH_DEFRAG_FILENAME);
-			_logger.info("Deciding H2 shutdown type. Checking for file '"+shutdownWithDefrag+"'. exists="+shutdownWithDefrag.exists());
+			_logger.info("Checking for override of H2 shutdown type. Checking for file '"+shutdownWithDefrag+"'. exists="+shutdownWithDefrag.exists());
 			if (shutdownWithDefrag.exists())
 			{
+				// get the reason why we shutdown
+				String shutdownReason = "";
+				try { shutdownReason = FileUtils.readFileToString(shutdownWithDefrag, StandardCharsets.UTF_8).trim(); }
+				catch(IOException ignore) {}
+
 				shutdownWithDefrag.delete();
-				_logger.info("Found file '"+shutdownWithDefrag+"'. So 'SHUTDOWN DEFRAG' will be used to stop/shutdown H2.");
+				_logger.info("Found file '"+shutdownWithDefrag+"'. So 'SHUTDOWN DEFRAG' will be used to stop/shutdown H2 database. reason='"+shutdownReason+"'.");
 				
-				h2Shutdown(H2ShutdownType.DEFRAG);
+				h2ShutdownType = H2ShutdownType.DEFRAG;
 			}
-			else
-			{
-				h2Shutdown(H2ShutdownType.COMPACT);
-			}
+			
+			h2Shutdown( h2ShutdownType );
 		}
 	}
 	public static final String H2_SHUTDOWN_WITH_DEFRAG_FILENAME = System.getProperty("java.io.tmpdir", "/tmp") + File.separatorChar + "dbxcentral.shutdown.with.defrag";
@@ -2922,7 +3257,19 @@ return -1;
 			if ( ex.getErrorCode() == 90121 )
 				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 			else
-				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
+			{
+				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
+				// String    rootCauseMsg = ExceptionUtils.getRootCauseMessage(ex);
+
+				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", ex.toString="+ex.toString()+", rootCauseEx="+rootCauseEx);
+				
+				// Check if the H2 database seems CORRUPT...
+				// Caused by: java.lang.IllegalStateException: Reading from nio:/opt/dbxtune_data/DBXTUNE_CENTRAL_DB.mv.db failed; file length -1 read length 768 at 2026700328 [1.4.197/1]
+				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
+				{
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+				}
+			}
 		}
 		
 		// Possibly: print information about H2 DB File SIZE information before and after shutdown compress
@@ -2937,6 +3284,25 @@ return -1;
 					+ ", AfterMb="  + String.format("%.1f", (dbFileSizeAfter /1024.0/1024.0))
 					+ ", Filename='"+dbFile.getAbsolutePath()
 					+ "'.");
+			
+			// if file size is smaller: 
+			// - Save the NEW file size after SHUTDOWN has been executed
+			// - This will help CentralH2Defrag (otherwise it needs one check just to determen that the file is smaller) 
+			int sizeDiffMb = (int) (sizeDiff /1024.0/1024.0);
+			if (sizeDiffMb < 0)
+			{
+				int dbFileSizeAfterMb = (int) (dbFileSizeAfter /1024.0/1024.0); 
+				CentralH2Defrag.saveH2StorageInfoFile(dbFileSizeAfterMb, dbFile.toString());
+			}
+			
+			// Check if we have a ".tempFile"
+			// Then it's probably 'SHUTDOWN DEFRAG' that didn't work... (and no exception was thrown)
+			File shutdownTempFile = new File(dbFile.getAbsolutePath() + ".tempFile");
+			if (shutdownTempFile.exists())
+			{
+				_logger.warn("After Shutdown H2 database using '"+shutdownCmd+"', the file '"+shutdownTempFile+"' exists. sizeMb("+(shutdownTempFile.length()/1024/1024)+"), sizeB("+shutdownTempFile.length()+"). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
+				shutdownTempFile.delete();
+			}
 		}
 
 		// Close the connection

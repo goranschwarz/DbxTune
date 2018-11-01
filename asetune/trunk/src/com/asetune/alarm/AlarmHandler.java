@@ -1003,7 +1003,7 @@ implements Runnable
 	}
 
 	/**
-	 * Send dummy alarm if file /tmp/SRVNAME.dummyAlarm.deleteme exists
+	 * Send dummy alarm if file '/tmp/DbxTune.dummyAlarm.SRVNAME.deleteme' exists
 	 */
 	public void checkSendDummyAlarm(String srvName)
 	{

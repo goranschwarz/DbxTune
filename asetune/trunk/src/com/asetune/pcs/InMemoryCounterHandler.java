@@ -374,9 +374,8 @@ implements Runnable
 				PersistContainer cont = _containerQueue.take();
 
 				// Make sure the container isn't empty.
-				if (cont == null)                     continue;
-				if (cont._counterObjects == null)	  continue;
-				if (cont._counterObjects.size() <= 0) continue;
+				if (cont == null || (cont != null && cont.isEmpty()) )
+					continue;
 
 				// Go and store or consume the in-data/container
 				long startTime = System.currentTimeMillis();

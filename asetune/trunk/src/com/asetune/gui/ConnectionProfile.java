@@ -366,6 +366,7 @@ public class ConnectionProfile
 	public static final String       XML_TDS_DBXTUNE_osMonSavePassword           = "osMonSavePassword";
 	public static final String       XML_TDS_DBXTUNE_osMonHost                   = "osMonHost";
 	public static final String       XML_TDS_DBXTUNE_osMonPort                   = "osMonPort";
+	public static final String       XML_TDS_DBXTUNE_osMonKeyFile                = "osMonKeyFile";
 
 	public static final String       XML_TDS_DBXTUNE_pcsWriterClass                    = "pcsWriterClass";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterDriver                   = "pcsWriterDriver";
@@ -465,6 +466,7 @@ public class ConnectionProfile
 		public boolean       _osMonSavePassword  = true;
 		public String        _osMonHost          = null;
 		public int           _osMonPort          = 22;
+		public String        _osMonKeyFile       = null;
 
 		// Recordings
 		public String        _pcsWriterClass             = null;
@@ -527,6 +529,7 @@ public class ConnectionProfile
 			_osMonSavePassword                 = fromEntry._osMonSavePassword;
 			_osMonHost                         = fromEntry._osMonHost;
 			_osMonPort                         = fromEntry._osMonPort;
+			_osMonKeyFile                      = fromEntry._osMonKeyFile;
 
 			// Recordings
 			_pcsWriterClass                    = fromEntry._pcsWriterClass;
@@ -613,6 +616,7 @@ public class ConnectionProfile
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonSavePassword   , _osMonSavePassword, entry._osMonSavePassword);
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonHost           , _osMonHost        , entry._osMonHost);
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPort           , _osMonPort        , entry._osMonPort);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonKeyFile        , _osMonKeyFile     , entry._osMonKeyFile);
 			}
 
 			return sb.toString();
@@ -684,6 +688,7 @@ public class ConnectionProfile
 				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword);
 				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost);
 				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_osMonKeyFile     , _osMonKeyFile);
 				sb.append("</table>");
 			}
 
@@ -715,6 +720,7 @@ public class ConnectionProfile
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonSavePassword,           _osMonSavePassword);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonHost,                   _osMonHost);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPort,                   _osMonPort);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonKeyFile,                _osMonKeyFile);
 		
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterClass,                    _pcsWriterClass);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDriver,                   _pcsWriterDriver);
@@ -780,6 +786,7 @@ public class ConnectionProfile
 					entry._osMonPassword             = getValue(element, XML_TDS_DBXTUNE_osMonPassword,     entry._osMonPassword);
 				entry._osMonHost                     = getValue(element, XML_TDS_DBXTUNE_osMonHost,         entry._osMonHost);
 				entry._osMonPort                     = getValue(element, XML_TDS_DBXTUNE_osMonPort,         entry._osMonPort);
+				entry._osMonKeyFile                  = getValue(element, XML_TDS_DBXTUNE_osMonKeyFile,      entry._osMonKeyFile);
 			}
 
 			// Recordings
@@ -874,6 +881,7 @@ public class ConnectionProfile
 //		public boolean       _osMonSavePassword  = true;
 //		public String        _osMonHost          = null;
 //		public int           _osMonPort          = 22;
+//		public String        _osMonKeyFile       = null;
 //
 //		// Recordings
 //		public String        _pcsWriterClass             = null;
@@ -935,6 +943,7 @@ public class ConnectionProfile
 //			_osMonSavePassword                 = fromEntry._osMonSavePassword;
 //			_osMonHost                         = fromEntry._osMonHost;
 //			_osMonPort                         = fromEntry._osMonPort;
+//			_osMonKeyFile                      = fromEntry._osMonKeyFile;
 //
 //			// Recordings
 //			_pcsWriterClass                    = fromEntry._pcsWriterClass;
@@ -1040,6 +1049,7 @@ public class ConnectionProfile
 //					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword, entry._osMonSavePassword);
 //					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost        , entry._osMonHost);
 //					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort        , entry._osMonPort);
+//					htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_osMonKeyFile     , _osMonKeyFile     , entry._osMonKeyFile);
 //				}
 			}
 
@@ -1145,6 +1155,7 @@ public class ConnectionProfile
 //					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonSavePassword, _osMonSavePassword);
 //					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonHost        , _osMonHost);
 //					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonPort        , _osMonPort);
+//					htmlTabRow(sb, XML_TDS_DBXTUNE_osMonKeyFile     , _osMonKeyFile);
 //					sb.append("</table>");
 //				}
 			}
@@ -1215,6 +1226,7 @@ public class ConnectionProfile
 //				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonSavePassword,           _osMonSavePassword);
 //				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonHost,                   _osMonHost);
 //				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPort,                   _osMonPort);
+//				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonKeyFile,                _osMonkeyFile);
 //			
 //				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterClass,                    _pcsWriterClass);
 //				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDriver,                   _pcsWriterDriver);
@@ -1305,6 +1317,7 @@ public class ConnectionProfile
 //						entry._osMonPassword             = getValue(element, XML_TDS_DBXTUNE_osMonPassword,     entry._osMonPassword);
 //					entry._osMonHost                     = getValue(element, XML_TDS_DBXTUNE_osMonHost,         entry._osMonHost);
 //					entry._osMonPort                     = getValue(element, XML_TDS_DBXTUNE_osMonPort,         entry._osMonPort);
+//					entry._osMonKeyFile                  = getValue(element, XML_TDS_DBXTUNE_osMonKeyFile,      entry._osMonKeyFile);
 //				}
 //	
 //				// Recordings

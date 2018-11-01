@@ -25,10 +25,10 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
 	@Override protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
-	private static final String SQLWIN_HOME_URL                = "http://www.asetune.com";
-	private static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.asetune.com/sqlw_check_for_update.php";
-	private static final String SQLWIN_CONNECT_INFO_URL        = "http://www.asetune.com/sqlw_connect_info.php";
-	private static final String SQLWIN_COUNTER_USAGE_INFO_URL  = "http://www.asetune.com/sqlw_counter_usage_info.php";
+	private static final String SQLWIN_HOME_URL                = "http://www.dbxtune.com";
+	private static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.dbxtune.com/sqlw_check_for_update.php";
+	private static final String SQLWIN_CONNECT_INFO_URL        = "http://www.dbxtune.com/sqlw_connect_info.php";
+	private static final String SQLWIN_COUNTER_USAGE_INFO_URL  = "http://www.dbxtune.com/sqlw_counter_usage_info.php";
 
 	public CheckForUpdatesSqlw()
 	{

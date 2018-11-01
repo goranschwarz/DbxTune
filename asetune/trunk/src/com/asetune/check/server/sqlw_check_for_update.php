@@ -63,11 +63,11 @@
 	$SQLW_LATEST_VERSION_STR = "3.6.0";
 	$SQLW_LATEST_VERSION_STR = "2016-11-07";
 	$DOWNLOAD_URL            = "sourceforge.net/projects/asetune/files/";
-	$WHATSNEW_URL            = "www.asetune.com/history.html";
+	$WHATSNEW_URL            = "www.dbxtune.com/history.html";
 	$SEND_OPTIONS            = "sendConnectInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=false, sendLogInfoError=false, sendLogInfoThreshold=100";
-//	$FEEDBACK_URL            = "2011-06-09:www.asemon.se/feedback.html";
+//	$FEEDBACK_URL            = "2011-06-09:www.dbxtune.com/feedback.html";
 	$FEEDBACK_URL            = "";
-//	$PROBLEM_URL             = "2012-06-01:www.asemon.se/asetune_problem.html";
+//	$PROBLEM_URL             = "2012-06-01:www.dbxtune.com/asetune_problem.html";
 	$PROBLEM_URL             = "";
 
 //	$FEEDBACK_URL            = $PROBLEM_URL;
@@ -111,7 +111,7 @@
 	$java_version = getUrlParam('java_version');
 	if (preg_match('#^1.[67]#', $java_version) === 1)
 	{
-		$FEEDBACK_URL = "2016-04-24:www.asetune.com/do_java_upgrade.html";
+		$FEEDBACK_URL = "2016-04-24:www.dbxtune.com/do_java_upgrade.html";
 	}
 
 	//------------------------------------------
@@ -178,8 +178,10 @@
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
 	//-------
-	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
-	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
+//	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());
+//	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
+
+	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
 
 	$sql = "insert into sqlw_usage
 	(
@@ -267,14 +269,14 @@
 
 	//------------------------------------------
 	// Do the INSERT
-	mysql_query($sql) or die("ERROR: " . mysql_error());
+	mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 
 	//------------------------------------------
 	// Send a responce id
-//	printf("CHECK_ID_SQLW: %d\n", mysql_insert_id());
-	printf("CHECK_ID: %d\n", mysql_insert_id());
+//	printf("CHECK_ID_SQLW: %d\n", mysqli_insert_id($dbconn));
+	printf("CHECK_ID: %d\n", mysqli_insert_id($dbconn));
 
 	//------------------------------------------
 	// Close connection to the database
-	mysql_close() or die("ERROR: " . mysql_error());
+	mysqli_close($dbconn) or die("ERROR: " . mysqli_error($dbconn));
 ?>

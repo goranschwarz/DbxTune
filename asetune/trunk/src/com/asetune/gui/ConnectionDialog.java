@@ -343,6 +343,9 @@ public class ConnectionDialog
 	private JTextField           _hostmonUser_txt        = new JTextField();
 	private JLabel               _hostmonPasswd_lbl      = new JLabel("Password");
 	private JTextField           _hostmonPasswd_txt      = null; // set to JPasswordField or JTextField depending on debug level
+	private JLabel               _hostmonKeyFile_lbl     = new JLabel("Private Key File");
+	private JTextField           _hostmonKeyFile_txt     = new JTextField();
+	private JButton              _hostmonKeyFile_but     = new JButton("...");
 
 	private ImageIcon            _hostmonServerImageIcon = SwingUtils.readImageIcon(Version.class, "images/server_32.png");
 	private JLabel               _hostmonServerIcon      = new JLabel(_hostmonServerImageIcon);
@@ -1240,15 +1243,17 @@ public class ConnectionDialog
 		return null;
 	}
 
-	public void setSshUsername(String username) { _hostmonUser_txt  .setText(username); }
-	public void setSshPassword(String password) { _hostmonPasswd_txt.setText(password); }
-	public void setSshHostname(String hostname) { _hostmonHost_txt  .setText(hostname); }
-	public void setSshPort(String portStr)      { _hostmonPort_txt  .setText(portStr); }
+	public void setSshUsername(String username) { _hostmonUser_txt   .setText(username); }
+	public void setSshPassword(String password) { _hostmonPasswd_txt .setText(password); }
+	public void setSshHostname(String hostname) { _hostmonHost_txt   .setText(hostname); }
+	public void setSshPort(String portStr)      { _hostmonPort_txt   .setText(portStr); }
+	public void setSshKeyFile(String keyFile)   { _hostmonKeyFile_txt.setText(keyFile); }
 
-	public String getSshUsername() { return _hostmonUser_txt  .getText(); }
-	public String getSshPassword() { return _hostmonPasswd_txt.getText(); }
-	public String getSshHostname() { return _hostmonHost_txt  .getText(); }
-	public String getSshPortStr()  { return _hostmonPort_txt  .getText(); }
+	public String getSshUsername() { return _hostmonUser_txt   .getText(); }
+	public String getSshPassword() { return _hostmonPasswd_txt .getText(); }
+	public String getSshHostname() { return _hostmonHost_txt   .getText(); }
+	public String getSshPortStr()  { return _hostmonPort_txt   .getText(); }
+	public String getSshKeyFile()  { return _hostmonKeyFile_txt.getText(); }
 
 	public String getOfflineJdbcDriver() { return _offlineJdbcDriver_cbx  .getEditor().getItem().toString(); }
 	public String getOfflineJdbcUrl()    { return _offlineJdbcUrl_cbx     .getEditor().getItem().toString(); }
@@ -2316,6 +2321,8 @@ public class ConnectionDialog
 		_hostmonPasswd_lbl.setToolTipText("Password to use when logging in to the below Operating System Host");
 		_hostmonPasswd_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
 		_hostmonOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
+		_hostmonKeyFile_lbl.setToolTipText("SSH Private Key File, it you want to use 'private key' to authenticate.");
+		_hostmonKeyFile_txt.setToolTipText("SSH Private Key File, it you want to use 'private key' to authenticate.");
 		
 		panel.add(_hostmonLoginIcon,  "");
 		panel.add(_hostmonLoginHelp,  "wmin 100, push, grow");
@@ -2328,12 +2335,19 @@ public class ConnectionDialog
 
 		panel.add(_hostmonOptionSavePwd_chk,      "skip");
 
+		panel.add(_hostmonKeyFile_lbl, "");
+		panel.add(_hostmonKeyFile_txt, "split, push, grow");
+		panel.add(_hostmonKeyFile_but, "wrap");
+
 		// ADD ACTION LISTENERS
+		_hostmonKeyFile_but.addActionListener(this);
+
 //		_hostmonUser_txt  .addActionListener(this);
 //		_hostmonPasswd_txt.addActionListener(this);
 		_hostmonUser_txt  .addKeyListener(this);
 		_hostmonPasswd_txt.addKeyListener(this);
 		_hostmonOptionSavePwd_chk.addActionListener(this);
+		_hostmonKeyFile_txt.addKeyListener(this);
 
 		// ADD FOCUS LISTENERS
 //		_hostmonUser_txt  .addFocusListener(this);
@@ -3858,10 +3872,11 @@ public class ConnectionDialog
 	
 				if (_aseHostMonitor_chk.isSelected())
 				{
-					String username = _hostmonUser_txt  .getText();
-					String password = _hostmonPasswd_txt.getText();
-					String hostname = _hostmonHost_txt  .getText();
-					String portStr  = _hostmonPort_txt  .getText();
+					String username = _hostmonUser_txt   .getText();
+					String password = _hostmonPasswd_txt .getText();
+					String hostname = _hostmonHost_txt   .getText();
+					String portStr  = _hostmonPort_txt   .getText();
+					String keyFile  = _hostmonKeyFile_txt.getText();
 		
 					try { Integer.parseInt(portStr); } 
 					catch (NumberFormatException e) 
@@ -3872,8 +3887,8 @@ public class ConnectionDialog
 					if (StringUtil.isNullOrBlank(username))
 						hostmonProblem = "SSH username must be specified";
 		
-					if (StringUtil.isNullOrBlank(password))
-						hostmonProblem = "SSH password must be specified";
+					if (StringUtil.isNullOrBlank(password) && StringUtil.isNullOrBlank(keyFile) )
+						hostmonProblem = "SSH password OR keyFile must be specified";
 		
 					if (StringUtil.isNullOrBlank(hostname))
 						hostmonProblem = "SSH hostname must be specified";
@@ -4374,6 +4389,7 @@ public class ConnectionDialog
 		String hostname = _hostmonHost_txt  .getText();
 		String portStr  = _hostmonPort_txt  .getText();
 		int port = 22;
+		String keyFile  = _hostmonKeyFile_txt.getText();
 
 		if (connProfile != null)
 		{
@@ -4384,6 +4400,7 @@ public class ConnectionDialog
 			password = entry._osMonPassword;
 			hostname = entry._osMonHost;
 			portStr  = entry._osMonPort + "";
+			keyFile  = entry._osMonKeyFile;
 		}
 
 		try { port = Integer.parseInt(portStr); } 
@@ -4395,8 +4412,8 @@ public class ConnectionDialog
 		}
 
 
-		_logger.info("Creating SSH Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"'.");
-		return new SshConnection(hostname, port, username, password);
+		_logger.info("Creating SSH Connection-Object to hostname='"+hostname+"'.  port='"+port+"', username='"+username+"', keyFile='"+keyFile+"'.");
+		return new SshConnection(hostname, port, username, password, keyFile);
 	}
 	
 	/**
@@ -5767,6 +5784,20 @@ if ( ! jdbcSshTunnelUse )
 			aseDeferredDisConnectChkAction(null);
 		}
 
+		// --- HOSTMON: KEY FILE ... ---
+		if (_hostmonKeyFile_but.equals(source))
+		{
+			String dir = System.getProperty("user.home") + File.separatorChar + ".ssh";
+
+			JFileChooser fc = new JFileChooser(dir);
+			int returnVal = fc.showOpenDialog(this);
+			if(returnVal == JFileChooser.APPROVE_OPTION) 
+			{
+				String filename = fc.getSelectedFile().getAbsolutePath();
+				_hostmonKeyFile_txt.setText(filename);
+			}
+		}
+		
 		// --- PCS: COMBOBOX: JDBC DRIVER ---
 		if (_pcsJdbcDriver_cbx.equals(source))
 		{
@@ -7606,6 +7637,7 @@ if ( ! jdbcSshTunnelUse )
 			int    sshPort      = 22;
 			String sshUser      = "sshUser";
 			String sshPass      = "*secret*";
+			String sshKeyFile   = "";
 			String sshInitOsCmd = "";
 			
 			if (_aseSshTunnelInfo != null)
@@ -7618,19 +7650,24 @@ if ( ! jdbcSshTunnelUse )
 				sshPort      = _aseSshTunnelInfo.getSshPort();
 				sshUser      = _aseSshTunnelInfo.getSshUsername();
 				sshPass      = _aseSshTunnelInfo.getSshPassword();
+				sshKeyFile   = _aseSshTunnelInfo.getSshKeyFile();
 				sshInitOsCmd = _aseSshTunnelInfo.getSshInitOsCmd();
 			}
 			
+			String sshKeyFileDesc = "";
+			if (StringUtil.hasValue(sshKeyFile))
+				sshKeyFileDesc = ", <br>SSH Key File '<b>"+sshKeyFile+"</b>'";
+
 			String initOsCmdDesc = "";
 			if (StringUtil.hasValue(sshInitOsCmd))
 				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
 
 			_aseSshTunnelDesc_lbl.setText(
 				"<html>" +
-					"Local Port '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
-					"Dest Host  '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
-					"SSH Host   '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
-					"SSH User   '<b>" + sshUser   + "</b>'"+initOsCmdDesc+". " +
+					"Local Port  '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
+					"Dest Host   '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
+					"SSH Host    '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
+					"SSH User    '<b>" + sshUser   + "</b>'"+sshKeyFileDesc+initOsCmdDesc+". " +
 					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + sshPass + "</b>' " : "") +
 				"</html>");
 		}
@@ -7647,6 +7684,7 @@ if ( ! jdbcSshTunnelUse )
 			int    sshPort      = 22;
 			String sshUser      = "sshUser";
 			String sshPass      = "*secret*";
+			String sshKeyFile   = "";
 			String sshInitOsCmd = "";
 			
 			if (_jdbcSshTunnelInfo != null)
@@ -7659,19 +7697,24 @@ if ( ! jdbcSshTunnelUse )
 				sshPort      = _jdbcSshTunnelInfo.getSshPort();
 				sshUser      = _jdbcSshTunnelInfo.getSshUsername();
 				sshPass      = _jdbcSshTunnelInfo.getSshPassword();
+				sshKeyFile   = _jdbcSshTunnelInfo.getSshKeyFile();
 				sshInitOsCmd = _jdbcSshTunnelInfo.getSshInitOsCmd();
 			}
 			
+			String sshKeyFileDesc = "";
+			if (StringUtil.hasValue(sshKeyFile))
+				sshKeyFileDesc = ", <br>SSH Key File '<b>"+sshKeyFile+"</b>'";
+
 			String initOsCmdDesc = "";
 			if (StringUtil.hasValue(sshInitOsCmd))
 				initOsCmdDesc = ", <br>Init OS Cmd '<b>"+sshInitOsCmd+"</b>'";
 
 			_jdbcSshTunnelDesc_lbl.setText(
 				"<html>" +
-					"Local Port '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
-					"Dest Host  '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
-					"SSH Host   '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
-					"SSH User   '<b>" + sshUser   + "</b>'"+initOsCmdDesc+". " +
+					"Local Port  '<b>" + (generateLocalPort ? "*generated*" : localPort) + "</b>', " +
+					"Dest Host   '<b>" + destHost + ":" + destPort  + "</b>', <br>" +
+					"SSH Host    '<b>" + sshHost  + ":" + sshPort   + "</b>', " +
+					"SSH User    '<b>" + sshUser   + "</b>'"+sshKeyFileDesc+initOsCmdDesc+". " +
 					(_logger.isDebugEnabled() ? "SSH Passwd '<b>" + sshPass + "</b>' " : "") +
 				"</html>");
 		}

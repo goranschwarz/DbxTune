@@ -1,6 +1,7 @@
 package com.asetune.tools.sqlw;
 
 import java.io.File;
+import java.util.Map;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -271,6 +272,18 @@ public class StatusBar extends JPanel
 			if ( ! StringUtil.isNullOrBlank(si.getSysListeners()) )
 				listeners = "    <li>ASE Listens on: <b>" + si.getSysListeners() + "</b></li>";
 
+			Map<String, Object> extraInfoMap = si.getExtraInfo();
+			String extraInfo = "";
+			if ( extraInfoMap != null && !extraInfoMap.isEmpty() )
+			{
+				extraInfo += "<hr>";
+				extraInfo += "Extra DBMS Information";
+				extraInfo += "<ul>";
+				for (String key : extraInfoMap.keySet())
+					extraInfo += "<li>" + key + ": <b>" + extraInfoMap.get(key) + "</b></li>";
+				extraInfo += "</ul>";
+			}
+			
 			_productStringShort.setToolTipText(
 					"<html>" +
 					"Connected to:<br>" +
@@ -287,6 +300,7 @@ public class StatusBar extends JPanel
 					(StringUtil.isNullOrBlank(si.getClientCharsetName()) ? "" : "<li>Client Charset Name: <b>" + si.getClientCharsetName() + "</b></li>") +
 					(StringUtil.isNullOrBlank(si.getClientCharsetDesc()) ? "" : "<li>Client Charset Desc: <b>" + si.getClientCharsetDesc() + "</b></li>") +
 					"</ul>" +
+					extraInfo +
 					"</html>");
 		}
 	}
@@ -498,10 +512,12 @@ public class StatusBar extends JPanel
 		public String _clientCharsetName;
 		public String _clientCharsetDesc;
 		
+		public Map<String, Object> _extraInfo;
+		
 		public ServerInfo(String srvName, String productName, String productVersion, 
 				String serverName, String initialCatalog, String username, String withUrl, String sysListeners, 
 				String srvPageSizeInKb, String srvCharset, String srvSortorder,
-				String clientCharsetId, String clientCharsetName, String clientCharsetDesc)
+				String clientCharsetId, String clientCharsetName, String clientCharsetDesc, Map<String, Object> extraInfo)
 		{
 			_srvName           = srvName;
 			_productName       = productName;
@@ -518,23 +534,27 @@ public class StatusBar extends JPanel
 			_clientCharsetId   = clientCharsetId;
 			_clientCharsetName = clientCharsetName;
 			_clientCharsetDesc = clientCharsetDesc;
+			
+			_extraInfo         = extraInfo;
 		}
 
-		public String getSrvName()           { return _srvName           != null ? _srvName        : NOT_CONNECTED; }
-		public String getProductName()       { return _productName       != null ? _productName    : ""; }
-		public String getProductVersion()    { return _productVersion    != null ? _productVersion : ""; }
-		public String getServerName()        { return _serverName        != null ? _serverName     : ""; }
-		public String getInitialCatalog()    { return _initialCatalog    != null ? _initialCatalog : ""; }
-		public String getUsername()          { return _username          != null ? _username       : ""; }
-		public String getWithUrl()           { return _withUrl           != null ? _withUrl        : ""; }
-		public String getSysListeners()      { return _sysListeners      != null ? _sysListeners   : ""; }
-		public String getPageSizeKb()        { return _pageSizeInKb      != null ? _pageSizeInKb   : ""; }
-		public String getCharset()           { return _charset           != null ? _charset        : ""; }
-		public String getSortorder()         { return _sortorder         != null ? _sortorder      : ""; }
+		public String getSrvName()           { return _srvName           != null ? _srvName           : NOT_CONNECTED; }
+		public String getProductName()       { return _productName       != null ? _productName       : ""; }
+		public String getProductVersion()    { return _productVersion    != null ? _productVersion    : ""; }
+		public String getServerName()        { return _serverName        != null ? _serverName        : ""; }
+		public String getInitialCatalog()    { return _initialCatalog    != null ? _initialCatalog    : ""; }
+		public String getUsername()          { return _username          != null ? _username          : ""; }
+		public String getWithUrl()           { return _withUrl           != null ? _withUrl           : ""; }
+		public String getSysListeners()      { return _sysListeners      != null ? _sysListeners      : ""; }
+		public String getPageSizeKb()        { return _pageSizeInKb      != null ? _pageSizeInKb      : ""; }
+		public String getCharset()           { return _charset           != null ? _charset           : ""; }
+		public String getSortorder()         { return _sortorder         != null ? _sortorder         : ""; }
 
-		public String getClientCharsetId()   { return _clientCharsetId   != null ? _clientCharsetId      : ""; }
-		public String getClientCharsetName() { return _clientCharsetName != null ? _clientCharsetName      : ""; }
-		public String getClientCharsetDesc() { return _clientCharsetDesc != null ? _clientCharsetDesc      : ""; }
+		public String getClientCharsetId()   { return _clientCharsetId   != null ? _clientCharsetId   : ""; }
+		public String getClientCharsetName() { return _clientCharsetName != null ? _clientCharsetName : ""; }
+		public String getClientCharsetDesc() { return _clientCharsetDesc != null ? _clientCharsetDesc : ""; }
+
+		public Map<String, Object> getExtraInfo() { return _extraInfo; }
 
 		public String getProductNameShort()
 		{
@@ -580,5 +600,7 @@ public class StatusBar extends JPanel
 		public void   setClientCharsetId  (String clientCharsetId)   { _clientCharsetId   = clientCharsetId; }
 		public void   setClientCharsetName(String clientCharsetName) { _clientCharsetName = clientCharsetName; }
 		public void   setClientCharsetDesc(String clientCharsetDesc) { _clientCharsetDesc = clientCharsetDesc; }
+
+		public void   setExtraInfo        (Map<String, Object> map)  { _extraInfo         = map; }
 	}
 }

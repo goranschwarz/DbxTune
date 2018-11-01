@@ -301,7 +301,7 @@ public class PersistWriterToBcpFiles
 			//--------------------------------------
 			// COUNTERS
 			//--------------------------------------
-			for (CountersModel cm : cont._counterObjects)
+			for (CountersModel cm : cont.getCounterObjects())
 			{
 				saveCounterData(cm, parentSampleTime, aseServerName);
 			}

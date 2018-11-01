@@ -57,7 +57,7 @@ public class ProxyTest
 		System.out.println("Using proxy selector: "+myProxySelector);
 
 		//		String webAddress = "http://www.google.com";
-		String webAddress = "http://www.asetune.com";
+		String webAddress = "http://www.dbxtune.com";
 		try
 		{
 			URL url = new URL(webAddress);

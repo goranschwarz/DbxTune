@@ -19,31 +19,36 @@ public class SshTunnelInfo
 	private int     _sshPort      = -1;
 	private String  _sshUsername  = null;
 	private String  _sshPassword  = null;
+	private String  _sshKeyFile   = null;
 	
 	private String  _sshInitOsCmd = null;
 	
+	private String nullToBlank  (String str) { return str == null ? "" : str; }
+	private String nullStrToNull(String str) { return "null".equalsIgnoreCase(str) ? null : str; }
 
-	public boolean isLocalPortGenerated() { return _localPortGenerated; }
-	public int    getLocalPort()          { return _localPort;   }
-	public String getLocalHost()          { return _localHost;   }
-	public String getDestHost()           { return _destHost;    }
-	public int    getDestPort()           { return _destPort;    }
-	public String getSshHost()            { return _sshHost;     }
-	public int    getSshPort()            { return _sshPort;     }
-	public String getSshUsername()        { return _sshUsername; }
-	public String getSshPassword()        { return _sshPassword; }
-	public String getSshInitOsCmd()       { return _sshInitOsCmd;  }
-	
-	public void setLocalPortGenerated(boolean localPortGenerated) { this._localPortGenerated = localPortGenerated; }
-	public void setLocalPort         (int localPort)              { this._localPort          = localPort;   }
-	public void setLocalHost         (String localHost)           { this._localHost          = localHost;   }
-	public void setDestHost          (String destHost)            { this._destHost           = destHost;    }
-	public void setDestPort          (int destPort)               { this._destPort           = destPort;    }
-	public void setSshHost           (String sshHost)             { this._sshHost            = sshHost;     }
-	public void setSshPort           (int sshPort)                { this._sshPort            = sshPort;     }
-	public void setSshUsername       (String sshUsername)         { this._sshUsername        = sshUsername; }
-	public void setSshPassword       (String sshPassword)         { this._sshPassword        = sshPassword; }
-	public void setSshInitOsCmd      (String initOsCmd)           { this._sshInitOsCmd       = initOsCmd;   }
+	public boolean isLocalPortGenerated() { return             _localPortGenerated; }
+	public int    getLocalPort()          { return             _localPort;     }
+	public String getLocalHost()          { return nullToBlank(_localHost);    }
+	public String getDestHost()           { return nullToBlank(_destHost);     }
+	public int    getDestPort()           { return             _destPort;      }
+	public String getSshHost()            { return nullToBlank(_sshHost);      }
+	public int    getSshPort()            { return             _sshPort;       }
+	public String getSshUsername()        { return nullToBlank(_sshUsername);  }
+	public String getSshPassword()        { return nullToBlank(_sshPassword);  }
+	public String getSshInitOsCmd()       { return nullToBlank(_sshInitOsCmd); }
+	public String getSshKeyFile()         { return nullToBlank(_sshKeyFile  ); }
+
+	public void setLocalPortGenerated(boolean localPortGenerated) { this._localPortGenerated =                localPortGenerated; }
+	public void setLocalPort         (int localPort)              { this._localPort          =                localPort;     }
+	public void setLocalHost         (String localHost)           { this._localHost          = nullStrToNull( localHost   ); }
+	public void setDestHost          (String destHost)            { this._destHost           = nullStrToNull( destHost    ); }
+	public void setDestPort          (int destPort)               { this._destPort           =                destPort;      }
+	public void setSshHost           (String sshHost)             { this._sshHost            = nullStrToNull( sshHost     ); }
+	public void setSshPort           (int sshPort)                { this._sshPort            =                sshPort;       }
+	public void setSshUsername       (String sshUsername)         { this._sshUsername        = nullStrToNull( sshUsername ); }
+	public void setSshPassword       (String sshPassword)         { this._sshPassword        = nullStrToNull( sshPassword ); }
+	public void setSshKeyFile        (String sshKeyFile)          { this._sshKeyFile         = nullStrToNull( sshKeyFile  ); }
+	public void setSshInitOsCmd      (String initOsCmd)           { this._sshInitOsCmd       = nullStrToNull( initOsCmd   ); }
 
 	public boolean isValid()
 	{
@@ -55,7 +60,7 @@ public class SshTunnelInfo
 		if (StringUtil.isNullOrBlank(_sshHost))      return false;
 		if (_sshPort <= 0)                           return false;
 		if (StringUtil.isNullOrBlank(_sshUsername))  return false;
-		if (StringUtil.isNullOrBlank(_sshPassword))  return false;
+		if (StringUtil.isNullOrBlank(_sshPassword) && StringUtil.isNullOrBlank(_sshKeyFile))  return false;
 		
 		return true;
 	}
@@ -70,7 +75,7 @@ public class SshTunnelInfo
 		if (StringUtil.isNullOrBlank(_sshHost))      return "SSH Host is blank";
 		if (_sshPort <= 0)                           return "SSH Port can't be less than 0";
 		if (StringUtil.isNullOrBlank(_sshUsername))  return "SSH Username is blank";
-		if (StringUtil.isNullOrBlank(_sshPassword))  return "SSH Password is blank";
+		if (StringUtil.isNullOrBlank(_sshPassword) && StringUtil.isNullOrBlank(_sshKeyFile))  return "SSH Password AND KeyFile is blank";
 
 		return "";
 	}
@@ -85,6 +90,7 @@ public class SshTunnelInfo
 		int    sshPort      = getSshPort();
 		String sshUser      = getSshUsername();
 //		String sshPass      = getSshPassword();
+		String sshKeyFile   = getSshKeyFile();
 		String sshInitOsCmd = getSshInitOsCmd();
 
 		return
@@ -92,6 +98,7 @@ public class SshTunnelInfo
 			"DestHost='"     + destHost       + ":" + destPort  + "', " +
 			"SshHost='"      + sshHost        + ":" + sshPort   + "', " +
 			"SshUser='"      + sshUser        + "', " +
+			"SshKeyFile='"   + sshKeyFile     + "', " +
 			"SshInitOsCmd='" + sshInitOsCmd   + "'.";
 	}
 	
@@ -112,6 +119,7 @@ public class SshTunnelInfo
 		cfg.put("SshPort",              getSshPort()+"");
 		cfg.put("SshUsername",          getSshUsername());
 		cfg.put("SshPassword",          hidePasswd ? "**secret**" : passwdInPlainText ? getSshPassword() : Configuration.encryptPropertyValue("SshPassword", getSshPassword()));
+		cfg.put("SshKeyFile",           getSshKeyFile());
 		cfg.put("SshInitOsCmd",         getSshInitOsCmd());
 		
 		return StringUtil.toCommaStr(cfg);
@@ -138,6 +146,7 @@ public class SshTunnelInfo
 		try{ ti.setSshPort(  Integer.parseInt(cfg.get("SshPort"))); } catch(NumberFormatException nfe) {}
 		     ti.setSshUsername(               cfg.get("SshUsername") );
 		     ti.setSshPassword(               Configuration.decryptPropertyValue("SshPassword", cfg.get("SshPassword")) );
+		     ti.setSshKeyFile(                cfg.get("SshKeyFile") );
 		     ti.setSshInitOsCmd(              cfg.get("SshInitOsCmd") );
 //System.out.println("SshTunnelInfo.parseConfigString(): SshPassword='"+cfg.get("SshPassword")+"'.");
 //System.out.println("SshTunnelInfo.parseConfigString(): returns='"+ti.getConfigString(false, true)+"'.");

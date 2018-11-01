@@ -7,12 +7,15 @@ import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.central.DbxCentralStatistics;
+import com.asetune.central.DbxCentralStatistics.ServerEntry;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.DbxTuneSample;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
@@ -112,6 +115,19 @@ extends HttpServlet
 		
 		// Finally add the data to the Writer, which will store the data "somewhere" probably in a DB
 		pcsAdd(sample);
+		
+		// get the queue size and return that to the caller
+		// This so caller can determen if it should wait untill it sends next (so that it do not overload the PCS)
+		
+		if ( CentralPcsWriterHandler.hasInstance() )
+		{
+			int pcsQueueSize = CentralPcsWriterHandler.getInstance().getQueueSize();
+
+			ServletOutputStream out = resp.getOutputStream();
+			out.print("{ \"queueSize\": "+pcsQueueSize+" }");
+			out.flush();
+			out.close();
+		}
 	}
 	/**
 	 * Send a Server Sent Event to any clients that has registered on: /api/pcs/graph-data/{name}
@@ -121,23 +137,26 @@ extends HttpServlet
 	 */
 	private void pcsAdd(DbxTuneSample sample)
 	{
-		if (CentralPcsWriterHandler.hasInstance())
+		if ( ! CentralPcsWriterHandler.hasInstance() )
 		{
-			CentralPcsWriterHandler.getInstance().add(sample);
+			String srvName = sample == null ? "-sample-is-null-" : sample.getServerName();
+			_logger.info("Trying to add sample for '"+srvName+"' to CentralPcsWriterHandler. But it has NO instance... Skipping pcsAdd(sample);");
+			return;
 		}
-//		String schemaName = sample.getServerName();
-//
-//		System.out.println("<<<< SQL >>>>: |-check/create-if-schema("+schemaName+")-exists-|.");
-//		
-//		for (CmEntry cmEntry : sample.getCollectors())
-//		{
-//			for (GraphEntry graphEntry : cmEntry.getGraphMap().values())
-//			{
-//				String tabName = schemaName + "." + cmEntry.getName() + "_" + graphEntry.getName();
-//				String sql = "insert into "+tabName+"(...) values(...)";
-//				System.out.println("SQL: |"+sql+"|.");
-//			}
-//		}
+
+		// Add it to PCS for storage
+		CentralPcsWriterHandler.getInstance().add(sample);
+
+		// Increement some statistics
+		String      srvName = sample.getServerName();
+		ServerEntry srvStat = DbxCentralStatistics.getInstance().getServerEntry(srvName);
+
+		srvStat.incReceiveCount();
+		
+		for (CmEntry cmEntry : sample.getCollectors())
+		{
+			srvStat.incReceiveGraphCount(cmEntry.getGraphMap().size());
+		}
 	}
 
 //	/**

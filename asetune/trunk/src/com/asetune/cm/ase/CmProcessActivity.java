@@ -497,8 +497,8 @@ extends CountersModel
 		
 		cols1+=" MP.FamilyID, MP.SPID, MP.KPID, MP.NumChildren, \n"
 			+ "  SP.status, MP.WaitEventID, \n"
-			+ "  WaitClassDesc=convert(varchar(80),''), " // value will be replaced in method localCalculation()
-			+ "  WaitEventDesc=convert(varchar(80),''), " // value will be replaced in method localCalculation()
+			+ "  WaitClassDesc=convert(varchar(120),''), " // value will be replaced in method localCalculation()
+			+ "  WaitEventDesc=convert(varchar(120),''), " // value will be replaced in method localCalculation()
 			+ "  MP.SecondsWaiting, MP.BlockingSPID, \n"
 			+ "  StatementStartTime = ST.StartTime, \n"
 //			+ "  StatementExecInMs = datediff(ms, ST.StartTime, getdate()), \n"

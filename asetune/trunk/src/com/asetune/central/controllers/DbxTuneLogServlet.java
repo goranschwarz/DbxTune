@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
 import java.sql.Timestamp;
+import java.util.LinkedList;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -45,6 +46,17 @@ public class DbxTuneLogServlet extends HttpServlet
 		String inputType     = req.getParameter("type");
 		String inputMethod   = req.getParameter("method");
 		String discardRegExp = req.getParameter("discard");
+		String tailParam     = req.getParameter("tail");
+
+		int numOfLines = -1; // All lines
+		if (tailParam != null)
+		{
+			try {
+				numOfLines = Integer.parseInt(tailParam);
+			} catch (NumberFormatException e) {
+				_logger.error("Parameter 'tail' is not a number. tailParam='"+tailParam+"'.");
+			}
+		}
 
 		if (StringUtil.isNullOrBlank(inputMethod))
 			inputMethod = "plain";
@@ -52,6 +64,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		System.out.println("DbxTuneLogServlet: name   = '"+inputName+"'.");
 		System.out.println("DbxTuneLogServlet: type   = '"+inputType+"'.");
 		System.out.println("DbxTuneLogServlet: method = '"+inputMethod+"'.");
+		System.out.println("DbxTuneLogServlet: tail   = '"+tailParam+"'.");
 
 		if (StringUtil.isNullOrBlank(inputName))
 			throw new ServletException("No input parameter named 'name'.");
@@ -67,7 +80,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		{
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");
-			asCode(inputName, inputType, discardRegExp);
+			asCode(inputName, inputType, discardRegExp, numOfLines);
 		}
 		else
 		{
@@ -164,7 +177,7 @@ public class DbxTuneLogServlet extends HttpServlet
 		}
 	}
 
-	private void asCode(String inputName, String inputType, String discardRegExp)
+	private void asCode(String inputName, String inputType, String discardRegExp, int tailNumOfLines)
 	throws ServletException, IOException
 	{
 		File f = new File(LOG_DIR+"/"+inputName);
@@ -184,6 +197,197 @@ public class DbxTuneLogServlet extends HttpServlet
 //		out.println("	}                    ");
 		out.println("</style> ");
 
+		// Write javascript code to
+		// - connect to the websocket that sends new rows
+		// - etc
+		if (tailNumOfLines > 0)
+		{
+			out.println("");
+			out.println("<script type='text/javascript'>");
+			
+//			out.println("");
+//			out.println("/** ");
+//			out.println(" * Is element within visible region of a scrollable container ");
+//			out.println(" * @param {HTMLElement} el - element to test ");
+//			out.println(" * @returns {boolean} true if within visible region, otherwise false ");
+//			out.println(" */ ");
+//			out.println("function checkVisible(el) { ");
+//			out.println("    var rect = el.getBoundingClientRect(); ");
+//			out.println("    return (rect.top >= 0) && (rect.bottom <= window.innerHeight); ");
+//			out.println("} ");
+//			out.println("");
+
+			out.println("");
+			out.println("// WebSocket is used for log-tail");
+			out.println("var logTailWebSocket; ");
+			out.println("");
+			out.println("// date updates every time we get a new log-line");
+			out.println("var dbxLastLogLineTime = Date.now();");
+			out.println("var dbxLastLogLineDiscardCount = 0;");
+			out.println("");
+			out.println("/** ");
+			out.println(" * Update clock... on when last log-line event was received ");
+			out.println(" */ ");
+			out.println("function updateLogLineClock() ");
+			out.println("{ ");
+			out.println("	let ageInSec = Math.floor( (Date.now() - dbxLastLogLineTime) / 1000 ); ");
+			out.println("	let div = document.getElementById('logLine-feedback-time'); ");
+			out.println("");
+			out.println("	div.style.color = ''; ");
+			out.println("	div.innerHTML   = 'Last log line received ' + ageInSec + ' seconds ago. Discard count ' + dbxLastLogLineDiscardCount + '<br>'; ");
+			out.println("");
+			out.println("	if (ageInSec > 120) ");
+			out.println("		div.style.color = 'red'; ");
+			out.println("");
+			out.println("	setTimeout(updateLogLineClock, 1000); ");
+			out.println("} ");
+			out.println("");
+
+			out.println("");
+			out.println("// YYYY-MM-DD hh:mm:ss ");
+			out.println("function dateToIsoStr(now) ");
+			out.println("{ ");
+			out.println("  let year   = '' + now.getFullYear(); ");
+			out.println("  let month  = '' + (now.getMonth() + 1); if (month.length  == 1) { month  = '0' + month;  } ");
+			out.println("  let day    = '' + now.getDate();        if (day.length    == 1) { day    = '0' + day;    } ");
+			out.println("  let hour   = '' + now.getHours();       if (hour.length   == 1) { hour   = '0' + hour;   } ");
+			out.println("  let minute = '' + now.getMinutes();     if (minute.length == 1) { minute = '0' + minute; } ");
+			out.println("  let second = '' + now.getSeconds();     if (second.length == 1) { second = '0' + second; } ");
+			out.println("  return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second; ");
+			out.println("} ");
+			out.println("");
+
+			out.println("");
+			out.println("function refreshWithFilter(msg) ");
+			out.println("{ ");
+			out.println("  // Get regExp from a field ");
+			out.println("  var discardText = document.getElementById('logLine-discardText').value; ");
+			out.println("  var currentUrl  = window.location.href; ");
+			out.println("");
+//			out.println("  window.location.href = currentUrl + '&discard=' + discardText;");
+			out.println("  const url = new URL(currentUrl); ");
+			out.println("  const params = new URLSearchParams(url.search); ");
+			out.println("  params.set('discard', discardText); ");
+			out.println("");
+//			out.println("  window.history.replaceState({}, '', `${location.pathname}?${params}`); ");
+			out.println("  window.location.href = `${location.pathname}?${params}`;");
+			out.println("} ");
+			out.println("");
+
+			out.println("");
+			out.println("function appendLogLine(msg) ");
+			out.println("{ ");
+			out.println("  // Get regExp from a field ");
+			out.println("  var regExp = document.getElementById('logLine-discardText').value; ");
+			out.println("");
+			out.println("  // does the regExp contain anything ??? ");
+			out.println("  if ( /\\S/.test(regExp) ) ");
+			out.println("  { ");
+			out.println("    var patt = new RegExp(regExp); ");
+			out.println("    if ( ! patt.test(msg) ) ");
+			out.println("    { ");
+//			out.println("      document.getElementById('log').append(msg); ");
+//			out.println("      document.getElementById('log').appendChild(document.createTextNode(msg)); ");
+			out.println("      document.getElementById('log').insertAdjacentHTML('beforeend', msg); ");
+			out.println("    } ");
+			out.println("    else ");
+			out.println("    { ");
+			out.println("      dbxLastLogLineDiscardCount++;");
+			out.println("	   document.getElementById('logLine-feedback').innerHTML = '<b>Last Discarded row (from above regexp filter):</b> <br>' + msg; ");
+			out.println("    } ");
+			out.println("  } ");
+			out.println("  else // always add record ");
+			out.println("  { ");
+//			out.println("    document.getElementById('log').append(msg); ");
+//			out.println("    document.getElementById('log').appendChild(document.createTextNode(msg)); ");
+			out.println("    document.getElementById('log').insertAdjacentHTML('beforeend', msg); ");
+			out.println("  } ");
+			out.println("} ");
+			out.println("");
+
+			out.println("");
+			out.println("function checkVisible(elm) ");
+			out.println("{ ");
+			out.println("  var rect = elm.getBoundingClientRect(); ");
+			out.println("  var viewHeight = Math.max(document.documentElement.clientHeight, window.innerHeight); ");
+			out.println("  return !(rect.bottom < 0 || rect.top - viewHeight >= 0); ");
+			out.println("} ");
+			out.println("");
+
+			out.println("");
+			out.println("function logTailConnectWs() ");
+			out.println("{ ");
+			out.println("  logTailWebSocket = new WebSocket('ws://' + location.host + '/logtail?name="+inputName+"'); ");
+			out.println("");
+			out.println("  logTailWebSocket.onopen = function(event) ");
+			out.println("  { ");
+			out.println("    console.log('logTailWebSocket:onopen(): ', event);");
+			out.println("	 document.getElementById('logLine-feedback').innerHTML = 'Connection to log-tail-server OPENED -- ' + dateToIsoStr(new Date()); ");
+			out.println("    document.getElementById('log').insertAdjacentHTML('beforeend', '<b><font color=\"blue\"><<<<<<--------- log tail STARTED (' + dateToIsoStr(new Date()) + ') --------->>>>>> \\n</font></b>'); ");
+			out.println("");
+			out.println("    // scroll to the end of the page");
+			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
+			out.println("  } ");
+			out.println("");
+			out.println("  logTailWebSocket.onmessage = function(event) ");
+			out.println("  { ");
+			out.println("    setTimeout(function() { ");
+			out.println("      dbxLastLogLineTime = Date.now(); ");
+			out.println("      appendLogLine(event.data + '\\n'); ");
+			out.println("      if (checkVisible(document.getElementById('logLine-feedback'))) ");
+			out.println("        window.scrollBy(0, 100000000000000000); ");
+			out.println("    },0); ");
+			out.println("  } ");
+			out.println("");
+			out.println("  logTailWebSocket.onclose = function(event) ");
+			out.println("  { ");
+			out.println("    console.log('logTailWebSocket:onclose(): ', event);");
+			out.println("	 document.getElementById('logLine-feedback').innerHTML = 'Connection to log-tail-server CLOSED -- ' + dateToIsoStr(new Date()); ");
+			out.println("    document.getElementById('log').insertAdjacentHTML('beforeend', '<b><font color=\"blue\"><<<<<<--------- log tail CLOSED (' + dateToIsoStr(new Date()) + ') --------->>>>>> \\n</font></b>'); ");
+			out.println("    setTimeout(logTailConnectWs, 5*1000);");
+			out.println("  } ");
+			out.println("} ");
+			out.println("");
+
+			out.println("//----------------------------------------------------------------------");
+			out.println("// When window is loaded...");
+			out.println("//----------------------------------------------------------------------");
+			out.println("window.onload = function() ");
+			out.println("{ ");
+			out.println("  if (!!window.WebSocket) ");
+			out.println("  { ");
+			out.println("    // Start a clock so we see when we received last log line");
+			out.println("    updateLogLineClock();");
+			out.println("");
+			out.println("    // Start log tail, using a WebSocket");
+			out.println("    logTailConnectWs(); ");
+			out.println("  } ");
+			out.println("  else ");
+			out.println("  { ");
+			out.println("    alert('The browser does not support WebSocket, log-tail will not be done.'); ");
+			out.println("  } ");
+			out.println("} ");
+			out.println("</script>");
+			out.println("");
+		}
+		else
+		{
+			out.println("");
+			out.println("<script type='text/javascript'>");
+			
+			out.println("//----------------------------------------------------------------------");
+			out.println("// When window is loaded...");
+			out.println("//----------------------------------------------------------------------");
+			out.println("window.onload = function() ");
+			out.println("{ ");
+			out.println("    // scroll to the end of the page");
+			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
+			out.println("} ");
+			
+			out.println("</script>");
+			out.println("");
+		}
+
 		out.println("<body> ");
 		out.println("<h2>"+f.getAbsolutePath()+"</h2>");
 
@@ -201,17 +405,23 @@ public class DbxTuneLogServlet extends HttpServlet
     		}
 		}
 		
-		
-		out.println("<div id='log'>");
+		out.println("<hr>");
+//		out.println("<div id='log'>");
+		out.println("<div>");
 ////		out.println("<textarea id='logtext' style='width:100%;height:100vw; overflow: hidden;'>");
 //		out.println("<textarea id='logtext'>");
-		out.println("<pre>");
+//		out.println("<pre>");
+		out.println("<pre id='log'>");
 
 		try ( FileInputStream in = new FileInputStream(f); 
 		      BufferedReader  br = new BufferedReader(new InputStreamReader(in)); )
 		{
 //			_resp.setContentLengthLong(f.length() * 2);
 			
+			LinkedList<String> tailList = null;
+			if (tailNumOfLines > 0)
+				tailList = new LinkedList<>();
+
 			String line;
 			while ((line = br.readLine()) != null)
 			{
@@ -222,21 +432,41 @@ public class DbxTuneLogServlet extends HttpServlet
 						continue;
 				}
 				
-				String prefix  = "";
-				String postfix = "";
-				if      (line.indexOf(" - INFO  - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - WARN  - " ) >= 0) { prefix = "<span style='background-color:rgb(255, 230, 153);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - AFFECTED ") >= 0) { prefix = "<span style='background-color:rgb(255, 230, 153);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - ERROR - " ) >= 0) { prefix = "<span style='background-color:rgb(255, 179, 179);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - ERROR   " ) >= 0) { prefix = "<span style='background-color:rgb(255, 179, 179);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - TRACE - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - DEBUG - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
-				else if (line.indexOf(" - FATAL - " ) >= 0) { prefix = "<span style='background-color:rgb(255,  51,  51);'>"; postfix = "</span>"; }
+//				String prefix  = "";
+//				String postfix = "";
+//				if      (line.indexOf(" - INFO  - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - WARN  - " ) >= 0) { prefix = "<span style='background-color:rgb(255, 230, 153);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - AFFECTED ") >= 0) { prefix = "<span style='background-color:rgb(255, 230, 153);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - ERROR - " ) >= 0) { prefix = "<span style='background-color:rgb(255, 179, 179);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - ERROR   " ) >= 0) { prefix = "<span style='background-color:rgb(255, 179, 179);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - TRACE - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - DEBUG - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
+//				else if (line.indexOf(" - FATAL - " ) >= 0) { prefix = "<span style='background-color:rgb(255,  51,  51);'>"; postfix = "</span>"; }
 
-				out.print(prefix);
-				out.println(line);
-				out.print(postfix);
+				// Set a color of a log line based on the severity
+				line = htmlColorizeLogLine(line);
+
+				if (tailList != null)
+				{
+					tailList.addLast(line);
+
+					if (tailList.size() > tailNumOfLines)
+						tailList.removeFirst();
+				}
+				else
+				{
+					out.println(line);
+				}
 			}
+			
+			if (tailList != null)
+			{
+				for (String msg : tailList)
+				{
+					out.println(msg);
+				}
+			}
+
 		}
 		catch (Exception ex)
 		{
@@ -246,8 +476,39 @@ public class DbxTuneLogServlet extends HttpServlet
 		out.println("</pre>");
 //		out.println("</textarea>");
 		out.println("</div>");
-		
+		out.println("<hr>");
 
+		out.println("<div id='end-of-file'>");
+		out.println("---END-OF-FILE---: <code>" + f + "</code><br>");
+		out.println("</div>");
+		out.println("<br>");
+
+		if (tailNumOfLines > 0)
+		{
+			// Print when the last LogLine was received
+			out.println("<div id='logLine-feedback-time'>");
+			out.println("</div>");
+			out.println("<br>");
+		
+			// Add a field se we can discard records locally
+			out.println("<div id='logLine-discard'>");
+			out.println("<b>Filter out some text on new records (regexp can be used):</b> <br>");
+			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/>");
+			out.println("<br>");
+			out.println("<button onclick='refreshWithFilter()'>Refresh page with above filter</button>");
+			out.println("</div>");
+			out.println("<br>");
+
+			// Print when the last LogLine was received
+			out.println("<div id='logLine-feedback' style='white-space: nowrap;'>");
+			out.println("</div>");
+			out.println("<br>");
+		}
+		else
+		{
+			out.println("Tail is not enabled.<br>");
+		}
+		
 		// FIXME: move codemirror to local resource
 //		out.println("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/codemirror.css'> ");
 //		out.println("<script src='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/codemirror.js'></script> ");
@@ -265,6 +526,25 @@ public class DbxTuneLogServlet extends HttpServlet
 
 		out.flush();
 		out.close();
+	}
+
+	public static String htmlColorizeLogLine(String line)
+	{
+		if (line == null)
+			return null;
+		
+		String prefix  = "";
+		String postfix = "";
+		if      (line.indexOf(" - INFO  - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - WARN  - " ) >= 0) { prefix = "<span style='background-color:rgb(255, 230, 153);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - AFFECTED ") >= 0) { prefix = "<span style='background-color:rgb(255, 230, 153);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - ERROR - " ) >= 0) { prefix = "<span style='background-color:rgb(255, 179, 179);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - ERROR   " ) >= 0) { prefix = "<span style='background-color:rgb(255, 179, 179);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - TRACE - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - DEBUG - " ) >= 0) { prefix = "<span style='background-color:rgb(240, 240, 240);'>"; postfix = "</span>"; }
+		else if (line.indexOf(" - FATAL - " ) >= 0) { prefix = "<span style='background-color:rgb(255,  51,  51);'>"; postfix = "</span>"; }
+
+		return prefix + line + postfix;
 	}
 
 	private void asHtml(String inputName, String inputType, String discardRegExp)

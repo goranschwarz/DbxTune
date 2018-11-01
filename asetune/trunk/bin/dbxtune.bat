@@ -23,53 +23,76 @@ rem ------------------------------------------------------------------------
 rem --- Set various stuff based on the passed application name
 rem ------------------------------------------------------------------------
 set JAVA_START_CLASS=""
+set JAVA_START_PARAMS=""
 
 IF "%APP_NAME%" == "ase" (
 	set JAVA_START_CLASS=com.asetune.AseTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/asetune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "iq" (
 	set JAVA_START_CLASS=com.asetune.IqTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/iqtune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "rs" (
 	set JAVA_START_CLASS=com.asetune.RsTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/rstune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "rax" (
 	set JAVA_START_CLASS=com.asetune.RaxTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/raxtune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "hana" (
 	set JAVA_START_CLASS=com.asetune.HanaTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/hanatune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "sqlserver" (
 	set JAVA_START_CLASS=com.asetune.SqlServerTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/sqlservertune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "oracle" (
 	set JAVA_START_CLASS=com.asetune.OracleTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/oracletune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "postgres" (
 	set JAVA_START_CLASS=com.asetune.PostgresTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/postgrestune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "mysql" (
 	set JAVA_START_CLASS=com.asetune.MySqlTune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/mysqltune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "db2" (
 	set JAVA_START_CLASS=com.asetune.Db2Tune
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/db2tune_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "sqlw" (
 	set JAVA_START_CLASS=com.asetune.tools.sqlw.QueryWindow
+	set JAVA_START_PARAMS=
 	set SPLASH=-splash:lib/sqlw_splash.jpg
 
 ) ELSE IF "%APP_NAME%" == "central" (
 	set JAVA_START_CLASS=com.asetune.central.DbxTuneCentral
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
+) ELSE IF "%APP_NAME%" == "h2fix" (
+	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
+) ELSE IF "%APP_NAME%" == "h2srv" (
+	set JAVA_START_CLASS=org.h2.tools.Server
+	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
 	set SPLASH=
 
 ) ELSE (
@@ -174,7 +197,14 @@ rem ------------------------------------------------------------------------
 rem --- set some default environment variables
 rem ------------------------------------------------------------------------
 set APPL_HOME=%DBXTUNE_HOME%
-set DBXTUNE_SAVE_DIR=%DBXTUNE_HOME%\data
+
+IF "%DBXTUNE_SAVE_DIR%"=="" (
+	if exist %systemdrive%%homepath%\.dbxtune\data (
+		set DBXTUNE_SAVE_DIR=%systemdrive%%homepath%\.dbxtune\data
+	) else (
+		set DBXTUNE_SAVE_DIR=%DBXTUNE_HOME%\data
+	)
+) 
 
 rem set JAVA_HOME=%SYBASE_JRE%
 rem set JAVA_HOME=%SYBASE%\shared-1_0\JRE-1_4
@@ -184,7 +214,7 @@ rem set JAVA_HOME=C:\Program Files\Java\jdk1.6.0_07
 rem ------------------------------------------------------------------------
 rem --- get JVM Parameters from file: 
 rem ------------------------------------------------------------------------
-set DBXTUNE_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.asetune\.dbxtune_jvm_settings.properties
+set DBXTUNE_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.dbxtune\.dbxtune_jvm_settings.properties
 if exist %DBXTUNE_JVM_PARAMETER_FILE% (
 	echo .
 	echo -----------------------------------------------------------------------
@@ -269,6 +299,7 @@ set CLASSPATH=%DBXTUNE_HOME%\classes
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\asetune.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\dsparser.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\log4j-1.2.17.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-SNAPSHOT.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\h2-1.4.197.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\wizard.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-swing-4.2.jar
@@ -327,8 +358,8 @@ rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\tomcat\*
 rem --- In Java 9 and many different JDBC Drivers, Oracles (ojdbc7.jar) needs to be first otherwise there will be stacktraces with problems of loading drivers etc...
 rem --- In Java 9 and many different JDBC Drivers, Sybase jconn4.jar needs to be added *last*
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jdbc_drivers\ojdbc7.jar
-set CLASSPATH=%CLASSPATH%;%USERPROFILE%\.asetune\jdbc_drivers\*
-set CLASSPATH=%CLASSPATH%;%USERPROFILE%\.asetune\lib\*
+set CLASSPATH=%CLASSPATH%;%USERPROFILE%\.dbxtune\jdbc_drivers\*
+set CLASSPATH=%CLASSPATH%;%USERPROFILE%\.dbxtune\lib\*
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jdbc_drivers\*
 set CLASSPATH=%CLASSPATH%;%EXTRA_JDBC_DRIVERS%
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jconn4.jar
@@ -430,11 +461,11 @@ rem echo CLASSPATH=%CLASSPATH%
 
 echo .
 echo -----------------------------------------------------------------------
-echo Starting %JAVA_START_CLASS%
+echo Starting %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 echo -----------------------------------------------------------------------
-echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %CMDLINE_ARGS%
+echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 echo -----------------------------------------------------------------------
-     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %CMDLINE_ARGS%
+     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 
 IF %ERRORLEVEL% EQU 8 GOTO restart_dbxtune
 
@@ -512,5 +543,11 @@ goto exit_dbxtune
 :exit_dbxtune
 popd
 
-pause
+rem ------------------------------------------------------------------------
+rem --- If we should leave the CMD prompt open or close it on exit 
+rem ------------------------------------------------------------------------
+IF NOT "%DBXTUNE_PAUSE_ON_EXIT%"=="" (
+	pause
+)
+
 endlocal

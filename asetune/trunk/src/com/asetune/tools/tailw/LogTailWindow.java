@@ -159,6 +159,9 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	private JTextField         _sshHostname_txt        = new JTextField("");
 	private JLabel             _sshPort_lbl            = new JLabel("Port num");
 	private JTextField         _sshPort_txt            = new JTextField("22");
+	private JLabel             _sshKeyFile_lbl         = new JLabel("Key File");
+	private JTextField         _sshKeyFile_txt         = new JTextField("");
+	private JButton            _sshKeyFile_but         = new JButton("...");
 	private GLabel             _sshTailOsCmd_lbl       = new GLabel("Tail Cmd");
 	private GTextField         _sshTailOsCmd_txt       = new GTextField("");
 	                           
@@ -322,6 +325,7 @@ PropertyConfigurator.configure(log4jProps);
 		String sshUsername = System.getProperty("user.name");
 		String sshPassword = null;
 		String sshHostname = null;
+		String sshKeyFile  = null;
 
 		if (cmd.hasOption('l'))	tailLabel    = cmd.getOptionValue('l');
 		if (cmd.hasOption('f'))	tailFile     = cmd.getOptionValue('f');
@@ -334,6 +338,7 @@ PropertyConfigurator.configure(log4jProps);
 		if (cmd.hasOption('u'))	sshUsername  = cmd.getOptionValue('u');
 		if (cmd.hasOption('p'))	sshPassword  = cmd.getOptionValue('p');
 		if (cmd.hasOption('s'))	sshHostname  = cmd.getOptionValue('s');
+		if (cmd.hasOption('k'))	sshKeyFile   = cmd.getOptionValue('k');
 
 //		System.setProperty("Logging.print.noDefaultLoggerMessage", "false");
 //		Logging.init("tailw.", propFile);
@@ -404,6 +409,7 @@ PropertyConfigurator.configure(log4jProps);
 		if (StringUtil.hasValue(sshUsername)) _sshUsername_txt.setText(sshUsername);
 		if (StringUtil.hasValue(sshPassword)) _sshPassword_txt.setText(sshPassword);
 		if (StringUtil.hasValue(sshHostname)) _sshHostname_txt.setText(sshHostname);
+		if (StringUtil.hasValue(sshKeyFile))  _sshKeyFile_txt .setText(sshKeyFile);
 
 		// Start the tail, after the window is visible
 		tailw.setStartTailAfterStartup(startTail);
@@ -713,6 +719,8 @@ PropertyConfigurator.configure(log4jProps);
 		_sshPassword_chk .setToolTipText("Save the password in the configuration file, and YES it's encrypted.");
 		_sshHostname_lbl .setToolTipText("Host name where the Log is located");
 		_sshHostname_txt .setToolTipText("Host name where the Log is located");
+		_sshKeyFile_lbl  .setToolTipText("SSH Private Key File... where the Log is located");
+		_sshKeyFile_txt  .setToolTipText("SSH Private Key File... where the Log is located");
 		_sshPort_lbl     .setToolTipText("Port number of the SSH Server, normally 22.");
 		_sshPort_txt     .setToolTipText("Port number of the SSH Server, normally 22.");
 //		_sshTailOsCmd_lbl.setToolTipText("<html>Execute OS command(s) before we start to tail the file.<br>This is if you need to do <b><code>su username</code></b> or <b><code>sudo cmd</code></b> or similar stuff to be able to read the file.</html>");
@@ -763,6 +771,10 @@ PropertyConfigurator.configure(log4jProps);
 		panel.add(_sshPort_lbl,        "");
 		panel.add(_sshPort_txt,        "growx, pushx, wrap");
 
+		panel.add(_sshKeyFile_lbl,     "");
+		panel.add(_sshKeyFile_txt,     "split, growx, pushx");
+		panel.add(_sshKeyFile_but,     "wrap");
+
 		panel.add(_sshTailOsCmd_lbl,   "");
 		panel.add(_sshTailOsCmd_txt,   "growx, pushx, wrap");
 
@@ -775,18 +787,22 @@ PropertyConfigurator.configure(log4jProps);
 		_sshPassword_chk.addActionListener(this);
 		_sshHostname_txt.addActionListener(this);
 		_sshPort_txt    .addActionListener(this);
+		_sshKeyFile_txt .addActionListener(this);
+		_sshKeyFile_but .addActionListener(this);
 
 		// Focus action listener
 		_sshUsername_txt.addFocusListener(this);
 		_sshPassword_txt.addFocusListener(this);
 		_sshHostname_txt.addFocusListener(this);
 		_sshPort_txt    .addFocusListener(this);
+		_sshKeyFile_txt .addFocusListener(this);
 		
 		// Caret listener
 		_sshUsername_txt.addCaretListener(this);
 		_sshPassword_txt.addCaretListener(this);
 		_sshHostname_txt.addCaretListener(this);
 		_sshPort_txt    .addCaretListener(this);
+		_sshKeyFile_txt .addCaretListener(this);
 
 		return panel;
 	}
@@ -993,6 +1009,21 @@ PropertyConfigurator.configure(log4jProps);
 
 			saveProps();
 		}
+		
+		// BUT: SSH KEY FILENAME ...
+		if (_sshKeyFile_but.equals(source))
+		{
+			String dir = System.getProperty("user.home") + File.separatorChar + ".ssh";
+
+			JFileChooser fc = new JFileChooser(dir);
+			int returnVal = fc.showOpenDialog(this);
+			if(returnVal == JFileChooser.APPROVE_OPTION) 
+			{
+				String filename = fc.getSelectedFile().getAbsolutePath();
+				_sshKeyFile_txt.setText(filename);
+			}
+		}
+
 		
 		// CHKBOX: keep both _tailNewRecords buttons in sync... (they should be the same button)
 		if (_tailNewRecordsTop_chk.equals(source))
@@ -1526,6 +1557,9 @@ PropertyConfigurator.configure(log4jProps);
 
 		conf.setProperty("LogTail.ssh.conn."+getServername()+".savePassword", _sshPassword_chk.isSelected() );
 
+		if ( ! StringUtil.isNullOrBlank(_sshKeyFile_txt.getText()) )
+			conf.setProperty("LogTail.ssh.conn."+getServername()+".keyFile",  _sshKeyFile_txt.getText() );
+
 		//----------------------------------
 		// SERVERS
 		//----------------------------------
@@ -1638,6 +1672,7 @@ PropertyConfigurator.configure(log4jProps);
 		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("LogTail.ssh.conn."+servername+".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
 		_sshUsername_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".username",  _sshUsername_txt .getText()) );
 		_sshPassword_txt .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".password",  _sshPassword_txt .getText()) );
+		_sshKeyFile_txt  .setText( conf.getProperty   ("LogTail.ssh.conn."+servername+".keyFile",   _sshKeyFile_txt  .getText()) );
 
 		_sshPassword_chk.setSelected( conf.getBooleanProperty("LogTail.ssh.conn."+servername+".savePassword", _sshPassword_chk.isSelected()) );
 	}
@@ -1698,13 +1733,14 @@ PropertyConfigurator.configure(log4jProps);
 		final String passwd  = _sshPassword_txt.getText();
 		final String host    = _sshHostname_txt.getText();
 		final String portStr = _sshPort_txt.getText();
+		final String keyFile = _sshKeyFile_txt.getText();
 //		final String initCmd = _sshTailOsCmd_txt.getText();
 
 		int port = 22;
 		try {port = Integer.parseInt(portStr);} 
 		catch(NumberFormatException ignore) {}
 
-		final SshConnection sshConn = new SshConnection(host, port, user, passwd);
+		final SshConnection sshConn = new SshConnection(host, port, user, passwd, keyFile);
 		WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
 		sshConn.setWaitForDialog(wait);
 
@@ -2110,7 +2146,7 @@ PropertyConfigurator.configure(log4jProps);
 
 		pw.println("usage: tailw [-l <label>] [-f <filename>] [-a]");
 		pw.println("             [-U <user>] [-P <passwd>] [-S <server>]");
-		pw.println("             [-u <sshUser>] [-p <sshPasswd>] [-s <sshHost>]");
+		pw.println("             [-u <sshUser>] [-p <sshPasswd>] [-s <sshHost>] [-k <file>]");
 		pw.println("             [-h] [-v]");
 		pw.println("  ");
 		pw.println("options:");
@@ -2128,6 +2164,7 @@ PropertyConfigurator.configure(log4jProps);
 		pw.println("  -u,--sshUser   <user>     SSH username, if file is remote");
 		pw.println("  -p,--sshPasswd <passwd>   SSH password, if file is remote");
 		pw.println("  -s,--sshServer <host>     SSH hostname, if file is remote");
+		pw.println("  -k,--sshKeyFile <file>    SSH Private Key File, if file is remote");
 		pw.println("");
 		pw.flush();
 	}
@@ -2157,6 +2194,7 @@ PropertyConfigurator.configure(log4jProps);
 		options.addOption( "u", "sshUser",     true, "SSH username, if file is remote" );
 		options.addOption( "p", "sshPasswd",   true, "SSH password, if file is remote" );
 		options.addOption( "s", "sshServer",   true, "SSH hostname, if file is remote" );
+		options.addOption( "k", "sshKeyFile",  true, "SSH Private Key File, if file is remote" );
 
 		return options;
 	}
@@ -2173,6 +2211,7 @@ PropertyConfigurator.configure(log4jProps);
 		if (cmd.hasOption('u')) hasParams = true;
 		if (cmd.hasOption('p')) hasParams = true;
 		if (cmd.hasOption('s')) hasParams = true;
+		if (cmd.hasOption('k')) hasParams = true;
 
 		return hasParams;
 	}

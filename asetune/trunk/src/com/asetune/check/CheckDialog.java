@@ -623,7 +623,7 @@ public class CheckDialog
 //			"<br>" +
 //			"If this application gave you better performance, <br>" +
 //			"<B>please</B> donate whatever you think it was worth: <br>" +
-//			"<A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
+//			"<A HREF=\"http://www.dbxtune.com\">http://www.dbxtune.com</A><br>" +
 			"</html>";
 		
 		JEditorPane feedback   = new JEditorPane("text/html", str);
@@ -639,7 +639,7 @@ public class CheckDialog
 
 		if ( showWhatsNew )
 		{
-			String whatsNewUrl = _cfu.getWhatsNewUrl();//default is: "http://www.asetune.com/history.html";
+			String whatsNewUrl = _cfu.getWhatsNewUrl();//default is: "http://www.dbxtune.com/history.html";
 			try
 			{
 				_logger.info(Version.getAppName()+" What's new page is '"+whatsNewUrl+"'.");
@@ -764,7 +764,7 @@ public class CheckDialog
 //		JFrame frame = new JFrame();
 //
 //		check._newAppVersion = "1.0.0";
-//		check._downloadUrl   = "http://www.asetune.com/download.html";
+//		check._downloadUrl   = "http://www.dbxtune.com/download.html";
 //		check._checkSucceed  = true;
 //		check._hasUpgrade    = true;
 //		CheckDialog.showDialog(frame, check);

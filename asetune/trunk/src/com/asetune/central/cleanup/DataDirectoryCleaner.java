@@ -21,6 +21,9 @@ import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.FileUtils;
+import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 import it.sauronsoftware.cron4j.Task;
 import it.sauronsoftware.cron4j.TaskExecutionContext;
@@ -49,9 +52,9 @@ extends Task
 	public static final String  PROPKEY_start = "DataDirectoryCleaner.start";
 	public static final boolean DEFAULT_start = true;
 
-	public static final String PROPKEY_cron = "DataDirectoryCleaner.cron";
-	public static final String DEFAULT_cron = "54 23 * * *";
-//	public static final String DEFAULT_cron = "* * * * *";
+	public static final String  PROPKEY_cron = "DataDirectoryCleaner.cron";
+	public static final String  DEFAULT_cron = "54 23 * * *";
+//	public static final String  DEFAULT_cron = "* * * * *";
 
 	public static final String  PROPKEY_multiplyFactor = "DataDirectoryCleaner.multiply.factor";
 	public static final double  DEFAULT_multiplyFactor = 2.0;
@@ -66,11 +69,19 @@ extends Task
 	public static final boolean DEFAULT_dryRun = false;
 //	public static final boolean DEFAULT_dryRun = true; // For test purposes
 
+	public static final String  PROPKEY_savedFileInfo_filename = "DataDirectoryCleaner.savedFileInfo.filename";
+	public static final String  DEFAULT_savedFileInfo_filename = "DbxTune.pcs.savedFileInfo.properties";
+	
 	public static final String EXTRA_LOG_NAME = DataDirectoryCleaner.class.getSimpleName() + "-TaskLogger";
 
 	private static final String _prefix = "DATA-DIR-CLEANUP: ";
 	
 	private boolean _dryRun = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_dryRun, DEFAULT_dryRun);
+	
+	private static long _lastExec = 0;
+	private static long _lastExecThreshold = 300*1000; // 5 minutes 
+
+	private Configuration _savedFileInfo = null;
 
 	private List<String> getFilesH2Dbs()
 	{
@@ -96,73 +107,56 @@ extends Task
 		return fileNames;
 	}
 
-//	private int getFreeSizeInMb()
-//	{
-//		File dataDir = new File(DATA_DIR);
-//		
-//		int freeMb = (int) dataDir.getFreeSpace() / 1024 / 1024 / 1024;
-//
-//		double freeGb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0 / 1024.0;
-////		double usableGb = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
-//		double totalGb  = dataDir.getTotalSpace()  / 1024.0 / 1024.0 / 1024.0;
-//		double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
-//		
-//		System.out.println("File system usage at '"+dataDir+"'<br>");
-//		System.out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
-//		
-//		return freeMb;
-//	}
-
-	private Map<String, List<File>> getFilesByServerName()
+	private Map<String, List<FileInfo>> getFilesByServerName()
 	{
-		List<File> files = getTimestampedDbFiles();
+		List<FileInfo> files = getTimestampedDbFiles();
 
-		Map<String, List<File>> map = new LinkedHashMap<>();
+		Map<String, List<FileInfo>> map = new LinkedHashMap<>();
 		
-		for (File f : files)
+		for (FileInfo fi : files)
 		{
-			String[] sa = f.getName().split("_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]");
+			String[] sa = fi._file.getName().split("_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]");
 			String srvName = sa[0];
 			
-			List<File> list = map.get(srvName);
+			List<FileInfo> list = map.get(srvName);
 			if (list == null)
 				list = new ArrayList<>();
 			
-			list.add(f);
+			list.add(fi);
 			map.put(srvName, list);
 		}
 		return map;
 	}
 	
-	private Map<String, List<File>> getFilesByTimeStamp()
+	private Map<String, List<FileInfo>> getFilesByTimeStamp()
 	{
-		List<File> files = getTimestampedDbFiles();
+		List<FileInfo> files = getTimestampedDbFiles();
 
-		Map<String, List<File>> map = new LinkedHashMap<>();
+		Map<String, List<FileInfo>> map = new LinkedHashMap<>();
 
-		for (File f : files)
+		for (FileInfo fi : files)
 		{
-			String fname = f.getName();
+			String fname = fi._file.getName();
 			int p = fname.lastIndexOf("_");
 			if (p != -1)
 			{
 				String ts = fname.substring(p+1, fname.length()-".MV.DB".length());
 				
-				List<File> list = map.get(ts);
+				List<FileInfo> list = map.get(ts);
 				if (list == null)
 					list = new ArrayList<>();
 				
-				list.add(f);
+				list.add(fi);
 				map.put(ts, list);
 			}
 		}
 		return map;
 	}
 	
-	private List<File> getTimestampedDbFiles()
+	private List<FileInfo> getTimestampedDbFiles()
 	{
 		List<String> files = getFilesH2Dbs();
-		List<File> output = new ArrayList<>();
+		List<FileInfo> output = new ArrayList<>();
 
 		for (String file : files)
 		{
@@ -171,7 +165,8 @@ extends Task
 			{
 				if (f.getName().toUpperCase().matches(".*_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].MV.DB"))
 				{
-					output.add(f);
+					FileInfo fi = new FileInfo(f);
+					output.add(fi);
 				}
 			}
 		}
@@ -179,15 +174,19 @@ extends Task
 	}
 
 	
-	private long getMaxSizeMb(Map<String, List<File>> map)
+	private long getMaxSizeMb(Map<String, List<FileInfo>> map, SizeType type)
 	{
 		long maxSize = 0;
 
-		for (List<File> list : map.values())
+		for (List<FileInfo> list : map.values())
 		{
 			long sum = 0;
-			for (File f : list)
-				sum += f.length();
+			for (FileInfo fi : list)
+			{
+				if      (SizeType.MAX_FILE_OR_SAVED.equals(type)) sum += fi.getMaxSize();
+				else if (SizeType.FILE_INFO        .equals(type)) sum += fi.getFileSize();
+				else if (SizeType.SAVED_INFO       .equals(type)) sum += fi.getSavedSize();
+			}
 
 			maxSize = Math.max(maxSize, sum);
 		}
@@ -195,60 +194,160 @@ extends Task
 		return maxSize / 1024 / 1024;
 	}
 
-	private long getSizeMb(List<File> list)
+	private long getSizeMb(List<FileInfo> list, SizeType type)
 	{
 		long sum = 0;
-		for (File f : list)
-			sum += f.length();
+		for (FileInfo fi : list)
+		{
+			if      (SizeType.MAX_FILE_OR_SAVED.equals(type)) sum += fi.getMaxSize();
+			else if (SizeType.FILE_INFO        .equals(type)) sum += fi.getFileSize();
+			else if (SizeType.SAVED_INFO       .equals(type)) sum += fi.getSavedSize();
+		}
 
 		return sum / 1024 / 1024;
 	}
-//	private long getSizeGb(List<File> list)
+
+	public enum SizeType
+	{
+		MAX_FILE_OR_SAVED, FILE_INFO, SAVED_INFO
+	};
+	
+//	private long getSizeGb(List<FileInfo> list)
 //	{
 //		return getSizeMb(list) / 1024;
 //	}
 
+	private class FileInfo
+	{
+		private File _file; 
+		private long _savedFileSize;
+		
+		/** Create a new FileInfo */
+		public FileInfo(File f)
+		{
+			_file = f;
+			_savedFileSize = -1;
 
+			if (_file.exists())
+			{
+				String key = _file.getName();
+				long savedSize = _savedFileInfo.getLongProperty(key, -1);
+
+				// Set the saved to be maximum of saved and current size
+				_savedFileSize = Math.max(savedSize, _file.length());
+				
+				// set the size again (the current-size might be larger than the saved-size)
+				_savedFileInfo.setProperty(key, _savedFileSize);
+			}
+		}
+
+//		/** Create a new FileInfo */
+//		public FileInfo(String fileStr)
+//		{
+//			this(new File(fileStr));
+//		}
+		
+		/**
+		 * Get MAX Size of the file.'
+		 * <p>
+		 * This would be either:
+		 * <ul>
+		 *   <li>The Current file size</li>
+		 *   <li>Or the previously saved size, if that is bigger</li>
+		 * </ul>
+		 * @return
+		 */
+		public long getMaxSize()
+		{
+			return Math.max(_savedFileSize, _file.length());
+		}
+		
+		public long getFileSize()
+		{
+			return _file.length();
+		}
+		public long getSavedSize()
+		{
+			return _savedFileSize;
+		}
+	}
 
 	@Override
 	public void execute(TaskExecutionContext context) throws RuntimeException
 	{
+		long timeSinceLastExec = System.currentTimeMillis() - _lastExec;
+		if (timeSinceLastExec < _lastExecThreshold)
+		{
+			_logger.info("Skipping 'Data Directory Cleanup' task since it was only "+TimeUtils.msToTimeStr("%MM:%SS", timeSinceLastExec)+" (MM:SS) since last cleanup. Minimum time between cleanups is "+TimeUtils.msToTimeStr("%MM:%SS", _lastExecThreshold)+" (MM:SS).");
+			return;
+		}
+
+
 		_logger.info("");
 		_logger.info("#############################################################################################");
 		_logger.info("Begin task: Data Directory Cleanup");
-
+		
 		check(_dryRun);
+		_lastExec = System.currentTimeMillis();
+		
+		//----------------------------------------------------------------
+		// Maybe check if we have any open file descriptors
+		// if we have to many open files (which means that we have been unsuccessful in shuting down H2), we might need to restart ourself...
+		// NOTE: H2 1.4.197 seems a bit unstable when it comes to closing files... Hopefully it's not my code that forgets to close files...
+		//----------------------------------------------------------------
+		// Or we could check if spaceLeft is LOW  && that the cleanup did not decrease in size, then we might need to kill-or-restart any of the collectors holding the files that are already deleted.
+		//----------------------------------------------------------------
+		// on Linux it might be done with : lsof ... or ls _afl /proc/self/fd/ | grep deleted
+		// or maybe: JMX --- UnixOperatingSystemMXBean 
+		//     OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
+		//     if(os instanceof UnixOperatingSystemMXBean)
+		//         System.out.println("Number of open fd: " + ((UnixOperatingSystemMXBean) os).getOpenFileDescriptorCount());
 
 		_logger.info("End task: Data Directory Cleanup");
 	}
 
 	private void check(boolean dryRun)
 	{
-		Map<String, List<File>> srvMap  = getFilesByServerName();
-		Map<String, List<File>> dateMap = getFilesByTimeStamp();
-
 		File dataDir = new File(DATA_DIR);
-		double beforeFreeMb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0;
+		File dataDirRes  = dataDir;
+		try { dataDirRes = dataDir.toPath().toRealPath().toFile(); } catch(IOException ex) { _logger.warn("Problems resolving File->Path->File");}
+
+//		double beforeFreeMb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0;
+		double beforeFreeMb   = dataDir.getUsableSpace() / 1024.0 / 1024.0;
 		double totalMb        = dataDir.getTotalSpace()  / 1024.0 / 1024.0;
 		double totalGb        = totalMb / 1024.0;
 		double beforePctUsed  = 100.0 - (beforeFreeMb / 1024.0 / totalGb * 100.0);
 		
-		_logger.info(String.format(_prefix + "File system usage at '%s'. Free = %.0f MB (%.1f GB), Total = %.0f MB (%.1f GB), Percent Used = %.1f %%", 
+		_logger.info(String.format(_prefix + "File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB), Total = %.0f MB (%.1f GB), Percent Used = %.1f %%", 
 				dataDir.getAbsolutePath(), 
+				dataDirRes.getAbsolutePath(),
 				beforeFreeMb, beforeFreeMb/1024.0, 
 				totalMb, totalMb / 1024.0, 
 				beforePctUsed));
+		
+		// Create a new Configuration object, which holds entries for 'SavedFileInfo'
+		String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(PROPKEY_savedFileInfo_filename, DEFAULT_savedFileInfo_filename);
+		_savedFileInfo = new Configuration(fileName);
+		_logger.info(_prefix + "Using file '"+_savedFileInfo.getFilename()+"' to store File Size Information, with "+_savedFileInfo.size()+" entries.");
+
+
+		// read a bunch of DB files
+		Map<String, List<FileInfo>> srvMap  = getFilesByServerName();
+		Map<String, List<FileInfo>> dateMap = getFilesByTimeStamp();
+		
+		// Save the props file
+		_savedFileInfo.save();
 		
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug(_prefix + "getFilesByServerName: "+srvMap);
 			_logger.debug(_prefix + "getFilesByTimeStamp:  "+dateMap);
-			_logger.debug(_prefix + "srvMap .getMaxSizeMb: "+getMaxSizeMb(srvMap));
-			_logger.debug(_prefix + "dateMap.getMaxSizeMb: "+getMaxSizeMb(dateMap));
+			_logger.debug(_prefix + "srvMap .getMaxSizeMb: "+getMaxSizeMb(srvMap,  SizeType.MAX_FILE_OR_SAVED));
+			_logger.debug(_prefix + "dateMap.getMaxSizeMb: "+getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED));
 		}
 
 		double multiplyFactor = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_multiplyFactor, DEFAULT_multiplyFactor);
-		long dateMapMaxSize = getMaxSizeMb(dateMap);
+		long dateMapMaxSize = getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED);
 		double needSpaceInMb = dateMapMaxSize * multiplyFactor;
 		
 		BigDecimal dateMapMaxSizeGb = new BigDecimal( dateMapMaxSize/1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
@@ -279,17 +378,27 @@ extends Task
 			_logger.info(_prefix + "BEGIN: listing H2 Database File sizes. By Groups: Server and Date");
 
 			_logger.info(_prefix + "H2 Database File Size group by SERVER");
-			for (Entry<String, List<File>> entry : srvMap.entrySet())
+			for (Entry<String, List<FileInfo>> entry : srvMap.entrySet())
 			{
-				long sizeMb = getSizeMb(entry.getValue());
-				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB", entry.getKey(), sizeMb, sizeMb/1024.0));
+				long sizeMb = getSizeMb(entry.getValue(), SizeType.MAX_FILE_OR_SAVED);
+				long fileMb = getSizeMb(entry.getValue(), SizeType.FILE_INFO);
+				long saveMb = getSizeMb(entry.getValue(), SizeType.SAVED_INFO);
+				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB  [current: %5.1f GB, saved-max: %5.1f GB]", 
+						entry.getKey(), sizeMb, sizeMb/1024.0,
+						fileMb/1024.0, saveMb/1024.0
+						));
 			}
 
 			_logger.info(_prefix + "H2 Database File Size group by DATE");
-			for (Entry<String, List<File>> entry : dateMap.entrySet())
+			for (Entry<String, List<FileInfo>> entry : dateMap.entrySet())
 			{
-				long sizeMb = getSizeMb(entry.getValue());
-				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB", entry.getKey(), sizeMb, sizeMb/1024.0));
+				long sizeMb = getSizeMb(entry.getValue(), SizeType.MAX_FILE_OR_SAVED);
+				long fileMb = getSizeMb(entry.getValue(), SizeType.FILE_INFO);
+				long saveMb = getSizeMb(entry.getValue(), SizeType.SAVED_INFO);
+				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB  [current: %5.1f GB, saved-max: %5.1f GB]", 
+						entry.getKey(), sizeMb, sizeMb/1024.0,
+						fileMb/1024.0, saveMb/1024.0
+						));
 			}
 			_logger.info(_prefix + "END: listing H2 Database File sizes. By Groups: Server and Date");
 		}
@@ -303,12 +412,12 @@ extends Task
 		else
 		{
 			// Compose what to be deleted
-			Map<String, List<File>> removeMap = new LinkedHashMap<>();
+			Map<String, List<FileInfo>> removeMap = new LinkedHashMap<>();
 			long removeMapSizeMb = 0;
-			for (Entry<String, List<File>> entry : dateMap.entrySet())
+			for (Entry<String, List<FileInfo>> entry : dateMap.entrySet())
 			{
 				removeMap.put(entry.getKey(), entry.getValue());
-				removeMapSizeMb += getSizeMb(entry.getValue());
+				removeMapSizeMb += getSizeMb(entry.getValue(), SizeType.FILE_INFO);
 				
 				// When we got enough MB to delete, get out of loop
 				if (removeMapSizeMb >= needSpaceInMb)
@@ -317,35 +426,49 @@ extends Task
 			
 			_logger.info(_prefix + "CLEANUP will be executed, files will be removed for: "+removeMap.keySet());
 			List<Path> deletedList = new ArrayList<>();
-			for (Entry<String, List<File>> removeEntry : removeMap.entrySet())
+			for (Entry<String, List<FileInfo>> removeEntry : removeMap.entrySet())
 			{
-				for (File removeFile : removeEntry.getValue())
+				for (FileInfo removeFile : removeEntry.getValue())
 				{
-					Path dbPath = removeFile.toPath().toAbsolutePath();
-					Path tracePath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".trace.db") );
+					Path dbPath       = removeFile._file.toPath().toAbsolutePath();
+					Path tracePath    = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".trace.db") );
+					Path tempFilePath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".mv.db.tempFile") );
+//					Path fileInfoPath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".mv.db.savedFileInfo") );
+					
+					// Maybe: add spillover files to a separate list
+					// ...  matches(".*-SPILL-OVER-DB-[0-9]+")) ...
+
+					
 					try
 					{
 						if (_logger.isDebugEnabled())
 						{
-							_logger.debug(_prefix + "Removing file:             "+dbPath.toAbsolutePath());
-							_logger.debug(_prefix + "Removing file (if exists): "+tracePath.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file:             "+dbPath      .toAbsolutePath());
+							_logger.debug(_prefix + "Removing file (if exists): "+tracePath   .toAbsolutePath());
+							_logger.debug(_prefix + "Removing file (if exists): "+tempFilePath.toAbsolutePath());
+//							_logger.debug(_prefix + "Removing file (if exists): "+fileInfoPath.toAbsolutePath());
 						}
 
 						if (dryRun) // Dry run do not do deletes
 						{
-							if (Files.exists(tracePath, LinkOption.NOFOLLOW_LINKS))
-								deletedList.add(tracePath);
+							if (Files.exists(tracePath,    LinkOption.NOFOLLOW_LINKS)) deletedList.add(tracePath);
+							if (Files.exists(tempFilePath, LinkOption.NOFOLLOW_LINKS)) deletedList.add(tempFilePath);
+//							if (Files.exists(fileInfoPath, LinkOption.NOFOLLOW_LINKS)) deletedList.add(fileInfoPath);
 							deletedList.add(dbPath);
 						}
 						else 
 						{
 							// Delete the trace file it it exists
-							if (Files.deleteIfExists(tracePath))
-								deletedList.add(tracePath);
+							if (Files.deleteIfExists(tracePath))    deletedList.add(tracePath);
+							if (Files.deleteIfExists(tempFilePath)) deletedList.add(tempFilePath);
+//							if (Files.deleteIfExists(fileInfoPath)) deletedList.add(fileInfoPath);
 
 							// Delete the DB FILE
 							Files.delete(dbPath);
 							deletedList.add(dbPath);
+
+							// Remove the SaveInfo entry
+							_savedFileInfo.remove(dbPath.toFile().getName());
 						}
 					}
 					catch (IOException e)
@@ -355,28 +478,34 @@ extends Task
 				}
 			}
 			
+			int maxDelPathLength = 0;
+			for (Path path : deletedList)
+				maxDelPathLength = Math.max(maxDelPathLength, path.toString().length());
+				
 			if (dryRun)
 			{
 //				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted: "+deletedList);
 				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted:");
 				for (Path path : deletedList)
-					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+path);
+					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+StringUtil.left(path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(path)+" GB, "+FileUtils.byteToMb(path)+" MB, "+FileUtils.byteToKb(path)+" KB]");
 			}
 			else
 			{
 //				_logger.info(_prefix + "Deleted the following list of files: "+deletedList);
 				_logger.info(_prefix + "Deleted the following list of files:");
 				for (Path path : deletedList)
-					_logger.info(_prefix + "  -- deleted-file: "+path);
+					_logger.info(_prefix + "  -- deleted-file: "+StringUtil.left(path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(path)+" GB, "+FileUtils.byteToMb(path)+" MB, "+FileUtils.byteToKb(path)+" KB]");
 			}
 				
 
-			double afterFreeMb   = dataDir.getFreeSpace() / 1024.0 / 1024.0;
+//			double afterFreeMb   = dataDir.getFreeSpace() / 1024.0 / 1024.0;
+			double afterFreeMb   = dataDir.getUsableSpace() / 1024.0 / 1024.0;
 			double afterPctUsed  = 100.0 - (afterFreeMb / 1024.0 / totalGb * 100.0);
 
 			_logger.info(_prefix + "---------------------------");
-			_logger.info(String.format(_prefix + "After cleanup. File system usage at '%s'. Free = %.0f MB (%.1f GB). %.0f MB (%.1f GB) was removed/deleted. Space Usage in Percent is now %.1f %%", 
+			_logger.info(String.format(_prefix + "After cleanup. File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB). %.0f MB (%.1f GB) was removed/deleted. Space Usage in Percent is now %.1f %%", 
 					dataDir.getAbsolutePath(), 
+					dataDirRes.getAbsolutePath(), 
 					afterFreeMb, afterFreeMb/1024.0,  
 					afterFreeMb - beforeFreeMb, (afterFreeMb - beforeFreeMb) / 1024.0, 
 					afterPctUsed));
@@ -390,6 +519,11 @@ extends Task
 				_logger.info(_prefix + "---------------------------");
 			}
 		} // end: doCleanup
+
+		// Save the props file, and thow away the object
+		_logger.info(_prefix + "Saving File Size Information in file '"+_savedFileInfo.getFilename()+"', with "+_savedFileInfo.size()+" entries.");
+		_savedFileInfo.save();
+		_savedFileInfo = null; // It will be read up on next call (we might change it manually...)
 	}
 	
 	public static void main(String[] args)
@@ -405,8 +539,8 @@ extends Task
 		DataDirectoryCleaner t = new DataDirectoryCleaner();
 		t.check(true);
 		
-//		Map<String, List<File>> srvMap = t.getFilesByServerName();
-//		Map<String, List<File>> tsMap = t.getFilesByTimeStamp();
+//		Map<String, List<FileInfo>> srvMap = t.getFilesByServerName();
+//		Map<String, List<FileInfo>> tsMap = t.getFilesByTimeStamp();
 //		
 //		System.out.println("getFilesByServerName: "+srvMap);
 //		System.out.println("getFilesByTimeStamp:  "+tsMap);

@@ -445,6 +445,22 @@ extends CountersModel
 			nl_16000           = "\n";
 		}
 
+		// ASE 16.0 SP3 PL4
+		String MaxInsRowsInXact = ""; // Max number of rows inserted in any transaction for this object
+		String MaxDelRowsInXact = ""; // Max number of rows deleted  in any transaction for this object
+		String MaxUpdRowsInXact = ""; // Max number of rows updated  in any transaction for this object
+		String nl_160_sp3_pl4   = ""; // NL for this section
+
+		if (aseVersion >= Ver.ver(16,0,0, 3,4))
+		{
+			MaxInsRowsInXact = "MaxInsRowsInXact, "; // do NOT do diff calc
+			MaxDelRowsInXact = "MaxDelRowsInXact, "; // do NOT do diff calc
+			MaxUpdRowsInXact = "MaxUpdRowsInXact, "; // do NOT do diff calc
+
+			nl_160_sp3_pl4   = "\n";
+		}
+
+		
 		// TOP ROWS
 		Configuration conf = Configuration.getCombinedConfiguration();
 		if (conf.getBooleanProperty(PROPKEY_sample_topRows, DEFAULT_sample_topRows))
@@ -487,6 +503,7 @@ extends CountersModel
 		         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
 		         "RowsInsUpdDel=convert("+bigint+",RowsInserted) + convert("+bigint+",RowsDeleted) + convert("+bigint+",RowsUpdated), \n" +
 		         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n" +
+		         MaxInsRowsInXact              + MaxUpdRowsInXact              + MaxDelRowsInXact   + nl_160_sp3_pl4 +
 		         Inserts                       + Updates                       + Deletes            + nl_16000 +
 		         LastInsertDateDiff + nl_16000 + LastUpdateDateDiff + nl_16000 + LastDeleteDateDiff + nl_16000 +
 		         LastInsertDate                + LastUpdateDate                + LastDeleteDate     + nl_16000 +

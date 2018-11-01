@@ -36,6 +36,11 @@
 	</servlet>
 
 	<servlet>
+		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DbxTuneLogTailWebSocketServlet</servlet-class>
+	</servlet>
+
+	<servlet>
 		<servlet-name>DbxTuneConfServlet</servlet-name>
 		<servlet-class>com.asetune.central.controllers.DbxTuneConfServlet</servlet-class>
 	</servlet>
@@ -58,6 +63,11 @@
 	<servlet>
 		<servlet-name>PcsReceiver</servlet-name>
 		<servlet-class>com.asetune.central.controllers.CentralPcsReceiverController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>PcsQueueInfo</servlet-name>
+		<servlet-class>com.asetune.central.controllers.PcsQueueInfoController</servlet-class>
 	</servlet>
 
 	<servlet>
@@ -117,6 +127,11 @@
 	</servlet-mapping>
 
 	<servlet-mapping>
+		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
+		<url-pattern>/logtail</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
 		<servlet-name>DbxTuneConfServlet</servlet-name>
 		<url-pattern>/conf</url-pattern>
 	</servlet-mapping>
@@ -139,6 +154,11 @@
 	<servlet-mapping>
 		<servlet-name>PcsReceiver</servlet-name>
 		<url-pattern>/api/pcs/receiver</url-pattern>
+	</servlet-mapping>
+ 
+	<servlet-mapping>
+		<servlet-name>PcsQueueInfo</servlet-name>
+		<url-pattern>/api/pcs/queueInfo</url-pattern>
 	</servlet-mapping>
  
 	<servlet-mapping>

@@ -51,6 +51,23 @@
             color:black;
         }
         */
+
+        .modal-content.ui-resizable {
+            /* overflow: scroll; */
+        }
+
+        .modal-body {
+            height: 600px;
+            /* height: 80%; */
+            /* width: 70%; */
+            /* width: 900px; */
+            overflow: hidden;
+        }
+        .modal-body:hover {
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
     </style>
 
     <!-- 
@@ -62,6 +79,7 @@
     <!-- Custom styles for this template -->
     <!-- <link href="/scripts/bootstrap/css/navbar-top-fixed.css" rel="stylesheet"> -->
     <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
     
     <!--
 <script type="text/javascript" src="http://www.chartjs.org/dist/2.7.1/Chart.bundle.js"></script>
@@ -88,11 +106,24 @@
     <!-- JS: DateRangePicker -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-daterangepicker/2.1.27/daterangepicker.js"></script>
 
+    <!-- JS: Bootstrap - TABLE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/editable/bootstrap-table-editable.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/export/bootstrap-table-export.js"></script> -->
+    <!-- <script src="https://rawgit.com/hhurz/tableExport.jquery.plugin/master/tableExport.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>
+
+    <!-- JS: jquery - contextMenu -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.contextMenu.min.js"></script>
+
     <!-- 
       =======================================================================
       == CSS imports - STYLES SHEETS GOES HERE
       =======================================================================
     -->
+    <!-- CSS: jqueri-ui -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css">
+
     <!-- CSS: DbxCentral -->
     <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
 
@@ -112,6 +143,12 @@
     <!-- <link rel="stylesheet" href="scripts/w2ui/w2ui-1.5.rc1.css" type="text/css"> -->
     <!-- <script src="scripts/w2ui/w2ui-1.5.rc1.js" type="text/javascript"></script> -->
 
+    <!-- JS: Bootstrap - TABLE -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.min.css">
+    <!-- <link rel="stylesheet" href="https://rawgit.com/vitalets/x-editable/master/dist/bootstrap3-editable/css/bootstrap-editable.css"> -->
+
+    <!-- JS: jquery - contextMenu -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.7.0/jquery.contextMenu.min.css">
 
 </head>
 
@@ -156,7 +193,8 @@
                 <!-- <a id="dbx-next-time"           class="dbx-nav-button" type="button"><i class="glyphicon fa fa-arrow-circle-right"></i></a> -->
             </div>
             <!-- <div    id="dbx-end-time"            class="dbx-nav-text">2018-??-?? ??:??</div> -->
-            <button id="dbx-config"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Config</button>
+<!--            <button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button" data-toggle="modal" data-target="#dbx-filter-dialog">Filter</button>-->
+            <button id="dbx-filter"              class="btn btn-outline-light mx-2 my-0 my-sm-0" type="button">Filter</button>
             <div    id="subscribe-feedback-msg"  class="dbx-nav-text"></div>
             <div    id="subscribe-feedback-time" class="dbx-nav-text"></div>
         </div>
@@ -212,9 +250,69 @@
     </div>
 -->
 
+    <!-- Modal: Filter dialog -->
+    <div class="modal fade" id="dbx-filter-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-filter-dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="dbx-filter-dialog-title">Locate or Set Visibility for specific Graph(s)</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li>Click on the 'GoTo' icon <span class="glyphicon fa fa-arrow-circle-right"></span> to Locate or set Fucus on a Specific Graph</li>
+                    <li>Set what Graph(s) you want to be visible, using the Checkbox and press the 'Set Visibility' button.</li>
+                </ul>
+                <table id="dbx-graph-filter-table" 
+                    class="table-responsive" 
+                    data-show-columns="false" 
+                    data-paging="false" 
+                    data-filtering="true" 
+                    data-filter-control="true" 
+                    data-click-to-select="false"
+                    data-sorting="true"
+                    data-checkbox-header="true"
+                    data-maintain-selected="true"
+                    data-ignore-click-to-select-on=scrollToDisableCheckRow()>
+                    <thead>
+                        <tr>
+                            <th data-field="visible"   data-checkbox="true"></th>
+                            <th data-field="scrollTo"  data-formatter="scrollToFormatter" data-sortable="false"></th>
+                            <th data-field="desc"      data-filter-control="input"  data-sortable="true">Description</th>
+                            <th data-field="type"      data-filter-control="select" data-sortable="true">Type</th>
+                            <th data-field="cm"        data-filter-control="input"  data-sortable="true">Counter Model</th>
+                            <!-- <th data-field="graphName" data-filter-control="input"  data-sortable="true">Graph Name</th> -->
+                            <!-- <th data-field="fullName"  data-filter-control="input"  data-sortable="true">Full Graph Name</th> -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr> 
+                            <td class="bs-checkbox "><input data-index="0" name="btSelectItem" type="checkbox"></td>
+                            <td>dummy-1</td> 
+                            <td>dummy-2</td> 
+                            <td>dummy-3</td> 
+                            <td>dummy-4</td> 
+                        </tr>
+                    </tbody>                
+                </table>
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal" id="dbx-filter-dialog-ok">Set Visibility</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+        </div>
+    </div>  
+<!-- -->
 
     <!-- JAVA SCRIPT - INIT PAGE -->
     <script type="application/javascript">
+
+        // used to hold Graph Filter "objects" for the Filter Dialog (initialized firt time the "filter" button is pressed)
+        var _filterDialogContentArr = [];
+
         window.onload = function () 
         {
             // Do we support the browser...
@@ -403,8 +501,56 @@
                 }
             }
 
+            // Install functions for button: dbx-filter
+            $("#dbx-filter").click( function() 
+            {
+                dbxOpenFilterDialog();
+            });
 
-        
+            var isSafari = !!navigator.userAgent.match(/Version\/[\d\.]+.*Safari/);
+            var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if ( ! (isSafari && iOS) )
+            {
+                $('.modal-content').resizable({
+                    alsoResize: ".modal-dialog"
+                    //alsoResize: ".modal-header, .modal-body, .modal-footer"
+                    // ,minHeight: 300
+                    // ,minWidth: 300
+                });
+                $('.modal-dialog').draggable();
+            }
+
+            $('#dbx-filter-dialog').on('show.bs.modal', function () {
+                $(this).find('.modal-body').css({
+                    'max-height':'100%'
+                });
+            });
+
+            // What should happen when we click OK in the dialog            
+            $("#dbx-filter-dialog-ok").click( function() 
+            {
+                $('#dbx-filter-dialog').modal('hide');
+
+                var selectedRecords = $('#dbx-graph-filter-table').bootstrapTable('getSelections');
+
+                // hide ALL graphs
+				for(let i=0; i<_graphMap.length; i++)
+				{
+                    const dbxGraph = _graphMap[i];
+                    var x = document.getElementById(dbxGraph.getFullName());
+                    x.style.display = 'none';
+                    // console.log('HIDE: x='+x, x);
+                }
+                // show marked ones ALL graphs
+                for (let i = 0; i < selectedRecords.length; i++) 
+                {
+                    const record = selectedRecords[i];
+                    var x = document.getElementById(record.fullName);
+                    x.style.display = 'block';
+                    // console.log('SHOW: x='+x, x);
+                }
+            });
+
 
             /**
              * LOAD DBXTUNE GRAPHS/CHARTS
@@ -417,6 +563,60 @@
             /* Start to subscribe to data, sent by the backend-server */
             dbxTuneGraphSubscribe();
         }
+        function scrollToFormatter(value, row, index) 
+        {
+            // console.log("scrollToFormatter: index="+index, row);
+            // return '<a href="javascript:void(0)" onclick="scrollToAction('+ row.fullName +')">GoTo</a>';
+            return '<a href="javascript:void(0)" onclick="scrollToAction('+ row.fullName +')"><span class="glyphicon fa fa-arrow-circle-right"></span></a>';
+        }
+        function scrollToAction(name)
+        {
+            console.log("scrollToAction: name="+name, name);
+            $('#dbx-filter-dialog').modal('hide');
+            // name.scrollIntoView();
+            var topOfElement = name.offsetTop - 150;
+            // window.scroll({ top: topOfElement, behavior: "smooth" });
+            window.scroll({ top: topOfElement });
+
+            // $(name).scrollTo(150);
+            // $('html, body').animate({
+            //     scrollTop: ($(name).offset().top)
+            // },500);
+            $(name).effect( "bounce", {times:5}, 1000 );
+        }
+        function scrollToDisableCheckRow(element)
+        {
+            console.log("scrollToDisableCheckRow: element="+element, element);
+            return $.inArray(element.tagName, ['A', 'BUTTON']);
+        }
+
+        function dbxOpenFilterDialog()
+        {
+            // loop all available graphs and add it to the table in the dialog
+            if (_filterDialogContentArr.length === 0)
+            {
+                for(let i=0; i<_graphMap.length; i++)
+                {
+                    const dbxGraph = _graphMap[i];
+
+                    var row = {
+                        "visible"   : true,
+                        "desc"      : dbxGraph.getGraphLabel(),
+                        "type"      : dbxGraph.getGraphCategory(),
+                        "cm"        : dbxGraph.getCmName(),
+                        "graphName" : dbxGraph.getGraphName(),
+                        "fullName"  : dbxGraph.getFullName(),
+                    };
+                    _filterDialogContentArr.push(row);
+                }
+                
+                $('#dbx-graph-filter-table').bootstrapTable({data: _filterDialogContentArr});
+            }
+
+            // Show the dialog
+            $("#dbx-filter-dialog").modal('show');
+        }
+
     </script>
 
 </body>

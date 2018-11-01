@@ -2,6 +2,7 @@ package com.asetune.hostmon;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.cm.os.CmOsIostat;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.VersionShort;
 
@@ -28,8 +29,15 @@ extends MonitorIo
 	@Override
 	public String getCommand()
 	{
+		// iotat switch: -N Display the registered device mapper names for any device mapper devices. Useful for viewing LVM2 statistics.
+		boolean opt_N = Configuration.getCombinedConfiguration().getBooleanProperty(CmOsIostat.PROPKEY_linux_opt_N, CmOsIostat.DEFAULT_linux_opt_N);
+		String extraOptions = "";
+		
+		if (opt_N)
+			extraOptions = "-N "; // Note the extra space at the end 
+
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "iostat -xdk "+getSleepTime();
+		return cmd != null ? cmd : "iostat -xdk " + extraOptions + getSleepTime();
 //		return cmd != null ? cmd : "iostat -xdzk "+getSleepTime(); // z doesnt seems to be standard
 	}
 

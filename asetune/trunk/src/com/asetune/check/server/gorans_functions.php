@@ -100,11 +100,11 @@
 	//----------------------------------------
 	// FUNCTION: toSqlStr
 	//----------------------------------------
-	function toSqlStr($input)
+	function toSqlStr($dbconn, $input)
 	{
 		if ($input == "")
 			return "NULL";
-		return "'" . mysql_real_escape_string($input) . "'";
+		return "'" . mysqli_real_escape_string($dbconn, $input) . "'";
 	}
 
 	//----------------------------------------
@@ -156,7 +156,7 @@
 	// long   version: 160000101 len=5, (Major[##] Minor[#] Maint[#] SP[###] PL[##])  new stuff... for older esd[x.y]. x partwill be held by the 3 digit SP, y part will be held by PL
 	//----------------------------------------
 //NOTE: NOT READY YET
-// test it with: http://www.asemon.se/db_cleanup.php?doAction=testVersion&version=1570100
+// test it with: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=1570100
 //	function versionFix($clientAppName, $version)
 	function versionFix($version)
 	{
@@ -318,7 +318,7 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 	function htmlResultset($userIdCache, $result, $headName, $colNameForNewLine='')
 	{
 		$colIdForNewLine = -1;
-		$fields_num = mysql_num_fields($result);
+		$fields_num = mysqli_num_fields($result);
 
 		// printing some info about what this is
 		echo "<h1>" . $headName . "</h1>";
@@ -329,7 +329,7 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 		// printing table headers
 		for($i=0; $i<$fields_num; $i++)
 		{
-			$field = mysql_fetch_field($result);
+			$field = mysqli_fetch_field($result);
 			echo "<td nowrap>{$field->name}</td>";
 			if ($colNameForNewLine != "")
 			{
@@ -342,7 +342,7 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 		$atRow = -1;
 
 		// printing table rows
-		while($row = mysql_fetch_row($result))
+		while($row = mysqli_fetch_row($result))
 		{
 			$atRow++;
 			echo "<tr>";
@@ -366,7 +366,8 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 			foreach($row as $cell)
 			{
 				$col++;
-				$colname = mysql_field_name($result, $col);
+				$finfo = mysqli_fetch_field_direct($result, $col);
+				$colname = $finfo->name;
 
 				if ( $colname == "sybUserName" )
 					echo "<td nowrap><A HREF=\"http://syberspase.sybase.com/compdir/mainMenu.do?keyword=$cell&submit=Go\" target=\"_blank\">$cell</A></td>";
@@ -375,7 +376,7 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 					echo "<td nowrap><A HREF=\"https://sapneth2.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=SEARCH&UserID=" . $cell . "\">$cell</A></td>";
 
 //				else if ( $colname == "sapUserName" )
-//					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?userName=" . $cell . "\">$cell</A></td>";
+//					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?userName=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "sapUserName" )
 					echo "<td nowrap><A HREF=\"https://sapneth1.wdf.sap.corp/~form/handler?_APP=00200682500000002283&_EVENT=DISPLAY&00200682500000002187=" . $cell . "\" target=\"_blank\">$cell</A></td>";
@@ -390,72 +391,75 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 							$userName = " (" . $userName . ")";
 
 						echo "<td nowrap>";
-						echo "<A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A>";
+						echo "<A HREF=\"http://www.dbxtune.com/usage_report.php?onUser=" . $cell . "\">$cell</A>";
 						echo ", SAP: <A HREF=\"https://people.wdf.sap.corp/profiles/" . $cell . "\" target=\"_blank\">$cell</A>";
 						echo $userName;
 						echo "</td>";
 					}
 					else
 					{
-						echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
+						echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
 //						$cellCont = nl2br($cell, false);
 //						echo "<td nowrap>$cellCont</td>";
 					}
 				}
 
 				else if ( $colname == "clientAppName" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?full=true&appName=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?full=true&appName=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "clientAsemonVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?full=true&appVersion=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?full=true&appVersion=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "deleteUserIdDesc" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?userId_key=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?userId_key=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "userNameUsage" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?onUser=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "domainName" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onDomain=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?onDomain=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "wwwDomainName" )
 					echo "<td nowrap><A HREF=\"http://$cell\" target=\"_blank\">$cell</A></td>";
 
 				else if ( $colname == "checkId" || $colname == "rowid")
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?onId=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?onId=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "sqlwCheckId" || $colname == "sqlwRowId")
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?sqlw=true&sqlwConnId=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?sqlw=true&sqlwConnId=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "showLogId" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?errorInfo=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "deleteLogId" || $colname == "deleteLogId2" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&deleteLogId=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?errorInfo=sum&deleteLogId=" . $cell . "\">$cell</A></td>";
+
+				else if ( $colname == "logLocation" )
+					echo "<td nowrap> $cell <A HREF=\"http://www.dbxtune.com/usage_report.php?errorInfo=sum&deleteLogLocation=" . $cell . "\">DeleteAll</A></td>";
 
 				else if ( $colname == "saveLogId" || $colname == "saveLogId2" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?errorInfo=sum&saveLogId=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?errorInfo=sum&saveLogId=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "callerIpAddress" )
 					echo "<td nowrap><A HREF=\"http://whatismyipaddress.com/ip/" . $cell . "\" target=\"_blank\">$cell</A></td>";
 
 				else if ( $colname == "getAppStartsForIp" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?getAppStartsForIp=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?getAppStartsForIp=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "getConnectForIp" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?getConnectForIp=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?getConnectForIp=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "getConnectForDomain" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?getConnectForDomain=" . $cell . "\">$cell</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?getConnectForDomain=" . $cell . "\">$cell</A></td>";
 
 				else if ( $colname == "srvVersion" || $colname == "srvVersionInt" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?mda_isCluster=0&mda=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
 
 				else if ( $colname == "deleteSrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "&mda_deleteIsCeEnabled=0\">" . versionDisplay($cell) . "</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?mda=delete&mda_deleteVersion=" . $cell . "&mda_deleteIsCeEnabled=0\">" . versionDisplay($cell) . "</A></td>";
 
 				else if ( $colname == "verifySrvVersion" )
-					echo "<td nowrap><A HREF=\"http://www.asemon.se/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
+					echo "<td nowrap><A HREF=\"http://www.dbxtune.com/usage_report.php?mda=delete&mda_verifyVersion=" . $cell . "\">" . versionDisplay($cell) . "</A></td>";
 				else
 				{
 					$cellCont = nl2br($cell, false);
@@ -466,10 +470,10 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 			echo "</tr>\n";
 		}
 		echo "</table>\n";
-		mysql_free_result($result);
+		mysqli_free_result($result);
 
 		// printing table rows
-//		while($row = mysql_fetch_row($result))
+//		while($row = mysqli_fetch_row($result))
 //		{
 //			echo "<tr>";
 //
@@ -481,7 +485,7 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 //			echo "</tr>\n";
 //		}
 //		echo "</table>\n";
-//		mysql_free_result($result);
+//		mysqli_free_result($result);
 	}
 
 

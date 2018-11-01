@@ -231,6 +231,12 @@
 		<!-- Delete the ${build} and ${dist} directory trees -->
 		<delete dir="${build}"/>
 		<delete dir="${dist}"/>
+		
+		<!-- echo datetime -->
+		<tstamp>
+		  <format property="BUILD_DATE" pattern="yyyy-MM-dd HH:mm:ss.sss zzz" locale="en,UK"/>
+		</tstamp>
+		<echo>PUSH END TIME: ${BUILD_DATE}</echo>
 	</target>
 
 
@@ -248,6 +254,12 @@
 		<!-- Delete the ${build} and ${dist} directory trees -->
 		<delete dir="${build}"/>
 		<delete dir="${dist}"/>
+
+		<!-- echo datetime -->
+		<tstamp>
+		  <format property="BUILD_DATE" pattern="yyyy-MM-dd HH:mm:ss.sss zzz" locale="en,UK"/>
+		</tstamp>
+		<echo>PUSH END TIME: ${BUILD_DATE}</echo>
 	</target>
 
 

@@ -15,6 +15,8 @@ import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
 
@@ -27,6 +29,7 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.table.TableColumnExt;
 
+import com.asetune.alarm.writers.AlarmWriterToMail;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.graph.TrendGraphColors;
 import com.asetune.utils.Configuration;
@@ -141,7 +144,8 @@ public class AlarmWriterSettingsTable extends JXTable
 				if (AlarmWriterSettingsTableModel.TAB_POS_PROPERTY_KEY == convertColumnIndexToModel(adapter.column))
 				{
 					CmSettingsHelper awse = _alarmWriterSettingsTableModel.getSettingForRow(convertRowIndexToModel(adapter.row));
-					if ( awse.getPropName().toLowerCase().indexOf("template") != -1)
+//					if ( awse.getPropName().toLowerCase().indexOf("template") != -1)
+					if ( awse.getPropName().toLowerCase().endsWith("template"))
 						return true;
 				}
 				return false;
@@ -234,6 +238,9 @@ public class AlarmWriterSettingsTable extends JXTable
 				String desc = tm.getValueAt(mrow, description_pos) + "";
 				String val  = tm.getValueAt(mrow, value_pos      ) + "";
 
+				if (StringUtils.startsWithIgnoreCase(val, "<html>"))
+					val = StringUtil.toHtmlString(val);
+
 				// If the desc is a HTML string, remove start/end tags.. which will be added later
 				if (StringUtils.startsWithIgnoreCase(desc, "<html>"))
 				{
@@ -325,11 +332,15 @@ public class AlarmWriterSettingsTable extends JXTable
 
 		JPopupMenu popup = new JPopupMenu();
 
-		JMenuItem edit      = new JMenuItem("Edit Value for selected row with the templates editor");
-		JMenuItem toDefault = new JMenuItem("Set the Default value for the selected row");
+		final JMenuItem edit      = new JMenuItem("Edit Value for selected row with the templates editor");
+		final JMenuItem toDefault = new JMenuItem("Set the Default value for the selected row");
+		final JMenuItem toHtmlDefault = new JMenuItem("For 'Msg-Template' set Default HTML template");
+		final JMenuItem toTextDefault = new JMenuItem("For 'Msg-Template' set Default TEXT template");
 
 		popup.add(edit);
 		popup.add(toDefault);
+		popup.add(toHtmlDefault);
+		popup.add(toTextDefault);
 
 		edit.addActionListener(new ActionListener()
 		{
@@ -373,6 +384,77 @@ public class AlarmWriterSettingsTable extends JXTable
 				
 				String defaultVal = table.getValueAt(vrow, vcol_default) + "";
 				table.setValueAt(defaultVal, vrow, vcol_value);
+			}
+		});
+
+		toHtmlDefault.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				JTable table = AlarmWriterSettingsTable.this;
+				int vrow = getSelectedRow();
+				if (vrow == -1)
+					return;
+
+				int vcol_value   = SwingUtils.findColumnView(table, "Value");
+				//int vcol_default = SwingUtils.findColumnView(table, "Default");
+				
+				String defaultVal = AlarmWriterToMail.createHtmlMsgBodyTemplate();
+				table.setValueAt(defaultVal, vrow, vcol_value);
+			}
+		});
+
+		toTextDefault.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				JTable table = AlarmWriterSettingsTable.this;
+				int vrow = getSelectedRow();
+				if (vrow == -1)
+					return;
+
+				int vcol_value   = SwingUtils.findColumnView(table, "Value");
+				//int vcol_default = SwingUtils.findColumnView(table, "Default");
+				
+				String defaultVal = AlarmWriterToMail.createTextMsgBodyTemplate();
+				table.setValueAt(defaultVal, vrow, vcol_value);
+			}
+		});
+
+		// Hide toHtmlDefault if not in correct "place"
+		popup.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				boolean visibleToHtmlAndTextDefault = false;
+				
+				JTable table = AlarmWriterSettingsTable.this;
+				int vrow = getSelectedRow();
+				if (vrow != -1)
+				{
+					int vcol_name = SwingUtils.findColumnView(table, "Name");
+					
+					String nameVal = table.getValueAt(vrow, vcol_name) + "";
+
+					if ("Msg-Template".equals(nameVal))
+						visibleToHtmlAndTextDefault = true;
+				}
+
+				toHtmlDefault.setVisible(visibleToHtmlAndTextDefault);
+				toTextDefault.setVisible(visibleToHtmlAndTextDefault);
+			}
+			
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
+			{
+			}
+			
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent e)
+			{
 			}
 		});
 

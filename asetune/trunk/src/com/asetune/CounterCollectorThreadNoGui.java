@@ -18,6 +18,7 @@ import javax.script.ScriptException;
 import org.apache.log4j.Logger;
 
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cache.XmlPlanCache;
@@ -98,6 +99,7 @@ implements Memory.MemoryListener
 
 	private String     _sshUsername     = null;
 	private String     _sshPassword     = null; 
+	private String     _sshKeyFile      = null;
 	private String     _sshHostname     = null;
 	private String     _sshPortStr      = null;
 	private int        _sshPort         = 22;
@@ -198,6 +200,7 @@ implements Memory.MemoryListener
 
 		_sshUsername     = _storeProps.getProperty("conn.sshUsername");
 		_sshPassword     = _storeProps.getProperty("conn.sshPassword"); 
+		_sshKeyFile      = _storeProps.getProperty("conn.sshKeyFile"); 
 		_sshHostname     = _storeProps.getProperty("conn.sshHostname");
 		_sshPortStr      = _storeProps.getProperty("conn.sshPort");
 		if (_sshPortStr != null && ! _sshPortStr.equals(""))
@@ -316,7 +319,7 @@ implements Memory.MemoryListener
 		//-----------------------------------
 		// read PASSWORD FOR SSH...
 //		if (_sshHostname != null && _sshPassword == null)
-		if (StringUtil.hasValue(_sshHostname) && StringUtil.hasValue(_sshUsername) && _sshPassword == null)
+		if (StringUtil.hasValue(_sshHostname) && StringUtil.hasValue(_sshUsername) && _sshPassword == null && _sshKeyFile == null)
 		{
 			Console cons = System.console();
 			if (cons != null)
@@ -354,6 +357,7 @@ implements Memory.MemoryListener
 			"_dbmsServer='"+_dbmsServer+"("+_dbmsHostPortStr+")', " +
 			"_sshUsername='"+_sshUsername+"', " +
 			"_sshPassword='*hidden*', " +
+			"_sshKeyFile='"+_sshKeyFile+"', " +
 			"_sshHostname='"+_sshHostname+"', " +
 			"_sshPort='"+_sshPort+"', " +
 			".";
@@ -518,8 +522,8 @@ implements Memory.MemoryListener
 		}
 		if (activeCountHostMon > 0)
 		{
-			if (_sshHostname == null || _sshUsername == null || _sshPassword == null)
-				throw new Exception("There are "+activeCountHostMon+" active Performance Counters that are doing Host Monitoring, this is using SSH for communication, but no hostname/user/passwd is given. hostname='"+_sshHostname+"', username='"+_sshUsername+"', password='"+(_sshPassword==null?null:"*has*passwd*")+"'.");
+			if (_sshHostname == null || _sshUsername == null || (_sshPassword == null && _sshKeyFile == null) )
+				throw new Exception("There are "+activeCountHostMon+" active Performance Counters that are doing Host Monitoring, this is using SSH for communication, but no hostname/user/passwd is given. hostname='"+_sshHostname+"', username='"+_sshUsername+"', password='"+(_sshPassword==null?null:"*has*passwd*")+"', keyFile='"+_sshKeyFile+"'.");
 		}
 		
 		// Add a "low memory" listener... so we can cleanup some stuff...
@@ -1147,16 +1151,17 @@ implements Memory.MemoryListener
 				if ( ! getCounterController().isMonConnected(true, true) )
 				{
 					_logger.error("Problems connecting to DBMS server. sleeping for "+_sleepOnFailedConnectTime+" seconds before retry...");
-//					_logger.error("Problems connecting to DBMS server. sleeping for "+_sleepTime+" seconds before retry...");
 
 					// Send ALARM: Server is down (note this will also issue and endOfScan in the AlarmHandler)
-					sendAlarmServerIsDown(_dbmsHostPortStr);
+					String fallbackSrvName = _dbmsHostPortStr;
+					if (StringUtil.hasValue(_dbmsServer))      fallbackSrvName = _dbmsServer;
+					if (StringUtil.hasValue(_dbmsServerAlias)) fallbackSrvName = _dbmsServerAlias;
+					
+					sendAlarmServerIsDown(fallbackSrvName);
 
+					// Sleep a short while
 					getCounterController().sleep(_sleepOnFailedConnectTime * 1000);
-//					getCounterController().sleep(_sleepTime * 1000);
-//					try { Thread.sleep( _sleepTime * 1000 ); }
-//					catch (InterruptedException ignore) {}
-
+					
 					// START AT THE TOP AGAIN
 					continue;
 				}
@@ -1191,16 +1196,16 @@ implements Memory.MemoryListener
 			// HOST Monitoring connection
 			if ( ! getCounterController().isHostMonConnected() )
 			{
-				if (_sshHostname != null && _sshUsername != null && _sshPassword != null)
+				if (_sshHostname != null && _sshUsername != null && (_sshPassword != null || _sshKeyFile != null))
 				{
-					_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"'");
+					_logger.info( "Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ "*hidden*" +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
 					if (System.getProperty("nogui.password.print", "false").equalsIgnoreCase("true"))
-						System.out.println("#### DEBUG ####: Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ _sshPassword +"', port='"+_sshPort+"'. hostname='"+_sshHostname+"'");
+						System.out.println("#### DEBUG ####: Connecting to SSH server using. user='"+_sshUsername+"', passwd='"+ _sshPassword +"', port='"+_sshPort+"', hostname='"+_sshHostname+"', keyFile='"+_sshKeyFile+"'.");
 	
 					// get a connection
 					try
 					{
-						SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword);
+						SshConnection sshConn = new SshConnection(_sshHostname, _sshPort, _sshUsername, _sshPassword, _sshKeyFile);
 						sshConn.connect();
 						getCounterController().setHostMonConnection(sshConn);
 					}
@@ -1263,8 +1268,14 @@ implements Memory.MemoryListener
 				// Get some Header information that will be used by the PersistContainer sub system
 				PersistContainer.HeaderInfo headerInfo = getCounterController().createPcsHeaderInfo();
 				if (headerInfo == null)
+				{
+					_logger.warn("No 'header information' object could be created... starting at top of the while loop.");
 					continue;
-				
+				}
+
+				// Save header info, so we can send AlarmEvents to DbxCentral (in case of connectivity issues) and ruse the servername and other fields.
+				_lastKnownHeaderInfo = headerInfo;
+
 				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
 				if (StringUtil.hasValue(_dbmsServerAlias))
 					headerInfo.setServerNameAlias(_dbmsServerAlias);

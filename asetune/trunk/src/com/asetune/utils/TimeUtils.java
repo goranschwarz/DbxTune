@@ -84,6 +84,15 @@ public class TimeUtils
 		return timeExpired(key, timeLimitInMs);
 	}
 
+	/**
+	 * Set a new start time for method timeExpired
+	 * @param key              Just a string that will identify this specific "event"
+	 */
+	public static void timeExpiredSetStartTime(String key)
+	{
+		_timeExpiredMap.put( key, new Long(System.currentTimeMillis()) );
+	}
+	
 //	public static boolean printMessage(String key, long timeLimitInMs, String messageToPrint, boolean appendDiscardCount)
 //	{
 //	}

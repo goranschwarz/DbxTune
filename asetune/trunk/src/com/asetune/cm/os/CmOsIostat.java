@@ -1,12 +1,14 @@
 package com.asetune.cm.os;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -20,6 +22,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.TrendGraph;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.OsTable;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -75,6 +78,29 @@ extends CounterModelHostMonitor
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
+	}
+
+	public static final String  PROPKEY_linux_opt_N = "CmOsIostat.linux.opt.N";
+	public static final boolean DEFAULT_linux_opt_N = false;
+
+	public static final String  PROPKEY_excludeDevices = "CmOsIostat.exclude.devices";
+	public static final boolean DEFAULT_excludeDevices = false;
+
+	public static final String  PROPKEY_excludeDevicesRegExp = "CmOsIostat.exclude.devices.regexp";
+	public static final String  DEFAULT_excludeDevicesRegExp = "sd[a-z]";
+
+	/** Used by the: Create 'Offline Session' Wizard */
+	@Override
+	public List<CmSettingsHelper> getLocalSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("Exclude some devices",           PROPKEY_excludeDevices      , Boolean.class, conf.getBooleanProperty(PROPKEY_excludeDevices      , DEFAULT_excludeDevices      ), DEFAULT_excludeDevices      , "Enable/Disable: Exclude devices by name" ));
+		list.add(new CmSettingsHelper("Exclude some devices RegExp",    PROPKEY_excludeDevicesRegExp, String .class, conf.getProperty       (PROPKEY_excludeDevicesRegExp, DEFAULT_excludeDevicesRegExp), DEFAULT_excludeDevicesRegExp, "If Exclude is enabled (true), this is the regular expression to use when testing device names." ));
+		list.add(new CmSettingsHelper("iostat switch: -N (Linux Only)", PROPKEY_linux_opt_N         , Boolean.class, conf.getBooleanProperty(PROPKEY_linux_opt_N         , DEFAULT_linux_opt_N         ), DEFAULT_linux_opt_N         , "Add Switch -N to iostat 'Display the registered device mapper names for any device mapper devices'. NOTE: Linux Only" ));
+
+		return list;
 	}
 
 
@@ -1136,7 +1162,11 @@ extends CounterModelHostMonitor
 		
 		if (hostname == null)
 			return;
-		
+
+//		boolean excludeDevices = false;
+		boolean excludeDevices       = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_excludeDevices,       DEFAULT_excludeDevices);
+		String  excludeDevicesRegExp = Configuration.getCombinedConfiguration().getProperty(       PROPKEY_excludeDevicesRegExp, DEFAULT_excludeDevicesRegExp);
+
 		// Find column Id's
 		List<String> colNames = newSample.getColNames();
 		if (colNames == null)
@@ -1165,23 +1195,34 @@ extends CounterModelHostMonitor
 			// Set device description, or add it for deletion if isHidden
 			if (deviceDescription_pos >= 0 && device_pos >= 0)
 			{
-    			// 'deviceDescription' fix into a real description 
-    			Object deviceName_obj = newSample.getValueAt(rowId, device_pos);
-    			if (deviceName_obj != null)
-    			{
-        			String deviceName = deviceName_obj.toString();
-        			
-        			boolean isHidden    = IoStatDeviceMapperDialog.isHidden(      hostname, deviceName);
-        			String  description = IoStatDeviceMapperDialog.getDescription(hostname, deviceName);
-        
-        			if (isHidden)
-        			{
-        				if (removeSet == null)
-        					removeSet = new HashSet<String>();
-        				removeSet.add(deviceName);
-        			}
-        			newSample.setValueAt(description, rowId, deviceDescription_pos);
-    			}
+				// 'deviceDescription' fix into a real description 
+				Object deviceName_obj = newSample.getValueAt(rowId, device_pos);
+				if (deviceName_obj != null)
+				{
+					String deviceName = deviceName_obj.toString();
+					
+					boolean isHidden    = IoStatDeviceMapperDialog.isHidden(      hostname, deviceName);
+					String  description = IoStatDeviceMapperDialog.getDescription(hostname, deviceName);
+
+					if (isHidden)
+					{
+						if (removeSet == null)
+							removeSet = new HashSet<String>();
+						removeSet.add(deviceName);
+					}
+					newSample.setValueAt(description, rowId, deviceDescription_pos);
+
+					// TODO: remove devices that are system devices 'sd[az]'
+					if (excludeDevices)
+					{
+						if (deviceName.matches(excludeDevicesRegExp))
+						{
+							if (removeSet == null)
+								removeSet = new HashSet<String>();
+							removeSet.add(deviceName);
+						}
+					}
+				}
 			}
 
 			// Calculate Average Read/Write Size per IO (how big IO's do we issue)

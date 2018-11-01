@@ -597,7 +597,7 @@ function dbxTuneGraphSubscribe()
 //--------------------------------------------------------------------
 class DbxGraph
 {
-	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug)
+	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphCategory, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug)
 	{
 		// Properties/fields
 		this._serverName        = serverName;
@@ -605,6 +605,7 @@ class DbxGraph
 		this._graphName         = graphName;
 		this._fullName          = cmName + "_" + graphName;
 		this._graphLabel        = graphLabel;
+		this._graphCategory     = graphCategory;
 		this._isPercentGraph    = isPercentGraph;
 		this._subscribeAgeInSec = subscribeAgeInSec;
 		this._debug             = debug;
@@ -780,13 +781,16 @@ class DbxGraph
 		// _outerChartDiv.style['--cols-size-xl'] = 'minmax('+gwidth+'px, 1fr)';
 		// <div id="graphs" class="grid" style="grid-gap: 0px; --cols-xl: auto-fit; --cols-size-xl: minmax(700px, 1fr);">
 
+		const thisClass=this;
 
 		// Create a div for every graph, with ID: cmName_graphName
 		// and add it to the outer div
 		const newDiv = document.createElement("div");
 		newDiv.setAttribute("id", this._fullName);
 		newDiv.style.border = "1px dotted gray";
+		newDiv.classList.add("dbx-graph-context-menu"); // add right click menu to the graph, using jQuery contextMenu plugin
 		_outerChartDiv.appendChild(newDiv);
+		this._chartDiv = newDiv;
 
 		// add a Horizontal Ruler
 		// newDiv.appendChild(document.createElement("hr"));
@@ -816,22 +820,98 @@ class DbxGraph
 		//---------------------------------------------------------------------------------------------------------
 		// on right click: "reset zoome" on ALL charts
 		//---------------------------------------------------------------------------------------------------------
-		newCanvas.addEventListener("contextmenu", function(event) {
-			event.preventDefault();
-			if (this._debug > 0)
-				console.log("xxxx", event);
-			for(var i=0; i<_graphMap.length; i++)
-			{
-				const dbxGraph = _graphMap[i];
-				dbxGraph._chartObject.resetZoom();
-			}
-		});
+		// newCanvas.addEventListener("contextmenu", function(event) {
+		// 	event.preventDefault();
+		// 	if (this._debug > 0)
+		// 		console.log("xxxx", event);
+		// 	for(var i=0; i<_graphMap.length; i++)
+		// 	{
+		// 		const dbxGraph = _graphMap[i];
+		// 		dbxGraph._chartObject.resetZoom();
+		// 	}
+		// });
+		try {
+			$.contextMenu({
+				selector: '.dbx-graph-context-menu',
+				items: {
+					// test: {
+					// 	name: "Test",
+					// 	callback: function(key, opt) 
+					// 	{
+					// 		console.log("Clicked on:'"+key+"', opt='"+opt+"', this='"+this+"'.", this, opt);
+					// 		alert("Clicked on:'"+key+", opt='"+opt+"'.");
+					// 	}
+					// },
+					resetZoomThis: {
+						name: "Reset Zoom (on this graph)",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							getGraphByName(graphName)._chartObject.resetZoom();
+						}
+					},
+					resetZoomAll: {
+						name: "Reset Zoom (on ALL graphs)",
+						callback: function(key, opt) 
+						{
+							console.log("contextMenu(graphName="+opt.dbxSourceName+"): key='"+key+"'.");
+							for(var i=0; i<_graphMap.length; i++)
+							{
+								const dbxGraph = _graphMap[i];
+								dbxGraph._chartObject.resetZoom();
+							}
+						}
+					},
+					hideThis: {
+						name: "Hide this graph",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+							document.getElementById(graphName).style.display = 'none';
+						}
+					},
+					filterDialog: {
+						name: "Open Filter Dialog...",
+						callback: function(key, opt) 
+						{
+							dbxOpenFilterDialog();
+							// $("#dbx-filter-dialog").modal('show');
+						}
+					},
+					showThisInNewTab: {
+						name: "Open this graph in new Tab",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+
+							// Get serverName this graph is for
+							var srvName = getGraphByName(graphName).getServerName();
+
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Change/set some parameters
+							params.set('sessionName', srvName);
+							params.set('graphList',   graphName);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+				}
+			});
+		} catch (error) {
+			console.log("Failed to install Context menu: error="+error);
+		}
 	
 		//---------------------------------------------------------------------------------------------------------
 		// on "click": get the timestamp in the timeline, and draw a timeline-marker in ALL graphs on the same timestamp
 		//             if you didn't click on a "point" then all timeline-markers are removed
 		//---------------------------------------------------------------------------------------------------------
-		const thisClass=this;
 		newCanvas.addEventListener("click", function(event) 
 		{
 			// Reset all timeline-markers
@@ -892,15 +972,16 @@ class DbxGraph
 		});
 	}
 
-	setInitialized() { this._initialized = true; }
-	isInitialized()  { return this._initialized; }
+	setInitialized()   { this._initialized = true; }
+	isInitialized()    { return this._initialized; }
 
-	getHeight()     { return this._graphHeight; }
-	getServerName() { return this._serverName; }
-	getCmName()     { return this._cmName; }
-	getGraphName()  { return this._graphName; }
-	getFullName()   { return this._fullName; }
-	getGraphLabel() { return this._graphLabel; }
+	getHeight()        { return this._graphHeight; }
+	getServerName()    { return this._serverName; }
+	getCmName()        { return this._cmName; }
+	getGraphName()     { return this._graphName; }
+	getFullName()      { return this._fullName; }
+	getGraphLabel()    { return this._graphLabel; }
+	getGraphCategory() { return this._graphCategory; }
 
 	getOldestTs() 
 	{ 
@@ -1424,13 +1505,32 @@ function dbxTuneLoadCharts(destinationDivId)
 	else
 	{
 		console.log("Using 'graphList' as 'graphProfile': graphList='"+graphList+"'.");
-		try {
-			graphProfile = JSON.parse(graphList);
-		} catch (error) {
-			console.log("Parsing 'graphList' Error: " + error);
-			$("#api-feedback").html('Error parsing "graphList". <br>Expected value is a JSON object.<br>Your input: <code>'+graphList+'</code><br>Example: <code>graphList=[{"srv":"GORAN_UB3_DS","graph":"CmSummary_OldestTranInSecGraph"},{"srv":"GORAN_UB2_DS","graph":"CmSummary_OldestTranInSecGraph"}]</code><br>or: <code>graphList=all</code>');
-			$("#api-feedback").css("color", "red");
-			return;
+		graphList = graphList.trim();
+
+		// This is a JSON Object, so parse it
+		if (graphList.startsWith("[") || graphList.startsWith("{"))
+		{
+			try {
+				graphProfile = JSON.parse(graphList);
+			} catch (error) {
+				console.log("Parsing 'graphList' Error: " + error);
+				$("#api-feedback").html('Error parsing "graphList". <br>Expected value is a JSON object.<br>Your input: <code>'+graphList+'</code><br>Example: <code>graphList=[{"srv":"GORAN_UB3_DS","graph":"CmSummary_OldestTranInSecGraph"},{"srv":"GORAN_UB2_DS","graph":"CmSummary_OldestTranInSecGraph"}]</code><br>or: <code>graphList=all</code><br>or: <code>graphList=name1,name2</code>');
+				$("#api-feedback").css("color", "red");
+				return;
+			}
+		}
+		else // Try to read it as a comma separated lits and create a graphProfile
+		{
+			let graphNameArr = graphList.split(",");
+			graphProfile = [];
+			for (let i=0; i<graphNameArr.length; i++) 
+			{
+				var graphEntry = {};
+				graphEntry.graph = graphNameArr[i];
+
+				// Add the object to the profile
+				graphProfile.push(graphEntry);
+			}
 		}
 		console.log("graphProfile="+graphProfile, graphProfile);
 	}
@@ -1526,6 +1626,7 @@ function dbxTuneLoadCharts(destinationDivId)
 					entry.cmName,
 					entry.graphName,
 					entry.graphLabel,
+					entry.graphCategory,
 					entry.percentGraph,
 					subscribeAgeInSec,
 					gheight,
@@ -1718,6 +1819,23 @@ function dbxTuneLoadCharts(destinationDivId)
 // 	} // end: for loop
 } // end: function
 
+
+/**
+ * Get the DbxGraph object from the global array by name
+ * 
+ * @param {*} name    The name of the graph
+ * @returns The DbxGraph Object
+ */
+function getGraphByName(name)
+{
+	for(var i=0; i<_graphMap.length; i++)
+	{
+		const dbxGraph = _graphMap[i];
+		if (dbxGraph.getFullName() === name)
+			return dbxGraph;
+	}
+	return null;
+}
 
 /**
  * create a object with the correct order that the graphs should be created/loaded

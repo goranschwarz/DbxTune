@@ -24,6 +24,7 @@ export CP=${CP}:$javaLibDir/jconn3.jar
 export CP=${CP}:$javaLibDir/jtds-1.3.1.jar
 export CP=${CP}:$javaLibDir/dsparser.jar
 export CP=${CP}:$javaLibDir/log4j-1.2.17.jar
+export CP=${CP}:$javaLibDir/h2-SNAPSHOT.jar
 export CP=${CP}:$javaLibDir/h2-1.4.197.jar
 export CP=${CP}:$javaLibDir/wizard.jar
 export CP=${CP}:$javaLibDir/miglayout-swing-4.2.jar

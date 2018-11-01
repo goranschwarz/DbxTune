@@ -118,7 +118,7 @@ create function to_char
 returns varchar(255)
 language java
 parameter style java
-external name 'asetune.com.test.Exodus.to_char(java.sql.Timestamp, java.lang.String)'
+external name 'dbxtune.com.test.Exodus.to_char(java.sql.Timestamp, java.lang.String)'
 go
 */
 

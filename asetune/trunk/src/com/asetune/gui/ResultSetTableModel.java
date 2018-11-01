@@ -23,6 +23,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
+import com.asetune.sql.pipe.PipeCommandConvert;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -127,6 +128,15 @@ public class ResultSetTableModel
 	throws SQLException
 	{
 		this(null, rsmd, false, "getResultSetInfo", -1, -1, false, null, null);
+	}
+
+	private ResultSetTableModel(String name) 
+	{
+		setName(name);		
+	}
+	public static ResultSetTableModel createEmpty(String name)
+	{
+		return new ResultSetTableModel(name);
 	}
 
 	/**
@@ -383,9 +393,21 @@ public class ResultSetTableModel
 //						break;
 //				}
 
-                // Do we want to remove leading/trailing blanks
+				// Do we want to remove leading/trailing blanks
 				if (o instanceof String && _stringTrim)
 					o = ((String)o).trim();
+
+				// Should we try to convert "faulty" characters to... (if ISO chars has been saved faulty in the DB using UTF8 or similar)
+				boolean convertIsEnabled = true;
+				if (convertIsEnabled && o instanceof String)
+				{
+					if (_pipeCmd != null && _pipeCmd.getCmd() instanceof PipeCommandConvert)
+					{
+						PipeCommandConvert pcc = (PipeCommandConvert) _pipeCmd.getCmd();
+
+						o = pcc.convert(rowCount+1, c, (String) o);
+					}
+				}
 
 				// Add the column data to the current row array list
 				row.add(o);
@@ -1451,31 +1473,52 @@ public class ResultSetTableModel
 
 	public String toHtmlTableString()
 	{
+		return toHtmlTableString(true, true);
+	}
+	public String toHtmlTableString(boolean tHeadNoWrap, boolean tBodyNoWrap)
+	{
 		StringBuilder sb = new StringBuilder(1024);
 
-		sb.append("<table border=1>\n");
+		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
+		String tBodyNoWrapStr = tBodyNoWrap ? " nowrap" : "";
+		
+		sb.append("<table border='1' width='100%'>\n");
+//		sb.append("<table border=1 style='min-width: 1024px; width: 100%;' width='100%'>\n");
 		int cols = getColumnCount();
 		int rows = getRowCount();
 		
 		// build header names
+		sb.append("<thead>\n");
 		sb.append("<tr>");
 		for (int c=0; c<cols; c++)
 		{
-			sb.append("<td nowrap>").append(getColumnName(c)).append("</td>");
+			sb.append("<th").append(tHeadNoWrapStr).append(">").append(getColumnName(c)).append("</th>");
 		}
 		sb.append("</tr>\n");
+		sb.append("</thead>\n");
 
 		// build all data rows...
+		sb.append("<tbody>\n");
 		for (int r=0; r<rows; r++)
 		{
 			sb.append("<tr>");
 			for (int c=0; c<cols; c++)
 			{
-				sb.append("<td nowrap>").append(getValueAtFullSize(r,c)).append("</td>");
+				Object objVal = getValueAt(r,c);
+				String strVal = "";
+				if (objVal != null)
+				{
+					strVal = objVal.toString();
+				}
+				if (StringUtil.isNullOrBlank(strVal))
+					strVal = "&nbsp;";
+
+				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
 			}
 			sb.append("</tr>\n");
-			sb.append("\n");
+			//sb.append("\n");
 		}
+		sb.append("</tbody>\n");
 		sb.append("</table>\n");
 
 		return sb.toString();

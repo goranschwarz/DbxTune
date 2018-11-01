@@ -568,6 +568,8 @@ public class QueryWindow
 	private String      _connectedClientCharsetId         = null;
 	private String      _connectedClientCharsetName       = null;
 	private String      _connectedClientCharsetDesc       = null;
+
+	private Map<String, Object> _connectedExtraInfo       = null;
 	
 	private String      _currentDbName                    = null; // probably only maintained for ASE
 	private boolean     _dbmsOutputIsEnabled              = false; // only maintained for Oracle & DB2
@@ -599,7 +601,7 @@ public class QueryWindow
 //	private JButton     _cmdSql_but      = SwingUtils.makeToolbarButton(Version.class, "images/command_sql.png",          ACTION_CMD_SQL,        this, "Execute some predefined SQL Statements",                          "SQL");
 //	private JButton     _cmdRcl_but      = SwingUtils.makeToolbarButton(Version.class, "images/command_rcl.png",          ACTION_CMD_RCL,        this, "Execute some predefined RCL Statements",                          "RCL");
 	private JButton     _rsWhoIsDown_but = SwingUtils.makeToolbarButton(Version.class, "images/rs_admin_who_is_down.png", ACTION_RS_WHO_IS_DOWN, this, "Execute Replication Server Command 'admin who_is_down' (Ctrl-w)", "who_is_down");
-	private JButton     _viewLogFile_but = SwingUtils.makeToolbarButton(Version.class, "images/tail_logfile.png",         ACTION_VIEW_LOG_TAIL,  this, "Show Server logfile",                                    "logfile");
+	private JButton     _viewLogFile_but = SwingUtils.makeToolbarButton(Version.class, "images/tail_logfile.png",         ACTION_VIEW_LOG_TAIL,  this, "Show Server Logfile",                                    "logfile");
 
 	private JLabel      _srvWarningMessage = new JLabel();
 	private JLabel      _jvm_lbl           = new JLabel(LOCAL_JVM);
@@ -1522,7 +1524,7 @@ public class QueryWindow
 			getDbmsProductInfoAfterConnect(conn, null);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(_connectedToServerName, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(_connectedToServerName, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc, _connectedExtraInfo);
 			_statusBar.setServerInfo(srvInfo);
 		}
 
@@ -3087,7 +3089,7 @@ public class QueryWindow
 			setSrvInTitle(srvStr, _connectedToProductName);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc, _connectedExtraInfo);
 			_statusBar.setServerInfo(srvInfo);
 			
 			// Load Windown Props for this TDS Server
@@ -3148,7 +3150,7 @@ public class QueryWindow
 			setSrvInTitle(srvStr, _connectedToProductName);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc, _connectedExtraInfo);
 			_statusBar.setServerInfo(srvInfo);
 
 			// Load Windown Props for this OFFLINE Server
@@ -3209,7 +3211,7 @@ public class QueryWindow
 			setSrvInTitle(srvStr, _connectedToProductName);
 
 			// Info in status bar
-			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc);
+			ServerInfo srvInfo = new ServerInfo(srvStr, _connectedToProductName, _connectedToProductVersion, _connectedToServerName, _connectedInitialCatalog, _connectedAsUser, _connectedWithUrl, _connectedToSysListeners, _connectedSrvPageSizeInKb, _connectedSrvCharset, _connectedSrvSortorder, _connectedClientCharsetId, _connectedClientCharsetName, _connectedClientCharsetDesc, _connectedExtraInfo);
 			_statusBar.setServerInfo(srvInfo);
 
 			// Load Windown Props for this JDBC Server
@@ -3352,6 +3354,7 @@ public class QueryWindow
 			_connectedClientCharsetId   = null;
 			_connectedClientCharsetName = null;
 			_connectedClientCharsetDesc = null;
+			_connectedExtraInfo         = conn.getDbmsExtraInfo();
 			try { _connectedInitialCatalog    = conn.getCatalog(); } catch (SQLException ex) {}
 
 			SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
@@ -3420,6 +3423,7 @@ public class QueryWindow
 		_connectedClientCharsetId   = null;
 		_connectedClientCharsetName = null;
 		_connectedClientCharsetDesc = null;
+		_connectedExtraInfo         = null;
 		
 		_currentDbName              = null;
 		_dbmsOutputIsEnabled        = false; // I don't think you need to disable it, hopefully it will be disabled when disconnecting
@@ -4288,6 +4292,7 @@ public class QueryWindow
 		_connectedClientCharsetId   = null;
 		_connectedClientCharsetName = null;
 		_connectedClientCharsetDesc = null;
+		_connectedExtraInfo         = null;
 
 		_currentDbName              = null;
 		_dbmsOutputIsEnabled        = false; // Mark this as false, it will be marked as true when executing...

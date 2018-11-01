@@ -15,7 +15,7 @@ public class SshTesting
 
 	public static void main(String[] args)
 	{
-		SshConnection conn = new SshConnection("192.168.0.112", 22, "gorans", "1niss2e");
+		SshConnection conn = new SshConnection("192.168.0.112", "gorans", "1niss2e");
 		
 		try
 		{

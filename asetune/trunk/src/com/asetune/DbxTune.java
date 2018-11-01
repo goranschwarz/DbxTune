@@ -1,5 +1,6 @@
 package com.asetune;
 
+import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -264,7 +265,13 @@ public abstract class DbxTune
 	public abstract IDbmsConfig createDbmsConfig();
 	public abstract MonTablesDictionary createMonTablesDictionary();
 
-	public static boolean hasGui() { return _gui; } 
+	public static boolean hasGui() 
+	{
+		if (GraphicsEnvironment.isHeadless()) 
+			return false;
+		
+		return _gui; 
+	} 
 	/**
 	 * Initialize and start 
 	 * 
@@ -437,9 +444,8 @@ public abstract class DbxTune
 		
 		// Take all Environment variables and add them as System Properties
 		// But: Do NOT overwrite already set System Properties with Environment variables
-		StringUtil.setEnvironmentVariablesToSystemProperties(false, false);  
-
-
+		StringUtil.setEnvironmentVariablesToSystemProperties(false, false);
+		
 		//-------------------------------
 		// LIST CM and exit
 		//-------------------------------
@@ -655,12 +661,15 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		if (_gui)
 		{
 			// Calling this would make GuiLogAppender, to register itself in log4j.
-			GuiLogAppender.getInstance();
+//			GuiLogAppender.getInstance();
 
 			// How long should a ToolTip be displayed...
 			// this is especially good for WaitEventID tooltip help, which could be much text to read.
 //			ToolTipManager.sharedInstance().setDismissDelay(120*1000); // 2 minutes
 		}
+		// Always register the "gui" LogAppender, which will also send errors to 'dbxtune.com'
+		// Calling this would make GuiLogAppender, to register itself in log4j.
+		GuiLogAppender.getInstance();
 
 		// Check registered LOG4J appenders
 		// NOTE: this should NOT be here for production
@@ -906,6 +915,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			// SSH CONNECTION
 			if (cmd.hasOption('u'))	storeConfigProps.setProperty("conn.sshUsername", cmd.getOptionValue('u'));
 			if (cmd.hasOption('p'))	storeConfigProps.setProperty("conn.sshPassword", cmd.getOptionValue('p'), true);
+			if (cmd.hasOption('k'))	storeConfigProps.setProperty("conn.sshKeyFile",  cmd.getOptionValue('k'));
 			if (cmd.hasOption('s'))
 			{
 				storeConfigProps.setProperty("conn.sshHostname", cmd.getOptionValue('s'));
@@ -1158,7 +1168,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			{
 				_hasDevVersionExpired = true;
 
-				String msg = "This DEVELOPMENT VERSION has expired. (version='"+Version.getVersionStr()+"', buildStr='"+Version.getBuildStr()+"'). The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', and the current date is '"+df.format(new Date())+"'. A new version can be downloaded here 'http://www.asetune.com'";
+				String msg = "This DEVELOPMENT VERSION has expired. (version='"+Version.getVersionStr()+"', buildStr='"+Version.getBuildStr()+"'). The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', and the current date is '"+df.format(new Date())+"'. A new version can be downloaded here 'http://www.dbxtune.com'";
 				_logger.error(msg);
 				Exception ex = new Exception(msg);
 				if (_gui)
@@ -1174,7 +1184,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 							"The <i>time to live</i> period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"'. <br>" +
 							"And the current date is '"+df.format(new Date())+"'.<br>" +
 							"<br>" +
-							"A new version can be downloaded at <A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
+							"A new version can be downloaded at <A HREF=\"http://www.dbxtune.com\">http://www.dbxtune.com</A><br>" +
 							"<br>" +
 							Version.getAppName() + " will still be started, but in <b>restricted mode</b><br>" +
 							"It can only read data from <i>Persistent Counter Storage</i>, also called <i>'offline databases'</i>.<br>" +
@@ -1660,7 +1670,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 		pw.println("usage: "+getAppNameCmd()+" [-C <cfgFile>] [-c <cfgFile>] [-t <filename>] [-h] [-v] [-a]");
 		pw.println("              [-U <user>]   [-P <passwd>]    [-S <server>] [-A <alias>] [-O <urlOptions>]");
-		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] ");
+		pw.println("              [-u <ssUser>] [-p <sshPasswd>] [-s <sshHostname>] [-k <keyFile>]");
 		pw.println("              [-L <logfile>] [-H <dirname>] [-R <dirname>] [-D <key=val>]");
 		pw.println("              [-n <cfgFile|cmNames>] [-r] [-l] [-i <seconds>] [-f <hours>]");
 		pw.println("              [-d <dbname>] [-T <H2|ASE|ASE>] ");
@@ -1684,6 +1694,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 		pw.println("  ");
 		pw.println("  -u,--sshUser <user>       SSH Username, used by Host Monitoring subsystem.");
 		pw.println("  -p,--sshPasswd <passwd>   SSH Password, used by Host Monitoring subsystem.");
+		pw.println("  -k,--sshKeyFile <file>    SSH Private Key File, used by Host Monitoring subsystem.");
 		pw.println("  -s,--sshServer <host>     SSH Hostname, used by Host Monitoring subsystem.");
 		pw.println("  ");
 		pw.println("  -L,--logfile <filename>   Name of the logfile where application logging is saved.");
@@ -1783,6 +1794,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 		options.addOption( Option.builder("u").longOpt("sshUser"       ).hasArg(true ).build() );
 		options.addOption( Option.builder("p").longOpt("sshPasswd"     ).hasArg(true ).build() );
+		options.addOption( Option.builder("k").longOpt("sshKeyFile"    ).hasArg(true ).build() );
 		options.addOption( Option.builder("s").longOpt("sshServer"     ).hasArg(true ).build() );
 
 		options.addOption( Option.builder("L").longOpt("logfile"       ).hasArg(true ).build() );

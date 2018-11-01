@@ -30,6 +30,7 @@ import javax.swing.text.TextAction;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.Completion;
 import org.fife.ui.rsyntaxtextarea.ErrorStrip;
 import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
@@ -877,6 +878,9 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		if (cList == null)
 			return EMPTY_COMPLETION_LIST;
 //		int cSize = cList.size();
+		
+		// remove duplicates. NOTE: a proper comparator is needed...
+		//cList = new ArrayList<>( new HashSet<>(cList) );
 
 		int needsLookupCount = 0;
 		for (Completion c : cList)
@@ -937,7 +941,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 //System.out.println("START: enteredText='"+enteredText+"'.");
 //System.out.println("START: currentWord='"+currentWord+"'.");
 
-SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
+SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, false);
 //SqlObjectName cwId = new SqlObjectName(currentWord);
 
 //System.out.println("START: enteredText IDENTIFIER: "+ etId);
@@ -971,7 +975,6 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		//
 		if ("use".equalsIgnoreCase(prevWord1))
 		{
-//System.out.println(">>> in: USE completion");
 			ArrayList<Completion> dbList = new ArrayList<Completion>();
 
 			String catName = SqlObjectName.stripQuote(enteredText, _dbIdentifierQuoteString);
@@ -983,6 +986,32 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					dbList.add(dc);
 			}
 			return dbList;
+		}
+		if ( enteredText.equalsIgnoreCase(":db") )
+		{
+			ArrayList<Completion> cList = new ArrayList<Completion>();
+			for (SqlDbCompletion dc : _dbComplList)
+				cList.add(dc);
+			
+			return cList;
+		}
+
+		//-----------------------------------------------------------
+		// : = show all ':' completions
+		//
+		if ( enteredText.equals(":") )
+		{
+//System.out.println(">>> in: :s SCHEMA REPLACEMENT");
+			ArrayList<Completion> cList = new ArrayList<Completion>();
+
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":s",  "Show all schemas") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":db", "Show all databases") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":t",  "Show all user tables") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":v",  "Show all user views") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":st", "Show all system tables") );
+			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":sv", "Show all system views") );
+			
+			return cList;
 		}
 
 		//-----------------------------------------------------------
@@ -999,6 +1028,76 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			
 			return cList;
 		}
+
+		//-------------------------------------
+		// Only show USER TABLES 
+		if (enteredText.equalsIgnoreCase(":t"))
+		{
+//System.out.println(">>> in: :t TABLE REPLACEMENT");
+			ArrayList<Completion> clist = new ArrayList<Completion>();
+			for (SqlTableCompletion tc : _tableComplList)
+			{
+				TableInfo ti = tc._tableInfo;
+//System.out.println("type='"+ti._tabType+"', name='"+ti._tabName+"'.");
+				if ("TABLE".equals(ti._tabType))
+					clist.add(tc);
+			}
+
+			if ( ! clist.isEmpty() )
+				return clist;
+		}
+
+		//-------------------------------------
+		// Only show VIEW 
+		if (enteredText.equalsIgnoreCase(":v"))
+		{
+//System.out.println(">>> in: :v VIEW REPLACEMENT");
+			ArrayList<Completion> clist = new ArrayList<Completion>();
+			for (SqlTableCompletion tc : _tableComplList)
+			{
+				TableInfo ti = tc._tableInfo;
+				if ("VIEW".equals(ti._tabType))
+					clist.add(tc);
+			}
+
+			if ( ! clist.isEmpty() )
+				return clist;
+		}
+
+		//-------------------------------------
+		// Only show SYSTEM VIEW 
+		if (enteredText.equalsIgnoreCase(":sv"))
+		{
+//System.out.println(">>> in: :sv SYSTEM VIEW REPLACEMENT");
+			ArrayList<Completion> clist = new ArrayList<Completion>();
+			for (SqlTableCompletion tc : _tableComplList)
+			{
+				TableInfo ti = tc._tableInfo;
+				if ("SYSTEM VIEW".equals(ti._tabType))
+					clist.add(tc);
+			}
+
+			if ( ! clist.isEmpty() )
+				return clist;
+		}
+
+		//-------------------------------------
+		// Only show SYSTEM TABLES 
+		if (enteredText.equalsIgnoreCase(":st"))
+		{
+//System.out.println(">>> in: :st SYSTEM-TABLE REPLACEMENT");
+			ArrayList<Completion> clist = new ArrayList<Completion>();
+			for (SqlTableCompletion tc : _tableComplList)
+			{
+				TableInfo ti = tc._tableInfo;
+				if ("SYSTEM".equals(ti._tabType) || "SYSTEM TABLE".equals(ti._tabType) || "MDA Table".equals(ti._tabType))
+					clist.add(tc);
+			}
+
+			if ( ! clist.isEmpty() )
+				return clist;
+		}
+
 
 		//-----------------------------------------------------------
 		// Complete STORED PROCS, if the previous word is EXEC
@@ -1042,7 +1141,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 						ProcedureInfo pi = pc._procInfo;
 						if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
 						{
-							SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, true, etId._catName, _addSchemaName, _quoteTableNames);
+							SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, false, etId._catName, false, _quoteTableNames);
 							procList.add(c);
 						}
 					}
@@ -1123,6 +1222,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 						procList.add(pc);
 				}
 			}
+//System.out.println("<<<---PROC_LIST.size(): "+procList.size());
+//System.out.println("<<<---PROC_LIST: "+procList);
 			return procList;
 		} // end: exec
 
@@ -1191,6 +1292,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 //				tables.addAll(functions);
 //				return tables;
 				List<Completion> tables    = getTableAndFuncCompletionsFromSchema(completions, tabAliasName, objNamePattern);
+//System.out.println("<<<---returns: "+tables);
 				return tables;
 			}
 			else // alias is NOT in the "locals" schemas (so hopefully it's a column, but we will discover that...)
@@ -1350,6 +1452,32 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				return colList;
 			}
 		} // end ALIAS check: if (enteredText.indexOf('.') >= 0)
+
+		
+		//-------------------------------------
+		// if it's Sybase, and the input starts with 'sp_' check the SYSTEM PROCEDURE LIST and the localDB
+		if (enteredText.startsWith("sp_") && DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
+		{
+			ArrayList<Completion> procList = new ArrayList<Completion>();
+			
+			// SYSTEM Procedures
+			for (SqlProcedureCompletion pc : _systemProcComplList)
+			{
+				ProcedureInfo pi = pc._procInfo;
+				if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+					procList.add(pc);
+			}
+			// Local DB Procedures
+			for (SqlProcedureCompletion pc : _procedureComplList)
+			{
+				ProcedureInfo pi = pc._procInfo;
+				if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+					procList.add(pc);
+			}
+			
+			if ( ! procList.isEmpty() )
+				return procList;
+		}
 
 		
 		//-----------------------------------------------------------
@@ -1762,7 +1890,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (maxSchemaNameLen <= 0 && StringUtil.isNullOrBlank(schemaTerm))
 		{
 			_dbSupportsSchema = false;
-			_addSchemaName    = false;
+//			_addSchemaName    = false;
 		}
 		
 		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '"+_dbProductName+"'.");
@@ -1824,6 +1952,24 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		}
 	}
 
+	/**
+	 * Add either schema or catalog name to _schemaNames
+	 * 
+	 * @param catalog
+	 * @param schema
+	 */
+	private void addSchema(String catalog, String schema)
+	{
+		String addStr = schema;
+		if (StringUtil.isNullOrBlank(schema))
+			addStr = catalog;
+		
+		if (StringUtil.hasValue(addStr))
+			_schemaNames.add(addStr);
+
+		// if (getDbSupportsSchema())
+	}
+	
 	/**
 	 * 
 	 * @param conn
@@ -1918,6 +2064,21 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			schemaInfoList.add(si);
 		}
 		rs.close();
+
+		if (schemaInfoList.isEmpty() && ! _dbSupportsSchema )
+		{
+			if (_dbInfoList != null && _dbInfoList.size() > 0)
+			{
+				for (DbInfo dbInfo : _dbInfoList)
+				{
+					SchemaInfo si = new SchemaInfo();
+					si._cat  = dbInfo._dbName;
+					si._name = dbInfo._dbName;
+
+					schemaInfoList.add(si);
+				}
+			}
+		}
 
 		return schemaInfoList;
 	}
@@ -2119,8 +2280,11 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				ti._tabRemark = mtd.getDescriptionForTable(ti._tabName);
 				
 			// add schemas... this is a Set so duplicates is ignored
-			if (ti._tabSchema != null)
-				_schemaNames.add(ti._tabSchema);
+			addSchema(ti._tabCat, ti._tabSchema);
+			
+			// special case for MySQL and DBMS that do not support schemas... just copy dbname into the schema field
+			if ( ! _dbSupportsSchema && StringUtil.isNullOrBlank(ti._tabSchema))
+				ti._tabSchema = ti._tabCat;
 
 			tableInfoList.add(ti);
 			
@@ -2501,7 +2665,11 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 				_logger.debug("refreshCompletionForFunctions: ROW("+counter+")-ADD: fi="+fi);
 
 			// add schemas... this is a Set so duplicates is ignored
-			_schemaNames.add(fi._funcSchema);
+			addSchema(fi._funcCat, fi._funcSchema);
+
+			// special case for MySQL and DBMS that do not support schemas... just copy dbname into the schema field
+			if ( ! _dbSupportsSchema && StringUtil.isNullOrBlank(fi._funcSchema))
+				fi._funcSchema = fi._funcCat;
 
 			// Check with the MonTable dictionary for Descriptions
 			if (mtd != null && StringUtil.isNullOrBlank(fi._funcName))
@@ -2871,7 +3039,11 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 
 //System.out.println("refreshCompletionForProcedures() ADD: pi="+pi);
 			// add schemas... this is a Set so duplicates is ignored
-			_schemaNames.add(pi._procSchema);
+			addSchema(pi._procCat, pi._procSchema);
+
+			// special case for MySQL and DBMS that do not support schemas... just copy dbname into the schema field
+			if ( ! _dbSupportsSchema && StringUtil.isNullOrBlank(pi._procSchema))
+				pi._procSchema = pi._procCat;
 
 			// Check with the MonTable dictionary for Descriptions
 			if (mtd != null && StringUtil.isNullOrBlank(pi._procRemark))
@@ -3295,7 +3467,7 @@ if (_guiOwner == null)
 //										_schemaNames.add(di._dbName);
 //								}
 								for (SchemaInfo si : allSchemas)
-									_schemaNames.add(si._name);
+									addSchema(si._cat, si._name);
 							}
 
 							// Add all schema names
@@ -3415,7 +3587,7 @@ if (_guiOwner == null)
 								for (ProcedureInfo pi : _systemProcInfoList)
 								{
 		//							SqlProcedureCompletion c = new SqlProcedureCompletion(_thisBaseClass, pi);
-									SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, false, null, _addSchemaName, _quoteTableNames);
+									SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, false, null, false, _quoteTableNames);
 									_systemProcComplList.add(c);
 								}
 							}

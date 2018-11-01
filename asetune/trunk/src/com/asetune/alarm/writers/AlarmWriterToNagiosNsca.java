@@ -22,7 +22,7 @@ import com.googlecode.jsendnsca.builders.NagiosSettingsBuilder;
 public class AlarmWriterToNagiosNsca
 extends AlarmWriterAbstract
 {
-	private static Logger _logger = Logger.getLogger(AlarmWriterToSyslog.class);
+	private static Logger _logger = Logger.getLogger(AlarmWriterToNagiosNsca.class);
 
 	@Override
 	public String getDescription()

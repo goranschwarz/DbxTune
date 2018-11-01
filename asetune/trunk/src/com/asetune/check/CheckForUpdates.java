@@ -66,22 +66,22 @@ public abstract class CheckForUpdates
 
 //	private static final boolean _printDevTrace = false;
 
-//	protected static final String ASETUNE_HOME_URL               = "http://www.asetune.com";
-//	protected static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
-//	protected static final String ASETUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
-//	protected static final String ASETUNE_MDA_INFO_URL           = "http://www.asetune.com/mda_info.php";
-//	protected static final String ASETUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
-//	protected static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
-//	protected static final String ASETUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
+//	protected static final String ASETUNE_HOME_URL               = "http://www.dbxtune.com";
+//	protected static final String ASETUNE_CHECK_UPDATE_URL       = "http://www.dbxtune.com/check_for_update.php";
+//	protected static final String ASETUNE_CONNECT_INFO_URL       = "http://www.dbxtune.com/connect_info.php";
+//	protected static final String ASETUNE_MDA_INFO_URL           = "http://www.dbxtune.com/mda_info.php";
+//	protected static final String ASETUNE_UDC_INFO_URL           = "http://www.dbxtune.com/udc_info.php";
+//	protected static final String ASETUNE_COUNTER_USAGE_INFO_URL = "http://www.dbxtune.com/counter_usage_info.php";
+//	protected static final String ASETUNE_ERROR_INFO_URL         = "http://www.dbxtune.com/error_info.php";
 //
-//	protected static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.asetune.com/sqlw_check_for_update.php";
-//	protected static final String SQLWIN_CONNECT_INFO_URL        = "http://www.asetune.com/sqlw_connect_info.php";
-//	protected static final String SQLWIN_COUNTER_USAGE_INFO_URL  = "http://www.asetune.com/sqlw_counter_usage_info.php";
+//	protected static final String SQLWIN_CHECK_UPDATE_URL        = "http://www.dbxtune.com/sqlw_check_for_update.php";
+//	protected static final String SQLWIN_CONNECT_INFO_URL        = "http://www.dbxtune.com/sqlw_connect_info.php";
+//	protected static final String SQLWIN_COUNTER_USAGE_INFO_URL  = "http://www.dbxtune.com/sqlw_counter_usage_info.php";
 
-//	protected static final String DEFAULT_DOWNLOAD_URL =  "http://www.asetune.com/download.html";
-//	protected static final String DEFAULT_WHATSNEW_URL =  "http://www.asetune.com/history.html";
+//	protected static final String DEFAULT_DOWNLOAD_URL =  "http://www.dbxtune.com/download.html";
+//	protected static final String DEFAULT_WHATSNEW_URL =  "http://www.dbxtune.com/history.html";
 	
-	protected String getHomeUrl()            { return "http://www.asetune.com"; };
+	protected String getHomeUrl()            { return "http://www.dbxtune.com"; };
 	protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
 	protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
@@ -105,7 +105,7 @@ public abstract class CheckForUpdates
 	 *  false = _GET[], send as: http://www.site.com?param1=var1&param2=var2 approximately 2000 chars is max<br>
 	 */
 	private boolean        _useHttpPost    = false;
-	// Note: when redirecting URL from www.asetune.com -> www.asemon.se, it looses the POST entries
+	// Note: when redirecting URL from www.asetune.com -> www.dbxtune.com, it looses the POST entries
 	//       So right now we need to use the 'http://www.site.com?param1=val1&param2=val2' instead
 
 //	private URL	           _url;
@@ -1209,13 +1209,43 @@ public abstract class CheckForUpdates
 			//_logger.warn("When trying to initialize Counters Model '"+getName()+"' in ASE Version "+getServerVersion()+", "+msg+" (connect with a user that has '"+needsRoleToRecreate+"' or load the proc from '$ASETUNE_HOME/classes' or unzip asetune.jar. under the class '"+scriptLocation.getClass().getName()+"' you will find the script '"+scriptName+"').");
 			if (msg.startsWith("When trying to initialize Counters Model")) 
 				return;
+
+			// DDL Lookup Storage: Discard entry due to PCS 'PersistWriterJdbc' has not yet been fully started'. (Storage tables might not be there yet).
+			if (msg.startsWith("DDL Lookup Storage: Discard entry due to PCS")) 
+				return;
+			
+			// Problems connecting/sending JSON-REST call to 'http://localhost:8080/api/pcs/receiver'. The entry will be saved in the 'error-queue' and sent later. Caught: java.net.ConnectException: Connection refused (Connection refused)
+			if (msg.indexOf("Problems connecting/sending JSON-REST call to") >= 0 && msg.indexOf("java.net.ConnectException") >= 0) 
+				return;
+
+			// Rejected 1 plan names due to ' not executed '. For the last '01:00' (HH:MM), The following plans was rejected (planName=count). {*ss0986313580_1062367249ss*=1}	
+			if (msg.indexOf("plan names due to ' not executed '.") >= 0)
+				return;
+
+			// The configuration 'statement pipe max messages' might be to low. For the last '01:00' (HH:MM), We have read 25225 rows. On 1 occations. Average read per occation was 25225 rows. And the configuration value for 'statement pipe max messages' is 25000		
+			if (msg.indexOf("max messages' might be to low. For the last") >= 0)
+				return;
+			
 			
 			if (msg.startsWith("CounterSample(CmRaSysmon).getCnt : 99000 ERROR: Found NO database that was marked for replication"))
 				return;
 			if (msg.startsWith("Date problems for table 'CmStmntCacheDetails"))
 				return;
 			
+			// The persistent queue has 3 entries. The persistent writer might not keep in pace. The current consumer has been active for 00:00:04.124	
+			// When the PCS has been active for MORE THAN 1 MINUTE
+			if (msg.indexOf("The persistent writer might not keep in pace. The current consumer has been active for") >= 0)
+			{
+				// Discard message when the Writer has worked for less than a minute
+				// OR: send only records that seems to be strange
+				if (msg.indexOf("00:00:") >= 0) 
+					return;
+			}
 		}
+		
+		// Check any sub-implemeters that extends CheckForUpdate 
+		if (discardLogInfoMessage(record))
+			return;
 		
 		if (_sendLogInfoCount > _sendLogInfoThreshold)
 		{
@@ -1238,6 +1268,25 @@ public abstract class CheckForUpdates
 		checkThread.setName("sendLogInfo");
 		checkThread.setDaemon(true);
 		checkThread.start();
+	}
+	
+	/**
+	 * Check if we should send a specific log message to dbxtune.com
+	 * 
+	 * @param record
+	 * @return true if the message should be discarded
+	 */
+	public boolean discardLogInfoMessage(final Log4jLogRecord record)
+	{
+		String msg = record.getMessage();
+		if (msg != null)
+		{
+			// check for various messages
+			//if (msg.startsWith("Some message that we do not want to send")) 
+			//	return;
+		}
+
+		return false;
 	}
 
 	/**

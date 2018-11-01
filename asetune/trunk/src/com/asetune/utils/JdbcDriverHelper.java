@@ -72,7 +72,7 @@ public class JdbcDriverHelper
 	private static Logger _logger = Logger.getLogger(JdbcDriverHelper.class);
 	public final static String  DEFAULT_DriversFileName = AppDir.getAppStoreDir() + File.separator + "JdbcDrivers.xml";
 
-	public static final String JDBC_DRIVER_DOWNLOAD_URL = "http://www.asetune.com/jdbc_drivers_download.php";
+	public static final String JDBC_DRIVER_DOWNLOAD_URL = "http://www.dbxtune.com/jdbc_drivers_download.php";
 
 	private static JdbcDriverTableModel _jdbcDriverModel = null;
 	private static String               _filename        = DEFAULT_DriversFileName;

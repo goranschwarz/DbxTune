@@ -278,6 +278,28 @@ public class H2UrlHelper
 		return null;
 	}
 
+	/**
+	 * Get FULL name of the parsed file part of the URL<br>
+	 * This is the full path including file <b>extention</b>
+	 * 
+	 * @return null if no file was passed or the file didn't exist.
+	 */
+	public File getDbFile(boolean returnFileEvenIfTheFileNotYetExists)
+	{
+		File f = getFile();
+		if (f == null)
+			return null;
+
+		if (f.exists())
+			return f;
+
+		f = new File(f.getAbsolutePath() + ".mv.db");
+		if (f.exists())
+			return f;
+		
+		return returnFileEvenIfTheFileNotYetExists ? f : null;
+	}
+
 //	/**
 //	 * Set file name part of the URL<br>
 //	 * This is the full path (or simply the filename, but then it will use the relative path)

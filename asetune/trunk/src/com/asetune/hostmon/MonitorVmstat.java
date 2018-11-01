@@ -18,13 +18,13 @@ extends HostMonitor
 	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
 	throws Exception
 	{
-		return createMonitor(host, 22, user, passwd, start);
+		return createMonitor(host, 22, user, passwd, null, start);
 	}
 
-	public static HostMonitor createMonitor(String host, int port, String user, String passwd, boolean start)
+	public static HostMonitor createMonitor(String host, int port, String user, String passwd, String keyFile, boolean start)
 	throws Exception
 	{
-		SshConnection conn = new SshConnection(host, port, user, passwd);
+		SshConnection conn = new SshConnection(host, port, user, passwd, keyFile);
 		return createMonitor(conn, start);
 	}
 

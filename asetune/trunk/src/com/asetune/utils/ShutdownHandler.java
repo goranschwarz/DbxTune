@@ -2,6 +2,7 @@ package com.asetune.utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -65,6 +66,8 @@ implements Runnable
 	private static Object _waitforObject = new Object();
 	private static boolean _withRestart = false;
 	private static Configuration _shutdownConfig = null;
+
+	private static String _shutdownReasonText = "";
 
 	/**
 	 * Interface for handlers that want to be notified on shutdowns.
@@ -147,10 +150,23 @@ implements Runnable
 	 */
 	public static void addShutdownHandler(Shutdownable handler) 
 	{
+		addShutdownHandler(-1, handler);
+	}
+
+	/**
+	 * Install an application handler that will be called when a system shutdown happens
+	 * @param index    The index of the list... -1 == append at the end
+	 * @param handler
+	 */
+	public static void addShutdownHandler(int index, Shutdownable handler) 
+	{
 		if ( ! hasJvmShutdownHook() )
 			installJvmShutdownHook();
 
-		_handlers.add(handler);
+		if (index >= 0)
+			_handlers.add(index, handler);
+		else
+			_handlers.add(handler);
 	}
 
 	/**
@@ -214,6 +230,7 @@ implements Runnable
 	{
 		_withRestart = withRestart;
 		_shutdownConfig = shutdownConfig;
+		_shutdownReasonText = reasonText;
 		
 		synchronized (_waitforObject)
 		{
@@ -237,9 +254,18 @@ implements Runnable
 	 */
 	public static Configuration getShutdownConfiguration()
 	{
+		Collections.emptyList();
+		
+		if (_shutdownConfig == null)
+			return Configuration.emptyConfiguration();
 		return _shutdownConfig;
 	}
 	
+	
+	public static String getShutdownReason()
+	{
+		return _shutdownReasonText;
+	}
 	
 
 	/**

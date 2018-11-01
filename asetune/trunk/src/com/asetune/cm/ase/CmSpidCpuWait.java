@@ -340,8 +340,8 @@ extends CountersModel
 			"  A.CPUTime, A.WaitTime as SpidWaitTime, W.WaitTime as EventIdWaitTime, W.Waits, \n" +
 			"  WaitTimePerWait = CASE WHEN W.Waits > 0 THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) ELSE convert(numeric(15,3), 0.0) END, \n" +
 			"  W.WaitEventID, \n" +
-			"  WaitClassDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitClassInfo \n" +
-			"  WaitEventDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitEventInfo \n" +
+			"  WaitClassDesc = convert(varchar(120),''), -- runtime replaced with cached values from monWaitClassInfo \n" +
+			"  WaitEventDesc = convert(varchar(120),''), -- runtime replaced with cached values from monWaitEventInfo \n" +
 			"  A.LogicalReads, A.PhysicalReads, A.PhysicalWrites, A.PagesRead, A.PagesWritten, \n" +
 			IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 			"  A.TableAccesses, A.IndexAccesses, A.Transactions, A.Commits, A.Rollbacks, A.LocksHeld, A.MemUsageKB, \n" +

@@ -742,7 +742,9 @@ extends CountersModel
 		String sql = 
 			"select VARIABLE_NAME,cast(VARIABLE_VALUE as signed integer) as VARIABLE_VALUE \n" +
 			"from performance_schema.global_status \n" +
-			"where VARIABLE_VALUE REGEXP '^[[:digit:]]+$' \n";
+			"where VARIABLE_VALUE REGEXP '^[[:digit:]]+$' \n" +
+			"  and length(VARIABLE_VALUE) <= 10  -- MaxInt=2,147,483,647 so discard numbers that are *big*... but it might still fail due to larger than 2b"
+			;
 
 		return sql;
 	}

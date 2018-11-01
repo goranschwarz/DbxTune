@@ -85,20 +85,20 @@ public interface ICentralPersistWriter
 	 * @param cont a DbxTuneSample filled with <b>all</b> the available
 	 *             CounterModels we could sample.
 	 */
-	public void startSession(String sessionName, DbxTuneSample cont);
+	public void startSession(String sessionName, DbxTuneSample cont) throws Exception;
 	
 	/**
 	 * Save a bunch of CM's that we have sampled during this sample interval.
 	 * @param cont
 	 */
-	public void saveSample(DbxTuneSample cont);
+	public void saveSample(DbxTuneSample cont) throws Exception;
 
 //	public boolean isDdlCreated(CmEntry cme); 
 //	public void    markDdlAsCreated(CmEntry cme);
 //	public boolean saveDdl(CmEntry cme);
 
 	/** save counters for this cm */
-	public void saveCounters(CmEntry cme);
+	public void saveCounters(CmEntry cme) throws Exception;
 
 //	/** save DDL into "any" storage */
 //	public void saveDdlDetails(DdlDetails ddlDetails);
@@ -123,7 +123,8 @@ public interface ICentralPersistWriter
 	 * @param cont 
 	 * @see CentralPcsWriterHandler#consume
 	 */
-	public void beginOfSample(DbxTuneSample cont);
+//	public void beginOfSample(DbxTuneSample cont);
+	public boolean beginOfSample(DbxTuneSample cont) throws Exception;
 
 	/**
 	 * Called from the {@link CentralPcsWriterHandler#consume} as the last thing it does.

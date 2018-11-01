@@ -9,6 +9,7 @@ import org.codehaus.commons.compiler.CompileException;
 import org.codehaus.janino.JavaSourceClassLoader;
 //import org.codehaus.janino.DebuggingInformation;
 
+import com.asetune.AppDir;
 import com.asetune.Version;
 import com.asetune.cm.CountersModel;
 import com.asetune.utils.Configuration;
@@ -21,7 +22,7 @@ public class UserDefinedAlarmHandler
 
 	public final static String PROPKEY_sourceDir         = "UserDefinedAlarmHandler.source.dir";
 //	public final static String DEFAULT_sourceDir         = "resources/alarm-handler-src";
-	public final static String DEFAULT_sourceDir         = "${DBXTUNE_UD_ALARM_SOURCE_DIR:-}resources/alarm-handler-src"; // default for ${DBXTUNE_UD_ALARM_SOURCE_DIR} is ''
+	public final static String DEFAULT_sourceDir         = "${DBXTUNE_UD_ALARM_SOURCE_DIR:-}/resources/alarm-handler-src"; // default for ${DBXTUNE_UD_ALARM_SOURCE_DIR} is ''
 	
 	public final static String PROPKEY_packetBaseName    = "UserDefinedAlarmHandler.packet.base.name";
 //	public final static String DEFAULT_packetBaseName    = "com.asetune.cm.alarm";
@@ -85,6 +86,14 @@ public class UserDefinedAlarmHandler
 //        Command xc = (Command) cl.loadClass("org.example.svenehrke.janino.command.MyCommand").newInstance();
 //        xc.execute();
 
+		// if DBXTUNE_UD_ALARM_SOURCE_DIR, is NOT set: set it to ${HOME}/.dbxtune
+		if ( ! conf.hasProperty("DBXTUNE_UD_ALARM_SOURCE_DIR") )
+		{
+			_logger.warn("The environment variable 'DBXTUNE_UD_ALARM_SOURCE_DIR' is NOT set. Setting this to '"+AppDir.getAppStoreDir()+"'.");
+			System.setProperty("DBXTUNE_UD_ALARM_SOURCE_DIR", AppDir.getAppStoreDir());
+		}
+
+		
 		// Read configuration.
 		_classSrcDirStr    = conf.getProperty(PROPKEY_sourceDir, DEFAULT_sourceDir);
 		_classSrcDirStr    = StringUtil.envVariableSubstitution(_classSrcDirStr); // resolv any environment variables into a value
