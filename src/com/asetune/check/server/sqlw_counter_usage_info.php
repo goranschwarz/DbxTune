@@ -55,10 +55,12 @@
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
-	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
-	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
+//	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());
+//	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
 
-	$prodName          = mysql_real_escape_string($prodName);
+	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
+
+	$prodName          = mysqli_real_escape_string($dbconn, $prodName);
 
 	$sql = "insert into sqlw_usage_info
 	(
@@ -122,12 +124,12 @@
 
 	//------------------------------------------
 	// Do the INSERT
-	mysql_query($sql) or die("ERROR: " . mysql_error());
+	mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 
 
 	//------------------------------------------
 	// Close connection to the database
-	mysql_close() or die("ERROR: " . mysql_error());
+	mysqli_close($dbconn) or die("ERROR: " . mysqli_error($dbconn));
 
 	echo "DONE: \n";
 ?>

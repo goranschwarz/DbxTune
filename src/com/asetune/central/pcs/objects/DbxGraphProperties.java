@@ -1,7 +1,6 @@
 package com.asetune.central.pcs.objects;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -30,7 +29,7 @@ public class DbxGraphProperties
 	private boolean   _visibleAtStartup;
 	private int       _initialOrder;
 
-	public String    getRecid()            { return UUID.randomUUID().toString();  }
+//	public String    getRecid()            { return UUID.randomUUID().toString();  }
 	public Timestamp getSessionStartTime() { return _sessionStartTime;  }
 	public String    getServerName      () { return _serverName      ;  }
 	public String    getCmName          () { return _cmName          ;  }

@@ -122,7 +122,8 @@ public class WriterUtils
 				}
 			}
 		}
-		
+
+		boolean isHtmlTemplate = StringUtils.startsWithIgnoreCase(template, "<html>");
 		
 		
 		VelocityContext context = new VelocityContext();
@@ -158,9 +159,9 @@ public class WriterUtils
 			context.put("reRaiseTimeStr"             , StringUtil.toStr( alarmEvent.getReRaiseTimeStr()             ));
 			context.put("timeToLive"                 , StringUtil.toStr( alarmEvent.getTimeToLive()                 ));
 			context.put("alarmClassAbriviated"       , StringUtil.toStr( alarmEvent.getAlarmClassAbriviated()       ));
-			context.put("extendedDescription"        , StringUtil.toStr( alarmEvent.getExtendedDescription()        ));
+			context.put("extendedDescription"        , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getExtendedDescriptionHtml()        : alarmEvent.getExtendedDescription() ));
 			context.put("reRaiseDescription"         , StringUtil.toStr( alarmEvent.getReRaiseDescription()         ));
-			context.put("reRaiseExtendedDescription" , StringUtil.toStr( alarmEvent.getReRaiseExtendedDescription() ));
+			context.put("reRaiseExtendedDescription" , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getReRaiseExtendedDescriptionHtml() : alarmEvent.getReRaiseExtendedDescription() ));
 			context.put("reRaiseData"                , StringUtil.toStr( alarmEvent.getReRaiseData()                ));
 			context.put("cancelTimeStr"              , StringUtil.toStr( alarmEvent.getCancelTimeStr()              ));
 			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                  ));

@@ -9,6 +9,18 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * <b>always</b> send this alarm<br>
+	 * The the "filter" functionality will be disarded/short-circuited 
+	 * 
+	 * @return true if we should always send, false if we shoudl look at the "filter" settings.
+	 */
+	@Override
+	public boolean alwaysSend()
+	{
+		return true;
+	}
+
 	public AlarmEventSrvDown(CountersModel cm)
 	{
 		super(

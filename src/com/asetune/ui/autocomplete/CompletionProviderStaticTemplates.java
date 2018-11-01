@@ -3,6 +3,8 @@ package com.asetune.ui.autocomplete;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.fife.ui.autocomplete.BasicCompletion;
+
 import com.asetune.Version;
 import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.utils.SwingUtils;
@@ -73,6 +75,14 @@ public class CompletionProviderStaticTemplates
 
 		list.add( new CompletionTemplate( "ddlgen",    "\\ddlgen -t tabname"));
 		list.add( new CompletionTemplate( "\\ddlgen",  "\\ddlgen -t tabname"));
+
+		list.add( new CompletionTemplate(":",   ":",   "Show all ':' shorthand completions") );
+		list.add( new CompletionTemplate(":s",  ":s",  "Show all schemas") );
+		list.add( new CompletionTemplate(":db", ":db", "Show all databases") );
+		list.add( new CompletionTemplate(":t",  ":t",  "Show all user tables") );
+		list.add( new CompletionTemplate(":v",  ":v",  "Show all user views") );
+		list.add( new CompletionTemplate(":st", ":st", "Show all system tables") );
+		list.add( new CompletionTemplate(":sv", ":sv", "Show all system views") );
 
 		return list;
 	}

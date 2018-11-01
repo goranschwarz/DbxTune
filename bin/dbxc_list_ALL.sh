@@ -86,7 +86,7 @@ fi
 
 if [ -z "${pidListCental}" ] 
 then
-	echo " * No DbXTune CENTAL Server processes is running..."
+	echo " * No DbxTune CENTAL Server processes is running..."
 	echo ""
 fi
 

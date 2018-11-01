@@ -45,6 +45,7 @@ extends Properties
 
 	private static final String ENCRYPTED_PREFIX = "encrypted:";
 
+    public static final Configuration EMPTY_CONFIGURATION = new Configuration();
 
 	public static final String SYSTEM_CONF = "SYSTEM_CONF"; 
 	public static final String USER_CONF   = "USER_CONF"; 
@@ -165,6 +166,15 @@ extends Properties
 //	{
 //		_writers.remove(writer);
 //	}
+
+	/**
+	 * Get an empty configuration, which is statically created.
+	 * @return
+	 */
+	public static Configuration emptyConfiguration()
+	{
+		return EMPTY_CONFIGURATION;
+	}
 
 	public String getConfName()
 	{

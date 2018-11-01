@@ -9,6 +9,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.File;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.util.List;
@@ -17,6 +18,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
@@ -77,6 +79,10 @@ implements ActionListener, KeyListener, FocusListener
 
 	private JCheckBox          _sshOptionSavePwd_chk = new JCheckBox("Save password", true);
 	
+	private JLabel             _sshKeyFile_lbl     = new JLabel("Key File");
+	private JTextField         _sshKeyFile_txt     = new JTextField("");
+	private JButton            _sshKeyFile_but     = new JButton("...");
+
 	private JLabel             _sshInitOsCmd_lbl   = new JLabel("Init OS Cmd");
 	private JTextField         _sshInitOsCmd_txt   = new JTextField("");
 
@@ -298,6 +304,8 @@ implements ActionListener, KeyListener, FocusListener
 		_sshHost_txt      .setToolTipText("<html>Hostname or IP address of the intermediate Host you are connecting to</html>");
 		_sshPort_lbl      .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
 		_sshPort_txt      .setToolTipText("<html>Port number of the SSH server you are connecting to</html>");
+		_sshKeyFile_lbl   .setToolTipText("<html>Private Key File, if you want to use that to authenticate.</html>");
+		_sshKeyFile_txt   .setToolTipText(_sshKeyFile_lbl.getToolTipText());
 		_sshInitOsCmd_lbl .setToolTipText("<html>Execute OS command(s) after we have connected.<br>This is if you need to do setup some <i>stuff</i> or create a new <i>sub SSH tunnel</i> or do...</html>");
 		_sshInitOsCmd_txt .setToolTipText(_sshInitOsCmd_lbl.getToolTipText());
 
@@ -319,6 +327,10 @@ implements ActionListener, KeyListener, FocusListener
 
 		panel.add(_sshOptionSavePwd_chk, "skip");
 
+		panel.add(_sshKeyFile_lbl,       "");
+		panel.add(_sshKeyFile_txt,       "split, pushx, growx");
+		panel.add(_sshKeyFile_but,       "wrap");
+
 		panel.add(_sshInitOsCmd_lbl,     "");
 		panel.add(_sshInitOsCmd_txt,     "pushx, growx");
 
@@ -333,12 +345,13 @@ implements ActionListener, KeyListener, FocusListener
 
 
 		// KEY ACTION LISTENERS
-		_sshPort_txt  .addKeyListener(this);
+		_sshPort_txt   .addKeyListener(this);
 		// just for validation
-		_sshUser_txt  .addKeyListener(this);
-		_sshPasswd_txt.addKeyListener(this);
-		_sshHost_txt  .addKeyListener(this);
-		_sshPort_txt  .addKeyListener(this);
+		_sshUser_txt   .addKeyListener(this);
+		_sshPasswd_txt .addKeyListener(this);
+		_sshHost_txt   .addKeyListener(this);
+		_sshPort_txt   .addKeyListener(this);
+		_sshKeyFile_txt.addKeyListener(this);
 
 		// ADD ACTION LISTENERS
 		_sshHost_txt         .addActionListener(this);
@@ -346,12 +359,15 @@ implements ActionListener, KeyListener, FocusListener
 		_sshUser_txt         .addActionListener(this);
 		_sshPasswd_txt       .addActionListener(this);
 		_sshOptionSavePwd_chk.addActionListener(this);
+		_sshKeyFile_txt      .addActionListener(this);
+		_sshKeyFile_but      .addActionListener(this);
 
 		// ADD FOCUS LISTENERS
-		_sshUser_txt  .addFocusListener(this);
-		_sshPasswd_txt.addFocusListener(this);
-		_sshHost_txt  .addFocusListener(this);
-		_sshPort_txt  .addFocusListener(this);
+		_sshUser_txt   .addFocusListener(this);
+		_sshPasswd_txt .addFocusListener(this);
+		_sshHost_txt   .addFocusListener(this);
+		_sshPort_txt   .addFocusListener(this);
+		_sshKeyFile_txt.addFocusListener(this);
 		
 		// Set minimum/preferred size
 		Dimension preSize = panel.getPreferredSize();
@@ -455,6 +471,7 @@ implements ActionListener, KeyListener, FocusListener
 			sshInfo.setSshUsername(                 _sshUser_txt  .getText());
 			sshInfo.setSshPassword(                 _sshPasswd_txt.getText());
 
+			sshInfo.setSshKeyFile(                  _sshKeyFile_txt  .getText());
 			sshInfo.setSshInitOsCmd(                _sshInitOsCmd_txt.getText());
 
 			_sshTunelInfo = sshInfo;
@@ -514,6 +531,20 @@ implements ActionListener, KeyListener, FocusListener
 			}
 		}
 		
+		// --- BUTTON: KEY FILE ...  ---
+		if (_sshKeyFile_but.equals(source) )
+		{
+			String dir = System.getProperty("user.home") + File.separatorChar + ".ssh";
+
+			JFileChooser fc = new JFileChooser(dir);
+			int returnVal = fc.showOpenDialog(this);
+			if(returnVal == JFileChooser.APPROVE_OPTION) 
+			{
+				String filename = fc.getSelectedFile().getAbsolutePath();
+				_sshKeyFile_txt.setText(filename);
+			}
+		}
+
 		validateContents();
 	}
 
@@ -595,6 +626,10 @@ implements ActionListener, KeyListener, FocusListener
 		conf.setProperty(PROP_PREFIX +"ssh.conn.password."+_hostPortStr,   _sshPasswd_txt.getText(), true);
 		conf.setProperty(PROP_PREFIX +"ssh.conn.password",                 _sshPasswd_txt.getText(), true);
 
+		// INIT KEY FILE
+		conf.setProperty(PROP_PREFIX +"ssh.conn.keyFile."+_hostPortStr,    _sshKeyFile_txt.getText());
+		conf.setProperty(PROP_PREFIX +"ssh.conn.keyFile",                  _sshKeyFile_txt.getText());
+
 		// INIT OS CMD
 		conf.setProperty(PROP_PREFIX +"ssh.conn.initOsCmd."+_hostPortStr,  _sshInitOsCmd_txt.getText());
 		conf.setProperty(PROP_PREFIX +"ssh.conn.initOsCmd",                _sshInitOsCmd_txt.getText());
@@ -634,6 +669,9 @@ implements ActionListener, KeyListener, FocusListener
 
 		// PASSWORD
 		_sshPasswd_txt.setText(ti.getSshPassword());
+
+		// INIT KEY FILE
+		_sshKeyFile_txt.setText(ti.getSshKeyFile());
 
 		// INIT OS CMD
 		_sshInitOsCmd_txt.setText(ti.getSshInitOsCmd());
@@ -743,6 +781,12 @@ implements ActionListener, KeyListener, FocusListener
 		if (strVal == null)
 			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.password", "");
 		sshInfo.setSshPassword(strVal);
+
+		// KEY FILE
+		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.keyFile."+hostPortStr);
+		if (strVal == null)
+			strVal = conf.getProperty(PROP_PREFIX +"ssh.conn.keyFile", "");
+		sshInfo.setSshKeyFile(strVal);
 
 		// INIT OS CMD
 		strVal     = conf.getProperty(PROP_PREFIX +"ssh.conn.initOsCmd."+hostPortStr);

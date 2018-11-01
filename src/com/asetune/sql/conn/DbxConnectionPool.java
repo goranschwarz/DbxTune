@@ -184,7 +184,7 @@ public class DbxConnectionPool
 		{
 			if ( ! conn.isValid(1) )
 			{
-				_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was no longer valid, closing the connection.");
+				_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was no longer valid, CLOSING THIS connection.");
 				conn.closeNoThrow();
 				return;				
 			}
@@ -207,7 +207,7 @@ public class DbxConnectionPool
 		{
 			conn.closeNoThrow();
 
-			_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the connection was no longer valid.");
+			_logger.warn("When returning the connection '"+conn+"' to the connection pool '"+_name+"', caught exception when checking it. CLOSED THIS Connection.", e);
 			return;
 		}
 		
@@ -222,9 +222,17 @@ public class DbxConnectionPool
 			if (connectTime > 0 && closeThreshold > 0)
 			{
 				long secondsSinceConnect = TimeUtils.msDiffNow(connectTime) / 1000;
+//System.out.println("DEBUG: DbxConnectionPool[name='"+_name+"'].releaseConnection(): secondsSinceConnect="+secondsSinceConnect+", closeThreshold="+closeThreshold+", propName='"+propName+"', conn="+conn+", url="+conn.getConnProp().getUrl()+", propsMap="+conn.getPropertyMap());
 				if (secondsSinceConnect > closeThreshold)
 				{
-					_logger.info("When returning the connection '"+conn+"' to the connection pool '"+_name+"', the 'keepalive' expired, CLOSING the connection. A new connection will be made on next attempt. (secondsSinceConnect="+secondsSinceConnect+", threshold="+closeThreshold+"). This can be changed with the property '"+propName+"=secondsToLive'.");
+					String secondsSinceConnectStr = "secondsSinceConnect="+secondsSinceConnect + " [" + TimeUtils.msToTimeStr("%HH:%MM", secondsSinceConnect*1000) + " HH:MM]";
+					String closeThresholdStr      = "threshold="          +closeThreshold      + " [" + TimeUtils.msToTimeStr("%HH:%MM", closeThreshold     *1000) + " HH:MM]";
+					ConnectionProp connProp = conn.getConnProp();
+					String connInfo = "(url='"+(connProp==null?"unknown":connProp.getUrl())+"', connPropertyMap='"+conn.getPropertyMap()+"')";
+					_logger.info("When returning the connection '"+conn+"' "+connInfo+" to the connection pool '"+_name+"', the 'keepalive' expired, "
+							+ "CLOSING the connection. A new connection will be made on next attempt. " 
+							+ "("+secondsSinceConnectStr+", "+closeThresholdStr+"). "
+							+ "This can be changed with the property '"+propName+"=secondsToLive'.");
 					conn.closeNoThrow();
 					return;
 				}

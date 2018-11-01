@@ -393,6 +393,7 @@ public class DbUtils
 	throws SQLException
 	{
 		String sql = "not-yet-specified";
+		int colPos = 1;
 		
 		if (StringUtil.isNullOrBlank(dbProduct))
 			dbProduct = getDatabaseProductName(conn);
@@ -400,26 +401,32 @@ public class DbUtils
 		if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_ASE))  // does MsSQL support @@errorlog??? //
 		{
 			sql = "select @@errorlog";
+			colPos = 1;
 		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_RS))
 		{
 			sql = "admin log_name";
+			colPos = 1;
 		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_RAX))
 		{
 			sql = "log_system_name";
+			colPos = 1;
 		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_ASA))
 		{
 			sql = "select property('ConsoleLogFile')";
+			colPos = 1;
 		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_MSSQL))
 		{
 			sql = "select convert(varchar(1024),serverproperty('ErrorLogFileName'))";
+			colPos = 1;
 		}
 		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_MYSQL))
 		{
 			sql = "SHOW VARIABLES LIKE 'log_error'";
+			colPos = 2;
 		}
 //		else if (DbUtils.isProductName(dbProduct, DbUtils.DB_PROD_NAME_POSTGRES))
 //		{
@@ -456,7 +463,7 @@ public class DbUtils
 		ResultSet rs = stmt.executeQuery(sql);
 		while (rs.next())
 		{
-			retStr = rs.getString(1);
+			retStr = rs.getString(colPos);
 		}
 		rs.close();
 		stmt.close();

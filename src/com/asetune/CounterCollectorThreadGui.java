@@ -561,7 +561,13 @@ extends CounterCollectorThreadAbstract
 				// Get some Header information that will be used by the PersistContainer sub system
 				PersistContainer.HeaderInfo headerInfo = getCounterController().createPcsHeaderInfo();
 				if (headerInfo == null)
+				{
+					_logger.warn("No 'header information' object could be created... starting at top of the while loop.");
 					continue;
+				}
+
+				// Save header info, so we can send AlarmEvents to DbxCentral (in case of connectivity issues) and ruse the servername and other fields.
+				_lastKnownHeaderInfo = headerInfo;
 
 				// If there is a ServerAlias, apply that... This is used by the DbxCentral for an alternate schema/servername
 //				if (StringUtil.hasValue(_dbmsServerAlias))

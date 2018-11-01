@@ -76,8 +76,9 @@ implements ICentralPersistWriter
 	}
 
 	@Override
-	public void beginOfSample(DbxTuneSample cont)
+	public boolean beginOfSample(DbxTuneSample cont)
 	{
+		return true;
 	}
 
 	@Override

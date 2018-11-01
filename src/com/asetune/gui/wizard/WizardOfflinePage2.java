@@ -175,13 +175,15 @@ implements ActionListener
 //		String envNameSaveDir = DbxTune.getInstance().getAppSaveDirEnvName();  // ASETUNE_SAVE_DIR
 		String envNameSaveDir = "DBXTUNE_SAVE_DIR";
 
+		String defaultUrl = "jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE:format=yyyy-MM-dd;roll=true}";
+		
 		_jdbcDriver_cbx.addItem("org.h2.Driver");
 		_jdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
 
 		// http://www.h2database.com/html/features.html#database_url
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:[<path>]<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE}");
-		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${SERVERNAME}_${DATE:format=yyyy-MM-dd;roll=true}");
+		_jdbcUrl_cbx   .addItem(defaultUrl);
 		_jdbcUrl_cbx   .addItem("jdbc:h2:file:${"+envNameSaveDir+"}/${HOSTNAME}_${DATE}");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:tcp://<host>[:<port>]/<dbname>");
 		_jdbcUrl_cbx   .addItem("jdbc:h2:ssl://<host>[:<port>]/<dbname>");
@@ -189,6 +191,10 @@ implements ActionListener
 		// http://infocenter.sybase.com/help/topic/com.sybase.dc39001_0605/html/prjdbc/X39384.htm
 		_jdbcUrl_cbx   .addItem("jdbc:sybase:Tds:<host>:<port>");
 		_jdbcUrl_cbx   .addItem("jdbc:sybase:Tds:<host>:<port>[/<dbname>]");
+		
+		
+		// Set the default value
+		_jdbcUrl_cbx.setSelectedItem(defaultUrl);
 	}
 
 	@Override

@@ -7,6 +7,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -45,6 +46,7 @@ public class SshConnection
 	private String _password = null;
 	private String _hostname = null;
 	private int    _port     = 22;
+	private String _keyFile  = null;
 	
 	private Connection _conn = null;
 	private boolean    _isConnected = false;
@@ -112,7 +114,7 @@ public class SshConnection
 	 */
 	public SshConnection(String hostname, String username, String password)
 	{
-		this(hostname, 22, username, password);
+		this(hostname, 22, username, password, null);
 	}
 
 	/**
@@ -121,24 +123,41 @@ public class SshConnection
 	 * @param port
 	 * @param username
 	 * @param password
+	 * @param keyFile
 	 */
-	public SshConnection(String hostname, int port, String username, String password)
+//	public SshConnection(String hostname, int port, String username, String password)
+//	{
+//		this(hostname, port, username, password, null);
+//	}
+
+	/**
+	 * Create a SshConnection object, you still need to connect() after the object is created
+	 * @param hostname
+	 * @param port
+	 * @param username
+	 * @param password
+	 * @param keyFile
+	 */
+	public SshConnection(String hostname, int port, String username, String password, String keyFile)
 	{
 		_hostname = hostname;
 		_port     = port;
 		_username = username;
 		_password = password;
+		_keyFile  = keyFile;
 	}
 
 	public void setUsername(String username) { _username = username; }
 	public void setPassword(String password) { _password = password; }
 	public void setHost(String host)         { _hostname = host; }
 	public void setPort(int port)            { _port     = port; }
+	public void setKeyFile(String keyFile)   { _keyFile  = keyFile; }
 
 	public String getUsername() { return _username; }
 	public String getPassword() { return _password; }
 	public String getHost()     { return _hostname; }
 	public int    getPort()     { return _port; }
+	public String getKeyFile()  { return _keyFile; }
 
 	public WaitForExecDialog getWaitForDialog()                       { return _waitforDialog; }
 	public void              setWaitForDialog(WaitForExecDialog wait) { _waitforDialog = wait; }
@@ -172,9 +191,10 @@ public class SshConnection
 	throws IOException
 	{
 		// Check that user, password and hostname is set 
-		if (_username == null || (_username != null && _username.trim().equals(""))) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'username' fields is net yet given.");
-		if (_password == null || (_password != null && _password.trim().equals(""))) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'password' fields is net yet given.");
-		if (_hostname == null || (_hostname != null && _hostname.trim().equals(""))) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'hostname' fields is net yet given.");
+		if (StringUtil.isNullOrBlank(_username)) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'username' fields is net yet given.");
+		if (StringUtil.isNullOrBlank(_hostname)) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'hostname' fields is net yet given.");
+
+		if (StringUtil.isNullOrBlank(_password) && StringUtil.isNullOrBlank(_keyFile)) throw new IllegalArgumentException("Trying to connect to a SSH host, but 'password' or 'sshKeyFile' fields is net yet given.");
 
 		// Create a connection instance if none exists.
 		if (_conn == null)
@@ -199,6 +219,16 @@ public class SshConnection
 			}
 		}
 
+		if (StringUtil.hasValue(_keyFile))
+		{
+			File f = new File(_keyFile);
+			if ( ! f.exists() )
+			{
+				throw new FileNotFoundException("The SSH Key File '"+f+"' did NOT exists.");
+			}
+		}
+
+		
 		if (_waitforDialog != null)
 			_waitforDialog.setState("SSH Connecting to host '"+_hostname+"' on port "+_port+" with username '"+_username+"'.");
 
@@ -240,9 +270,37 @@ public class SshConnection
 		boolean enableRSA                 = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sshAuthenticateEnableRSA,                 DEFAULT_sshAuthenticateEnableRSA);
 
 		String lastError = null;
+		
+		boolean useSshKeyFile = false;
+		if (StringUtil.hasValue(_keyFile))
+		{
+			useSshKeyFile = new File(_keyFile).exists();
+		}
 
 		while (true)
 		{
+			if (useSshKeyFile && _conn.isAuthMethodAvailable(_username, "publickey"))
+			{
+				File key = new File(_keyFile);
+			
+				logInfoMsg("SSH Authentication method 'publickey': Trying using key file '"+key+"'.");
+				
+				boolean res = _conn.authenticateWithPublicKey(_username, key, _password);
+
+				if (res == true)
+				{
+					logInfoMsg("SSH Authentication method 'publickey' with file '"+key+"': SUCCEEDED");
+					break;
+				}
+
+				lastError = "User Supplied SSH Key File '"+key+"' authentication failed.";
+
+				logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+
+				useSshKeyFile = false; // do not try again
+			}
+			
+			
 			if ((enableDSA || enableRSA) && _conn.isAuthMethodAvailable(_username, "publickey"))
 			{
 				logInfoMsg("SSH Authentication method 'publickey' is available, and will be tested first.");
@@ -272,6 +330,10 @@ public class SshConnection
 
 						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
 					}
+					else
+					{
+						logInfoMsg("Skipping: SSH Authentication method 'publickey': DSA Key File '"+key+"' not found.");
+					}
 					enableDSA = false; // do not try again
 				}
 
@@ -299,6 +361,10 @@ public class SshConnection
 						lastError = "RSA authentication failed.";
 
 						logInfoMsg("SSH Authentication method 'publickey': "+lastError);
+					}
+					else
+					{
+						logInfoMsg("Skipping: SSH Authentication method 'publickey': RSA Key File '"+key+"' not found.");
 					}
 					enableRSA = false; // do not try again
 				}
@@ -991,6 +1057,9 @@ public class SshConnection
 			if (sa.length > 0)
 				_osName = sa[0];
 
+			// TODO:
+			// on Linux you it might be available using: 'locale charmap' -- returned 'UTF-8'
+			
 			// also try to figure out a dummy default character set for the OS
 			if      (_osName.equals("Linux")) _osCharset = "UTF-8";
 			else if (_osName.equals("SunOS")) _osCharset = "ISO-8859-1";

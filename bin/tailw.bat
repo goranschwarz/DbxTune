@@ -98,6 +98,7 @@ set classpath=%classpath%;%TAILW_HOME%\lib\jconn3.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\jtds-1.3.1.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\dsparser.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\log4j-1.2.17.jar
+set classpath=%classpath%;%TAILW_HOME%\lib\h2-SNAPSHOT.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\h2-1.4.197.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\wizard.jar
 set classpath=%classpath%;%TAILW_HOME%\lib\miglayout-swing-4.2.jar

@@ -80,7 +80,8 @@ public class WizardOffline
 				WizardOfflinePage8 .class,  // Alarm Writers
 				WizardOfflinePage9 .class,  // Alarm Configuration
 				WizardOfflinePage10.class,  // Other PCS Writers 
-				WizardOfflinePage11.class   // Save this to filename
+				WizardOfflinePage11.class,  // Daily Report 
+				WizardOfflinePage12.class   // Save this to filename
 				};
 		Wizard wiz = WizardPage.createWizard("Create an offline sample session.", wca, new WizardOffllinePageSummary());
 		
@@ -208,6 +209,7 @@ public class WizardOffline
 		fixProp(settings, "conn.",    "sshPort",      false, false);
 		fixProp(settings, "conn.",    "sshUsername",  false, false);
 		fixProp(settings, "conn.",    "sshPassword",  false, true);
+		fixProp(settings, "conn.",    "sskKeyFile",   false, false);
 
 		fixProp(settings, "offline.", "sampleTime",           true,  false);
 		fixProp(settings, "offline.", "startRecordingAtTime", false, false);
@@ -251,6 +253,11 @@ public class WizardOffline
 			if (obj instanceof String)
 			{
 				val = (String) obj;
+			}
+			else if (obj instanceof Boolean)
+			{
+				System.out.println("WIZARD-OFFLINE-FINNISH:WARNING(autoconvert: Boolean->String) key='"+key+"', value='"+obj+"'.");
+				val = obj + "";
 			}
 			else if (obj instanceof Configuration)
 			{
@@ -307,6 +314,11 @@ public class WizardOffline
 					offlineProps.add( (Configuration) obj );
 				}
 				if (key.equals("to-be-discarded.alarmPanelConfig"))
+				{
+					// Put the Alarm configuration in the output map/file
+					offlineProps.add( (Configuration) obj );
+				}
+				if (key.equals("to-be-discarded.dailySummaryReportConfig"))
 				{
 					// Put the Alarm configuration in the output map/file
 					offlineProps.add( (Configuration) obj );

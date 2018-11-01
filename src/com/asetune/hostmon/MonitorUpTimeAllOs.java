@@ -54,6 +54,10 @@ extends MonitorUpTime
  	
  	Ubuntu:  10:49:32  up 273 days,    2:24,  2 users,   load average: 0,00, 0,00, 0,00      <<<< note: the 'load average' fields contains ',' instead of '.' for values...
 
+ 	RHEL:    17:45:24  up 48 days,     5:04,  1 user,    load average: 1.56, 4.28, 2.45
+ 	RHEL:    17:45:44  up              3:14,  1 user,    load average: 0.04, 0.04, 0.05      <<<< note: "### days" is blank if the machine has been restarted today...
+
+
 	*/
 	
 	public MonitorUpTimeAllOs()
@@ -130,10 +134,45 @@ extends MonitorUpTime
 		{
 			// Can we figure out what's wrong here???
 			// If so: try to fix it.
+
+			// Are the "## days" missing (it has been restarted today)
+			if (preParsed.length < md.getParseColumnCount())
+			{
+				// Typically 2 fields are missing, see below: ## days
+				if (preParsed.length == md.getParseColumnCount()-2)
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug(">>>>>>>> PRE-FIX(missing fields '## days') >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+
+					// but instead the third column is "HH:MM"
+					if (preParsed[2].matches("[0-9]?[0-9]:[0-9][0-9],")) // Note the ',' at the end
+					{
+						String[] tmp = new String[md.getParseColumnCount()];
+						
+						// RHEL:    17:45:24  up 48 days,     5:04,  1 user,    load average: 1.56, 4.28, 2.45
+						// RHEL:    17:45:44  up              3:14,  1 user,    load average: 0.04, 0.04, 0.05      <<<< note: "### days" is blank if the machine has been restarted today...
+
+						tmp[0]  = preParsed[0]; // current time
+						tmp[1]  = preParsed[1]; // str 'up'
+						tmp[2]  = "0";          // str '##'    --->>> Just fill in with '0'
+						tmp[3]  = "days";       // str 'days'  --->>> Just fill in with 'days'
+						tmp[4]  = preParsed[2]; // HH:MM -- hoursUp
+						tmp[5]  = preParsed[3]; // # ------ users
+						tmp[6]  = preParsed[4]; // str 'user'
+						tmp[7]  = preParsed[5]; // str 'load'
+						tmp[8]  = preParsed[6]; // str 'average' 
+						tmp[9]  = preParsed[7]; // 1 minute
+						tmp[10] = preParsed[8]; // 5 minutes
+						tmp[11] = preParsed[9]; // 15 minutes
+						
+						preParsed = tmp;
+					}
+				}
+			}
 			
 			// If "hours" is smaller than a full hour... then uptime will produce "7 min" instead of "HH:MM"... meaning we will have 1 extra field...
 			// Rewrite this into "0:07" and remove that extra field from the data array 
-			if (preParsed.length > md.getParseColumnCount())
+			else if (preParsed.length > md.getParseColumnCount())
 			{
 				if (_logger.isDebugEnabled())
 					_logger.debug(">>>>>>>> PRE-FIX(field='min,') >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
@@ -185,7 +224,9 @@ extends MonitorUpTime
 						_logger.debug(">>>>>>>> POST-FIX(field='min,') >>>>>>>> "+getModuleName()+".parseRow(): preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
 				}
 			}
-			else
+
+			// Finally check if we fixed the issue
+			if (preParsed.length != md.getParseColumnCount())
 				_logger.warn(getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
 		}
 

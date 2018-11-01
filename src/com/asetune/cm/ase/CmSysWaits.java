@@ -217,8 +217,8 @@ extends CountersModel
 			cols1 += "InstanceID, \n";
 		}
 
-		cols1 += "WaitClassDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitClassInfo \n";
-		cols1 += "WaitEventDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitEventInfo \n";
+		cols1 += "WaitClassDesc = convert(varchar(120),''), -- runtime replaced with cached values from monWaitClassInfo \n";
+		cols1 += "WaitEventDesc = convert(varchar(120),''), -- runtime replaced with cached values from monWaitEventInfo \n";
 		cols1 += "W.WaitEventID, WaitTime, Waits \n";
 //		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
 //		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
@@ -626,7 +626,8 @@ extends CountersModel
 					// set data & label in the array
 					dataMap.put(wce.getEventNameLabel(), dataValue);
 				}
-				tgdp.setData(this.getTimestamp(), dataMap);
+				if ( ! dataMap.isEmpty() )
+					tgdp.setData(this.getTimestamp(), dataMap);
 
 //				// data & label array size = WaitCounterSummary.size or PRIVIOUS max size
 //				Double[] dArr = new Double[Math.max(wcs.getEventIdSize(), _labelOrder_eventId.size())];
@@ -710,7 +711,8 @@ extends CountersModel
 					// set data & label in the array
 					dataMap.put(wce.getClassName(), dataValue);
 				}
-				tgdp.setData(this.getTimestamp(), dataMap);
+				if ( ! dataMap.isEmpty() )
+					tgdp.setData(this.getTimestamp(), dataMap);
 
 				
 //				// data & label array size = WaitCounterSummary.size or PRIVIOUS max size

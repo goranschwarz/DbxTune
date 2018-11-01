@@ -10,15 +10,19 @@ import java.util.Scanner;
 import java.util.Set;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.os.CmOsIostat;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.hostmon.MonitorIoLinux;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -46,13 +50,16 @@ extends TabularCntrPanel
 	{
 	}
 
-	private JLabel  _hostmonThreadNotInit_lbl;
-	private JLabel  _hostmonThreadIsRunning_lbl;
-	private JLabel  _hostmonThreadIsStopped_lbl;
-	private JLabel  _hostmonHostname_lbl;
-	private JButton _hostmonStart_but;
-	private JButton _hostmonStop_but;
-	private JButton _iostatMapping_but;
+	private JLabel     _hostmonThreadNotInit_lbl;
+	private JLabel     _hostmonThreadIsRunning_lbl;
+	private JLabel     _hostmonThreadIsStopped_lbl;
+	private JLabel     _hostmonHostname_lbl;
+	private JButton    _hostmonStart_but;
+	private JButton    _hostmonStop_but;
+	private JCheckBox  _opt_N_chk;
+	private JCheckBox  _excludeDevices_chk;
+	private JTextField _excludeDevicesRegExp_txt;
+	private JButton    _iostatMapping_but;
 //	private IoStatDeviceMapperDialog _deviceMapperDialog = null;
 
 	@Override
@@ -72,6 +79,9 @@ extends TabularCntrPanel
 		_hostmonHostname_lbl         = new JLabel();
 		_hostmonStart_but            = new JButton("Start");
 		_hostmonStop_but             = new JButton("Stop");
+		_opt_N_chk                   = new JCheckBox("Use Device Mapper Name", CmOsIostat.DEFAULT_linux_opt_N);
+		_excludeDevices_chk          = new JCheckBox("Exclude devices", CmOsIostat.DEFAULT_excludeDevices);
+		_excludeDevicesRegExp_txt    = new JTextField(CmOsIostat.DEFAULT_excludeDevicesRegExp, 10);
 		_iostatMapping_but           = new JButton("Device Mapping");
 
 		_hostmonThreadNotInit_lbl  .setToolTipText("<html>Indicates whether the underlying Host Monitor Thread has not yet been initialized.</html>");
@@ -80,6 +90,14 @@ extends TabularCntrPanel
 		_hostmonHostname_lbl       .setToolTipText("<html>What host name are we monitoring.</html>");
 		_hostmonStart_but          .setToolTipText("<html>Start the underlying Host Monitor Thread.</html>");
 		_hostmonStop_but           .setToolTipText("<html>Stop the underlying Host Monitor Thread.</html>");
+		_opt_N_chk                 .setToolTipText("<html>iostat -N switch: Display the registered device mapper names for any device mapper devices.<br>"
+		                                               + "<br>"
+		                                               + "For more info on the -N switch, do: man iostat<br>"
+		                                               + "<b>Note 1</b>: Linux Only<br>"
+		                                               + "<b>Note 2</b>: You need to Restart (Stop-&gt;Start) the collector, for this to take effect...<br>"
+		                                               + "</html>");
+		_excludeDevices_chk        .setToolTipText("<html>Enable or Disable Exclution of device nemes by regular expressions.</html>");
+		_excludeDevicesRegExp_txt  .setToolTipText("<html>RegExp to test for when excuding devices by name.</html>");
 		_iostatMapping_but         .setToolTipText("<html>Open a dialog where you can map 'device name' to a more readable name, which is displaied in the column 'deviceDescription'.</html>");
 
 		_hostmonThreadNotInit_lbl  .setVisible(true);
@@ -87,14 +105,26 @@ extends TabularCntrPanel
 		_hostmonThreadIsStopped_lbl.setVisible(false);
 		_hostmonStart_but          .setVisible(false);
 		_hostmonStop_but           .setVisible(false);
+		_opt_N_chk                 .setVisible(true);
+		_excludeDevices_chk        .setVisible(true);
+		_excludeDevicesRegExp_txt  .setVisible(true);
 		_iostatMapping_but         .setVisible(true);
 
+		// Set initial values
+		Configuration conf = Configuration.getCombinedConfiguration();
+		_opt_N_chk               .setSelected(conf.getBooleanProperty(CmOsIostat.PROPKEY_linux_opt_N,          CmOsIostat.DEFAULT_linux_opt_N));
+		_excludeDevices_chk      .setSelected(conf.getBooleanProperty(CmOsIostat.PROPKEY_excludeDevices,       CmOsIostat.DEFAULT_excludeDevices));
+		_excludeDevicesRegExp_txt.setText(    conf.getProperty       (CmOsIostat.PROPKEY_excludeDevicesRegExp, CmOsIostat.DEFAULT_excludeDevicesRegExp));
+		
 		panel.add( _hostmonThreadNotInit_lbl,   "hidemode 3, wrap 10");
 		panel.add( _hostmonThreadIsRunning_lbl, "hidemode 3, wrap 10");
 		panel.add( _hostmonThreadIsStopped_lbl, "hidemode 3, wrap 10");
 		panel.add( _hostmonHostname_lbl,        "hidemode 3, wrap 10");
 		panel.add( _hostmonStart_but,           "hidemode 3, wrap");
-		panel.add( _hostmonStop_but,            "hidemode 3, wrap");
+		panel.add( _hostmonStop_but,            "hidemode 3, split");
+		panel.add( _opt_N_chk,                  "hidemode 3, wrap");
+		panel.add( _excludeDevices_chk,         "hidemode 3, split");
+		panel.add( _excludeDevicesRegExp_txt,   "hidemode 3, pushx, growx, wrap"); 
 		panel.add( _iostatMapping_but,          "hidemode 3, wrap");
 
 		_hostmonStart_but.addActionListener(new ActionListener()
@@ -140,6 +170,48 @@ extends TabularCntrPanel
 			}
 		});
 
+		_opt_N_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (tempConf != null)
+				{
+					tempConf.setProperty(CmOsIostat.PROPKEY_linux_opt_N, _opt_N_chk.isSelected());
+					tempConf.save();
+				}
+			}
+		});
+		
+		_excludeDevices_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (tempConf != null)
+				{
+					tempConf.setProperty(CmOsIostat.PROPKEY_excludeDevices, _excludeDevices_chk.isSelected());
+					tempConf.save();
+				}
+			}
+		});
+		
+		_excludeDevicesRegExp_txt.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (tempConf != null)
+				{
+					tempConf.setProperty(CmOsIostat.PROPKEY_excludeDevicesRegExp, _excludeDevicesRegExp_txt.getText());
+					tempConf.save();
+				}
+			}
+		});
+		
 		_iostatMapping_but.addActionListener(new ActionListener()
 		{
 			@Override

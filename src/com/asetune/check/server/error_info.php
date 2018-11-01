@@ -50,15 +50,17 @@
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
-	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
-	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
+//	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());
+//	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
+	
+	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
 
-	$logLevel      = mysql_real_escape_string($logLevel);
-	$logThreadName = mysql_real_escape_string($logThreadName);
-	$logClassName  = mysql_real_escape_string($logClassName);
-	$logLocation   = mysql_real_escape_string($logLocation);
-	$logMessage    = mysql_real_escape_string($logMessage);
-	$logStacktrace = mysql_real_escape_string($logStacktrace);
+	$logLevel      = mysqli_real_escape_string($dbconn, $logLevel);
+	$logThreadName = mysqli_real_escape_string($dbconn, $logThreadName);
+	$logClassName  = mysqli_real_escape_string($dbconn, $logClassName);
+	$logLocation   = mysqli_real_escape_string($dbconn, $logLocation);
+	$logMessage    = mysqli_real_escape_string($dbconn, $logMessage);
+	$logStacktrace = mysqli_real_escape_string($dbconn, $logStacktrace);
 
 	//------------------------------------------
 	// Normally all errors goes to 'asemon_error_info', but some errors goes to 'asemon_error_info2'
@@ -120,11 +122,11 @@
 
 	//------------------------------------------
 	// Do the INSERT
-	mysql_query($sql) or die("ERROR: " . mysql_error());
+	mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 
 	//------------------------------------------
 	// Close connection to the database
-	mysql_close() or die("ERROR: " . mysql_error());
+	mysqli_close($dbconn) or die("ERROR: " . mysqli_error($dbconn));
 
 	echo "DONE: \n";
 ?>

@@ -160,6 +160,8 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	private JTextField        _sshHostname_txt        = new JTextField("");
 	private JLabel            _sshPort_lbl            = new JLabel("Port num");
 	private JTextField        _sshPort_txt            = new JTextField("22");
+	private JLabel            _sshKeyFile_lbl         = new JLabel("Key File");
+	private JTextField        _sshKeyFile_txt         = new JTextField("");
 	private GLabel            _sshTailOsCmd_lbl       = new GLabel("Tail Cmd");
 	private GTextField        _sshTailOsCmd_txt       = new GTextField("");
 	                          
@@ -529,6 +531,8 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		_sshHostname_txt.setToolTipText("Host name where the ASE Server is located");
 		_sshPort_lbl    .setToolTipText("Port number of the SSH Server, normally 22.");
 		_sshPort_txt    .setToolTipText("Port number of the SSH Server, normally 22.");
+		_sshKeyFile_lbl .setToolTipText("SSH Private Key File, if autentication is done via 'private key'.");
+		_sshKeyFile_txt .setToolTipText("SSH Private Key File, if autentication is done via 'private key'.");
 
 		String tooltip = "<html>"
 				+ "The normal OS Command to view log file changes are: <code>tail -n 999 -f /var/logs/somefile</code><br>"
@@ -577,6 +581,9 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		panel.add(_sshPort_lbl,        "");
 		panel.add(_sshPort_txt,        "growx, pushx, wrap");
 
+		panel.add(_sshKeyFile_lbl,     "");
+		panel.add(_sshKeyFile_txt,     "growx, pushx, wrap");
+
 		panel.add(_sshTailOsCmd_lbl,   "");
 		panel.add(_sshTailOsCmd_txt,   "growx, pushx, wrap");
 
@@ -589,18 +596,21 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		_sshPassword_chk.addActionListener(this);
 		_sshHostname_txt.addActionListener(this);
 		_sshPort_txt    .addActionListener(this);
+		_sshKeyFile_txt .addActionListener(this);
 
 		// Focus action listener
 		_sshUsername_txt.addFocusListener(this);
 		_sshPassword_txt.addFocusListener(this);
 		_sshHostname_txt.addFocusListener(this);
 		_sshPort_txt    .addFocusListener(this);
+		_sshKeyFile_txt .addFocusListener(this);
 
 		// Caret listener
 		_sshUsername_txt.addCaretListener(this);
 		_sshPassword_txt.addCaretListener(this);
 		_sshHostname_txt.addCaretListener(this);
 		_sshPort_txt    .addCaretListener(this);
+		_sshKeyFile_txt .addCaretListener(this);
 
 		
 		return panel;
@@ -1365,8 +1375,9 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			int port = 22;
 			try {port = Integer.parseInt(portStr);} 
 			catch(NumberFormatException ignore) {}
+			final String keyFile = _sshKeyFile_txt.getText();
 
-			_sshConn = new SshConnection(host, port, user, passwd);
+			_sshConn = new SshConnection(host, port, user, passwd, keyFile);
 			WaitForExecDialog wait = new WaitForExecDialog(this, "SSH Connecting to "+host+", with user "+user);
 			_sshConn.setWaitForDialog(wait);
 
@@ -1722,6 +1733,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".hostname",   _sshHostname_txt.getText() );
 		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".port",       _sshPort_txt.getText() );
 		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".username",   _sshUsername_txt.getText() );
+		conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".keyFile",    _sshKeyFile_txt.getText() );
 
 		if ( StringUtil.hasValue(_sshTailOsCmd_txt.getText()) )
 			conf.setProperty("aseAppTrace.ssh.conn."+_aseHostName+".tailOsCmd", _sshTailOsCmd_txt.getText() );
@@ -1848,9 +1860,10 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		// SSH
 		//----------------------------------
 		_sshHostname_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".hostname",  _aseHostName) );
-		_sshPort_txt     .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".port",      _sshPort_txt    .getText()) );
-		_sshUsername_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".username",  _sshUsername_txt.getText()) );
-		_sshPassword_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".password",  _sshPassword_txt.getText()) );
+		_sshPort_txt     .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".port",      _sshPort_txt     .getText()) );
+		_sshUsername_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".username",  _sshUsername_txt .getText()) );
+		_sshPassword_txt .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".password",  _sshPassword_txt .getText()) );
+		_sshKeyFile_txt  .setText( conf.getProperty   ("aseAppTrace.ssh.conn."+_aseHostName+".keyFile",   _sshKeyFile_txt  .getText()) );
 		_sshTailOsCmd_txt.setText( conf.getPropertyRaw("aseAppTrace.ssh.conn."+_aseHostName+".tailOsCmd", _sshTailOsCmd_txt.getText()) ); // This contains variables etc
 
 		_sshPassword_chk.setSelected( conf.getBooleanProperty("aseAppTrace.ssh.conn."+_aseHostName+".savePassword", _sshPassword_chk.isSelected()) );

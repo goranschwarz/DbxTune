@@ -159,6 +159,8 @@ implements Serializable
 			{
 				if ( _tabType.equalsIgnoreCase("TABLE") || _tabType.equalsIgnoreCase("SYSTEM") )
 				{
+					//System.out.println("refreshColumnInfo(): _tabCat='"+_tabCat+"', _tabSchema='"+_tabSchema+"', _tabName='"+_tabName+"'.");
+					
 					_pk = getPkOrFirstUniqueIndex(conn, _tabCat, _tabSchema, _tabName);
 					_extraInfo = conn.getTableExtraInfo(_tabCat, _tabSchema, _tabName);
 					
@@ -369,13 +371,28 @@ implements Serializable
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("<B>Extra Table Information</B><BR>");
-		sb.append("<UL>");
+
+//		sb.append("<UL>");
+//		for (TableExtraInfo ei : _extraInfo.values())
+//		{
+//			if ( ! TableExtraInfo.IndexExtraInfo.equals(ei.getName()) )
+//			{
+//			//	sb.append("  <LI>").append("<B>").append(ei.getDescriptiveName()).append(": </B>").append(ei.getStringValue()).append("<BR><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></LI>");
+//				sb.append("  <LI>").append("<B>").append(ei.getDescriptiveName()).append(": </B> ").append(ei.getStringValue()).append("<FONT color='green'> -- ").append(ei.getHtmlDescription()).append("</FONT></LI>");
+//			}
+//		}
+//		sb.append("</UL>");
+
+		sb.append("<table BORDER=0 CELLSPACING=0 CELLPADDING=1>");
 		for (TableExtraInfo ei : _extraInfo.values())
 		{
 			if ( ! TableExtraInfo.IndexExtraInfo.equals(ei.getName()) )
-				sb.append("  <LI>").append("<B>").append(ei.getDescriptiveName()).append(": </B>").append(ei.getStringValue()).append("<BR><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></LI>");
+			{
+				sb.append("  <TR><TD nowrap>&nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;</TD><TD nowrap>").append("<B>").append(ei.getDescriptiveName()).append("</B> </TD> <TD nowrap>&nbsp;").append(ei.getStringValue()).append("&nbsp;</TD> <TD nowrap><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></TD></TR>");
+			}
 		}
-		sb.append("</UL>");
+		sb.append("</table>");
+
 		sb.append("<HR>");
 		return sb.toString();
 	}

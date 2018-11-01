@@ -224,6 +224,22 @@ extends CountersModel
 	@Override
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
+		// ------------------------------------------------------------------------------------------------
+		// ASE 16.0 SP3 PL0
+		// ------------------------------------------------------------------------------------------------
+		String ProcedureCacheSizeKB = ""; // Capacity of the Procedure Cache (KB)
+		String AQTCacheUsedSizeKB   = ""; // Amount of cache in use for Auto Query Tuning (AQT) objects (KB)
+		String NumAQTs              = ""; // Number of AQT objects in the cache
+		String nl_160_sp3           = "";
+
+		if ( aseVersion >= Ver.ver(16,0,0, 3,0) )
+		{
+			ProcedureCacheSizeKB = "  , ProcedureCacheSizeKB";
+			AQTCacheUsedSizeKB   = "  , AQTCacheUsedSizeKB";
+			NumAQTs              = "  , NumAQTs";
+			nl_160_sp3           = "\n";
+		}
+
 		// Can we reset counters/something if 'NumSearches' or 'HitCount' is below 0 (counter has wrapped)
 		String sql = 
 			"SELECT \n" +
@@ -250,6 +266,9 @@ extends CountersModel
 			"  NumRemovals, \n" +
 			"  NumRecompilesSchemaChanges, \n" +
 			"  NumRecompilesPlanFlushes \n" +
+			ProcedureCacheSizeKB  + nl_160_sp3 +
+			AQTCacheUsedSizeKB    + nl_160_sp3 +
+			NumAQTs               + nl_160_sp3 +
 			"FROM master..monStatementCache \n";
 
 		return sql;

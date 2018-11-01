@@ -467,7 +467,8 @@ implements IDbmsConfig
 					entry.sourcefile         = rs.getString (15);
 					entry.sourceline         = rs.getInt    (16);
 
-					entry.defaultValue = entry.reset_val;
+//					entry.defaultValue = entry.reset_val;
+					entry.defaultValue = entry.boot_val;
 					
 //					// fix 'used memory' column
 //					if (entry.configValue == null)
@@ -482,6 +483,9 @@ implements IDbmsConfig
 					else
 						entry.isNonDefault = ! entry.configValue.equals(entry.defaultValue);
 
+					if ("default".equals(entry.source))
+						entry.isNonDefault = false;
+					
 					// Add
 					_configMap .put(entry.configName, entry);
 					_configList.add(entry);
@@ -532,7 +536,8 @@ implements IDbmsConfig
 					entry.sourcefile         = rs.getString (17);
 					entry.sourceline         = rs.getInt    (18);
 
-					entry.defaultValue = entry.reset_val;
+//					entry.defaultValue = entry.reset_val;
+					entry.defaultValue = entry.boot_val;
 
 					_configMap .put(entry.configName, entry);
 					_configList.add(entry);

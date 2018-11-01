@@ -40,6 +40,7 @@
 	$srvUser            = getUrlParam('srvUser');
 	$srvUserRoles       = getUrlParam('srvUserRoles');
 	$srvVersionStr      = getUrlParam('srvVersionStr');
+	$srvPageSizeInKb    = getUrlParam('srvPageSizeInKb');
 	$srvSortOrderId     = getUrlParam('srvSortOrderId');
 	$srvSortOrderName   = getUrlParam('srvSortOrderName');
 	$srvCharsetId       = getUrlParam('srvCharsetId');
@@ -71,22 +72,24 @@
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
-	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
-	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
+//	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());
+//	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
 
-	$srvName           = mysql_real_escape_string($srvName);
-	$srvIpPort         = mysql_real_escape_string($srvIpPort);
-	$sshTunnelInfo     = mysql_real_escape_string($sshTunnelInfo);
-	$srvUser           = mysql_real_escape_string($srvUser);
-	$srvVersionStr     = mysql_real_escape_string($srvVersionStr);
+	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
 
-	$pcsConfig         = mysql_real_escape_string($pcsConfig);
+	$srvName           = mysqli_real_escape_string($dbconn, $srvName);
+	$srvIpPort         = mysqli_real_escape_string($dbconn, $srvIpPort);
+	$sshTunnelInfo     = mysqli_real_escape_string($dbconn, $sshTunnelInfo);
+	$srvUser           = mysqli_real_escape_string($dbconn, $srvUser);
+	$srvVersionStr     = mysqli_real_escape_string($dbconn, $srvVersionStr);
 
-	$prodName          = mysql_real_escape_string($prodName);
-	$prodVersionStr    = mysql_real_escape_string($prodVersionStr);
-	$jdbcUrl           = mysql_real_escape_string($jdbcUrl);
-	$jdbcDriverName    = mysql_real_escape_string($jdbcDriverName);
-	$jdbcDriverVersion = mysql_real_escape_string($jdbcDriverVersion);
+	$pcsConfig         = mysqli_real_escape_string($dbconn, $pcsConfig);
+
+	$prodName          = mysqli_real_escape_string($dbconn, $prodName);
+	$prodVersionStr    = mysqli_real_escape_string($dbconn, $prodVersionStr);
+	$jdbcUrl           = mysqli_real_escape_string($dbconn, $jdbcUrl);
+	$jdbcDriverName    = mysqli_real_escape_string($dbconn, $jdbcDriverName);
+	$jdbcDriverVersion = mysqli_real_escape_string($dbconn, $jdbcDriverVersion);
 
 
 	$sql = "insert into asemon_connect_info
@@ -107,6 +110,7 @@
 		srvUser,
 		srvUserRoles,
 		srvVersionStr,
+		srvPageSizeInKb,
 		srvSortOrderId,
 		srvSortOrderName,
 		srvCharsetId,
@@ -142,6 +146,7 @@
 		'$srvUser',
 		'$srvUserRoles',
 		'$srvVersionStr',
+		'$srvPageSizeInKb',
 		'$srvSortOrderId',
 		'$srvSortOrderName',
 		'$srvCharsetId',
@@ -167,7 +172,7 @@
 
 	//------------------------------------------
 	// Do the INSERT
-	mysql_query($sql) or die("ERROR: " . mysql_error());
+	mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 
 	//------------------------------------------
 	// CHECK if client should send MDA information
@@ -189,7 +194,7 @@
 			echo "DEBUG EXECUTING SQL: $sql\n";
 
 		$hasMdaInfo = 1;
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result)
 		{
 			if ( $debug == "true" )
@@ -197,13 +202,13 @@
 		}
 		else
 		{
-			while($row = mysql_fetch_row($result))
+			while($row = mysqli_fetch_row($result))
 			{
 				$hasMdaInfo = $row[0];
 				if ( $debug == "true" )
 					echo "DEBUG read row: $hasMdaInfo \n";
 			}
-			mysql_free_result($result);
+			mysqli_free_result($result);
 		}
 		if ( $debug == "true" )
 			echo "DEBUG hasMdaInfo: $hasMdaInfo \n";
@@ -223,7 +228,7 @@
 
 	//------------------------------------------
 	// Close connection to the database
-	mysql_close() or die("ERROR: " . mysql_error());
+	mysqli_close($dbconn) or die("ERROR: " . mysqli_error($dbconn));
 
 	echo "DONE: \n";
 ?>

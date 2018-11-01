@@ -47,6 +47,26 @@ implements TableModelListener
 		_alarmWriterSettingsTable      = new AlarmWriterSettingsTable(_alarmWriterSettingsTableModel);
 		_alarmWriterSettingsTableModel.addTableModelListener(this); // call this.tableChanged(TableModelEvent) when the table changed
 
+		// DISABLE HTML RENDERING in the cells for String
+		//_alarmWriterSettingsTable.putClientProperty("html.disable", Boolean.TRUE);
+		// The above did NOT work, neither  setDefaultRenderer(... putClientProperty("html.disable") ... )
+//		_alarmWriterSettingsTable.setDefaultRenderer(StringValue.class, new DefaultTableCellRenderer()
+//		{
+//			private static final long serialVersionUID = 1L;
+//
+//			@Override
+//			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+//			{
+//				Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+//System.out.println("getTableCellRendererComponent: c="+c);
+//				if (c instanceof JComponent)
+//				{
+//					((JComponent)c).putClientProperty("html.disable", Boolean.TRUE);
+//				}
+//				return c;
+//			}
+//		});
+		
 		GTableFilter filter = new GTableFilter(_alarmWriterSettingsTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 		filter.setText("");
 

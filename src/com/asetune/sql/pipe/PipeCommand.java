@@ -68,6 +68,15 @@ public class PipeCommand
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
+		else if (   _cmdStr.startsWith("convert ") || _cmdStr.equals("convert")
+		         || _cmdStr.startsWith("iconv ")   || _cmdStr.equals("iconv")
+		        )
+		{
+			IPipeCommand cmd = new PipeCommandConvert(_cmdStr, _sqlStr);
+			_pipeList.add(cmd);
+			_cmd = cmd;
+			// for the moment this doesn't support MULTIPLE commands in the pipe
+		}
 		else if (_cmdStr.startsWith("bcp ") || _cmdStr.equals("bcp"))
 		{
 //			_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
@@ -85,7 +94,7 @@ public class PipeCommand
 		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile");
+			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, convert, iconv");
 		}
 	}
 	

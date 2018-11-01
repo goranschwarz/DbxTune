@@ -41,6 +41,31 @@ public class H2Connection extends DbxConnection
 	}
 	
 	@Override
+	public Map<String, Object> getDbmsExtraInfo()
+	{
+		String sql = "select DATABASE(), DATABASE_PATH()";
+		LinkedHashMap<String, Object> map = new LinkedHashMap<>();
+		
+		try (Statement stmnt = _conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while (rs.next())
+			{
+				map.put("DATABASE",      rs.getString(1));
+				map.put("DATABASE_PATH", rs.getString(2));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+			if (_logger.isDebugEnabled())
+				_logger.debug("getDbmsExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+		}
+		
+		return map;
+	}
+	
+	
+	@Override
 	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
 	{
 		LinkedHashMap<String, TableExtraInfo> extraInfo = new LinkedHashMap<>();
@@ -51,6 +76,7 @@ public class H2Connection extends DbxConnection
 		
 		String sql = 
 				  "select ROW_COUNT_ESTIMATE \n"
+				+ "      ,DISK_SPACE_USED('\"'||TABLE_SCHEMA||'\".\"'||TABLE_NAME||'\"')/1024 \n"
 				+ "from INFORMATION_SCHEMA.TABLES \n"
 				+ "where 1=1 \n"
 				+ (StringUtil.hasValue(schema) ? "  and upper(TABLE_SCHEMA)   = upper('" + schema + "') \n" : "")
@@ -62,7 +88,11 @@ public class H2Connection extends DbxConnection
 			ResultSet rs = stmnt.executeQuery(sql);
 			while(rs.next())
 			{
-				extraInfo.put(TableExtraInfo.TableRowCount, new TableExtraInfo(TableExtraInfo.TableRowCount, "Row Count", rs.getLong(1), "Number of rows in the table. 'ROW_COUNT_ESTIMATE' from 'INFORMATION_SCHEMA.TABLES'", null));
+				long rowcount    = rs.getLong(1);
+				long tabSizeInKb = rs.getLong(2);
+				
+				extraInfo.put(TableExtraInfo.TableRowCount,     new TableExtraInfo(TableExtraInfo.TableRowCount,     "Row Count",      rowcount,    "Number of rows in the table. 'ROW_COUNT_ESTIMATE' from 'INFORMATION_SCHEMA.TABLES'", null));
+				extraInfo.put(TableExtraInfo.TableDataSizeInKb, new TableExtraInfo(TableExtraInfo.TableDataSizeInKb, "Tab Size In KB", tabSizeInKb, "Table size in KB. using DISK_SPACE_USED(), see: http://www.h2database.com/html/functions.html#disk_space_used", null));
 			}
 			rs.close();
 		}

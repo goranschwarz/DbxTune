@@ -202,12 +202,12 @@ extends SqlStatementAbstract
 		sb.append("  So everything is not available.\n");
 		sb.append("   \n");
 		sb.append("options: \n");
-		sb.append("  -l,--login <name>           Name of the database to get DDL for.\n");
-		sb.append("  -h,--host <name>            Name of the table to get DDL for.\n");
-		sb.append("  -p,--port <number>          Name of the view to get DDL for.\n");
-		sb.append("  -i,--identityc <filename>   Name of the procedure to get DDL for.\n");
+		sb.append("  -l,--login <name>           Username to login with.\n");
+		sb.append("  -h,--host <name>            Hostname to connect to.\n");
+		sb.append("  -p,--port <number>          Port number to connect to.\n");
+		sb.append("  -i,--identity <filename>    Private Key File.\n");
 		sb.append("                                                                          \n");
-		sb.append("  -w,--openWindow              Open a Window with the DDL. Nomally it goes to output window.\n");
+		sb.append("  -w,--openWindow              Open a Window with the result. Nomally it goes to output window.\n");
 		sb.append("  -?,--help                    Print this text.\n");
 		sb.append("  \n");
 
@@ -238,7 +238,7 @@ extends SqlStatementAbstract
 		try
 		{
 			setProgressState("Connecting to host '"+_params._hostName+"' as '"+_params._loginName+"' using SSH.");
-			sshConn = new SshConnection(_params._hostName, _params._portNumber, _params._loginName, _params._password);
+			sshConn = new SshConnection(_params._hostName, _params._portNumber, _params._loginName, _params._password, _params._identity);
 //			sshConn.setWaitForDialog(this.);
 			sshConn.setGuiOwner(_owner);
 			sshConn.connect();

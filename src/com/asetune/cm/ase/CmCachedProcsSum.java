@@ -194,6 +194,7 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
 	{
 		String cols = "";
+		int    orderByColumnNumber = 8; // order by column 'SumRequestCnt'
 
 		// ASE 15.7
 		String SumExecutionCount = "";
@@ -237,6 +238,8 @@ extends CountersModel
 		{
 			SumActive      = "  SumActive = sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END), ";
 			ase1600_nl     = "\n";
+
+			orderByColumnNumber++;
 		}
 
 		// ASE 16.0 SP2
@@ -269,7 +272,8 @@ extends CountersModel
 			"  SumMemUsageKB         = sum(convert(bigint,MemUsageKB)), \n" +
 			"  MaxCompileDate        = max(CompileDate), \n" +
 //			"  MinCompileAgeInSec    = datediff(ss, max(CompileDate), getdate()), \n" +
-			"  MinCompileAgeInSec    = CASE WHEN datediff(day, CompileDate, getdate()) >= 24 THEN -1 ELSE  datediff(ss, CompileDate, getdate()) END, \n" +
+//			"  MinCompileAgeInSec    = CASE WHEN datediff(day, CompileDate, getdate()) >= 24 THEN -1 ELSE  datediff(ss, CompileDate, getdate()) END, \n" +
+			"  MinCompileAgeInSec    = min(CASE WHEN datediff(day, CompileDate, getdate()) >= 1095 THEN -1 ELSE  datediff(ss, CompileDate, getdate()) END), \n" + // 1095 days = 3 years... it migt be better to check if value is before 1970 or when seconds is bigger than MAX_INT
 			"  SumRequestCnt         = sum(convert(bigint,RequestCnt)), \n" +
 			"  SumRequestCntDiff     = sum(convert(bigint,RequestCnt)), \n" +
 			"  SumTempdbRemapCnt     = sum(convert(bigint,TempdbRemapCnt)), \n" +
@@ -304,7 +308,7 @@ extends CountersModel
 			"select " + cols + "\n" +
 			"from master..monCachedProcedures \n" +
 			"group by DBName, ObjectName, ObjectType \n" +
-			"order by 8 desc" +
+			"order by "+orderByColumnNumber+" desc" +
 			"";
 //DELETEME
 //setNonConfiguredMonitoringAllowed(true);

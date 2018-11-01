@@ -51,7 +51,7 @@ extends JPanel
 //	private final String FACEBOOK_URL            = "http://www.facebook.com/pages/AseTune/223112614400980"; 
 	private final String FACEBOOK_URL            = "http://www.facebook.com/asetune"; 
 	private final String SOURCEFORGE_URL         = "http://sourceforge.net/projects/asetune/"; 
-	private final String DONATE_URL              = "http://www.asetune.com/donate.html"; 
+	private final String DONATE_URL              = "http://www.dbxtune.com/donate.html"; 
 
 	private final static String  PROPKEY_inMemoryHistoryEnabled     = "in-memory.history.enabled"; 
 	private final static boolean DEFAULT_inMemoryHistoryEnabled     = false; 

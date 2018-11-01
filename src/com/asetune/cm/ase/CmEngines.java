@@ -71,8 +71,23 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {"NonIdleCPUTimePct", "SystemCPUTimePct", "UserCPUTimePct", "IOCPUTimePct", "IdleCPUTimePct"};//"CPUTime", "SystemCPUTime", "UserCPUTime", "IdleCPUTime", "IOCPUTime"};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"CPUTime", "SystemCPUTime", "UserCPUTime", "IdleCPUTime", "IOCPUTime", "Yields", 
-		"DiskIOChecks", "DiskIOPolled", "DiskIOCompleted", "ContextSwitches", 
-		"HkgcPendingItems", "HkgcOverflows", "HkgcPendingItemsDcomp", "HkgcOverflowsDcomp"};
+		"DiskIOChecks", "DiskIOPolled", "DiskIOCompleted", "ContextSwitches" 
+		, "HkgcPendingItems"      // Number of items yet to be garbage collected by housekeeper garbage collector on this engine
+		, "HkgcOverflows"         // Number of items that could not be queued to housekeeper garbage collector due to queue overflows
+		, "HkgcPendingItemsDcomp" // Number of data pages yet to be page compressed by housekeeper garbage collector on this engine
+		, "HkgcOverflowsDcomp"    // Number of data pages that could not be queued to housekeeper garbage collector for data page compression due to queue overflows
+		, "HkgcOverflowsCmpact"   // Number of items that could not be queued to housekeeper garbage collector for compact due to queue overflows
+		, "HkgcOverflowsRec"      // Number of items requested from rollback that could not be queued to housekeeper garbage collector due to queue overflows
+		, "LotsDelRolXacts"       // Number of roll-backed transactions which made lots of empty pages
+		, "LotsDelCmtXacts"       // Number of committed transactions which made lots of empty pages
+//		, "LongXacts"             // Number of transactions last for equal or more than 1 hours
+		, "PostcommitPageCount"   // Number of pages deallocated in post commit phase
+		, "HkgcReq"               // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues
+		, "HkgcReqCmpact"         // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues for compact
+		, "HkgcReqDcomp"          // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues for page compression
+		, "HkgcReqRec"            // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues from UNDO
+		, "HkgcRetries"           // Total number of times we tried for queued items.
+		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -305,22 +320,22 @@ extends CountersModel
 		}
 		
 		// ------------------------------------------------------------------------------------------------
-		// New monEngines Cols in ASE 15.7 SP 136 (and possible 16.0 SP2 PL#unknown#) (not in SP02, PL01)
+		// New monEngines Cols in ASE 15.7 SP 136, and above 16.0 SP2 PL2
 		// ------------------------------------------------------------------------------------------------
-		String HkgcOverflowsCmpact = "";
-		String HkgcOverflowsRec    = "";
-		String LotsDelRolXacts     = "";
-		String LotsDelCmtXacts     = "";
-		String LongXacts           = "";
-		String PostcommitPageCount = "";
-		String HkgcReq             = "";
-		String HkgcReqCmpact       = "";
-		String HkgcReqDcomp        = "";
-		String HkgcReqRec          = "";
-		String HkgcRetries         = "";
+		String HkgcOverflowsCmpact = ""; // Number of items that could not be queued to housekeeper garbage collector for compact due to queue overflows	          
+		String HkgcOverflowsRec    = ""; // Number of items requested from rollback that could not be queued to housekeeper garbage collector due to queue overflows	
+		String LotsDelRolXacts     = ""; // Number of roll-backed transactions which made lots of empty pages	                                                      
+		String LotsDelCmtXacts     = ""; // Number of committed transactions which made lots of empty pages	                                                      
+		String LongXacts           = ""; // Number of transactions last for equal or more than 1 hours	                                                              
+		String PostcommitPageCount = ""; // Number of pages deallocated in post commit phase	                                                                      
+		String HkgcReq             = ""; // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues	                                  
+		String HkgcReqCmpact       = ""; // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues for compact	                      
+		String HkgcReqDcomp        = ""; // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues for page compression	          
+		String HkgcReqRec          = ""; // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues from UNDO	                      
+		String HkgcRetries         = ""; // Total number of times we tried for queued items.	                                                                      
 		String nl_1570_sp136       = "";
-//		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) || aseVersion >= Ver.ver(16,0,0, 2, #) )
-		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) )
+//		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) )
+		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) || aseVersion >= Ver.ver(16,0,0, 2,2) )
 		{
 			HkgcOverflowsCmpact = "HkgcOverflowsCmpact, ";
 			HkgcOverflowsRec    = "HkgcOverflowsRec, ";
@@ -394,7 +409,7 @@ extends CountersModel
 		}
 		cols2 += HkgcPendingItemsDcomp + HkgcOverflowsDcomp + nl_15701;
 
-		// New Columns for ASE 15.7 SP136 and possible in some 16.0 SP1 PL##
+		// New Columns for ASE 15.7 SP136, and above 16.0 SP2 PL2
 		cols2 += HkgcOverflowsCmpact + HkgcOverflowsRec + LotsDelRolXacts + LotsDelCmtXacts + LongXacts + nl_1570_sp136 +
 				PostcommitPageCount + HkgcReq + HkgcReqCmpact + HkgcReqDcomp + HkgcReqRec + HkgcRetries + nl_1570_sp136;
 

@@ -460,7 +460,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				else
 				{
-					loadSqlTextAndPlanText(spid, kpid, batchId, procName);
+					loadSqlTextAndPlanText(spid, kpid, batchId, procName, false);
 				}
 			}
 		});
@@ -521,7 +521,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				else
 				{
 					_statementsFilter.setFilterText("WHERE SPID = "+spid+" and KPID = "+kpid+" and BatchID = "+batchId);
-					loadSqlTextAndPlanText(spid, kpid, batchId, procName);
+					loadSqlTextAndPlanText(spid, kpid, batchId, procName, true);
 				}
 			}
 		});
@@ -688,7 +688,7 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 				else
 				{
-					loadSqlTextAndPlanText(spid, kpid, batchId, procName);
+					loadSqlTextAndPlanText(spid, kpid, batchId, procName, true);
 				}
 			}
 		});
@@ -869,7 +869,7 @@ implements ActionListener, ChangeListener//, MouseListener
 		if (selectedTab == 1 ||_tabbedPane.isTabUnDocked(1)) loadSqlTextTab();
 	}
 
-	private void loadSqlTextAndPlanText(int spid, int kpid, int batchId, String procName)
+	private void loadSqlTextAndPlanText(int spid, int kpid, int batchId, String procName, boolean loadStatements)
 	{
 //		PersistReader reader = PersistReader.getInstance();
 //		if (reader == null)
@@ -882,7 +882,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			ResultSet rs;
 			RSyntaxTextAreaX ta;
 
-			String where = " where \"SPID\" = "+spid+" and KPID = "+kpid+" and \"BatchID\" = "+batchId;
+			String where = " where \"SPID\" = "+spid+" and \"KPID\" = "+kpid+" and \"BatchID\" = "+batchId;
 			
 			DbxConnection conn = getConnection();
 			Statement stmnt = conn.createStatement();
@@ -955,6 +955,20 @@ implements ActionListener, ChangeListener//, MouseListener
 				}
 			}
 
+			// GET STATEMENTS for this batch (put it in the SQL TExt for now, later on a separate JTable)
+			if (loadStatements)
+			{
+				tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+				sql = "select * from " + tabName + where;
+				rs = stmnt.executeQuery(sql);
+				ResultSetTableModel rstm = new ResultSetTableModel(rs, "SQL_CAPTURE_STATEMENTS");
+				_sqlText_txt.append("\n");
+				_sqlText_txt.append("-------------------------------------------------------------------------------------------------------------------------------------------------\n");
+				_sqlText_txt.append("-- Loading Statements, using SQL: " + sql + "\n");
+				_sqlText_txt.append(rstm.toAsciiTableString());
+				rs.close();
+			}
+			
 		}
 		catch(SQLException ex)
 		{

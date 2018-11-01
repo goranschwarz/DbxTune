@@ -43,13 +43,13 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 	@Override protected String getDefaultDownloadUrl() { return getHomeUrl() + "/download.html"; }
 	@Override protected String getDefaultWhatsNewUrl() { return getHomeUrl() + "/history.html"; }
 
-	protected static final String DBXTUNE_HOME_URL               = "http://www.asetune.com";
-	protected static final String DBXTUNE_CHECK_UPDATE_URL       = "http://www.asetune.com/check_for_update.php";
-	protected static final String DBXTUNE_CONNECT_INFO_URL       = "http://www.asetune.com/connect_info.php";
-	protected static final String DBXTUNE_MDA_INFO_URL           = "http://www.asetune.com/mda_info.php";
-	protected static final String DBXTUNE_UDC_INFO_URL           = "http://www.asetune.com/udc_info.php";
-	protected static final String DBXTUNE_COUNTER_USAGE_INFO_URL = "http://www.asetune.com/counter_usage_info.php";
-	protected static final String DBXTUNE_ERROR_INFO_URL         = "http://www.asetune.com/error_info.php";
+	protected static final String DBXTUNE_HOME_URL               = "http://www.dbxtune.com";
+	protected static final String DBXTUNE_CHECK_UPDATE_URL       = "http://www.dbxtune.com/check_for_update.php";
+	protected static final String DBXTUNE_CONNECT_INFO_URL       = "http://www.dbxtune.com/connect_info.php";
+	protected static final String DBXTUNE_MDA_INFO_URL           = "http://www.dbxtune.com/mda_info.php";
+	protected static final String DBXTUNE_UDC_INFO_URL           = "http://www.dbxtune.com/udc_info.php";
+	protected static final String DBXTUNE_COUNTER_USAGE_INFO_URL = "http://www.dbxtune.com/counter_usage_info.php";
+	protected static final String DBXTUNE_ERROR_INFO_URL         = "http://www.dbxtune.com/error_info.php";
 
 	public CheckForUpdatesDbx()
 	{

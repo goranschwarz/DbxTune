@@ -24,7 +24,7 @@ import com.asetune.utils.StringUtil;
 import net.miginfocom.swing.MigLayout;
 
 
-public class WizardOfflinePage11
+public class WizardOfflinePage12
 extends WizardPage
 implements ActionListener
 {
@@ -40,7 +40,7 @@ implements ActionListener
 	@Override
 	public Dimension getPreferredSize() { return WizardOffline.preferredSize; }
 
-	public WizardOfflinePage11()
+	public WizardOfflinePage12()
 	{
 		super(WIZ_NAME, WIZ_DESC);
 

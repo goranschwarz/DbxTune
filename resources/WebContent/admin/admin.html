@@ -219,14 +219,14 @@
    */
   function restartServer(restartType) 
   {
-    var urlParams="";
+    var urlParams="&h2ShutdownType=IMMEDIATELY";
     if (restartType === "compact")
     {
-      urlParams="&compact";
+      urlParams="&h2ShutdownType=COMPACT";
     }
-    if (restartType === "defrag")
+    else if (restartType === "defrag")
     {
-      urlParams="&defrag";
+      urlParams="&h2ShutdownType=DEFRAG";
     }
 
     $.ajax(

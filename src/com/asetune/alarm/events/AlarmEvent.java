@@ -120,12 +120,14 @@ extends Throwable
 	protected int          _raiseDelayInSec     = 0; // wait with the raise event until X number of seconds has passed (usabe for CPU events or other "peak" things that happends, which we might want to filter out)  
 	protected int          _raiseDelayInSecDefault = 0;
 
-	protected String       _description         = "";
-	protected String       _reRaiseDesc         = "";
-	protected String       _extendedDesc        = "";
-	protected String       _reRaiseExtendedDesc = "";
-	protected Object       _data                = null;
-	protected Object       _reRaiseData         = null;
+	protected String       _description             = "";
+	protected String       _reRaiseDesc             = "";
+	protected String       _extendedDesc            = "";
+	protected String       _extendedDescHtml        = "";
+	protected String       _reRaiseExtendedDesc     = "";
+	protected String       _reRaiseExtendedDescHtml = "";
+	protected Object       _data                    = null;
+	protected Object       _reRaiseData             = null;
 
 //	protected long         _initialCrTime       = -1;
 	protected int          _reRaiseCount        = 0;
@@ -138,6 +140,16 @@ extends Throwable
 
 	protected Number       _crossedThreshold    = null;
 
+	/**
+	 * If Writer/Sender should <b>always</b> send this alarm<br>
+	 * The the "filter" functionality will be disarded/short-circuited 
+	 * 
+	 * @return true if we should always send, false if we shoudl look at the "filter" settings.
+	 */
+	public boolean alwaysSend()
+	{
+		return false;
+	}
 	
 	public boolean hasTimeToLive()        { return _timeToLive > 0; }
 	public boolean hasTimeToLiveExpired()
@@ -216,30 +228,32 @@ extends Throwable
 		setTimeToLive( ttl );
 	}
 	
-	public String       getServiceType()                { return _serviceType; }
-	public String       getServiceName()                { return _serviceName; }
-	public String       getServiceInfo()                { return _serviceInfo; }
-	public Object       getExtraInfo()                  { return _extraInfo; }
-	public Category     getCategory()                   { return _category; }
-	public Severity     getSeverity()                   { return _severity; }
-	public ServiceState getState()                      { return _state; }
+	public String       getServiceType()                    { return _serviceType; }
+	public String       getServiceName()                    { return _serviceName; }
+	public String       getServiceInfo()                    { return _serviceInfo; }
+	public Object       getExtraInfo()                      { return _extraInfo; }
+	public Category     getCategory()                       { return _category; }
+	public Severity     getSeverity()                       { return _severity; }
+	public ServiceState getState()                          { return _state; }
+                                                            
+	public String       getDescription()                    { return !hasRaiseDelay() ? _description : _description + " [raiseDelay="+getRaiseDelayInSec()+"]"; }
+	public String       getReRaiseDescription()             { return _reRaiseDesc; }
+	public String       getExtendedDescription()            { return _extendedDesc; }
+	public String       getExtendedDescriptionHtml()        { return StringUtil.hasValue(_extendedDescHtml) ? _extendedDescHtml : StringUtil.toHtmlString(_extendedDesc); }
+	public String       getReRaiseExtendedDescription()     { return _reRaiseExtendedDesc; }
+	public String       getReRaiseExtendedDescriptionHtml() { return StringUtil.hasValue(_reRaiseExtendedDescHtml) ? _reRaiseExtendedDescHtml : StringUtil.toHtmlString(_reRaiseExtendedDesc); }
+	public Object       getData()                           { return _data; }
+	public Object       getReRaiseData()                    { return _reRaiseData; }
 
-	public String       getDescription()                { return !hasRaiseDelay() ? _description : _description + " [raiseDelay="+getRaiseDelayInSec()+"]"; }
-	public String       getReRaiseDescription()         { return _reRaiseDesc; }
-	public String       getExtendedDescription()        { return _extendedDesc; }
-	public String       getReRaiseExtendedDescription() { return _reRaiseExtendedDesc; }
-	public Object       getData()                       { return _data; }
-	public Object       getReRaiseData()                { return _reRaiseData; }
+	public Category     getCategoryDefault()                { return _categoryDefault; }
+	public int          getRaiseDelayInSecDefault()         { return _raiseDelayInSecDefault; }
 
-	public Category     getCategoryDefault()            { return _categoryDefault; }
-	public int          getRaiseDelayInSecDefault()     { return _raiseDelayInSecDefault; }
-
-	public void         setDescription(String desc)                { _description         = desc; }
-	public void         setReRaiseDescription(String desc)         { _reRaiseDesc         = desc; }
-	public void         setExtendedDescription(String desc)        { _extendedDesc        = desc; }
-	public void         setReRaiseExtendedDescription(String desc) { _reRaiseExtendedDesc = desc; }
-	public void         setData(Object data)                       { _data                = data; }
-	public void         setReRaiseData(Object data)                { _reRaiseData         = data; }
+	public void         setDescription(String desc)                             { _description         = desc; }
+	public void         setReRaiseDescription(String desc)                      { _reRaiseDesc         = desc; }
+	public void         setExtendedDescription(String desc, String html)        { _extendedDesc        = desc; _extendedDescHtml        = html; }
+	public void         setReRaiseExtendedDescription(String desc, String html) { _reRaiseExtendedDesc = desc; _reRaiseExtendedDescHtml = html; }
+	public void         setData(Object data)                                    { _data                = data; }
+	public void         setReRaiseData(Object data)                             { _reRaiseData         = data; }
 	
 
 	public Number getCrossedThreshold()

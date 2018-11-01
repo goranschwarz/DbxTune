@@ -66,11 +66,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/AseTune/3pp/swingx-all-1.6.5-1-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/h2-1.4.197.jar" sourcepath="3pp/h2-2018-03-18.zip">
-		<attributes>
-			<attribute name="javadoc_location" value="http://www.h2database.com/javadoc"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/proxy-vole_20131209.jar" sourcepath="3pp/proxy-vole_20131209_src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://proxy-vole.googlecode.com/svn/trunk/proxy_vole/doc/api/"/>
@@ -153,5 +148,6 @@
 	<classpathentry kind="lib" path="lib/gson-2.8.0.jar"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-1.1.jar" sourcepath="3pp/jsqlparser-1.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
+	<classpathentry kind="lib" path="lib/h2-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

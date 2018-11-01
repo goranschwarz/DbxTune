@@ -64,6 +64,7 @@ import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.cm.ase.CmSpidWait;
 import com.asetune.cm.ase.CmSpinlockActivity;
 import com.asetune.cm.ase.CmSpinlockSum;
+import com.asetune.cm.ase.CmSqlStatement;
 import com.asetune.cm.ase.CmStatementCache;
 import com.asetune.cm.ase.CmStmntCacheDetails;
 import com.asetune.cm.ase.CmSummary;
@@ -358,6 +359,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		// tab: Object/Access
 		CmActiveStatements .create(counterController, guiController);
 		CmObjectActivity   .create(counterController, guiController);
+		CmSqlStatement     .create(counterController, guiController);
 		CmActiveObjects    .create(counterController, guiController);
 		CmProcCallStack    .create(counterController, guiController);
 		CmLocks            .create(counterController, guiController);
@@ -475,9 +477,9 @@ public class CounterControllerAse extends CounterControllerAbstract
 					// Msg 937: Database 'PML' is unavailable. It is undergoing LOAD DATABASE.
 					if (code == 937)
 					{
-						_logger.info("createPcsHeaderInfo(): Discarding Msg "+code+", Str '"+msgStr+"'.");
+						_logger.debug("createPcsHeaderInfo(): Discarding Msg "+code+", Str '"+msgStr+"'.");
 						
-						return null;
+						return null; // do NOT threat this as an error... An exception will NOT be thrown to the caller
 					}
 					
 					return sqle;

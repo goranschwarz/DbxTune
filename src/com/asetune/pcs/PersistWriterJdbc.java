@@ -35,8 +35,11 @@ import org.apache.log4j.Logger;
 import org.h2.server.TcpServer;
 import org.h2.tools.Server;
 
+import com.asetune.CounterController;
 import com.asetune.DbxTune;
+import com.asetune.ICounterController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
@@ -52,6 +55,8 @@ import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
 import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.gui.MainFrame;
+import com.asetune.pcs.report.DailySummaryReportFactory;
+import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.pcs.sqlcapture.SqlCaptureDetails;
 import com.asetune.sql.PreparedStatementCache;
@@ -107,6 +112,16 @@ public class PersistWriterJdbc
 	public static final String  PROPKEY_sqlCaptureStorage_usePrivateConnection  = "PersistWriterJdbc.sqlCaptureStorage.usePrivateConnection";
 	public static final boolean DEFAULT_sqlCaptureStorage_usePrivateConnection  = true;
 
+
+	public static final String  PROPKEY_h2_shutdown_type                 = "PersistWriterJdbc.h2.shutdown.type";
+	public static final String  DEFAULT_h2_shutdown_type                 = H2ShutdownType.DEFRAG.toString();
+
+	public static final String  PROPKEY_h2_shutdown_inBgThread           = "PersistWriterJdbc.h2.shutdown.inBgThread";
+	public static final boolean DEFAULT_h2_shutdown_inBgThread           = true;
+	
+
+	public static final String  PROPKEY_isSevereProblem_simulateDiskFull = "DbxTune.pcs.isSevereProblem.simulateDiskFull.enabled";
+	public static final boolean DEFAULT_isSevereProblem_simulateDiskFull = false;
 	
 	/*---------------------------------------------------
 	** class members
@@ -184,9 +199,38 @@ public class PersistWriterJdbc
 
 		if (e == null)
 			return false;
+
 		boolean retCode    = false;
 		boolean doShutdown = false;
 		boolean dbIsFull   = false;
+
+		//---------------------------------------------------------------
+		// For TESTING: Simulate a: DiskFull-->Shutdown...
+		//---------------------------------------------------------------
+		boolean checkForDummyShutdown = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_isSevereProblem_simulateDiskFull, DEFAULT_isSevereProblem_simulateDiskFull);
+		if (checkForDummyShutdown)
+		{
+			String tmpDir = System.getProperty("java.io.tmpdir", "/tmp/");
+			if ( ! (tmpDir.endsWith("/") || tmpDir.endsWith("\\")) )
+				tmpDir += File.separatorChar;
+			
+			String tmpFilename = tmpDir + "DbxTune.pcs.isSevereProblem.simulateDiskFull.deleteme";
+			File probeFile1 = new File(tmpFilename);
+
+			_logger.info("SIMULATE-DISK-FULL: checking for probe file '"+probeFile1+"'. exists: " + probeFile1.exists() );
+			if (probeFile1.exists())
+			{
+				_logger.info("SIMULATE-DISK-FULL: found-file('"+probeFile1+"')... setting: doShutdown=true, dbIsFull=true, retCode=true");
+
+				doShutdown = true;
+				dbIsFull   = true;
+				retCode    = true;
+
+				_logger.info("SIMULATE-DISK-FULL: removing file('"+probeFile1+"').");
+				try { probeFile1.delete(); }
+				catch(Exception ex) { _logger.error("SIMULATE-DISK-FULL: Problems removing file '"+probeFile1+"'. Caught: "+ex);}
+			}
+		}
 
 		// Loop all nested SQLExceptions
 		int exLevel = 0;
@@ -216,7 +260,9 @@ public class PersistWriterJdbc
 				// The MVStore doesn't give the same error on "disk full"
 				// Lets examine the Exception chain, and look for "There is not enough space on the disk"
 				String rootCauseMsg = ExceptionUtils.getRootCauseMessage(e);
-				if (rootCauseMsg.indexOf("There is not enough space") >= 0)
+				if (    rootCauseMsg.indexOf("There is not enough space") >= 0
+					 || rootCauseMsg.indexOf("No space left on device")   >= 0
+				   )
 				{
 					// Mark it for shutdown
 					doShutdown = true;
@@ -224,14 +270,25 @@ public class PersistWriterJdbc
 					retCode    = true;
 				}
 
+				// Check if it looks like a CORRUPT H2 database
+				Throwable rootCauseEx = ExceptionUtils.getRootCause(e);
+				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
+				{
+					_logger.error("ATTENTION: ErrorCode="+e.getErrorCode()+", SQLState="+e.getSQLState()+", ex.toString="+e.toString()+", rootCauseEx="+rootCauseEx);
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+				}
+				
 				// The database has been closed == 90098
 				// MVStore: This map is closed == 90028
-				if (error == 90098 || error == 90028)
+				// IllegalExceptionState: Transaction is closed == 50000
+				if (error == 90098 || error == 90028 || error == 50000)
 				{
 					// What should we do here... close the connection or what...
 					// Meaning closing the connection would result in a "reopen" on next save!
 					if (conn != null)
 					{
+						_logger.error("checking for connection errors in: 'isSevereProblem()'. Caught error="+error+", rootCauseMsg='"+rootCauseMsg+"'. which is mapped to 'close-connection'. A new connection will be opened on next save attempt.");
+						
 						try { conn.close(); }
 						catch (SQLException closeEx)
 						{
@@ -282,7 +339,15 @@ public class PersistWriterJdbc
 					{
 						_logger.info("Issuing STOP on the Persistent Counter Storage Handler");
 						PersistentCounterHandler.getInstance().stop(true, 0);
-						PersistentCounterHandler.setInstance(null);					
+						PersistentCounterHandler.setInstance(null);
+						
+						// if we are in NO-GUI mode... should we STOP DBXTUNE or should we continue...
+						if ( ! DbxTune.hasGui() )
+						{
+							_logger.info("Since this is a NO-GUI instance, and we have stopped the PCS hander... I see no reason to continue... So Issuing STOP on the Counter Controller also, which should stop the whole '"+Version.getAppName()+"' process.");
+							ICounterController cc = CounterController.getInstance();
+							cc.shutdown();
+						}
 					}
 				};
 				Thread shutdownThread = new Thread(shutdownPcs);
@@ -622,9 +687,61 @@ public class PersistWriterJdbc
 		// IF H2, make special shutdown
 		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
 		{
-			h2Shutdown(H2ShutdownType.COMPACT);
+			// Get shutdown type from the Configuration.
+			H2ShutdownType h2ShutdownType   = H2ShutdownType.IMMEDIATELY; // DEFAULT is really H2ShutdownType.DEFRAG
+			String  pcsH2ShutdownType       = getConfig().getProperty       (PROPKEY_h2_shutdown_type,       DEFAULT_h2_shutdown_type);
+			boolean pcsH2ShutdownInBgThread = getConfig().getBooleanProperty(PROPKEY_h2_shutdown_inBgThread, DEFAULT_h2_shutdown_inBgThread);
+			try { 
+				h2ShutdownType = H2ShutdownType.valueOf( pcsH2ShutdownType ); 
+			} catch(RuntimeException ex) { 
+				_logger.info("Shutdown type '"+pcsH2ShutdownType+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ");
+			}
+
+			// Create a Runnable to do the shutdown work, either with a thread (in background) or directly from this thread.
+			final H2ShutdownType final_h2ShutdownType = h2ShutdownType;
+			Runnable h2Shutdown = new Runnable()
+			{
+				@Override
+				public void run()
+				{
+					h2Shutdown(_mainConn, final_h2ShutdownType);
+				}
+			};
+			
+			// Now execute h2Shutdown "target"
+			if (pcsH2ShutdownInBgThread)
+			{
+				Thread h2ShutdownThread = new Thread(h2Shutdown);
+				h2ShutdownThread.setName("H2ShutdownThread");
+				h2ShutdownThread.setDaemon(false); // I don't think we should run it as a daemon...
+				_logger.info("Shutting down current H2 database using a background thread.");
+				h2ShutdownThread.start();
+
+				// 
+				int sleepTimeSec = 5;
+				_logger.info("Waiting for "+sleepTimeSec+" seconds, to let the H2 database shutdown thread to be started/initiated and do initial work before continuing.");
+				try { Thread.sleep(sleepTimeSec * 1000); }
+				catch (InterruptedException ignore) {}
+			}
+			else
+			{
+				h2Shutdown.run();
+			}
+			
+			// Reset the current connection WITHOUT closing it
+			// _mainConn.close() seems to block until the shutdown is complete, and since the connection wont be usefull after 
+			// the shutdown we can just as easely "throw the handle", lets just hope that it do not give use any memory leaks
+			_mainConn = null; 
 		}
 
+		// Close the connection
+		if (_mainConn != null)
+		{
+			_mainConn.closeNoThrow();
+			_mainConn = null; 
+		}
+		
+		// Stop any other services
 		if (_h2TcpServer != null)
 		{
 			_logger.info("Stopping H2 TCP Service. at port="+_h2TcpServer.getPort()+", URL: "+_h2TcpServer.getURL());
@@ -671,17 +788,20 @@ public class PersistWriterJdbc
 
 	/**
 	 * Helper method to shutdown H2 
+	 * 
+	 * @param h2Conn
+	 * @param shutdownType
 	 */
-	private void h2Shutdown(H2ShutdownType shutdownType)
+	private void h2Shutdown(DbxConnection h2Conn, H2ShutdownType shutdownType)
 	{
-		if (_mainConn == null)
+		if (h2Conn == null)
 		{
-			_logger.info("h2ShutdownCompact(): will do nothing, _mainConn was null");
+			_logger.info("h2ShutdownCompact(): will do nothing, h2Conn was null");
 			return;
 		}
-
+		
 		String currentUrl = null;
-		try { currentUrl = _mainConn.getMetaData().getURL(); }
+		try { currentUrl = h2Conn.getMetaData().getURL(); }
 		catch(SQLException ex) { _logger.warn("Problems getting current URL from the H2 Connection. Caught: "+ex); }
 		
 		// Try to get the FILES SIZE before we do 'shutdown compact'
@@ -714,13 +834,13 @@ public class PersistWriterJdbc
 		String shutdownCmd = "SHUTDOWN " + shutdownType;
 
 		// Issue a dummy command to see if the connection is still alive
-		try (Statement stmnt = _mainConn.createStatement();) {
+		try (Statement stmnt = h2Conn.createStatement();) {
 			stmnt.execute("select 1111");
 		} catch(SQLException ex) {
 			_logger.error("Problem when executing DUMMY SQL 'select 1111' before "+shutdownCmd+". SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
 		}
 
-		try (Statement stmnt = _mainConn.createStatement();) 
+		try (Statement stmnt = h2Conn.createStatement();) 
 		{
 			_logger.info("Sending "+shutdownCmd+" to H2 database.");
 			stmnt.execute(shutdownCmd);
@@ -732,7 +852,19 @@ public class PersistWriterJdbc
 			if ( ex.getErrorCode() == 90121 )
 				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 			else
-				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", toString="+ex.toString());
+			{
+				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
+				// String    rootCauseMsg = ExceptionUtils.getRootCauseMessage(ex);
+
+				_logger.error("Problem when shutting down H2 using command '"+shutdownCmd+"'. SqlException: ErrorCode="+ex.getErrorCode()+", SQLState="+ex.getSQLState()+", ex.toString="+ex.toString()+", rootCauseEx="+rootCauseEx);
+				
+				// Check if the H2 database seems CORRUPT...
+				// Caused by: java.lang.IllegalStateException: Reading from nio:/opt/dbxtune_data/DBXTUNE_CENTRAL_DB.mv.db failed; file length -1 read length 768 at 2026700328 [1.4.197/1]
+				if (rootCauseEx != null && rootCauseEx.getClass().getSimpleName().equals("IllegalStateException"))
+				{
+					_logger.error("ATTENTION: The H2 database looks CORRUPT, the rootCauseEx is 'IllegalStateException', which might indicate a corrupt database. rootCauseEx="+rootCauseEx, rootCauseEx);
+				}
+			}
 		}
 		
 		// Possibly: print information about H2 DB File SIZE information before and after shutdown compress
@@ -749,9 +881,8 @@ public class PersistWriterJdbc
 					+ "'.");
 		}
 
-		// Close the connection
-		try { _mainConn.close(); } catch(Exception ignore) {}
-		_mainConn = null; 
+		// Close the connection (it would already be closed, due to the shutdown, but anyway...)
+		try { h2Conn.close(); } catch(Exception ignore) {}
 	}
 
 
@@ -1103,12 +1234,17 @@ public class PersistWriterJdbc
 		// for H2, we have a "new database option" if the "timestamp" has changed.
 		if (_h2NewDbOnDateChange && _mainConn != null)
 		{
-//			String dateStr = new SimpleDateFormat(_h2DbDateParseFormat).format(new Date());
 			String dateStr = new SimpleDateFormat(_h2DbDateParseFormat).format(newDate);
 			// If new Date or first time...
 			if ( ! dateStr.equals(_h2LastDateChange) )
 			{
 				_lastUsedUrl = null;
+
+				// Create a "daily" report, with:
+				//  - Alarms that has happened
+				//  - A summary of Performance issues that has happened the day
+				//  - etc...
+				createDailySummaryReport(_mainConn, cont.getServerNameOrAlias());
 
 				if ( _h2LastDateChange != null)
 					_logger.info("Closing the old database with ${DATE} marked as '"+_h2LastDateChange+"', a new database will be opened using ${DATE} marker '"+dateStr+"'.");
@@ -1531,6 +1667,7 @@ public class PersistWriterJdbc
 		
 		return _mainConn;
 	}
+
 	private DbxConnection closeConn(DbxConnection conn)
 	{
 		if (conn == null)
@@ -2037,9 +2174,10 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		if (cont._counterObjects == null)
+//		if (cont._counterObjects == null)
+		if (cont.isEmpty())
 		{
-			_logger.error("Input parameter PersistContainer._counterObjects can't be null. Can't continue startSession()...");
+			_logger.error("Input parameter PersistContainer.isEmpty()==true. Can't continue startSession()...");
 			return;
 		}
 
@@ -2065,6 +2203,7 @@ public class PersistWriterJdbc
 //			checkAndCreateTable(conn, SQL_CAPTURE_SQLTEXT);
 //			checkAndCreateTable(conn, SQL_CAPTURE_STATEMENTS);
 //			checkAndCreateTable(conn, SQL_CAPTURE_PLANS);
+			checkAndCreateTable(conn, ALARM_ACTIVE);
 			checkAndCreateTable(conn, ALARM_HISTORY);
 			// Create tables for SQL Capture... they can have more (or less) tables than SQL_CAPTURE_SQLTEXT, SQL_CAPTURE_STATEMENTS, SQL_CAPTURE_PLANS
 			if (PersistentCounterHandler.hasInstance())
@@ -2122,7 +2261,7 @@ public class PersistWriterJdbc
 //			tabName = getTableName(SESSION_PARAMS, null, true);
 			Timestamp ts = cont.getSessionStartTime();
 
-			for (CountersModel cm : cont._counterObjects)
+			for (CountersModel cm : cont.getCounterObjects())
 			{
 				String prefix = cm.getName();
 
@@ -2388,19 +2527,23 @@ public class PersistWriterJdbc
 	 * @param str
 	 * @return  input="it's a string" output="'it''s a string'"
 	 */
-	public static String safeStr(String str)
+//	public static String safeStr(String str)
+//	{
+//		if (str == null)
+//			return "NULL";
+//
+//		StringBuilder sb = new StringBuilder();
+//
+//		// add ' around the string...
+//		// and replace all ' into ''
+//		sb.append("'");
+//		sb.append(str.replace("'", "''"));
+//		sb.append("'");
+//		return sb.toString();
+//	}
+	public static String safeStr(Object obj)
 	{
-		if (str == null)
-			return "NULL";
-
-		StringBuilder sb = new StringBuilder();
-
-		// add ' around the string...
-		// and replace all ' into ''
-		sb.append("'");
-		sb.append(str.replace("'", "''"));
-		sb.append("'");
-		return sb.toString();
+		return DbUtils.safeStr(obj);
 	}
 
 	public void saveMonTablesDictionary(DbxConnection conn, MonTablesDictionary mtd, Timestamp sessionStartTime)
@@ -2504,16 +2647,89 @@ public class PersistWriterJdbc
 	 * Save any alarms
 	 * 
 	 * @param conn                Database connection 
-	 * @param sessionStartTime 
-	 * @param sessionSampleTime   
+	 * @param cont 
 	 * @throws SQLException 
 	 */
-	private void saveAlarms(DbxConnection conn, Timestamp sessionStartTime, Timestamp sessionSampleTime) 
+	private void saveAlarms(DbxConnection conn, PersistContainer cont) 
 	throws SQLException
 	{
+		if (cont == null)
+			return;
+
 		if ( ! AlarmWriterToPcsJdbc.hasInstance() )
 			return;
 
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		Timestamp sessionStartTime  = cont.getSessionStartTime();
+		Timestamp sessionSampleTime = cont.getMainSampleTime();
+		
+		// Delete all ACTIVE alarms
+		String sql = "delete from " + getTableName(ALARM_ACTIVE, null, true);
+		try
+		{
+			int count = conn.dbExec(sql);
+			getStatistics().incDeletes(count);
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Error deleting Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+			// throws Exception if it's a severe problem
+			isSevereProblem(conn, e);
+		}
+
+		// Save ACTIVE Alarms
+		List<AlarmEvent> activeAlarms = cont.getAlarmList();
+		if ( ! activeAlarms.isEmpty() )
+		{
+			for (AlarmEvent ae : activeAlarms)
+			{
+				// Store some info
+				StringBuilder sbSql = new StringBuilder();
+
+				try
+				{
+					sbSql.append(getTableInsertStr(ALARM_ACTIVE, null, false));
+					sbSql.append(" values(");
+					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         )); // "alarmClass"              varchar(80)   null false   - 1
+					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  )); // "serviceType"             varchar(80)   null false   - 2
+					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  )); // "serviceName"             varchar(30)   null false   - 3
+					sbSql.append(", ").append(safeStr( ae.getServiceInfo()                                                  )); // "serviceInfo"             varchar(80)   null false   - 4
+					sbSql.append(", ").append(safeStr( ae.getExtraInfo()                                                    )); // "extraInfo"               varchar(80)   null true    - 5
+					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     )); // "category"                varchar(20)   null false   - 6
+					sbSql.append(", ").append(safeStr( ae.getSeverity()                                                     )); // "severity"                varchar(10)   null false   - 7
+					sbSql.append(", ").append(safeStr( ae.getState()                                                        )); // "state"                   varchar(10)   null false   - 8
+					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                 )); // "repeatCnt"               int           null false   - 9
+					sbSql.append(", ").append(safeStr( ae.getDuration()                                                     )); // "duration"                varchar(10)   null false   - 10
+					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())      )); // "createTime"              datetime      null false   - 11
+					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())  )); // "cancelTime"              datetime      null true    - 12
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                   )); // "timeToLive"              int           null true    - 13
+					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"")); // "threshold"               varchar(15)   null true    - 14
+					sbSql.append(", ").append(safeStr( ae.getData()                                                         )); // "data"                    varchar(80)   null true    - 15
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  )); // "lastData"                varchar(80)   null true    - 16
+					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  )); // "description"             varchar(512)  null false   - 17
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           )); // "lastDescription"         varchar(512)  null false   - 18
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                          )); // "extendedDescription"     text          null true    - 19
+					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription()                                   )); // "lastExtendedDescription" text          null true    - 20
+					sbSql.append(")");
+
+					sql = sbSql.toString();
+					conn.dbExec(sql);
+					getStatistics().incInserts();
+				}
+				catch (SQLException e)
+				{
+					_logger.warn("Error writing Active Alarm(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+					// throws Exception if it's a severe problem
+					isSevereProblem(conn, e);
+				}
+			}
+		}
+
+		// Save HISTORY/EVENTS
+		
+		
 		// Get the list... and start a new list...
 //		List<AlarmEventWrapper> alarmList = AlarmWriterToPcsJdbc.getInstance().getList(true);
 		List<AlarmEventWrapper> alarmList = AlarmWriterToPcsJdbc.getInstance().getList();
@@ -2530,39 +2746,40 @@ public class PersistWriterJdbc
 			try
 			{
 				// Get the SQL statement
-				String sql = getTableInsertStr(ALARM_HISTORY, null, true);
+				sql = getTableInsertStr(ALARM_HISTORY, null, true);
 				PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
 		
 //System.out.println("saveAlarms(): SQL="+sql);
 				// Set values
 				int i=1;
-				pst.setTimestamp(i++, sessionStartTime                                                    ); // sessionStartTime        - datetime    , Nullable = false
-				pst.setTimestamp(i++, sessionSampleTime                                                   ); // sessionSampleTime       - datetime    , Nullable = false
-				pst.setTimestamp(i++, aew.getAddDate()                                                    ); // eventTime	            - datetime    , Nullable = false
-				pst.setString   (i++, aew.getAction()                                                     ); // action                  - varchar(15) , Nullable = false
-//				pst.setBoolean  (i++, ae.isActive()                                                       ); // isActive                - bit         , Nullable = false
-				pst.setString   (i++, ae.getAlarmClassAbriviated()                                        ); // alarmClass              - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getServiceType()                                                 ); // serviceType             - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getServiceName()                                                 ); // serviceName             - varchar(30) , Nullable = false
-				pst.setString   (i++, ae.getServiceInfo()                                                 ); // serviceInfo             - varchar(80) , Nullable = false
-				pst.setString   (i++, ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()     ); // extraInfo               - varchar(80) , Nullable = true 
-				pst.setString   (i++, ae.getCategory()+""                                                 ); // category                - varchar(20) , Nullable = false
-				pst.setString   (i++, ae.getSeverity()+""                                                 ); // severity                - varchar(10) , Nullable = false
-				pst.setString   (i++, ae.getState()+""                                                    ); // state                   - varchar(10) , Nullable = false
-				pst.setInt      (i++, ae.getReRaiseCount()                                                ); // repeatCnt               - int         , Nullable = false
-				pst.setString   (i++, ae.getDuration()                                                    ); // duration                - varchar(10) , Nullable = false
-//				pst.setTimestamp(i++, ae.getCrTimeStr()                                                   ); // createTime              - datetime    , Nullable = false
-//				pst.setTimestamp(i++, ae.getCancelTimeStr()                                               ); // cancelTime              - datetime    , Nullable = true 
-				pst.setTimestamp(i++, ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())     ); // createTime              - datetime    , Nullable = false
-				pst.setTimestamp(i++, ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime()) ); // cancelTime              - datetime    , Nullable = true 
-//				pst.setInt      (i++, ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                ); // timeToLive              - int         , Nullable = true 
-				pst.setInt      (i++, ae.getTimeToLive()                                                  ); // timeToLive              - int         , Nullable = true 
-				pst.setString   (i++, ae.getData()        == null ? null : ae.getData().toString()        ); // data                    - varchar(80) , Nullable = true 
-				pst.setString   (i++, ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString() ); // lastData                - varchar(80) , Nullable = true 
-				pst.setString   (i++, ae.getDescription()                                                 ); // description             - varchar(512), Nullable = false
-				pst.setString   (i++, ae.getReRaiseDescription()                                          ); // lastDescription         - varchar(512), Nullable = false
-				pst.setString   (i++, ae.getExtendedDescription()                                         ); // extendedDescription     - text        , Nullable = true 
-				pst.setString   (i++, ae.getReRaiseExtendedDescription()                                  ); // lastExtendedDescription - text        , Nullable = true 
+				pst.setTimestamp(i++, sessionStartTime                                                     ); // sessionStartTime        - datetime    , Nullable = false
+				pst.setTimestamp(i++, sessionSampleTime                                                    ); // sessionSampleTime       - datetime    , Nullable = false
+				pst.setTimestamp(i++, aew.getAddDate()                                                     ); // eventTime	            - datetime    , Nullable = false
+				pst.setString   (i++, aew.getAction()                                                      ); // action                  - varchar(15) , Nullable = false
+//				pst.setBoolean  (i++, ae.isActive()                                                        ); // isActive                - bit         , Nullable = false
+				pst.setString   (i++, ae.getAlarmClassAbriviated()                                         ); // alarmClass              - varchar(80) , Nullable = false
+				pst.setString   (i++, ae.getServiceType()                                                  ); // serviceType             - varchar(80) , Nullable = false
+				pst.setString   (i++, ae.getServiceName()                                                  ); // serviceName             - varchar(30) , Nullable = false
+				pst.setString   (i++, ae.getServiceInfo()                                                  ); // serviceInfo             - varchar(80) , Nullable = false
+				pst.setString   (i++, ae.getExtraInfo() == null ? null : ae.getExtraInfo().toString()      ); // extraInfo               - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getCategory()+""                                                  ); // category                - varchar(20) , Nullable = false
+				pst.setString   (i++, ae.getSeverity()+""                                                  ); // severity                - varchar(10) , Nullable = false
+				pst.setString   (i++, ae.getState()+""                                                     ); // state                   - varchar(10) , Nullable = false
+				pst.setInt      (i++, ae.getReRaiseCount()                                                 ); // repeatCnt               - int         , Nullable = false
+				pst.setString   (i++, ae.getDuration()                                                     ); // duration                - varchar(10) , Nullable = false
+//				pst.setTimestamp(i++, ae.getCrTimeStr()                                                    ); // createTime              - datetime    , Nullable = false
+//				pst.setTimestamp(i++, ae.getCancelTimeStr()                                                ); // cancelTime              - datetime    , Nullable = true 
+				pst.setTimestamp(i++, ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())      ); // createTime              - datetime    , Nullable = false
+				pst.setTimestamp(i++, ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())  ); // cancelTime              - datetime    , Nullable = true 
+//				pst.setInt      (i++, ae.getTimeToLive() == -1 ? null : ae.getTimeToLive()                 ); // timeToLive              - int         , Nullable = true 
+				pst.setInt      (i++, ae.getTimeToLive()                                                   ); // timeToLive              - int         , Nullable = true 
+				pst.setString   (i++, ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+""); // threshold      - varchar(15) , Nullable = true 
+				pst.setString   (i++, ae.getData()        == null ? null : ae.getData().toString()         ); // data                    - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getReRaiseData() == null ? null : ae.getReRaiseData().toString()  ); // lastData                - varchar(80) , Nullable = true 
+				pst.setString   (i++, ae.getDescription()                                                  ); // description             - varchar(512), Nullable = false
+				pst.setString   (i++, ae.getReRaiseDescription()                                           ); // lastDescription         - varchar(512), Nullable = false
+				pst.setString   (i++, ae.getExtendedDescription()                                          ); // extendedDescription     - text        , Nullable = true 
+				pst.setString   (i++, ae.getReRaiseExtendedDescription()                                   ); // lastExtendedDescription - text        , Nullable = true 
 		
 				// EXECUTE
 				pst.executeUpdate();
@@ -2601,6 +2818,12 @@ public class PersistWriterJdbc
 			return;
 		}
 
+		boolean checkForDummyShutdown = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_isSevereProblem_simulateDiskFull, DEFAULT_isSevereProblem_simulateDiskFull);
+		if (checkForDummyShutdown)
+		{
+			isSevereProblem(conn, new SQLException("Dummy Exception..."));
+		}
+		
 
 		Timestamp sessionStartTime  = cont.getSessionStartTime();
 		Timestamp sessionSampleTime = cont.getMainSampleTime();
@@ -2619,40 +2842,44 @@ public class PersistWriterJdbc
 			_inSaveSample = true;
 
 			// Save any alarms
-			saveAlarms(conn, sessionStartTime, sessionSampleTime);
+			saveAlarms(conn, cont);
 
-			//
-			// INSERT THE ROW
-			//
-//			String tabName = getTableName(SESSION_SAMPLES, null, true);
-
-			sbSql = new StringBuffer();
-//			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(SESSION_SAMPLES, null, false));
-			sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
-
-			dbExec(conn, sbSql.toString());
-			getStatistics().incInserts();
-
-			// Increment the "counter" column and set LastSampleTime in the SESSIONS table
-			String tabName = getTableName(SESSIONS, null, true);
-			sbSql = new StringBuffer();
-			sbSql.append(" update ").append(tabName);
-			sbSql.append("    set ").append(qic).append("NumOfSamples")  .append(qic).append(" = ").append(qic).append("NumOfSamples").append(qic).append(" + 1,");
-			sbSql.append("        ").append(qic).append("LastSampleTime").append(qic).append(" = '").append(sessionSampleTime).append("'");
-			sbSql.append("  where ").append(qic).append("SessionStartTime").append(qic).append(" = '").append(sessionStartTime).append("'");
-
-			dbExec(conn, sbSql.toString());
-			getStatistics().incUpdates();
-
-			//--------------------------------------
-			// COUNTERS
-			//--------------------------------------
-			for (CountersModel cm : cont._counterObjects)
+			// Save counters
+			if ( ! cont.getCounterObjects().isEmpty() )
 			{
-				saveCounterData(conn, cm, sessionStartTime, sessionSampleTime);
-			}
+				//
+				// INSERT THE ROW
+				//
+//				String tabName = getTableName(SESSION_SAMPLES, null, true);
 
+				sbSql = new StringBuffer();
+//				sbSql.append(" insert into ").append(tabName);
+				sbSql.append(getTableInsertStr(SESSION_SAMPLES, null, false));
+				sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
+
+				dbExec(conn, sbSql.toString());
+				getStatistics().incInserts();
+
+				// Increment the "counter" column and set LastSampleTime in the SESSIONS table
+				String tabName = getTableName(SESSIONS, null, true);
+				sbSql = new StringBuffer();
+				sbSql.append(" update ").append(tabName);
+				sbSql.append("    set ").append(qic).append("NumOfSamples")  .append(qic).append(" = ").append(qic).append("NumOfSamples").append(qic).append(" + 1,");
+				sbSql.append("        ").append(qic).append("LastSampleTime").append(qic).append(" = '").append(sessionSampleTime).append("'");
+				sbSql.append("  where ").append(qic).append("SessionStartTime").append(qic).append(" = '").append(sessionStartTime).append("'");
+
+				dbExec(conn, sbSql.toString());
+				getStatistics().incUpdates();
+
+				//--------------------------------------
+				// COUNTERS
+				//--------------------------------------
+				for (CountersModel cm : cont.getCounterObjects())
+				{
+					saveCounterData(conn, cm, sessionStartTime, sessionSampleTime);
+				}
+			}
+				
 			// CLOSE the transaction
 			conn.commit();
 		}
@@ -3843,4 +4070,51 @@ public class PersistWriterJdbc
 	//---------------------------------------------
 	// END: SQL Capture
 	//---------------------------------------------
+	
+	
+	
+	//---------------------------------------------
+	// BEGIN: Daily Summary Report
+	//---------------------------------------------
+	private void createDailySummaryReport(DbxConnection conn, String serverName)
+	{
+		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
+		{
+			_logger.info("Daily Summary Report is NOT Enabled, this can be enabled using property '"+DailySummaryReportFactory.PROPKEY_create+"=true'.");
+			return;
+		}
+
+		if ( ! DailySummaryReportFactory.isCreateReportEnabledForServer(serverName) )
+		{
+			_logger.info("Daily Summary Report is NOT Enabled, for serverName '"+serverName+"'. Check property '"+DailySummaryReportFactory.PROPKEY_filter_keep_servername+"' or '"+DailySummaryReportFactory.PROPKEY_filter_skip_servername+"'.");
+			return;
+		}
+
+		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
+		if (report == null)
+		{
+			_logger.info("Daily Summary Report: create did not pass a valid report instance, skipping report creation.");
+			return;
+		}
+
+		report.setConnection(conn);
+		report.setServerName(serverName);
+		try
+		{
+			// Initialize the Report, which also initialized the ReportSender
+			report.init();
+
+			// Create & and Send the report
+			report.create();
+			report.send();
+		}
+		catch(Exception ex)
+		{
+			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
+		}
+	}
+	//---------------------------------------------
+	// END: Daily Summary Report
+	//---------------------------------------------
+
 }

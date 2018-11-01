@@ -1196,4 +1196,14 @@ public class DbxTuneSample
 		String jsonStr = sw.toString();
 		return jsonStr;
 	}
+
+	/**
+	 * check if the containe contains anything...
+	 * @return
+	 */
+	public boolean isEmpty()
+	{
+		return getCollectors().isEmpty() && getActiveAlarms().isEmpty() && getAlarmEntries().isEmpty();
+	}
+	
 }

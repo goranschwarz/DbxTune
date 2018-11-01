@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.central.pcs.CentralPersistWriterBase.Table;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -54,7 +55,8 @@ public abstract class PersistWriterBase
 	public static final int SQL_CAPTURE_SQLTEXT      = 60;
 	public static final int SQL_CAPTURE_STATEMENTS   = 61;
 	public static final int SQL_CAPTURE_PLANS        = 62;
-	public static final int ALARM_HISTORY            = 90;
+	public static final int ALARM_ACTIVE             = 90;
+	public static final int ALARM_HISTORY            = 91;
 	public static final int ABS                      = 100;
 	public static final int DIFF                     = 101;
 	public static final int RATE                     = 102;
@@ -558,6 +560,7 @@ public abstract class PersistWriterBase
 		case SQL_CAPTURE_SQLTEXT:      return q + "MonSqlCapSqlText"            + q;
 		case SQL_CAPTURE_STATEMENTS:   return q + "MonSqlCapStatements"         + q;
 		case SQL_CAPTURE_PLANS:        return q + "MonSqlCapPlans"              + q;
+		case ALARM_ACTIVE:             return q + "MonAlarmActive"              + q;
 		case ALARM_HISTORY:            return q + "MonAlarmHistory"             + q;
 		case ABS:                      return q + cm.getName() + "_abs"         + q;
 		case DIFF:                     return q + cm.getName() + "_diff"        + q;
@@ -822,6 +825,34 @@ public abstract class PersistWriterBase
 ////			else if (type == SQL_CAPTURE_PLANS)
 ////			{
 ////			}
+			else if (type == ALARM_ACTIVE)
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"alarmClass"                 +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"serviceType"                +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"serviceName"                +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"serviceInfo"                +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"extraInfo"                  +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"category"                   +qic,40)+" "+fill(getDatatype("varchar",   20,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"severity"                   +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"state"                      +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"repeatCnt"                  +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"duration"                   +qic,40)+" "+fill(getDatatype("varchar",   10,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"createTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"cancelTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"timeToLive"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"threshold"                  +qic,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"description"                +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"lastDescription"            +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"extendedDescription"        +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"lastExtendedDescription"    +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"alarmClass"+qic+", "+qic+"serviceType"+qic+", "+qic+"serviceName"+qic+", "+qic+"serviceInfo"+qic+", "+qic+"extraInfo"+qic+")\n");
+				sbSql.append(") \n");
+			}
 			else if (type == ALARM_HISTORY)
 			{
 				sbSql.append("create table " + tabName + "\n");
@@ -844,6 +875,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"createTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"cancelTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"timeToLive"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"threshold"                  +qic,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"description"                +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
@@ -851,7 +883,7 @@ public abstract class PersistWriterBase
 				sbSql.append("   ,"+fill(qic+"extendedDescription"        +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"lastExtendedDescription"    +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
-				sbSql.append("   ,PRIMARY KEY ("+qic+"EventTime"+qic+", "+qic+"Action"+qic+", "+qic+"AlarmClass"+qic+", "+qic+"serviceType"+qic+", "+qic+"serviceName"+qic+", "+qic+"serviceInfo"+qic+", "+qic+"extraInfo"+qic+")\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"eventTime"+qic+", "+qic+"action"+qic+", "+qic+"alarmClass"+qic+", "+qic+"serviceType"+qic+", "+qic+"serviceName"+qic+", "+qic+"serviceInfo"+qic+", "+qic+"extraInfo"+qic+")\n");
 				sbSql.append(") \n");
 			}
 			else if (type == ABS || type == DIFF || type == RATE)
@@ -1193,37 +1225,66 @@ public abstract class PersistWriterBase
 //		else if (type == SQL_CAPTURE_PLANS)
 //		{
 //		}
+		else if (type == ALARM_ACTIVE)
+		{
+			sbSql.append("insert into ").append(tabName).append(" (");
+			sbSql.append(qic).append("alarmClass"             ).append(qic).append(", "); // 1
+			sbSql.append(qic).append("serviceType"            ).append(qic).append(", "); // 2
+			sbSql.append(qic).append("serviceName"            ).append(qic).append(", "); // 3
+			sbSql.append(qic).append("serviceInfo"            ).append(qic).append(", "); // 4
+			sbSql.append(qic).append("extraInfo"              ).append(qic).append(", "); // 5
+			sbSql.append(qic).append("category"               ).append(qic).append(", "); // 6
+			sbSql.append(qic).append("severity"               ).append(qic).append(", "); // 7
+			sbSql.append(qic).append("state"                  ).append(qic).append(", "); // 8
+			sbSql.append(qic).append("repeatCnt"              ).append(qic).append(", "); // 9
+			sbSql.append(qic).append("duration"               ).append(qic).append(", "); // 10
+			sbSql.append(qic).append("createTime"             ).append(qic).append(", "); // 11
+			sbSql.append(qic).append("cancelTime"             ).append(qic).append(", "); // 12
+			sbSql.append(qic).append("timeToLive"             ).append(qic).append(", "); // 13
+			sbSql.append(qic).append("threshold"              ).append(qic).append(", "); // 14
+			sbSql.append(qic).append("data"                   ).append(qic).append(", "); // 15
+			sbSql.append(qic).append("lastData"               ).append(qic).append(", "); // 16
+			sbSql.append(qic).append("description"            ).append(qic).append(", "); // 17
+			sbSql.append(qic).append("lastDescription"        ).append(qic).append(", "); // 18
+			sbSql.append(qic).append("extendedDescription"    ).append(qic).append(", "); // 19
+			sbSql.append(qic).append("lastExtendedDescription").append(qic).append("");   // 20
+			sbSql.append(") \n");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+		}
 		else if (type == ALARM_HISTORY)
 		{
 			sbSql.append("insert into ").append(tabName).append(" (");
-			sbSql.append(qic).append("SessionStartTime"       ).append(qic).append(", ");
-			sbSql.append(qic).append("SessionSampleTime"      ).append(qic).append(", ");
-			sbSql.append(qic).append("EventTime"	          ).append(qic).append(", ");
-			sbSql.append(qic).append("Action"                 ).append(qic).append(", ");
-//			sbSql.append(qic).append("isActive"               ).append(qic).append(", ");
-			sbSql.append(qic).append("AlarmClass"             ).append(qic).append(", ");
-			sbSql.append(qic).append("serviceType"            ).append(qic).append(", ");
-			sbSql.append(qic).append("serviceName"            ).append(qic).append(", ");
-			sbSql.append(qic).append("serviceInfo"            ).append(qic).append(", ");
-			sbSql.append(qic).append("extraInfo"              ).append(qic).append(", ");
-			sbSql.append(qic).append("category"               ).append(qic).append(", ");
-			sbSql.append(qic).append("severity"               ).append(qic).append(", ");
-			sbSql.append(qic).append("state"                  ).append(qic).append(", ");
-			sbSql.append(qic).append("repeatCnt"              ).append(qic).append(", ");
-			sbSql.append(qic).append("duration"               ).append(qic).append(", ");
-			sbSql.append(qic).append("createTime"             ).append(qic).append(", ");
-			sbSql.append(qic).append("cancelTime"             ).append(qic).append(", ");
-			sbSql.append(qic).append("timeToLive"             ).append(qic).append(", ");
-			sbSql.append(qic).append("Data"                   ).append(qic).append(", ");
-			sbSql.append(qic).append("LastData"               ).append(qic).append(", ");
-			sbSql.append(qic).append("description"            ).append(qic).append(", ");
-			sbSql.append(qic).append("LastDescription"        ).append(qic).append(", ");
-			sbSql.append(qic).append("extendedDescription"    ).append(qic).append(", ");
-			sbSql.append(qic).append("LastExtendedDescription").append(qic).append("");
+			sbSql.append(qic).append("SessionStartTime"       ).append(qic).append(", "); // 1
+			sbSql.append(qic).append("SessionSampleTime"      ).append(qic).append(", "); // 2
+			sbSql.append(qic).append("eventTime"	          ).append(qic).append(", "); // 3
+			sbSql.append(qic).append("action"                 ).append(qic).append(", "); // 4
+//			sbSql.append(qic).append("isActive"               ).append(qic).append(", "); // commented out
+			sbSql.append(qic).append("alarmClass"             ).append(qic).append(", "); // 5
+			sbSql.append(qic).append("serviceType"            ).append(qic).append(", "); // 6
+			sbSql.append(qic).append("serviceName"            ).append(qic).append(", "); // 7
+			sbSql.append(qic).append("serviceInfo"            ).append(qic).append(", "); // 8
+			sbSql.append(qic).append("extraInfo"              ).append(qic).append(", "); // 9
+			sbSql.append(qic).append("category"               ).append(qic).append(", "); // 10
+			sbSql.append(qic).append("severity"               ).append(qic).append(", "); // 11
+			sbSql.append(qic).append("state"                  ).append(qic).append(", "); // 12
+			sbSql.append(qic).append("repeatCnt"              ).append(qic).append(", "); // 13
+			sbSql.append(qic).append("duration"               ).append(qic).append(", "); // 14
+			sbSql.append(qic).append("createTime"             ).append(qic).append(", "); // 15
+			sbSql.append(qic).append("cancelTime"             ).append(qic).append(", "); // 16
+			sbSql.append(qic).append("timeToLive"             ).append(qic).append(", "); // 17
+			sbSql.append(qic).append("threshold"              ).append(qic).append(", "); // 18
+			sbSql.append(qic).append("Data"                   ).append(qic).append(", "); // 19
+			sbSql.append(qic).append("lastData"               ).append(qic).append(", "); // 20
+			sbSql.append(qic).append("description"            ).append(qic).append(", "); // 21
+			sbSql.append(qic).append("lastDescription"        ).append(qic).append(", "); // 22
+			sbSql.append(qic).append("extendedDescription"    ).append(qic).append(", "); // 23
+			sbSql.append(qic).append("lastExtendedDescription").append(qic).append("");   // 24
 			sbSql.append(") \n");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
-				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				//                   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 		}
 		else if (type == ABS || type == DIFF || type == RATE)
 		{
@@ -1389,6 +1450,10 @@ public abstract class PersistWriterBase
 //		{
 //			return null;
 //		}
+		else if (type == ALARM_ACTIVE)
+		{
+			return null;
+		}
 		else if (type == ALARM_HISTORY)
 		{
 			String tabName = getTableName(type, null, false);

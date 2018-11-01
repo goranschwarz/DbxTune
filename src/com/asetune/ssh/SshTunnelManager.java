@@ -182,7 +182,8 @@ public class SshTunnelManager
 				sshTunnelInfo.getSshHost(), 
 				sshTunnelInfo.getSshPort(), 
 				sshTunnelInfo.getSshUsername(), 
-				sshTunnelInfo.getSshPassword());
+				sshTunnelInfo.getSshPassword(),
+				sshTunnelInfo.getSshKeyFile());
 
 //System.out.println("SshTunnelManager.setupTunnel(): hostPortStr='"+hostPortStr+"', sshHost='"+sshTunnelInfo.getSshHost()+", sshPort='"+sshTunnelInfo.getSshPort()+"', sshUser='"+sshTunnelInfo.getSshUsername()+"', sshPasswd='"+sshTunnelInfo.getSshPassword()+"'.");
 //System.out.println("SshTunnelManager.setupTunnel(): hostPortStr='"+hostPortStr+"', sshTunnelInfo='"+sshTunnelInfo.getConfigString(false, true)+"'.");

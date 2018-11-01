@@ -48,7 +48,7 @@
 //	{
 //		if ($input == "")
 //			return "NULL";
-//		return "'" . mysql_real_escape_string($input) . "'";
+//		return "'" . mysqli_real_escape_string($dbconn, $input) . "'";
 //	}
 
 
@@ -85,8 +85,10 @@
 
 	//------------------------------------------
 	// Now connect to the database
-	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die("ERROR: " . mysql_error());
-	mysql_select_db("asemon_se", $db) or die("ERROR: " . mysql_error());
+//	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());
+//	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
+
+	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
 
 	for ( $bc = 0; $bc < $batchSize; $bc++ )
 	{
@@ -103,7 +105,7 @@
 		$Description        = getUrlParam('Description' . "-$bc");
 
 		// make some strings "safe"
-		$Description = mysql_real_escape_string($Description);
+		$Description = mysqli_real_escape_string($dbconn, $Description);
 
 		$sql = "insert into asemon_mda_info
 		(
@@ -163,10 +165,10 @@
 
 		//------------------------------------------
 		// Do the INSERT, if errors exit (1062==Duplicate Key, which we dont kare about here...)
-		mysql_query($sql);
+		mysqli_query($dbconn, $sql);
 
-		$errorNumber = mysql_errno();
-		$errorString = mysql_error();
+		$errorNumber = mysqli_errno($dbconn);
+		$errorString = mysqli_error($dbconn);
 		if ($errorNumber != 0 && $errorNumber != 1062)
 		{
 			die("ERROR: Number=" . $errorNumber . ", Message=" . $errorString);
@@ -175,7 +177,7 @@
 
 	//------------------------------------------
 	// Close connection to the database
-	mysql_close() or die("ERROR: " . mysql_error());
+	mysqli_close($dbconn) or die("ERROR: " . mysqli_error($dbconn));
 
 	echo "DONE: \n";
 ?>

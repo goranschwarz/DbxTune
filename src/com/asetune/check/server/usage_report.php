@@ -23,41 +23,41 @@
 <BODY>
 
 <h1>Choose a Specific Report Below</h1>
-<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=false"              >Summary Report, Start Count</A>,
-<A HREF="http://www.asemon.se/usage_report.php?summary_count=true&diffReset=true"               >WITH RESET</A> <i>(WITH RESET is only for admin users, <b>so please do not use</b>)</i> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_os=true"                                 >Summary Report, OS Count</A>              <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_country=true"                            >Summary Report, Country Count</A>         <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_version=true&summary_version_clear=false">Summary Report, Version Count</A>,
-<A HREF="http://www.asemon.se/usage_report.php?summary_version=true&summary_version_clear=true" >WITH RESET</A>                 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_asever=true"                             >Summary Report, ASE Version Count</A>     <BR>
-<A HREF="http://www.asemon.se/usage_report.php?summary_user=true"                               >Summary Report, on User</A>               <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_count=true&diffReset=false"              >Summary Report, Start Count</A>,
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_count=true&diffReset=true"               >WITH RESET</A> <i>(WITH RESET is only for admin users, <b>so please do not use</b>)</i> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_os=true"                                 >Summary Report, OS Count</A>              <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_country=true"                            >Summary Report, Country Count</A>         <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_version=true&summary_version_clear=false">Summary Report, Version Count</A>,
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_version=true&summary_version_clear=true" >WITH RESET</A>                 <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_asever=true"                             >Summary Report, ASE Version Count</A>     <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_user=true"                               >Summary Report, on User</A>               <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?conn=first"                                      >Connection Info Report (first 500)</A>         -or- <A HREF="http://www.asemon.se/usage_report.php?conn=all">ALL</A> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?conn=first"                                      >Connection Info Report (first 500)</A>         -or- <A HREF="http://www.dbxtune.com/usage_report.php?conn=all">ALL</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?mda=all"                                         >MDA Table/Column Info, for various ASE Versions</A> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?mda=all"                                         >MDA Table/Column Info, for various ASE Versions</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?udc=true"                                        >User Defined Counters Info Report</A>     <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?udc=true"                                        >User Defined Counters Info Report</A>     <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?usage=first"                                     >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.asemon.se/usage_report.php?usage=all">ALL</A> -or- <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmEngines">CmEngines</A>, <A HREF="http://www.asemon.se/usage_report.php?usage=counter&cmName=CmObjectActivity">CmObjectActivity</A> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?usage=first"                                     >Counter Usage Info Report (first 500)</A>      -or- <A HREF="http://www.dbxtune.com/usage_report.php?usage=all">ALL</A> -or- <A HREF="http://www.dbxtune.com/usage_report.php?usage=counter&cmName=CmEngines">CmEngines</A>, <A HREF="http://www.dbxtune.com/usage_report.php?usage=counter&cmName=CmObjectActivity">CmObjectActivity</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=sum"                                   >Error Info Report, Summary</A>                 -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?errorInfo=first"                                 >Error Info Report (first 500)</A>              -or- <A HREF="http://www.asemon.se/usage_report.php?errorInfo=all">ALL</A> <BR>
-<A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=first"                               >Timeout Info Report (first 500)</A>            -or- <A HREF="http://www.asemon.se/usage_report.php?timeoutInfo=all">ALL</A> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?errorInfo=sum"                                   >Error Info Report, Summary</A>                 -or- <A HREF="http://www.dbxtune.com/usage_report.php?errorInfo=sumSave">Saved</A> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?errorInfo=first"                                 >Error Info Report (first 500)</A>              -or- <A HREF="http://www.dbxtune.com/usage_report.php?errorInfo=all">ALL</A> <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?timeoutInfo=first"                               >Timeout Info Report (first 500)</A>            -or- <A HREF="http://www.dbxtune.com/usage_report.php?timeoutInfo=all">ALL</A> <BR>
 <BR>
-<A HREF="http://www.asemon.se/usage_report.php?full=true"                                       >Full Report (first 300)</A>               <BR>
-<A HREF="http://www.asemon.se/usage_report.php?sap=true"                                        >SAP Systems Report (first 300)</A>        <BR>
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=false"     >SQL Window (first 300)</A>,
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=true"      >WITH RESET</A>                            <BR>
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwConnId=first"                      >SQL Window Connection Info (first 300)</A><BR>
-<A HREF="http://www.asemon.se/usage_report.php?sqlw=true&sqlwUsageId=first"                     >SQL Window Usage Info (first 300)</A><BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?full=true"                                       >Full Report (first 300)</A>               <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?sap=true"                                        >SAP Systems Report (first 300)</A>        <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=false"     >SQL Window (first 300)</A>,
+<A HREF="http://www.dbxtune.com/usage_report.php?sqlw=true&sqlwStat=true&sqlwDiffReset=true"      >WITH RESET</A>                            <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?sqlw=true&sqlwConnId=first"                      >SQL Window Connection Info (first 300)</A><BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?sqlw=true&sqlwUsageId=first"                     >SQL Window Usage Info (first 300)</A><BR>
 <BR>
 <h2>Admin:</h2>
 DB Cleanup:
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=cleanup"                      >cleanup</A>,
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=dbmaint"                      >dbmaint</A>,
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=check"                        >check</A>,
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=help"                         >help</A>,
-<A HREF="http://www.asemon.se/db_cleanup.php?doAction=reCreateProcs"                >recreate stored procs</A>
+<A HREF="http://www.dbxtune.com/db_cleanup.php?doAction=cleanup"                      >cleanup</A>,
+<A HREF="http://www.dbxtune.com/db_cleanup.php?doAction=dbmaint"                      >dbmaint</A>,
+<A HREF="http://www.dbxtune.com/db_cleanup.php?doAction=check"                        >check</A>,
+<A HREF="http://www.dbxtune.com/db_cleanup.php?doAction=help"                         >help</A>,
+<A HREF="http://www.dbxtune.com/db_cleanup.php?doAction=reCreateProcs"                >recreate stored procs</A>
 <i>(only for admin, <b>so please do not use</b>)</i>
 
 <?php
@@ -94,6 +94,8 @@ DB Cleanup:
 	$rpt_sqlw_UsageId          = $_GET['sqlwUsageId'];
 
 	$del_deleteLogId           = $_GET['deleteLogId'];
+	$del_deleteLogLocation     = $_GET['deleteLogLocation'];
+	$del_logMessageStart       = $_GET['deleteLogMessageStart'];
 	$save_saveLogId            = $_GET['saveLogId'];
 
 	$mda_deleteVersion         = versionFix($_GET['mda_deleteVersion']);
@@ -145,12 +147,10 @@ DB Cleanup:
 	//-------------------------------------------
 	// CONNECT to database
 	//-------------------------------------------
-//	mysql_connect("localhost", "asemon_stat", "asemon") or die(mysql_error());
-//	mysql_select_db("asemon_stat") or die(mysql_error());
+//	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());
+//	mysql_select_db("dbxtune_com", $db) or die("ERROR: " . mysql_error());
 
-//	$db=mysql_connect("localhost", "asemon_se", "qazZSE44") or die(mysql_error());
-	$db=mysql_connect("localhost", "asemon_se", "UuWb3ETM") or die(mysql_error());
-	mysql_select_db("asemon_se", $db) or die(mysql_error());
+	$dbconn=mysqli_connect("localhost", "dbxtune_com", "L8MucH4c", "dbxtune_com") or die("ERROR: " . mysqli_connect_error());
 
 
 
@@ -166,23 +166,23 @@ DB Cleanup:
 			<input type="submit" value="Submit"/>
 		</form>
 	';
-//	mysql_query("CREATE TABLE userIdDescription (userId varchar(20), description varchar(100))")  or die("ERROR: " . mysql_error());
+//	mysqli_query($dbconn, "CREATE TABLE userIdDescription (userId varchar(20), description varchar(100))")  or die("ERROR: " . mysqli_error($dbconn));
 
 	//------------------------------------------
 	// Get a CACHE for userIdDescription, which can be used as a lookup table
 	//------------------------------------------
 	$userIdCache = array();
-	$result = mysql_query("select upper(userId) as userId, description from userIdDescription");
+	$result = mysqli_query($dbconn, "select upper(userId) as userId, description from userIdDescription");
 	if ($result)
 	{
-		while ($row = mysql_fetch_assoc($result))
+		while ($row = mysqli_fetch_assoc($result))
 		{
 			$userIdCache[ $row['userId'] ] = $row['description'];
 		}
 	}
 	else
 	{
-		echo mysql_errno() . ": " . mysql_error() . "<br>";
+		echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 	}
 //	print_r($userIdCache);
 //	echo "<br>";
@@ -203,9 +203,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "on domain $rpt_onDomain");
@@ -224,9 +224,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "on domain $rpt_onDomain");
@@ -245,9 +245,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "AppStarts MADE BY Caller IP Address $rpt_getAppStartsForIp");
@@ -269,9 +269,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "CONNECTIONS MADE BY Caller IP Address $rpt_getConnectForIp");
@@ -293,9 +293,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "CONNECTIONS MADE BY Domain $rpt_getConnectForDomain");
@@ -314,32 +314,32 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "asemon_usage on: $rpt_onId");
 
 
 		// sending query
-		$result = mysql_query("SELECT * FROM asemon_connect_info WHERE checkId = " . $rpt_onId);
+		$result = mysqli_query($dbconn, "SELECT * FROM asemon_connect_info WHERE checkId = " . $rpt_onId);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "asemon_connect_info on: $rpt_onId");
 
 		// sending query
-		$result = mysql_query("SELECT * FROM asemon_udc_info WHERE checkId = " . $rpt_onId);
+		$result = mysqli_query($dbconn, "SELECT * FROM asemon_udc_info WHERE checkId = " . $rpt_onId);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "asemon_udc_info on: $rpt_onId");
 
 		// sending query
-		$result = mysql_query("
+		$result = mysqli_query($dbconn, "
 			SELECT checkId,
 				serverAddTime,
 				clientAppName,
@@ -359,7 +359,7 @@ DB Cleanup:
 			ORDER BY connectId, sessionStartTime, addSequence
 			");
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "asemon_counter_usage_info on: $rpt_onId");
@@ -390,7 +390,7 @@ DB Cleanup:
 			ORDER BY sendCounter
 		";
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -422,7 +422,7 @@ DB Cleanup:
 			ORDER BY sendCounter
 		";
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -452,7 +452,7 @@ DB Cleanup:
 			ORDER BY sendCounter
 		";
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -468,15 +468,15 @@ DB Cleanup:
 	//-------------------------------------------
 	if ( $ipDesc_key != "" )
 	{
-		mysql_query("DELETE FROM callerIpDescription WHERE callerIpAddress = '" . $ipDesc_key . "'")         or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO callerIpDescription values('" . $ipDesc_key . "', '" . $ipDesc_val . "')")  or die("ERROR: " . mysql_error());
+		mysqli_query($dbconn, "DELETE FROM callerIpDescription WHERE callerIpAddress = '" . $ipDesc_key . "'")         or die("ERROR: " . mysqli_error($dbconn));
+		mysqli_query($dbconn, "INSERT INTO callerIpDescription values('" . $ipDesc_key . "', '" . $ipDesc_val . "')")  or die("ERROR: " . mysqli_error($dbconn));
 
 		$sql = "SELECT * FROM callerIpDescription";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Caller IP Descriptions");
@@ -493,21 +493,21 @@ DB Cleanup:
 		$userId_val = trim($userId_val);
 
 
-//		mysql_query("DELETE FROM userIdDescription")         or die("ERROR: " . mysql_error());
-		mysql_query("DELETE FROM userIdDescription where userId = ''")         or die("ERROR: " . mysql_error());
+//		mysqli_query($dbconn, "DELETE FROM userIdDescription")         or die("ERROR: " . mysqli_error($dbconn));
+		mysqli_query($dbconn, "DELETE FROM userIdDescription where userId = ''")         or die("ERROR: " . mysqli_error($dbconn));
 
 		echo "Actions taken:";
 		echo "<ul>";
 		if ( $userId_key != "" )
 		{
 			echo "<li><i>Trying to delete user '" . $userId_key . "' (if it exists)</i></li>";
-			mysql_query("DELETE FROM userIdDescription WHERE upper(userId) = upper('" . $userId_key . "')")         or die("ERROR: " . mysql_error());
+			mysqli_query($dbconn, "DELETE FROM userIdDescription WHERE upper(userId) = upper('" . $userId_key . "')")         or die("ERROR: " . mysqli_error($dbconn));
 		}
 
 		if ( $userId_key != "" && $userId_val != "" )
 		{
 			echo "<li><i>Adding userId: '" . $userId_key . "', with description '" . $userId_val . "'</i></li>";
-			mysql_query("INSERT INTO userIdDescription values(upper('" . $userId_key . "'), '" . $userId_val . "')")  or die("ERROR: " . mysql_error());
+			mysqli_query($dbconn, "INSERT INTO userIdDescription values(upper('" . $userId_key . "'), '" . $userId_val . "')")  or die("ERROR: " . mysqli_error($dbconn));
 		}
 
 		//echo "userId_query: (" . $userId_query . ")<br>";
@@ -522,18 +522,18 @@ DB Cleanup:
 		echo "</ul>";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "User ID Descriptions/Translations");
 
 
 		$sql = "SELECT count(*) as DescriptionCount FROM userIdDescription" . $sqlWhere;
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Number of records in Translation Table");
@@ -566,9 +566,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "START Count");
@@ -591,24 +591,54 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "ASE CONNECT Count");
 																			echo "	</TD>";
 
+//																			echo "	<TD VALIGN=\"top\">";
+//		//------------------------------------------
+//		// Summary Report, Start Count, per day - WITHOUT SOME DOMAINS
+//		//------------------------------------------
+//		$sql = "
+//			SELECT
+//				DATE_FORMAT(serverAddTime, '%Y-%m-%d')  as usageDate,
+//				count(*)             as usageCount
+//			FROM asemon_usage
+//			WHERE clientHostName <> 'asetune-virtual-machine'
+//			GROUP BY
+//				DATE_FORMAT(serverAddTime, '%Y-%m-%d')
+//			ORDER BY
+//				1 desc
+//			LIMIT 30
+//			";
+//
+//		// sending query
+//		$result = mysqli_query($dbconn, $sql);
+//		if (!$result) {
+//			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+//			die("ERROR: Query to show fields from table failed");
+//		}
+//		htmlResultset($userIdCache, $result, "START Count WITHOUT 'asetune-virtual-machine'");
+//																			echo "	</TD>";
+
+																			echo "	<TD VALIGN=\"top\">";
+																			echo "	    &nbsp;--------&gt;&gt;&gt;&nbsp;";
+																			echo "	</TD>";
+
 																			echo "	<TD VALIGN=\"top\">";
 		//------------------------------------------
-		// Summary Report, Start Count, per day - WITHOUT SOME DOMAINS
+		// Summary Report, Start Count, per day - GUI
 		//------------------------------------------
 		$sql = "
 			SELECT
 				DATE_FORMAT(serverAddTime, '%Y-%m-%d')  as usageDate,
 				count(*)             as usageCount
 			FROM asemon_usage
-			WHERE clientHostName <> 'asetune-virtual-machine'
+			WHERE gui = 'true'
 			GROUP BY
 				DATE_FORMAT(serverAddTime, '%Y-%m-%d')
 			ORDER BY
@@ -617,16 +647,43 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($userIdCache, $result, "START Count WITHOUT 'asetune-virtual-machine'");
+		htmlResultset($userIdCache, $result, "GUI-START Count");
 																			echo "	</TD>";
 
+
 																			echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, Start Count, per day - NO-GUI
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y-%m-%d')  as usageDate,
+				count(*)             as usageCount
+			FROM asemon_usage
+			WHERE gui = 'false'
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y-%m-%d')
+			ORDER BY
+				1 desc
+			LIMIT 30
+			";
+
+		// sending query
+		$result = mysqli_query($dbconn, $sql);
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "NO-GUI-START Count");
 																			echo "	</TD>";
+
+
+
 																			echo "</TR>";
 																			echo "</TABLE>";
 
@@ -651,9 +708,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "START Count");
@@ -675,24 +732,55 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "ASE CONNECT Count");
 																			echo "	</TD>";
 
+//																			echo "	<TD VALIGN=\"top\">";
+//		//------------------------------------------
+//		// Summary Report, Start Count, per month - WITHOUT SOME DOMAINS
+//		//------------------------------------------
+//		$sql = "
+//			SELECT
+//				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
+//				count(*)             as usageCount
+//			FROM asemon_usage
+//			WHERE clientHostName <> 'asetune-virtual-machine'
+//			GROUP BY
+//				DATE_FORMAT(serverAddTime, '%Y %b')
+//			ORDER BY
+//				DATE_FORMAT(serverAddTime, '%Y-%m') desc
+//			";
+//
+//		// sending query
+//		$result = mysqli_query($dbconn, $sql);
+//		if (!$result) {
+//			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+//			die("ERROR: Query to show fields from table failed");
+//		}
+//		htmlResultset($userIdCache, $result, "START Count WITHOUT 'asetune-virtual-machine'");
+//																			echo "	</TD>";
+
+
+																			echo "	<TD VALIGN=\"top\">";
+																			echo "	    &nbsp;--------&gt;&gt;&gt;&nbsp;";
+																			echo "	</TD>";
+
+
 																			echo "	<TD VALIGN=\"top\">";
 		//------------------------------------------
-		// Summary Report, Start Count, per month - WITHOUT SOME DOMAINS
+		// Summary Report, Start Count, per month - GUI
 		//------------------------------------------
 		$sql = "
 			SELECT
 				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
 				count(*)             as usageCount
 			FROM asemon_usage
-			WHERE clientHostName <> 'asetune-virtual-machine'
+			WHERE gui = 'true'
 			GROUP BY
 				DATE_FORMAT(serverAddTime, '%Y %b')
 			ORDER BY
@@ -700,13 +788,41 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
-		htmlResultset($userIdCache, $result, "START Count WITHOUT 'asetune-virtual-machine'");
+		htmlResultset($userIdCache, $result, "GUI-START Count");
 																			echo "	</TD>";
+
+
+																			echo "	<TD VALIGN=\"top\">";
+		//------------------------------------------
+		// Summary Report, Start Count, per month - NO-GUI
+		//------------------------------------------
+		$sql = "
+			SELECT
+				DATE_FORMAT(serverAddTime, '%Y %b')  as usageDate,
+				count(*)             as usageCount
+			FROM asemon_usage
+			WHERE gui = 'false'
+			GROUP BY
+				DATE_FORMAT(serverAddTime, '%Y %b')
+			ORDER BY
+				DATE_FORMAT(serverAddTime, '%Y-%m') desc
+			";
+
+		// sending query
+		$result = mysqli_query($dbconn, $sql);
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "NO-GUI-START Count");
+																			echo "	</TD>";
+
+
 																			echo "</TR>";
 																			echo "</TABLE>";
 
@@ -714,28 +830,28 @@ DB Cleanup:
 		//------------------------------------------
 		// Summary per: CALLER-IP-ADDRESS
 		//------------------------------------------
-//		$result = mysql_query("SELECT @@MAX_JOIN_SIZE");
+//		$result = mysqli_query($dbconn, "SELECT @@MAX_JOIN_SIZE");
 //		htmlResultset($userIdCache, $result, "SELECT @@MAX_JOIN_SIZE");
 //echo "XXX: 1<br>";
-//		$result = mysql_query("select count(*) from sumCallerIpStartNow");
+//		$result = mysqli_query($dbconn, "select count(*) from sumCallerIpStartNow");
 //		htmlResultset($userIdCache, $result, "sumCallerIpStartNow");
 
-//		$result = mysql_query("select count(*) from sumCallerIpStartPriv");
+//		$result = mysqli_query($dbconn, "select count(*) from sumCallerIpStartPriv");
 //		htmlResultset($userIdCache, $result, "sumCallerIpStartPriv");
 
-//		$result = mysql_query("select count(*) from callerIpDescription");
+//		$result = mysqli_query($dbconn, "select count(*) from callerIpDescription");
 //		htmlResultset($userIdCache, $result, "callerIpDescription");
 
 
-		mysql_query("SET SQL_BIG_SELECTS=1") or die("ERROR: " . mysql_error());
+		mysqli_query($dbconn, "SET SQL_BIG_SELECTS=1") or die("ERROR: " . mysqli_error($dbconn));
 
-//		mysql_query("CREATE TABLE sumCallerIpStartNow (callerIpAddress varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
-//		mysql_query("CREATE TABLE sumCallerIpStartPriv(callerIpAddress varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
-//		mysql_query("CREATE TABLE callerIpDescription (callerIpAddress varchar(20), description varchar(50))")                                          or die("ERROR: " . mysql_error());
+//		mysqli_query($dbconn, "CREATE TABLE sumCallerIpStartNow (callerIpAddress varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysqli_error($dbconn));
+//		mysqli_query($dbconn, "CREATE TABLE sumCallerIpStartPriv(callerIpAddress varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysqli_error($dbconn));
+//		mysqli_query($dbconn, "CREATE TABLE callerIpDescription (callerIpAddress varchar(20), description varchar(50))")                                          or die("ERROR: " . mysqli_error($dbconn));
 
 		//----------- Trunacte NOW table and pupulate it again
-		mysql_query("TRUNCATE TABLE sumCallerIpStartNow") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumCallerIpStartNow(callerIpAddress, usageCount, lastStarted, pollTime)
+		mysqli_query($dbconn, "TRUNCATE TABLE sumCallerIpStartNow") or die("ERROR: " . mysqli_error($dbconn));
+		mysqli_query($dbconn, "INSERT INTO    sumCallerIpStartNow(callerIpAddress, usageCount, lastStarted, pollTime)
 			SELECT
 --				callerIpAddress,
 				COALESCE(callerIpAddress,'**********'),
@@ -746,11 +862,11 @@ DB Cleanup:
 --			WHERE callerIpAddress IS NOT NULL
 			GROUP BY
 				callerIpAddress
-			") or die("ERROR: " . mysql_error());
+			") or die("ERROR: " . mysqli_error($dbconn));
 
 //echo "XXX: 2<br>";
 		//----------- GET RESULTS & PRINT IT
-		$result = mysql_query("
+		$result = mysqli_query($dbconn, "
 			SELECT n.callerIpAddress,
 				n.callerIpAddress AS getAppStartsForIp,
 				n.callerIpAddress AS getConnectForIp,
@@ -766,7 +882,7 @@ DB Cleanup:
 			LIMIT 30");
 
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Caller IP ADDRESS, ORDER BY START_TIME    TOP 30");
@@ -775,8 +891,8 @@ DB Cleanup:
 		//----------- Move NOW table into PREV
 		if ( $rpt_summary_diffReset == "true" )
 		{
-			mysql_query("TRUNCATE TABLE sumCallerIpStartPriv") or die("ERROR: " . mysql_error());
-			mysql_query("INSERT INTO    sumCallerIpStartPriv (SELECT * FROM sumCallerIpStartNow)") or die("ERROR: " . mysql_error());
+			mysqli_query($dbconn, "TRUNCATE TABLE sumCallerIpStartPriv") or die("ERROR: " . mysqli_error($dbconn));
+			mysqli_query($dbconn, "INSERT INTO    sumCallerIpStartPriv (SELECT * FROM sumCallerIpStartNow)") or die("ERROR: " . mysqli_error($dbconn));
 		}
 
 		//------------------------------------------
@@ -805,8 +921,8 @@ DB Cleanup:
 //				2 desc
 
 		//----------- Trunacte NOW table and pupulate it again
-		mysql_query("TRUNCATE TABLE sumDomainStartNow") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumDomainStartNow(domainName, usageCount, lastStarted, pollTime)
+		mysqli_query($dbconn, "TRUNCATE TABLE sumDomainStartNow") or die("ERROR: " . mysqli_error($dbconn));
+		mysqli_query($dbconn, "INSERT INTO    sumDomainStartNow(domainName, usageCount, lastStarted, pollTime)
 			SELECT
 				SUBSTRING_INDEX(clientCanonicalHostName, '.', -2),
 				count(*),
@@ -815,10 +931,10 @@ DB Cleanup:
 			FROM asemon_usage
 			GROUP BY
 				SUBSTRING_INDEX(clientCanonicalHostName, '.', -2)
-			") or die("ERROR: " . mysql_error());
+			") or die("ERROR: " . mysqli_error($dbconn));
 
 		//----------- GET RESULTS & PRINT IT
-		$result = mysql_query("
+		$result = mysqli_query($dbconn, "
 			SELECT n.domainName,
 				CONCAT('www.', n.domainName) AS wwwDomainName,
 				n.domainName AS getConnectForDomain,
@@ -831,13 +947,13 @@ DB Cleanup:
 			LIMIT 30");
 
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Domian Count, ORDER BY START_TIME    TOP 30");
 
 		//----------- SECOND RESULT
-		$result = mysql_query("
+		$result = mysqli_query($dbconn, "
 			SELECT n.domainName,
 				CONCAT('www.', n.domainName) AS wwwDomainName,
 				n.domainName AS getConnectForDomain,
@@ -846,10 +962,12 @@ DB Cleanup:
 				n.lastStarted,
 				p.pollTime AS lastPollTime
 			FROM sumDomainStartNow n LEFT JOIN sumDomainStartPriv p ON n.domainName = p.domainName
-			ORDER BY 5 desc, 4 desc, 6 desc");
+			ORDER BY 5 desc, 4 desc, 6 desc
+			LIMIT 500
+			");
 
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Domain Count");
@@ -857,74 +975,74 @@ DB Cleanup:
 		//----------- Move NOW table into PREV
 		if ( $rpt_summary_diffReset == "true" )
 		{
-			mysql_query("TRUNCATE TABLE sumDomainStartPriv") or die("ERROR: " . mysql_error());
-			mysql_query("INSERT INTO    sumDomainStartPriv (SELECT * FROM sumDomainStartNow)") or die("ERROR: " . mysql_error());
+			mysqli_query($dbconn, "TRUNCATE TABLE sumDomainStartPriv") or die("ERROR: " . mysqli_error($dbconn));
+			mysqli_query($dbconn, "INSERT INTO    sumDomainStartPriv (SELECT * FROM sumDomainStartNow)") or die("ERROR: " . mysqli_error($dbconn));
 		}
 
 
 
 
-		//------------------------------------------
-		// FROM sybase.com and sap.corp
-		//------------------------------------------
-		//----------- Trunacte NOW table and pupulate it again
-		mysql_query("TRUNCATE TABLE sumSybaseUsersStartNow") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumSybaseUsersStartNow(userName, usageCount, lastStarted, pollTime)
-			SELECT
-				user_name,
-				count(*),
-				max(serverAddTime),
-				NOW()
-			FROM asemon_usage
-			WHERE
-				   SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sybase.com'
-				OR SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sap.corp'
-			GROUP BY
-				user_name
-			") or die("ERROR: " . mysql_error());
-
-		//----------- GET RESULTS & PRINT IT
-		$result = mysql_query("
-			SELECT n.userName as userNameUsage,
-				n.userName as sybUserName,
-				n.userName as sapUserName,
-				n.usageCount AS usageNow,
-				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
-				n.lastStarted,
-				p.pollTime AS lastPollTime
-			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
-			ORDER BY 6 desc, 5 desc, 4 desc");
-
-		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
-		}
-		htmlResultset($userIdCache, $result, "Sybase and SAP users, Start Count, order by START_TIME");
-
-		//----------- SECOND RESULT
-		$result = mysql_query("
-			SELECT n.userName as userNameUsage,
-				n.userName as sybUserName,
-				n.userName as sapUserName,
-				n.usageCount AS usageNow,
-				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
-				n.lastStarted,
-				p.pollTime AS lastPollTime
-			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
-			ORDER BY 4 desc");
-
-		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
-			die("ERROR: Query to show fields from table failed");
-		}
-		htmlResultset($userIdCache, $result, "Sybase and SAP users, Start Count");
-
-		//----------- Move NOW table into PREV
-		if ( $rpt_summary_diffReset == "true" )
-		{
-			mysql_query("TRUNCATE TABLE sumSybaseUsersStartPriv") or die("ERROR: " . mysql_error());
-			mysql_query("INSERT INTO    sumSybaseUsersStartPriv (SELECT * FROM sumSybaseUsersStartNow)") or die("ERROR: " . mysql_error());
-		}
+//		//------------------------------------------
+//		// FROM sybase.com and sap.corp
+//		//------------------------------------------
+//		//----------- Trunacte NOW table and pupulate it again
+//		mysqli_query($dbconn, "TRUNCATE TABLE sumSybaseUsersStartNow") or die("ERROR: " . mysqli_error($dbconn));
+//		mysqli_query($dbconn, "INSERT INTO    sumSybaseUsersStartNow(userName, usageCount, lastStarted, pollTime)
+//			SELECT
+//				user_name,
+//				count(*),
+//				max(serverAddTime),
+//				NOW()
+//			FROM asemon_usage
+//			WHERE
+//				   SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sybase.com'
+//				OR SUBSTRING_INDEX(clientCanonicalHostName, '.', -2) = 'sap.corp'
+//			GROUP BY
+//				user_name
+//			") or die("ERROR: " . mysqli_error($dbconn));
+//
+//		//----------- GET RESULTS & PRINT IT
+//		$result = mysqli_query($dbconn, "
+//			SELECT n.userName as userNameUsage,
+//				n.userName as sybUserName,
+//				n.userName as sapUserName,
+//				n.usageCount AS usageNow,
+//				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+//				n.lastStarted,
+//				p.pollTime AS lastPollTime
+//			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
+//			ORDER BY 6 desc, 5 desc, 4 desc");
+//
+//		if (!$result) {
+//			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+//			die("ERROR: Query to show fields from table failed");
+//		}
+//		htmlResultset($userIdCache, $result, "Sybase and SAP users, Start Count, order by START_TIME");
+//
+//		//----------- SECOND RESULT
+//		$result = mysqli_query($dbconn, "
+//			SELECT n.userName as userNameUsage,
+//				n.userName as sybUserName,
+//				n.userName as sapUserName,
+//				n.usageCount AS usageNow,
+//				n.usageCount - IFNULL(p.usageCount,0) AS usageDiff,
+//				n.lastStarted,
+//				p.pollTime AS lastPollTime
+//			FROM sumSybaseUsersStartNow n LEFT JOIN sumSybaseUsersStartPriv p ON n.userName = p.userName
+//			ORDER BY 4 desc");
+//
+//		if (!$result) {
+//			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+//			die("ERROR: Query to show fields from table failed");
+//		}
+//		htmlResultset($userIdCache, $result, "Sybase and SAP users, Start Count");
+//
+//		//----------- Move NOW table into PREV
+//		if ( $rpt_summary_diffReset == "true" )
+//		{
+//			mysqli_query($dbconn, "TRUNCATE TABLE sumSybaseUsersStartPriv") or die("ERROR: " . mysqli_error($dbconn));
+//			mysqli_query($dbconn, "INSERT INTO    sumSybaseUsersStartPriv (SELECT * FROM sumSybaseUsersStartNow)") or die("ERROR: " . mysqli_error($dbconn));
+//		}
 	}
 
 
@@ -944,9 +1062,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Country Count");
@@ -963,9 +1081,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Country Count");
@@ -988,9 +1106,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Country Count");
@@ -999,16 +1117,16 @@ DB Cleanup:
 	//-------------------------------------------
 	// SUMMARY REPORT, VERSION COUNT
 	//-------------------------------------------
-//	mysql_query("DROP TABLE sumAseTuneVersionNow") or die("ERROR: " . mysql_error());
-//	mysql_query("DROP TABLE sumAseTuneVersionPriv") or die("ERROR: " . mysql_error());
-//	mysql_query("CREATE TABLE sumAseTuneVersionNow (clientAppName varchar(30), clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
-//	mysql_query("CREATE TABLE sumAseTuneVersionPriv(clientAppName varchar(30), clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+//	mysqli_query($dbconn, "DROP TABLE sumAseTuneVersionNow") or die("ERROR: " . mysqli_error($dbconn));
+//	mysqli_query($dbconn, "DROP TABLE sumAseTuneVersionPriv") or die("ERROR: " . mysqli_error($dbconn));
+//	mysqli_query($dbconn, "CREATE TABLE sumAseTuneVersionNow (clientAppName varchar(30), clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysqli_error($dbconn));
+//	mysqli_query($dbconn, "CREATE TABLE sumAseTuneVersionPriv(clientAppName varchar(30), clientAsemonVersion varchar(20), usageCount int, lastUsedSrvDate timestamp, pollTime timestamp)") or die("ERROR: " . mysqli_error($dbconn));
 
 	if ( $rpt_summary_version == "true" )
 	{
 		//----------- Trunacte NOW table and pupulate it again
-		mysql_query("TRUNCATE TABLE sumAseTuneVersionNow") or die("ERROR: " . mysql_error());
-		mysql_query("INSERT INTO    sumAseTuneVersionNow(clientAppName, clientAsemonVersion, usageCount, lastUsedSrvDate, pollTime)
+		mysqli_query($dbconn, "TRUNCATE TABLE sumAseTuneVersionNow") or die("ERROR: " . mysqli_error($dbconn));
+		mysqli_query($dbconn, "INSERT INTO    sumAseTuneVersionNow(clientAppName, clientAsemonVersion, usageCount, lastUsedSrvDate, pollTime)
 			SELECT
 				clientAppName,
 				clientAsemonVersion,
@@ -1020,10 +1138,10 @@ DB Cleanup:
 				clientAppName, clientAsemonVersion
 			ORDER BY
 				clientAsemonVersion desc, clientAppName
-			") or die("ERROR: " . mysql_error());
+			") or die("ERROR: " . mysqli_error($dbconn));
 
 		//----------- GET RESULTS & PRINT IT (at AppName level)
-		$result = mysql_query("
+		$result = mysqli_query($dbconn, "
 			SELECT
 				n.clientAppName,
 				sum(n.usageCount) AS usageNow,
@@ -1036,13 +1154,13 @@ DB Cleanup:
 			ORDER BY 4 desc");
 
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Application Name Level, Summary Report");
 
 		//----------- GET RESULTS & PRINT IT
-		$result = mysql_query("
+		$result = mysqli_query($dbconn, "
 			SELECT
 				n.clientAppName,
 				n.clientAsemonVersion,
@@ -1054,7 +1172,7 @@ DB Cleanup:
 			ORDER BY 4 desc, 5 desc");
 
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Version Count");
@@ -1062,8 +1180,8 @@ DB Cleanup:
 		//----------- Move NOW table into PREV
 		if ( $rpt_summary_version_clear == "true" )
 		{
-			mysql_query("TRUNCATE TABLE sumAseTuneVersionPriv") or die("ERROR: " . mysql_error());
-			mysql_query("INSERT INTO    sumAseTuneVersionPriv (SELECT * FROM sumAseTuneVersionNow)") or die("ERROR: " . mysql_error());
+			mysqli_query($dbconn, "TRUNCATE TABLE sumAseTuneVersionPriv") or die("ERROR: " . mysqli_error($dbconn));
+			mysqli_query($dbconn, "INSERT INTO    sumAseTuneVersionPriv (SELECT * FROM sumAseTuneVersionNow)") or die("ERROR: " . mysqli_error($dbconn));
 		}
 
 //		$sql = "
@@ -1077,9 +1195,9 @@ DB Cleanup:
 //			";
 //
 //		// sending query
-//		$result = mysql_query($sql);
+//		$result = mysqli_query($dbconn, $sql);
 //		if (!$result) {
-//			echo mysql_errno() . ": " . mysql_error() . "<br>";
+//			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 //			die("ERROR: Query to show fields from table failed");
 //		}
 //		htmlResultset($userIdCache, $result, "Summary Report, Version Count");
@@ -1098,9 +1216,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE Version Count");
@@ -1113,9 +1231,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE Version Count");
@@ -1129,9 +1247,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, Connected to ASE CLUSTER Version Count");
@@ -1163,9 +1281,9 @@ DB Cleanup:
 			";
 
 		// sending query
-		$result = mysql_query($sql);
+		$result = mysqli_query($dbconn, $sql);
 		if (!$result) {
-			echo mysql_errno() . ": " . mysql_error() . "<br>";
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 			die("ERROR: Query to show fields from table failed");
 		}
 		htmlResultset($userIdCache, $result, "Summary Report, On User");
@@ -1194,7 +1312,7 @@ DB Cleanup:
 		}
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -1216,8 +1334,8 @@ DB Cleanup:
 			$sql = "DELETE FROM asemon_mda_info WHERE srvVersion = $mda_deleteVersion AND isClusterEnabled = $mda_deleteIsCeEnabled";
 
 			echo "EXEC: <code>$sql</code><br>\n";
-			mysql_query($sql) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 		}
 
@@ -1229,8 +1347,8 @@ DB Cleanup:
 			$sql = "UPDATE asemon_mda_info SET verified = 'Y' WHERE srvVersion = $mda_verifyVersion";
 
 			echo "EXEC: <code>$sql</code><br>\n";
-			mysql_query($sql) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 		}
 
@@ -1259,7 +1377,7 @@ DB Cleanup:
 		";
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -1338,7 +1456,7 @@ DB Cleanup:
 
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1389,7 +1507,7 @@ DB Cleanup:
 echo "SQL: $sql";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1430,7 +1548,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1464,7 +1582,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1514,7 +1632,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1533,7 +1651,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1552,7 +1670,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1570,7 +1688,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1588,7 +1706,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1606,7 +1724,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1625,7 +1743,7 @@ echo "SQL: $sql";
 				";
 
 				// sending query
-				$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+				$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 				if (!$result) {
 					die("Query to show fields from table failed");
 				}
@@ -1649,7 +1767,7 @@ echo "SQL: $sql";
 		";
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -1723,7 +1841,7 @@ echo "SQL: $sql";
 
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -1735,7 +1853,7 @@ echo "SQL: $sql";
 	//-------------------------------------------
 	// ERROR INFO
 	//-------------------------------------------
-	if ( !empty($rpt_errorInfo) || !empty($del_deleteLogId) || !empty($save_saveLogId) )
+	if ( !empty($rpt_errorInfo) || !empty($del_deleteLogId) || !empty($del_deleteLogLocation) || !empty($del_logMessageStart) || !empty($save_saveLogId) )
 	{
 		if ( is_numeric($del_deleteLogId) )
 		{
@@ -1745,24 +1863,88 @@ echo "SQL: $sql";
 			$sql = "DELETE from asemon_error_info where checkId = $del_deleteLogId";
 
 			echo "EXEC: <code>$sql</code><br>\n";
-			mysql_query($sql) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 
 			//---------
 			$sql = "DELETE from asemon_error_info2 where checkId = $del_deleteLogId";
 
 			echo "EXEC: <code>$sql</code><br>\n";
-			mysql_query($sql) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 
 			//---------
 			$sql = "DELETE from asemon_error_info_save where checkId = $del_deleteLogId";
 
 			echo "EXEC: <code>$sql</code><br>\n";
-			mysql_query($sql) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+			printf("<br>\n");
+
+			//reset
+			$sql = "";
+		}
+
+		if ( !empty($del_deleteLogLocation) )
+		{
+			echo "<h4>Cleaning up table 'asemon_error_info', 'asemon_error_info2' and 'asemon_error_info_save' for ALL logLocation: '$del_deleteLogLocation' </h4>\n";
+
+			//---------
+			$sql = "DELETE from asemon_error_info where logLocation = '" . mysqli_real_escape_string($dbconn, $del_deleteLogLocation) . "'";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+			printf("<br>\n");
+
+			//---------
+			$sql = "DELETE from asemon_error_info2 where logLocation = '" . mysqli_real_escape_string($dbconn, $del_deleteLogLocation) . "'";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+			printf("<br>\n");
+
+			//---------
+			$sql = "DELETE from asemon_error_info_save where logLocation = '" . mysqli_real_escape_string($dbconn, $del_deleteLogLocation) . "'";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+			printf("<br>\n");
+
+			//reset
+			$sql = "";
+		}
+
+		if ( !empty($del_logMessageStart) )
+		{
+			echo "<h4>Cleaning up table 'asemon_error_info', 'asemon_error_info2' and 'asemon_error_info_save' for ALL logMessage: '$del_logMessageStart' </h4>\n";
+
+			//---------
+			$sql = "DELETE from asemon_error_info where logMessage like '" . mysqli_real_escape_string($dbconn, $del_logMessageStart) . "%'";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+			printf("<br>\n");
+
+			//---------
+			$sql = "DELETE from asemon_error_info2 where logMessage like '" . mysqli_real_escape_string($dbconn, $del_logMessageStart) . "%'";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+			printf("<br>\n");
+
+			//---------
+			$sql = "DELETE from asemon_error_info_save where logMessage like '" . mysqli_real_escape_string($dbconn, $del_logMessageStart) . "%'";
+
+			echo "EXEC: <code>$sql</code><br>\n";
+			mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 
 			//reset
@@ -1778,12 +1960,12 @@ echo "SQL: $sql";
 			$sql2 = "DELETE from asemon_error_info where checkId = $save_saveLogId";
 
 			echo "EXEC: <code>$sql1</code><br>\n";
-			mysql_query($sql1) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql1) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 
 			echo "EXEC: <code>$sql2</code><br>\n";
-			mysql_query($sql2) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql2) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 
 			//---------
@@ -1791,17 +1973,28 @@ echo "SQL: $sql";
 			$sql2 = "DELETE from asemon_error_info2 where checkId = $save_saveLogId";
 
 			echo "EXEC: <code>$sql1</code><br>\n";
-			mysql_query($sql1) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql1) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 
 			echo "EXEC: <code>$sql2</code><br>\n";
-			mysql_query($sql2) or die("ERROR: " . mysql_error());
-			printf("Records affected: %d<br>\n", mysql_affected_rows());
+			mysqli_query($dbconn, $sql2) or die("ERROR: " . mysqli_error($dbconn));
+			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
 			printf("<br>\n");
 
 			//reset
 			$sql = "";
 		}
+
+		//------------------------------------------
+		// build a form, for deleteStartOfErrorDescription
+		//------------------------------------------
+		echo '<br><br>
+			<b>Delete records from: asemon_error_info, asemon_error_info2, asemon_error_info, asemon_error_info_save, where "logMessage" STARTS with the following: </b>
+			<form action="usage_report.php" method="get">
+				logMessage:  <input type="text" size=100 maxlength=1000 name="deleteLogMessageStart" value="" />
+				<input type="submit" value="Submit"/>
+			</form>
+		';
 
 		if ( $rpt_errorInfo == "sum" )
 		{
@@ -1824,7 +2017,7 @@ echo "SQL: $sql";
 				LIMIT 500
 			";
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1849,7 +2042,7 @@ echo "SQL: $sql";
 				LIMIT 500
 			";
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1907,7 +2100,7 @@ echo "SQL: $sql";
 				ORDER BY sendCounter
 			";
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1938,7 +2131,7 @@ echo "SQL: $sql";
 				ORDER BY sendCounter
 			";
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -1967,7 +2160,7 @@ echo "SQL: $sql";
 				ORDER BY sendCounter
 			";
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2033,7 +2226,7 @@ echo "SQL: $sql";
 		if ( $sql != "" )
 		{
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2104,7 +2297,7 @@ echo "SQL: $sql";
 		if ( $sql != "" )
 		{
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2180,7 +2373,7 @@ echo "SQL: $sql";
 
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -2202,7 +2395,7 @@ echo "SQL: $sql";
 		";
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -2217,7 +2410,7 @@ echo "SQL: $sql";
 		";
 
 		// sending query
-		$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 		if (!$result) {
 			die("Query to show fields from table failed");
 		}
@@ -2244,7 +2437,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2285,7 +2478,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2305,7 +2498,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2321,7 +2514,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2358,7 +2551,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2386,9 +2579,9 @@ echo "SQL: $sql";
 				";
 
 			// sending query
-			$result = mysql_query($sql);
+			$result = mysqli_query($dbconn, $sql);
 			if (!$result) {
-				echo mysql_errno() . ": " . mysql_error() . "<br>";
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 				die("ERROR: Query to show fields from table failed");
 			}
 			htmlResultset($userIdCache, $result, "START Count");
@@ -2410,9 +2603,9 @@ echo "SQL: $sql";
 				";
 
 			// sending query
-			$result = mysql_query($sql);
+			$result = mysqli_query($dbconn, $sql);
 			if (!$result) {
-				echo mysql_errno() . ": " . mysql_error() . "<br>";
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 				die("ERROR: Query to show fields from table failed");
 			}
 			htmlResultset($userIdCache, $result, "START Count");
@@ -2420,12 +2613,12 @@ echo "SQL: $sql";
 			//------------------------------------------
 			// Summary per: user_name
 			//------------------------------------------
-	//		mysql_query("CREATE TABLE sumSqlwStartNow (user_name varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
-	//		mysql_query("CREATE TABLE sumSqlwStartPriv(user_name varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysql_error());
+	//		mysqli_query($dbconn, "CREATE TABLE sumSqlwStartNow (user_name varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysqli_error($dbconn));
+	//		mysqli_query($dbconn, "CREATE TABLE sumSqlwStartPriv(user_name varchar(20), usageCount int, lastStarted timestamp, pollTime timestamp)") or die("ERROR: " . mysqli_error($dbconn));
 
 			//----------- Trunacte NOW table and pupulate it again
-			mysql_query("TRUNCATE TABLE sumSqlwStartNow") or die("ERROR: " . mysql_error());
-			mysql_query("INSERT INTO    sumSqlwStartNow(user_name, usageCount, lastStarted, pollTime)
+			mysqli_query($dbconn, "TRUNCATE TABLE sumSqlwStartNow") or die("ERROR: " . mysqli_error($dbconn));
+			mysqli_query($dbconn, "INSERT INTO    sumSqlwStartNow(user_name, usageCount, lastStarted, pollTime)
 				SELECT
 					user_name,
 					count(*),
@@ -2434,21 +2627,21 @@ echo "SQL: $sql";
 				FROM sqlw_usage
 				GROUP BY
 					user_name
-				") or die("ERROR: " . mysql_error());
+				") or die("ERROR: " . mysqli_error($dbconn));
 
-	//		$result = mysql_query("select count(*) from sumSqlwStartNow");
+	//		$result = mysqli_query($dbconn, "select count(*) from sumSqlwStartNow");
 	//		htmlResultset($userIdCache, $result, "sumSqlwStartNow");
-	//		$result = mysql_query("select * from sumSqlwStartNow order by lastStarted desc");
+	//		$result = mysqli_query($dbconn, "select * from sumSqlwStartNow order by lastStarted desc");
 	//		htmlResultset($userIdCache, $result, "SqlwStartNow");
 
-	//		$result = mysql_query("select count(*) from sumSqlwStartPriv");
+	//		$result = mysqli_query($dbconn, "select count(*) from sumSqlwStartPriv");
 	//		htmlResultset($userIdCache, $result, "sumSqlwStartPriv");
-	//		$result = mysql_query("select * from sumSqlwStartPriv order by lastStarted desc");
+	//		$result = mysqli_query($dbconn, "select * from sumSqlwStartPriv order by lastStarted desc");
 	//		htmlResultset($userIdCache, $result, "SqlwStartPriv");
 
 	//echo "XXX: 2<br>";
 			//----------- GET RESULTS & PRINT IT
-			$result = mysql_query("
+			$result = mysqli_query($dbconn, "
 				SELECT
 					n.user_name,
 					n.user_name as sapUserName,
@@ -2461,7 +2654,7 @@ echo "SQL: $sql";
 				LIMIT 30");
 
 			if (!$result) {
-				echo mysql_errno() . ": " . mysql_error() . "<br>";
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
 				die("ERROR: Query to show fields from table failed");
 			}
 			htmlResultset($userIdCache, $result, "SQLW USER USAGE, ORDER BY START_TIME    TOP 30");
@@ -2470,8 +2663,8 @@ echo "SQL: $sql";
 			//----------- Move NOW table into PREV
 			if ( $rpt_sqlw_diffReset == "true" )
 			{
-				mysql_query("TRUNCATE TABLE sumSqlwStartPriv") or die("ERROR: " . mysql_error());
-				mysql_query("INSERT INTO    sumSqlwStartPriv (SELECT * FROM sumSqlwStartNow)") or die("ERROR: " . mysql_error());
+				mysqli_query($dbconn, "TRUNCATE TABLE sumSqlwStartPriv") or die("ERROR: " . mysqli_error($dbconn));
+				mysqli_query($dbconn, "INSERT INTO    sumSqlwStartPriv (SELECT * FROM sumSqlwStartNow)") or die("ERROR: " . mysqli_error($dbconn));
 			}
 
 
@@ -2489,7 +2682,7 @@ echo "SQL: $sql";
 			";
 
 			// sending query
-			$result = mysql_query($sql) or die("ERROR: " . mysql_error());
+			$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
 			if (!$result) {
 				die("Query to show fields from table failed");
 			}
@@ -2502,7 +2695,7 @@ echo "SQL: $sql";
 
 
 	// Close connection to the database
-	mysql_close() or die(mysql_error());
+	mysqli_close($dbconn) or die(mysqli_error($dbconn));
 ?>
 
 <BR>

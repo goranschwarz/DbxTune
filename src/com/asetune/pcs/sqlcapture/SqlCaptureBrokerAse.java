@@ -184,7 +184,16 @@ extends SqlCaptureBrokerAbstract
 							if (_logger.isDebugEnabled())
 								_logger.debug("sybMessageHandler: _nonConfiguredMonitoringCount="+_nonConfiguredMonitoringCount+": Msg="+code+", '"+msgStr+"'.");
 							
-							return null;
+							return null; // JDBC Caller will NOT be aborted, or a Exception will NOT be throw to the caller
+						}
+						
+						// Msg 950: Database 'XXXXX' is currently offline. Please wait and try your command later. 
+						if (code == 950)
+						{
+							if (_logger.isDebugEnabled())
+								_logger.debug("sybMessageHandler: Discarding the following message: Msg="+code+", '"+msgStr+"'.");
+							
+							return null; // JDBC Caller will NOT be aborted, or a Exception will NOT be throw to the caller
 						}
 						
 						return sqle;
@@ -1059,6 +1068,8 @@ extends SqlCaptureBrokerAbstract
 			int     sendDdlForLookup_gt_logicalReads  = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads,  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads);
 			int     sendDdlForLookup_gt_physicalReads = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads);
 
+//			int aseVersion = conn.getDbmsVersionNumber();
+			
 			try
 			{
 				Statement stmnt = conn.createStatement();
@@ -1077,9 +1088,41 @@ extends SqlCaptureBrokerAbstract
 					int logicalReads  = rs.getInt("LogicalReads");
 					int physicalReads = rs.getInt("PhysicalReads");
 
+					int cpuTime       = rs.getInt("CpuTime");
+					int waitTime      = rs.getInt("WaitTime");
+					int rowsAffected  = rs.getInt("RowsAffected"); // RowsAffected was introduced in ASE 12.5.4 (but before that we genereate -1) 
+
+//					int procedureId   = rs.getInt("ProcedureID");
+//					int ssqlId        = rs.getInt("SsqlId");
+//					int ContextID     = rs.getInt("ContextID");
+
+					String procName   = rs.getString("ProcName");
+					int    lineNumber = rs.getInt("LineNumber");
+
+
 					// To be used by keep/discard Set
 					PK pk = new PK(SPID, KPID, BatchID);
 
+					// add information to the StatementStatistics subsystem
+					// which is used by a CM to check how Statement Execution within ranges
+					// For Example: how many Statements that executed, between
+					//     0-10 ms
+					//     10-50 ms
+					//     50-100 ms
+					//     100-250 ms
+					//     250-500 ms
+					//     500-1000 ms
+					//     1000-2500 ms
+					//     2500-5000 ms
+					//     5-10 sec
+					//     10-15 sec
+					//     15-20 sec
+					//     20-30 sec
+					//     above 30 sec
+					if (_statementStatistics != null)
+						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber);
+
+					
 					//System.out.println("Statement CHECK if above THRESHOLD: SPID="+SPID+",KPID="+KPID+",BatchID="+BatchID+": execTime="+execTime+", logicalReads="+logicalReads+", physicalReads="+physicalReads+".   SAVE="+(execTime > saveStatement_gt_execTime && logicalReads > saveStatement_gt_logicalReads && physicalReads > saveStatement_gt_physicalReads));
 					// Add only rows that are above the limits
 					if (    execTime      > saveStatement_gt_execTime
@@ -1689,7 +1732,82 @@ extends SqlCaptureBrokerAbstract
 		return count;
 	}
 
-	
+
+	/**
+	 * Update Statement Statistics, which is used by a CM to report exeution times within known spans. 
+	 * <p>
+	 * For Example: how many Statements that executed, between
+	 * <ul>
+	 *     <li> 0-10 ms       </li>
+	 *     <li> 10-50 ms      </li>
+	 *     <li> 50-100 ms     </li>
+	 *     <li> 100-250 ms    </li>
+	 *     <li> 250-500 ms    </li>
+	 *     <li> 500-1000 ms   </li>
+	 *     <li> 1000-2500 ms  </li>
+	 *     <li> 2500-5000 ms  </li>
+	 *     <li> 5-10 sec      </li>
+	 *     <li> 10-15 sec     </li>
+	 *     <li> 15-20 sec     </li>
+	 *     <li> 20-30 sec     </li>
+	 *     <li> above 30 sec  </li>
+	 * </ul>
+	 * 
+	 * @param execTime
+	 * @param logicalReads
+	 * @param physicalReads
+	 * @param waitTime 
+	 * @param cpuTime 
+	 * @param procName 
+	 * @param lineNumber 
+	 * @param contextID 
+	 */
+	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, String procName, int lineNumber)
+	{
+		if (_statementStatistics == null)
+			return;
+		
+		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber);
+	}
+
+	public void closeStatementStats()
+	{
+		_statementStatistics = null;
+	}
+
+	public SqlCaptureStatementStatisticsSample getStatementStats(boolean reset)
+	{
+		// If we DO NOT have an object create one
+		// This will happen only first time when the CM tries to retrive data.
+		if (_statementStatistics == null)
+		{
+			_statementStatistics = new SqlCaptureStatementStatisticsSample();
+			return _statementStatistics;
+		}
+		
+		if ( ! reset)
+		{
+			return _statementStatistics;
+		}
+		else
+		{
+			// If we already have an object
+			// - create a new object
+			// - the old/current stats object will be deleivered to the CM
+			// NOTE: do we need a critical section for this
+			SqlCaptureStatementStatisticsSample newStmntStatObj = new SqlCaptureStatementStatisticsSample();
+			SqlCaptureStatementStatisticsSample retStmntStatObj = _statementStatistics;
+			
+			_statementStatistics = newStmntStatObj;
+			return retStmntStatObj;
+		}
+	}
+
+	/** This will be NULL untill we call getStatementStats() for the first time. */
+	private SqlCaptureStatementStatisticsSample _statementStatistics = null;
+
+
+
 	/**
 	 * 
 	 */

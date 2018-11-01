@@ -43,6 +43,9 @@ public class SqlObjectName
 	private String  _dbProductName = null;
 	private String  _dbIdentifierQuoteString = null;
 	private boolean _dbStoresUpperCaseIdentifiers = false;
+
+	private boolean _autoAddDboForSybaseAndSqlServer = true;
+	
 	/** 
 	 * constructor using full name [catalog.][schema.][object] 
 	 */
@@ -51,6 +54,23 @@ public class SqlObjectName
 		_dbProductName                = dbProductName;
 		_dbIdentifierQuoteString      = dbIdentifierQuoteString;
 		_dbStoresUpperCaseIdentifiers = dbStoresUpperCaseIdentifiers;
+		
+		_autoAddDboForSybaseAndSqlServer = true;
+		
+		setFullName(name);
+	}
+
+	/** 
+	 * constructor using full name [catalog.][schema.][object] 
+	 */
+	public SqlObjectName(final String name, String dbProductName, String dbIdentifierQuoteString, boolean dbStoresUpperCaseIdentifiers, boolean autoAddDboForSybaseAndSqlServer)
+	{
+		_dbProductName                = dbProductName;
+		_dbIdentifierQuoteString      = dbIdentifierQuoteString;
+		_dbStoresUpperCaseIdentifiers = dbStoresUpperCaseIdentifiers;
+		
+		_autoAddDboForSybaseAndSqlServer = autoAddDboForSybaseAndSqlServer;
+		
 		setFullName(name);
 	}
 
@@ -91,7 +111,7 @@ public class SqlObjectName
 		}
 		
 		// in some cases check schema/owner name
-		if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_dbProductName) || DbUtils.DB_PROD_NAME_MSSQL.equals(_dbProductName))
+		if (_autoAddDboForSybaseAndSqlServer && (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_dbProductName) || DbUtils.DB_PROD_NAME_MSSQL.equals(_dbProductName)))
 		{
 			// if empty schema/owner, add 'dbo'
 			if (StringUtil.isNullOrBlank(_originSchName))

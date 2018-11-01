@@ -178,6 +178,15 @@ implements Runnable
 	 * Get a "public" string of how all writer are configured, no not reveal
 	 * passwords or sensitive information.
 	 */
+	public int getQueueSize()
+	{
+		return _containerQueue.size();
+	}
+	
+	/**
+	 * Get a "public" string of how all writer are configured, no not reveal
+	 * passwords or sensitive information.
+	 */
 	public String getConfigStr()
 	{
 		String configStr = "";
@@ -625,7 +634,11 @@ implements Runnable
 //				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', sessionSampleTime='"+cont.getSessionSampleTime()+"'. Previous persist took "+prevConsumeTimeMs+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
 
 				// BEGIN-OF-SAMPLE If we want to do anything in here
-				pw.beginOfSample(cont);
+				if ( ! pw.beginOfSample(cont) )
+				{
+					_logger.warn("Calling beginOfSample() failed for PersistWriter named '"+pw.getName()+"'. Discarding this consume(ObjectLookupQueueEntry:Input) queue entry and continuing with next writer.");
+					continue;
+				}
 
 				// should we indicate that a new session should be started in the Writer
 				boolean startNewSession = false;
@@ -641,7 +654,7 @@ implements Runnable
 //				if ( ! pw.isSessionStarted() || cont.getStartNewSample() )
 				if ( ! pw.isSessionStarted(sessionName) || startNewSession )
 				{
-					System.out.println("############################-STARTING-A-NEW-SESSION-###########");
+					System.out.println("############################-STARTING-A-NEW-SESSION-########### srvName='"+cont.getServerName()+"'.");
 					System.out.println("## Writer["+pw.getName()+"] -->> startSession(): ");
 					System.out.println("##    !pw.isSessionStarted()="+!pw.isSessionStarted(sessionName));
 					System.out.println("##    startNewSession       ="+startNewSession);
@@ -688,8 +701,8 @@ implements Runnable
 				}
 
 				
-//				// END-OF-SAMPLE If we want to do anything in here
-//				pw.endOfSample(cont, false);
+				// END-OF-SAMPLE If we want to do anything in here
+				pw.endOfSample(cont, false);
 
 				// Stop clock and print statistics.
 				long execTime = System.currentTimeMillis() - startTime;
@@ -700,9 +713,14 @@ implements Runnable
 				// Reset the statistics
 				pw.resetCounters();
 			}
+			catch (Exception ex)
+			{
+				_logger.error("The Persistent Writer '"+pw.getName()+"' caught exception. Continuing with next Writer...", ex);
+				pw.endOfSample(cont, true);
+			}
 			catch (Throwable t)
 			{
-				_logger.error("The Persistent Writer got runtime error in consume() in Persistent Writer named '"+pw.getName()+"'. Continuing with next Writer...", t);
+				_logger.error("The Persistent Writer '"+pw.getName()+"' got runtime error in consume(). Continuing with next Writer...", t);
 				pw.endOfSample(cont, true);
 			}
 		}
@@ -766,9 +784,12 @@ implements Runnable
 				fireQueueSizeChange();
 
 				// Make sure the container isn't empty.
-				if (cont == null)                     continue;
-				if (cont.getCollectors() == null)	  continue;
-				if (cont.getCollectors().size() <= 0) continue;
+				if (cont == null || (cont != null && cont.isEmpty()) )
+					continue;
+//				// Make sure the container isn't empty.
+//				if (cont == null)                     continue;
+//				if (cont.getCollectors() == null)	  continue;
+//				if (cont.getCollectors().size() <= 0) continue;
 
 				// if we are about to STOP the service
 				if ( ! isRunning() )

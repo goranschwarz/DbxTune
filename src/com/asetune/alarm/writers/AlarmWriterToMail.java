@@ -16,7 +16,7 @@ import com.asetune.utils.StringUtil;
 public class AlarmWriterToMail
 extends AlarmWriterAbstract
 {
-	private static Logger _logger = Logger.getLogger(AlarmWriterToSyslog.class);
+	private static Logger _logger = Logger.getLogger(AlarmWriterToMail.class);
 
 	@Override
 	public String getDescription()
@@ -123,19 +123,20 @@ extends AlarmWriterAbstract
 		
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,      String .class, conf.getProperty       (PROPKEY_smtpHostname     , DEFAULT_smtpHostname     ), DEFAULT_smtpHostname     , "Name of the host that holds the smtp server"));
-		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                String .class, conf.getProperty       (PROPKEY_to               , DEFAULT_to               ), DEFAULT_to               , "To what mail adresses should we send the mail (if several ones, just comma separate them)"));
-		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,              String .class, conf.getProperty       (PROPKEY_from             , DEFAULT_from             ), DEFAULT_from             , "What should be the senders email address"));
-		list.add( new CmSettingsHelper("Subject-Template", Type.MANDATORY, PROPKEY_subjectTemplate,   String .class, conf.getProperty       (PROPKEY_subjectTemplate  , DEFAULT_subjectTemplate  ), DEFAULT_subjectTemplate  , "What should be the subject (Note: this is a template)"));
-		list.add( new CmSettingsHelper("Msg-Template",     Type.MANDATORY, PROPKEY_msgBodyTemplate,   String .class, conf.getProperty       (PROPKEY_msgBodyTemplate  , DEFAULT_msgBodyTemplate  ), DEFAULT_msgBodyTemplate  , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
-                                                                                                                                                                                                                             
-		list.add( new CmSettingsHelper("username",                         PROPKEY_username,          String .class, conf.getProperty       (PROPKEY_username         , DEFAULT_username         ), DEFAULT_username         , "If the SMTP server reuires you to login (default: is not to logon)"));
-		list.add( new CmSettingsHelper("password",                         PROPKEY_password,          String .class, conf.getProperty       (PROPKEY_password         , DEFAULT_password         ), DEFAULT_password         , "If the SMTP server reuires you to login (default: is not to logon)"));
-		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                String .class, conf.getProperty       (PROPKEY_cc               , DEFAULT_cc               ), DEFAULT_cc               , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
-		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,          Integer.class, conf.getIntProperty    (PROPKEY_smtpPort         , DEFAULT_smtpPort         ), DEFAULT_smtpPort         , "What port number is the SMTP server on (-1 = use the default)"));
-		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,           Integer.class, conf.getIntProperty    (PROPKEY_sslPort          , DEFAULT_sslPort          ), DEFAULT_sslPort          , "What port number is the SSL-SMTP server on (-1 = use the default)"));
-		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,            Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl           , DEFAULT_useSsl           ), DEFAULT_useSsl           , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
-		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout, Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout, DEFAULT_connectionTimeout), DEFAULT_connectionTimeout, "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
+		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,           String .class, conf.getProperty       (PROPKEY_smtpHostname          , DEFAULT_smtpHostname          ), DEFAULT_smtpHostname          , "Name of the host that holds the smtp server"));
+		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them)"));
+		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                   String .class, conf.getProperty       (PROPKEY_from                  , DEFAULT_from                  ), DEFAULT_from                  , "What should be the senders email address"));
+		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,        String .class, conf.getProperty       (PROPKEY_subjectTemplate       , DEFAULT_subjectTemplate       ), DEFAULT_subjectTemplate       , "What should be the subject (Note: this is a template)"));
+		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,        String .class, conf.getProperty       (PROPKEY_msgBodyTemplate       , DEFAULT_msgBodyTemplate       ), DEFAULT_msgBodyTemplate       , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
+		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml, Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml), DEFAULT_msgBodyTemplateUseHtml, "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
+
+		list.add( new CmSettingsHelper("username",                         PROPKEY_username,               String .class, conf.getProperty       (PROPKEY_username              , DEFAULT_username              ), DEFAULT_username              , "If the SMTP server reuires you to login (default: is not to logon)"));
+		list.add( new CmSettingsHelper("password",                         PROPKEY_password,               String .class, conf.getProperty       (PROPKEY_password              , DEFAULT_password              ), DEFAULT_password              , "If the SMTP server reuires you to login (default: is not to logon)"));
+		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                     String .class, conf.getProperty       (PROPKEY_cc                    , DEFAULT_cc                    ), DEFAULT_cc                    , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
+		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,               Integer.class, conf.getIntProperty    (PROPKEY_smtpPort              , DEFAULT_smtpPort              ), DEFAULT_smtpPort              , "What port number is the SMTP server on (-1 = use the default)"));
+		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                Integer.class, conf.getIntProperty    (PROPKEY_sslPort               , DEFAULT_sslPort               ), DEFAULT_sslPort               , "What port number is the SSL-SMTP server on (-1 = use the default)"));
+		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                 Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                , DEFAULT_useSsl                ), DEFAULT_useSsl                , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
+		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,      Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout     , DEFAULT_connectionTimeout     ), DEFAULT_connectionTimeout     , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
 
 		return list;
 	}
@@ -143,19 +144,20 @@ extends AlarmWriterAbstract
 	//-------------------------------------------------------
 	// class members
 	//-------------------------------------------------------
-	private String  _smtpHostname        = "";
-	private String  _to                  = "";
-	private String  _from                = "";
-	private String  _subjectTemplate     = "";
-	private String  _msgBodyTemplate     = "";
+	private String  _smtpHostname           = "";
+	private String  _to                     = "";
+	private String  _from                   = "";
+	private String  _subjectTemplate        = "";
+	private String  _msgBodyTemplate        = "";
+	private boolean _msgBodyTemplateUseHtml = DEFAULT_msgBodyTemplateUseHtml;
                                          
-	private String  _username            = "";
-	private String  _password            = "";
-	private String  _cc                  = "";
-	private int     _smtpPort            = -1;
-	private int     _sslPort             = -1;
-	private boolean _useSsl              = false;
-	private int     _smtpConnectTimeout  = -1;
+	private String  _username               = "";
+	private String  _password               = "";
+	private String  _cc                     = "";
+	private int     _smtpPort               = -1;
+	private int     _sslPort                = -1;
+	private boolean _useSsl                 = DEFAULT_useSsl;
+	private int     _smtpConnectTimeout     = -1;
 
 	private List<String> _toList     = new ArrayList<>();
 	private List<String> _ccList     = new ArrayList<>();
@@ -168,18 +170,20 @@ extends AlarmWriterAbstract
 
 		_logger.info("Initializing the AlarmWriter component named '"+getName()+"'.");
 
-		_smtpHostname       = conf.getProperty       (PROPKEY_smtpHostname,      DEFAULT_smtpHostname);
-		_to                 = conf.getProperty       (PROPKEY_to,                DEFAULT_to);
-		_from               = conf.getProperty       (PROPKEY_from,              DEFAULT_from);
-		_subjectTemplate    = conf.getProperty       (PROPKEY_subjectTemplate,   DEFAULT_subjectTemplate);
-		_msgBodyTemplate    = conf.getProperty       (PROPKEY_msgBodyTemplate,   DEFAULT_msgBodyTemplate);
+		_smtpHostname           = conf.getProperty       (PROPKEY_smtpHostname,           DEFAULT_smtpHostname);
+		_to                     = conf.getProperty       (PROPKEY_to,                     DEFAULT_to);
+		_cc                     = conf.getProperty       (PROPKEY_cc,                     DEFAULT_cc);
+		_from                   = conf.getProperty       (PROPKEY_from,                   DEFAULT_from);
+		_subjectTemplate        = conf.getProperty       (PROPKEY_subjectTemplate,        DEFAULT_subjectTemplate);
+		_msgBodyTemplate        = conf.getProperty       (PROPKEY_msgBodyTemplate,        DEFAULT_msgBodyTemplate);
+		_msgBodyTemplateUseHtml = conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml);
                             
-		_username           = conf.getProperty       (PROPKEY_username,          DEFAULT_username);
-		_password           = conf.getProperty       (PROPKEY_password,          DEFAULT_password);
-		_smtpPort           = conf.getIntProperty    (PROPKEY_smtpPort,          DEFAULT_smtpPort);
-		_sslPort            = conf.getIntProperty    (PROPKEY_sslPort,           DEFAULT_sslPort);
-		_useSsl             = conf.getBooleanProperty(PROPKEY_useSsl,            DEFAULT_useSsl);
-		_smtpConnectTimeout = conf.getIntProperty    (PROPKEY_connectionTimeout, DEFAULT_connectionTimeout);
+		_username               = conf.getProperty       (PROPKEY_username,               DEFAULT_username);
+		_password               = conf.getProperty       (PROPKEY_password,               DEFAULT_password);
+		_smtpPort               = conf.getIntProperty    (PROPKEY_smtpPort,               DEFAULT_smtpPort);
+		_sslPort                = conf.getIntProperty    (PROPKEY_sslPort,                DEFAULT_sslPort);
+		_useSsl                 = conf.getBooleanProperty(PROPKEY_useSsl,                 DEFAULT_useSsl);
+		_smtpConnectTimeout     = conf.getIntProperty    (PROPKEY_connectionTimeout,      DEFAULT_connectionTimeout);
 
 		//------------------------------------------
 		// Check for mandatory parameters
@@ -206,77 +210,170 @@ extends AlarmWriterAbstract
 	{
 		int spaces = 45;
 		_logger.info("Configuration for Alarm Writer Module: "+getName());
-		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname      , spaces) + ": " + _smtpHostname);
-		_logger.info("    " + StringUtil.left(PROPKEY_to                , spaces) + ": " + _to);
-		_logger.info("    " + StringUtil.left(PROPKEY_from              , spaces) + ": " + _from);
-		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate   , spaces) + ": " + _subjectTemplate);
-		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate   , spaces) + ": " + _msgBodyTemplate);
+		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname          , spaces) + ": " + _smtpHostname);
+		_logger.info("    " + StringUtil.left(PROPKEY_to                    , spaces) + ": " + _to);
+		_logger.info("    " + StringUtil.left(PROPKEY_from                  , spaces) + ": " + _from);
+		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate       , spaces) + ": " + _subjectTemplate);
+		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate       , spaces) + ": " + _msgBodyTemplate);
+		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplateUseHtml, spaces) + ": " + _msgBodyTemplateUseHtml);
 
-		_logger.info("    " + StringUtil.left(PROPKEY_username          , spaces) + ": " + _username);
-		_logger.info("    " + StringUtil.left(PROPKEY_password          , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
-		_logger.info("    " + StringUtil.left(PROPKEY_cc                , spaces) + ": " + _cc);
-		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort          , spaces) + ": " + _smtpPort);
-		_logger.info("    " + StringUtil.left(PROPKEY_sslPort           , spaces) + ": " + _sslPort);
-		_logger.info("    " + StringUtil.left(PROPKEY_useSsl            , spaces) + ": " + _useSsl);
-		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout , spaces) + ": " + _smtpConnectTimeout);
+		_logger.info("    " + StringUtil.left(PROPKEY_username              , spaces) + ": " + _username);
+		_logger.info("    " + StringUtil.left(PROPKEY_password              , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
+		_logger.info("    " + StringUtil.left(PROPKEY_cc                    , spaces) + ": " + _cc);
+		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort              , spaces) + ": " + _smtpPort);
+		_logger.info("    " + StringUtil.left(PROPKEY_sslPort               , spaces) + ": " + _sslPort);
+		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                , spaces) + ": " + _useSsl);
+		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout     , spaces) + ": " + _smtpConnectTimeout);
 	}
 
 
-	public static final String  PROPKEY_smtpHostname       = "AlarmWriterToMail.smtp.hostname";
-	public static final String  DEFAULT_smtpHostname       = "";
+	public static final String  PROPKEY_smtpHostname           = "AlarmWriterToMail.smtp.hostname";
+	public static final String  DEFAULT_smtpHostname           = "";
+                                                               
+	public static final String  PROPKEY_to                     = "AlarmWriterToMail.to";
+	public static final String  DEFAULT_to                     = "";
+	                                                           
+	public static final String  PROPKEY_from                   = "AlarmWriterToMail.from";
+	public static final String  DEFAULT_from                   = "";
+	                                                           
+	public static final String  PROPKEY_subjectTemplate        = "AlarmWriterToMail.msg.subject.template";
+	public static final String  DEFAULT_subjectTemplate        = "${type}: ${serviceName} - ${alarmClassAbriviated} - ${extraInfo}";
+	                                                           
+	public static final String  PROPKEY_msgBodyTemplate        = "AlarmWriterToMail.msg.body.template";
+	public static final String  DEFAULT_msgBodyTemplate        = createMsgBodyTemplate();
 
-	public static final String  PROPKEY_to                 = "AlarmWriterToMail.to";
-	public static final String  DEFAULT_to                 = "";
+	public static final String  PROPKEY_msgBodyTemplateUseHtml = "AlarmWriterToMail.msg.body.template.default.html";
+	public static final boolean DEFAULT_msgBodyTemplateUseHtml = true;
+
 	
-	public static final String  PROPKEY_from               = "AlarmWriterToMail.from";
-	public static final String  DEFAULT_from               = "";
-	
-	public static final String  PROPKEY_subjectTemplate    = "AlarmWriterToMail.msg.subject.template";
-	public static final String  DEFAULT_subjectTemplate    = "${type}: ${alarmClassAbriviated} - ${serviceInfo} - ${extraInfo}";
-	
-	public static final String  PROPKEY_msgBodyTemplate    = "AlarmWriterToMail.msg.body.template";
-	public static final String  DEFAULT_msgBodyTemplate    = createMsgBodyTemplate();
-
-	
-	public static final String  PROPKEY_username           = "AlarmWriterToMail.smtp.username";
-	public static final String  DEFAULT_username           = "";
-
-	public static final String  PROPKEY_password           = "AlarmWriterToMail.smpt.password";
-	public static final String  DEFAULT_password           = "";
-
-	public static final String  PROPKEY_cc                 = "AlarmWriterToMail.cc";
-	public static final String  DEFAULT_cc                 = "";
-
-	public static final String  PROPKEY_smtpPort           = "AlarmWriterToMail.smpt.port";
-	public static final int     DEFAULT_smtpPort           = -1;
-
-	public static final String  PROPKEY_sslPort            = "AlarmWriterToMail.ssl.port";
-	public static final int     DEFAULT_sslPort            = -1;
-
-	public static final String  PROPKEY_useSsl             = "AlarmWriterToMail.ssl.use";
-	public static final boolean DEFAULT_useSsl             = false;
-
-	public static final String  PROPKEY_connectionTimeout  = "AlarmWriterToMail.smtp.connect.timeout";
-	public static final int     DEFAULT_connectionTimeout  = -1;
+	public static final String  PROPKEY_username               = "AlarmWriterToMail.smtp.username";
+	public static final String  DEFAULT_username               = "";
+                                                               
+	public static final String  PROPKEY_password               = "AlarmWriterToMail.smpt.password";
+	public static final String  DEFAULT_password               = "";
+                                                               
+	public static final String  PROPKEY_cc                     = "AlarmWriterToMail.cc";
+	public static final String  DEFAULT_cc                     = "";
+                                                               
+	public static final String  PROPKEY_smtpPort               = "AlarmWriterToMail.smpt.port";
+	public static final int     DEFAULT_smtpPort               = -1;
+                                                               
+	public static final String  PROPKEY_sslPort                = "AlarmWriterToMail.ssl.port";
+	public static final int     DEFAULT_sslPort                = -1;
+                                                               
+	public static final String  PROPKEY_useSsl                 = "AlarmWriterToMail.ssl.use";
+	public static final boolean DEFAULT_useSsl                 = false;
+                                                               
+	public static final String  PROPKEY_connectionTimeout      = "AlarmWriterToMail.smtp.connect.timeout";
+	public static final int     DEFAULT_connectionTimeout      = -1;
 	
 	public static String createMsgBodyTemplate()
 	{
+		boolean useHtmlTemplate = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml);
+		if (useHtmlTemplate)
+			return createHtmlMsgBodyTemplate();
+		else
+			return createTextMsgBodyTemplate();
+	}
+	
+//	public static String createTextMsgBodyTemplate()
+//	{
+//		return ""
+//			+ "Type:     ${type}  (${duration})\n"
+//			+ "\n"
+//			+ "Server:   ${serviceName}\n"
+//			+ "Alarm:    ${alarmClassAbriviated}\n"
+//			+ "\n"
+//			+ "Category: ${category}\n"
+//			+ "Severity: ${severity}\n"
+//			+ "State:    ${state}\n"
+//			+ "\n"
+//			+ "Info:     ${extraInfo}\n"
+//			+ "Time:     ${crTimeStr}\n"
+//			+ "\n"
+//			+ "${description}\n"
+//			+ "\n"
+//			+ "${extendedDescription}\n"
+//			;
+//	}
+	public static String createTextMsgBodyTemplate()
+	{
 		return ""
-			+ "Type:     ${type}  (${duration})\n"
+			+ "Type:      ${type}  (${duration})\n"
 			+ "\n"
-			+ "Server:   ${serviceName}\n"
-			+ "Alarm:    ${alarmClassAbriviated}\n"
+			+ "Server:    ${serviceName}\n"
+			+ "Alarm:     ${alarmClassAbriviated}\n"
+			+ "Collector: ${serviceInfo}\n"
 			+ "\n"
-			+ "Category: ${category}\n"
-			+ "Severity: ${severity}\n"
-			+ "State:    ${state}\n"
+			+ "Category:  ${category}\n"
+			+ "Severity:  ${severity}\n"
+			+ "State:     ${state}\n"
 			+ "\n"
-			+ "Info:     ${extraInfo}\n"
-			+ "Time:     ${crTimeStr}\n"
+			+ "Info:      ${extraInfo}\n"
+			+ "Time:      ${crTimeStr}\n"
 			+ "\n"
+			+ "\n"
+			+ "Alarm description:\n"
+			+ "==================================================================\n"
 			+ "${description}\n"
+			+ "------------------------------------------------------------------\n"
+			+ "#if ( ${extendedDescription} != '' )\n"
 			+ "\n"
+			+ "\n"
+			+ "Extended description:\n"
+			+ "==================================================================\n"
 			+ "${extendedDescription}\n"
+			+ "------------------------------------------------------------------\n"
+			+ "#end\n"
 			;
 	}
+	public static String createHtmlMsgBodyTemplate() // Note: this is not tested (at least not reading the text in Outlook or similar)
+	{
+		return ""
+			+ "<html> \n"
+				
+			+ "<head> \n"
+			+ "    <style> \n"
+			+ "        body  { font-family: Arial, Helvetica, sans-serif; } \n"
+			+ "        pre   { font-size: 10px; word-wrap: none; white-space: no-wrap; space: nowrap; } \n"
+//			+ "        table { border-collapse: collapse;} \n"
+//			+ "        th    { border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white; } \n"
+//			+ "        td    { border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; } \n"
+//			+ "        tr:nth-child(even) { background-color: #f2f2f2; } \n"
+			+ "    </style> \n"
+			+ "</head> \n"
+			
+			+ "<table>\n"
+			+ "<tr> <td><b>Type:     </b></td> <td>${type}  (${duration})  </td> </tr>\n"
+			+ "<tr> <td><b>Server:   </b></td> <td>${serviceName}          </td> </tr>\n"
+			+ "<tr> <td><b>Alarm:    </b></td> <td>${alarmClassAbriviated} </td> </tr>\n"
+			+ "<tr> <td><b>Collector:</b></td> <td>${serviceInfo}          </td> </tr>\n"
+
+			+ "<td colspan='2'>&nbsp;</td>\n"
+			+ "<tr> <td><b>Category: </b></td> <td>${category}             </td> </tr>\n"
+			+ "<tr> <td><b>Severity: </b></td> <td>${severity}             </td> </tr>\n"
+			+ "<tr> <td><b>State:    </b></td> <td>${state}                </td> </tr>\n"
+			+ "<td colspan='2'>&nbsp;</td>\n"
+			+ "<tr> <td><b>Info:     </b></td> <td>${extraInfo}            </td> </tr>\n"
+			+ "<tr> <td><b>Time:     </b></td> <td>${crTimeStr}            </td> </tr>\n"
+			+ "</table>\n"
+			
+			+ "<br>\n"
+			+ "<b>Alarm description:</b>\n"
+			+ "<hr>\n"
+			+ "${description}\n"
+			
+			// Only if we have a extended description
+			+ "#if ( ${extendedDescription} != '' )\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<b>Extended Description:</b>\n"
+			+ "<hr>\n"
+			+ "${extendedDescription}\n"
+			+ "#end\n"
+			
+			+ "</html>\n"
+			;
+		}
 }

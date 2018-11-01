@@ -13,9 +13,9 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
-import java.util.regex.Pattern;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -26,20 +26,18 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
-import javax.swing.JTextField;
 import javax.swing.UIManager;
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXTable;
-import org.jdesktop.swingx.sort.RowFilters;
 
 import com.asetune.Version;
 import com.asetune.check.CheckForUpdates;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.tools.sqlw.QueryWindow;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.PlatformUtils;
 import com.asetune.utils.SwingUtils;
 
@@ -55,10 +53,6 @@ public class AboutBox
 
 	private JButton   _ok_but             = new JButton("OK");
 	private JButton   _checkForUpdate_but = new JButton("Check For Updates...");
-
-	protected JLabel            _filter_lbl   = new JLabel("Filter: ");
-	protected JTextField        _filter_txt   = new JTextField();
-	protected JLabel            _filter_cnt   = new JLabel();
 
 	public AboutBox(Frame owner)
 	{
@@ -101,25 +95,6 @@ public class AboutBox
 		if ( _checkForUpdate_but.equals(e.getSource()) )
 		{
 			CheckForUpdates.getInstance().checkForUpdateNoBlock(this, true, true);
-//			String appName = Version.getAppName();
-//			
-//			if (AseTune.APP_NAME.equals(appName))
-//			{
-//    			CheckForUpdates.noBlockCheck(this, true, true);
-//			}
-//			else if (QueryWindow.APP_NAME.equals(appName))
-//			{
-//    			CheckForUpdates.noBlockCheckSqlWindow(this, true, true);
-//			}
-////			else if (IqTune.APP_NAME.equals(appName))
-////			{
-////    			CheckForUpdates.noBlockCheckIqTune(this, true, true);
-////			}
-//			else
-//			{
-//    			// Not yet implemented for application ?????
-//    			JOptionPane.showMessageDialog(this, "This in not yet implemented for application '"+appName+"'.");
-//			}
 		}
 	}
 
@@ -167,10 +142,11 @@ public class AboutBox
 		panel.setLayout(new MigLayout("ins 0","[fill]",""));
 
 		JTabbedPane tab = new JTabbedPane();
-		tab.add("About",       initTabAbout());
-//		tab.add("Todo",        initTabTodo());
-		tab.add("History",     initTabHistory());
-		tab.add("System Info", initTabSystemInfo());
+		tab.add("About",          initTabAbout());
+//		tab.add("Todo",           initTabTodo());
+		tab.add("History",        initTabHistory());
+		tab.add("System Info",    initTabSystemInfo());
+		tab.add("Combind Config", initTabCombinedConfig());
 
 		panel.add(tab,                 "height 100%, wrap 15");
 		panel.add(_checkForUpdate_but, "        gapleft  15, bottom, left, split");
@@ -264,7 +240,7 @@ public class AboutBox
 			creditTo +
 			suggestion +
 			"<B>please</B> donate whatever you think it was worth: <br>" +
-			"<A HREF=\"http://www.asetune.com\">http://www.asetune.com</A><br>" +
+			"<A HREF=\"http://www.dbxtune.com\">http://www.dbxtune.com</A><br>" +
 			"</html>";
 
 		JEditorPane feedback   = new JEditorPane("text/html", str);
@@ -357,9 +333,6 @@ public class AboutBox
 //		panel.setLayout(new BorderLayout());
 		panel.setLayout(new MigLayout("insets 0 0 0 0"));
 
-		_filter_txt.setToolTipText("Client filter, that does regular expression on all table cells using this value");
-		_filter_cnt.setToolTipText("Visible rows / actual rows in the GUI Table");
-
 		Properties sysProps = System.getProperties();
 
 		Vector<String> cols = new Vector<String>();
@@ -387,39 +360,53 @@ public class AboutBox
 		tab.setSortable(true);
 		tab.setColumnControlVisible(true);
 
-		panel.add(_filter_lbl,           "split");
-		panel.add(_filter_txt,           "growx, pushx");
-		panel.add(_filter_cnt,           "wrap");
-
-//		panel.add(new JScrollPane(tab),  BorderLayout.CENTER);
+		GTableFilter filter = new GTableFilter(tab);
+		
+		panel.add(filter,                "pushx, growx, wrap");
 		panel.add(new JScrollPane(tab),  "push, grow, wrap");
-
-		_filter_txt.addCaretListener(new CaretListener()
-		{
-			@Override
-			public void caretUpdate(CaretEvent e)
-			{
-				String searchString = _filter_txt.getText().trim();
-				if ( searchString.length() <= 0 ) 
-					tab.setRowFilter(null);
-				else
-				{
-					// Create a array with all visible columns... hence: it's only those we want to search
-					// Note the indices are MODEL column index
-					int[] mcols = new int[tab.getColumnCount()];
-					for (int i=0; i<mcols.length; i++)
-						mcols[i] = tab.convertColumnIndexToModel(i);
-					
-					tab.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString + ".*", mcols));
-				}
-				
-				String rowc = tab.getRowCount() + "/" + tab.getModel().getRowCount();
-				_filter_cnt.setText(rowc);
-			}
-		});
 
 		return panel;
 	}
+
+	protected JPanel initTabCombinedConfig()
+	{
+		JPanel panel = new JPanel();
+		panel.setLayout(new MigLayout("insets 0 0 0 0"));
+
+		Configuration combinedConfig = Configuration.getCombinedConfiguration();
+
+		Vector<String> cols = new Vector<String>();
+		cols.add("Keys");
+		cols.add("Values");
+
+		Vector<Vector<String>> rows = new Vector<Vector<String>>();
+
+		List<String> keyList = combinedConfig.getKeys("");
+		for (String key : keyList)
+		{
+			String val = combinedConfig.getProperty(key);
+
+			Vector<String> row = new Vector<String>();
+			row.add(key);
+			row.add(val);
+
+			rows.add(row);
+		}
+
+		final JXTable tab = new JXTable(rows, cols);
+		tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		tab.packAll(); // set size so that all content in all cells are visible
+		tab.setSortable(true);
+		tab.setColumnControlVisible(true);
+
+		GTableFilter filter = new GTableFilter(tab);
+		
+		panel.add(filter,                "pushx, growx, wrap");
+		panel.add(new JScrollPane(tab),  "push, grow, wrap");
+
+		return panel;
+	}
+
 
 
 	/*---------------------------------------------------

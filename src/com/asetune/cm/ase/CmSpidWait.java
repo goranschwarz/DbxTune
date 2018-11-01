@@ -236,8 +236,8 @@ extends CountersModel
 			OrigUserName = "OrigUserName = isnull(suser_name(W.OrigServerUserID), suser_name(W.ServerUserID)), ";
 
 		cols = InstanceID + "W.SPID, W.KPID, " + UserName + OrigUserName + "\n" +
-			"WaitClassDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitClassInfo \n" +
-			"WaitEventDesc = convert(varchar(80),''), -- runtime replaced with cached values from monWaitEventInfo \n" +
+			"WaitClassDesc = convert(varchar(120),''), -- runtime replaced with cached values from monWaitClassInfo \n" +
+			"WaitEventDesc = convert(varchar(120),''), -- runtime replaced with cached values from monWaitEventInfo \n" +
 			"W.WaitEventID, W.WaitTime, W.Waits, \n" +
 			"WaitTimePerWait = CASE WHEN W.Waits > 0 \n" +
 			"                       THEN convert(numeric(15,3), (W.WaitTime + 0.0) / W.Waits) \n" +

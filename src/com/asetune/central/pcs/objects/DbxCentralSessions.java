@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -31,7 +30,7 @@ public class DbxCentralSessions
 	private List<DbxGraphProperties> _graphProperties = null;
 
 //	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss.SSS")
-	public String getRecid() { return UUID.randomUUID().toString();  }
+//	public String getRecid() { return UUID.randomUUID().toString();  }
 	public Timestamp getSessionStartTime()       { return _sessionStartTime;        }
 	public int    getStatus()                    { return _status;                  }
 	public String getServerName()                { return _serverName;              }

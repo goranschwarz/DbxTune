@@ -17,10 +17,7 @@ public class UrlPostTest
 				String q = "&clientSourceVersion=999&user_name=goransXXX&debug=true";
 
 				// Send data
-//				URL url = new URL("http://www.asemon.se/check_for_update.php");
-//				URL url = new URL("http://www.asemon.se/xxx.php?"+q.toString());
-				URL url = new URL("http://www.sybtune.com/xxx.php?"+q.toString());
-//				URL url = new URL("http://www.asetune.com/xxx.php?"+q.toString());
+				URL url = new URL("http://www.dbxtune.com/xxx.php?"+q.toString());
 				URLConnection conn = url.openConnection();
 //				conn.setDoInput(true);
 //				conn.setDoOutput(true);

@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -17,6 +19,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.mail.HtmlEmail;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
@@ -31,13 +35,18 @@ import com.asetune.AppDir;
 import com.asetune.NormalExitException;
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.writers.AlarmWriterToMail;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralPcsJdbcCleaner;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.CentralPersistWriterJdbc;
+import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesDbxCentral;
+import com.asetune.gui.GuiLogAppender;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.report.senders.ReportSenderToMail;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.CronUtils;
 import com.asetune.utils.Debug;
@@ -307,7 +316,10 @@ public class DbxTuneCentral
 //		String propFile = null;
 		Logging.init(null, propFile, logFilename);
 
-		
+		// Always register the "gui" LogAppender, which will also send errors to 'dbxtune.com'
+		// Calling this would make GuiLogAppender, to register itself in log4j.
+		GuiLogAppender.getInstance();
+
 		// Print out the memory configuration
 		// And the JVM info
 		_logger.info("Starting "+Version.getAppName()+", version "+Version.getVersionStr()+", build "+Version.getBuildStr());
@@ -376,6 +388,25 @@ public class DbxTuneCentral
 		_logger.info("getWebDir():  "+getAppWebDir());
 		
 
+		//-------------------------------------------------------------------------
+		// HARDCODE a STOP date when this "DEVELOPMENT VERSION" will STOP working
+		//-------------------------------------------------------------------------
+		boolean enforceOldDbxTuneVersionsCheck = System.getProperty("_ENFORCE_OLD_DBXTUNE_VERSIONS_CHECK_", "true").equalsIgnoreCase("true");
+		if (Version.IS_DEVELOPMENT_VERSION && enforceOldDbxTuneVersionsCheck)
+		{
+			SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+
+			_logger.info("This DEVELOPMENT VERSION will NOT work after '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', then you will have to download a later version..");
+			if ( System.currentTimeMillis() > Version.DEV_VERSION_EXPIRE_DATE.getTime() )
+			{
+				//_hasDevVersionExpired = true;
+
+				String msg = "This DEVELOPMENT VERSION has expired. (version='"+Version.getVersionStr()+"', buildStr='"+Version.getBuildStr()+"'). The \"time to live\" period ended at '"+df.format(Version.DEV_VERSION_EXPIRE_DATE)+"', and the current date is '"+df.format(new Date())+"'. A new version can be downloaded here 'http://www.dbxtune.com'";
+				_logger.error(msg);
+				throw new Exception(msg);
+			}
+		}
+
 		// Start the Persistant Counter Service
 		startCentralPcs();
 
@@ -396,6 +427,178 @@ public class DbxTuneCentral
 		boolean writeDbxTuneServiceFile = true;
 		if (writeDbxTuneServiceFile)
 			writeDbxTuneServiceFile();
+		
+		
+		// Create a statistics object that will be used by various subsystems to
+		// track how many times we doe stuff...
+		// This will later on be sent to dbxtune.com, just as we do with checking for updates etc.
+		DbxCentralStatistics.getInstance(); // Not really needed, but lets do it anyway
+
+//Fix the below to work better
+//- Implement a CheckForUpdate for the DbxCentral instance
+//DONE: - Check for new release should: mail (using {sendReport|sendAlarm}ToMail) properties (if we can find any)
+//DONE: - Shutdown hook, should be in current shutdown
+//- A scheduler task that sends in Usage behaviour at HH:mm every day (or when doing "dailyReport")
+//- The ServerSide of "checkForUpdate" probably needs some new table(s) to handle the DbxCentral Statistics
+
+// Statistics: shutdown reason
+		
+		// Install a "CheckForUpdate" instance
+		CheckForUpdates.setInstance( new CheckForUpdatesDbxCentral() );
+
+		//---------------------------------
+		// Go and check for updates, before continuing (timeout 10 seconds)
+		//---------------------------------
+		_logger.info("Checking for new release...");
+//		CheckForUpdates.blockCheck(10*1000);
+		CheckForUpdates.getInstance().checkForUpdateBlock(10*1000);
+		if (CheckForUpdates.getInstance().hasUpgrade())
+		{
+			sendDbxTuneUpdateMail();
+		}
+
+		//---------------------------------
+		// Install shutdown hook -- SEND Counter Usage - add it as FIRST (index: 0)
+		ShutdownHandler.addShutdownHandler(0, new ShutdownHandler.Shutdownable()
+		{
+			@Override
+			public List<String> systemShutdown()
+			{
+				_logger.debug("----Start Shutdown Hook: sendCounterUsageInfo");
+				
+				DbxCentralStatistics.getInstance().setShutdownReason( ShutdownHandler.getShutdownReason() );
+				
+				// Send the statistics object to dbxtune.com
+				CheckForUpdates.getInstance().sendCounterUsageInfo(true);
+				
+				_logger.debug("----End Shutdown Hook: sendCounterUsageInfo");
+				
+				return null;
+			}
+		});
+	}
+	
+	private static void sendDbxTuneUpdateMail()
+	{
+		CheckForUpdates cfu = CheckForUpdates.getInstance();
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		_logger.info(Version.getAppName() + " new Upgrade is Available. New version is '"+cfu.getNewAppVersionStr()+"' and can be downloaded here '"+cfu.getDownloadUrl()+"'.");
+		
+		String msgSubject = Version.getAppName() + " new Upgrade is Available";
+		String msgBody = "<html>" +
+				Version.getAppName() + " new Upgrade is Available. <br>" + 
+				"New version is '"+cfu.getNewAppVersionStr()+"'.<br>" +
+				"And can be downloaded here: <a href='"+cfu.getDownloadUrl()+"'>"+cfu.getDownloadUrl()+"</a><br>" +
+				"<hr>" +
+				"Whats new: <a href='"+cfu.getWhatsNewUrl()+"'>"+cfu.getWhatsNewUrl()+"</a>" +
+				"</html>";
+		
+		String  smtpHostname       = conf.getProperty       (AlarmWriterToMail.PROPKEY_smtpHostname,           AlarmWriterToMail.DEFAULT_smtpHostname);
+		String  toCsv              = conf.getProperty       (AlarmWriterToMail.PROPKEY_to,                     AlarmWriterToMail.DEFAULT_to);
+		String  ccCsv              = conf.getProperty       (AlarmWriterToMail.PROPKEY_cc,                     AlarmWriterToMail.DEFAULT_cc);
+		String  from               = conf.getProperty       (AlarmWriterToMail.PROPKEY_from,                   AlarmWriterToMail.DEFAULT_from);
+
+		String  username           = conf.getProperty       (AlarmWriterToMail.PROPKEY_username,               AlarmWriterToMail.DEFAULT_username);
+		String  password           = conf.getProperty       (AlarmWriterToMail.PROPKEY_password,               AlarmWriterToMail.DEFAULT_password);
+		int     smtpPort           = conf.getIntProperty    (AlarmWriterToMail.PROPKEY_smtpPort,               AlarmWriterToMail.DEFAULT_smtpPort);
+		int     sslPort            = conf.getIntProperty    (AlarmWriterToMail.PROPKEY_sslPort,                AlarmWriterToMail.DEFAULT_sslPort);
+		boolean useSsl             = conf.getBooleanProperty(AlarmWriterToMail.PROPKEY_useSsl,                 AlarmWriterToMail.DEFAULT_useSsl);
+		int     smtpConnectTimeout = conf.getIntProperty    (AlarmWriterToMail.PROPKEY_connectionTimeout,      AlarmWriterToMail.DEFAULT_connectionTimeout);
+		
+		if (StringUtil.isNullOrBlank(smtpHostname))
+		{
+			smtpHostname       = conf.getProperty       (ReportSenderToMail.PROPKEY_smtpHostname,           ReportSenderToMail.DEFAULT_smtpHostname);
+			toCsv              = conf.getProperty       (ReportSenderToMail.PROPKEY_to,                     ReportSenderToMail.DEFAULT_to);
+			ccCsv              = conf.getProperty       (ReportSenderToMail.PROPKEY_cc,                     ReportSenderToMail.DEFAULT_cc);
+			from               = conf.getProperty       (ReportSenderToMail.PROPKEY_from,                   ReportSenderToMail.DEFAULT_from);
+
+			username           = conf.getProperty       (ReportSenderToMail.PROPKEY_username,               ReportSenderToMail.DEFAULT_username);
+			password           = conf.getProperty       (ReportSenderToMail.PROPKEY_password,               ReportSenderToMail.DEFAULT_password);
+			smtpPort           = conf.getIntProperty    (ReportSenderToMail.PROPKEY_smtpPort,               ReportSenderToMail.DEFAULT_smtpPort);
+			sslPort            = conf.getIntProperty    (ReportSenderToMail.PROPKEY_sslPort,                ReportSenderToMail.DEFAULT_sslPort);
+			useSsl             = conf.getBooleanProperty(ReportSenderToMail.PROPKEY_useSsl,                 ReportSenderToMail.DEFAULT_useSsl);
+			smtpConnectTimeout = conf.getIntProperty    (ReportSenderToMail.PROPKEY_connectionTimeout,      ReportSenderToMail.DEFAULT_connectionTimeout);
+		}
+
+		if (StringUtil.hasValue(smtpHostname) && StringUtil.hasValue(toCsv) && StringUtil.hasValue(from))
+		{
+			List<String> toList = StringUtil.commaStrToList(toCsv);
+
+			List<String> ccList = new ArrayList<>();
+			if (StringUtil.hasValue(ccCsv))
+				ccList = StringUtil.commaStrToList(ccCsv);
+			
+			try
+			{
+				HtmlEmail email = new HtmlEmail();
+
+				email.setHostName(smtpHostname);
+
+				// Charset
+				//email.setCharset(StandardCharsets.UTF_8.name());
+				
+				// Connection timeout
+				if (smtpConnectTimeout >= 0)
+					email.setSocketConnectionTimeout(smtpConnectTimeout);
+
+				// SMTP PORT
+				if (smtpPort >= 0)
+					email.setSmtpPort(smtpPort);
+
+				// USE SSL
+				if (useSsl)
+					email.setSSLOnConnect(useSsl);
+
+				// SSL PORT
+				if (useSsl && sslPort >= 0)
+					email.setSslSmtpPort(sslPort+""); // Hmm why is this a String parameter?
+
+				// AUTHENTICATION
+				if (StringUtil.hasValue(username))
+					email.setAuthentication(username, password);
+				
+				// add TO and CC
+				for (String to : toList)
+					email.addTo(to);
+
+				for (String cc : ccList)
+					email.addCc(cc);
+
+				// FROM & SUBJECT
+				email.setFrom(from);
+				email.setSubject(msgSubject);
+
+				// CONTENT HTML or PLAIN
+				if (StringUtils.startsWithIgnoreCase(msgBody.trim(), "<html>"))
+					email.setHtmlMsg(msgBody);
+				else
+					email.setTextMsg(msgBody);
+//				email.setHtmlMsg(msgBodyHtml);
+//				email.setTextMsg(msgBodyText);
+				
+//				System.out.println("About to send the following message: \n"+msgBody);
+				if (_logger.isDebugEnabled())
+				{
+					_logger.debug("About to send the following message: \n"+msgBody);
+				}
+
+				// SEND
+				email.send();
+
+				_logger.info("Sent mail message: host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"'.");
+			}
+			catch (Exception ex)
+			{
+				_logger.error("Problems sending mail (host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"').", ex);
+			}
+		}
+		else // not enough params to send mail.
+		{
+			if (StringUtil.hasValue(smtpHostname) && StringUtil.hasValue(toCsv) && StringUtil.hasValue(from))
+			_logger.info(Version.getAppName() + " new Upgrade is Available. New version is '"+cfu.getNewAppVersionStr()+"' and can be downloaded here '"+cfu.getDownloadUrl()+"'.");
+			_logger.info("Not enough email parameters to send mail. One of the following parameters are blank: smtpHostname='"+smtpHostname+"', to='"+toCsv+"', from='"+from+"'. Tried to be retrived from 'AlarmWriterToMail.*', or 'ReportSenderToMail.*'.");
+		}
 	}
 	
 	private static void close()
@@ -896,7 +1099,7 @@ public class DbxTuneCentral
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_cron,  DataDirectoryCleaner.DEFAULT_cron);
-			_logger.info("Adding Data Directory Cleanup scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'Data Directory Cleanup' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
 			_scheduler.schedule(cron, new DataDirectoryCleaner());
 		}
 
@@ -937,7 +1140,7 @@ public class DbxTuneCentral
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralPcsJdbcCleaner.PROPKEY_cron,  CentralPcsJdbcCleaner.DEFAULT_cron);
-			_logger.info("Adding Central PCS Data Retention/Cleanup scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'Central PCS Data Retention/Cleanup' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
 			_scheduler.schedule(cron, new CentralPcsJdbcCleaner());
 		}
 		
@@ -966,11 +1169,27 @@ public class DbxTuneCentral
 					@Override
 					public int decide(LoggingEvent event)
 					{
-						if (    event.getLogger().getName().equals(CentralH2Defrag.class.getName()) 
-						     || event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()) 
-						   )
-						{
+//						if (    event.getLogger().getName().equals(CentralH2Defrag.class.getName()) 
+//						     || event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()) 
+//						   )
+//						{
+//							return Filter.NEUTRAL;
+//						}
+
+						// log all in: CentralH2Defrag
+						if (event.getLogger().getName().equals(CentralH2Defrag.class.getName()))
 							return Filter.NEUTRAL;
+
+						// log only "some" (message has H2 in the message) in: CentralPersistWriterJdbc
+						if (event.getLogger().getName().equals(CentralPersistWriterJdbc.class.getName()))
+						{
+//							if (event.getThreadName().equals("xxxx"))
+//								return Filter.NEUTRAL;
+								
+							String msg = "" + event.getMessage();
+
+							if (msg.indexOf(" H2 ") != -1)
+								return Filter.NEUTRAL;
 						}
 
 						return Filter.DENY;
@@ -982,7 +1201,7 @@ public class DbxTuneCentral
 			}
 
 			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralH2Defrag.PROPKEY_cron,  CentralH2Defrag.DEFAULT_cron);
-			_logger.info("Adding Central PCS Data Retention/Cleanup scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_logger.info("Adding 'H2 Database Defrag' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
 			_scheduler.schedule(cron, new CentralH2Defrag());
 		}
 

@@ -109,6 +109,9 @@ public class SwingUtils
 
 	public static float getHiDpiScale()
 	{
+		if (GraphicsEnvironment.isHeadless()) 
+			return -1.0f;
+
 		String hiDpiScale = System.getProperty("SwingUtils.hiDpiScale");
 		if (hiDpiScale != null)
 		{

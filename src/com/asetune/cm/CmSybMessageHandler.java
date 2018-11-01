@@ -25,7 +25,7 @@ implements SybMessageHandler
 	private boolean       _discardMsgZeroPrintInfo = true; 
 
 	private boolean       _discardMsgLoadDb = true; // discard messages that has with 'in load db', etc...
-	private boolean       _discardMsgLoadDbPrintInfo = true; 
+	private boolean       _discardMsgLoadDbPrintInfo = false; 
 
 //	private boolean       _downgradeSqlException = false;
 
@@ -47,12 +47,16 @@ implements SybMessageHandler
 		// Change the default behavior for _discardMsgZero
 		_discardMsgZero          = conf.getBooleanProperty(cmName+".discardMsgZero",          _discardMsgZero);
 		_discardMsgZeroPrintInfo = conf.getBooleanProperty(cmName+".discardMsgZeroPrintInfo", _discardMsgZeroPrintInfo);
-		_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgZero="+_discardMsgZero+", discardMsgZeroPrintInfo="+_discardMsgZeroPrintInfo);
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgZero="+_discardMsgZero+", discardMsgZeroPrintInfo="+_discardMsgZeroPrintInfo);
 
 		// Change the default behavior for _discardMsgLoadDb
 		_discardMsgLoadDb          = conf.getBooleanProperty(cmName+".discardMsgLoadDb",          _discardMsgLoadDb);
 		_discardMsgLoadDbPrintInfo = conf.getBooleanProperty(cmName+".discardMsgLoadDbPrintInfo", _discardMsgLoadDbPrintInfo);
-		_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgLoadDb="+_discardMsgLoadDb+", discardMsgLoadDbPrintInfo="+_discardMsgLoadDbPrintInfo);
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug("CmSybMessageHandler: Config for CM '"+cmName+"': discardMsgLoadDb="+_discardMsgLoadDb+", discardMsgLoadDbPrintInfo="+_discardMsgLoadDbPrintInfo);
 
 		// LogName
 		setLogPrefix(cmName);
@@ -72,6 +76,13 @@ implements SybMessageHandler
 		// MsgNum='969', Severity='14', Msg: You can access database '%.*s' only from its owner instance '%.*s'. You cannot access local temporary databases from non-owner instances except to use CREATE DATABASE and DROP DATABASE with local system temporary databases.
 		// This is a Cluster message, thrown by object_name(id, DBID) if it's a nonlocal tempdb, and the object_name() returns NULL instead
 		addDiscardMsgNum(969); 
+		
+		// Msg=10227, message text: There is no active server process for the specified spid value '102'.  Possibly the user connection has terminated.
+		addDiscardMsgNum(10227); 
+		
+		// Msg=10226, message text: The specified spid value '428' is out of range. It must be positive and not exceed the maximum number of user connections.
+		addDiscardMsgNum(10226);
+		
 		
 		// Cluster wide monitor command succeeded.
 		addDiscardMsgStr("Cluster wide monitor command succeeded.");

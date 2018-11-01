@@ -39,7 +39,7 @@ public class PersistContainer
 	protected String              _serverName       = null;
 	protected String              _onHostname       = null;
 	protected String              _serverNameAlias  = null;
-	protected List<CountersModel> _counterObjects   = null;
+	private   List<CountersModel> _counterObjects   = null;
 
 	protected boolean             _startNewSample   = false;
 
@@ -62,7 +62,9 @@ public class PersistContainer
 		{
 		}
 		
-		public Timestamp getMainSampleTime()   { return _mainSampleTime; }
+		public Timestamp getMainSampleTime()             { return _mainSampleTime; }
+		public void      setMainSampleTime(Timestamp ts) { _mainSampleTime = ts; }
+
 		public String    getServerName()       { return _serverName; }
 		public String    getOnHostname()       { return _onHostname; }
 		public Timestamp getCounterClearTime() { return _counterClearTime; }
@@ -218,7 +220,7 @@ public class PersistContainer
 
 	/**
 	 * Get the alarm list
-	 * @return
+	 * @return Will never return null
 	 */
 	public List<AlarmEvent> getAlarmList()
 	{
@@ -238,7 +240,7 @@ public class PersistContainer
 
 	/**
 	 * Get the alarm list
-	 * @return
+	 * @return Will never return null
 	 */
 	public List<AlarmEventWrapper> getAlarmEvents()
 	{
@@ -248,6 +250,36 @@ public class PersistContainer
 	}
 
 
+	/**
+	 * Get counter objects
+	 * @return Will never return null
+	 */
+	public List<CountersModel> getCounterObjects()
+	{
+		if (_counterObjects == null)
+			return Collections.emptyList();
+		return _counterObjects;		
+	}
+	
+	/**
+	 * check if the containe contains anything...
+	 * @return
+	 */
+	public boolean isEmpty()
+	{
+		return getCounterObjects().isEmpty() && getAlarmList().isEmpty() && getAlarmEvents().isEmpty();
+//		boolean isEmpty = true;
+//		if (_counterObjects != null)
+//			isEmpty = _counterObjects.isEmpty();
+//
+//		if (_activeAlarmList != null)
+//			isEmpty = _activeAlarmList.isEmpty();
+//			
+//		if (_alarmEventsList != null)
+//			isEmpty = _alarmEventsList.isEmpty();
+//		
+//		return isEmpty;
+	}
 	
 	public boolean equals(PersistContainer pc)
 	{

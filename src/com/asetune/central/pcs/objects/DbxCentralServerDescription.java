@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -142,7 +143,7 @@ public class DbxCentralServerDescription
 		File f = new File(filename);
 		if (f.exists())
 		{
-			List<String> readList  = FileUtils.readLines(f);
+			List<String> readList  = FileUtils.readLines(f, Charset.defaultCharset());
 			List<String> writeList = new ArrayList<>();
 
 			for (String line : readList)

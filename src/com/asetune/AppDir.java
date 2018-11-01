@@ -34,8 +34,18 @@ public class AppDir
 	/** Get the directory where user settings are stored. More or less the user/temporary configuration files */
 	public static String getAppStoreDir()
 	{
+		return getAppStoreDir(false);
+	}
+
+	/**
+	 * Get the directory where user settings are stored. More or less the user/temporary configuration files
+	 * @param appendSeparator  Append File.separatorChar at the end
+	 * @return
+	 */
+	public static String getAppStoreDir(boolean appendSeparator)
+	{
 //		return System.getProperty("user.home") + sep + ".asetune";
-		return System.getProperty("user.home") + sep + ".dbxtune";
+		return System.getProperty("user.home") + sep + ".dbxtune" + (appendSeparator ? sep : "");
 	}
 	
 	
@@ -99,6 +109,7 @@ public class AppDir
 		// Create "${HOME}/.dbxtune/log", conf
 		baseLogCreated  = mkdir(dir, "log",  ps, logList, "- where log files are stored.");
 		baseConfCreated = mkdir(dir, "conf", ps, logList, "- where properties/configuration files are located...");
+		baseConfCreated = mkdir(dir, "data", ps, logList, "- where local recording files could be located...");
 		
 		// Create "${HOME}/.dbxtune/dbxc
 		File dbxcCreated = null;
@@ -437,6 +448,17 @@ public class AppDir
 		mkdir(dir, "resources",                              ps, logList, "- other various resources.");
 		mkdir(dir, "resources" + sep + "alarm-handler-src",  ps, logList, "- User defined Alarms handling source code, can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
 
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "asetune",       ps, logList, "- User defined Alarms handling source code, for AseTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "db2tune",       ps, logList, "- User defined Alarms handling source code, for Db2Tune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "hanatune",      ps, logList, "- User defined Alarms handling source code, for HanaTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "iqtune",        ps, logList, "- User defined Alarms handling source code, for IqTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "mysqltune",     ps, logList, "- User defined Alarms handling source code, for MySqlTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "oracletune",    ps, logList, "- User defined Alarms handling source code, for OracleTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "postgrestune",  ps, logList, "- User defined Alarms handling source code, for PostgresTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "raxtune",       ps, logList, "- User defined Alarms handling source code, for RaxTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "rstune",        ps, logList, "- User defined Alarms handling source code, for RsTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		mkdir(dir, "resources" + sep + "alarm-handler-src" + sep + "sqlservertune", ps, logList, "- User defined Alarms handling source code, for SqlServerTune can be placed here. Note: specify this with env var ${DBXTUNE_UD_ALARM_SOURCE_DIR}");
+		
 		// Create a special LOG file for the upgrade...
 //		if ( upgardeFromAsetuneToDbxtune && ! logList.isEmpty() )
 		if ( logList.size() > 1 ) // 1 entry will always be in there: "INFO: The application directory '"+dir+"' already exists. So I will probably do nothing in here."

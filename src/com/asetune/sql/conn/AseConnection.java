@@ -180,11 +180,11 @@ extends TdsConnection
 
 					// ADD INFO
 					extraInfo.put(TableExtraInfo.TableRowCount,      new TableExtraInfo(TableExtraInfo.TableRowCount,      "Row Count",        rowtotal     , "Number of rows in the table. Note: exec dbname..sp_spaceused 'schema.tabname', 1", null));
-					extraInfo.put(TableExtraInfo.TableLockScheme,    new TableExtraInfo(TableExtraInfo.TableLockScheme,    "Locking Scheme",   lockingScheme, "Table locking Scheme (allpages, datapages, datarows)", null));
 					extraInfo.put(TableExtraInfo.TableTotalSizeInKb, new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb, "Total Size In KB", data+index   , "Details from sp_spaceused: reserved="+nf.format(reserved)+" KB, data="+nf.format(data)+" KB, index_size="+nf.format(index)+" KB, unused="+nf.format(unused)+" KB", null));
 					extraInfo.put(TableExtraInfo.TableDataSizeInKb,  new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,  "Data Size In KB",  data         , "From 'sp_spaceued', columns 'data'.", null));
 					extraInfo.put(TableExtraInfo.TableIndexSizeInKb, new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb, "Index Size In KB", sumIndexSize , "From 'sp_spaceued', index section, sum of 'size'. Details: size="+nf.format(sumIndexSize)+" KB, reserved="+nf.format(sumIndexReserved)+" KB, unused="+nf.format(sumIndexUnused)+" KB", null));
 					extraInfo.put(TableExtraInfo.TableLobSizeInKb,   new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,   "LOB Size In KB",   sumLobSize   , "From 'sp_spaceued', index section, 'size' of columns name 't"+table+"'. Details: size="+nf.format(sumLobSize)+" KB, reserved="+nf.format(sumLobReserved)+" KB, unused="+nf.format(sumLobUnused)+" KB", null));
+					extraInfo.put(TableExtraInfo.TableLockScheme,    new TableExtraInfo(TableExtraInfo.TableLockScheme,    "Locking Scheme",   lockingScheme, "Table locking Scheme (allpages, datapages, datarows)", null));
 				}
 			}
 			catch (SQLException ex)

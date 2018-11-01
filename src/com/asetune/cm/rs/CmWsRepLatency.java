@@ -378,9 +378,10 @@ extends CountersModel
 						String keepLogicalNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ApplyAgeInMinutes_ForLogicalName,  DEFAULT_alarm_ApplyAgeInMinutes_ForLogicalName);
 						String skipLogicalNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ApplyAgeInMinutes_SkipLogicalName, DEFAULT_alarm_ApplyAgeInMinutes_SkipLogicalName);
 
-						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
-						boolean doAlarm = false;
-						doAlarm = (true    && (StringUtil.isNullOrBlank(keepLogicalNameRegExp) ||   lName.matches(keepLogicalNameRegExp ))); //     matches the KEEP regexp
+						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepLogicalNameRegExp) ||   lName.matches(keepLogicalNameRegExp ))); //     matches the KEEP regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLogicalNameRegExp) || ! lName.matches(skipLogicalNameRegExp)));  // NO match in the SKIP regexp
 
 						// NO match in the SKIP regexp
@@ -410,9 +411,10 @@ extends CountersModel
 						String keepLogicalNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DataAgeInMinutes_ForLogicalName,  DEFAULT_alarm_DataAgeInMinutes_ForLogicalName);
 						String skipLogicalNameRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_DataAgeInMinutes_SkipLogicalName, DEFAULT_alarm_DataAgeInMinutes_SkipLogicalName);
 
-						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; Below is more readable, from a variable context point-of-view, but harder to understand
-						boolean doAlarm = false;
-						doAlarm = (true    && (StringUtil.isNullOrBlank(keepLogicalNameRegExp) ||   lName.matches(keepLogicalNameRegExp ))); //    matches the KEEP regexp
+						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepLogicalNameRegExp) ||   lName.matches(keepLogicalNameRegExp ))); //    matches the KEEP regexp
 						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipLogicalNameRegExp) || ! lName.matches(skipLogicalNameRegExp))); // NO match in the SKIP regexp
 
 						// NO match in the SKIP regexp

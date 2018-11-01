@@ -34,8 +34,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 
 import com.asetune.DbxTune;
+import com.asetune.Version;
 import com.asetune.alarm.writers.AlarmWriterToFile;
 import com.asetune.central.DbxTuneCentral;
+import com.asetune.central.cleanup.CentralH2Defrag;
+import com.asetune.central.cleanup.CentralH2Defrag.H2StorageInfo;
+import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
 import com.asetune.sql.conn.DbxConnection;
@@ -386,7 +390,7 @@ public class OverviewServlet extends HttpServlet
 		int refresh = StringUtil.parseInt(refreshStr, 0);
 
 
-		String linkToolTip = "Open this recording in native/desktop AseTune application.\nBy clicking this; a request will be sent to the first AseTune application which you started on your local (PC) client";
+		String linkToolTip = "Open this recording in native/desktop DbxTune application.\nBy clicking this; a request will be sent to the first DbxTune application which you started on your local (PC) client";
 		String dbxTuneGuiUrl = "http://localhost:PORT/connect-offline?url=";
 
 		String username = System.getProperty("user.name");
@@ -405,6 +409,8 @@ public class OverviewServlet extends HttpServlet
 		out.println("  th {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white;}");
 		out.println("  td {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; }");
 		out.println("  tr:nth-child(even) {background-color: #f2f2f2;}");
+//		out.println("  .topright { position: absolute; top: 8px; right: 16px; font-size: 14px; }"); // topright did not work with bootstrap (and navigation bar) 
+
 		out.println("</style>");
 
 		out.println("<link href='/scripts/prism/prism.css' rel='stylesheet' />");
@@ -418,7 +424,11 @@ public class OverviewServlet extends HttpServlet
 
 		out.println("<div class='container-fluid'>");
 
+		String ver = "Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
+		
 		out.println("<h1>DbxTune - Central - " + username + "@" + hostname + "</h1>");
+
+		out.println("<div class='topright'>"+ver+"</div>");
 
 		out.println("<p>");
 //		out.println("Page loaded: " + (new Timestamp(System.currentTimeMillis())) + ", " );
@@ -703,8 +713,9 @@ public class OverviewServlet extends HttpServlet
 				continue;
 			}
 
-			String srvName  = session.getServerName();
-			String infoFile = session.getCollectorInfoFile();
+			String srvName   = session.getServerName();
+			String srvTdAttr = "";
+			String infoFile  = session.getCollectorInfoFile();
 			
 			String alarmFileActive = "";
 			String alarmFileLog    = "";
@@ -762,6 +773,11 @@ public class OverviewServlet extends HttpServlet
 					
 					if ( alarmFileUpdateAgeSec > (refreshRate * refreshRateAlarmMultiplyer) )
 						luTdAttr = "style='background-color:rgb(255,0,0);'";
+					
+					if ( ! "NO ACTIVE ALARMS.".equals(fileContent) )
+						srvTdAttr = "style='background-color:rgb(255, 128, 128);'"; // SOME ALARMS == light red
+					else
+						srvTdAttr = "style='background-color:rgb(204, 255, 204);'"; // OK == light green
 				}
 				else
 				{
@@ -800,13 +816,13 @@ public class OverviewServlet extends HttpServlet
 			}
 
 			out.println("  <tr> ");
-			out.println("    <td>"              + srvName        + "</td>");
-			out.println("    <td>"              + logFileTd      + "</td>");
-			out.println("    <td>"              + lastUpdateTs   + "</td>");
-			out.println("    <td "+luTdAttr+">" + lastUpdateAge  + "</td>");
-			out.println("    <td><pre>"         + fileContent    + "</pre></td>");
-			out.println("    <td>"              + lastLogLineAge + "</td>");
-			out.println("    <td><pre>"         + lastLogLine    + "</pre></td>");
+			out.println("    <td "+srvTdAttr+">"      + srvName        + "</td>");
+			out.println("    <td>"                    + logFileTd      + "</td>");
+			out.println("    <td>"                    + lastUpdateTs   + "</td>");
+			out.println("    <td "+luTdAttr+">"       + lastUpdateAge  + "</td>");
+			out.println("    <td "+srvTdAttr+"><pre>" + fileContent    + "</pre></td>");
+			out.println("    <td>"                    + lastLogLineAge + "</td>");
+			out.println("    <td><pre>"               + lastLogLine    + "</pre></td>");
 			out.println("  </tr>");
 
 //			out.println("  <tr> <td>1</td> <td>2</td> <td>3</td> <td>4</td> <td>5</td> <td>6</td> <td>7</td> </tr>");
@@ -872,17 +888,64 @@ public class OverviewServlet extends HttpServlet
 		out.println("<h5 class='card-header'>All file(s) in the LOG Directory</h5>");
 		out.println("<div class='card-body'>");
 		out.println("<p>List all the files in the <i>log</i> directory <code>"+ (new File(LOG_DIR)) +"</code>, click the <i>Url</i> to view the content in the file.<br>");
-		out.println("Note: If you want to filter out something from the content, Type it in the column <b>Discard Text</b> and hit <i>enter</i></p>");
+		out.println("Note: If you want to filter out something from the content, Type it in the column <b>Discard Text</b> and hit <i>enter</i><br>");
+		out.println("Column <b>View Options</b>");
+		out.println("<ul>");
+		out.println("  <li><code>plain        </code> - View all records in the file.</li>");
+		out.println("  <li><code>discard      </code> - All records except <code>'Persisting Counters using|Sent subscription data for server'</code>.</li>");
+		out.println("  <li><code>tail         </code> - Display last 500 records, and <i>follow</i> output as the file grows.</li>");
+		out.println("  <li><code>tail+discard </code> - The 'tail' and 'discard' option combined.</li>");
+		out.println("</ul>");
 		out.println("</p>");
 
+//		out.println("<table>");
+//		out.println("<thead>");
+//		out.println("  <tr>");
+//		out.println("    <th>File</th>");
+//		out.println("    <th>Size GB</th>");
+//		out.println("    <th>Size MB</th>");
+//		out.println("    <th>Size KB</th>");
+//		out.println("    <th>Tail-f (last 500)</th>");
+//		out.println("    <th>Tail-f (last 500 + discard)</th>");
+//		out.println("    <th>Show (discard some)</th>");
+//		out.println("    <th>Discard Text</th>");
+//		out.println("  </tr>");
+//		out.println("</thead>");
+//		out.println("<tbody>");
+//		for (String file : getFilesInLogDir())
+//		{
+//			File f = new File(file);
+//			if (f.isDirectory())
+//				continue;
+//
+//			String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
+//			String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
+//			String sizeInKB = String.format("%.1f KB", f.length() / 1024.0);
+//			
+//			String urlDiscardStr = "&discard=Persisting Counters using|Sent subscription data for server";
+//			out.println("  <tr>");
+//			out.println("    <td><a href='/log?name="+f.getName()+"'>"+f.getName()+"</a></td>");
+//			out.println("    <td>" + sizeInGB     + "</td>");
+//			out.println("    <td>" + sizeInMB     + "</td>");
+//			out.println("    <td>" + sizeInKB     + "</td>");
+//			out.println("    <td><a href='/log?name="+f.getName()+"&tail=500'><code>"+f.getName()+"</code></a></td>");
+//			out.println("    <td><a href='/log?name="+f.getName()+urlDiscardStr+"&tail=500'><code>"+f.getName()+"</code></a></td>");
+//			out.println("    <td><a href='/log?name="+f.getName()+urlDiscardStr+"'><code>"+f.getName()+"</code></a></td>");
+//			out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
+//			out.println("  </tr>");
+//
+//		}
+//		out.println("</tbody>");
+//		out.println("</table>");
 		out.println("<table>");
 		out.println("<thead>");
 		out.println("  <tr>");
 		out.println("    <th>File</th>");
+		out.println("    <th>View Options</th>");
 		out.println("    <th>Size GB</th>");
 		out.println("    <th>Size MB</th>");
 		out.println("    <th>Size KB</th>");
-		out.println("    <th>Url</th>");
+		out.println("    <th>Last Modified</th>");
 		out.println("    <th>Discard Text</th>");
 		out.println("  </tr>");
 		out.println("</thead>");
@@ -897,12 +960,19 @@ public class OverviewServlet extends HttpServlet
 			String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
 			String sizeInKB = String.format("%.1f KB", f.length() / 1024.0);
 			
+			String urlDiscardStr = "&discard=Persisting Counters using|Sent subscription data for server";
 			out.println("  <tr>");
 			out.println("    <td><a href='/log?name="+f.getName()+"'>"+f.getName()+"</a></td>");
+			out.println("    <td>");
+			out.println("      <a href='/log?name="+f.getName()+"'>plain</a>");
+			out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"'>discard</a>");
+			out.println("      | <a href='/log?name="+f.getName()+"&tail=500'>tail</a>");
+			out.println("      | <a href='/log?name="+f.getName()+urlDiscardStr+"&tail=500'>tail+discard</a>");
+			out.println("    </td>");
 			out.println("    <td>" + sizeInGB     + "</td>");
 			out.println("    <td>" + sizeInMB     + "</td>");
 			out.println("    <td>" + sizeInKB     + "</td>");
-			out.println("    <td><a href='/log?name="+f.getName()+"'><code>"+f.getName()+"</code></a></td>");
+			out.println("    <td>" + (new Timestamp(f.lastModified())) + "</td>");
 			out.println("    <td><input type='text' placeholder='filter-out some text (regexp can be used), hit <enter> to search' class='search' size='80' style='border:none' onkeydown='openLogFileWithDiscard(this, \""+f.getName()+"\")'/></td>");
 			out.println("  </tr>");
 
@@ -980,16 +1050,33 @@ public class OverviewServlet extends HttpServlet
 			out.println("<p>H2 Databases used by Dbx Central</p>");
 
 			File dataDir = new File(DbxTuneCentral.getAppDataDir());
-			double freeGb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0 / 1024.0;
+			File dataDirRes = null;
+			try { dataDirRes = dataDir.toPath().toRealPath().toFile(); } catch(IOException ex) { _logger.warn("Problems resolving File->Path->File");}
+
+//			double freeGb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0 / 1024.0;
+			double freeGb   = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
 //			double usableGb = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
 			double totalGb  = dataDir.getTotalSpace()  / 1024.0 / 1024.0 / 1024.0;
 			double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
 			
 			out.println("<p>");
-			out.println("File system usage at '"+dataDir+"'<br>");
+			out.println("File system usage at '"+dataDir+"', resolved to '"+dataDirRes+"'.<br>");
 			out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
 			out.println("</p>");
 			
+			out.println("<p>");
+			out.println("Quick links to Some Dbx Central log files.");
+			out.println("<ul>");
+			out.println("  <li><a href='/log?name=DBX_CENTRAL.console'>                   DBX_CENTRAL.console                   </a></li>");
+			out.println("  <li><a href='/log?name=DBX_CENTRAL.log'>                       DBX_CENTRAL.log                       </a></li>");
+			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralH2Defrag.log'>       DBX_CENTRAL_CentralH2Defrag.log       </a></li>");
+			out.println("  <li><a href='/log?name=DBX_CENTRAL_DataDirectoryCleaner.log'>  DBX_CENTRAL_DataDirectoryCleaner.log  </a></li>");
+			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralPcsJdbcCleaner.log'> DBX_CENTRAL_CentralPcsJdbcCleaner.log </a></li>");
+			out.println("</ul>");
+			out.println("</p>");
+			
+			
+			H2StorageInfo h2StorageInfo = CentralH2Defrag.getH2StorageInfo();
 			
 			out.println("<table>");
 			out.println("<thead>");
@@ -997,6 +1084,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("    <th>File</th>");
 			out.println("    <th>Size GB</th>");
 			out.println("    <th>Size MB</th>");
+			out.println("    <th>Saved Info</th>");
 			out.println("    <th>JDBC Url</th>");
 			out.println("    <th>WEB Url</th>");
 			out.println("  </tr>");
@@ -1029,6 +1117,7 @@ public class OverviewServlet extends HttpServlet
 				out.println("    <td>" + dbName    + "</td>");
 				out.println("    <td>" + sizeInGB  + "</td>");
 				out.println("    <td>" + sizeInMB  + "</td>");
+				out.println("    <td>" + h2StorageInfo  + "</td>");
 				out.println("    <td><code>" + jdbcUrl + "</code></td>");
 //				out.println("    <td><code>" + webUrl + "</code></td>");
 				out.println("    <td><div title='Open a web query tool'><a href='" + webUrl + "'><code>" + webUrl + "</code></a></div></td>");
@@ -1036,6 +1125,11 @@ public class OverviewServlet extends HttpServlet
 			}
 			out.println("</tbody>");
 			out.println("</table>");
+			
+			// Print detailes about how many MB we are consumimg per minute/hour
+			if (h2StorageInfo != null)
+			{
+			}
 			
 			// Print some content of the Central Database
 			if (CentralPersistReader.hasInstance())
@@ -1055,7 +1149,7 @@ public class OverviewServlet extends HttpServlet
 					    + "	   min(" + q + "SessionStartTime" + q + ") as " + q + "FirstSample" + q + ", \n"
 					    + "	   max(" + q + "LastSampleTime" + q + ")   as " + q + "LastSample" + q + ", \n"
 //					    + "	   sum(" + q + "NumOfSamples" + q + ")     as " + q + "NumOfSamples" + q + ", \n" // Note this might be off/faulty after a: Data Retention Cleanup
-					    + "	   datediff(day, max(" + q + "LastSampleTime" + q + "), getdate())   as " + q + "LastSampleAgeInDays" + q + ", \n"
+					    + "	   datediff(day, max(" + q + "LastSampleTime" + q + "), CURRENT_TIMESTAMP)   as " + q + "LastSampleAgeInDays" + q + ", \n"
 					    + "	   datediff(day, min(" + q + "SessionStartTime" + q + "), max(" + q + "LastSampleTime" + q + ")) as " + q + "NumOfDaysSampled" + q + " \n"
 					    + "from " + q + "DbxCentralSessions" + q + " \n"
 					    + "group by " + q + "ServerName" + q + ", " + q + "OnHostname" + q + ", " + q + "ProductString" + q + " \n"
@@ -1143,26 +1237,35 @@ public class OverviewServlet extends HttpServlet
         out.println("<p>Historical database recordings.</p>");
         out.println("Column description");
         out.println("<ul>");
-        out.println("<li><b>File      </b> - Name of the database file</li>");
-        out.println("<li><b>DayOfWeek </b> - What day of the week is this recording for (just extract the YYYY-MM-DD and try to convert it into a day of week)</li>");
-        out.println("<li><b>Size GB   </b> - File size in GB</li>");
-        out.println("<li><b>Size MB   </b> - File size in MB</li>");
-        out.println("<li><b>URL       </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
+        out.println("<li><b>File             </b> - Name of the database file</li>");
+        out.println("<li><b>DayOfWeek        </b> - What day of the week is this recording for (just extract the YYYY-MM-DD and try to convert it into a day of week)</li>");
+        out.println("<li><b>Saved Max GB     </b> - Maximum size of the File before it was <i>compressed</i> using <code>shutdown defrag</code>, which is done with with <i>PCS H2 <b>rollover</b></i>. The value is updated by DataDirectoryCleaner.check(), when it's executed by the scheduler (default; at 23:54). This value is also the one used when calulating how much space we need for H2 databases in the next 24 hours. If the value is negative, no <i>max</i> value has yet been found/saved.</li>");
+        out.println("<li><b>Current Size GB  </b> - Current File size in GB</li>");
+        out.println("<li><b>Current Size MB  </b> - Current File size in MB</li>");
+        out.println("<li><b>URL              </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
         out.println("</ul>");
         out.println("<p>Note: Offline databases with <b>todays</b> timestamp will be marked in <span style='background-color:rgb(204, 255, 204);'>light green</span>, which probably is the active recording.</p>");
 
 		File dataDir = new File(DbxTuneCentral.getAppDataDir());
-		double freeGb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0 / 1024.0;
+		File dataDirRes = null;
+		try { dataDirRes = dataDir.toPath().toRealPath().toFile(); } catch(IOException ex) { _logger.warn("Problems resolving File->Path->File");}
+
+		double freeGb   = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
+//		double freeGb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0 / 1024.0;
 //		double usableGb = dataDir.getUsableSpace() / 1024.0 / 1024.0 / 1024.0;
 		double totalGb  = dataDir.getTotalSpace()  / 1024.0 / 1024.0 / 1024.0;
 		double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
 		
 		out.println("<p>");
-		out.println("File system usage at '"+dataDir+"'<br>");
+		out.println("File system usage at '"+dataDir+"', resolved to '"+dataDirRes+"'.<br>");
 //		out.println(String.format("Free = %.1f GB, Usable = %.1f GB, Total = %.1f GB <br>", freeGb, usableGb, totalGb));
 		out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
 		out.println("</p>");
-		
+
+		// Get the same "saved file size info" as DataDirectoryCleaner
+		String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_savedFileInfo_filename, DataDirectoryCleaner.DEFAULT_savedFileInfo_filename);
+		Configuration savedFileInfo = new Configuration(fileName);
+		_logger.info("Loaded file '"+savedFileInfo.getFilename()+"' to store File Size Information, with "+savedFileInfo.size()+" entries.");
 		
 //		for (Path root : FileSystems.getDefault().getRootDirectories()) 
 //		{
@@ -1181,8 +1284,9 @@ public class OverviewServlet extends HttpServlet
 		out.println("  <tr>");
 		out.println("    <th>File</th>");
 		out.println("    <th>DayOfWeek</th>");
-		out.println("    <th>Size GB</th>");
-		out.println("    <th>Size MB</th>");
+		out.println("    <th>Saved Max GB</th>");
+		out.println("    <th>Current Size GB</th>");
+		out.println("    <th>Current Size MB</th>");
 		out.println("    <th>Url</th>");
 		out.println("  </tr>");
 		out.println("</thead>");
@@ -1201,6 +1305,9 @@ public class OverviewServlet extends HttpServlet
 			
 			String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
 			String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
+			
+			String savedSizeInGB = String.format("%.1f GB", savedFileInfo.getLongProperty(f.getName(), -1) / 1024.0 / 1024.0 / 1024.0);
+//			String savedSizeInMB = String.format("%.1f MB", savedFileInfo.getLongProperty(f.getName(), -1) / 1024.0 / 1024.0);
 			
 			String srvName = dbName;
 			if (dbName.matches(".*_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"))
@@ -1233,13 +1340,23 @@ public class OverviewServlet extends HttpServlet
 			
 			String style = "";
 			if (isTodayH2DbTimestamp(f.getName()))
+			{
 				style = "style='background-color:rgb(204, 255, 204);'"; // Very Light green
 				
+				// Point the URL to the ACTIVE recording (which is on non-default port)
+				if (session != null)
+				{
+					url        = session.getCollectorCurrentUrl();
+					dbxTuneUrl = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
+				}
+			}
+				
 			out.println("  <tr>");
-			out.println("    <td "+style+">" + dbName    + "</td>");
-			out.println("    <td "+style+">" + dayOfWeek + "</td>");
-			out.println("    <td "+style+">" + sizeInGB  + "</td>");
-			out.println("    <td "+style+">" + sizeInMB  + "</td>");
+			out.println("    <td "+style+">" + dbName         + "</td>");
+			out.println("    <td "+style+">" + dayOfWeek      + "</td>");
+			out.println("    <td "+style+">" + savedSizeInGB  + "</td>");
+			out.println("    <td "+style+">" + sizeInGB       + "</td>");
+			out.println("    <td "+style+">" + sizeInMB       + "</td>");
 			out.println("    <td "+style+"><div title='"+linkToolTip+"'><a href='" + dbxTuneUrl + "'><code>" + url + "</code></a></div></td>");
 			out.println("  </tr>");
 		}

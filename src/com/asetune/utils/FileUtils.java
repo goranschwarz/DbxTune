@@ -16,7 +16,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
+import java.nio.file.Path;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -35,6 +38,55 @@ import net.miginfocom.swing.MigLayout;
 public class FileUtils
 {
 	private static Logger _logger = Logger.getLogger(FileUtils.class);
+
+	/** get KB in format ###.# */
+	public static double byteToKb(Path p)
+	{
+		return byteToKb(p.toFile().length());
+	}
+	/** get KB in format ###.# */
+	public static double byteToKb(File f)
+	{
+		return byteToKb(f.length());
+	}
+	/** get KB in format ###.# */
+	public static double byteToKb(long bytes)
+	{
+		return new BigDecimal(bytes / 1024.0).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+	}
+
+	/** get MB in format ###.# */
+	public static double byteToMb(Path p)
+	{
+		return byteToMb(p.toFile().length());
+	}
+	/** get MB in format ###.# */
+	public static double byteToMb(File f)
+	{
+		return byteToMb(f.length());
+	}
+	/** get MB in format ###.# */
+	public static double byteToMb(long bytes)
+	{
+		return new BigDecimal(bytes / 1024.0 / 1024.0).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+	}
+
+	/** get MB in format ###.# */
+	public static double byteToGb(Path p)
+	{
+		return byteToGb(p.toFile().length());
+	}
+	/** get GB in format ###.# */
+	public static double byteToGb(File f)
+	{
+		return byteToGb(f.length());
+	}
+	/** get GB in format ###.# */
+	public static double byteToGb(long bytes)
+	{
+		return new BigDecimal(bytes / 1024.0 / 1024.0 / 1024.0).setScale(1, RoundingMode.HALF_EVEN).doubleValue();
+	}
+	
 
 	
 	public static void copy(String from_name, String to_name) 

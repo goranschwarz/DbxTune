@@ -61,24 +61,12 @@ implements DbxConnectionStateInfo
 	private void refresh(DbxConnection conn)
 	{
 		// Do the work
-		try
-		{
-			_catalog        = conn.getCatalog();
-			_autocommit     = conn.getAutoCommit();
-			_isolationLevel = conn.getTransactionIsolation();
-//			_inTransaction  = DbUtils.isInTransaction(conn, dbProduct);
-			_inTransaction  = conn.isInTransaction();
-		}
-		catch (SQLException sqle)
-		{
-			_logger.error("Error in DbxConnectionStateInfoGenericJdbc.refresh()", sqle);
-		}
+		try { _catalog        = conn.getCatalog();              } catch (SQLException sqle) { _logger.error("Error in DbxConnectionStateInfoGenericJdbc.refresh(getCatalog)"             , sqle); }
+		try { _autocommit     = conn.getAutoCommit();           } catch (SQLException sqle) { _logger.error("Error in DbxConnectionStateInfoGenericJdbc.refresh(getAutoCommit)"          , sqle); }
+		try { _isolationLevel = conn.getTransactionIsolation(); } catch (SQLException sqle) { _logger.error("Error in DbxConnectionStateInfoGenericJdbc.refresh(getTransactionIsolation)", sqle); }
+		try { _inTransaction  = conn.isInTransaction();         } catch (SQLException sqle) { _logger.error("Error in DbxConnectionStateInfoGenericJdbc.refresh(isInTransaction)"        , sqle); }
 	}
 
-	
-	
-	
-	
 	
 	@Override
 	public boolean isNormalState()

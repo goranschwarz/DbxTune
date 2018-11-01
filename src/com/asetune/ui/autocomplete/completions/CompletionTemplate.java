@@ -64,14 +64,36 @@ public class CompletionTemplate
 			}
 			return "<html>" + getInputText() + " -- <i><font color=\"green\">" + shortDesc + "</font></i></html>";
 		}
+//		@Override
+//		public String getSummary()
+//		{
+//			if (getShortDescription() == null)
+//				return null;
+//			
+//			String replacementText = super.getReplacementText();
+//			return "<html><pre>" + replacementText + "</pre></html>";
+//		}
 		@Override
 		public String getSummary()
 		{
+			String replacementText  = super.getReplacementText();
+			String shortDescription = super.getShortDescription();
+			
 			if (getShortDescription() == null)
 				return null;
-			
-			String replacementText = super.getReplacementText();
-			return "<html><pre>" + replacementText + "</pre></html>";
+
+			return 
+				"<html>"
+				+ "<b>" + shortDescription + "</b>" 
+				+ "<br>" 
+				+ "<br>" 
+				+ "<br>" 
+				+ "<i>The below text will be inserted in the editor:</i>" 
+				+ "<hr>" 
+				+ "<pre>" 
+				+ replacementText 
+				+ "</pre>"
+				+ "</html>";
 		}
 	}
 

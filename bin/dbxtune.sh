@@ -65,6 +65,7 @@ case "${toolset}" in
 		shortAppName="asetune"
 		longAppName="AseTune"
 		javaMainClass="com.asetune.AseTune"
+		javaMainParams=""
 		javaSplashScreen="lib/asetune_splash.jpg"
 		;;
 
@@ -72,6 +73,7 @@ case "${toolset}" in
 		shortAppName="iqtune"
 		longAppName="IqTune"
 		javaMainClass="com.asetune.IqTune"
+		javaMainParams=""
 		javaSplashScreen="lib/iqtune_splash.jpg"
 		;;
 
@@ -79,6 +81,7 @@ case "${toolset}" in
 		shortAppName="rstune"
 		longAppName="RsTune"
 		javaMainClass="com.asetune.RsTune"
+		javaMainParams=""
 		javaSplashScreen="lib/rstune_splash.jpg"
 		;;
 
@@ -86,6 +89,7 @@ case "${toolset}" in
 		shortAppName="raxtune"
 		longAppName="RaxTune"
 		javaMainClass="com.asetune.RaxTune"
+		javaMainParams=""
 		javaSplashScreen="lib/raxtune_splash.jpg"
 		;;
 
@@ -93,6 +97,7 @@ case "${toolset}" in
 		shortAppName="hanatune"
 		longAppName="HanaTune"
 		javaMainClass="com.asetune.HanaTune"
+		javaMainParams=""
 		javaSplashScreen="lib/hanatune_splash.jpg"
 		;;
 
@@ -100,6 +105,7 @@ case "${toolset}" in
 		shortAppName="sqlservertune"
 		longAppName="SqlServerTune"
 		javaMainClass="com.asetune.SqlServerTune"
+		javaMainParams=""
 		javaSplashScreen="lib/sqlservertune_splash.jpg"
 		;;
 
@@ -107,6 +113,7 @@ case "${toolset}" in
 		shortAppName="oracletune"
 		longAppName="OracleTune"
 		javaMainClass="com.asetune.OracleTune"
+		javaMainParams=""
 		javaSplashScreen="lib/oracletune_splash.jpg"
 		;;
 
@@ -114,6 +121,7 @@ case "${toolset}" in
 		shortAppName="postgrestune"
 		longAppName="PostgresTune"
 		javaMainClass="com.asetune.PostgresTune"
+		javaMainParams=""
 		javaSplashScreen="lib/postgrestune_splash.jpg"
 		;;
 
@@ -121,6 +129,7 @@ case "${toolset}" in
 		shortAppName="mysqltune"
 		longAppName="MySqlTune"
 		javaMainClass="com.asetune.MySqlTune"
+		javaMainParams=""
 		javaSplashScreen="lib/mysqltune_splash.jpg"
 		;;
 
@@ -128,6 +137,7 @@ case "${toolset}" in
 		shortAppName="db2tune"
 		longAppName="Db2Tune"
 		javaMainClass="com.asetune.Db2Tune"
+		javaMainParams=""
 		javaSplashScreen="lib/db2tune_splash.jpg"
 		;;
 
@@ -135,6 +145,7 @@ case "${toolset}" in
 		shortAppName="sqlw"
 		longAppName="SqlW"
 		javaMainClass="com.asetune.tools.sqlw.QueryWindow"
+		javaMainParams=""
 		javaSplashScreen="lib/sqlw_splash.jpg"
 		;;
 
@@ -142,7 +153,25 @@ case "${toolset}" in
 		shortAppName="dbxtunecentral"
 		longAppName="DbxTuneCentral"
 		javaMainClass="com.asetune.central.DbxTuneCentral"
-		javaSplashScreen="lib/db2tune_splash.jpg"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
+	h2fix)
+		shortAppName="h2fix"
+		longAppName="H2CentralDbCopy"
+		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
+	h2srv)
+		shortAppName="h2srv"
+		longAppName="H2TcpServer"
+		javaMainClass="org.h2.tools.Server"
+		javaMainParams="-tcp -tcpAllowOthers -ifExists"
+		#javaMainParams="-tcp -tcpAllowOthers -ifExists -baseDir ${baseDir}"
+		javaSplashScreen=""
 		;;
 
 	*)
@@ -191,7 +220,13 @@ export APPL_HOME=${DBXTUNE_HOME}
 #----------------------------------
 APPL_SAVE_DIR_propName="DBXTUNE_SAVE_DIR"
 
-export DBXTUNE_SAVE_DIR=${DBXTUNE_SAVE_DIR:-$APPL_HOME/data}
+if [ -d ${HOME}/.dbxtune/data ]
+then
+	export DBXTUNE_SAVE_DIR=${DBXTUNE_SAVE_DIR:-${HOME}/.dbxtune/data}
+else
+	export DBXTUNE_SAVE_DIR=${DBXTUNE_SAVE_DIR:-$APPL_HOME/data}
+fi
+
 export APPL_SAVE_DIR=${DBXTUNE_SAVE_DIR}
 
 
@@ -243,6 +278,7 @@ export CLASSPATH=${APPL_HOME}/classes
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-SNAPSHOT.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.197.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-4.2.jar
@@ -395,8 +431,15 @@ noGuiSrvName=""
 jvmNoGuiSwitch=""
 
 ## Get options '-n or --noGui' and '-S or --server'
-## OSX does not have '-o' option
-params=( $( getopt -q n:S: --long noGui:,server: -- "$@" ) )
+## OSX-getopt: does not have '-o' option, and do not support -l --longoptions, nor -q
+OS=$(uname)
+if [ "${OS}" == "Darwin" ]
+then
+	params=( $( getopt n:S: "$@" 2>/dev/null ) )
+else
+	params=( $( getopt -q -o n:S: -l noGui:,server: -- "$@" ) )
+fi
+
 for (( j=0; j<${#params[@]}; j++ ))
 do
 	if [ "${params[j]}" == "-n" ] || [ "${params[j]}" == "--noGui" ] 
@@ -466,13 +509,14 @@ echo "JVM_PARAMS=${JVM_PARAMS}"
 echo ""
 echo "================================================================"
 echo "Starting ${longAppName}"
+echo "Using: ${javaMainClass} ${javaMainParams} $@"
 echo "----------------------------------------------------------------"
 
 osRc=0
 while true
 do
-	echo java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
-	     java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} $@
+	echo java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} ${javaMainParams} $@
+	     java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} ${javaMainParams} $@
 	osRc=$?
 
 	## OS Retcun code 8 = restart	     

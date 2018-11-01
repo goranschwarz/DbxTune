@@ -284,7 +284,7 @@ extends CounterSample
 		}
 
 		// Mark this connection as
-		dbConn.setProperty("GW-CONNECTION", true);
+		dbConn.setProperty("GW-CONNECTION", name);
 		
 		return dbConn;
 	}
