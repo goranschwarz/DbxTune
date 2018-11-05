@@ -2,7 +2,6 @@ package com.asetune.utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -228,9 +227,14 @@ implements Runnable
 	 */
 	public static void shutdown(String reasonText, boolean withRestart, Configuration shutdownConfig)
 	{
-		_withRestart = withRestart;
-		_shutdownConfig = shutdownConfig;
-		_shutdownReasonText = reasonText;
+		// Only set this for "the FIRST caller"
+		if (StringUtil.isNullOrBlank(_shutdownReasonText))
+		{
+			_shutdownConfig = shutdownConfig;
+			
+			_withRestart = withRestart;
+			_shutdownReasonText = reasonText;
+		}
 		
 		synchronized (_waitforObject)
 		{
@@ -254,8 +258,6 @@ implements Runnable
 	 */
 	public static Configuration getShutdownConfiguration()
 	{
-		Collections.emptyList();
-		
 		if (_shutdownConfig == null)
 			return Configuration.emptyConfiguration();
 		return _shutdownConfig;

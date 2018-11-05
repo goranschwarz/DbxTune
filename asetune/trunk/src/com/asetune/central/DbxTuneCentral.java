@@ -32,6 +32,7 @@ import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.asetune.AppDir;
+import com.asetune.DbxTune;
 import com.asetune.NormalExitException;
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
@@ -407,6 +408,21 @@ public class DbxTuneCentral
 			}
 		}
 
+		// Install a "CheckForUpdate" instance
+		CheckForUpdates.setInstance( new CheckForUpdatesDbxCentral() );
+
+		//---------------------------------
+		// Go and check for updates, before continuing (timeout 10 seconds)
+		// This has to be done before: startCentralPcs()
+		//---------------------------------
+		_logger.info("Checking for new release...");
+//		CheckForUpdates.blockCheck(10*1000);
+		CheckForUpdates.getInstance().checkForUpdateBlock(10*1000);
+		if (CheckForUpdates.getInstance().hasUpgrade())
+		{
+			sendDbxTuneUpdateMail();
+		}
+
 		// Start the Persistant Counter Service
 		startCentralPcs();
 
@@ -443,20 +459,6 @@ public class DbxTuneCentral
 
 // Statistics: shutdown reason
 		
-		// Install a "CheckForUpdate" instance
-		CheckForUpdates.setInstance( new CheckForUpdatesDbxCentral() );
-
-		//---------------------------------
-		// Go and check for updates, before continuing (timeout 10 seconds)
-		//---------------------------------
-		_logger.info("Checking for new release...");
-//		CheckForUpdates.blockCheck(10*1000);
-		CheckForUpdates.getInstance().checkForUpdateBlock(10*1000);
-		if (CheckForUpdates.getInstance().hasUpgrade())
-		{
-			sendDbxTuneUpdateMail();
-		}
-
 		//---------------------------------
 		// Install shutdown hook -- SEND Counter Usage - add it as FIRST (index: 0)
 		ShutdownHandler.addShutdownHandler(0, new ShutdownHandler.Shutdownable()
@@ -464,14 +466,19 @@ public class DbxTuneCentral
 			@Override
 			public List<String> systemShutdown()
 			{
+//System.out.println("----Start Shutdown Hook: sendCounterUsageInfo");
 				_logger.debug("----Start Shutdown Hook: sendCounterUsageInfo");
-				
-				DbxCentralStatistics.getInstance().setShutdownReason( ShutdownHandler.getShutdownReason() );
+
+				DbxCentralStatistics stat = DbxCentralStatistics.getInstance();
+
+				stat.setShutdownReason  ( ShutdownHandler.getShutdownReason()   );
+				stat.setRestartSpecified( ShutdownHandler.wasRestartSpecified() );
 				
 				// Send the statistics object to dbxtune.com
-				CheckForUpdates.getInstance().sendCounterUsageInfo(true);
+				CheckForUpdates.getInstance().sendCounterUsageInfo(true, stat);
 				
 				_logger.debug("----End Shutdown Hook: sendCounterUsageInfo");
+//System.out.println("----End Shutdown Hook: sendCounterUsageInfo");
 				
 				return null;
 			}
@@ -838,8 +845,8 @@ public class DbxTuneCentral
 		if ( ! conf.hasProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_URL     ) ) conf.setProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_URL     , "jdbc:h2:file:${DBXTUNE_SAVE_DIR}/DBXTUNE_CENTRAL_DB");
 		if ( ! conf.hasProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_USERNAME) ) conf.setProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_USERNAME, "sa");
 		if ( ! conf.hasProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_PASSWORD) ) conf.setProperty(CentralPersistWriterJdbc.PROPKEY_JDBC_PASSWORD, "");
-		
 
+		
 		//---------------------------
 		// START the Persistent Storage thread
 		//---------------------------
@@ -1567,7 +1574,8 @@ public class DbxTuneCentral
 	public static void main(String[] args)
 	{
 		Version.setAppName("DbxTuneCentral");
-		
+		DbxTune.setStartTime();
+
 		Options options = buildCommandLineOptions();
 		try
 		{
@@ -1656,7 +1664,7 @@ public class DbxTuneCentral
 		// Was the shutdown in restart...
 		if (ShutdownHandler.wasRestartSpecified())
 		{
-			System.exit(8);
+			System.exit(ShutdownHandler.RESTART_EXIT_CODE);
 		}
 	}
 }

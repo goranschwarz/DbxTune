@@ -18,7 +18,6 @@ import javax.script.ScriptException;
 import org.apache.log4j.Logger;
 
 import com.asetune.alarm.AlarmHandler;
-import com.asetune.alarm.events.AlarmEventSrvDown;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cache.XmlPlanCache;

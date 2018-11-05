@@ -1,37 +1,63 @@
+##################################################################################################
+## Manual installation instructions for DbxCentral - The central Web Console to view Trend graphs
+##################################################################################################
+NOTE 1: Right now, Windows isn't "really" supported... Which means there are no start scripts etc...
+        Let me know if running DbxCentral on Windows is a deal breaker for you :)
+
+For a big picture look at the file $DBXTUNE_HOME/doc/dbxtune-central.pptx
+
+
 ##--------------------------------------
 ## Initial work:
-## Make a connection to the host you are going to install on
+## Make a connection to the host you are going to install on (for the moment Linux/Unix is only tested/supported)
 ## - ssh username@dbxtune.acme.com
-## Check what the latest "drop" is: http://gorans.org/www/asetune/tmp/
-## - Then set the latest/desired YYYY-MM-DD an the below 'timestamp' variable
+##   you can use any Unix/Linux user, but I recommend creating a separate user for the purpose, for example 'sybase' or 'dbxtune' or 'dbxuser'
 ##--------------------------------------
 
-## download Software
-timestamp="2018-07-04"
+##--------------------------------------
+## Download and install the binaries into ${HOME}/dbxtune/
+##--------------------------------------
+
+## download Software, https://sourceforge.net/projects/asetune/files/
+timestamp="2018-11-05"   ## the downloaded file are named: asetune_YYYY-MM-DD.zip
 cd ${HOME}
 mkdir ${HOME}/dbxtune
 cd ${HOME}/dbxtune
-wget http://gorans.org/www/asetune/tmp/asetune_${timestamp}.zip
 
-## grab 'xtract_install_dbxtune.sh' which will do a seconds download and do chmod on some files
+## put the downloaded ZIP file user ${HOME}/dbxtune
+## or download it again: 
+##    wget https://sourceforge.net/projects/asetune/files/asetune_${timestamp}.zip/download
+##    mv download asetune_${timestamp}.zip
+
+cd ${HOME}/dbxtune
 mkdir asetune_${timestamp}
-cd asetune_${timestamp}
+ln -s asetune_${timestamp} 0    ## creates a "pointer" to the latest working release
+cd 0
 unzip ../asetune_${timestamp}.zip
-cp resources/dbxcentral/scripts/xtract_install_dbxtune.sh ../
+chmod 755 bin/*.sh
 cd ..
-chmod 755 xtract_install_dbxtune.sh
-
-## Now execute the 'xtract_install_dbxtune.sh', which will download (again) and setup some basics...
-./xtract_install_dbxtune.sh ${timestamp}     ## if YYYY-MM-DD is "today", then you do not need to specify it
 
 
 ##--------------------------------------
-## Create appdir... which copies some files to ${HOME}/.dbxtune/
+## Some extra info about the DbxTune directory structures...
+## DbxTune/DbxCentral consists of 2 distinct directory locations
+##   1: The binary software, which resides under ${HOME}/dbxtune/0   (where 0 is a soft link to the latest sw release)
+##   2: User configurations, log files, customized start files, etc... under: ${HOME}/.dbxtune
+## Splitting the "software" and "user configuration" into two distinct locations makes it easier to "switch" between different DbxTune versions, or upgrade/install new versions.
 ##--------------------------------------
-0/bin/dbxcentral.sh --createAppDir
+
+
+##--------------------------------------
+## Create "appdir" (or user specifics)
+## The below command creates directory ${HOME}/.dbxtune/ and copies some files to it
+##--------------------------------------
+cd ${HOME}/dbxtune
+./0/bin/dbxcentral.sh --createAppDir
 
 		##
 		## Below is output from when I did it
+		## Note: this example was done with a zip file: asetune_2018-06-28.zip 
+		##      (which is an earlier version than you are installing, so there might be some differences in the output)
 		##
 		sybase@gorans-ub2:~/dbxtune$ 0/bin/dbxcentral.sh --createAppDir
 
@@ -44,8 +70,8 @@ chmod 755 xtract_install_dbxtune.sh
 		Information about some environment variables
 		----------------------------------------------------------------
 		SYBASE=/opt/sybase/15.5
-		DBXTUNE_HOME=/home/sybase/dbxtune/asetune_2018-07-04
-		DBXTUNE_SAVE_DIR=/home/sybase/dbxtune/asetune_2018-07-04/data
+		DBXTUNE_HOME=/home/sybase/dbxtune/asetune_2018-06-28
+		DBXTUNE_SAVE_DIR=/home/sybase/dbxtune/asetune_2018-06-28/data
 		DBXTUNE_JAVA_HOME=
 		JAVA_HOME=
 
@@ -63,12 +89,12 @@ chmod 755 xtract_install_dbxtune.sh
 		================================================================
 		Starting DbxTuneCentral
 		----------------------------------------------------------------
-		java -Xmx2048m -Xms64m -noverify -XX:-UseGCOverheadLimit -Duser.language=en -Dsybase.home=/opt/sybase/15.5 -DSYBASE=/opt/sybase/15.5 -DAPPL_HOME=/home/sybase/dbxtune/asetune_2018-07-04 -DDBXTUNE_HOME=/home/sybase/dbxtune/asetune_2018-07-04 -DDBXTUNE_SAVE_DIR=/home/sybase/dbxtune/asetune_2018-07-04/data -splash:lib/db2tune_splash.jpg com.asetune.central.DbxTuneCentral --createAppDir
+		java -Xmx2048m -Xms64m -noverify -XX:-UseGCOverheadLimit -Duser.language=en -Dsybase.home=/opt/sybase/15.5 -DSYBASE=/opt/sybase/15.5 -DAPPL_HOME=/home/sybase/dbxtune/asetune_2018-06-28 -DDBXTUNE_HOME=/home/sybase/dbxtune/asetune_2018-06-28 -DDBXTUNE_SAVE_DIR=/home/sybase/dbxtune/asetune_2018-06-28/data -splash:lib/db2tune_splash.jpg com.asetune.central.DbxTuneCentral --createAppDir
 		2018-06-28 18:01:22 DEBUG com.asetune.central.DbxTuneCentral - parseCommandLine: swith='a', value='null'.
 		2018-06-28 18:01:22 WARN  com.asetune.utils.Configuration - Can't find any configuration named 'USER_TEMP', creating a new one.
 		2018-06-28 18:01:22 WARN  com.asetune.utils.Configuration - Can't find any configuration named 'USER_CONF', creating a new one.
 		2018-06-28 18:01:22 WARN  com.asetune.utils.Configuration - Can't find any configuration named 'SYSTEM_CONF', creating a new one.
-		Found that 'DBXTUNE_HOME' is not a soft link. DBXTUNE_HOME='/home/sybase/dbxtune/asetune_2018-07-04', BUT the parent directory has a '0' soft link. I'm going to use that instead.
+		Found that 'DBXTUNE_HOME' is not a soft link. DBXTUNE_HOME='/home/sybase/dbxtune/asetune_2018-06-28', BUT the parent directory has a '0' soft link. I'm going to use that instead.
 		Setting DBXTUNE_HOME='/home/sybase/dbxtune/0' during the application dir creation/upgrade.
 		Creating directory '/home/sybase/.dbxtune' - to hold various files for DbxTuneCentral
 		Creating directory '/home/sybase/.dbxtune/log' - where log files are stored.
@@ -123,6 +149,7 @@ ll data
 ## Prepare/Edit some files
 ##   step 1: add one/several ASE's to configuration
 ##   step 2: add SQL-Server to configuration (for simplicity: done after DbxCentral has been started and we have checked that it works)
+##   step 3: add Postgres to configuration (or any of the other implementations, only small differences, which you will figure out)
 ##--------------------------------------
 
 ########################################
@@ -134,7 +161,7 @@ ll data
 ## - add entries manually by 'printf'
 ## - or: add entries manually by 'vi'
 ## - or: create a softlink (to already existing interfaces)
-## NOTE 1: The servernames in the intefaces file SHOULD be the same as the servers @@servername
+## NOTE 1: The servernames in the intefaces file SHOULD be the same as the servers @@servername   (this is IMPORTANT)
 ## NOTE 2: This step is only for Sybase Products like: ASE, IQ, RepServer, RepAgentX
 ##
 cd ${HOME}/.dbxtune/
@@ -145,7 +172,9 @@ printf "\nASE_NAME\n\tquery tcp ether HOSTNAME PORT\n\n" >> ${HOME}/.dbxtune/int
 
 ##--------------------------------------
 ## Describe what servers that should be monitored
-## What collectors should be managed (started/stopped with start_ALL.sh / stop_ALL.sh)
+## What collectors should be managed, started/stopped with:
+##     ~/dbxtune/0/bin/dbxc_start_ALL.sh / ~/dbxtune/0/bin/dbxc_stop_ALL.sh 
+##  or ~/.dbxtune/dbxc/bin/start_ALL.sh  / ~/.dbxtune/dbxc/bin/stop_ALL.sh
 ## Hopefully the file is "self explainable"
 ##
 cd ${HOME}/.dbxtune/dbxc/conf
@@ -158,28 +187,30 @@ vi SERVER_LIST
 ##--------------------------------------
 ## Add passwords for the servers (both DBMS user and OS/SSH user)
 ## Create passwords in file ($HOME/.passwd.enc)
-## The DBMS username and OS username we are using when connecting to ASE/SQL-Server   (for SQL-Server on Windows we can currently NOT monitor the OS)
+## The DBMS username and OS username we are using when connecting to ASE
 ## Note: you only need to specify "-S srvName" if you have the same username with *different* passwords to different server names...
-##       The logic is: if we can’t find the servername in the password file we will "fallback" to an "generic" username entry (which has no server-name specification)
+##       So if you have same password for user xxx on all servers, you do not need to specify the -S flag
+##       The logic is: if we can't find the servername in the password file we will "fallback" to an "generic" username entry (which has no server-name specification)
 ##
 cd ${HOME}/.dbxtune/dbxc/bin
 ./dbxPassword.sh set -U<os_user>   -P<passwd> [-S <os_host_name>]
 ./dbxPassword.sh set -U<dbms_user> -P<passwd> [-S <dbms_srv_name>]
 
 		## Below is an example of how I did it
-		## ASE: GORANS_UB1_DS, GORAN_UB2_DS: has password secret
-		## ASE: GORAN_UB3_DS: has password secret1
-		## OS:  has password secret on all hosts
-		
+		## ASE: GORANS_UB1_DS, GORAN_UB2_DS: has password "secret"
+		## ASE: GORAN_UB3_DS: has password "secret1"
+		## OS:  has password "secret" on all hosts
+
+		# Add OS user "gorans", with password "secret" on all unspecified OS hosts
 		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Ugorans -Psecret
 
 		===================================================
 		 File content: /home/sybase/.passwd.enc
 		---------------------------------------------------
-		sa: U2FsdGVkX19w2cApVrs5jt/gTfPHYrlvIKY3P8Yv/iQ=
 		gorans: U2FsdGVkX1/TSgmIfJZ4e9CvmLzWiXgVj1rNuzQHBuo=
 		---------------------------------------------------
 
+		# Add DBMS user "sa", with password "secret" on all unspecified ASE's
 		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Usa -Psecret
 
 		===================================================
@@ -189,6 +220,7 @@ cd ${HOME}/.dbxtune/dbxc/bin
 		sa: U2FsdGVkX1/V9HABSg+SQ2j5+IxWsTVr1TCdRpMim4A=
 		---------------------------------------------------
 
+		# Add DBMS user "sa", with password "secret1" on ASE "GORAN_UB3_DS"
 		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Usa -Psecret1 -SGORAN_UB3_DS
 
 		===================================================
@@ -199,15 +231,14 @@ cd ${HOME}/.dbxtune/dbxc/bin
 		sa: GORAN_UB3_DS: U2FsdGVkX1+Dx3T9JFgv2EtAr4GuA7USsG7ocljOhR4=
 		---------------------------------------------------
 
-		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$
 
 ##--------------------------------------
 ## Edit NO-GUI Configuration files
 ##     - add your counters between: BEGIN/END: Performance Counter Settings
 ##     - set 'offline.sampleTime=##' to the sample interval you want
 ##     - This could also be overidden/specified (-i,--interval <seconds>) in start_xxxtune.sh or in the SERVER_LIST (as a parameter to start_xxxtune.sh)
-## or: create new config files, done with AseTune or SqlServerTune in GUI mode, 
-##     using a wizard: Menu->Tools->Create 'Record Session – Template file' Wizard...
+## or: create new config files, done with AseTune or SqlServerTune in GUI mode (or any of the dbxTune implementations)
+##     using a wizard: Menu->Tools->Create 'Record Session â€“ Template file' Wizard...
 ##     then copy the content to the 'ase.GENERIC.conf'
 ##
 cd ${HOME}/.dbxtune/dbxc/conf
@@ -243,7 +274,7 @@ cd ${HOME}/.dbxtune/dbxc/bin
 ./start_ALL.sh 
 
 		## Below is an example of how I did it
-		## Which starts 3 ASE collectors & DbxCentral
+		## Which starts DbxCentral and 3 ASE collectors
 		
 		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./start_ALL.sh
 		Sourcing local environment from: /home/sybase/.dbxtune/DBXTUNE.env
@@ -262,20 +293,15 @@ cd ${HOME}/.dbxtune/dbxc/bin
 
 		 * Started all servers, Now LIST them
 
-		cat: conf/SERVER_LIST: No such file or directory
 		 >> INFO: DbxCentral - CENTRAL SERVER, PID=6404
-
-		List of UN-REGISTERED servers (not in conf/SERVER_LIST)
 		 >> INFO: AseTune - Collector for 'GORANS_UB1_DS' is running... PID=6550
 		 >> INFO: AseTune - Collector for 'GORAN_UB2_DS' is running... PID=6694
 		 >> INFO: AseTune - Collector for 'GORAN_UB3_DS' is running... PID=6881
 
-		DbxTune Collector Count: 3   (in conf/SERVER_LIST: 0)
+		DbxTune Collector Count: 3   (in conf/SERVER_LIST: 3)
 		DbxCentral Server Count: 1
 
 		OK: All registered collectors and DbxCentral are running.
-
-		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./list_ALL.sh
 
 ##--------------------------------------
 ## List the collectors and DbxCentral
@@ -309,20 +335,20 @@ for example: http://dbxtune.acme.com:8080/
 cd ${HOME}/.dbxtune/dbxc/conf
 vi SERVER_LIST
 		# I added the following entries (which is hosted on Linux)
-		gorans-ub2      ; 1 ; SQL-Server on Linux ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
+		gorans-ub2-ss ; 1 ; SQL-Server on Linux ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
 
 		# On windows it might look like
 		winHostName\instName  ; 1 ; SQL-Server on Windows ; ${DBXTUNE_CENTRAL_BASE}/bin/start_sqlservertune.sh <SRVNAME>
 
 ##--------------------------------------
 ## Add passwords for the servers (both DBMS user and OS/SSH user)
+## (Note: for SQL-Server on Windows we can currently NOT monitor the OS)
 ##
 cd ${HOME}/.dbxtune/dbxc/bin
 ./dbxPassword.sh set -U<dbms_user> -P<passwd> [-S <dbms_srv_name>]
 
 		## Below is an example of how I did it
-		
-		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Usa -Psecret2 -Sgorans-ub2
+		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Usa -Psecret2 -Sgorans-ub2-ss
 
 ##--------------------------------------
 ## Edit NO-GUI Configuration files
@@ -352,7 +378,7 @@ vi start_sqlservertune.sh
 ##         BUT the ${HOME}/.dbxtune/dbxc/conf/SERVER_LIST should only have a single backslash (hostName\instanceName)
 ##
 cd ${HOME}/.dbxtune/dbxc/bin
-./start_sqlservertune.sh gorans-ub2
+./start_sqlservertune.sh gorans-ub2-ss
 
 ##--------------------------------------
 ## Now start it in the *REAL* way
@@ -365,10 +391,80 @@ cd ${HOME}/.dbxtune/dbxc/bin
 ## Now lets check that we can see data in DbxCentral
 ## The new SQL-Server should show up as an icon on the first page
 ## if it doesn't work:
-##    - check: more ${HOME}/.dbxtune/dbxc/log/gorans-ub2.console
+##    - check: more ${HOME}/.dbxtune/dbxc/log/gorans-ub2-ss.console
 ##    - check: more ${HOME}/.dbxtune/dbxc/log/DBX_CENTRAL.console
 ##
 refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
+
+
+
+
+
+
+########################################
+## step 3: add Postgres (or MySql, or any other implementation)
+########################################
+
+##--------------------------------------
+## describe what SQL-Servers that should be monitored
+##
+cd ${HOME}/.dbxtune/dbxc/conf
+vi SERVER_LIST
+		# I added the following entries (which is hosted on Linux)
+		gorans-ub2-pg ; 1 ; Postgress 9.5 ; ${DBXTUNE_CENTRAL_BASE}/bin/start_postgrestune.sh <SRVNAME>
+
+##--------------------------------------
+## Add passwords for the servers (both DBMS user and OS/SSH user)
+## (Note: for SQL-Server on Windows we can currently NOT monitor the OS)
+##
+cd ${HOME}/.dbxtune/dbxc/bin
+./dbxPassword.sh set -U<dbms_user> -P<passwd> [-S <dbms_srv_name>]
+
+		## Below is an example of how I did it
+		sybase@gorans-ub2:~/.dbxtune/dbxc/bin$ ./dbxPassword.sh set -Upostgres -Psecret3 -Sgorans-ub2-pg
+
+##--------------------------------------
+## Edit NO-GUI Configuration files
+##     - add your counters between: BEGIN/END: Performance Counter Settings
+##     - set 'offline.sampleTime=##' to the sample interval you want
+##
+cd ${HOME}/.dbxtune/dbxc/conf
+vi postgres.GENERIC.conf
+
+##--------------------------------------
+## Edit NO-GUI START files, possibly change
+##     - dbmsUser=postgres
+##     - osUser=gorans
+##
+cd ${HOME}/.dbxtune/dbxc/bin
+vi start_postgrestune.sh
+
+##--------------------------------------
+## TEST start, to see that it works as expected
+## If it comes up without errors, do Ctrl-C to stop it
+## Hint 1, you should see something like: ... Persistent Counter DB: Creating table 'CmSummary_abs' for CounterModel 'CmSummary'.
+## Hint 2, If it's 'Login problems', and you suspect it's the wrong password, edit 'start_postgrestune.sh' and uncomment row: export DBXTUNE_JVM_SWITCHES="-Dnogui.password.print=true"
+##         Then look for '### DEBUG ###' in the output
+##
+cd ${HOME}/.dbxtune/dbxc/bin
+./start_postgrestune.sh gorans-ub2-pg
+
+##--------------------------------------
+## Now start it in the *REAL* way
+## Only collectors/servers that are NOT started will be started (which is described in ${HOME}/.dbxtune/dbxc/conf/SERVER_LIST)
+##
+cd ${HOME}/.dbxtune/dbxc/bin
+./start_ALL.sh 
+
+##--------------------------------------
+## Now lets check that we can see data in DbxCentral
+## The new SQL-Server should show up as an icon on the first page
+## if it doesn't work:
+##    - check: more ${HOME}/.dbxtune/dbxc/log/gorans-ub2-pg.console
+##    - check: more ${HOME}/.dbxtune/dbxc/log/DBX_CENTRAL.console
+##
+refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
+
 
 
 
@@ -416,63 +512,3 @@ refresh the browser... or open a new tab: http://dbxtune.acme.com:8080/
 ######################################################################################
 
 
-
-
-
-
-
-mkdir ${HOME}/.dbxtune
-mkdir ${HOME}/.dbxtune/dbxc
-
-mkdir ${HOME}/.dbxtune/dbxc/bin    ## various start_XXX files
-mkdir ${HOME}/.dbxtune/dbxc/log    ## various log files for different collectors and DbxCentral
-mkdir ${HOME}/.dbxtune/dbxc/conf   ## configuration files for different collectors and DbxCentral
-mkdir ${HOME}/.dbxtune/dbxc/data   ## or ln -s ${HOME}/.dbxtune/dbxc/data /somewhere/data
-
-## link or create the interfaces file for Sybase Directory Services
-cd ${HOME}/.dbxtune
-#ln -s /opt/sybase/interfaces interfaces
-#vi interfaces
-
-
-ssh sybase@
-
-cd ${HOME}
-mkdir ${HOME}/dbxtune
-cd ${HOME}/dbxtune
-wget http://gorans.org/www/asetune/tmp/asetune_2018-06-26.zip
-
-
-mkdir asetune_2018-06-26
-cd asetune_2018-06-26
-unzip ../asetune_2018-06-26.zip
-cp resources/dbxcentral/scripts/xtract_install_dbxtune.sh ../
-cd ..
-chmod 755 xtract_install_dbxtune.sh
-## Now execute the "xtract_install_dbxtune.sh", which will download (again) and setup some basic...
-./xtract_install_dbxtune.sh 2018-06-19     ## if YYYY-MM-DD is "today", then you do not need to specify it
-
-
-mkdir conf
-#mkdir data   
-ln -s /opt/dbxtune_data data
-mkdir log
-
-
-
-cp 0/resources/dbxcentral/scripts/start_ALL.sh                 ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/XXX/start_dbxcentral.sh      ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/XXX/start_asetune.sh         ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/XXX/start_sqlservertune.sh   ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/XXX/start_postgrestune.sh    ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/stop_ALL.sh                  ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/list_ALL.sh                  ${HOME}/.dbxtune/dbxc/bin/
-cp 0/resources/dbxcentral/scripts/dbxPassword.sh               ${HOME}/.dbxtune/dbxc/bin/
-
-cp 0/resources/dbxcentral/scripts/conf/DBX_CENTRAL.conf        ${HOME}/.dbxtune/dbxc/conf/
-cp 0/resources/dbxcentral/scripts/conf/ase.GENERIC.conf        ${HOME}/.dbxtune/dbxc/conf/
-cp 0/resources/dbxcentral/scripts/conf/sqlserver.GENERIC.conf  ${HOME}/.dbxtune/dbxc/conf/
-
-cp 0/resources/dbxcentral/scripts/XXX/SERVER_LIST              ${HOME}/.dbxtune/dbxc/conf/
-
-#cp 0/resources/dbxcentral/scripts/conf/interfaces              ${HOME}/.dbxtune/

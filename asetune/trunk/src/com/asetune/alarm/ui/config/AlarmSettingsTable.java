@@ -24,7 +24,6 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.alarm.ui.config.AlarmTableModel.AlarmEntry;
 import com.asetune.cm.CmSettingsHelper;
-import com.asetune.graph.TrendGraphColors;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 

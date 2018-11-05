@@ -383,9 +383,9 @@ extends Task
 				long sizeMb = getSizeMb(entry.getValue(), SizeType.MAX_FILE_OR_SAVED);
 				long fileMb = getSizeMb(entry.getValue(), SizeType.FILE_INFO);
 				long saveMb = getSizeMb(entry.getValue(), SizeType.SAVED_INFO);
-				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB  [current: %5.1f GB, saved-max: %5.1f GB]", 
+				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB  [current: %5.1f GB, saved-max: %5.1f GB, diff: %5.1f]", 
 						entry.getKey(), sizeMb, sizeMb/1024.0,
-						fileMb/1024.0, saveMb/1024.0
+						fileMb/1024.0, saveMb/1024.0, (saveMb-fileMb)/1024.0
 						));
 			}
 
@@ -395,9 +395,9 @@ extends Task
 				long sizeMb = getSizeMb(entry.getValue(), SizeType.MAX_FILE_OR_SAVED);
 				long fileMb = getSizeMb(entry.getValue(), SizeType.FILE_INFO);
 				long saveMb = getSizeMb(entry.getValue(), SizeType.SAVED_INFO);
-				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB  [current: %5.1f GB, saved-max: %5.1f GB]", 
+				_logger.info(String.format(_prefix + "    %-30s %6d MB, \t%5.1f GB  [current: %5.1f GB, saved-max: %5.1f GB, diff: %5.1f]", 
 						entry.getKey(), sizeMb, sizeMb/1024.0,
-						fileMb/1024.0, saveMb/1024.0
+						fileMb/1024.0, saveMb/1024.0, (saveMb-fileMb)/1024.0
 						));
 			}
 			_logger.info(_prefix + "END: listing H2 Database File sizes. By Groups: Server and Date");

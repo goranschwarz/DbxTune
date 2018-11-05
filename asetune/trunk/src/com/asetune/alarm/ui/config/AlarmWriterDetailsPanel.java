@@ -12,7 +12,6 @@ import javax.swing.JPanel;
 import javax.swing.border.Border;
 
 import com.asetune.Version;
-import com.asetune.alarm.ui.config.AlarmTableModel.AlarmEntry;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.utils.Configuration;

@@ -3,8 +3,6 @@ package com.asetune.ui.autocomplete;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.fife.ui.autocomplete.BasicCompletion;
-
 import com.asetune.Version;
 import com.asetune.ui.autocomplete.completions.CompletionTemplate;
 import com.asetune.utils.SwingUtils;

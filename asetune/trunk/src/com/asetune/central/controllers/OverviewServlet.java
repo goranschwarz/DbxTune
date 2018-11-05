@@ -1064,18 +1064,6 @@ public class OverviewServlet extends HttpServlet
 			out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
 			out.println("</p>");
 			
-			out.println("<p>");
-			out.println("Quick links to Some Dbx Central log files.");
-			out.println("<ul>");
-			out.println("  <li><a href='/log?name=DBX_CENTRAL.console'>                   DBX_CENTRAL.console                   </a></li>");
-			out.println("  <li><a href='/log?name=DBX_CENTRAL.log'>                       DBX_CENTRAL.log                       </a></li>");
-			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralH2Defrag.log'>       DBX_CENTRAL_CentralH2Defrag.log       </a></li>");
-			out.println("  <li><a href='/log?name=DBX_CENTRAL_DataDirectoryCleaner.log'>  DBX_CENTRAL_DataDirectoryCleaner.log  </a></li>");
-			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralPcsJdbcCleaner.log'> DBX_CENTRAL_CentralPcsJdbcCleaner.log </a></li>");
-			out.println("</ul>");
-			out.println("</p>");
-			
-			
 			H2StorageInfo h2StorageInfo = CentralH2Defrag.getH2StorageInfo();
 			
 			out.println("<table>");
@@ -1131,6 +1119,30 @@ public class OverviewServlet extends HttpServlet
 			{
 			}
 			
+
+			String fn = "";
+			String urlDiscardStr = "&discard=Persisting Counters using|Sent subscription data for server";
+			
+			out.println("<p>");
+			out.println("<br>");
+			out.println("Quick links to Some Dbx Central log files.");
+			out.println("<ul>");
+			fn = "DBX_CENTRAL.console";                   out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL.log";                       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_CentralH2Defrag.log";       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_DataDirectoryCleaner.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_CentralPcsJdbcCleaner.log"; out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+//			out.println("  <li><a href='/log?name=DBX_CENTRAL.console'>                   DBX_CENTRAL.console                   </a></li>");
+//			out.println("  <li><a href='/log?name=DBX_CENTRAL.log'>                       DBX_CENTRAL.log                       </a></li>");
+//			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralH2Defrag.log'>       DBX_CENTRAL_CentralH2Defrag.log       </a></li>");
+//			out.println("  <li><a href='/log?name=DBX_CENTRAL_DataDirectoryCleaner.log'>  DBX_CENTRAL_DataDirectoryCleaner.log  </a></li>");
+//			out.println("  <li><a href='/log?name=DBX_CENTRAL_CentralPcsJdbcCleaner.log'> DBX_CENTRAL_CentralPcsJdbcCleaner.log </a></li>");
+			out.println("</ul>");
+			out.println("</p>");
+
+//			out.println("<p><br></p>");
+
+			
 			// Print some content of the Central Database
 			if (CentralPersistReader.hasInstance())
 			{
@@ -1158,8 +1170,6 @@ public class OverviewServlet extends HttpServlet
 					
 					try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 					{
-						out.println("<p><br></p>");
-
 						out.println("<p>");
 						out.println("What <i>sessions</i> are stored in the Dbx Central database");
 						out.println("</p>");
@@ -1242,6 +1252,7 @@ public class OverviewServlet extends HttpServlet
         out.println("<li><b>Saved Max GB     </b> - Maximum size of the File before it was <i>compressed</i> using <code>shutdown defrag</code>, which is done with with <i>PCS H2 <b>rollover</b></i>. The value is updated by DataDirectoryCleaner.check(), when it's executed by the scheduler (default; at 23:54). This value is also the one used when calulating how much space we need for H2 databases in the next 24 hours. If the value is negative, no <i>max</i> value has yet been found/saved.</li>");
         out.println("<li><b>Current Size GB  </b> - Current File size in GB</li>");
         out.println("<li><b>Current Size MB  </b> - Current File size in MB</li>");
+        out.println("<li><b>Diff Size GB     </b> - Difference in SavedGB-CurrentGB, which is how much space is saved by doing 'shutdown defrag' when closing the db on 'rollover'.</li>");
         out.println("<li><b>URL              </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
         out.println("</ul>");
         out.println("<p>Note: Offline databases with <b>todays</b> timestamp will be marked in <span style='background-color:rgb(204, 255, 204);'>light green</span>, which probably is the active recording.</p>");
@@ -1287,6 +1298,7 @@ public class OverviewServlet extends HttpServlet
 		out.println("    <th>Saved Max GB</th>");
 		out.println("    <th>Current Size GB</th>");
 		out.println("    <th>Current Size MB</th>");
+		out.println("    <th>Diff Size MB</th>");
 		out.println("    <th>Url</th>");
 		out.println("  </tr>");
 		out.println("</thead>");
@@ -1306,8 +1318,17 @@ public class OverviewServlet extends HttpServlet
 			String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
 			String sizeInMB = String.format("%.1f MB", f.length() / 1024.0 / 1024.0);
 			
-			String savedSizeInGB = String.format("%.1f GB", savedFileInfo.getLongProperty(f.getName(), -1) / 1024.0 / 1024.0 / 1024.0);
-//			String savedSizeInMB = String.format("%.1f MB", savedFileInfo.getLongProperty(f.getName(), -1) / 1024.0 / 1024.0);
+			long savedSizeInGbLong = savedFileInfo.getLongProperty(f.getName(), -1);
+			String savedSizeInGB = String.format("%.1f GB", savedSizeInGbLong / 1024.0 / 1024.0 / 1024.0);
+			String diffSizeInGB  = String.format("%.1f GB", (savedSizeInGbLong - f.length()) / 1024.0 / 1024.0 / 1024.0);
+			if (savedSizeInGbLong < 0)
+			{
+				savedSizeInGB = "n/a"; // Not found in 'savedFileInfo'
+				diffSizeInGB  = "n/a"; // Not found in 'savedFileInfo'
+			}
+			if (f.length() == savedSizeInGbLong)
+				diffSizeInGB  = "none"; // not compressed at all... probably failed in compression or simply not savedFileInfo was ...
+
 			
 			String srvName = dbName;
 			if (dbName.matches(".*_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"))
@@ -1357,6 +1378,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("    <td "+style+">" + savedSizeInGB  + "</td>");
 			out.println("    <td "+style+">" + sizeInGB       + "</td>");
 			out.println("    <td "+style+">" + sizeInMB       + "</td>");
+			out.println("    <td "+style+">" + diffSizeInGB   + "</td>");
 			out.println("    <td "+style+"><div title='"+linkToolTip+"'><a href='" + dbxTuneUrl + "'><code>" + url + "</code></a></div></td>");
 			out.println("  </tr>");
 		}

@@ -85,6 +85,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		urlParams.add("clientAppName",        Version.getAppName());
 		urlParams.add("clientAppVersion",     Version.getVersionStr());
 //		urlParams.add("clientAseTuneVersion", Version.getVersionStr());
+		urlParams.add("clientBuildStr",       Version.getBuildStr());
 		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
 		urlParams.add("appStartupTime",       appStartupTime);
 
