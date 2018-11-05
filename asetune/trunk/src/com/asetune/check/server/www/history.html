@@ -17,17 +17,722 @@ h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:
 
 <FONT SIZE="6" COLOR="red">A new Version of AseTune is Available.</FONT><br>
 Even if AseTune tells you've got the latest version, there is a new one.<br>
-Download it at <A HREF="http://www.dbxtune.com/download.html">http://www.dbxtune.com/download.html</A><br>
+Download it at <A HREF="http://www.asetune.com/download.html">http://www.asetune.com/download.html</A><br>
 or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourceforge.net/projects/asetune/files/</A><br>
 <br>
 
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2018-11-05</H2>
+<UL>
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Moved into one common configuration file: dbxtune.properties, instead of {product}tune.properties<br>
+			The user file is still individual for all different tools: {product}tune.user.properties<br>
+			The save file is still individual for all different tools: {product}tune.save.properties</LI>
+		<LI>All CM tabs now also has a filter field where you can enter SQL syntax to filter what you want to se in the JTable<br>
+			This does NOT affect the SQL Statement issued to the server, it only filters in the local in-memory JTable</LI>
+		<LI>Exception text are now stored in a recording so it can be displayed when we view the data later</LI>
+		<LI>CM Dependencies has been improved: if we view a tab that depends on some else CM, the dependant CM will be refreshed...</LI>
+		<LI>Warning popups on 'Full Translog', 'Oldest Open Tran', 'Lock Waits' will only popup on <b>new</b> occations (so we can dismiss them, and get a new popup next time we got problems)</LI>
+		<LI>Alarm system has been implemeted (mainly for <b>NO-GUI mode</b>), where you can have AlarmWriters, which sends Alarms to various implementations.<br>
+			You can set Alarm Thresholds at: menu-&gt;View-&gt;Change Alarm Options... and in the Wizard 'Create record session - template file Wizard...'<br>
+			In the above dialog you can create "user defined alarm logic", which consists of java code that is compiled "on the fly" (so it's java as a script language)<br>
+			To view Active/Historical Alarm, menu-&gt;View-&gt;Alarm Active/History<br>
+			<br>
+			The following Alarm Writers has been created, the idea is to use them in 'NO-GUI' mode (but they will work in GUI mode as well)
+			<table BORDER=1 CELLSPACING=0 CELLPADDING=2>
+				<tr> <td>ToFile       </td> <td> Write Active alarms to one file, and the history to another log file.</td></tr>
+				<tr> <td>ToMail       </td> <td> Send a SMTP mail</td></tr>
+				<tr> <td>ToNagiosNsca </td> <td> Send Alarms to Nagios via the NSCA protocoll</td></tr>
+				<tr> <td>ToNagiosRest </td> <td> Send Alarms to Nagios via the REST protocoll</td></tr>
+				<tr> <td>ToRest       </td> <td> Send Alarms to a HTTP server using POST where payload will be a JSON object</td></tr>
+				<tr> <td>ToSmsViaSnpp </td> <td> Send Alarms to a SMS/TEXT via SNPP Simple Network Paging Protocol</td></tr>
+				<tr> <td>ToStdout     </td> <td> Simply print the Alarms to Standbard OUT</td></tr>
+				<tr> <td>ToSunMcFile  </td> <td> Send Alarms to Sun Management Center, write as a text file with tags.</td></tr>
+				<tr> <td>ToSyslog     </td> <td> Send Alarms to Syslog server (narmally a Unix/Linux system logger)</td></tr>
+			</table>
+			<br>
+			Below is a list of Alarms that currently available... But more will come...
+			<table BORDER=1 CELLSPACING=0 CELLPADDING=2>
+				<tr> <td>BlockingLockAlarm              </td> <td> Found Blocking locks in '${servername}'. Count=${cnt}.</td></tr>
+				<tr> <td>FullTranLog                    </td> <td> Full transaction log in some database(s) in '${servername}'. Count=${cnt}.</td></tr>
+				<tr> <td>FullTranLog                    </td> <td> Full transaction log in '${servername}', dbname='${dbname}'.</td></tr>
+				<tr> <td>HighCpuUtilization             </td> <td> High CPU Utilization in '${servername}'. CPU at ${totalCpuUsagePct}.</td></tr>
+				<tr> <td>HighCpuUtilization             </td> <td> High ${cpuType} Utilization in '${servername}'. CPU at ${totalCpuUsagePct} percent (total=${totalCpuUsagePct}%, user=${userCpuUsagePct}%, system=${systemCpuUsagePct}%, idle=${idleCpuUsagePct}%).</td></tr>
+				<tr> <td>LastBackupFailed               </td> <td> Last Backup FAILED in Server '${servername}' and dbname '${dbname}'.</td></tr>
+				<tr> <td>LongRunningDetachedTransaction </td> <td> Found Long running transaction, with state 'Detached' in '${servername}', dbname='${dbname}'. Seconds=${seconds}, TranName='${tranName}'.</td></tr>
+				<tr> <td>LongRunningTransaction         </td> <td> Found Long running transaction in '${servername}'. Seconds=${sec}.</td></tr>
+				<tr> <td>LongRunningTransaction         </td> <td> Found Long running transaction in '${servername}', dbname='${dbname}'. Seconds=${sec}, TranName='${oldestTranName}'.</td></tr>
+				<tr> <td>LowDbFreeSpace                 </td> <td> Low DB DATA Free Space in Server '${servername}' and dbname '${dbname}', FreeSpaceInMB=###, UsedSpaceInPcs=###. </td></tr>
+				<tr> <td>LowLogFreeSpace                </td> <td> Low LOG DATA Free Space in Server '${servername}' and dbname '${dbname}', FreeSpaceInMB=###, UsedSpaceInPcs=###. </td></tr>
+				<tr> <td>LowOsDiskFreeSpace             </td> <td> Low Operating System Disk Free Space in Server '${servername}' at MountPoint '${mountPoint}', FreeSpaceInMB=###, UsedSpaceInPcs=###.</td></tr>
+				<tr> <td>OldBackup                      </td> <td> Old or No backup found in '${servername}', dbname='${dbname}', for backup type '${dumpType}', Backup Age in Hours '###'.</td></tr>
+				<tr> <td>OsLoadAverage                  </td> <td> Exhausting CPU Scheduling resources at OperatingSystem level on hostname '${hostname}'. adjLoadAverage: 1min=${avg_1min}, 5min=${avg_5min}, 15min=${avg_15min}.</td></tr>
+				<tr> <td>ProcedureCacheLowOnMemory      </td><td> Stored Procedure Cache Memory is getting low in server '${servername}'. FreeSpaceInMB=###, UsedSpaceInPcs=###. </td></tr>
+				<tr> <td>ProcedureCacheOutOfMemory      </td><td> Out Of Stored Procedure Cache Memory in server '${servername}'. </td></tr>
+				<tr> <td>RunQueueLength                 </td> <td> Exhausting CPU Scheduling resources in '${servername}'. RunQueueLength: avg_1min=${avg_1min}, avg_5min=${avg_5min}, avg_15min=${avg_15min}.</td></tr>
+				<tr> <td>SrvDown                        </td> <td> Server is DOWN. Name='${servername}'</td></tr>
+				<tr> <td>SrvDown                        </td> <td> Server is DOWN. Name='${servername}', url='${url}'</td></tr>
+				<tr> <td>StatementCacheAboveConfig      </td> <td> Statement Cache is above the configured value in server '${servername}'. configuredSpaceInMb=###, usedSpaceInMb=###, usedSpaceInPct=###, usedPercentOfProcedurMemory=###.</td></tr>
+			</table>
+			Some alarms specific for RepServer: RsDbQueueSize, RsMemoryUsage, RsReplicationAge, RsSdUsage, RsWsState
+			<br>
+			</LI>
+		<LI>NO-GUI Mode: if no password has been specified for DBMS/SSH (-P, -p or in the config file), get the password from the file $HOME/.passwd.enc (which is encrypted passwords using opensll)</LI>
+		<LI>NO-GUI Mode: You can specify a logname for each of the no-gui collector processes (if you have several on the same machine). Use -L logFileName</LI>
+		<LI>SSH Key File improvements for all tools. Use: -k filename</LI>
+		<LI>All Graphs now has '(TabName-&gt;CmName)' so it's easier to identify from where the information originates</LI>
+		<LI>Memory settings setting dialog for 'Max Memory' and 'Garbage Collection'. In this dialog you can specify your own values.</LI>
+		<LI>The "postpone" functionality can be temporaraly be enabled/disabled with a checkbox without changing the postpone time</LI>
+		<LI>Host Monitoring: The os utilities can output different number of columns, in different versions of the utilities. Now it handles the different versions.
+			Also better internationalization for numbers and time. <br>
+			On startup it will print the utility version.
+			</LI>
+		<LI>Tail of log files, now has filters that you can apply to discard some records (good for RepServer and other log files, which generates a lot of output)</LI>
+		<LI>New Counter Collector, HostMonitoring: Memory Information, which gets information from /proc/meminfo</LI>
+		<LI>Changing local home directory from '~/.asetune' to '~/.dbxtune'</LI>
+		<LI>config and log files changed from '~/.asetune' to '~/.dbxtune/conf' and '~/.dbxtune/log'</LI>
+		<LI>Some new command line switches: '-a|--createAppDir', '-A|--serverAlias', '-O|--urlOptions'... mainly for no-gui</LI>
+		<LI>Connection Dialog: set/change the DBXTUNE_SAVE_DIR in the dialog</LI>
+		<LI>Connection Dialog: button to create a new Profile</LI>
+		<LI>Connection Dialog: Made number of items before scroll, in the JDBC Driver drop-down larger.</LI>
+		<LI>DDL View: Added search field/dialog</LI>
+		<LI>Better handling of 'SrvDown', send to DbxCentral</LI>
+		<LI>Wizard: Create 'Record Session - template File'<br>Added page: Send Daily Report, with a bunch of configuration options</LI>
+		<LI>PCS: Persistent Counter Storage - Also writing Active Alarms to the Recording PCS Database</LI>
+		<LI>PCS: You can specify 'PersistWriterJdbc.h2.shutdown.type=DEFRAG|COMPACT|IMMEDIATELY', where DEFRAG is default, and if you want to do that in a background thread 'PersistWriterJdbc.h2.shutdown.inBgThread=true|false', where 'true' is default.</LI>
+		<LI>PCS: In no-gui mode, if the disk becomes full, then DbxTune will stop... since it can't save any data...</LI>
+		<LI>PCS: Create a Daily Report and send... For the moment it will only send Current Active and All Alarms that has been generated during that day. In the future it might me more sophisticated, and try to figure out recommendations for various SQL Statements or DBMS Configurations.</LI>
+
+		<LI>Probably a bunch of other stuff, which I can't remember...</LI>
+	</UL>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>DbxCentral - The central WEB console to view Trend Graphs</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI><b>This is a total new functionality</b>, and it's here where a lot off hours has been spent...</LI>
+		<LI>See a preview of this at <a href="http://gorans.org:8080">http://gorans.org:8080</a><br>
+		    Please be gentle with the environment, it's only trying to give you a preview...<br>
+		    The preview environment is currently having:<br>
+		    &nbsp;&nbsp;&nbsp;&nbsp; 4 - different versions of ASE (12.5.4, 15.5, 15.7 & 16.0)<br>
+			&nbsp;&nbsp;&nbsp;&nbsp; 1 - SQL-Server 2017 (Running on Linux)<br>
+			&nbsp;&nbsp;&nbsp;&nbsp; 1 - Postgres, Version 9.5<br>
+			&nbsp;&nbsp;&nbsp;&nbsp; 1 - MySQL, Version 5.7<br>
+			&nbsp;&nbsp;&nbsp;&nbsp; Missing pieces are: RepServer,RAX, IQ, Oracle, DB2 & HANA<br>
+			Note 1: The ASE 15.5 version currently has a alarm/warning active to illustrate how alarms is displayed.<br>
+			Note 2: Nothing is really happening on any of the DBMS instances, so do not expect any fancy graph activity... It's just NO-GUI collectors sampling idle DBMS Instances
+		   </LI>
+		<LI>All dbxTune collectors can now send the "trend graph" information to a Central Server, which can/will store the data for a longer time.
+		    The default retention period is 1 year.</LI>
+		<LI>Trend Graphs can be viewed from "any" web browser, by "anyone" (except the old Microsoft Internet Explorer)
+            This will enable developers to find potential performance problems while testing/developing.</LI>
+		<LI>Trend graph updates are "pushed" from the web server to the browser via web sockets (so no need to refresh every x second)</LI>
+		<LI>To view all <b>details</b> about a recording you will still have to use the "fat" GUI,  the current GUI implementation
+            (but you can remote-connect to the recorded database, which is stored on the DbxCentral host)</LI>
+		<LI>If all collectors are also running on the same host as DbxCentral, it will also delete old recordings based on how
+            much space we got left on the file system, and prediction of how much recording space we will need for next 2 days.</LI>
+		<LI>Alarm information is also sent from the collectors to DbxCentral, so we can see if we are having active alarms for specific servers</LI>
+		<LI>The Alarm information is also stored, so we can later on check what alarms we had, and for how long they were active</LI>
+		<LI><b>This is in BETA mode for the moment, instructions for how to set this up is in a separate file... see README_dbxcentral_install.txt<br>
+		    Please send feedback on this functionality when you test it or start to use it</b>
+		    </LI>
+	</UL>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Enhancement: Check for a "full transaction log" in CmSummary and CmOpenDatabases</LI>
+		<LI>Tooltip: show PK column(s) and current cell value when hovering over a table cell (this can be enabled/disabled under the "local options" button)</LI>
+		<LI>Tooltip: for cell content on columns 'ObjectName':
+			<ul>
+				<li>content starts with '*ss' or '*sq' show the XML Execution Plan in a special GUI - AsePlanView</li>
+				<li>content is a table: show extended information about the table (rowcount, data/index/LOB size, FK References etc.)</li>
+			</ul>
+			</LI>
+		<LI>When "refresh" a CM's show how long time we have used to refresh this tab in the watermark text (the timer is visible after 500ms or so)</LI>
+		<LI>Trying to do a better job at error '2714 There is already an object named '#xxxxxxxxxx' in the database.'<br>
+			If we get this several times (drop do not work), try to do re-connect at next sample (mark the connection for re-connect)</LI>
+		<LI>AsePlanView , has got one extra load option 'Load Name', which tries to load any '*ss####...' name from the XML Plan Cache</LI>
+		<LI>Persitent Counter Store - Record a session
+			<ul>
+				<li>Record executed SQL Statement and SQL Text, with filters to store only if ExecutionTime, LogicalReads and PhysicalReads is greater than a specific value.</li>
+				<li>new Dialog where you can view SQL Statements and SQL Text saved by the Persistance Counter Store. (you can view ALL Statements or just ones within current sample in the timeline)</li>
+			</ul>
+			</LI>
+		<LI>Show DBMS Configuration, added Configuration History tab (for ASE 16)</LI>
+		<LI>Show DBMS Configuration, changed from "isql" column layout to "sqlw" layout (more condensed)</LI>
+		<LI>Show application name in the titlebar can be enabled or disabled. Under preferences.</LI>
+		<LI>Configure monitoring Dialog, added 'nonpushdown pipe active', and 'show deferred compilation text'.</LI>
+		<LI>Capture SQL when recording a session (and the below dialog to view Captured SQL - in offline mode)</LI>
+		<LI>Added dialog so we can view 'Capture SQL, Offline view'.</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Summary -&gt; Summary Panel - CmSummary</b><br>
+		<ul>
+			<li>Changed the default value of 'CmSummary.sample.lockCount' from false to true</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Disk -&gt; Devices - CmDeviceIo</b><br>
+		<ul>
+			<li>local graphs added: 'Read/Write Pct' and 'Read/APF Pct'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Cache -&gt; Cached Objects - CmCachedObjects</b><br>
+		<ul>
+			<li>PK extended to include 'OwnerUserID'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Cache -&gt; Statement Cache Details - CmStmntCacheDetails</b><br>
+		<ul>
+			<li>added 'Remark' column, where 'SkewedExecPlan-Abs' and 'SkewedExecPlan-Diff' is described</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Processes - CmProcessActivity</b><br>
+		<ul>
+			<li>Background color for Worker processes:
+			<ul>
+				<li>DARK BEIGE - SPID has Worker Processes Connected to it (Parent for a worker thread)</li>
+				<li>BEIGE      - SPID is a Worker Processes</li>
+			</ul>
+			</li>
+			<li>added columns: AvgBytesPerSentPacket, AvgBytesPerReceivedPacket</li>
+			<li>added column: in 16.0 SP2, sample SQL-Text using query_text(spid) if not in WaitEventID 250</li>
+			<li>added column: ClientRemotePort - pssinfo(SP.spid, 'ipport') to get the client port used to comunicate</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Sysmon Raw - CmSysmon</b><br>
+		<ul>
+			<li>Now also prints Some spinlock contention values (for example, Cachlet and Procedure cache spinlocks)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Active Statements - CmActiveStatements</b><br>
+		<ul>
+			<li>in ASE 16.0 SP2 PL5 and 15.7.0 SP138 the column 'PhysicalReads, LogicalReads, PagesModified' is bigint</li>
+			<li>in ASE 16.0 SP3 new column 'QueryOptimizationTime'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Objects - CmObjectActivity</b><br>
+		<ul>
+			<li>in ASE 16.0 SP3 PL4 new columns: MaxInsRowsInXact, MaxDelRowsInXact, MaxUpdRowsInXact</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; SQL Statements - CmSqlStatement</b><br>
+		<ul>
+			<li>New Collector: SQL Statement/Batch Activity - In what "time span" does most SQL Statements/Batches execute within, and how much resources do they consume.</li>
+			<li>Gets records from monSysStatement (from the AseTune - SQL Capture Broker subsystem)</li>
+			<li>Note: If you have a Stored Procedure based system, you will have a lot of extra 'cnt' incrementation, this since one row in monSysStatement is produced for every statement in a stored proc.</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; QP Metrics - CmQpMetrics</b><br>
+		<ul>
+			<li>Added checkbox if we want to "flush" the statistics or not</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; SPID Activity - CmSpidCpuWait</b><br>
+		<ul>
+			<li>in ASE 16.0 SP3 new column 'QueryOptimizationTime'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Databases - CmOpenDatabases</b><br>
+		<ul>
+			<li>Show SQL Statement and QueryPlan for oldest open transaction</li>
+			<li>A better job trying to distinguage Data/UserDefined segments and Log segments</li>
+			<li>in ASE 15.7 SP136 & SP64 or above; use Function spaceusage(dbid) to track a bunch of new columns, which is good to track especially LOB (text/image) column growth<br>
+				RawSpaceUsage, ReservedMb, UsedMb, UnUsedMb, DataMb, DataMbReal, IndexMb, IndexMbReal, LobMb, ReservedPages, UsedPages, UnUsedPages, DataPages, DataPagesReal, IndexPages, IndexPagesReal, LobPages, Tables, RowCountSum, OamPages, AllocationUnits
+				</li>
+			<li>new graph: TempdbUsedMbGraph - TempDB Space used in MB</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Cache -&gt; Statement Cache - CmStatementCache</b><br>
+		<ul>
+			<li>new columns: if ASE above 16.0 SP3 PL0</li>
+			<ul>
+				<li>ProcedureCacheSizeKB = Capacity of the Procedure Cache (KB)</li>
+				<li>AQTCacheUsedSizeKB   = Amount of cache in use for Auto Query Tuning (AQT) objects (KB)</li>
+				<li>NumAQTs              = Number of AQT objects in the cache</li>
+			</ul>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Host Monitor -&gt; OS Disk Stat(iostat) - CmOsIostat</b><br>
+		<ul>
+			<li>You can now map the device names got from iostat into your own label-name, or discard some devices...</li>
+			<li>Linux, add -N switch to iostat, if property 'CmOsIostat.linux.opt.N=true'. -N = Display the registered device mapper names for any device mapper devices</li>
+			<li>Discard some devices from the output. if property 'CmOsIostat.exclude.devices=true' and 'CmOsIostat.exclude.devices.regexp=someRegExp', someRegExp defaults to 'sd[a-z]'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Host Monitor -&gt; OS Load Average(uptime) - CmOsUptime</b><br>
+		<ul>
+			<li>Added columns 'nproc', 'adjLoadAverage_1Min', 'adjLoadAverage_5Min', 'adjLoadAverage_15Min'<br>
+				where nproc is number of available processing units. and adjLoadAverage* is LoadAverage/nproc to average out the LoadAverage value to a more sensible value
+				</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Object/Access -&gt; Transactions - CmTransactions</b><br>
+		<ul>
+			<li>This one is new</li>
+			<li>List current Transactions in the system - mostly to check if we have long running distributed transactions</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Host Monitor -&gt; Network Stats - CmOsNwInfo</b><br>
+		<ul>
+			<li>This one is new</li>
+			<li>Checks The Network activity from the OS</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Host Monitor -&gt; OS Disk Space Usage(df) - CmOsDiskSpace</b><br>
+		<ul>
+			<li>This one is new</li>
+			<li>Does 'df' on the OS, so we can check for full or near-full disk systems (more important for PostgresTune MySqlTune etc)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmCachePools<ul>
+				<li>Cache Pools Hit Rate</li>
+				<li>Cache Pools Utilization</li>
+				<li>Cache Pools Used MB</li>
+				<li>Cache Pools Free MB</li>
+				<li>Cache Pools MRU Replacement</li>
+				<li>Cache Pools LRU fetch-and-discard Placement</li>
+				<li>Cache Pools Logical Reads</li>
+				<li>Cache Pools Physical Reads</li>
+				<li>Cache Pools APF Reads</li>
+				<li>Cache Pools APF Reads Percent</li>
+				<li>Cache Pools Replacement Slide</li>
+			</ul></li>
+
+			<li>CmDataCache <ul>
+				<li>Data Caches LogicalReads</li>
+				<li>Data Caches PhysicalReads</li>
+				<li>Data Caches ApfReads</li>
+				<li>Data Caches Writes</li>
+			</ul></li>
+
+			<li>CmOpenDatabases <ul>
+				<li>DB Data Space left in MB</li>
+				<li>DB Data Space used in PCT</li>
+			</ul></li>
+
+			<li>CmSpMonitorConfig <ul>
+				<li>Procedure Cache Usage in Percent</li>
+				<li>Procedure Cache Usage in MB</li>
+				<li>MetaData Cache Usage in Percent</li>
+				<li>MetaData Cache Active Count (number of: open objects, open index, open partitions, locks, sort buffers, user connections, worker processes)</li>
+			</ul></li>
+
+			<li>CmPCacheModuleUsage <ul>
+				<li>Procedure Cache Module Usage (in MB)</li>
+			</ul></li>
+
+			<li>CmPCacheModuleUsage <ul>
+				<li>Procedure Cache Module Usage (in MB)</li>
+			</ul></li>
+
+			<li>CmProcessActivity <ul>
+				<li>Tempdb Usage in MB, using pssinfo</li>
+			</ul></li>
+
+			<li>CmRaLogActivity <ul>
+				<li>RA LogScan Records Sum, per second</li>
+				<li>RA Log Transaction Records Sum, per second</li>
+				<li>RA Log CRUD Operations Sum, per second</li>
+				<li>RA Log Other Operations Sum, per second</li>
+				<li>RA CRUD Operations per DB, per second</li>
+			</ul></li>
+
+			<li>CmTempdbActivity <ul>
+				<li>TempDB Logical Reads per seconds</li>
+				<li>TempDB Physical Writes per seconds</li>
+				<li>TempDB Catalog Lock Requests per seconds</li>
+			</ul></li>
+
+			<li>CmThreads <ul>
+				<li>Tasks Executed per Thread</li>
+			</ul></li>
+
+			<li>CmOsIostat <ul>
+				<li>iostat: Wait Time(await) per Device</li>
+				<li>iostat: Read Wait Time(r_await) per Device</li>
+				<li>iostat: Write Wait Time(w_await) per Device</li>
+				<li>iostat: Service Time(svctm) per Device</li>
+				<li>iostat: Avg Queue Length(avgqu-sz) per Device</li>
+				<li>iostat: Busy Percent(utilPct) per Device</li>
+				<li>iostat: Read Operations(readsPerSec) per Device & sec</li>
+				<li>iostat: Write Operations(writesPerSec) per Device & sec</li>
+				<li>iostat: Read KB(kbReadPerSec) per Device & sec</li>
+				<li>iostat: Write KB(kbWritePerSec) per Device & sec</li>
+				<li>iostat: Avg Read KB/IO(avgReadKbPerIo) per Device</li>
+				<li>iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device</li>
+			</ul></li>
+
+			<li>CmOsMpstat <ul>
+				<li>mpstat: CPU usage Summary</li>
+				<li>mpstat: CPU usage per core</li>
+			</ul></li>
+
+			<li>CmOsVmstat <ul>
+				<li>vmstat: Processes Usage</li>
+				<li>vmstat: Swap Usage</li>
+				<li>vmstat: Memory Usage</li>
+				<li>vmstat: Swap In/Out per sec</li>
+				<li>vmstat: IO Read/Write or blk-in/out per sec</li>
+			</ul></li>
+
+			<li>CmOsUptime <ul>
+				<li>uptime: Adjusted Load Average (normal load average / nproc)</li>
+			</ul></li>
+
+			<li>CmOsMeminfo <ul>
+				<li>/proc/meminfo: MemFree in MB</li>
+				<li>/proc/meminfo: MemAvailable in MB</li>
+			</ul></li>
+		</ul>
+		</LI>
+
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI></LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Transactions - CmIqTransaction</b><br>
+		<ul>
+			<li>Extended PK to 'TxnID', 'VersionID', and 'ConnHandle'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>Server -&gt; Version Use - CmIqVersionUse</b><br>
+		<ul>
+			<li>Extended PK to 'IQConnID', and 'VersionID'</li>
+		</ul>
+		</LI>
+
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Check if we got stuck in "gateway mode" and do "disconnect" if it happens</LI>
+		<LI>Show DBMS Configuration, added 'admin logical_status'</LI>
+		<LI>new collector: CmRsMemory - Replication Server Memory Usage in each <i>module</i>.</LI>
+		<LI>new collector: CmWsRepLatency - Warm Standby Latency: How long does it take to replicate a record from Active to Standby.</LI>
+
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmAdminDiskSpace<ul>
+				<li>Stable Device Usage in PCT, for all Partitions</li>
+			</ul></li>
+
+			<li>CmRsMemory<ul>
+				<li>Stat: RS Total Memory Usage in Percent</li>
+				<li>Stat: Memory Usage in MB per Module</li>
+			</ul></li>
+
+			<li>CmWsRepLatency<ul>
+				<li>Latency In Seconds, from Active->Standby</li>
+				<li>Apply Age In Seconds, from Active->Standby</li>
+				<li>Data Age In Seconds, from Active->Standby</li>
+			</ul></li>
+
+		</ul>
+		</LI>
+	<!-- ---end-of-this-tool--- -->
+	</UL>
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Capture DBMS Configuration (from v$parameter & v$nls_parameters)</LI>
+		<LI>Enhanced some generic DbxTune code to always close the ResultSet's</LI>
+		<LI>Added some Oracle specific datatypes</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>DBMS Configurations: 'sp_helpdb' and 'sys.databases'</LI>
+		<LI>Added Host Monitoring iostat/vmstat/mpstat/uptime/meminfo for Linux (since SQL-Server now can run on Linux)</LI>
+		<LI>CmWho Extended PK to 'spid', 'kpid'</LI>
+		<LI>new collector: CmTempdbSpidUsage - What session_id's are using the tempdb.</LI>
+		<LI>new collector: CmOsLatchStats - Show information about LATCH, from table 'sys.dm_os_latch_stats'.</LI>
+		<LI>DBMS Configuration, enhanced to include/save: HelpSort, HostInfo, SysInfo, ClusterNodes</LI>
+		<LI>Help text for 'CmPerfCounters', to describe what the different values are.</LI>
+
+
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmPerfCounters<ul>
+				<li>CPU Usage in Percent</li>
+				<li>CPU Usage Effective in Percent</li>
+				<li>SQL Batches Received per Sec</li>
+				<li>SQL Batches (all) In Time Span Received per Sec</li>
+				<li>SQL Batches (0-10ms) In Time Span Received per Sec</li>
+				<li>SQL Batches (10ms-100ms) In Time Span Received per Sec</li>
+				<li>SQL Batches (100ms-1s) In Time Span Received per Sec</li>
+				<li>SQL Batches (1s-10s) In Time Span Received per Sec</li>
+				<li>SQL Batches (>10s) In Time Span Received per SAMPLE</li>
+				<li>Buffer Cache Hit Rate, in Percent</li>
+				<li>Page Life Expectancy</li>
+				<li>Buffer Cache Reads per Sec</li>
+				<li>Buffer Cache Physical Reads per Sec</li>
+				<li>Buffer Cache Writes per Sec</li>
+				<li>Temp Table Stats</li>
+				<li>Tempdb Free Space</li>
+				<li>Version Store in Tempdb</li>
+				<li>Snapshot Isolation</li>
+				<li>Log Cache Hit Rate, in Percent</li>
+				<li>Log Cache Reads per Sec</li>
+				<li>Log Pool Requets per Sec</li>
+				<li>Transactions per Sec</li>
+				<li>Active Transactions</li>
+				<li>SQL Compilations per Sec</li>
+				<li>SQL Re-Compilations per Sec</li>
+				<li>Blocked Processes</li>
+				<li>Page Splits per Sec</li>
+				<li>Forwarded Records per Sec</li>
+				<li>Access Methods per Sec</li>
+				<li>Latch Waits per Sec</li>
+				<li>Average Latch Wait Time</li>
+			</ul></li>
+
+			<li>CmSummary<ul>
+				<li>Max Active SQL Execution Time In Seconds</li>
+			</ul></li>
+
+		</ul>
+		</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>new collector: BgWriter - One row only, showing statistics about the background writer process's activity.</LI>
+		<LI>new collector: CmPgTablesIo - One row for each table in the current database, showing statistics about accesses to that specific table..</LI>
+		<LI>new collector: CmPgIndexes - One row for each index in the current database, showing statistics about accesses to that specific index.</LI>
+		<LI>new collector: CmPgIndexesIo - One row for each index in the current database, showing statistics about accesses to that specific index.</LI>
+		<LI>new collector: CmPgFunctions - One row for each tracked function, showing statistics about executions of that function.</LI>
+		<LI>new collector: CmPgSequencesIo - One row for each index in the current database, showing statistics about accesses to that specific sequence.</LI>
+		<LI>new collector: CmPgTableSize - Show how large tables are (rows, total, data, index & toast).</LI>
+
+		<!-- ----- Graphs ----- -->
+		<LI>
+		<b>New Graphs</b><br>
+		<ul>
+			<li>CmPgDatabases<ul>
+				<li>Row Fetch Efficiency (tup_fetched/tup_returned) in Percent</li>
+				<li>Row Fetch Efficiency ABS (tup_fetched/tup_returned) in Percent</li>
+				<li>Row Fetch Efficiency SUM [tup_returned, tup_fetched]</li>
+				<li>Connections</li>
+				<li>Connections Sum</li>
+				<li>Commits per second</li>
+				<li>Rollbacks per second</li>
+				<li>Reads per second</li>
+				<li>Cache Hits per second</li>
+				<li>Rows Returned per second</li>
+				<li>Rows Fetched per second</li>
+				<li>Rows Inserted per second</li>
+				<li>Rows Updated per second</li>
+				<li>Rows Deleted per second</li>
+				<li>Conflicting Statements per second</li>
+				<li>Temp Files Created per second</li>
+				<li>Temp Bytes per second</li>
+				<li>Deadlocks per second</li>
+				<li>Read Time per second</li>
+				<li>Write Time per second</li>
+				<li>DB Size in MB</li>
+			</ul></li>
+
+			<li>CmPgStatements<ul>
+				<li>SQL Statement Calls per second</li>
+			</ul></li>
+
+		</ul>
+		</LI>
+
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>This is a <b>new tool</b>, for MySQL (5.7 and above)</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>This is a <b>new tool</b></LI>
+		<LI>It havn't got anything usefull in it yet... I had a request to do it, but I need help to create aproperiate collectors.</b></LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SQL Window</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Show Tooltip: as a html table for all columns on current row. Easier to view any "wide" rows. This can be enabled/disabled in the Preferences</LI>
+		<LI>JDBC Meta Data Information. Added new tabs 'Columns', 'PrimaryKeys', 'BestRow', 'IndexInfo', 'FK -&gt;', 'FK &lt;-', 'Func Columns'</LI>
+		<LI>JSON output in a formated way in the output window, with syntax higlightning and code folding (only if it's a single row and columns)</LI>
+		<LI>Generate SQL Statements (select, insert, udate, delete) from selected text in the editor (right click menu in the editor)</LI>
+		<LI>Generate SQL Statements (insert, udate, delete) from selected rows in the ResultSet (easy to copy records, and insert them in some other place) (right click menu in the ResultSet table)</LI>
+		<LI>variables can be used in the SQL text. This can be used to test shell scripts that uses variables. <br>
+			Example: <br>
+			<code>\set varName='tab1'<br></code>
+			<code>go<br></code>
+			<code>select * from ${varName}<br></code>
+			<code>go</code>
+			</LI>
+		<LI>Execute SSH commands directly from the editor. <br>
+			Example: <br>
+			<code>\ssh user@hostname "echo 'dummy'; pwd; id; date"</code>
+			</LI>
+		<LI>for 'Sybase/SAP ASE' and 'Microsoft SQL-Server': If '<code>set statistics io on</code>' create an extra jtable with the output and a summary (for readability)</LI>
+		<LI>Cell tooltip for LOB (text/image): for image fields, lets try to figgure out the mime type and open the associated application with the content (for example PDF documents will be showed in a PDF Reader or simular)</LI>
+		<LI>Editor Tooltop: hover over a word (or selected text), if the table exists extended information will be displaied about the table. (for example: rowcount, indexes, and FK references... for views: the table referenced by the view... But it depends on what has been implemented for the product we are connected to)</LI>
+		<LI>In the Editor: Format (selected or all) SQL text (Ctrl+Shift+F), or right click menu</LI>
+		<LI>In the Editor: Markup all word that are equal as the word you double clicked on (trying to emulate the functionality of notepad++), which makes it easier to find other instances of a word.</LI>
+		<LI>bug fix: Trying to figgure out if the "sql batch" only consisted of comments... In some cases Single Line Comments in Multiline comments, resulted in stacktrace</LI>
+		<LI>If the connection to the database is <i>lost</i>, a popup will ask you if you want to reconnect, or do it later by yourself/LI>
+		<LI>Better handling of MySQL, for tooltips etc, etc</LI>
+		<LI>go convert|iconv -- To Convert any character set issues...</LI>
+		<LI>Code Completion: new : short-cuts
+			<ul>
+			<li>:db - get databases</li>
+			<li>:t  - get tables</li>
+			<li>:v  - get views</li>
+			<li>:st - get system tables</li>
+			<li>:sv - get system views</li>
+			<li>Improvements for Sybase system procedures... sp_<ctrl+space> also searches system procedures in sybsystemprocs db</li>
+			</ul>
+		</LI>
+
+		<LI>Probably a bunch of other stuff, which I can't remember...</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Log Tail Tool</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+</UL>
+
+
+<!-- ========================================================================== -->
 <H2>2016-11-07</H2>
 <UL>
 	<!-- ---------------------------------------------------------------------- -->
-	<H3>Generic - Changes that affects all DbxTune tools</H3> 
+	<H3>Generic - Changes that affects all DbxTune tools</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
 		<LI>Now java 1.7 is needed</LI>
@@ -50,7 +755,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
-	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3> 
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
 		<LI>Record a session: DDL Capture was changed to be more generic (internal changes)</LI>
@@ -283,7 +988,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ---end-of-this-tool--- -->
 	</UL>
 
-	
+
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>RsTune - Sybase/SAP Replication Server</H3>
 	<!-- ---------------------------------------------------------------------- -->
@@ -306,7 +1011,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>No changes, please request some if you want this tool to envolve</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
-	
+
 
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>HanaTune - SAP HANA</H3>
@@ -472,7 +1177,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Probably other stuff also, but I can't remember...</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
-	
+
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>Log Tail Tool</H3>
 	<!-- ---------------------------------------------------------------------- -->
@@ -612,43 +1317,43 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Bug fix: freeze</b><br>
 	The GUI seems to freeze in some cases. Hopefully this is fixed...<br>
 	The major change made was: WaitForExec dialog now always gets executed on the EDT - Event Dispatch Thread<br>
-	The above dialog was used during Java Garbage Collections<br>  
+	The above dialog was used during Java Garbage Collections<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Rep Senders - CmRaSenders, Log Scanners - CmRaScanners</b><br>
-	Both of them had wrong PK for delta calculation. It now uses ScannerSPID in CmRaScanners and SenderSPID for CmRaSenders<br> 
+	Both of them had wrong PK for delta calculation. It now uses ScannerSPID in CmRaScanners and SenderSPID for CmRaSenders<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Devices - CmDeviceIO</b><br>
-	For ASE 12.5.x TotalIOs: convert to numeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br> 
+	For ASE 12.5.x TotalIOs: convert to numeric(10) to not get 'Arithmetic overflow' when Reads+Writes together are bigger than an int value<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Databases - CmOpenDatabases</b><br>
-	Check if user are authorized to select on master..syslogshold, if not columns OldestTran* to static values<br> 
+	Check if user are authorized to select on master..syslogshold, if not columns OldestTran* to static values<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Procedure Call Stack - CmProcCallStack</b><br>
-	Class cast exception in rare cases for ASE 12.5.x (Short -> Integer): use Number.intValue() instead<br> 
+	Class cast exception in rare cases for ASE 12.5.x (Short -> Integer): use Number.intValue() instead<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: sp_monitorconfig - CmSpMonitorConfig, and 'View ASE Configuration'</b><br>
-	now checks for SA_ROLE before calling sp_monitorconfig<br> 
+	now checks for SA_ROLE before calling sp_monitorconfig<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Memory check</b><br>
-	If environment ASETUNE_JVM_MEMORY_PARAMS is set to -Xmx4096m AseTune wont start... fixed memory check for above/near 4GB<br> 
+	If environment ASETUNE_JVM_MEMORY_PARAMS is set to -Xmx4096m AseTune wont start... fixed memory check for above/near 4GB<br>
 	</LI>
 
 
 	<LI>
 	<b>Bug fix: Mac OSX, java 8 wont start.</b><br>
-	On Mac it sometimes throw Null Pointer Exceptions due to 'awt.multiClickInterval' wasn't present, now using a default value for this<br> 
+	On Mac it sometimes throw Null Pointer Exceptions due to 'awt.multiClickInterval' wasn't present, now using a default value for this<br>
 	</LI>
 
 </UL>
@@ -668,11 +1373,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<ul>
 	   <li>Version String in 16 has been changed again. SP### will now be SP## PL##. So ServicePack and PachLevel has been separated.<br>
 	       Changes in AseTune was also made to the internal version "integer" which holds the parsed version number.</li>
-	   <li>Tool 'Configure ASE for Monitoring': added parameters 'threshold event monitoring', 'threshold event max messages' </li> 
-	   <li>Processes: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
-	   <li>Active Statements: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li> 
-	   <li>Cached Procedures: new column 'Active' - Indicates whether the plan for this procedure is active or not</li> 
-	   <li>Cached Procedures Sum: new column 'SumActive' - How many of this instance where column Active = 'Yes'</li> 
+	   <li>Tool 'Configure ASE for Monitoring': added parameters 'threshold event monitoring', 'threshold event max messages' </li>
+	   <li>Processes: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li>
+	   <li>Active Statements: new column 'ClientDriverVersion' - The version of the connectivity driver used by the client program</li>
+	   <li>Cached Procedures: new column 'Active' - Indicates whether the plan for this procedure is active or not</li>
+	   <li>Cached Procedures Sum: new column 'SumActive' - How many of this instance where column Active = 'Yes'</li>
 	   <li>Objects: new columns</li>
 	     <ul>
 	       <li>Scans              - The number of scans on this object</li>
@@ -687,18 +1392,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	       <li>Deletes            - The number of deletes on this object</li>
 	       <li>LastDeleteDate     - The date of the last delete on this object</li>
 	       <li>LastDeleteDateDiff - How many MS ago did we do a Delete</li>
-	     </ul> 
+	     </ul>
 	   <li>Statement Cache Details: new columns (the below was also back ported for ASE 15.7 SP130)</li>
 	     <ul>
 	       <li>TotalPIO         - The total PIO value.</li>
 	       <li>TotalLIO         - The total LIO value.</li>
 	       <li>TotalCpuTime     - The total execution time value. (ms)</li>
 	       <li>TotalElapsedTime - The total elapsed time value. (ms)</li>
-	     </ul> 
-	   <li>Server - Resource Governor - New Performance Counter, works on MDA Table 'monThresholdEvent', which contains information "events" that the Resource Governor has exceeded.</li> 
-	   <li>RepAgent - Stream Stats   - New Performance Counter, works on MDA Table 'monRepStreamStatistics'.</li> 
-	   <li>RepAgent - Sync Task Stat - New Performance Counter, works on MDA Table 'monRepSyncTaskStatistics'.</li> 
-	   <li>RepAgent - RA Trunc Point - New Performance Counter, works on MDA Table 'monRepTruncationPoint'.</li> 
+	     </ul>
+	   <li>Server - Resource Governor - New Performance Counter, works on MDA Table 'monThresholdEvent', which contains information "events" that the Resource Governor has exceeded.</li>
+	   <li>RepAgent - Stream Stats   - New Performance Counter, works on MDA Table 'monRepStreamStatistics'.</li>
+	   <li>RepAgent - Sync Task Stat - New Performance Counter, works on MDA Table 'monRepSyncTaskStatistics'.</li>
+	   <li>RepAgent - RA Trunc Point - New Performance Counter, works on MDA Table 'monRepTruncationPoint'.</li>
 	</ul>
 	</LI>
 
@@ -709,13 +1414,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	the IO originates from. The IO is done by the IOController but the counter IOCPUTime is <i>faulty</i> increased on <b>all</b> engines.<br>
 	By the way this might be fixed by ASE CR#757246 in the future<br>
 	<br>
-	A CheckBox '<code>Collapse IOCPUTime into IdleCPUTime</code>' was introduced, so you can decide if you want to <i>disregard</i> the column IOCPUTime in the calculations. Or actually 
+	A CheckBox '<code>Collapse IOCPUTime into IdleCPUTime</code>' was introduced, so you can decide if you want to <i>disregard</i> the column IOCPUTime in the calculations. Or actually
 	move/collapse the IOCPUTime counter into the IdleCPUTime counter.<br>
 	Note: this CheckBox is only visible if you run ASE 15.7 and if you are in process kernel mode, the CheckBox will be disabled.<br>
 	<br>
-	Also added the following columns, while the old columns 'CPUTime', 'SystemCPUTime', 'UserCPUTime', 'IOCPUTime' and 'IdleCPUTime' are now <i>just</i> difference counters. 
+	Also added the following columns, while the old columns 'CPUTime', 'SystemCPUTime', 'UserCPUTime', 'IOCPUTime' and 'IdleCPUTime' are now <i>just</i> difference counters.
 	<ul>
-	   <li>NonIdleCPUTimePct - Formula: (SystemCPUTime + UserCPUTime [ + IOCPUTime]) / CPUTime * 100.0</li> 
+	   <li>NonIdleCPUTimePct - Formula: (SystemCPUTime + UserCPUTime [ + IOCPUTime]) / CPUTime * 100.0</li>
 	   <li>SystemCPUTimePct  - Formula: SystemCPUTime / CPUTime * 100.0</li>
 	   <li>UserCPUTimePct    - Formula: UserCPUTime   / CPUTime * 100.0</li>
 	   <li>IOCPUTimePct      - Formula: IOCPUTime     / CPUTime * 100.0</li>
@@ -726,15 +1431,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Enhancement: Wait</b><br>
 	Added WaitTimePerWait to the local graphs...<br>
-	Also enabled the CheckBox 'Include [250] waiting for incoming network data in graph   
+	Also enabled the CheckBox 'Include [250] waiting for incoming network data in graph
 	</LI>
 
 	<LI>
 	<b>Enhancement: SPID Wait</b><br>
 	Added local graphs... More or less the same graphs as in the 'Wait' tab.<br>
 	<ul>
-	   <li>Summary Graphs on EventID - WaitTime, Waits, WaitTimePerWait (all records is summarized over EventID)</li> 
-	   <li>Summary Graphs on ClassName - WaitTime, Waits, WaitTimePerWait (all records is summarized over ClassName)</li> 
+	   <li>Summary Graphs on EventID - WaitTime, Waits, WaitTimePerWait (all records is summarized over EventID)</li>
+	   <li>Summary Graphs on ClassName - WaitTime, Waits, WaitTimePerWait (all records is summarized over ClassName)</li>
 	</ul>
 	</LI>
 
@@ -766,9 +1471,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Enhancement: System Load</b><br>
 	Three new graphs
 	<ul>
-	   <li>Outstanding IO's, When the refresh happened, Per Engine</li> 
-	   <li>Outstanding IO's, Average over last minute, Per Engine</li> 
-	   <li>Outstanding IO's, Summary for all instances</li> 
+	   <li>Outstanding IO's, When the refresh happened, Per Engine</li>
+	   <li>Outstanding IO's, Average over last minute, Per Engine</li>
+	   <li>Outstanding IO's, Summary for all instances</li>
 	</ul>
 	</LI>
 
@@ -776,11 +1481,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Enhancement: Databases</b><br>
 	Some new columns
 	<ul>
-	   <li>LogSizeFreeInMbDiff  - Same as LogSizeFreeInMb, but the difference from previous sample</li> 
-	   <li>DataSizeInMb         - How much Data is allocated in MB for this database</li> 
-	   <li>DataSizeFreeInMb     - How much Data are we NOT using in MB</li> 
-	   <li>DataSizeFreeInMbDiff - Same as DataSizeFreeInMbDiff, but the difference from previous sample</li> 
-	   <li>DataSizeUsedPct      - How much Data are we using in Percent</li> 
+	   <li>LogSizeFreeInMbDiff  - Same as LogSizeFreeInMb, but the difference from previous sample</li>
+	   <li>DataSizeInMb         - How much Data is allocated in MB for this database</li>
+	   <li>DataSizeFreeInMb     - How much Data are we NOT using in MB</li>
+	   <li>DataSizeFreeInMbDiff - Same as DataSizeFreeInMbDiff, but the difference from previous sample</li>
+	   <li>DataSizeUsedPct      - How much Data are we using in Percent</li>
 	   <li>SPID                 - duplicate of OldestTranSpid, to enable table right click menu</li>
 	</ul>
 	</LI>
@@ -789,8 +1494,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Enhancement: Temp Db</b><br>
 	Some new columns
 	<ul>
-	   <li>LockContPct    - Percent Calculation of Lock Contention</li> 
-	   <li>CatLockContPct - Percent Calculation of Catalog Lock Contention</li> 
+	   <li>LockContPct    - Percent Calculation of Lock Contention</li>
+	   <li>CatLockContPct - Percent Calculation of Catalog Lock Contention</li>
 	</ul>
 	</LI>
 
@@ -806,8 +1511,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	The limitation is done <b>after</b> the <code>order by</code> has been applied...<br>
 	And the <code>order by</code> for the Counter Models are:
 	<ul>
-	   <li>Objects        - <code>order by LogicalReads desc</code></li> 
-	   <li>Cached Objects - <code>order by CachedKB desc</code></li> 
+	   <li>Objects        - <code>order by LogicalReads desc</code></li>
+	   <li>Cached Objects - <code>order by CachedKB desc</code></li>
 	</ul>
 	</LI>
 
@@ -815,8 +1520,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<b>Enhancement: IO Controller</b><br>
 	Two new graphs
 	<ul>
-	   <li>Pending IO's, or number of outstanding IO's</li> 
-	   <li>Completed IO's per seconds</li> 
+	   <li>Pending IO's, or number of outstanding IO's</li>
+	   <li>Completed IO's per seconds</li>
 	</ul>
 	Also removed column Pending from being difference calculated, it seems that it's a peek counter.
 	</LI>
@@ -828,7 +1533,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	SQL: CASE WHEN (value < 0) THEN @int_max + (value - @int_min) ELSE convert(bigint, value) END -- @int_min/max is bigint <br>
 	Also at the client side, try to do a better job when the higher datatype (unsigned int) gets wrapped but NOT cleared.<br>
        Algorithm ASE 12.5:  diffColVal = new BigDecimal((maxUnsignedInt - prevColVal.doubleValue()) + newColVal.doubleValue() + 1); <br>
-       Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br> 
+       Algorithm ASE >= 15: diffColVal = new Long((maxUnsignedInt - prevColVal.longValue()) + newColVal.longValue() + 1); <br>
     If the underlying counters are cleared, the sample interval is adjusted to reflect <b>when</b> the counters where cleared and the values will start at zero (as it's a counter reset)<br>
     The goal is to eliminate problems with Counter Wrapping and Counter Resets...<br>
     So even when it happens, the counters in the "difference calculated" values should reflect the actual DIFFERENCE from previous sample<br>
@@ -839,16 +1544,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	a new local checkbox 'Include System Tables'<br>
 	This checkbox sends 'dbcc trace{on|off}(3650)' to the server to include system tables in monOpenObjectActivity<br>
 	Note: it doesn't check if the traceflag is on/off for every sample, it just sends 'on/off' when you press the checkbox.<br>
-	When the Performance Counter initializes, it will set traceflag 3650 on if it was enabled last time you used AseTune (it will not turn it of)<br>  
+	When the Performance Counter initializes, it will set traceflag 3650 on if it was enabled last time you used AseTune (it will not turn it of)<br>
 	</LI>
 
 	<LI>
 	<b>Enhancement: Sysmon Raw</b><br>
 	Implemented 3 new sysmon sections
 	<ul>
-	   <li>Disk I/O Management</li> 
-	   <li>Network I/O Management</li> 
-	   <li>Monitor Access to Executing SQL</li> 
+	   <li>Disk I/O Management</li>
+	   <li>Network I/O Management</li>
+	   <li>Monitor Access to Executing SQL</li>
 	</ul>
 	</LI>
 
@@ -886,19 +1591,19 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	This is the same tool as within AeTune and SqlWindow, but now as a standalone utility.<br>
 	Start it using 'tailw.bat' or 'tailw.sh'<br>
 	With the tool you can tail any file, local or remote.<br>
-	When using the remote tail, SSH connection is used to read/stream to the client side, which probably is on windows.<br> 
+	When using the remote tail, SSH connection is used to read/stream to the client side, which probably is on windows.<br>
 	</LI>
 
 	<LI>
 	<b>Enhancement: Connection Dialog</b><br>
 	Connection Profile: this will make it a bit easier to connect...<br>
-	A Tree View in a new panel, located to the left of the connection attributes can be enabled.<br> 
+	A Tree View in a new panel, located to the left of the connection attributes can be enabled.<br>
     The connection dialog will be used for both the AseTune and SqlWindow applications<br>
-    To enable/disable the Tree View Panel, there are two buttons on the bottom left corner.<br> 
+    To enable/disable the Tree View Panel, there are two buttons on the bottom left corner.<br>
     A Connection Profiles can also be selected from a Drop Down Box, called "Use Profile"<br>
     New Connection Profiles is "automatically" created after a connection has been successfully established, it will ask you for
-    a name... if you change some attributes and connect, a dialog will be asking you if you want to save it or not.<br> 
-    Another way to Save/Create a Profile is by pressing 'Save Profile...'<br>  
+    a name... if you change some attributes and connect, a dialog will be asking you if you want to save it or not.<br>
+    Another way to Save/Create a Profile is by pressing 'Save Profile...'<br>
     * The SSH Connection Stuff now also takes a 'init OS Command', so you can kick off a OS command when the SSH connects
       this can then kick of a shell scripts, which may 'setup a new SSH Tunnel Connection chain' or setup some environment, or...<br>
     * JCheckbox option to enable jConnect Password Encryption over the network<br>
@@ -918,18 +1623,18 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	When using this option, the predefined template will be used, which mean you can have different predefined Performance
 	Counter Sets for different servers, and when you connect that Counter Template will automatically be used.<br>
 	Maintaining Template Sets is done in the existing dialog  'Settings for All Collector Tabs', which you can open by clicking 'Template Dialog'<br>
-	This dialog can also be reached "at any time" from the Main Menu-&gt;View-&gt;Change 'Performance Counter' Options... 
+	This dialog can also be reached "at any time" from the Main Menu-&gt;View-&gt;Change 'Performance Counter' Options...
 	</LI>
 
 	<LI>
 	<b>Enhancement: View ASE Configuration</b><br>
-	Added 1 tab: ASE Config File - Tries to read the ASE configuration file. This will use CIS and needs configuration 'enable file access' to be enabled 
+	Added 1 tab: ASE Config File - Tries to read the ASE configuration file. This will use CIS and needs configuration 'enable file access' to be enabled
 	</LI>
 
 	<LI>
 	<b>Enhancement - Stacktrace analyzer</b><br>
 	Right click menu: Stack Matrix Table<br>
-	In the 'Stack Matrix Table' Dialog you can navigate within the stacktrace samples to: 
+	In the 'Stack Matrix Table' Dialog you can navigate within the stacktrace samples to:
 	<ul>
 	   <li>Select a specific sample, then look at the <i>source</i> content in the stack file for that sample.</li>
 	   <li>Highlight what other samples the current KPID, SPID or SUID is active in.</li>
@@ -1061,7 +1766,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<code>Server 'GORAN_1570_DS', Line 1 (script row 12), Status 0, TranState 1:</code><br>
 	<code>Dummy Error message, just to test</code><br>
 	Which means; row 1 in the current SQL Batch, but row 12 in the editor.<br>
-	This makes it <b>a lot</b> easier to find errors in the editor when executing/debugging stuff.<br> 
+	This makes it <b>a lot</b> easier to find errors in the editor when executing/debugging stuff.<br>
 	</LI>
 
 	<LI>
@@ -1082,17 +1787,17 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<LI>
 	<b>Bug fix: Active Statements</b><br>
 	Columns 'Command' and 'Application' was placed in the wrong order in the output for 'BLOCKER' section.<br>
-	Simply moved the columns to match the 'ACTIVE' section of the select statement.<br> 
+	Simply moved the columns to match the 'ACTIVE' section of the select statement.<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Cached Procedure Sum</b><br>
-	Recording of DDL for procedures was using 'RequestCntDiff' which was faulty, use 'RequestCntDiff' instead<br> 
+	Recording of DDL for procedures was using 'RequestCntDiff' which was faulty, use 'RequestCntDiff' instead<br>
 	</LI>
 
 	<LI>
 	<b>Bug fix: Threads</b><br>
-	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br> 
+	Drop the temporary table before using it (if it exists), otherwise we will get a error in some cases.<br>
 	</LI>
 
 	<LI>

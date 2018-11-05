@@ -59,9 +59,9 @@
 	//------------------------------------------
 	// DEFINE latest version information
 	//-------
-	$ASEMON_LATEST_VERSION_SRC = 454;
-	$ASEMON_LATEST_VERSION_STR = "3.6.0";
-	$ASEMON_LATEST_VERSION_STR = "2016-11-07";
+	$ASEMON_LATEST_VERSION_SRC = 471;
+	$ASEMON_LATEST_VERSION_STR = "4.0.0";
+	$ASEMON_LATEST_VERSION_STR = "2018-11-05";
 	$DOWNLOAD_URL              = "sourceforge.net/projects/asetune/files/";
 	$WHATSNEW_URL              = "www.dbxtune.com/history.html";
 	$SEND_OPTIONS              = "sendConnectInfo=true, sendMdaInfo=true, sendMdaInfoBatchSize=5, sendUdcInfo=true, sendCounterUsageInfo=true, sendLogInfoWarning=true, sendLogInfoError=true, sendLogInfoThreshold=100";
