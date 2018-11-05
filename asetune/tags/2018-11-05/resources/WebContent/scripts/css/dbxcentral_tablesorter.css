@@ -1,0 +1,5 @@
+/* Dbx Central CSS for tablesorter */
+
+.dbxErrorRow > td {
+    background-color: #ff4f4f  !important;
+}

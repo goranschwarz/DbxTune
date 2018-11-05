@@ -1,0 +1,90 @@
+/* Dbx Central CSS */
+
+
+
+
+
+/* Right now this is empty */
+
+/* BEGIN: sidebar */
+.wrapper {
+    display: block;
+}
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    /* top layer */
+    z-index: 9999;
+}
+
+.overlay {
+    /* full screen */
+    width: 100vw;
+    height: 100vh;
+    /* transparent black */
+    background: rgba(0, 0, 0, 0.8);
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: none;
+    /* middle layer, i.e. appears below the sidebar */
+    z-index: 9998;
+}
+
+#dismiss {
+    width: 35px;
+    height: 35px;
+    position: absolute;
+    /* top right corner of the sidebar */
+    top: 10px;
+    right: 10px;
+}
+/* END: sidebar */
+
+
+/* BEGIN: dbx-button icons */
+.dbx-button-image:before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    margin-right: 5px;
+    vertical-align: text-top;
+    background-color: transparent;
+    background-position : center center;
+    background-repeat:no-repeat;
+}
+
+.dbx-button-asetune:before       { background-image : url(/images/icons/asetune_dbms_icon_16.png); }
+.dbx-button-db2tune:before       { background-image : url(/images/icons/db2tune_dbms_icon_16.png); }
+.dbx-button-hanatune:before      { background-image : url(/images/icons/hanatune_dbms_icon_16.png); }
+.dbx-button-iqtune:before        { background-image : url(/images/icons/iqtune_dbms_icon_16.png); }
+.dbx-button-mysqltune:before     { background-image : url(/images/icons/mysqltune_dbms_icon_16.png); }
+.dbx-button-oracletune:before    { background-image : url(/images/icons/oracletune_dbms_icon_16.png); }
+.dbx-button-postgrestune:before  { background-image : url(/images/icons/postgrestune_dbms_icon_16.png); }
+.dbx-button-raxtune:before       { background-image : url(/images/icons/raxtune_dbms_icon_16.png); }
+.dbx-button-rstune:before        { background-image : url(/images/icons/rstune_dbms_icon_16.png); }
+.dbx-button-sqlservertune:before { background-image : url(/images/icons/sqlservertune_dbms_icon_16.png); }
+/* END: dbx-button icons */
+
+/* BEGIN: Extention class for show 'Working...' */
+.modal.working .modal-content::before {
+    content: "Working...";
+    text-align: center;
+    line-height: 155px;
+    font-size: 20px;
+    position: absolute;
+    top: 55px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    color: rgb(238, 238, 238);
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.8);
+}    
+/* END: Extention class for show 'Working...' */

@@ -1,0 +1,78 @@
+package asetune;
+
+import com.asetune.cm.CountersModel;
+import com.asetune.cm.CounterSample;
+import com.asetune.utils.Ver;
+
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.IUserDefinedAlarmInterrogator;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventHighCpuUtilization;
+
+import org.apache.log4j.Logger;
+
+
+import asetune.exceptions.TestException;
+
+
+public class CmEngines
+implements IUserDefinedAlarmInterrogator
+{
+	private static Logger _logger = Logger.getLogger(CmEngines.class);
+
+	public void interrogateCounterData(CountersModel cm)
+	{
+		boolean enabled = false;
+		if ( ! enabled )
+			return; // short circut this method
+
+//System.out.println("#### CmEngines: #############################################"); // Used when debugging re-compile on file changes...
+		System.out.println(">>>> ----------------------------------------------");
+		System.out.println("     CmEngines: interrogateCounterData(cm) was called.");
+		if (cm != null)
+		{
+			System.out.println("     CmEngines: cmName = '" + cm.getName() + "'. absRowCount = " + cm.getAbsRowCount() + " --->> cm="+cm);
+		}
+		
+		int dbmsVersion = cm.getServerVersion();
+		System.out.println("     CmEngines: dbmsVersion="+dbmsVersion+", verStr='"+Ver.versionIntToStr(dbmsVersion)+"'.");
+		
+		if ( ! cm.hasRateData() )
+		{
+			System.out.println("     CmEngines: no rate data...");
+			return;
+		}
+
+		int cpuUsagePct = (int) (100.0 - cm.getRateValueAvg("IdleCPUTimePct"));
+		System.out.println("     CmEngines: avg: cpuUsagePct: " + cpuUsagePct);
+
+		int threshold = 5;
+		if (cpuUsagePct > threshold)
+		{
+			System.out.println("     CmEngines: SEND WARNING: CPU Usage is above "+threshold+"%, Current average CPU Usage at : " + cpuUsagePct );
+
+			// Send ALARM
+			if (AlarmHandler.hasInstance())
+			{
+//				AlarmEventHighCpuUtilization alarm = new AlarmEventHighCpuUtilization("ASE", cm.getServerName(), cm.getSampleInterval(), cpuUsagePct);
+				AlarmEvent alarm = new AlarmEventHighCpuUtilization(cm, threshold, cpuUsagePct);
+System.out.println("CmEngines: ALARM: Added an alarm to the alarm hander: "+alarm);
+
+				AlarmHandler.getInstance().addAlarm(alarm);
+			}
+		}
+
+//		Exception xxx = new TestException("Dummy Test Exception");
+//		xxx.printStackTrace();
+
+		// Loop on all rateData rows
+		for (int rowId=0; rowId < cm.getRateRowCount(); rowId++) 
+		{
+			Object engineNum            = cm.getRateValue        (rowId, "EngineNumber");
+			Double engineIdleCPUTimePct = cm.getRateValueAsDouble(rowId, "IdleCPUTimePct");
+
+			System.out.println("     CmEngines: EngineNumber="+engineNum+", IdleCPUTimePct="+engineIdleCPUTimePct);
+		}
+		System.out.println("<<<< ----------------------------------------------");
+	}
+}

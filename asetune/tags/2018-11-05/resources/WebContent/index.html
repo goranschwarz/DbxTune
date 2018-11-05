@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>DbxTune - Central</title>
+
+  <!-- 
+    =======================================================================
+    == JS imports - JAVA SCRIPTS GOES HERE
+    =======================================================================
+  -->
+  <!-- JS: JQuery -->
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
+  
+  <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
+  <script type="text/javascript" src="/scripts/moment/moment.js"></script>
+  <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
+
+  <!-- JS: Bootstrap -->
+  <script src="/scripts/popper/1.12.9/popper.min.js"></script>
+  <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+
+  <!-- JS: DbxCentral -->
+  <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
+
+  <!-- 
+    =======================================================================
+    == CSS imports - STYLES SHEETS GOES HERE
+    =======================================================================
+  -->
+  <!-- CSS: DbxCentral -->
+  <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
+
+  <!-- CSS: Bootstrap -->
+  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+
+  <!-- CSS: Font Awsome -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+  <!-- Local CSS -->
+  <style type='text/css'>
+    /* table {border-collapse: collapse;}
+    th, td {border: 1px solid black; text-align: left; padding: 2px;}
+    tr:nth-child(even) {background-color: #f2f2f2;} */
+    .dbx-quick-access-tooltip-table table {border-collapse: collapse;}
+    .dbx-quick-access-tooltip-table th, td {border: 1px solid white; text-align: left; padding: 2px;}
+
+    .tooltip-inner { max-width: 1000px; }
+
+    .jumbotron{ margin-top:-30px; }
+
+    #active-alarms {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      overflow: scroll;
+      /* background-color: rgb(255, 195, 83); */
+      background-color: rgba(255, 195, 83, 0.5);
+    }
+    
+  </style>
+
+</head>
+
+<body>
+  <!-- NavBar that works, except for: iphone... -->
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+    <a class="navbar-brand" href="/">DbxCentral</a>
+    <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
+    <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/overview">Servers<span class="sr-only">(current)</span></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/admin/admin.html">Admin</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/desktop_app.html">Desktop App</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
+  <main role="main" class="container">
+    <div class="jumbotron">
+      <h1>DbxTune - Central</h1>
+      <p class="lead">View Trends Graphs for all your Database Systems in one place!</p>
+      <!-- <p class="lead">View all your DBMS trends graphs in a centralized console.</p> -->
+      <!-- <p class="lead">DbxTune Central is the component where all DbxTune collectors can send summary data so it can be easely viewed...</p> -->
+      <p><img id="example-graph" src="images/dbxcentral_graph_example.png" alt="Example Graph"></p>
+      <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>
+      <a class="btn btn-lg btn-primary" href="/graph.html" role="button">View charts &raquo;</a>
+      &nbsp;&nbsp;&nbsp;<span id="dbx-alarm-cnt">0</span> Active Alams<span id="dbx-alarm-srv-cnt">, in 0 Servers.</span> <span id="dbx-alarm-age">0</span> seconds ago. Click <a href='?refresh=60'>here</a> to refresh every 60 seconds
+      <p></p>
+      Quick access list
+      <div id="dbx-quick-access-server-list">
+        <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
+      </div>
+      Quick access list (show all available graphs)
+      <div id="dbx-quick-access-server-all-list">
+        <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE&graphList=all" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
+      </div>
+      Profiles
+      <div id="dbx-quick-access-profile-list">
+        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>
+      </div>
+      <!-- Error message: browser support -->
+      <div id="browser-not-supported"></div>
+    </div>
+  </main>
+
+
+<!-- 
+<h1>DbxTune - Central</h1>
+
+List of stuff that can be done
+<ul>
+  <li> <a href='/graph_subscribe.html'>  Test Chart/Graph broadcast (Google Charts)</a> </li>
+  <li> <a href='/graph.html'> Test Chart/Graph broadcast (JS Chart)     </a> </li>
+  <li> <a href='overview'           > Overview of Alarms and Recordings </a> </li>
+  <li> <a href='admin'              > Admin this central instance </a> </li>
+  <li> <a href='not-yet-implemented'> View online and historical performance charts for the monitored servers </a> </li>
+  <li> <a href='not-yet-implemented'> Download the native/desktop AseTune application</a> </li>
+</ul>
+<a href="dummyfile.txt">dummyfile.txt</a>
+ -->
+
+<!-- Show Active alarms -->
+<div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
+</div>
+
+<!-- Just add some blank lines for scrolling purposes -->
+<br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br><br><br><br>
+
+
+<script>
+  // Do we support the browser...
+  // Get version of MS: IE or Edge
+  // IE or EDGE are not supported
+  var ieVersion = detectIE();
+  if (ieVersion !== false) 
+  {
+    var browserVersion = ((ieVersion >= 12) ? 'Edge ' : 'IE ') + ieVersion;
+    document.getElementById('browser-not-supported').innerHTML = "<br><br>Current Browser: <b>" + browserVersion + "</b> isn't that well tested. If you have issues use: Chrome, Firefox or Safari";
+    if (ieVersion < 12)
+    {
+      document.getElementById('browser-not-supported').innerHTML = "<br><br><font color='red'>Current Browser: <b>" + browserVersion + "</b> is not supported. Please use Chrome, Firefox or Safari</font>";
+      // alert("Current Browser: " + browserVersion + " is not supported. Please use Chrome, Firefox or Safari");
+      // return;
+    }
+  }
+
+  //-----------------------------------------------------------
+  // get input parameters
+  //-----------------------------------------------------------
+  var _refresh = getParameter("refresh", 0);
+  var _debug   = getParameter("debug",   0);
+
+  console.log("_refresh="+_refresh);
+  console.log("_debug="+_debug);
+
+// Enable bootstrap tooltip...
+  // $(document).ready(function(){
+  //     $('[data-toggle="tooltip"]').tooltip();   
+  // });
+
+  function resizeExampleImage() {
+    // Origin size is: 378
+    var exampleImage = document.getElementById("example-graph");
+    // console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
+    if ($(window).height() >  1152) exampleImage.style.height = '';//'378px';
+    if ($(window).height() <= 1024) exampleImage.style.height = '300px';
+    if ($(window).height() <=  768) exampleImage.style.height = '200px';
+    // console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
+  }
+
+  window.addEventListener("resize", function() {
+    resizeExampleImage();
+  });
+  resizeExampleImage();
+
+  //-----------------------------------------------------------
+  // get SERVERS
+  //-----------------------------------------------------------
+	$.ajax(
+	{
+    url: "/api/sessions",
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+		
+		success: function(data, status) 
+		{
+			// console.log("RECEIVED DATA: "+data);
+			var jsonResp = JSON.parse(data);
+			
+      var html = "";
+      var htmlAll = "";
+      for (var i=0; i<jsonResp.length; i++) {
+        var entry = jsonResp[i];
+
+        if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
+        {
+          console.log("Skipping server '"+entry.serverName+"', since it's in DISABLED Status (status=1)");
+          continue;
+        }
+
+        var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
+        var lastSampleWarnThresh   = 5; // # minutes
+
+        var tt =
+          "<table class='table table-sm'>"+
+          "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
+          "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
+          "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
+          "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
+          "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
+          "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
+          "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
+          "</table>";
+          // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
+          // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
+          // tt = entry.serverDescription;
+
+          // set button class depending on how long ago since we got any sample for this server
+          var btnClass="btn-primary";
+          if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
+            btnClass="btn-warning";
+
+          var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
+
+        html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
+        htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
+      }
+      if (html === "")
+      {
+        html    = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+        htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+      }
+      $('#dbx-quick-access-server-list').html(html);
+      $('#dbx-quick-access-server-all-list').html(htmlAll);
+
+      // Enable bootstrap tooltip...
+      $('[data-toggle="tooltip"]').tooltip();
+
+      // Get ACTIVE Alarms
+      setTimeout(dbxTuneCheckActiveAlarms, 100);
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+  }); // end: ajax call
+  
+  //-----------------------------------------------------------
+  // get PROFILES
+  //-----------------------------------------------------------
+  console.log("get profiles: /api/graph/profiles");
+	$.ajax(
+	{
+    url: "/api/graph/profiles",  // status=0 (ONLY ENABLED)
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+		
+		success: function(data, status) 
+		{
+			console.log("RECEIVED DATA: "+data);
+      var jsonResp = JSON.parse(data);
+      console.log("profiles: jsonResp", jsonResp);
+			
+      var htmlCurrent = $('#dbx-quick-access-profile-list').html();
+      var html = "";
+      for (var i=0; i<jsonResp.length; i++) {
+        var entry = jsonResp[i];
+
+        console.log("profiles: entry", entry);
+        
+        if (entry.profileName === "")
+          continue;
+
+        var urlOptions = entry.profileUrlOptions;
+        if (urlOptions === null)
+          urlOptions = "";
+        if (urlOptions && !urlOptions.startsWith("&")) {
+          urlOptions = "&" + urlOptions;
+        }
+        html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';
+      }
+      $('#dbx-quick-access-profile-list').html(html + htmlCurrent);
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+  }); // end: ajax call
+  
+  //-----------------------------------------------------------
+  // get ALARMS
+  //-----------------------------------------------------------
+  function dbxTuneCheckActiveAlarms() 
+  {
+    console.log("get active-alarms: /api/alarm/active");
+    $.ajax(
+    {
+      url: "api/alarm/active",
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+        
+      success: function(data, status) 
+      {
+        // console.log("RECEIVED DATA: "+data);
+        var jsonResp = JSON.parse(data);
+          
+        // update ACTIVE Alarm view (note: there can be several servers)
+        var activeAlarmsDiv = document.getElementById("active-alarms");
+
+        var alarmSrvCount = 0;
+        var alarmSumCount = 0;
+
+        // remove 'btn-danger' from all server buttons
+        let btnQaNormal = document.querySelectorAll('*[id^="btn-qa-normal-"]');
+        let btnQaAll    = document.querySelectorAll('*[id^="btn-qa-all-"]');
+        btnQaNormal.forEach( function(item) { item.classList.remove('btn-danger'); } );
+        btnQaAll   .forEach( function(item) { item.classList.remove('btn-danger'); } );
+
+        // ADD 'btn-success' from all server buttons (which would be the GOOD STATE)
+        // if we have problems... set it to "danger" if we see errors
+        btnQaNormal.forEach( function(item) { item.classList.add('btn-success'); } );
+        btnQaAll   .forEach( function(item) { item.classList.add('btn-success'); } );
+
+        // remove all old alarms (new/active will be inserted again)
+        let activeAlarmDivs = document.querySelectorAll('*[id^="active-alarms-srv-"]');
+        activeAlarmDivs.forEach( function(item) { item.remove(); } );
+
+        // reorder: stuff a outer "map", which is the server, and all it's alarms
+        var srvAlarmMap = {}; // new object (this will be the Map with <String>, Array<AlarmEntry>)
+        for (var i=0; i<jsonResp.length; i++) {
+          var srvName = jsonResp[i].srvName;
+
+          // Check if KEY exists, if NOT create an array, where we will "stuff" AlarmEntries
+          if ( ! srvAlarmMap.hasOwnProperty(srvName) )
+            srvAlarmMap[srvName] = [];
+
+          srvAlarmMap[srvName].push(jsonResp[i]);
+        }
+        if (_debug > 1)
+          console.log("dbxTuneCheckActiveAlarms(): srvAlarmMap:",srvAlarmMap);
+
+        // Loop the alarm MAP
+        for (var key in srvAlarmMap) {
+          var entry = srvAlarmMap[key];
+          // var graphServerName = entry.srvName;
+          var graphServerName = key;
+
+          alarmSrvCount++;
+
+          // Set the button to RED if we got an alarm on that server
+          if (document.getElementById("btn-qa-normal-"+graphServerName) != null)
+          {
+            document.getElementById("btn-qa-normal-"+graphServerName).classList.remove('btn-success');
+            document.getElementById("btn-qa-all-"   +graphServerName).classList.remove('btn-success');
+
+            document.getElementById("btn-qa-normal-"+graphServerName).classList.add('btn-danger');
+            document.getElementById("btn-qa-all-"   +graphServerName).classList.add('btn-danger');
+          }
+
+          // if (_serverList.indexOf(graphServerName) == -1)
+          // {
+          // 	if (_debug > 1)
+          // 		console.log("dbxTuneCheckActiveAlarms(): SKIPPING... NOT in the server list. graphServerName="+graphServerName+", serverlist:", _serverList);
+          // 	continue;
+          // }
+          if (_debug > 1)
+            console.log("dbxTuneCheckActiveAlarms(): graphServerName="+graphServerName+", entry:", entry);
+
+          // If any Active alarms create a new SRV-DIV and a table...
+          if (typeof graphServerName !== 'undefined')
+          {
+            let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
+            if (srvDiv === null)
+            {
+              srvDiv = document.createElement("div");
+              srvDiv.id = "active-alarms-srv-"+graphServerName;
+
+              activeAlarmsDiv.appendChild(srvDiv);
+            }
+            let tab = jsonToTable(entry);
+            srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
+            srvDiv.appendChild(tab);
+            srvDiv.appendChild(document.createElement("br"));
+            
+            alarmSumCount += entry.length;
+
+            if (_debug > 1)
+              console.log("TABLE for srv'"+graphServerName+"': ", tab);
+          }
+          else // Remove the SRV-DIV if no active alarm
+          {
+            let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
+            if (srvDiv !== null)
+              activeAlarmsDiv.removeChild(srvDiv);
+          }
+        }
+
+        // should we show the activeAlarmsDiv or not?
+        if (_debug > 0)
+          console.log("activeAlarmsDiv.getElementsByTagName('*').length: "+activeAlarmsDiv.getElementsByTagName('*').length);
+        if (activeAlarmsDiv.getElementsByTagName('*').length > 0)
+        {
+          activeAlarmsDiv.style.visibility = 'visible';
+          pageTitleNotification.on("---ALARM---", 1000);
+        }
+        else
+        {
+          activeAlarmsDiv.style.visibility = 'hidden';
+          pageTitleNotification.off();
+        }
+        
+        // Set how many ACTIVE ALarms we have...
+        document.getElementById('dbx-alarm-cnt').innerHTML = alarmSumCount;
+        // Set how many servers
+        if (alarmSrvCount === 0)
+          document.getElementById('dbx-alarm-srv-cnt').innerHTML = ".";
+        else
+          document.getElementById('dbx-alarm-srv-cnt').innerHTML = ", in " + alarmSrvCount + " Server(s).";
+      },
+      error: function(xhr, desc, err) 
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+      }
+    }); // end: ajax call
+  } // end: function
+
+  //-----------------------------------------------------------
+  // update "### seconds ago"
+  //-----------------------------------------------------------
+  function updateLastUpdatedClock() {                   
+    var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);
+    document.getElementById('dbx-alarm-age').innerHTML = ageInSec;
+
+    // do we need to refresh???
+    if (_refresh > 0 && ageInSec >= _refresh)
+    {
+      dbxTuneCheckActiveAlarms();
+      lastUpdateTime = new Date();
+    }
+
+    setTimeout(updateLastUpdatedClock, 1000); 
+  }                                                     
+  var lastUpdateTime = new Date();
+  updateLastUpdatedClock();
+</script>
+</body>
+</html>

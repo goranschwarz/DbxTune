@@ -1,0 +1,424 @@
+<!-- ============================================================================================ -->
+<!-- == NOTE: This file is included from all other tooltip provider files ======================= -->
+<!-- ============================================================================================ -->
+
+
+<!-- ============================================================================================ -->
+<!-- == SQL Window Command ====================================================================== -->
+<!-- ============================================================================================ -->
+
+
+<!-- == go =================================== -->
+<Entry>
+    <CmdName>go</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description><![CDATA[Terminator that sends of a SQL <i>batch</i> to the server.]]></Description>
+    <Syntax>
+<![CDATA[
+<pre>
+go [#1 [wait #2]] [ | {grep | egrep | bcp} ]
+</pre>
+#1 = Number of times to repeat the command<br>
+#2 = Ms to sleep after each batch execution<br>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: executes the command 10 times.<BR>
+       <CODE>insert into t1(c1,c2,c3) values(1,2,3)</CODE><br>
+       <CODE>go 10</CODE><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: executes the command 10 times, and waits 100 milliseconds betwen execution.<BR>
+       <CODE>select timeNow = getdate()</CODE><br>
+       <CODE>go 10 wait 100</CODE><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+</Entry>
+
+
+<!-- == reset =================================== -->
+<Entry>
+    <CmdName>reset</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Reset the command batch, and continue to read. next 'go' will execute</Description>
+    <Syntax><![CDATA[<pre>reset</pre>]]></Syntax>
+</Entry>
+
+
+<!-- == exit =================================== -->
+<Entry>
+    <CmdName>exit</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Stop here, do not execute any more SQL batches (same as quit)</Description>
+    <Syntax><![CDATA[<pre>exit</pre>]]></Syntax>
+</Entry>
+
+
+<!-- == quit =================================== -->
+<Entry>
+    <CmdName>quit</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Stop here, do not execute any more SQL batches (same as exit)</Description>
+    <Syntax><![CDATA[<pre>exit</pre>]]></Syntax>
+</Entry>
+
+
+<!-- == \prep =================================== -->
+<Entry>
+    <CmdName>prep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a statement (via PreparedStatement)</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\prep insert into t1 values(?) :(int=98)
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: Insert some values.<BR>
+       <CODE>\prep insert into t1 values(?,?) :(int=98, string='Test value')</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Insert a picture into a table with a BLOB column.<BR>
+       <CODE>\prep insert into t1 values(?,?,?) :(int=98, string=null, blob='c:\some\path\picture.gif')</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Insert a picture into a table with a BLOB column, fetch the image from the Network.<BR>
+       <CODE>\prep insert into t1 values(?,?,?) :(int=98, string='some str', blob='http://www.dbxtune.com/images/sample3.png')</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \call =================================== -->
+<Entry>
+    <CmdName>call</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure (via CallableStatement)</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\call procName(?) :(int=99)
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: Simple call of a proceedure, with 3 input parameters<BR>
+       <CODE>\call procName1(?,?,?) :(string='a string', int=99, string=null)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Calls a procedure where last parameter is an output variable<BR>
+       <CODE>\call procName2(?,?) :(int=99, string=null out)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Call an Oracle procedure which has a SYS_REFCURSOR (a ResultSet) as output parameter<BR>
+       <CODE>\call oracleProc(?) :(ora_rs)</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \exec =================================== -->
+<Entry>
+    <CmdName>exec</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure (via RPC if possible), and get the return code from the procedure</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\exec procName(?) :(int=99)
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: Simple execute a proceedure, with 3 input parameters<BR>
+       <CODE>\exec procName1(?,?,?) :(string='a string', int=99, string=null)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute a procedure where last parameter is an output variable<BR>
+       <CODE>\exec procName2(?,?) :(int=99, string=null out)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute an Oracle procedure which has a SYS_REFCURSOR (a ResultSet) as output parameter<BR>
+       <CODE>\exec oracleProc(?) :(ora_rs)</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\rpc</SeeAlso>
+</Entry>
+
+
+
+<!-- == \rpc =================================== -->
+<Entry>
+    <CmdName>rpc</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Execute a stored procedure, but enforced via RPC (Remote Procedure Call). and get the return code from the procedure</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\rpc procName(?) :(int=99)
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: Simple execute a proceedure, with 3 input parameters<BR>
+       <CODE>\rpc procName1(?,?,?) :(string='a string', int=99, string=null)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute a procedure where last parameter is an output variable<BR>
+       <CODE>\rpc procName2(?,?) :(int=99, string=null out)</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: Execute an Oracle procedure which has a SYS_REFCURSOR (a ResultSet) as output parameter<BR>
+       <CODE>\rpc oracleProc(?) :(ora_rs)</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\exec</SeeAlso>
+</Entry>
+
+
+<!-- == grep =================================== -->
+<Entry>
+    <CmdName>grep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Grep the output from a command and search for specific rows</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+sp_who
+go | grep some_string
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>egrep, bcp</SeeAlso>
+</Entry>
+
+
+<!-- == egrep =================================== -->
+<Entry>
+    <CmdName>egrep</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Grep the output (using regular expresion) from a command and search for specific rows</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+sp_who
+go | grep some_string
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>grep, bcp</SeeAlso>
+</Entry>
+
+
+<!-- == bcp =================================== -->
+<Entry>
+    <CmdName>bcp</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>do 'bcp' on a resultset into another server</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+select * from tab1
+go | bcp [[dbname.]owner.]tablename [-U user] [-P passwd] [-S servername|host:port] [-b]
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>grep, egrep</SeeAlso>
+</Entry>
+
+
+<!-- == tofile =================================== -->
+<Entry>
+    <CmdName>tofile</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Write the resultset into a file instead of display it on the screen. This is good for big resultsets</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+select * from tab1
+go | tofile [-a] [-o] [-h] [-f <str>] [-r <str>] [-c <charset>] [-q] [-i] [-n] filename
+
+/*
+Options:
+  -a,--append                  Append to file.
+  -o,--overwrite               If file already exists overwrite it.
+  -h,--header                  Write header/column names       DEFAULT=false
+  -f,--field_terminator <str>  Character(s) between fields     DEFAULT=\t
+  -r,--row_terminator <str>    Character(s) to terminate a row DEFAULT=\n
+  -c,--charset <name>          Java Characterset name          DEFAULT=UTF8
+  -q,--query                   Print Query at the top of the file
+  -i,--rsinfo                  Print JDBC ResultSet info in the file
+  -n,--noguiquestion           Do not show GUI questions for file overwrite
+*/
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+FIXME
+]]>
+    </Example>
+    <SeeAlso>grep, egrep</SeeAlso>
+</Entry>
+
+
+<!-- == \loadfile =================================== -->
+<Entry>
+    <CmdName>loadfile</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Load a file (maybe a CSV, Comma Separated Value) file into a table</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\loadfile -T tablename filename
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: simple.<BR>
+       <CODE>\loadfile -T t1 c:\tmp\t1.csv</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: xxxxxx.<BR>
+       <CODE>\loadfile -T t1 c:\tmp\t1.csv</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: xxxxxx.<BR>
+       <CODE>\loadfile -T t1 c:\tmp\t1.csv</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\loadfile</SeeAlso>
+</Entry>
+
+
+<!-- == \ddlgen =================================== -->
+<Entry>
+    <CmdName>ddlgen</CmdName>
+    <Module>SQL Window Command</Module>
+    <Description>Generate DDL from some DBMS objects</Description>
+    <Syntax>
+<![CDATA[
+<pre>
+\ddlgen -h FIXME
+</pre>
+]]></Syntax>
+    <Example>
+<![CDATA[
+<UL>
+   <LI>
+       <B>Example 1</B>: for all object in a database<BR>
+       <CODE>\ddlgen -d [dbname]</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 1</B>: for table<BR>
+       <CODE>\ddlgen -t tablename</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 2</B>: for procedure.<BR>
+       <CODE>\ddlgen -p procname</CODE><br><br>
+   </LI>
+   <LI>
+       <B>Example 3</B>: for a view.<BR>
+       <CODE>\ddlgen -v viewname</CODE><br><br>
+   </LI>
+</UL>
+]]>
+    </Example>
+    <SeeAlso>\ddlgen</SeeAlso>
+</Entry>
+
+
+
+
+
+
+<!-- ============================================================================================ -->
+<!-- == Code Completion ========================================================================= -->
+<!-- ============================================================================================ -->
+
+<!-- == :a =================================== -->
+<Entry>
+    <CmdName>:a</CmdName>
+    <Module>Code Completion</Module>
+    <Description>Present all known/used schemas in the current catalog.</Description>
+    <Syntax><![CDATA[<code>:a</code><i>&lt;Ctrl+Space&gt;</i>]]></Syntax>
+</Entry>
+
+
+<!-- == use =================================== -->
+<Entry>
+    <CmdName>use</CmdName>
+    <Module>Code Completion</Module>
+    <Description>Present all known catalogs in the server, starting with 'temp'</Description>
+    <Syntax><![CDATA[<code>use temp</code><i>&lt;Ctrl+Space&gt;</i>]]></Syntax>
+</Entry>
+
+
+<!-- == exec =================================== -->
+<Entry>
+    <CmdName>exec</CmdName>
+    <Module>Code Completion</Module>
+    <Description>Present all stored procedures, starting with the char 'a'</Description>
+    <Syntax><![CDATA[<code>exec a</code><i>&lt;Ctrl+Space&gt;</i>]]></Syntax>
+</Entry>
+
+
+<!-- == xxx =================================== -->
+<Entry>
+    <CmdName>xxx</CmdName>
+    <Module>
+    DUMMY TEST
+    </Module>
+    <Description>TEST</Description>
+    <Syntax>
+    <![CDATA[
+ <A HREF="http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html">http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html</A>
+    ]]>
+    </Syntax>
+	<SeeAlso>
+    <![CDATA[
+ <A HREF="http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html">http://infocenter.sybase.com/help/topic/com.sybase.infocenter.dc32410.1571100/doc/html/san1273713895825.html</A>
+    ]]>
+	</SeeAlso>
+</Entry>

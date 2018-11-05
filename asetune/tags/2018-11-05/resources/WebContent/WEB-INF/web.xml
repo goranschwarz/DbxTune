@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!--
+<!DOCTYPE web-app
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+-->
+<!DOCTYPE web-app>
+
+
+<web-app>
+
+	<servlet>
+		<servlet-name>AdminServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.AdminServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>AlarmLogServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.AlarmLogServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>AlarmActiveController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.AlarmActiveController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>AlarmHistoryController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.AlarmHistoryController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DbxTuneLogServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DbxTuneLogServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DbxTuneLogTailWebSocketServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DbxTuneConfServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DbxTuneConfServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DownloadServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DownloadServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>DummyServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DummyServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>OverviewServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.OverviewServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>PcsReceiver</servlet-name>
+		<servlet-class>com.asetune.central.controllers.CentralPcsReceiverController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>PcsQueueInfo</servlet-name>
+		<servlet-class>com.asetune.central.controllers.PcsQueueInfoController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>ShutdownServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ShutdownServlet</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>ChartBroadcastServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ChartBroadcastServlet</servlet-class>
+		<async-supported>true</async-supported>
+	</servlet>
+	
+	<servlet>
+		<servlet-name>SessionsController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.SessionsController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>GraphPropertiesController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.GraphPropertiesController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>GraphProfilesController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.GraphProfilesController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>GraphDataController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.GraphDataController</servlet-class>
+	</servlet>
+
+	<servlet>
+		<servlet-name>ChartBroadcastWebSocketServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.ChartBroadcastWebSocketServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ChartBroadcastWebSocketServlet</servlet-name>
+		<url-pattern>/api/chart/broadcast-ws</url-pattern>
+	</servlet-mapping>
+
+
+	<servlet-mapping>
+		<servlet-name>AdminServlet</servlet-name>
+		<url-pattern>/admin</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>AlarmLogServlet</servlet-name>
+		<url-pattern>/alarmLog</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DbxTuneLogServlet</servlet-name>
+		<url-pattern>/log</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DbxTuneLogTailWebSocketServlet</servlet-name>
+		<url-pattern>/logtail</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DbxTuneConfServlet</servlet-name>
+		<url-pattern>/conf</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DownloadServlet</servlet-name>
+		<url-pattern>/download-local-dbxtune</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DummyServlet</servlet-name>
+		<url-pattern>/dummy</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>OverviewServlet</servlet-name>
+		<url-pattern>/overview</url-pattern>
+	</servlet-mapping>
+ 
+	<servlet-mapping>
+		<servlet-name>PcsReceiver</servlet-name>
+		<url-pattern>/api/pcs/receiver</url-pattern>
+	</servlet-mapping>
+ 
+	<servlet-mapping>
+		<servlet-name>PcsQueueInfo</servlet-name>
+		<url-pattern>/api/pcs/queueInfo</url-pattern>
+	</servlet-mapping>
+ 
+	<servlet-mapping>
+		<servlet-name>ShutdownServlet</servlet-name>
+		<url-pattern>/admin/shutdown</url-pattern>
+	</servlet-mapping>
+ 
+	<servlet-mapping>
+		<servlet-name>ChartBroadcastServlet</servlet-name>
+		<url-pattern>/api/chart/broadcast-sse</url-pattern>
+	</servlet-mapping>
+ 
+	<servlet-mapping>
+		<servlet-name>SessionsController</servlet-name>
+		<url-pattern>/api/sessions</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>GraphPropertiesController</servlet-name>
+		<url-pattern>/api/graphs</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>GraphProfilesController</servlet-name>
+		<url-pattern>/api/graph/profiles</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>GraphDataController</servlet-name>
+		<url-pattern>/api/graph/data</url-pattern>
+	</servlet-mapping>
+	
+	<servlet-mapping>
+		<servlet-name>AlarmActiveController</servlet-name>
+		<url-pattern>/api/alarm/active</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>AlarmHistoryController</servlet-name>
+		<url-pattern>/api/alarm/history</url-pattern>
+	</servlet-mapping>
+
+ 
+ <!-- 
+    <servlet id="jsp">
+        <servlet-name>jsp</servlet-name>
+        <servlet-class>org.apache.jasper.servlet.JspServlet</servlet-class>
+        <init-param>
+            <param-name>logVerbosityLevel</param-name>
+            <param-value>DEBUG</param-value>
+        </init-param>
+        <init-param>
+            <param-name>fork</param-name>
+            <param-value>>false</param-value>
+        </init-param>
+        <init-param>
+            <param-name>keepgenerated</param-name>
+            <param-value>>true</param-value>
+        </init-param>
+        <load-on-startup>0</load-on-startup>
+    </servlet>
+ 
+    <servlet-mapping>
+        <servlet-name>jsp</servlet-name>
+        <url-pattern>*.jsp</url-pattern>
+        <url-pattern>*.jspf</url-pattern>
+        <url-pattern>*.jspx</url-pattern>
+        <url-pattern>*.xsp</url-pattern>
+        <url-pattern>*.JSP</url-pattern>
+        <url-pattern>*.JSPF</url-pattern>
+        <url-pattern>*.JSPX</url-pattern>
+        <url-pattern>*.XSP</url-pattern>
+    </servlet-mapping>
+ -->
+ 
+	<!-- http://www.thecoderscorner.com/team-blog/hosting-servers/17-setting-up-role-based-security-in-tomcat/ -->
+<!--
+	<security-role>
+		<role-name>admin</role-name>
+	</security-role>
+
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>admin pages</web-resource-name>
+			<url-pattern>/admin/*</url-pattern>
+		</web-resource-collection>
+		<auth-constraint>
+			<role-name>admin</role-name>
+		</auth-constraint>
+	</security-constraint>
+-->
+
+	<login-config>
+		<auth-method>BASIC</auth-method>
+		<realm-name>DbxTuneCentralRealm</realm-name>
+	</login-config> 
+
+	<security-constraint>
+		<web-resource-collection>
+	        <web-resource-name>Secure resources</web-resource-name>
+	        <url-pattern>/admin/*</url-pattern>
+	    </web-resource-collection>
+	    <auth-constraint>
+	        <role-name>admin</role-name>
+	    </auth-constraint>
+	</security-constraint>
+
+
+<!--
+	<login-config>
+
+		<auth-method>FORM</auth-method>
+		<form-login-config>
+			<form-login-page>/login/login.jsp</form-login-page>
+			<form-error-page>/login/loginfail.jsp</form-error-page>
+		</form-login-config>
+	</login-config> 
+--> 
+
+</web-app> 

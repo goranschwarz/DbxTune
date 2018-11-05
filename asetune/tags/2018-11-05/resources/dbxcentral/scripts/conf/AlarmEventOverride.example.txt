@@ -1,0 +1,55 @@
+## for CPU stuff, only report after 1 hour
+AlarmEventHighCpuUtilization.raise.delay = 3600
+AlarmEventOsLoadAverage.raise.delay = 3600
+AlarmEventRunQueueLength.raise.delay = 3600
+
+##--------------------------------------------------------
+## Change raise delay
+##--------------------------------------------------------
+#AlarmEventBlockingLockAlarm.raise.delay = ###
+#AlarmEventFullTranLog.raise.delay = ###
+#AlarmEventHighCpuUtilization.raise.delay = ###
+#AlarmEventLastBackupFailed.raise.delay = ###
+#AlarmEventLongRunningDetachedTransaction.raise.delay = ###
+#AlarmEventLongRunningTransaction.raise.delay = ###
+#AlarmEventLowDbFreeSpace.raise.delay = ###
+#AlarmEventLowLogFreeSpace.raise.delay = ###
+#AlarmEventLowOsDiskFreeSpace.raise.delay = ###
+#AlarmEventOldBackup.raise.delay = ###
+#AlarmEventOsLoadAverage.raise.delay = ###
+#AlarmEventProcedureCacheLowOnMemory.raise.delay = ###
+#AlarmEventProcedureCacheOutOfMemory.raise.delay = ###
+#AlarmEventRunQueueLength.raise.delay = ###
+#AlarmEventSrvDown.raise.delay = ###
+#AlarmEventStatementCacheAboveConfig.raise.delay = ###
+
+#AlarmEventRsDbQueueSize.raise.delay = ###
+#AlarmEventRsReplicationAge.raise.delay = ###
+#AlarmEventRsSdUsage.raise.delay = ###
+#AlarmEventRsWsState.raise.delay = ###
+
+
+##--------------------------------------------------------
+## Change CATEGORY
+##--------------------------------------------------------
+#AlarmEventBlockingLockAlarm.category = XXX
+#AlarmEventFullTranLog.category = XXX
+#AlarmEventHighCpuUtilization.category = XXX
+#AlarmEventLastBackupFailed.category = XXX
+#AlarmEventLongRunningDetachedTransaction.category = XXX
+#AlarmEventLongRunningTransaction.category = XXX
+#AlarmEventLowDbFreeSpace.category = XXX
+#AlarmEventLowLogFreeSpace.category = XXX
+#AlarmEventLowOsDiskFreeSpace.category = XXX
+#AlarmEventOldBackup.category = XXX
+#AlarmEventOsLoadAverage.category = XXX
+#AlarmEventProcedureCacheLowOnMemory.category = XXX
+#AlarmEventProcedureCacheOutOfMemory.category = XXX
+#AlarmEventRunQueueLength.category = XXX
+#AlarmEventSrvDown.category = XXX
+#AlarmEventStatementCacheAboveConfig.category = XXX
+
+#AlarmEventRsDbQueueSize.category = XXX
+#AlarmEventRsReplicationAge.category = XXX
+#AlarmEventRsSdUsage.category = XXX
+#AlarmEventRsWsState.category = XXX

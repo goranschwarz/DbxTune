@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>DbxTune - Central</title>
+
+  <!-- 
+    =======================================================================
+    == JS imports - JAVA SCRIPTS GOES HERE
+    =======================================================================
+  -->
+  <!-- JS: JQuery -->
+  <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
+  
+  <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
+  <script type="text/javascript" src="/scripts/moment/moment.js"></script>
+  <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
+
+  <!-- JS: Bootstrap -->
+  <script src="/scripts/popper/1.12.9/popper.min.js"></script>
+  <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+
+  <!-- JS: DbxCentral -->
+  <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
+
+  <!-- 
+    =======================================================================
+    == CSS imports - STYLES SHEETS GOES HERE
+    =======================================================================
+  -->
+  <!-- CSS: DbxCentral -->
+  <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
+
+  <!-- CSS: Bootstrap -->
+  <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
+
+  <!-- CSS: Font Awsome -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+  <!-- Local CSS -->
+  <style type='text/css'>
+    /* table {border-collapse: collapse;}
+    th, td {border: 1px solid black; text-align: left; padding: 2px;}
+    tr:nth-child(even) {background-color: #f2f2f2;} */
+    .dbx-quick-access-tooltip-table table {border-collapse: collapse;}
+    .dbx-quick-access-tooltip-table th, td {border: 1px solid white; text-align: left; padding: 2px;}
+
+    .tooltip-inner { max-width: 1000px; }
+
+    .jumbotron{ margin-top:-30px; }
+  </style>
+
+</head>
+
+<body>
+  <!-- NavBar that works, except for: iphone... -->
+  <nav class="navbar navbar-expand-md navbar-dark sticky-top bg-dark mb-0">
+    <a class="navbar-brand" href="/">DbxCentral</a>
+    <!-- <a class="navbar-brand" href="#"><img style="	width: 32px;" src="images/dbxcentral_32.png">DbxCentral</a> -->
+    <!-- <a class="navbar-brand" href="#"><img style="	width: 16px;" src="images/dbxcentral_16.png">DbxCentral</a> -->
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/overview">Servers</a>
+        </li>
+        <li class="nav-item active">
+          <a class="nav-link" href="/admin/admin.html">Admin</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/desktop_app.html">Desktop App</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
+  <main role="main" class="container">
+    <div class="jumbotron">
+      <h1>DbxTune - Administration</h1>
+      <p class="lead">Administration of ...</p>
+      <p></p>
+
+      Remove Any off the below servers... (a confirm dialog will be displayed)
+      <div id="dbx-remove-server-list">
+          <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+      </div>
+
+      Disable Any off the below servers... (it will not show up in the server list)
+      <div id="dbx-disable-server-list">
+          <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+      </div>
+
+      Enable Any off the below servers... (below list has been disabled)
+      <div id="dbx-enable-server-list">
+          <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+      </div>
+
+      Add a server
+      <div id="dbx-add-server-div">
+        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add 'Servers' to the configuration." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add...</a>
+      </div>
+
+      Restart DbxCentral
+      <div id="dbx-restart-server-div">
+        <!-- <a class="btn btn-sm btn-primary mb-2" onclick="restartServer()" role="button">Restart</a> -->
+        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance. no collectors will be restarted." onclick="restartServer('normal')">Restart</button>
+        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'compact'. no collectors will be restarted." onclick="restartServer('compact')">Restart (with compact)</button>
+        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'defrag'. no collectors will be restarted." onclick="restartServer('defrag')">Restart (with defrag)</button>
+        <!-- <span id="dbx-server-restart-spinner"><img src="/images/busy_spinner.gif" height="32" width="32"></span> -->
+        <span id="dbx-server-restart-feedback"></span>
+        <span id="dbx-server-restart-spinner"><img src="/images/ajax-loader.gif"></span>
+      </div>
+
+      <p><br></p>
+      Logout as 'admin'
+      <div id="dbx-logout-div">
+        <button class="btn btn-sm mb-2" data-toggle="tooltip" data-placement="right" title="Logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Error message: browser support -->
+  <div id="browser-not-supported"></div>
+
+  <div id="delete-result"></div>
+
+
+  <!-- Modal: Confirm dialog -->
+  <div class="modal fade" id="dbx-confirm-delete-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-confirm-delete-dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dbx-confirm-delete-dialog-title"><b>WARNING:</b> Removal of server '<b class="title"></b>' is irreversible</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          When removing the server, the following will be done.
+          <ul>
+            <li>Remove Server from Dbx Central Meta Data tables.</li>
+            <li>Remove Server Data from Dbx Central database (db schema '<b class="title"></b>').</li>
+            <li>Remove all DBMS recording(s), <i>H2 database files</i></li>
+            <li>Remove Server from <code>conf/SERVER_LIST</code></li>
+            <li>Remove Log files for the Server</li>
+          </ul>
+          A report will show, what was possible to remove (if you press: Remove)
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-danger btn-ok">Remove Server</button>
+        </div>
+      </div>
+    </div>
+  </div>  
+
+
+<script>
+  // Hide spinner at start
+  $('#dbx-server-restart-spinner').hide();
+
+  $('#dbx-confirm-delete-dialog').on('click', '.btn-ok', function(e) {
+      var modalDiv = $(e.delegateTarget);
+      var serverName = $(this).data('recordId');
+      console.log("#dbx-confirm-delete-dialog: serverName: "+serverName);
+      modalDiv.addClass('working');
+      removeServer(serverName, modalDiv);
+      // $.ajax({url: '/api/record/' + id, type: 'DELETE'})
+      // $.post('/api/record/' + id).then()
+      // setTimeout(function() {
+      //     modalDiv.modal('hide').removeClass('working');
+      // }, 1000)
+  });
+  $('#dbx-confirm-delete-dialog').on('show.bs.modal', function(e) {
+      var data = $(e.relatedTarget).data();
+      console.log("#dbx-confirm-delete-dialog: data.recordId: "+data.recordId);
+      $('.title', this).text(data.recordTitle);
+      $('.btn-ok', this).data('recordId', data.recordId);
+  });
+
+  /**
+   * Restart server
+   */
+  function waitforRestartServer() 
+  {
+    $.ajax(
+    {
+      //url: "/dummyfile.html",
+      url: "/dummy", // a servlet is called dummy
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+      
+      success: function(data, status) 
+      {
+        $('#dbx-server-restart-spinner').hide();
+        $('#dbx-server-restart-feedback').text('Server restarted!').fadeOut(3000);
+        console.log("Content.status: " + status);
+        console.log("Content: " + data);
+      },
+      error: function(xhr, desc, err) 
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+
+        let feedbackDiv = document.getElementById('dbx-server-restart-feedback');
+        feedbackDiv.innerHTML += '.';
+
+        setTimeout(waitforRestartServer, 1000);
+      }
+    }); // end: ajax call
+  }
+
+  /**
+   * Restart server
+   */
+  function restartServer(restartType) 
+  {
+    var urlParams="&h2ShutdownType=IMMEDIATELY";
+    if (restartType === "compact")
+    {
+      urlParams="&h2ShutdownType=COMPACT";
+    }
+    else if (restartType === "defrag")
+    {
+      urlParams="&h2ShutdownType=DEFRAG";
+    }
+
+    $.ajax(
+    {
+      url: "/admin/shutdown?password=secret&restart"+urlParams,
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+      
+      success: function(data, status) 
+      {
+        $('#dbx-server-restart-spinner').show();
+        $('#dbx-server-restart-feedback').text("Waiting for restart...").show();
+        setTimeout(waitforRestartServer, 4000);
+      },
+      error: function(xhr, desc, err) 
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+        $('#dbx-server-restart-feedback').text("Connect to server failed: "+err).show();
+      }
+    }); // end: ajax call
+  }
+
+
+  // function removeServerConfirmDialog(serverName)
+  // {
+  //   $("#dbx-confirm-delete-dialog").modal("show");
+  // }
+
+  function setServerStatus(action, serverName)
+  {
+    console.log("setServerStatus: action='"+action+"', serverName='"+serverName+"'.");
+    // alert("setServerStatus: action='"+action+"', serverName='"+serverName+"'.");
+
+    $.ajax(
+    {
+      url: "/admin?op="+action+"Server&name="+serverName,
+      type: 'get',
+      async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+      
+      success: function(data, status) 
+      {
+        var jsonResp = JSON.parse(data);
+        var actions = jsonResp.actions;
+        console.log("actions: "+actions, actions);
+
+        var tab = "<table class='table table-hover'>";
+        tab += "<thead class='thead-light'><tr>";
+        tab += "  <th scope='col'>Action</th>";
+        tab += "  <th scope='col'>Status</th>";
+        tab += "  <th scope='col'>Message</th>";
+        tab += "</tr></thead>";
+        tab += "<tbody>";
+        for (var key in actions) {
+          if (actions.hasOwnProperty(key)) {
+            tab += "<tr>";
+            tab += "  <td nowrap scope='row'>"+key+"</td>";
+            tab += "  <td nowrap>"+actions[key].status+"</td>";
+            tab += "  <td nowrap>"+actions[key].message+"</td>";
+            tab += "</tr>";
+          }
+        }
+        tab += "</tbody>";
+        tab += "</table>";
+
+        var refreshBut = '<a class="btn btn-sm btn-primary mb-2" href="/admin/admin.html" role="button">Refresh Page...</a>';
+        var deleteResultDiv = document.getElementById("delete-result");
+        deleteResultDiv.innerHTML = "<p>Results when changing status for: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
+      },
+      error: function(xhr, desc, err) 
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+
+        alert("Error: action='"+action+"', serverName='"+serverName+"'. Details: " + desc + "\nError: " + err);
+      }
+    }); // end: ajax call
+
+  }
+
+  /**
+   * remove Server
+   */
+  function removeServer(serverName, modalDiv)
+  {
+    console.log("Removing Server: "+serverName);
+    $.ajax(
+    {
+      url: "/admin?op=removeServer&name="+serverName,
+      type: 'get',
+      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+      
+      success: function(data, status) 
+      {
+        modalDiv.modal('hide').removeClass('working');
+
+        var jsonResp = JSON.parse(data);
+        var actions = jsonResp.actions;
+        console.log("actions: "+actions, actions);
+
+        // var tab = jsonToTable(jsonResp.actions);
+        var tab = "<table class='table table-hover'>";
+        tab += "<thead class='thead-light'><tr>";
+        tab += "  <th scope='col'>Action</th>";
+        tab += "  <th scope='col'>Status</th>";
+        tab += "  <th scope='col'>Message</th>";
+        tab += "</tr></thead>";
+        tab += "<tbody>";
+        for (var key in actions) {
+          if (actions.hasOwnProperty(key)) {
+            // console.log(key + " -> " + actions[key]);
+            tab += "<tr>";
+            tab += "  <td nowrap scope='row'>"+key+"</td>";
+            tab += "  <td nowrap>"+actions[key].status+"</td>";
+            tab += "  <td nowrap>"+actions[key].message+"</td>";
+            tab += "</tr>";
+          }
+        }
+        tab += "</tbody>";
+        tab += "</table>";
+
+        var refreshBut = '<a class="btn btn-sm btn-primary mb-2" href="/admin/admin.html" role="button">Refresh Page...</a>';
+        var deleteResultDiv = document.getElementById("delete-result");
+        deleteResultDiv.innerHTML = "<p>Results when removing: <b>"+serverName+"</b></p>"+tab+"<br>"+refreshBut;
+      },
+      error: function(xhr, desc, err) 
+      {
+        console.log(xhr);
+        console.log("Details: " + desc + "\nError: " + err);
+      }
+    }); // end: ajax call
+  }
+  
+  /**
+   * logout from basic authentication...
+   * simply make a "dummy" call with a not existing user
+   */
+  function logout()
+  {
+    console.log("logout...");
+    $.ajax(
+    {
+      url: "/admin/admin.html",
+      type: "get",
+      dataType: 'json',
+      async: true,
+      username: "some_username_that_doesnt_exist",
+      password: "any_stupid_password",
+      data: '{ "dummy" }'
+    })
+    //In our case, we WANT to get access denied, so a success would be a failure.
+    .done(function() {
+      alert('Error, when trying to logout...')
+    })
+    //Likewise, a failure *usually* means we succeeded.
+    //set window.location to redirect the user to wherever you want them to go
+    .fail(function() {
+      window.location = "/";
+    });
+  }
+
+  //-----------------------------------------------------------
+  // get SERVERS
+  //-----------------------------------------------------------
+	$.ajax(
+	{
+    url: "/api/sessions",
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+		
+		success: function(data, status) 
+		{
+			// console.log("RECEIVED DATA: "+data);
+			var jsonResp = JSON.parse(data);
+			
+      var htmlRemove  = "";
+      var htmlEnable  = "";
+      var htmlDisable = "";
+      for (var i=0; i<jsonResp.length; i++) 
+      {
+          var entry = jsonResp[i];
+
+          var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
+          var lastSampleWarnThresh   = 5; // # minutes
+
+          var tt =
+          "<table class='table table-sm'>"+
+          "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
+          "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
+          "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
+          "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
+          "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
+          "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
+          "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
+          "</table>";
+          // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
+          // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
+          // tt = entry.serverDescription;
+
+          // set button class depending on how long ago since we got any sample for this server
+          var btnClass="btn-danger";
+          // if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
+          //     btnClass="btn-warning";
+
+          var btnClass="btn-danger";
+          var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
+
+          htmlRemove  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-toggle="modal" data-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
+          if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
+            htmlEnable  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+          else
+            htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';          
+      }
+      if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+      if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
+      if (htmlEnable  === "") htmlEnable  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
+
+      $('#dbx-remove-server-list').html(htmlRemove);
+      $('#dbx-disable-server-list').html(htmlDisable);
+      $('#dbx-enable-server-list').html(htmlEnable);
+
+      // Enable bootstrap tooltip...
+      $('[data-toggle="tooltip"]').tooltip();
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+  }); // end: ajax call
+  
+//   //-----------------------------------------------------------
+//   // get PROFILES
+//   //-----------------------------------------------------------
+// 	$.ajax(
+// 	{
+//     url: "/api/graph/profiles",
+// 		type: 'get',
+// 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+		
+// 		success: function(data, status) 
+// 		{
+// 			// console.log("RECEIVED DATA: "+data);
+// 			var jsonResp = JSON.parse(data);
+			
+//       var htmlCurrent = $('#dbx-quick-access-profile-list').html();
+//       var html = "";
+//       for (var i=0; i<jsonResp.length; i++) {
+//         var entry = jsonResp[i];
+        
+//         if (entry.profileName === "")
+//           continue;
+//         html += '<a class="btn btn-sm btn-primary mb-2 mr-2" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
+//       }
+//       $('#dbx-quick-access-profile-list').html(html + htmlCurrent);
+// 		},
+// 		error: function(xhr, desc, err) 
+// 		{
+// 			console.log(xhr);
+// 			console.log("Details: " + desc + "\nError: " + err);
+// 		}
+//   }); // end: ajax call
+  
+</script>
+</body>
+</html>
