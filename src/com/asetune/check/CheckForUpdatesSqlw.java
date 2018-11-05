@@ -58,7 +58,8 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		urlParams.add("clientSourceVersion",  Version.getSourceRev());
 		urlParams.add("clientAppName",        Version.getAppName());
 		urlParams.add("clientAppVersion",     Version.getVersionStr());
-//		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
+		urlParams.add("clientBuildStr",       Version.getBuildStr());
+		urlParams.add("clientExpireDate",     Version.DEV_VERSION_EXPIRE_STR);
 		urlParams.add("appStartupTime",       appStartupTime);
 
 		try

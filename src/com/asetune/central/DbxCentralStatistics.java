@@ -1,7 +1,10 @@
 package com.asetune.central;
 
+import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.asetune.central.pcs.DbxTuneSample;
 
 public class DbxCentralStatistics
 {
@@ -10,8 +13,12 @@ public class DbxCentralStatistics
 	/** one StatEntry for every server name we have received info from */
 	private ConcurrentHashMap<String, ServerEntry> _serverMap = new ConcurrentHashMap<>();
 
-	private String _shutdownReason = "";
-	
+	private String    _shutdownReason       = "";
+	private boolean   _wasRestartSpecified  = false;
+	private int       _H2DbFileSize1InMb    = -1;
+	private int       _H2DbFileSize2InMb    = -1;
+	private int       _H2DbFileSizeDiffInMb = -1;
+	private String    _pcsJdbcWriterUrl     = "";
 	
 	public static DbxCentralStatistics getInstance()
 	{
@@ -40,7 +47,7 @@ public class DbxCentralStatistics
 	 * @param srvName Name of the server to update statistics for
 	 * @return never null
 	 */
-	public ServerEntry getServerEntry(String srvName)
+	public ServerEntry getServerEntry(String srvName, DbxTuneSample sample)
 	{
 		if (_serverMap == null)
 			_serverMap = new ConcurrentHashMap<>();
@@ -48,7 +55,7 @@ public class DbxCentralStatistics
 		ServerEntry se = _serverMap.get(srvName);
 		if (se == null)
 		{
-			se = new ServerEntry();
+			se = new ServerEntry(srvName, sample);
 			_serverMap.put(srvName, se);
 		}
 		
@@ -60,31 +67,67 @@ public class DbxCentralStatistics
 	 */
 	public void clear()
 	{
-		if (_serverMap == null)
-			_serverMap = new ConcurrentHashMap<>();
-		
-		for (ServerEntry se : _serverMap.values())
-		{
-			se.clear();
-		}
+//		if (_serverMap == null)
+//			_serverMap = new ConcurrentHashMap<>();
+//		
+//		for (ServerEntry se : _serverMap.values())
+//		{
+//			se.clear();
+//		}
+		_serverMap = new ConcurrentHashMap<>();
 
-		_shutdownReason = "";
+		_shutdownReason       = "";
+		_wasRestartSpecified  = false;
+		_H2DbFileSize1InMb    = -1;
+		_H2DbFileSize2InMb    = -1;
+		_H2DbFileSizeDiffInMb = -1;
+		_pcsJdbcWriterUrl     = "";
 	}
 
 
-	public void setShutdownReason(String str) { _shutdownReason = str; }
+	public void setShutdownReason(String str)    { _shutdownReason       = str; }
+	public void setRestartSpecified(boolean b)   { _wasRestartSpecified  = b; }
+	public void setH2DbFileSize1InMb(int mb)     { _H2DbFileSize1InMb    = mb; }
+	public void setH2DbFileSize2InMb(int mb)     { _H2DbFileSize2InMb    = mb; }
+	public void setH2DbFileSizeDiffInMb(int mb)  { _H2DbFileSizeDiffInMb = mb; }
+	public void setJdbcWriterUrl(String jdbcUrl) { _pcsJdbcWriterUrl     = jdbcUrl; }
 
-	public String getShutdownReason() { return _shutdownReason; }
+	public String  getShutdownReason()       { return _shutdownReason; }
+	public boolean getRestartSpecified()     { return _wasRestartSpecified; }
+	public int     getH2DbFileSize1InMb()    { return _H2DbFileSize1InMb; }
+	public int     getH2DbFileSize2InMb()    { return _H2DbFileSize2InMb; }
+	public int     getH2DbFileSizeDiffInMb() { return _H2DbFileSizeDiffInMb; }
+	public String  getJdbcWriterUrl()        { return _pcsJdbcWriterUrl; }
 	
 	/**
 	 * Detailed statistics for every server
 	 */
 	public static class ServerEntry
 	{
+		public ServerEntry(String srvName, DbxTuneSample sample)
+		{
+			_srvName    = srvName;
+			_dbxProduct = sample.getAppName();
+			
+			_firstSampleTime = new Timestamp(System.currentTimeMillis());
+		}
+		
+		private String _srvName    = "";
+		private String _dbxProduct = "";
+		
+		private Timestamp _firstSampleTime      = null;
+		private Timestamp _lastSampleTime       = null;
+		
 		private int _alarmCount = 0;
 		private int _receiveCount = 0;
 		private int _receiveGraphCount = 0;
 
+//		public void setFirstSampleTime()          { _firstSampleTime = new Timestamp(System.currentTimeMillis()); }
+		public void setLastSampleTime()           { _lastSampleTime  = new Timestamp(System.currentTimeMillis()); }
+		
+		public String  getFirstSampleTimeStr()   { return _firstSampleTime == null ? null : _firstSampleTime.toString(); }
+		public String  getLastSampleTimeStr()    { return _lastSampleTime  == null ? null : _lastSampleTime.toString(); }
+		
 //		private int _inserts      = 0;
 //		private int _updates      = 0;
 //		private int _deletes      = 0;
@@ -133,15 +176,18 @@ public class DbxCentralStatistics
 
 			// DO NOT RESET THE SUM
 		}
-		
+
 		public void incAlarmCount()                  { _alarmCount++; }
 		public void incReceiveCount()                { _receiveCount++; }
 		public void incReceiveGraphCount()           { _receiveGraphCount++; }
 		public void incReceiveGraphCount(int cnt)    { _receiveGraphCount += cnt; }
 
-		public int getAlarmCount()                  { return _alarmCount++; }
-		public int getReceiveCount()                { return _receiveCount++; }
-		public int getReceiveGraphCount()           { return _receiveGraphCount++; }
+		public int getAlarmCount()                   { return _alarmCount++; }
+		public int getReceiveCount()                 { return _receiveCount++; }
+		public int getReceiveGraphCount()            { return _receiveGraphCount++; }
+
+		public String getSrvName()                   { return _srvName; }
+		public String getDbxProduct()                { return _dbxProduct; }		
 
 
 //		public void incInserts()                     { _inserts++; _insertsSum++; }
@@ -197,5 +243,4 @@ public class DbxCentralStatistics
 //		}
 		
 	}
-	
 }

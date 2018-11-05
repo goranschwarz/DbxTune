@@ -879,6 +879,17 @@ public class PersistWriterJdbc
 					+ ", AfterMb="  + String.format("%.1f", (dbFileSizeAfter /1024.0/1024.0))
 					+ ", Filename='"+dbFile.getAbsolutePath()
 					+ "'.");
+			
+			// Check if we have a ".tempFile"
+			// Then it's probably 'SHUTDOWN DEFRAG' that didn't work... (and no exception was thrown)
+			File shutdownTempFile = new File(dbFile.getAbsolutePath() + ".tempFile");
+			if (shutdownTempFile.exists())
+			{
+				_logger.warn("After Shutdown H2 database using '"+shutdownCmd+"', the file '"+shutdownTempFile+"' exists. sizeMb("+(shutdownTempFile.length()/1024/1024)+"), sizeB("+shutdownTempFile.length()+"). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
+				shutdownTempFile.delete();
+			}
+			
+			// Should we write any statistics about this...
 		}
 
 		// Close the connection (it would already be closed, due to the shutdown, but anyway...)

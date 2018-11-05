@@ -266,7 +266,6 @@ export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-"-noverify -XX:-UseGCOverheadLimit"}
 ##     - The GC throws this exception when too much time is spent in garbage collection for too little return, eg. 98% of CPU time is spent on GC and less than 2% of heap is recovered.
 ##     - This feature is designed to prevent applications from running for an extended period of time while making little or no progress because the heap is too small.
 
-
 export EXTRA=
 #export DEBUG_OPTIONS=-agentlib:hprof=cpu=samples,interval=20,depth=50
 #export DEBUG_OPTIONS=-agentlib:hprof=cpu=times
@@ -326,7 +325,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/gson-2.8.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jetty-all-9.2.22.v20170606.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/javax.servlet-api-3.1.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron4j-2.2.5.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron-utils-7.0.1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron-utils-7.0.6.jar
 
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/tomcat/*
 
@@ -504,6 +503,13 @@ echo "JVM_PARAMS=${JVM_PARAMS}"
 
 
 #------------------------------------------------------------------------
+#--- Some extra JVM PARAMS, out of memory
+#------------------------------------------------------------------------
+dumpDir=${DBXTUNE_USER_HOME:-${HOME}/.dbxtune}
+export JVM_OOM_PARAMS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${dumpDir}"
+
+
+#------------------------------------------------------------------------
 #--- Start the process (in loop if shutdown-with-restart)
 #------------------------------------------------------------------------
 echo ""
@@ -515,8 +521,8 @@ echo "----------------------------------------------------------------"
 osRc=0
 while true
 do
-	echo java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} ${javaMainParams} $@
-	     java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} ${javaMainParams} $@
+	echo java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_OOM_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} ${javaMainParams} $@
+	     java ${jvmNoGuiSwitch} ${JVM_MEMORY_PARAMS} ${JVM_GC_PARAMS} ${JVM_OOM_PARAMS} ${JVM_PARAMS} -Duser.language=en -Dsybase.home="${SYBASE}" -DSYBASE="${SYBASE}" -DAPPL_HOME=${APPL_HOME} -D${APPL_HOME_propName}="${APPL_HOME}" -D${APPL_SAVE_DIR_propName}="${APPL_SAVE_DIR}" ${EXTRA} ${DBXTUNE_JVM_SWITCHES} ${DEBUG_OPTIONS} ${SPLASH} ${javaMainClass} ${javaMainParams} $@
 	osRc=$?
 
 	## OS Retcun code 8 = restart	     

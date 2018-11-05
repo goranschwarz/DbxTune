@@ -149,9 +149,10 @@ extends HttpServlet
 
 		// Increement some statistics
 		String      srvName = sample.getServerName();
-		ServerEntry srvStat = DbxCentralStatistics.getInstance().getServerEntry(srvName);
+		ServerEntry srvStat = DbxCentralStatistics.getInstance().getServerEntry(srvName, sample);
 
 		srvStat.incReceiveCount();
+		srvStat.setLastSampleTime();
 		
 		for (CmEntry cmEntry : sample.getCollectors())
 		{

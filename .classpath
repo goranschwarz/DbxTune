@@ -135,7 +135,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/jide-oss-3.6.18.jar"/>
-	<classpathentry kind="lib" path="lib/cron-utils-7.0.1.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.7.25.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.7.25.jar"/>
@@ -149,5 +148,6 @@
 	<classpathentry kind="lib" path="lib/jsqlparser-1.1.jar" sourcepath="3pp/jsqlparser-1.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
 	<classpathentry kind="lib" path="lib/h2-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib/cron-utils-7.0.6.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

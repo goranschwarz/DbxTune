@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.asetune.DbxTune;
 import com.asetune.Version;
+import com.asetune.central.DbxCentralStatistics;
 import com.asetune.central.DbxTuneCentral;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
@@ -35,6 +36,8 @@ import com.asetune.central.pcs.DbxTuneSample.AlarmEntry;
 import com.asetune.central.pcs.DbxTuneSample.AlarmEntryWrapper;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
 import com.asetune.central.pcs.DbxTuneSample.GraphEntry;
+import com.asetune.check.CheckForUpdates;
+import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.ConnectionProp;
@@ -153,7 +156,8 @@ extends CentralPersistWriterBase
 		_jdbcPassword = conf.getProperty(PROPKEY_JDBC_PASSWORD, DEFAULT_JDBC_PASSWORD);
 		if (_jdbcPassword.equalsIgnoreCase("null"))
 			_jdbcPassword="";
-		
+
+
 		_alarmEventActionStore = StringUtil.commaStrToSet( conf.getProperty(PROPKEY_ALARM_EVENTS_STORE, DEFAULT_ALARM_EVENTS_STORE) );
 		
 //		_h2AutoDefragTime = conf.getIntProperty(PROPKEY_H2_AUTO_DEFRAG_TIME, DEFAULT_H2_AUTO_DEFRAG_TIME);
@@ -492,6 +496,15 @@ extends CentralPersistWriterBase
 			
 			// Start any services that depended on open() to complete
 //			startServices();
+			
+			
+			// Set some statistical fields
+			DbxCentralStatistics.getInstance().setJdbcWriterUrl(_jdbcUrl);
+
+			// Send info that we have connected
+			DbxConnectInfo ci = new DbxConnectInfo(_mainConn, true);
+			CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
+			
 		}
 		catch (SQLException ev)
 		{
@@ -3303,6 +3316,12 @@ return -1;
 				_logger.warn("After Shutdown H2 database using '"+shutdownCmd+"', the file '"+shutdownTempFile+"' exists. sizeMb("+(shutdownTempFile.length()/1024/1024)+"), sizeB("+shutdownTempFile.length()+"). This is probably due to a 'incomplete' shutdown (defrag). REMOVING THIS FILE.");
 				shutdownTempFile.delete();
 			}
+			
+			// Write som statistics
+			DbxCentralStatistics stat = DbxCentralStatistics.getInstance();
+			stat.setH2DbFileSizeDiffInMb(sizeDiffMb);
+			stat.setH2DbFileSize1InMb( (int) (dbFileSizeBefore /1024.0/1024.0) );
+			stat.setH2DbFileSize2InMb( (int) (dbFileSizeAfter  /1024.0/1024.0) );
 		}
 
 		// Close the connection

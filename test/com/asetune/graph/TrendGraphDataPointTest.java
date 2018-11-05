@@ -2,16 +2,12 @@ package com.asetune.graph;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.Test;
 
-import com.asetune.cm.ase.helper.WaitCounterSummary;
-import com.asetune.cm.ase.helper.WaitCounterSummary.WaitCounterEntry;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 
 public class TrendGraphDataPointTest

@@ -92,7 +92,7 @@ Also to 'gorans.org' just in case...
 - gorans.org/www/asetune/tmp/asetune_YYYY-MM-DD.zip
 
 -----------------------------------------------------------
-done at asemon.se
+done at dbxtune.com
 
 ftp: history.html
 - ftp history.html
@@ -129,7 +129,7 @@ cd c:\tmpsvn
 ## MAIL out that a new release is available
 ###########################################################
 - copy *.php, *.html, etc files 
-        from: asemon.se
+        from: dbxtune.com
           to: C:\projects\asetune\src\com\asetune\check\server
 - checkin "post release" files...
 

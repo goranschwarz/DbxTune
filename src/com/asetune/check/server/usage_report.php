@@ -306,6 +306,19 @@ DB Cleanup:
 	//-------------------------------------------
 	if ( $rpt_onId != "" )
 	{
+		// First get what's the ApplicationName
+		$clientAppName = "";
+		$sql = "
+			SELECT clientAppName
+			FROM asemon_usage
+			WHERE rowid = " . $rpt_onId . "
+			";
+		$result = mysqli_query($dbconn, $sql);
+		while($row = $result->fetch_assoc())
+			$clientAppName = $row["clientAppName"];
+		$result->free();
+
+		////////////////////////////////////////////////////////
 		$sql = "
 			SELECT *
 			FROM asemon_usage
@@ -321,48 +334,69 @@ DB Cleanup:
 		}
 		htmlResultset($userIdCache, $result, "asemon_usage on: $rpt_onId");
 
+		
+		if ( $clientAppName == "DbxTuneCentral" )
+		{
+			// sending query
+			$result = mysqli_query($dbconn, "SELECT * FROM dbxc_store_info WHERE checkId = " . $rpt_onId);
+			if (!$result) {
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+				die("ERROR: Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "dbxc_store_info on: $rpt_onId");
 
-		// sending query
-		$result = mysqli_query($dbconn, "SELECT * FROM asemon_connect_info WHERE checkId = " . $rpt_onId);
-		if (!$result) {
-			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
-			die("ERROR: Query to show fields from table failed");
+			// sending query
+			$result = mysqli_query($dbconn, "SELECT * FROM dbxc_store_srv_info WHERE checkId = " . $rpt_onId);
+			if (!$result) {
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+				die("ERROR: Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "dbxc_store_srv_info on: $rpt_onId");
 		}
-		htmlResultset($userIdCache, $result, "asemon_connect_info on: $rpt_onId");
+		else
+		{
+			// sending query
+			$result = mysqli_query($dbconn, "SELECT * FROM asemon_connect_info WHERE checkId = " . $rpt_onId);
+			if (!$result) {
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+				die("ERROR: Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "asemon_connect_info on: $rpt_onId");
 
-		// sending query
-		$result = mysqli_query($dbconn, "SELECT * FROM asemon_udc_info WHERE checkId = " . $rpt_onId);
-		if (!$result) {
-			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
-			die("ERROR: Query to show fields from table failed");
-		}
-		htmlResultset($userIdCache, $result, "asemon_udc_info on: $rpt_onId");
+			// sending query
+			$result = mysqli_query($dbconn, "SELECT * FROM asemon_udc_info WHERE checkId = " . $rpt_onId);
+			if (!$result) {
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+				die("ERROR: Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "asemon_udc_info on: $rpt_onId");
 
-		// sending query
-		$result = mysqli_query($dbconn, "
-			SELECT checkId,
-				serverAddTime,
-				clientAppName,
-				sessionType,
-				sessionStartTime,
-				sessionEndTime,
-				TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
-				userName,
-				connectId,
-				cmName,
-				addSequence,
-				refreshCount,
-				sumRowCount,
-				(sumRowCount / refreshCount) AS avgSumRowCount
-			FROM asemon_counter_usage_info
-			WHERE checkId = " . $rpt_onId . "
-			ORDER BY connectId, sessionStartTime, addSequence
-			");
-		if (!$result) {
-			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
-			die("ERROR: Query to show fields from table failed");
+			// sending query
+			$result = mysqli_query($dbconn, "
+				SELECT checkId,
+					serverAddTime,
+					clientAppName,
+					sessionType,
+					sessionStartTime,
+					sessionEndTime,
+					TIMEDIFF(sessionEndTime, sessionStartTime) as sampleTime,
+					userName,
+					connectId,
+					cmName,
+					addSequence,
+					refreshCount,
+					sumRowCount,
+					(sumRowCount / refreshCount) AS avgSumRowCount
+				FROM asemon_counter_usage_info
+				WHERE checkId = " . $rpt_onId . "
+				ORDER BY connectId, sessionStartTime, addSequence
+				");
+			if (!$result) {
+				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+				die("ERROR: Query to show fields from table failed");
+			}
+			htmlResultset($userIdCache, $result, "asemon_counter_usage_info on: $rpt_onId");
 		}
-		htmlResultset($userIdCache, $result, "asemon_counter_usage_info on: $rpt_onId");
 
 		// NEW ERRORS
 		$sql = "

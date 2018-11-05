@@ -17,7 +17,7 @@ any good tools for "digging" into the various Performance Counters (and also
 record a session that could be investigated later on), so I created my own 
 tool (AseTune) to be able to perform my duties at customer sites.
 
-I left SAP 2015/2016, and now I work as a consultant for B3IT - http://b3it.se
+I left SAP 2015/2016, and now I work as a consultant for B3IT - http://b3.se
 So if you are looking for help, I can help you...
 
 
@@ -32,8 +32,8 @@ So if you are looking for help, I can help you...
 * PerfDemo      - A tool that can be used to stress load ASE - used for demo purposes of AseTune
 
 The below tools are in beta status...
-If you want to use them simply unzip dbxtune_beta_tools.zip 
-in the directory where the base package (asetune_YYYY-MM-DD.zip) is installed
+If you want to use them simply start them from the "bin" directory
+The tools need enhancements, please let me know what, and how you can contribute with ideas and/or code :)
 
 * RaxTune       - Tune Sybase/SAP Replication Agent X (not a DBMS, but still possible to capture statistics)
 * RsTune        - Tune Sybase/SAP Replication Server  (not a DBMS, but still possible to capture statistics)
@@ -41,9 +41,9 @@ in the directory where the base package (asetune_YYYY-MM-DD.zip) is installed
 * HanaTune      - Tune SAP HANA - The InMemory combined Column/Row Store database
   --------------- None SAP/Sybase DBMS products:
 * SqlServerTune - Tune Microsoft SQL-Server
-* OracleTune    - Tune Oracle DBMS
 * PostgresTune  - Tune Postgres DBMS
 * MySqlTune     - Tune MySQL DBMS (5.7 and later)
+* OracleTune    - Tune Oracle DBMS
 * DB2Tune       - Tune DB2 LUW DBMS (LUW = Linux Unix Windows, mainframe isn't supported)
 
 
@@ -60,18 +60,21 @@ The central database will contain *less* information than the individual offline
 Therefor "overview" information can be saved for a longer period...
 
 The central web server can also "pushes" out chart/graph data to web browsers, which makes
-it possible to have a "live" dashboard (without having to refresh the browser all the time). 
+it possible to have a "live" dashboard (without having to refresh the browser all the time).  
 
 If we need to view any *details* from a recording. Then we will have to start the native DbxTune
 application and connect to the "offline" database.
 So the central server is "just" to view trends of how the system is working. 
+
+For setup/installation: README_dbxcentral_install.txt
+For a big picture look at the file: doc/dbxtune-central.pptx
 
 
 
 ==============================================================================
  Requirements
 ==============================================================================
-* Java 7 and above (Java 7 is still working, but it I will probably move to Java 8 on next release)
+* Java 7 and above (Java 7 is still working, but it I *will* move to Java 8 on next release)
 
 
 
@@ -80,17 +83,20 @@ So the central server is "just" to view trends of how the system is working.
 ==============================================================================
 Well there is not really an installer, just follow these simple steps
 * unpack the ZIP in some directory 
-* start any of the tools
+* start any of the tools (files are located in the 'bin' directory)
   - windows: start the BAT file (xxxTune.bat)
   - Linux/Unix/Mac: start the SH file (xxxTune.sh)
 * Connect to any server you want to tune/monitor
+
+* If you want to setup DbxCentral - The central Web Console to view Trend graphs
+  See: README_dbxcentral_install.txt
  
 
 
 ==============================================================================
  License
 ==============================================================================
-* GPL v3 (see COPYING or LICENSE.txt)
+* GPL v3 (see doc/COPYING or LICENSE.txt)
 * For commercial licenses, contact me, at: goran_schwarz@hotmail.com
 
 
@@ -157,14 +163,14 @@ This is the most complete tool. This because it has been around for 7-10 years
 ------------------------------------------------------------------------------
 -- MySqlTune -----------------------------------------------------------------
 ------------------------------------------------------------------------------
-  This tool is new in release 2018-02-xx
+  This tool is new in release 2018-11-05
   Status: Not that much functionality, needs A LOT MORE work before released. 
   Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
 ------------------------------------------------------------------------------
 -- DB2Tune -------------------------------------------------------------------
 ------------------------------------------------------------------------------
-  This tool is new in release 2018-02-xx
+  This tool is new in release 2018-11-05
   Status: Not that much functionality, needs A LOT MORE work before released. 
   Tip: Create 'User Defined Counters' where you can add your own SQL and Performance Counters...
 
@@ -178,7 +184,7 @@ Here are some of the functionality
  * Code completion Ctrl+space 
  * Command history
  * Execute favorite commands (added by the user)
- * A bunch of predefined "SQL Short cut commands"
+ * A bunch of predefined "SQL Shortcut commands"
  * Tail the Server error log (done via SSH if it’s not located on your box)
  * View Server configurations (show all, or just the changed ones)
  * View JDBC MetaData structures
@@ -201,8 +207,3 @@ Here are some of the functionality
   * if you have problems, plese send me an email at: goran_schwarz@hotmail.com
 
 
-  
-
-
-
-  

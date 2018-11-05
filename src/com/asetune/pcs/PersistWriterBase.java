@@ -19,7 +19,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.central.pcs.CentralPersistWriterBase.Table;
 import com.asetune.cm.CountersModel;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.IDbmsConfig;

@@ -32,12 +32,12 @@ import java.util.Date;
 public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune";      // Do not have spaces etc in this one
-//	public static final String VERSION_STRING     = "3.6.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "3.6.0.60.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2018-10-29/build 248";
+	public static final String VERSION_STRING     = "4.0.0";        // Use this for public releases
+//	public static final String VERSION_STRING     = "3.6.0.61.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2018-11-05/build 250";
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
-	public static final String  DEV_VERSION_EXPIRE_STR  = "2018-11-30";  // "YYYY-MM-DD" 
+	public static final String  DEV_VERSION_EXPIRE_STR  = "2020-11-30";  // "YYYY-MM-DD" 
 	public static       Date    DEV_VERSION_EXPIRE_DATE = null;
 
 	public static final String SOURCE_DATE_STRING = "$Date$";

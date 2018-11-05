@@ -351,7 +351,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\gson-2.8.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jetty-all-9.2.22.v20170606.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.servlet-api-3.1.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron4j-2.2.5.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-7.0.1.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-7.0.6.jar
 
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\tomcat\*
 
@@ -452,6 +452,13 @@ rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dsun.io.serialization.extendedDebugIn
 
 
 rem ------------------------------------------------------------------------
+rem --- Some extra JVM PARAMS, out of memory
+rem ------------------------------------------------------------------------
+set JVM_OOM_PARAMS=-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=%DBXTUNE_SAVE_DIR%
+
+
+
+rem ------------------------------------------------------------------------
 rem --- START: just call java, it should have been added to the path priviously
 rem --- pushd \\192.168.0.130\xxx\yyy     if it's a UNC path like the example, pushd will map a network drive, which will be unmounted at popd
 rem ------------------------------------------------------------------------
@@ -463,9 +470,9 @@ echo .
 echo -----------------------------------------------------------------------
 echo Starting %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 echo -----------------------------------------------------------------------
-echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
+echo java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_OOM_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 echo -----------------------------------------------------------------------
-     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
+     java %JVM_MEMORY_PARAMS% %JVM_GC_PARAMS% %JVM_OOM_PARAMS% %JVM_PARAMS% %JVM_DEBUG_PROPS% -Duser.language=en -Dsybase.home="%SYBASE%" -DSYBASE="%SYBASE%" -DAPPL_HOME="%APPL_HOME%" -DDBXTUNE_HOME="%DBXTUNE_HOME%" -DDBXTUNE_SAVE_DIR="%DBXTUNE_SAVE_DIR%" %DBXTUNE_SYSTEM_PROPS% %EXTRA% %DEBUG_OPTIONS% %SPLASH% %JAVA_START_CLASS% %JAVA_START_PARAMS% %CMDLINE_ARGS%
 
 IF %ERRORLEVEL% EQU 8 GOTO restart_dbxtune
 

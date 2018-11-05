@@ -172,6 +172,8 @@
 		doCleanup($dbconn, "delete from asemon_counter_usage_info where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
 		doCleanup($dbconn, "delete from asemon_error_info         where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
 		doCleanup($dbconn, "delete from asemon_error_info2        where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
+		doCleanup($dbconn, "delete from dbxc_store_info           where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
+		doCleanup($dbconn, "delete from dbxc_store_srv_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
 		doCleanup($dbconn, "delete from asemon_usage              where clientHostName in('gorans-ub2') ");
 		
 		// doCleanup($dbconn, "delete from asemon_usage              where user_name = 'gorans' or user_name = 'sybase'");

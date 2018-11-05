@@ -113,6 +113,10 @@ public abstract class DbxTune
 	{
 		return _startTime;
 	}
+	public static void setStartTime()
+	{
+		_startTime = System.currentTimeMillis();
+	}
 
 	/**
 	 * What is the implementors application name.
