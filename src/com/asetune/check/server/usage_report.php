@@ -337,6 +337,14 @@ DB Cleanup:
 		
 		if ( $clientAppName == "DbxTuneCentral" )
 		{
+//			// sending query
+//			$result = mysqli_query($dbconn, "SELECT * FROM asemon_connect_info WHERE checkId = " . $rpt_onId);
+//			if (!$result) {
+//				echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+//				die("ERROR: Query to show fields from table failed");
+//			}
+//			htmlResultset($userIdCache, $result, "asemon_connect_info on: $rpt_onId");
+
 			// sending query
 			$result = mysqli_query($dbconn, "SELECT * FROM dbxc_store_info WHERE checkId = " . $rpt_onId);
 			if (!$result) {
