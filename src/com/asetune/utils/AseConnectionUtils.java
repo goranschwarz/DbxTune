@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -1124,6 +1125,74 @@ public class AseConnectionUtils
 		catch (SQLException e)
 		{
 			_logger.debug("When getting ASE charset, Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	/**
+	 * When was ASE last started, as a String using pattern "yyyyMMdd.HHmmss"<br>
+	 * if problems accessing ASE, it will return "epoch" (new Timestamp(0))
+	 * 
+	 * @param conn
+	 * @param pattern
+	 * @return
+	 */
+	public static String getAseStartDateAsString(Connection conn)
+	{
+		return getAseStartDateAsString(conn, "yyyyMMdd.HHmmss");
+	}
+	
+	/**
+	 * When was ASE last started,as a String using pattern<br>
+	 * if problems accessing ASE, it will return "epoch" (new Timestamp(0))
+	 * 
+	 * @param conn
+	 * @param pattern  pattern using SimpleDateFormat
+	 * @return
+	 */
+	public static String getAseStartDateAsString(Connection conn, String pattern)
+	{
+		Timestamp startTs = getAseStartDate(conn);
+		SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+		
+		return sdf.format(startTs);
+	}
+	/**
+	 * When was ASE last started
+	 * @param conn
+	 * @return Timestamp when server started. if problems return <code>new Timestamp(0)</code>
+	 */
+	public static Timestamp getAseStartDate(Connection conn)
+	{
+		final Timestamp UNKNOWN = new Timestamp(0);
+
+		if ( ! isConnectionOk(conn, true, null) )
+			return UNKNOWN;
+
+		try
+		{
+			Timestamp retTs = UNKNOWN;
+
+			String sql = "select StartDate=max(StartDate) from master.dbo.monState";
+			
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				retTs = rs.getTimestamp(1);
+			}
+			rs.close();
+			stmt.close();
+
+			if (retTs == null)
+				retTs = new Timestamp(0);
+			
+			return retTs;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting ASE StartTime, Caught exception.", e);
 
 			return UNKNOWN;
 		}

@@ -61,6 +61,10 @@ implements Runnable
 	public static final String  PROPKEY_warnQueueSizeThresh                      = "PersistentCounterHandler.warnQueueSizeThresh";
 	public static final int     DEFAULT_warnQueueSizeThresh                      = 2;
 
+	public static final String  PROPKEY_ddl_connCheckPeriod                      = "PersistentCounterHandler.ddl.connCheckPeriod";
+	public static final long    DEFAULT_ddl_connCheckPeriod                      = 5 * 60 * 1000; // 5 minutes
+//	public static final long    DEFAULT_ddl_connCheckPeriod                      = 10 * 1000; // test.. 10 seconds...
+                                                                                 
 
 
 	public static final String  PROPKEY_sqlCap_doSqlCaptureAndStore              = "PersistentCounterHandler.sqlCapture.doSqlCaptureAndStore";
@@ -81,6 +85,10 @@ implements Runnable
 	public static final String  PROPKEY_sqlCap_sleepTimeInMs                     = "PersistentCounterHandler.sqlCapture.sleepTimeInMs";
 	public static final int     DEFAULT_sqlCap_sleepTimeInMs                     = 1000;
 	                                                                             
+	public static final String  PROPKEY_sqlCap_connCheckPeriod                   = "PersistentCounterHandler.sqlCapture.connCheckPeriod";
+	public static final long    DEFAULT_sqlCap_connCheckPeriod                   = 5 * 60 * 1000; // 5 minutes
+//	public static final long    DEFAULT_sqlCap_connCheckPeriod                   = 10 * 1000; // test.. 10 seconds...
+                                                                                 
 	public static final String  PROPKEY_sqlCap_saveStatement_whereClause         = "PersistentCounterHandler.sqlCapture.saveStatement.where.clause";
 	public static final String  DEFAULT_sqlCap_saveStatement_whereClause         = ""; // "" = do not use any where caluse
 
@@ -178,6 +186,9 @@ implements Runnable
 	/** Delegate SQL Capture to DBMS dependent implementations */
 	private ISqlCaptureBroker _sqlCaptureBroker = null;
 
+	private long _ddlLookup_checkConn_last   = 0;
+	private long _ddlLookup_checkConn_period = DEFAULT_ddl_connCheckPeriod;
+	
 	/** last message on this was written at what time */
 	private long _ddlLookup_infoMessage_last      = 0;
 	
@@ -195,6 +206,9 @@ implements Runnable
 	/** The SQL Capture Storage Consumer "thread" code */ 
 	private Runnable _sqlCaptureStorage = null;
 
+	private long _sqlCapture_checkConn_last   = 0;
+	private long _sqlCapture_checkConn_period = DEFAULT_sqlCap_connCheckPeriod;
+	
 	/** */
 	private BlockingQueue<SqlCaptureDetails> _sqlCaptureStoreQueue = new LinkedBlockingQueue<SqlCaptureDetails>();
 	
@@ -308,8 +322,12 @@ implements Runnable
 		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
 		
 		_doDdlLookupAndStore             = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             DEFAULT_ddl_doDdlLookupAndStore);
+		_ddlLookup_checkConn_period      = _props.getLongProperty   (PROPKEY_ddl_connCheckPeriod,                 DEFAULT_ddl_connCheckPeriod);
+		_ddlLookup_checkConn_last        = System.currentTimeMillis();
 		
 		_doSqlCaptureAndStore            = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore,         DEFAULT_sqlCap_doSqlCaptureAndStore);
+		_sqlCapture_checkConn_period     = _props.getLongProperty   (PROPKEY_sqlCap_connCheckPeriod,              DEFAULT_sqlCap_connCheckPeriod);
+		_sqlCapture_checkConn_last       = System.currentTimeMillis();
 
 		// property: alarm.handleAlarmEventClass
 		// NOTE: this could be a comma ',' separated list
@@ -318,10 +336,13 @@ implements Runnable
 		_logger.info("Configuration for PersistentCounterHandler");
 		_logger.info("                  "+PROPKEY_WriterClass+"                              = "+writerClasses);
 		_logger.info("                  "+PROPKEY_warnQueueSizeThresh+"                      = "+_warnQueueSizeThresh);
+		
 		_logger.info("                  "+PROPKEY_ddl_doDdlLookupAndStore+"                  = "+_doDdlLookupAndStore);
-		if (_doDdlLookupAndStore)
+		if ( ! _doDdlLookupAndStore )
+		_logger.info("             ---- ObjectLookup is DISABLED");
+		else
 		{
-		_logger.info("                  ObjectLookupInspector ClassName                      = "+( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
+		_logger.info("             ---- ObjectLookupInspector ClassName                      = "+( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
 		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+"      = "+_addDependantObjectsToDdlInQueue);
 		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"          = "+_afterDdlLookupSleepTimeInMs);
 		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"          = "+_warnDdlInputQueueSizeThresh);
@@ -329,9 +350,11 @@ implements Runnable
 		}
 
 		_logger.info("                  "+PROPKEY_sqlCap_doSqlCaptureAndStore    +"          = "+_doSqlCaptureAndStore);
-		if (_doSqlCaptureAndStore)
+		if ( ! _doSqlCaptureAndStore)
+		_logger.info("             ---- SqlCapture is DISABLED");
+		else
 		{
-		_logger.info("                  SqlCaptureBroker ClassName                           = "+( _sqlCaptureBroker == null ? "null" : _sqlCaptureBroker.getClass().getName()));
+		_logger.info("             ---- SqlCaptureBroker ClassName                           = "+( _sqlCaptureBroker == null ? "null" : _sqlCaptureBroker.getClass().getName()));
 		_logger.info("                  "+PROPKEY_sqlCap_doSqlText+"                         = "+_props.getProperty(PROPKEY_sqlCap_doSqlText));
 		_logger.info("                  "+PROPKEY_sqlCap_doStatementInfo+"                   = "+_props.getProperty(PROPKEY_sqlCap_doStatementInfo));
 		_logger.info("                  "+PROPKEY_sqlCap_doPlanText+"                        = "+_props.getProperty(PROPKEY_sqlCap_doPlanText));
@@ -665,7 +688,85 @@ implements Runnable
 
 	
 	
+	/**
+	 * Check that the DDL Lookup DBMS Connection is OK (not in a transaction or similar)<br>
+	 * If it's NOT ok, then simply close the connection and let the DBMS cleanup/close the transaction<br>
+	 * On next lookup, a new connection will be attempted...
+	 */
+	private void checkObjectInfoLookupConnection()
+	{
+//System.out.println(">>>>>>>>>>>>>>>>>>>>> checkObjectInfoLookupConnection(): Just want to know how OFTEN this is called... that is if we want to have a Timeout or similar on it (if it's called to often)");
+		DbxConnection conn = getLookupConnection();
+		if (conn == null)
+			return;
+
+		// Sorry can't continue: There are no Object Lookup Inspector installed
+		if (_objectLookupInspector == null)
+			return;
+
+		// Lets grab a new connection then...
+		try
+		{
+			boolean ok = _objectLookupInspector.checkConnection(conn);
+			if ( ! ok )
+			{
+//can we test this in any way...
+				_logger.warn("When checking the DDL Lookup Connection, it returned NOT_OK. The Connection will be closed. The DBMS is responsible for clearing/cleaning up the transaction.");
+
+				// Close the connection and let the DBMS handle any eventual rollbacks and cleanups
+				conn.closeNoThrow();
+				setDdlLookupConnection(null);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems Checking DDL Lookup Connection. The DDL Lookup Connection will be CLOSED. Caught: "+ex, ex);
+
+			// Close the connection and let the DBMS handle any eventual rollbacks and cleanups
+			conn.closeNoThrow();
+			setDdlLookupConnection(null);
+		}
+	}
 	
+	/**
+	 * Check that the SQL Capture DBMS Connection is OK (not in a transaction or similar)<br>
+	 * If it's NOT ok, then simply close the connection and let the DBMS cleanup/close the transaction<br>
+	 * On next lookup, a new connection will be attempted...
+	 */
+	private void checkSqlCaptureConnection()
+	{
+//System.out.println(">>>>>>>>>>>>>>>>>>>>> checkSqlCaptureConnection(): Just want to know how OFTEN this is called... that is if we want to have a Timeout or similar on it (if it's called to often)");
+		DbxConnection conn = getSqlCaptureConnection();
+		if (conn == null)
+			return;
+
+		// Sorry can't continue: There are no SQL Capture Broker installed
+		if (_sqlCaptureBroker == null)
+			return;
+
+		// Lets grab a new connection then...
+		try
+		{
+			boolean ok = _sqlCaptureBroker.checkConnection(conn);
+			if ( ! ok )
+			{
+//can we test this in any way...
+				_logger.warn("When checking the SQL Capture Connection, it returned NOT_OK. The Connection will be closed. The DBMS is responsible for clearing/cleaning up the transaction.");
+
+				// Close the connection and let the DBMS handle any eventual rollbacks and cleanups
+				conn.closeNoThrow();
+				setSqlCaptureConnection(null);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems Checking SQL Capture Connection. The SQL Capture Connection will be CLOSED. Caught: "+ex, ex);
+
+			// Close the connection and let the DBMS handle any eventual rollbacks and cleanups
+			conn.closeNoThrow();
+			setSqlCaptureConnection(null);
+		}
+	}
 	
 	/**
 	 * Get DDL information from the database and pass it on to the storage thread
@@ -722,7 +823,7 @@ implements Runnable
 		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
 		{
 			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
-			if (_ddlLookup_infoMessage_period > howLongAgo)
+			if (howLongAgo > _ddlLookup_infoMessage_period)
 			{
 				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
 				_ddlLookup_infoMessage_last = System.currentTimeMillis();
@@ -809,7 +910,7 @@ implements Runnable
 //		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
 //		{
 //			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
-//			if (_ddlLookup_infoMessage_period > howLongAgo)
+//			if (howLongAgo > _ddlLookup_infoMessage_period)
 //			{
 //				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
 //				_ddlLookup_infoMessage_last = System.currentTimeMillis();
@@ -1440,6 +1541,7 @@ implements Runnable
 	
 			while(isRunning())
 			{
+//System.out.println("DdlLookupQueueHandler... at TOP: isRunning()="+isRunning());
 				//_logger.info("Thread '"+_thread.getName()+"', SLEEPS...");
 				//try { Thread.sleep(5 * 1000); }
 				//catch (InterruptedException ignore) {}
@@ -1482,6 +1584,21 @@ implements Runnable
 					if (_logger.isDebugEnabled())
 						_logger.debug("It took "+prevLookupTimeMs+" ms to lookup the DDL "+qe+".");
 
+					// Check the ObjectInfoLookup Connection and see that it's healty... 
+					// Meaning no open transaction left etc...
+//System.out.println("DdlLookupQueueHandler... AFTER:doObjectInfoLookup()... prevLookupTimeMs="+prevLookupTimeMs+", didLookup="+didLookup);
+					if (didLookup)
+					{
+						// Only check every X minute
+						long howLongAgo = System.currentTimeMillis() - _ddlLookup_checkConn_last;
+//System.out.println("DdlLookupQueueHandler... AFTER:doObjectInfoLookup()... prevLookupTimeMs="+prevLookupTimeMs+", didLookup="+didLookup+", _ddlLookup_checkConn_period="+_ddlLookup_checkConn_period+", howLongAgo="+howLongAgo);
+						if (howLongAgo > _ddlLookup_checkConn_period)
+						{
+							checkObjectInfoLookupConnection();
+							_ddlLookup_checkConn_last = System.currentTimeMillis();
+						}
+					}
+					
 					// Let others do some work. so we don't monopolize the server.
 					if (didLookup && _afterDdlLookupSleepTimeInMs > 0)
 						Thread.sleep((int)_afterDdlLookupSleepTimeInMs);
@@ -2234,6 +2351,7 @@ implements Runnable
 	
 			while(isRunning())
 			{
+//System.out.println("SqlCaptureHandler... at TOP: isRunning()="+isRunning());
 				try 
 				{
 					checkForConfigChanges();
@@ -2255,6 +2373,15 @@ implements Runnable
 					if (_logger.isDebugEnabled())
 						_logger.debug("It took "+timeMs+" ms to Capture SQL Text/Statements.");
 					
+					// Only check every X minute
+					long howLongAgo = System.currentTimeMillis() - _sqlCapture_checkConn_last;
+//System.out.println("SqlCaptureHandler... doSqlCapture()... timeMs="+timeMs+", _sqlCapture_checkConn_period="+_sqlCapture_checkConn_period+", howLongAgo="+howLongAgo);
+					if (howLongAgo > _sqlCapture_checkConn_period)
+					{
+						checkSqlCaptureConnection();
+						_sqlCapture_checkConn_last = System.currentTimeMillis();
+					}
+
 					// Sleep before next "poll" time
 					Thread.sleep(_sqlCaptureSleepTimeInMs);
 				} 

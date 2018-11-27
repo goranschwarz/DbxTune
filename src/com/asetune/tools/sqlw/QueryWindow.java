@@ -1215,9 +1215,20 @@ public class QueryWindow
 				@Override
 				public void actionPerformed(ActionEvent e)
 				{
-					String filename = System.getenv("SQLW_JVM_PARAMETER_FILE");
+					// get the file, if not found... give it a default...
+					String filename = System.getenv("DBXTUNE_JVM_PARAMETER_FILE");
+					if (StringUtil.isNullOrBlank(filename))
+					{
+						//-----------------------------------------------------
+						// from: 'dbxtune.bat' or 'dbxtune.sh'
+						//-----------------------------------------------------
+						// SQLW: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.sqlw_jvm_settings.properties
+						// ELSE: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.dbxtune_jvm_settings.properties
+						
+						filename = AppDir.getAppStoreDir(true) + ".sqlw_jvm_settings.properties";
+					}
 
-					int ret = JvmMemorySettingsDialog.showDialog(_jframe, "SQLW", filename);
+					int ret = JvmMemorySettingsDialog.showDialog(_jframe, Version.getAppName(), filename);
 					if (ret == JOptionPane.OK_OPTION)
 					{
 					}
@@ -7041,6 +7052,13 @@ ex.printStackTrace();
 							"Line " + ceedi.getLineNumber() + scriptRowStr +
 							", Status " + ceedi.getStatus() + 
 							", TranState " + ceedi.getTranState() + ":\n");
+					
+					if (ceedi.hasEedParams())
+					{
+						Map<String, Object> map = ceedi.getEedParamsAsMap();
+						if ( ! map.isEmpty() )
+							sb.append("Extra Error Info: ").append(map).append("\n");
+					}
 				}
 
 				// Now print the error or warning

@@ -80,7 +80,7 @@ extends AlarmWriterAbstract
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 		// replace variables in the template with runtime variables
-		String jsonMessage = WriterUtils.createMessageFromTemplate(action, alarmEvent, _jsonTemplate, true);
+		String jsonMessage = WriterUtils.createMessageFromTemplate(action, alarmEvent, _jsonTemplate, true, null, getDbxCentralUrl());
 
 		try
 		{
@@ -161,6 +161,8 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("http-header-7",                 PROPKEY_header7,          String .class, conf.getProperty       (PROPKEY_header7,          DEFAULT_header7),          DEFAULT_header7,          "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
 		list.add( new CmSettingsHelper("http-header-8",                 PROPKEY_header8,          String .class, conf.getProperty       (PROPKEY_header8,          DEFAULT_header8),          DEFAULT_header8,          "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
 		list.add( new CmSettingsHelper("http-header-9",                 PROPKEY_header9,          String .class, conf.getProperty       (PROPKEY_header9,          DEFAULT_header9),          DEFAULT_header9,          "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+
+		list.add( new CmSettingsHelper("DbxCentralUrl",                 PROPKEY_dbxCentralUrl,    String .class, conf.getProperty       (PROPKEY_dbxCentralUrl   , DEFAULT_dbxCentralUrl   ), DEFAULT_dbxCentralUrl   , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));
 
 		return list;
 	}

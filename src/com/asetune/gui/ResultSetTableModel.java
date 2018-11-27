@@ -4,22 +4,28 @@
 package com.asetune.gui;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.regex.Pattern;
 
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
@@ -1471,19 +1477,114 @@ public class ResultSetTableModel
 		return sb.toString();
 	}
 
-	public String toHtmlTableString()
+	/**
+	 * Return a text string with one table for each row. The Table will only have 2 columns. 1=Column Name, 2=Column Value
+	 * @return
+	 */
+	public String toTablesVerticalString() //toAsciiTablesVerticalString()
 	{
-		return toHtmlTableString(true, true);
+		StringBuilder sb = new StringBuilder(1024);
+
+		int cols = getColumnCount();
+		int rows = getRowCount();
+		
+		String ColHead = "Column Name";
+		int colNameSizeMax = ColHead.length();
+		for (int c=0; c<cols; c++)
+			colNameSizeMax = Math.max(colNameSizeMax, getColumnName(c).length());
+		
+		for (int r=0; r<rows; r++)
+		{
+			sb.append("\n");
+			sb.append("Row: ").append(r+1).append(" (").append(rows).append(")").append("\n");
+			
+			sb.append(StringUtil.left(ColHead, colNameSizeMax)).append(": ").append("Column Value").append("\n");
+			sb.append(StringUtil.replicate("-", colNameSizeMax)).append(": ").append(StringUtil.replicate("-", 50)).append("\n");
+			
+			// build all data rows...
+			for (int c=0; c<cols; c++)
+			{
+				String colName = getColumnName(c);
+				Object objVal  = getValueAt(r,c);
+				String strVal = "";
+				if (objVal != null)
+				{
+					strVal = objVal.toString();
+				}
+				else
+					strVal = "NULL";
+
+				sb.append(StringUtil.left(colName, colNameSizeMax)).append(": ");
+				sb.append(strVal).append("\n");
+//				sb.append("    <td").append(tBodyNoWrapStr).append("><b>").append(colName).append("</b></td>\n");
+//				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>\n");
+			}
+		}
+		
+		return sb.toString();
 	}
-	public String toHtmlTableString(boolean tHeadNoWrap, boolean tBodyNoWrap)
+
+	public String toAsciiTablesVerticalString()
+	{
+		StringBuilder sb = new StringBuilder(1024);
+
+		int cols = getColumnCount();
+		int rows = getRowCount();
+		
+		String[] colArr = {"Column Name", "Column Value"};
+		for (int r=0; r<rows; r++)
+		{
+			DefaultTableModel tm = new DefaultTableModel(colArr, 0);
+			
+			sb.append("\n");
+			sb.append("Row: ").append(r+1).append(" (").append(rows).append(")").append("\n");
+
+			// build all data rows...
+			for (int c=0; c<cols; c++)
+			{
+				String colName = getColumnName(c);
+				Object objVal  = getValueAt(r,c);
+				String strVal = "";
+				if (objVal != null)
+				{
+					strVal = objVal.toString();
+				}
+				else
+					strVal = "NULL";
+
+				String[] row = new String[2];
+				row[0] = colName;
+				row[1] = strVal;
+				tm.addRow(row);
+			}
+
+			sb.append(SwingUtils.tableToString(tm, false));
+		}
+		
+		return sb.toString();
+	}
+
+
+	public String toHtmlTableString(String className)
+	{
+		return toHtmlTableString(className, true, true);
+	}
+	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
 		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
 		String tBodyNoWrapStr = tBodyNoWrap ? " nowrap" : "";
 		
-		sb.append("<table border='1' width='100%'>\n");
-//		sb.append("<table border=1 style='min-width: 1024px; width: 100%;' width='100%'>\n");
+		if (StringUtil.hasValue(className))
+		{
+			sb.append("<table border='1' class='").append(className).append("'>\n");
+		}
+		else
+		{
+			sb.append("<table border='1'>\n");
+//			sb.append("<table border=1 style='min-width: 1024px; width: 100%;' width='100%'>\n");
+		}
 		int cols = getColumnCount();
 		int rows = getRowCount();
 		
@@ -1581,6 +1682,72 @@ public class ResultSetTableModel
 		return sb.toString();
 	}
 	
+	/**
+	 * Return a html string with one table for each row. The Table will only have 2 columns. 1=Column Name, 2=Column Value
+	 * @return
+	 */
+	public String toHtmlTablesVerticalString(String className)
+	{
+		return toHtmlTablesVerticalString(className, true, true);
+	}
+	public String toHtmlTablesVerticalString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap)
+	{
+		StringBuilder sb = new StringBuilder(1024);
+
+//		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
+		String tBodyNoWrapStr = tBodyNoWrap ? " nowrap" : "";
+		
+		int cols = getColumnCount();
+		int rows = getRowCount();
+
+		for (int r=0; r<rows; r++)
+		{
+			sb.append("<br>\n");
+			sb.append("Row: ").append(r+1).append(" (").append(rows).append(")").append("<br>\n");
+
+			if (StringUtil.hasValue(className))
+			{
+				sb.append("<table border='1' class='").append(className).append("'>\n");
+			}
+			else
+			{
+				sb.append("<table border='1'>\n");
+//				sb.append("<table border=1 style='min-width: 1024px; width: 100%;' width='100%'>\n");
+			}
+			
+			// build header names
+			sb.append("<thead>\n");
+			sb.append("  <tr> <th>Column</th> <th>Value</th> </tr>\n");
+			sb.append("</thead>\n");
+
+			// build all data rows...
+			sb.append("<tbody>\n");
+			for (int c=0; c<cols; c++)
+			{
+				String colName = getColumnName(c);
+				Object objVal  = getValueAt(r,c);
+				String strVal = "";
+				if (objVal != null)
+				{
+					strVal = objVal.toString();
+				}
+				if (StringUtil.isNullOrBlank(strVal))
+					strVal = "&nbsp;";
+
+				sb.append("  <tr>\n");
+				sb.append("    <td").append(tBodyNoWrapStr).append("><b>").append(colName).append("</b></td>\n");
+				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>\n");
+				sb.append("  </tr>\n");
+			}
+			
+			sb.append("</tbody>\n");
+			
+			sb.append("</table>\n");
+		}
+
+		return sb.toString();
+	}
+
 
 	
 	//------------------------------------------------------------
@@ -1796,4 +1963,33 @@ public class ResultSetTableModel
 	//-- END: getValueAsXXXXX using column name
 	//------------------------------------------------------------
 
+	
+	public static void main(String[] args)
+	{
+		Properties log4jProps = new Properties();
+		log4jProps.setProperty("log4j.rootLogger", "INFO, A1");
+		//log4jProps.setProperty("log4j.rootLogger", "DEBUG, A1");
+		log4jProps.setProperty("log4j.appender.A1", "org.apache.log4j.ConsoleAppender");
+		log4jProps.setProperty("log4j.appender.A1.layout", "org.apache.log4j.PatternLayout");
+		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
+		PropertyConfigurator.configure(log4jProps);
+		
+		try
+		{
+			Connection conn = DriverManager.getConnection("jdbc:sybase:Tds:192.168.0.110:1600", "sa", "sybase");
+			
+			Statement stmnt = conn.createStatement();
+			ResultSet rs = stmnt.executeQuery("select top 5 * from sysobjects");
+			
+			ResultSetTableModel rstm = new ResultSetTableModel(rs, "dummy");
+//			System.out.println(rstm.toHtmlTablesVerticalString());
+			System.out.println(rstm.toAsciiTableString());
+			System.out.println(rstm.toAsciiTablesVerticalString());
+			
+		}
+		catch(Exception ex)
+		{
+			ex.printStackTrace();
+		}
+	}
 }

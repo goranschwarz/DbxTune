@@ -11,7 +11,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
-import org.h2.util.Profiler;
 
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
@@ -31,6 +30,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
+import com.asetune.utils.Profiler;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
@@ -66,6 +66,7 @@ extends CounterCollectorThreadAbstract
 		{
 			long start = System.currentTimeMillis();
 			Profiler prof = new Profiler();
+			prof.onlyForThreadList( new String[] {"AWT-EventQueue-0"} );
 			prof.startCollecting();
 
 			// Create all the CM objects, the objects will be added to _CMList

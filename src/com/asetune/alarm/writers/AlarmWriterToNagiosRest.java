@@ -80,7 +80,7 @@ extends AlarmWriterAbstract
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 		// replace variables in the template with runtime variables
-		String jsonMessage = WriterUtils.createMessageFromTemplate(action, alarmEvent, _jsonTemplate, true);
+		String jsonMessage = WriterUtils.createMessageFromTemplate(action, alarmEvent, _jsonTemplate, true, null, getDbxCentralUrl());
 
 		try
 		{

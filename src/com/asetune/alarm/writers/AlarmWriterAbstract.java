@@ -1,5 +1,7 @@
 package com.asetune.alarm.writers;
 
+import java.net.InetAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +10,9 @@ import org.apache.log4j.Logger;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
+import com.asetune.pcs.IPersistWriter;
+import com.asetune.pcs.PersistWriterToHttpJson;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -65,6 +70,68 @@ implements IAlarmWriter
 	@Override
 	public void restoredAlarms(List<AlarmEvent> restoredAlarms)
 	{
+	}
+
+	public static final String  PROPKEY_dbxCentralUrl = "AlarmWriter.dbxCentralUrl";
+	public static final String  DEFAULT_dbxCentralUrl = "";
+
+	@Override
+	/**
+	 * Get the configuration for 'AlarmWriter.dbxCentralUrl'<br>
+	 * If it's not configured, we try to do <i>best effort</i> to find the name in <i>other</i> configurations
+	 */
+	public String getDbxCentralUrl()
+	{
+		String dbxCentralUrl = getConfiguration().getProperty(PROPKEY_dbxCentralUrl, DEFAULT_dbxCentralUrl);
+		
+		if (StringUtil.isNullOrBlank(dbxCentralUrl))
+		{
+			// if it's not configured...
+			// can we grab the URL from PCS PersistWriterToHttpJsonRest
+			// and if it points to 'localhost:8080' then -->> get current hostname
+			if (PersistentCounterHandler.hasInstance())
+			{
+				PersistentCounterHandler pcs = PersistentCounterHandler.getInstance();
+				List<IPersistWriter> writers = pcs.getWriters();
+				for (IPersistWriter writer : writers)
+				{
+					if (writer instanceof PersistWriterToHttpJson)
+					{
+						try
+						{
+							PersistWriterToHttpJson dbxCentralWriter = (PersistWriterToHttpJson) writer;
+							Configuration conf = dbxCentralWriter.getConfig();
+							String url = conf.getProperty("PersistWriterToHttpJson.url", null);
+
+//							public static final String  PROPKEY_url               = "PersistWriterToHttpJson.url";
+//							public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
+							
+							// yes we found it...
+							if (url != null && url.endsWith("/api/pcs/receiver"))
+							{
+								URI uri = new URI(url);
+								String host = uri.getHost();
+								int    port = uri.getPort(); // -1 if not defined
+									
+								// Try to replace 'localhost' with our current hostname...
+								if ("localhost".equals(host))
+								{
+									host = InetAddress.getLocalHost().getCanonicalHostName();
+								}
+									
+								if (port < 0)
+									dbxCentralUrl = "http://" + host;
+								else
+									dbxCentralUrl = "http://" + host + ":" + port;
+							}
+						}
+						catch(Exception ignore) {}
+					}
+				}
+			}
+		}
+		
+		return dbxCentralUrl;
 	}
 
 	//----------------------------------------------------------------
@@ -146,6 +213,8 @@ implements IAlarmWriter
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_severity  ), spaces) + ": " + skip_severity_regExp  );
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_state     ), spaces) + ": " + keep_state_regExp     );
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_state     ), spaces) + ": " + skip_state_regExp     );
+			_logger.info("DbxCentral URL for Alarm Writer Module: "+getName());
+			_logger.info("    " + PROPKEY_dbxCentralUrl + ": " + getDbxCentralUrl());
 		}
 	}
 	

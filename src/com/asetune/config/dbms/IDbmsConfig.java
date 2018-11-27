@@ -35,6 +35,20 @@ extends TableModel
 	throws SQLException;
 
 	/**
+	 * Check the configuration collected in refresh() and add/create a issue/anomaly if anything strange was found. 
+	 */
+	public void checkConfig(DbxConnection conn);
+
+	/** add an issue */
+	public void addConfigIssue(DbmsConfigIssue issue);
+
+	/** Get configuration issues */
+	public List<DbmsConfigIssue> getConfigIssues();
+	
+	/** Check if we have any configuration issues */
+	public boolean hasConfigIssues();
+	
+	/**
 	 * Get description for the configuration name
 	 * @param colfigName
 	 * @return the description

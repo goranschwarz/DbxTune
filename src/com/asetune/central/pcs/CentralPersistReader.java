@@ -89,7 +89,10 @@ public class CentralPersistReader
 		MAX_OVER_MINUTES, 
 
 		/** Only take the Average value from a sample over X minutes, this can be used if there are to many samples */
-		AVG_OVER_MINUTES;
+		AVG_OVER_MINUTES,
+		
+		/** Sum all value from a sample over X minutes, this can be used if there are to many samples */
+		SUM_OVER_MINUTES;
 
 		/** parse the value */
 		public static SampleType fromString(String text)
@@ -1558,6 +1561,64 @@ public class CentralPersistReader
 						list.add(e);
 					}
 				}
+				else if (SampleType.SUM_OVER_MINUTES.equals(sampleType)) // calculate SUM over X minutes
+				{
+					// This section calculates SUM values over X number of minutes (goal is to return LESS records to client)
+					// Algorithm:
+					//   - Add records to a temporary list
+					//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
+					//     - calculate SUM over all "saved" records.
+					//     - add the SUM calculated record to the "return list"
+					
+					//
+					Timestamp spanStartTime = null;
+					List<Map<String, Double>> tmpList = new ArrayList<>();
+					
+					long sumOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
+
+					while (rs.next())
+					{
+						readCount++;
+						LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
+
+					//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+						Timestamp sessionSampleTime = rs.getTimestamp(2);
+					//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+						
+						if (spanStartTime == null)
+							spanStartTime = sessionSampleTime;
+
+						for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+						{
+							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+						}
+
+						tmpList.add(labelAndDataMap);
+						
+						// Is it time to do calculation yet? 
+						long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
+						if (spanDiffMs >= sumOverMs)
+						{
+							LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
+							tmpList.clear();
+							
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, sumMap);
+							list.add(e);
+							
+							// Start a new spanTime
+							spanStartTime = sessionSampleTime;
+						}
+					}
+					// Calculate and Add results from "last" records 
+					if ( ! tmpList.isEmpty() )
+					{
+						LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
+						tmpList.clear();
+						
+						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, sumMap);
+						list.add(e);
+					}
+				}
 				else if (SampleType.MAX_OVER_SAMPLES.equals(sampleType)) // calculate MAX over X samples
 				{
 					// This section calculates MAX values over X number of samples (goal is to return LESS records to client)
@@ -1775,6 +1836,57 @@ public class CentralPersistReader
 		return toMap;
 	}
 
+	/**
+	 * Calculate sum values from all values in the Map
+	 * @param tmpList
+	 * @return
+	 */
+	private LinkedHashMap<String, Double> calcSumData(List<Map<String, Double>> tmpList)
+	{
+		// Algorithm
+		// - add all List entries to a SUM map
+
+		// Create the output Map
+		LinkedHashMap<String, Double> toMap = new LinkedHashMap<>();
+		
+		// Add SUM entries from the List of Maps into a single Map with same keys 
+		for (Map<String, Double> fromMap : tmpList)
+		{
+			for (Entry<String, Double> from : fromMap.entrySet())
+			{
+				String fromKey = from.getKey();
+				Double fromVal = from.getValue();
+
+				Double currentSumVal = toMap.get(fromKey);
+				if (currentSumVal == null)
+					toMap.put(fromKey, fromVal);
+				else
+				{
+					if (fromVal != null)
+					{
+						toMap.put(fromKey, currentSumVal + fromVal);
+					}
+				}
+			}
+		}
+		
+		// Round the numbers in the toMap
+		for (Entry<String, Double> sum : toMap.entrySet())
+		{
+			String sumKey = sum.getKey();
+			Double sumVal = sum.getValue();
+
+			if (sumVal != null)
+			{
+				BigDecimal bd = new BigDecimal(sumVal).setScale(1, BigDecimal.ROUND_HALF_EVEN /*RoundingMode.HALF_UP*/);  // in the CENTRAL DB the datatype is decimal(16, 1)
+				Double avgVal = new Double(bd.doubleValue());
+				toMap.put(sumKey, avgVal);
+			}
+		}
+
+		return toMap;
+	}
+
 	private static void testCalcAvgData()
 	{
 		List<Map<String, Double>> list = new ArrayList<>();
@@ -1968,10 +2080,80 @@ public class CentralPersistReader
 		if ( max6 != null  ) System.err.println("FAIL: max6 expected value 'null', result value '"+max6+"'");
 		if ( max7 != -99d  ) System.err.println("FAIL: msg7 expected value '-99.0', result value '"+max7+"'");
 	}
+	
+	private static void testCalcSumData()
+	{
+		List<Map<String, Double>> list = new ArrayList<>();
+		
+		Map<String, Double> map1 = new LinkedHashMap<>();
+		map1.put("k1", new Double(1.1) );
+		map1.put("k2", new Double(2.2) );
+		map1.put("k3", new Double(3.3) );
+		map1.put("k4", new Double(3.0) );
+		map1.put("k5", new Double(50) );
+		map1.put("k6", null );
+		map1.put("k7", null );
+		
+		Map<String, Double> map2 = new LinkedHashMap<>();
+		map2.put("k1", new Double(1.1) );
+		map2.put("k2", new Double(2.2) );
+		map2.put("k3", new Double(3.3) );
+		map2.put("k4", new Double(3.0) );
+		map2.put("k5", null );             // Note: null value (should not be included in divideByCount)
+		map2.put("k6", null );
+		map2.put("k7", null );
+		
+		Map<String, Double> map3 = new LinkedHashMap<>();
+		map3.put("k1", new Double(1.1) );
+		map3.put("k2", new Double(2.2) );
+		map3.put("k3", new Double(3.3) );
+		map3.put("k4", new Double(4.0) );
+		map3.put("k5", new Double(150) );
+		map3.put("k6", null );
+		map3.put("k7", new Double(99) );
+		
+		// Add entries to list
+		list.add(map1);
+		list.add(map2);
+		list.add(map3);
+
+		
+		// TEST: SUM
+		Map<String, Double> sumMap = new CentralPersistReader().calcSumData(list);
+		Double sum1 = sumMap.get("k1");
+		Double sum2 = sumMap.get("k2");
+		Double sum3 = sumMap.get("k3");
+		Double sum4 = sumMap.get("k4");
+		Double sum5 = sumMap.get("k5");
+		Double sum6 = sumMap.get("k6");
+		Double sum7 = sumMap.get("k7");
+
+		System.out.println("--- TEST: SUM");
+		System.out.println("testCalcSumData(): avgMap.size()="+sumMap.size());
+		System.out.println("testCalcSumData(): k1="+sum1);
+		System.out.println("testCalcSumData(): k2="+sum2);
+		System.out.println("testCalcSumData(): k3="+sum3);
+		System.out.println("testCalcSumData(): k4="+sum4);
+		System.out.println("testCalcSumData(): k5="+sum5);
+		System.out.println("testCalcSumData(): k6="+sum6);
+		System.out.println("testCalcSumData(): k7="+sum7);
+
+		if ( sumMap.size() != 7) System.err.println("FAIL: sumMap.size() expected value '7', result value '"+sumMap.size()+"'");
+		if ( sum1 != 3.3d ) System.err.println("FAIL: sum1 expected value '3.3', result value '" +sum1+"'");
+		if ( sum2 != 6.6d ) System.err.println("FAIL: sum2 expected value '6.6', result value '" +sum2+"'");
+		if ( sum3 != 9.9d ) System.err.println("FAIL: sum3 expected value '9.9', result value '" +sum3+"'");
+		if ( sum4 != 10d  ) System.err.println("FAIL: sum4 expected value '10',  result value '" +sum4+"'");
+		if ( sum5 != 200d ) System.err.println("FAIL: sum5 expected value '200', result value '" +sum5+"'");
+		if ( sum6 != null ) System.err.println("FAIL: sum6 expected value 'null', result value '"+sum6+"'");
+		if ( sum7 != 99d  ) System.err.println("FAIL: sum7 expected value '99.0', result value '"+sum7+"'");
+
+	}
+
 	public static void main(String[] args)
 	{
 		testCalcAvgData();
 		testCalcMaxNegativeData();
+		testCalcSumData();
 	}
 
 

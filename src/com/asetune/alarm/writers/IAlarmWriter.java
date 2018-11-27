@@ -62,6 +62,12 @@ public interface IAlarmWriter
 	public void cancel(AlarmEvent alarmEvent);
 
 	/**
+	 * Get the URL of the DbxCentral Web server, so messages can include a reference if they want.
+	 * @return
+	 */
+	public String getDbxCentralUrl();
+	
+	/**
 	 * At the end of a scan for suspected components, this method is called 
 	 * and it can be used for "sending of a batch" of events or flushing a file
 	 * or wahtever you want to do.

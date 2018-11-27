@@ -27,7 +27,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low DB LOG Free Space in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
+				"Low DB LOG Free Space (MB) in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInMb="+thresholdInMb+")",
 				thresholdInMb
 				);
 
@@ -35,7 +35,7 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("dbname="+dbname+",mb="+freeSpaceInMb+",pct="+usedSpaceInPct);
+		setData("dbname="+dbname+",freeMb="+freeSpaceInMb+",usedPct="+usedSpaceInPct);
 	}
 
 	/**
@@ -57,7 +57,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SPACE,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Low DB LOG Free Space in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
+				"Low DB LOG Free Space (PCT) in Server '" + cm.getServerName() + "' and dbname '" + dbname + "', FreeSpaceInMB="+freeSpaceInMb+", UsedSpaceInPcs="+usedSpaceInPct+". (thresholdInPct="+thresholdInPct+")",
 				thresholdInPct
 				);
 
@@ -65,6 +65,6 @@ extends AlarmEvent
 		setTimeToLive(cm);
 
 		// Set the raw data carier
-		setData("dbname="+dbname+",mb="+freeSpaceInMb+",pct="+usedSpaceInPct);
+		setData("dbname="+dbname+",freeMb="+freeSpaceInMb+",usedPct="+usedSpaceInPct);
 	}
 }

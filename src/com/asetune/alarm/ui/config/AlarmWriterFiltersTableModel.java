@@ -63,6 +63,11 @@ public class AlarmWriterFiltersTableModel extends AbstractTableModel
 
 	private List<CmSettingsHelper> _settings = new ArrayList<>();
 	
+	public List<CmSettingsHelper> getSettings()
+	{
+		return _settings;
+	}
+
 	/** Populate information in the table */
 	public void refreshTable(List<CmSettingsHelper> settings)
 	{

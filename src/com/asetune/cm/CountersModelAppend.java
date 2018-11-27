@@ -4,41 +4,23 @@
 package com.asetune.cm;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLWarning;
-import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.SwingUtilities;
-
-import org.apache.log4j.Logger;
-
-import com.asetune.DbxTune;
 import com.asetune.ICounterController;
-import com.asetune.gui.TabularCntrPanel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 
 
 public class CountersModelAppend
     extends CountersModel
 {
 	/** Log4j logging. */
-	private static Logger	   _logger	          = Logger.getLogger(CountersModelAppend.class);
+//	private static Logger	   _logger	          = Logger.getLogger(CountersModelAppend.class);
 	private static final long	serialVersionUID	= 1L;
 
-	private List<List<Object>> _data    = null;
-	private List<String>       _cols    = null;
-	private Timestamp _thisSamplingTime = null;
-	private Timestamp _prevSamplingTime = null;
-	private long      _interval         = 0;
-
-	@SuppressWarnings("unused")
-	private boolean   _newRows          = false;
-
-	private boolean   _initialized      = false;
+	private List<List<Object>> _lastRefreshData = new ArrayList<>();
+	private List<List<Object>> _allData         = new ArrayList<>();
 
 	public CountersModelAppend(
 		ICounterController counterController,
@@ -57,139 +39,87 @@ public class CountersModelAppend
 		setDataSource(DATA_ABS, false);
 	}
 
-	@Override
-	public boolean isDataInitialized()
+	public static final String  PROPKEY_showAllRecords = "<CMNAME>.showAllRecords";
+	public static final boolean DEFAULT_showAllRecords = true;
+	public boolean showAllRecords()
 	{
-		return _initialized;
+		String propName = PROPKEY_showAllRecords.replace("<CMNAME>", getName());
+		return Configuration.getCombinedConfiguration().getBooleanProperty(propName, DEFAULT_showAllRecords);
+	}
+	public void setShowAllRecords(boolean b)
+	{
+		String propName = PROPKEY_showAllRecords.replace("<CMNAME>", getName());
+		
+		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+		if (conf != null)
+		{
+			conf.setProperty(propName, b);
+			conf.save();
+		}
 	}
 	
-	public boolean saveSampleToFile()
+	/**
+	 * This is used to get <i>LAST</i> data, can for example be used by the Persistent Counter Storage to "push" data for last sample
+	 * @return
+	 */
+	public List<List<Object>> getDataCollectionForLastRefresh()
 	{
-		return false;
+		return _lastRefreshData;
 	}
 
-//	@Override
-//	public List<String> getColNames()
-//	{
-//		return _cols;
-//	}
-//
-//	@Override
-//	public List<List<Object>> getDataCollection()
-//	{
-//		return _data;
-//	}
-
-	@Override
-	public List<List<Object>> getDataCollection(int whatData)
-	{
-		List<List<Object>> data = null;
-
-		if      (whatData == DATA_ABS)  data = _data;
-		else if (whatData == DATA_DIFF) data = _data;
-		else if (whatData == DATA_RATE) data = _data;
-		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-
-		if (data == null)
-			return null;
-
-		return data;
-	}
-
-	@Override
-	public synchronized List<String> getColNames(int whatData)
-	{
-		List<String> data = null;
-
-		if      (whatData == DATA_ABS)  data = _cols;
-		else if (whatData == DATA_DIFF) data = _cols;
-		else if (whatData == DATA_RATE) data = _cols;
-		else
-			throw new RuntimeException("Only ABS, DIFF, or RATE data is available.");
-
-		if (data == null)
-			return null;
-
-		return data;
-	}
 	
 	/*---------------------------------------------------
 	** BEGIN: implementing TableModel or overriding CounterModel/AbstractTableModel
 	**---------------------------------------------------
 	*/
 	@Override
-	public int getColumnCount()
-	{
-		int c = 0;
-		if (isDataInitialized() && _cols != null)
-			c = _cols.size();
-		return c;
-    }
-
-	@Override
-	public String getColumnName(int col)
-	{
-		if (isDataInitialized() && _cols != null)
-			return (String) _cols.get(col);
-		return null;
-	}
-
-	@Override
 	public int getRowCount()
 	{
+		// Offline mode is not handled here
+		if (isOfflineConnected())
+			return super.getRowCount();
+
 		int c = 0;
-		if (isDataInitialized() && _data != null)
-			c = _data.size();
+
+		if (isDataInitialized())
+			c = showAllRecords() ? _allData.size() : _lastRefreshData.size();
+		
 		return c;
     }
 
 	@Override
 	public Object getValueAt(int row, int col)
 	{
-		if (!isDataInitialized())   return null;
+		// Offline mode is not handled here
+		if (isOfflineConnected())
+			return super.getValueAt(row, col);
 
-		List<Object> rowList = _data.get(row);
-		if (rowList == null) return null;
+		if (!isDataInitialized())   
+			return null;
+
+		List<Object> rowList = showAllRecords() ? _allData.get(row) : _lastRefreshData.get(row);
+		if (rowList == null) 
+			return null;
+
 		return rowList.get(col);
     }
-
-	@Override
-	public boolean isCellEditable(int rowIndex, int columnIndex)
-	{
-		return false;
-    }
-
-	@Override
-	public int findColumn(String colName)
-	{
-		if (isDataInitialized() && _cols != null)
-		{
-			for (int i=0; i<_cols.size(); i++)
-			{
-				if ( colName.equals(getColumnName(i)) )
-					return i;
-			}
-		}
-		return -1;
-	}
-
 	/*---------------------------------------------------
 	** END: implementing TableModel or overriding CounterModel/AbstractTableModel
 	**---------------------------------------------------
 	*/
 
 	@Override public boolean discardDiffPctHighlighterOnAbsTable() { return true; }
-	@Override public boolean isDiffCalcEnabled() { return false; }
+	@Override public boolean isDiffCalcEnabled()     { return false; }
 	@Override public boolean isDiffColumn(int index) { return false; }
 	@Override public boolean isPctColumn (int index) { return false; }
 
-	@Override
-	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
+	@Override public boolean hasAbsData() 
 	{
+		if (isOfflineConnected())
+			return super.hasAbsData();
+		
+		return getRowCount() > 0; 
 	}
-	
-	@Override public boolean hasAbsData() { return _data != null; }
 
 //	@Override public void    setPersistCountersAbs(boolean b) {}
 	@Override public boolean isPersistCountersAbsEnabled() { return true; }
@@ -207,176 +137,67 @@ public class CountersModelAppend
 	@Override public boolean getDefaultIsPersistCountersAbsEnabled()  { return true; }
 	@Override public boolean getDefaultIsPersistCountersDiffEnabled() { return false; }
 	@Override public boolean getDefaultIsPersistCountersRateEnabled() { return false; }
+
 	
+	// The below can be used if we want to handle OFFLINE data in this CM (right now it's done by the Parent)
+//	@Override
+//	public void setOfflineValueAt(int type, Object value, int row, int col)
+//	{
+//		// TODO Auto-generated method stub
+//		super.setOfflineValueAt(type, value, row, col);
+//System.out.println("APPEND: setOfflineValueAt(type="+type+", row="+row+", col="+col+", value="+value);
+//	}
 	
 
-	private void checkWarnings(Statement st) 
-	throws Exception
-	{
-		boolean hasWarning = false;
-		try
-		{
-			SQLWarning w = st.getWarnings();
-			while (w != null)
-			{
-				hasWarning = true;
-				_logger.warn("CounterSample. Warning : " + w);
-				w = w.getNextWarning();
-			}
-		}
-		catch (Exception ex)
-		{
-			_logger.warn("CounterSample.getWarnings : " + ex);
-			ex.printStackTrace();
-		}
-		if (hasWarning)
-		{
-			throw new Exception("SQL Warning");
-		}
-		return;
-	}	
 
-	private int _nbRows = 0;
-	private int _nbCols = 0;
+//	/**
+//	 * get the data a bit earlier than after 'super.refreshGetData(conn)' <br>
+//	 * Since this is called from inside super.refreshGetData(conn), and not (in GUI maode after SwingUtilities.invokeLater(...) ) <br>
+//	 * When we have "fixed" direct assign of: _prevSample=tmpNewSample, _newSample=tmpNewSample, _diffData=tmpDiffData, _rateData=tmpRateData we can use "attempt 1"
+//	 */
+//	@Override
+//	public void localCalculation(CounterSample newSample)
+//	{
+//		// get last sample... as "last sample"
+//		_lastRefreshData = newSample.getDataCollection();
+//
+//		// add all in this sample to "allData"
+//		if (_lastRefreshData != null)
+//			_allData.addAll(_lastRefreshData);
+//
+////System.out.println("APPEND("+Thread.currentThread().getName()+"): _lastRefreshData.size()="+(_lastRefreshData==null?null:_lastRefreshData.size())+", _allData.size()="+_allData.size());
+//	}
 
-
-	private int getCnt(Connection cnx, String sql)
-	throws Exception
-	{
-		if (sql == null)
-			sql = getSql() + getSqlWhere();
-
-		Statement stmt = cnx.createStatement();
-		ResultSet rs;
-		ResultSetMetaData rsmd;
-		rs = stmt.executeQuery("select getdate() " + sql);
-		checkWarnings(stmt);
-		rs.next();
-		if (_thisSamplingTime != null)
-			_prevSamplingTime = _thisSamplingTime;
-		_thisSamplingTime = (rs.getTimestamp(1));
-
-		if (_prevSamplingTime != null && _thisSamplingTime != null)
-		{
-			_interval = _thisSamplingTime.getTime() - _prevSamplingTime.getTime();
-		}
-
-		rs.next();
-		stmt.getMoreResults();
-		checkWarnings(stmt);
-		rs = stmt.getResultSet();
-		rsmd = rs.getMetaData();
-
-		if (_cols == null)
-		{
-			// Initialize column names
-			_cols = new ArrayList<String>();
-			_nbCols = rsmd.getColumnCount();
-			for (int i = 1; i <= _nbCols; i++)
-			{
-				_cols.add(rsmd.getColumnName(i));
-			}
-		}
-
-		// Initialize data structure
-		if ( _data == null )
-		{
-			_nbRows = 0;
-			_data = new ArrayList<List<Object>>();
-		}
-
-		// Load counters in memory
-		List<Object> row = null;
-		Object val;
-
-		_logger.debug("---");
-		while (rs.next())
-		{
-			_newRows = true;
-
-			// Get one row
-			row = new ArrayList<Object>();
-			_data.add(row);
-			for (int i = 1; i <= _nbCols; i++)
-			{
-				val = rs.getObject(i);
-				
-				if (_logger.isDebugEnabled())
-				{
-					if (_data.size() == 1)
-						_logger.debug("READ_RESULTSET(row 0): col=" + i + ", colName=" + (_cols.get(i - 1) + "                                   ").substring(0, 25) + ", ObjectType=" + (val == null ? "NULL-VALUE" : val.getClass().getName()));
-				}
-				row.add(val);
-			}
-			_nbRows++;
-		}
-		rs.close();
-		_logger.debug("Number of rows in '"+getName()+"': "+_nbRows);
-		
-		if (row == null)
-			return -1;
-		return row.size();
-	}
-
-
-
+//-------- BEGIN attempt 1 ------------------
+// Note: if we change 'super.refreshGetData(conn)' to assign following values SYNCRONUS in the methos and not with: SwingUtilities.invokeLater(...)
+//	_prevSample = tmpNewSample;
+//	_newSample  = tmpNewSample;
+//	_diffData   = tmpDiffData;
+//	_rateData   = tmpRateData;
+//
+//	/**
+//	 * Use parent to get most work done
+//	 */
 	@Override
 	protected int refreshGetData(DbxConnection conn) throws Exception
 	{
-		if (_logger.isDebugEnabled())
-			_logger.debug("Entering refresh() method for " + getName());
+		// Call super to get all records...
+		int superRows = super.refreshGetData(conn);
+//System.out.println("APPEND: super.refreshGetData(conn): superRows="+superRows);
 
-		if (conn == null)
-			return -1;
+		// get last sample... as "last sample"
+		_lastRefreshData = super.getDataCollection(DATA_ABS); // HERE is where we fail, since super.refreshGetData() assignes internal variables in SwingUtilities.invokeLater(...)
 
-		int rowsFetched = getCnt(conn, null);
+		// add all in this sample to "allData"
+		if (_lastRefreshData != null)
+			_allData.addAll(_lastRefreshData);
 
-		// Update dates on panel
-		TabularCntrPanel tabPanel = getTabPanel();
-		if (tabPanel != null)
-			tabPanel.setTimeInfo(null, getSampleTimeHead(), _thisSamplingTime, _interval);
+//System.out.println("APPEND("+Thread.currentThread().getName()+"): _lastRefreshData.size()="+(_lastRefreshData==null?null:_lastRefreshData.size())+", _allData.size()="+_allData.size());
+		fireTableDataChanged();
 
-		if ( DbxTune.hasGui() )
-		{
-			Runnable doWork = new Runnable()
-			{
-				@Override
-				public void run()
-				{
-					beginGuiRefresh();
-
-					if ( ! _initialized )
-					{
-						_logger.debug(getName()+":------doFireTableStructureChanged------");
-						fireTableStructureChanged();
-
-						_initialized = true;
-					}
-
-					if (getTabPanel() != null && !getTabPanel().isTableInitialized())
-					{
-						_logger.debug(getName()+":------doFireTableStructureChanged------");
-						fireTableStructureChanged();
-						getTabPanel().adjustTableColumnWidth();
-					}
-					else
-					{
-						_logger.debug(getName()+":-fireTableDataChanged-");
-						fireTableDataChanged();
-					}
-					
-					endGuiRefresh();
-				}
-			};
-			// Invoke this job on the SWING Event Dispather Thread
-			if ( ! SwingUtilities.isEventDispatchThread() )
-				SwingUtilities.invokeLater(doWork);
-			else
-				doWork.run();
-		}
-		
-		return rowsFetched;
+		return superRows;
 	}
+//-------- END attempt 1 ------------------
 
 	/**
 	 * NO PK is needed, we are NOT going to do DIFF calculations
@@ -389,41 +210,18 @@ public class CountersModelAppend
 	}
 
 	@Override
-	public void clearForRead()
-	{
-		_nbRows = 0;
-		_data = new ArrayList<List<Object>>();
-	}
-
-	@Override
-	public void clear()
-	{
-		clear(100);
-	}
-	@Override
 	public synchronized void clear(int clearLevel)
 	{
-		_initialized = false;
+		super.clear(clearLevel);
 
-		_thisSamplingTime = null;
-		_prevSamplingTime = null;
-		_interval         = 0;
-
-		// Clear dates on panel
-		TabularCntrPanel tabPanel = getTabPanel();
-		if (tabPanel != null)
-			tabPanel.reset();
-
-//		System.out.println(_name+":------doFireTableStructureChanged------");
-		fireTableStructureChanged();
-	}
-
-
-	// Return the value of a cell (rowId, ColumnName)
-	@Override
-	public synchronized Timestamp getTimestamp()
-	{
-		return _thisSamplingTime;
+		_allData         = new ArrayList<>();
+		_lastRefreshData = new ArrayList<>();
 	}
 	
+	@Override
+	public void reset()
+	{
+		super.reset();
+		clear(); // Should clear() be called here, or should we move some fields from clear method ???
+	}
 }

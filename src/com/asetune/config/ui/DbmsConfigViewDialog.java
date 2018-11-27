@@ -22,6 +22,7 @@ import org.apache.log4j.Logger;
 import com.asetune.Version;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
 import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
@@ -49,6 +50,8 @@ implements ActionListener, ConnectionProvider
 	private Window                 _owner           = null;
 
 	private JButton                _refresh         = new JButton("Refresh");
+	private JButton                _diffSavedConfig = new JButton("Diff Saved Config...");
+	private JButton                _showIssues      = new JButton("Show Issues");
 	private JLabel                 _freeMb          = new JLabel();
 	
 	private ConnectionProvider     _connProvider    = null;
@@ -125,7 +128,10 @@ implements ActionListener, ConnectionProvider
 				if (PersistReader.getInstance().isConnected())
 					b = false;
 
-			_refresh.setEnabled(b);
+			_refresh        .setEnabled(b);
+			_showIssues     .setEnabled(b);
+
+			_diffSavedConfig.setVisible(false);
 		}
 	}
 	
@@ -236,8 +242,10 @@ implements ActionListener, ConnectionProvider
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
-		panel.add(_refresh, "left");
-		panel.add(_freeMb,  "left");
+		panel.add(_refresh,         "left");
+		panel.add(_diffSavedConfig, "hidemode 3, left");
+		panel.add(_showIssues,      "left");
+		panel.add(_freeMb,          "left");
 
 		// ADD the OK, Cancel, Apply buttons
 		panel.add(_ok,     "push, tag ok");
@@ -252,13 +260,16 @@ implements ActionListener, ConnectionProvider
 //		_freeMb.setText(((Cache) AseConfigText.getInstance(ConfigType.AseCacheConfig)).getFreeMemoryStr());
 		_freeMb.setText(DbmsConfigTextManager.hasInstances() ? DbmsConfigManager.getInstance().getFreeMemoryStr() : "");
 
-		_refresh.setToolTipText("Re-read the configuration.");
+		_refresh   .setToolTipText("Re-read the configuration.");
+		_showIssues.setToolTipText("When connecting to the DBMS, we check for various configuration isues... This opens the window with any config issues...");
 
 		// ADD ACTIONS TO COMPONENTS
-		_ok           .addActionListener(this);
-		_cancel       .addActionListener(this);
-//		_apply        .addActionListener(this);
-		_refresh      .addActionListener(this);
+		_ok             .addActionListener(this);
+		_cancel         .addActionListener(this);
+//		_apply          .addActionListener(this);
+		_refresh        .addActionListener(this);
+		_diffSavedConfig.addActionListener(this);
+		_showIssues     .addActionListener(this);
 
 		return panel;
 	}
@@ -272,6 +283,19 @@ implements ActionListener, ConnectionProvider
 		if (_refresh.equals(source))
 		{
 			doRefresh();
+		}
+
+		// --- BUTTON: REFRESH ---
+		if (_diffSavedConfig.equals(source))
+		{
+			doDiffSavedConfig();
+		}
+
+		// --- BUTTON: SHOW ISSUES ---
+		if (_showIssues.equals(source))
+		{
+			IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
+			DbmsConfigIssuesDialog.showDialog(this, dbmsConfig, this);
 		}
 
 		// --- BUTTON: CANCEL ---
@@ -336,6 +360,21 @@ implements ActionListener, ConnectionProvider
 	{
 	}
 
+	private void doDiffSavedConfig()
+	{
+		// - open dialog to connect to a PCS database
+		// - (check if it's of the same DBMS type or DbxTune application)
+		// - fetch the various configurations
+		// - do DIFF
+		// - Present in "some form"
+
+		// IDbmsConfig     has to be enhanced mith at least one method: allowConfigDiff or canDoConfigDiff
+		// IDbmsConfigText has to be enhanced mith at least one method: allowConfigDiff or canDoConfigDiff  
+		//                 (some Text config can be done, while others wont work, for example: sp_monitorconfig will diff ALL THE TIME, while sp_helpcache/sp_helpdevice/sp_helpdb etc will be GOOD)
+
+		System.out.println("-NOT-YET-IMPLEMENTED-");
+	}
+	
 	/*---------------------------------------------------
 	** BEGIN: Property handling
 	**---------------------------------------------------
@@ -343,7 +382,7 @@ implements ActionListener, ConnectionProvider
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "aseConfigViewDialog.";
+		String base = "DbmsConfigViewDialog.";
 
 		if (tmpConf != null)
 		{
@@ -365,7 +404,7 @@ implements ActionListener, ConnectionProvider
 
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "aseConfigViewDialog.";
+		String base = "DbmsConfigViewDialog.";
 
 		setSize(width, height);
 

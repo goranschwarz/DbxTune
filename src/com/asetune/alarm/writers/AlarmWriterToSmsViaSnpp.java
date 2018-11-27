@@ -49,7 +49,7 @@ extends AlarmWriterAbstract
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 //		String msgBody = action + ": " + alarmEvent.getShortMessage();
-		String msgBody = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true);
+		String msgBody = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
 		
 		
 		Message m = new Message();

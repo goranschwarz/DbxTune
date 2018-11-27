@@ -6,7 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>area > boundaries | Chart.js sample</title>
 	<link rel="stylesheet" type="text/css" href="../../style.css">
-	<script src="../../../Chart.bundle.js"></script>
+	<script src="../../../dist/Chart.bundle.js"></script>
 	<script src="../../utils.js"></script>
 	<script src="analyser.js"></script>
 </head>
@@ -94,15 +94,16 @@
 			});
 		});
 
-
+		// eslint-disable-next-line no-unused-vars
 		function toggleSmooth(btn) {
 			var value = btn.classList.toggle('btn-on');
 			Chart.helpers.each(Chart.instances, function(chart) {
-				chart.options.elements.line.tension = value? 0.4 : 0.000001;
+				chart.options.elements.line.tension = value ? 0.4 : 0.000001;
 				chart.update();
 			});
 		}
 
+		// eslint-disable-next-line no-unused-vars
 		function randomize() {
 			var seed = utils.rand();
 			Chart.helpers.each(Chart.instances, function(chart) {

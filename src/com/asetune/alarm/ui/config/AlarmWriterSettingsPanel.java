@@ -97,9 +97,9 @@ implements TableModelListener
 //		_alarmWriterSettingsTable.refreshTable(settings);
 //		checkContent();
 //	}
-	public void setWriterSettings(List<CmSettingsHelper> settings)
+	public void setWriterSettings(List<CmSettingsHelper> settings, String writerClassName)
 	{
-		_alarmWriterSettingsTable.refreshTable(settings);
+		_alarmWriterSettingsTable.refreshTable(settings, writerClassName);
 		checkContent();
 	}
 //	public void setWriterName(String className)

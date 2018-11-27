@@ -696,6 +696,35 @@ class DbxGraph
 					yAxes: [{
 						ticks: {
 							beginAtZero: true,  // if true, scale will include 0 if it is not already included.
+							callback: function(value, index, values) 
+							{
+								// Alter numbers larger than 1k
+								if (value >= 1000) {
+									var units = [" K", " M", " G", " T"];
+
+									var order = Math.floor(Math.log(value) / Math.log(1000));
+
+									// TODO: check more than one label to decide if we should use decimals for all labels or just this one...  
+									
+									var unitname = units[(order - 1)];
+									//var num = Math.floor(value / 1000 ** order);
+									var num = (value / 1000 ** order).toFixed(1).replace(/\.0$/, '');
+
+									// output number remainder + unitname
+									return num + unitname;
+								}
+
+								// return formatted original number
+								// Use ChartJS default method for this, otherwise 1.0 till be 1 etc...
+								return Chart.Ticks.formatters.linear(value, index, values);
+
+								//return value.toFixed(1);
+								//return value.toFixed(1).replace(/\.0$/, '');
+								//return Chart.Ticks.formatters.linear(value, index, values);
+								//return this.toLocaleString();
+								//return value.toString();
+								//return value.toLocaleString();
+							}
 						}
 					}],
 				},
@@ -743,6 +772,13 @@ class DbxGraph
 						}
 					}
 				}
+//				plugins: {
+//					datalabels: {
+//						formatter: function(value, context) {
+//							return numeral(value).format(0,0);
+//						}
+//					}
+//				}
 			},
 			tooltips: {
 //				mode: 'dataset',
@@ -1246,13 +1282,16 @@ function dbxTuneLoadCharts(destinationDivId)
 			'</tr>' +
 			'<tr>' + 
 				'<td>graphList</td>' + 
-				'<td>A JSON Object that contains what you want to display graphs for<br>' + 
+				'<td>A JSON Object that contains what you want to display graphs for, or a comma separated list of graph names<br>' + 
 				'Example 1: <code>[{"srv":"PROD_A_ASE","graph":"CmSummary_aaCpuGraph"},{"srv":"PROD_B_ASE","graph":"CmSummary_aaCpuGraph"}]</code><br>' +
 				'Example 2: <code>[{"graph":"CmSummary_aaCpuGraph"},{"graph":"CmSummary_OldestTranInSecGraph"}]</code><br>' +
 				'Example 3: <code>all</code> Special word to choose all graph names.<br>' +
-				'Note 1: Name of the graphs for a SERVER can be fetched using: <a href="/api/graphs?sessionName=SRV_NAME">/api/graphs?sessionName=SRV_NAME</a><br>' +
-				'Note 2: If the "srv":"SRV_NAME" is specified (as in example 1). the <code>sessionName</code> parameter wont have to be specified<br>' +
-				'Note 3: If only "graph":"CmName_graphName" is specified (as in example 2), or "all" (as in example 3). the <code>sessionName</code> parameter has to be specified, and if you specify more that one server, the graph(s) will be displayed for all servers<br>' +
+				'Example 4: <code>CmSummary_aaCpuGraph,CmSummary_OldestTranInSecGraph</code> only the 2 graphs specified in the comma separeted list.<br>' +
+				'Note 1: Available SRV_NAME(S) or "sessions" can be fetched using: <a href="/api/sessions">/api/sessions</a><br>' +
+				'Note 2: Name of graph(s) for a SERVER can be fetched using: <a href="/api/graphs?sessionName=replace-me-with-a-SRV_NAME-from-note-1">/api/graphs?sessionName=replace-me-with-a-SRV_NAME-from-note-1</a><br>' +
+				'Note 3: If the "srv":"SRV_NAME" is specified (as in example 1). the <code>sessionName</code> parameter wont have to be specified<br>' +
+				'Note 4: If only "graph":"CmName_graphName" is specified (as in example 2), or "all" (as in example 3). the <code>sessionName</code> parameter has to be specified, and if you specify more that one server, the graph(s) will be displayed for all servers<br>' +
+				'Note 5: If a comma separated list is specified (as in example 4). the <code>sessionName</code> parameter has to be specified.<br>' +
 				'</td>' + 
 			'</tr>' +
 			'<tr>' + 
@@ -1317,6 +1356,7 @@ function dbxTuneLoadCharts(destinationDivId)
 				'  <li>MAX_OVER_SAMPLES - Get MAX values over X number of data points</li>' + 
 				'  <li>MAX_OVER_MINUTES - Get MAX values over X minutes of data points</li>' + 
 				'  <li>AVG_OVER_MINUTES - Get AVERAGE values over X minutes of data points</li>' + 
+				'  <li>SUM_OVER_MINUTES - Get SUM values over X minutes of data points</li>' + 
 				'</ul>' + 
 				'<b>default:</b> AUTO<br>' + 
 				'</td>' + 
@@ -1330,6 +1370,7 @@ function dbxTuneLoadCharts(destinationDivId)
 				'  <li>MAX_OVER_SAMPLES - A number value...</li>' + 
 				'  <li>MAX_OVER_MINUTES - A number value...</li>' + 
 				'  <li>AVG_OVER_MINUTES - A number value...</li>' + 
+				'  <li>SUM_OVER_MINUTES - A number value... there are 60 minutes in one hour, and 1440 minutes in one day</li>' + 
 				'</ul>' + 
 				'<b>default:</b> ""<br>' + 
 				'</td>' + 

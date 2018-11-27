@@ -85,11 +85,12 @@ public class H2UrlHelper
 		// for TCP/SSL get host/port
 		if (_urlType.equals("tcp") || _urlType.equals("ssl"))
 		{
+			String cleanUri = urlVal.replace('\\', '/');
 			try
 			{
-				URI uri = URI.create(urlVal);
+				URI uri = URI.create(cleanUri);
 
-				//System.out.println("H2UrlHelper.parse(url='"+url+"'): cleanURI='"+urlVal+"', uri.getScheme()='"+uri.getScheme()+"', uri.getHost()='"+uri.getHost()+"', uri.getPort()='"+uri.getPort()+"'.");
+				//System.out.println("H2UrlHelper.parse(url='"+url+"'): cleanURI='"+cleanUri+"', uri.getScheme()='"+uri.getScheme()+"', uri.getHost()='"+uri.getHost()+"', uri.getPort()='"+uri.getPort()+"'.");
 				
 				_tcpHost = uri.getHost();
 				_tcpPort = uri.getPort();
@@ -98,7 +99,7 @@ public class H2UrlHelper
 			}
 			catch (Throwable ex)
 			{
-				//System.out.println("Problem parsing the GENERIC URL '"+url+"'. Caught: "+ex);
+				//System.out.println("H2UrlHelper: Problem parsing the GENERIC URL '"+url+"', cleanUri '"+cleanUri+"'. Caught: "+ex);
 			}
 		}
 
@@ -181,6 +182,22 @@ public class H2UrlHelper
 			return _tcpHost + ":" + _tcpPort;
 
 		return _tcpHost;
+	}
+
+	public String getUrlTcpHost()
+	{
+		return _tcpHost;
+	}
+
+	public int getUrlTcpPort()
+	{
+		if (StringUtil.isNullOrBlank(_tcpHost))
+			return -1;
+
+		if (_tcpPort == -1)
+			return 9092;
+
+		return _tcpPort;
 	}
 
 	/**

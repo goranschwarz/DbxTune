@@ -128,7 +128,7 @@ public class BackwardNameCompatibility
 		if (name.equals(CM_NAME__PROC_CACHE_LOAD        )) return CmProcCacheLoad    .CM_NAME;
 		if (name.equals(CM_NAME__PROC_CALL_STACK        )) return CmProcCallStack    .CM_NAME;
 		if (name.equals(CM_NAME__CACHED_OBJECTS         )) return CmCachedObjects    .CM_NAME;
-		if (name.equals(CM_NAME__ERRORLOG               )) return CmErrolog          .CM_NAME;
+		if (name.equals(CM_NAME__ERRORLOG               )) return CmErrorLog         .CM_NAME;
 		if (name.equals(CM_NAME__DEADLOCK               )) return CmDeadlock         .CM_NAME;
 		if (name.equals(CM_NAME__LOCK_TIMEOUT           )) return CmLockTimeout      .CM_NAME;
 		if (name.equals(CM_NAME__PROC_CACHE_MODULE_USAGE)) return CmPCacheModuleUsage.CM_NAME;
@@ -180,7 +180,7 @@ public class BackwardNameCompatibility
 		if (name.equals(CmProcCacheLoad    .CM_NAME)) return CM_NAME__PROC_CACHE_LOAD;
 		if (name.equals(CmProcCallStack    .CM_NAME)) return CM_NAME__PROC_CALL_STACK;
 		if (name.equals(CmCachedObjects    .CM_NAME)) return CM_NAME__CACHED_OBJECTS;
-		if (name.equals(CmErrolog          .CM_NAME)) return CM_NAME__ERRORLOG;
+		if (name.equals(CmErrorLog         .CM_NAME)) return CM_NAME__ERRORLOG;
 		if (name.equals(CmDeadlock         .CM_NAME)) return CM_NAME__DEADLOCK;
 		if (name.equals(CmLockTimeout      .CM_NAME)) return CM_NAME__LOCK_TIMEOUT;
 		if (name.equals(CmPCacheModuleUsage.CM_NAME)) return CM_NAME__PROC_CACHE_MODULE_USAGE;

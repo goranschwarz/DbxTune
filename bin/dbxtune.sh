@@ -233,7 +233,12 @@ export APPL_SAVE_DIR=${DBXTUNE_SAVE_DIR}
 #------------------------------------------------------------------------
 #--- get JVM Parameters from file:
 #------------------------------------------------------------------------
-DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.dbxtune_jvm_settings.properties
+if [ "${toolset}" == "sqlw" ]
+then
+	DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.sqlw_jvm_settings.properties
+else
+	DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.dbxtune_jvm_settings.properties
+fi
 if [ -f ${DBXTUNE_JVM_PARAMETER_FILE} ]
 then
 	echo ""
@@ -283,7 +288,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-4.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/swingx-all-1.6.5-1.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jchart2d-3.2.2.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jchart2d-3.3.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/planviewer.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-lang3-3.7.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-io-2.6.jar

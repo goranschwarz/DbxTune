@@ -49,6 +49,19 @@ public interface ISqlCaptureBroker
 	public DbxConnection createConnection()
 	throws Exception;
 
+	/**
+	 * Check the connection for any abnormalities, like open transactions etc...<p>
+	 * if we return TRUE:  Then the collection is OK<br>
+	 * if we return FALSE: The Connection will be closed by the PersistentCounterHandler & a new will be opened later.<br>
+	 * on close, let the DBMS handle any eventual rollbacks and cleanups
+	 * 
+	 * @param conn The connection that we want to check.
+	 * @return true=OK, false=CloseConnection
+	 * @throws Exception If this happens, it's the same as if return FALSE... meaning: close the connection.
+	 */
+	public boolean checkConnection(DbxConnection conn)
+	throws Exception;
+
 	public List<String> getTableNames();
 	public String getTableDdlString(DatabaseMetaData dbmd, String tabName);
 	public List<String> getIndexDdlString(DatabaseMetaData dbmd, String tabName);

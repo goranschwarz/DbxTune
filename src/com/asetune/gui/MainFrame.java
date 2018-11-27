@@ -102,7 +102,10 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.ase.CmBlocking;
 import com.asetune.cm.ase.CmOpenDatabases;
 import com.asetune.config.dbms.DbmsConfigManager;
+import com.asetune.config.dbms.DbmsConfigTextManager;
+import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.config.ui.DbmsConfigIssuesDialog;
 import com.asetune.config.ui.DbmsConfigViewDialog;
 import com.asetune.gui.ConnectionDialog.Options;
 import com.asetune.gui.swing.AbstractComponentDecorator;
@@ -454,6 +457,8 @@ public abstract class MainFrame
 	// STATUS Panel
 	private JPanel                    _statusPanel               = new JPanel();
 	private JButton                   _alarmView_but             = new JButton();
+	private ChangeToJTabDialog        _alarmViewChangeToDialog   = null;
+	private int                       _alarmViewSaveActiveCnt    = 0;
 	private JButton                   _blockAlert_but            = new JButton();
 	private JButton                   _fullTranlogAlert_but      = new JButton();
 	private JButton                   _oldestOpenTran_but        = new JButton();
@@ -1975,13 +1980,50 @@ public abstract class MainFrame
 	@Override
 	public void alarmChanges(AlarmHandler alarmHandler, int activeAlarms, List<AlarmEvent> list)
 	{
-		MainFrame.getInstance().setActiveAlarms();
+		setActiveAlarms();
+
+//		System.out.println("alarmChanges(): _alarmViewSaveActiveCnt="+_alarmViewSaveActiveCnt+", activeAlarms="+activeAlarms);
+		
+		if (activeAlarms > 0)
+		{
+			// Only open if we go from ZERO alarms to "any new alarms"
+			if (activeAlarms > _alarmViewSaveActiveCnt)
+			{
+				// Create a new Dialog if we do not have one
+				if (_alarmViewChangeToDialog == null)
+				{
+					ActionListener al = new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							action_openAlarmViewDialog(e);
+						}
+					};
+					
+					String toTabName = "Alarm View";
+					_alarmViewChangeToDialog = new ChangeToJTabDialog(MainFrame.getInstance(), "There are New Active Alarms.", al, toTabName);
+				}
+
+				// If the Alarm View is already VISIBLE, we do not need to show the "Change to" dialog
+				boolean setToVisible = true;
+				if (_alarmView != null)
+				{
+					if (_alarmView.isVisible())
+						setToVisible = false;
+				}
+
+				if (setToVisible)
+					_alarmViewChangeToDialog.setVisible(true);
+			}
+		}
+		_alarmViewSaveActiveCnt = activeAlarms;
 	}
 	/*---------------------------------------------------
 	** END: implementing - AlarmHandler.ChangeListener
 	**---------------------------------------------------
 	*/
-
+	
 	/*---------------------------------------------------
 	** BEGIN: implementing ActionListener
 	**---------------------------------------------------
@@ -3180,6 +3222,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
     				System.setProperty("SERVERNAME", DbxTune.stripSrvName(dbmsServerName));
 			} catch (Exception ignore) {}
 			
+			// Check if we have DBMS Configuration ISSUES
+			if (DbmsConfigManager.hasInstance())
+			{
+				IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
+				if (dbmsConfig.hasConfigIssues())
+				{
+					DbmsConfigIssuesDialog.showDialog(this, dbmsConfig, this);
+				}
+			}
 		} // end: TDS_CONN
 
 		if ( connType == ConnectionDialog.JDBC_CONN)
@@ -3223,6 +3274,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
     				System.setProperty("SERVERNAME", DbxTune.stripSrvName(dbmsServerName));
 			} catch (Exception ignore) {}
 			
+			// Check if we have DBMS Configuration ISSUES
+			if (DbmsConfigManager.hasInstance())
+			{
+				IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
+				if (dbmsConfig.hasConfigIssues())
+				{
+					DbmsConfigIssuesDialog.showDialog(this, dbmsConfig, this);
+				}
+			}
 		} // end: JDBC
 
 		if ( connType == ConnectionDialog.OFFLINE_CONN)
@@ -3289,6 +3349,16 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 //					ci.setSshTunnelInfo(connDialog.getOfflineSshTunnelInfo());
 				CheckForUpdates.getInstance().sendConnectInfoNoBlock(ci);
 //				CheckForUpdates.getInstance().sendConnectInfoNoBlock(connType, null);
+				
+				// Check if we have DBMS Configuration ISSUES
+				//if (DbmsConfigManager.hasInstance())
+				//{
+				//	IDbmsConfig dbmsConfig = DbmsConfigManager.getInstance();
+				//	if (dbmsConfig.hasConfigIssues())
+				//	{
+				//		DbmsConfigIssuesDialog.showDialog(this, dbmsConfig, this);
+				//	}
+				//}
 			}
 		} // end: OFFLINE_CONN
 
@@ -3507,10 +3577,14 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 				//--------------------------
 				// Empty various Dictionaries
 				disconnectHookin(getWaitDialog());
-//				getWaitDialog().setState("Clearing ASE Config Dictionary.");
-//				AseConfig.reset();
-//				AseConfigText.reset();
-//
+				
+				getWaitDialog().setState("Clearing DBMS Config Dictionary.");
+				if (DbmsConfigManager.hasInstance())
+					DbmsConfigManager.getInstance().reset();
+
+				if (DbmsConfigTextManager.hasInstances())
+					DbmsConfigTextManager.reset();
+
 //				getWaitDialog().setState("Clearing Mon Tables Dictionary.");
 //				MonTablesDictionary.reset();      // Most probably need to work more on this one...
 //
@@ -3526,7 +3600,6 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					}
 				}
 				getWaitDialog().setState("Resetting Counter Collector.");
-//				GetCounters.getInstance().reset(false); // Which does reset on all CM objects
 				CounterController.getInstance().reset(false); // Which does reset on all CM objects
 
 				//--------------------------
@@ -3695,9 +3768,20 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 	
 	private void action_openJvmMemoryConfig(ActionEvent e)
 	{
+		// get the file, if not found... give it a default...
 		String filename = System.getenv("DBXTUNE_JVM_PARAMETER_FILE");
+		if (StringUtil.isNullOrBlank(filename))
+		{
+			//-----------------------------------------------------
+			// from: 'dbxtune.bat' or 'dbxtune.sh'
+			//-----------------------------------------------------
+			// SQLW: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.sqlw_jvm_settings.properties
+			// ELSE: DBXTUNE_JVM_PARAMETER_FILE=${HOME}/.dbxtune/.dbxtune_jvm_settings.properties
+			
+			filename = AppDir.getAppStoreDir(true) + ".dbxtune_jvm_settings.properties";
+		}
 
-		int ret = JvmMemorySettingsDialog.showDialog(this, "DBXTUNE", filename);
+		int ret = JvmMemorySettingsDialog.showDialog(this, Version.getAppName(), filename);
 		if (ret == JOptionPane.OK_OPTION)
 		{
 		}

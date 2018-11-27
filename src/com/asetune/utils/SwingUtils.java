@@ -576,6 +576,15 @@ public class SwingUtils
 	// panels
 	public static void showMessage(Component owner, final Level errorLevel, final String title, final String msg, final Throwable exception) 
 	{
+		// If we are NOT in GUI mode, log the error and get out of here
+		if (GraphicsEnvironment.isHeadless())
+		{
+			if      (errorLevel.equals(Level.INFO))    _logger.info (msg, exception);
+			else if (errorLevel.equals(Level.WARNING)) _logger.warn (msg, exception);
+			else                                       _logger.error(msg, exception);
+			return;
+		}
+		
 		if (owner != null)
 		{
 			if ( ! (owner instanceof JFrame) )
@@ -1138,27 +1147,35 @@ public class SwingUtils
 
 	public static String tableToString(TableModel tm)
 	{
-		JTable dummyJtable = new JTable(tm);
-		return tableToString(dummyJtable);
-		
+		return tableToString(tm, true);
 	}
+	public static String tableToString(TableModel tm, boolean printNumOfRowsAtEnd)
+	{
+		JTable dummyJtable = new JTable(tm);
+		return tableToString(dummyJtable, printNumOfRowsAtEnd);
+	}
+	
 	public static String tableToString(JTable jtable, int[] justRowNumbers)
 	{
 		int firstRow = justRowNumbers[0];
 		int lastRow  = justRowNumbers[justRowNumbers.length-1] + 1;
-		return tableToString(jtable, false, null, null, firstRow, lastRow, justRowNumbers);
+		return tableToString(jtable, false, null, null, firstRow, lastRow, justRowNumbers, true);
 	}
 	public static String tableToString(JTable jtable, int justRowNumber)
 	{
-		return tableToString(jtable, false, null, null, justRowNumber, justRowNumber+1, null);
+		return tableToString(jtable, false, null, null, justRowNumber, justRowNumber+1, null, true);
 	}
 	public static String tableToString(JTable jtable)
 	{
-		return tableToString(jtable, false, null, null, -1, -1, null);
+		return tableToString(jtable, true);
+	}
+	public static String tableToString(JTable jtable, boolean printNumOfRowsAtEnd)
+	{
+		return tableToString(jtable, false, null, null, -1, -1, null, printNumOfRowsAtEnd);
 	}
 	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData)
 	{
-		return tableToString(jtable, stripHtml, prefixColName, prefixColData, -1, -1, null);
+		return tableToString(jtable, stripHtml, prefixColName, prefixColData, -1, -1, null, true);
 	}
 	/**
 	 * Turn a JTable's TableModel into a String table, can be used for putting into the copy/paste buffer.
@@ -1189,7 +1206,7 @@ public class SwingUtils
 //	private static String REGEXP_NEW_LINE = "[\\r\\n]+";
 //	private static String REGEXP_NEW_LINE = "[\\n\\x0B\\f\\r]+";
 
-	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers)
+	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers, boolean printNumOfRowsAtEnd)
 	{
 		String colSepOther = "+";
 		String colSepData  = "|";
@@ -1458,7 +1475,8 @@ public class SwingUtils
 			sb.append(colSepOther).append(line);
 		}
 		sb.append(colSepOther).append(newLine);
-		sb.append("Rows ").append(copiedRows).append(newLine);
+		if (printNumOfRowsAtEnd)
+			sb.append("Rows ").append(copiedRows).append(newLine);
 		
 		return sb.toString();
 	}

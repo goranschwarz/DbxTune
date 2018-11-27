@@ -363,6 +363,12 @@ public class AlarmWritersTableModel extends AbstractTableModel
 		return e._filters;
 	}
 
+	public String getClassNameForRow(int row)
+	{
+		AlarmWriterEntry e = _entries.get(row);
+		return e._className;
+	}
+
 	/** Check if this model has changed */
 	public boolean isDirty()
 	{

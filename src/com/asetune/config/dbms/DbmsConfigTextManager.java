@@ -87,8 +87,9 @@ public abstract class DbmsConfigTextManager
 	{
 		for (IDbmsConfigText entry : _instances.values())
 		{
-			if ( ! entry.isInitialized() )
-				entry.reset();
+//			if ( ! entry.isInitialized() )
+//				entry.reset();
+			entry.reset();
 		}
 //		_instances.clear();
 	}

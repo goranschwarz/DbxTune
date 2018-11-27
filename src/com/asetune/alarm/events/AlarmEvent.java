@@ -140,6 +140,12 @@ extends Throwable
 
 	protected Number       _crossedThreshold    = null;
 
+	protected int          _activeAlarmCount    = -1;
+
+	/** How many Active Alarms to we have in the AlarmHandler */
+	public int  getActiveAlarmCount()          { return _activeAlarmCount; }
+	public void setActiveAlarmCount(int count) { _activeAlarmCount = count; }
+	
 	/**
 	 * If Writer/Sender should <b>always</b> send this alarm<br>
 	 * The the "filter" functionality will be disarded/short-circuited 
@@ -268,7 +274,7 @@ extends Throwable
 	public void markCancel()
 	{
 		_cancelTime    = System.currentTimeMillis();
-		_cancelTimeStr = _dateFormater.format(new Date(_crTime));
+		_cancelTimeStr = _dateFormater.format(new Date(_cancelTime));
 	}
 
 //	public String getAlarmClassNameShort()

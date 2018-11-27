@@ -71,6 +71,7 @@ import info.monitorenter.gui.chart.ITrace2D;
 import info.monitorenter.gui.chart.ITracePoint2D;
 import info.monitorenter.gui.chart.TracePoint2D;
 import info.monitorenter.gui.chart.ZoomableChart;
+import info.monitorenter.gui.chart.controls.LayoutFactory;
 import info.monitorenter.gui.chart.labelformatters.LabelFormatterDate;
 import info.monitorenter.gui.chart.labelformatters.LabelFormatterSimple;
 import info.monitorenter.gui.chart.pointpainters.APointPainter;
@@ -171,6 +172,19 @@ implements ActionListener, MouseListener
 		Configuration conf = Configuration.getCombinedConfiguration();
 		
 		boolean showToolTip = conf.getBooleanProperty("TrendGraph.showToolTip", false);
+		
+		LayoutFactory lf = LayoutFactory.getInstance();
+		lf.setShowChartBackgroundMenu( conf.getBooleanProperty("TrendGraph.setShowChartBackgroundMenu",    true));
+		lf.setShowChartForegroundMenu( conf.getBooleanProperty("TrendGraph.setShowChartForegroundMenu",    true));
+		lf.setShowAntialiasingMenu   ( conf.getBooleanProperty("TrendGraph.setShowAntialiasingMenu",       true));
+		lf.setShowGridMenu           ( conf.getBooleanProperty("TrendGraph.setShowGridMenu",               true));
+		lf.setShowToolTipMenu        ( conf.getBooleanProperty("TrendGraph.setShowToolTipMenu",            false));
+		lf.setShowHighlightMenu      ( conf.getBooleanProperty("TrendGraph.setShowHighlightMenu",          false));
+		lf.setShowAxisXMenu          ( conf.getBooleanProperty("TrendGraph.setShowAxisXMenu",              false));
+		lf.setShowAxisYMenu          ( conf.getBooleanProperty("TrendGraph.setShowAxisYMenu",              false));
+		lf.setShowAxisFormatterMenu  ( conf.getBooleanProperty("TrendGraph.setShowAxisFormatterMenu",      false));
+		lf.setShowPrintMenu          ( conf.getBooleanProperty("TrendGraph.setShowPrintMenu",              true));
+		lf.setShowSaveMenu           ( conf.getBooleanProperty("TrendGraph.setShowSaveMenu",               false));
 		
 		_pctGraph = pct;
 //		_chart = new Chart2D();
@@ -1493,7 +1507,7 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 
 			// NOTE: probably not the best place to have this... move later on...
 			if ( ! _loadProps_menuItem_checkbox )
-				_chkboxMenuItem.doClick();
+				_chkboxMenuItem.doClick(1); // 1=For how many MS the button should be clicked... which is a simple "sleep"
 			
 
 			// Install resize listener: after 500ms take action 

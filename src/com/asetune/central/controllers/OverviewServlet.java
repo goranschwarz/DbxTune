@@ -1250,9 +1250,9 @@ public class OverviewServlet extends HttpServlet
         out.println("<li><b>File             </b> - Name of the database file</li>");
         out.println("<li><b>DayOfWeek        </b> - What day of the week is this recording for (just extract the YYYY-MM-DD and try to convert it into a day of week)</li>");
         out.println("<li><b>Saved Max GB     </b> - Maximum size of the File before it was <i>compressed</i> using <code>shutdown defrag</code>, which is done with with <i>PCS H2 <b>rollover</b></i>. The value is updated by DataDirectoryCleaner.check(), when it's executed by the scheduler (default; at 23:54). This value is also the one used when calulating how much space we need for H2 databases in the next 24 hours. If the value is negative, no <i>max</i> value has yet been found/saved.</li>");
-        out.println("<li><b>Current Size GB  </b> - Current File size in GB</li>");
-        out.println("<li><b>Current Size MB  </b> - Current File size in MB</li>");
-        out.println("<li><b>Diff Size GB     </b> - Difference in SavedGB-CurrentGB, which is how much space is saved by doing 'shutdown defrag' when closing the db on 'rollover'.</li>");
+        out.println("<li><b>File Size GB     </b> - Current File size in GB</li>");
+        out.println("<li><b>File Size MB     </b> - Current File size in MB</li>");
+        out.println("<li><b>Shrink Size GB   </b> - Difference in SavedGB-CurrentGB, which is how much space is saved by doing 'shutdown defrag' when closing the db on 'rollover'.</li>");
         out.println("<li><b>URL              </b> - Click here to view the <b>detailed</b> recording. Note: You must have the Native DbxTune application started on your PC/Client machine.</li>");
         out.println("</ul>");
         out.println("<p>Note: Offline databases with <b>todays</b> timestamp will be marked in <span style='background-color:rgb(204, 255, 204);'>light green</span>, which probably is the active recording.</p>");
@@ -1289,18 +1289,21 @@ public class OverviewServlet extends HttpServlet
 //			}
 //		}
 		
+
+		String tableHead 
+				= "  <tr>"
+				+ "    <th>File</th>"
+				+ "    <th>DayOfWeek</th>"
+				+ "    <th>Saved Max GB</th>"
+				+ "    <th>File Size GB</th>"
+				+ "    <th>File Size MB</th>"
+				+ "    <th>Shrink Size GB</th>"
+				+ "    <th>Url (green row is active recording)</th>"
+				+ "  </tr>";
 		
 		out.println("<table>");
 		out.println("<thead>");
-		out.println("  <tr>");
-		out.println("    <th>File</th>");
-		out.println("    <th>DayOfWeek</th>");
-		out.println("    <th>Saved Max GB</th>");
-		out.println("    <th>Current Size GB</th>");
-		out.println("    <th>Current Size MB</th>");
-		out.println("    <th>Diff Size MB</th>");
-		out.println("    <th>Url</th>");
-		out.println("  </tr>");
+		out.println(tableHead);
 		out.println("</thead>");
 		out.println("<tbody>");
 		
@@ -1339,8 +1342,9 @@ public class OverviewServlet extends HttpServlet
 			if (prevSrvName != null && ! prevSrvName.equals(srvName))
 			{
 				out.println("  <tr>");
-				out.println("    <td nowrap colspan='5' style='background-color:rgb(209, 224, 224);'>&nbsp;</td>");
+				out.println("    <td nowrap colspan='7' style='background-color:rgb(209, 224, 224);'>&nbsp;</td>");
 				out.println("  </tr>");
+				out.println(tableHead); // Also add new "headers" so we don't have to scroll that much
 			}
 			prevSrvName = srvName;
 			

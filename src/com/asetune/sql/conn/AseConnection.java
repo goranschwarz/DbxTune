@@ -49,7 +49,23 @@ extends TdsConnection
 	@Override
 	public boolean isInTransaction() throws SQLException
 	{
-		return false; // FIXME: Don't know how to check this, so lets assume FALSE
+		String sql = "select trancount = @@trancount, lock_count=count(*) from master.dbo.syslocks where spid = @@spid";
+
+		int tranCount = 0;
+		int lockCount = 0;
+		try (Statement stmnt = createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				tranCount = rs.getInt(1);
+				lockCount = rs.getInt(2);
+			}
+		}
+
+		return (tranCount > 0 || lockCount > 0);
+
+		// probably check @@trancount && select count(*) from syslocks where spid = @@spid
+		//return false; // FIXME: Don't know how to check this, so lets assume FALSE
 	}
 
 	/**

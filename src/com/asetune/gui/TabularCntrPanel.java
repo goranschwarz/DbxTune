@@ -1364,7 +1364,7 @@ implements
 			if (onlySelectedRow)
 				rowsToCopy = _dataTable.getSelectedRows();
 
-			sb.append(SwingUtils.tableToString(_dataTable, true, extraColNames, extraColData, -1, -1, rowsToCopy));
+			sb.append(SwingUtils.tableToString(_dataTable, true, extraColNames, extraColData, -1, -1, rowsToCopy, true));
 		}
 
 		String data = sb.toString();

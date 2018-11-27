@@ -25,6 +25,12 @@ public class DbxStatement implements Statement
 		_stmnt = stmnt;
 	}
 
+	@Override
+	public String toString()
+	{
+		return getClass().getName() + "@" + Integer.toHexString(hashCode()) + "[_stmnt=" + _stmnt + "]";
+	}
+
 	//#################################################################################
 	//#################################################################################
 	//### BEGIN: delegated methods

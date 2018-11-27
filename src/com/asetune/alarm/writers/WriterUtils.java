@@ -46,15 +46,17 @@ public class WriterUtils
 	 * @param activeAlarmList             List of "active" alarms
 	 * @param template                    the Velocity template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
+	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
+	 * @param dbxCentralUrl               Where can the DbxCentral be found;
 	 * @return                            The resolved template
 	 * @throws ParseErrorException        If we had parser exceptions
 	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
 	 * @throws ResourceNotFoundException  Resource not found...
 	 */
-	public static String createMessageFromTemplate(String writerName, List<AlarmEvent> activeAlarmList, String template, boolean doTrim)
+	public static String createMessageFromTemplate(String writerName, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
-		return createMessageFromTemplate(writerName, null, activeAlarmList, template, doTrim);
+		return createMessageFromTemplate(writerName, null, activeAlarmList, template, doTrim, trMap, dbxCentralUrl);
 	}
 
 	/**
@@ -64,19 +66,21 @@ public class WriterUtils
 	 * @param alarmEvent                  The AlarmEvent object
 	 * @param template                    the Velocity template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
+	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
+	 * @param dbxCentralUrl               Where can the DbxCentral be found;
 	 * @return                            The resolved template
 	 * @throws ParseErrorException        If we had parser exceptions
 	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
 	 * @throws ResourceNotFoundException  Resource not found...
 	 */
-	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, String template, boolean doTrim)
+	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		List<AlarmEvent> activeAlarmList = null;
 		if (AlarmHandler.hasInstance())
 			activeAlarmList = AlarmHandler.getInstance().getAlarmList();
 
-		return createMessageFromTemplate(action, alarmEvent, activeAlarmList, template, doTrim);
+		return createMessageFromTemplate(action, alarmEvent, activeAlarmList, template, doTrim, trMap, dbxCentralUrl);
 	}
 
 	/**
@@ -87,12 +91,15 @@ public class WriterUtils
 	 * @param activeAlarmList             List of "active" alarms
 	 * @param template                    the Velocity template
 	 * @param doTrim                      remove whitespaces newlines etc from start and end
+	 * @param trMap                       A Map of Strings that needs transalations: "&" -> "&amp";
+	 * @param dbxCentralUrl               Where can the DbxCentral be found;
+	 * 
 	 * @return                            The resolved template
 	 * @throws ParseErrorException        If we had parser exceptions
 	 * @throws MethodInvocationException  If any exceptions where thrown when calling a method on a methodName
 	 * @throws ResourceNotFoundException  Resource not found...
 	 */
-	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, List<AlarmEvent> activeAlarmList, String template, boolean doTrim)
+	public static String createMessageFromTemplate(String action, AlarmEvent alarmEvent, List<AlarmEvent> activeAlarmList, String template, boolean doTrim, Map<String, String> trMap, String dbxCentralUrl)
 	throws ParseErrorException, MethodInvocationException, ResourceNotFoundException
 	{
 		Properties config = new Properties();
@@ -131,6 +138,12 @@ public class WriterUtils
 		// Add access to: com.asetune.utils.StringUtil
 		context.put("StringUtil", StringUtil.class);
 		
+		// Add access to: com.asetune.Version
+		context.put("Version", Version.class);
+		
+		// Add access to: java.lang.System
+		context.put("System", System.class);
+		
 		// Add access to: org.apache.commons.lang3.StringUtils
 		context.put("StringUtils", StringUtils.class);
 		
@@ -138,34 +151,38 @@ public class WriterUtils
 		// Add TYPE to context
 		context.put("type", action);
 
+		// Dbx Central URL
+		context.put("dbxCentralUrl", dbxCentralUrl);
+		
 		if (alarmEvent != null)
 		{
 			// put (basic) AlarmEvent fields
-			context.put("alarmClass"                 , StringUtil.toStr( alarmEvent.getAlarmClass()                 ));
-			context.put("serviceType"                , StringUtil.toStr( alarmEvent.getServiceType()                ));
-			context.put("serviceName"                , StringUtil.toStr( alarmEvent.getServiceName()                ));
-			context.put("serviceInfo"                , StringUtil.toStr( alarmEvent.getServiceInfo()                ));
-			context.put("extraInfo"                  , StringUtil.toStr( alarmEvent.getExtraInfo()                  ));
-			context.put("category"                   , StringUtil.toStr( alarmEvent.getCategory()                   ));
-			context.put("severity"                   , StringUtil.toStr( alarmEvent.getSeverity()                   ));
-			context.put("state"                      , StringUtil.toStr( alarmEvent.getState()                      ));
-			context.put("data"                       , StringUtil.toStr( alarmEvent.getData()                       ));
-			context.put("description"                , StringUtil.toStr( alarmEvent.getDescription()                ));
+			context.put("alarmClass"                 , StringUtil.toStr( alarmEvent.getAlarmClass()                ,trMap ));
+			context.put("serviceType"                , StringUtil.toStr( alarmEvent.getServiceType()               ,trMap ));
+			context.put("serviceName"                , StringUtil.toStr( alarmEvent.getServiceName()               ,trMap ));
+			context.put("serviceInfo"                , StringUtil.toStr( alarmEvent.getServiceInfo()               ,trMap ));
+			context.put("extraInfo"                  , StringUtil.toStr( alarmEvent.getExtraInfo()                 ,trMap ));
+			context.put("category"                   , StringUtil.toStr( alarmEvent.getCategory()                  ,trMap ));
+			context.put("severity"                   , StringUtil.toStr( alarmEvent.getSeverity()                  ,trMap ));
+			context.put("state"                      , StringUtil.toStr( alarmEvent.getState()                     ,trMap ));
+			context.put("data"                       , StringUtil.toStr( alarmEvent.getData()                      ,trMap ));
+			context.put("description"                , StringUtil.toStr( alarmEvent.getDescription()               ,trMap ));
 
 			// And some extra/extended AlarmEvent fields
-			context.put("duration"                   , StringUtil.toStr( alarmEvent.getDuration()                   ));
-			context.put("reRaiseCount"               , StringUtil.toStr( alarmEvent.getReRaiseCount()               ));
-			context.put("crTimeStr"                  , StringUtil.toStr( alarmEvent.getCrTimeStr()                  ));
-			context.put("reRaiseTimeStr"             , StringUtil.toStr( alarmEvent.getReRaiseTimeStr()             ));
-			context.put("timeToLive"                 , StringUtil.toStr( alarmEvent.getTimeToLive()                 ));
-			context.put("alarmClassAbriviated"       , StringUtil.toStr( alarmEvent.getAlarmClassAbriviated()       ));
-			context.put("extendedDescription"        , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getExtendedDescriptionHtml()        : alarmEvent.getExtendedDescription() ));
-			context.put("reRaiseDescription"         , StringUtil.toStr( alarmEvent.getReRaiseDescription()         ));
-			context.put("reRaiseExtendedDescription" , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getReRaiseExtendedDescriptionHtml() : alarmEvent.getReRaiseExtendedDescription() ));
-			context.put("reRaiseData"                , StringUtil.toStr( alarmEvent.getReRaiseData()                ));
-			context.put("cancelTimeStr"              , StringUtil.toStr( alarmEvent.getCancelTimeStr()              ));
-			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                  ));
-			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                      ));
+			context.put("duration"                   , StringUtil.toStr( alarmEvent.getDuration()                  ,trMap ));
+			context.put("reRaiseCount"               , StringUtil.toStr( alarmEvent.getReRaiseCount()              ,trMap ));
+			context.put("crTimeStr"                  , StringUtil.toStr( alarmEvent.getCrTimeStr()                 ,trMap ));
+			context.put("reRaiseTimeStr"             , StringUtil.toStr( alarmEvent.getReRaiseTimeStr()            ,trMap ));
+			context.put("timeToLive"                 , StringUtil.toStr( alarmEvent.getTimeToLive()                ,trMap ));
+			context.put("alarmClassAbriviated"       , StringUtil.toStr( alarmEvent.getAlarmClassAbriviated()      ,trMap ));
+			context.put("extendedDescription"        , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getExtendedDescriptionHtml()        : alarmEvent.getExtendedDescription() ,trMap ));
+			context.put("reRaiseDescription"         , StringUtil.toStr( alarmEvent.getReRaiseDescription()        ,trMap ));
+			context.put("reRaiseExtendedDescription" , StringUtil.toStr( isHtmlTemplate ? alarmEvent.getReRaiseExtendedDescriptionHtml() : alarmEvent.getReRaiseExtendedDescription() ,trMap ));
+			context.put("reRaiseData"                , StringUtil.toStr( alarmEvent.getReRaiseData()               ,trMap ));
+			context.put("cancelTimeStr"              , StringUtil.toStr( alarmEvent.getCancelTimeStr()             ,trMap ));
+			context.put("crAgeInMs"                  , StringUtil.toStr( alarmEvent.getCrAgeInMs()                 ,trMap ));
+			context.put("isActive"                   , StringUtil.toStr( alarmEvent.isActive()                     ,trMap ));
+			context.put("activeAlarmCount"           , StringUtil.toStr( alarmEvent.getActiveAlarmCount()          ,trMap ));
 		}
 		
 		if (activeAlarmList != null)
@@ -322,6 +339,7 @@ public class WriterUtils
 		desc.put("cancelTimeStr"              , "<html> <h2>cancelTimeStr             </h2> What time the Alarm was cancelled, this would only be availabe when <code>type</code> is CANCEL.                                                     <br><br>Example: <code>2017-09-30 00:55:12.345</code>      </html>");
 		desc.put("crAgeInMs"                  , "<html> <h2>crAgeInMs                 </h2> How many milleseconds has pased since the Alarm was Created.  </html>");
 		desc.put("isActive"                   , "<html> <h2>isActive                  </h2> Boolean status flag if the Alarm is still Active, which would be true when <code>type</code> is RAISE and RE-RAISE.                                  <br><br>Example: <code>true</code> or <code>false</code>      </html>");
+		desc.put("activeAlarmCount"           , "<html> <h2>activeAlarmCount          </h2> Get number of <b>active</b> alarms in the AlarmHandler. This can be used to simply print out how many active alarms we have for the moment. </html>");
 		
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "_[generalDescription]"      , ""                              ,  null, desc.get("generalDescription"        )));
@@ -349,10 +367,13 @@ public class WriterUtils
 		provider.addCompletion(new ShorthandCompletionX(provider, "cancelTimeStr"              , "${cancelTimeStr}"              ,  null, desc.get("cancelTimeStr"             )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "crAgeInMs"                  , "${crAgeInMs}"                  ,  null, desc.get("crAgeInMs"                 )));
 		provider.addCompletion(new ShorthandCompletionX(provider, "isActive"                   , "${isActive}"                   ,  null, desc.get("isActive"                  )));
+		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmCount"           , "${activeAlarmCount}"           ,  null, desc.get("activeAlarmCount"           )));
 
+		provider.addCompletion(new ShorthandCompletionX(provider, "dbxCentralUrl"              , "${dbxCentralUrl}"              ,  null, "<html>Some writers want to add a <i>link</i> where the DbxCentral can be located. (easy to click)</html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "activeAlarmList"            , "#foreach( $alarm in $activeAlarmList )\n${alarm.serviceName} - ${alarm.state} - ${alarm.description}\n#end" ,  null, "<html>Some writers want to have access to the 'activeAlarmList', where you can loop around the active alarms...</html>"));
 
 		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtil"                 , "${StringUtil.format(\"%-20s\", ${type})}" ,  null, "<html>Access DbxTune StringUtil, which for example has format(...) see: <a href='https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html'>https://docs.oracle.com/javase/7/docs/api/java/util/Formatter.html</a></html>"));
+		provider.addCompletion(new ShorthandCompletionX(provider, "Version"                    , "${Version.getAppName()}"                  ,  null, "<html>Access DbxTune Version, which has: getAppName(), getBuildStr() </html>"));
 		provider.addCompletion(new ShorthandCompletionX(provider, "StringUtils"                , "${StringUtils.xxx(${type})}"              ,  null, "<html>Access Apache Commons StringUtils, which has some methods, see: <a href='https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html'>https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html</a></html>"));
 		
 		return provider;
@@ -370,7 +391,7 @@ public class WriterUtils
 
 		AlarmEvent ae = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", AlarmEvent.Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
 
-		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true);
+		String str = createMessageFromTemplate(AlarmWriterAbstract.ACTION_RAISE, ae, "TEST: ${type} - ${alarmClass} --- $display.truncate(\"This is a long string.\", 10)", true, null, "http://DUMMY-dbxcentral:8080");
 		System.out.println("OUT: "+str);
 	}
 }

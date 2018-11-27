@@ -8,21 +8,26 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.utils.AseUrlHelper;
+import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
 
 public class JdbcUrlParser
 {
 	private static Logger _logger = Logger.getLogger(JdbcUrlParser.class);
 
-	protected String _dbName = null;
+//	protected String _dbName = null;
 	protected String _dbType = null;
 	protected String _host   = null;
 	protected int    _port   = -1;
 	protected String _hostPortStr = null;
 
+	protected String _path = null;
+	protected String _optionsStr = null;
+	protected String _hostPrefix = "";
+
 	/** Returns the database name. */
-	public String getDbName()              { return _dbName; }
-	public void   setDbName(String dbname) { _dbName = dbname; }
+//	public String getDbName()              { return _dbName; }
+//	public void   setDbName(String dbname) { _dbName = dbname; }
 
 	/** Returns the database type (actually the JDBC subprotocol, first "word" after jdbc:). */
 	public String getDbType()            { return _dbType; }
@@ -49,6 +54,32 @@ public class JdbcUrlParser
 		return null;
 	}
 
+	/** Returns the "path". */
+	public String getPath()            { return _path; }
+	public void   setPath(String path) { _path = path; }
+
+	/** Returns the "path". */
+	public String getOptions()           { return _optionsStr; }
+	public void   setOptions(String opt) { _optionsStr = opt; }
+
+	/** Returns the "path". */
+	public String getHostPrefix()           { return _hostPrefix; }
+	public void   setHostPrefix(String str) { _hostPrefix = str; }
+
+	/** trying to construct an URL again */
+	public String toUrl()
+	{
+		// FIXME: THIS IS TO SIMPLIFIED...
+		String hostPrefix = getHostPrefix() == null ? "" : getHostPrefix();
+		String path       = getPath()       == null ? "" : getPath();
+		String options    = getOptions()    == null ? "" : getOptions();
+		
+		if (StringUtil.hasValue(options))
+			options = "?" + options;
+		
+		return "jdbc:" + getDbType() + ":" + hostPrefix + getHostPortStr() + path + options;
+	}
+	
 
 	public static JdbcUrlParser parse(String url)
 	{
@@ -68,10 +99,33 @@ public class JdbcUrlParser
 	    		p.setHost  (aseUrl.getFirstHost());
 	    		p.setPort  (aseUrl.getFirstPort());
 	    		p.setHostPortStr(aseUrl.getHostPortStr());
+	    		
+	    		p.setPath   (aseUrl.getDbname());
+	    		p.setOptions(aseUrl.getOptions("&"));
 			}
 			catch (ParseException ex)
 			{
 				_logger.warn("Problem parsing the SYBASE URL '"+url+"'. Caught: "+ex);
+			}
+		}
+		else if (url.startsWith("jdbc:h2:"))
+		{
+			try
+			{
+				// FIXME: make H2UrlHelper a subclass of JdbcUrlParser
+				H2UrlHelper h2Url = new H2UrlHelper(url);
+				
+				p.setDbType("h2");
+	    		p.setHost  (h2Url.getUrlTcpHost());
+	    		p.setPort  (h2Url.getUrlTcpPort());
+	    		p.setHostPortStr(h2Url.getUrlTcpHostPort());
+
+	    		p.setPath   (h2Url.getFilename());
+	    		p.setOptions(h2Url.getUrlOptions());
+			}
+			catch (Exception ex)
+			{
+				_logger.warn("Problem parsing the H2 URL '"+url+"'. Caught: "+ex);
 			}
 		}
 		else if (url.startsWith("jdbc:oracle:thin:"))
@@ -85,11 +139,13 @@ public class JdbcUrlParser
 //			if (url.startsWith("jdbc:sqlserver://"))
 //				url = url.replace("jdbc:sqlserver://", "jdbc:sqlserver:");
 
+//			String cleanURI = url;
+			String cleanURI = url.replace('\\', '/');
+//System.out.println("cleanURI='"+cleanURI+"'.");
 			try
 			{
-				String cleanURI = url;
 				if (url.startsWith("jdbc:"))
-					cleanURI = url.substring("jdbc:".length());
+					cleanURI = cleanURI.substring("jdbc:".length());
 				
 				// URI.create() do not like 'sqlserver://' so stripping out all '://'
 //				if (cleanURI.indexOf("//") >= 0)
@@ -100,24 +156,86 @@ public class JdbcUrlParser
 				if (_logger.isDebugEnabled())
 					_logger.debug("JdbcUrlParser.parse(url='"+url+"'): cleanURI='"+cleanURI+"', uri.getScheme()='"+uri.getScheme()+"', uri.getHost()='"+uri.getHost()+"', uri.getPort()='"+uri.getPort()+"'.");
 				
+				if (cleanURI.indexOf("//"+uri.getHost()) >= 0)
+					p.setHostPrefix("//");
+				
 				p.setDbType     (uri.getScheme());
 				p.setHost       (uri.getHost());
 				p.setPort       (uri.getPort());
 				p.setHostPortStr( null ); // getHostPortStr(): if _hostPortStr==null -> getHost() + ":" + getPort()
+
+				p.setPath   (uri.getPath());
+	    		p.setOptions(uri.getQuery());
 			}
 			catch (Throwable ex)
 			{
-				_logger.warn("Problem parsing the GENERIC URL '"+url+"'. Caught: "+ex);
+				_logger.warn("Problem parsing the GENERIC URL '"+url+"', cleanURI '"+cleanURI+"'. Caught: "+ex);
 			}
 		}
 
 		return p;
 		
 	}
+
+//	https://stackoverflow.com/questions/9287052/how-to-parse-a-jdbc-url-to-get-hostname-port-etc
+//	/**
+//	 * Split di una url JDBC nei componenti. Estrae i componenti di una uri JDBC
+//	 * del tipo: <br>
+//	 * String url = "jdbc:derby://localhost:1527/netld;collation=TERRITORY_BASED:PRIMARY";
+//	 * <br>
+//	 * nelle rispettive variabili pubbliche.
+//	 * 
+//	 * @author Nicola De Nisco
+//	 */
+//	public class JdbcUrlSplitter
+//	{
+//		public String driverName, host, port, database, params;
+//
+//		public JdbcUrlSplitter(String jdbcUrl)
+//		{
+//			int pos, pos1, pos2;
+//			String connUri;
+//
+//			if ( jdbcUrl == null || !jdbcUrl.startsWith("jdbc:") || (pos1 = jdbcUrl.indexOf(':', 5)) == -1 )
+//				throw new IllegalArgumentException("Invalid JDBC url.");
+//
+//			driverName = jdbcUrl.substring(5, pos1);
+//			if ( (pos2 = jdbcUrl.indexOf(';', pos1)) == -1 )
+//			{
+//				connUri = jdbcUrl.substring(pos1 + 1);
+//			}
+//			else
+//			{
+//				connUri = jdbcUrl.substring(pos1 + 1, pos2);
+//				params = jdbcUrl.substring(pos2 + 1);
+//			}
+//
+//			if ( connUri.startsWith("//") )
+//			{
+//				if ( (pos = connUri.indexOf('/', 2)) != -1 )
+//				{
+//					host = connUri.substring(2, pos);
+//					database = connUri.substring(pos + 1);
+//
+//					if ( (pos = host.indexOf(':')) != -1 )
+//					{
+//						port = host.substring(pos + 1);
+//						host = host.substring(0, pos);
+//					}
+//				}
+//			}
+//			else
+//			{
+//				database = connUri;
+//			}
+//		}
+//	}	
+	
+	
 	@Override
 	public String toString()
 	{
-		return super.toString() + "dbType='"+getDbType()+"', host='"+getHost()+"', port="+getPort()+", hostPortStr='"+getHostPortStr()+"'.";
+		return super.toString() + ": dbType='"+getDbType()+"', host='"+getHost()+"', port="+getPort()+", hostPortStr='"+getHostPortStr()+"', path='"+getPath()+"', options='"+getOptions()+"'.";
 	}
 	
 	public static void main(String[] args)
@@ -151,6 +269,18 @@ public class JdbcUrlParser
 		test("jdbc:oracle:thin:Herong/TopSecret@///XE");
 		test("jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=h1)(PORT=5555)) (CONNECT_DATA=(SERVICE_NAME= service_name)))");
 		test("jdbc:oracle:thin:@(DESCRIPTION=(LOAD_BALANCE=on) (ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=h1)(PORT=1111))(ADDRESS=(PROTOCOL=TCP)(HOST=h2)(PORT=2222))) (CONNECT_DATA=(SERVICE_NAME= service_name)))");
+		test("jdbc:postgresql:database");
+		test("dbc:postgresql:/");
+		test("jdbc:postgresql://host/database");
+		test("jdbc:postgresql://host/");
+		test("jdbc:postgresql://host:1234/database");
+		test("jdbc:postgresql://host:1234/");
+		test("jdbc:postgresql://host:1234/database?ssl=true");
+		test("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");
+		
+		test2("jdbc:postgresql://host:1234/aDbName");
+		test2("jdbc:postgresql://host:1234/database?ssl=true&user=fred&password=secret");
+		
 	}
 	
 	private static void test(String url)
@@ -159,6 +289,16 @@ public class JdbcUrlParser
 		System.out.println("########################################################");
 		System.out.println(" URL="+url);
 		System.out.println(" toString="+JdbcUrlParser.parse(url));
+	}
+
+	private static void test2(String url)
+	{
+		System.out.println("");
+		System.out.println("## test2 ######################################################");
+		System.out.println("                 URL="+url);
+		JdbcUrlParser p = JdbcUrlParser.parse(url);
+		p.setPath("/YYY");
+		System.out.println(" changed path. toUrl="+p.toUrl());
 	}
 	
 

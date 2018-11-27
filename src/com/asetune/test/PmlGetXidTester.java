@@ -208,7 +208,8 @@ public class PmlGetXidTester
 //			System.out.println("ERROR: DBWORKER["+_workerId+"]: doWork(callId="+callId+")");
 			String sql = "" 
 					+ "declare @ret_id int \n"
-					+ "exec get_xid_tmp 1, @last_id=@ret_id out \n"
+//					+ "exec get_xid_tmp 1, @last_id=@ret_id out \n"
+					+ "exec get_xid 1, @last_id=@ret_id out \n"
 					+ "select @ret_id as RET_ID \n"
 					;
 //			boolean asSingelSqlBatch = false;

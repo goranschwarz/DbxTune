@@ -24,6 +24,230 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 <H1>History of what has been done so far</H1>
 
 <!-- ========================================================================== -->
+<H2>2018-MM-DD</H2>
+<UL>
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Generic - Changes that affects all DbxTune tools</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Improved startup time...</LI>
+		<LI>Alarms
+			<UL>
+				<LI>New: AlarmWriterToSlack -- Send messages to Slack</LI>
+				<LI>new: AlarmEventConfigResourceIsLow -- When DBMS is low on configured resources</LI>
+				<LI>new: AlarmEventConfigResourceIsUsedUp -- When DBMS is out off configured resources</LI>
+				<LI>new: AlarmEventErrorLogEntry -- When some defined error messages is written to the DBMS Error log</LI>
+				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
+				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
+				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>
+				<LI>possible to use DbxTune <code>${Version}</code> information for example <code>${Version.getAppName()}</code></LI>
+				<LI>possible to use Java <code>${System}</code> information for example <code>${System.getProperty("some.prop.name")}</code></LI>
+			</UL>
+		</LI>
+		<LI>Daily Report Message, some smaller changes to the Mail Message structure.</LI>
+		<LI>in GUI Mode: when an Alarm is Raised, you will now get a popup (similar to when you have blocking locks, long transactions...)</LI>
+	</UL>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>DbxCentral - The central WEB console to view Trend Graphs</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>Axis Labels on graphs now has K/M/G/P for large values</LI>
+		<LI>Minor layout changes of some html pages</LI>
+	</UL>
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmDataCahces</b><br>
+		<ul>
+			<li>send AlarmEventConfigResourceIsLow if 'default data cache' is < 10mb (8mb is the typical default configuration)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmErrorLog</b><br>
+		<ul>
+			<li>Send Alarm: <code>AlarmEventConfigResourceIsUsedUp</code> if ErrorNumber 1601 -- There are not enough 'user connections' available to start a new process</li>
+			<li>Send Alarm: <code>AlarmEventFullTranLog           </code> if ErrorNumber 7413 -- # task(s) are sleeping waiting for space to become available in the log segment for database XXXXX.</li>
+			<li>Send Alarm: <code>AlarmEventErrorLogEntry         </code> if Severity &gt; 16 (coniguration <code>CmErrorLog.alarm.system.if.Severity.gt</code>)</li>
+			<li>Will now be saved to PCS when you record a session</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmDeadlock</b><br>
+		<ul>
+			<li>Will now be saved to PCS when you record a session</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmLockTimeout</b><br>
+		<ul>
+			<li>Will now be saved to PCS when you record a session</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmOpenDatabases</b><br>
+		<ul>
+			<li>Option to disable SQL-Text and Showplan for open transactions.<br>
+			<code>CmOpenDatabases.sample.monSqltext=true</code><br>
+			<code>CmOpenDatabases.sample.showplan</code><br>
+			</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmMonitorConfig</b><br>
+		<ul>
+			<li>Send alarm <code>AlarmEventConfigResourceIsLow   </code> if "Pct_act"  is lower than 90% for config 'number of open objects', 'number of open partitions', 'number of open indexes', 'number of open databases', 'number of locks', 'number of user connections'</li>
+			<li>Send alarm <code>AlarmEventConfigResourceIsUsedUp</code> if "Num_free" is lower than 2   for config 'number of open objects', 'number of open partitions', 'number of open indexes', 'number of open databases', 'number of locks', 'number of user connections'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>View DBMS Configuration</b><br>
+		<ul>
+			<li>on startup check for various strange DBMS configuration(s)
+			<ul>
+				<li>'default data cache' is at default configuration</li>
+				<li>disk devices that are configured with dsync=false and/or directio=false (except for device names that contains the string 'temp' or 'tmp')</li>
+				<li>sp_monitorconfig, if any of the records has 'numReuse' above 0</li>
+			</ul>
+			- In GUI mode, a dialog will be displayed... where you can "disable the message, until next ASE restart"<br>
+			- In NO-GUI mode, simply print some Warning to the AseTune error log<br>
+			</li>
+			<li>Search dialog in the DBMS Config can now use "where" (SQL similar where clauses to search the config table)</li>
+		</ul>
+
+		</LI>
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>PCS - Recordings -- DDL Lookup and SQL Capture</b><br>
+		<ul>
+			<li>DDL Lookup SQL Capture Connections will be checked every 5 minute (for open transaction, if it's not valid, close connection)<br>
+			<code>PersistentCounterHandler.ddl.connCheckPeriod=300000</code><br>
+			<code>PersistentCounterHandler.sqlCapture.connCheckPeriod=300000</code><br>
+			</li>
+		</ul>
+		</LI>
+
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>IqTune - Sybase/SAP IQ (The Column Storage Database) </H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>CmIqStatistics: fixed bug for DiskGraph, data and labels count was incorrect.</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RsTune - Sybase/SAP Replication Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>RaxTune - Sybase/SAP Replication Agent X</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>HanaTune - SAP HANA</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>OracleTune - Oracle Database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SqlServerTune - Microsoft SQL-Server</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>PostgresTune - PostgreSQL</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No need to have the initial connection pointing to the 'postgres' database for collectors that iterates over databases</LI>
+		<LI>in DatabaseIterator only lookup the databases where we are authorized</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>MySqlTune - MySQL database</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>View DBMS Configuration, simple for now...</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Db2Tune - IBM DB2 LWU</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>SQL Window</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>print EED Parameters for error messages (in ASE, some messages might have extra information attached to the message)</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+
+	
+	<!-- ---------------------------------------------------------------------- -->
+	<H3>Log Tail Tool</H3>
+	<!-- ---------------------------------------------------------------------- -->
+	<UL>
+		<LI>No changes, please request some if you want this tool to envolve</LI>
+	</UL>
+	<!-- ---end-of-this-tool--- -->
+</UL>
+
+<!-- ========================================================================== -->
 <H2>2018-11-05</H2>
 <UL>
 	<!-- ---------------------------------------------------------------------- -->

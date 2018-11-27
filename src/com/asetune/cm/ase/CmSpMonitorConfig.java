@@ -11,6 +11,8 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventProcedureCacheLowOnMemory;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSybMessageHandler;
@@ -429,45 +431,195 @@ extends CountersModel
 		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 //debugPrint = true;
 
-		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
-		int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
-		if (rqRows == null)
-			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), retuned null, so I can't do more here.");
-		else
+//		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
+//		int[] rqRows = this.getAbsRowIdsWhere("Name", "procedure cache size");
+//		if (rqRows == null)
+//			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('Name', 'procedure cache size'), retuned null, so I can't do more here.");
+//		else
+//		{
+//			//-------------------------------------------------------
+//			// Procedure Cache Usage
+//			//-------------------------------------------------------
+//			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcedureCacheUsage"))
+//			{
+//				Double pctAct    = this.getAbsValueAsDouble(rqRows[0], "Pct_act");
+//				Double numFree   = this.getAbsValueAsDouble(rqRows[0], "Num_free");
+////				Double numActive = this.getAbsValueAsDouble(rqRows[0], "Num_active");
+////				Double maxUsed   = this.getAbsValueAsDouble(rqRows[0], "Max_Used");
+////				Double reuseCnt  = this.getAbsValueAsDouble(rqRows[0], "Reuse_cnt");
+//				
+//				if (numFree   != null) numFree   = numFree   / 512.0;
+////				if (numActive != null) numActive = numActive / 512.0;
+////				if (maxUsed   != null) maxUsed   = maxUsed   / 512.0;
+//				
+//				if (pctAct != null)
+//				{
+//					if (debugPrint || _logger.isDebugEnabled())
+//						System.out.println("##### sendAlarmRequest("+cm.getName()+"): pctAct='"+pctAct+"', numFree='"+numFree+"'.");
+//
+//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct);
+//					if (pctAct.intValue() > threshold)
+//					{
+//						AlarmHandler.getInstance().addAlarm( 
+//							new AlarmEventProcedureCacheLowOnMemory(cm, numFree, pctAct, threshold) );
+//					}
+//				}
+//			}
+//		}
+		
+		for (int r=0; r<cm.getAbsRowCount(); r++)
 		{
-			//-------------------------------------------------------
-			// Procedure Cache Usage
-			//-------------------------------------------------------
-			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcedureCacheUsage"))
-			{
-				Double pctAct    = this.getAbsValueAsDouble(rqRows[0], "Pct_act");
-				Double numFree   = this.getAbsValueAsDouble(rqRows[0], "Num_free");
-//				Double numActive = this.getAbsValueAsDouble(rqRows[0], "Num_active");
-//				Double maxUsed   = this.getAbsValueAsDouble(rqRows[0], "Max_Used");
-//				Double reuseCnt  = this.getAbsValueAsDouble(rqRows[0], "Reuse_cnt");
-				
-				if (numFree   != null) numFree   = numFree   / 512.0;
-//				if (numActive != null) numActive = numActive / 512.0;
-//				if (maxUsed   != null) maxUsed   = maxUsed   / 512.0;
-				
-				if (pctAct != null)
-				{
-					if (debugPrint || _logger.isDebugEnabled())
-						System.out.println("##### sendAlarmRequest("+cm.getName()+"): pctAct='"+pctAct+"', numFree='"+numFree+"'.");
+			boolean didAlarm = false;
 
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct);
-					if (pctAct.intValue() > threshold)
-					{
-						AlarmHandler.getInstance().addAlarm( 
-							new AlarmEventProcedureCacheLowOnMemory(cm, numFree, pctAct, threshold) );
-					}
+			String cfgName   = cm.getAbsString(r,        "Name");
+			Double pctAct    = cm.getAbsValueAsDouble(r, "Pct_act");
+			Double numFree   = cm.getAbsValueAsDouble(r, "Num_free");
+			Double numActive = cm.getAbsValueAsDouble(r, "Num_active");
+
+			if (pctAct == null || numFree == null)
+				continue;
+
+			if ("procedure cache size"           .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("ProcedureCacheUsage"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct);
+				if (pctAct.intValue() > threshold)
+				{
+					Double numFreeMb = numFree / 512.0;
+
+					AlarmHandler.getInstance().addAlarm(new AlarmEventProcedureCacheLowOnMemory(cm, numFreeMb, pctAct, threshold) );
+					didAlarm = true;
 				}
 			}
+			else if ("number of open objects"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenObjectsPct"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct, DEFAULT_alarm_NumberOfOpenObjectsPct);
+				if (pctAct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					didAlarm = true;
+				}
+			}
+			else if ("number of open partitions" .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenPartitionsPct"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct, DEFAULT_alarm_NumberOfOpenPartitionsPct);
+				if (pctAct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					didAlarm = true;
+				}
+			}
+			else if ("number of open indexes"    .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenIndexesPct"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct, DEFAULT_alarm_NumberOfOpenIndexesPct);
+				if (pctAct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					didAlarm = true;
+				}
+			}
+			else if ("number of open databases"  .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfOpenDatabasesPct"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct, DEFAULT_alarm_NumberOfOpenDatabasesPct);
+				if (pctAct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					didAlarm = true;
+				}
+			}
+			else if ("number of locks"           .equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfLocksPct"))
+			{
+				// AlarmEventConfigResourceIsUsedUp: is called from CounterModel.java 
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfLocksPct, DEFAULT_alarm_NumberOfLocksPct);
+				if (pctAct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					didAlarm = true;
+				}
+			}
+			else if ("number of user connections".equals(cfgName) && isSystemAlarmsForColumnEnabledAndInTimeRange("NumberOfUserConnectionsPct"))
+			{
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct);
+				if (pctAct.intValue() > threshold)
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsLow(cm, cfgName, numFree, numActive, pctAct, threshold) );
+					didAlarm = true;
+				}
+			}
+			
+			// OUT OF
+			int outOfThreshold = 2;
+			if ("number of open databases".equals(cfgName))
+				outOfThreshold = 0;
+			
+			if (numFree <= outOfThreshold) // 0 is REALLY OUT OF it (but normally: it do not stay at 0 for a very long time... so lets use some other low value...)
+			{
+				if ("procedure cache size".equals(cfgName))
+				{
+					// EMULATE: Error=701, Severity=17, Text=There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 701, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There is not enough procedure cache to run this procedure, trigger, or SQL batch. Retry later, or ask your SA to reconfigure ASE with more procedure cache.") );
+					didAlarm = true;
+				}
+				else if ("number of open objects".equals(cfgName))
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					didAlarm = true;
+				}
+				else if ("number of open partitions".equals(cfgName))
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					didAlarm = true;
+				}
+				else if ("number of open indexes".equals(cfgName))
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					didAlarm = true;
+				}
+				else if ("number of open databases".equals(cfgName))
+				{
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, -1, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). The server will re-use older entries, which will degrade performance. Please add more '"+cfgName+"'.") );
+					didAlarm = true;
+				}
+				else if ("number of locks".equals(cfgName))
+				{
+					// EMULATE: Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1204, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.") );
+					didAlarm = true;
+				}
+				else if ("number of user connections".equals(cfgName))
+				{
+					// EMULATE: Error=1601, Severity=21, Text=There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.
+					AlarmHandler.getInstance().addAlarm(new AlarmEventConfigResourceIsUsedUp(cm, cfgName, 1601, "Configuration '"+cfgName+"' has ZERO free slots (numFree="+numFree+", threshold="+outOfThreshold+"). There are not enough 'user connections' available to start a new process. Retry when there are fewer active users, or ask your System Administrator to reconfigure ASE with more user connections.") );
+					didAlarm = true;
+				}
+			}
+			
+			if ( didAlarm && (debugPrint || _logger.isDebugEnabled()) )
+				System.out.println("##### sendAlarmRequest("+cm.getName()+"): name='"+cfgName+"', pctAct='"+pctAct+"', numFree='"+numFree+"'.");
 		}
+
 	} // end: method
 
-	public static final String  PROPKEY_alarm_ProcedureCacheUsagePct = CM_NAME + ".alarm.system.if.ProcedureCacheUsagePct.gt";
-	public static final int     DEFAULT_alarm_ProcedureCacheUsagePct = 80;
+	public static final String  PROPKEY_alarm_ProcedureCacheUsagePct     = CM_NAME + ".alarm.system.if.ProcedureCacheUsagePct.gt";
+	public static final int     DEFAULT_alarm_ProcedureCacheUsagePct     = 80;
+	
+	public static final String  PROPKEY_alarm_NumberOfOpenObjectsPct     = CM_NAME + ".alarm.system.if.NumberOfOpenObjectsPct.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenObjectsPct     = 90;
+	
+	public static final String  PROPKEY_alarm_NumberOfOpenPartitionsPct  = CM_NAME + ".alarm.system.if.NumberOfOpenPartitionsPct.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenPartitionsPct  = 90;
+	
+	public static final String  PROPKEY_alarm_NumberOfOpenIndexesPct     = CM_NAME + ".alarm.system.if.NumberOfOpenIndexesPct.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenIndexesPct     = 90;
+	
+	public static final String  PROPKEY_alarm_NumberOfOpenDatabasesPct   = CM_NAME + ".alarm.system.if.NumberOfOpenDatabasesPct.gt";
+	public static final int     DEFAULT_alarm_NumberOfOpenDatabasesPct   = 95;
+//	public static final int     DEFAULT_alarm_NumberOfOpenDatabasesPct   = 90;
+	
+	public static final String  PROPKEY_alarm_NumberOfLocksPct           = CM_NAME + ".alarm.system.if.NumberOfLocksPct.gt";
+	public static final int     DEFAULT_alarm_NumberOfLocksPct           = 90;
+	
+	public static final String  PROPKEY_alarm_NumberOfUserConnectionsPct = CM_NAME + ".alarm.system.if.NumberOfUserConnectionsPct.gt";
+	public static final int     DEFAULT_alarm_NumberOfUserConnectionsPct = 90;
 	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
@@ -475,7 +627,13 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("ProcedureCacheUsagePct", PROPKEY_alarm_ProcedureCacheUsagePct, Integer.class, conf.getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct, DEFAULT_alarm_ProcedureCacheUsagePct), DEFAULT_alarm_ProcedureCacheUsagePct, "If 'ProcedureCacheUsagePct' is greater than ## Percent then send 'AlarmEventProcedureCacheLowOnMemory'." ));
+		list.add(new CmSettingsHelper("ProcedureCacheUsagePct",     PROPKEY_alarm_ProcedureCacheUsagePct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_ProcedureCacheUsagePct    , DEFAULT_alarm_ProcedureCacheUsagePct    ), DEFAULT_alarm_ProcedureCacheUsagePct    , "If '"+"ProcedureCacheUsagePct"    +"' is greater than ## Percent then send 'AlarmEventProcedureCacheLowOnMemory'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenObjectsPct",     PROPKEY_alarm_NumberOfOpenObjectsPct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenObjectsPct    , DEFAULT_alarm_NumberOfOpenObjectsPct    ), DEFAULT_alarm_NumberOfOpenObjectsPct    , "If '"+"NumberOfOpenObjectsPct"    +"' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenPartitionsPct",  PROPKEY_alarm_NumberOfOpenPartitionsPct , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenPartitionsPct , DEFAULT_alarm_NumberOfOpenPartitionsPct ), DEFAULT_alarm_NumberOfOpenPartitionsPct , "If '"+"NumberOfOpenPartitionsPct" +"' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenIndexesPct",     PROPKEY_alarm_NumberOfOpenIndexesPct    , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenIndexesPct    , DEFAULT_alarm_NumberOfOpenIndexesPct    ), DEFAULT_alarm_NumberOfOpenIndexesPct    , "If '"+"NumberOfOpenIndexesPct"    +"' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfOpenDatabasesPct",   PROPKEY_alarm_NumberOfOpenDatabasesPct  , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfOpenDatabasesPct  , DEFAULT_alarm_NumberOfOpenDatabasesPct  ), DEFAULT_alarm_NumberOfOpenDatabasesPct  , "If '"+"NumberOfOpenDatabasesPct"  +"' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfLocksPct",           PROPKEY_alarm_NumberOfLocksPct          , Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfLocksPct          , DEFAULT_alarm_NumberOfLocksPct          ), DEFAULT_alarm_NumberOfLocksPct          , "If '"+"NumberOfLocksPct"          +"' is greater than ## Percent then send 'AlarmEvent...'." ));
+		list.add(new CmSettingsHelper("NumberOfUserConnectionsPct", PROPKEY_alarm_NumberOfUserConnectionsPct, Integer.class, conf.getIntProperty(PROPKEY_alarm_NumberOfUserConnectionsPct, DEFAULT_alarm_NumberOfUserConnectionsPct), DEFAULT_alarm_NumberOfUserConnectionsPct, "If '"+"NumberOfUserConnectionsPct"+"' is greater than ## Percent then send 'AlarmEvent...'." ));
 
 		return list;
 	}

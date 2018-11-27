@@ -44,6 +44,11 @@ public class DbxCallableStatement implements CallableStatement
 	}
 
 
+	@Override
+	public String toString()
+	{
+		return getClass().getName() + "@" + Integer.toHexString(hashCode()) + "[_cstmnt=" + _cstmnt + "]";
+	}
 
 	//#################################################################################
 	//#################################################################################

@@ -2321,8 +2321,8 @@ public class ConnectionDialog
 		_hostmonPasswd_lbl.setToolTipText("Password to use when logging in to the below Operating System Host");
 		_hostmonPasswd_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
 		_hostmonOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
-		_hostmonKeyFile_lbl.setToolTipText("SSH Private Key File, it you want to use 'private key' to authenticate.");
-		_hostmonKeyFile_txt.setToolTipText("SSH Private Key File, it you want to use 'private key' to authenticate.");
+		_hostmonKeyFile_lbl.setToolTipText("SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.");
+		_hostmonKeyFile_txt.setToolTipText("SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.");
 		
 		panel.add(_hostmonLoginIcon,  "");
 		panel.add(_hostmonLoginHelp,  "wmin 100, push, grow");

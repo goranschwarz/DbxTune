@@ -48,6 +48,7 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 	private String				_message						= null;
 	private String				_toTabName						= null;
 	private GTabbedPane			_tabPane						= null;
+	private ActionListener      _externalActionListener         = null;
 
 	private JLabel				_message_lbl					= new JLabel("");
 
@@ -71,13 +72,27 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 	{
 		super(owner, message, false);
 
-		_message = message;
-		_tabPane = tabPane;
-		_toTabName = toTabName;
+		_message                = message;
+		_tabPane                = tabPane;
+		_externalActionListener = null;
+		_toTabName              = toTabName;
 
-		// ImageIcon icon = SwingUtils.readImageIcon(Version.class,
-		// "images/sql_query_window.png");
-		// ((Frame)this.getOwner()).setIconImage(icon.getImage());
+		initComponents();
+		loadProps();
+		pack();
+
+		setLocationRelativeTo(owner);
+		setVisible(true);
+	}
+
+	public ChangeToJTabDialog(Frame owner, String message, ActionListener al, String toTabName)
+	{
+		super(owner, message, false);
+
+		_message                = message;
+		_tabPane                = null;
+		_externalActionListener = al;
+		_toTabName              = toTabName;
 
 		initComponents();
 		loadProps();
@@ -235,14 +250,6 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 		if (firstTime)
 			setFocus();
 
-		// No need to continue, we are already in the correct tab
-//		String currentSelectedTab = _tabPane.getTitleAt(_tabPane.getSelectedIndex());
-		String currentSelectedTab = _tabPane.getSelectedTitle(true);
-		if ( _toTabName.equals(currentSelectedTab) )
-		{
-			return;
-		}
-
 		_message_lbl.setText(
 				"<html>" + 
 				"<h4>" + _message + "</h4>" +
@@ -250,6 +257,16 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				"<br>" +
 				"This was found at: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + "<br>" +
 				"</html>");
+
+		// No need to continue, we are already in the correct tab
+		if (_tabPane != null)
+		{
+			String currentSelectedTab = _tabPane.getSelectedTitle(true);
+			if ( _toTabName.equals(currentSelectedTab) )
+			{
+				return;
+			}
+		}
 
 		// Always do ask what we want to do
 		if ( _next_alwaysAsk_rb.isSelected() )
@@ -264,8 +281,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 				return;
 
 			if ( _action_change_rb.isSelected() )
-//				_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
-				_tabPane.setSelectedTitle(_toTabName);
+				doAction();
+//				_tabPane.setSelectedTitle(_toTabName);
 
 			return;
 		}
@@ -283,8 +300,8 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 					return;
 
 				if ( _action_change_rb.isSelected() )
-//					_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
-					_tabPane.setSelectedTitle(_toTabName);
+					doAction();
+//					_tabPane.setSelectedTitle(_toTabName);
 
 				return;
 			}
@@ -292,6 +309,15 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 
 		// well if nothing in the above if statements, we will end up here
 		super.setVisible(true);
+	}
+
+	private void doAction()
+	{
+		if (_tabPane != null) 
+			_tabPane.setSelectedTitle(_toTabName);
+
+		if (_externalActionListener != null)
+			_externalActionListener.actionPerformed(new ActionEvent(this, 0, "open:"+_toTabName));
 	}
 
 	private void loadProps()
@@ -358,8 +384,10 @@ public class ChangeToJTabDialog extends JDialog implements ActionListener
 	{
 		// _apply.setEnabled(false);
 		if ( _action_change_rb.isSelected() )
-//			_tabPane.setSelectedIndex(_tabPane.indexOfTab(_toTabName));
-			_tabPane.setSelectedTitle(_toTabName);
+		{
+			//_tabPane.setSelectedTitle(_toTabName);
+			doAction();
+		}
 
 		saveProps();
 	}

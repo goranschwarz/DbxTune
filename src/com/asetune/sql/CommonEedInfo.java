@@ -1,7 +1,11 @@
 package com.asetune.sql;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.sybase.jdbcx.EedInfo;
 
@@ -145,12 +149,62 @@ public class CommonEedInfo
 	}
 
 	/**
+	 * Check if we have EED Params or not
+	 * @return
+	 */
+	public boolean hasEedParams()
+	{
+		return _params != null;
+	}
+
+	/**
 	 * Not yet implemented in jTDS
 	 * @return a one-row result set containing any parameter values that accompany the error message.
 	 */
 	public ResultSet getEedParams()
 	{
 		return _params;
+	}
+
+	/**
+	 * Not yet implemented in jTDS
+	 * @return A map, with, a one-row result set containing any parameter values that accompany the error message.
+	 */
+	public Map<String, Object> getEedParamsAsMap()
+	{
+		ResultSet rs = getEedParams();
+
+		if (rs == null)
+			return Collections.emptyMap();
+
+		// Add each of the columns to a Map
+		LinkedHashMap<String, Object> eedParamsMap = new LinkedHashMap<>();
+		try
+		{
+			if ( ! rs.isClosed() )
+			{
+    			ResultSetMetaData rsmd = rs.getMetaData();
+    			int numCols = rsmd.getColumnCount();
+    			while(rs.next())
+    			{
+    				for (int c=1; c<=numCols; c++)
+    				{
+    					String name = rsmd.getColumnLabel(c);
+    					Object val  = rs.getObject(c);
+    
+    					eedParamsMap.put(name, val);
+    				}
+    			}
+    		}
+		}
+		catch(SQLException ex)
+		{
+			// SQLException: JZ0R0: ResultSet has already been closed.
+			if ( ! "JZ0R0".equals(ex.getSQLState()) )
+				eedParamsMap.put("SQLException", ex);
+		}
+
+		return eedParamsMap;
 	}
 
 	/**

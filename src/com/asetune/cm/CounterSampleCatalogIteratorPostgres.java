@@ -15,6 +15,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.MainFrame;
+import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
@@ -60,7 +61,12 @@ extends CounterSampleCatalogIterator
 	protected List<String> getCatalogList(CountersModel cm, Connection conn)
 	throws SQLException
 	{
-		String sql = "select datname from pg_catalog.pg_database where datname not like 'template%' order by 1";
+		String sql 
+				= "select datname \n"
+				+ "from pg_catalog.pg_database \n"
+				+ "where datname not like 'template%' \n"
+				+ "  and pg_catalog.has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
+				+ "order by 1 \n";
 
 		ArrayList<String> list = new ArrayList<String>();
 
@@ -115,12 +121,20 @@ extends CounterSampleCatalogIterator
 		// Clone the ConnectionProp
 		connProp = new ConnectionProp(connProp);
 
+//		// Set the new database name
+//		String url = connProp.getUrl();
+//		if (url.indexOf("/postgres") == -1)
+//			throw new SQLException("Initial connection 'template' has to be made to the 'postgres' database");
+//			
+//		url = url.replace("/postgres", "/"+dbname);
+//		connProp.setUrl(url);
+
 		// Set the new database name
 		String url = connProp.getUrl();
-		if (url.indexOf("/postgres") == -1)
-			throw new SQLException("Initial connection 'template' has to be made to the 'postgres' database");
-			
-		url = url.replace("/postgres", "/"+dbname);
+		JdbcUrlParser p = JdbcUrlParser.parse(url); 
+		p.setPath("/"+dbname); // set the new database name
+
+		url = p.toUrl();
 		connProp.setUrl(url);
 		
 		// Create a new connection pool for this DB

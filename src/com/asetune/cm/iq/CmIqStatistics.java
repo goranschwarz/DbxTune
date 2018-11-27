@@ -215,14 +215,14 @@ extends CountersModel
 			
 		if (GRAPH_NAME_STAT_DISK.equals(tgdp.getName()))
 		{	
-			Double[] arr = new Double[5];
+			Double[] arr = new Double[6];
 
 			arr[0] = this.getRateValueAsDouble("MainStoreDiskReads" ,    "stat_value");
 			arr[1] = this.getRateValueAsDouble("MainStoreDiskWrites",    "stat_value");
 			arr[2] = this.getRateValueAsDouble("TempStoreDiskReads",     "stat_value");
 			arr[3] = this.getRateValueAsDouble("TempStoreDiskWrites",    "stat_value");
-			arr[3] = this.getRateValueAsDouble("CacheDbspaceDiskReads",  "stat_value");
-			arr[3] = this.getRateValueAsDouble("CacheDbspaceDiskWrites", "stat_value");
+			arr[4] = this.getRateValueAsDouble("CacheDbspaceDiskReads",  "stat_value");
+			arr[5] = this.getRateValueAsDouble("CacheDbspaceDiskWrites", "stat_value");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

@@ -235,6 +235,10 @@ implements Runnable
 			_withRestart = withRestart;
 			_shutdownReasonText = reasonText;
 		}
+		else
+		{
+			_logger.info("The just sent shutdown request properties [reasonText='"+reasonText+"', withRestart="+withRestart+"] wont be used... keeping first entered request with properties [reasonText='"+_shutdownReasonText+"', withRestart="+_withRestart+"]. The shutdown request will still be done, but the shutdown properties will be discarded.");
+		}
 		
 		synchronized (_waitforObject)
 		{

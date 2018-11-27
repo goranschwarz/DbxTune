@@ -100,13 +100,14 @@ public class AlarmWritersTable extends JXTable
 //				 List<AlarmWriterSettingsEntry> settings = _alarmWritersTableModel.getSettingsForRow(mrow);
 //				_alarmWriterSettingsPanel.setWriterSettings(settings);
 				 List<CmSettingsHelper> settings = _alarmWritersTableModel.getSettingsForRow(mrow);
+				 String writerClassName          = _alarmWritersTableModel.getClassNameForRow(mrow);
 //				_alarmWriterSettingsPanel.setWriterSettings(settings);
 //				_alarmWriterDetailsPanel.getAlarmWriterSettingsPanel().setWriterSettings(settings);
-				_alarmWriterDetailsPanel.setWriterSettings(settings);
+				_alarmWriterDetailsPanel.setWriterSettings(settings, writerClassName);
 
 				List<CmSettingsHelper> filters = _alarmWritersTableModel.getFiltersForRow(mrow);
 //				_alarmWriterDetailsPanel.getAlarmWriterFiltersPanel().setWriterFilters(filters);
-				_alarmWriterDetailsPanel.setWriterFilters(filters);
+				_alarmWriterDetailsPanel.setWriterFilters(filters, writerClassName);
 				 
 //				_alarmWriterSettingsPanel.setWriterName(className);
 			}

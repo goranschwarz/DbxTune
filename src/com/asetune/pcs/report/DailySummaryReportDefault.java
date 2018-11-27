@@ -16,8 +16,11 @@ extends DailySummaryReportAbstract
 {
 	private static Logger _logger = Logger.getLogger(DailySummaryReportDefault.class);
 
-	private ResultSetTableModel _alarmsActiveRstm;
-	private ResultSetTableModel _alarmsHistoryRstm;
+	private ResultSetTableModel _alarmsActiveShortRstm;
+	private ResultSetTableModel _alarmsActiveFullRstm;
+	
+	private ResultSetTableModel _alarmsHistoryShortRstm;
+	private ResultSetTableModel _alarmsHistoryFullRstm;
 
 	@Override
 	public void create()
@@ -26,8 +29,11 @@ extends DailySummaryReportAbstract
 		content.setServerName( getServerName() );
 
 		// Get Alarms (all in DB since it should be a "rolling" database)
-		getAlarmsActive();
-		getAlarmsHistory();
+		getAlarmsActiveShort();
+		getAlarmsHistoryShort();
+
+		getAlarmsActiveFull();
+		getAlarmsHistoryFull();
 
 		// Create and set TEXT/HTML Content
 		content.setReportAsText(createText());
@@ -41,58 +47,150 @@ extends DailySummaryReportAbstract
 
 	private boolean isEmpty()
 	{
-		return    _alarmsActiveRstm.getRowCount() == 0
-		       && _alarmsHistoryRstm.getRowCount() == 0;
+		return    _alarmsActiveFullRstm.getRowCount() == 0
+		       && _alarmsHistoryFullRstm.getRowCount() == 0;
 	}
 
-	private void getAlarmsActive()
+	private void getAlarmsActiveShort()
 	{
 		DbxConnection conn = getConnection();
 		String sql;
 		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
-		sql = "select * \n" +
+		sql = "select #createTime#, #alarmClass#, #serviceInfo#, #extraInfo#, #severity#, #state#, #description# \n" +
 		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_ACTIVE, null, false) + "#\n" +
 		      "order by #createTime#";
 		sql = sql.replace("#", q);
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
-			_alarmsActiveRstm = new ResultSetTableModel(rs, "Active Alarms");
+			_alarmsActiveShortRstm = new ResultSetTableModel(rs, "Active Alarms Short");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("_alarmsActiveRstm.getRowCount()="+ _alarmsActiveRstm.getRowCount());
+				_logger.debug("_alarmsActiveShortRstm.getRowCount()="+ _alarmsActiveShortRstm.getRowCount());
 		}
 		catch(SQLException ex)
 		{
-			_alarmsActiveRstm = ResultSetTableModel.createEmpty("Active Alarms");
-			_logger.warn("Problems getting Alarms: " + ex);
+			_alarmsActiveShortRstm = ResultSetTableModel.createEmpty("Active Alarms Short");
+			_logger.warn("Problems getting Alarms Short: " + ex);
 		}
 	}
 
-	private void getAlarmsHistory()
+	private void getAlarmsActiveFull()
 	{
 		DbxConnection conn = getConnection();
 		String sql;
 		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
-		sql = "select * \n" +
+		sql = "select \n" +
+		      "     #createTime#,             \n" +
+		      "     #alarmClass#,             \n" +
+		      "     #serviceType#,            \n" +
+		      "     #serviceName#,            \n" +
+		      "     #serviceInfo#,            \n" +
+		      "     #extraInfo#,              \n" +
+		      "     #category#,               \n" +
+		      "     #severity#,               \n" +
+		      "     #state#,                  \n" +
+		      "     #repeatCnt#,              \n" +
+		      "     #cancelTime#,             \n" +
+		      "     #timeToLive#,             \n" +
+		      "     #threshold#,              \n" +
+		      "     #data#,                   \n" +
+		      "     #lastData#,               \n" +
+		      "     #description#,            \n" +
+		      "     #lastDescription#,        \n" +
+		      "     #extendedDescription#,    \n" +
+		      "     #lastExtendedDescription# \n" +
+		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_ACTIVE, null, false) + "#\n" +
+		      "order by #createTime#";
+		sql = sql.replace("#", q);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+		{
+			_alarmsActiveFullRstm = new ResultSetTableModel(rs, "Active Alarms Full");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("_alarmsActiveFullRstm.getRowCount()="+ _alarmsActiveFullRstm.getRowCount());
+		}
+		catch(SQLException ex)
+		{
+			_alarmsActiveFullRstm = ResultSetTableModel.createEmpty("Active Alarms");
+			_logger.warn("Problems getting Alarms Full: " + ex);
+		}
+	}
+
+	private void getAlarmsHistoryShort()
+	{
+		DbxConnection conn = getConnection();
+		String sql;
+		String q = conn.getQuotedIdentifierChar();
+
+		// Get Alarms
+		sql = "select #action#, #duration#, #eventTime#, #alarmClass#, #serviceInfo#, #extraInfo#, #severity#, #state#, #description# \n" +
 		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_HISTORY, null, false) + "#\n" +
 		      "where #action# not in('END-OF-SCAN', 'RE-RAISE') \n" +
 		      "order by #eventTime#";
 		sql = sql.replace("#", q);
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
-			_alarmsHistoryRstm = new ResultSetTableModel(rs, "Alarm History");
+			_alarmsHistoryShortRstm = new ResultSetTableModel(rs, "Alarm History Short");
 			
 			if (_logger.isDebugEnabled())
-				_logger.debug("_alarmsHistoryRstm.getRowCount()="+ _alarmsHistoryRstm.getRowCount());
+				_logger.debug("_alarmsHistoryRstm.getRowCount()="+ _alarmsHistoryShortRstm.getRowCount());
 		}
 		catch(SQLException ex)
 		{
-			_alarmsHistoryRstm = ResultSetTableModel.createEmpty("Active History");
-			_logger.warn("Problems getting Alarms: " + ex);
+			_alarmsHistoryShortRstm = ResultSetTableModel.createEmpty("Active History");
+			_logger.warn("Problems getting Alarms Short: " + ex);
+		}
+	}
+
+	private void getAlarmsHistoryFull()
+	{
+		DbxConnection conn = getConnection();
+		String sql;
+		String q = conn.getQuotedIdentifierChar();
+
+		// Get Alarms
+		sql = "select * \n" +
+		      "     #action#,                 \n" +
+		      "     #duration#,               \n" +
+		      "     #eventTime#,              \n" +
+		      "     #alarmClass#,             \n" +
+		      "     #serviceType#,            \n" +
+		      "     #serviceName#,            \n" +
+		      "     #serviceInfo#,            \n" +
+		      "     #extraInfo#,              \n" +
+		      "     #category#,               \n" +
+		      "     #severity#,               \n" +
+		      "     #state#,                  \n" +
+		      "     #repeatCnt#,              \n" +
+		      "     #createTime#,             \n" +
+		      "     #cancelTime#,             \n" +
+		      "     #timeToLive#,             \n" +
+		      "     #threshold#,              \n" +
+		      "     #data#,                   \n" +
+		      "     #lastData#,               \n" +
+		      "     #description#,            \n" +
+		      "     #lastDescription#,        \n" +
+		      "     #extendedDescription#,    \n" +
+		      "     #lastExtendedDescription# \n" +
+		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_HISTORY, null, false) + "#\n" +
+		      "where #action# not in('END-OF-SCAN', 'RE-RAISE') \n" +
+		      "order by #eventTime#";
+		sql = sql.replace("#", q);
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+		{
+			_alarmsHistoryFullRstm = new ResultSetTableModel(rs, "Alarm History Full");
+			
+			if (_logger.isDebugEnabled())
+				_logger.debug("_alarmsHistoryFullRstm.getRowCount()="+ _alarmsHistoryFullRstm.getRowCount());
+		}
+		catch(SQLException ex)
+		{
+			_alarmsHistoryFullRstm = ResultSetTableModel.createEmpty("Active History Full");
+			_logger.warn("Problems getting Alarms Full: " + ex);
 		}
 	}
 
@@ -105,19 +203,27 @@ extends DailySummaryReportAbstract
 		sb.append("=======================================================\n");
 		sb.append(" Active Alarms \n");
 		sb.append("-------------------------------------------------------\n");
-		if (_alarmsActiveRstm.getRowCount() == 0)
-			sb.append("No Active Alarms");
+		if (_alarmsActiveFullRstm.getRowCount() == 0)
+			sb.append("No Active Alarms\n");
 		else
-			sb.append(_alarmsActiveRstm.toAsciiTableString());
+		{
+			sb.append("Active Alarm Count: ").append(_alarmsActiveFullRstm.getRowCount()).append("\n");
+			sb.append(_alarmsActiveShortRstm.toAsciiTableString());
+			sb.append(_alarmsActiveFullRstm.toAsciiTablesVerticalString());
+		}
 		sb.append("\n");
 		
 		sb.append("=======================================================\n");
 		sb.append(" Alarm History \n");
 		sb.append("-------------------------------------------------------\n");
-		if (_alarmsHistoryRstm.getRowCount() == 0)
-			sb.append("No Alarms has been reported");
+		if (_alarmsHistoryFullRstm.getRowCount() == 0)
+			sb.append("No Alarms has been reported\n");
 		else
-			sb.append(_alarmsHistoryRstm.toAsciiTableString());
+		{
+			sb.append("Alarm Count in period: ").append(_alarmsHistoryFullRstm.getRowCount()).append("\n");
+			sb.append(_alarmsHistoryShortRstm.toAsciiTableString());
+			sb.append(_alarmsHistoryFullRstm.toAsciiTablesVerticalString());
+		}
 		sb.append("\n");
 		
 		sb.append("\n");
@@ -175,17 +281,25 @@ extends DailySummaryReportAbstract
 		sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
 
 		sb.append("<h3>Active Alarms</h3> \n");
-		if (_alarmsActiveRstm.getRowCount() == 0)
+		if (_alarmsActiveFullRstm.getRowCount() == 0)
 			sb.append("No Active Alarms \n");
 		else
-			sb.append(_alarmsActiveRstm.toHtmlTableString());
+		{
+			sb.append("Active Alarm Count: ").append(_alarmsActiveFullRstm.getRowCount()).append("<br>\n");
+			sb.append(_alarmsActiveShortRstm.toHtmlTableString("activeAlarmsOverview"));
+			sb.append(_alarmsActiveFullRstm.toHtmlTablesVerticalString("activeAlarmsDetails"));
+		}
 		sb.append("\n<br>");
 
 		sb.append("<h3>Alarm History</h3> \n");
-		if (_alarmsHistoryRstm.getRowCount() == 0)
+		if (_alarmsHistoryFullRstm.getRowCount() == 0)
 			sb.append("No Alarms has been reported \n");
 		else
-			sb.append(_alarmsHistoryRstm.toHtmlTableString());
+		{
+			sb.append("Alarm Count in period: ").append(_alarmsHistoryFullRstm.getRowCount()).append("\n");
+			sb.append(_alarmsHistoryShortRstm.toHtmlTableString("historyAlarmsOverview"));
+			sb.append(_alarmsHistoryFullRstm.toHtmlTablesVerticalString("historyAlarmsDetails"));
+		}
 		sb.append("\n<br>");
 
 		sb.append("\n<br>");

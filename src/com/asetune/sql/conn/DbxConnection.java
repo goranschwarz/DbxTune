@@ -46,7 +46,7 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
 import com.asetune.utils.VersionShort;
-import com.sybase.jdbc4.jdbc.SybConnection;
+import com.sybase.jdbcx.SybConnection;
 
 public abstract class DbxConnection
 implements Connection
@@ -1601,6 +1601,12 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	
 	
 	
+	@Override
+	public String toString()
+	{
+		return getClass().getName() + "@" + Integer.toHexString(hashCode()) + "[_conn=" + _conn + "]";
+	}
+
 	//#################################################################################
 	//#################################################################################
 	//### BEGIN: delegated methods for Connection
