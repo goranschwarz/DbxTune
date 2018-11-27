@@ -149,6 +149,12 @@ extends CountersModel
 	public static final String  PROPKEY_sample_spaceusage            = PROP_PREFIX + ".sample.spaceusage";
 	public static final boolean DEFAULT_sample_spaceusage            = false;
 
+	public static final String  PROPKEY_sample_showplan              = PROP_PREFIX + ".sample.showplan";
+	public static final boolean DEFAULT_sample_showplan              = true;
+	
+	public static final String  PROPKEY_sample_monSqlText            = PROP_PREFIX + ".sample.monSqltext";
+	public static final boolean DEFAULT_sample_monSqlText            = true;
+
 //	public static final String  PROPKEY_spaceusageInMb               = PROP_PREFIX + ".sample.spaceusageInMb";
 //	public static final boolean DEFAULT_spaceusageInMb               = false;
 	
@@ -680,8 +686,10 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Sample Spaceusage Details", PROPKEY_sample_spaceusage , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spaceusage , DEFAULT_sample_spaceusage ), DEFAULT_sample_spaceusage, "Execute spaceusage(dbid) on every sample. Only in ASE 16.0 and above." ));
+		list.add(new CmSettingsHelper("Sample Spaceusage Details",     PROPKEY_sample_spaceusage , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_spaceusage , DEFAULT_sample_spaceusage ), DEFAULT_sample_spaceusage, "Execute spaceusage(dbid) on every sample. Only in ASE 16.0 and above." ));
 //		list.add(new CmSettingsHelper("Space Usage in MB",         PROPKEY_spaceusageInMb ,    Boolean.class, conf.getBooleanProperty(PROPKEY_spaceusageInMb    , DEFAULT_spaceusageInMb    ), DEFAULT_spaceusageInMb,    "Calculate spaceusage in MB instead of pages."                          ));
+		list.add(new CmSettingsHelper("Sample Showplan on Open Trans", PROPKEY_sample_showplan   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan   , DEFAULT_sample_showplan   ), DEFAULT_sample_showplan  , "Get sp_showplan on on SPID's that has an open transaction." ));
+		list.add(new CmSettingsHelper("Sample SQL Text on Open Trans", PROPKEY_sample_monSqlText , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText , DEFAULT_sample_monSqlText ), DEFAULT_sample_monSqlText, "Get SQL Text (from monProcessSQLText) on on SPID's that has an open transaction" ));
 
 		return list;
 	}
@@ -835,7 +843,8 @@ extends CountersModel
 		String OldestTranSqlText      = "OldestTranSqlText      = convert(text, null), \n";
 		String OldestTranShowPlanText = "OldestTranShowPlanText = convert(text, null), \n";
 
-		if (aseVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
+		boolean getMonSqltext = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
+		if (getMonSqltext && aseVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
 		{
 			OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0) THEN query_text(h.spid) ELSE null END, \n";
 			// The below if we want to discard messages like: CmOpenDatabases: Received a Msg while reading the resultset from 'CmOpenDatabases', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The message text: The specified spid value '8' applies to a server internal process, which does not execute a query plan.
@@ -1269,9 +1278,10 @@ extends CountersModel
 			Object oval_OldestTranSpid = newSample.getValueAt(rowId, pos_OldestTranSpid);
 			if (oval_OldestTranSpid != null && oval_OldestTranSpid instanceof Number)
 			{
-				boolean getSqltext  = true;
-				boolean getShowplan = true;
-				
+				Configuration conf = Configuration.getCombinedConfiguration();
+				boolean getShowplan   = conf.getBooleanProperty(PROPKEY_sample_showplan,   DEFAULT_sample_showplan);
+				boolean getMonSqltext = conf.getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
+
 				int OldestTranSpid = ((Number)newSample.getValueAt(rowId, pos_OldestTranSpid)).intValue();
 
 				if (OldestTranSpid > 0) // NULL result from the ASE is translated as 0... so lets not hope that the SPID 0 has issues.
@@ -1291,7 +1301,7 @@ extends CountersModel
 						if (getMonitorConfig("SQL batch capture") > 0 && getMonitorConfig("max SQL text monitored") > 0)
 						{
 							// monProcessSQLText; needs 'enable monitoring', 'SQL batch capture' and 'max SQL text monitored' configuration parameters for this monitoring table to collect data.
-							if (getSqltext)
+							if (getMonSqltext)
 								sqlText  = AseConnectionUtils.monSqlText(getCounterController().getMonConnection(), OldestTranSpid, true);
 							else
 								sqlText = "This was disabled";

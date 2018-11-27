@@ -18,6 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -2332,6 +2333,21 @@ public class StringUtil
 		return "???";
 	}
 
+	/**
+	 * null save way to call <code>trim()</code> on a string...<br>
+	 * Simply call <code>return s.trim()</code> on the string
+	 * 
+	 * @param s the string to trim
+	 * @return if null, returns null, otherwise the trimed string by calling <code>s.trim()</code>
+	 */
+	public static String trim(String s)
+	{
+		if (s == null)
+			return s;
+
+		return s.trim();
+	}
+
 	public static String ltrim(String s) 
 	{
 		if (s == null)
@@ -2894,6 +2910,25 @@ public class StringUtil
 		return obj.toString();
 	}
 	
+	/** 
+	 * Simply do toString() on non null object, and "" on null objects 
+	 */
+	public static String toStr(Object obj, Map<String, String> trMap)
+	{
+		String str = toStr(obj);
+		if (str.equals(""))
+			return str;
+
+		// loop the trMap and replace strings
+		if (trMap != null)
+		{
+    		for (Entry<String, String> entry : trMap.entrySet())
+    			str = str.replace(entry.getKey(), entry.getValue());
+		}
+
+		return str;
+	}
+
 	/**
 	 * conviniance wrapper for: String.format()
 	 * 

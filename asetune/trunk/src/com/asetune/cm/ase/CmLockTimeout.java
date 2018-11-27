@@ -9,6 +9,8 @@ import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.TabularCntrPanelAppend;
 import com.asetune.utils.Ver;
 
 /**
@@ -89,11 +91,11 @@ extends CountersModelAppend
 	{
 	}
 
-//	@Override
-//	protected TabularCntrPanel createGui()
-//	{
-//		return new CmLockTimeoutPanel(this);
-//	}
+	@Override
+	protected TabularCntrPanel createGui()
+	{
+		return new TabularCntrPanelAppend(this);
+	}
 
 	@Override
 	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)

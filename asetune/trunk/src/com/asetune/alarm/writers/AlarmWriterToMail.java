@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.Type;
+import com.asetune.cm.CmSettingsHelper.UrlInputValidator;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
@@ -56,8 +57,8 @@ extends AlarmWriterAbstract
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 		// replace variables in the template with runtime variables
-		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true);
-		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true);
+		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
+		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
 
 		try
 		{
@@ -137,6 +138,8 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                Integer.class, conf.getIntProperty    (PROPKEY_sslPort               , DEFAULT_sslPort               ), DEFAULT_sslPort               , "What port number is the SSL-SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                 Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                , DEFAULT_useSsl                ), DEFAULT_useSsl                , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
 		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,      Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout     , DEFAULT_connectionTimeout     ), DEFAULT_connectionTimeout     , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
+
+		list.add( new CmSettingsHelper("DbxCentralUrl",                    PROPKEY_dbxCentralUrl,          String .class, conf.getProperty       (PROPKEY_dbxCentralUrl         , DEFAULT_dbxCentralUrl         ), DEFAULT_dbxCentralUrl         , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));
 
 		return list;
 	}
@@ -344,18 +347,34 @@ extends AlarmWriterAbstract
 			+ "</head> \n"
 			
 			+ "<table>\n"
-			+ "<tr> <td><b>Type:     </b></td> <td>${type}  (${duration})  </td> </tr>\n"
-			+ "<tr> <td><b>Server:   </b></td> <td>${serviceName}          </td> </tr>\n"
-			+ "<tr> <td><b>Alarm:    </b></td> <td>${alarmClassAbriviated} </td> </tr>\n"
-			+ "<tr> <td><b>Collector:</b></td> <td>${serviceInfo}          </td> </tr>\n"
+			+ "  <tr> <td><b>Type:      </b></td> <td>${type}                 </td> </tr>\n"
+			+ "#if (${type} == 'CANCEL' || ${type} == 'RE-RAISE')\n"
+			+ "  <tr> <td><b>Duration:  </b></td> <td>${duration} (MM:SS)     </td> </tr>\n"
+			+ "#end\n"
+			+ "  <tr> <td><b>Active Cnt:</b></td> <td>${activeAlarmCount}     </td> </tr>\n"
+			+ "\n"
+			+ "  <td colspan='2'>&nbsp; </td>\n"
+			+ "  <tr> <td><b>Server:    </b></td> <td>${serviceName}          </td> </tr>\n"
+			+ "  <tr> <td><b>Alarm:     </b></td> <td>${alarmClassAbriviated} </td> </tr>\n"
+			+ "  <tr> <td><b>Collector: </b></td> <td>${serviceInfo}          </td> </tr>\n"
+			+ "\n"
+			+ "  <td colspan='2'>&nbsp; </td>\n"
+			+ "  <tr> <td><b>Category:  </b></td> <td>${category}             </td> </tr>\n"
+			+ "  <tr> <td><b>Severity:  </b></td> <td>${severity}             </td> </tr>\n"
+			+ "  <tr> <td><b>State:     </b></td> <td>${state}                </td> </tr>\n"
+			+ "\n"
+			+ "  <td colspan='2'>&nbsp; </td>\n"
+			+ "  <tr> <td><b>Info:      </b></td> <td>${extraInfo}            </td> </tr>\n"
+			+ "  <tr> <td><b>Raise Time:</b></td> <td>${crTimeStr}            </td> </tr>\n"
+			
+			+ "#if (${type} == 'RE-RAISE')\n"
+			+ "  <tr> <td><b>ReRaise Time:</b></td> <td>${reRaiseTimeStr}     </td> </tr>\n"
+			+ "#end\n"
+			
+			+ "#if (${type} == 'CANCEL')\n"
+			+ "  <tr> <td><b>Cancel Time:</b></td> <td>${cancelTimeStr}       </td> </tr>\n"
+			+ "#end\n"
 
-			+ "<td colspan='2'>&nbsp;</td>\n"
-			+ "<tr> <td><b>Category: </b></td> <td>${category}             </td> </tr>\n"
-			+ "<tr> <td><b>Severity: </b></td> <td>${severity}             </td> </tr>\n"
-			+ "<tr> <td><b>State:    </b></td> <td>${state}                </td> </tr>\n"
-			+ "<td colspan='2'>&nbsp;</td>\n"
-			+ "<tr> <td><b>Info:     </b></td> <td>${extraInfo}            </td> </tr>\n"
-			+ "<tr> <td><b>Time:     </b></td> <td>${crTimeStr}            </td> </tr>\n"
 			+ "</table>\n"
 			
 			+ "<br>\n"

@@ -42,6 +42,8 @@ implements ActionListener, FocusListener
 	private String             _envPrefix                = null;
 	private String             _filename                 = null;
 
+	private String             _appName                  = null;
+	
 	private JButton            _ok                       = new JButton("OK");
 	private JButton            _cancel                   = new JButton("Cancel");
 	private JLabel             _warning_lbl              = new JLabel("Warning messages, goes in here");
@@ -64,9 +66,9 @@ implements ActionListener, FocusListener
 
 
 
-	public static int showDialog(Frame owner, String envPrefix, String filename)
+	public static int showDialog(Frame owner, String appName, String filename)
 	{
-		JvmMemorySettingsDialog dialog = new JvmMemorySettingsDialog(owner, envPrefix, filename);
+		JvmMemorySettingsDialog dialog = new JvmMemorySettingsDialog(owner, appName, filename);
 
 		dialog.setLocationRelativeTo(owner);
 		dialog.setVisible(true);
@@ -74,16 +76,18 @@ implements ActionListener, FocusListener
 		
 		return dialog._dialogReturnSt;
 	}
-	public JvmMemorySettingsDialog(Frame owner, String envPrefix, String filename)
+	public JvmMemorySettingsDialog(Frame owner, String appName, String filename)
 	{
 		super(owner, "Java/JVM Memory Parameters", true);
 
-		if (StringUtil.isNullOrBlank(envPrefix) || StringUtil.isNullOrBlank(filename))
-			throw new IllegalArgumentException("JvmMemorySettingsDialog: The params envPrefix='"+envPrefix+"' and filename='"+filename+"', must have some values.");
+		if (StringUtil.isNullOrBlank(appName) || StringUtil.isNullOrBlank(filename))
+			throw new IllegalArgumentException("JvmMemorySettingsDialog: The params appName='"+appName+"' and filename='"+filename+"', must have some values.");
 
 		_owner        = owner;
-		_envPrefix    = envPrefix;
+		_appName      = appName;
 		_filename     = filename;
+		
+		_envPrefix = "DBXTUNE";
 
 		_appEnvMem = _envPrefix + "_" + _envMem;
 		_appEnvGc  = _envPrefix + "_" + _envGc;

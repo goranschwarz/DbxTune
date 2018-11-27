@@ -461,28 +461,28 @@ public class DbxTuneCentral
 		
 		//---------------------------------
 		// Install shutdown hook -- SEND Counter Usage - add it as FIRST (index: 0)
-		ShutdownHandler.addShutdownHandler(0, new ShutdownHandler.Shutdownable()
-		{
-			@Override
-			public List<String> systemShutdown()
-			{
-//System.out.println("----Start Shutdown Hook: sendCounterUsageInfo");
-				_logger.debug("----Start Shutdown Hook: sendCounterUsageInfo");
-
-				DbxCentralStatistics stat = DbxCentralStatistics.getInstance();
-
-				stat.setShutdownReason  ( ShutdownHandler.getShutdownReason()   );
-				stat.setRestartSpecified( ShutdownHandler.wasRestartSpecified() );
-				
-				// Send the statistics object to dbxtune.com
-				CheckForUpdates.getInstance().sendCounterUsageInfo(true, stat);
-				
-				_logger.debug("----End Shutdown Hook: sendCounterUsageInfo");
-//System.out.println("----End Shutdown Hook: sendCounterUsageInfo");
-				
-				return null;
-			}
-		});
+//		ShutdownHandler.addShutdownHandler(0, new ShutdownHandler.Shutdownable()
+//		{
+//			@Override
+//			public List<String> systemShutdown()
+//			{
+////System.out.println("----Start Shutdown Hook: sendCounterUsageInfo");
+//				_logger.debug("----Start Shutdown Hook: sendCounterUsageInfo");
+//
+//				DbxCentralStatistics stat = DbxCentralStatistics.getInstance();
+//
+//				stat.setShutdownReason  ( ShutdownHandler.getShutdownReason()   );
+//				stat.setRestartSpecified( ShutdownHandler.wasRestartSpecified() );
+//				
+//				// Send the statistics object to dbxtune.com
+//				CheckForUpdates.getInstance().sendCounterUsageInfo(true, stat);
+//				
+//				_logger.debug("----End Shutdown Hook: sendCounterUsageInfo");
+////System.out.println("----End Shutdown Hook: sendCounterUsageInfo");
+//				
+//				return null;
+//			}
+//		});
 	}
 	
 	private static void sendDbxTuneUpdateMail()
@@ -607,7 +607,18 @@ public class DbxTuneCentral
 			_logger.info("Not enough email parameters to send mail. One of the following parameters are blank: smtpHostname='"+smtpHostname+"', to='"+toCsv+"', from='"+from+"'. Tried to be retrived from 'AlarmWriterToMail.*', or 'ReportSenderToMail.*'.");
 		}
 	}
-	
+
+	private static void sendCounterUsageInfo()
+	{
+		DbxCentralStatistics stat = DbxCentralStatistics.getInstance();
+
+		stat.setShutdownReason  ( ShutdownHandler.getShutdownReason()   );
+		stat.setRestartSpecified( ShutdownHandler.wasRestartSpecified() );
+		
+		// Send the statistics object to dbxtune.com
+		CheckForUpdates.getInstance().sendCounterUsageInfo(true, stat);
+	}
+
 	private static void close()
 	{
 		try
@@ -615,6 +626,8 @@ public class DbxTuneCentral
 			stopWebServer();
 			stopCentralPcs();
 			stopScheduler();
+
+			sendCounterUsageInfo();
 		}
 		catch(Exception ex)
 		{

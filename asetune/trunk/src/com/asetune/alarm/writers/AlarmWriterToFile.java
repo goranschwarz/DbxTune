@@ -357,7 +357,7 @@ extends AlarmWriterAbstract
 //		writeToFile.close();
 
 		// Translate template into a real string
-		String writeText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _alarmLog_msgTemplate, true);
+		String writeText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _alarmLog_msgTemplate, true, null, getDbxCentralUrl());
 
 		writeToFile.println(writeText);
 		writeToFile.close();
@@ -399,7 +399,7 @@ extends AlarmWriterAbstract
 		}
 
 		// Translate template into a real string
-		String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms, _activeAlarms_msgTemplate, true);
+		String writeText = WriterUtils.createMessageFromTemplate(getClass().getSimpleName(), activeAlarms, _activeAlarms_msgTemplate, true, null, "http://DUMMY-dbxtune:8080");
 
 		writeToFile.println(writeText);
 		writeToFile.close();

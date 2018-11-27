@@ -61,6 +61,11 @@ public interface IDbmsConfigText
 
 
 	/**
+	 * Check the configuration collected in refresh() and add/create a issue/anomaly if anything strange was found. 
+	 */
+	public void checkConfig(DbxConnection conn);
+
+	/**
 	 * What server version do we need to get this information.
 	 * @return an integer version in the form 12549 for version 12.5.4.9, 0 = all version
 	 */

@@ -147,7 +147,7 @@ extends CounterControllerAbstract
 //		CmProcCacheLoad    .create(counterController, guiController);
 //		CmProcCallStack    .create(counterController, guiController);
 //		CmCachedObjects    .create(counterController, guiController);
-//		CmErrolog          .create(counterController, guiController);
+//		CmErrorLog         .create(counterController, guiController);
 //		CmDeadlock         .create(counterController, guiController);
 //		CmLockTimeout      .create(counterController, guiController);
 //		CmThresholdEvent   .create(counterController, guiController);

@@ -13,8 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.table.AbstractTableModel;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.config.dbms.AseConfigText.Cache;
@@ -27,17 +25,13 @@ import com.asetune.utils.SwingUtils;
 
 
 public class AseConfig
-extends AbstractTableModel 
-implements IDbmsConfig
+extends DbmsConfigAbstract 
 {
 	private static final long serialVersionUID = 1L;
 
 	/** Log4j logging. */
 	private static Logger _logger          = Logger.getLogger(AseConfig.class);
 
-	/** Instance variable */
-//	private static AseConfig _instance = null;
-	
 	private boolean   _offline   = false;
 	private boolean   _hasGui    = false;
 	private Timestamp _timestamp = null;
@@ -241,20 +235,6 @@ implements IDbmsConfig
 		public int     dataType;
 	}
 
-//	/** check if we got an instance or not */
-//	public static boolean hasInstance()
-//	{
-//		return (_instance != null);
-//	}
-//
-//	/** Get a instance of the class, if we didn't have an instance, one will be created, but not initialized */
-//	public static AseConfig getInstance()
-//	{
-//		if (_instance == null)
-//			_instance = new AseConfig();
-//		return _instance;
-//	}
-
 	public AseConfig()
 	{
 		DbmsConfigTextManager.clear();
@@ -268,8 +248,8 @@ implements IDbmsConfig
 	@Override
 	public void reset()
 	{
-//		_instance = null;
 		_configMap = null;
+		super.reset();
 	}
 
 	/** get the Map */
@@ -314,6 +294,8 @@ implements IDbmsConfig
 		if (conn == null)
 			return;
 
+		reset();
+		
 		_configMap         = new HashMap<String,AseConfigEntry>();
 		_configList        = new ArrayList<AseConfigEntry>();
 		_configSectionList = new ArrayList<String>();
@@ -467,6 +449,13 @@ implements IDbmsConfig
 			return;
 		}
 
+		// Check if we got any strange in the configuration
+		// in case it does: report that...
+		if ( ! _offline )
+		{
+			checkConfig(conn);
+		}
+		
 		// notify change
 		fireTableDataChanged();
 	}

@@ -79,8 +79,8 @@ extends AlarmWriterAbstract
 
 		// Use the template and fill in values
 		String syslogMsgText;
-		if      (ACTION_RAISE .equals(action)) syslogMsgText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _raiseMsgTemplate, true);
-		else if (ACTION_CANCEL.equals(action)) syslogMsgText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _cancelMsgTemplate, true);
+		if      (ACTION_RAISE .equals(action)) syslogMsgText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _raiseMsgTemplate,  true, null, getDbxCentralUrl());
+		else if (ACTION_CANCEL.equals(action)) syslogMsgText = WriterUtils.createMessageFromTemplate(action, alarmEvent, _cancelMsgTemplate, true, null, getDbxCentralUrl());
 		else 
 			throw new RuntimeException("Unknown action type: "+action);
 

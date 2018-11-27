@@ -3052,8 +3052,8 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		if (cm instanceof CountersModelAppend) 
-			return;
+//		if (cm instanceof CountersModelAppend) 
+//			return;
 
 //		if ( ! cm.hasDiffData() && ( cm.isPersistCountersDiffEnabled() || cm.isPersistCountersRateEnabled() ) )
 //		{
@@ -3226,6 +3226,13 @@ public class PersistWriterJdbc
 		List<List<Object>> rows = cm.getDataCollection(cmWhatData);
 		List<String>       cols = cm.getColNames(cmWhatData);
 
+		// If it's an Append only CM, then grab just the LAST available entries (if any)
+		if (cm instanceof CountersModelAppend) 
+		{
+			rows = ((CountersModelAppend)cm).getDataCollectionForLastRefresh();
+			cols = ((CountersModelAppend)cm).getColNames(cmWhatData);
+		}
+		
 		if (rows == null || cols == null)
 		{
 			_logger.error("Rows or Columns can't be null. rows='"+rows+"', cols='"+cols+"'");

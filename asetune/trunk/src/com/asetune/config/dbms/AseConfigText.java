@@ -3,7 +3,9 @@ package com.asetune.config.dbms;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -13,9 +15,11 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.AseTraceFlagsDictionary;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 
@@ -601,6 +605,57 @@ public abstract class AseConfigText
 
 			return sql;
 		}
+		
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havnt got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+			
+			int    defaultDataCacheSizeInMb = -1;
+			String sql        = "";
+			String srvName    = "UNKNOWN";
+			int    srvVersion = 0;
+			Timestamp srvRestart = AseConnectionUtils.getAseStartDate(conn);
+			try
+			{
+				srvName    = conn.getDbmsServerName();
+				srvVersion = conn.getDbmsVersionNumber();
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting ASE 'default data cache' size, when getting DBMS ServerName or VersionNumber. Caught: "+ex, ex);
+			}
+				
+			
+			if (srvVersion >= Ver.ver(16,0))
+				sql = "select run_size from master.dbo.syscacheinfo where cache_name = 'default data cache'";
+			else
+				sql = "select run_size = value/1024 from master.dbo.syscurconfigs where config=19 and comment = 'default data cache'";
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+					defaultDataCacheSizeInMb = rs.getInt(1);
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting ASE 'default data cache' size, using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+
+			// If 'default data cache' is at "factory" setting...
+			if (defaultDataCacheSizeInMb > 0 && defaultDataCacheSizeInMb < 10)
+			{
+				String key = "DbmsConfigIssue."+srvName+".defaultDataCache.atFactorySetting";
+				
+				DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "default data cache", Severity.WARNING, 
+						"The 'default data cache' is configured at the factory setting... 8 MB or similar... This is WAY TO LOW.", 
+						"Fix this using: exec sp_cacheconfig 'default data cache', '#G'");
+
+				DbmsConfigManager.getInstance().addConfigIssue(issue);
+			}
+		}
 	}
 
 	public static class ConfigHistory extends DbmsConfigTextAbstract
@@ -618,7 +673,7 @@ public abstract class AseConfigText
 				+ "begin \n"
 				+ "    --execute('exec sybsecurity.dbo.sp_confighistory') \n"
 //				+ "    execute('select top 1000 * from sybsecurity.dbo.ch_events order by timestamp desc') \n" // to get *last* 1000 changes...
-				+ "    execute('select * from sybsecurity.dbo.ch_events') \n"
+				+ "    execute('select * from sybsecurity.dbo.ch_events where isnull(type,'''') != ''set switch'' and isnull(target,'''') != ''3604'' ') \n"
 				+ "end \n"
 				+ "else \n"
 				+ "begin \n"
@@ -632,8 +687,8 @@ public abstract class AseConfigText
 				+ "    print '----------------------------------------------------------' \n"
 				+ "    print '' \n"
 				+ "    print '-- Create data and log device to hold the database' \n"
-				+ "    print 'disk init name = ''sybsecurity_data_1'',   physname = ''/somewhere/devices/sybsecurity_data_1.dat'',  size = ''300m'', skip_alloc=false, directio=true, dsync=false' \n"
-				+ "    print 'disk init name = ''sybsecurity_log_1'',    physname = ''/somewhere/devices/sybsecurity_log_1.dat'',   size = ''50m'',  skip_alloc=false, directio=true, dsync=false' \n"
+				+ "    print 'disk init name = ''sybsecurity_data_1'',   physname = ''/somewhere/devices/SRVNAME.sybsecurity_data_1.dat'',  size = ''300m'', skip_alloc=false, directio=true, dsync=false' \n"
+				+ "    print 'disk init name = ''sybsecurity_log_1'',    physname = ''/somewhere/devices/SRVNAME.sybsecurity_log_1.dat'',   size = ''50m'',  skip_alloc=false, directio=true, dsync=false' \n"
 				+ "    print 'go' \n"
 				+ "    print '' \n"
 				+ "    print '-- Create the database' \n"
@@ -708,6 +763,70 @@ public abstract class AseConfigText
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDevice; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdevice"; }
+		
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havnt got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+			
+			String    sql        = "exec sp_helpdevice";
+			String    srvName    = "UNKNOWN";
+			Timestamp srvRestart = AseConnectionUtils.getAseStartDate(conn);
+			try
+			{
+				srvName    = conn.getDbmsServerName();
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting ASE 'sp_helpdevice' for dsync/directio, when getting DBMS ServerName or VersionNumber. Caught: "+ex, ex);
+			}
+				
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					String deviceName  = rs.getString(1);
+					String physName    = rs.getString(2);
+					String description = rs.getString(3);
+					//int  status      = rs.getInt(4);
+					int    cntrltype   = rs.getInt(5);
+
+					// cntrltype == 0, seems to be "normal" physical devices 
+					if (cntrltype != 0)
+						continue;
+
+					// skip any device names that contains "temp" or "tmp"
+					if (deviceName.indexOf("temp") >= 0 || deviceName.indexOf("tmp") >= 0)
+					{
+						_logger.info("Checking Configuration for 'HelpDevice': Skipping device name '"+deviceName+"', which looks like a 'temp' device. (reason: name contains 'temp' or 'tmp')");
+						continue;
+					}
+					
+					boolean hasDsync    = description.indexOf("dsync on")    >= 0;
+					boolean hasDirectIo = description.indexOf("directio on") >= 0;
+					
+					if ( hasDsync == false && hasDirectIo == false)
+					{
+						String key = "DbmsConfigIssue."+srvName+".device."+deviceName+".noDsyncOrDirectIo";
+						
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "device '"+deviceName+"' no dsync or directio", Severity.WARNING, 
+								"The device name '"+deviceName+"' with physical name '"+physName+"' is not correctly configured for durability, directio=false and dsync=false.", 
+								"Fix this using: exec sp_deviceattr '"+deviceName+"', 'directio', 'true' \n"
+										+ "\n" 
+										+ "Note: you also need to restart ASE for 'sp_deviceattr' to take effect.");
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting ASE 'sp_helpdevice' for dsync/directio, using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+		}
 	}
 
 	public static class DeviceFsSpaceUsage extends DbmsConfigTextAbstract
@@ -874,6 +993,14 @@ public abstract class AseConfigText
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseShmDumpConfig; }
 		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_shmdumpconfig"; }
+
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// TODO: Check that at least 1 shmem dump without data is configured for signal 11 or timeslice
+			// http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.39996_1250/html/svrtsg/svrtsg178.htm
+			// https://help.sap.com/viewer/3bdda6b0ffad441aab4fe51e4e876a19/16.0.3.5/en-US/a8b25b91bc2b1014b1e19f32c163a329.html
+		}
 	}
 
 	public static class MonitorConfig extends DbmsConfigTextAbstract
@@ -888,6 +1015,64 @@ public abstract class AseConfigText
 			List<String> list = new ArrayList<String>();
 			list.add(AseConnectionUtils.SA_ROLE);
 			return list;
+		}
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havnt got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+			
+			String    sql        = "exec sp_monitorconfig 'all'";
+			String    srvName    = "UNKNOWN";
+			Timestamp srvRestart = AseConnectionUtils.getAseStartDate(conn);
+			try
+			{
+				srvName = conn.getDbmsServerName();
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting ASE 'sp_monitorconfig', when getting DBMS ServerName or VersionNumber. Caught: "+ex, ex);
+			}
+				
+			
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					String name      = StringUtil.trim(rs.getString(1));
+					int    numFree   =                 rs.getInt   (2);
+					int    numActive =                 rs.getInt   (3);
+					String pctActive = StringUtil.trim(rs.getString(4));
+					int    maxUsed   =                 rs.getInt   (5);
+					int    numReuse  =                 rs.getInt   (6);
+
+					// System.out.println("MonitorConfig: row: Name='"+name+"', Num_free="+numFree+", Num_active="+numActive+", Pct_Act="+pctActive+", Max_Used="+maxUsed+", Num_Reuse="+numReuse);
+					if (_logger.isDebugEnabled())
+						_logger.debug("MonitorConfig: row: Name='"+name+"', Num_free="+numFree+", Num_active="+numActive+", Pct_Act="+pctActive+", Max_Used="+maxUsed+", Num_Reuse="+numReuse);
+
+					if ( numReuse > 0 )
+					{
+						String key = "DbmsConfigIssue."+srvName+".sp_monitorconfig."+name+".numReuse";
+						
+						DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, name, Severity.WARNING, 
+								"Configuration '"+name+"' has Num_Reuse="+numReuse+" (in sp_monitorconfig 'all'). \n"
+										+ "The server will re-use older entries, which will degrade performance. \n"
+										+ "\n" 
+										+ "Note: This might be older 'Num_Reuse' counters, if the server hasn't rebooted.", 
+								"Fix this using: exec sp_configure '"+name+"', ##### \n"
+										+ "\n" 
+										+ "Note: You can also check 'Num_Reuse', by: exec sp_monitorconfig 'all' \n"
+										+ "Details: Name='"+name+"', Num_free="+numFree+", Num_active="+numActive+", Pct_Act="+pctActive+", Max_Used="+maxUsed+", Num_Reuse="+numReuse);
+
+						DbmsConfigManager.getInstance().addConfigIssue(issue);
+					}
+				}
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting ASE 'sp_monitorconfig', using sql '"+sql+"'. Caught: "+ex, ex);
+			}
 		}
 	}
 	

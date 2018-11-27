@@ -26,6 +26,12 @@ public class DbxDatabaseMetaData implements DatabaseMetaData
 	}
 
 
+	@Override
+	public String toString()
+	{
+		return getClass().getName() + "@" + Integer.toHexString(hashCode()) + "[_dbmd=" + _dbmd + "]";
+	}
+
 
 	//#################################################################################
 	//#################################################################################

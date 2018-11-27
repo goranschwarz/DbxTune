@@ -33,7 +33,7 @@ import com.asetune.cm.ase.CmDeviceIo;
 import com.asetune.cm.ase.CmDeviceSegIO;
 import com.asetune.cm.ase.CmDeviceSegUsage;
 import com.asetune.cm.ase.CmEngines;
-import com.asetune.cm.ase.CmErrolog;
+import com.asetune.cm.ase.CmErrorLog;
 import com.asetune.cm.ase.CmExecutionTime;
 import com.asetune.cm.ase.CmIoControllers;
 import com.asetune.cm.ase.CmIoQueue;
@@ -349,7 +349,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmSysmon           .create(counterController, guiController);
 		CmWorkerThread     .create(counterController, guiController);
 		CmMemoryUsage      .create(counterController, guiController);
-		CmErrolog          .create(counterController, guiController);
+		CmErrorLog         .create(counterController, guiController);
 		CmDeadlock         .create(counterController, guiController);
 		CmLockTimeout      .create(counterController, guiController);
 		CmThresholdEvent   .create(counterController, guiController);

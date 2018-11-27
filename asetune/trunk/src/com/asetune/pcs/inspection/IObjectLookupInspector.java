@@ -50,6 +50,20 @@ public interface IObjectLookupInspector
 	throws Exception;
 
 	/**
+	 * Check the connection for any abnormalities, like open transactions etc...<p>
+	 * if we return TRUE:  Then the collection is OK<br>
+	 * if we return FALSE: The Connection will be closed by the PersistentCounterHandler & a new will be opened later.<br>
+	 * on close, let the DBMS handle any eventual rollbacks and cleanups
+	 * 
+	 * @param conn The connection that we want to check.
+	 * @return true=OK, false=CloseConnection
+	 * @throws Exception If this happens, it's the same as if return FALSE... meaning: close the connection.
+	 */
+	public boolean checkConnection(DbxConnection conn)
+	throws Exception;
+
+	
+	/**
 	 * Initialize the Lookup Inspector with the same configuartion as the PersistenceCounterHandler
 	 * @param conf
 	 */
@@ -60,4 +74,5 @@ public interface IObjectLookupInspector
 	public boolean       getBooleanProperty(String propName, boolean defaultValue);
 	public int           getIntProperty    (String propName, int     defaultValue);
 	public long          getLongProperty   (String propName, long    defaultValue);
+
 }

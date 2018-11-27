@@ -1,5 +1,7 @@
 package com.asetune.pcs.sqlcapture;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.gui.MainFrame;
@@ -8,6 +10,8 @@ import com.asetune.utils.Configuration;
 
 public abstract class SqlCaptureBrokerAbstract implements ISqlCaptureBroker
 {
+	private static Logger _logger = Logger.getLogger(SqlCaptureBrokerAbstract.class);
+	
 	/** Configuration we were initialized with */
 	private Configuration _conf;
 
@@ -36,6 +40,23 @@ public abstract class SqlCaptureBrokerAbstract implements ISqlCaptureBroker
 		}
 	}
 
+	// Check the connection for OpenTransaction or other ABNORMALITIES
+	// return: true = OK, false = CLOSE CONNECTION 
+	@Override
+	public boolean checkConnection(DbxConnection conn)
+	throws Exception
+	{
+		boolean inTran =conn.isInTransaction();
+		
+		if (inTran)
+		{
+			_logger.error("When checking the SQL Capture DBMS Connection, it was still in a transaction. The Connection will be closed. The DBMS is responsible for clearing/cleaning up the transaction.");
+			return false; // CLOSE CONNECTION
+		}
+		
+		return true; // OK
+	}
+	
 	@Override
 	public void init(Configuration conf)
 	{

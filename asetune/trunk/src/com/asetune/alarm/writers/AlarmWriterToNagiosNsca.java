@@ -62,7 +62,7 @@ extends AlarmWriterAbstract
 	private void sendMessage(String action, AlarmEvent alarmEvent)
 	{
 		// replace variables in the template with runtime variables
-		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgTemplate, true);
+		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgTemplate, true, null, getDbxCentralUrl());
 
 		// below is found at: https://stackoverflow.com/questions/16777560/sending-passive-checks-to-the-nagios-nsca-add-on-from-java-application
 		//                or: https://github.com/jsendnsca/jsendnsca

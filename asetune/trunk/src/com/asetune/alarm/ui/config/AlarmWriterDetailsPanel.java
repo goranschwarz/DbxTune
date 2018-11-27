@@ -31,6 +31,8 @@ implements PropertyChangeListener
 //	AlarmDetailUserDefinedPanel _alarmWriterFiltersPanel;
 	AlarmWriterSettingsPanel _alarmWriterSettingsPanel;
 	AlarmWriterFiltersPanel  _alarmWriterFiltersPanel;
+	
+//	String _currentWriterClassName = "";
 
 	private static final ImageIcon hasSettings_ico = SwingUtils.readImageIcon(Version.class, "images/alarm_details_has_system_settings.png");
 	private static final ImageIcon hasFilters_ico  = SwingUtils.readImageIcon(Version.class, "images/alarm_details_has_userdefined_settings.png");
@@ -82,7 +84,7 @@ implements PropertyChangeListener
 		firePropertyChange(evt.getPropertyName(), evt.getOldValue(), evt.getNewValue());
 	}
 
-	public void setWriterSettings(List<CmSettingsHelper> settings)
+	public void setWriterSettings(List<CmSettingsHelper> settings, String writerClassName)
 	{
 		// Check if any "settings" has been changed in the underlying panels...
 		// If so: Alert
@@ -104,14 +106,23 @@ implements PropertyChangeListener
 		}
 		
 		// Show current settings in the panels
-		_alarmWriterSettingsPanel.setWriterSettings(settings);
+		_alarmWriterSettingsPanel.setWriterSettings(settings, writerClassName);
 
 		// Set icon of TAB
 		_alarmWriterDetailedTabbedPanel.setIconAtTitle(TAB_NAME_SETTINGS, _alarmWriterSettingsPanel.hasData() && _alarmWriterSettingsPanel.hasCheckedRows() ? hasSettings_ico : noSettings_ico);
 		_alarmWriterDetailedTabbedPanel.setIconAtTitle(TAB_NAME_FILTERS,  _alarmWriterFiltersPanel .hasData() && _alarmWriterFiltersPanel .hasCheckedRows() ? hasFilters_ico  : noFilters_ico);
 	}
+	
+//	public void setWriterClassName(String writerClassName)
+//	{
+//		_currentWriterClassName = writerClassName;
+//	}
+//	public String getWriterClassName()
+//	{
+//		return _currentWriterClassName;
+//	}
 
-	public void setWriterFilters(List<CmSettingsHelper> filters)
+	public void setWriterFilters(List<CmSettingsHelper> filters, String writerClassName)
 	{
 		// Check if any "settings" has been changed in the underlying panels...
 		// If so: Alert
@@ -133,7 +144,7 @@ implements PropertyChangeListener
 		}
 		
 		// Show current settings in the panels
-		_alarmWriterFiltersPanel.setWriterFilters(filters);
+		_alarmWriterFiltersPanel.setWriterFilters(filters, writerClassName);
 
 		// Set icon of TAB
 		_alarmWriterDetailedTabbedPanel.setIconAtTitle(TAB_NAME_SETTINGS, _alarmWriterSettingsPanel.hasData() && _alarmWriterSettingsPanel.hasCheckedRows() ? hasSettings_ico : noSettings_ico);

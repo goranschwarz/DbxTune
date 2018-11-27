@@ -15,6 +15,7 @@ import java.util.Stack;
 import java.util.regex.Pattern;
 
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.RowFilter;
 import javax.swing.Timer;
@@ -155,8 +156,10 @@ extends JPanel
 	private int        _deferredFilterSleepTime = 250;
 
 	private Timer      _deferredFilterTimer;
-	
-	public GTableFilter(JXTable table)
+
+	private RowFilter<? super TableModel, ? super Integer> _externalFilter;
+
+    public GTableFilter(JXTable table)
 	{
 		this(table, ROW_COUNT_LAYOUT_RIGHT, false);
 	}
@@ -219,6 +222,20 @@ extends JPanel
 	public boolean isFilterChkboxSelected()             { return _filter_chk.isSelected(); }
 	public void    setFilterChkboxSelected(boolean val) { _filter_chk.setSelected(val); _filter_txt.setEnabled(val); }
 	
+//	public boolean isFilterLabelVisible()           { return _filter_lbl.isVisible(); }
+//	public void    setFilterLabelVisible(boolean b) { _filter_lbl.setVisible(b); }
+	public JLabel  getFilterLabel()                 { return _filter_lbl; }
+	
+	public void	setExternalFilter(RowFilter<? super TableModel, ? super Integer> filter) 
+	{ 
+		_externalFilter = filter;
+		applyFilter();
+	}
+	public RowFilter<? super TableModel, ? super Integer> getExternalFilter()
+	{ 
+		return _externalFilter; 
+	}
+
 	/*---------------------------------------------------
 	** BEGIN: component initialization
 	**---------------------------------------------------
@@ -239,7 +256,7 @@ extends JPanel
 		if (_rowCntLayout == ROW_COUNT_LAYOUT_RIGHT)
 		{
 			add(_filter_chk, "hidemode 3");
-			add(_filter_lbl, "");
+			add(_filter_lbl, "hidemode 3");
 			add(_filter_txt, "growx, pushx");
 			add(_filter_cnt, "wrap");
 		}
@@ -316,6 +333,37 @@ extends JPanel
 		_filter_cnt.setText(rowc);
 	}
 
+	private void setTableRowFilter(RowFilter<? super TableModel, ? super Integer> filter)
+//	private void setTableRowFilter(RowFilter<TableModel, Integer> filter)
+	{
+		if (filter == null && _externalFilter == null)
+		{
+			_table.setRowFilter(null);
+		}
+		else if (filter != null && _externalFilter == null)
+		{
+			_table.setRowFilter(filter);
+		}
+		else if (filter == null && _externalFilter != null)
+		{
+			_table.setRowFilter(_externalFilter);
+		}
+		else
+		{
+			AndFilter<TableModel, Integer> andFilter = new AndFilter<>();
+			andFilter.addFilter(filter);
+			andFilter.addFilter(_externalFilter);
+
+			_table.setRowFilter(andFilter);
+
+//			List<RowFilter<? super TableModel, ? super Integer>> andList = new ArrayList<>();
+//			andList.add(filter);
+//			andList.add(_externalFilter);
+//			
+//			_table.setRowFilter(andList);
+		}
+	}
+	
 	public void applyFilter()
 	{
 		// The text field should be enabled/disabled based on the Checkbox
@@ -324,7 +372,8 @@ extends JPanel
 		// IF the filter checkbox is NOT set, simply reset the filter and return
 		if ( _filter_chk_visible && ! _filter_chk.isSelected() )
 		{
-			_table.setRowFilter(null);
+//			_table.setRowFilter(null);
+			setTableRowFilter(null);
 			return;
 		}
 		
@@ -332,14 +381,19 @@ extends JPanel
 		{
 			String searchStringNoTrim = _filter_txt.getText();
 			String searchString       = _filter_txt.getText().trim();
-			if ( searchString.length() <= 0 ) 
-				_table.setRowFilter(null);
+			if ( searchString.length() <= 0 )
+			{
+//				_table.setRowFilter(null);
+				setTableRowFilter(null);
+			}
 			else
 			{
 				if (searchStringNoTrim.toUpperCase().startsWith("WHERE "))
 				{
 					// Parse SQL Like
-					SimpleSqlWhereTableFilter.setFilterForWhere(_table, searchStringNoTrim.substring("where ".length()).trim());
+//					SimpleSqlWhereTableFilter.setFilterForWhere(_table, searchStringNoTrim.substring("where ".length()).trim());
+					ALocalFilter<TableModel, Integer> filter = SimpleSqlWhereTableFilter.getFilterForWhere(_table, searchStringNoTrim.substring("where ".length()).trim());
+					setTableRowFilter(filter);
 				}
 				else
 				{
@@ -352,7 +406,8 @@ extends JPanel
     				for (int i=0; i<mcols.length; i++)
     					mcols[i] = i;
     
-    				_table.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString, mcols));
+//    				_table.setRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString, mcols));
+    				setTableRowFilter(RowFilters.regexFilter(Pattern.CASE_INSENSITIVE, searchString, mcols));
 				}
 			}
 			_filter_txt.setToolTipText(FILTER_TOOLTIP_SHORT);
@@ -379,7 +434,8 @@ extends JPanel
 	public void resetFilter()
 	{
 		_filter_txt.setText("");
-		_table.setRowFilter(null);
+//		_table.setRowFilter(null);
+		setTableRowFilter(null);
 
 		updateRowCount();
 	}
@@ -418,11 +474,40 @@ extends JPanel
 	private static class SimpleSqlWhereTableFilter
 	implements ExpressionVisitor
 	{
-		public static void setFilterForWhere(JXTable table, String whereClause)
+//		public static void setFilterForWhere(JXTable table, String whereClause)
+//		throws Exception
+//		{
+//			if (table == null || whereClause == null)
+//				return;
+//
+//			// If the string starts with "where" remove that before parsing
+//			if (whereClause.toUpperCase().startsWith("WHERE "))
+//				whereClause = whereClause.substring("where ".length()).trim();
+//
+//			// If there is no string, set to NO filter
+//			if (whereClause.trim().length() == 0)
+//			{
+//				table.setRowFilter(null);
+//				return;
+//			}
+//
+//			// Now parse the "where" string and set filter...
+//			Expression expr = CCJSqlParserUtil.parseCondExpression(whereClause);
+//			
+//			if (_logger.isDebugEnabled())
+//			{
+//				_logger.debug("-------------------------------------------------------------");
+//				_logger.debug("FULL EXPR: "+expr);
+//			}
+//
+//			@SuppressWarnings("unused")
+//			SimpleSqlWhereTableFilter swpv = new SimpleSqlWhereTableFilter(table, expr);
+//		}
+		public static ALocalFilter<TableModel, Integer> getFilterForWhere(JXTable table, String whereClause)
 		throws Exception
 		{
 			if (table == null || whereClause == null)
-				return;
+				return null;
 
 			// If the string starts with "where" remove that before parsing
 			if (whereClause.toUpperCase().startsWith("WHERE "))
@@ -431,8 +516,8 @@ extends JPanel
 			// If there is no string, set to NO filter
 			if (whereClause.trim().length() == 0)
 			{
-				table.setRowFilter(null);
-				return;
+				//table.setRowFilter(null);
+				return null;
 			}
 
 			// Now parse the "where" string and set filter...
@@ -444,8 +529,9 @@ extends JPanel
 				_logger.debug("FULL EXPR: "+expr);
 			}
 
-			@SuppressWarnings("unused")
+			// Create a filter
 			SimpleSqlWhereTableFilter swpv = new SimpleSqlWhereTableFilter(table, expr);
+			return swpv.getFilter();
 		}
 
 
@@ -475,7 +561,12 @@ extends JPanel
 				printRowFilterStack(_andOrStack.peek(), 0);
 
 			// Set filter on the table
-			table.setRowFilter(_andOrStack.peek());
+			//table.setRowFilter(_andOrStack.peek());
+		}
+
+		public ALocalFilter<TableModel, Integer> getFilter()
+		{
+			return _andOrStack.peek();
 		}
 
 		@SuppressWarnings({ "unchecked" })

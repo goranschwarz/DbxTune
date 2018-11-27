@@ -43,6 +43,12 @@ public class DbxPreparedStatement implements PreparedStatement
 	}
 
 
+	@Override
+	public String toString()
+	{
+		return getClass().getName() + "@" + Integer.toHexString(hashCode()) + "[_pstmnt=" + _pstmnt + "]";
+	}
+
 	//#################################################################################
 	//#################################################################################
 	//### BEGIN: delegated methods

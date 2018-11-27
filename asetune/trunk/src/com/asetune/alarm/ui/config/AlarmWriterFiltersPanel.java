@@ -77,9 +77,9 @@ implements TableModelListener
 //		_alarmWriterFiltersTable.refreshTable(filters);
 //		checkContent();
 //	}
-	public void setWriterFilters(List<CmSettingsHelper> filters)
+	public void setWriterFilters(List<CmSettingsHelper> filters, String writerClassName)
 	{
-		_alarmWriterFiltersTable.refreshTable(filters);
+		_alarmWriterFiltersTable.refreshTable(filters, writerClassName);
 		checkContent();
 	}
 //	public void setWriterName(String className)

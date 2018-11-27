@@ -1,5 +1,7 @@
 package com.asetune.pcs.inspection;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.DbxTune;
 import com.asetune.Version;
 import com.asetune.gui.MainFrame;
@@ -9,6 +11,8 @@ import com.asetune.utils.Configuration;
 public abstract class ObjectLookupInspectorAbstract
 implements IObjectLookupInspector
 {
+	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorAbstract.class);
+
 	/** Configuration we were initialized with */
 	private Configuration _conf;
 
@@ -31,6 +35,23 @@ implements IObjectLookupInspector
 		}
 	}
 
+	// Check the connection for OpenTransaction or other ABNORMALITIES
+	// return: true = OK, false = CLOSE CONNECTION 
+	@Override
+	public boolean checkConnection(DbxConnection conn)
+	throws Exception
+	{
+		boolean inTran =conn.isInTransaction();
+		
+		if (inTran)
+		{
+			_logger.error("When checking the DDL Lookup Connection, it was still in a transaction. The Connection will be closed. The DBMS is responsible for clearing/cleaning up the transaction.");
+			return false; // CLOSE CONNECTION
+		}
+		
+		return true; // OK
+	}
+	
 	@Override
 	public void init(Configuration conf)
 	{

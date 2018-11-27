@@ -50,6 +50,8 @@ public class AlarmWriterFiltersTable extends JXTable
 	String _currentCmName = "";
 	int    _currentTmRow  = -1;
 
+	String _currentWriterClassName = "";
+
 	public AlarmWriterFiltersTable(AlarmWriterFiltersTableModel alarmWriterFiltersTableModel)
 //	public AlarmWriterFiltersTable(AlarmWritersTableModel alarmWritersTableModel, AlarmWriterFiltersPanel alarmWriterFiltersPanel)
 	{
@@ -265,8 +267,10 @@ public class AlarmWriterFiltersTable extends JXTable
 //		_alarmWriterFiltersTableModel.refreshTable(filters);
 //		packAll(); // set size so that all content in all cells are visible
 //	}
-	public void refreshTable(List<CmSettingsHelper> filters)
+	public void refreshTable(List<CmSettingsHelper> filters, String writerClassName)
 	{
+		_currentWriterClassName = writerClassName;
+
 		_alarmWriterFiltersTableModel.refreshTable(filters);
 		packAll(); // set size so that all content in all cells are visible
 		
@@ -302,6 +306,18 @@ public class AlarmWriterFiltersTable extends JXTable
 		
 	}
 
+	private Configuration getCurrentConfig()
+	{
+		Configuration conf = new Configuration();
+		
+		for (CmSettingsHelper sh : _alarmWriterFiltersTableModel.getSettings())
+		{
+			conf.setProperty(sh.getPropName(), sh.getStringValue());
+		}
+		
+		return conf;
+	}
+	
 	
 	/*---------------------------------------------------
 	** BEGIN: PopupMenu on the table
@@ -342,14 +358,17 @@ public class AlarmWriterFiltersTable extends JXTable
 					return;
 
 				int vcol = SwingUtils.findColumnView(table, "Value");
+				int pcol = SwingUtils.findColumnView(table, "Property");
 				
 //				// Translate View row to Model row
 //				int mrow = convertRowIndexToModel(vrow);
 //				int mcol = SwingUtils.findColumn(getModel(), "Value");
 //				
 //				String val = getModel().getValueAt(mrow, mcol) + "";
-				String val = table.getValueAt(vrow, vcol) + "";
-				val = TemplateEditor.showDialog(null, val);
+				String val     = table.getValueAt(vrow, vcol) + "";
+				String propKey = table.getValueAt(vrow, pcol) + "";
+				
+				val = TemplateEditor.showDialog(null, val, _currentWriterClassName, propKey, getCurrentConfig());
 				if (StringUtil.hasValue(val))
 				{
 					table.setValueAt(val.trim(), vrow, vcol);

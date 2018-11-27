@@ -55,6 +55,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.IUserDefinedAlarmInterrogator;
 import com.asetune.alarm.UserDefinedAlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventProcedureCacheOutOfMemory;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.graph.TrendGraphDataPoint;
@@ -252,12 +253,10 @@ implements Cloneable, ITableTooltip
 	
 	private int _dataSource = getDefaultDataSource();//DATA_RATE;
 
-	private boolean dataInitialized=false;
-	private boolean firstTimeSample=true;
+	private boolean _dataInitialized=false;
+	private boolean _firstTimeSample=true;
 	private boolean _sqlInitDone=false;
 
-	private int maxRowSeen;
-	
 	public enum State { NORMAL, SRV_IN_SHUTDOWN };
 	private State _state = State.NORMAL;
 
@@ -361,6 +360,7 @@ implements Cloneable, ITableTooltip
 		//_diffDissColumns = null; // set by the constructor
 		_isDiffDissCol   = null;   // this will be refreshed
 
+		_rsmd = null;
 		
 		// incremented every time a refresh() happens, done by incRefreshCounter()
 		//_refreshCounter  = 0;  // probably NOT reset, then send counter info will show 0, reset is done by resetStatCounters()
@@ -384,11 +384,9 @@ implements Cloneable, ITableTooltip
 		// _dataSource = DATA_RATE;  // lets keep current view
 
 		// more basic stuff
-		dataInitialized = false;
-		firstTimeSample = true;
-		_sqlInitDone    = false;
-
-		maxRowSeen      = 0; // this isn't used ???
+		_dataInitialized = false;
+		_firstTimeSample = true;
+		_sqlInitDone     = false;
 
 		// new delta/rate row flag
 		_isNewDeltaOrRateRow = null;
@@ -532,7 +530,6 @@ implements Cloneable, ITableTooltip
 		_prevSample       = null; // Contains old raw data
 		_newSample        = null; // Contains new raw data
 		_diffData         = null; // diff between newSample and oldSample data (not filtered)
-		maxRowSeen        = 0;
 
 		String[] emptyArray = {};
 		if (_diffColumns      == null) _diffColumns      = emptyArray;
@@ -699,10 +696,8 @@ implements Cloneable, ITableTooltip
 		
 		c._dataSource                 = this._dataSource;
 
-		c.dataInitialized             = this.dataInitialized;
-		c.firstTimeSample             = this.firstTimeSample;
-
-		c.maxRowSeen                  = this.maxRowSeen;
+		c._dataInitialized            = this._dataInitialized;
+		c._firstTimeSample            = this._firstTimeSample;
 
 		c._refreshCounter             = this._refreshCounter;
 		c._sumRowCount                = this._sumRowCount;
@@ -1860,6 +1855,11 @@ implements Cloneable, ITableTooltip
 					if (StringUtils.endsWithIgnoreCase(strVal, "</html>"))
 						strVal = strVal.substring(0, strVal.length() - "</html>".length() );
 				}
+				else
+				{
+					// make '\n' into '<br>'
+					strVal = strVal.replace("\n", "<br>");
+				}
 				
 				// If it's a LONG String, only display first 'maxStrLen' characters...
 				int strValLen = strVal.length(); 
@@ -2268,6 +2268,7 @@ implements Cloneable, ITableTooltip
 		if (getGuiController() != null && getGuiController().hasGUI())
 		{
 			CountersModel cm = this;
+			long startTime = System.currentTimeMillis();
 			
 			// GRAPH
 			TrendGraph tg = new TrendGraph(name, chkboxText, graphLabel, 
@@ -2278,6 +2279,11 @@ implements Cloneable, ITableTooltip
 				needsVersion, 
 				minimumHeight);
 			
+			long execTime = System.currentTimeMillis() - startTime;
+			if (_logger.isDebugEnabled())
+				_logger.debug("addTrendGraph('"+name+"'): crTimeMs="+execTime);
+//System.out.println("addTrendGraph('"+name+"'): crTimeMs="+execTime);
+
 			addTrendGraph(name, tg, true);
 		}
 	}
@@ -4580,6 +4586,14 @@ implements Cloneable, ITableTooltip
 				}
 			}
 
+			// --- ASE ---- 
+			// Error=1204, Severity=17, Text=ASE has run out of LOCKS. Re-run your command when there are fewer active users, or contact a user with System Administrator (SA) role to reconfigure ASE with more LOCKS.
+			if (errorCode == 1204 && AlarmHandler.hasInstance())
+			{
+				AlarmHandler.getInstance().addAlarm( new AlarmEventConfigResourceIsUsedUp(this, "number of locks", errorCode, errorMsg) );				
+			}
+			
+			
 			// Look for Timeout exception
 			boolean isTimeoutException = false;
 			if ("JZ006".equals(e.getSQLState()))
@@ -4648,10 +4662,9 @@ implements Cloneable, ITableTooltip
 		initColumnStuff(tmpNewSample);
 
 		// if it's the first time sampling...
-		if (firstTimeSample)
+		if (isFirstTimeSample())
 		{
 //			saveDdl();
-//			firstTimeSample = false; // done later
 		}
 
 		// Used later
@@ -4733,41 +4746,160 @@ implements Cloneable, ITableTooltip
 		// Check if there is any rows that we want to interrogate more, , every CM's has to implement this.
 		sendDdlDetailsRequest(tmpNewSample, tmpDiffData, tmpRateData);
 
+
+//		if ( ! DbxTune.hasGui() )
+//		{
+//			// NO GUI, move structures
+//			_prevSample = tmpNewSample;
+//			_newSample  = tmpNewSample;
+//			_diffData   = tmpDiffData;
+//			_rateData   = tmpRateData;
+//
+//			// if it's the first time sampling...
+//			if (isFirstTimeSample())
+//			{
+//				fireTableStructureChanged();
+//			}
+//
+//			// Calculte what values we should have in the graphs
+//			// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
+//			updateGraphData();
+//
+//			// Do we want to send an Alarm somewhere, every CM's has to implement this.
+//			wrapperFor_sendAlarmRequest();
+//
+//			setFirstTimeSample(false);
+//		}
+//		else // HAS GUI
+//		{
+//			// Make them final copies to be used in the doWork/Runnable below
+//			final CounterSample fTmpNewSample = tmpNewSample;
+//			final CounterSample fTmpDiffData = tmpDiffData;
+//			final CounterSample fTmpRateData = tmpRateData;
+//
+//			final CountersModel thisCm = this;
+//
+//			Runnable doWork = new Runnable()
+//			{
+//				@Override
+//				public void run()
+//				{
+//					// IMPORTANT: move datastructure.
+//					_prevSample = fTmpNewSample;
+//					_newSample  = fTmpNewSample;
+//					_diffData   = fTmpDiffData;
+//					_rateData   = fTmpRateData;
+//					
+//					beginGuiRefresh();
+//
+//					// Set: Info fields
+//					if (getGuiController() != null)
+//						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
+//
+//					// Simulate a SLOW action, for example a massive sort...
+//					// which would case the GUI to block for a while...
+//					//try { Thread.sleep(250); }
+//					//catch (InterruptedException ignore) {}
+//
+//					try
+//					{
+//						if (getTabPanel() != null && !getTabPanel().isTableInitialized())
+//						{
+//							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
+//							if (_logger.isDebugEnabled())
+//								_logger.debug(getName()+":------doFireTableStructureChanged------");
+//							fireTableStructureChanged();
+//							
+//							// Hmm do I need to do this here...
+//							//getTabPanel().adjustTableColumnWidth();
+//						}
+//						else if (isFirstTimeSample() && isDataInitialized())
+//						{
+//							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
+//							if (_logger.isDebugEnabled()) 
+//								_logger.debug(getName()+":------doFireTableStructureChanged------");
+//							fireTableStructureChanged();
+//						}
+//						else
+//						{
+//							//System.out.println(getName()+":-fireTableData-CHANGED-");
+//							if (_logger.isDebugEnabled()) 
+//								_logger.debug(getName()+":-fireTableData-CHANGED-");
+//							fireTableDataChanged();
+//						}
+//					}
+//					catch(Throwable t)
+//					{
+//						_logger.warn("Problem when doing fireTableStructureChanged() or fireTableDataChanged(), for the CM='"+thisCm.getName()+"'", t);
+//					}
+//
+//					// Calculte what values we should have in the graphs
+//					// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
+//					// since we do this differred in case we use Swing, it has to be done here.
+//					updateGraphData();
+//		
+//					// reset: Info fields
+////					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+//					if (getGuiController() != null)
+//						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "");
+//
+//					endGuiRefresh();
+//
+//					// send DDL Request info based on the sorted JTable
+//					if (getTabPanel() != null)
+//					{
+//						getTabPanel().ddlRequestInfoSave();
+//					}
+//
+//					// Do we want to send an Alarm somewhere, every CM's has to implement this.
+//					wrapperFor_sendAlarmRequest();
+//
+//					setFirstTimeSample(false);
+//
+//				} // end: run method
+//			};
+//
+//			//			try{SwingUtilities.invokeAndWait(doWork);}
+//			//			catch (Exception e) {e.printStackTrace();}
+//
+//			// INVOKE the above RUNNABLE on the SWING EDT (Event Dispather Thread)
+//			if ( ! SwingUtilities.isEventDispatchThread() )
+//				SwingUtilities.invokeLater(doWork);
+//			else
+//				doWork.run();
+//		}
+
+
+		// At the very end we can assign the internal members
+		// and for GUI lets kick off "change listeners" to update the GUI, which needs to be done in the SWING - Event Dispatcher Thread
+		
+		// assign members
+		_prevSample = tmpNewSample;
+		_newSample  = tmpNewSample;
+		_diffData   = tmpDiffData;
+		_rateData   = tmpRateData;
+
+		// if it's the first time sampling... but I do not think we have to do this when we do NOT have a GUI
+//		if ( isFirstTimeSample() && ! DbxTune.hasGui() )
+//			fireTableStructureChanged();
+
+		// Calculte what values we should have in the graphs
+		// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
+		updateGraphData();
+
 		// Do we want to send an Alarm somewhere, every CM's has to implement this.
-		// NOTE: This is moved a bit down, until the "end" so that the CM's _prevSample, _newSample, _diffData, _rateData has been SET...
-		//sendAlarmRequest(fTmpNewSample, fTmpDiffData, fTmpRateData);
+		wrapperFor_sendAlarmRequest();
 
+		// Remember "first time sample" for the "doWork" object 
+		final boolean localFirstTimeSample = isFirstTimeSample();
 
-		if ( ! DbxTune.hasGui() )
+		// first sample is DONE
+		setFirstTimeSample(false);
+
+		// If we have a GUI we need to do some extra stuff
+		// let the GUI know that we have new data, done via fire*
+		if ( DbxTune.hasGui() )
 		{
-			// NO GUI, move structures
-			_prevSample = tmpNewSample;
-			_newSample  = tmpNewSample;
-			_diffData   = tmpDiffData;
-			_rateData   = tmpRateData;
-
-			// if it's the first time sampling...
-			if (firstTimeSample)
-			{
-				fireTableStructureChanged();
-				firstTimeSample = false;
-			}
-
-			// Calculte what values we should have in the graphs
-			// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
-			updateGraphData();
-
-			// Do we want to send an Alarm somewhere, every CM's has to implement this.
-//			wrapperFor_sendAlarmRequest(tmpNewSample, tmpDiffData, tmpRateData);
-			wrapperFor_sendAlarmRequest();
-		}
-		else // HAS GUI
-		{
-			// Make them final copies to be used in the doWork/Runnable below
-			final CounterSample fTmpNewSample = tmpNewSample;
-			final CounterSample fTmpDiffData = tmpDiffData;
-			final CounterSample fTmpRateData = tmpRateData;
-
 			final CountersModel thisCm = this;
 
 			Runnable doWork = new Runnable()
@@ -4775,28 +4907,14 @@ implements Cloneable, ITableTooltip
 				@Override
 				public void run()
 				{
-					// IMPORTANT: move datastructure.
-					_prevSample = fTmpNewSample;
-					_newSample  = fTmpNewSample;
-					_diffData   = fTmpDiffData;
-					_rateData   = fTmpRateData;
-					
 					beginGuiRefresh();
 
 					// Set: Info fields
-//					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
 					if (getGuiController() != null)
 						getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "GUI refresh of '"+_displayName+"'");
 
-					// Simulate a SLOW action, for example a massive sort...
-					// which would case the GUI to block for a while...
-					//try { Thread.sleep(250); }
-					//catch (InterruptedException ignore) {}
-
 					try
 					{
-//						System.out.println();
-//						System.out.println(getName()+":#### KICK OFF - CHANGED ####");
 						if (getTabPanel() != null && !getTabPanel().isTableInitialized())
 						{
 							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
@@ -4807,10 +4925,8 @@ implements Cloneable, ITableTooltip
 							// Hmm do I need to do this here...
 							//getTabPanel().adjustTableColumnWidth();
 						}
-						else if (firstTimeSample && isDataInitialized())
+						else if (localFirstTimeSample && isDataInitialized())
 						{
-							firstTimeSample = false;
-
 							//System.out.println(getName()+":-fireTable-STRUCTURE-CHANGED-");
 							if (_logger.isDebugEnabled()) 
 								_logger.debug(getName()+":------doFireTableStructureChanged------");
@@ -4818,24 +4934,6 @@ implements Cloneable, ITableTooltip
 						}
 						else
 						{
-							// Delete of individual rows...
-							// is not really needed since we do: fireTableDataChanged()
-							// This was implemented to some problems... but can probably be commented out
-//							for (int row : deletedRows)
-//							{
-//								System.out.println(getName()+":-fireTableRows-DELETED("+row+","+row+")-");
-//								fireTableRowsDeleted(row, row);
-//							}
-
-							// DEBUG: what listeners are called...
-//							if ( "CMprocActivity".equals(getName()) )
-//							{
-//								int i=0;
-//								for (TableModelListener tml : getTableModelListeners())
-//								{
-//									System.out.println("-LISTENER: fireTableDataChanged - thread("+Thread.currentThread().getName()+") - Listener("+(i++)+"): "+tml);
-//								}
-//							}
 							//System.out.println(getName()+":-fireTableData-CHANGED-");
 							if (_logger.isDebugEnabled()) 
 								_logger.debug(getName()+":-fireTableData-CHANGED-");
@@ -4847,11 +4945,6 @@ implements Cloneable, ITableTooltip
 						_logger.warn("Problem when doing fireTableStructureChanged() or fireTableDataChanged(), for the CM='"+thisCm.getName()+"'", t);
 					}
 
-					// Calculte what values we should have in the graphs
-					// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
-					// since we do this differred in case we use Swing, it has to be done here.
-					updateGraphData();
-		
 					// reset: Info fields
 //					MainFrame.getInstance().setStatus(MainFrame.ST_STATUS2_FIELD, "");
 					if (getGuiController() != null)
@@ -4864,16 +4957,8 @@ implements Cloneable, ITableTooltip
 					{
 						getTabPanel().ddlRequestInfoSave();
 					}
-
-					// Do we want to send an Alarm somewhere, every CM's has to implement this.
-//					wrapperFor_sendAlarmRequest(fTmpNewSample, fTmpDiffData, fTmpRateData);
-					wrapperFor_sendAlarmRequest();
-
 				} // end: run method
 			};
-
-			//			try{SwingUtilities.invokeAndWait(doWork);}
-			//			catch (Exception e) {e.printStackTrace();}
 
 			// INVOKE the above RUNNABLE on the SWING EDT (Event Dispather Thread)
 			if ( ! SwingUtilities.isEventDispatchThread() )
@@ -4881,13 +4966,9 @@ implements Cloneable, ITableTooltip
 			else
 				doWork.run();
 		}
-
-//		if (_tabPanel != null)
-//		{
-//			// Update dates on panel
-//			_tabPanel.setTimeInfo(getCounterClearTime(), getSampleTime(), getSampleInterval());
-//		}
 		
+		
+		// Finally return number of records found in LAST refresh
 		return (tmpNewSample != null) ? tmpNewSample.getRowCount() : -1;
 	}
 
@@ -5797,10 +5878,8 @@ implements Cloneable, ITableTooltip
 
 				// Check that the 'cron' sceduling pattern is valid...
 				String cronPatStr = cronPat;
-				boolean negation = false;
 				if (cronPatStr.startsWith("!"))
 				{
-					negation = true;
 					cronPatStr = cronPatStr.substring(1);
 				}
 				if ( ! SchedulingPattern.validate(cronPatStr) )
@@ -5987,7 +6066,6 @@ implements Cloneable, ITableTooltip
 		setValidSampleData(false);
 		setDataInitialized(false);
 		setTimeInfo(null, null, null, 0);
-		maxRowSeen        = 0;
 //		selectedModelRow  = -1;
 
 		if (clearCmLevel > 50)
@@ -6988,11 +7066,21 @@ implements Cloneable, ITableTooltip
 
 	public void setDataInitialized(boolean b)
 	{
-		dataInitialized = b;
+		_dataInitialized = b;
 	}
 	public boolean isDataInitialized()
 	{
-		return dataInitialized;
+		return _dataInitialized;
+	}
+
+
+	public void setFirstTimeSample(boolean b)
+	{
+		_firstTimeSample = b;
+	}
+	public boolean isFirstTimeSample()
+	{
+		return _firstTimeSample;
 	}
 
 

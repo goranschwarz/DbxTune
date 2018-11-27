@@ -546,6 +546,9 @@ implements Runnable
 
 			// Increment the repeat counter in the ACTIVE container
 			_alarmContActive.handleReRaise(alarmEvent);
+			
+			// set the Active Alarm Count
+			alarmEvent.setActiveAlarmCount(_alarmContActive.size());
 
 			// if any writers still wants to have the alarm raised... raise the alarms in THAT specific alarm writers
 			for (IAlarmWriter aw : _writerClasses)
@@ -572,8 +575,13 @@ implements Runnable
 			return;
 		}
 
-		// put it in the "Active alarms" Container and also Persist/Save the alarms
+		// put it in the "Active alarms" Container
 		_alarmContActive.add(alarmEvent);
+
+		// set the Active Alarm Count
+		alarmEvent.setActiveAlarmCount(_alarmContActive.size());
+
+		// Persist/Save the alarms
 		saveAlarms(_alarmContActive, _serializedFileName);
 
 		// raise the alarms in all the alarm writers
@@ -723,6 +731,9 @@ implements Runnable
 		for (AlarmEvent alarmEvent : cancelList)
 		{
 			alarmEvent.markCancel();
+			
+			// set the Active Alarm Count
+			alarmEvent.setActiveAlarmCount(_alarmContActive.size() - cancelList.size());
 		}
 
 		// cancel the alarms in all the alarm writers

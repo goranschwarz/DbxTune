@@ -529,7 +529,8 @@ extends CentralPersistWriterBase
 			_mainConn = closeConn(_mainConn);
 
 			// IF H2, make special things
-			if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
+//			if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
+			if ( _jdbcUrl.startsWith("jdbc:h2:") && _mainConn != null)
 			{
 				// Try to close ALL H2 servers, many might be active due to AUTO_SERVER=true
 				if (h2DbIsAlreadyOpen)
@@ -1381,7 +1382,7 @@ extends CentralPersistWriterBase
 						sql = insertStmnt;
 						try
 						{
-							_logger.warn("Inserting base data into '"+getTableName(schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Using SQL: "+sql);
+							_logger.info("Inserting base data into '"+getTableName(schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Using SQL: "+sql);
 							conn.dbExec(sql);
 							getStatistics().incInserts();
 						}
@@ -3161,7 +3162,8 @@ return -1;
 		}
 
 		// IF H2, make special shutdown
-		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
+//		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
+		if ( _jdbcUrl.startsWith("jdbc:h2:") && _mainConn != null)
 		{
 			// TODO: Probably better to use 'shutdownConfig' than the File 'H2_SHUTDOWN_WITH_DEFRAG_FILENAME'
 			Configuration shutdownConfig = ShutdownHandler.getShutdownConfiguration();

@@ -2,6 +2,7 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,6 +12,9 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -20,6 +24,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
 /**
@@ -602,5 +607,70 @@ extends CountersModel
 				diffData.setValueAt(new BigDecimal(0), rowId, pos_SpinsPerWait);
 
 		}
+	}
+	
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		// column 'CacheSize' was introduced in ASE 15.7
+		if ( this.getServerVersion() < Ver.ver(15, 7) )
+			return;
+
+		CountersModel cm = this;
+		
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+//debugPrint = true;
+
+		// Get a array of rowId's where the column 'Name' has the value 'procedure cache size'
+		int[] rqRows = this.getAbsRowIdsWhere("CacheName", "default data cache");
+		if (rqRows == null)
+			_logger.warn("When checking for alarms in '"+getName()+"', getAbsRowIdsWhere('CacheName', 'default data cache'), retuned null, so I can't do more here.");
+		else
+		{
+			//-------------------------------------------------------
+			// 'default data cache' is default configured
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("DefaultDataCacheSizeInMb"))
+			{
+				Double cacheSize = this.getAbsValueAsDouble(rqRows[0], "CacheSize");
+
+				if (cacheSize != null)
+				{
+					cacheSize = cacheSize / 1024.0;
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): CacheName='default data cache', cacheSize="+cacheSize+".");
+
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_DefaultDataCacheSizeInMb, DEFAULT_alarm_DefaultDataCacheSizeInMb);
+					if (cacheSize.intValue() < threshold)
+					{
+						String msg = "The 'default data cache' is configured at the factory setting... 8 MB or similar... This is WAY TO LOW. fix this using: exec sp_cacheconfig 'default data cache', '#G'";
+						AlarmHandler.getInstance().addAlarm(
+							new AlarmEventConfigResourceIsLow(cm, "default data cache", cacheSize, msg, threshold) );
+					}
+				}
+			}
+		}
+	} // end: method
+
+	public static final String  PROPKEY_alarm_DefaultDataCacheSizeInMb = CM_NAME + ".alarm.system.if.DefaultDataCacheSizeInMb.lt";
+	public static final int     DEFAULT_alarm_DefaultDataCacheSizeInMb = 10;
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("DefaultDataCacheSizeInMb", PROPKEY_alarm_DefaultDataCacheSizeInMb, Integer.class, conf.getIntProperty(PROPKEY_alarm_DefaultDataCacheSizeInMb, DEFAULT_alarm_DefaultDataCacheSizeInMb), DEFAULT_alarm_DefaultDataCacheSizeInMb, "If Size 'default data cache' is less than ### MB then send 'AlarmEventXxx'." ));
+
+		return list;
 	}
 }

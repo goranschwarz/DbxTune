@@ -12,8 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.table.AbstractTableModel;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.pcs.PersistWriterJdbc;
@@ -23,8 +21,7 @@ import com.asetune.utils.SwingUtils;
 
 
 public class OracleConfig
-extends AbstractTableModel 
-implements IDbmsConfig
+extends DbmsConfigAbstract 
 {
 	private static final long serialVersionUID = 1L;
 
@@ -238,6 +235,7 @@ implements IDbmsConfig
 	public void reset()
 	{
 		_configMap = null;
+		super.reset();
 	}
 
 	/** get the Map */
@@ -277,6 +275,8 @@ implements IDbmsConfig
 		if (conn == null)
 			return;
 
+		reset();
+		
 		_configMap         = new HashMap<String,OracleConfigEntry>();
 		_configList        = new ArrayList<OracleConfigEntry>();
 		_configSectionList = new ArrayList<String>();
@@ -381,6 +381,13 @@ implements IDbmsConfig
 			return;
 		}
 
+		// Check if we got any strange in the configuration
+		// in case it does: report that...
+		if ( ! _offline )
+		{
+			checkConfig(conn);
+		}
+		
 		// notify change
 		fireTableDataChanged();
 	}
@@ -594,12 +601,6 @@ implements IDbmsConfig
 	public String getColName_nonDefault()
 	{
 		return NON_DEFAULT;
-	}
-
-	@Override
-	public String getFreeMemoryStr()
-	{
-		return "";
 	}
 
 	@Override

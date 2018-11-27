@@ -10,8 +10,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -47,9 +45,9 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 import com.asetune.DbxTune;
 import com.asetune.config.dbms.AseConfig;
 import com.asetune.config.dbms.DbmsConfigManager;
-//import com.asetune.config.dbms.AseConfig;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.gui.SqlTextDialog;
+import com.asetune.gui.swing.GTableFilter;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.ConnectionProvider;
@@ -75,21 +73,16 @@ implements ActionListener
 	private JTextField         _timestamp_txt           = new JTextField(SECTION_NOT_CONNECTED);
 	private JLabel             _section_lbl             = new JLabel("Section Name");
 	private JComboBox<String>  _section_cbx             = new JComboBox<String>( new String[] {SECTION_NOT_CONNECTED} );
-	private JLabel             _config_lbl              = new JLabel("Config Name");
-	private JTextField         _config_txt              = new JTextField();
+	private GTableFilter       _tableFilter             = null; // initiated later
+//	private JLabel             _config_lbl              = new JLabel("Config Name");
+//	private JTextField         _config_txt              = new JTextField();
+//	private JLabel             _rowcount2_lbl           = new JLabel("");
 	private JCheckBox          _excludeMonitoring_chk   = new JCheckBox("Exclude values for Monitoring", false);
 	private JCheckBox          _showOnlyNonDefaults_chk = new JCheckBox("Show Only Non Default Values", false);
-	private JLabel             _rowcount2_lbl           = new JLabel("");
 	private JButton            _copy_but                = new JButton("Copy");
 
 	private ConnectionProvider _connProvider    = null;
 	private IDbmsConfig        _dbmsConfig      = null;
-
-//	public DbmsConfigPanel(ConnectionProvider connProvider)
-//	{
-//		_connProvider = connProvider;
-//		init();
-//	}
 
 
 	public DbmsConfigPanel(ConnectionProvider connProvider, IDbmsConfig instance)
@@ -108,19 +101,6 @@ implements ActionListener
 		boolean       isOffline = false;
 		DbxConnection conn      = null;
 
-//		if (GetCounters.getInstance().isMonConnected())
-//		{
-//			ts        = null;
-//			isOffline = false;
-//			conn      = GetCounters.getInstance().getMonConnection();
-//		}
-//		else
-//		{
-//			ts        = null; // NOTE: this will not work, get the value from somewhere
-//			isOffline = true;
-//			conn      = PersistReader.getInstance().getConnection();
-//		}
-
 		conn = _connProvider.getConnection();
 
 		if (PersistReader.hasInstance())
@@ -132,22 +112,17 @@ implements ActionListener
 			}
 		}
 
-//		IDbmsConfig aseConfig = AseConfig.getInstance();
-////		aseConfig.refresh(conn, ts);
-//		aseConfig.initialize(conn, hasGui, isOffline, ts);
+		// Initialize the DBMS Config
 		_dbmsConfig.initialize(conn, hasGui, isOffline, ts);
-		// 
-//		_timestamp_txt.setText(AseConfig.getInstance().getTimestamp()+"");
+
+		// And set the timestamp, for when this was done
 		_timestamp_txt.setText(_dbmsConfig.getTimestamp()+"");
-//		aseConfig.fireTableDataChanged();
 	}
 
 	private void init()
 	{
 		setLayout( new BorderLayout() );
 		
-//		IDbmsConfig aseConfig = AseConfig.getInstance();
-//		if ( ! aseConfig.isInitialized() )
 		if ( ! _dbmsConfig.isInitialized() )
 		{
 			JLabel notConnected = new JLabel("Not yet Initialized, please connect first.");
@@ -161,8 +136,13 @@ implements ActionListener
 		// Set how many items the "sections" can have before a JScrollBar is visible
 		_section_cbx.setMaximumRowCount(50);
 
-		add(createFilterPanel(), BorderLayout.NORTH);
-		add(createTablePanel(),  BorderLayout.CENTER);
+		// Create panels
+		JPanel tablePanel  = createTablePanel();  // This needs to be created first, as the filter panel needs the _table to be initialized
+		JPanel filterPanel = createFilterPanel();
+
+		// Add the panels to the GUI
+		add(filterPanel, BorderLayout.NORTH);
+		add(tablePanel,  BorderLayout.CENTER);
 		
 		// Hide/show: Include/exclude Monitoring Checkbox
 		boolean isSybaseAse = false;
@@ -173,15 +153,6 @@ implements ActionListener
 				isSybaseAse = true;
 		}
 		_excludeMonitoring_chk.setVisible(isSybaseAse);
-//		try 
-//		{
-//			boolean isSybaseAse = DbUtils.isProductName(_connProvider.getConnection().getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE);
-//			_excludeMonitoring_chk.setVisible(isSybaseAse);
-//		}
-//		catch(SQLException e) 
-//		{ 
-//			_excludeMonitoring_chk.setVisible(false); 
-//		}
 	}
 
 	private JPanel createFilterPanel()
@@ -194,23 +165,25 @@ implements ActionListener
 		_timestamp_txt          .setToolTipText("When was the configuration snapshot taken");
 		_section_lbl            .setToolTipText("Show only a specific Section");
 		_section_cbx            .setToolTipText("Show only a specific Section");
-		_config_lbl             .setToolTipText("Show only config name with this name.");
-		_config_txt             .setToolTipText("Show only config name with this name.");
+//		_config_lbl             .setToolTipText("Show only config name with this name.");
+//		_config_txt             .setToolTipText("Show only config name with this name.");
 		_showOnlyNonDefaults_chk.setToolTipText("Show only modified configuration values (same as sp_configure 'nondefault')");
 		_excludeMonitoring_chk  .setToolTipText("Include or Exclude values from sp_configure 'Monitoring'");
-		_copy_but               .setToolTipText("Copy the ASE Configuration table into the clip board as ascii table.");
+		_copy_but               .setToolTipText("Copy the DBMS Configuration table into the clip board as ascii table.");
 
 		panel.add(_section_lbl,             "");
 		panel.add(_section_cbx,             "split");
-//		panel.add(_rowcount2_lbl,           "");
 		panel.add(new JLabel(),             "pushx, growx");
 		panel.add(_timestamp_lbl,           "");
 		panel.add(_timestamp_txt,           "wrap");
 
-		panel.add(_config_lbl,              "");
-//		panel.add(_config_txt,              "pushx, growx, wrap");
-		panel.add(_config_txt,              "span 2, split, pushx, growx");
-		panel.add(_rowcount2_lbl,           "wrap");
+//		panel.add(_config_lbl,              "");
+//		panel.add(_config_txt,              "span 2, split, pushx, growx");
+//		panel.add(_rowcount2_lbl,           "wrap");
+		
+		_tableFilter = new GTableFilter(_table);
+		panel.add(_tableFilter.getFilterLabel(), "");
+		panel.add(_tableFilter,             "span 2, split, pushx, growx, wrap");
 
 		panel.add(_showOnlyNonDefaults_chk, "span 3, split");
 		panel.add(_excludeMonitoring_chk,   "");
@@ -222,32 +195,30 @@ implements ActionListener
 		// Add Items
 		_section_cbx.removeAllItems();
 		_section_cbx.addItem(SECTION_ALL);
-//		for (String section : AseConfig.getInstance().getSectionList())
 		List<String> sectionList = _dbmsConfig.getSectionList();
 		Collections.sort(sectionList);
 		for (String section : sectionList)
 			_section_cbx.addItem(section);
 
-//		_timestamp_txt.setText(AseConfig.getInstance().getTimestamp()+"");
 		_timestamp_txt.setText(_dbmsConfig.getTimestamp()+"");
 
 		// Add action listener
 		_section_cbx            .addActionListener(this);
-		_config_txt             .addActionListener(this);
+//		_config_txt             .addActionListener(this);
 		_showOnlyNonDefaults_chk.addActionListener(this);
 		_excludeMonitoring_chk  .addActionListener(this);
 		_copy_but               .addActionListener(this);
 
 		// Key listener for the config
-		_config_txt             .addKeyListener(new KeyListener()
-		{
-			@Override public void keyTyped(KeyEvent e) {}
-			@Override public void keyPressed(KeyEvent e) {}
-			@Override public void keyReleased(KeyEvent e) 
-			{
-				setTableFilter();
-			}
-		});
+//		_config_txt             .addKeyListener(new KeyListener()
+//		{
+//			@Override public void keyTyped(KeyEvent e) {}
+//			@Override public void keyPressed(KeyEvent e) {}
+//			@Override public void keyReleased(KeyEvent e) 
+//			{
+//				setTableFilter();
+//			}
+//		});
 
 		// set auto completion
 		AutoCompleteDecorator.decorate(_section_cbx);
@@ -275,7 +246,6 @@ implements ActionListener
 		panel.setLayout(new BorderLayout());
 
 		_table = new LocalTable();
-//		_table.setModel(AseConfig.getInstance());
 		_table.setModel(_dbmsConfig);
 
 		// Create a rightClickMenuPopup if "Reverse Engineering is Possible"
@@ -290,38 +260,11 @@ implements ActionListener
 								// visible
 		_table.setSortable(true);
 		_table.setColumnControlVisible(true);
-//		_table.setHighlighters(_table); // a variant of cell render
 
 		//--------------------------------------------------------------------
 		// New SORTER that toggles from ASCENDING -> DESCENDING -> UNSORTED
 		//--------------------------------------------------------------------
 		_table.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-
-		// Fixing/setting background selection color... on some platforms it
-		// seems to be a strange color
-		// on XP a gray color of "r=178,g=180,b=191" is the default, which looks
-		// good on the screen
-//		Configuration conf = Configuration.getInstance(Configuration.CONF);
-//		if ( conf != null )
-//		{
-//			if ( conf.getBooleanProperty("table.setSelectionBackground", true) )
-//			{
-//				Color newBg = new Color(conf.getIntProperty("table.setSelectionBackground.r", 178), conf.getIntProperty("table.setSelectionBackground.g", 180), conf.getIntProperty("table.setSelectionBackground.b", 191));
-//
-//				_logger.debug("table.setSelectionBackground(" + newBg + ").");
-//				_table.setSelectionBackground(newBg);
-//			}
-//		}
-//		else
-//		{
-//			Color bgc = _table.getSelectionBackground();
-//			if ( !(bgc.getRed() == 178 && bgc.getGreen() == 180 && bgc.getBlue() == 191) )
-//			{
-//				Color newBg = new Color(178, 180, 191);
-//				_logger.debug("table.setSelectionBackground(" + newBg + "). Config could not be read, trusting defaults...");
-//				_table.setSelectionBackground(newBg);
-//			}
-//		}
 
 		// Mark the row as RED if PENDING CONFIGURATION
 		_table.addHighlighter( new ColorHighlighter(new HighlightPredicate()
@@ -346,11 +289,8 @@ implements ActionListener
 
 		
 		JScrollPane scroll = new JScrollPane(_table);
-//		_watermark = new Watermark(scroll, "Not Connected...");
-
-		// panel.add(scroll, BorderLayout.CENTER);
-		// panel.add(scroll, "");
 		panel.add(scroll);
+
 		return panel;
 	}
 
@@ -388,11 +328,11 @@ implements ActionListener
 			setTableFilter();
 		}
 
-		// --- CHECKBOX: CONFIG NAME ---
-		if (_config_txt.equals(source))
-		{
-			setTableFilter();
-		}
+//		// --- TEXT: CONFIG NAME ---
+//		if (_config_txt.equals(source))
+//		{
+//			setTableFilter();
+//		}
 
 		// --- CHECKBOX: NON-DEFAULTS ---
 		if (_showOnlyNonDefaults_chk.equals(source))
@@ -477,14 +417,12 @@ implements ActionListener
 		// SECTION
 		if ( _section_cbx.getSelectedIndex() != 0 )
 		{
-//			String colName     = AseConfig.SECTION_NAME; 
-//			final int colIndex = AseConfig.getInstance().findColumn(colName);
 			String colName     = _dbmsConfig.getColName_sectionName(); 
 			final int colIndex = _dbmsConfig.findColumn(colName);
 			final String str = _section_cbx.getSelectedItem() + "";
 
 			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in AseConfig table.");
+				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
 			else
 			{
 				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
@@ -499,41 +437,37 @@ implements ActionListener
 			}
 		}
 
-		// CONFIG NAME
-		if ( ! _config_txt.getText().trim().equals("") )
-		{
-//			String colName     = AseConfig.CONFIG_NAME; 
-//			final int colIndex = AseConfig.getInstance().findColumn(colName);
-			String colName     = _dbmsConfig.getColName_configName(); 
-			final int colIndex = _dbmsConfig.findColumn(colName);
-			final String str = _config_txt.getText().trim();
-
-			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in AseConfig table.");
-			else
-			{
-				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
-				{
-					@Override
-					public boolean include(RowFilter.Entry<? extends TableModel, ? extends Integer> entry)
-					{
-						return entry.getStringValue(colIndex).indexOf(str) >= 0;
-					}
-				};
-				filters.add(filter);
-			}
-		}
+//		// CONFIG NAME
+//		if ( ! _config_txt.getText().trim().equals("") )
+//		{
+//			String colName     = _dbmsConfig.getColName_configName(); 
+//			final int colIndex = _dbmsConfig.findColumn(colName);
+//			final String str = _config_txt.getText().trim();
+//
+//			if (colIndex < 0)
+//				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
+//			else
+//			{
+//				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
+//				{
+//					@Override
+//					public boolean include(RowFilter.Entry<? extends TableModel, ? extends Integer> entry)
+//					{
+//						return entry.getStringValue(colIndex).indexOf(str) >= 0;
+//					}
+//				};
+//				filters.add(filter);
+//			}
+//		}
 
 		// NON-DEFAULTS
 		if ( _showOnlyNonDefaults_chk.isSelected() )
 		{
-//			String colName     = AseConfig.NON_DEFAULT; 
-//			final int colIndex = AseConfig.getInstance().findColumn(colName);
 			String colName     = _dbmsConfig.getColName_nonDefault(); 
 			final int colIndex = _dbmsConfig.findColumn(colName);
 
 			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in AseConfig table.");
+				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
 			else
 			{
 				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
@@ -562,7 +496,7 @@ implements ActionListener
 			final String str   = "Monitoring";
 
 			if (colIndex < 0)
-				_logger.warn("Column name '"+colName+"' can't be found in AseConfig table.");
+				_logger.warn("Column name '"+colName+"' can't be found in DbmsConfig table.");
 			else
 			{
 				RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>()
@@ -577,14 +511,19 @@ implements ActionListener
 			}
 		}
 
-		// Now SET filter
-		if (filters.size() == 0)
-			_table.setRowFilter( null );
-		else
-			_table.setRowFilter( RowFilter.andFilter(filters) );
+//		// Now SET filter
+//		if (filters.size() == 0)
+//			_table.setRowFilter( null );
+//		else
+//			_table.setRowFilter( RowFilter.andFilter(filters) );
+//		
+//		// Update the row count label
+//		_rowcount2_lbl.setText(_table.getModel().getRowCount() + "/" + _table.getRowCount());
 		
-		// Update the row count label
-		_rowcount2_lbl.setText(_table.getModel().getRowCount() + "/" + _table.getRowCount());
+		if (filters.size() == 0)
+			_tableFilter.setExternalFilter( null );
+		else
+			_tableFilter.setExternalFilter( RowFilter.andFilter(filters) );
 	}
 
 	
@@ -617,7 +556,6 @@ implements ActionListener
 					if ( colNameObj instanceof String )
 					{
 						String colName = (String) colNameObj;
-//						toolTip = AseConfig.getInstance().getColumnToolTip(colName);
 						toolTip = _dbmsConfig.getColumnToolTip(colName);
 					}
 					return toolTip;
@@ -640,33 +578,8 @@ implements ActionListener
 				int mcol = super.convertColumnIndexToModel(col);
 				int mrow = super.convertRowIndexToModel(row);
 
+				// get the tooltip
 				tip = _dbmsConfig.getCellToolTip(mrow, mcol);
-
-//				TableModel tm = getModel();
-//				if (tm instanceof AbstractTableModel)
-//				{
-//					AbstractTableModel atm = (AbstractTableModel) tm;
-//
-//					//String colName = tm.getColumnName(col);
-//					//Object cellValue = tm.getValueAt(row, col);
-//					//tip = "colName='"+colName+"', cellValue='"+cellValue+"'.";
-//
-//					StringBuilder sb = new StringBuilder();
-//					sb.append("<html>");
-//					sb.append("<b>Description:  </b>").append(atm.getValueAt(row, atm.findColumn(AseConfig.DESCRIPTION))) .append("<br>");
-//					sb.append("<b>Section Name: </b>").append(atm.getValueAt(row, atm.findColumn(AseConfig.SECTION_NAME))).append("<br>");
-//					sb.append("<b>Config Name:  </b>").append(atm.getValueAt(row, atm.findColumn(AseConfig.CONFIG_NAME))) .append("<br>");
-//					sb.append("<b>Run Value:    </b>").append(atm.getValueAt(row, atm.findColumn(AseConfig.CONFIG_VALUE))).append("<br>");
-//					sb.append("<b>Max Value:    </b>").append(atm.getValueAt(row, atm.findColumn(AseConfig.MAX_VALUE)))   .append("<br>");
-//					sb.append("<b>Min Value:    </b>").append(atm.getValueAt(row, atm.findColumn(AseConfig.MIN_VALUE)))   .append("<br>");
-//					if (Boolean.TRUE.equals(atm.getValueAt(row, atm.findColumn(AseConfig.PENDING))))
-//					{
-//						sb.append("<br>");
-//						sb.append("<b>NOTE: DBMS Needs to be rebooted for this option to take effect.</b>").append("<br>");
-//					}
-//					sb.append("</html>");
-//					tip = sb.toString();
-//				}
 			}
 			if ( tip != null )
 				return tip;

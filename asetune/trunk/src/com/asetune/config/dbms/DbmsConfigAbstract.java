@@ -1,9 +1,109 @@
 package com.asetune.config.dbms;
 
+import java.util.ArrayList;
+import java.util.List;
 
-public abstract class DbmsConfigAbstract 
-//implements IDbmsConfig
+import javax.swing.table.AbstractTableModel;
+
+import org.apache.log4j.Logger;
+
+import com.asetune.sql.conn.DbxConnection;
+
+public abstract class DbmsConfigAbstract
+extends AbstractTableModel 
+implements IDbmsConfig
 {
+	private static final long serialVersionUID = 1L;
+
+	/** Log4j logging. */
+	private static Logger _logger = Logger.getLogger(DbmsConfigAbstract.class);
+
+	private List<DbmsConfigIssue> _configIssueList = new ArrayList<>();
+
+	//--------------------------------------------------------------------------------
+	// BEGIN: issues methods
+	//--------------------------------------------------------------------------------
+	/** add an issue */
+	@Override
+	public void addConfigIssue(DbmsConfigIssue issue)
+	{
+		// if this is mapped to 'discard' or 'do not care'... then SKIP this issue
+		boolean markedAsDiscarded = issue.isDiscarded();
+
+		String type = markedAsDiscarded ? "discarded" : "added";
+		_logger.warn("Received a DBMS Config Issue ["+type+"]. configName='"+issue.getConfigName()+"', severity="+issue.getSeverity()+", key='"+issue.getPropKey()+"', description='"+issue.getDescription().replace('\n', ' ')+"'.");
+		
+//		if ( markedAsDiscarded )
+//			return;
+
+		_configIssueList.add(issue);
+	}
+
+	/** Get configuration issues */
+	@Override
+	public List<DbmsConfigIssue> getConfigIssues()
+	{
+		return _configIssueList;
+	}
+	
+	/** Check if we have any configuration issues */
+	@Override
+	public boolean hasConfigIssues()
+	{
+		int count = 0;
+
+		for (DbmsConfigIssue issue : _configIssueList)
+		{
+			if ( ! issue.isDiscarded() )
+				count++;
+		}
+
+		return count > 0;
+//		return _configIssueList.size() > 0;
+	}
+	//--------------------------------------------------------------------------------
+	// END: issues methods
+	//--------------------------------------------------------------------------------
+
+	@Override
+	public void reset()
+	{
+		_configIssueList = new ArrayList<>();
+	}
+	
+	@Override
+	public void checkConfig(DbxConnection conn)
+	{
+	}
+
+	@Override
+	public String getFreeMemoryStr()
+	{
+		return "";
+	}
+
+	@Override
+	public boolean isReverseEngineeringPossible()
+	{
+		return false;
+	}
+
+	@Override
+	public String reverseEngineer(int[] modelRows)
+	{
+		return null;
+	}
+
+	
+	//--------------------------------------------------------------------------------
+	// BEGIN implement: AbstractTableModel
+	//--------------------------------------------------------------------------------
+	
+	//--------------------------------------------------------------------------------
+	// END implement: AbstractTableModel
+	//--------------------------------------------------------------------------------
+	
+	
 //	private static final long serialVersionUID = 1L;
 //
 //	/** Log4j logging. */

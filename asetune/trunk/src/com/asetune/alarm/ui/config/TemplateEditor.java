@@ -48,6 +48,7 @@ import com.asetune.alarm.events.AlarmEventDummy;
 import com.asetune.alarm.ui.view.DummyEventDialog;
 import com.asetune.alarm.ui.view.DummyEventDialog.AlarmEventSetCallback;
 import com.asetune.alarm.writers.AlarmWriterAbstract;
+import com.asetune.alarm.writers.IAlarmWriter;
 import com.asetune.alarm.writers.WriterUtils;
 import com.asetune.gui.swing.GLabel;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -82,7 +83,12 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	private JComboBox<String> _setAlarmType_cbx  = new JComboBox<>(new String[]{AlarmWriterAbstract.ACTION_RAISE, AlarmWriterAbstract.ACTION_RE_RAISE, AlarmWriterAbstract.ACTION_CANCEL});
 
 	private JButton           _templateHelp_but  = new JButton("Velocity Template Language Documentation");
+	private JButton           _sendTestAlarm_but = new JButton("Send Test Alarm");
 	
+	private String            _currentWriterClassName = "";
+	private Configuration     _currentConfig          = null;
+	private String            _currentPropKey         = null;
+
 	// PANEL: OK-CANCEL
 	private JButton          _ok          = new JButton("OK");
 	private JButton          _cancel      = new JButton("Cancel");
@@ -92,7 +98,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 
 	private static final String DIALOG_TITLE = "AlarmEvent Template Editor";
 
-	public TemplateEditor(Window owner)
+	public TemplateEditor(Window owner, String currentWriterClassName, String currentPropKey, Configuration configuration)
 	{
 //		super(owner, DIALOG_TITLE, ModalityType.APPLICATION_MODAL);
 //		super(owner, DIALOG_TITLE, ModalityType.TOOLKIT_MODAL);
@@ -100,6 +106,10 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 //		super(owner, DIALOG_TITLE, ModalityType.MODELESS);
 //		super(owner, DIALOG_TITLE);
 //		setModal(true);
+
+		_currentWriterClassName = currentWriterClassName;
+		_currentPropKey         = currentPropKey;
+		_currentConfig          = configuration;
 
 		// Add some examples, which will be used...
 		_exampleAlarmEvent     = new AlarmEventDummy("GORAN_1_DS", "SomeCmName", "SomeExtraInfo", Category.OTHER, Severity.WARNING, ServiceState.AFFECTED, -1, 999, "This is an Alarm Example with the data value of '999'", "Extended Description goes here");
@@ -116,14 +126,16 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 	/**
 	 * Show the dialog
 	 * @param owner   The owner object, if null we try to grab the Window from the KeyboardFocusManager
+	 * @param currentWriterClassName 
+	 * @param configuration 
 	 * @return
 	 */
-	public static String showDialog(Window owner, String initialText)
+	public static String showDialog(Window owner, String initialText, String currentWriterClassName, String currentPropKey, Configuration configuration)
 	{
 		if (owner == null)
 			owner = SwingUtils.getParentWindowByFocus();
 			
-		TemplateEditor dialog = new TemplateEditor(owner);
+		TemplateEditor dialog = new TemplateEditor(owner, currentWriterClassName, currentPropKey, configuration);
 		dialog.setText(initialText);
 		dialog.setLocationRelativeTo(owner);
 		dialog.setVisible(true);
@@ -321,17 +333,20 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
 		// ADD the OK, Cancel, Apply buttons
-		panel.add(_templateHelp_but, "");
-		panel.add(new JLabel(),      "growx, pushx");
-		panel.add(_ok,               "tag ok, right");
-		panel.add(_cancel,           "tag cancel");
+		panel.add(_templateHelp_but,  "");
+		panel.add(_sendTestAlarm_but, "");
+		panel.add(new JLabel(),       "growx, pushx");
+		panel.add(_ok,                "tag ok, right");
+		panel.add(_cancel,            "tag cancel");
 
 		// ADD ACTIONS TO COMPONENTS
-		_ok              .addActionListener(this);
-		_cancel          .addActionListener(this);
-		_templateHelp_but.addActionListener(this);
+		_ok               .addActionListener(this);
+		_cancel           .addActionListener(this);
+		_templateHelp_but .addActionListener(this);
+		_sendTestAlarm_but.addActionListener(this);
 
-		_templateHelp_but.setToolTipText("Open the default web browser at "+TEMPLATE_HELP);;
+		_templateHelp_but .setToolTipText("Open the default web browser at "+TEMPLATE_HELP);;
+		_sendTestAlarm_but.setToolTipText("<html>Send a Test Alarm using the above template<br>Using AlarmWriter: <code>"+_currentWriterClassName+"</code></html>");
 		
 		return panel;
 	}
@@ -418,6 +433,61 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 					bg.setDaemon(true);
 					bg.start();
 				}
+			}
+		}
+		
+		if (_sendTestAlarm_but.equals(source))
+		{
+			String writerClassName = _currentWriterClassName;
+			IAlarmWriter alarmWriterClass;
+			Configuration conf = _currentConfig;
+
+			conf.setProperty(_currentPropKey, _editor_txt.getText());
+			try
+			{
+				System.out.println("Instantiating and Initializing AlarmWriterClass='"+_currentWriterClassName+"'.");
+				try
+				{
+					Class<?> c = Class.forName( writerClassName );
+					alarmWriterClass = (IAlarmWriter) c.newInstance();
+				}
+				catch (ClassCastException ex)
+				{
+					throw new ClassCastException("When trying to load alarmWriter class '"+writerClassName+"'. The alarmWriter do not seem to follow the interface '"+IAlarmWriter.class.getName()+"'");
+				}
+				catch (ClassNotFoundException ex)
+				{
+					throw new ClassNotFoundException("Tried to load alarmWriter class '"+writerClassName+"'.", ex);
+				}
+
+				// Now initialize the User Defined AlarmWriter
+				alarmWriterClass.init(conf);
+//				alarmWriterClass.printFilterConfig();
+//				alarmWriterClass.printConfig();
+//				alarmWriterClass.startService();
+
+				Object sendType = _setAlarmType_cbx.getSelectedItem();
+				if (AlarmWriterAbstract.ACTION_RAISE.equals(sendType))
+				{
+					alarmWriterClass.raise(_exampleAlarmEvent);
+				}
+				else if (AlarmWriterAbstract.ACTION_RE_RAISE.equals(sendType))
+				{
+					alarmWriterClass.reRaise(_exampleAlarmEvent);
+				}
+				else if (AlarmWriterAbstract.ACTION_CANCEL.equals(sendType))
+				{
+					alarmWriterClass.cancel(_exampleAlarmEvent);
+				}
+				else
+				{
+					throw new Exception("Unknow send type '"+sendType+"'.");
+				}
+				
+			}
+			catch(Exception ex)
+			{
+				SwingUtils.showErrorMessage("Send dummy alarm", "Some problem sending the dummy alarm to '"+writerClassName+"'.", ex);
 			}
 		}
     }
@@ -598,7 +668,7 @@ implements ActionListener, DocumentListener, CaretListener, AlarmEventSetCallbac
 			try
 			{
 				String type = _setAlarmType_cbx.getSelectedItem()+"";
-				String str = WriterUtils.createMessageFromTemplate(type, _exampleAlarmEvent, _exampleAlarmEventList, _editor_txt.getText(), true);
+				String str = WriterUtils.createMessageFromTemplate(type, _exampleAlarmEvent, _exampleAlarmEventList, _editor_txt.getText(), true, null, "http://DUMMY-dbxtune:8080");
 				_example_lbl.setText(str);
 			}
 			catch (Exception ex)

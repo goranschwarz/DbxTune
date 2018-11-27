@@ -7,6 +7,7 @@ import org.apache.commons.cli.CommandLine;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesMySql;
 import com.asetune.config.dbms.IDbmsConfig;
+import com.asetune.config.dbms.MySqlConfig;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryMySql;
 import com.asetune.gui.MainFrame;
@@ -108,8 +109,8 @@ extends DbxTune
 	@Override
 	public IDbmsConfig createDbmsConfig()
 	{
-		return null; // null means it's not supported
-//		return new MySqlConfig();
+		//return null; // null means it's not supported
+		return new MySqlConfig();
 	}
 
 	@Override

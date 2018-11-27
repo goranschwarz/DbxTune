@@ -62,6 +62,7 @@ import com.asetune.utils.ShutdownHandler;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingExceptionHandler;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
 
 /**
  * NOT YET EVEN CLOSE TO BE FINNISHED
@@ -657,9 +658,9 @@ public abstract class DbxTune
 		}, "checkForUpdatesThread");
 //		checkForUpdatesThread.setDaemon(true);
 //		checkForUpdatesThread.start();
-long cfuInitStartTime = System.currentTimeMillis();
+		long cfuInitStartTime = System.currentTimeMillis();
 		checkForUpdatesThread.run();
-System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-cfuInitStartTime)+"' ms.");
+		_logger.info("Init of CheckForUpdate took '"+(System.currentTimeMillis()-cfuInitStartTime)+"' ms.");
 
 		SplashWindow.drawProgress("Initializing...");
 		if (_gui)
@@ -1279,6 +1280,7 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			// Start a HTTP Server (on the client host) so DbxTune Central web content - can "talk" to the local GUI instance
 			// This can be used for example to issue a "connect to - recorded database" that is managed by 'DbxTune Central' 
 			boolean startHttpSrv = true;
+//			boolean startHttpSrv = false;
 			if (startHttpSrv)
 			{
 				// TODO: implement this
@@ -1464,6 +1466,9 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 			// Start OutOfMemory check/thread
 			// Listeners has to be attached, which is done in CounterCollectorThreadNoGui
 			Memory.start();
+			
+			String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - DbxTune.getStartTime());
+			_logger.info("Application startup time "+appStartupTime+" (MM:SS.ms)");
 		}
 		else
 		{
@@ -1591,6 +1596,9 @@ System.out.println("Init of CheckForUpdate took '"+(System.currentTimeMillis()-c
 
 //System.out.println(profiler.getTop(4));
 //profiler.stopCollecting();
+
+					String appStartupTime = TimeUtils.msToTimeStr("%MM:%SS.%ms", System.currentTimeMillis() - DbxTune.getStartTime());
+					_logger.info("Application startup time "+appStartupTime+" (MM:SS.ms)");
 
 					// FINALLY SHOW THE WINDOW
 					SplashWindow.drawProgress("Loading Main Window...");

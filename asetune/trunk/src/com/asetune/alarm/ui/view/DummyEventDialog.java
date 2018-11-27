@@ -324,8 +324,8 @@ implements ActionListener, FocusListener
 			int    timeToLive                    = StringUtil.parseInt(_timeToLive_txt.getText(), -1);
 			int    raiseDelay                    = StringUtil.parseInt(_raiseDelay_txt.getText(), -1);
 			String data                          = _data_txt        .getText();
-			String description                   = _description_txt .getText();
-			String extendedDesc                  = _extendedDesc_txt.getText();
+			String description                   = _description_txt .getText().replace("\\n", "\n");
+			String extendedDesc                  = _extendedDesc_txt.getText().replace("\\n", "\n");
 
 			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc);
 
@@ -347,8 +347,8 @@ implements ActionListener, FocusListener
 			int    timeToLive                    = StringUtil.parseInt(_timeToLive_txt.getText(), -1);
 			int    raiseDelay                    = StringUtil.parseInt(_raiseDelay_txt.getText(), -1);
 			String data                          = _data_txt        .getText();
-			String description                   = _description_txt .getText();
-			String extendedDesc                  = _extendedDesc_txt.getText();
+			String description                   = _description_txt .getText().replace("\\n", "\n");
+			String extendedDesc                  = _extendedDesc_txt.getText().replace("\\n", "\n");
 
 			AlarmEventDummy alarmEvent = new AlarmEventDummy(serviceName, serviceInfo, extraInfo, category, severity, state, timeToLive, data, description, extendedDesc);
 

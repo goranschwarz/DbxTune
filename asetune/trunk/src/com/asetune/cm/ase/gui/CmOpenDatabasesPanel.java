@@ -79,6 +79,8 @@ extends TabularCntrPanel
 	private static final String CHART_TITLE_DATA = "Data Space Usage in Percent";
 
 	private JCheckBox sampleSpaceusage_chk;
+	private JCheckBox sampleShowplan_chk;
+	private JCheckBox sampleMonSqlText_chk;
 //	private JCheckBox spaceusageInMb_chk;
 
 	static
@@ -506,8 +508,11 @@ extends TabularCntrPanel
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
 //		final JCheckBox sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage");;
-		sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage details");
 //		spaceusageInMb_chk   = new JCheckBox("Spaceusage in MB");
+		sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage details");
+		sampleShowplan_chk   = new JCheckBox("Showplan");
+		sampleMonSqlText_chk = new JCheckBox("SQL Text");
+		
 		final JCheckBox enableLogGraph_chk   = new JCheckBox("Tran Log Graph");
 		final JCheckBox enableDataGraph_chk  = new JCheckBox("Data Graph");
 		final JButton resetMoveToTab_but     = new JButton("Reset 'Move to Tab' settings");
@@ -544,6 +549,8 @@ extends TabularCntrPanel
 //				+ "Calculate spaceusage in MB instead of pages.<br>"
 //				+ "This is only for the spaceusage columns: 'ReservedPages, UsedPages, UnUsedPages, DataPages, DataPagesReal, IndexPages, IndexPagesReal, LobPages' in ASE 16.0<br>"
 //				+ "</html>");
+		sampleShowplan_chk  .setToolTipText("<html>Get sp_showplan on on SPID's that has an <b>open transaction</b>.</html>");
+		sampleMonSqlText_chk.setToolTipText("<html>Get SQL Text (from monProcessSQLText) on on SPID's that has an <b>open transaction</b>.</html>");
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 
@@ -551,6 +558,8 @@ extends TabularCntrPanel
 		enableDataGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableDataGraph, DEFAULT_enableDataGraph));
 		sampleSpaceusage_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_spaceusage, CmOpenDatabases.DEFAULT_sample_spaceusage));
 //		spaceusageInMb_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_spaceusageInMb, CmOpenDatabases.DEFAULT_spaceusageInMb));
+		sampleShowplan_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_showplan  , CmOpenDatabases.DEFAULT_sample_showplan));
+		sampleMonSqlText_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_monSqlText, CmOpenDatabases.DEFAULT_sample_monSqlText));
 		
 		// Set initial value for Graph Orientation
 		String orientationStr = conf.getProperty(PROPKEY_plotOrientation, DEFAULT_plotOrientation);
@@ -578,6 +587,24 @@ extends TabularCntrPanel
 //				helperActionSave(CmOpenDatabases.PROPKEY_spaceusageInMb, ((JCheckBox)e.getSource()).isSelected());
 //			}
 //		});
+		sampleShowplan_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(CmOpenDatabases.PROPKEY_sample_showplan, ((JCheckBox)e.getSource()).isSelected());
+				getCm().setSql(null); // Causes SQL Statement to be recreated
+			}
+		});
+		sampleMonSqlText_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(CmOpenDatabases.PROPKEY_sample_monSqlText, ((JCheckBox)e.getSource()).isSelected());
+				getCm().setSql(null); // Causes SQL Statement to be recreated
+			}
+		});
 		enableLogGraph_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -644,9 +671,11 @@ extends TabularCntrPanel
 		panel.add(graphType_cbx,        "wrap");
 		panel.add(enableLogGraph_chk,   "span, split");
 		panel.add(enableDataGraph_chk,  "wrap");
-		panel.add(sampleSpaceusage_chk, "wrap");
-//		panel.add(sampleSpaceusage_chk, "span, split");
+//		panel.add(sampleSpaceusage_chk, "wrap");
+		panel.add(sampleSpaceusage_chk, "span, split");
 //		panel.add(spaceusageInMb_chk,   "wrap");
+		panel.add(sampleShowplan_chk,   "");
+		panel.add(sampleMonSqlText_chk, "wrap");
 
 		return panel;
 	}

@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.cm.CountersModel;
+import com.asetune.cm.CountersModelAppend;
 import com.asetune.cm.ase.BackwardNameCompatibility;
 import com.asetune.config.dict.MonTablesDictionary.MonTableColumnsEntry;
 import com.asetune.config.dict.MonTablesDictionary.MonTableEntry;
@@ -1707,7 +1708,11 @@ implements Runnable, ConnectionProvider
 		if (cm.getTabPanel() != null)
 			cm.getTabPanel().adjustTableColumnWidth();
 	}
-	@SuppressWarnings("unused")
+
+	// used for CountersModelAppend to get current SessionStartTime
+	// used/set in: loadSessionCm(CountersModel cm, int type, Timestamp sampleTs)
+//	private Timestamp _lastKnowSessionStartTime = null;
+	
 	private void loadSessionCm(CountersModel cm, int type, Timestamp sampleTs)
 	{
 		if (cm       == null) throw new IllegalArgumentException("CountersModel can't be null");
@@ -1736,11 +1741,25 @@ implements Runnable, ConnectionProvider
 		//     "col2"              datatype     null,
 		//     "...."              datatype     null,
 		//
-		String sql = "select * from \""+cmName+"_"+typeStr+"\" " +
-		             "where \"SessionSampleTime\" = ? ";
-		String sql2 = "select * from \""+cmName+"_"+typeStr+"\" " +
-		             "where \"SessionSampleTime\" = '"+sampleTs+"' ";
+//		String sql  = "select * from \""+cmName+"_"+typeStr+"\" where \"SessionSampleTime\" = ? ";
+		String sql2 = "select * from \""+cmName+"_"+typeStr+"\" where \"SessionSampleTime\" = '"+sampleTs+"' ";
 
+		if (cm instanceof CountersModelAppend)
+		{
+			if ( ((CountersModelAppend)cm).showAllRecords() )
+			{
+//				CountersModel summaryCm = CounterController.getInstance().getSummaryCm();
+//				Timestamp sessionStartTime = summaryCm.getSampleTimeHead();
+//				Timestamp sessionStartTime = _lastKnowSessionStartTime;
+
+				sql2 = "select * from \""+cmName+"_"+typeStr+"\" " +
+//				       "where \"SessionStartTime\" = '"+sessionStartTime+"' " +
+				       "where \"SessionStartTime\" = (select min(\"SessionStartTime\") from \""+cmName+"_"+typeStr+"\" where \"SessionSampleTime\" = '"+sampleTs+"') " +
+				       "  and \"SessionSampleTime\" <= '"+sampleTs+"' ";
+//System.out.println("offline:append: sql2=|"+sql2+"|.");
+			}
+		}
+		
 		try
 		{
 //			PreparedStatement pstmnt = _conn.prepareStatement(sql);
@@ -1791,12 +1810,14 @@ implements Runnable, ConnectionProvider
 			{
 //r++;
 //System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR PersistReader: read row="+r+", cols="+cols+", cm="+cm);
-				Timestamp sessionStartTime  = rs.getTimestamp(1);
+//				Timestamp sessionStartTime  = rs.getTimestamp(1);
 				Timestamp sessionSampleTime = rs.getTimestamp(2);
 				Timestamp sampleTime        = rs.getTimestamp(3);
 				int       sampleMs          = rs.getInt(4);
 				int       newDiffRateRow    = hasNewDiffRateRowCol ? rs.getInt(5) : 0;
 
+//				_lastKnowSessionStartTime = sessionStartTime;
+				
 //				cm.setSampleTimeHead(sessionStartTime);
 				cm.setSampleTimeHead(sessionSampleTime);
 				cm.setSampleTime(sampleTime);

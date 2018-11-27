@@ -502,7 +502,7 @@ extends ObjectLookupInspectorAbstract
 //		if (_ddlInputQueue.size() > _ddlLookup_infoMessage_queueSize)
 //		{
 //			long howLongAgo = System.currentTimeMillis() - _ddlLookup_infoMessage_last;
-//			if (_ddlLookup_infoMessage_period > howLongAgo)
+//			if (howLongAgo > _ddlLookup_infoMessage_period)
 //			{
 //				_logger.info("DDL Lookup: InputQueueSize="+_ddlInputQueue.size()+", StoreQueueSize="+_ddlStoreQueue.size()+". Now getting DDL information about object '"+dbname+"."+objectName+"',");
 //				_ddlLookup_infoMessage_last = System.currentTimeMillis();

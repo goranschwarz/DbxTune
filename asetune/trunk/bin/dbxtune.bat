@@ -214,7 +214,11 @@ rem set JAVA_HOME=C:\Program Files\Java\jdk1.6.0_07
 rem ------------------------------------------------------------------------
 rem --- get JVM Parameters from file: 
 rem ------------------------------------------------------------------------
-set DBXTUNE_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.dbxtune\.dbxtune_jvm_settings.properties
+IF "%APP_NAME%" == "sqlw" (
+	set DBXTUNE_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.dbxtune\.sqlw_jvm_settings.properties
+) ELSE (
+	set DBXTUNE_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.dbxtune\.dbxtune_jvm_settings.properties
+)
 if exist %DBXTUNE_JVM_PARAMETER_FILE% (
 	echo .
 	echo -----------------------------------------------------------------------
@@ -305,8 +309,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\wizard.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-swing-4.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\miglayout-core-4.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\swingx-all-1.6.5-1.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jchart2d-3.2.2.jar
-rem set CLASSPATH=%CLASSPATH%;C:\Users\gorans\git\jchart2d\jchart2d-3.3.0.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jchart2d-3.3.2.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\planviewer.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-lang3-3.7.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-io-2.6.jar
