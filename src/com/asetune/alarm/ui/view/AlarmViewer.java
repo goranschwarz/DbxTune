@@ -12,6 +12,9 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -44,9 +47,12 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEvent.Severity;
 import com.asetune.alarm.writers.AlarmWriterToTableModel;
+import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.TrendGraphColors;
 import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTableFilter;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.SwingUtils;
 
@@ -246,7 +252,8 @@ implements ActionListener
 				AlarmWriterToTableModel.getInstance().getHistoryTableModel().clear(true);
 			}
 		});
-		filter.setText("where Action in('RAISE', 'CANCEL')");
+//		filter.setText("where Action in('RAISE', 'CANCEL')");
+		filter.setText("where action in('RAISE', 'CANCEL')");
 
 		panel.add(filter,                            "pushx, growx, wrap");
 		panel.add(clear,                             "split");
@@ -354,12 +361,32 @@ implements ActionListener
 		protected int           _lastTableHeaderColumn = -1;
 		private   JPopupMenu    _popupMenu             = null;
 		private   JPopupMenu    _headerPopupMenu       = null;
+		private   boolean       _isOffline             = false;
 
 		LocalActiveTable()
 		{
 			super("alarmView.activeTable");
 			setModel( AlarmWriterToTableModel.getInstance().getActiveTableModel() );
 
+			if (MainFrame.isOfflineConnected())
+			{
+				DbxConnection conn = MainFrame.getOfflineConnection();
+
+				String sql = "select * from #MonAlarmActive#";
+				sql = sql.replace("#", conn.getQuotedIdentifierChar());
+						
+				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					ResultSetTableModel rstm = new ResultSetTableModel(rs, "alarmView.activeTable");
+					setModel( rstm );
+					_isOffline = true;
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("Problems loading Offline Active Alarms", ex);
+				}
+			}
+			
 //			setShowGrid(false);
 			setSortable(true);
 			setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -529,7 +556,10 @@ implements ActionListener
 //				public void mouseDragged(MouseEvent e) {/*ignore*/}
 //			});
 
-			return tabHeader;
+			if ( ! _isOffline )
+				return tabHeader;
+			else
+				return super.createDefaultTableHeader();
 		}
 
 		/** CELL tool tip */
@@ -626,11 +656,31 @@ implements ActionListener
 		protected int           _lastTableHeaderColumn = -1;
 		private   JPopupMenu    _popupMenu             = null;
 		private   JPopupMenu    _headerPopupMenu       = null;
+		private   boolean       _isOffline             = false;
 
 		LocalHistoryTable()
 		{
 			super("alarmView.historyTable");
 			setModel( AlarmWriterToTableModel.getInstance().getHistoryTableModel() );
+
+			if (MainFrame.isOfflineConnected())
+			{
+				DbxConnection conn = MainFrame.getOfflineConnection();
+
+				String sql = "select * from #MonAlarmHistory#";
+				sql = sql.replace("#", conn.getQuotedIdentifierChar());
+						
+				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					ResultSetTableModel rstm = new ResultSetTableModel(rs, "alarmView.historyTable");
+					setModel( rstm );
+					_isOffline = true;
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("Problems loading Offline Alarm History", ex);
+				}
+			}
 
 //			setShowGrid(false);
 			setSortable(true);
@@ -667,6 +717,8 @@ implements ActionListener
 				@Override
 				public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 				{
+					if (_isOffline)
+						return false;
 					return (Boolean) adapter.getValue(adapter.getColumnIndex("isActive"));
 				}
 			}, SwingUtils.parseColor(colorStr, TrendGraphColors.VERY_LIGHT_YELLOW), null));
@@ -834,7 +886,10 @@ implements ActionListener
 //				public void mouseDragged(MouseEvent e) {/*ignore*/}
 //			});
 
-			return tabHeader;
+			if ( ! _isOffline )
+				return tabHeader;
+			else
+				return super.createDefaultTableHeader();
 		}
 
 		/** CELL tool tip */

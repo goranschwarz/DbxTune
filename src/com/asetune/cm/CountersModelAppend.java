@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.asetune.ICounterController;
-import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 
 
@@ -150,54 +149,22 @@ public class CountersModelAppend
 	
 
 
-//	/**
-//	 * get the data a bit earlier than after 'super.refreshGetData(conn)' <br>
-//	 * Since this is called from inside super.refreshGetData(conn), and not (in GUI maode after SwingUtilities.invokeLater(...) ) <br>
-//	 * When we have "fixed" direct assign of: _prevSample=tmpNewSample, _newSample=tmpNewSample, _diffData=tmpDiffData, _rateData=tmpRateData we can use "attempt 1"
-//	 */
-//	@Override
-//	public void localCalculation(CounterSample newSample)
-//	{
-//		// get last sample... as "last sample"
-//		_lastRefreshData = newSample.getDataCollection();
-//
-//		// add all in this sample to "allData"
-//		if (_lastRefreshData != null)
-//			_allData.addAll(_lastRefreshData);
-//
-////System.out.println("APPEND("+Thread.currentThread().getName()+"): _lastRefreshData.size()="+(_lastRefreshData==null?null:_lastRefreshData.size())+", _allData.size()="+_allData.size());
-//	}
-
-//-------- BEGIN attempt 1 ------------------
-// Note: if we change 'super.refreshGetData(conn)' to assign following values SYNCRONUS in the methos and not with: SwingUtilities.invokeLater(...)
-//	_prevSample = tmpNewSample;
-//	_newSample  = tmpNewSample;
-//	_diffData   = tmpDiffData;
-//	_rateData   = tmpRateData;
-//
-//	/**
-//	 * Use parent to get most work done
-//	 */
+	// Keep data in 2 places
+	//   1: last refresh --- keeps records in just the LAST sample
+	//   2: all data     --- appand just sampled data to a "summary" list
 	@Override
-	protected int refreshGetData(DbxConnection conn) throws Exception
+	public void hookInNearEndOfRefreshGetData()
 	{
-		// Call super to get all records...
-		int superRows = super.refreshGetData(conn);
-//System.out.println("APPEND: super.refreshGetData(conn): superRows="+superRows);
-
 		// get last sample... as "last sample"
-		_lastRefreshData = super.getDataCollection(DATA_ABS); // HERE is where we fail, since super.refreshGetData() assignes internal variables in SwingUtilities.invokeLater(...)
+		_lastRefreshData = getDataCollection(DATA_ABS);
 
 		// add all in this sample to "allData"
 		if (_lastRefreshData != null)
 			_allData.addAll(_lastRefreshData);
 
 //System.out.println("APPEND("+Thread.currentThread().getName()+"): _lastRefreshData.size()="+(_lastRefreshData==null?null:_lastRefreshData.size())+", _allData.size()="+_allData.size());
-		fireTableDataChanged();
-
-		return superRows;
 	}
-//-------- END attempt 1 ------------------
+
 
 	/**
 	 * NO PK is needed, we are NOT going to do DIFF calculations

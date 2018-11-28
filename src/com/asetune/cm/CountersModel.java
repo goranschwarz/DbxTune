@@ -3811,6 +3811,13 @@ implements Cloneable, ITableTooltip
 		return true;
 	}
 
+	/**
+	 * Just after all internal member fields has been set, but before calling wrapperFor_sendAlarmRequest() we can do some adjustements...<br>
+	 * For example CounterModelAppend uses this hookin to set some internal data structures.
+	 */
+	public void hookInNearEndOfRefreshGetData()
+	{
+	}
 
 	/**
 	 * Check if we are connected to any "online" data source 
@@ -4887,9 +4894,12 @@ implements Cloneable, ITableTooltip
 		// this has to be after _prevSample, _newSample, _diffData, _rateData has been SET
 		updateGraphData();
 
+		// last chance to hookin and do something with data
+		hookInNearEndOfRefreshGetData();
+		
 		// Do we want to send an Alarm somewhere, every CM's has to implement this.
 		wrapperFor_sendAlarmRequest();
-
+		
 		// Remember "first time sample" for the "doWork" object 
 		final boolean localFirstTimeSample = isFirstTimeSample();
 
