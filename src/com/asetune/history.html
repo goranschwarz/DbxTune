@@ -46,6 +46,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>Daily Report Message, some smaller changes to the Mail Message structure.</LI>
 		<LI>in GUI Mode: when an Alarm is Raised, you will now get a popup (similar to when you have blocking locks, long transactions...)</LI>
+		<LI>AlarmView Dialog, now also works in offline mode</LI>
 	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -75,6 +76,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Send Alarm: <code>AlarmEventConfigResourceIsUsedUp</code> if ErrorNumber 1601 -- There are not enough 'user connections' available to start a new process</li>
 			<li>Send Alarm: <code>AlarmEventFullTranLog           </code> if ErrorNumber 7413 -- # task(s) are sleeping waiting for space to become available in the log segment for database XXXXX.</li>
 			<li>Send Alarm: <code>AlarmEventErrorLogEntry         </code> if Severity &gt; 16 (coniguration <code>CmErrorLog.alarm.system.if.Severity.gt</code>)</li>
+			<li>In above <i>severity</i> check, we can skip/discard error messages we do not want alarms on.<br>
+			    <code>CmErrorLog.alarm.system.errorNumber.skip.list=123,321,231</code> where the numers are a comma separeted list of error numbers to skip/discard.
+			    </li>
 			<li>Will now be saved to PCS when you record a session</li>
 		</ul>
 		</LI>
@@ -234,6 +238,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
 		<LI>print EED Parameters for error messages (in ASE, some messages might have extra information attached to the message)</LI>
+		<LI>added 'go tab' to display the output ResultSet(s) in JTabbedPane</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
