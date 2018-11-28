@@ -12,7 +12,8 @@ extends AbstractTableModel
 {
 	private static final long serialVersionUID = 1L;
 
-	private static final String[] TAB_HEADER = {"AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "crTime", "reRaiseTime", "timeToLive", "Data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
+//	private static final String[] TAB_HEADER = {"AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "crTime", "reRaiseTime", "timeToLive", "Data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "crTime", "reRaiseTime", "timeToLive", "data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
 	public static final int TAB_POS_ALARM_CLASS               = 0;
 	public static final int TAB_POS_SERVICE_TYPE              = 1;
 	public static final int TAB_POS_SERVICE_NAME              = 2;

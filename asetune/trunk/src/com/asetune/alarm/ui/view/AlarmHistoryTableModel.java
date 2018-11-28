@@ -83,7 +83,8 @@ extends AbstractTableModel
 			_dateAdded  = _dateFormater.format( new Date(System.currentTimeMillis()) );
 		}
 	}
-	private static final String[] TAB_HEADER = {"Event Time", "Action", "isActive", "AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "Data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
+//	private static final String[] TAB_HEADER = {"Event Time", "Action", "isActive", "AlarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "Data", "LastData", "description", "LastDescription", "extendedDescription", "LastExtendedDescription"};
+	private static final String[] TAB_HEADER = {"Event Time", "action", "isActive", "alarmClass", "serviceType", "serviceName", "serviceInfo", "extraInfo", "category", "severity", "state", "repeatCnt", "duration", "createTime", "reRaiseTime", "cancelTime", "timeToLive", "Data", "lastData", "description", "lastDescription", "extendedDescription", "lastExtendedDescription"};
 	public static final int TAB_POS_EVENT_TIME                = 0;
 	public static final int TAB_POS_ACTION                    = 1;
 	public static final int TAB_POS_IS_ACTIVE                 = 2;

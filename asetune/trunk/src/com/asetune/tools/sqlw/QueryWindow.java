@@ -7307,6 +7307,8 @@ ex.printStackTrace();
 			
 			boolean isConnectionOk = true;
 
+			boolean goTabbedPane = false;
+			
 			// loop all batches
 			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 			{
@@ -7335,6 +7337,8 @@ ex.printStackTrace();
 				}
 				
 				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+batchCount+", starting at row "+(sr.getSqlBatchStartLine()+1) );
+
+				goTabbedPane = sr.hasOption_asTabbedPane();
 
 				// Set "global" flag, sine it's used elsewhere
 				_appendResults_scriptReader = sr.hasOption_appendOutput();
@@ -7488,8 +7492,8 @@ ex.printStackTrace();
 										bottomRsRowsCount = sr.getOption_bottomRows();
 									
 									boolean asPlainText = _asPlainText_chk.isSelected();
-									if (sr.hasOption_asPlaintText())
-										asPlainText = sr.getOption_asPlaintText();
+									if (sr.hasOption_asPlainText())
+										asPlainText = sr.getOption_asPlainText();
 
 									boolean noData = false;
 									if (sr.hasOption_noData())
@@ -7719,7 +7723,12 @@ ex.printStackTrace();
 			progress.setState("Add data to GUI result");
 
 			// Finally, add all the results to the output
-			addToResultsetPanel(_resultCompList, (_appendResults_chk.isSelected() || _appendResults_scriptReader), _asPlainText_chk.isSelected(), _rsInTabs_chk.isSelected());
+			addToResultsetPanel(
+					_resultCompList, 
+					(_appendResults_chk.isSelected() || _appendResults_scriptReader), // append results
+					_asPlainText_chk.isSelected(),                                    // as Plain text
+					(_rsInTabs_chk.isSelected() || goTabbedPane)                      // as Tabbed Pane
+			);
 //			Runnable doRun = new Runnable()
 //			{
 //				@Override

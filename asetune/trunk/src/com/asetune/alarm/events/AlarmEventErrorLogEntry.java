@@ -41,6 +41,6 @@ extends AlarmEvent
 		setTimeToLive( ttlSec * 1000 );
 
 		// Set the description 
-		setDescription("Msg="+errorNumber+" Severity="+alarmSeverity+": " + errorMessage.trim()+ ". ["+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
+		setDescription("Num="+errorNumber+" Severity="+errorSeverity+", Text=" + errorMessage.trim()+ " ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
 	}
 }

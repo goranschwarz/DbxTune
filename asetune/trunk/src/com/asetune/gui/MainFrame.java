@@ -3547,6 +3547,15 @@ _cmNavigatorPrevStack.addFirst(selectedTabTitle);
 					_ddlViewer.dispose();
 					_ddlViewer = null;
 				}
+				
+				//--------------------------
+				// Close the Alarm View
+				if (_alarmView != null)
+				{
+					_alarmView.setVisible(false);
+					_alarmView.dispose();
+					_alarmView = null;
+				}
 
 				//--------------------------
 				// If we have a PersistentCounterHandler, stop it...

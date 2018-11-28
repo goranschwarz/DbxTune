@@ -154,7 +154,17 @@ extends CountersModelAppend
 	 * @param rowNum
 	 * @return
 	 */
-	private String getErrorRecodAsText(List<List<Object>> lastRefreshRows, int rowNum)
+	private String getErrorRecordAsText(List<List<Object>> lastRefreshRows, int rowNum)
+	{
+		return getErrorRecordAsTextOrHtml(lastRefreshRows, rowNum, false);
+	}
+	
+	private String getErrorRecordAsHtml(List<List<Object>> lastRefreshRows, int rowNum)
+	{
+		return getErrorRecordAsTextOrHtml(lastRefreshRows, rowNum, true);
+	}
+
+	private String getErrorRecordAsTextOrHtml(List<List<Object>> lastRefreshRows, int rowNum, boolean asHtml)
 	{
 		List<Object> row = lastRefreshRows.get(rowNum);
 
@@ -164,15 +174,32 @@ extends CountersModelAppend
 			colNameMaxLen = Math.max(colNameMaxLen, getColumnName(c).length());
 
 		StringBuilder sb = new StringBuilder();
-		for (int c=0; c<row.size(); c++)
+		
+		if (asHtml)
 		{
-			String name = getColumnName(c);
-			Object val  = row.get(c);
+			sb.append("<table class='errorlogTableVertical'>\n");
+//			sb.append("  <tr> <th>Column Name</th> <th>Value</th> </tr>\n");
+			for (int c=0; c<row.size(); c++)
+			{
+				String name = getColumnName(c);
+				Object val  = row.get(c);
+				
+				sb.append("  <tr> <td><b>").append(name).append("</b></td> <td>").append(val).append("</td> </tr>\n");
+			}
+			sb.append("</table>\n");
+		}
+		else
+		{
+			for (int c=0; c<row.size(); c++)
+			{
+				String name = getColumnName(c);
+				Object val  = row.get(c);
 
-			sb.append(StringUtil.left(name, colNameMaxLen));
-			sb.append(" : ");
-			sb.append(val);
-			sb.append("\n");
+				sb.append(StringUtil.left(name, colNameMaxLen));
+				sb.append(" : ");
+				sb.append(val);
+				sb.append("\n");
+			}
 		}
 		
 		return sb.toString();
@@ -219,6 +246,8 @@ extends CountersModelAppend
 		
 //		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
+		List<String> errorNumberSkipList = null; // initiated later
+		
 		for (int r=0; r<lastRefreshRows.size(); r++)
 		{
 			List<Object> row = lastRefreshRows.get(r);
@@ -343,17 +372,32 @@ extends CountersModelAppend
 
 				if (severity > threshold && severity < 99)
 				{
-					String extendedDescText = getErrorRecodAsText(lastRefreshRows, r);
-					String extendedDescHtml = getErrorRecodAsText(lastRefreshRows, r);
+					// Initilize the errorlist if not done earlier
+					if (errorNumberSkipList == null)
+					{
+						String errorListStr = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList);
+						errorNumberSkipList = StringUtil.parseCommaStrToList(errorListStr);
+					}
+					if (errorNumberSkipList.contains( Integer.toString(errorNumber)) )
+					{
+						// Skipping this error number
+						if (_logger.isDebugEnabled())
+							_logger.debug("ErrorNumber "+errorNumber+" is part of the 'error-number-skip-list', so it wont be raised. (num="+errorNumber+", severity="+severity+", text='"+ErrorMessage+"')");
+					}
+					else
+					{
+						String extendedDescText = getErrorRecordAsText(lastRefreshRows, r);
+						String extendedDescHtml = getErrorRecordAsHtml(lastRefreshRows, r);
 
-					AlarmEvent.Severity alarmSeverity = AlarmEvent.Severity.WARNING;
-					if (severity > 17)
-						alarmSeverity = AlarmEvent.Severity.ERROR;
-					
-					AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNumber, severity, ErrorMessage, threshold);
-					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						AlarmEvent.Severity alarmSeverity = AlarmEvent.Severity.WARNING;
+						if (severity > 17)
+							alarmSeverity = AlarmEvent.Severity.ERROR;
+						
+						AlarmEvent ae = new AlarmEventErrorLogEntry(this, alarmSeverity, errorNumber, severity, ErrorMessage, threshold);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
 
-					alarmHandler.addAlarm( ae );
+						alarmHandler.addAlarm( ae );
+					}
 				}
 			}
 		}
@@ -368,15 +412,19 @@ extends CountersModelAppend
 	public static final String  PROPKEY_alarm_Severity              = CM_NAME + ".alarm.system.if.Severity.gt";
 	public static final int     DEFAULT_alarm_Severity              = 16;
 
+	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
+	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("UserConnections",    PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections   , DEFAULT_alarm_UserConnections   ), DEFAULT_alarm_UserConnections   , "On Error 1601, send 'AlarmEvent FIXME'." ));
-		list.add(new CmSettingsHelper("TransactionLogFull", PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull, DEFAULT_alarm_TransactionLogFull), DEFAULT_alarm_TransactionLogFull, "On Error 7413, send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("Severity",           PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty(    PROPKEY_alarm_Severity          , DEFAULT_alarm_Severity          ), DEFAULT_alarm_Severity          , "If 'Severity' is greater than ## then send 'AlarmEvent FIXME'." ));
+		list.add(new CmSettingsHelper("UserConnections"        , PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEvent FIXME'." ));
+		list.add(new CmSettingsHelper("TransactionLogFull"     , PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("Severity"               , PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEvent FIXME'." ));
+		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)", PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
 
 		return list;
 	}

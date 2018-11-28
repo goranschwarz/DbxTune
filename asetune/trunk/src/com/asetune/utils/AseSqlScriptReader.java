@@ -67,6 +67,7 @@ public class AseSqlScriptReader
 	private int             _bottomRows            = -1; // option 'bottom #'
 	private int             _rowCount              = -1; // option 'rowc'
 	private int             _asPlainText           = -1; // option 'plain'
+	private int             _asTabbedPane          = -1; // option 'tab'
 	private int             _noData                = -1; // option 'nodata'
 	private int             _appendOutput          = -1; // option 'append'
 	private int             _printSql              = -1; // option 'psql' -- print SQL Statement
@@ -595,7 +596,8 @@ public class AseSqlScriptReader
 	public boolean hasOption_topRows()           { return _topRows           > 0; }
 	public boolean hasOption_bottomRows()        { return _bottomRows        > 0; }
 	public boolean hasOption_rowCount()          { return _rowCount          > 0; }
-	public boolean hasOption_asPlaintText()      { return _asPlainText       > 0; }
+	public boolean hasOption_asPlainText()       { return _asPlainText       > 0; }
+	public boolean hasOption_asTabbedPane()      { return _asTabbedPane      > 0; }
 	public boolean hasOption_noData()            { return _noData            > 0; }
 	public boolean hasOption_appendOutput()      { return _appendOutput      > 0; }
 	public boolean hasOption_printSql()          { return _printSql          > 0; }
@@ -606,7 +608,8 @@ public class AseSqlScriptReader
 	public int     getOption_topRows()           { return _topRows; }
 	public int     getOption_bottomRows()        { return _bottomRows; }
 	public boolean getOption_rowCount()          { return _rowCount          > 0; }
-	public boolean getOption_asPlaintText()      { return _asPlainText       > 0; }
+	public boolean getOption_asPlainText()       { return _asPlainText       > 0; }
+	public boolean getOption_asTabbedPane()      { return _asTabbedPane      > 0; }
 	public boolean getOption_noData()            { return _noData            > 0; }
 	public boolean getOption_appendOutput()      { return _appendOutput      > 0; }
 	public boolean getOption_printSql()          { return _printSql          > 0; }
@@ -644,6 +647,7 @@ public class AseSqlScriptReader
 		_bottomRows        = -1;
 		_rowCount          = -1;
 		_asPlainText       = -1;
+		_asTabbedPane      = -1;
 		_noData            = -1;
 		_appendOutput      = -1;
 		_printSql          = -1;
@@ -847,6 +851,12 @@ public class AseSqlScriptReader
 										if (StringUtil.hasValue(word2))
 											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
 									}
+									else if ("tab".equalsIgnoreCase(word1))
+									{
+										_asTabbedPane = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
+									}
 									else if ("nodata".equalsIgnoreCase(word1))
 									{
 										_noData = 1;
@@ -894,7 +904,7 @@ public class AseSqlScriptReader
 										String desc = 
 											error +" \n" +
 											"\n" +
-											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,plain] [,nodata] [,append] [,psql] [,prsi] [,time]'\n" +
+											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time]'\n" +
 											"\n" +
 											"#1 = Number of times to repeat the command\n" +
 											"#2 = Rows to read from a ResultSet.\n" +
@@ -906,6 +916,7 @@ public class AseSqlScriptReader
 											"bottom # - Only display last # rows in the result set\n" +
 											"wait #   - Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'\n" +
 											"plain    - Do NOT use a GUI table for result set, instead print as plain text.\n" +
+											"tab      - Present ResultSet(s) in Tabbed Panel.\n" +
 											"nodata   - Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)\n" +
 											"append   - Do NOT clear results from previous executions. Append at the end.\n" +
 											"psql     - Print the executed SQL Statement in the output\n" +

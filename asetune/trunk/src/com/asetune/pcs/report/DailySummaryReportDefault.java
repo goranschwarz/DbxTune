@@ -18,9 +18,11 @@ extends DailySummaryReportAbstract
 
 	private ResultSetTableModel _alarmsActiveShortRstm;
 	private ResultSetTableModel _alarmsActiveFullRstm;
+	private Exception           _alarmsActiveProblem;
 	
 	private ResultSetTableModel _alarmsHistoryShortRstm;
 	private ResultSetTableModel _alarmsHistoryFullRstm;
+	private Exception           _alarmsHistoryProblem;
 
 	@Override
 	public void create()
@@ -71,6 +73,8 @@ extends DailySummaryReportAbstract
 		}
 		catch(SQLException ex)
 		{
+			_alarmsActiveProblem = ex;
+
 			_alarmsActiveShortRstm = ResultSetTableModel.createEmpty("Active Alarms Short");
 			_logger.warn("Problems getting Alarms Short: " + ex);
 		}
@@ -115,6 +119,8 @@ extends DailySummaryReportAbstract
 		}
 		catch(SQLException ex)
 		{
+			_alarmsActiveProblem = ex;
+
 			_alarmsActiveFullRstm = ResultSetTableModel.createEmpty("Active Alarms");
 			_logger.warn("Problems getting Alarms Full: " + ex);
 		}
@@ -141,6 +147,8 @@ extends DailySummaryReportAbstract
 		}
 		catch(SQLException ex)
 		{
+			_alarmsHistoryProblem = ex;
+
 			_alarmsHistoryShortRstm = ResultSetTableModel.createEmpty("Active History");
 			_logger.warn("Problems getting Alarms Short: " + ex);
 		}
@@ -153,7 +161,7 @@ extends DailySummaryReportAbstract
 		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
-		sql = "select * \n" +
+		sql = "select \n" +
 		      "     #action#,                 \n" +
 		      "     #duration#,               \n" +
 		      "     #eventTime#,              \n" +
@@ -189,6 +197,8 @@ extends DailySummaryReportAbstract
 		}
 		catch(SQLException ex)
 		{
+			_alarmsHistoryProblem = ex;
+			
 			_alarmsHistoryFullRstm = ResultSetTableModel.createEmpty("Active History Full");
 			_logger.warn("Problems getting Alarms Full: " + ex);
 		}
@@ -211,6 +221,8 @@ extends DailySummaryReportAbstract
 			sb.append(_alarmsActiveShortRstm.toAsciiTableString());
 			sb.append(_alarmsActiveFullRstm.toAsciiTablesVerticalString());
 		}
+		if (_alarmsActiveProblem != null)
+			sb.append(_alarmsActiveProblem);
 		sb.append("\n");
 		
 		sb.append("=======================================================\n");
@@ -224,6 +236,8 @@ extends DailySummaryReportAbstract
 			sb.append(_alarmsHistoryShortRstm.toAsciiTableString());
 			sb.append(_alarmsHistoryFullRstm.toAsciiTablesVerticalString());
 		}
+		if (_alarmsHistoryProblem != null)
+			sb.append(_alarmsHistoryProblem);
 		sb.append("\n");
 		
 		sb.append("\n");
@@ -289,6 +303,8 @@ extends DailySummaryReportAbstract
 			sb.append(_alarmsActiveShortRstm.toHtmlTableString("activeAlarmsOverview"));
 			sb.append(_alarmsActiveFullRstm.toHtmlTablesVerticalString("activeAlarmsDetails"));
 		}
+		if (_alarmsActiveProblem != null)
+			sb.append("<pre>").append(_alarmsActiveProblem).append("</pre>");
 		sb.append("\n<br>");
 
 		sb.append("<h3>Alarm History</h3> \n");
@@ -300,6 +316,8 @@ extends DailySummaryReportAbstract
 			sb.append(_alarmsHistoryShortRstm.toHtmlTableString("historyAlarmsOverview"));
 			sb.append(_alarmsHistoryFullRstm.toHtmlTablesVerticalString("historyAlarmsDetails"));
 		}
+		if (_alarmsHistoryProblem != null)
+			sb.append("<pre>").append(_alarmsHistoryProblem).append("</pre>");
 		sb.append("\n<br>");
 
 		sb.append("\n<br>");
