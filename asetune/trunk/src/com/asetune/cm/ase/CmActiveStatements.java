@@ -116,6 +116,28 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
+	private static final String  PROP_PREFIX                      = CM_NAME;
+	
+	public static final String  PROPKEY_sample_showplan           = PROP_PREFIX + ".sample.showplan";
+	public static final boolean DEFAULT_sample_showplan           = true;
+
+	public static final String  PROPKEY_sample_monSqlText         = PROP_PREFIX + ".sample.monSqltext";
+	public static final boolean DEFAULT_sample_monSqlText         = true;
+
+	public static final String  PROPKEY_sample_dbccSqlText        = PROP_PREFIX + ".sample.dbccSqltext";
+	public static final boolean DEFAULT_sample_dbccSqlText        = false;
+
+	public static final String  PROPKEY_sample_procCallStack      = PROP_PREFIX + ".sample.procCallStack";
+	public static final boolean DEFAULT_sample_procCallStack      = false;
+
+	public static final String  PROPKEY_sample_dbccStacktrace     = PROP_PREFIX + ".sample.dbccStacktrace";
+	public static final boolean DEFAULT_sample_dbccStacktrace     = false;
+	
+	public static final String  PROPKEY_sample_cachedPlanInXml    = PROP_PREFIX + ".sample.cachedPlanInXml";
+	public static final boolean DEFAULT_sample_cachedPlanInXml    = false;
+	
+	public static final String  PROPKEY_sample_holdingLocks       = PROP_PREFIX + ".sample.holdingLocks";
+	public static final boolean DEFAULT_sample_holdingLocks       = true;
 	
 	private void addTrendGraphs()
 	{
@@ -423,14 +445,22 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Get Showplan",             getName()+".sample.showplan"        , Boolean.class, conf.getBooleanProperty(getName()+".sample.showplan"        , true ), true , "Do 'sp_showplan spid' on every row in the table."                                      ));
-		list.add(new CmSettingsHelper("Get Monitored SQL Text",   getName()+".sample.monSqltext"      , Boolean.class, conf.getBooleanProperty(getName()+".sample.monSqltext"      , true ), true , "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table." ));
-		list.add(new CmSettingsHelper("Get DBCC SQL Text",        getName()+".sample.dbccSqltext"     , Boolean.class, conf.getBooleanProperty(getName()+".sample.dbccSqltext"     , false), false, "Do 'dbcc sqltext(spid)' on every row in the table."                                    ));
-		list.add(new CmSettingsHelper("Get Procedure Call Stack", getName()+".sample.procCallStack"   , Boolean.class, conf.getBooleanProperty(getName()+".sample.procCallStack"   , false), false, "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table."    ));
-		list.add(new CmSettingsHelper("Get ASE Stacktrace",       getName()+".sample.dbccStacktrace"  , Boolean.class, conf.getBooleanProperty(getName()+".sample.dbccStacktrace"  , false), false, "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
-		list.add(new CmSettingsHelper("Get Cached Plan in XML",   getName()+".sample.cachedPlanInXml" , Boolean.class, conf.getBooleanProperty(getName()+".sample.cachedPlanInXml" , false), false, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
-		list.add(new CmSettingsHelper("Get SPID's holding locks", getName()+".sample.holdingLocks"    , Boolean.class, conf.getBooleanProperty(getName()+".sample.holdingLocks"    , true ), true , "Include SPID's that holds locks even if that are not active in the server."            ));
+//		list.add(new CmSettingsHelper("Get Showplan",             getName()+".sample.showplan"        , Boolean.class, conf.getBooleanProperty(getName()+".sample.showplan"        , true ), true , "Do 'sp_showplan spid' on every row in the table."                                      ));
+//		list.add(new CmSettingsHelper("Get Monitored SQL Text",   getName()+".sample.monSqltext"      , Boolean.class, conf.getBooleanProperty(getName()+".sample.monSqltext"      , true ), true , "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table." ));
+//		list.add(new CmSettingsHelper("Get DBCC SQL Text",        getName()+".sample.dbccSqltext"     , Boolean.class, conf.getBooleanProperty(getName()+".sample.dbccSqltext"     , false), false, "Do 'dbcc sqltext(spid)' on every row in the table."                                    ));
+//		list.add(new CmSettingsHelper("Get Procedure Call Stack", getName()+".sample.procCallStack"   , Boolean.class, conf.getBooleanProperty(getName()+".sample.procCallStack"   , false), false, "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table."    ));
+//		list.add(new CmSettingsHelper("Get ASE Stacktrace",       getName()+".sample.dbccStacktrace"  , Boolean.class, conf.getBooleanProperty(getName()+".sample.dbccStacktrace"  , false), false, "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
+//		list.add(new CmSettingsHelper("Get Cached Plan in XML",   getName()+".sample.cachedPlanInXml" , Boolean.class, conf.getBooleanProperty(getName()+".sample.cachedPlanInXml" , false), false, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
+//		list.add(new CmSettingsHelper("Get SPID's holding locks", getName()+".sample.holdingLocks"    , Boolean.class, conf.getBooleanProperty(getName()+".sample.holdingLocks"    , true ), true , "Include SPID's that holds locks even if that are not active in the server."            ));
 
+		list.add(new CmSettingsHelper("Get Showplan"             , PROPKEY_sample_showplan        , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_showplan        , DEFAULT_sample_showplan       ), DEFAULT_sample_showplan       , "Do 'sp_showplan spid' on every row in the table."                                      ));
+		list.add(new CmSettingsHelper("Get Monitored SQL Text"   , PROPKEY_sample_monSqlText      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_monSqlText      , DEFAULT_sample_monSqlText     ), DEFAULT_sample_monSqlText     , "Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table." ));
+		list.add(new CmSettingsHelper("Get DBCC SQL Text"        , PROPKEY_sample_dbccSqlText     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccSqlText     , DEFAULT_sample_dbccSqlText    ), DEFAULT_sample_dbccSqlText    , "Do 'dbcc sqltext(spid)' on every row in the table."                                    ));
+		list.add(new CmSettingsHelper("Get Procedure Call Stack" , PROPKEY_sample_procCallStack   , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_procCallStack   , DEFAULT_sample_procCallStack  ), DEFAULT_sample_procCallStack  , "Do 'select * from monProcessProcedures where SPID=spid' on every row in the table."    ));
+		list.add(new CmSettingsHelper("Get ASE Stacktrace"       , PROPKEY_sample_dbccStacktrace  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace  , DEFAULT_sample_dbccStacktrace ), DEFAULT_sample_dbccStacktrace , "Do 'dbcc stacktrace(spid)' on every row in the table."                                 ));
+		list.add(new CmSettingsHelper("Get Cached Plan in XML"   , PROPKEY_sample_cachedPlanInXml , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml), DEFAULT_sample_cachedPlanInXml, "Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table."          ));
+		list.add(new CmSettingsHelper("Get SPID's holding locks" , PROPKEY_sample_holdingLocks    , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_holdingLocks    , DEFAULT_sample_holdingLocks   ), DEFAULT_sample_holdingLocks   , "Include SPID's that holds locks even if that are not active in the server."            ));
+		
 		return list;
 	}
 
@@ -603,12 +633,18 @@ extends CountersModel
 	public void localCalculation(CounterSample prevSample, CounterSample newSample)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean getShowplan        = conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",        true);
-		boolean getMonSqltext      = conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",      true);
-		boolean getDbccSqltext     = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",     false);
-		boolean getProcCallStack   = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",   true);
-		boolean getDbccStacktrace  = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace",  false);
-		boolean getCachedPlanInXml = conf == null ? false: conf.getBooleanProperty(getName()+".sample.cachedPlanInXml", false);
+//		boolean getShowplan        = conf == null ? true : conf.getBooleanProperty(getName()+".sample.showplan",        true);
+//		boolean getMonSqltext      = conf == null ? true : conf.getBooleanProperty(getName()+".sample.monSqltext",      true);
+//		boolean getDbccSqltext     = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccSqltext",     false);
+//		boolean getProcCallStack   = conf == null ? true : conf.getBooleanProperty(getName()+".sample.procCallStack",   true);
+//		boolean getDbccStacktrace  = conf == null ? false: conf.getBooleanProperty(getName()+".sample.dbccStacktrace",  false);
+//		boolean getCachedPlanInXml = conf == null ? false: conf.getBooleanProperty(getName()+".sample.cachedPlanInXml", false);
+		boolean getShowplan        = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_showplan        , DEFAULT_sample_showplan       );
+		boolean getMonSqltext      = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_monSqlText      , DEFAULT_sample_monSqlText     );
+		boolean getDbccSqltext     = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_dbccSqlText     , DEFAULT_sample_dbccSqlText    );
+		boolean getProcCallStack   = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_procCallStack   , DEFAULT_sample_procCallStack  );
+		boolean getDbccStacktrace  = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace  , DEFAULT_sample_dbccStacktrace );
+		boolean getCachedPlanInXml = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml);
 
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID        = -1, pos_WaitEventDesc   = -1, pos_WaitClassDesc = -1, pos_SPID = -1;

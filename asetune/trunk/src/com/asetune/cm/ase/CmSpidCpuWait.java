@@ -129,7 +129,7 @@ extends CountersModel
 	public static final String  PROPKEY_sample_procCallStack      = PROP_PREFIX + ".sample.procCallStack";
 	public static final boolean DEFAULT_sample_procCallStack      = false;
 
-	public static final String  PROPKEY_sample_showplan           = PROP_PREFIX + ".sample.procCallStack";
+	public static final String  PROPKEY_sample_showplan           = PROP_PREFIX + ".sample.showplan";
 	public static final boolean DEFAULT_sample_showplan           = false;
 
 	public static final String  PROPKEY_sample_dbccStacktrace     = PROP_PREFIX + ".sample.dbccStacktrace";
