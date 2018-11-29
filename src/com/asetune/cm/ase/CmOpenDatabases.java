@@ -843,13 +843,13 @@ extends CountersModel
 		String OldestTranSqlText      = "OldestTranSqlText      = convert(text, null), \n";
 		String OldestTranShowPlanText = "OldestTranShowPlanText = convert(text, null), \n";
 
-		boolean getMonSqltext = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
-		if (getMonSqltext && aseVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
-		{
-			OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0) THEN query_text(h.spid) ELSE null END, \n";
-			// The below if we want to discard messages like: CmOpenDatabases: Received a Msg while reading the resultset from 'CmOpenDatabases', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The message text: The specified spid value '8' applies to a server internal process, which does not execute a query plan.
-			// OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0 AND exists(select 1 from master.dbo.sysprocesses p where p.spid = h.spid and p.suid != 0)) THEN query_text(h.spid) ELSE null END, \n"; 
-		}
+//		boolean getMonSqltext = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
+//		if (getMonSqltext && aseVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
+//		{
+//			OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0) THEN query_text(h.spid) ELSE null END, \n";
+//			// The below if we want to discard messages like: CmOpenDatabases: Received a Msg while reading the resultset from 'CmOpenDatabases', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The message text: The specified spid value '8' applies to a server internal process, which does not execute a query plan.
+//			// OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0 AND exists(select 1 from master.dbo.sysprocesses p where p.spid = h.spid and p.suid != 0)) THEN query_text(h.spid) ELSE null END, \n"; 
+//		}
 		
 		if ( ! canDoSelectOnSyslogshold )
 		{
