@@ -144,12 +144,12 @@ rem --- Source environment
 rem ------------------------------------------------------------------------
 rem set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.asetune\DBXTUNE.env.bat
 set DBXTUNE_USER_ENV_FILE=%systemdrive%%homepath%\.dbxtune\DBXTUNE.env.bat
-if exist %DBXTUNE_USER_ENV_FILE% (
+if exist "%DBXTUNE_USER_ENV_FILE%" (
 	echo .
 	echo -----------------------------------------------------------------------
 	echo Sourcing local environment from: %DBXTUNE_USER_ENV_FILE%
 	echo -----------------------------------------------------------------------
-	call %DBXTUNE_USER_ENV_FILE%
+	call "%DBXTUNE_USER_ENV_FILE%"
 ) else (
 	echo .
 	echo -----------------------------------------------------------------------
@@ -219,13 +219,13 @@ IF "%APP_NAME%" == "sqlw" (
 ) ELSE (
 	set DBXTUNE_JVM_PARAMETER_FILE=%HOMEDRIVE%%HOMEPATH%\.dbxtune\.dbxtune_jvm_settings.properties
 )
-if exist %DBXTUNE_JVM_PARAMETER_FILE% (
+if exist "%DBXTUNE_JVM_PARAMETER_FILE%" (
 	echo .
 	echo -----------------------------------------------------------------------
 	echo Reading DBXTUNE_JVM_PARAMETER_FILE: %DBXTUNE_JVM_PARAMETER_FILE%
 	echo -----------------------------------------------------------------------
 	setlocal disabledelayedexpansion
-	FOR /F "tokens=1* delims==" %%i IN (%DBXTUNE_JVM_PARAMETER_FILE%) DO (
+	FOR /F "tokens=1* delims==" %%i IN ("%DBXTUNE_JVM_PARAMETER_FILE%") DO (
 		echo     Found parameter '%%i' which is set to '%%j'
 		set "%%i=%%j"
 	)
@@ -457,7 +457,7 @@ rem set JVM_DEBUG_PROPS=%JVM_DEBUG_PROPS% -Dsun.io.serialization.extendedDebugIn
 rem ------------------------------------------------------------------------
 rem --- Some extra JVM PARAMS, out of memory
 rem ------------------------------------------------------------------------
-set JVM_OOM_PARAMS=-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=%DBXTUNE_SAVE_DIR%
+set JVM_OOM_PARAMS=-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath="%DBXTUNE_SAVE_DIR%"
 
 
 
