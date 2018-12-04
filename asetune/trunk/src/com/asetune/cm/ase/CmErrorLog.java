@@ -214,9 +214,15 @@ extends CountersModelAppend
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		// ABS Data from LAST refresh only
+		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
+
+		// DO NOTHING on FIRST refresh
 		if ( isFirstTimeSample() )
 		{
-			_logger.info("First time we check the errorlog, Alarms will NOT be checked, because it will include old error messages.");
+			String rowsInThisRefresh = " (Rows in first refresh was " + (lastRefreshRows == null ? "-null-" : lastRefreshRows.size()) + ")";
+
+			_logger.info("First time we check the errorlog, Alarms will NOT be checked, because it will include old error messages." + rowsInThisRefresh);
 			return;
 		}
 		
@@ -224,9 +230,6 @@ extends CountersModelAppend
 		
 //		CountersModel cm = this;
 //		String dbmsSrvName = this.getServerName();
-
-		// ABS Data from LAST refresh only
-		List<List<Object>> lastRefreshRows = getDataCollectionForLastRefresh();
 
 		// Exit early if NO ROWS
 		if (lastRefreshRows == null)
