@@ -23,7 +23,9 @@ extends AlarmEvent
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Old or No backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', for backup type '" + dumpType + "', Backup Age in Hours '" + age + "'. (threshold="+threshold+")",
+				"Old or No backup found in '" + cm.getServerName() + "', dbname='" + dbname + "', for backup type '" + dumpType + "', Backup Age in Hours '" + age + "'" 
+						+ (age == -1 ? ", (where -1 means: Since ASE was started)" : "") 
+						+ ". (threshold="+threshold+")",
 				threshold);
 
 		// Set: Time To Live if postpone is enabled

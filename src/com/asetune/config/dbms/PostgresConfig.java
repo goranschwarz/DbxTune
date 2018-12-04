@@ -428,24 +428,43 @@ extends DbmsConfigAbstract
 //System.out.println("RaxConfig.refresh(): read row...");
 					PostgresConfigEntry entry = new PostgresConfigEntry();
 
-//					1> select x.name, x.setting, x.unit, x.category, x.short_desc, x.extra_desc, x.context, x.vartype, x.source, x.min_val, x.max_val, x.enumvals, x.boot_val, x.reset_val
-//					2> from pg_catalog.pg_settings x
-//					RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
-//					RS> ---- ---------- ---------------------- ----------------- ------------
-//					RS> 1    name       java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 2    setting    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 3    unit       java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 4    category   java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 5    short_desc java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 6    extra_desc java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 7    context    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 8    vartype    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 9    source     java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 10   min_val    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 11   max_val    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 12   enumvals   java.sql.Types.ARRAY   _text             pg_settings 
-//					RS> 13   boot_val   java.sql.Types.VARCHAR text(2147483647)  pg_settings 
-//					RS> 14   reset_val  java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// 1> select 
+					// 2>        name 
+					// 3>       ,setting 
+					// 4>       ,unit 
+					// 5>       ,category 
+					// 6>       ,short_desc 
+					// 7>       ,extra_desc 
+					// 8>       ,context 
+					// 9>       ,vartype 
+					// 10>       ,source 
+					// 11>       ,min_val 
+					// 12>       ,max_val 
+					// 13>       ,enumvals 
+					// 14>       ,boot_val 
+					// 15>       ,reset_val 
+					// 16>       ,sourcefile 
+					// 17>       ,sourceline 
+					// 18> from pg_catalog.pg_settings
+					
+					// RS> Col# Label      JDBC Type Name         Guessed DBMS type Source Table
+					// RS> ---- ---------- ---------------------- ----------------- ------------
+					// RS> 1    name       java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 2    setting    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 3    unit       java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 4    category   java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 5    short_desc java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 6    extra_desc java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 7    context    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 8    vartype    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 9    source     java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 10   min_val    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 11   max_val    java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 12   enumvals   java.sql.Types.ARRAY   _text             pg_settings 
+					// RS> 13   boot_val   java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 14   reset_val  java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 15   sourcefile java.sql.Types.VARCHAR text(2147483647)  pg_settings 
+					// RS> 16   sourceline java.sql.Types.INTEGER int4              pg_settings 
 
 					//entry.isNonDefault     = Set this below: configValue != defaultValue
 					entry.configName         = rs.getString (1);

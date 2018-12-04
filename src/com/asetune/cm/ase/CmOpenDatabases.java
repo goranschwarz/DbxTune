@@ -164,8 +164,10 @@ extends CountersModel
 	
 	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
 	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB    = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
+	public static final String GRAPH_NAME_LOGSIZE_USED_MB    = "DbLogSizeUsedMbGraph";
 	public static final String GRAPH_NAME_LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
 	public static final String GRAPH_NAME_DATASIZE_LEFT_MB   = "DbDataSizeLeftMbGraph";
+	public static final String GRAPH_NAME_DATASIZE_USED_MB   = "DbDataSizeUsedMbGraph";
 	public static final String GRAPH_NAME_DATASIZE_USED_PCT  = "DbDataSizeUsedPctGraph";
 //	public static final String GRAPH_NAME_OLDEST_TRAN_IN_SEC = "OldestTranInSecGraph";
 	public static final String GRAPH_NAME_TEMPDB_USED_MB     = "TempdbUsedMbGraph";
@@ -205,6 +207,17 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_MB,
+			"DB Transaction Log Space used in MB",        // Menu CheckBox text
+			"DB Transaction Log Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
 			"DB Transaction Log Space used in PCT",     // Menu CheckBox text
 			"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
@@ -223,6 +236,17 @@ extends CountersModel
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
 			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_DATASIZE_USED_MB,
+			"DB Data Space used in MB",     // Menu CheckBox text
+			"DB Data Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false,  // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
@@ -1437,6 +1461,26 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
 		}
 
+		if (GRAPH_NAME_LOGSIZE_USED_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[dbMap.size()];
+			String[] lArray = new String[dbMap.size()];
+			int d = 0;
+			for (int row : dbMap.values())
+			{
+				String dbname = this.getAbsString       (row, "DBName");
+				Double dvalue = this.getAbsValueAsDouble(row, "LogSizeUsedInMb");
+
+				lArray[d] = dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
 		if (GRAPH_NAME_LOGSIZE_USED_PCT.equals(tgdp.getName()))
 		{
 			// Write 1 "line" for every database
@@ -1467,6 +1511,26 @@ extends CountersModel
 			{
 				String dbname = this.getAbsString       (row, "DBName");
 				Double dvalue = this.getAbsValueAsDouble(row, "DataSizeFreeInMb");
+
+				lArray[d] = dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_DATASIZE_USED_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[dbMap.size()];
+			String[] lArray = new String[dbMap.size()];
+			int d = 0;
+			for (int row : dbMap.values())
+			{
+				String dbname = this.getAbsString        (row, "DBName");
+				Double dvalue = this.getDiffValueAsDouble(row, "DataSizeUsedInMb");
 
 				lArray[d] = dbname;
 				dArray[d] = dvalue;
@@ -1627,9 +1691,16 @@ extends CountersModel
 
 		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
+		// If some databases (in Db/Log dump) is not available... we may still want to alarm, due to "any" reason
+		// So add those databases to the below list, and make decitions after looping all databases
+		List<String> examedDbList  = new ArrayList<>();
+		
 		for (int r=0; r<cm.getDiffRowCount(); r++)
 		{
 			String dbname = cm.getAbsString(r, "DBName");
+
+			// add examined DB's to list... so we can detect missing databases, and make alarms *after* the db-loop is done 
+			examedDbList.add(dbname);
 
 			//-------------------------------------------------------
 			// Long running transaction
@@ -1746,32 +1817,70 @@ extends CountersModel
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastDbBackupAgeInHours"))
 			{
 				Double val = cm.getAbsValueAsDouble(r, "LastDbBackupAgeInHours");
-				if (val != null)
+				if (val == null)
+					val = -1.0;
+				
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
+				if (val.intValue() > threshold || val.intValue() < 0)
 				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
-					if (val.intValue() > threshold)
+					// Get config 'skip some transaction names'
+					String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs);
+					String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs);
+					String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
+					String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
+
+					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+					boolean doAlarm = true;
+
+					// if -1 (LastTranLogDumpTime=NULL), only alarm if we have anything in the keep* or skip* rules
+					if (val.intValue() < 0 && StringUtil.isNullOrBlankForAll(keepDbRegExp, skipDbRegExp, keepSrvRegExp, skipSrvRegExp))
+						doAlarm = false;
+					
+					// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+					// Below is more readable, from a variable context point-of-view, but HARDER to understand
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+
+					// NO match in the SKIP regexp
+					if (doAlarm)
 					{
-						// Get config 'skip some transaction names'
-						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs);
-						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs);
-						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
-						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
-
-						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
-						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
-
-						// NO match in the SKIP regexp
-						if (doAlarm)
-						{
-							alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
-						}
+						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
 					}
 				}
+
+//				if (val < 0)
+//				{
+//					// Alarm on NO DATA backup?
+//					fixme
+//				}
+//				else
+//				{
+//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastDbBackupAgeInHours, DEFAULT_alarm_LastDbBackupAgeInHours);
+//					if (val.intValue() > threshold)
+//					{
+//						// Get config 'skip some transaction names'
+//						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForDbs,  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs);
+//						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastDbBackupAgeInHoursSkipDbs);
+//						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursForSrv,  DEFAULT_alarm_LastDbBackupAgeInHoursForSrv);
+//						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastDbBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv);
+//
+//						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+//						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+//						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+//
+//						// NO match in the SKIP regexp
+//						if (doAlarm)
+//						{
+//							alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
+//						}
+//					}
+//				}
 			}
 
 			//-------------------------------------------------------
@@ -1780,31 +1889,68 @@ extends CountersModel
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("LastLogBackupAgeInHours"))
 			{
 				Double val = cm.getAbsValueAsDouble(r, "LastLogBackupAgeInHours");
-				if (val != null)
+				if (val == null)
+					val = -1.0;
+				
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours, DEFAULT_alarm_LastLogBackupAgeInHours);
+				if (val.intValue() > threshold || val.intValue() < 0)
 				{
-					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours, DEFAULT_alarm_LastLogBackupAgeInHours);
-					if (val.intValue() > threshold)
-					{
-						// Get config 'skip some transaction names'
-						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForDbs,  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs);
-						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs);
-						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForSrv,  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv);
-						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv);
+					// Get config 'skip some transaction names'
+					String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForDbs,  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs);
+					String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs);
+					String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForSrv,  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv);
+					String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv);
 
-						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
-						// Below is more readable, from a variable context point-of-view, but HARDER to understand
-						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
-						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
-						
-						if (doAlarm)
-						{
-							alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
-						}
+					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+					boolean doAlarm = true;
+
+					// if -1 (BackupStartTime=NULL), only alarm if we have anything in the keep* or skip* rules
+					if (val.intValue() < 0 && StringUtil.isNullOrBlankForAll(keepDbRegExp, skipDbRegExp, keepSrvRegExp, skipSrvRegExp))
+						doAlarm = false;
+					
+					// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+					// Below is more readable, from a variable context point-of-view, but HARDER to understand
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+					
+					if (doAlarm)
+					{
+						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
 					}
 				}
+
+//				if (val < 0)
+//				{
+//					// Alarm on NO LOG backup?
+//					fixme
+//				}
+//				else
+//				{
+//					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_LastLogBackupAgeInHours, DEFAULT_alarm_LastLogBackupAgeInHours);
+//					if (val.intValue() > threshold)
+//					{
+//						// Get config 'skip some transaction names'
+//						String keepDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForDbs,  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs);
+//						String skipDbRegExp  = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs, DEFAULT_alarm_LastLogBackupAgeInHoursSkipDbs);
+//						String keepSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursForSrv,  DEFAULT_alarm_LastLogBackupAgeInHoursForSrv);
+//						String skipSrvRegExp = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LastLogBackupAgeInHoursSkipSrv, DEFAULT_alarm_LastLogBackupAgeInHoursSkipSrv);
+//
+//						// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+//						// Below is more readable, from a variable context point-of-view, but HARDER to understand
+//						boolean doAlarm = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepDbRegExp)  ||   dbname     .matches(keepDbRegExp ))); //     matches the KEEP Db  regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepSrvRegExp) ||   dbmsSrvName.matches(keepSrvRegExp))); //     matches the KEEP Srv regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipDbRegExp)  || ! dbname     .matches(skipDbRegExp ))); // NO match in the SKIP Db  regexp
+//						doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipSrvRegExp) || ! dbmsSrvName.matches(skipSrvRegExp))); // NO match in the SKIP Srv regexp
+//						
+//						if (doAlarm)
+//						{
+//							alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
+//						}
+//					}
+//				}
 			}
 			
 			//-------------------------------------------------------
@@ -1898,7 +2044,28 @@ extends CountersModel
 					}
 				}
 			}
-		}
+		} // end: loop dbnames
+
+	
+		// Check if all Mandatory databases has been checked
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("MandatoryDatabaseList"))
+//		{
+//			String dbListStr = Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_MandatoryDatabaseList, DEFAULT_alarm_MandatoryDatabaseList);
+//			if (StringUtil.hasValue(dbListStr))
+//			{
+//				List<String> dbList = StringUtil.parseCommaStrToList(dbListStr);
+//				for (String dbNameRegEx : dbList)
+//				{
+//					List<String> matches = StringUtil.getMatchingStrings(examedDbList, dbNameRegEx);
+//					if ( matches.size() != 1 )
+//					{
+//						System.out.println("ALARM: MandatoryDatabaseList: Missing entry '"+dbNameRegEx+"' [matches.size()="+matches.size()+", matchesEntries="+matches+"], in the list of examed databases '"+examedDbList+"'.");
+//						//FIXME: make alarm here
+//					}
+//				}
+//			}
+//		}
+		
 	}
 
 	/**
@@ -2086,7 +2253,7 @@ extends CountersModel
 	public static final int     DEFAULT_alarm_LastBackupFailed                = 0;
 
 	public static final String  PROPKEY_alarm_LastDbBackupAgeInHours          = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.gt";
-	public static final int     DEFAULT_alarm_LastDbBackupAgeInHours          = 24*365*10; // 10 years; more or less disabled
+	public static final int     DEFAULT_alarm_LastDbBackupAgeInHours          = 999_999; // 114 years; more or less disabled
 	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursForDbs    = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.for.dbs";
 	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursForDbs    = "";
 	public static final String  PROPKEY_alarm_LastDbBackupAgeInHoursSkipDbs   = CM_NAME + ".alarm.system.if.LastDbBackupAgeInHours.skip.dbs";
@@ -2097,7 +2264,7 @@ extends CountersModel
 	public static final String  DEFAULT_alarm_LastDbBackupAgeInHoursSkipSrv   = "";
 
 	public static final String  PROPKEY_alarm_LastLogBackupAgeInHours         = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.gt";
-	public static final int     DEFAULT_alarm_LastLogBackupAgeInHours         = 24*365*10; // 10 years; more or less disabled
+	public static final int     DEFAULT_alarm_LastLogBackupAgeInHours         = 999_999; // 114 years; more or less disabled
 	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursForDbs   = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.for.dbs";
 	public static final String  DEFAULT_alarm_LastLogBackupAgeInHoursForDbs   = "";
 	public static final String  PROPKEY_alarm_LastLogBackupAgeInHoursSkipDbs  = CM_NAME + ".alarm.system.if.LastLogBackupAgeInHours.skip.dbs";
@@ -2119,6 +2286,11 @@ extends CountersModel
 	public static final String  PROPKEY_alarm_LowLogFreeSpaceInPct            = CM_NAME + ".alarm.system.if.LowLogFreeSpaceInPct.gt";
 	public static final String  DEFAULT_alarm_LowLogFreeSpaceInPct            = "";
 
+	// A comma separated list of databases that *must* exists, othewise ALARM. (the dbname can be a regexp, but each entry in the list must have a count of 1 after we have looped all records)
+	// TODO: NOT YET IMPLEMENTED... think a bit more about this...
+//	public static final String  PROPKEY_alarm_MandatoryDatabaseList           = CM_NAME + ".alarm.system.MandatoryDatabaseList";
+//	public static final String  DEFAULT_alarm_MandatoryDatabaseList           = "";
+	
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
@@ -2148,6 +2320,8 @@ extends CountersModel
 		list.add(new CmSettingsHelper("LowDbFreeSpaceInPct",              PROPKEY_alarm_LowDbFreeSpaceInPct             , String.class, conf.getProperty    (PROPKEY_alarm_LowDbFreeSpaceInPct             , DEFAULT_alarm_LowDbFreeSpaceInPct            ), DEFAULT_alarm_LowDbFreeSpaceInPct            , "If 'LowDbFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowDbFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)"   , new MapNumberValidator()));
 		list.add(new CmSettingsHelper("LowLogFreeSpaceInPct",             PROPKEY_alarm_LowLogFreeSpaceInPct            , String.class, conf.getProperty    (PROPKEY_alarm_LowLogFreeSpaceInPct            , DEFAULT_alarm_LowLogFreeSpaceInPct           ), DEFAULT_alarm_LowLogFreeSpaceInPct           , "If 'LowLogFreeSpaceInPct' is less than ## Percent then send 'AlarmEventLowLogFreeSpace'.format: db1=#, db2=#, db3=#  (Note: the 'dbname' can use regexp)" , new MapNumberValidator()));
 
+//		list.add(new CmSettingsHelper("MandatoryDatabaseList",            PROPKEY_alarm_MandatoryDatabaseList           , String.class, conf.getProperty    (PROPKEY_alarm_MandatoryDatabaseList           , DEFAULT_alarm_MandatoryDatabaseList          ), DEFAULT_alarm_MandatoryDatabaseList          , "A list of databases that needs to be present. This is a comma separated list of databases (each name can contain regex)" ));
+		
 		return list;
 	}
 

@@ -61,6 +61,20 @@ public class JdbcUrlParserTest
 		assertEquals("localhost",       JdbcUrlParser.parse(url).getHost());
 		assertEquals("localhost:12345", JdbcUrlParser.parse(url).getHostPortStr());
 		
+		url = "jdbc:postgresql://host1:5432/postgres";
+		p = JdbcUrlParser.parse(url);
+//		System.out.println("--- x:" + p);
+		assertEquals(5432,         JdbcUrlParser.parse(url).getPort());
+		assertEquals("host1",      JdbcUrlParser.parse(url).getHost());
+		assertEquals("host1:5432", JdbcUrlParser.parse(url).getHostPortStr());
+		
+		url = "jdbc:postgresql://host1/postgres";
+		p = JdbcUrlParser.parse(url);
+//		System.out.println("--- x:" + p);
+		assertEquals(-1,      JdbcUrlParser.parse(url).getPort());
+		assertEquals("host1", JdbcUrlParser.parse(url).getHost());
+		assertEquals("host1", JdbcUrlParser.parse(url).getHostPortStr());
+		
 	}
 
 }

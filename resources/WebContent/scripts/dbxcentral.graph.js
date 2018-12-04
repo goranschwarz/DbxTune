@@ -2013,6 +2013,7 @@ function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleVal
 			if (_debug > 0)
 				console.log('DONE: loading data for cmName='+cmName+', graphName='+graphName);
 
+			// Also do this if error happened, otherwise we wont load anymore data
 			const pct = Math.round( (indexToLoad+1) / _graphMap.length * 100);
 			$('#progressBar').css('width', pct+'%');
 			$('#progressBar').html(pct+'%');
@@ -2026,7 +2027,6 @@ function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleVal
 				// Load next GRAPH in 10 ms
 				setTimeout( loadDataForGraph(indexToLoad + 1, startTime, endTime, sampleType, sampleValue), 1);
 			}
-
 		},
 		error: function(xhr, desc, err) 
 		{
@@ -2036,6 +2036,21 @@ function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleVal
 //				$("#api-feedback").html("<strong>ERROR Details:</strong> " + desc + "<br /><strong>Error:</strong> " + err + "<br /><strong>ResponseText:</strong> " + xhr["responseText"] + "<br />");
 //				$("#dialog-tab-prevReviewNote").html("<strong>ERROR Details:</strong> " + desc + "<br /><strong>Error:</strong> " + err + "<br /><strong>ResponseText:</strong> " + xhr["responseText"] + "<br />");
 //				$("#dialog-tab-prevReviewNote").css("color", "red");
+
+			// Also do this if error happened, otherwise we wont load anymore data
+			const pct = Math.round( (indexToLoad+1) / _graphMap.length * 100);
+			$('#progressBar').css('width', pct+'%');
+			$('#progressBar').html(pct+'%');
+			// $('#progressDiv').html("Done loading: "+cmName+' - '+graphName);
+			if (pct === 100)
+			{
+				graphLoadIsComplete();
+			}
+			else
+			{
+				// Load next GRAPH in 10 ms
+				setTimeout( loadDataForGraph(indexToLoad + 1, startTime, endTime, sampleType, sampleValue), 1);
+			}
 		}
 	}); // end: ajax call
 }
