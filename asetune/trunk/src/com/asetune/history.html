@@ -54,6 +54,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
 		<LI>Axis Labels on graphs now has K/M/G/P for large values</LI>
+		<LI>If we get errors when loading a graph/chart, don't stop, just continue with next.</LI>
 		<LI>Minor layout changes of some html pages</LI>
 	</UL>
 
@@ -106,6 +107,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Option to disable SQL-Text and Showplan for open transactions.<br>
 			<code>CmOpenDatabases.sample.monSqltext=true</code><br>
 			<code>CmOpenDatabases.sample.showplan</code><br>
+			</li>
+			<li>New graph: DbDataSizeUsedMbGraph - DB Data Space used in MB</li>
+			<li>New graph: DbLogSizeUsedMbGraph  - DB Transaction Log Space used in MB</li>
+			<li>Smaller changes the Alarm functionality for 'LastDbBackupAgeInHours' and 'LastLogBackupAgeInHours'<br>
+			   - If 'BackupStartTime=NULL' or 'LastTranLogDumpTime=NULL' AND any of the keep* or skip* rules are available<br>
+			   Then send alarm (AlarmEventOldBackup) when ASE has not yet made any backups<br>
+			   This so we can easier trap if any backup jobs has *stopped* working *after* a ASE reboot
 			</li>
 		</ul>
 		</LI>
@@ -211,6 +219,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>No need to have the initial connection pointing to the 'postgres' database for collectors that iterates over databases</LI>
 		<LI>in DatabaseIterator only lookup the databases where we are authorized</LI>
+		<LI>CmPgTableSize: do NOT include schema 'information_schema', 'pg_catalog', 'pg_toast'</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

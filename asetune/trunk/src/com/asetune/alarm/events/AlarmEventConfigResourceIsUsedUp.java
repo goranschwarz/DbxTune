@@ -14,7 +14,7 @@ extends AlarmEvent
 				Version.getAppName(), // serviceType
 				cm.getServerName(),   // serviceName
 				cm.getName(),         // serviceInfo    // Note: use cm.getName() will cause one event for every CM. If we set this to "", then there will only be one Alarm for the whole server
-				null,                 // extraInfo
+				cfgName,              // extraInfo
 				AlarmEvent.Category.SRV_CONFIG,
 				errorNumber > 0 ? AlarmEvent.Severity.ERROR : AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.AFFECTED, 

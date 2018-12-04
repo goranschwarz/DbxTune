@@ -49,7 +49,12 @@ public class JdbcUrlParser
 			return _hostPortStr;
 		
 		if (StringUtil.hasValue(getHost()))
-			return getHost() + ":" + getPort();
+		{
+			if (getPort() != -1)
+				return getHost() + ":" + getPort();
+			else
+				return getHost();
+		}
 
 		return null;
 	}

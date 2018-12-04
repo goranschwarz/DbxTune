@@ -338,6 +338,32 @@ public class StringUtil
 	}
 
 	/**
+	 * Finds all entries in the list that matches the regex
+	 * 
+	 * @param  list    The list of strings to check
+	 * @param  regex   The regular expression to use
+	 * 
+	 * @return list containing the entries of all matching entries, if none found it's an empty list
+	 */
+	public static List<String> getMatchingStrings(List<String> list, String regex) 
+	{
+		ArrayList<String> matches = new ArrayList<>();
+
+		Pattern p = Pattern.compile(regex);
+
+		for (String str : list) 
+		{
+			if (p.matcher(str).matches()) 
+			{
+				matches.add(str);
+			}
+		}
+
+		return matches;
+	}
+
+	
+	/**
 	 * Parsers a comma separated list and returns a ArrayList which holds all values.<br>
 	 * The entries will be trimmed()...
 	 * @param str a comma separated list
@@ -1073,6 +1099,20 @@ public class StringUtil
 	private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]*>");
 
 	/**
+	 * For the moment, quite simple just a regex "<[^>]*>" to check 
+	 * 
+	 * @param a String to check for html tags
+	 * @return true if any html tags is available 
+	 */
+	public static boolean containsHtml(String in)
+	{
+		if (in == null)
+			return false;
+
+		return HTML_TAG_PATTERN.matcher(in).find();
+	}
+	
+	/**
 	 * Remove any trailing white spaces and newlines
 	 * @param str
 	 * @return
@@ -1193,6 +1233,21 @@ public class StringUtil
 	}
 
 	/**
+	 * same as isNullOrBlank() but for many fields
+	 * @param str String(s) to check
+	 * @return true if null/blank, false if str(s) contains anything else
+	 */
+	public static boolean isNullOrBlankForAll(String... inputs)
+	{
+		for (String str : inputs)
+		{
+			if ( ! isNullOrBlank(str) )
+				return false;
+		}
+		return true;
+	}
+	
+	/**
 	 * Checks if a string is null or an empty string "" or a blank string (only spaces in string)
 	 * @param str String to check
 	 * @return true if null/blank, false if str contains anything else
@@ -1219,6 +1274,21 @@ public class StringUtil
 		}
 		return true;
 	}
+	/**
+	 * same as hasValue() but for many fields
+	 * @param str
+	 * @return
+	 */
+	public static boolean hasValueForAll(String... inputs)
+	{
+		for (String str : inputs)
+		{
+			if ( isNullOrBlank(str) )
+				return false;
+		}
+		return true;
+	}
+
 	/**
 	 * if NOT null or NOT empty, simply do: return ! isNullOrBlank(str)
 	 * @param str

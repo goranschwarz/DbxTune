@@ -1734,6 +1734,11 @@ public class ResultSetTableModel
 				if (StringUtil.isNullOrBlank(strVal))
 					strVal = "&nbsp;";
 
+				// Translate NL to <br> it it's not already a HTML string.
+				// or maybe: wrap it with <pre>"strVal"</pre> instead
+				if ( ! StringUtil.containsHtml(strVal) )
+					strVal = strVal.replace("\n", "<br>");
+				
 				sb.append("  <tr>\n");
 				sb.append("    <td").append(tBodyNoWrapStr).append("><b>").append(colName).append("</b></td>\n");
 				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>\n");

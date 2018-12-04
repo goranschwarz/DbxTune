@@ -178,6 +178,7 @@ extends CountersModel
 			"      FROM pg_class c \n" +
 			"      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace \n" +
 			"      WHERE relkind = 'r' \n" +
+			"        AND n.nspname NOT IN('information_schema', 'pg_catalog', 'pg_toast') \n" +
 			"  ) a \n" +
 			") a \n" +
 			"";
