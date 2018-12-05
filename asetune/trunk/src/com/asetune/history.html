@@ -33,10 +33,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Improved startup time...</LI>
 		<LI>Alarms
 			<UL>
-				<LI>New: AlarmWriterToSlack -- Send messages to Slack</LI>
-				<LI>new: AlarmEventConfigResourceIsLow -- When DBMS is low on configured resources</LI>
+				<LI>New: AlarmWriterToSlack               -- Send messages to Slack</LI>
+				<LI>new: AlarmEventConfigResourceIsLow    -- When DBMS is low on configured resources</LI>
 				<LI>new: AlarmEventConfigResourceIsUsedUp -- When DBMS is out off configured resources</LI>
-				<LI>new: AlarmEventErrorLogEntry -- When some defined error messages is written to the DBMS Error log</LI>
+				<LI>new: AlarmEventErrorLogEntry          -- When some defined error messages is written to the DBMS Error log</LI>
+				<LI>new: AlarmEventOldTranLogBackup       -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
 				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
 				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
 				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>

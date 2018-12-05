@@ -28,6 +28,7 @@ import com.asetune.alarm.events.AlarmEventLongRunningTransaction;
 import com.asetune.alarm.events.AlarmEventLowDbFreeSpace;
 import com.asetune.alarm.events.AlarmEventLowLogFreeSpace;
 import com.asetune.alarm.events.AlarmEventOldBackup;
+import com.asetune.alarm.events.AlarmEventOldTranLogBackup;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.MapNumberValidator;
 import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
@@ -1846,7 +1847,7 @@ extends CountersModel
 					// NO match in the SKIP regexp
 					if (doAlarm)
 					{
-						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "DB", dbname, val.intValue()) );
+						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, dbname, val.intValue()) );
 					}
 				}
 
@@ -1917,7 +1918,7 @@ extends CountersModel
 					
 					if (doAlarm)
 					{
-						alarmHandler.addAlarm( new AlarmEventOldBackup(cm, threshold, "LOG", dbname, val.intValue()) );
+						alarmHandler.addAlarm( new AlarmEventOldTranLogBackup(cm, threshold, dbname, val.intValue()) );
 					}
 				}
 
