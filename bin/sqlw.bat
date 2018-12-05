@@ -3,4 +3,4 @@ setlocal
 
 set STARTDIR=%~dp0
 
-call %STARTDIR%\dbxtune.bat sqlw %*
+call "%STARTDIR%\dbxtune.bat" sqlw %*
