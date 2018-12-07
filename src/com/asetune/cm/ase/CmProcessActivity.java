@@ -514,7 +514,7 @@ extends CountersModel
 			+ sp_1254 + ClientRemotePort
 			+ "  MP.DBName, MP.Login, SP.suid, MP.SecondsConnected, \n"
 			+ "  SP.loggedindatetime, SP.cpu, SP.physical_io, SP.memusage, \n"
-			+ "  A.CPUTime, A.WaitTime, " + RowsAffected + "A.LogicalReads, \n"
+			+ "  A.CPUTime, A.WaitTime, A.LocksHeld, " + RowsAffected + "A.LogicalReads, \n"
 			+ "  A.PhysicalReads, A.PagesRead, A.PhysicalWrites, A.PagesWritten, \n"
 			+ sp_15702 + IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702;
 		cols2 += "";
@@ -534,7 +534,7 @@ extends CountersModel
 		}
 		cols3+=""
 			+ "  A.TableAccesses, A.IndexAccesses, A.TempDbObjects, \n"
-			+ "  A.ULCBytesWritten, A.ULCFlushes, A.ULCFlushFull, \n"
+			+ "  A.ULCBytesWritten, A.ULCFlushes, A.ULCFlushFull, A.ULCMaxUsage, A.ULCCurrentUsage, \n"
 			+ "  A.Transactions, A.Commits, A.Rollbacks, \n"
 			+ "  MP.EngineNumber, MP.Priority, \n"
 			+ sp_1570 + HeapMemoryInUseKB + HeapMemoryUsedHWM_KB + HeapMemoryReservedKB + HeapMemoryAllocs + nl_1570
