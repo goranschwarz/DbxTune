@@ -1239,6 +1239,9 @@ public class StringUtil
 	 */
 	public static boolean isNullOrBlankForAll(String... inputs)
 	{
+		if (inputs == null)
+			return true;
+		
 		for (String str : inputs)
 		{
 			if ( ! isNullOrBlank(str) )
@@ -1281,6 +1284,9 @@ public class StringUtil
 	 */
 	public static boolean hasValueForAll(String... inputs)
 	{
+		if (inputs == null)
+			return false;
+		
 		for (String str : inputs)
 		{
 			if ( isNullOrBlank(str) )
