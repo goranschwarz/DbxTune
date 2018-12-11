@@ -80,7 +80,7 @@ extends MonTablesDictionary
 
 				setDbmsExecutableVersionStr( versionStr );
 				
-				int versionNum = Ver.sybVersionStringToNumber(versionStr);
+				long versionNum = Ver.sybVersionStringToNumber(versionStr);
 				setDbmsExecutableVersionNum( versionNum );
 
 //System.out.println("Setting RS VersionNum = "+versionNum);

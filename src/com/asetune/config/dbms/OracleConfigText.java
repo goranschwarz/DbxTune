@@ -32,6 +32,6 @@ public abstract class OracleConfigText
 		@Override public    String     getTabLabel()                       { return "NLS Params"; }
 		@Override public    String     getName()                           { return ConfigType.OraNlsParams.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from v$nls_parameters"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from v$nls_parameters"; }
 	}
 }

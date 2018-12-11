@@ -296,13 +296,13 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 
 		if (mtd.getDbmsExecutableVersionNum() <= 0)
 		{
-			_logger.debug("MonTablesDictionary aseVersionNum is zero, stopping here.");
+			_logger.debug("MonTablesDictionary srvVersionNum is zero, stopping here.");
 			return null;
 		}
 
 		if (mtd.getDbmsMonTableVersionNum() > 0 && mtd.getDbmsExecutableVersionNum() != mtd.getDbmsMonTableVersionNum())
 		{
-			_logger.info("MonTablesDictionary aseVersionNum("+mtd.getDbmsExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getDbmsMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
+			_logger.info("MonTablesDictionary srvVersionNum("+mtd.getDbmsExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getDbmsMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
 			return null;
 		}
 

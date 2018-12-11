@@ -167,7 +167,7 @@ extends DbmsConfigAbstract
 	private ArrayList<String>              _configSectionList = null;
 
 	private String _aseName = "";
-	private String _aseVersion = "";
+	private String _srvVersion = "";
 	
 	public class AseConfigEntry
 	{
@@ -301,18 +301,18 @@ extends DbmsConfigAbstract
 		_configSectionList = new ArrayList<String>();
 		
 		_aseName    = conn.getDbmsServerName();
-		_aseVersion = conn.getDbmsVersionStr();
+		_srvVersion = conn.getDbmsVersionStr();
 
 // version
 //		try
 //		{
-//			String aseVersionStr = null;
+//			String srvVersionStr = null;
 //
 //			Statement stmt = conn.createStatement();
 //			ResultSet rs = stmt.executeQuery("select @@version");
 //			while ( rs.next() )
 //			{
-//				aseVersionStr = rs.getString(1);
+//				srvVersionStr = rs.getString(1);
 //			}
 //			rs.close();
 //		}
@@ -713,7 +713,7 @@ extends DbmsConfigAbstract
 		sb.append("** Reverse engineering ").append(modelRows.length).append(" entries. \n");
 		sb.append("** At Date:         ").append(new Timestamp(System.currentTimeMillis())).append("\n");
 		sb.append("** ASE Server name: ").append(_aseName).append("\n");
-		sb.append("** ASE Version:     ").append(_aseVersion).append("\n");
+		sb.append("** ASE Version:     ").append(_srvVersion).append("\n");
 		sb.append("*/ \n");
 		sb.append("\n");
 		for (int r=0; r<modelRows.length; r++)

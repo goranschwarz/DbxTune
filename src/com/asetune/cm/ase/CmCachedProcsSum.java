@@ -42,9 +42,9 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	public static final int      NEED_SRV_VERSION = 1550000;
-	public static final int      NEED_SRV_VERSION = Ver.ver(15,5);
-	public static final int      NEED_CE_VERSION  = 0;
+//	public static final long     NEED_SRV_VERSION = 1550000;
+	public static final long     NEED_SRV_VERSION = Ver.ver(15,5);
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedProcedures"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -127,7 +127,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 //		if (srvVersion >= 1570000)
 		if (srvVersion >= Ver.ver(15,7))
@@ -137,7 +137,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -176,7 +176,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -191,7 +191,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols = "";
 		int    orderByColumnNumber = 8; // order by column 'SumRequestCnt'
@@ -211,8 +211,8 @@ extends CountersModel
 		String AvgPhysicalWrites = ""; // xxx / ExecutionCount
 		String AvgPagesWritten   = ""; // xxx / ExecutionCount
 
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			SumExecutionCount = "  SumExecutionCount     = sum(convert(bigint,ExecutionCount)), \n";
 			SumCPUTime        = "  SumCPUTime            = sum(convert(bigint,CPUTime)), \n";
@@ -234,7 +234,7 @@ extends CountersModel
 		String SumActive      = ""; // Indicates whether the plan for this procedure is active or not
 		String ase1600_nl     = "";
 
-		if (aseVersion >= Ver.ver(16,0))
+		if (srvVersion >= Ver.ver(16,0))
 		{
 			SumActive      = "  SumActive = sum(CASE WHEN lower(Active) = 'yes' THEN 1 ELSE 0 END), ";
 			ase1600_nl     = "\n";
@@ -251,7 +251,7 @@ extends CountersModel
 		String AvgSnapJITTime        = ""; // xxx / SnapExecutionCount
 		String AvgSnapExecutionTime  = ""; // xxx / SnapExecutionCount
 
-		if (aseVersion >= Ver.ver(16,0,0, 2))
+		if (srvVersion >= Ver.ver(16,0,0, 2))
 		{
 			SumSnapCodegenTime    = "  SumSnapCodegenTime    = sum(convert(bigint,SnapCodegenTime   )), \n";
 			SumSnapJITTime        = "  SumSnapJITTime        = sum(convert(bigint,SnapJITTime       )), \n";

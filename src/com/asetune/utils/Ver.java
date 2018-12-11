@@ -2,6 +2,12 @@ package com.asetune.utils;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.DbmsVersionHelperOracle;
+import com.asetune.sql.DbmsVersionHelperSimple;
+import com.asetune.sql.DbmsVersionHelperSqlServer;
+import com.asetune.sql.DbmsVersionHelperSybase;
+import com.asetune.sql.IDbmsVersionHelper;
+
 public class Ver
 {
 	private static Logger _logger = Logger.getLogger(Ver.class);
@@ -29,50 +35,187 @@ public class Ver
 //		return (ver*100000) + (sp*100) + pl;
 //	}
 
+//	/**
+//	 * compose a long integer version number (9 digits, MMMMSSSPP) based on the more readable input
+//	 *
+//	 * @param major 2 digit number
+//	 * @param minor 1 digit number
+//	 * @param maint 1 digit number
+//	 * @param sp    3 digit number (ex: 1, 50, 101)
+//	 * @param pl    2 digit number (ex: 1)
+//	 * @return
+//	 * 
+//	 * @return a 9 digit number MMMMSSSPP  (MMMM=mainVersion, SSS=ServicePack/ESD#, PP=PatchLevel/ESD#SubLevel)
+//	 */
+//	public static int ver(int major, int minor, int maint, int sp, int pl)
+//	{
+//		if (major < 10 && majorVersion_mustBeTenOrAbove)
+//			_logger.warn("Version Converter. major="+major+", minor="+minor+",maint="+maint+",sp="+sp+", pl="+pl+". Major must be above 10 otherwise the calcuation will be wrong.");
+//
+//		return    (major * 100_000_00)
+//				+ (minor *  10_000_00)
+//				+ (maint *   1_000_00)
+//				+ (sp    *       1_00)
+//				+ pl
+//				;
+//	}
+//
+//	public static int ver(int major, int minor, int maint, int sp)
+//	{
+//		return ver(major, minor, maint, sp, 0);
+//	}
+//
+//	public static int ver(int major, int minor, int maint)
+//	{
+//		return ver(major, minor, maint, 0, 0);
+//	}
+//
+//	public static int ver(int major, int minor)
+//	{
+//		return ver(major, minor, 0, 0, 0);
+//	}
 	/**
 	 * compose a long integer version number (9 digits, MMMMSSSPP) based on the more readable input
 	 *
-	 * @param major 2 digit number
-	 * @param minor 1 digit number
-	 * @param maint 1 digit number
-	 * @param sp    3 digit number (ex: 1, 50, 101)
-	 * @param pl    2 digit number (ex: 1)
+	 * @param major 1-2 digit number
+	 * @param minor 1-2 digit number
+	 * @param maint 1-2 digit number
+	 * @param sp    1-4 digit number (ex: 1, 50, 101)
+	 * @param pl    1-4 digit number (ex: 1)
 	 * @return
 	 * 
-	 * @return a 9 digit number MMMMSSSPP  (MMMM=mainVersion, SSS=ServicePack/ESD#, PP=PatchLevel/ESD#SubLevel)
+	 * @return a 13+ digit number MmMmMmSsssPppp  (Mm=mainVersion, Mm=minorVersion, Mm=maintenanceVersion, Ssss=ServicePack/ESD#, Pppp=PatchLevel/ESD#SubLevel)
 	 */
-	public static int ver(int major, int minor, int maint, int sp, int pl)
+	public static long ver(int major, int minor, int maint, int sp, int pl)
 	{
-		if (major < 10 && majorVersion_mustBeTenOrAbove)
-			_logger.warn("Version Converter. major="+major+", minor="+minor+",maint="+maint+",sp="+sp+", pl="+pl+". Major must be above 10 otherwise the calcuation will be wrong.");
+//		if (major < 10 && majorVersion_mustBeTenOrAbove)
+//			_logger.warn("Version Converter. major="+major+", minor="+minor+",maint="+maint+",sp="+sp+", pl="+pl+". Major must be above 10 otherwise the calcuation will be wrong.");
 
-		return    (major * 10000000)
-				+ (minor * 1000000)
-				+ (maint * 100000)
-				+ (sp    * 100)
-				+ pl
-				;
+//		return    (major * 1_00_00_0000_0000L)
+//				+ (minor *    1_00_0000_0000L)
+//				+ (maint *       1_0000_0000L)
+//				+ (sp    *            1_0000L)
+//				+ pl
+//				;
+		long v1 = (long) major * 1_00_00_0000_0000L;
+		long v2 = (long) minor *    1_00_0000_0000L;
+		long v3 = (long) maint *       1_0000_0000L;
+		long v4 = (long) sp    *            1_0000L;
+		long v5 = (long) pl;
+
+//		System.out.println("v1["+StringUtil.right(""+major,4)+"] - "+v1);
+//		System.out.println("v2["+StringUtil.right(""+minor,4)+"] - "+v2);
+//		System.out.println("v3["+StringUtil.right(""+maint,4)+"] - "+v3);
+//		System.out.println("v4["+StringUtil.right(""+sp   ,4)+"] - "+v4);
+//		System.out.println("v5["+StringUtil.right(""+pl   ,4)+"] - "+v5);
+//		System.out.println("<<<- "+(v1 + v2 + v3 + v4 + v5));
+		
+		return v1 + v2 + v3 + v4 + v5;
 	}
 
-	public static int ver(int major, int minor, int maint, int sp)
+	public static long ver(int major, int minor, int maint, int sp)
 	{
 		return ver(major, minor, maint, sp, 0);
 	}
 
-	public static int ver(int major, int minor, int maint)
+	public static long ver(int major, int minor, int maint)
 	{
 		return ver(major, minor, maint, 0, 0);
 	}
 
-	public static int ver(int major, int minor)
+	public static long ver(int major, int minor)
 	{
 		return ver(major, minor, 0, 0, 0);
 	}
 
 	
 	
+
+	private static IDbmsVersionHelper _dbmsVersionHelper = null;
+	public static IDbmsVersionHelper getDbmsVersionHelper() { return _dbmsVersionHelper; }
+	public static void setDbmsVersionHelper(IDbmsVersionHelper helper) { _dbmsVersionHelper = helper; }
+
+	public static String versionNumToStr(long version)
+	{
+		int major = versionNumPart(version, VERSION_MAJOR);
+		int minor = versionNumPart(version, VERSION_MINOR);
+		int maint = versionNumPart(version, VERSION_MAINTENANCE);
+		int sp    = versionNumPart(version, VERSION_SERVICE_PACK);
+		int pl    = versionNumPart(version, VERSION_PATCH_LEVEL);
+
+		if (_dbmsVersionHelper != null)
+		{
+			return _dbmsVersionHelper.versionNumToStr(version, major, minor, maint, sp, pl);
+		}
+		else
+		{
+			return defaultVersionNumToStr(version, major, minor, maint, sp, pl);
+		}
+	}
+
+	public static String versionNumToStr(long version, String dbmsProductName)
+	{
+		int major = versionNumPart(version, VERSION_MAJOR);
+		int minor = versionNumPart(version, VERSION_MINOR);
+		int maint = versionNumPart(version, VERSION_MAINTENANCE);
+		int sp    = versionNumPart(version, VERSION_SERVICE_PACK);
+		int pl    = versionNumPart(version, VERSION_PATCH_LEVEL);
+
+		IDbmsVersionHelper dbmsVersionHelper = null;
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ, DbUtils.DB_PROD_NAME_SYBASE_RAX, DbUtils.DB_PROD_NAME_SYBASE_RS, DbUtils.DB_PROD_NAME_SYBASE_RSDA, DbUtils.DB_PROD_NAME_SYBASE_RSDRA))
+			dbmsVersionHelper = new DbmsVersionHelperSybase();
+		else if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+			dbmsVersionHelper = new DbmsVersionHelperSqlServer();
+		else if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_ORACLE))
+			dbmsVersionHelper = new DbmsVersionHelperOracle();
+		else
+			dbmsVersionHelper = new DbmsVersionHelperSimple();
+		
+		return dbmsVersionHelper.versionNumToStr(version, major, minor, maint, sp, pl);
+	}
+
 	
-	
+	public static String defaultVersionNumToStr(long version, int major, int minor, int maintenance, int servicePack, int patchLevel)
+	{
+//System.out.println("defaultVersionNumToStr(version='"+version+"', major='"+major+"', minor'"+minor+"', maintenance'"+maintenance+"', servicePack'"+servicePack+"', patchLevel'"+patchLevel+"'. )");
+
+		String verStr = "";
+		if (maintenance == 0)
+			verStr = major + "." + minor;
+		else
+			verStr = major + "." + minor + "." + maintenance;
+
+		if (major >= 16)
+		{
+			if (servicePack > 0)
+				verStr += " SP" + String.format("%02d", servicePack);
+			if (patchLevel > 0)
+				verStr += " PL" + String.format("%02d", patchLevel);
+
+			// <<<<<<---------- RETURN HERE ------------------
+			return verStr;
+		}
+		if (major >= 15 && minor >= 7 && servicePack >= 50)
+		{
+			verStr += " SP" + servicePack;
+
+			// <<<<<<---------- RETURN HERE ------------------
+			return verStr;
+		}
+		
+		// all other below 16.0 and 15.7 SP50
+		if (servicePack > 0)
+		{
+			String esdStr = Integer.toString(servicePack);
+			if (patchLevel > 0)
+				esdStr += "." + patchLevel;
+			
+			// <<<<<<---------- RETURN HERE ------------------
+			return verStr + " ESD#" + esdStr;
+		}
+
+		return verStr;
+	}
 	
 	/** 
 	 * Convert a int version to a string version 
@@ -80,7 +223,7 @@ public class Ver
 	 * <code>15030 will be "15.0.3"</code>
 	 * <code>15031 will be "15.0.3 ESD#1"</code>
 	 */
-	public static String versionIntToStr(int version)
+	public static String FIXME_versionIntToStr(int version)
 	{
 		// 9 digit version num   // large version number (12.5.4 ESD#10.1)  125401001   (MMMMSSSPP: MMMM(1254)=MajorMinorMaintenance, SSS(010)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
 		if (version > 100000000) // large version number (15.7   SP100)     157010001   (MMMMSSSPP: MMMM(1570)=MajorMinorMaintenance, SSS(100)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
@@ -93,7 +236,7 @@ public class Ver
 			int patchLevel  = version % 100;
 
 //            System.out.println("");
-//            System.out.println("versionIntToStr(): version     = " + version);
+//            System.out.println("versionNumToStr(): version     = " + version);
 //            System.out.println("                   baseVer     = " + baseVer);
 //            System.out.println("                   major       = " + major);
 //            System.out.println("                   minor       = " + minor);
@@ -199,26 +342,70 @@ public class Ver
 		}
 	}
 
-	public static int versionIntPart(int version, int part)
+//	public static int versionNumPart(long version, int part)
+//	{
+//		if (version < Integer.MAX_VALUE)
+//		{
+//			return FIXME_versionIntPart( (int) version, part );
+//		}
+//		
+//		throw new RuntimeException("versionNumPart() for bigger values than Integer.MAX_VALUE is NOT-YET-IMPLEMENTED");
+//	}
+	public static int versionNumPart(long version, int part)
 	{
-		// 9 digit version num   // large version number (12.5.4 ESD#10.1)  125401001   (MMMMSSSPP: MMMM(1254)=MajorMinorMaintenance, SSS(010)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
-		if (version > 100000000) // large version number (15.7   SP100)     157010001   (MMMMSSSPP: MMMM(1570)=MajorMinorMaintenance, SSS(100)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
-		{                        // large version number (16.0   SP01 PL01) 160000101   (MMMMSSSPP: MMMM(1600)=MajorMinorMaintenance, SSS(001)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
-			int baseVer     = version / 100000;
-			int major       = baseVer / 100;
-			int minor       = baseVer % 100 / 10;
-			int maintenance = baseVer % 10;
-			int servicePack = version % 100000 / 100;
-			int patchLevel  = version % 100;
+		// above 13 digit version num      // long version number (12.5.4 ESD#10.1)  12_05_04_0010_0001   (MM MM MM SSSS PPPP: MM(12)=Major MM(05)=Minor, MM(04)=Maintenance, SSSS(0010)=ServicePack/EsdLevel, PPPP(0001)=PatchLevel/SubEsdLevel)
+		if (version > 1_00_00_0000_0000L)  // long version number (15.7   SP100)     15_07_00_0100_0001   (MM MM MM SSSS PPPP: MM(15)=Major MM(07)=Minor, MM(00)=Maintenance, SSSS(0100)=ServicePack/EsdLevel, PPPP(0000)=PatchLevel/SubEsdLevel)
+		{                                  // long version number (16.0   SP01 PL01) 16_00_00_0001_0001   (MM MM MM SSSS PPPP: MM(16)=Major MM(00)=Minor, MM(00)=Maintenance, SSSS(0001)=ServicePack/EsdLevel, PPPP(0001)=PatchLevel/SubEsdLevel)
+			int baseVer     = (int) (version / 1_0000_0000L); // only save  [12 05 04] get rid of SP/PL [0010 0001] 
+			int spPlVer     = (int) (version % 1_0000_0000L); // get rid of [12 05 04] and save   SP/PL [0010 0001]
 
-//            System.out.println("");
-//            System.out.println("versionIntToStr(): version     = " + version);
-//            System.out.println("                   baseVer     = " + baseVer);
-//            System.out.println("                   major       = " + major);
-//            System.out.println("                   minor       = " + minor);
-//            System.out.println("                   maintenance = " + maintenance);
-//            System.out.println("                   servicePack = " + servicePack);
-//            System.out.println("                   patchLevel  = " + patchLevel);
+			int major       = (int) (baseVer / 1_00_00L);
+			int minor       = (int) (baseVer % 1_00_00L / 1_00L);
+			int maintenance = (int) (baseVer % 1_00L);
+
+			int servicePack = (int) (spPlVer / 1_0000L);
+			int patchLevel  = (int) (version % 1_0000L);
+
+//			System.out.println("");
+//			System.out.println("versionNumToStr(): version     = " + version);
+//			System.out.println("                   baseVer     = " + baseVer);
+//			System.out.println("                   spPlVer     = " + spPlVer);
+//			System.out.println("                   -----------------------------");
+//			System.out.println("                   major       = " + major);
+//			System.out.println("                   minor       = " + minor);
+//			System.out.println("                   maintenance = " + maintenance);
+//			System.out.println("                   servicePack = " + servicePack);
+//			System.out.println("                   patchLevel  = " + patchLevel);
+
+			switch (part)
+			{
+			case VERSION_MAJOR:        return major;
+			case VERSION_MINOR:        return minor;
+			case VERSION_MAINTENANCE:  return maintenance;
+			case VERSION_ROLLUP:       return servicePack;
+			case VERSION_SERVICE_PACK: return servicePack;
+			case VERSION_PATCH_LEVEL:  return patchLevel;
+			default:                   return -1;
+			}
+		}
+		// 9 digit version num           // large version number (12.5.4 ESD#10.1)  125401001   (MMMMSSSPP: MMMM(1254)=MajorMinorMaintenance, SSS(010)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
+		else if (version > 1000_000_00L) // large version number (15.7   SP100)     157010001   (MMMMSSSPP: MMMM(1570)=MajorMinorMaintenance, SSS(100)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
+		{                                // large version number (16.0   SP01 PL01) 160000101   (MMMMSSSPP: MMMM(1600)=MajorMinorMaintenance, SSS(001)=ServicePack/EsdLevel, PP(01)=PatchLevel/SubEsdLevel)
+			int baseVer     = (int) (version / 1_000_00L);
+			int major       = (int) (baseVer / 100L);
+			int minor       = (int) (baseVer % 100L / 10L);
+			int maintenance = (int) (baseVer % 10L);
+			int servicePack = (int) (version % 1_000_00L / 100L);
+			int patchLevel  = (int) (version % 100L);
+
+//			System.out.println("");
+//			System.out.println("versionNumToStr(): version     = " + version);
+//			System.out.println("                   baseVer     = " + baseVer);
+//			System.out.println("                   major       = " + major);
+//			System.out.println("                   minor       = " + minor);
+//			System.out.println("                   maintenance = " + maintenance);
+//			System.out.println("                   servicePack = " + servicePack);
+//			System.out.println("                   patchLevel  = " + patchLevel);
 
 			switch (part)
 			{
@@ -232,12 +419,12 @@ public class Ver
 			}
 		}
 		// 7 digit version number
-		else if (version > 1000000) // medium version number 1570100   (major minor maintenance EsdLevel/ServicePack)
+		else if (version > 1000_000L) // medium version number 1570100   (major minor maintenance EsdLevel/ServicePack)
 		{
-			int major       = version                                         / 100000;
-			int minor       =(version -  (major * 100000))                    / 10000;
-			int maintenance =(version - ((major * 100000) + (minor * 10000))) / 1000;
-			int servicePack = version - ((major * 100000) + (minor * 10000) + (maintenance * 1000));
+			int major       = (int) ( version                                             / 100_000L);
+			int minor       = (int) ((version -  (major * 100_000L))                      /  10_000L);
+			int maintenance = (int) ((version - ((major * 100_000L) + (minor * 10_000L))) /   1_000L);
+			int servicePack = (int) ( version - ((major * 100_000L) + (minor * 10_000L) + (maintenance * 1_000L)));
 	
 			switch (part)
 			{
@@ -253,10 +440,10 @@ public class Ver
 		// 5 digit version number
 		else // old version number 15704
 		{
-			int major       = version                                     / 1000;
-			int minor       =(version -  (major * 1000))                  / 100;
-			int maintenance =(version - ((major * 1000) + (minor * 100))) / 10;
-			int rollup      = version - ((major * 1000) + (minor * 100) + (maintenance * 10));
+			int major       = (int) (  version                                       / 1000L);
+			int minor       = (int) ( (version -  (major * 1000L))                   /  100L);
+			int maintenance = (int) ( (version - ((major * 1000L) + (minor * 100L))) /   10L);
+			int rollup      = (int) (  version - ((major * 1000L) + (minor * 100L) + (maintenance * 10L)) );
 	
 			switch (part)
 			{
@@ -291,6 +478,39 @@ public class Ver
 	 * @param version
 	 * @return
 	 */
+//	private static int fixVersionOverflow(int type, int version)
+//	{
+//		if (version < 0)
+//			return 0;
+//
+//		if (type == VERSION_ROLLUP)
+//		{
+//			if (version <  1000) return version;
+//			if (version >= 1000) return 999;
+//
+////			if (version <  10) return version;
+////			if (version >= 10) return 9;
+//
+////			if (version < 10)                       return version;
+////			if (version >= 10   && version < 100)   return version / 10;
+////			if (version >= 100  && version < 1000)  return version / 100;
+////			if (version >= 1000 && version < 10000) return version / 1000;
+//		}
+//
+//		if (type == VERSION_SERVICE_PACK)
+//		{
+//			if (version <  1000)  return version;
+//			if (version >= 1000) return 999;
+//		}
+//
+//		if (type == VERSION_PATCH_LEVEL)
+//		{
+//			if (version <  100) return version;
+//			if (version >= 100) return 99;
+//		}
+//
+//		return version;
+//	}
 	private static int fixVersionOverflow(int type, int version)
 	{
 		if (version < 0)
@@ -298,32 +518,25 @@ public class Ver
 
 		if (type == VERSION_ROLLUP)
 		{
-			if (version <  1000) return version;
-			if (version >= 1000) return 999;
-
-//			if (version <  10) return version;
-//			if (version >= 10) return 9;
-
-//			if (version < 10)                       return version;
-//			if (version >= 10   && version < 100)   return version / 10;
-//			if (version >= 100  && version < 1000)  return version / 100;
-//			if (version >= 1000 && version < 10000) return version / 1000;
+			if (version <  10000) return version;
+			if (version >= 10000) return 9999;
 		}
 
 		if (type == VERSION_SERVICE_PACK)
 		{
-			if (version <  1000)  return version;
-			if (version >= 1000) return 999;
+			if (version <  10000) return version;
+			if (version >= 10000) return 9999;
 		}
 
 		if (type == VERSION_PATCH_LEVEL)
 		{
-			if (version <  100) return version;
-			if (version >= 100) return 99;
+			if (version <  10000) return version;
+			if (version >= 10000) return 9999;
 		}
 
 		return version;
 	}
+	
 	/**
 	 * Parses the ASE version string into a number.<br>
 	 * The version string will be splitter on the character '/' into different
@@ -371,10 +584,10 @@ public class Ver
 	
 // FIXME: this is a ASE-CE version string
 //	 Adaptive Server Enterprise/15.0.3/EBF 16748 Cluster Edition/P/x86_64/Enterprise Linux/asepyxis/2837/64-bit/FBO/Mon Jun  1 08:38:39 2009
-	public static int sybVersionStringToNumber(String versionStr)
+	public static long sybVersionStringToNumber(String versionStr)
 	{
 //System.out.println("---> sybVersionStringToNumber(): versionStr='"+versionStr+"'.");
-//		int aseVersionNumber = 0;
+//		long srvVersionNumber = 0;
 
 		int major       = 0; // <12>.5.4
 		int minor       = 0; // 12.<5>.4
@@ -382,61 +595,61 @@ public class Ver
 		int servicePack = 0; // SP<01> SP<50> SP<100> or ESD#<4>.2
 		int patchLevel  = 0; // PL<02> or ESD#4.<2>
 
-		String[] aseVersionParts = versionStr.split("/");
-		if (aseVersionParts.length > 0)
+		String[] srvVersionParts = versionStr.split("/");
+		if (srvVersionParts.length > 0)
 		{
-			String aseVersionNumberStr = null;
+			String srvVersionNumberStr = null;
 			String aseEsdStr = null;
 			String servivePackStr = null;
 			String patchLevelStr  = null;
-			int    aseVersionNumberStrArrayPos = -1;
+			int    srvVersionNumberStrArrayPos = -1;
 			int    aseEsdStrArrayPos           = -1;
 //			int    servivePackStrArrayPos      = -1;
 //			int    patchLevelStrArrayPos       = -1;
 
 			// Scan the string to see if there are any part that looks like a version str (##.#)
-			for (int i=0; i<aseVersionParts.length; i++)
+			for (int i=0; i<srvVersionParts.length; i++)
 			{
-//				if ( aseVersionParts[i].matches("^[0-9][0-9][.][0-9][.][0-9]") && aseVersionNumberStr == null )
-//				if ( aseVersionParts[i].matches("^[0-9][0-9][.][0-9]([.][0-9])*") && aseVersionNumberStr == null )
-				if ( aseVersionParts[i].matches("^[0-9][0-9][.][0-9].*") && aseVersionNumberStr == null )
+//				if ( srvVersionParts[i].matches("^[0-9][0-9][.][0-9][.][0-9]") && srvVersionNumberStr == null )
+//				if ( srvVersionParts[i].matches("^[0-9][0-9][.][0-9]([.][0-9])*") && srvVersionNumberStr == null )
+				if ( srvVersionParts[i].matches("^[0-9][0-9][.][0-9].*") && srvVersionNumberStr == null )
 				{
-					aseVersionNumberStr         = aseVersionParts[i];
-					aseVersionNumberStrArrayPos = i;
+					srvVersionNumberStr         = srvVersionParts[i];
+					srvVersionNumberStrArrayPos = i;
 				}
 
 				// Check for Sybase ESD level
-				if ( aseVersionParts[i].indexOf("ESD#") > 0 && aseEsdStr == null)
+				if ( srvVersionParts[i].indexOf("ESD#") > 0 && aseEsdStr == null)
 				{
-					aseEsdStr         = aseVersionParts[i];
+					aseEsdStr         = srvVersionParts[i];
 					aseEsdStrArrayPos = i;
 				}
 
 				// Check for "SAP Service Pack, with three numbers SP100, SP110, etc"
 				// Check for "SAP Service Pack, with two numbers SP50, SP51, etc"
-				if ( aseVersionParts[i].matches(".* SP[0-9].*") && servivePackStr == null)
+				if ( srvVersionParts[i].matches(".* SP[0-9].*") && servivePackStr == null)
 				{
-					servivePackStr         = aseVersionParts[i];
+					servivePackStr         = srvVersionParts[i];
 //					servivePackStrArrayPos = i;
 				}
 
 				// Check for "SAP Patch Level, with two numbers PL01, PL02, etc", introduced in ASE 16.0
-				if ( aseVersionParts[i].matches(".* PL[0-9].*") && patchLevelStr == null)
+				if ( srvVersionParts[i].matches(".* PL[0-9].*") && patchLevelStr == null)
 				{
-					patchLevelStr         = aseVersionParts[i];
+					patchLevelStr         = srvVersionParts[i];
 //					patchLevelStrArrayPos = i;
 				}
 			}
 
-			if (aseVersionNumberStr == null)
+			if (srvVersionNumberStr == null)
 			{
 //				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.", new Exception("DUMMY EXCEPTION TO GET CALLSTACK"));
 				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.");
 				return 0; // which probably is 0
 			}
 
-			String[] aseVersionNumberParts = aseVersionNumberStr.split("\\.");
-			if (aseVersionNumberParts.length > 1)
+			String[] srvVersionNumberParts = srvVersionNumberStr.split("\\.");
+			if (srvVersionNumberParts.length > 1)
 			{
 				// Version parts can contain characters...
 				// hmm version could be: 12.5.3a
@@ -444,39 +657,39 @@ public class Ver
 				{
 					String versionPart = null;
 					// MAJOR version: ( <12>.5.2.1 - MAJOR.minor.maint.rollup )
-					if (aseVersionNumberParts.length >= 1)
+					if (srvVersionNumberParts.length >= 1)
 					{
-						versionPart = aseVersionNumberParts[0].trim();
+						versionPart = srvVersionNumberParts[0].trim();
 						major = fixVersionOverflow(VERSION_MAJOR, Integer.parseInt(versionPart));
-//						aseVersionNumber += 1000 * major;
-//						aseVersionNumber += 100000 * major;
+//						srvVersionNumber += 1000 * major;
+//						srvVersionNumber += 100000 * major;
 					}
 
 					// MINOR version: ( 12.<5>.2.1 - major.MINOR.maint.rollup )
-					if (aseVersionNumberParts.length >= 2)
+					if (srvVersionNumberParts.length >= 2)
 					{
-						versionPart = aseVersionNumberParts[1].trim().substring(0, 1);
+						versionPart = srvVersionNumberParts[1].trim().substring(0, 1);
 						minor = fixVersionOverflow(VERSION_MINOR, Integer.parseInt(versionPart));
-//						aseVersionNumber += 100 * minor;
-//						aseVersionNumber += 10000 * minor;
+//						srvVersionNumber += 100 * minor;
+//						srvVersionNumber += 10000 * minor;
 					}
 
 					// MAINTENANCE version: ( 12.5.<2>.1 - major.minor.MAINT.rollup )
-					if (aseVersionNumberParts.length >= 3)
+					if (srvVersionNumberParts.length >= 3)
 					{
-						versionPart = aseVersionNumberParts[2].trim().substring(0, 1);
+						versionPart = srvVersionNumberParts[2].trim().substring(0, 1);
 						maint = fixVersionOverflow(VERSION_MAINTENANCE, Integer.parseInt(versionPart));
-//						aseVersionNumber += 10 * maint;
-//						aseVersionNumber += 1000 * maint;
+//						srvVersionNumber += 10 * maint;
+//						srvVersionNumber += 1000 * maint;
 					}
 
 					// ROLLUP version: ( 12.5.2.<1> - major.minor.maint.ROLLUP )
-					if (aseVersionNumberParts.length >= 4 && aseVersionNumberStrArrayPos != aseEsdStrArrayPos)
+					if (srvVersionNumberParts.length >= 4 && srvVersionNumberStrArrayPos != aseEsdStrArrayPos)
 					{
-//						versionPart = aseVersionNumberParts[3].trim().substring(0, 1);
-						versionPart = aseVersionNumberParts[3].trim();
+//						versionPart = srvVersionNumberParts[3].trim().substring(0, 1);
+						versionPart = srvVersionNumberParts[3].trim();
 						servicePack = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
-//						aseVersionNumber += 10 * rollup;
+//						srvVersionNumber += 10 * rollup;
 					}
 					else // go and check for ESD string, which is another way of specifying ROLLUP
 					{
@@ -514,12 +727,12 @@ public class Ver
 									versionPart = aseEsdStr.trim().substring(esdStart, esdEnd);
 									servicePack = fixVersionOverflow(VERSION_SERVICE_PACK, Integer.parseInt(versionPart));
 //									int mainEsdNum = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
-//									aseVersionNumber += 1 * rollup;
-//									aseVersionNumber += 10 * mainEsdNum;
+//									srvVersionNumber += 1 * rollup;
+//									srvVersionNumber += 10 * mainEsdNum;
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + aseVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + srvVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 							if (subEsdStart != -1)
@@ -529,11 +742,11 @@ public class Ver
 									versionPart = aseEsdStr.trim().substring(subEsdStart, subEsdEnd);
 									patchLevel = fixVersionOverflow(VERSION_PATCH_LEVEL, Integer.parseInt(versionPart));
 //									int subEsdNum = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
-//									aseVersionNumber += 1 * subEsdNum;
+//									srvVersionNumber += 1 * subEsdNum;
 								}
 								catch (RuntimeException e) // NumberFormatException,
 								{
-									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + aseVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+									_logger.warn("Problems converting some part(s) of the ESD# in the version string '" + srvVersionNumberStr + "' into a number. ESD# string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 								}
 							}
 						}
@@ -562,7 +775,7 @@ public class Ver
 							}
 							catch (RuntimeException e) // NumberFormatException,
 							{
-								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + aseVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + srvVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 							}
 						}
 					}
@@ -586,11 +799,11 @@ public class Ver
 							{
 								versionPart = patchLevelStr.trim().substring(start, end);
 								patchLevel = fixVersionOverflow(VERSION_PATCH_LEVEL, Integer.parseInt(versionPart));
-//								aseVersionNumber += 1 * patchLevel;
+//								srvVersionNumber += 1 * patchLevel;
 							}
 							catch (RuntimeException e) // NumberFormatException,
 							{
-								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + aseVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+								_logger.warn("Problems converting some part(s) of the SP (ServicePack) in the version string '" + srvVersionNumberStr + "' into a number. Service Pack string was '"+versionPart+"'. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 							}
 						}
 					}
@@ -599,12 +812,12 @@ public class Ver
 				catch (RuntimeException e) // NumberFormatException,
 											// IndexOutOfBoundsException
 				{
-					_logger.warn("Problems converting some part(s) of the version string '" + aseVersionNumberStr + "' into a number. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
+					_logger.warn("Problems converting some part(s) of the version string '" + srvVersionNumberStr + "' into a number. The version number will be set to " + Ver.ver(major, minor, maint, servicePack, patchLevel));
 				}
 			}
 			else
 			{
-				_logger.warn("There ASE version string seems to be faulty, can't find any '.' in the version number subsection '" + aseVersionNumberStr + "'.");
+				_logger.warn("There ASE version string seems to be faulty, can't find any '.' in the version number subsection '" + srvVersionNumberStr + "'.");
 			}
 		}
 		else
@@ -614,12 +827,12 @@ public class Ver
 
 //System.out.println("  <- sybVersionStringToNumber(): <<<--- "+Ver.ver(major, minor, maint, servicePack, patchLevel));
 		return Ver.ver(major, minor, maint, servicePack, patchLevel);
-		//return aseVersionNumber;
+		//return srvVersionNumber;
 	}
 
 
 
-	public static int hanaVersionStringToNumber(String versionStr)
+	public static long hanaVersionStringToNumber(String versionStr)
 	{
 		if (StringUtil.isNullOrBlank(versionStr))
 			return 0;
@@ -648,7 +861,7 @@ public class Ver
 		}
 	}
 
-	public static int asaVersionStringToNumber(String versionStr)
+	public static long asaVersionStringToNumber(String versionStr)
 	{
 		if (StringUtil.isNullOrBlank(versionStr))
 			return 0;
@@ -677,7 +890,7 @@ public class Ver
 		}
 	}
 
-	public static int iqVersionStringToNumber(String versionStr)
+	public static long iqVersionStringToNumber(String versionStr)
 	{
 //		IQ:
 //		Sybase IQ/16.0.0.656/140812/P/sp04.06/RS6000MP/AIX 6.1.0/64bit/2014-08-12 12:26:08	61	2015-12-01 19:07:31
@@ -736,13 +949,13 @@ public class Ver
 
 			if (iqVersionNumberStr == null)
 			{
-//				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.", new Exception("DUMMY EXCEPTION TO GET CALLSTACK"));
-				_logger.warn("There ASE version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.");
+//				_logger.warn("There IQ version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.", new Exception("DUMMY EXCEPTION TO GET CALLSTACK"));
+				_logger.warn("There IQ version string seems to be faulty, can't find any '##.#' in the version number string '" + versionStr + "'.");
 				return 0; // which probably is 0
 			}
 
-			String[] aseVersionNumberParts = iqVersionNumberStr.split("\\.");
-			if (aseVersionNumberParts.length > 1)
+			String[] srvVersionNumberParts = iqVersionNumberStr.split("\\.");
+			if (srvVersionNumberParts.length > 1)
 			{
 				// Version parts can contain characters...
 				// hmm version could be: 12.5.3a
@@ -750,33 +963,33 @@ public class Ver
 				{
 					String versionPart = null;
 					// MAJOR version: ( <12>.5.2.1 - MAJOR.minor.maint.rollup )
-					if (aseVersionNumberParts.length >= 1)
+					if (srvVersionNumberParts.length >= 1)
 					{
-						versionPart = aseVersionNumberParts[0].trim();
+						versionPart = srvVersionNumberParts[0].trim();
 						major = fixVersionOverflow(VERSION_MAJOR, Integer.parseInt(versionPart));
 					}
 
 					// MINOR version: ( 12.<5>.2.1 - major.MINOR.maint.rollup )
-					if (aseVersionNumberParts.length >= 2)
+					if (srvVersionNumberParts.length >= 2)
 					{
-						versionPart = aseVersionNumberParts[1].trim().substring(0, 1);
+						versionPart = srvVersionNumberParts[1].trim().substring(0, 1);
 						minor = fixVersionOverflow(VERSION_MINOR, Integer.parseInt(versionPart));
 					}
 
 //					// MAINTENANCE version: ( 12.5.<2>.1 - major.minor.MAINT.rollup )
-//					if (aseVersionNumberParts.length >= 3)
+//					if (srvVersionNumberParts.length >= 3)
 //					{
-//						versionPart = aseVersionNumberParts[2].trim().substring(0, 1);
+//						versionPart = srvVersionNumberParts[2].trim().substring(0, 1);
 //						maint = fixVersionOverflow(VERSION_MAINTENANCE, Integer.parseInt(versionPart));
 //					}
 //
 //					// ROLLUP version: ( 12.5.2.<1> - major.minor.maint.ROLLUP )
-//					if (aseVersionNumberParts.length >= 4 && iqVersionNumberStrArrayPos != iqEsdStrArrayPos)
+//					if (srvVersionNumberParts.length >= 4 && iqVersionNumberStrArrayPos != iqEsdStrArrayPos)
 //					{
-////						versionPart = aseVersionNumberParts[3].trim().substring(0, 1);
-//						versionPart = aseVersionNumberParts[3].trim();
+////						versionPart = srvVersionNumberParts[3].trim().substring(0, 1);
+//						versionPart = srvVersionNumberParts[3].trim();
 //						servicePack = fixVersionOverflow(VERSION_ROLLUP, Integer.parseInt(versionPart));
-////						aseVersionNumber += 10 * rollup;
+////						srvVersionNumber += 10 * rollup;
 //					}
 //					else // go and check for ESD string, which is another way of specifying ROLLUP
 //					{
@@ -894,7 +1107,7 @@ public class Ver
 							{
 								versionPart = patchLevelStr.trim().substring(start, end);
 								patchLevel = fixVersionOverflow(VERSION_PATCH_LEVEL, Integer.parseInt(versionPart));
-//								aseVersionNumber += 1 * patchLevel;
+//								srvVersionNumber += 1 * patchLevel;
 							}
 							catch (RuntimeException e) // NumberFormatException,
 							{
@@ -924,7 +1137,7 @@ public class Ver
 		return Ver.ver(major, minor, maint, servicePack, patchLevel);
 	}
 
-	public static int oracleVersionStringToNumber(String versionStr)
+	public static long oracleVersionStringToNumber(String versionStr)
 	{
 		if (StringUtil.isNullOrBlank(versionStr))
 			return 0;
@@ -953,7 +1166,7 @@ public class Ver
 		}
 	}
 
-	public static int db2VersionStringToNumber(String versionStr)
+	public static long db2VersionStringToNumber(String versionStr)
 	{
 		if (StringUtil.isNullOrBlank(versionStr))
 			return 0;
@@ -988,32 +1201,106 @@ public class Ver
 		}
 	}
 	
+	public static long sqlServerVersionStringToNumber(String versionStr)
+	{
+		//System.out.println("---> sybVersionStringToNumber(): versionStr='"+versionStr+"'.");
+//		long srvVersionNumber = 0;
+
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
+		
+		int major       = 0; // <12>.5.4
+		int minor       = 0; // 12.<5>.4
+		int maint       = 0; // 12.5.<4>
+		int servicePack = 0; // SP<01> SP<50> SP<100> or ESD#<4>.2
+		int patchLevel  = 0; // PL<02> or ESD#4.<2>
+
+		if (versionStr.startsWith("Microsoft SQL Server "))
+		{
+			// Remove "Microsoft SQL Server "
+			versionStr = versionStr.substring("Microsoft SQL Server ".length());
+			
+			// for example... spit at ' - '
+			// [0] = Microsoft SQL Server 2017 (RTM-CU9) (KB4341265)
+			// [1] = 14.0.3030.27 (X64) Jun 29 2018 18:02:47 Copyright (C) 2017 Microsoft Corporation Standard Edition (64-bit) on Windows Server 2016 Standard 10.0 (Build 14393: ) (Hypervisor)	
+			String[] srvVersionParts = versionStr.split(" - ");
+			if (srvVersionParts.length >= 2)
+			{
+				String verStrP1 = srvVersionParts[0].trim();
+			//	String verStrP2 = srvVersionParts[1].trim(); 
+
+				int firstSpace = verStrP1.indexOf(' ');
+				String prodYear = verStrP1.substring(0, firstSpace == -1 ? 4 : firstSpace);
+				major = StringUtil.parseInt(prodYear, -1);
+				
+				if (verStrP1.startsWith("2008 R2"))
+					minor = 2;
+				
+				int firstLP = verStrP1.indexOf('(');
+				int firstRP = verStrP1.indexOf(')');
+				if (firstLP >= 0 && firstRP >= 0)
+				{
+					String subVerStr = verStrP1.substring(firstLP+1, firstRP);
+	
+					int spPosStart = subVerStr.indexOf("SP"); 
+					if (spPosStart >= 0)
+					{
+						spPosStart += 2;
+						int spPosEnd = spPosStart;
+						for(; spPosEnd<subVerStr.length() && Character.isDigit(subVerStr.charAt(spPosEnd)); spPosEnd++)
+							/*do nothing, just incrementing: spPosEnd*/;
+						servicePack = StringUtil.parseInt(subVerStr.substring(spPosStart, spPosEnd), -1);
+					}
+
+					int cuPosStart = subVerStr.indexOf("CU"); 
+					if (cuPosStart >= 0)
+					{
+						cuPosStart += 2;
+						int cuPosEnd = cuPosStart;
+						for(; cuPosEnd<subVerStr.length() && Character.isDigit(subVerStr.charAt(cuPosEnd)); cuPosEnd++)
+							/*do nothing, just incrementing: cuPosEnd*/;
+						patchLevel = StringUtil.parseInt(subVerStr.substring(cuPosStart, cuPosEnd), -1);
+					}
+				}
+				//System.out.println("major="+major+", minor="+minor+", sp="+servicePack+", cu="+patchLevel);
+			}
+		}
+		else
+		{
+			_logger.warn("There SQL-Server version string seems to be faulty, can't find 'Microsoft SQL Server' in the string '" + versionStr + "'.");
+			return 0;
+		}
+
+		//System.out.println("  <- sqlServerVersionStringToNumber(): <<<--- "+Ver.ver(major, minor, maint, servicePack, patchLevel));
+		return Ver.ver(major, minor, maint, servicePack, patchLevel);
+		
+	}
+	
 	/**
 	 * Take a "short version int" into a "long version int", which is the "internal" version number used in DbxTune to compare version numbers.<br>
 	 * <b>Note</b>: this might change in the future to use an larger part of the Integer, so we can compare larger minor/mantenance numbers. (today we can only have 1 minor/maintenance digit)<br>
 	 * So use the methods: <code>ver(major); ver(major,minor); ver(major,minor,maint); ver(major,minor,maint, sp); ver(major,minor,maint, sp, pl);</code> to generate version numbers for comparisons.   
 	 * <pre>
-	 * ShortVerStr    ShortInt(6)  LongerInt(9)
-	 * -----------    ------       ---------
-	 *       1.2.3 ->  10203    ->  12300000
-	 *      99.2.3 -> 990203    -> 992300000
+	 * ShortVerStr    ShortInt(6)   Long(14)
+	 * -----------    ------        ------------------
+	 *       1.2.3 ->  10203    ->   1_02_03 0000 0000    
+	 *      99.2.3 -> 990203    ->  99_02_03_0000_0000
 	 * </pre>
 	 * @param shortVerInt
 	 * @return a "long version number" which can be used for comparison inside DbxTune
 	 */
-	public static int shortVersionStringToNumber(int shortVerInt)
+	public static long shortVersionStringToNumber(int shortVerInt)
 	{
-		int major       = shortVerInt / 10000;
-		int minor       = (shortVerInt % 10000) / 100;
-		int maint       = shortVerInt % 100;
+		int major       =  shortVerInt / 10_000;
+		int minor       = (shortVerInt % 10_000) / 100;
+		int maint       =  shortVerInt % 100;
 
 		if (major > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'major' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as major="+major);
-		if (minor > 9)  _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'minor' greater than 9 (1 digit), the passed shortVerInt="+shortVerInt+" was calculated as minor="+minor);
-		if (maint > 9)  _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'maint' greater than 9 (1 digit), the passed shortVerInt="+shortVerInt+" was calculated as maint="+maint);
+		if (minor > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'minor' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as minor="+minor);
+		if (maint > 99) _logger.warn("shortVersionStringToNumber(shortVerInt="+shortVerInt+"): long version string can't handle 'maint' greater than 99 (2 digit), the passed shortVerInt="+shortVerInt+" was calculated as maint="+maint);
 
 		return ver(major, minor, maint);
 	}
-
 
 
 
@@ -1022,54 +1309,74 @@ public class Ver
 	//////////////////////////////////////////////
 	public static void main(String[] args)
 	{
-		int version = 0;
-		version = 125000300; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 125400100; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 125401002; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157000420; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157000000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157010000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157010200; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157015000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157016000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157005000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157005100; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 157006000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 160000000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 160000001; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 160000100; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 160000101; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 161200101; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 999999999; System.out.println(version + " = "+ versionIntToStr(version));
+		long version = 0;
+//		version = 12_05_00_0003_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 12_05_04_0001_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 12_05_04_0010_0002L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0004_0020L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0000_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0100_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0102_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0150_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0160_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0050_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0051_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 15_07_00_0060_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 16_00_00_0000_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 16_00_00_0000_0001L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 16_00_00_0001_0000L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 16_00_00_0001_0001L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 16_01_02_0001_0001L; System.out.println(version + " = "+ versionNumToStr(version));
+//		version = 99_99_99_9999_9999L; System.out.println(version + " = "+ versionNumToStr(version));
+//		System.out.println("----------------------------------------------------------------------------------");
+
+		version = 1250_003_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1254_001_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1254_010_02; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_004_20; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_000_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_100_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_102_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_150_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_160_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_050_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_051_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_060_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1600_000_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1600_000_01; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1600_001_00; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1600_001_01; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1612_001_01; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 9999_999_99; System.out.println(version + " = "+ versionNumToStr(version));
 		System.out.println("----------------------------------------------------------------------------------");
 
-		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(15,7,0, 100   ); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(15,7,0, 101   ); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(16,0          ); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(16,0,0, 0,   1); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(16,0,0, 1     ); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(16,0,0, 1,   1); System.out.println(version + " = "+ versionIntToStr(version));
+		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(15,7,0, 100   ); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(15,7,0, 101   ); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(16,0          ); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(16,0,0, 0,   1); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(16,0,0, 1     ); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(16,0,0, 1,   1); System.out.println(version + " = "+ versionNumToStr(version));
 		System.out.println("----------------------------------------------------------------------------------");
 
-		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(15,7,0, 51,  0); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(15,7,0, 101, 0); System.out.println(version + " = "+ versionIntToStr(version));
-		version = Ver.ver(44,5,6, 777,88); System.out.println(version + " = "+ versionIntToStr(version));
-//		version = Ver.ver(1, 2,3, 4,   5); System.out.println(version + " = "+ versionIntToStr(version)); // should fail... do to main<10
+		version = Ver.ver(12,5,4, 10,  2); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(15,7,0, 51,  0); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(15,7,0, 101, 0); System.out.println(version + " = "+ versionNumToStr(version));
+		version = Ver.ver(44,5,6, 777,88); System.out.println(version + " = "+ versionNumToStr(version));
+//		version = Ver.ver(1, 2,3, 4,   5); System.out.println(version + " = "+ versionNumToStr(version)); // should fail... do to main<10
 		System.out.println("----------------------------------------------------------------------------------");
 
-		version = 1250030; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1254010; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570042; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570000; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570100; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570120; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570150; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570160; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570050; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570051; System.out.println(version + " = "+ versionIntToStr(version));
-		version = 1570060; System.out.println(version + " = "+ versionIntToStr(version));
+		version = 1250_030; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1254_010; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_042; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_000; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_100; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_120; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_150; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_160; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_050; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_051; System.out.println(version + " = "+ versionNumToStr(version));
+		version = 1570_060; System.out.println(version + " = "+ versionNumToStr(version));
 		System.out.println("----------------------------------------------------------------------------------");
 
 //		testVersion(1250011, "12.5.0 ESD#1.1");
@@ -1114,7 +1421,7 @@ public class Ver
 		testVersion(Ver.ver(15,7,0,101), "Adaptive Server Enterprise/15.7/EBF XXXX SMP SP101 /...");   
 		testVersion(Ver.ver(15,7,0,111), "Adaptive Server Enterprise/15.7/EBF XXXX SMP SP111 /...");   
 		testVersion(Ver.ver(15,7,0,200), "Adaptive Server Enterprise/15.7/EBF XXXX SMP SP200 /...");   
-		testVersion(Ver.ver(15,7,0,999), "Adaptive Server Enterprise/15.7/EBF XXXX SMP SP2000 /...");  
+		testVersion(Ver.ver(15,7,0,2000),"Adaptive Server Enterprise/15.7/EBF XXXX SMP SP2000 /...");  
 		testVersion(Ver.ver(15,7,1,100), "Adaptive Server Enterprise/15.7.1/EBF XXXX SMP SP100 /...");   
 
 		testVersion(Ver.ver(15,7,0,50),  "Adaptive Server Enterprise/15.7.0/EBF XXXX SMP SP50 /...");
@@ -1179,50 +1486,50 @@ public class Ver
 		testDb2Version(Ver.ver(11,1,2, 2), "DB2 v11.1.2.2");
 	}
 
-	private static boolean testVersion(int expectedIntVer, String verStr)
+	private static boolean testVersion(long expectedNumVer, String verStr)
 	{
-		int version = sybVersionStringToNumber(verStr);
+		long version = sybVersionStringToNumber(verStr);
 		
-		if (version != expectedIntVer) 
+		if (version != expectedNumVer) 
 		{
-			System.out.println("FAILED: version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("FAILED: version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
 			return false;
 		}
 		else 
 		{
-			System.out.println("OK    : version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("OK    : version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
 			return true;
 		}
 	}
 
-	private static boolean testIqVersion(int expectedIntVer, String verStr)
+	private static boolean testIqVersion(long expectedNumVer, String verStr)
 	{
-		int version = iqVersionStringToNumber(verStr);
+		long version = iqVersionStringToNumber(verStr);
 		
-		if (version != expectedIntVer) 
+		if (version != expectedNumVer) 
 		{
-			System.out.println("FAILED: version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("FAILED: version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
 			return false;
 		}
 		else 
 		{
-			System.out.println("OK    : version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("OK    : version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
 			return true;
 		}
 	}
 
-	private static boolean testDb2Version(int expectedIntVer, String verStr)
+	private static boolean testDb2Version(long expectedNumVer, String verStr)
 	{
-		int version = db2VersionStringToNumber(verStr);
+		long version = db2VersionStringToNumber(verStr);
 		
-		if (version != expectedIntVer) 
+		if (version != expectedNumVer) 
 		{
-			System.out.println("FAILED: version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("FAILED: version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
 			return false;
 		}
 		else 
 		{
-			System.out.println("OK    : version="+version+", expectedVersion="+expectedIntVer+", VersionStr='"+verStr+"'."); 
+			System.out.println("OK    : version="+version+", expectedVersion="+expectedNumVer+", VersionStr='"+verStr+"'."); 
 			return true;
 		}
 	}

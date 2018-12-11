@@ -73,37 +73,35 @@ extends DbxConnection
 	}
 	
 	@Override
-	public int getDbmsVersionNumber()
+	public long getDbmsVersionNumber()
 	{
-		int srvVersionNum = 0;
+		long srvVersionNum = 0;
 
-		String sql = "select @@version";
-		
 		// version
 		try
 		{
 			String versionStr = "";
 
-			Statement stmt = _conn.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
-			while ( rs.next() )
-			{
-				versionStr = rs.getString(1);
-			}
-			rs.close();
-	
-			if (srvVersionNum == 0)
-			{
-				srvVersionNum = VersionSqlServer.parseVersionStringToNumber(versionStr);
-			}
+			versionStr    = getDbmsVersionStr();
+		//	srvVersionNum = VersionSqlServer.parseVersionStringToNumber(versionStr);
+			srvVersionNum = Ver.sqlServerVersionStringToNumber(versionStr);
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("SqlServerConnection.getDbmsVersionNumber(), '"+sql+"'", ex);
+			//_logger.error("SqlServerConnection.getDbmsVersionNumber(), '"+sql+"'", ex);
 		}
 		
 		return srvVersionNum;
 	}
+//	public static long getDbmsVersionNumber()
+//	{
+//		final int UNKNOWN = -1;
+//
+//		String versionStr = getDbmsVersionStr();
+//
+//		long versionNum = Ver.sqlServerVersionStringToNumber(versionStr);
+//		return versionNum;
+//	}
 
 	@Override
 	public String getDbmsVersionStr() 
@@ -257,10 +255,10 @@ extends DbxConnection
 	 * @param dbname     Name of the database (if null, current db will be used)
 	 * @param objectName Name of the procedure/view/trigger...
 	 * @param owner      Name of the owner, if null is passed, it will be set to 'dbo'
-	 * @param aseVersion Version of the ASE, if 0, the version will be fetched from ASE
+	 * @param srvVersion Version of the ASE, if 0, the version will be fetched from ASE
 	 * @return Text of the procedure/view/trigger...
 	 */
-	public String getObjectText(String dbname, String objectName, String owner, int dbmsVersion)
+	public String getObjectText(String dbname, String objectName, String owner, long dbmsVersion)
 	{
 		if (StringUtil.isNullOrBlank(owner))
 			owner = "dbo.";

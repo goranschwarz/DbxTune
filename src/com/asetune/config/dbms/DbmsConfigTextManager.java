@@ -20,7 +20,7 @@ public abstract class DbmsConfigTextManager
 //
 //	private boolean _offline = false;
 //	private boolean _hasGui  = false;
-////	private int     _aseVersion = 0;
+////	private int     _srvVersion = 0;
 //
 //	/** The configuration is kept in a String */
 //	private String _configStr = null;
@@ -184,8 +184,8 @@ public abstract class DbmsConfigTextManager
 //	abstract public ConfigType getConfigType();
 //	
 //	/** get SQL statement to be executed to GET current configuration string 
-//	 * @param aseVersion */
-//	abstract protected String getSqlCurrentConfig(int aseVersion);
+//	 * @param srvVersion */
+//	abstract protected String getSqlCurrentConfig(long srvVersion);
 //
 //	/**
 //	 * get SQL Statement used to get information from the offline storage
@@ -330,7 +330,7 @@ public abstract class DbmsConfigTextManager
 //
 //		if ( ! _offline )
 //		{
-//			int          aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+//			int          srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 //			boolean      isCluster  = AseConnectionUtils.isClusterEnabled(conn);
 //
 //			int          needVersion = needVersion();
@@ -339,9 +339,9 @@ public abstract class DbmsConfigTextManager
 //			List<String> needConfig  = needConfig();
 //
 //			// Check if we can get the configuration, due to compatible version.
-//			if (needVersion > 0 && aseVersion < needVersion)
+//			if (needVersion > 0 && srvVersion < needVersion)
 //			{
-//				_configStr = "This info is only available if the Server Version is above " + Ver.versionIntToStr(needVersion);
+//				_configStr = "This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion);
 //				return;
 //			}
 //
@@ -394,7 +394,7 @@ public abstract class DbmsConfigTextManager
 //			}
 //
 //			// Get the SQL to execute.
-//			String sql = getSqlCurrentConfig(aseVersion);
+//			String sql = getSqlCurrentConfig(srvVersion);
 //			
 //			AseSqlScript script = null;
 //			try
@@ -524,7 +524,7 @@ public abstract class DbmsConfigTextManager
 //		}
 //
 //		@Override
-//		protected String getSqlCurrentConfig(int aseVersion)
+//		protected String getSqlCurrentConfig(long srvVersion)
 //		{
 //			String sql = 
 //				"select ConfigSnapshotAtDateTime = convert(varchar(30),getdate(),109) \n" +
@@ -555,9 +555,9 @@ public abstract class DbmsConfigTextManager
 //				"exec sp_cacheconfig \n" +
 //				"\n"; 
 //			
-////			if (aseVersion >= 15700)
-////			if (aseVersion >= 1570000)
-//			if (aseVersion >= Ver.ver(15,7))
+////			if (srvVersion >= 15700)
+////			if (srvVersion >= 1570000)
+//			if (srvVersion >= Ver.ver(15,7))
 //			{
 //				sql += 
 //					"\n" +
@@ -588,7 +588,7 @@ public abstract class DbmsConfigTextManager
 //	public static class ThreadPool extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseThreadPool; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monThreadPool"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monThreadPool"; }
 ////		@Override public    int        needVersion()                       { return 15700; }
 ////		@Override public    int        needVersion()                       { return 1570000; }
 //		@Override public    int        needVersion()                       { return Ver.ver(15,7); }
@@ -597,25 +597,25 @@ public abstract class DbmsConfigTextManager
 //	public static class HelpDb extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDb; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdb"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdb"; }
 //	}
 //
 //	public static class Tempdb extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseTempdb; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_tempdb 'show'"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_tempdb 'show'"; }
 //	}
 //
 //	public static class HelpDevice extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDevice; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdevice"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdevice"; }
 //	}
 //
 //	public static class DeviceFsSpaceUsage extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseDeviceFsSpaceUsage; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
 ////		@Override public    int        needVersion()                       { return 15700; }
 ////		@Override public    int        needVersion()                       { return 1570000; }
 //		@Override public    int        needVersion()                       { return Ver.ver(15,7); }
@@ -624,7 +624,7 @@ public abstract class DbmsConfigTextManager
 //	public static class HelpServer extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpServer; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpserver"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpserver"; }
 //	}
 //
 //	public static class Traceflags extends DbmsConfigText
@@ -643,12 +643,12 @@ public abstract class DbmsConfigTextManager
 //			return needAnyRole;
 //		}
 //		@Override 
-//		protected String getSqlCurrentConfig(int aseVersion) 
+//		protected String getSqlCurrentConfig(long srvVersion) 
 //		{
 //			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
-////			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion < 15000) )
-////			if (aseVersion >= 1502000 || (aseVersion >= 1254020 && aseVersion < 1500000) )
-//			if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4,2) && aseVersion < Ver.ver(15,0)) )
+////			if (srvVersion >= 15020 || (srvVersion >= 12542 && srvVersion < 15000) )
+////			if (srvVersion >= 1502000 || (srvVersion >= 1254020 && srvVersion < 1500000) )
+//			if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4,2) && srvVersion < Ver.ver(15,0)) )
 //				return "show switch"; 
 //			else
 //				return "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)"; 
@@ -752,20 +752,20 @@ public abstract class DbmsConfigTextManager
 //	public static class SpVersion extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseSpVersion; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_version"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_version"; }
 //		@Override public    int        needVersion()                       { return Ver.ver(12,5,4); }
 //	}
 //
 //	public static class ShmDumpConfig extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseShmDumpConfig; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_shmdumpconfig"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_shmdumpconfig"; }
 //	}
 //
 //	public static class MonitorConfig extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseMonitorConfig; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_monitorconfig 'all'"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_monitorconfig 'all'"; }
 //		@Override public    List<String> needRole()
 //		{ 
 //			List<String> list = new ArrayList<String>();
@@ -777,20 +777,20 @@ public abstract class DbmsConfigTextManager
 //	public static class HelpSort extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpSort; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpsort"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpsort"; }
 //	}
 //
 //	public static class LicenceInfo extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monLicense"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monLicense"; }
 //		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
 //	}
 //	
 //	public static class ClusterInfo extends DbmsConfigText
 //	{
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseClusterInfo; }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
 //		@Override public    int        needVersion()                       { return Ver.ver(15,0,2); }
 //		@Override public    boolean    needCluster()                       { return true; }
 //	}
@@ -811,7 +811,7 @@ public abstract class DbmsConfigTextManager
 //			list.add("enable file access");
 //			return list;
 //		}
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) 
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) 
 //		{ 
 //			return 
 //			"declare @cmd      varchar(1024) \n" +

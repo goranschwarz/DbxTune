@@ -386,7 +386,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		
 		if (connType == ConnectionDialog.TDS_CONN || connType == ConnectionDialog.JDBC_CONN)
 		{
-			srvVersion       = connInfo.getDbmsVersionInt() + "";
+			srvVersion       = connInfo.getDbmsVersionNum() + "";
 			isClusterEnabled = connInfo.isDbmsClusterEnabled() + "";
 
 			srvName          = connInfo.getDbmsServerName();
@@ -476,7 +476,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		if (srvName       != null) srvName.trim();
 		if (srvIpPort     != null) srvIpPort.trim();
 		if (srvUser       != null) srvUser.trim();
-		if (srvVersionStr != null) srvVersionStr.trim();
+		if (srvVersionStr != null) srvVersionStr.replace("\n", " ").replace("\r", "").trim();
 
 		if (_logger.isDebugEnabled())
 			urlParams.add("debug",    "true");
@@ -530,7 +530,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		private       String        _jdbcDriverClass   = "";
 		private       String        _jdbcUrl           = "";
 		private       String        _jdbcHostPort      = "";
-		private       int           _dbmsVersionInt    = 0;
+		private       long          _dbmsVersionNum    = 0;
 		private       String        _dbmsVersionStr    = "";
 		private       String        _dbmsServerName    = "";
 		private       String        _dbmsUserName      = "";
@@ -630,7 +630,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		public String        getJdbcDriverClass  () { return _jdbcDriverClass   == null ? "" : _jdbcDriverClass  .trim(); }
 		public String        getJdbcUrl          () { return _jdbcUrl           == null ? "" : _jdbcUrl          .trim(); }
 		public String        getJdbcHostPort     () { return _jdbcHostPort      == null ? "" : _jdbcHostPort     .trim(); }
-		public int           getDbmsVersionInt   () { return _dbmsVersionInt; }
+		public long          getDbmsVersionNum   () { return _dbmsVersionNum; }
 		public String        getDbmsVersionStr   () { return _dbmsVersionStr    == null ? "" : _dbmsVersionStr   .trim(); }
 		public String        getDbmsServerName   () { return _dbmsServerName    == null ? "" : _dbmsServerName   .trim(); }
 		public String        getDbmsUserName     () { return _dbmsUserName      == null ? "" : _dbmsUserName     .trim(); }
@@ -650,7 +650,7 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 		public void setJdbcDriverClass   (String str)            { _jdbcDriverClass   = StringUtil.hasValue(str) ? str : ""; }
 		public void setJdbcUrl           (String str)            { _jdbcUrl           = StringUtil.hasValue(str) ? str : ""; }
 		public void setJdbcHostPort      (String str)            { _jdbcHostPort      = StringUtil.hasValue(str) ? str : ""; }
-		public void setDbmsVersionInt    (int    ver)            { _dbmsVersionInt    = ver; }
+		public void setDbmsVersionInt    (long   ver)            { _dbmsVersionNum    = ver; }
 		public void setDbmsVersionStr    (String str)            { _dbmsVersionStr    = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsServerName    (String str)            { _dbmsServerName    = StringUtil.hasValue(str) ? str : ""; }
 		public void setDbmsUserName      (String str)            { _dbmsUserName      = StringUtil.hasValue(str) ? str : ""; }
@@ -687,13 +687,13 @@ public abstract class CheckForUpdatesDbx extends CheckForUpdates
 //
 //		if (mtd.getAseExecutableVersionNum() <= 0)
 //		{
-//			_logger.debug("MonTablesDictionary aseVersionNum is zero, stopping here.");
+//			_logger.debug("MonTablesDictionary srvVersionNum is zero, stopping here.");
 //			return null;
 //		}
 //
 //		if (mtd.getAseMonTableVersionNum() > 0 && mtd.getAseExecutableVersionNum() != mtd.getAseMonTableVersionNum())
 //		{
-//			_logger.info("MonTablesDictionary aseVersionNum("+mtd.getAseExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getAseMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
+//			_logger.info("MonTablesDictionary srvVersionNum("+mtd.getAseExecutableVersionNum()+") and installmaster/monTables VersionNum("+mtd.getAseMonTableVersionNum()+") is not in sync, so we don't want to send MDA info about this.");
 //			return null;
 //		}
 //

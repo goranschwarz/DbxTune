@@ -195,14 +195,14 @@ public class CounterControllerAse extends CounterControllerAbstract
 	 * 
 	 * @param conn
 	 * @param hasGui              is this initialized with a GUI?
-	 * @param aseVersion          what is the ASE Executable version
+	 * @param srvVersion          what is the ASE Executable version
 	 * @param isClusterEnabled    is it a cluster ASE
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception
-	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -215,7 +215,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+"), isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+" ("+Ver.versionNumToStr(monTablesVersion)+").");
 
 		// Get active ASE Roles
 		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
@@ -619,11 +619,11 @@ public class CounterControllerAse extends CounterControllerAbstract
 		//----------------------
 		try
 		{
-			int aseVersion = 0;
+			long srvVersion = 0;
 			if (MonTablesDictionaryManager.hasInstance())
-				aseVersion = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
+				srvVersion = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
 
-			if ( aseVersion >= Ver.ver(15,0,3,1) && aseVersion < Ver.ver(17,0) )
+			if ( srvVersion >= Ver.ver(15,0,3,1) && srvVersion < Ver.ver(17,0) )
 			{
 				if (_config_captureMissingStatistics || _config_enableMetricsCapture)
 				{

@@ -14,6 +14,8 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFramePostgres;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.DbmsVersionHelperSimple;
+import com.asetune.sql.IDbmsVersionHelper;
 import com.asetune.utils.DbUtils;
 
 public class PostgresTune
@@ -104,6 +106,12 @@ extends DbxTune
 	public CheckForUpdates createCheckForUpdates()
 	{
 		return new CheckForUpdatesPostgres(); 
+	}
+
+	@Override
+	public IDbmsVersionHelper createDbmsVersionHelper()
+	{
+		return new DbmsVersionHelperSimple();
 	}
 
 	@Override

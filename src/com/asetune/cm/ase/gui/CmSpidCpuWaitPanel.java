@@ -43,7 +43,7 @@ extends TabularCntrPanel
 		"This will stop MDA counter updates during the freeze period so that data from multiple tables will be 'in sync'.<br>" +
 		"The negative side effect of this is that some counter incrementation wont happen while executing the SQL Statement that fetches data.<br>" +
 		"<br>" +
-		"<b>Note:</b> This only works on ASE Version "+Ver.versionIntToStr(CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda)+" or higher, and you need to have 'sa_role' as well." +
+		"<b>Note:</b> This only works on ASE Version "+Ver.versionNumToStr(CmSpidCpuWait.NEED_SRV_VERSION_sample_freezeMda)+" or higher, and you need to have 'sa_role' as well." +
 		"</html>";
 	public static final String  TOOLTIP_sample_systemSpids      = "<html>Include system SPID's</html>";
 	public static final String  TOOLTIP_sample_extraWhereClause = 

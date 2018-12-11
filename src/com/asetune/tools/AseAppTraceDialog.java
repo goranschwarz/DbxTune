@@ -111,7 +111,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	/** What ASE host name are we connected to */
 	private String            _aseHostName            = "";
 	private String            _aseServerName          = DEFAULT_aseServerName;
-	private String            _aseVersionStr          = "";
+	private String            _srvVersionStr          = "";
                               
 	private JPanel            _aseOptionsPanel        = null;
 	private Connection        _aseConn                = null;
@@ -207,10 +207,10 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	                          
 	private List<String>      _aseUserHasRoles        = new LinkedList<String>();
 
-	public AseAppTraceDialog(int spid, String servername, String aseVersionStr)
+	public AseAppTraceDialog(int spid, String servername, String srvVersionStr)
 	{
 		super();
-		init(spid, servername, aseVersionStr);
+		init(spid, servername, srvVersionStr);
 	}
 
 
@@ -221,7 +221,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 	//------------------------------------------------------------
 	//------------------------------------------------------------
 	//------------------------------------------------------------
-	private void init(int spid, String aseName, String aseVersionStr)
+	private void init(int spid, String aseName, String srvVersionStr)
 	{
 		setTitle("ASE Application Tracing - Not Connected"); // Set window title
 		
@@ -243,11 +243,11 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				setIconImages(iconList);
 		}
 
-		_aseVersionStr = aseVersionStr;
+		_srvVersionStr = srvVersionStr;
 		_aseServerName = aseName;
 		_spid          = spid;
 
-		if (_aseVersionStr == null) _aseVersionStr = "";
+		if (_srvVersionStr == null) _srvVersionStr = "";
 		if (_aseServerName == null) _aseServerName = DEFAULT_aseServerName;
 
 		_aseHostName = "";
@@ -1253,7 +1253,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				{
 					_aseConn = AseConnectionFactory.getConnection(null, Version.getAppName()+"-AppTrace-"+_spid, null);
 					_aseServerName = AseConnectionUtils.getAseServername(_aseConn);
-					_aseVersionStr = AseConnectionUtils.getAseVersionStr(_aseConn);
+					_srvVersionStr = AseConnectionUtils.getAseVersionStr(_aseConn);
 
 					// Get list of active roles
 					_aseUserHasRoles = AseConnectionUtils.getActiveSystemRoles(_aseConn);
@@ -1317,12 +1317,12 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 			return false;
 
 		// ERROR only on ASE 15.0.2 or higher.
-		int aseVersion = Ver.sybVersionStringToNumber(_aseVersionStr);
-//		if (aseVersion < 15020 )
-//		if (aseVersion < 1502000 )
-		if (aseVersion < Ver.ver(15,0,2) )
+		long srvVersion = Ver.sybVersionStringToNumber(_srvVersionStr);
+//		if (srvVersion < 15020 )
+//		if (srvVersion < 1502000 )
+		if (srvVersion < Ver.ver(15,0,2) )
 		{
-			String msg = "The ASE Version must be above 15.0.2, which was the release that introduced 'Application Tracing'. You connected to "+Ver.versionIntToStr(aseVersion)+".";
+			String msg = "The ASE Version must be above 15.0.2, which was the release that introduced 'Application Tracing'. You connected to "+Ver.versionNumToStr(srvVersion)+".";
 			_logger.info(msg);
 			SwingUtils.showWarnMessage(this, "Need a later ASE Version", msg, null);
 			closeAseConn();
@@ -1670,7 +1670,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		String aseSaveFile = getAseTraceFilename();
 
 		String dirSep = "/";
-		if (_aseVersionStr != null && _aseVersionStr.indexOf("Windows") >= 0)
+		if (_srvVersionStr != null && _srvVersionStr.indexOf("Windows") >= 0)
 			dirSep = "\\";
 
 		if ( ! (aseSaveDir.endsWith("\\") || aseSaveDir.endsWith("/")) )
@@ -1811,9 +1811,9 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 		if (saveDir == null)
 		{
 			saveDir = "/tmp/";
-			if ( ! StringUtil.isNullOrBlank(_aseVersionStr) )
+			if ( ! StringUtil.isNullOrBlank(_srvVersionStr) )
 			{
-				if (_aseVersionStr.indexOf("Windows") >= 0)
+				if (_srvVersionStr.indexOf("Windows") >= 0)
 					saveDir = "c:\\";
 			}
 		}
@@ -1847,9 +1847,9 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 
 		if (_accessType_cbx.getSelectedIndex() == 0)
 		{
-			if ( ! StringUtil.isNullOrBlank(_aseVersionStr) )
+			if ( ! StringUtil.isNullOrBlank(_srvVersionStr) )
 			{
-				if (_aseVersionStr.indexOf("Windows") >= 0)
+				if (_srvVersionStr.indexOf("Windows") >= 0)
 					_accessType_cbx.setSelectedIndex(ACCESS_TYPE_LOCAL);
 				else
 					_accessType_cbx.setSelectedIndex(ACCESS_TYPE_SSH);

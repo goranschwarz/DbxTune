@@ -690,8 +690,8 @@ extends TabularCntrPanel
 			{
 				// disable if not 16.0
 //				if ( cm.getServerVersion() > Ver.ver(16,0))
-				int aseVersion = cm.getServerVersion();
-				if (aseVersion >= Ver.ver(15,7,0, 136) || (aseVersion >= Ver.ver(15,7,0, 64) && aseVersion < Ver.ver(15,7,0, 100)) )
+				long srvVersion = cm.getServerVersion();
+				if (srvVersion >= Ver.ver(15,7,0, 136) || (srvVersion >= Ver.ver(15,7,0, 64) && srvVersion < Ver.ver(15,7,0, 100)) )
 				{
 					sampleSpaceusage_chk.setEnabled(true);
 //					spaceusageInMb_chk  .setEnabled(true);

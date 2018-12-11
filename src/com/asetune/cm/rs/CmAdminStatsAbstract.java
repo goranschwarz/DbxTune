@@ -16,7 +16,7 @@ extends CountersModel
 
 	private String _moduleName = "";
 	
-	public CmAdminStatsAbstract(ICounterController counterController, String name, String groupName, String sql, List<String> pkList, String[] diffColumns, String[] pctColumns, String[] monTables, String[] dependsOnRole, String[] dependsOnConfig, int dependsOnVersion, int dependsOnCeVersion, boolean negativeDiffCountersToZero, boolean systemCm, int defaultPostponeTime)
+	public CmAdminStatsAbstract(ICounterController counterController, String name, String groupName, String sql, List<String> pkList, String[] diffColumns, String[] pctColumns, String[] monTables, String[] dependsOnRole, String[] dependsOnConfig, long dependsOnVersion, long dependsOnCeVersion, boolean negativeDiffCountersToZero, boolean systemCm, int defaultPostponeTime)
 	{
 		super(counterController, name, groupName, sql, pkList, diffColumns, pctColumns, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, negativeDiffCountersToZero, systemCm, defaultPostponeTime);
 	}
@@ -39,7 +39,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -49,7 +49,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return "";
 	}

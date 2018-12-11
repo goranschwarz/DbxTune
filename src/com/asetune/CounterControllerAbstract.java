@@ -301,13 +301,13 @@ implements ICounterController
 	 * @return a List of CountersModel objects
 	 */
 	@Override
-//	public List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, int aseVersion, boolean isClusterEnabled)
-	public List<CountersModel> getCmListDependsOnConfig(String cfgName, DbxConnection conn, int aseVersion, boolean isClusterEnabled)
+//	public List<CountersModel> getCmListDependsOnConfig(String cfgName, Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<CountersModel> getCmListDependsOnConfig(String cfgName, DbxConnection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		ArrayList<CountersModel> cmList = new ArrayList<CountersModel>();
 		for (CountersModel cm : getCmList())
 		{
-			String[] sa = cm.getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
+			String[] sa = cm.getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
 //			String[] sa = cm.getDependsOnConfig();
 			if ( sa == null )
 				continue;
@@ -441,17 +441,17 @@ implements ICounterController
 	 * 
 	 * @param conn
 	 * @param hasGui              is this initialized with a GUI?
-	 * @param aseVersion          what is the ASE Executable version
+	 * @param srvVersion          what is the ASE Executable version
 	 * @param isClusterEnabled    is it a cluster ASE
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-//	public abstract void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public abstract void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception;
-	public abstract void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+	public abstract void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 	throws Exception;
 
-//	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception
 //	{
 //		if (_isInitialized)
@@ -464,7 +464,7 @@ implements ICounterController
 //		if (! _countersIsCreated)
 //			createCounters();
 //		
-//		_logger.info("Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+//		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
 //
 //		// Get active ASE Roles
 //		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
@@ -474,20 +474,20 @@ implements ICounterController
 //		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);
 //
 //		// Get some specific configurations
-////		if (aseVersion >= 15031)
-////		if (aseVersion >= 1503010)
-//		if (aseVersion >= Ver.ver(15,0,3,1))
+////		if (srvVersion >= 15031)
+////		if (srvVersion >= 1503010)
+//		if (srvVersion >= Ver.ver(15,0,3,1))
 //			_config_captureMissingStatistics = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "capture missing statistics");
 //
-////		if (aseVersion >= 15020)
-////		if (aseVersion >= 1502000)
-//		if (aseVersion >= Ver.ver(15,0,2))
+////		if (srvVersion >= 15020)
+////		if (srvVersion >= 1502000)
+//		if (srvVersion >= Ver.ver(15,0,2))
 //			_config_enableMetricsCapture = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable metrics capture");
 //
 //		_config_threadedKernelMode = false;
-////		if (aseVersion >= 15700)
-////		if (aseVersion >= 1570000)
-//		if (aseVersion >= Ver.ver(15,7))
+////		if (srvVersion >= 15700)
+////		if (srvVersion >= 1570000)
+//		if (srvVersion >= Ver.ver(15,7))
 //		{
 //			String kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
 //			_config_threadedKernelMode = "threaded".equals(kernelMode);
@@ -496,9 +496,9 @@ implements ICounterController
 //		
 //		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 //		// This will hurt performance, especially when querying sysmonitors table, so set this to off
-////		if (aseVersion >= 15031)
-////		if (aseVersion >= 1503010)
-//		if (aseVersion >= Ver.ver(15,0,3,1))
+////		if (srvVersion >= 15031)
+////		if (srvVersion >= 1503010)
+//		if (srvVersion >= Ver.ver(15,0,3,1))
 //			AseConnectionUtils.setCompatibilityMode(conn, false);
 //
 //		// initialize all the CM's
@@ -509,10 +509,10 @@ implements ICounterController
 //
 //			if (cm != null)
 //			{
-//				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
+//				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+srvVersion+".");
 //
 //				// set the version
-////				cm.setServerVersion(aseVersion);
+////				cm.setServerVersion(srvVersion);
 //				cm.setServerVersion(monTablesVersion);
 //				cm.setClusterEnabled(isClusterEnabled);
 //				
@@ -606,17 +606,17 @@ implements ICounterController
 //		//----------------------
 //		try
 //		{
-//			int aseVersion = 0;
+//			long srvVersion = 0;
 //			if (MonTablesDictionary.hasInstance())
-//				aseVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
-////				aseVersion = MonTablesDictionary.getInstance().aseVersionNum;
+//				srvVersion = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
+////				srvVersion = MonTablesDictionary.getInstance().srvVersionNum;
 //
-////			if (    aseVersion >= 15031 && aseVersion <= 15033
-////				 || aseVersion >= 15500 && aseVersion <= 15501
+////			if (    srvVersion >= 15031 && srvVersion <= 15033
+////				 || srvVersion >= 15500 && srvVersion <= 15501
 ////			   )
-////			if ( aseVersion >= 15031 && aseVersion < 16000 )
-////			if ( aseVersion >= 1503010 && aseVersion < 1600000 )
-//			if ( aseVersion >= Ver.ver(15,0,3,1) && aseVersion < Ver.ver(16,0) )
+////			if ( srvVersion >= 15031 && srvVersion < 16000 )
+////			if ( srvVersion >= 1503010 && srvVersion < 1600000 )
+//			if ( srvVersion >= Ver.ver(15,0,3,1) && srvVersion < Ver.ver(16,0) )
 //			{
 //				if (_config_captureMissingStatistics || _config_enableMetricsCapture)
 //				{

@@ -12,8 +12,8 @@ public interface IDbmsConfigText
 //	public String getConfigType();
 	
 //	/** get SQL statement to be executed to GET current configuration string 
-//	 * @param aseVersion */
-//	public String getSqlCurrentConfig(int aseVersion);
+//	 * @param srvVersion */
+//	public String getSqlCurrentConfig(long srvVersion);
 
 	/**
 	 * get SQL Statement used to get information from the offline storage
@@ -69,7 +69,7 @@ public interface IDbmsConfigText
 	 * What server version do we need to get this information.
 	 * @return an integer version in the form 12549 for version 12.5.4.9, 0 = all version
 	 */
-	public int needVersion();
+	public long needVersion();
 
 	/**
 	 * If server needs to be Cluster Edition to get this information.

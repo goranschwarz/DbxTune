@@ -81,8 +81,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monOpenDatabases"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -382,13 +382,13 @@ extends CountersModel
 
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -692,7 +692,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -721,7 +721,7 @@ extends CountersModel
 
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -746,9 +746,9 @@ extends CountersModel
 		String ceDbRecoveryStatus = ""; // 
 		String QuiesceTag         = "";
 		String SuspendedProcesses = "";
-//		if (aseVersion >= 12510)
-//		if (aseVersion >= 1251000)
-		if (aseVersion >= Ver.ver(12,5,1))
+//		if (srvVersion >= 12510)
+//		if (srvVersion >= 1251000)
+		if (srvVersion >= Ver.ver(12,5,1))
 		{
 			QuiesceTag         = "od.QuiesceTag, ";
 			SuspendedProcesses = "od.SuspendedProcesses, ";
@@ -763,7 +763,7 @@ extends CountersModel
 		String PRSSelectCount  = "";
 		String PRSRewriteCount = "";
 		String nl_15702        = "";
-		if (aseVersion >= Ver.ver(15,7,0,2))
+		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			PRSUpdateCount  = "od.PRSUpdateCount, ";  // Number of updates to PRSes (Precomputed Result Set) caused by IUDs (Insert/Update/Delete) on the base table
 			PRSSelectCount  = "od.PRSSelectCount, ";  // Number of times PRSes (Precomputed Result Set) were selected for query rewriting plan during compilation
@@ -794,9 +794,9 @@ extends CountersModel
 		String OamPages        = "";
 		String AllocationUnits = "";
 		String nl_160          = "";
-//		if (aseVersion >= Ver.ver(16,0))
+//		if (srvVersion >= Ver.ver(16,0))
 		// This is implemeted in ASE 15.7 SP136 and ASE 15.7 SP64 (but not in 15.7 SP100-SP135)
-		if (aseVersion >= Ver.ver(15,7,0, 136) || (aseVersion >= Ver.ver(15,7,0, 64) && aseVersion < Ver.ver(15,7,0, 100)) )
+		if (srvVersion >= Ver.ver(15,7,0, 136) || (srvVersion >= Ver.ver(15,7,0, 64) && srvVersion < Ver.ver(15,7,0, 100)) )
 		{
 			if (sampleSpaceusage)
 				RawSpaceUsage   = "RawSpaceUsage = spaceusage(od.DBID), ";
@@ -833,7 +833,7 @@ extends CountersModel
 		// The calculation is stolen from: sp_helpdb dbname
 
 		// In ASE 15.7 when doing db shrink, it saves some rows in sysusages with a negative vdevno 
-		String DbSizeInMb_extraWhere = aseVersion >= Ver.ver(15, 0) ? " and u.vdevno >= 0" : "";
+		String DbSizeInMb_extraWhere = srvVersion >= Ver.ver(15, 0) ? " and u.vdevno >= 0" : "";
 		String DbSizeInMb             = "DbSizeInMb             = (select sum(u.size/(1024*1024/@@maxpagesize)) from master.dbo.sysusages u readpast where u.dbid = od.DBID" + DbSizeInMb_extraWhere + "), \n";
 		String LogDataIsMixed         = "LogDataIsMixed         = (select convert(bit,(db.status2 & 32768)) from master.dbo.sysdatabases db readpast where db.dbid = od.DBID), \n";
 		String IsUserTempdb           = "IsUserTempdb           = (select convert(bit,(db.status3 & 256))   from master.dbo.sysdatabases db readpast where db.dbid = od.DBID), \n";
@@ -869,7 +869,7 @@ extends CountersModel
 		String OldestTranShowPlanText = "OldestTranShowPlanText = convert(text, null), \n";
 
 //		boolean getMonSqltext = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
-//		if (getMonSqltext && aseVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
+//		if (getMonSqltext && srvVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
 //		{
 //			OldestTranSqlText = "OldestTranSqlText      = CASE WHEN (h.spid is not null AND h.spid > 0) THEN query_text(h.spid) ELSE null END, \n";
 //			// The below if we want to discard messages like: CmOpenDatabases: Received a Msg while reading the resultset from 'CmOpenDatabases', This could be mapped to a column by using a column name 'msgAsColValue' in the SELECT statement. Right now it's discarded. The message text: The specified spid value '8' applies to a server internal process, which does not execute a query plan.
@@ -933,10 +933,10 @@ extends CountersModel
 		cols3 += QuiesceTag + RawSpaceUsage + nl_160 
 				+ OldestTranSqlText + OldestTranShowPlanText;
 
-		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+		if (srvVersion >= Ver.ver(15,0,1) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
 		}
-		if (aseVersion >= Ver.ver(15,0,2,5))
+		if (srvVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2 += "od.LastTranLogDumpTime, LastLogBackupAgeInHours = isnull(datediff(hour, od.LastTranLogDumpTime, getdate()),-1), \n";
 			cols2 += "od.LastCheckpointTime, ";
@@ -2326,10 +2326,10 @@ extends CountersModel
 		return list;
 	}
 
-//	static void test(int aseVersion)
+//	static void test(long srvVersion)
 //	{
-//		boolean okVersion =  (aseVersion >= Ver.ver(15,7,0, 136) || (aseVersion >= Ver.ver(15,7,0, 64) && aseVersion < Ver.ver(15,7,0, 100)) );
-//		System.out.println("version="+aseVersion+", ok="+okVersion);
+//		boolean okVersion =  (srvVersion >= Ver.ver(15,7,0, 136) || (srvVersion >= Ver.ver(15,7,0, 64) && srvVersion < Ver.ver(15,7,0, 100)) );
+//		System.out.println("version="+srvVersion+", ok="+okVersion);
 //		
 //	}
 //	public static void main(String[] args)

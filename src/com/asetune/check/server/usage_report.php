@@ -31,6 +31,7 @@
 <A HREF="http://www.dbxtune.com/usage_report.php?summary_version=true&summary_version_clear=true" >WITH RESET</A>                 <BR>
 <A HREF="http://www.dbxtune.com/usage_report.php?summary_asever=true"                             >Summary Report, ASE Version Count</A>     <BR>
 <A HREF="http://www.dbxtune.com/usage_report.php?summary_user=true"                               >Summary Report, on User</A>               <BR>
+<A HREF="http://www.dbxtune.com/usage_report.php?summary_dbxc=true"                               >Summary Report, on DbxCentral</A>         <BR>
 <BR>
 <A HREF="http://www.dbxtune.com/usage_report.php?conn=first"                                      >Connection Info Report (first 500)</A>         -or- <A HREF="http://www.dbxtune.com/usage_report.php?conn=all">ALL</A> <BR>
 <BR>
@@ -75,6 +76,7 @@ DB Cleanup:
 	$rpt_summary_version_clear = $_GET['summary_version_clear'];
 	$rpt_summary_asever        = $_GET['summary_asever'];
 	$rpt_summary_user          = $_GET['summary_user'];
+	$rpt_summary_dbxc          = $_GET['summary_dbxc'];
 	$rpt_conn                  = $_GET['conn'];
 	$rpt_mda                   = $_GET['mda'];
 	$rpt_udc                   = $_GET['udc'];
@@ -1332,6 +1334,81 @@ DB Cleanup:
 	}
 
 	//-------------------------------------------
+	// SUMMARY REPORT, DBX CENTRAL
+	//-------------------------------------------
+	if ( $rpt_summary_dbxc == "true" )
+	{
+		$sql = "
+			select *
+			from asemon_usage
+			where clientAppName = 'DbxTuneCentral'
+			order by serverAddTime desc
+			limit 30 
+		";
+
+		// sending query
+		$result = mysqli_query($dbconn, $sql);
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "Last 30 starts, DBX Central");
+
+
+		$sql = "
+			select 
+				checkId, 
+				serverAddTime, 
+				userName, 
+				(select clientCanonicalHostName from asemon_usage u where t.checkId = u.rowid) as HostName, 
+				shutdownReason, 
+				wasRestartSpecified, 
+				writerJdbcUrl, 
+				H2DbFileSize1InMb, 
+				H2DbFileSize2InMb, 
+				H2DbFileSizeDiffInMb 
+			from dbxc_store_info t
+			order by serverAddTime desc
+		";
+
+		// sending query
+		$result = mysqli_query($dbconn, $sql);
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "Summary Report, DBX Central");
+
+
+		$sql = "
+			select 
+				checkId,
+				serverAddTime,
+				userName,
+				(select clientCanonicalHostName from asemon_usage u where t.checkId = u.rowid) as HostName, 
+				srvName,
+				dbxProduct,
+				firstSamleTime,
+				lastSamleTime,
+				SEC_TO_TIME(TIMESTAMPDIFF(SECOND, firstSamleTime, lastSamleTime)) as sampleTime,
+				alarmCount,
+				receiveCount,
+				receiveGraphCount,
+				cast(receiveGraphCount / receiveCount as int) as graphsPerRecv
+			from dbxc_store_srv_info t
+			order by serverAddTime desc
+			";
+
+		// sending query
+		$result = mysqli_query($dbconn, $sql);
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, "Summary Report, DBX Central (server entries)");
+	}
+
+	//-------------------------------------------
 	// CONNECTION INFO
 	//-------------------------------------------
 	if ( $rpt_conn != "" )
@@ -1433,8 +1510,8 @@ DB Cleanup:
 			<form action="usage_report.php" method="get">
 				<input type="text" size=4 name="mda" readonly="mda" value="diff" />
 				Is ASE Cluster Edition (0 or 1, default=0):<input type="text" size=5  maxlength=5  name="mda_isCluster"   value="' . $mda_isCluster   . '" />
-				Low Version:                               <input type="text" size=12 maxlength=12 name="mda_lowVersion"  value="' . $mda_lowVersion  . '" />
-				High Version:                              <input type="text" size=12 maxlength=12 name="mda_highVersion" value="' . $mda_highVersion . '" />
+				Low Version:                               <input type="text" size=20 maxlength=20 name="mda_lowVersion"  value="' . versionDisplay($mda_lowVersion ) . '" />
+				High Version:                              <input type="text" size=20 maxlength=20 name="mda_highVersion" value="' . versionDisplay($mda_highVersion) . '" />
 				<input type="submit" />
 			</form>
 
@@ -1568,7 +1645,7 @@ echo "SQL: $sql";
 			}
 
 			//-----------------------------
-			$label = "MDA TABLE DIFF Report: isCluster=$mda_isCluster, low=$mda_lowVersion, High=$mda_highVersion (only new tables in HIGH Version will be visible)";
+			$label = "MDA TABLE DIFF Report: isCluster=$mda_isCluster, low=" . versionDisplay($mda_lowVersion) . ", High=" . versionDisplay($mda_highVersion) . " (only new tables in HIGH Version will be visible)";
 			$sql = "
 				SELECT h.srvVersion,
 					h.isClusterEnabled,
@@ -1597,7 +1674,7 @@ echo "SQL: $sql";
 			htmlResultset($userIdCache, $result, $label);
 
 			//-----------------------------
-			$label = "MDA COLUMN DIFF Report: low=$mda_lowVersion, High=$mda_highVersion (only new columns in HIGH Version will be visible)";
+			$label = "MDA COLUMN DIFF Report: low=" . versionDisplay($mda_lowVersion) . ", High=" . versionDisplay($mda_highVersion) . " (only new columns in HIGH Version will be visible)";
 			$sql = "
 				SELECT
 					h.srvVersion,
@@ -2398,6 +2475,41 @@ echo "SQL: $sql";
 //			LIMIT 300
 //		";
 
+//	rowid,
+//	serverAddTime,
+//	clientCheckTime,
+//	serverSourceVersion,
+//	clientSourceDate,
+//	clientSourceVersion,
+//	clientAppName,
+//	clientAsemonVersion,
+//	appStartupTime,
+//	clientExpireDate,
+//	clientHostName,
+//	clientHostAddress,
+//	clientCanonicalHostName,
+//	callerIpAddress,
+//	screenResolution,
+//	hiDpiScale,
+//	user_name,
+//	user_home,
+//	user_dir,
+//	propfile,
+//	java_version,
+//	java_vm_version,
+//	java_vm_vendor,
+//	sun_arch_data_model,
+//	java_home,
+//	java_class_path,
+//	memory,
+//	os_name,
+//	os_version,
+//	os_arch,
+//	sun_desktop,
+//	user_country,
+//	user_language,
+//	user_timezone
+
 		if ( empty($rpt_appName) )
 			$rpt_appName = '%';
 
@@ -2405,7 +2517,41 @@ echo "SQL: $sql";
 			$rpt_appVersion = '%';
 
 		$sql = "
-			SELECT *
+			SELECT
+				rowid,
+				serverAddTime,
+				clientCheckTime,
+				serverSourceVersion,
+				clientSourceDate,
+				clientSourceVersion,
+				clientAppName,
+				gui,
+				os_name,
+				clientAsemonVersion,
+				appStartupTime,
+				clientExpireDate,
+				clientHostName,
+				clientHostAddress,
+				clientCanonicalHostName,
+				callerIpAddress,
+				screenResolution,
+				hiDpiScale,
+				user_name,
+				user_home,
+				user_dir,
+				propfile,
+				java_version,
+				java_vm_version,
+				java_vm_vendor,
+				sun_arch_data_model,
+				java_home,
+				memory,
+				os_version,
+				os_arch,
+				sun_desktop,
+				user_country,
+				user_language,
+				user_timezone
 			FROM asemon_usage
 			WHERE clientAppName       like '$rpt_appName'
 			  AND clientAsemonVersion like '$rpt_appVersion'

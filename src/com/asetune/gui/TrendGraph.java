@@ -123,7 +123,7 @@ implements ActionListener, MouseListener
 	private int                _panelMinHeightAtStart = PANEL_MIN_HEIGHT_NOT_USED;
 	private CountersModel      _cm                    = null;
 	private boolean            _initialVisible        = true;
-	private int                _validFromVersion      = 0; // 0 = all versions; > 0 = only in specific version
+	private long               _validFromVersion      = 0; // 0 = all versions; > 0 = only in specific version
 	SimpleDateFormat           _sdf                   = new SimpleDateFormat("H:mm:ss.SSS");
 
 	// The name of the graph, jachrt2d not good enough.
@@ -157,7 +157,7 @@ implements ActionListener, MouseListener
 	 * @param initialVisibleVersion If the graph should be visible in the summary at "initial" startup, when properties has been saved for the graph, the initial visible state will be reflected from that. visible at start 0=false, 1=always_true, 15702=true_if_ase_is_15702_or_over
 	 * @param panelMinHeight Initial minimum height of the chart panel, when properties has been saved for the graph, the initial minimum height will be reflected from that.
 	 */
-	public TrendGraph(String name, String chkboxText, String chartLabel, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, int validFromVersion, int panelMinHeight)
+	public TrendGraph(String name, String chkboxText, String chartLabel, String[] seriesNames, boolean pct, CountersModel cm, boolean initialVisible, long validFromVersion, int panelMinHeight)
 	{
 		_graphName             = name;
 		_chartLabelName        = chartLabel;
@@ -1585,12 +1585,12 @@ System.out.println("Changing line "+i+" from='"+line.getName()+"', to='"+display
 	 * Called from GetCounters.initCounters(...) to set visibility for Graphs depending on what version we connect to
 	 * @param serverVersion
 	 */
-	public void initializeGraphForVersion(int serverVersion)
+	public void initializeGraphForVersion(long serverVersion)
 	{
 		// Check if we got proper version...
 		// NOTE: This a fallback: most problem will be displayed by the below CM.getProblemDesc()
 		if (serverVersion <= _validFromVersion)
-			setWarningLabel("This graph is only available if DBMS version is above "+Ver.versionIntToStr(_validFromVersion));
+			setWarningLabel("This graph is only available if DBMS version is above "+Ver.versionNumToStr(_validFromVersion));
 		else
 			setWarningLabel(null);
 

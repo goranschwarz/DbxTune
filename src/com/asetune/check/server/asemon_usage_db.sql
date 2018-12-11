@@ -56,7 +56,7 @@ CREATE TABLE asemon_usage
 	sun_desktop             varchar(15),
 	user_country            varchar(5),
 	user_language           varchar(5),
-	user_timezone           varchar(15)
+	user_timezone           varchar(30)
 );
 
 CREATE TABLE asemon_connect_info
@@ -313,3 +313,29 @@ CREATE TABLE sqlw_usage_info
 	PRIMARY KEY (sqlwCheckId, connectId, serverAddTime)
 );
 
+CREATE TABLE IF NOT EXISTS dbxc_store_info (
+	checkId                int(11)        NOT NULL,
+	serverAddTime          timestamp      NOT NULL   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	userName               varchar(30)        NULL   DEFAULT NULL,
+	shutdownReason         varchar(60)        NULL   DEFAULT NULL,
+	wasRestartSpecified    int(11)            NULL   DEFAULT NULL,
+	writerJdbcUrl          varchar(1024)      NULL   DEFAULT NULL,
+	H2DbFileSize1InMb      int(11)            NULL   DEFAULT NULL,
+	H2DbFileSize2InMb      int(11)            NULL   DEFAULT NULL,
+	H2DbFileSizeDiffInMb   int(11)            NULL   DEFAULT NULL,
+	PRIMARY KEY (checkId,serverAddTime)
+)
+
+CREATE TABLE IF NOT EXISTS dbxc_store_srv_info (
+	checkId                int(11)        NOT NULL,
+	serverAddTime          timestamp      NOT NULL   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	userName               varchar(30)        NULL   DEFAULT NULL,
+	srvName                varchar(30)    NOT NULL,
+	dbxProduct             varchar(30)        NULL   DEFAULT NULL,
+	firstSamleTime         timestamp      NOT NULL   DEFAULT '0000-00-00 00:00:00',
+	lastSamleTime          timestamp          NULL   DEFAULT NULL,
+	alarmCount             int(11)            NULL   DEFAULT NULL,
+	receiveCount           int(11)            NULL   DEFAULT NULL,
+	receiveGraphCount      int(11)            NULL   DEFAULT NULL,
+	PRIMARY KEY (checkId, serverAddTime, srvName)
+)

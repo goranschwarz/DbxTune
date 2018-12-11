@@ -83,8 +83,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 	private JLabel           _atAtServerName_lbl           = new JLabel();
 	private JTextField       _listeners_txt                = new JTextField();
 	private JLabel           _listeners_lbl                = new JLabel();
-	private JTextField       _aseVersion_txt               = new JTextField();
-	private JLabel           _aseVersion_lbl               = new JLabel();
+	private JTextField       _srvVersion_txt               = new JTextField();
+	private JLabel           _srvVersion_lbl               = new JLabel();
 	private JTextField       _asePageSize_txt              = new JTextField();
 	private JLabel           _asePageSize_lbl              = new JLabel();
 	private JTextField       _lastSampleTime_txt           = new JTextField();
@@ -413,10 +413,10 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_listeners_txt        .setEditable(false);
 
 		tooltip = "The version string taken from @@version";
-		_aseVersion_lbl       .setText("SRV Version");
-		_aseVersion_lbl       .setToolTipText(tooltip);
-		_aseVersion_txt       .setToolTipText(tooltip);
-		_aseVersion_txt       .setEditable(false);
+		_srvVersion_lbl       .setText("SRV Version");
+		_srvVersion_lbl       .setToolTipText(tooltip);
+		_srvVersion_txt       .setToolTipText(tooltip);
+		_srvVersion_txt       .setEditable(false);
 
 		tooltip = "The PageSize is taken from @@maxpagesize, which is presented in bytes.";
 		_asePageSize_lbl      .setText("SRV Page Size");
@@ -929,8 +929,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		panel.add(_listeners_lbl,           "");
 		panel.add(_listeners_txt,           "growx, wrap");
 		
-		panel.add(_aseVersion_lbl,          "");
-		panel.add(_aseVersion_txt,          "growx, wrap");
+		panel.add(_srvVersion_lbl,          "");
+		panel.add(_srvVersion_txt,          "growx, wrap");
 		
 		panel.add(_asePageSize_lbl,         "");
 		panel.add(_asePageSize_txt,         "growx, wrap");
@@ -1385,7 +1385,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_localServerName_txt  .setText();
 		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
 		_listeners_txt         .setText(cm.getAbsString (0, "NetworkAddressInfo")); _listeners_txt.setCaretPosition(0);
-		_aseVersion_txt        .setText(cm.getAbsString (0, "aseVersion").replaceFirst("Microsoft SQL Server ", "")); _aseVersion_txt.setCaretPosition(0);
+		_srvVersion_txt        .setText(cm.getAbsString (0, "srvVersion").replaceFirst("Microsoft SQL Server ", "")); _srvVersion_txt.setCaretPosition(0);
 		_asePageSize_txt       .setText(cm.getAbsString (0, "srvPageSize"));
 		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
 		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
@@ -1623,7 +1623,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 		_atAtServerName_txt     .setText("");
 		_listeners_txt          .setText("");
-		_aseVersion_txt         .setText("");
+		_srvVersion_txt         .setText("");
 		_asePageSize_txt        .setText("");
 		_lastSampleTime_txt     .setText("");
 		_utcTimeDiff_txt        .setText("");

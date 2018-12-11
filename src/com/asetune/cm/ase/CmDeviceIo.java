@@ -47,8 +47,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monDeviceIO"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -286,13 +286,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -338,7 +338,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -351,7 +351,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -362,19 +362,19 @@ extends CountersModel
 		}
 
 //		String TotalIOs = "TotalIOs = (Reads + Writes)";
-//		if (aseVersion > 15000) 
+//		if (srvVersion > 15000) 
 //			TotalIOs = "TotalIOs = (convert(bigint,Reads) + convert(bigint,Writes))";
 //		String TotalIOs = "(Reads + Writes)";
 		String TotalIOs = "(convert(numeric(10,0),Reads) + convert(numeric(10,0),Writes))"; // due to "Arithmetic overflow occurred" in 12.5.x
-//		if (aseVersion > 15000) 
-//		if (aseVersion > 1500000) 
-		if (aseVersion > Ver.ver(15,0)) 
+//		if (srvVersion > 15000) 
+//		if (srvVersion > 1500000) 
+		if (srvVersion > Ver.ver(15,0)) 
 			TotalIOs = "(convert(bigint,Reads) + convert(bigint,Writes))";
 
 		String DeviceType = "";
-//		if (aseVersion >= 15020) 
-//		if (aseVersion >= 1502000) 
-		if (aseVersion >= Ver.ver(15,0,2)) 
+//		if (srvVersion >= 15020) 
+//		if (srvVersion >= 1502000) 
+		if (srvVersion >= Ver.ver(15,0,2)) 
 		{
 			DeviceType = 
 				"DeviceType = CASE \n" +
@@ -391,9 +391,9 @@ extends CountersModel
 		String ReadServiceTimeMs  = ""; // CALCULATED
 		String WriteServiceTimeMs = ""; // CALCULATED
 //		String nl_15702           = ""; // NL for this section
-//		if (aseVersion >= 15702)
-//		if (aseVersion >= 1570020)
-		if (aseVersion >= Ver.ver(15,7,0,2))
+//		if (srvVersion >= 15702)
+//		if (srvVersion >= 1570020)
+		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			ReadTime           = "ReadTime, ";  // DO DIFF CALC
 			WriteTime          = "WriteTime, "; // DO DIFF CALC
@@ -433,9 +433,9 @@ extends CountersModel
 				 ReadServiceTimeMs +
 				 WriteServiceTimeMs;
 		cols3 += DeviceType+" PhysicalName";
-//		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
-		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+//		if (srvVersion >= 15010 || (srvVersion >= 12540 && srvVersion < 15000) )
+//		if (srvVersion >= 1501000 || (srvVersion >= 1254000 && srvVersion < 1500000) )
+		if (srvVersion >= Ver.ver(15,0,1) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
 		}
 
@@ -453,7 +453,7 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		int aseVersion = getServerVersion();
+		long srvVersion = getServerVersion();
 
 		// ---- DISK IO's PER SECOND GRAPHS
 		if (GRAPH_NAME_RW_DISK_IO.equals(tgdp.getName()))
@@ -525,9 +525,9 @@ extends CountersModel
 				tranPos = getCounterDataAbs().findColumn("ReadServiceTimeMs");
 	
 			// Only available in 15.7.0 esd#2 and above 
-//			if ( aseVersion < 15702 || tranPos == -1 )
-//			if ( aseVersion < 1570020 || tranPos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,2) || tranPos == -1 )
+//			if ( srvVersion < 15702 || tranPos == -1 )
+//			if ( srvVersion < 1570020 || tranPos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,2) || tranPos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_R_SERVICE_TIME);
@@ -561,9 +561,9 @@ extends CountersModel
 				tranPos = getCounterDataAbs().findColumn("WriteServiceTimeMs");
 	
 			// Only available in 15.7.0 esd#2 and above 
-//			if ( aseVersion < 15702 || tranPos == -1 )
-//			if ( aseVersion < 1570020 || tranPos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,2) || tranPos == -1 )
+//			if ( srvVersion < 15702 || tranPos == -1 )
+//			if ( srvVersion < 1570020 || tranPos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,2) || tranPos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_W_SERVICE_TIME);

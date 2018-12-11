@@ -97,7 +97,7 @@ public class DDLGeneratorWrapper
 	throws Exception
 	{
 		File jarFile = null;
-		int dbmsVersion = _conn.getDbmsVersionNumber();
+		long dbmsVersion = _conn.getDbmsVersionNumber();
 
 		// ASE 12.5.4 or below, use the 1254 jar version on DDLGen
 		if (dbmsVersion < Ver.ver(15, 0))

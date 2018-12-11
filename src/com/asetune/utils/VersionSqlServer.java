@@ -21,7 +21,7 @@ public class VersionSqlServer
 	// +----------------------------+----------------+-----------------+
 	// | no-info                    | no-info        | no-info         |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2016          = Ver.ver(13,0,0, 0, 0);
+	public static final long SQLSERVER_2016          = Ver.ver(13,0,0, 0, 0);
 
 	// #################################################################
 	// ## SQL Server 2014
@@ -44,19 +44,19 @@ public class VersionSqlServer
 	// | CU-1                       | 12.0.2342.0    | April 2014      |
 	// | RTM                        | 12.0.2000.0    | April 2014      |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2014_SP1_CU3  = Ver.ver(12,0,0, 1, 3);
-	public static final int SQLSERVER_2014_SP1_CU2  = Ver.ver(12,0,0, 1, 2);
-	public static final int SQLSERVER_2014_SP1_CU1  = Ver.ver(12,0,0, 1, 1);
-	public static final int SQLSERVER_2014_SP1      = Ver.ver(12,0,0, 1, 0);
-	public static final int SQLSERVER_2014_CU8      = Ver.ver(12,0,0, 0, 8);
-	public static final int SQLSERVER_2014_CU7      = Ver.ver(12,0,0, 0, 7);
-	public static final int SQLSERVER_2014_CU6      = Ver.ver(12,0,0, 0, 6);
-	public static final int SQLSERVER_2014_CU5      = Ver.ver(12,0,0, 0, 5);
-	public static final int SQLSERVER_2014_CU4      = Ver.ver(12,0,0, 0, 4);
-	public static final int SQLSERVER_2014_CU3      = Ver.ver(12,0,0, 0, 3);
-	public static final int SQLSERVER_2014_CU2      = Ver.ver(12,0,0, 0, 2);
-	public static final int SQLSERVER_2014_CU1      = Ver.ver(12,0,0, 0, 1);
-	public static final int SQLSERVER_2014          = Ver.ver(12,0,0, 0, 0);
+	public static final long SQLSERVER_2014_SP1_CU3  = Ver.ver(12,0,0, 1, 3);
+	public static final long SQLSERVER_2014_SP1_CU2  = Ver.ver(12,0,0, 1, 2);
+	public static final long SQLSERVER_2014_SP1_CU1  = Ver.ver(12,0,0, 1, 1);
+	public static final long SQLSERVER_2014_SP1      = Ver.ver(12,0,0, 1, 0);
+	public static final long SQLSERVER_2014_CU8      = Ver.ver(12,0,0, 0, 8);
+	public static final long SQLSERVER_2014_CU7      = Ver.ver(12,0,0, 0, 7);
+	public static final long SQLSERVER_2014_CU6      = Ver.ver(12,0,0, 0, 6);
+	public static final long SQLSERVER_2014_CU5      = Ver.ver(12,0,0, 0, 5);
+	public static final long SQLSERVER_2014_CU4      = Ver.ver(12,0,0, 0, 4);
+	public static final long SQLSERVER_2014_CU3      = Ver.ver(12,0,0, 0, 3);
+	public static final long SQLSERVER_2014_CU2      = Ver.ver(12,0,0, 0, 2);
+	public static final long SQLSERVER_2014_CU1      = Ver.ver(12,0,0, 0, 1);
+	public static final long SQLSERVER_2014          = Ver.ver(12,0,0, 0, 0);
 
 	// #################################################################
 	// ## SQL Server 2012
@@ -96,37 +96,37 @@ public class VersionSqlServer
 	// | CU-1                       | 11.0.2316.0    | April 2012      |
 	// | RTM                        | 11.0.2100.60   | March 2011      |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2012_SP3      = Ver.ver(11,0,0, 3, 0);
-	public static final int SQLSERVER_2012_SP2_CU9  = Ver.ver(11,0,0, 2, 9);
-	public static final int SQLSERVER_2012_SP2_CU8  = Ver.ver(11,0,0, 2, 8);
-	public static final int SQLSERVER_2012_SP2_CU7  = Ver.ver(11,0,0, 2, 7);
-	public static final int SQLSERVER_2012_SP2_CU6  = Ver.ver(11,0,0, 2, 6);
-	public static final int SQLSERVER_2012_SP2_CU5  = Ver.ver(11,0,0, 2, 5);
-	public static final int SQLSERVER_2012_SP2_CU4  = Ver.ver(11,0,0, 2, 4);
-	public static final int SQLSERVER_2012_SP2_CU3  = Ver.ver(11,0,0, 2, 3);
-	public static final int SQLSERVER_2012_SP2_CU2  = Ver.ver(11,0,0, 2, 2);
-	public static final int SQLSERVER_2012_SP2_CU1  = Ver.ver(11,0,0, 2, 1);
-	public static final int SQLSERVER_2012_SP2      = Ver.ver(11,0,0, 2, 0);
-	public static final int SQLSERVER_2012_SP1_CU13 = Ver.ver(11,0,0, 1, 13);
-	public static final int SQLSERVER_2012_SP1_CU12 = Ver.ver(11,0,0, 1, 12);
-	public static final int SQLSERVER_2012_SP1_CU11 = Ver.ver(11,0,0, 1, 11);
-	public static final int SQLSERVER_2012_SP1_CU10 = Ver.ver(11,0,0, 1, 10);
-	public static final int SQLSERVER_2012_SP1_CU9  = Ver.ver(11,0,0, 1, 9);
-	public static final int SQLSERVER_2012_SP1_CU8  = Ver.ver(11,0,0, 1, 8);
-	public static final int SQLSERVER_2012_SP1_CU7  = Ver.ver(11,0,0, 1, 7);
-	public static final int SQLSERVER_2012_SP1_CU6  = Ver.ver(11,0,0, 1, 6);
-	public static final int SQLSERVER_2012_SP1_CU5  = Ver.ver(11,0,0, 1, 5);
-	public static final int SQLSERVER_2012_SP1_CU4  = Ver.ver(11,0,0, 1, 4);
-	public static final int SQLSERVER_2012_SP1_CU3  = Ver.ver(11,0,0, 1, 3);
-	public static final int SQLSERVER_2012_SP1_CU2  = Ver.ver(11,0,0, 1, 2);
-	public static final int SQLSERVER_2012_SP1_CU1  = Ver.ver(11,0,0, 1, 1);
-	public static final int SQLSERVER_2012_SP1      = Ver.ver(11,0,0, 1, 0);
-	public static final int SQLSERVER_2012_CU5      = Ver.ver(11,0,0, 0, 5);
-	public static final int SQLSERVER_2012_CU4      = Ver.ver(11,0,0, 0, 4);
-	public static final int SQLSERVER_2012_CU3      = Ver.ver(11,0,0, 0, 3);
-	public static final int SQLSERVER_2012_CU2      = Ver.ver(11,0,0, 0, 2);
-	public static final int SQLSERVER_2012_CU1      = Ver.ver(11,0,0, 0, 1);
-	public static final int SQLSERVER_2012          = Ver.ver(11,0,0, 0, 0);
+	public static final long SQLSERVER_2012_SP3      = Ver.ver(11,0,0, 3, 0);
+	public static final long SQLSERVER_2012_SP2_CU9  = Ver.ver(11,0,0, 2, 9);
+	public static final long SQLSERVER_2012_SP2_CU8  = Ver.ver(11,0,0, 2, 8);
+	public static final long SQLSERVER_2012_SP2_CU7  = Ver.ver(11,0,0, 2, 7);
+	public static final long SQLSERVER_2012_SP2_CU6  = Ver.ver(11,0,0, 2, 6);
+	public static final long SQLSERVER_2012_SP2_CU5  = Ver.ver(11,0,0, 2, 5);
+	public static final long SQLSERVER_2012_SP2_CU4  = Ver.ver(11,0,0, 2, 4);
+	public static final long SQLSERVER_2012_SP2_CU3  = Ver.ver(11,0,0, 2, 3);
+	public static final long SQLSERVER_2012_SP2_CU2  = Ver.ver(11,0,0, 2, 2);
+	public static final long SQLSERVER_2012_SP2_CU1  = Ver.ver(11,0,0, 2, 1);
+	public static final long SQLSERVER_2012_SP2      = Ver.ver(11,0,0, 2, 0);
+	public static final long SQLSERVER_2012_SP1_CU13 = Ver.ver(11,0,0, 1, 13);
+	public static final long SQLSERVER_2012_SP1_CU12 = Ver.ver(11,0,0, 1, 12);
+	public static final long SQLSERVER_2012_SP1_CU11 = Ver.ver(11,0,0, 1, 11);
+	public static final long SQLSERVER_2012_SP1_CU10 = Ver.ver(11,0,0, 1, 10);
+	public static final long SQLSERVER_2012_SP1_CU9  = Ver.ver(11,0,0, 1, 9);
+	public static final long SQLSERVER_2012_SP1_CU8  = Ver.ver(11,0,0, 1, 8);
+	public static final long SQLSERVER_2012_SP1_CU7  = Ver.ver(11,0,0, 1, 7);
+	public static final long SQLSERVER_2012_SP1_CU6  = Ver.ver(11,0,0, 1, 6);
+	public static final long SQLSERVER_2012_SP1_CU5  = Ver.ver(11,0,0, 1, 5);
+	public static final long SQLSERVER_2012_SP1_CU4  = Ver.ver(11,0,0, 1, 4);
+	public static final long SQLSERVER_2012_SP1_CU3  = Ver.ver(11,0,0, 1, 3);
+	public static final long SQLSERVER_2012_SP1_CU2  = Ver.ver(11,0,0, 1, 2);
+	public static final long SQLSERVER_2012_SP1_CU1  = Ver.ver(11,0,0, 1, 1);
+	public static final long SQLSERVER_2012_SP1      = Ver.ver(11,0,0, 1, 0);
+	public static final long SQLSERVER_2012_CU5      = Ver.ver(11,0,0, 0, 5);
+	public static final long SQLSERVER_2012_CU4      = Ver.ver(11,0,0, 0, 4);
+	public static final long SQLSERVER_2012_CU3      = Ver.ver(11,0,0, 0, 3);
+	public static final long SQLSERVER_2012_CU2      = Ver.ver(11,0,0, 0, 2);
+	public static final long SQLSERVER_2012_CU1      = Ver.ver(11,0,0, 0, 1);
+	public static final long SQLSERVER_2012          = Ver.ver(11,0,0, 0, 0);
 
 	// #################################################################
 	// ## SQL Server 2008 R2
@@ -175,47 +175,47 @@ public class VersionSqlServer
 	// | RTM CU-1                   | 10.5.1702      | May 2010        |
 	// | RTM                        | 10.5.1600      | April 2010      |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2008R2_SP3      = Ver.ver(10,5,0, 3, 0);
-	public static final int SQLSERVER_2008R2_SP2_CU13 = Ver.ver(10,5,0, 2, 13);
-	public static final int SQLSERVER_2008R2_SP2_CU12 = Ver.ver(10,5,0, 2, 12);
-	public static final int SQLSERVER_2008R2_SP2_CU11 = Ver.ver(10,5,0, 2, 11);
-	public static final int SQLSERVER_2008R2_SP2_CU10 = Ver.ver(10,5,0, 2, 10);
-	public static final int SQLSERVER_2008R2_SP2_CU9  = Ver.ver(10,5,0, 2, 9);
-	public static final int SQLSERVER_2008R2_SP2_CU8  = Ver.ver(10,5,0, 2, 8);
-	public static final int SQLSERVER_2008R2_SP2_CU7  = Ver.ver(10,5,0, 2, 7);
-	public static final int SQLSERVER_2008R2_SP2_CU6  = Ver.ver(10,5,0, 2, 6);
-	public static final int SQLSERVER_2008R2_SP2_CU5  = Ver.ver(10,5,0, 2, 5);
-	public static final int SQLSERVER_2008R2_SP2_CU4  = Ver.ver(10,5,0, 2, 4);
-	public static final int SQLSERVER_2008R2_SP2_CU3  = Ver.ver(10,5,0, 2, 3);
-	public static final int SQLSERVER_2008R2_SP2_CU2  = Ver.ver(10,5,0, 2, 2);
-	public static final int SQLSERVER_2008R2_SP2_CU1  = Ver.ver(10,5,0, 2, 1);
-	public static final int SQLSERVER_2008R2_SP2      = Ver.ver(10,5,0, 2, 0);
-	public static final int SQLSERVER_2008R2_SP1_CU10 = Ver.ver(10,5,0, 1, 10);
-	public static final int SQLSERVER_2008R2_SP1_CU9  = Ver.ver(10,5,0, 1, 9);
-	public static final int SQLSERVER_2008R2_SP1_CU8  = Ver.ver(10,5,0, 1, 8);
-	public static final int SQLSERVER_2008R2_SP1_CU7  = Ver.ver(10,5,0, 1, 7);
-	public static final int SQLSERVER_2008R2_SP1_CU6  = Ver.ver(10,5,0, 1, 6);
-	public static final int SQLSERVER_2008R2_SP1_CU5  = Ver.ver(10,5,0, 1, 5);
-	public static final int SQLSERVER_2008R2_SP1_CU4  = Ver.ver(10,5,0, 1, 4);
-	public static final int SQLSERVER_2008R2_SP1_CU3  = Ver.ver(10,5,0, 1, 3);
-	public static final int SQLSERVER_2008R2_SP1_CU2  = Ver.ver(10,5,0, 1, 2);
-	public static final int SQLSERVER_2008R2_SP1_CU1  = Ver.ver(10,5,0, 1, 1);
-	public static final int SQLSERVER_2008R2_SP1      = Ver.ver(10,5,0, 1, 0);
-	public static final int SQLSERVER_2008R2_CU14     = Ver.ver(10,5,0, 0, 14);
-	public static final int SQLSERVER_2008R2_CU13     = Ver.ver(10,5,0, 0, 13);
-	public static final int SQLSERVER_2008R2_CU12     = Ver.ver(10,5,0, 0, 12);
-	public static final int SQLSERVER_2008R2_CU11     = Ver.ver(10,5,0, 0, 11);
-	public static final int SQLSERVER_2008R2_CU10     = Ver.ver(10,5,0, 0, 10);
-	public static final int SQLSERVER_2008R2_CU9      = Ver.ver(10,5,0, 0, 9);
-	public static final int SQLSERVER_2008R2_CU8      = Ver.ver(10,5,0, 0, 8);
-	public static final int SQLSERVER_2008R2_CU7      = Ver.ver(10,5,0, 0, 7);
-	public static final int SQLSERVER_2008R2_CU6      = Ver.ver(10,5,0, 0, 6);
-	public static final int SQLSERVER_2008R2_CU5      = Ver.ver(10,5,0, 0, 5);
-	public static final int SQLSERVER_2008R2_CU4      = Ver.ver(10,5,0, 0, 4);
-	public static final int SQLSERVER_2008R2_CU3      = Ver.ver(10,5,0, 0, 3);
-	public static final int SQLSERVER_2008R2_CU2      = Ver.ver(10,5,0, 0, 2);
-	public static final int SQLSERVER_2008R2_CU1      = Ver.ver(10,5,0, 0, 1);
-	public static final int SQLSERVER_2008R2          = Ver.ver(10,5,0, 0, 0);
+	public static final long SQLSERVER_2008R2_SP3      = Ver.ver(10,5,0, 3, 0);
+	public static final long SQLSERVER_2008R2_SP2_CU13 = Ver.ver(10,5,0, 2, 13);
+	public static final long SQLSERVER_2008R2_SP2_CU12 = Ver.ver(10,5,0, 2, 12);
+	public static final long SQLSERVER_2008R2_SP2_CU11 = Ver.ver(10,5,0, 2, 11);
+	public static final long SQLSERVER_2008R2_SP2_CU10 = Ver.ver(10,5,0, 2, 10);
+	public static final long SQLSERVER_2008R2_SP2_CU9  = Ver.ver(10,5,0, 2, 9);
+	public static final long SQLSERVER_2008R2_SP2_CU8  = Ver.ver(10,5,0, 2, 8);
+	public static final long SQLSERVER_2008R2_SP2_CU7  = Ver.ver(10,5,0, 2, 7);
+	public static final long SQLSERVER_2008R2_SP2_CU6  = Ver.ver(10,5,0, 2, 6);
+	public static final long SQLSERVER_2008R2_SP2_CU5  = Ver.ver(10,5,0, 2, 5);
+	public static final long SQLSERVER_2008R2_SP2_CU4  = Ver.ver(10,5,0, 2, 4);
+	public static final long SQLSERVER_2008R2_SP2_CU3  = Ver.ver(10,5,0, 2, 3);
+	public static final long SQLSERVER_2008R2_SP2_CU2  = Ver.ver(10,5,0, 2, 2);
+	public static final long SQLSERVER_2008R2_SP2_CU1  = Ver.ver(10,5,0, 2, 1);
+	public static final long SQLSERVER_2008R2_SP2      = Ver.ver(10,5,0, 2, 0);
+	public static final long SQLSERVER_2008R2_SP1_CU10 = Ver.ver(10,5,0, 1, 10);
+	public static final long SQLSERVER_2008R2_SP1_CU9  = Ver.ver(10,5,0, 1, 9);
+	public static final long SQLSERVER_2008R2_SP1_CU8  = Ver.ver(10,5,0, 1, 8);
+	public static final long SQLSERVER_2008R2_SP1_CU7  = Ver.ver(10,5,0, 1, 7);
+	public static final long SQLSERVER_2008R2_SP1_CU6  = Ver.ver(10,5,0, 1, 6);
+	public static final long SQLSERVER_2008R2_SP1_CU5  = Ver.ver(10,5,0, 1, 5);
+	public static final long SQLSERVER_2008R2_SP1_CU4  = Ver.ver(10,5,0, 1, 4);
+	public static final long SQLSERVER_2008R2_SP1_CU3  = Ver.ver(10,5,0, 1, 3);
+	public static final long SQLSERVER_2008R2_SP1_CU2  = Ver.ver(10,5,0, 1, 2);
+	public static final long SQLSERVER_2008R2_SP1_CU1  = Ver.ver(10,5,0, 1, 1);
+	public static final long SQLSERVER_2008R2_SP1      = Ver.ver(10,5,0, 1, 0);
+	public static final long SQLSERVER_2008R2_CU14     = Ver.ver(10,5,0, 0, 14);
+	public static final long SQLSERVER_2008R2_CU13     = Ver.ver(10,5,0, 0, 13);
+	public static final long SQLSERVER_2008R2_CU12     = Ver.ver(10,5,0, 0, 12);
+	public static final long SQLSERVER_2008R2_CU11     = Ver.ver(10,5,0, 0, 11);
+	public static final long SQLSERVER_2008R2_CU10     = Ver.ver(10,5,0, 0, 10);
+	public static final long SQLSERVER_2008R2_CU9      = Ver.ver(10,5,0, 0, 9);
+	public static final long SQLSERVER_2008R2_CU8      = Ver.ver(10,5,0, 0, 8);
+	public static final long SQLSERVER_2008R2_CU7      = Ver.ver(10,5,0, 0, 7);
+	public static final long SQLSERVER_2008R2_CU6      = Ver.ver(10,5,0, 0, 6);
+	public static final long SQLSERVER_2008R2_CU5      = Ver.ver(10,5,0, 0, 5);
+	public static final long SQLSERVER_2008R2_CU4      = Ver.ver(10,5,0, 0, 4);
+	public static final long SQLSERVER_2008R2_CU3      = Ver.ver(10,5,0, 0, 3);
+	public static final long SQLSERVER_2008R2_CU2      = Ver.ver(10,5,0, 0, 2);
+	public static final long SQLSERVER_2008R2_CU1      = Ver.ver(10,5,0, 0, 1);
+	public static final long SQLSERVER_2008R2          = Ver.ver(10,5,0, 0, 0);
 
 	// #################################################################
 	// ## SQL Server 2008
@@ -282,64 +282,64 @@ public class VersionSqlServer
 	// | RTM CU-1                   | 10.00.1763     | November 2008   |
 	// | RTM                        | 10.00.1600     | August 2008     |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2008_SP4      = Ver.ver(10,0,0, 4, 0);
-	public static final int SQLSERVER_2008_SP3_CU17 = Ver.ver(10,0,0, 3, 17);
-	public static final int SQLSERVER_2008_SP3_CU16 = Ver.ver(10,0,0, 3, 16);
-	public static final int SQLSERVER_2008_SP3_CU15 = Ver.ver(10,0,0, 3, 15);
-	public static final int SQLSERVER_2008_SP3_CU14 = Ver.ver(10,0,0, 3, 14);
-	public static final int SQLSERVER_2008_SP3_CU13 = Ver.ver(10,0,0, 3, 13);
-	public static final int SQLSERVER_2008_SP3_CU12 = Ver.ver(10,0,0, 3, 12);
-	public static final int SQLSERVER_2008_SP3_CU11 = Ver.ver(10,0,0, 3, 11);
-	public static final int SQLSERVER_2008_SP3_CU10 = Ver.ver(10,0,0, 3, 10);
-	public static final int SQLSERVER_2008_SP3_CU9  = Ver.ver(10,0,0, 3, 9);
-	public static final int SQLSERVER_2008_SP3_CU8  = Ver.ver(10,0,0, 3, 8);
-	public static final int SQLSERVER_2008_SP3_CU7  = Ver.ver(10,0,0, 3, 7);
-	public static final int SQLSERVER_2008_SP3_CU6  = Ver.ver(10,0,0, 3, 6);
-	public static final int SQLSERVER_2008_SP3_CU5  = Ver.ver(10,0,0, 3, 5);
-	public static final int SQLSERVER_2008_SP3_CU4  = Ver.ver(10,0,0, 3, 4);
-	public static final int SQLSERVER_2008_SP3_CU3  = Ver.ver(10,0,0, 3, 3);
-	public static final int SQLSERVER_2008_SP3_CU2  = Ver.ver(10,0,0, 3, 2);
-	public static final int SQLSERVER_2008_SP3_CU1  = Ver.ver(10,0,0, 3, 1);
-	public static final int SQLSERVER_2008_SP3      = Ver.ver(10,0,0, 3, 0);
-	public static final int SQLSERVER_2008_SP2_CU10 = Ver.ver(10,0,0, 2, 10);
-	public static final int SQLSERVER_2008_SP2_CU9  = Ver.ver(10,0,0, 2, 9);
-	public static final int SQLSERVER_2008_SP2_CU8  = Ver.ver(10,0,0, 2, 8);
-	public static final int SQLSERVER_2008_SP2_CU7  = Ver.ver(10,0,0, 2, 7);
-	public static final int SQLSERVER_2008_SP2_CU6  = Ver.ver(10,0,0, 2, 6);
-	public static final int SQLSERVER_2008_SP2_CU5  = Ver.ver(10,0,0, 2, 5);
-	public static final int SQLSERVER_2008_SP2_CU4  = Ver.ver(10,0,0, 2, 4);
-	public static final int SQLSERVER_2008_SP2_CU3  = Ver.ver(10,0,0, 2, 3);
-	public static final int SQLSERVER_2008_SP2_CU2  = Ver.ver(10,0,0, 2, 2);
-	public static final int SQLSERVER_2008_SP2_CU1  = Ver.ver(10,0,0, 2, 1);
-	public static final int SQLSERVER_2008_SP2      = Ver.ver(10,0,0, 2, 0);
-	public static final int SQLSERVER_2008_SP1_CU16 = Ver.ver(10,0,0, 1, 16);
-	public static final int SQLSERVER_2008_SP1_CU15 = Ver.ver(10,0,0, 1, 15);
-	public static final int SQLSERVER_2008_SP1_CU14 = Ver.ver(10,0,0, 1, 14);
-	public static final int SQLSERVER_2008_SP1_CU13 = Ver.ver(10,0,0, 1, 13);
-	public static final int SQLSERVER_2008_SP1_CU12 = Ver.ver(10,0,0, 1, 12);
-	public static final int SQLSERVER_2008_SP1_CU11 = Ver.ver(10,0,0, 1, 11);
-	public static final int SQLSERVER_2008_SP1_CU10 = Ver.ver(10,0,0, 1, 10);
-	public static final int SQLSERVER_2008_SP1_CU9  = Ver.ver(10,0,0, 1, 9);
-	public static final int SQLSERVER_2008_SP1_CU8  = Ver.ver(10,0,0, 1, 8);
-	public static final int SQLSERVER_2008_SP1_CU7  = Ver.ver(10,0,0, 1, 7);
-	public static final int SQLSERVER_2008_SP1_CU6  = Ver.ver(10,0,0, 1, 6);
-	public static final int SQLSERVER_2008_SP1_CU5  = Ver.ver(10,0,0, 1, 5);
-	public static final int SQLSERVER_2008_SP1_CU4  = Ver.ver(10,0,0, 1, 4);
-	public static final int SQLSERVER_2008_SP1_CU3  = Ver.ver(10,0,0, 1, 3);
-	public static final int SQLSERVER_2008_SP1_CU2  = Ver.ver(10,0,0, 1, 2);
-	public static final int SQLSERVER_2008_SP1_CU1  = Ver.ver(10,0,0, 1, 1);
-	public static final int SQLSERVER_2008_SP1      = Ver.ver(10,0,0, 1, 0);
-	public static final int SQLSERVER_2008_CU10     = Ver.ver(10,0,0, 0, 10);
-	public static final int SQLSERVER_2008_CU9      = Ver.ver(10,0,0, 0, 9);
-	public static final int SQLSERVER_2008_CU8      = Ver.ver(10,0,0, 0, 8);
-	public static final int SQLSERVER_2008_CU7      = Ver.ver(10,0,0, 0, 7);
-	public static final int SQLSERVER_2008_CU6      = Ver.ver(10,0,0, 0, 6);
-	public static final int SQLSERVER_2008_CU5      = Ver.ver(10,0,0, 0, 5);
-	public static final int SQLSERVER_2008_CU4      = Ver.ver(10,0,0, 0, 4);
-	public static final int SQLSERVER_2008_CU3      = Ver.ver(10,0,0, 0, 3);
-	public static final int SQLSERVER_2008_CU2      = Ver.ver(10,0,0, 0, 2);
-	public static final int SQLSERVER_2008_CU1      = Ver.ver(10,0,0, 0, 1);
-	public static final int SQLSERVER_2008          = Ver.ver(10,0,0, 0, 0);
+	public static final long SQLSERVER_2008_SP4      = Ver.ver(10,0,0, 4, 0);
+	public static final long SQLSERVER_2008_SP3_CU17 = Ver.ver(10,0,0, 3, 17);
+	public static final long SQLSERVER_2008_SP3_CU16 = Ver.ver(10,0,0, 3, 16);
+	public static final long SQLSERVER_2008_SP3_CU15 = Ver.ver(10,0,0, 3, 15);
+	public static final long SQLSERVER_2008_SP3_CU14 = Ver.ver(10,0,0, 3, 14);
+	public static final long SQLSERVER_2008_SP3_CU13 = Ver.ver(10,0,0, 3, 13);
+	public static final long SQLSERVER_2008_SP3_CU12 = Ver.ver(10,0,0, 3, 12);
+	public static final long SQLSERVER_2008_SP3_CU11 = Ver.ver(10,0,0, 3, 11);
+	public static final long SQLSERVER_2008_SP3_CU10 = Ver.ver(10,0,0, 3, 10);
+	public static final long SQLSERVER_2008_SP3_CU9  = Ver.ver(10,0,0, 3, 9);
+	public static final long SQLSERVER_2008_SP3_CU8  = Ver.ver(10,0,0, 3, 8);
+	public static final long SQLSERVER_2008_SP3_CU7  = Ver.ver(10,0,0, 3, 7);
+	public static final long SQLSERVER_2008_SP3_CU6  = Ver.ver(10,0,0, 3, 6);
+	public static final long SQLSERVER_2008_SP3_CU5  = Ver.ver(10,0,0, 3, 5);
+	public static final long SQLSERVER_2008_SP3_CU4  = Ver.ver(10,0,0, 3, 4);
+	public static final long SQLSERVER_2008_SP3_CU3  = Ver.ver(10,0,0, 3, 3);
+	public static final long SQLSERVER_2008_SP3_CU2  = Ver.ver(10,0,0, 3, 2);
+	public static final long SQLSERVER_2008_SP3_CU1  = Ver.ver(10,0,0, 3, 1);
+	public static final long SQLSERVER_2008_SP3      = Ver.ver(10,0,0, 3, 0);
+	public static final long SQLSERVER_2008_SP2_CU10 = Ver.ver(10,0,0, 2, 10);
+	public static final long SQLSERVER_2008_SP2_CU9  = Ver.ver(10,0,0, 2, 9);
+	public static final long SQLSERVER_2008_SP2_CU8  = Ver.ver(10,0,0, 2, 8);
+	public static final long SQLSERVER_2008_SP2_CU7  = Ver.ver(10,0,0, 2, 7);
+	public static final long SQLSERVER_2008_SP2_CU6  = Ver.ver(10,0,0, 2, 6);
+	public static final long SQLSERVER_2008_SP2_CU5  = Ver.ver(10,0,0, 2, 5);
+	public static final long SQLSERVER_2008_SP2_CU4  = Ver.ver(10,0,0, 2, 4);
+	public static final long SQLSERVER_2008_SP2_CU3  = Ver.ver(10,0,0, 2, 3);
+	public static final long SQLSERVER_2008_SP2_CU2  = Ver.ver(10,0,0, 2, 2);
+	public static final long SQLSERVER_2008_SP2_CU1  = Ver.ver(10,0,0, 2, 1);
+	public static final long SQLSERVER_2008_SP2      = Ver.ver(10,0,0, 2, 0);
+	public static final long SQLSERVER_2008_SP1_CU16 = Ver.ver(10,0,0, 1, 16);
+	public static final long SQLSERVER_2008_SP1_CU15 = Ver.ver(10,0,0, 1, 15);
+	public static final long SQLSERVER_2008_SP1_CU14 = Ver.ver(10,0,0, 1, 14);
+	public static final long SQLSERVER_2008_SP1_CU13 = Ver.ver(10,0,0, 1, 13);
+	public static final long SQLSERVER_2008_SP1_CU12 = Ver.ver(10,0,0, 1, 12);
+	public static final long SQLSERVER_2008_SP1_CU11 = Ver.ver(10,0,0, 1, 11);
+	public static final long SQLSERVER_2008_SP1_CU10 = Ver.ver(10,0,0, 1, 10);
+	public static final long SQLSERVER_2008_SP1_CU9  = Ver.ver(10,0,0, 1, 9);
+	public static final long SQLSERVER_2008_SP1_CU8  = Ver.ver(10,0,0, 1, 8);
+	public static final long SQLSERVER_2008_SP1_CU7  = Ver.ver(10,0,0, 1, 7);
+	public static final long SQLSERVER_2008_SP1_CU6  = Ver.ver(10,0,0, 1, 6);
+	public static final long SQLSERVER_2008_SP1_CU5  = Ver.ver(10,0,0, 1, 5);
+	public static final long SQLSERVER_2008_SP1_CU4  = Ver.ver(10,0,0, 1, 4);
+	public static final long SQLSERVER_2008_SP1_CU3  = Ver.ver(10,0,0, 1, 3);
+	public static final long SQLSERVER_2008_SP1_CU2  = Ver.ver(10,0,0, 1, 2);
+	public static final long SQLSERVER_2008_SP1_CU1  = Ver.ver(10,0,0, 1, 1);
+	public static final long SQLSERVER_2008_SP1      = Ver.ver(10,0,0, 1, 0);
+	public static final long SQLSERVER_2008_CU10     = Ver.ver(10,0,0, 0, 10);
+	public static final long SQLSERVER_2008_CU9      = Ver.ver(10,0,0, 0, 9);
+	public static final long SQLSERVER_2008_CU8      = Ver.ver(10,0,0, 0, 8);
+	public static final long SQLSERVER_2008_CU7      = Ver.ver(10,0,0, 0, 7);
+	public static final long SQLSERVER_2008_CU6      = Ver.ver(10,0,0, 0, 6);
+	public static final long SQLSERVER_2008_CU5      = Ver.ver(10,0,0, 0, 5);
+	public static final long SQLSERVER_2008_CU4      = Ver.ver(10,0,0, 0, 4);
+	public static final long SQLSERVER_2008_CU3      = Ver.ver(10,0,0, 0, 3);
+	public static final long SQLSERVER_2008_CU2      = Ver.ver(10,0,0, 0, 2);
+	public static final long SQLSERVER_2008_CU1      = Ver.ver(10,0,0, 0, 1);
+	public static final long SQLSERVER_2008          = Ver.ver(10,0,0, 0, 0);
 
 	// #################################################################
 	// ## SQL Server 2005
@@ -389,47 +389,47 @@ public class VersionSqlServer
 	// | Service Pack 1 =========== | 9.00.2047      | April 2006      |
 	// | RTM                        | 9.00.1399      | November 2005   |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2005_SP4_CU3  = Ver.ver(9,0,0, 4, 3);
-	public static final int SQLSERVER_2005_SP4_CU2  = Ver.ver(9,0,0, 4, 2);
-	public static final int SQLSERVER_2005_SP4_CU1  = Ver.ver(9,0,0, 4, 1);
-	public static final int SQLSERVER_2005_SP4      = Ver.ver(9,0,0, 4, 0);
-	public static final int SQLSERVER_2005_SP3_CU15 = Ver.ver(9,0,0, 3, 15);
-	public static final int SQLSERVER_2005_SP3_CU14 = Ver.ver(9,0,0, 3, 14);
-	public static final int SQLSERVER_2005_SP3_CU13 = Ver.ver(9,0,0, 3, 13);
-	public static final int SQLSERVER_2005_SP3_CU12 = Ver.ver(9,0,0, 3, 12);
-	public static final int SQLSERVER_2005_SP3_CU11 = Ver.ver(9,0,0, 3, 11);
-	public static final int SQLSERVER_2005_SP3_CU10 = Ver.ver(9,0,0, 3, 10);
-	public static final int SQLSERVER_2005_SP3_CU9  = Ver.ver(9,0,0, 3, 9);
-	public static final int SQLSERVER_2005_SP3_CU8  = Ver.ver(9,0,0, 3, 8);
-	public static final int SQLSERVER_2005_SP3_CU7  = Ver.ver(9,0,0, 3, 7);
-	public static final int SQLSERVER_2005_SP3_CU6  = Ver.ver(9,0,0, 3, 6);
-	public static final int SQLSERVER_2005_SP3_CU5  = Ver.ver(9,0,0, 3, 5);
-	public static final int SQLSERVER_2005_SP3_CU4  = Ver.ver(9,0,0, 3, 4);
-	public static final int SQLSERVER_2005_SP3_CU3  = Ver.ver(9,0,0, 3, 3);
-	public static final int SQLSERVER_2005_SP3_CU2  = Ver.ver(9,0,0, 3, 2);
-	public static final int SQLSERVER_2005_SP3_CU1  = Ver.ver(9,0,0, 3, 1);
-	public static final int SQLSERVER_2005_SP3      = Ver.ver(9,0,0, 3, 0);
-	public static final int SQLSERVER_2005_SP2_CU17 = Ver.ver(9,0,0, 2, 17);
-	public static final int SQLSERVER_2005_SP2_CU16 = Ver.ver(9,0,0, 2, 16);
-	public static final int SQLSERVER_2005_SP2_CU15 = Ver.ver(9,0,0, 2, 15);
-	public static final int SQLSERVER_2005_SP2_CU14 = Ver.ver(9,0,0, 2, 14);
-	public static final int SQLSERVER_2005_SP2_CU13 = Ver.ver(9,0,0, 2, 13);
-	public static final int SQLSERVER_2005_SP2_CU12 = Ver.ver(9,0,0, 2, 12);
-	public static final int SQLSERVER_2005_SP2_CU11 = Ver.ver(9,0,0, 2, 11);
-	public static final int SQLSERVER_2005_SP2_CU10 = Ver.ver(9,0,0, 2, 10);
-	public static final int SQLSERVER_2005_SP2_CU9  = Ver.ver(9,0,0, 2, 9);
-	public static final int SQLSERVER_2005_SP2_CU8  = Ver.ver(9,0,0, 2, 8);
-	public static final int SQLSERVER_2005_SP2_CU7  = Ver.ver(9,0,0, 2, 7);
-	public static final int SQLSERVER_2005_SP2_CU6  = Ver.ver(9,0,0, 2, 6);
-	public static final int SQLSERVER_2005_SP2_CU5  = Ver.ver(9,0,0, 2, 5);
-	public static final int SQLSERVER_2005_SP2_CU4  = Ver.ver(9,0,0, 2, 4);
-	public static final int SQLSERVER_2005_SP2_CU3  = Ver.ver(9,0,0, 2, 3);
-	public static final int SQLSERVER_2005_SP2_CU2  = Ver.ver(9,0,0, 2, 2);
-	public static final int SQLSERVER_2005_SP2_CU1  = Ver.ver(9,0,0, 2, 1);
-	public static final int SQLSERVER_2005_SP2      = Ver.ver(9,0,0, 2, 0);
-	public static final int SQLSERVER_2005_SP1_CU1  = Ver.ver(9,0,0, 1, 1);
-	public static final int SQLSERVER_2005_SP1      = Ver.ver(9,0,0, 1, 0);
-	public static final int SQLSERVER_2005          = Ver.ver(9,0,0, 0, 0);
+	public static final long SQLSERVER_2005_SP4_CU3  = Ver.ver(9,0,0, 4, 3);
+	public static final long SQLSERVER_2005_SP4_CU2  = Ver.ver(9,0,0, 4, 2);
+	public static final long SQLSERVER_2005_SP4_CU1  = Ver.ver(9,0,0, 4, 1);
+	public static final long SQLSERVER_2005_SP4      = Ver.ver(9,0,0, 4, 0);
+	public static final long SQLSERVER_2005_SP3_CU15 = Ver.ver(9,0,0, 3, 15);
+	public static final long SQLSERVER_2005_SP3_CU14 = Ver.ver(9,0,0, 3, 14);
+	public static final long SQLSERVER_2005_SP3_CU13 = Ver.ver(9,0,0, 3, 13);
+	public static final long SQLSERVER_2005_SP3_CU12 = Ver.ver(9,0,0, 3, 12);
+	public static final long SQLSERVER_2005_SP3_CU11 = Ver.ver(9,0,0, 3, 11);
+	public static final long SQLSERVER_2005_SP3_CU10 = Ver.ver(9,0,0, 3, 10);
+	public static final long SQLSERVER_2005_SP3_CU9  = Ver.ver(9,0,0, 3, 9);
+	public static final long SQLSERVER_2005_SP3_CU8  = Ver.ver(9,0,0, 3, 8);
+	public static final long SQLSERVER_2005_SP3_CU7  = Ver.ver(9,0,0, 3, 7);
+	public static final long SQLSERVER_2005_SP3_CU6  = Ver.ver(9,0,0, 3, 6);
+	public static final long SQLSERVER_2005_SP3_CU5  = Ver.ver(9,0,0, 3, 5);
+	public static final long SQLSERVER_2005_SP3_CU4  = Ver.ver(9,0,0, 3, 4);
+	public static final long SQLSERVER_2005_SP3_CU3  = Ver.ver(9,0,0, 3, 3);
+	public static final long SQLSERVER_2005_SP3_CU2  = Ver.ver(9,0,0, 3, 2);
+	public static final long SQLSERVER_2005_SP3_CU1  = Ver.ver(9,0,0, 3, 1);
+	public static final long SQLSERVER_2005_SP3      = Ver.ver(9,0,0, 3, 0);
+	public static final long SQLSERVER_2005_SP2_CU17 = Ver.ver(9,0,0, 2, 17);
+	public static final long SQLSERVER_2005_SP2_CU16 = Ver.ver(9,0,0, 2, 16);
+	public static final long SQLSERVER_2005_SP2_CU15 = Ver.ver(9,0,0, 2, 15);
+	public static final long SQLSERVER_2005_SP2_CU14 = Ver.ver(9,0,0, 2, 14);
+	public static final long SQLSERVER_2005_SP2_CU13 = Ver.ver(9,0,0, 2, 13);
+	public static final long SQLSERVER_2005_SP2_CU12 = Ver.ver(9,0,0, 2, 12);
+	public static final long SQLSERVER_2005_SP2_CU11 = Ver.ver(9,0,0, 2, 11);
+	public static final long SQLSERVER_2005_SP2_CU10 = Ver.ver(9,0,0, 2, 10);
+	public static final long SQLSERVER_2005_SP2_CU9  = Ver.ver(9,0,0, 2, 9);
+	public static final long SQLSERVER_2005_SP2_CU8  = Ver.ver(9,0,0, 2, 8);
+	public static final long SQLSERVER_2005_SP2_CU7  = Ver.ver(9,0,0, 2, 7);
+	public static final long SQLSERVER_2005_SP2_CU6  = Ver.ver(9,0,0, 2, 6);
+	public static final long SQLSERVER_2005_SP2_CU5  = Ver.ver(9,0,0, 2, 5);
+	public static final long SQLSERVER_2005_SP2_CU4  = Ver.ver(9,0,0, 2, 4);
+	public static final long SQLSERVER_2005_SP2_CU3  = Ver.ver(9,0,0, 2, 3);
+	public static final long SQLSERVER_2005_SP2_CU2  = Ver.ver(9,0,0, 2, 2);
+	public static final long SQLSERVER_2005_SP2_CU1  = Ver.ver(9,0,0, 2, 1);
+	public static final long SQLSERVER_2005_SP2      = Ver.ver(9,0,0, 2, 0);
+	public static final long SQLSERVER_2005_SP1_CU1  = Ver.ver(9,0,0, 1, 1);
+	public static final long SQLSERVER_2005_SP1      = Ver.ver(9,0,0, 1, 0);
+	public static final long SQLSERVER_2005          = Ver.ver(9,0,0, 0, 0);
 
 	// #################################################################
 	// ## SQL Server 2000
@@ -444,22 +444,22 @@ public class VersionSqlServer
 	// | Service Pack 1 =========== | 8.00.384       | June 2001       |
 	// | RTM                        | 8.00.14        | November 2000   |
 	// +----------------------------+----------------+-----------------+
-	public static final int SQLSERVER_2000_SP4_CU1  = Ver.ver(8,0,0, 4, 1);
-	public static final int SQLSERVER_2000_SP4      = Ver.ver(8,0,0, 4, 0);
-	public static final int SQLSERVER_2000_SP3      = Ver.ver(8,0,0, 3, 0);
-	public static final int SQLSERVER_2000_SP2      = Ver.ver(8,0,0, 2, 0);
-	public static final int SQLSERVER_2000_SP1      = Ver.ver(8,0,0, 1, 0);
-	public static final int SQLSERVER_2000          = Ver.ver(8,0,0, 0, 0);
+	public static final long SQLSERVER_2000_SP4_CU1  = Ver.ver(8,0,0, 4, 1);
+	public static final long SQLSERVER_2000_SP4      = Ver.ver(8,0,0, 4, 0);
+	public static final long SQLSERVER_2000_SP3      = Ver.ver(8,0,0, 3, 0);
+	public static final long SQLSERVER_2000_SP2      = Ver.ver(8,0,0, 2, 0);
+	public static final long SQLSERVER_2000_SP1      = Ver.ver(8,0,0, 1, 0);
+	public static final long SQLSERVER_2000          = Ver.ver(8,0,0, 0, 0);
 	
 	
-	public static int parseVersionStringToNumber(String versionStr)
+	public static long parseVersionStringToNumber(String versionStr)
 	{
 		return parse(versionStr);
 	}
 
-	private static int parse(String version)
+	private static long parse(String version)
 	{
-		int intVersion = -1;
+		long intVersion = -1;
 		
 		String regexp = "(\\d+)\\.(\\d+)\\.(\\d+)(?:\\.(\\d+))?"; // search for versions like 1.2[.3]
         Pattern versionPattern = Pattern.compile(regexp);
@@ -476,10 +476,10 @@ public class VersionSqlServer
 			if (g3str == null) g3str = "0";
 			if (g4str == null) g4str = "0";
 			
-			int v1 = Integer.parseInt(g1str);
-			int v2 = Integer.parseInt(g2str);
-			int v3 = Integer.parseInt(g3str);
-			int v4 = Integer.parseInt(g4str);
+			long v1 = Long.parseLong(g1str);
+			long v2 = Long.parseLong(g2str);
+			long v3 = Long.parseLong(g3str);
+			long v4 = Long.parseLong(g4str);
 
 			// earlier version than SQL-Server 2000: NOT Supported
 			if (v1 < 8)

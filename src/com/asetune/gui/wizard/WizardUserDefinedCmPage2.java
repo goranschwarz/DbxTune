@@ -284,20 +284,20 @@ implements ActionListener, FocusListener, CaretListener
 		// NEED VERSION
 		if ( ! _needVersion_txt.getText().equals(NEED_VERSION_DEFAULT) )
 		{
-			String aseVersionStr = _needVersion_txt.getText();
-			if ( ! aseVersionStr.equals("") )
+			String srvVersionStr = _needVersion_txt.getText();
+			if ( ! srvVersionStr.equals("") )
 			{
-				int    aseVersionInt = -1;
+				long srvVersionNum = -1;
 				try 
 				{
-					aseVersionInt = Integer.parseInt(aseVersionStr); 
+					srvVersionNum = Long.parseLong(srvVersionStr); 
 				}
 				catch (NumberFormatException ignore) 
 				{ 
-					return "ASE Version needs to be a number."; 
+					return "DBMS Version needs to be a number."; 
 				}
-				if (aseVersionInt > 0 && aseVersionStr.length() != Integer.toString(Ver.ver(15,0,3,1,1)).length() )
-					return "ASE Version needs to be a number, Example "+Ver.ver(15,0,3,1,1)+" (15.0.3 ESD#1.1).";
+				if (srvVersionNum > 0 && srvVersionStr.length() != Long.toString(Ver.ver(15,0,3,1,1)).length() )
+					return "DBMS Version needs to be a number, Example "+Ver.ver(15,0,3,1,1)+" (15.0.3 ESD#1.1).";
 			}
 		}
 

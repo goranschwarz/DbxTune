@@ -14,6 +14,8 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameRax;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.DbmsVersionHelperSybase;
+import com.asetune.sql.IDbmsVersionHelper;
 import com.asetune.utils.DbUtils;
 
 public class RaxTune
@@ -100,6 +102,12 @@ extends DbxTune
 		return null;
 	}
 	
+	@Override
+	public IDbmsVersionHelper createDbmsVersionHelper()
+	{
+		return new DbmsVersionHelperSybase();
+	}
+
 	@Override
 	public IDbmsConfig createDbmsConfig()
 	{

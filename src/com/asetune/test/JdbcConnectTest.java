@@ -37,7 +37,7 @@ public class JdbcConnectTest
 		return spid;
 	}
 
-	public static String getAseVersion(Connection conn)
+	public static String getsrvVersion(Connection conn)
 	{
 		String version = "";
 		String sql = "select @@version";
@@ -57,7 +57,7 @@ public class JdbcConnectTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getAseVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql="+sql);
 			e.printStackTrace();
 		}
 		
@@ -127,7 +127,7 @@ java -cp classes;lib/jconn3.jar com.asetune.test.JdbcPreparedStatementsTest ston
 			if (jdbcUrl.startsWith("jdbc:sybase:Tds"))
 			{
 				System.out.println("Sybase SPID:      "+getSpid(conn));
-				System.out.println("Sybase @@version: "+getAseVersion(conn));
+				System.out.println("Sybase @@version: "+getsrvVersion(conn));
 			}
 
 			System.out.println("Disconnecting from DBMS...");

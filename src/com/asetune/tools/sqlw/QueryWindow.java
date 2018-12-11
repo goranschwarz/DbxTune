@@ -550,7 +550,7 @@ public class QueryWindow
 	private long        _untitledFileLastModified         = -1;
 	private boolean     _untitledFileOverWriteSession     = false;
 	
-	private int         _srvVersion                       = 0;
+	private long        _srvVersion                       = 0;
 	private long        _connectedAtTime                  = 0;
 	private String      _connectedDriverName              = null;
 	private String      _connectedDriverVersion           = null;
@@ -3108,7 +3108,7 @@ public class QueryWindow
 			
 			// Set ther ServerKey that saveWinProps() will use to store connection specifics (window size, pos, etc) 
 			_winPropsKey = srvStr;
-			
+
 			if (sendConnectionStatistics)
 			{
 				// Send Connection Info to Statistics server
@@ -3119,7 +3119,7 @@ public class QueryWindow
 				connInfo.setJdbcDriverVersion(_connectedDriverVersion);
 				connInfo.setJdbcDriver       (AseConnectionFactory.getDriver());
 				connInfo.setJdbcUrl          (_connectedWithUrl); 
-				connInfo.setSrvVersionInt    (_srvVersion);
+				connInfo.setSrvVersionNum    (_srvVersion);
 				connInfo.setSrvName          (_connectedToServerName); 
 				connInfo.setSrvUser          (_connectedAsUser); 
 				connInfo.setSrvPageSizeInKb  (_connectedSrvPageSizeInKb);
@@ -3180,7 +3180,7 @@ public class QueryWindow
 				connInfo.setJdbcDriverVersion(_connectedDriverVersion);
 				connInfo.setJdbcDriver       (connDialog.getOfflineJdbcDriver());
 				connInfo.setJdbcUrl          (_connectedWithUrl); 
-				connInfo.setSrvVersionInt    (0);
+				connInfo.setSrvVersionNum    (0);
 				connInfo.setSrvName          (_connectedToServerName); 
 				connInfo.setSrvUser          (_connectedAsUser); 
 				connInfo.setSrvPageSizeInKb  (_connectedSrvPageSizeInKb); 
@@ -3241,7 +3241,7 @@ public class QueryWindow
 				connInfo.setJdbcDriverVersion(_connectedDriverVersion);
 				connInfo.setJdbcDriver       (connDialog.getJdbcDriver());
 				connInfo.setJdbcUrl          (_connectedWithUrl); 
-				connInfo.setSrvVersionInt    (0);
+				connInfo.setSrvVersionNum    (_srvVersion);
 				connInfo.setSrvName          (_connectedToServerName); 
 				connInfo.setSrvUser          (_connectedAsUser); 
 				connInfo.setSrvPageSizeInKb  (_connectedSrvPageSizeInKb); 
@@ -3370,7 +3370,7 @@ public class QueryWindow
 
 			SqlUtils.setPrettyPrintDatabaseProductName(_connectedToProductName);
 			
-			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
+			_logger.info("Connected to DatabaseProductName='"+_connectedToProductName+"', DatabaseProductVersion='"+_connectedToProductVersion+"', srvVersionNum="+_srvVersion+" ("+Ver.versionNumToStr(_srvVersion, _connectedToProductName)+"), DatabaseServerName='"+_connectedToServerName+"', InitialCatalog='"+_connectedInitialCatalog+"' with Username='"+_connectedAsUser+"', toURL='"+_connectedWithUrl+"', using Driver='"+_connectedDriverName+"', DriverVersion='"+_connectedDriverVersion+"'.");
 		} 
 		catch (Throwable ex) 
 		{
@@ -3555,7 +3555,7 @@ public class QueryWindow
 					_tooltipProviderAbstract     = new ToolTipSupplierAse(_window, _compleationProviderAbstract, this);
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 					
-					_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
+//					_srvVersion              = AseConnectionUtils.getAseVersionNumber(_conn);
 
 					// MonTableDictionary: This so that SQL-Capture can work 
 					MonTablesDictionary monTableDict = new MonTablesDictionaryAse();
@@ -3615,7 +3615,7 @@ public class QueryWindow
 					_tooltipProviderAbstract     = new ToolTipSupplierRepServer(_window, _compleationProviderAbstract, this);
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
-					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
+//					_srvVersion = AseConnectionUtils.getRsVersionNumber(_conn);
 
 					// DBMS Configuration
 					DbmsConfigManager.setInstance( new RsConfig() );
@@ -3666,7 +3666,7 @@ public class QueryWindow
 					_tooltipProviderAbstract     = new ToolTipSupplierRax(_window, _compleationProviderAbstract, this);
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
-					_srvVersion = AseConnectionUtils.getRaxVersionNumber(_conn);
+//					_srvVersion = AseConnectionUtils.getRaxVersionNumber(_conn);
 
 					// DBMS Configuration
 					DbmsConfigManager.setInstance( new RaxConfig() );
@@ -3711,7 +3711,7 @@ public class QueryWindow
 					_tooltipProviderAbstract     = new ToolTipSupplierAsa(_window, _compleationProviderAbstract, this);
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
-//					_aseVersion = AseConnectionUtils.getAsaVersionNumber(_conn); // FIXME: ASA has another "system"
+//					_srvVersion = AseConnectionUtils.getAsaVersionNumber(_conn); // FIXME: ASA has another "system"
 
 					// Sortorder & charset
 					_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
@@ -3732,7 +3732,7 @@ public class QueryWindow
 					_tooltipProviderAbstract     = new ToolTipSupplierIq(_window, _compleationProviderAbstract, this);
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 
-//					_aseVersion = AseConnectionUtils.getIqVersionNumber(_conn); // FIXME: IQ has another "system"
+//					_srvVersion = AseConnectionUtils.getIqVersionNumber(_conn); // FIXME: IQ has another "system"
 
 					// Sortorder & charset
 					_connectedSrvCharset   = AseConnectionUtils.getAsaCharset(_conn);
@@ -3800,7 +3800,8 @@ public class QueryWindow
 			_conn = connDialog.getJdbcConn();
 			_connType = ConnectionDialog.JDBC_CONN;
 
-			_srvVersion = -1;
+//			_srvVersion = -1;
+//			_srvVersion = _conn.getDbmsVersionNumber();
 
 			// Set AutoCommit to the proper value
 			action_autocommitAtConnect();
@@ -5411,14 +5412,14 @@ public class QueryWindow
 	private void action_aseAppTrace(ActionEvent e)
 	{
 		String servername    = MonTablesDictionaryManager.getInstance().getDbmsServerName();
-		String aseVersionStr = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionStr();
-		int    aseVersionNum = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
+		String srvVersionStr = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionStr();
+		long   srvVersionNum = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
 //		String servername    = _conn.getDbmsServerName();
-//		String aseVersionStr = _conn.getDbmsVersionStr();
-//		int    aseVersionNum = _conn.getDbmsVersionNumber();
-		if (aseVersionNum >= Ver.ver(15,0,2))
+//		String srvVersionStr = _conn.getDbmsVersionStr();
+//		int    srvVersionNum = _conn.getDbmsVersionNumber();
+		if (srvVersionNum >= Ver.ver(15,0,2))
 		{
-			AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
+			AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, srvVersionStr);
 			apptrace.setVisible(true);
 		}
 		else
@@ -5426,7 +5427,7 @@ public class QueryWindow
 			// NOT supported in ASE versions below 15.0.2
 			String htmlMsg = 
 				"<html>" +
-				"  <h2>Sorry this functionality is not available in ASE "+Ver.versionIntToStr(aseVersionNum)+"</h2>" +
+				"  <h2>Sorry this functionality is not available in ASE "+Ver.versionNumToStr(srvVersionNum)+"</h2>" +
 				"  Application Tracing is introduced in ASE 15.0.2" +
 				"</html>";
 			SwingUtils.showInfoMessage(_window, "Not supported for this ASE Version", htmlMsg);
@@ -9208,7 +9209,7 @@ checkPanelSize(_resPanel, comp);
 		final SqlwUsageInfo sqlwUsageInfo = new SqlwUsageInfo();
 
 		sqlwUsageInfo.setConnType         (_connType);
-		sqlwUsageInfo.setSrvVersionInt    (_srvVersion);
+		sqlwUsageInfo.setSrvVersionNum    (_srvVersion);
 		sqlwUsageInfo.setProductName      (_connectedToProductName);
 
 		sqlwUsageInfo.setConnectTime      (_connectedAtTime);
@@ -9806,11 +9807,11 @@ checkPanelSize(_resPanel, comp);
 	}
 
 	
-	private JPopupMenu createSetAseOptionButtonPopupMenu(final int aseVersion)
+	private JPopupMenu createSetAseOptionButtonPopupMenu(final long srvVersion)
 	{
 		ArrayList<AseOptionOrSwitch> options = new ArrayList<AseOptionOrSwitch>();
 
-		if (aseVersion >= Ver.ver(15,0,2)) 
+		if (srvVersion >= Ver.ver(15,0,2)) 
 		{
 			boolean statementCache   = false;
 			boolean literalAutoParam = false;
@@ -9827,17 +9828,17 @@ checkPanelSize(_resPanel, comp);
 		}
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF set statistics io ON-OFF", null, "showplan & statistics io", false, "Displays the query plan and statistics io"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF", null, "showplan", false, "Displays the query plan"));
-		if (aseVersion >= Ver.ver(15,0,3)) 
+		if (srvVersion >= Ver.ver(15,0,3)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch on 3604,9529 with override", "set switch off 3604,9529", "switch 3604,9529", false, "Traceflag 3604,9529: Include Lava operator execution statistics and resource use in a showplan format at most detailed level."));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics io ON-OFF",            null, "statistics io",            false, "Number of logical and physical IO's per table"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics time ON-OFF",          null, "statistics time",          false, "Compile time and elapsed time"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics subquerycache ON-OFF", null, "statistics subquerycache", false, "Statistics about internal subquery optimizations"));
-		if (aseVersion >= Ver.ver(15,0)) 
+		if (srvVersion >= Ver.ver(15,0)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics plancost ON-OFF",      null, "statistics plancost",      false, "Query plan in tree format, includes estimated/actual rows and IO's"));
-		if (aseVersion >= Ver.ver(15,0,2)) 
+		if (srvVersion >= Ver.ver(15,0,2)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics resource ON-OFF",      null, "statistics resource",      false, "Resource usage, includes procedure cache and tempdb"));
 
-		if (aseVersion >= Ver.ver(15,7,0,100) || aseVersion >= Ver.ver(15,7,0,60) )
+		if (srvVersion >= Ver.ver(15,7,0,100) || srvVersion >= Ver.ver(15,7,0,60) )
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 
@@ -9885,7 +9886,7 @@ checkPanelSize(_resPanel, comp);
 //			previously indicated is resumed. No output is generated if a directory name was not previously provided.
 		}
 		
-		if (aseVersion >= Ver.ver(15,0,2))
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch ON-OFF 3604", null, "switch 3604", false, "Set traceflag 3604 on|off, <b>the below options needs this</b>."));
@@ -10055,7 +10056,7 @@ checkPanelSize(_resPanel, comp);
 	 * @param cmName The <b>long</b> or <b>short</b> name of the CounterModel
 	 * @return a JButton (if one was passed, it's the same one, but if null was passed a new instance is created)
 	 */
-	private JButton createSetAseOptionButton(JButton button, final int aseVersion)
+	private JButton createSetAseOptionButton(JButton button, final long srvVersion)
 	{
 		if (button == null)
 			button = new JButton();
@@ -10064,7 +10065,7 @@ checkPanelSize(_resPanel, comp);
 		button.setToolTipText("<html>Set various options, for example: set showplan on|off.</html>");
 		button.setText("Set");
 
-		JPopupMenu popupMenu = createSetAseOptionButtonPopupMenu(aseVersion);
+		JPopupMenu popupMenu = createSetAseOptionButtonPopupMenu(srvVersion);
 		button.setComponentPopupMenu(popupMenu);
 
 		// If we click on the button, display the popup menu
@@ -10092,7 +10093,7 @@ checkPanelSize(_resPanel, comp);
 
 	/**
 	 */
-	private JButton createSetRsOptionButton(JButton button, final int version)
+	private JButton createSetRsOptionButton(JButton button, final long version)
 	{
 		if (button == null)
 			button = new JButton();
@@ -10123,7 +10124,7 @@ checkPanelSize(_resPanel, comp);
 		
 		return button;
 	}
-	private JPopupMenu createSetRsOptionButtonPopupMenu(final int version)
+	private JPopupMenu createSetRsOptionButtonPopupMenu(final long version)
 	{
 		// Do PopupMenu
 		final JPopupMenu popupMenu = new JPopupMenu();
@@ -10136,7 +10137,7 @@ checkPanelSize(_resPanel, comp);
 
 	/**
 	 */
-	private JButton createSetIqOptionButton(JButton button, final int version)
+	private JButton createSetIqOptionButton(JButton button, final long version)
 	{
 		if (button == null)
 			button = new JButton();
@@ -10167,7 +10168,7 @@ checkPanelSize(_resPanel, comp);
 		
 		return button;
 	}
-	private JPopupMenu createSetIqOptionButtonPopupMenu(final int version)
+	private JPopupMenu createSetIqOptionButtonPopupMenu(final long version)
 	{
 		// Do PopupMenu
 		final JPopupMenu popupMenu = new JPopupMenu();
@@ -10779,7 +10780,7 @@ checkPanelSize(_resPanel, comp);
 	/*----------------------------------------------------------------------
 	** BEGIN: Favorite SQL and RCL button stuff
 	**----------------------------------------------------------------------*/ 
-	private JButton createSqlCommandsButton(JButton button, final int version)
+	private JButton createSqlCommandsButton(JButton button, final long version)
 	{
 		if (button == null)
 			button = new JButton();
@@ -10846,7 +10847,7 @@ checkPanelSize(_resPanel, comp);
 		
 		return button;
 	}
-	private JPopupMenu createSqlCommandsButtonPopupMenu(final int version)
+	private JPopupMenu createSqlCommandsButtonPopupMenu(final long version)
 	{
 		ArrayList<FavoriteCommandEntry> commandList = new ArrayList<FavoriteCommandDialog.FavoriteCommandEntry>();
 
@@ -10944,7 +10945,7 @@ checkPanelSize(_resPanel, comp);
 	}
 
 
-	private JButton createRclCommandsButton(JButton button, final int version)
+	private JButton createRclCommandsButton(JButton button, final long version)
 	{
 		if (button == null)
 			button = new JButton();
@@ -10985,7 +10986,7 @@ checkPanelSize(_resPanel, comp);
 		
 		return button;
 	}
-	private JPopupMenu createRclCommandsButtonPopupMenu(final int version)
+	private JPopupMenu createRclCommandsButtonPopupMenu(final long version)
 	{
 		ArrayList<FavoriteCommandEntry> commandList = new ArrayList<FavoriteCommandDialog.FavoriteCommandEntry>();
 		commandList.add(new FavoriteCommandEntry(VendorType.RS, "admin health",                       "", "Displays status information.  Status is HEALTHY when all threads are running, otherwise SUSPECT."));

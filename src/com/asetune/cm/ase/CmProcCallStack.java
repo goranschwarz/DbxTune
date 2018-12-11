@@ -42,8 +42,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessProcedures"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -110,7 +110,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 //		if (srvVersion >= 15700)
 //		if (srvVersion >= 1570000)
@@ -121,14 +121,14 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		// this would mean NO PK and NO DIFF
 		return null;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -147,17 +147,17 @@ extends CountersModel
 		String ase1570_nl     = "";
 
 		if (isClusterEnabled)    InstanceID      = "InstanceID, ";
-//		if (aseVersion >= 12530) LineNumber      = "LineNumber, ";
-//		if (aseVersion >= 1253000) LineNumber      = "LineNumber, ";
-		if (aseVersion >= Ver.ver(12,5,3)) LineNumber      = "LineNumber, ";
+//		if (srvVersion >= 12530) LineNumber      = "LineNumber, ";
+//		if (srvVersion >= 1253000) LineNumber      = "LineNumber, ";
+		if (srvVersion >= Ver.ver(12,5,3)) LineNumber      = "LineNumber, ";
 
-//		if (aseVersion >= 15025) StatementNumber = "StatementNumber, ";
-//		if (aseVersion >= 1502050) StatementNumber = "StatementNumber, ";
-		if (aseVersion >= Ver.ver(15,0,2,5)) StatementNumber = "StatementNumber, ";
+//		if (srvVersion >= 15025) StatementNumber = "StatementNumber, ";
+//		if (srvVersion >= 1502050) StatementNumber = "StatementNumber, ";
+		if (srvVersion >= Ver.ver(15,0,2,5)) StatementNumber = "StatementNumber, ";
 		
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
+//		if (srvVersion >= 15700)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			ExecutionCount = "ExecutionCount, ";
 			CPUTime        = "CPUTime, ";

@@ -92,7 +92,7 @@ public class AseConfigMonitoringDialog
 	private DbxConnection      _conn             = null;
 	private boolean            _configErrors     = false;
 
-	private int                _aseVersionNum    = 0;
+	private long               _srvVersionNum    = 0;
 	private boolean            _isClusterEnabled = false;
 	private boolean            _isXfsLicenseEnabled = true;
 	
@@ -200,36 +200,36 @@ public class AseConfigMonitoringDialog
 	** BEGIN: constructors
 	**---------------------------------------------------
 	*/
-//	private AseConfigMonitoringDialog(Frame owner, Connection conn, int aseVersionNum, String title)
-	private AseConfigMonitoringDialog(Frame owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel, String title)
+//	private AseConfigMonitoringDialog(Frame owner, Connection conn, long srvVersionNum, String title)
+	private AseConfigMonitoringDialog(Frame owner, DbxConnection conn, long srvVersionNum, boolean showOnExitPanel, String title)
 	{
 		super(owner, title, true);
-		init(owner, conn, aseVersionNum, showOnExitPanel);
+		init(owner, conn, srvVersionNum, showOnExitPanel);
 	}
-//	private AseConfigMonitoringDialog(Dialog owner, Connection conn, int aseVersionNum, String title)
-	private AseConfigMonitoringDialog(Dialog owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel, String title)
+//	private AseConfigMonitoringDialog(Dialog owner, Connection conn, long srvVersionNum, String title)
+	private AseConfigMonitoringDialog(Dialog owner, DbxConnection conn, long srvVersionNum, boolean showOnExitPanel, String title)
 	{
 		super(owner, title, true);
-		init(owner, conn, aseVersionNum, showOnExitPanel);
+		init(owner, conn, srvVersionNum, showOnExitPanel);
 	}
-//	private void init(Window owner, Connection conn, int aseVersionNum)
-	private void init(Window owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
+//	private void init(Window owner, Connection conn, long srvVersionNum)
+	private void init(Window owner, DbxConnection conn, long srvVersionNum, boolean showOnExitPanel)
 	{
 		_conn = conn;
 		_showOnExitPanel = showOnExitPanel;
 		
-		setAseVersion(aseVersionNum);
+		setSrvVersion(srvVersionNum);
 		if ( AseConnectionUtils.isConnectionOk(_conn, false, null) )
 		{
 			// Try to get a new version number if it doesn't exist...
-			if (_aseVersionNum <= 0)
+			if (_srvVersionNum <= 0)
 			{
-				_aseVersionNum    = AseConnectionUtils.getAseVersionNumber(_conn);
+				_srvVersionNum    = AseConnectionUtils.getAseVersionNumber(_conn);
 				_isClusterEnabled = AseConnectionUtils.isClusterEnabled(_conn);
 
 				_isXfsLicenseEnabled = isXfsLicenseEnabled(_conn);
 
-				_logger.debug("init() Need to refresh the ASE Server version number, it is now '"+_aseVersionNum+"', isClusterEnabled="+_isClusterEnabled+".");
+				_logger.debug("init() Need to refresh the ASE Server version number, it is now '"+_srvVersionNum+"', isClusterEnabled="+_isClusterEnabled+".");
 			}
 		}
 
@@ -245,10 +245,10 @@ public class AseConfigMonitoringDialog
 	}
 
 
-//	public static void showDialog(Frame owner, Connection conn, int aseVersionNum)
-	public static void showDialog(Frame owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
+//	public static void showDialog(Frame owner, Connection conn, long srvVersionNum)
+	public static void showDialog(Frame owner, DbxConnection conn, long srvVersionNum, boolean showOnExitPanel)
 	{
-		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
+		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, srvVersionNum, showOnExitPanel, msgDialogTitle);
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
 			return;
@@ -256,10 +256,10 @@ public class AseConfigMonitoringDialog
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
-//	public static void showDialog(Dialog owner, Connection conn, int aseVersionNum)
-	public static void showDialog(Dialog owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
+//	public static void showDialog(Dialog owner, Connection conn, long srvVersionNum)
+	public static void showDialog(Dialog owner, DbxConnection conn, long srvVersionNum, boolean showOnExitPanel)
 	{
-		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
+		AseConfigMonitoringDialog dialog = new AseConfigMonitoringDialog(owner, conn, srvVersionNum, showOnExitPanel, msgDialogTitle);
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
 			return;
@@ -267,16 +267,16 @@ public class AseConfigMonitoringDialog
 		dialog.setVisible(true);
 		dialog.dispose();
 	}
-//	public static void showDialog(Component owner, Connection conn, int aseVersionNum)
-	public static void showDialog(Component owner, DbxConnection conn, int aseVersionNum, boolean showOnExitPanel)
+//	public static void showDialog(Component owner, Connection conn, long srvVersionNum)
+	public static void showDialog(Component owner, DbxConnection conn, long srvVersionNum, boolean showOnExitPanel)
 	{
 		AseConfigMonitoringDialog dialog = null;
 		if (owner instanceof Frame)
-			dialog = new AseConfigMonitoringDialog((Frame)owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
+			dialog = new AseConfigMonitoringDialog((Frame)owner, conn, srvVersionNum, showOnExitPanel, msgDialogTitle);
 		else if (owner instanceof Dialog)
-			dialog = new AseConfigMonitoringDialog((Dialog)owner, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
+			dialog = new AseConfigMonitoringDialog((Dialog)owner, conn, srvVersionNum, showOnExitPanel, msgDialogTitle);
 		else
-			dialog = new AseConfigMonitoringDialog((Dialog)null, conn, aseVersionNum, showOnExitPanel, msgDialogTitle);
+			dialog = new AseConfigMonitoringDialog((Dialog)null, conn, srvVersionNum, showOnExitPanel, msgDialogTitle);
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, true, owner) )
 			return;
@@ -700,10 +700,10 @@ public class AseConfigMonitoringDialog
 				return;
 
 			// Try to get a new version number if it doesn't exist...
-			if (_aseVersionNum <= 0)
+			if (_srvVersionNum <= 0)
 			{
-				_aseVersionNum = AseConnectionUtils.getAseVersionNumber(_conn);
-				_logger.debug("setVisible("+visible+") Need to refresh the ASE Server version number, it is now '"+_aseVersionNum+"'.");
+				_srvVersionNum = AseConnectionUtils.getAseVersionNumber(_conn);
+				_logger.debug("setVisible("+visible+") Need to refresh the ASE Server version number, it is now '"+_srvVersionNum+"'.");
 
 				_isClusterEnabled = AseConnectionUtils.isClusterEnabled(_conn);
 			}
@@ -779,69 +779,69 @@ public class AseConfigMonitoringDialog
 				     || comp.equals(_cfgMetricsPioMax_sp)
 				   )
 				{
-					if (_aseVersionNum >= Ver.ver(15,0,2))
+					if (_srvVersionNum >= Ver.ver(15,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_enableSpinlockMonitoring_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,7,0,2))
+					if (_srvVersionNum >= Ver.ver(15,7,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_executionTimeMonitoring_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,7,0,100))
+					if (_srvVersionNum >= Ver.ver(15,7,0,100))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_statementCacheMonitoring_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,0,2))
+					if (_srvVersionNum >= Ver.ver(15,0,2))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_showDeferredCompilationText_chk) )
 				{
-				//	if (_aseVersionNum >= Ver.ver(15,7,0, 121)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
+				//	if (_srvVersionNum >= Ver.ver(15,7,0, 121)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
 					if (_aseConfigMap.containsKey(comp.getClientProperty(ASE_CONFIG)))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_captureCompressionStatistics_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,7))
+					if (_srvVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_cfgCapMissingStatistics_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,0,3,1))
+					if (_srvVersionNum >= Ver.ver(15,0,3,1))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeActive_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,7))
+					if (_srvVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_lockTimeoutPipeMaxMessages_sp) )
 				{
-					if (_aseVersionNum >= Ver.ver(15,7))
+					if (_srvVersionNum >= Ver.ver(15,7))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_thresholdEventMonitoring_chk) )
 				{
-					if (_aseVersionNum >= Ver.ver(16,0))
+					if (_srvVersionNum >= Ver.ver(16,0))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_thresholdEventMaxMessages_sp) )
 				{
-					if (_aseVersionNum >= Ver.ver(16,0))
+					if (_srvVersionNum >= Ver.ver(16,0))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_nonpushdownPipeActive_chk) )
 				{
-				//	if (_aseVersionNum >= Ver.ver(m,m)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
+				//	if (_srvVersionNum >= Ver.ver(m,m)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
 					if (_aseConfigMap.containsKey(comp.getClientProperty(ASE_CONFIG)))
 						comp.setEnabled(true);
 				}
 				else if ( comp.equals(_nonpushdownPipeMaxMessages_sp) )
 				{
-					// if (_aseVersionNum >= Ver.ver(m,m)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
+					// if (_srvVersionNum >= Ver.ver(m,m)) // FIXME: probably not in 16.0, but in 16.0 SP#    OR EVen better <<< check if available from sp_configure 'Monitoring' >>>
 					if (_aseConfigMap.containsKey(comp.getClientProperty(ASE_CONFIG)))
 						comp.setEnabled(true);
 				}
@@ -923,13 +923,13 @@ public class AseConfigMonitoringDialog
 	** BEGIN: helper methods
 	**---------------------------------------------------
 	*/
-	public void setAseVersion(int versionNumber)
+	public void setSrvVersion(long versionNumber)
 	{
-		_aseVersionNum = versionNumber;
+		_srvVersionNum = versionNumber;
 	}
-	public int getAseVersion()
+	public long getSrvVersion()
 	{
-		return _aseVersionNum;
+		return _srvVersionNum;
 	}
 
 	/**
@@ -1362,10 +1362,10 @@ public class AseConfigMonitoringDialog
 			}
 			rs.close();
 
-			if (_aseVersionNum >= Ver.ver(15,0,3,1))
+			if (_srvVersionNum >= Ver.ver(15,0,3,1))
 				_cfgCapMissingStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture missing statistics") > 0 );
 
-			if (_aseVersionNum >= Ver.ver(15,0,2)) 
+			if (_srvVersionNum >= Ver.ver(15,0,2)) 
 			{
 				_cfgEnableMetricsCapture_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "enable metrics capture") > 0 );
 				_cfgMetricsElapMax_spm      .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics elap max") );
@@ -1374,7 +1374,7 @@ public class AseConfigMonitoringDialog
 				_cfgMetricsPioMax_spm       .setValue(    AseConnectionUtils.getAseConfigRunValue(conn, "metrics pio max") );
 			}
 
-			if (_aseVersionNum >= Ver.ver(15,7)) 
+			if (_srvVersionNum >= Ver.ver(15,7)) 
 			{
 				_captureCompressionStatistics_chk.setSelected( AseConnectionUtils.getAseConfigRunValue(conn, "capture compression statistics") > 0 );
 			}
@@ -1415,9 +1415,9 @@ public class AseConfigMonitoringDialog
 		if (conn == null)
 			return false;
 
-//		if (_aseVersionNum < Ver.ver(15,0))
+//		if (_srvVersionNum < Ver.ver(15,0))
 //			return false;
-		if (_aseVersionNum >= Ver.ver(15,0))
+		if (_srvVersionNum >= Ver.ver(15,0))
 			return true; // In ASE 15 or above the 'ASE_XFS' is not a license option anymore, it's included.
 
 		int enabled = 0;
@@ -1454,7 +1454,7 @@ public class AseConfigMonitoringDialog
 		{
 			int newConfigVal = newValue ? 1 : 0;
 
-			List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(aseConfig, _conn, _aseVersionNum, _isClusterEnabled);
+			List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(aseConfig, _conn, _srvVersionNum, _isClusterEnabled);
 			if (cmList.size() > 0)
 			{
 				// List for info message
@@ -1477,7 +1477,7 @@ public class AseConfigMonitoringDialog
 					//------------------------------------------------------
 					
 					// set the version
-//					cm.setServerVersion(_aseVersionNum);
+//					cm.setServerVersion(_srvVersionNum);
 //					cm.setClusterEnabled(_isClusterEnabled);
 					
 					// set the active roles, so it can be used in initSql()
@@ -1955,7 +1955,7 @@ public class AseConfigMonitoringDialog
     			String cfg = (String) comp.getClientProperty(ASE_CONFIG);
     			if ( ! StringUtil.isNullOrBlank(cfg) )
     			{
-    				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _aseVersionNum, _isClusterEnabled);
+    				List<CountersModel> cmList = CounterController.getInstance().getCmListDependsOnConfig(cfg, _conn, _srvVersionNum, _isClusterEnabled);
     				if (cmList.size() > 0)
     				{
     					tt += "<br><br>";

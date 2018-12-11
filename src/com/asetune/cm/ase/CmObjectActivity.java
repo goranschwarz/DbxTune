@@ -59,8 +59,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monOpenObjectActivity"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -171,13 +171,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -223,7 +223,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -256,7 +256,7 @@ extends CountersModel
 	
 
 	@Override
-	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) 
+	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) 
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_systemTables = conf.getBooleanProperty(PROPKEY_sample_systemTables, DEFAULT_sample_systemTables);
@@ -268,7 +268,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -304,13 +304,13 @@ extends CountersModel
 		String AvgLevel0WaitTime   = "";
 		String ase1570_SP100_nl    = ""; // NL for this section
 
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 			bigint = "bigint";
 
-		if (aseVersion >= Ver.ver(15,0,2))
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			String rowCountOption = "          "; // 16.0 SP2 or 15.7 SP130 (I know it was introduced in SP130, but not in what 16 SP, so lets guess at SP2) 
-			if (aseVersion >= Ver.ver(16,0,0, 2) || (aseVersion >= Ver.ver(15,7,0, 130) && aseVersion < Ver.ver(16,0)) )
+			if (srvVersion >= Ver.ver(16,0,0, 2) || (srvVersion >= Ver.ver(15,7,0, 130) && srvVersion < Ver.ver(16,0)) )
 				rowCountOption = ",'noblock'";
 
 			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID"+rowCountOption+")),   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
@@ -341,9 +341,9 @@ extends CountersModel
 				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'UsageInMb', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
+//		if (srvVersion >= 15700)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			SharedLockWaitTime    = "SharedLockWaitTime, ";
 			ExclusiveLockWaitTime = "ExclusiveLockWaitTime, ";
@@ -353,8 +353,8 @@ extends CountersModel
 			ase15700_nl           = "\n"; // NL for this section
 		}
 
-//		if (aseVersion >= 1570100)
-		if (aseVersion >= Ver.ver(15,7,0,100))
+//		if (srvVersion >= 1570100)
+		if (srvVersion >= Ver.ver(15,7,0,100))
 		{
 			NumLevel0Waiters    = "NumLevel0Waiters, ";
 			AvgLevel0WaitTime   = "AvgLevel0WaitTime, ";
@@ -367,9 +367,9 @@ extends CountersModel
 		String HkgcPendingDcomp   = "";
 		String HkgcOverflowsDcomp = "";
 		String nl_15701           = ""; // NL for this section
-//		if (aseVersion >= 15701)
-//		if (aseVersion >= 1570010)
-		if (aseVersion >= Ver.ver(15,7,0,1))
+//		if (srvVersion >= 15701)
+//		if (srvVersion >= 1570010)
+		if (srvVersion >= Ver.ver(15,7,0,1))
 		{
 			HkgcRequestsDcomp  = "HkgcRequestsDcomp, ";
 			HkgcPendingDcomp   = "HkgcPendingDcomp, ";
@@ -387,9 +387,9 @@ extends CountersModel
 		String PRSRewriteCount    = ""; // Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String LastPRSRewriteDate = ""; // Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String nl_15702           = ""; // NL for this section
-//		if (aseVersion >= 15702)
-//		if (aseVersion >= 1570020)
-		if (aseVersion >= Ver.ver(15,7,0,2))
+//		if (srvVersion >= 15702)
+//		if (srvVersion >= 1570020)
+		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "IOSize1Page, ";        // DO DIFF CALC
 			IOSize2Pages       = "IOSize2Pages, ";       // DO DIFF CALC
@@ -417,8 +417,8 @@ extends CountersModel
 		String LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
 		String nl_16000           = ""; // NL for this section
 
-//		if (aseVersion >= 1600000)
-		if (aseVersion >= Ver.ver(16,0))
+//		if (srvVersion >= 1600000)
+		if (srvVersion >= Ver.ver(16,0))
 		{
 			// note: protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days, 20 hours, 31 minutes and 23.647 seconds, the MS difference is overflowned
 			
@@ -451,7 +451,7 @@ extends CountersModel
 		String MaxUpdRowsInXact = ""; // Max number of rows updated  in any transaction for this object
 		String nl_160_sp3_pl4   = ""; // NL for this section
 
-		if (aseVersion >= Ver.ver(16,0,0, 3,4))
+		if (srvVersion >= Ver.ver(16,0,0, 3,4))
 		{
 			MaxInsRowsInXact = "MaxInsRowsInXact, "; // do NOT do diff calc
 			MaxDelRowsInXact = "MaxDelRowsInXact, "; // do NOT do diff calc
@@ -512,15 +512,15 @@ extends CountersModel
 		cols3 += ObjectCacheDate + "LastOptSelectDate, LastUsedDate";
 	//	cols3 = "OptSelectCount, LastOptSelectDate, LastUsedDate, LastOptSelectDateDiff=datediff(ss,LastOptSelectDate,getdate()), LastUsedDateDiff=datediff(ss,LastUsedDate,getdate())";
 	// it looked like we got "overflow" in the datediff sometimes... And I have newer really used these cols, so lets take them out for a while...
-		if (aseVersion >= Ver.ver(15,0,2))
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			cols2 += "HkgcRequests, HkgcPending, HkgcOverflows, \n";
 		}
-		if (aseVersion >= Ver.ver(15,7,0,1))
+		if (srvVersion >= Ver.ver(15,7,0,1))
 		{
 			cols2 += HkgcRequestsDcomp + HkgcPendingDcomp + HkgcOverflowsDcomp + nl_15701;
 		}
-		if (aseVersion >= Ver.ver(15,7,0,2))
+		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			cols2 += PRSSelectCount + LastPRSSelectDate + PRSRewriteCount + LastPRSRewriteDate + nl_15702;
 		}
@@ -563,9 +563,9 @@ extends CountersModel
 		String MaxDowngradeServiceTime   = "";
 		String ase15501_ce_nl            = ""; // NL for this section
 
-//		if ( aseVersion >= 15030 && isClusterEnabled )
-//		if ( aseVersion >= 1503000 && isClusterEnabled )
-		if ( aseVersion >= Ver.ver(15,0,3) && isClusterEnabled )
+//		if ( srvVersion >= 15030 && isClusterEnabled )
+//		if ( srvVersion >= 1503000 && isClusterEnabled )
+		if ( srvVersion >= Ver.ver(15,0,3) && isClusterEnabled )
 		{
 			PhysicalLocks             = "PhysicalLocks, ";
 			PhysicalLocksRetained     = "PhysicalLocksRetained, ";
@@ -587,9 +587,9 @@ extends CountersModel
 			AvgDowngradeServiceTime   = "AvgDowngradeServiceTime, ";
 			ase15030_ce_nl            = "\n";
 		}
-//		if ( aseVersion >= 15501 && isClusterEnabled )
-//		if ( aseVersion >= 1550010 && isClusterEnabled )
-		if ( aseVersion >= Ver.ver(15,5,0,1) && isClusterEnabled )
+//		if ( srvVersion >= 15501 && isClusterEnabled )
+//		if ( srvVersion >= 1550010 && isClusterEnabled )
+		if ( srvVersion >= Ver.ver(15,5,0,1) && isClusterEnabled )
 		{
 			MaxPhysicalLockWaitTime   = "MaxPhysicalLockWaitTime, ";
 			MaxTransferReqWaitTime    = "MaxTransferReqWaitTime, ";

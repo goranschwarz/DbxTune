@@ -941,7 +941,7 @@ extends JXTable
 			return;
 		}
 
-		int srvVersion = 0;
+		long srvVersion = 0;
 		if (getModel() instanceof CountersModel)
 		{
 			CountersModel cm = (CountersModel) getModel();
@@ -1164,7 +1164,7 @@ extends JXTable
 			return;
 		}
 
-		int srvVersion = 0;
+		long srvVersion = 0;
 		if (getModel() instanceof CountersModel)
 		{
 			CountersModel cm = (CountersModel) getModel();

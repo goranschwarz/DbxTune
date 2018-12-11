@@ -280,8 +280,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"sysmonitors"};
 	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
@@ -367,7 +367,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
@@ -388,7 +388,7 @@ extends CountersModel
 
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -401,7 +401,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_resetAfter = conf.getBooleanProperty(PROPKEY_sample_resetAfter, DEFAULT_sample_resetAfter);
@@ -412,11 +412,11 @@ extends CountersModel
 		String datatype    = "numeric(19,0)"; // 19.0 is unsigned bigint, so lets use that... 
 		String optGoalPlan = "";
 
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 		{
 			datatype    = "bigint";
 		}
-		if (aseVersion >= Ver.ver(15,0,2))
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -507,7 +507,7 @@ extends CountersModel
 		// if 12.5.x: group_name = 'spinlock_p_0' or 'spinlock_w_0' or 'spinlock_s_0'  
 		// if 15.7.x: group_name = 'spinlock_p'   or 'spinlock_w'   or 'spinlock_s'  
 		String spinPostfix = "_0";
-		if (aseVersion >= Ver.ver(15,7))
+		if (srvVersion >= Ver.ver(15,7))
 			spinPostfix = "";
 		
 		String sqlCreateTmpSysmonitors = 
@@ -638,7 +638,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlInitForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		//---------------------------------------------
 		// SQL INIT (executed first time only)
@@ -646,14 +646,14 @@ extends CountersModel
 		//---------------------------------------------
 		String sqlInit = "DBCC traceon(3604) \n";
 
-//		if (aseVersion < 12520)
-//		if (aseVersion < 1252000)
-		if (aseVersion < Ver.ver(12,5,2))
+//		if (srvVersion < 12520)
+//		if (srvVersion < 1252000)
+		if (srvVersion < Ver.ver(12,5,2))
 			sqlInit += "DBCC traceon(8399) \n";
 
-//		if (aseVersion >= 15020 || (aseVersion >= 12541 && aseVersion < 15000) )
-//		if (aseVersion >= 1502000 || (aseVersion >= 1254010 && aseVersion < 1500000) )
-		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4,1) && aseVersion < Ver.ver(15,0)) )
+//		if (srvVersion >= 15020 || (srvVersion >= 12541 && srvVersion < 15000) )
+//		if (srvVersion >= 1502000 || (srvVersion >= 1254010 && srvVersion < 1500000) )
+		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4,1) && srvVersion < Ver.ver(15,0)) )
 		{
 			sqlInit = "set switch on 3604 with no_info \n";
 		}
@@ -664,7 +664,7 @@ extends CountersModel
 		return sqlInit;
 	}
 	@Override
-	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) 
+	public String getSqlCloseForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) 
 	{
 		String sqlClose = 
 			"--DBCC monitor('select', 'all',        'off') \n" +

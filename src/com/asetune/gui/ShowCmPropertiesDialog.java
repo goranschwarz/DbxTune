@@ -126,8 +126,8 @@ extends JDialog implements ActionListener, ChangeListener
 	private JLabel             _needRole_lbl         = new JLabel("Need Server Roles");
 	private JTextField         _needRole_txt         = new JTextField();
 
-	private JLabel             _needAseVersion_lbl   = new JLabel("Need Server Version");
-	private JTextField         _needAseVersion_txt   = new JTextField();
+	private JLabel             _needsrvVersion_lbl   = new JLabel("Need Server Version");
+	private JTextField         _needsrvVersion_txt   = new JTextField();
 
 	private JLabel             _needAseCeVersion_lbl = new JLabel("Need Cluster Edition");
 	private JTextField         _needAseCeVersion_txt = new JTextField();
@@ -304,8 +304,8 @@ extends JDialog implements ActionListener, ChangeListener
 		_needRole_lbl         .setToolTipText("<html>What Server Role(s) does this Performance Counter depend on.</html>");
 		_needRole_txt         .setToolTipText("<html>What Server Role(s) does this Performance Counter depend on.</html>");
 
-		_needAseVersion_lbl   .setToolTipText("<html>We need to connect to a Server with a higher Version than this to get Performance Counters</html>");
-		_needAseVersion_txt   .setToolTipText("<html>We need to connect to a Server with a higher Version than this to get Performance Counters</html>");
+		_needsrvVersion_lbl   .setToolTipText("<html>We need to connect to a Server with a higher Version than this to get Performance Counters</html>");
+		_needsrvVersion_txt   .setToolTipText("<html>We need to connect to a Server with a higher Version than this to get Performance Counters</html>");
 
 		_needAseCeVersion_lbl .setToolTipText("<html>If this is 0, then we will use Server Version number.</html>");
 		_needAseCeVersion_txt .setToolTipText("<html>If this is 0, then we will use Server Version number.</html>");
@@ -318,14 +318,12 @@ extends JDialog implements ActionListener, ChangeListener
 		//------------ END: TOOLTIP
 		
 		
-//		int     aseVersion  = 12503;
-//		int     aseVersion  = 1250030;
-		int     aseVersion  = Ver.ver(12,5,0,3);
+		long    srvVersion  = Ver.ver(12,5,0,3);
 		boolean isCeEnabled = false;
 
 		if (_cm.isRuntimeInitialized())
 		{
-			aseVersion  = _cm.getServerVersion();
+			srvVersion  = _cm.getServerVersion();
 			isCeEnabled = _cm.isClusterEnabled();
 			_initialized_true_lbl .setVisible(true);
 			_initialized_false_lbl.setVisible(false);
@@ -433,8 +431,8 @@ extends JDialog implements ActionListener, ChangeListener
 		otherPanel.add(_needRole_lbl,          "");
 		otherPanel.add(_needRole_txt,          "skip, growx, pushx, wrap");
 
-		otherPanel.add(_needAseVersion_lbl,    "");
-		otherPanel.add(_needAseVersion_txt,    "skip, growx, pushx, wrap");
+		otherPanel.add(_needsrvVersion_lbl,    "");
+		otherPanel.add(_needsrvVersion_txt,    "skip, growx, pushx, wrap");
 
 		otherPanel.add(_needAseCeVersion_lbl,  "");
 		otherPanel.add(_needAseCeVersion_txt,  "skip, growx, pushx, wrap");
@@ -450,7 +448,7 @@ extends JDialog implements ActionListener, ChangeListener
 		panel.add(sqlPanel,    "wrap");
 		panel.add(otherPanel,  "growx, pushx, wrap");
 		
-		loadFieldsUsingVersion(aseVersion, isCeEnabled);
+		loadFieldsUsingVersion(srvVersion, isCeEnabled);
 
 		return panel;
 	}
@@ -516,7 +514,7 @@ extends JDialog implements ActionListener, ChangeListener
 //		int ver = (major * 1000) + (minor * 100) + (maint * 10) + esd;
 //		int ver = (major * 100000) + (minor * 10000) + (maint * 1000) + esd;
 //System.out.println("stateChanged: ver="+ver+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+".");
-		int ver = Ver.ver(major, minor, maint, esd, pl);
+		long ver = Ver.ver(major, minor, maint, esd, pl);
 
 		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
 
@@ -527,14 +525,18 @@ extends JDialog implements ActionListener, ChangeListener
 	{
 		if (StringUtil.isNullOrBlank(versionStr) || "0.0.0".equals(versionStr))
 			versionStr = "00.0.0"; // then the below sybVersionStringToNumber() work better
-
-		int version = Ver.sybVersionStringToNumber(versionStr);
 		
-		int major = Ver.versionIntPart(version, Ver.VERSION_MAJOR);
-		int minor = Ver.versionIntPart(version, Ver.VERSION_MINOR);
-		int maint = Ver.versionIntPart(version, Ver.VERSION_MAINTENANCE);
-		int esd   = Ver.versionIntPart(version, Ver.VERSION_SERVICE_PACK);
-		int pl    = Ver.versionIntPart(version, Ver.VERSION_PATCH_LEVEL);
+		// if 1.2 --> 01.2
+		if (versionStr.matches("^[0-9]\\.[0-9].*"))
+			versionStr = "0" + versionStr; // then the below sybVersionStringToNumber() work better
+
+		long version = Ver.sybVersionStringToNumber(versionStr);
+		
+		int major = Ver.versionNumPart(version, Ver.VERSION_MAJOR);
+		int minor = Ver.versionNumPart(version, Ver.VERSION_MINOR);
+		int maint = Ver.versionNumPart(version, Ver.VERSION_MAINTENANCE);
+		int esd   = Ver.versionNumPart(version, Ver.VERSION_SERVICE_PACK);
+		int pl    = Ver.versionNumPart(version, Ver.VERSION_PATCH_LEVEL);
 
 //System.out.println("parseVersionString: versionStr='"+versionStr+"', version="+version+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+", pl="+pl+".");
 		_testVersionMajor_spm.setValue(major);
@@ -543,32 +545,32 @@ extends JDialog implements ActionListener, ChangeListener
 		_testVersionEsd_spm  .setValue(esd);
 		_testVersionPl_spm   .setValue(pl);
 
-//		_testVersionShort_txt.setText(AseConnectionUtils.versionIntToStr(version));
-		_testVersionInt_txt  .setText(Integer.toString(version));
+//		_testVersionShort_txt.setText(AseConnectionUtils.versionNumToStr(version));
+		_testVersionInt_txt  .setText(" " + Long.toString(version) );
 	}
 
-	private void loadFieldsUsingVersion(int aseVersion, boolean isCeEnabled)
+	private void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
 	{
 //		Connection conn = AseTune.getCounterCollector().getMonConnection();
 //		Connection conn = CounterController.getInstance().getMonConnection();
 		Connection conn = _cm.getCounterController().getMonConnection();
 
-		String sqlInit  = _cm.getSqlInitForVersion (conn, aseVersion, isCeEnabled);
-		String sqlExec  = _cm.getSqlForVersion     (conn, aseVersion, isCeEnabled);
+		String sqlInit  = _cm.getSqlInitForVersion (conn, srvVersion, isCeEnabled);
+		String sqlExec  = _cm.getSqlForVersion     (conn, srvVersion, isCeEnabled);
 		String sqlWhere = _cm.getSqlWhere();
-		String sqlClose = _cm.getSqlCloseForVersion(conn, aseVersion, isCeEnabled);
+		String sqlClose = _cm.getSqlCloseForVersion(conn, srvVersion, isCeEnabled);
 
 		if ( sqlInit == null )  sqlInit = "";
 		if ( sqlExec == null )  sqlExec = "";
 		if ( sqlWhere == null ) sqlWhere = "";
 		if ( sqlClose == null )	sqlClose = "";
 
-		String pkCols           = StringUtil.toCommaStr(_cm.getPkForVersion(conn, aseVersion, isCeEnabled));
+		String pkCols           = StringUtil.toCommaStr(_cm.getPkForVersion(conn, srvVersion, isCeEnabled));
 		String diffCols         = StringUtil.toCommaStr(_cm.getDiffColumns());
 		String pctCols          = StringUtil.toCommaStr(_cm.getPctColumns());
-		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfigForVersion(conn, aseVersion, isCeEnabled));
+		String needConfig       = StringUtil.toCommaStr(_cm.getDependsOnConfigForVersion(conn, srvVersion, isCeEnabled));
 		String needRole         = StringUtil.toCommaStr(_cm.getDependsOnRole());
-		String needAseVersion   = _cm.getDependsOnVersionStr();
+		String needsrvVersion   = _cm.getDependsOnVersionStr();
 		String needAseCeVersion = _cm.getDependsOnCeVersionStr();
 		String dependsOnCm      = StringUtil.toCommaStr(_cm.getDependsOnCm());
 		String toolTipMonTables = StringUtil.toCommaStr(_cm.getMonTablesInQuery());
@@ -578,10 +580,10 @@ extends JDialog implements ActionListener, ChangeListener
 		_sqlWhere.setText(sqlWhere);
 		_sqlClose.setText(sqlClose);
 
-		String aseVersionStr = Ver.versionIntToStr(aseVersion);
-//System.out.println("loadFieldsUsingVersion(): version="+aseVersion+", aseVersionStr='"+aseVersionStr+"'.");
-		_testVersionShort_txt.setText(aseVersionStr);
-		parseVersionString(aseVersionStr);
+		String srvVersionStr = Ver.versionNumToStr(srvVersion);
+//System.out.println("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
+		_testVersionShort_txt.setText(srvVersionStr);
+		parseVersionString(srvVersionStr);
 
 		_testVersionIsCe_chk.setSelected(isCeEnabled);
 
@@ -590,7 +592,7 @@ extends JDialog implements ActionListener, ChangeListener
 		_pctCols_txt         .setText(pctCols);
 		_needConfig_txt      .setText(needConfig);
 		_needRole_txt        .setText(needRole);
-		_needAseVersion_txt  .setText(needAseVersion);
+		_needsrvVersion_txt  .setText(needsrvVersion);
 		_needAseCeVersion_txt.setText(needAseCeVersion);
 		_dependsOnCm_txt     .setText(dependsOnCm);
 		_toolTipMonTables_txt.setText(toolTipMonTables);
@@ -604,7 +606,7 @@ extends JDialog implements ActionListener, ChangeListener
 		context.setMarkAll(false);
 		SearchEngine.find(_sqlExec, context);
 
-		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, aseVersion, isCeEnabled));
+		if (_pkColsHighlight_chk  .isSelected()) RTextUtility.markAll(_sqlExec, PK_COLOR,   _cm.getPkForVersion(conn, srvVersion, isCeEnabled));
 		if (_diffColsHighlight_chk.isSelected()) RTextUtility.markAll(_sqlExec, DIFF_COLOR, _cm.getDiffColumns());
 		if (_pctColsHighlight_chk .isSelected()) RTextUtility.markAll(_sqlExec, PCT_COLOR,  _cm.getPctColumns());
 		

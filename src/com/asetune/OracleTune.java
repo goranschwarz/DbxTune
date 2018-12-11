@@ -14,6 +14,8 @@ import com.asetune.gui.MainFrame;
 import com.asetune.gui.MainFrameOracle;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.DbmsVersionHelperOracle;
+import com.asetune.sql.IDbmsVersionHelper;
 import com.asetune.utils.DbUtils;
 
 public class OracleTune
@@ -104,6 +106,12 @@ extends DbxTune
 	public CheckForUpdates createCheckForUpdates()
 	{
 		return new CheckForUpdatesOracle(); 
+	}
+
+	@Override
+	public IDbmsVersionHelper createDbmsVersionHelper()
+	{
+		return new DbmsVersionHelperOracle();
 	}
 
 	@Override

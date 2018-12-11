@@ -52,10 +52,10 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	public static final int      NEED_SRV_VERSION = 15020;
-//	public static final int      NEED_SRV_VERSION = 1502000;
-	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,2);
-	public static final int      NEED_CE_VERSION  = 0;
+//	public static final long     NEED_SRV_VERSION = 15020;
+//	public static final long     NEED_SRV_VERSION = 1502000;
+	public static final long     NEED_SRV_VERSION = Ver.ver(15,0,2);
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedStatement"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -161,7 +161,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
@@ -181,7 +181,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -212,7 +212,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -225,7 +225,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sampleSqlText            = (conf == null) ? DEFAULT_sample_sqlText                 : conf.getBooleanProperty(PROPKEY_sample_sqlText,               DEFAULT_sample_sqlText);
@@ -261,7 +261,7 @@ extends CountersModel
 		comment = "Property: "+PROPKEY_sample_xmlPlan+" is "+sampleXmlPlan+".";
 		String sql_hasXmlPlan  = " HasXmlPlan    = convert(bit,0), -- "+comment+" \n";
 		String sql_doXmlPlan   = " xmlPlan       = convert(text, '"+comment+"'), \n";
-		if (aseVersion >= Ver.ver(15,7))
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			if ( sampleXmlPlan )
 			{
@@ -303,9 +303,9 @@ extends CountersModel
 		String ParallelPlanRanSerial  = ""; // The number of times a parallel query plan was adjusted so that it executed without parallelism (parallel plans only)
 		String WorkerThreadDeficit    = ""; // The total thread deficit for all executions of a parallel plan (parallel plans only)
 		String nl_15702               = ""; // NL for this section
-//		if (aseVersion >= 15702)
-//		if (aseVersion >= 1570020)
-		if (aseVersion >= Ver.ver(15,7,0,2))
+//		if (srvVersion >= 15702)
+//		if (srvVersion >= 1570020)
+		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			AvgScanRows			   = "AvgScanRows, ";             // no Diff
 			MaxScanRows            = "MaxScanRows, ";             // no Diff
@@ -330,8 +330,8 @@ extends CountersModel
 		String TotalLIO            = ""; // The total LIO value.
 		String TotalCpuTime        = ""; // The total execution time value. (ms)
 		String TotalElapsedTime    = ""; // The total elapsed time value. (ms)
-//		if (aseVersion >= Ver.ver(16,0))
-		if (aseVersion >= Ver.ver(15,7,0, 130))
+//		if (srvVersion >= Ver.ver(16,0))
+		if (srvVersion >= Ver.ver(15,7,0, 130))
 		{
 			TotalPIO		 = "TotalPIO, ";         // DIFF COUNTER
 			TotalLIO         = "TotalLIO, ";         // DIFF COUNTER
@@ -347,24 +347,24 @@ extends CountersModel
 		String cols = 
 			(isClusterEnabled ? " InstanceID, \n" : "") + //  The Server Instance Identifier (cluster only)
 			" DBID, \n" +                       // The database ID from which the statement was cached.
-//			(aseVersion >= 15024 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-//			(aseVersion >= 1502040 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-			(aseVersion >= Ver.ver(15,0,2,4) ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
-//			(aseVersion >= 15700 ? " StmtType, " : "") + // The type of the cached statement.
-//			(aseVersion >= 1570000 ? " StmtType, " : "") + // The type of the cached statement.
-			(aseVersion >= Ver.ver(15,7) ? " StmtType, " : "") + // The type of the cached statement.
+//			(srvVersion >= 15024 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
+//			(srvVersion >= 1502040 ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
+			(srvVersion >= Ver.ver(15,0,2,4) ? " DBName, \n" : "DBName = db_name(DBID), \n") + //  Name of the database (will be NULL if the database is no longer open)
+//			(srvVersion >= 15700 ? " StmtType, " : "") + // The type of the cached statement.
+//			(srvVersion >= 1570000 ? " StmtType, " : "") + // The type of the cached statement.
+			(srvVersion >= Ver.ver(15,7) ? " StmtType, " : "") + // The type of the cached statement.
 			" UserID, SUserID, SUserName = suser_name(SUserID), \n" +
 			" ObjectName = object_name(SSQLID, 2), \n" +
 			" SSQLID, \n" +                     // The unique identifier for a statement.
 			" Hashkey, \n" +                    // The hashkey over the statement's text.
 //			" HasShowplan   = CASE WHEN show_plan(-1,SSQLID,-1,-1) < 0 THEN convert(bit,0) ELSE convert(bit,1) END, \n" +
 //			" HasSqltext    = convert(bit,1), \n" +
-//			(aseVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-//			(aseVersion >= 1570000 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-			(aseVersion >= Ver.ver(15,7) ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
-//			(aseVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
-//			(aseVersion >= 1570000 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
-			(aseVersion >= Ver.ver(15,7) ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+//			(srvVersion >= 15700 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
+//			(srvVersion >= 1570000 ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
+			(srvVersion >= Ver.ver(15,7) ? " OptimizationGoal, " : "") + // The optimization goal stored in the statement cache
+//			(srvVersion >= 15700 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+//			(srvVersion >= 1570000 ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
+			(srvVersion >= Ver.ver(15,7) ? " OptimizerLevel, \n" : "") + // The optimizer level stored in the statement cache
 			"Remark = convert(varchar(60), ''), \n" + // Display some findings...
 			sql_hasSqlText +
 			sql_hasShowplan + 
@@ -394,7 +394,7 @@ extends CountersModel
 			" ParallelDegree, \n" +               // The parallel-degree session setting.
 			ParallelDegreeReduced + ParallelPlanRanSerial + WorkerThreadDeficit + nl_15702 + 
 			" QuotedIdentifier    = convert(bit,QuotedIdentifier), \n" + // The quoted identifier session setting.
-			(aseVersion < Ver.ver(15,0,2,6) ? " TableCount, \n" : "") + // describeme
+			(srvVersion < Ver.ver(15,0,2,6) ? " TableCount, \n" : "") + // describeme
 			" TransactionIsolationLevel, \n" +  // The transaction isolation level session setting.
 			" TransactionMode, \n" +            // The transaction mode session setting.
 			" SAAuthorization     = convert(bit,SAAuthorization), \n" +     // The SA authorization session setting.

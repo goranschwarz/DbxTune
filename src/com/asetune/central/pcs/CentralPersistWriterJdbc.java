@@ -801,10 +801,10 @@ extends CentralPersistWriterBase
 		dbExecSetting(conn, "set arithabort numeric_truncation off ", logExtraInfo);
 
 		// only 15.0 or above is supported
-		int aseVersion = conn.getDbmsVersionNumber();
-		if (aseVersion < Ver.ver(15,0))
+		long srvVersion = conn.getDbmsVersionNumber();
+		if (srvVersion < Ver.ver(15,0))
 		{
-			String msg = "The PCS storage is ASE Version '"+Ver.versionIntToStr(aseVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
+			String msg = "The PCS storage is ASE Version '"+Ver.versionNumToStr(srvVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
 			_logger.error(msg);
 //			close(true); // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect() 
 
@@ -833,7 +833,7 @@ extends CentralPersistWriterBase
 			throw ex;
 		}
 
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 		{
 			_logger.debug("Connected to ASE (above 15.0), do some specific settings 'set delayed_commit on'.");
 			dbExecSetting(_mainConn, "set delayed_commit on ", logExtraInfo);
@@ -842,7 +842,7 @@ extends CentralPersistWriterBase
 		int asePageSize = AseConnectionUtils.getAsePageSize(_mainConn);
 		if (asePageSize < 4096)
 		{
-			_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+Ver.versionIntToStr(aseVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
+			_logger.warn("The ASE Servers Page Size is '"+asePageSize+"', to the connected server version '"+Ver.versionNumToStr(srvVersion)+"', which is probably NOT a good idea. The PCS storage will use rows wider than that... which will be reported as errors. However I will let this continue. BUT you can just hope for the best.");
 		}
 	}
 

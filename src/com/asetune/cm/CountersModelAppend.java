@@ -29,8 +29,8 @@ public class CountersModelAppend
 		String[] monTables, 
 		String[] dependsOnRole, 
 		String[] dependsOnConfig, 
-		int dependsOnVersion, 
-		int dependsOnCeVersion, 
+		long dependsOnVersion, 
+		long dependsOnCeVersion, 
 		boolean systemCm)
 	{
 		super(counterController, name, groupName, sql, null, null, null, monTables, dependsOnRole, dependsOnConfig, dependsOnVersion, dependsOnCeVersion, true, systemCm);
@@ -170,7 +170,7 @@ public class CountersModelAppend
 	 * NO PK is needed, we are NOT going to do DIFF calculations
 	 */
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		// NO PK is needed, we are NOT going to do DIFF calculations
 		return null;

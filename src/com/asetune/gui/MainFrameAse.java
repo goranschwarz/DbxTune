@@ -213,7 +213,7 @@ extends MainFrame
 
 		boolean hasMonRole          = AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE);
 		boolean hasEnableMonitoring = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
-		int     aseVersion          = AseConnectionUtils.getAseVersionNumber(conn); 
+		long    srvVersion          = AseConnectionUtils.getAseVersionNumber(conn); 
 
 		String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(conn);
 		if (StringUtil.hasValue(gracePeriodWarning))
@@ -239,12 +239,12 @@ extends MainFrame
 				cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_AA_NW_PACKET,       true);
 				cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_OLDEST_TRAN_IN_SEC, true);
 
-				if (aseVersion >= Ver.ver(15,0,3,3) && hasMonRole)
+				if (srvVersion >= Ver.ver(15,0,3,3) && hasMonRole)
 					cm.setTrendGraphEnable(CmSummary.GRAPH_NAME_TRANSACTION,    true);
 			}
 
 			// GRAPHS in SYSLOAD
-			if (aseVersion >= Ver.ver(15,5) && hasMonRole)
+			if (srvVersion >= Ver.ver(15,5) && hasMonRole)
 			{
 				cm = CounterController.getInstance().getCmByName(CmSysLoad.CM_NAME);
 				if (cm != null)
@@ -252,7 +252,7 @@ extends MainFrame
 			}
 
 			// GRAPHS in PROC_CACHE_MODULE_USAGE
-			if (aseVersion >= Ver.ver(15,0,1) && hasMonRole)
+			if (srvVersion >= Ver.ver(15,0,1) && hasMonRole)
 			{
 				cm = CounterController.getInstance().getCmByName(CmPCacheModuleUsage.CM_NAME);
 				if (cm != null)
@@ -482,11 +482,11 @@ extends MainFrame
 		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
 		{
 			String servername    = MonTablesDictionaryManager.getInstance().getDbmsServerName();
-			String aseVersionStr = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionStr();
-			int    aseVersionNum = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
-			if (aseVersionNum >= Ver.ver(15,0,2))
+			String srvVersionStr = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionStr();
+			long   srvVersionNum = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
+			if (srvVersionNum >= Ver.ver(15,0,2))
 			{
-				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
+				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, srvVersionStr);
 				apptrace.setVisible(true);
 			}
 			else
@@ -494,7 +494,7 @@ extends MainFrame
 				// NOT supported in ASE versions below 15.0.2
 				String htmlMsg = 
 					"<html>" +
-					"  <h2>Sorry this functionality is not available in ASE "+Ver.versionIntToStr(aseVersionNum)+"</h2>" +
+					"  <h2>Sorry this functionality is not available in ASE "+Ver.versionNumToStr(srvVersionNum)+"</h2>" +
 					"  Application Tracing is introduced in ASE 15.0.2" +
 					"</html>";
 				SwingUtils.showInfoMessage(this, "Not supported for this ASE Version", htmlMsg);
@@ -855,15 +855,15 @@ extends MainFrame
 			_logger.debug("createPredefinedSqlMenu(): found prefix '"+prefixStr+"'.");
 
 			// Read properties
-			final String menuItemName      = conf.getProperty(prefixStr   +".name");
-			final String sqlStr            = conf.getProperty(prefixStr   +".execute");
-			final int    needsVersion      = conf.getIntProperty(prefixStr+".install.needsVersion", 0); 
-			final String dbname            = conf.getProperty(prefixStr   +".install.dbname"); 
-			final String procName          = conf.getProperty(prefixStr   +".install.procName"); 
-			final String procDateThreshStr = conf.getProperty(prefixStr   +".install.procDateThreshold"); 
-			final String scriptLocationStr = conf.getProperty(prefixStr   +".install.scriptLocation"); 
-			final String scriptName        = conf.getProperty(prefixStr   +".install.scriptName"); 
-			final String needsRole         = conf.getProperty(prefixStr   +".install.needsRole"); 
+			final String menuItemName      = conf.getProperty(prefixStr    +".name");
+			final String sqlStr            = conf.getProperty(prefixStr    +".execute");
+			final long   needsVersion      = conf.getLongProperty(prefixStr+".install.needsVersion", 0); 
+			final String dbname            = conf.getProperty(prefixStr    +".install.dbname"); 
+			final String procName          = conf.getProperty(prefixStr    +".install.procName"); 
+			final String procDateThreshStr = conf.getProperty(prefixStr    +".install.procDateThreshold"); 
+			final String scriptLocationStr = conf.getProperty(prefixStr    +".install.scriptLocation"); 
+			final String scriptName        = conf.getProperty(prefixStr    +".install.scriptName"); 
+			final String needsRole         = conf.getProperty(prefixStr    +".install.needsRole"); 
 
 			//---------------------------------------
 			// Check that we got everything we needed

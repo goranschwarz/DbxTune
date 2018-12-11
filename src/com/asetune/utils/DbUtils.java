@@ -821,7 +821,7 @@ public class DbUtils
 		}
 	}
 
-	public static int getHanaVersionNumber(Connection conn)
+	public static long getHanaVersionNumber(Connection conn)
 	{
 		final int UNKNOWN = -1;
 
@@ -843,7 +843,7 @@ public class DbUtils
 			rs.close();
 			stmt.close();
 
-			int versionNum = Ver.hanaVersionStringToNumber(versionStr);
+			long versionNum = Ver.hanaVersionStringToNumber(versionStr);
 //System.out.println("getHanaVersionNumber() VersionNum = "+versionNum);
 //System.out.println("getHanaVersionNumber() VersionStr = '"+versionStr+"'.");
 			return versionNum;
@@ -1014,7 +1014,7 @@ public class DbUtils
 		}
 	}
 
-	public static int getOracleVersionNumber(Connection conn)
+	public static long getOracleVersionNumber(Connection conn)
 	{
 		final int UNKNOWN = -1;
 
@@ -1036,7 +1036,7 @@ public class DbUtils
 			rs.close();
 			stmt.close();
 
-			int versionNum = Ver.oracleVersionStringToNumber(versionStr);
+			long versionNum = Ver.oracleVersionStringToNumber(versionStr);
 			return versionNum;
 		}
 		catch (SQLException e)
@@ -1253,6 +1253,63 @@ public class DbUtils
 	
 	//------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------
+	// BEGIN - SQL-Server helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+//	public static String getSqlServerVersionStr(Connection conn)
+//	{
+//		final String UNKNOWN = "UNKNOWN";
+//
+//		// FIXME: move this to DbUtils
+//		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+//			return UNKNOWN;
+//
+//		String versionStr = "";
+//		String sql        = "SELECT @@version";
+//
+//		try
+//		{
+//			Statement stmt = conn.createStatement();
+//			ResultSet rs = stmt.executeQuery(sql);
+//			while (rs.next())
+//			{
+//				versionStr = rs.getString(1).trim();
+//			}
+//			rs.close();
+//			stmt.close();
+//
+//			return versionStr;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("When getting SQL-Server Version String. sql='"+sql+"', Caught exception.", e);
+//
+//			return UNKNOWN;
+//		}
+//	}
+//
+//	public static long getSqlServerVersionNumber(Connection conn)
+//	{
+//		final int UNKNOWN = -1;
+//
+//		// FIXME: move this to DbUtils
+//		if ( ! AseConnectionUtils.isConnectionOk(conn) )
+//			return UNKNOWN;
+//
+//		String versionStr = getSqlServerVersionStr(conn);
+//
+//		long versionNum = Ver.sqlServerVersionStringToNumber(versionStr);
+//		return versionNum;
+//	}
+
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+	// END - SQL-Server helper methods
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
+
+	//------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------
 	// BEGIN DB2 helper methods
 	//------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------
@@ -1322,7 +1379,7 @@ public class DbUtils
 		}
 	}
 
-	public static int getDb2VersionNumber(Connection conn)
+	public static long getDb2VersionNumber(Connection conn)
 	{
 		final int UNKNOWN = -1;
 
@@ -1332,7 +1389,7 @@ public class DbUtils
 
 		String versionStr = getDb2VersionStr(conn);
 
-		int versionNum = Ver.db2VersionStringToNumber(versionStr);
+		long versionNum = Ver.db2VersionStringToNumber(versionStr);
 		return versionNum;
 	}
 

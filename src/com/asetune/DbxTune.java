@@ -47,6 +47,7 @@ import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.IDbmsVersionHelper;
 import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
@@ -63,6 +64,7 @@ import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingExceptionHandler;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
+import com.asetune.utils.Ver;
 
 /**
  * NOT YET EVEN CLOSE TO BE FINNISHED
@@ -267,6 +269,7 @@ public abstract class DbxTune
 	public abstract ISqlCaptureBroker createPcsSqlCaptureBroker();
 
 	public abstract CheckForUpdates createCheckForUpdates();
+	public abstract IDbmsVersionHelper createDbmsVersionHelper();
 	public abstract IDbmsConfig createDbmsConfig();
 	public abstract MonTablesDictionary createMonTablesDictionary();
 
@@ -1435,6 +1438,11 @@ public abstract class DbxTune
 //			CheckForUpdates.blockCheck(10*1000);
 			CheckForUpdates.getInstance().checkForUpdateBlock(10*1000);
 
+			// Version Helper
+			IDbmsVersionHelper versionHelper = createDbmsVersionHelper();
+			Ver.setDbmsVersionHelper(versionHelper);
+			
+			
 			//---------------------------------
 			// Install shutdown hook, that will STOP the collector (and SHUTDOWN H2)
 			// This needs to be done before we start any connections to H2
@@ -1541,6 +1549,10 @@ public abstract class DbxTune
 					final MainFrame frame = createGuiMainFrame();
 					Configuration.setGuiWindow(frame);
 
+					// Version Helper
+					IDbmsVersionHelper versionHelper = createDbmsVersionHelper();
+					Ver.setDbmsVersionHelper(versionHelper);
+					
 					// Create and Start the "collector" thread
 					SplashWindow.drawProgress("Loading: Counter Models...");
 					try

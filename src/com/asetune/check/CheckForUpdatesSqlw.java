@@ -153,7 +153,8 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		urlParams.add("jdbcDriver",          sqlwConnInfo.getJdbcDriver());
 		urlParams.add("jdbcUrl",             sqlwConnInfo.getJdbcUrl());
 
-		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionInt()+"");
+		urlParams.add("srvVersionInt",       sqlwConnInfo.getSrvVersionNum()+"");
+		urlParams.add("srvVersionNum",       sqlwConnInfo.getSrvVersionNum()+"");
 		urlParams.add("srvName",             sqlwConnInfo.getSrvName());
 		urlParams.add("srvUser",             sqlwConnInfo.getSrvUser());
 		urlParams.add("srvPageSizeInKb",     sqlwConnInfo.getSrvPageSIzeInKb());
@@ -214,7 +215,8 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 
 		urlParams.add("connectType",         sqlwUsageInfo.getConnTypeStr());
 		urlParams.add("prodName",            sqlwUsageInfo.getProductName());
-		urlParams.add("srvVersionInt",       sqlwUsageInfo.getSrvVersionInt());
+		urlParams.add("srvVersionInt",       sqlwUsageInfo.getSrvVersionNum());
+		urlParams.add("srvVersionNum",       sqlwUsageInfo.getSrvVersionNum());
 
 		urlParams.add("connectTime",         connectTime);
 		urlParams.add("disconnectTime",      disconnectTime);
@@ -287,7 +289,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		private       String        _jdbcDriverVersion = "";
 		private       String        _jdbcDriver        = "";
 		private       String        _jdbcUrl           = "";
-		private       int           _srvVersionInt     = 0;
+		private       long          _srvVersionNum     = 0;
 		private       String        _srvName           = "";
 		private       String        _srvUser           = "";
 		private       String        _srvPageSizeInKb   = "";
@@ -312,7 +314,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		public String        getJdbcDriverVersion() { return _jdbcDriverVersion == null ? "" : _jdbcDriverVersion.trim(); }
 		public String        getJdbcDriver       () { return _jdbcDriver        == null ? "" : _jdbcDriver       .trim(); }
 		public String        getJdbcUrl          () { return _jdbcUrl           == null ? "" : _jdbcUrl          .trim(); }
-		public int           getSrvVersionInt    () { return _srvVersionInt; }
+		public long          getSrvVersionNum    () { return _srvVersionNum; }
 		public String        getSrvName          () { return _srvName           == null ? "" : _srvName          .trim(); }
 		public String        getSrvUser          () { return _srvUser           == null ? "" : _srvUser          .trim(); }
 		public String        getSrvPageSIzeInKb  () { return _srvPageSizeInKb   == null ? "" : _srvPageSizeInKb  .trim(); }
@@ -327,7 +329,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		public void setJdbcDriverVersion(String str)            { _jdbcDriverVersion = str; }
 		public void setJdbcDriver       (String str)            { _jdbcDriver        = str; }
 		public void setJdbcUrl          (String str)            { _jdbcUrl           = str; }
-		public void setSrvVersionInt    (int    ver)            { _srvVersionInt     = ver; }
+		public void setSrvVersionNum    (long   ver)            { _srvVersionNum     = ver; }
 		public void setSrvName          (String str)            { _srvName           = str; }
 		public void setSrvUser          (String str)            { _srvUser           = str; }
 		public void setSrvPageSizeInKb  (String str)            { _srvPageSizeInKb   = str; }
@@ -340,7 +342,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 	{
 		private int    _connType          = 0;
 		private String _prodName          = "";
-		private int    _srvVersionInt     = 0;
+		private long   _srvVersionNum     = 0;
 
 		private long   _connectTime       = 0;
 		private long   _disconnectTime    = 0;
@@ -360,7 +362,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 		
 		public void setConnType         (int    val) { _connType          = val; }
 		public void setProductName      (String val) { _prodName          = val; }
-		public void setSrvVersionInt    (int    val) { _srvVersionInt     = val; }
+		public void setSrvVersionNum    (long   val) { _srvVersionNum     = val; }
 
 		public void setConnectTime      (long   val) { _connectTime       = val; }
 		public void setDisconnectTime   (long   val) { _disconnectTime    = val; }
@@ -380,7 +382,7 @@ public class CheckForUpdatesSqlw extends CheckForUpdates
 
 		public int    getConnType         () { return _connType; }
 		public String getProductName      () { return _prodName; }
-		public int    getSrvVersionInt    () { return _srvVersionInt; }
+		public long   getSrvVersionNum    () { return _srvVersionNum; }
 
 		public long   getConnectTime      () { return _connectTime; }
 		public long   getDisconnectTime   () { return _disconnectTime; }

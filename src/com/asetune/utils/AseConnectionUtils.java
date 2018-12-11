@@ -1409,9 +1409,9 @@ public class AseConnectionUtils
 	 * 444 = Service Pack or ESD: a 3 digit number<br>
 	 * 55 = Patch Level or SUB ESD: a 2 digit number<br>
 	 */
-	public static int getAseVersionNumber(Connection conn)
+	public static long getAseVersionNumber(Connection conn)
 	{
-		int aseVersionNum = 0;
+		long srvVersionNum = 0;
 
 //		// @@version_number
 //		try
@@ -1420,7 +1420,7 @@ public class AseConnectionUtils
 //			ResultSet rs = stmt.executeQuery(SQL_VERSION_NUM);
 //			while ( rs.next() )
 //			{
-//				aseVersionNum = rs.getInt(1);
+//				srvVersionNum = rs.getInt(1);
 //			}
 //			rs.close();
 //		}
@@ -1432,19 +1432,19 @@ public class AseConnectionUtils
 		// version
 		try
 		{
-			String aseVersionStr = "";
+			String srvVersionStr = "";
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery(SQL_VERSION);
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 	
-			if (aseVersionNum == 0)
+			if (srvVersionNum == 0)
 			{
-				aseVersionNum = Ver.sybVersionStringToNumber(aseVersionStr);
+				srvVersionNum = Ver.sybVersionStringToNumber(srvVersionStr);
 			}
 		}
 		catch (SQLException ex)
@@ -1452,7 +1452,7 @@ public class AseConnectionUtils
 			_logger.error("MonTablesDictionary:getAseVersionNumber(), @@version", ex);
 		}
 		
-		return aseVersionNum;
+		return srvVersionNum;
 	}
 
 	/**
@@ -1468,26 +1468,26 @@ public class AseConnectionUtils
 	 * </ul>
 	 * If the ESD level is above 9 it will still return 9 (otherwise it would wrap...)
 	 */
-	public static int getRsVersionNumber(Connection conn)
+	public static long getRsVersionNumber(Connection conn)
 	{
-		int srvVersionNum = 0;
+		long srvVersionNum = 0;
 
 		// version
 		try
 		{
-			String aseVersionStr = "";
+			String srvVersionStr = "";
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("admin version");
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 	
 			if (srvVersionNum == 0)
 			{
-				srvVersionNum = Ver.sybVersionStringToNumber(aseVersionStr);
+				srvVersionNum = Ver.sybVersionStringToNumber(srvVersionStr);
 			}
 		}
 		catch (SQLException ex)
@@ -1511,26 +1511,26 @@ public class AseConnectionUtils
 	 * </ul>
 	 * If the ESD level is above 9 it will still return 9 (otherwise it would wrap...)
 	 */
-	public static int getRaxVersionNumber(Connection conn)
+	public static long getRaxVersionNumber(Connection conn)
 	{
-		int srvVersionNum = 0;
+		long srvVersionNum = 0;
 
 		// version
 		try
 		{
-			String aseVersionStr = "";
+			String srvVersionStr = "";
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("ra_version");
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 	
 			if (srvVersionNum == 0)
 			{
-				srvVersionNum = Ver.sybVersionStringToNumber(aseVersionStr);
+				srvVersionNum = Ver.sybVersionStringToNumber(srvVersionStr);
 			}
 		}
 		catch (SQLException ex)
@@ -1541,26 +1541,26 @@ public class AseConnectionUtils
 		return srvVersionNum;
 	}
 
-	public static int getAsaVersionNumber(Connection conn)
+	public static long getAsaVersionNumber(Connection conn)
 	{
-		int srvVersionNum = 0;
+		long srvVersionNum = 0;
 
 		// version
 		try
 		{
-			String aseVersionStr = "";
+			String srvVersionStr = "";
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("select @@version");
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 	
 			if (srvVersionNum == 0)
 			{
-				srvVersionNum = Ver.asaVersionStringToNumber(aseVersionStr);
+				srvVersionNum = Ver.asaVersionStringToNumber(srvVersionStr);
 			}
 		}
 		catch (SQLException ex)
@@ -1571,26 +1571,26 @@ public class AseConnectionUtils
 		return srvVersionNum;
 	}
 
-	public static int getIqVersionNumber(Connection conn)
+	public static long getIqVersionNumber(Connection conn)
 	{
-		int srvVersionNum = 0;
+		long srvVersionNum = 0;
 
 		// version
 		try
 		{
-			String aseVersionStr = "";
+			String srvVersionStr = "";
 
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("select @@version");
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 	
 			if (srvVersionNum == 0)
 			{
-				srvVersionNum = Ver.iqVersionStringToNumber(aseVersionStr);
+				srvVersionNum = Ver.iqVersionStringToNumber(srvVersionStr);
 			}
 		}
 		catch (SQLException ex)
@@ -1724,8 +1724,8 @@ public class AseConnectionUtils
 //	public static boolean checkForMonitorOptions(Connection conn, String user, boolean gui, Component parent, String... needsConfig)
 	public static boolean checkForMonitorOptions(DbxConnection conn, String user, boolean gui, Component parent, String... needsConfig)
 	{
-		int    aseVersionNum  = 0;
-		String aseVersionStr  = "";
+		long   srvVersionNum  = 0;
+		String srvVersionStr  = "";
 		String atAtServername = "";
 		String aseLanguage    = "";
 		String sql = "";
@@ -1779,7 +1779,7 @@ public class AseConnectionUtils
 				ResultSet rs = stmt.executeQuery(sql);
 				while ( rs.next() )
 				{
-					aseVersionNum = rs.getInt(1);
+					srvVersionNum = rs.getInt(1);
 				}
 				rs.close();
 			}
@@ -1794,13 +1794,13 @@ public class AseConnectionUtils
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 
-			if ( ! aseVersionStr.startsWith(DbUtils.DB_PROD_NAME_SYBASE_ASE) )
+			if ( ! srvVersionStr.startsWith(DbUtils.DB_PROD_NAME_SYBASE_ASE) )
 			{
-				String msg = "This doesn't look like an ASE server. @@version='"+aseVersionStr+"'.";
+				String msg = "This doesn't look like an ASE server. @@version='"+srvVersionStr+"'.";
 				_logger.error(msg);
 				if (gui)
 				{
@@ -1808,7 +1808,7 @@ public class AseConnectionUtils
 						"<html>" +
 						"This doesn't look like an Sybase ASE server.<br>" +
 						"<br>" +
-						"The Version String is '<code>"+aseVersionStr+"</code>'. <br>" +
+						"The Version String is '<code>"+srvVersionStr+"</code>'. <br>" +
 						"In my book this ain't a ASE Server, so I can't continue.<br>" +
 						"</html>";
 
@@ -1817,14 +1817,14 @@ public class AseConnectionUtils
 				return false;
 			}
 
-			int aseVersionNumFromVerStr = Ver.sybVersionStringToNumber(aseVersionStr);
-			aseVersionNum = Math.max(aseVersionNum, aseVersionNumFromVerStr);
+			long srvVersionNumFromVerStr = Ver.sybVersionStringToNumber(srvVersionStr);
+			srvVersionNum = Math.max(srvVersionNum, srvVersionNumFromVerStr);
 
 			// MINIMUM ASE Version is 12.5.0.3
-			if (aseVersionNum < Ver.ver(12,5,0,3,0))
+			if (srvVersionNum < Ver.ver(12,5,0,3,0))
 			{
 				// FIXME: 
-				String msg = "The minimum ASE Version supported by "+Version.getAppName()+" is 12.5.0.3 in earlier releases MDA tables doesn't exists. Connected to @@version='"+aseVersionStr+"'.";
+				String msg = "The minimum ASE Version supported by "+Version.getAppName()+" is 12.5.0.3 in earlier releases MDA tables doesn't exists. Connected to @@version='"+srvVersionStr+"'.";
 				_logger.error(msg);
 				if (gui)
 				{
@@ -1833,7 +1833,7 @@ public class AseConnectionUtils
 						"The minimum ASE Version supported by "+Version.getAppName()+" is 12.5.0.3<br>" +
 						"in earlier ASE releases MDA tables doesn't exists<br>" +
 						"<br>" +
-						"The Version String is '<code>"+aseVersionStr+"</code>'. <br>" +
+						"The Version String is '<code>"+srvVersionStr+"</code>'. <br>" +
 						"</html>";
 
 					SwingUtils.showErrorMessage(parent, Version.getAppName()+" - connect check", msgHtml, null);
@@ -1851,7 +1851,7 @@ public class AseConnectionUtils
 			}
 			rs.close();
 
-			_logger.info("Just connected to an ASE Server named '"+atAtServername+"' with Version Number "+aseVersionNum+", and the Version String '"+aseVersionStr+"', using language '"+aseLanguage+"'.");
+			_logger.info("Just connected to an ASE Server named '"+atAtServername+"' with Version Number "+srvVersionNum+", and the Version String '"+srvVersionStr+"', using language '"+aseLanguage+"'.");
 
 			
 			// if user name is null or empty, then get current user
@@ -2109,11 +2109,11 @@ public class AseConnectionUtils
 					if (rs.getInt(1) == 0)
 					{
 						String scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmontables";
-//						if (aseVersionNum >= 15000)
+//						if (srvVersionNum >= 15000)
 //							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
-//						if (aseVersionNum >= 1500000)
+//						if (srvVersionNum >= 1500000)
 //							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
-						if (aseVersionNum >= Ver.ver(15,0))
+						if (srvVersionNum >= Ver.ver(15,0))
 							scriptName = "$SYBASE/$SYBASE_ASE/scripts/installmaster";
 	
 						String msg = "Monitoring tables must be installed ( please apply '"+scriptName+"' )";
@@ -2124,7 +2124,7 @@ public class AseConnectionUtils
 								"<html>" +
 								"ASE Monitoring tables hasn't been installed. <br>" +
 								"<br>" +
-								"ASE Version is '"+Ver.versionIntToStr(aseVersionNum)+"'. <br>" +
+								"ASE Version is '"+Ver.versionNumToStr(srvVersionNum)+"'. <br>" +
 								"Please apply '"+scriptName+"'.<br>" +
 								"" +
 								"<br>" +
@@ -2194,7 +2194,7 @@ public class AseConnectionUtils
 								SwingUtils.showErrorMessageExt(parent, Version.getAppName()+" - connect check", errorMesage, null, (JPanel)null);
 
 								// open config dialog
-								AseConfigMonitoringDialog.showDialog(parent, conn, aseVersionNum, true);
+								AseConfigMonitoringDialog.showDialog(parent, conn, srvVersionNum, true);
 		
 								// After reconfig, go and check again
 								errorMesage = checkAseConfig(conn, needsConfig, false, has_sa_role);
@@ -3273,19 +3273,19 @@ public class AseConnectionUtils
 			htmlNewLine = "<br>\n";
 		}
 
-		int aseVersion = 0;
+		long srvVersion = 0;
 		String LineNumber      = "LineNumber='', ";
 		String StatementNumber = "StatementNumber='', ";
 		if (MonTablesDictionaryManager.hasInstance())
 		{
-			 aseVersion = MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion();
+			 srvVersion = MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion();
 			
-//			if (aseVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
-//			if (aseVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
-//			if (aseVersion >= 1253000) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
-//			if (aseVersion >= 1502050) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
-			if (aseVersion >= Ver.ver(12,5,3))   LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
-			if (aseVersion >= Ver.ver(15,0,2,2)) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
+//			if (srvVersion >= 12530) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
+//			if (srvVersion >= 15025) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
+//			if (srvVersion >= 1253000) LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
+//			if (srvVersion >= 1502050) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
+			if (srvVersion >= Ver.ver(12,5,3))   LineNumber      = "LineNumber      = convert(varchar(10),LineNumber), ";
+			if (srvVersion >= Ver.ver(15,0,2,2)) StatementNumber = "StatementNumber = convert(varchar(10),StatementNumber), ";
 		}
 		
 		StringBuilder sb = null;
@@ -3589,7 +3589,7 @@ public class AseConnectionUtils
 	 * 
 	 * @return
 	 */
-	public static boolean checkCreateStoredProc(Connection conn, int needsVersion, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate)
+	public static boolean checkCreateStoredProc(Connection conn, long needsVersion, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate)
 	throws Exception
 	{
 		if (dbname            == null) throw new IllegalArgumentException("checkCreateStoredProc(): 'dbname' cant be null");
@@ -3614,11 +3614,11 @@ public class AseConnectionUtils
 			// CHECK ASE VERSION
 			if (needsVersion > 0)
 			{
-				int aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+				long srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 				
-				if (aseVersion < needsVersion)
+				if (srvVersion < needsVersion)
 				{
-					String msg = "The procedure '"+procName+"' in '"+dbname+"', needs at least version '"+needsVersion+"', while we are connected to ASE Version '"+aseVersion+"'.";
+					String msg = "The procedure '"+procName+"' in '"+dbname+"', needs at least version '"+needsVersion+"', while we are connected to ASE Version '"+srvVersion+"'.";
 					_logger.warn(msg);
 					throw new Exception(msg);
 				}
@@ -3761,19 +3761,19 @@ public class AseConnectionUtils
 	 * @param dbname     Name of the database (if null, current db will be used)
 	 * @param objectName Name of the procedure/view/trigger...
 	 * @param owner      Name of the owner, if null is passed, it will be set to 'dbo'
-	 * @param aseVersion Version of the ASE, if 0, the version will be fetched from ASE
+	 * @param srvVersion Version of the ASE, if 0, the version will be fetched from ASE
 	 * @return Text of the procedure/view/trigger...
 	 */
-//	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int planId, int aseVersion)
-	public static String getObjectText(DbxConnection conn, String dbname, String objectName, String owner, int planId, int aseVersion)
+//	public static String getObjectText(Connection conn, String dbname, String objectName, String owner, int planId, long srvVersion)
+	public static String getObjectText(DbxConnection conn, String dbname, String objectName, String owner, int planId, long srvVersion)
 	{
 		if (StringUtil.isNullOrBlank(owner) || (owner != null && (owner.equals("-1") || owner.equals("0") || owner.equals("1"))) )
 			owner = "dbo";
 
-//		if (aseVersion <= 0)
-//			aseVersion = getAseVersionNumber(conn);
-		if (aseVersion <= 0)
-			aseVersion = conn.getDbmsVersionNumber();
+//		if (srvVersion <= 0)
+//			srvVersion = getAseVersionNumber(conn);
+		if (srvVersion <= 0)
+			srvVersion = conn.getDbmsVersionNumber();
 
 		if (planId < 0)
 			planId = 0;
@@ -3794,7 +3794,7 @@ public class AseConnectionUtils
 		// Statement Cache objects
 		if (isStatementCache)
 		{
-			if (aseVersion >= Ver.ver(15,7))
+			if (srvVersion >= Ver.ver(15,7))
 			{
 				//-----------------------------------------------------------
 				// From Documentation on: show_cached_plan_in_xml(statement_id, plan_id, level_of_detail)
@@ -3893,9 +3893,9 @@ public class AseConnectionUtils
 			else
 			{
 				String sql;
-//				if (aseVersion >= 15020)
-//				if (aseVersion >= 1502000)
-				if (aseVersion >= Ver.ver(15,0,2))
+//				if (srvVersion >= 15020)
+//				if (srvVersion >= 1502000)
+				if (srvVersion >= Ver.ver(15,0,2))
 				{
 					sql =
 						"set switch on 3604 with no_info \n" +
@@ -3980,7 +3980,7 @@ public class AseConnectionUtils
 				{
 					// Maybe the MetaData is wrong... so if it's "master" and a proc starting with "sp_", lets try to look it up in sybsystemprocs 
 					if (objectName.startsWith("sp_") && !"sybsystemprocs".equals(dbname)) // !sybsystemprocs will stop us from possible infinate loop
-						returnText = getObjectText(conn, "sybsystemprocs", objectName, owner, planId, aseVersion);
+						returnText = getObjectText(conn, "sybsystemprocs", objectName, owner, planId, srvVersion);
 				}
 			}
 			catch (SQLException e)
