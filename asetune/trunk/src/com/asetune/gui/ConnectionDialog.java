@@ -4138,7 +4138,7 @@ public class ConnectionDialog
 //			if (currentVersion != newVersion)
 //			{
 //				String msg = "<html>" +
-//						"Connecting to a different DB Version, This is NOT supported now... (previousVersion='"+Ver.versionIntToStr(currentVersion)+"', connectToVersion='"+Ver.versionIntToStr(newVersion)+"'). <br>" +
+//						"Connecting to a different DB Version, This is NOT supported now... (previousVersion='"+Ver.versionNumToStr(currentVersion)+"', connectToVersion='"+Ver.versionNumToStr(newVersion)+"'). <br>" +
 //						"To connect to another DB Version, you need to restart the application." +
 //						"</html>";
 //				if (DbxTune.hasGui())

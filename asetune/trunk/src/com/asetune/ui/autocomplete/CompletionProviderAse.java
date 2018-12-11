@@ -629,7 +629,7 @@ extends CompletionProviderAbstractSql
 //		DatabaseMetaData dbmd = conn.getMetaData();
 
 		boolean hasMonRole = AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE);
-		int aseVersionNum  = AseConnectionUtils.getAseVersionNumber(conn);
+		long srvVersionNum  = AseConnectionUtils.getAseVersionNumber(conn);
 
 		// if ASE go and get monTables description
 		if (CollectionUtils.isNullOrEmpty(_aseMonTableDesc) && hasMonRole)
@@ -638,9 +638,9 @@ extends CompletionProviderAbstractSql
 
 			_aseMonTableDesc = new HashMap<String, String>();
 			String sql = "select TableName, Description from master.dbo.monTables ";
-//			if (aseVersionNum >= 15700)
-//			if (aseVersionNum >= 1570000)
-			if (aseVersionNum >= Ver.ver(15,7))
+//			if (srvVersionNum >= 15700)
+//			if (srvVersionNum >= 1570000)
+			if (srvVersionNum >= Ver.ver(15,7))
 				sql += " where Language = 'en_US' ";
 
 			try
@@ -956,7 +956,7 @@ extends CompletionProviderAbstractSql
 		//----------------------------------------------
 		// if ASE, check if we have monrole and get MDA Descriptions
 		boolean hasMonRole = AseConnectionUtils.hasRole(conn, AseConnectionUtils.MON_ROLE);
-		int aseVersionNum  = AseConnectionUtils.getAseVersionNumber(conn);
+		long srvVersionNum  = AseConnectionUtils.getAseVersionNumber(conn);
 
 		if (hasMonRole)
 		{
@@ -976,9 +976,9 @@ extends CompletionProviderAbstractSql
 				waitDialog.setState("Getting MDA Column Descriptions.");
 				
 				String sql = "select TableName, ColumnName, Description from master.dbo.monTableColumns ";
-//				if (aseVersionNum >= 15700)
-//				if (aseVersionNum >= 1570000)
-				if (aseVersionNum >= Ver.ver(15,7))
+//				if (srvVersionNum >= 15700)
+//				if (srvVersionNum >= 1570000)
+				if (srvVersionNum >= Ver.ver(15,7))
 					sql += " where Language = 'en_US' ";
 
 				try

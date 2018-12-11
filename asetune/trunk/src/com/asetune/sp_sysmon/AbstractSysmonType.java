@@ -15,7 +15,7 @@ public abstract class AbstractSysmonType
 
 	protected SpSysmon _sysmon      = null;
 
-	protected int _aseVersion       = 0;
+	protected long _srvVersion      = 0;
 
 //	protected int _NumEngines       = 0;
 //	protected int _NumXacts         = 0;
@@ -115,13 +115,13 @@ public abstract class AbstractSysmonType
 
 		
 		if (cm.isRuntimeInitialized())
-			_aseVersion = cm.getServerVersion();
+			_srvVersion = cm.getServerVersion();
 
 		setData( cm.getDataCollection(CountersModel.DATA_DIFF) );
 		setAbsData( cm.getDataCollection(CountersModel.DATA_ABS) );
 	}
 
-	public AbstractSysmonType(SpSysmon sysmon, int aseVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
+	public AbstractSysmonType(SpSysmon sysmon, long srvVersion, int sampleTimeInMs, List<List<Object>> data, int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
 	{
 		_sysmon = sysmon;
 		
@@ -133,9 +133,9 @@ public abstract class AbstractSysmonType
 
 		_sysmon.setNumElapsedMs(sampleTimeInMs);
 		
-		_aseVersion     = aseVersion;
+		_srvVersion     = srvVersion;
 
-		_sysmon.setAseVersionStr   (Ver.versionIntToStr(aseVersion));
+		_sysmon.setAseVersionStr   (Ver.versionNumToStr(srvVersion));
 		_sysmon.setAseServerNameStr("UNKNOWN");
 		_sysmon.setRunDate         (null);
 		_sysmon.setSampleStartTime (null);

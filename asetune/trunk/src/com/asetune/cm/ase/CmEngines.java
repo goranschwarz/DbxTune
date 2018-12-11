@@ -61,8 +61,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monEngine"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -228,7 +228,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -244,13 +244,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -263,7 +263,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -271,7 +271,7 @@ extends CountersModel
 		// Get if we are in "process" or "threaded" kernel mode, which will be an input if "IOCPUTime" should be treated as "IdleCPUTime" 
 		// This is only valid for ASE 15.7 and relates to: CR 757246- sp_sysmon IO Busy is over weighted in threaded mode.
 		//sp_configure 'kernel mode' = 'threaded'|'process'
-		if (aseVersion >= Ver.ver(15,7) && conn != null)
+		if (srvVersion >= Ver.ver(15,7) && conn != null)
 		{
 			_config_kernelMode = AseConnectionUtils.getAseConfigRunValueStrNoEx(conn, "kernel mode");
 //System.out.println("getSqlForVersion(): _config_kernelMode="+_config_kernelMode);
@@ -282,7 +282,7 @@ extends CountersModel
 
 		
 		String ThreadID = "";
-		if (aseVersion >= Ver.ver(15,7))
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			ThreadID = "ThreadID, ";
 		}
@@ -296,7 +296,7 @@ extends CountersModel
 		String HkgcPendingItemsDcomp = "";
 		String HkgcOverflowsDcomp    = "";
 		String nl_15701              = "";
-		if (aseVersion >= Ver.ver(15,7,0,1))
+		if (srvVersion >= Ver.ver(15,7,0,1))
 		{
 			HkgcPendingItemsDcomp = "HkgcPendingItemsDcomp, ";
 			HkgcOverflowsDcomp    = "HkgcOverflowsDcomp, ";
@@ -309,12 +309,12 @@ extends CountersModel
 		String IdleCPUTime         = "IdleCPUTime, ";
 		
 		String NonIdleCPUTime_calc = "SystemCPUTime + UserCPUTime";
-		if (aseVersion >= Ver.ver(15,5) || (aseVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
+		if (srvVersion >= Ver.ver(15,5) || (srvVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
 		{
 			NonIdleCPUTime_calc = "convert(bigint,SystemCPUTime) + convert(bigint,UserCPUTime) + convert(bigint,IOCPUTime)";
 
 			// take away IOCPUTime in 15.7 & inThreadedMode & checkBoxIsEnabled
-			if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+			if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				NonIdleCPUTime_calc = "convert(bigint,SystemCPUTime) + convert(bigint,UserCPUTime)";
 				
 		}
@@ -334,8 +334,8 @@ extends CountersModel
 		String HkgcReqRec          = ""; // Total number of events that were queued in Housekeeper Garbage Collection(HKGC) queues from UNDO	                      
 		String HkgcRetries         = ""; // Total number of times we tried for queued items.	                                                                      
 		String nl_1570_sp136       = "";
-//		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) )
-		if ( (aseVersion >= Ver.ver(15,7,0, 136) && aseVersion < Ver.ver(16,0)) || aseVersion >= Ver.ver(16,0,0, 2,2) )
+//		if ( (srvVersion >= Ver.ver(15,7,0, 136) && srvVersion < Ver.ver(16,0)) )
+		if ( (srvVersion >= Ver.ver(15,7,0, 136) && srvVersion < Ver.ver(16,0)) || srvVersion >= Ver.ver(16,0,0, 2,2) )
 		{
 			HkgcOverflowsCmpact = "HkgcOverflowsCmpact, ";
 			HkgcOverflowsRec    = "HkgcOverflowsRec, ";
@@ -370,8 +370,8 @@ extends CountersModel
 		                           "                         ELSE convert(numeric(10,1), 0.0 )   \n" +
 		                           "                    END,  \n";
 
-//		if (aseVersion >= 1550000 || (aseVersion >= 1503000 && isClusterEnabled) )
-		if (aseVersion >= Ver.ver(15,5) || (aseVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
+//		if (srvVersion >= 1550000 || (srvVersion >= 1503000 && isClusterEnabled) )
+		if (srvVersion >= Ver.ver(15,5) || (srvVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
 		{
 			IOCPUTime            = "IOCPUTime, ";
 			IOCPUTimePct         = "IOCPUTimePct      = CASE WHEN CPUTime > 0   \n" +
@@ -380,7 +380,7 @@ extends CountersModel
 			                       "                    END,   \n";
 		}
 
-		if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+		if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 		{
 			IOCPUTime    = "IOCPUTime    = convert(int, -1), \n";
 			IOCPUTimePct = "IOCPUTimePct = convert(numeric(10,1), -1.0), \n";
@@ -395,15 +395,15 @@ extends CountersModel
 		cols2 += "";
 		cols3 += "ProcessesAffinitied, Status, StartTime, StopTime, AffinitiedToCPU, "+ThreadID+"OSPID";
 
-		if (aseVersion >= Ver.ver(12,5,3,2))
+		if (srvVersion >= Ver.ver(12,5,3,2))
 		{
 			cols2 += "Yields, DiskIOChecks, DiskIOPolled, DiskIOCompleted, \n";
 		}
-		if (aseVersion >= Ver.ver(15,0,2,5))
+		if (srvVersion >= Ver.ver(15,0,2,5))
 		{
 			cols2 += "MaxOutstandingIOs, ";
 		}
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 		{
 			cols2 += "HkgcMaxQSize, HkgcPendingItems, HkgcHWMItems, HkgcOverflows, \n";
 		}
@@ -425,16 +425,16 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		int aseVersion = getServerVersion();
+		long srvVersion = getServerVersion();
 		// NOTE: IOCPUTime was introduced in ASE 15.5
 
 		if (GRAPH_NAME_CPU_SUM.equals(tgdp.getName()))
 		{
 			Double[] dataArray  = new Double[3];
 			String[] labelArray = new String[3];
-			if (aseVersion >= Ver.ver(15,5))
+			if (srvVersion >= Ver.ver(15,5))
 			{
-				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
 					// dummy for easier logic (multiple negation are hard to understand)
 				}
@@ -456,9 +456,9 @@ extends CountersModel
 			dataArray[1] = this.getDiffValueAvg("SystemCPUTimePct");
 			dataArray[2] = this.getDiffValueAvg("UserCPUTimePct");
 
-			if (aseVersion >= Ver.ver(15,5))
+			if (srvVersion >= Ver.ver(15,5))
 			{
-				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
 					// dummy for easier logic (multiple negation are hard to understand)
 					if (_logger.isDebugEnabled())
@@ -489,9 +489,9 @@ extends CountersModel
 		if (GRAPH_NAME_CPU_ENG.equals(tgdp.getName()))
 		{
 			// Set label on the TrendGraph if we are above 15.5
-			if (aseVersion >= Ver.ver(15,5))
+			if (srvVersion >= Ver.ver(15,5))
 			{
-				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
     				TrendGraph tg = getTrendGraph(tgdp.getName());
     				if (tg != null)
@@ -550,7 +550,7 @@ extends CountersModel
 	@Override
 	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
-		int aseVersion = getServerVersion();
+		long srvVersion = getServerVersion();
 		// NOTE: IOCPUTime was introduced in ASE 15.5
 		
 		// Compute the avgServ column, which is IOTime/(Reads+APFReads+Writes)
@@ -587,8 +587,8 @@ extends CountersModel
 			IdleCPUTime =   ((Number)diffData.getValueAt(rowId, IdleCPUTime_pos  )).intValue();
 
 			IOCPUTime = 0;
-//			if (aseVersion >= 1550000)
-			if (aseVersion >= Ver.ver(15,5))
+//			if (srvVersion >= 1550000)
+			if (srvVersion >= Ver.ver(15,5))
 			{
 				IOCPUTime = ((Number)diffData .getValueAt(rowId, IOCPUTime_pos  )).intValue();
 			}
@@ -629,11 +629,11 @@ extends CountersModel
 			diffData.setValueAt(calcUserCPUTime,   rowId, UserCPUTimePct_pos    );
 			diffData.setValueAt(calcIdleCPUTime,   rowId, IdleCPUTimePct_pos    );
 	
-			if (aseVersion >= Ver.ver(15,5))
+			if (srvVersion >= Ver.ver(15,5))
 			{
 				diffData.setValueAt(calcIoCPUTime, rowId, IOCPUTimePct_pos);
 
-				if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+				if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 				{
 					diffData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
 					diffData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);
@@ -648,7 +648,7 @@ extends CountersModel
 	@Override
 	public void localCalculationRatePerSec(CounterSample rateData, CounterSample DiffData)
 	{
-		int aseVersion = getServerVersion();
+		long srvVersion = getServerVersion();
 
 		List<String> colNames = rateData.getColNames();
 		if (colNames==null) 
@@ -668,7 +668,7 @@ extends CountersModel
 		// Loop on all rateData rows
 		for (int rowId=0; rowId < rateData.getRowCount(); rowId++) 
 		{
-			if (aseVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
+			if (srvVersion >= Ver.ver(15,7) && inThreadedMode() && _collapse_IoCpuTime_to_IdleCpuTime)
 			{
 				rateData.setValueAt(new Integer   ( -1 ), rowId, IOCPUTime_pos);
 				rateData.setValueAt(new BigDecimal( -1 ), rowId, IOCPUTimePct_pos);

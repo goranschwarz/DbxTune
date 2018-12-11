@@ -79,7 +79,7 @@ extends TdsConnection
 	}
 
 	@Override
-	public int getDbmsVersionNumber()
+	public long getDbmsVersionNumber()
 	{
 		return AseConnectionUtils.getAseVersionNumber(this);
 	}
@@ -218,7 +218,7 @@ extends TdsConnection
 					+ "    partCnt = (select count(*) from " + (cat==null ? "" : cat+".") + "dbo.syspartitions where id = object_id('" + cat + "." + schema + "." + table + "') and indid in(0,1)) \n"
 					+ "";
 			
-			int dbmsVersion = getDbmsVersionNumber();
+			long dbmsVersion = getDbmsVersionNumber();
 			if (dbmsVersion < Ver.ver(15,0))
 			{
 				_logger.warn("getTableExtraInfo() isn't yet implemented for version '"+dbmsVersion+"', It needs to be at least 15.0"); 

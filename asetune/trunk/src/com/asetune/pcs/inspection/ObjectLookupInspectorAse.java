@@ -26,7 +26,7 @@ extends ObjectLookupInspectorAbstract
 {
 	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorAse.class);
 
-	private int _dbmsVersion = 0;
+	private long _dbmsVersion = 0;
 
 	private static final List<Integer> skipSpDependsMessages = null;
 //	private static final List<Integer> skipSpDependsMessages = Arrays.asList(0, 17462, 17463, 17464, 17465, 17466, 17467, 17468, 17469);

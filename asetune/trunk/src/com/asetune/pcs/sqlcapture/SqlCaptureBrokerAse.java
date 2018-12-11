@@ -720,7 +720,7 @@ extends SqlCaptureBrokerAbstract
 	{
 		checkConfig(conn);
 		
-		int aseVersion = conn.getDbmsVersionNumber();
+		long srvVersion = conn.getDbmsVersionNumber();
 
 		// Get any specific where clause for the monSysStatements
 		String statementWhereClause = getProperty(PersistentCounterHandler.PROPKEY_sqlCap_saveStatement_whereClause, PersistentCounterHandler.DEFAULT_sqlCap_saveStatement_whereClause);
@@ -755,39 +755,39 @@ extends SqlCaptureBrokerAbstract
 		String QueryOptimizationTime = "convert(int, -1) as QueryOptimizationTime, ";
 		String ServerLogin           = "convert(varchar(30), '-1') as ServerLogin, \n";
 
-		if (aseVersion >= Ver.ver(15,0,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+		if (srvVersion >= Ver.ver(15,0,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
 			RowsAffected    = "RowsAffected, ";
 			ErrorStatus     = "ErrorStatus, ";
 		}
-		if (aseVersion >= Ver.ver(12,5,3))
+		if (srvVersion >= Ver.ver(12,5,3))
 		{
 			ServerLogin     = "ServerLogin = suser_name(ServerUserID), ";
 		}
-		if (aseVersion >= Ver.ver(15,0,2))
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			HashKey         = "HashKey, ";
 			SsqlId          = "SsqlId, ";
 //			ProcName        = "ProcName = CASE WHEN SsqlId > 0 THEN object_name(SsqlId,2) ELSE isnull(object_name(ProcedureID,DBID), object_name(ProcedureID,db_id('sybsystemprocs'))) END, \n";
 			ProcName        = "ProcName = CASE WHEN SsqlId > 0 THEN object_name(SsqlId,2) ELSE isnull(isnull(object_name(ProcedureID,DBID),object_name(ProcedureID,2)),object_name(ProcedureID,db_id('sybsystemprocs'))) END, \n"; // *sq dynamic SQL (ct_dynamic/prepared_stmnt) does NOT set the SsqlId column
 		}
-		if (aseVersion >= Ver.ver(15,0,2,3))
+		if (srvVersion >= Ver.ver(15,0,2,3))
 		{
 			DBName          = "DBName, ";
 		}
-		if (aseVersion >= Ver.ver(15,0,3))
+		if (srvVersion >= Ver.ver(15,0,3))
 		{
 			ProcNestLevel   = "ProcNestLevel, ";
 			StatementNumber = "StatementNumber, ";
 			ObjOwnerID      = "ObjOwnerID = CASE WHEN SsqlId > 0 THEN 0 ELSE object_owner_id(ProcedureID, DBID) END,";
 		}
-		if (aseVersion >= Ver.ver(15,5))
+		if (srvVersion >= Ver.ver(15,5))
 		{
 			InstanceID      = "InstanceID, ";
 		}
 		
 		// ASE 16.0 SP3
-		if (aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+		if (srvVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
 		{
 			QueryOptimizationTime       = "QueryOptimizationTime, ";
 		}
@@ -1068,7 +1068,7 @@ extends SqlCaptureBrokerAbstract
 			int     sendDdlForLookup_gt_logicalReads  = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_logicalReads,  PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_logicalReads);
 			int     sendDdlForLookup_gt_physicalReads = getIntProperty    (PersistentCounterHandler.PROPKEY_sqlCap_sendDdlForLookup_gt_physicalReads, PersistentCounterHandler.DEFAULT_sqlCap_sendDdlForLookup_gt_physicalReads);
 
-//			int aseVersion = conn.getDbmsVersionNumber();
+//			long srvVersion = conn.getDbmsVersionNumber();
 			
 			try
 			{

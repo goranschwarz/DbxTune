@@ -38,8 +38,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = null;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"M_DATABASE"};
 	public static final String[] NEED_ROLES       = new String[] {};
@@ -178,20 +178,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 //		String cols1, cols2, cols3;
 //		cols1 = cols2 = cols3 = "";
@@ -217,7 +217,7 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-//		int srvVersion = getServerVersion();
+//		long srvVersion = getServerVersion();
 
 		//---------------------------------
 		// GRAPH:

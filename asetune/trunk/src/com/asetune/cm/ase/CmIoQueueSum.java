@@ -44,8 +44,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_DISK;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monIOQueue"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -145,13 +145,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -164,7 +164,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -181,9 +181,9 @@ extends CountersModel
 		         "  THEN convert(numeric(18,1), sum(convert(numeric(18,0), IOTime))/sum(convert(numeric(18,0), IOs))) \n" +
 		         "  ELSE convert(numeric(18,1), null) \n" +
 		         "END";
-//		if (aseVersion >= 15010 || (aseVersion >= 12540 && aseVersion < 15000) )
-//		if (aseVersion >= 1501000 || (aseVersion >= 1254000 && aseVersion < 1500000) )
-		if (aseVersion >= Ver.ver(15,0,1) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+//		if (srvVersion >= 15010 || (srvVersion >= 12540 && srvVersion < 15000) )
+//		if (srvVersion >= 1501000 || (srvVersion >= 1254000 && srvVersion < 1500000) )
+		if (srvVersion >= Ver.ver(15,0,1) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
 		}
 

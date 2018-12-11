@@ -20,7 +20,7 @@ public class SpSysmon
 	public int getNumXacts()     { return _NumXacts; }
 	public int getNumElapsedMs() { return _NumElapsedMs; }
 
-	public void setAseVersionStr   (String    aseVersionStr)    { _aseVersionStr    = aseVersionStr; }
+	public void setAseVersionStr   (String    srvVersionStr)    { _srvVersionStr    = srvVersionStr; }
 	public void setAseServerNameStr(String    aseServerNameStr) { _aseServerNameStr = aseServerNameStr; }
 	public void setRunDate         (Timestamp runDate)          { _runDate          = runDate; }
 	public void setSampleStartTime (Timestamp sampleStartTime)  { _sampleStartTime  = sampleStartTime; }
@@ -29,7 +29,7 @@ public class SpSysmon
 	public void setSampleMode      (String    sampleMode)       { _sampleMode       = sampleMode; }
 	public void setCounterClearTime(Timestamp counterClearTime) { _counterClearTime = counterClearTime; }
 
-	public String    getAseVersionStr()    { return _aseVersionStr; }
+	public String    getAseVersionStr()    { return _srvVersionStr; }
 	public String    getAseServerNameStr() { return _aseServerNameStr; }
 	public Timestamp getRunDate()          { return _runDate; }
 	public Timestamp getSampleStartTime()  { return _sampleStartTime; }
@@ -38,7 +38,7 @@ public class SpSysmon
 	public String    getSampleMode()       { return _sampleMode; }
 	public Timestamp getCounterClearTime() { return _counterClearTime; }
 	
-	private String    _aseVersionStr    = "";
+	private String    _srvVersionStr    = "";
 	private String    _aseServerNameStr = "";
 	private Timestamp _runDate          = null;
 	private Timestamp _sampleStartTime  = null;
@@ -64,7 +64,7 @@ public class SpSysmon
 		sb.append("      Sybase Adaptive Server Enterprise System Performance Report\n");
 		sb.append("===============================================================================\n");
 		sb.append("\n");
-		sb.append("Server Version:        ").append(_aseVersionStr)   .append("\n");
+		sb.append("Server Version:        ").append(_srvVersionStr)   .append("\n");
 		sb.append("Server Name:           ").append(_aseServerNameStr).append("\n");
 		sb.append("Run Date:              ").append(_runDate)         .append("\n");
 		sb.append("Sampling Started at:   ").append(_sampleStartTime) .append("\n");
@@ -125,30 +125,30 @@ public class SpSysmon
 		repagent  = new RepAgent (this, cm);
 	}
 
-	public SpSysmon(int aseVersion, int sampleTimeInMs, List<List<Object>> data, 
+	public SpSysmon(long srvVersion, int sampleTimeInMs, List<List<Object>> data, 
 			int fieldName_pos, int groupName_pos, int instanceId_pos, int value_pos)
 	{
-		basicCalc = new BasicCalc(this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		kernel    = new Kernel   (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		wpm       = new Wpm      (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		parallel  = new Parallel (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		taskmgmt  = new TaskMgmt (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		appmgmt   = new AppMgmt  (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		esp       = new Esp      (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		hk        = new Hk       (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		maccess   = new Maccess  (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		xactsum   = new XactSum  (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		xactmgmt  = new XactMgmt (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		index     = new Index    (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		mdcache   = new MdCache  (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		locks     = new Locks    (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		dcache    = new DataCache(this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		pcache    = new ProcCache(this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		memory    = new Memory   (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		recovery  = new Recovery (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		diskio    = new DiskIo   (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		netio     = new NetIo    (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
-		repagent  = new RepAgent (this, aseVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		basicCalc = new BasicCalc(this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		kernel    = new Kernel   (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		wpm       = new Wpm      (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		parallel  = new Parallel (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		taskmgmt  = new TaskMgmt (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		appmgmt   = new AppMgmt  (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		esp       = new Esp      (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		hk        = new Hk       (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		maccess   = new Maccess  (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		xactsum   = new XactSum  (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		xactmgmt  = new XactMgmt (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		index     = new Index    (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		mdcache   = new MdCache  (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		locks     = new Locks    (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		dcache    = new DataCache(this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		pcache    = new ProcCache(this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		memory    = new Memory   (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		recovery  = new Recovery (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		diskio    = new DiskIo   (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		netio     = new NetIo    (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
+		repagent  = new RepAgent (this, srvVersion, sampleTimeInMs, data, fieldName_pos, groupName_pos, instanceId_pos, value_pos);
 	}
 
 	public void calc()

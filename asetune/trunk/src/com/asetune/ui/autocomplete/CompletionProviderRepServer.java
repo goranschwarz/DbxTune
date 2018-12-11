@@ -878,7 +878,7 @@ extends CompletionProviderAbstract
 					boolean quoteNames = false;
 //					List<String> list = null;
 
-//					int srvVersionNum = RepServerUtils.getVersionNumber(conn);
+//					long srvVersionNum = RepServerUtils.getVersionNumber(conn);
 
 					/*==============================================================
 					 * RS_DATABASES

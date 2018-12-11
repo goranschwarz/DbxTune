@@ -1611,7 +1611,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
 //		_listeners_txt         .setText(cm.getAbsString (0, "NetworkAddressInfo"));
 //		_listeners_txt         .setCaretPosition(0);
-//		_srvVersion_txt        .setText(cm.getAbsString (0, "aseVersion").replaceFirst("Adaptive Server Enterprise/", ""));
+//		_srvVersion_txt        .setText(cm.getAbsString (0, "srvVersion").replaceFirst("Adaptive Server Enterprise/", ""));
 //		_srvVersion_txt        .setCaretPosition(0);
 //		_srvPageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 //		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));

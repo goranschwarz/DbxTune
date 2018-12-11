@@ -55,7 +55,7 @@ public abstract class AseConfigText
 //
 //	private boolean _offline = false;
 //	private boolean _hasGui  = false;
-////	private int     _aseVersion = 0;
+////	private int     _srvVersion = 0;
 //
 //	/** The configuration is kept in a String */
 //	private String _configStr = null;
@@ -186,8 +186,8 @@ public abstract class AseConfigText
 //	abstract public ConfigType getConfigType();
 //	
 //	/** get SQL statement to be executed to GET current configuration string 
-//	 * @param aseVersion */
-//	abstract protected String getSqlCurrentConfig(int aseVersion);
+//	 * @param srvVersion */
+//	abstract protected String getSqlCurrentConfig(long srvVersion);
 //
 //	/**
 //	 * get SQL Statement used to get information from the offline storage
@@ -332,7 +332,7 @@ public abstract class AseConfigText
 //
 //		if ( ! _offline )
 //		{
-//			int          aseVersion = AseConnectionUtils.getAseVersionNumber(conn);
+//			int          srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 //			boolean      isCluster  = AseConnectionUtils.isClusterEnabled(conn);
 //
 //			int          needVersion = needVersion();
@@ -341,9 +341,9 @@ public abstract class AseConfigText
 //			List<String> needConfig  = needConfig();
 //
 //			// Check if we can get the configuration, due to compatible version.
-//			if (needVersion > 0 && aseVersion < needVersion)
+//			if (needVersion > 0 && srvVersion < needVersion)
 //			{
-//				_configStr = "This info is only available if the Server Version is above " + Ver.versionIntToStr(needVersion);
+//				_configStr = "This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion);
 //				return;
 //			}
 //
@@ -396,7 +396,7 @@ public abstract class AseConfigText
 //			}
 //
 //			// Get the SQL to execute.
-//			String sql = getSqlCurrentConfig(aseVersion);
+//			String sql = getSqlCurrentConfig(srvVersion);
 //			
 //			AseSqlScript script = null;
 //			try
@@ -546,7 +546,7 @@ public abstract class AseConfigText
 		}
 
 		@Override
-		protected String getSqlCurrentConfig(int aseVersion)
+		protected String getSqlCurrentConfig(long srvVersion)
 		{
 			String sql = 
 				"select ConfigSnapshotAtDateTime = convert(varchar(30),getdate(),109) \n" +
@@ -577,9 +577,9 @@ public abstract class AseConfigText
 				"exec sp_cacheconfig \n" +
 				"\n"; 
 			
-//			if (aseVersion >= 15700)
-//			if (aseVersion >= 1570000)
-			if (aseVersion >= Ver.ver(15,7))
+//			if (srvVersion >= 15700)
+//			if (srvVersion >= 1570000)
+			if (srvVersion >= Ver.ver(15,7))
 			{
 				sql += 
 					"\n" +
@@ -616,7 +616,7 @@ public abstract class AseConfigText
 			int    defaultDataCacheSizeInMb = -1;
 			String sql        = "";
 			String srvName    = "UNKNOWN";
-			int    srvVersion = 0;
+			long   srvVersion = 0;
 			Timestamp srvRestart = AseConnectionUtils.getAseStartDate(conn);
 			try
 			{
@@ -664,8 +664,8 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseConfigHistory.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigHistory; }
-		@Override public    int        needVersion()                       { return Ver.ver(16,0); }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) 
+		@Override public    long       needVersion()                       { return Ver.ver(16,0); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) 
 		{
 			return ""
 				+ "-- Check if the database exists... \n"
@@ -734,8 +734,8 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseThreadPool.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseThreadPool; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monThreadPool"; }
-		@Override public    int        needVersion()                       { return Ver.ver(15,7); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monThreadPool"; }
+		@Override public    long       needVersion()                       { return Ver.ver(15,7); }
 	}
 
 	public static class HelpDb extends DbmsConfigTextAbstract
@@ -744,7 +744,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseHelpDb.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDb; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdb"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdb"; }
 	}
 
 	public static class Tempdb extends DbmsConfigTextAbstract
@@ -753,7 +753,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseTempdb.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseTempdb; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_tempdb 'show'"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_tempdb 'show'"; }
 	}
 
 	public static class HelpDevice extends DbmsConfigTextAbstract
@@ -762,7 +762,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseHelpDevice.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpDevice; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpdevice"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdevice"; }
 		
 		@Override
 		public void checkConfig(DbxConnection conn)
@@ -835,10 +835,8 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseDeviceFsSpaceUsage.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseDeviceFsSpaceUsage; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
-//		@Override public    int        needVersion()                       { return 15700; }
-//		@Override public    int        needVersion()                       { return 1570000; }
-		@Override public    int        needVersion()                       { return Ver.ver(15,7); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monDeviceSpaceUsage"; }
+		@Override public    long       needVersion()                       { return Ver.ver(15,7); }
 	}
 
 	public static class HelpServer extends DbmsConfigTextAbstract
@@ -847,7 +845,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseHelpServer.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpServer; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpserver"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpserver"; }
 	}
 
 	public static class Traceflags extends DbmsConfigTextAbstract
@@ -869,12 +867,12 @@ public abstract class AseConfigText
 			return needAnyRole;
 		}
 		@Override 
-		protected String getSqlCurrentConfig(int aseVersion) 
+		protected String getSqlCurrentConfig(long srvVersion) 
 		{
 			// 12.5.4 esd#2 and 15.0.2 supports "show switch", which makes less output in the ASE Errorlog
-//			if (aseVersion >= 15020 || (aseVersion >= 12542 && aseVersion < 15000) )
-//			if (aseVersion >= 1502000 || (aseVersion >= 1254020 && aseVersion < 1500000) )
-			if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4,2) && aseVersion < Ver.ver(15,0)) )
+//			if (srvVersion >= 15020 || (srvVersion >= 12542 && srvVersion < 15000) )
+//			if (srvVersion >= 1502000 || (srvVersion >= 1254020 && srvVersion < 1500000) )
+			if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4,2) && srvVersion < Ver.ver(15,0)) )
 				return "show switch"; 
 			else
 				return "dbcc traceon(3604) dbcc traceflags dbcc traceoff(3604)"; 
@@ -982,8 +980,8 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseSpVersion.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseSpVersion; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_version"; }
-		@Override public    int        needVersion()                       { return Ver.ver(12,5,4); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_version"; }
+		@Override public    long       needVersion()                       { return Ver.ver(12,5,4); }
 	}
 
 	public static class ShmDumpConfig extends DbmsConfigTextAbstract
@@ -992,7 +990,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseShmDumpConfig.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseShmDumpConfig; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_shmdumpconfig"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_shmdumpconfig"; }
 
 		@Override
 		public void checkConfig(DbxConnection conn)
@@ -1009,7 +1007,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseMonitorConfig.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseMonitorConfig; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_monitorconfig 'all'"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_monitorconfig 'all'"; }
 		@Override public    List<String> needRole()
 		{ 
 			List<String> list = new ArrayList<String>();
@@ -1082,7 +1080,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseHelpSort.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpSort; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_helpsort"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpsort"; }
 	}
 
 	public static class LicenceInfo extends DbmsConfigTextAbstract
@@ -1091,8 +1089,8 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseLicenseInfo.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseLicenseInfo; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "select * from master.dbo.monLicense"; }
-		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from master.dbo.monLicense"; }
+		@Override public    long       needVersion()                       { return Ver.ver(15,0); }
 	}
 	
 	public static class ClusterInfo extends DbmsConfigTextAbstract
@@ -1101,8 +1099,8 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseClusterInfo.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseClusterInfo; }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
-		@Override public    int        needVersion()                       { return Ver.ver(15,0,2); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_cluster 'logical', 'show', NULL"; }
+		@Override public    long       needVersion()                       { return Ver.ver(15,0,2); }
 		@Override public    boolean    needCluster()                       { return true; }
 	}
 	
@@ -1112,7 +1110,7 @@ public abstract class AseConfigText
 		@Override public    String     getName()                           { return ConfigType.AseConfigFile.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseConfigFile; }
-		@Override public    int        needVersion()                       { return Ver.ver(15,0); }
+		@Override public    long       needVersion()                       { return Ver.ver(15,0); }
 		@Override public    List<String> needRole()
 		{ 
 			List<String> list = new ArrayList<String>();
@@ -1125,7 +1123,7 @@ public abstract class AseConfigText
 			list.add("enable file access");
 			return list;
 		}
-		@Override protected String     getSqlCurrentConfig(int aseVersion) 
+		@Override protected String     getSqlCurrentConfig(long srvVersion) 
 		{ 
 			return 
 			"declare @cmd      varchar(1024) \n" +
@@ -1182,7 +1180,7 @@ public abstract class AseConfigText
 //		@Override public    String     getTabLabel()                       { return "Monitoring"; }
 //		@Override public    String     getName()                           { return ConfigType.AseConfigMonitoring.toString(); }
 //		@Override public    String     getConfigType()                     { return getName(); }
-//		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "exec sp_configure 'Monitoring'"; }
+//		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_configure 'Monitoring'"; }
 //	}
 
 	

@@ -33,7 +33,7 @@ public abstract class MySqlConfigText
 		@Override public    String     getTabLabel()                       { return "SQL Mode"; }
 		@Override public    String     getName()                           { return ConfigType.SqlMode.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "SELECT @@GLOBAL.sql_mode"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "SELECT @@GLOBAL.sql_mode"; }
 	}
 
 	public static class HelpDb extends DbmsConfigTextAbstract
@@ -41,7 +41,7 @@ public abstract class MySqlConfigText
 		@Override public    String     getTabLabel()                       { return "Databases"; }
 		@Override public    String     getName()                           { return ConfigType.HelpDb.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "SHOW DATABASES"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "SHOW DATABASES"; }
 	}
 
 	public static class Replicas extends DbmsConfigTextAbstract
@@ -49,7 +49,7 @@ public abstract class MySqlConfigText
 		@Override public    String     getTabLabel()                       { return "Replicas"; }
 		@Override public    String     getName()                           { return ConfigType.Replicas.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
-		@Override protected String     getSqlCurrentConfig(int aseVersion) { return "SHOW SLAVE HOSTS"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "SHOW SLAVE HOSTS"; }
 	}
 
 }

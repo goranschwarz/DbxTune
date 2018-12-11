@@ -150,9 +150,9 @@ public class RefreshProcess extends Thread
 	public CountersModel	   _cmProcWaits;
 	public CountersModel	   _cmLocks;
 
-	private int     _aseVersion       = 0;
+	private long    _srvVersion       = 0;
 	private boolean _isClusterEnabled = false;
-	private int     _monTablesVersion = 0;
+	private long    _monTablesVersion = 0;
 	 
 
 	private String  _historyRestrictionSql = "";
@@ -439,13 +439,13 @@ public class RefreshProcess extends Thread
 				 * SPID        KPID        DBID        ProcedureID PlanID      BatchID     ContextID   LineNumber  CpuTime     WaitTime    MemUsageKB  PhysicalReads LogicalReads PagesModified PacketsSent PacketsReceived NetworkPacketSize PlansAltered RowsAffected StartTime                      
 				 */
 				String extraCols = "";
-				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
+				if (_srvVersion >= Ver.ver(15,0,0,2) || (_srvVersion >= Ver.ver(12,5,4) && _srvVersion < Ver.ver(15,0)) )
 				{
 					extraCols = "  S.RowsAffected, \n";
 				}
 
 				String ObjOwnerID = "ObjOwnerID = convert(int, 0), ";
-				if (_aseVersion >= Ver.ver(15,0,3) )
+				if (_srvVersion >= Ver.ver(15,0,3) )
 				{
 					ObjOwnerID = "ObjOwnerID = object_owner_id(S.ProcedureID, S.DBID), ";
 				}
@@ -453,7 +453,7 @@ public class RefreshProcess extends Thread
 				// ASE 16.0 SP3
 				String QueryOptimizationTime       = "";
 				String ase160_sp3_nl               = "";
-				if (_aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+				if (_srvVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
 				{
 					QueryOptimizationTime       = "  S.QueryOptimizationTime, ";
 					ase160_sp3_nl               = "\n";
@@ -870,17 +870,17 @@ public class RefreshProcess extends Thread
 				//       in method: saveCapturedStatements
 
 				String extraCols = "";
-				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
+				if (_srvVersion >= Ver.ver(15,0,0,2) || (_srvVersion >= Ver.ver(12,5,4) && _srvVersion < Ver.ver(15,0)) )
 				{
 					extraCols = "       RowsAffected, ErrorStatus, \n";
 				}
-				if (_aseVersion >= Ver.ver(15,0,3) )
+				if (_srvVersion >= Ver.ver(15,0,3) )
 				{
 					extraCols += "      ProcNestLevel, StatementNumber, \n";
 				}
 
 				String ObjOwnerID = "      ObjOwnerID = convert(int, 0), \n";
-				if (_aseVersion >= Ver.ver(15,0,3) )
+				if (_srvVersion >= Ver.ver(15,0,3) )
 				{
 					ObjOwnerID = "      ObjOwnerID = object_owner_id(ProcedureID, DBID), \n";
 				}
@@ -888,7 +888,7 @@ public class RefreshProcess extends Thread
 				// ASE 16.0 SP3
 				String QueryOptimizationTime       = "";
 				String ase160_sp3_nl               = "";
-				if (_aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+				if (_srvVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
 				{
 					QueryOptimizationTime       = "      QueryOptimizationTime, ";
 					ase160_sp3_nl               = "\n";
@@ -2322,12 +2322,12 @@ public class RefreshProcess extends Thread
 				tabWriter.write("    MemUsageKB         int             not null,\n");
 				tabWriter.write("    PhysicalReads      int             not null,\n");
 				tabWriter.write("    LogicalReads       int             not null,\n");
-				if (_aseVersion >= Ver.ver(15,0,0,2) || (_aseVersion >= Ver.ver(12,5,4) && _aseVersion < Ver.ver(15,0)) )
+				if (_srvVersion >= Ver.ver(15,0,0,2) || (_srvVersion >= Ver.ver(12,5,4) && _srvVersion < Ver.ver(15,0)) )
 				{
 				tabWriter.write("    RowsAffected       int             not null,\n");
 				tabWriter.write("    ErrorStatus        int             not null,\n");
 				}
-				if (_aseVersion >= Ver.ver(15,0,3) )
+				if (_srvVersion >= Ver.ver(15,0,3) )
 				{
 				tabWriter.write("    ProcNestLevel      int             not null,\n");
 				tabWriter.write("    StatementNumber    int             not null,\n");
@@ -2509,15 +2509,15 @@ public class RefreshProcess extends Thread
 ////		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, ";
 ////		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0)";
 ////		cols3 = "";
-//////		if (_aseVersion >= 12520)
-//////		if (_aseVersion >= 1252000)
-////		if (_aseVersion >= Ver.ver(12,5,2))
+//////		if (_srvVersion >= 12520)
+//////		if (_srvVersion >= 1252000)
+////		if (_srvVersion >= Ver.ver(12,5,2))
 ////		{
 ////			cols3 = ", TableSize";
 ////		}
-//////		if (_aseVersion >= 15000)
-//////		if (_aseVersion >= 1500000)
-////		if (_aseVersion >= Ver.ver(15,0))
+//////		if (_srvVersion >= 15000)
+//////		if (_srvVersion >= 1500000)
+////		if (_srvVersion >= Ver.ver(15,0))
 ////		{
 ////			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 ////			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize
@@ -2553,7 +2553,7 @@ public class RefreshProcess extends Thread
 //			}
 //
 //			@Override
-//			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //			{
 //				String cols1 = "";
 //				String cols2 = "";
@@ -2580,7 +2580,7 @@ public class RefreshProcess extends Thread
 //			}
 //
 //			@Override
-//			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //			{
 //				List <String> pkCols = new LinkedList<String>();
 //
@@ -2713,7 +2713,7 @@ public class RefreshProcess extends Thread
 //			}
 //
 //			@Override
-//			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //			{
 //				String sql = 
 //					"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
@@ -2730,7 +2730,7 @@ public class RefreshProcess extends Thread
 //			}
 //
 //			@Override
-//			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //			{
 //				List <String> pkCols = new LinkedList<String>();
 //
@@ -2823,15 +2823,15 @@ public class RefreshProcess extends Thread
 ////		cols1 = "SPID, KPID, DBID, ParentSPID, LockID, Context, ObjectID, ObjectName=object_name(ObjectID, DBID), LockState, LockType, LockLevel, ";
 ////		cols2 = "";
 ////		cols3 = "WaitTime, PageNumber, RowNumber";
-//////		if (_aseVersion >= 15002)
-//////		if (_aseVersion >= 1500020)
-////		if (_aseVersion >= Ver.ver(15,0,0,2))
+//////		if (_srvVersion >= 15002)
+//////		if (_srvVersion >= 1500020)
+////		if (_srvVersion >= Ver.ver(15,0,0,2))
 ////		{
 ////			cols2 = "BlockedState, BlockedBy, ";  //
 ////		}
-//////		if (_aseVersion >= 15020)
-//////		if (_aseVersion >= 1502000)
-////		if (_aseVersion >= Ver.ver(15,0,2))
+//////		if (_srvVersion >= 15020)
+//////		if (_srvVersion >= 1502000)
+////		if (_srvVersion >= Ver.ver(15,0,2))
 ////		{
 ////			cols3 += ", SourceCodeID";  //
 ////		}
@@ -2864,7 +2864,7 @@ public class RefreshProcess extends Thread
 //			}
 //
 //			@Override
-//			public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //			{
 //				String cols1 = "";
 //				String cols2 = "";
@@ -2897,7 +2897,7 @@ public class RefreshProcess extends Thread
 //			}
 //
 //			@Override
-//			public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//			public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //			{
 //				return null;
 //			}
@@ -2952,7 +2952,7 @@ public class RefreshProcess extends Thread
 //	private boolean      _isInitialized     = false;
 //	private boolean      _countersIsCreated = false;
 //
-//	public void initCounters(Connection conn, boolean hasGui, int aseVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception
 //	{
 //		if (_isInitialized)
@@ -2965,7 +2965,7 @@ public class RefreshProcess extends Thread
 //		if (! _countersIsCreated)
 //			createCounters();
 //		
-//		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+aseVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+//		_logger.info("Capture SQL; Initializing all CM objects, using ASE server version number "+srvVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
 //
 //		// Get active ASE Roles
 //		//List<String> activeRoleList = AseConnectionUtils.getActiveRoles(conn);
@@ -2976,7 +2976,7 @@ public class RefreshProcess extends Thread
 //
 //		// in version 15.0.3.1 compatibility_mode was introduced, this to use 12.5.4 optimizer & exec engine
 //		// This will hurt performance, especially when querying sysmonitors table, so set this to off
-//		if (aseVersion >= Ver.ver(15,0,3,1))
+//		if (srvVersion >= Ver.ver(15,0,3,1))
 //			AseConnectionUtils.setCompatibilityMode(conn, false);
 //
 //		ArrayList<CountersModel> CMList = new ArrayList<CountersModel>();
@@ -2990,10 +2990,10 @@ public class RefreshProcess extends Thread
 //		{
 //			if (cm != null)
 //			{
-//				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+aseVersion+".");
+//				_logger.debug("Initializing CM named '"+cm.getName()+"', display name '"+cm.getDisplayName()+"', using ASE server version number "+srvVersion+".");
 //
 //				// set the version
-////				cm.setServerVersion(aseVersion);
+////				cm.setServerVersion(srvVersion);
 //				cm.setServerVersion(monTablesVersion);
 //				cm.setClusterEnabled(isClusterEnabled);
 //				
@@ -3197,20 +3197,20 @@ public class RefreshProcess extends Thread
 
 //		try
 //		{
-    		_aseVersion       = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
+    		_srvVersion       = MonTablesDictionaryManager.getInstance().getDbmsExecutableVersionNum();
     		_isClusterEnabled = MonTablesDictionaryManager.getInstance().isClusterEnabled();
     		_monTablesVersion = MonTablesDictionaryManager.getInstance().getDbmsMonTableVersion();
 //		}
 //		catch(RuntimeException rte) // if MonTablesDictionary hasn't been initialized... java.lang.RuntimeException: No MonTablesDictionary has been set...
 //		{
-//    		_aseVersion       = _conn.getDbmsVersionNumber();
+//    		_srvVersion       = _conn.getDbmsVersionNumber();
 //    		_isClusterEnabled = false; // _conn.isClusterEnabled();
-//    		_monTablesVersion = _aseVersion; // hopefully good enough
+//    		_monTablesVersion = _srvVersion; // hopefully good enough
 //		}
 
 //		try
 //		{
-//			initCounters(_conn, true, _aseVersion, _isClusterEnabled, _monTablesVersion);
+//			initCounters(_conn, true, _srvVersion, _isClusterEnabled, _monTablesVersion);
 //		}
 //		catch (Exception ex)
 //		{
@@ -3222,7 +3222,7 @@ public class RefreshProcess extends Thread
 		{
 			CounterControllerSqlCapture counterController = new CounterControllerSqlCapture(true, this, pdf);
 			counterController.setMonConnection(_conn);
-			counterController.initCounters(_conn, true, _aseVersion, _isClusterEnabled, _monTablesVersion);
+			counterController.initCounters(_conn, true, _srvVersion, _isClusterEnabled, _monTablesVersion);
 			
 			String whereSpidKpid = "";
 			if (_spid > 0) whereSpidKpid += "  and SPID = " + _spid + "\n";

@@ -32,8 +32,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_UDC;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monXXX"};
 	public static final String[] NEED_ROLES       = new String[] {"XXX_role"};
@@ -114,7 +114,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}

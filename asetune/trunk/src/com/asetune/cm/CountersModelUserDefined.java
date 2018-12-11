@@ -56,7 +56,7 @@ public class CountersModelUserDefined
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		// Treat version specific SQL
 		if (_sqlVerStr != null)
@@ -71,7 +71,7 @@ public class CountersModelUserDefined
 	
 				int sqlVersionNumInKey = key.intValue();
 	
-				// connected aseVersion, go and get the highest/closest sql version string 
+				// connected srvVersion, go and get the highest/closest sql version string 
 				if (srvVersion >= sqlVersionNumInKey)
 				{
 //					if (sqlVersionNumInKey < 12503)
@@ -101,25 +101,25 @@ public class CountersModelUserDefined
 	}
 
 //	@Override
-//	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		return getSqlInit();
 //	}
 
 //	@Override
-//	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//	public String getSqlCloseForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		return getSqlClose();
 //	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return _pkList;
 	}
 
 //	@Override
-//	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 //	{
 //		return getDependsOnConfig();
 //	}

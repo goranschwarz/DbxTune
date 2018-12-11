@@ -215,7 +215,7 @@ implements ActionListener
 	private RTextScrollPane   _dumpQueueTxtScroll    = new RTextScrollPane(_dumpQueueTxt);
 
 	
-	private int               _srvVersion                = 0;
+	private long              _srvVersion                = 0;
 	private String            _connectedToProductName    = null;
 	private String            _connectedToProductVersion = null;
 	private String            _connectedToServerName     = null;
@@ -1904,7 +1904,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 ////				_rsInTabs       .setEnabled(true);
 ////				_asPlainText    .setEnabled(true);
 ////				_setOptions     .setEnabled(true);
-////				_execGuiShowplan.setEnabled( (_aseVersion >= 15000) );
+////				_execGuiShowplan.setEnabled( (_srvVersion >= 15000) );
 ////			}
 ////			else if (_connectedToProductName != null && _connectedToProductName.equals(ConnectionDialog.DB_PROD_NAME_SYBASE_RS))
 ////			{

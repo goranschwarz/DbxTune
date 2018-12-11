@@ -42,8 +42,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessObject"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -110,13 +110,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -132,7 +132,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -145,9 +145,9 @@ extends CountersModel
 		pkCols.add("ObjectID");
 		pkCols.add("IndexID");
 
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
-		if (aseVersion >= Ver.ver(15,0))
+//		if (srvVersion >= 15000)
+//		if (srvVersion >= 1500000)
+		if (srvVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
 		// NOTE: PK is NOT unique, so therefore 'dupMergeCount' column is added to the SQL Query
@@ -157,7 +157,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols = "";
 
@@ -172,14 +172,14 @@ extends CountersModel
 		if (isClusterEnabled)
 			InstanceID = "InstanceID, ";
 
-//		if (aseVersion >= 12520)
-//		if (aseVersion >= 1252000)
-		if (aseVersion >= Ver.ver(12,5,2))
+//		if (srvVersion >= 12520)
+//		if (srvVersion >= 1252000)
+		if (srvVersion >= Ver.ver(12,5,2))
 			TableSize = "TableSize, \n";
 
-//		if (aseVersion >= 15000)
-//		if (aseVersion >= 1500000)
-		if (aseVersion >= Ver.ver(15,0))
+//		if (srvVersion >= 15000)
+//		if (srvVersion >= 1500000)
+		if (srvVersion >= Ver.ver(15,0))
 		{
 			TableSize = "";
 			PartitionName = "PartitionName, ";
@@ -187,9 +187,9 @@ extends CountersModel
 			PartitionID   = ", PartitionID";
 		}
 
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
-		if (aseVersion >= Ver.ver(15,0,2))
+//		if (srvVersion >= 15020)
+//		if (srvVersion >= 1502000)
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			IndexName = "IndexName = CASE WHEN IndexID=0 THEN convert(varchar(30),'DATA') \n" +
 				        "                 ELSE convert(varchar(30), isnull(index_name(DBID, ObjectID, IndexID), '-unknown-')) \n" +
@@ -208,9 +208,9 @@ extends CountersModel
 		// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "SPID != @@spid";
-//		if (aseVersion < 15000)
-//		if (aseVersion < 1500000)
-		if (aseVersion < Ver.ver(15,0))
+//		if (srvVersion < 15000)
+//		if (srvVersion < 1500000)
+		if (srvVersion < Ver.ver(15,0))
 		{
 			whereSpidNotMe = "SPID != convert(int,@@spid)";
 		}

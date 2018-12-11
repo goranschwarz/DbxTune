@@ -44,8 +44,8 @@ extends CountersModelAppend
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monErrorLog"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -108,13 +108,13 @@ extends CountersModelAppend
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -128,9 +128,9 @@ extends CountersModelAppend
 		cols1 = "Time, "+instanceId+"SPID, KPID, FamilyID, EngineNumber, ErrorNumber, Severity, ";
 		cols2 = "";
 		cols3 = "ErrorMessage";
-//		if (aseVersion >= 12510)
-//		if (aseVersion >= 1251000)
-		if (aseVersion >= Ver.ver(12,5,1))
+//		if (srvVersion >= 12510)
+//		if (srvVersion >= 1251000)
+		if (srvVersion >= Ver.ver(12,5,1))
 		{
 			cols2 = "State, ";
 		}

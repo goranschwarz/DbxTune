@@ -31,9 +31,9 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_REP_AGENT;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	public static final int      NEED_SRV_VERSION = 1600000;
-	public static final int      NEED_SRV_VERSION = Ver.ver(16,0);
-	public static final int      NEED_CE_VERSION  = 0;
+//	public static final long     NEED_SRV_VERSION = 1600000;
+	public static final long     NEED_SRV_VERSION = Ver.ver(16,0);
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monRepSyncTaskStatistics"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -157,13 +157,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -175,7 +175,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String sql = "select * from master..monRepSyncTaskStatistics";
 		return sql;

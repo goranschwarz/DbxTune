@@ -151,7 +151,7 @@ implements Cloneable, ITableTooltip
 	// private int typeModel;
 	private boolean            _isInitialized     = false;
 	private boolean            _runtimeInitialized= false;
-	private int                _serverVersion     = 0;
+	private long               _serverVersion     = 0;
 	private boolean            _isClusterEnabled  = false;
 	private List<String>       _activeServerRolesOrPermissions = null;
 	private Map<String,Integer>_monitorConfigsMap = null;
@@ -172,8 +172,8 @@ implements Cloneable, ITableTooltip
 	private Set<String>        _dependsOnCm          = null;
 	private String[]           _dependsOnRole        = null;
 	private String[]           _dependsOnConfig      = null;
-	private int                _dependsOnVersion     = 0;
-	private int                _dependsOnCeVersion   = 0;
+	private long               _dependsOnVersion     = 0;
+	private long               _dependsOnCeVersion   = 0;
 	private List<StoredProcCheck> _dependsOnStoredProc  = null; // containes: StoredProcCheck objects
 	
 	/** If we should refresh this CM in a different manner than the default refresh rate. 0=useDefault, >0=number of seconds between samples */
@@ -443,8 +443,8 @@ implements Cloneable, ITableTooltip
 			String[]     monTables,        // What monitor tables are accessed in this query, used for TOOLTIP lookups
 			String[]     dependsOnRole,    // Needs following role(s)
 			String[]     dependsOnConfig,  // Check that these configurations are above 0
-			int          dependsOnVersion, // What version of ASE do we need to sample for this CounterModel
-			int          dependsOnCeVersion, // What version of ASE-CE do we need to sample for this CounterModel
+			long         dependsOnVersion, // What version of ASE do we need to sample for this CounterModel
+			long         dependsOnCeVersion, // What version of ASE-CE do we need to sample for this CounterModel
 			boolean      negativeDiffCountersToZero, // if diff calculations is negative, reset the counter to zero.
 			boolean      systemCm
 	)
@@ -481,8 +481,8 @@ implements Cloneable, ITableTooltip
 			String[]     monTables,
 			String[]     dependsOnRole,
 			String[]     dependsOnConfig,
-			int          dependsOnVersion,
-			int          dependsOnCeVersion,
+			long         dependsOnVersion,
+			long         dependsOnCeVersion,
 			boolean      negativeDiffCountersToZero,
 			boolean      systemCm,
 			int          defaultPostponeTime
@@ -2238,7 +2238,7 @@ implements Cloneable, ITableTooltip
 	 * @param needsVersion       What DBMS version is this graph valid from. (use com.asetune.utils.Ver to generate a value). 0 = any version
 	 * @param minimumHeight      Minimum height of the graph content in pixels. (-1 = Let the layout manager decide this)
 	 */
-	public void addTrendGraph(String name, String chkboxText, String graphLabel, String[] seriesLabels, LabelType seriesLabelType, TrendGraphDataPoint.Category graphCategory, boolean isPercentGraph, boolean visibleAtStart, int needsVersion, int minimumHeight)
+	public void addTrendGraph(String name, String chkboxText, String graphLabel, String[] seriesLabels, LabelType seriesLabelType, TrendGraphDataPoint.Category graphCategory, boolean isPercentGraph, boolean visibleAtStart, long needsVersion, int minimumHeight)
 	{
 		if (LabelType.Dynamic.equals(seriesLabelType))
 			seriesLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
@@ -2342,7 +2342,7 @@ implements Cloneable, ITableTooltip
 		return tg.isGraphEnabled();
 	}
 
-	public void initTrendGraphForVersion(int serverVersion)
+	public void initTrendGraphForVersion(long serverVersion)
 	{
 		if (_trendGraphs.size() == 0)
 			return;
@@ -2727,12 +2727,12 @@ implements Cloneable, ITableTooltip
 	}
 	
 	/** */
-	public void setServerVersion(int serverVersion)
+	public void setServerVersion(long serverVersion)
 	{
 		_serverVersion = serverVersion;
 	}
 	/** */
-	public int getServerVersion()
+	public long getServerVersion()
 	{
 		if ( ! isRuntimeInitialized() ) throw new RuntimeException("This can't be called before the CM has been connected to any monitored server.");
 		return _serverVersion;
@@ -2759,7 +2759,7 @@ implements Cloneable, ITableTooltip
 	public String getServerVersionStr()
 	{
 		if ( ! isRuntimeInitialized() ) throw new RuntimeException("This can't be called before the CM has been connected to any monitored server.");
-		return Ver.versionIntToStr( getServerVersion() );
+		return Ver.versionNumToStr( getServerVersion() );
 	}
 
 	/** In here we could call getServerVersion() and decide what SQL syntax we should 
@@ -2773,31 +2773,31 @@ implements Cloneable, ITableTooltip
 	public void initSql(Connection conn)
 	{
 		// Get what version we are connected to.
-		int     aseVersion       = getServerVersion();
+		long    srvVersion       = getServerVersion();
 		boolean isClusterEnabled = isClusterEnabled();
 
 		// Get what configuration we depends on
-		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, aseVersion, isClusterEnabled);
+		String[] dependsOnConfig = getDependsOnConfigForVersion(conn, srvVersion, isClusterEnabled);
 		setDependsOnConfig(dependsOnConfig);
 		
 		// Generate the SQL, for the specific ASE version
-		String sql = getSqlForVersion(conn, aseVersion, isClusterEnabled);
+		String sql = getSqlForVersion(conn, srvVersion, isClusterEnabled);
 		setSql(sql);
 
 		// Generate the SQL INIT, for the specific ASE version
-		String sqlInit = getSqlInitForVersion(conn, aseVersion, isClusterEnabled);
+		String sqlInit = getSqlInitForVersion(conn, srvVersion, isClusterEnabled);
 		setSqlInit(sqlInit);
 
 		// Generate the SQL CLOSE, for the specific ASE version
-		String sqlClose = getSqlCloseForVersion(conn, aseVersion, isClusterEnabled);
+		String sqlClose = getSqlCloseForVersion(conn, srvVersion, isClusterEnabled);
 		setSqlClose(sqlClose);
 
 		// Generate PrimaryKey, for the specific ASE version
-		List<String> pkList = getPkForVersion(conn, aseVersion, isClusterEnabled);
+		List<String> pkList = getPkForVersion(conn, srvVersion, isClusterEnabled);
 		setPk(pkList);
 		
 		// Set specific column descriptions
-		addMonTableDictForVersion(conn, aseVersion, isClusterEnabled);
+		addMonTableDictForVersion(conn, srvVersion, isClusterEnabled);
 	}
 
 	/**
@@ -2829,35 +2829,35 @@ implements Cloneable, ITableTooltip
 	 * (by calling setSql()) for the desired ASE version.
 	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
-//	public abstract String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled);
-	public String getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//	public abstract String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
-		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new UnsupportedOperationException("The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
-	public String getSqlInitForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String getSqlInitForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
 
-	public String getSqlCloseForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String getSqlCloseForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
 
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
-//	public abstract List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled);
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+//	public abstract List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
-		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
+		throw new UnsupportedOperationException("The method CountersModel.getPkForVersion(long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='"+getName()+"'.");
 	}
 
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return null;
 	}
 
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 	}
 
@@ -3421,26 +3421,26 @@ implements Cloneable, ITableTooltip
 	 */
 	public String getDependsOnVersionStr()
 	{
-		return Ver.versionIntToStr( getDependsOnVersion() );
+		return Ver.versionNumToStr( getDependsOnVersion() );
 	}
-	public int getDependsOnVersion()
+	public long getDependsOnVersion()
 	{
 		return _dependsOnVersion;
 	}
-	public void setDependsOnVersion(int version)
+	public void setDependsOnVersion(long version)
 	{
 		_dependsOnVersion = version;
 	}
 
 	public String getDependsOnCeVersionStr()
 	{
-		return Ver.versionIntToStr( getDependsOnCeVersion() );
+		return Ver.versionNumToStr( getDependsOnCeVersion() );
 	}
-	public int getDependsOnCeVersion()
+	public long getDependsOnCeVersion()
 	{
 		return _dependsOnCeVersion;
 	}
-	public void setDependsOnCeVersion(int version)
+	public void setDependsOnCeVersion(long version)
 	{
 		_dependsOnCeVersion = version;
 	}
@@ -3450,15 +3450,15 @@ implements Cloneable, ITableTooltip
 		if (_dependsOnVersion == 0)
 			return true;
 
-		int needsVersion   = getDependsOnVersion();
-		int aseVersion     = getServerVersion();
+		long needsVersion   = getDependsOnVersion();
+		long srvVersion     = getServerVersion();
 
 		if ( isClusterEnabled() && getDependsOnCeVersion() > 0 )
 		{
 			return checkDependsOnCeVersion();
 		}
 
-		if (aseVersion >= needsVersion)
+		if (srvVersion >= needsVersion)
 		{
 			return true;
 		}
@@ -3483,10 +3483,10 @@ implements Cloneable, ITableTooltip
 		if (_dependsOnCeVersion == 0)
 			return true;
 
-		int needsCeVersion = getDependsOnCeVersion();
-		int aseVersion     = getServerVersion();
+		long needsCeVersion = getDependsOnCeVersion();
+		long srvVersion     = getServerVersion();
 
-		if (aseVersion >= needsCeVersion)
+		if (srvVersion >= needsCeVersion)
 		{
 			return true;
 		}
@@ -3517,7 +3517,7 @@ implements Cloneable, ITableTooltip
 	 * @param scriptName          Name of the script (from within the jar file or classpath) (mandatory)
 	 * @param needsRoleToRecreate What ROLE inside ASE server do we need to create this procedure (can be null, no roles would be checked)
 	 */
-	public void addDependsOnStoredProc(String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, int needSrvVersion)
+	public void addDependsOnStoredProc(String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, long needSrvVersion)
 	{
 		if (dbname            == null) throw new IllegalArgumentException("addDependsOnStoredProc(): 'dbname' cant be null");
 		if (procName          == null) throw new IllegalArgumentException("addDependsOnStoredProc(): 'procName' cant be null");
@@ -3532,12 +3532,12 @@ implements Cloneable, ITableTooltip
 		_dependsOnStoredProc.add(spc);
 	}
 	
-	public boolean checkDependsOnStoredProc(Connection conn, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, int needSrvVersion)
+	public boolean checkDependsOnStoredProc(Connection conn, String dbname, String procName, Date procDateThreshold, Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, long needSrvVersion)
 	{
-		int srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
+		long srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 		if (srvVersion < needSrvVersion)
 		{
-			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current ASE Version is to low '"+Ver.versionIntToStr(srvVersion)+"', this procedure needs ASE Version '"+Ver.versionIntToStr(needSrvVersion)+"' to install.");
+			_logger.warn("When trying to checking stored procedure '"+procName+"' in '"+dbname+"' the Current ASE Version is to low '"+Ver.versionNumToStr(srvVersion)+"', this procedure needs ASE Version '"+Ver.versionNumToStr(needSrvVersion)+"' to install.");
 			return false;
 		}
 
@@ -7303,10 +7303,10 @@ implements Cloneable, ITableTooltip
 		Class<?> _scriptLocation;       // in what "directory" (actually a classname) do we find the script 
 		String   _scriptName;           // name of the script (from within the jar file or classpath)
 		String   _needsRoleToRecreate;  // what ROLE inside ASE server do we need to create this proc
-		int      _needSrvVersion;       // no need to create proc if server is below this version
+		long     _needSrvVersion;       // no need to create proc if server is below this version
 
 		StoredProcCheck(String dbname, String procName, Date procDateThreshold, 
-				Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, int needSrvVersion)
+				Class<?> scriptLocation, String scriptName, String needsRoleToRecreate, long needSrvVersion)
 		{
 			_dbname              = dbname;
 			_procName            = procName;

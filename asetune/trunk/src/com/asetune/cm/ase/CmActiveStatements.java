@@ -57,8 +57,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_OBJECT_ACCESS;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessStatement", "monProcess"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -150,7 +150,7 @@ extends CountersModel
 	}
 	
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -188,7 +188,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		if (srvVersion >= Ver.ver(15,7))
 			return new String[] {"enable monitoring=1", "statement statistics active=1", "per object statistics active=1", "wait event timing=1"};
@@ -197,7 +197,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -211,7 +211,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -232,9 +232,9 @@ extends CountersModel
 		String ClientApplName = "";
 		String ase1570_nl     = "";
 
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
+//		if (srvVersion >= 15700)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			HostName       = "P.HostName, ";
 			ClientName     = "P.ClientName, ";
@@ -244,8 +244,8 @@ extends CountersModel
 		}
 		// ASE 16.0
 		String ClientDriverVersion = ""; // The version of the connectivity driver used by the client program
-//		if (aseVersion >= 1600000)
-		if (aseVersion >= Ver.ver(16,0))
+//		if (srvVersion >= 1600000)
+		if (srvVersion >= Ver.ver(16,0))
 		{
 			ClientDriverVersion = "P.ClientDriverVersion, ";
 		}
@@ -254,7 +254,7 @@ extends CountersModel
 		String QueryOptimizationTime       = "";
 		String QueryOptimizationTime_union = "";
 		String ase160_sp3_nl               = "";
-		if (aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+		if (srvVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
 		{
 			QueryOptimizationTime       = "S.QueryOptimizationTime, ";
 			QueryOptimizationTime_union = "QueryOptimizationTime=-1, ";    // Used be the seconds SQL Statement, just to create a "union"
@@ -262,9 +262,9 @@ extends CountersModel
 		}
 		
 		String optGoalPlan = "";
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
-		if (aseVersion >= Ver.ver(15,0,2))
+//		if (srvVersion >= 15020)
+//		if (srvVersion >= 1502000)
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -275,9 +275,9 @@ extends CountersModel
 		}
 
 		String dbNameCol  = "dbname=db_name(S.DBID)";
-//		if (aseVersion >= 15026) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
-//		if (aseVersion >= 1502060) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
-		if (aseVersion >= Ver.ver(15,0,2,6)) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
+//		if (srvVersion >= 15026) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
+//		if (srvVersion >= 1502060) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
+		if (srvVersion >= Ver.ver(15,0,2,6)) // just a guess what release this was introduced (not in 15.0.2.1, but at least in 15.0.2.6, I have not gathered info for 15022-15025])
 		{
 			dbNameCol  = "dbname=S.DBName";
 		}
@@ -312,7 +312,7 @@ extends CountersModel
 		         "CachedPlanInXml=convert(text,null) \n" +
 		         "";
 
-		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
 			cols2 += "RowsAffectedDiff = S.RowsAffected, S.RowsAffected, \n" +
 			         "tempdb_name = db_name(tempdb_id(S.SPID)), \n" +
@@ -322,7 +322,7 @@ extends CountersModel
 		// in 12.5.4 (esd#9) will produce an "empty" resultset using "S.SPID != @@spid"
 		//                   so this will be a workaround for those releses below 15.0.0
 		String whereSpidNotMe = "S.SPID != @@spid";
-		if (aseVersion < Ver.ver(15,0))
+		if (srvVersion < Ver.ver(15,0))
 		{
 			whereSpidNotMe = "S.SPID != convert(int,@@spid)";
 		}
@@ -349,9 +349,9 @@ extends CountersModel
 		}
 
 		dbNameCol  = "dbname=db_name(P.DBID)";
-//		if (aseVersion >= 15020) // just a guess what release this was introduced. 15020 is OK
-//		if (aseVersion >= 1502000) // just a guess what release this was introduced. 15020 is OK
-		if (aseVersion >= Ver.ver(15,0,2)) // just a guess what release this was introduced. 15020 is OK
+//		if (srvVersion >= 15020) // just a guess what release this was introduced. 15020 is OK
+//		if (srvVersion >= 1502000) // just a guess what release this was introduced. 15020 is OK
+		if (srvVersion >= Ver.ver(15,0,2)) // just a guess what release this was introduced. 15020 is OK
 		{
 			dbNameCol  = "dbname=P.DBName";
 		}
@@ -360,7 +360,7 @@ extends CountersModel
 		String PhysicalReads = "PhysicalReads=-1";
 		String LogicalReads  = "LogicalReads=-1";
 		String PagesModified = "PagesModified=-1";
-		if (aseVersion >= Ver.ver(16,0,0, 2,5) || (aseVersion >= Ver.ver(15,7,0, 138) && aseVersion < Ver.ver(16,0)) )
+		if (srvVersion >= Ver.ver(16,0,0, 2,5) || (srvVersion >= Ver.ver(15,7,0, 138) && srvVersion < Ver.ver(16,0)) )
 		{
 			PhysicalReads = "PhysicalReads=convert(bigint,-1)";
 			LogicalReads  = "LogicalReads=convert(bigint,-1)";
@@ -396,7 +396,7 @@ extends CountersModel
 		         "DbccStacktrace=convert(text,null), \n" +
 		         "CachedPlanInXml=convert(text,null) \n" +
 		         "";
-		if (aseVersion >= Ver.ver(15,0,2) || (aseVersion >= Ver.ver(12,5,4) && aseVersion < Ver.ver(15,0)) )
+		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
 			cols2 += "RowsAffectedDiff = convert(int,-1), RowsAffected = convert(int,-1), \n" +
 			         "tempdb_name = db_name(tempdb_id(P.SPID)), \n" +

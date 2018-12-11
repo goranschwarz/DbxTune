@@ -965,18 +965,18 @@ implements ActionListener
 				((TdsConnection)conn).setSybMessageHandler(new PerfDemoSybMessageHandler(appname+": ", this, null));
 
 			// select @@version
-			String aseVersionStr = "unknown";
+			String srvVersionStr = "unknown";
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("select @@version");
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 			if (showInfo)
-				JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n"+aseVersionStr, "PerfDemo - connect check", JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n"+srvVersionStr, "PerfDemo - connect check", JOptionPane.INFORMATION_MESSAGE);
 			else
-				appendToLog("Connection succeeded: "+aseVersionStr);
+				appendToLog("Connection succeeded: "+srvVersionStr);
 
 			if (closeConn)
 			{

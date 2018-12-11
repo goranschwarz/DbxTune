@@ -30,8 +30,8 @@ extends CountersModel
 //	public static final String   GUI_ICON_FILE    = null;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessObject"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -94,13 +94,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -118,7 +118,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1 = "";
 		String cols2 = "";
@@ -126,13 +126,13 @@ extends CountersModel
 		cols1 = "SPID, KPID, DBName, ObjectID, OwnerUserID, ObjectName, IndexID, ObjectType, \n";
 		cols2 = "LogicalReads, PhysicalReads, PhysicalAPFReads, dupMergeCount=convert(int,0) \n";
 		cols3 = "";
-//		if (aseVersion >= 1252000)
-		if (aseVersion >= Ver.ver(12,5,2))
+//		if (srvVersion >= 1252000)
+		if (srvVersion >= Ver.ver(12,5,2))
 		{
 			cols3 = ", TableSize";
 		}
-//		if (aseVersion >= 1500000)
-		if (aseVersion >= Ver.ver(15,0))
+//		if (srvVersion >= 1500000)
+		if (srvVersion >= Ver.ver(15,0))
 		{
 			cols1 += "PartitionID, PartitionName, "; // new cols in 15.0.0
 			cols3 = ", PartitionSize";  // TableSize has changed name to PartitionSize

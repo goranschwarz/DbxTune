@@ -57,8 +57,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = null;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monState"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -580,20 +580,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		boolean hasMonRole = false;
 		boolean isMonitoringEnabled = false;
@@ -601,7 +601,7 @@ extends CountersModel
 		String nwAddrInfo = "'no sa_role'";
 
 		boolean isHaDrSupported = false;
-		if (aseVersion >= Ver.ver(16,0,0, 2))
+		if (srvVersion >= Ver.ver(16,0,0, 2))
 			isHaDrSupported = true;
 
 		if (isRuntimeInitialized())
@@ -626,16 +626,16 @@ extends CountersModel
 		
 		// Allow This CM to read monState even if 'enable monitoring' is turned off...
 		setNonConfiguredMonitoringAllowed(false); // to reset this if we disconnects from SP100, and connects to a lower version
-//		if (aseVersion >= 1570100)
-		if (aseVersion >= Ver.ver(15,7,0,100))
+//		if (srvVersion >= 1570100)
+		if (srvVersion >= Ver.ver(15,7,0,100))
 		{
 			setNonConfiguredMonitoringAllowed(true);
 		}
 
 
 		String utcTimeDiff = "";
-//		if (aseVersion >= 1254000)
-		if (aseVersion >= Ver.ver(12,5,4))
+//		if (srvVersion >= 1254000)
+		if (srvVersion >= Ver.ver(12,5,4))
 		{
 			utcTimeDiff = ", utcTimeDiff        = datediff(mi, getutcdate(), getdate()) \n";
 		}
@@ -773,7 +773,7 @@ extends CountersModel
 			cols1 += ", StartDate           = min(StartDate) \n";
 			cols1 += ", CountersCleared     = max(CountersCleared) \n";
 			
-			if (aseVersion >= Ver.ver(15,7,0,100))
+			if (srvVersion >= Ver.ver(15,7,0,100))
 			{
 				cols1 += ", Rollbacks          = sum(Rollbacks) \n";	
 				cols1 += ", Selects            = sum(Selects) \n";
@@ -795,12 +795,12 @@ extends CountersModel
 				cols1 += ", LogicalReads       = sum(LogicalReads) \n";
 			}
 
-			if (aseVersion >= Ver.ver(16,0,0, 0,5))
+			if (srvVersion >= Ver.ver(16,0,0, 0,5))
 			{
 				cols1 += ", TotalSyncCommitTime = sum(TotalSyncCommitTime) \n";
 			}
 			
-			if (aseVersion >= Ver.ver(16,0,0, 2))
+			if (srvVersion >= Ver.ver(16,0,0, 2))
 			{
 				cols1 += ", SnapsGenerated      = sum(SnapsGenerated) \n";
 				cols1 += ", SnapsExecuted       = sum(SnapsExecuted) \n";
@@ -813,7 +813,7 @@ extends CountersModel
 			LockCount = ", LockCount          = (select count(*) from master..syslocks) \n";
 		}
 		
-		cols2 = ", aseVersion         = @@version \n" +
+		cols2 = ", srvVersion         = @@version \n" +
 				", atAtServerName     = @@servername \n" +
 				", clusterInstanceId  = " + (isClusterEnabled ? "convert(varchar(15),@@instanceid)"     : "'Not Enabled'") + " \n" + 
 				", clusterCoordId     = " + (isClusterEnabled ? "convert(varchar(3), @@clustercoordid)" : "'Not Enabled'") + " \n" +
@@ -828,9 +828,9 @@ extends CountersModel
 				", asePageSize        = @@maxpagesize \n" +
 
 				", bootcount          = @@bootcount \n" + // from 12.5.0.3
-//				", recovery_state     = "+ (aseVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
-//				", recovery_state     = "+ (aseVersion >= 1251000 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
-				", recovery_state     = "+ (aseVersion >= Ver.ver(12,5,1) ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+//				", recovery_state     = "+ (srvVersion >= 12510 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+//				", recovery_state     = "+ (srvVersion >= 1251000 ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
+				", recovery_state     = "+ (srvVersion >= Ver.ver(12,5,1) ? "@@recovery_state" : "'Introduced in ASE 12.5.1'") + " \n" +
 
 				", cpu_busy           = @@cpu_busy \n" +
 				", cpu_io             = @@io_busy \n" +
@@ -1004,7 +1004,7 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		int aseVersion = getServerVersion();
+		long srvVersion = getServerVersion();
 
 		//---------------------------------
 		// GRAPH:
@@ -1056,8 +1056,8 @@ extends CountersModel
 				transactions_pos = getCounterDataAbs().findColumn("Transactions");
 			
 			// if you don't have 'mon_role', the column 'Transactions' is not part of the result set even if we are above 15.0.3 ESD#3
-//			if ( aseVersion < 1503030 || transactions_pos == -1 )
-			if ( aseVersion < Ver.ver(15,0,3,3) || transactions_pos == -1 )
+//			if ( srvVersion < 1503030 || transactions_pos == -1 )
+			if ( srvVersion < Ver.ver(15,0,3,3) || transactions_pos == -1 )
 			{
 				// disable the transactions graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TRANSACTION);
@@ -1070,8 +1070,8 @@ extends CountersModel
 			}
 			else
 			{
-//				if ( aseVersion >= 1570100 )
-				if ( aseVersion >= Ver.ver(15,7,0,100) )
+//				if ( srvVersion >= 1570100 )
+				if ( srvVersion >= Ver.ver(15,7,0,100) )
 				{
 					Double[] dArray = new Double[2];
 					String[] lArray = new String[] { "Transactions", "Rollbacks" };
@@ -1107,8 +1107,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("Selects");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_SELECT_OPERATIONS);
@@ -1141,8 +1141,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("Inserts");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_IUDM_OPERATIONS);
@@ -1178,8 +1178,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("TableAccesses");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TAB_IND_ACCESS);
@@ -1213,8 +1213,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("TempDbObjects");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_TEMPDB_ACCESS);
@@ -1248,8 +1248,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("ULCFlushes");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_ULC);
@@ -1284,8 +1284,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("PagesRead");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_IO_RW);
@@ -1321,8 +1321,8 @@ extends CountersModel
 				col_pos = getCounterDataAbs().findColumn("LogicalReads");
 			
 			// if you don't have 'mon_role', the column 'Xxx' is not part of the result set even if we are above 15.7 SP100
-//			if ( aseVersion < 1570100 || col_pos == -1 )
-			if ( aseVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
+//			if ( srvVersion < 1570100 || col_pos == -1 )
+			if ( srvVersion < Ver.ver(15,7,0,100) || col_pos == -1 )
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_LOGICAL_READ);

@@ -41,8 +41,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedProcedures"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -123,7 +123,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 //		if (srvVersion >= 15700)
 //		if (srvVersion >= 1570000)
@@ -134,7 +134,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -185,7 +185,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -198,7 +198,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols = "";
 
@@ -247,7 +247,7 @@ extends CountersModel
 			InstanceID = "InstanceID, ";
 		}
 
-		if (aseVersion >= Ver.ver(15,5) || (aseVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
+		if (srvVersion >= Ver.ver(15,5) || (srvVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
 		{
 			orderBy = "order by RequestCnt desc \n";
 
@@ -257,7 +257,7 @@ extends CountersModel
 			ase1550_nl         = "\n";
 		}
 
-		if (aseVersion >= Ver.ver(15,7))
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			ExecutionCount    = "ExecutionCount, ";
 			CPUTime           = "CPUTime, ";
@@ -277,12 +277,12 @@ extends CountersModel
 			ase1570_nl        = "\n";
 		}
 		
-		if (aseVersion >= Ver.ver(16,0))
+		if (srvVersion >= Ver.ver(16,0))
 		{
 			Active            = "Active, ";
 		}
 
-		if (aseVersion >= Ver.ver(16,0,0, 2))
+		if (srvVersion >= Ver.ver(16,0,0, 2))
 		{
 			SnapCodegenTime      = "SnapCodegenTime, ";
 			SnapJITTime          = "SnapJITTime, ";

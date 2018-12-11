@@ -54,8 +54,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessActivity", "monProcessWaits", "monWaitEventInfo", "monWaitClassInfo"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -137,9 +137,7 @@ extends CountersModel
 	
 	public static final String  PROPKEY_sample_freezeMda          = PROP_PREFIX + ".sample.freezeMda";
 	public static final boolean DEFAULT_sample_freezeMda          = true;
-//	public static final int     NEED_SRV_VERSION_sample_freezeMda = 12540;
-//	public static final int     NEED_SRV_VERSION_sample_freezeMda = 1254000;
-	public static final int     NEED_SRV_VERSION_sample_freezeMda = Ver.ver(12,5,4);
+	public static final long    NEED_SRV_VERSION_sample_freezeMda = Ver.ver(12,5,4);
 	
 	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
 	public static final String  DEFAULT_sample_extraWhereClause   = "";
@@ -179,13 +177,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -241,7 +239,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -256,7 +254,7 @@ extends CountersModel
 	}
 	
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_freezeMda          = conf.getBooleanProperty(PROPKEY_sample_freezeMda,        DEFAULT_sample_freezeMda);
@@ -267,7 +265,7 @@ extends CountersModel
 		String sql_sample_freezeMda_declare = "";
 		String sql_sample_freezeMda_begin   = "";
 		String sql_sample_freezeMda_end     = "";
-		if (sample_freezeMda && aseVersion > NEED_SRV_VERSION_sample_freezeMda)
+		if (sample_freezeMda && srvVersion > NEED_SRV_VERSION_sample_freezeMda)
 		{
 			sql_sample_freezeMda_declare = "declare @status int \n";
 			sql_sample_freezeMda_begin   = "select @status = mdaconfig('freeze', 'begin') \n";
@@ -286,20 +284,20 @@ extends CountersModel
 
 		// Do the server support optimization goals?
 		String optGoalPlan = "";
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
-		if (aseVersion >= Ver.ver(15,0,2))
+//		if (srvVersion >= 15020)
+//		if (srvVersion >= 1502000)
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
 
 		// Get user name, if we are above ASE 12.5.4
 		String UserName   = "";
-		if (aseVersion >= Ver.ver(12,5,4))
+		if (srvVersion >= Ver.ver(12,5,4))
 			UserName = "UserName = suser_name(A.ServerUserID), ";
 		
 		String OrigUserName = ""; // in 16.0 SP2
-		if (aseVersion >= Ver.ver(16,0,0, 2))
+		if (srvVersion >= Ver.ver(16,0,0, 2))
 			OrigUserName = "OrigUserName = isnull(suser_name(A.OrigServerUserID), suser_name(A.ServerUserID)), ";
 		
 		String cols = "";
@@ -314,9 +312,9 @@ extends CountersModel
 		String IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the process
 		String IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the process
 		String nl_15702           = ""; // NL for this section
-//		if (aseVersion >= 15702)
-//		if (aseVersion >= 1570020)
-		if (aseVersion >= Ver.ver(15,7,0,2))
+//		if (srvVersion >= 15702)
+//		if (srvVersion >= 1570020)
+		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "A.IOSize1Page, ";
 			IOSize2Pages       = "A.IOSize2Pages, ";
@@ -328,7 +326,7 @@ extends CountersModel
 		// ASE 16.0 SP3
 		String QueryOptimizationTime       = "";
 		String ase160_sp3_nl               = "";
-		if (aseVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
+		if (srvVersion >= Ver.ver(16,0,0, 3)) // 16.0 SP3
 		{
 			QueryOptimizationTime       = "  A.QueryOptimizationTime, ";
 			ase160_sp3_nl               = "\n";
@@ -346,9 +344,9 @@ extends CountersModel
 			IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 			"  A.TableAccesses, A.IndexAccesses, A.Transactions, A.Commits, A.Rollbacks, A.LocksHeld, A.MemUsageKB, \n" +
 			QueryOptimizationTime + ase160_sp3_nl +
-//			(aseVersion >= 15700 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
-//			(aseVersion >= 1570000 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
-			(aseVersion >= Ver.ver(15,7) ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
+//			(srvVersion >= 15700 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
+//			(srvVersion >= 1570000 ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
+			(srvVersion >= Ver.ver(15,7) ? "  A.HeapMemoryInUseKB, A.HeapMemoryUsedHWM_KB , A.HeapMemoryReservedKB, A.HeapMemoryAllocs, \n" : "") +
 			"  HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 			"  HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), \n" +
 			"  MonSqlText=convert(text,null), \n" +

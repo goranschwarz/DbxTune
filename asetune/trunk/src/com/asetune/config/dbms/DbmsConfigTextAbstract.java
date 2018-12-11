@@ -29,7 +29,7 @@ implements IDbmsConfigText
 
 	private boolean _offline = false;
 	private boolean _hasGui  = false;
-//	private int     _aseVersion = 0;
+//	private int     _srvVersion = 0;
 
 	/** The configuration is kept in a String */
 	private String _configStr = null;
@@ -71,8 +71,8 @@ implements IDbmsConfigText
 	abstract public String getConfigType();
 	
 	/** get SQL statement to be executed to GET current configuration string 
-	 * @param aseVersion */
-	abstract protected String getSqlCurrentConfig(int aseVersion);
+	 * @param srvVersion */
+	abstract protected String getSqlCurrentConfig(long srvVersion);
 
 	/**
 	 * get SQL Statement used to get information from the offline storage
@@ -158,7 +158,7 @@ implements IDbmsConfigText
 	 * @return an integer version in the form 12549 for version 12.5.4.9, 0 = all version
 	 */
 	@Override
-	public int needVersion()
+	public long needVersion()
 	{
 		return 0;
 	}
@@ -233,10 +233,10 @@ implements IDbmsConfigText
 		{
 //			int          srvVersion = AseConnectionUtils.getAseVersionNumber(conn);
 //			boolean      isCluster  = AseConnectionUtils.isClusterEnabled(conn);
-			int          srvVersion = conn.getDbmsVersionNumber();
+			long         srvVersion = conn.getDbmsVersionNumber();
 			boolean      isCluster  = conn.isDbmsClusterEnabled();
 
-			int          needVersion = needVersion();
+			long         needVersion = needVersion();
 			boolean      needCluster = needCluster();
 			List<String> needRole    = needRole();
 			List<String> needConfig  = needConfig();
@@ -261,7 +261,7 @@ implements IDbmsConfigText
 			// Check if we can get the configuration, due to compatible version.
 			if (needVersion > 0 && srvVersion < needVersion)
 			{
-				setConfig("This info is only available if the Server Version is above " + Ver.versionIntToStr(needVersion));
+				setConfig("This info is only available if the Server Version is above " + Ver.versionNumToStr(needVersion));
 				return;
 			}
 

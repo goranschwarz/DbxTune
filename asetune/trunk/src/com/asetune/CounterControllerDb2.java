@@ -27,6 +27,7 @@ import com.asetune.pcs.PersistContainer;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 
 public class CounterControllerDb2 
@@ -120,9 +121,9 @@ extends CounterControllerAbstract
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-//	public void initCounters(Connection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+//	public void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception
-	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -135,7 +136,7 @@ extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using DB2 version number "+srvVersion+".");
+		_logger.info("Initializing all CM objects, using DB2 version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+").");
 
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())

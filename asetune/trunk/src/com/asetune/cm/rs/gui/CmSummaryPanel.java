@@ -1371,7 +1371,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		
 		
 //		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
-//		_aseVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  _aseVersion_txt.setCaretPosition(0);
+//		_srvVersion_txt        .setText(cm.getAbsString (0, "atAtVersion").replaceFirst("Sybase IQ/", ""));  _srvVersion_txt.setCaretPosition(0);
 //		_asePageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 //		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
 //		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");
@@ -1402,8 +1402,8 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_atAtServerName_txt    .setText(cm.getAbsString (0, "atAtServerName"));
 //		_listeners_txt         .setText(cm.getAbsString (0, "NetworkAddressInfo"));
 //		_listeners_txt         .setCaretPosition(0);
-//		_aseVersion_txt        .setText(cm.getAbsString (0, "aseVersion").replaceFirst("Adaptive Server Enterprise/", ""));
-//		_aseVersion_txt        .setCaretPosition(0);
+//		_srvVersion_txt        .setText(cm.getAbsString (0, "srvVersion").replaceFirst("Adaptive Server Enterprise/", ""));
+//		_srvVersion_txt        .setCaretPosition(0);
 //		_asePageSize_txt       .setText(cm.getAbsString (0, "asePageSize"));
 //		_lastSampleTime_txt    .setText(cm.getAbsString (0, "timeIsNow"));
 //		_utcTimeDiff_txt       .setText(cm.findColumn("utcTimeDiff") >= 0 ? cm.getAbsString (0, "utcTimeDiff") : "Not available");

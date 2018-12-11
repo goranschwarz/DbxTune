@@ -2117,11 +2117,11 @@ public abstract class MainFrame
 //		if (ACTION_OPEN_ASE_APP_TRACE.equals(actionCmd))
 //		{
 //			String servername    = MonTablesDictionary.getInstance().getAseServerName();
-//			String aseVersionStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
-//			int    aseVersionNum = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
-//			if (aseVersionNum >= Ver.ver(15,0,2))
+//			String srvVersionStr = MonTablesDictionary.getInstance().getAseExecutableVersionStr();
+//			int    srvVersionNum = MonTablesDictionary.getInstance().getAseExecutableVersionNum();
+//			if (srvVersionNum >= Ver.ver(15,0,2))
 //			{
-//				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, aseVersionStr);
+//				AseAppTraceDialog apptrace = new AseAppTraceDialog(-1, servername, srvVersionStr);
 //				apptrace.setVisible(true);
 //			}
 //			else
@@ -2129,7 +2129,7 @@ public abstract class MainFrame
 //				// NOT supported in ASE versions below 15.0.2
 //				String htmlMsg = 
 //					"<html>" +
-//					"  <h2>Sorry this functionality is not available in ASE "+Ver.versionIntToStr(aseVersionNum)+"</h2>" +
+//					"  <h2>Sorry this functionality is not available in ASE "+Ver.versionNumToStr(srvVersionNum)+"</h2>" +
 //					"  Application Tracing is introduced in ASE 15.0.2" +
 //					"</html>";
 //				SwingUtils.showInfoMessage(this, "Not supported for this ASE Version", htmlMsg);

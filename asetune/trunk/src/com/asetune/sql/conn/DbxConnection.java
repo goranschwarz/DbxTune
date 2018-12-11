@@ -75,7 +75,7 @@ implements Connection
 	protected String _databaseProductName    = null;
 	protected String _databaseProductVersion = null;
 	protected String _databaseServerName     = null;
-	protected int    _dbmsVersionNumber      = -1;
+	protected long   _dbmsVersionNumber      = -1;
 	protected String _dbmsVersionStr         = null;
 	
 	protected String _dbmsPageSizeInKb       = null;
@@ -1364,7 +1364,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		return versionStr;
 	}
 	
-	public int getDbmsVersionNumber()
+	public long getDbmsVersionNumber()
 	{
 		if (_dbmsVersionNumber != -1)
 			return _dbmsVersionNumber;
@@ -1372,7 +1372,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		if (_conn == null)
 			return -1;
 		
-		int dbmsVersionNumber = -1;
+		long dbmsVersionNumber = -1;
 		String currentDbProductName = "";
 		try 
 		{ 
@@ -1420,11 +1420,11 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		{
 			dbmsVersionNumber = DbUtils.getOracleVersionNumber(_conn);
 		}
-		// Microsoft
-		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
-		{
+		// Microsoft -- override in SqlServerConnection
+//		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+//		{
 //			dbmsVersionNumber = DbUtils.getSqlServerVersionNumber(_conn);
-		}
+//		}
 		// DB2
 		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX, DbUtils.DB_PROD_NAME_DB2_ZOS))
 		{

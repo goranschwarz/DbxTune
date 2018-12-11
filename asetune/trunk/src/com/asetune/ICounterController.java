@@ -145,7 +145,7 @@ public interface ICounterController
 	Timestamp getStatisticsLastSampleTime();
 	void resetStatisticsTime();
 
-	void initCounters(DbxConnection conn, boolean b, int srvExecutableVersionNum, boolean clusterEnabled, int mdaVersion) throws Exception;
+	void initCounters(DbxConnection conn, boolean b, long srvExecutableVersionNum, boolean clusterEnabled, long mdaVersion) throws Exception;
 
 	void reset(boolean b);
 
@@ -154,7 +154,7 @@ public interface ICounterController
 
 
 	
-	List<CountersModel> getCmListDependsOnConfig(String srvConfig, DbxConnection conn, int srvVersionNum, boolean isClusterEnabled);
+	List<CountersModel> getCmListDependsOnConfig(String srvConfig, DbxConnection conn, long srvVersionNum, boolean isClusterEnabled);
 	void setWaitEvent(String string);
 	void createCounters(boolean hasGui);
 	boolean sleep(int i);

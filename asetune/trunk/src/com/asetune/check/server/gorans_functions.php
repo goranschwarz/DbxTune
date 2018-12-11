@@ -110,7 +110,7 @@
 	//----------------------------------------
 	// FUNCTION: upgrade version from "small" version number to "big" version number
 	//----------------------------------------
-	function versionFixOLD($version)
+	function versionFixOld1($version)
 	{
 		// If the input is empty, lets just return with nothing...
 		if (strlen($version) == 0)
@@ -158,7 +158,7 @@
 //NOTE: NOT READY YET
 // test it with: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=1570100
 //	function versionFix($clientAppName, $version)
-	function versionFix($version)
+	function versionFixOld2($version)
 	{
 //		if ($clientAppName != "AseTune")
 //			return $version;
@@ -257,7 +257,8 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 		}
 		else // Do nothing if already at the new "big" version (or chop it off after  9 chars if it's to long)
 		{
-			return substr($version, 0, 9);
+			return $version;
+		//	return substr($version, 0, 9);
 		}
 	}
 	// SQL UPDATE:
@@ -277,6 +278,86 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 
         // FIX offline-read settings...
 //		doCleanup("update asemon_connect_info     set serverAddTime = serverAddTime, srvVersion = -1   WHERE srvVersion < 0");
+
+
+	// from 7 [mmmm sss pp] numbers to 13 [mm mm mm ssss pppp]
+	// convert: 1254 010 01  -->> 12 05 04 0010 0001
+	// convert: 1570 100 00  -->> 12 05 07 0100 0000
+	function versionFix($version)
+	{
+		// If the input is empty, lets just return with nothing...
+		if (strlen($version) == 0)
+			return $version;
+
+		// If the input is a number below 0: do nothing its a offline-read session
+		if ($version < 0)
+			return $version;
+
+		// NO Need to convert it into a higher version
+		// 13 = M MM MM SSSS PPPP
+		if (strlen($version) >= 13)
+			return $version;
+
+		// SKIP backward compatible... less than MMMM SSS PP skip them... (they should no longer exists)
+		if (strlen($version) < 8)
+			return $version;
+
+		//-----------------------------------------------------------------------------------
+		// BELOW THIS POINT: It's conversion code from MMMM SSS PP -> [M]M MM MM SSSS PPPP
+		//-----------------------------------------------------------------------------------
+
+		// if its a "mmmm sss pp" version, convert it to a "long" version [m]m mm mm ssss pppp
+		// Upgrade version from 1250 030 01 -->> 12 05 00 0030 0001
+		// Upgrade version from 1570 050 00 -->> 15 07 00 0050 0000
+		// Upgrade version from 1570 100 00 -->> 15 07 00 0100 0000
+		// Upgrade version from 1570 120 00 -->> 15 07 00 0120 0000
+		
+		// Start from right side(PL) and work our self up to ServicePack(SP), Maintenance, Minor, Major
+		$plVersion    = "00" . substr($version, -2, 2);
+		$spVersion    =  "0" . substr($version, -5, 3);
+		$maintVersion =  "0" . substr($version, -6, 1);
+		$minorVersion =  "0" . substr($version, -7, 1);
+		$majorVersion =        substr($version, 0, -7); // from start up to 'minor'
+
+		$version = $majorVersion . $minorVersion . $maintVersion . $spVersion . $plVersion;
+
+		return $version;
+	}
+	// TEST: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=112344455
+	// TEST: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=157010000
+	// TEST: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=160000504
+	// TEST: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=1020300040005
+	// TEST: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=15070001000000
+	// TEST: http://www.dbxtune.com/db_cleanup.php?doAction=testVersion&version=16010200050004
+
+	//----------------------------------------
+	// FUNCTION: htmlResultset
+	//----------------------------------------
+	function versionDisplayLongLong($version)
+	{
+		if ( ! is_numeric($version) )
+			return $version;
+
+		// get rid of begining traing spaces
+		$version = trim($version);
+
+		if (strlen($version) >= 13)
+		{
+			$plVersion    = substr($version, -4, 4);
+			$spVersion    = substr($version, -8, 4);
+			$maintVersion = substr($version, -10, 2);
+			$minorVersion = substr($version, -12, 2);
+			$majorVersion = substr($version, 0, -12); // from start up to 'minor'
+
+			//$majorPreStr = "";
+			//if (strlen($majorVersion) == 1)
+			//	$majorPreStr = "&nbsp;";
+				
+			return $majorPreStr . $majorVersion . " " . $minorVersion . " " . $maintVersion . " " . $spVersion . " " . $plVersion;
+		}
+
+		return $version;
+	}
 
 
 
@@ -307,6 +388,11 @@ echo "HANA version 1 or other products with a major release less than 10<br>";
 			$plVersion   = substr($version, 7);
 
 			return $baseVersion . " " . $spVersion . " " . $plVersion;
+		}
+		
+		if (strlen($version) >= 13)
+		{
+			return versionDisplayLongLong($version);
 		}
 
 		return $version;

@@ -57,7 +57,7 @@ public class StressConnect
 	public String     _statDoSpinMonUsername = "sa";
 	public String     _statDoSpinMonPassword = "sybase";
 	public Connection _statDoSpinMonConn     = null;
-	public int        _statSrvVersion        = 0;
+	public long       _statSrvVersion        = 0;
 	public boolean    _statExtraInfo         = false;
 	
 //	private DbMessageHandler _msgHandler = new DbMessageHandler();

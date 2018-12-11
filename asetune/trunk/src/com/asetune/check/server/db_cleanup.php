@@ -34,7 +34,9 @@
 	{
 		$version = $_GET['version'];
 		echo "input version = '" . $version . "'<br>";
-		echo "conv  version = '" . versionFixNEW($version) . "'<br>";
+		$versionConv = versionFix_toLongLong($version);
+		echo "conv  version = '" . $versionConv . "'<br>";
+		echo "print version = '" . versionDisplayLongLong($versionConv) . "'<br>";
 		die("----END---<br>");
 	}
 
@@ -137,6 +139,292 @@
 		printf("SUCCESS loading file: $filename<br>\n");
 	}
 
+	
+//	function upgradeVersionToLongLong($dbconn, $tabname, $idColName, $verColName)
+//	{
+//		echo "upgradeVersionToLongLong: <code>$tabname</code><br>\n";
+//
+//		$sql = "SELECT distinct $idColName, $verColName FROM $tabname WHERE $verColName > 0 AND $verColName < 1000000000000"; // 1 00 00 0000 0000
+//		echo "upgradeVersionToLongLong - SQL: <code>$sql</code><br>\n";
+//
+//		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+//		if (!$result) {
+//			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+//			die("ERROR: Query to show fields from table failed");
+//		}
+//		printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+//
+//		// Add SQL Statements to an list/array
+//		$sqlList = array();
+//		while($row = mysqli_fetch_row($result))
+//		{
+//			$id         = $row[0];
+//			$curVersion = $row[1];
+//			$newVersion = versionFix($curVersion);
+//			$updateStr = "UPDATE $tabname SET $verColName = $newVersion WHERE $idColName = $id -- oldVel = $curVersion";
+//
+//			array_push($sqlList, $updateStr);
+//		}
+//		mysqli_free_result($result);
+//
+//		// printing table rows
+//		$r = 0;
+//		foreach ($sqlList as &$sqlStr) 
+//		{
+//			$r++;
+//			
+//			//printf(" ---row[$r] " . $sqlStr . "<br>\n");
+//			
+//			printf("EXEC[$r]: <code>$sqlStr</code><br>\n");
+//			mysqli_query($dbconn, $sqlStr) or die("ERROR: " . mysqli_error($dbconn));
+//			printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+//			printf("<br>\n");
+//		}
+//		printf("-END-<br>\n");
+//	}
+	function upgradeVersion_asemon_connect_info($dbconn, $doExec)
+	{
+		$tabname = "asemon_connect_info";
+		echo "upgradeVersion(): <code>$tabname</code><br>\n";
+
+		$sql = "SELECT checkId, serverAddTime, connectId, srvVersion" 
+			 . " FROM $tabname WHERE srvVersion > 0 AND srvVersion < 1000000000000"; // 1 00 00 0000 0000
+		echo "upgradeVersion() - SQL: <code>$sql</code><br>\n";
+
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+
+		// Add SQL Statements to an list/array
+		$sqlList = array();
+		while($row = mysqli_fetch_row($result))
+		{
+			$checkId        = $row[0];
+			$serverAddTime  = $row[1];
+			$connectId      = $row[2];
+			$curVersion     = $row[3];
+			$newVersion = versionFix($curVersion);
+			$updateStr = "UPDATE $tabname SET srvVersion = $newVersion WHERE checkId = $checkId AND serverAddTime = '$serverAddTime' AND connectId = $connectId -- oldVel = $curVersion";
+
+			array_push($sqlList, $updateStr);
+		}
+		mysqli_free_result($result);
+
+		printf("EXEC: <code>START TRANSACTION</code><br>\n");
+		mysqli_query($dbconn, "START TRANSACTION") or die("ERROR: " . mysqli_error($dbconn));
+		
+		// printing table rows
+		$r = 0;
+		foreach ($sqlList as &$sqlStr) 
+		{
+			$r++;
+			
+			if ($doExec != 1)
+			{
+				printf(" ---row[$r] " . $sqlStr . "<br>\n");
+			}
+			else
+			{
+				printf("EXEC[$r]: <code>$sqlStr</code><br>\n");
+				mysqli_query($dbconn, $sqlStr) or die("ERROR: " . mysqli_error($dbconn));
+				$rowc = mysqli_affected_rows($dbconn);
+				printf("Records affected: %d<br>\n", $rowc);
+				if ($rowc != 1)
+					die("ERROR: Expected row count is 1. and we received $rowc. -------- ROLLBACK AND EXIT -------------\n<br>");
+				printf("<br>\n");
+			}
+		}
+		
+		printf("EXEC: <code>COMMIT</code><br>\n");
+		mysqli_query($dbconn, "COMMIT") or die("ERROR: " . mysqli_error($dbconn));
+		printf("-END-<br>\n");
+	}
+	function upgradeVersion_asemon_mda_info($dbconn, $doExec)
+	{
+		$tabname = "asemon_mda_info";
+		echo "upgradeVersion(): <code>$tabname</code><br>\n";
+
+		$sql = "SELECT type, srvVersion, isClusterEnabled, TableName, ColumnName" 
+			 . " FROM $tabname WHERE srvVersion > 0 AND srvVersion < 1000000000000"; // 1 00 00 0000 0000
+		echo "upgradeVersion() - SQL: <code>$sql</code><br>\n";
+
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+
+		// Add SQL Statements to an list/array
+		$sqlList = array();
+		while($row = mysqli_fetch_row($result))
+		{
+			$type              = $row[0];
+			$srvVersion        = $row[1];
+			$isClusterEnabled  = $row[2];
+			$TableName         = $row[3];
+			$ColumnName        = $row[4];
+			$newVersion = versionFix($srvVersion);
+			$updateStr = "UPDATE $tabname SET srvVersion = $newVersion WHERE type = '$type' AND srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled AND TableName = '$TableName' AND ColumnName = '$ColumnName' -- oldVel = $srvVersion";
+
+			array_push($sqlList, $updateStr);
+		}
+		mysqli_free_result($result);
+
+		printf("EXEC: <code>START TRANSACTION</code><br>\n");
+		mysqli_query($dbconn, "START TRANSACTION") or die("ERROR: " . mysqli_error($dbconn));
+		
+		// printing table rows
+		$r = 0;
+		foreach ($sqlList as &$sqlStr) 
+		{
+			$r++;
+			
+			if ($doExec != 1)
+			{
+				printf(" ---row[$r] " . $sqlStr . "<br>\n");
+			}
+			else
+			{
+				printf("EXEC[$r]: <code>$sqlStr</code><br>\n");
+				mysqli_query($dbconn, $sqlStr) or die("ERROR: " . mysqli_error($dbconn));
+				$rowc = mysqli_affected_rows($dbconn);
+				printf("Records affected: %d<br>\n", $rowc);
+				if ($rowc != 1)
+					die("ERROR: Expected row count is 1. and we received $rowc. -------- ROLLBACK AND EXIT -------------\n<br>");
+				printf("<br>\n");
+			}
+		}
+		
+		printf("EXEC: <code>COMMIT</code><br>\n");
+		mysqli_query($dbconn, "COMMIT") or die("ERROR: " . mysqli_error($dbconn));
+		printf("-END-<br>\n");
+	}
+	function upgradeVersion_sqlw_connect_info($dbconn, $doExec)
+	{
+		$tabname = "sqlw_connect_info";
+		echo "upgradeVersion(): <code>$tabname</code><br>\n";
+
+		$sql = "SELECT sqlwCheckId, serverAddTime, connectId, srvVersionInt" 
+			 . " FROM $tabname WHERE srvVersionInt > 0 AND srvVersionInt < 1000000000000"; // 1 00 00 0000 0000
+		echo "upgradeVersion() - SQL: <code>$sql</code><br>\n";
+
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+
+		// Add SQL Statements to an list/array
+		$sqlList = array();
+		while($row = mysqli_fetch_row($result))
+		{
+			$sqlwCheckId    = $row[0];
+			$serverAddTime  = $row[1];
+			$connectId      = $row[2];
+			$curVersion     = $row[3];
+			$newVersion = versionFix($curVersion);
+			$updateStr = "UPDATE $tabname SET srvVersionInt = $newVersion WHERE sqlwCheckId = $sqlwCheckId AND serverAddTime = '$serverAddTime' AND connectId = $connectId -- oldVel = $curVersion";
+
+			array_push($sqlList, $updateStr);
+		}
+		mysqli_free_result($result);
+
+		printf("EXEC: <code>START TRANSACTION</code><br>\n");
+		mysqli_query($dbconn, "START TRANSACTION") or die("ERROR: " . mysqli_error($dbconn));
+		
+		// printing table rows
+		$r = 0;
+		foreach ($sqlList as &$sqlStr) 
+		{
+			$r++;
+			
+			if ($doExec != 1)
+			{
+				printf(" ---row[$r] " . $sqlStr . "<br>\n");
+			}
+			else
+			{
+				printf("EXEC[$r]: <code>$sqlStr</code><br>\n");
+				mysqli_query($dbconn, $sqlStr) or die("ERROR: " . mysqli_error($dbconn));
+				$rowc = mysqli_affected_rows($dbconn);
+				printf("Records affected: %d<br>\n", $rowc);
+				if ($rowc != 1)
+					die("ERROR: Expected row count is 1. and we received $rowc. -------- ROLLBACK AND EXIT -------------\n<br>");
+				printf("<br>\n");
+			}
+		}
+		
+		printf("EXEC: <code>COMMIT</code><br>\n");
+		mysqli_query($dbconn, "COMMIT") or die("ERROR: " . mysqli_error($dbconn));
+		printf("-END-<br>\n");
+	}
+	function upgradeVersion_sqlw_usage_info($dbconn, $doExec)
+	{
+		$tabname = "sqlw_usage_info";
+		echo "upgradeVersion(): <code>$tabname</code><br>\n";
+
+		$sql = "SELECT sqlwCheckId, serverAddTime, connectId, srvVersionInt" 
+			 . " FROM $tabname WHERE srvVersionInt > 0 AND srvVersionInt < 1000000000000"; // 1 00 00 0000 0000
+		echo "upgradeVersion() - SQL: <code>$sql</code><br>\n";
+
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+		if (!$result) {
+			echo mysqli_errno($dbconn) . ": " . mysqli_error($dbconn) . "<br>";
+			die("ERROR: Query to show fields from table failed");
+		}
+		printf("Records affected: %d<br>\n", mysqli_affected_rows($dbconn));
+
+		// Add SQL Statements to an list/array
+		$sqlList = array();
+		while($row = mysqli_fetch_row($result))
+		{
+			$sqlwCheckId    = $row[0];
+			$serverAddTime  = $row[1];
+			$connectId      = $row[2];
+			$curVersion     = $row[3];
+			$newVersion = versionFix($curVersion);
+			$updateStr = "UPDATE $tabname SET srvVersionInt = $newVersion WHERE sqlwCheckId = $sqlwCheckId AND serverAddTime = '$serverAddTime' AND connectId = $connectId -- oldVel = $curVersion";
+
+			array_push($sqlList, $updateStr);
+		}
+		mysqli_free_result($result);
+
+		printf("EXEC: <code>START TRANSACTION</code><br>\n");
+		mysqli_query($dbconn, "START TRANSACTION") or die("ERROR: " . mysqli_error($dbconn));
+
+		// printing table rows
+		$r = 0;
+		foreach ($sqlList as &$sqlStr) 
+		{
+			$r++;
+			
+			if ($doExec != 1)
+			{
+				printf(" ---row[$r] " . $sqlStr . "<br>\n");
+			}
+			else
+			{
+				printf("EXEC[$r]: <code>$sqlStr</code><br>\n");
+				mysqli_query($dbconn, $sqlStr) or die("ERROR: " . mysqli_error($dbconn));
+				$rowc = mysqli_affected_rows($dbconn);
+				printf("Records affected: %d<br>\n", $rowc);
+				if ($rowc != 1)
+					die("ERROR: Expected row count is 1. and we received $rowc. -------- ROLLBACK AND EXIT -------------\n<br>");
+				printf("<br>\n");
+			}
+		}
+
+		printf("EXEC: <code>COMMIT</code><br>\n");
+		mysqli_query($dbconn, "COMMIT") or die("ERROR: " . mysqli_error($dbconn));
+		printf("-END-<br>\n");
+	}
+
+
 
 	//------------------------------------------
 	// Now connect to the database
@@ -164,6 +452,8 @@
 		doCleanup($dbconn, "delete from sqlw_usage                where user_name in('gorans', 'i063783') ");
 		doCleanup($dbconn, "delete from sqlw_connect_info         where userName  in('gorans', 'i063783') ");
 		doCleanup($dbconn, "delete from sqlw_usage_info           where userName  in('gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from dbxc_store_info           where userName  in('gorans', 'i063783') ");
+		doCleanup($dbconn, "delete from dbxc_store_srv_info       where userName  in('gorans', 'i063783') ");
 
 		// based on HOSTNAME
 		doCleanup($dbconn, "delete from asemon_connect_info       where checkId in(select rowid from asemon_usage where clientHostName in('gorans-ub2')) ");
@@ -247,8 +537,8 @@
 	}
 	else if ( $doAction == "errors_old_versions" )
 	{
-		doCleanup($dbconn, "delete from asemon_error_info  where appVersion < '3.6.0' ");
-		doCleanup($dbconn, "delete from asemon_error_info2 where appVersion < '3.6.0' ");
+		doCleanup($dbconn, "delete from asemon_error_info  where appVersion < '4.0.0' ");
+		doCleanup($dbconn, "delete from asemon_error_info2 where appVersion < '4.0.0' ");
 	}
 	else if ( $doAction == "dbmaint" )
 	{
@@ -624,6 +914,15 @@
 
 		echo "<i><b>--- END OF COMMANDS ---</b></i>\n";
 	}
+	else if ( $doAction == "srvToLongLong" )
+	{
+		// exec: http://www.dbxtune.com/db_cleanup.php?doAction=srvToLongLong
+//		upgradeVersion_asemon_connect_info($dbconn, 1);
+//		upgradeVersion_asemon_mda_info    ($dbconn, 1);
+//		upgradeVersion_sqlw_connect_info  ($dbconn, 1);
+//		upgradeVersion_sqlw_usage_info    ($dbconn, 1);
+		die("----END---<br>");
+	}
 	else
 	{
 		echo "<h1>UNSUPPORTED COMMAND '" . $doAction . "'</h1>\n";
@@ -642,7 +941,7 @@
 	mysqli_close($dbconn) or die("ERROR: " . mysqli_error($dbconn));
 
 	echo "<h2>Other options</h2>\n";
-	echo "    <A HREF=\"http://www.dbxtune.com/db_cleanup.php?doAction=errors_old_versions\" >Cleanup old versions errors: < '3.6.0'</A>\n";
+	echo "    <A HREF=\"http://www.dbxtune.com/db_cleanup.php?doAction=errors_old_versions\" >Cleanup old versions errors: < '4.0.0'</A>\n";
 ?>
 <BR>
 -END-

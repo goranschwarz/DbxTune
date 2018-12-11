@@ -15,6 +15,8 @@ import com.asetune.gui.MainFrameSqlServer;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.inspection.ObjectLookupInspectorSqlServer;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
+import com.asetune.sql.DbmsVersionHelperSqlServer;
+import com.asetune.sql.IDbmsVersionHelper;
 import com.asetune.utils.DbUtils;
 
 public class SqlServerTune
@@ -105,6 +107,12 @@ extends DbxTune
 	public CheckForUpdates createCheckForUpdates()
 	{
 		return new CheckForUpdatesSqlServer(); 
+	}
+
+	@Override
+	public IDbmsVersionHelper createDbmsVersionHelper()
+	{
+		return new DbmsVersionHelperSqlServer();
 	}
 
 	@Override

@@ -13,6 +13,7 @@ import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.Ver;
 
 public class CounterControllerSqlCapture extends CounterControllerAbstract
 {
@@ -58,12 +59,12 @@ public class CounterControllerSqlCapture extends CounterControllerAbstract
 	 * 
 	 * @param conn
 	 * @param hasGui              is this initialized with a GUI?
-	 * @param aseVersion          what is the ASE Executable version
+	 * @param srvVersion          what is the ASE Executable version
 	 * @param isClusterEnabled    is it a cluster ASE
 	 * @param monTablesVersion    what version of the MDA tables should we use
 	 */
 	@Override
-	public void initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion)
+	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -77,7 +78,7 @@ public class CounterControllerSqlCapture extends CounterControllerAbstract
 		if (! isCountersCreated())
 			createCounters(hasGui);
 		
-		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+", isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+".");
+		_logger.info("Initializing all CM objects, using ASE server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+"), isClusterEnabled="+isClusterEnabled+" with monTables Install version "+monTablesVersion+" ("+Ver.versionNumToStr(monTablesVersion)+").");
 
 		// Get active Monitor Configuration
 		Map<String,Integer> monitorConfigMap = AseConnectionUtils.getMonitorConfigs(conn);

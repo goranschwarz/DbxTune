@@ -38,8 +38,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"sysmonitors"};
 	public static final String[] NEED_ROLES       = new String[] {"sa_role"};
@@ -108,13 +108,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -128,20 +128,20 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String optGoalPlan = "";
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
-		if (aseVersion >= Ver.ver(15,0,2))
+//		if (srvVersion >= 15020)
+//		if (srvVersion >= 1502000)
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
 
 		String discardSpinlocks = "group_name not in ('spinlock_p_0', 'spinlock_w_0', 'spinlock_s_0')";
-//		if (aseVersion >= 15700)
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
+//		if (srvVersion >= 15700)
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 			discardSpinlocks = "group_name not in ('spinlock_p', 'spinlock_w', 'spinlock_s')";
 		
 		String sql =   
@@ -163,7 +163,7 @@ extends CountersModel
 		
 		// ASE Devices
 		String vdevno = "d.vdevno";
-		if (aseVersion < Ver.ver(15,0))
+		if (srvVersion < Ver.ver(15,0))
 			vdevno = "convert(int, d.low/power(2,24))";
 
 		String sqlDevices = 
@@ -240,7 +240,7 @@ extends CountersModel
 
 		// @@kernelmode
 		String kernelmode = "convert(varchar(255), 'process')";
-		if (aseVersion >= Ver.ver(15,7))
+		if (srvVersion >= Ver.ver(15,7))
 			kernelmode = "@@kernelmode";
 
 		String sqlGlobalVariableKernelmode =

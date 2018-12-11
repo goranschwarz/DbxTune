@@ -33,10 +33,10 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	public static final int      NEED_SRV_VERSION = 15010;
-//	public static final int      NEED_SRV_VERSION = 1501000;
-	public static final int      NEED_SRV_VERSION = Ver.ver(15,0,1);
-	public static final int      NEED_CE_VERSION  = 0;
+//	public static final long     NEED_SRV_VERSION = 15010;
+//	public static final long     NEED_SRV_VERSION = 1501000;
+	public static final long     NEED_SRV_VERSION = Ver.ver(15,0,1);
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcedureCacheMemoryUsage", "monProcedureCacheModuleUsage"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -103,13 +103,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -123,12 +123,12 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String optGoalPlan = "";
-//		if (aseVersion >= 15020)
-//		if (aseVersion >= 1502000)
-		if (aseVersion >= Ver.ver(15,0,2))
+//		if (srvVersion >= 15020)
+//		if (srvVersion >= 1502000)
+		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			optGoalPlan = "plan '(use optgoal allrows_dss)' \n";
 		}
@@ -138,9 +138,9 @@ extends CountersModel
 
 		String InstanceID     = "";
 		String InstanceIDJoin = "";
-//		if (isClusterEnabled && aseVersion >= 15500)
-//		if (isClusterEnabled && aseVersion >= 1550000)
-		if (isClusterEnabled && aseVersion >= Ver.ver(15,5))
+//		if (isClusterEnabled && srvVersion >= 15500)
+//		if (isClusterEnabled && srvVersion >= 1550000)
+		if (isClusterEnabled && srvVersion >= Ver.ver(15,5))
 		{
 //			InstanceID     = "M.InstanceID, ";
 //			InstanceIDJoin = "  and M.InstanceID *= C.InstanceID \n";

@@ -16,6 +16,8 @@ import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.inspection.ObjectLookupInspectorAse;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.pcs.sqlcapture.SqlCaptureBrokerAse;
+import com.asetune.sql.DbmsVersionHelperSybase;
+import com.asetune.sql.IDbmsVersionHelper;
 import com.asetune.utils.DbUtils;
 
 public class AseTune
@@ -107,6 +109,12 @@ extends DbxTune
 	public CheckForUpdates createCheckForUpdates()
 	{
 		return new CheckForUpdatesAse(); 
+	}
+
+	@Override
+	public IDbmsVersionHelper createDbmsVersionHelper()
+	{
+		return new DbmsVersionHelperSybase();
 	}
 
 	@Override

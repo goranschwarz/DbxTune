@@ -31,8 +31,8 @@ extends CountersModel
 //	public static final String   GUI_ICON_FILE    = null;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monProcessWaits", "monWaitEventInfo", "monWaitClassInfo"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -110,13 +110,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -127,7 +127,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String sql = 
 			"select SPID, KPID, Class=C.Description, Event=I.Description, W.WaitEventID, WaitTime, Waits \n" + 
@@ -135,8 +135,8 @@ extends CountersModel
 			"where W.WaitEventID=I.WaitEventID \n" + 
 			"  and I.WaitClassID=C.WaitClassID \n";
 
-//		if (aseVersion >= 1570000)
-		if (aseVersion >= Ver.ver(15,7))
+//		if (srvVersion >= 1570000)
+		if (srvVersion >= Ver.ver(15,7))
 		{
 			sql += "  and C.Language = 'en_US' \n";
 			sql += "  and I.Language = 'en_US' \n";

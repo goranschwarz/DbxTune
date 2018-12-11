@@ -337,17 +337,17 @@ implements ActionListener
 			Connection conn = AseConnectionFactory.getConnection(host, port, null, user, passwd, appname, null, "", null);
 		
 			// select @@version
-			String aseVersionStr = "unknown";
+			String srvVersionStr = "unknown";
 			Statement stmt = conn.createStatement();
 			ResultSet rs = stmt.executeQuery("select @@version");
 			while ( rs.next() )
 			{
-				aseVersionStr = rs.getString(1);
+				srvVersionStr = rs.getString(1);
 			}
 			rs.close();
 			conn.close();
 
-			JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n"+aseVersionStr, Version.getAppName()+" - connect check", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Connection succeeded.\n\n"+srvVersionStr, Version.getAppName()+" - connect check", JOptionPane.INFORMATION_MESSAGE);
 			return true;
 		}
 		catch (SQLException e)

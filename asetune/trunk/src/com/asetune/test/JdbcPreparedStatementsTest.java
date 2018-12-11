@@ -176,7 +176,7 @@ public class JdbcPreparedStatementsTest
 		return spid;
 	}
 
-	public String getAseVersion()
+	public String getsrvVersion()
 	{
 		String version = "";
 		String sql = "select @@version";
@@ -197,7 +197,7 @@ public class JdbcPreparedStatementsTest
 		}
 		catch (SQLException e)
 		{
-			System.err.println("Problems getAseVersion(). sql="+sql);
+			System.err.println("Problems getsrvVersion(). sql="+sql);
 			e.printStackTrace();
 		}
 		
@@ -304,7 +304,7 @@ public class JdbcPreparedStatementsTest
 		System.out.println("PROPS="+jdbcProps);
 
 		jt.connect(jdbcDriver, jdbcUrl, jdbcUser, jdbcPasswd, jdbcProps);
-		System.out.println("ASE Version used in this test is: "+jt.getAseVersion());
+		System.out.println("ASE Version used in this test is: "+jt.getsrvVersion());
 		System.out.println("SPID used in this test is: "+jt.getSpid());
 		if (testCase == 3)
 		{

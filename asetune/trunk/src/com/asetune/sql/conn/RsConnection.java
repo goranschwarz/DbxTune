@@ -42,7 +42,7 @@ extends TdsConnection
 	}
 
 	@Override
-	public int getDbmsVersionNumber()
+	public long getDbmsVersionNumber()
 	{
 		return AseConnectionUtils.getRsVersionNumber(this);
 	}

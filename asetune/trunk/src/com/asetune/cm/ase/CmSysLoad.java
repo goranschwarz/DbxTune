@@ -48,12 +48,12 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	public static final int      NEED_SRV_VERSION = 15500;
-//	public static final int      NEED_SRV_VERSION = 1550000;
-	public static final int      NEED_SRV_VERSION = Ver.ver(15,5);
-//	public static final int      NEED_CE_VERSION  = 15020;
-//	public static final int      NEED_CE_VERSION  = 1502000;
-	public static final int      NEED_CE_VERSION  = Ver.ver(15,0,2);
+//	public static final long     NEED_SRV_VERSION = 15500;
+//	public static final long     NEED_SRV_VERSION = 1550000;
+	public static final long     NEED_SRV_VERSION = Ver.ver(15,5);
+//	public static final long     NEED_CE_VERSION  = 15020;
+//	public static final long     NEED_CE_VERSION  = 1502000;
+	public static final long     NEED_CE_VERSION  = Ver.ver(15,0,2);
 
 	public static final String[] MON_TABLES       = new String[] {"monSysLoad"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -253,13 +253,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -273,7 +273,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1 = "";
 		if (isClusterEnabled)
@@ -294,9 +294,9 @@ extends CountersModel
 		
 		// in ASE 15.7, we get problems if we do the order by
 		// com.sybase.jdbc3.jdbc.SybSQLException: Domain error occurred.
-//		if (aseVersion < 15700)
-//		if (aseVersion < 1570000)
-		if (aseVersion < Ver.ver(15,7))
+//		if (srvVersion < 15700)
+//		if (srvVersion < 1570000)
+		if (srvVersion < Ver.ver(15,7))
 			sql += "order by StatisticID, EngineNumber" + (isClusterEnabled ? ", InstanceID" : "");
 
 		return sql;
@@ -305,11 +305,11 @@ extends CountersModel
 	@Override
 	public void updateGraphData(TrendGraphDataPoint tgdp)
 	{
-		int aseVersion = getServerVersion();
+		long srvVersion = getServerVersion();
 
 		if (GRAPH_NAME_AVG_RUN_QUEUE_LENTH.equals(tgdp.getName()))
 		{
-			if (aseVersion < Ver.ver(15,5))
+			if (srvVersion < Ver.ver(15,5))
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH);
@@ -343,7 +343,7 @@ extends CountersModel
 
 		if (GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH.equals(tgdp.getName()))
 		{
-			if (aseVersion < Ver.ver(15,5))
+			if (srvVersion < Ver.ver(15,5))
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH);
@@ -400,7 +400,7 @@ extends CountersModel
 
 		if (GRAPH_NAME_SUM_OUTSTAND_IO.equals(tgdp.getName()))
 		{
-			if (aseVersion < Ver.ver(15,5))
+			if (srvVersion < Ver.ver(15,5))
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO);
@@ -433,7 +433,7 @@ extends CountersModel
 
 		if (GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO.equals(tgdp.getName()))
 		{
-			if (aseVersion < Ver.ver(15,5))
+			if (srvVersion < Ver.ver(15,5))
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO);
@@ -490,7 +490,7 @@ extends CountersModel
 
 		if (GRAPH_NAME_ENGINE_1M_OUTSTAND_IO.equals(tgdp.getName()))
 		{
-			if (aseVersion < Ver.ver(15,5))
+			if (srvVersion < Ver.ver(15,5))
 			{
 				// disable the graph checkbox...
 				TrendGraph tg = getTrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO);
@@ -557,8 +557,8 @@ extends CountersModel
 		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
 
 		// If version is below 15.5: do not continue
-		int aseVersion = cm.getServerVersion();
-		if (aseVersion < Ver.ver(15,5))
+		long srvVersion = cm.getServerVersion();
+		if (srvVersion < Ver.ver(15,5))
 			return;
 
 

@@ -1805,7 +1805,7 @@ implements
 			cm = getCm();
 
 		// If the cm has not implemented method, a UnsupportedOperationException will be thrown
-		// The method CountersModel.getSqlForVersion(Connection conn, int srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='CMosMpstat'.
+		// The method CountersModel.getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled) has NOT been overridden, which should be done. CM Name='CMosMpstat'.
 		// so fall back to some other display method
 		try
 		{
@@ -3564,7 +3564,7 @@ implements
 //				return;
 //			}
 //
-//			int srvVersion = 0;
+//			long srvVersion = 0;
 //			if (getModel() instanceof CountersModel)
 //			{
 //				CountersModel cm = (CountersModel) getModel();
@@ -3755,7 +3755,7 @@ implements
 //				return;
 //			}
 //
-//			int srvVersion = 0;
+//			long srvVersion = 0;
 //			if (getModel() instanceof CountersModel)
 //			{
 //				CountersModel cm = (CountersModel) getModel();

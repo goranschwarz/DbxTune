@@ -46,7 +46,7 @@ public class CounterSampleTest
 		{
 			@Override public    String     getServerTimeCmd()             { return null; /*return "select CURRENT_TIMESTAMP()";*/ }
 			@Override public    void       checkServerSpecifics()         {}
-			@Override public    void       initCounters(DbxConnection conn, boolean hasGui, int srvVersion, boolean isClusterEnabled, int monTablesVersion) throws Exception {}
+			@Override public    void       initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion) throws Exception {}
 			@Override protected String     getIsClosedSql()               { return "select 1"; }
 			@Override public    HeaderInfo createPcsHeaderInfo()          { return null; }
 			@Override public    void       createCounters(boolean hasGui) {}

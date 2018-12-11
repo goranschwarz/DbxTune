@@ -55,8 +55,8 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_CACHE;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final int      NEED_SRV_VERSION = 0;
-	public static final int      NEED_CE_VERSION  = 0;
+	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"monCachedObject"};
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
@@ -153,13 +153,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, int srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		try 
 		{
@@ -194,7 +194,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -206,7 +206,7 @@ extends CountersModel
 		pkCols.add("ObjectID");
 		pkCols.add("IndexID");
 
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 			pkCols.add("PartitionID");
 
 		pkCols.add("CacheID");
@@ -215,7 +215,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, int aseVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String cols1, cols2, cols3;
 		cols1 = cols2 = cols3 = "";
@@ -257,7 +257,7 @@ extends CountersModel
 
 		String TableCachedPct    = "";
 		String TotalSizeKB_where = "";
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 		{
 			TableCachedPct    = "TableCachedPct = convert(numeric(5,1), M.CachedKB/(M.TotalSizeKB*1.0) * 100.0), \n";
 			TotalSizeKB_where = "  and M.TotalSizeKB > 0 \n";
@@ -268,10 +268,10 @@ extends CountersModel
 		cols3 += "M.CachedKB, CachedKBDiff=M.CachedKB, "+TableCachedPct+"M.CacheName, M.CacheID, \n" +
 		         "T.TotalCacheSizeKB, CacheUsagePct = convert(numeric(5,1), M.CachedKB/(T.TotalCacheSizeKB*1.0) * 100.0)";
 
-		if (aseVersion >= Ver.ver(15,5,0,4)) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
+		if (srvVersion >= Ver.ver(15,5,0,4)) // dont really know when this was introduced, but it was in my 15.5.0 ESD#4
 			cols2 += "M.ProcessesAccessing, \n";
 
-		if (aseVersion >= Ver.ver(15,0))
+		if (srvVersion >= Ver.ver(15,0))
 			cols2 += "M.PartitionID, M.PartitionName, M.TotalSizeKB, TotalSizeKBDiff=M.TotalSizeKB, \n";
 
 		String sql = 
