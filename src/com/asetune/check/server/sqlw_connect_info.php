@@ -53,6 +53,9 @@
 	if (empty($connectId))
 		$connectId = -1;
 
+	// remove newlines from some fields
+	$prodVersionStr = trim(str_replace(array("\n", "\r"), " ", $prodVersionStr));
+
 
 	//------------------------------------------
 	// Now connect to the database and insert a usage record

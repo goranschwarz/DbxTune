@@ -128,6 +128,10 @@ public class Ver
 		return ver(major, minor, 0, 0, 0);
 	}
 
+	public static long ver(int major)
+	{
+		return ver(major, 0, 0, 0, 0);
+	}
 	
 	
 
@@ -1276,6 +1280,34 @@ public class Ver
 		
 	}
 	
+	public static long h2VersionStringToNumber(String versionStr)
+	{
+		//System.out.println("---> h2VersionStringToNumber(): versionStr='"+versionStr+"'.");
+//		long srvVersionNumber = 0;
+
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
+		
+		int major       = 0; // <1>.4.197
+		int minor       = 0; // 1.<4>.197
+		int maint       = 0;
+		int servicePack = 0; // 1.4.<197>
+		int patchLevel  = 0;
+
+		String[] sa = versionStr.split("\\.");
+		if (sa.length == 3)
+		{
+			try { major       = Integer.parseInt(sa[0]); } catch(NumberFormatException ex) { major       = 0; _logger.warn("Problem parsing 'major' version string with value '"+sa[0]+"'. Setting this to 0. Caught: "+ex); }
+			try { minor       = Integer.parseInt(sa[1]); } catch(NumberFormatException ex) { minor       = 0; _logger.warn("Problem parsing 'minor' version string with value '"+sa[1]+"'. Setting this to 0. Caught: "+ex); }
+			      maint       = 0;
+			try { servicePack = Integer.parseInt(sa[2]); } catch(NumberFormatException ex) { servicePack = 0; _logger.warn("Problem parsing 'servicePack' version string with value '"+sa[2]+"'. Setting this to 0. Caught: "+ex); }
+			      patchLevel  = 0;
+		}
+			
+		//System.out.println("  <- h2VersionStringToNumber(): <<<--- "+Ver.ver(major, minor, maint, servicePack, patchLevel));
+		return Ver.ver(major, minor, maint, servicePack, patchLevel);
+		
+	}
 	/**
 	 * Take a "short version int" into a "long version int", which is the "internal" version number used in DbxTune to compare version numbers.<br>
 	 * <b>Note</b>: this might change in the future to use an larger part of the Integer, so we can compare larger minor/mantenance numbers. (today we can only have 1 minor/maintenance digit)<br>

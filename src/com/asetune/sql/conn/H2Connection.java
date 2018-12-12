@@ -41,6 +41,63 @@ public class H2Connection extends DbxConnection
 	}
 	
 	@Override
+	public long getDbmsVersionNumber()
+	{
+		long srvVersionNum = 0;
+
+		// version
+		try
+		{
+			String versionStr = "";
+
+			versionStr    = getDbmsVersionStr();
+			srvVersionNum = Ver.h2VersionStringToNumber(versionStr);
+		}
+		catch (SQLException ex)
+		{
+			//_logger.error("SqlServerConnection.getDbmsVersionNumber(), '"+sql+"'", ex);
+		}
+		
+		return srvVersionNum;
+	}
+
+	@Override
+	public String getDbmsVersionStr() 
+	throws SQLException
+	{
+		final String UNKNOWN = "";
+
+		if ( ! isConnectionOk() )
+			return UNKNOWN;
+
+		String sql = "select h2version()";
+
+		try
+		{
+			String verStr = UNKNOWN;
+
+			Statement stmt = _conn.createStatement();
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next())
+			{
+				verStr = rs.getString(1);
+			}
+			rs.close();
+			stmt.close();
+
+			if (verStr != null)
+				verStr = verStr.replace('\n', ' ');
+			return verStr;
+		}
+		catch (SQLException e)
+		{
+			_logger.debug("When getting DBMS Version ('"+sql+"'), Caught exception.", e);
+
+			return UNKNOWN;
+		}
+	}
+
+	@Override
 	public Map<String, Object> getDbmsExtraInfo()
 	{
 		String sql = "select DATABASE(), DATABASE_PATH()";

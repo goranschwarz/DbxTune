@@ -66,7 +66,8 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                           { return ConfigType.SqlServerHostInfo.toString(); }
 		@Override public    String     getConfigType()                     { return getName(); }
 		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select * from sys.dm_os_host_info"; }
-		@Override public    long       needVersion()                       { return Ver.ver(14,0); } // 14 == 2017
+		@Override public    long       needVersion()                       { return Ver.ver(2017); }
+//		@Override public    long       needVersion()                       { return Ver.ver(14,0); } // 14 == 2017
 	}
 
 	public static class SysInfo extends DbmsConfigTextAbstract
