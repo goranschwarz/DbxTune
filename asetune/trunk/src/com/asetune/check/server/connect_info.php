@@ -64,12 +64,24 @@
 	if (empty($connectId))
 		$connectId = -1;
 
+	// remove newlines from some fields
+	$srvVersionStr = trim(str_replace(array("\n", "\r"), " ", $srvVersionStr));
+
 	// Set default values for new fields that is not sent by older versions
 	if ( $clientAppName == "" )
 	{
 		$clientAppName = "AseTune";
 	}
 
+	// Fix SQL-Server version 
+	if ( $clientAppName == "SqlServerTune" )
+	{
+		if (strlen($srvVersion) == 14) // 12 05 00 0030 0000
+		{
+			$srvVersion = parseSqlServerVersionStr($srvVersionStr, $srvVersion);
+		}
+	}
+	
 	//------------------------------------------
 	// Now connect to the database and insert a usage record
 //	$db=mysql_connect("localhost", "dbxtune_com", "L8MucH4c") or die("ERROR: " . mysql_error());

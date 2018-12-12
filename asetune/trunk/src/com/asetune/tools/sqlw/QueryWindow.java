@@ -9830,6 +9830,8 @@ checkPanelSize(_resPanel, comp);
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set showplan ON-OFF", null, "showplan", false, "Displays the query plan"));
 		if (srvVersion >= Ver.ver(15,0,3)) 
 			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SWITCH, "set switch on 3604,9529 with override", "set switch off 3604,9529", "switch 3604,9529", false, "Traceflag 3604,9529: Include Lava operator execution statistics and resource use in a showplan format at most detailed level."));
+		if (srvVersion >= Ver.ver(16,0,0, 3,3)) // 16.0 SP3 PL3
+			options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics ioplan ON-OFF",        null, "statistics ioplan",        false, "Displays the IO statistics per plan (kind of like showplan, but for IO's)"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics io ON-OFF",            null, "statistics io",            false, "Number of logical and physical IO's per table"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics time ON-OFF",          null, "statistics time",          false, "Compile time and elapsed time"));
 		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics subquerycache ON-OFF", null, "statistics subquerycache", false, "Statistics about internal subquery optimizations"));

@@ -108,6 +108,55 @@
 	}
 
 	//----------------------------------------
+	// FUNCTION: parse a SQL-Server version string
+	// input:  Microsoft SQL Server 2017 (RTM-SP4-CU99) (KB4338363) - 14.0.3029.16 (X64) Jun 
+	// return: 2017 00 00 0004 0099     #but without the spaces
+	//----------------------------------------
+	function parseSqlServerVersionStr($srvVersionStr, $defaultValue)
+	{
+		$checkForStr = "Microsoft SQL Server ";
+		if (strpos($srvVersionStr, $checkForStr) === 0)
+		{
+			$ver = substr($srvVersionStr, strlen($checkForStr));
+			$major = substr($ver, 0, 4);
+			$minor = "00";
+			$maint = "00";
+			$sp    = "0000";
+			$cu    = "0000";
+
+			if (strpos($ver, "2008 R2") === 0)
+					$minor = "05";
+
+			$spPos = strpos($ver, "SP");
+			if ($spPos > 0)
+			{
+				$spPos += 2;
+				$spEnd = $spPos;
+				for(; is_numeric($ver[$spEnd]); $spEnd++)
+					;
+
+				$sp = $sp . substr($ver, $spPos, $spEnd-$spPos);
+				$sp = substr($sp, -4);
+			}
+
+			$cuPos = strpos($ver, "CU");
+			if ($cuPos > 0)
+			{
+				$cuPos += 2;
+				$cuEnd = $cuPos;
+				for(; is_numeric($ver[$cuEnd]); $cuEnd++)
+					;
+
+				$cu = $cu . substr($ver, $cuPos, $cuEnd-$cuPos);
+				$cu = substr($cu, -4);
+			}
+
+			return $major . $minor . $maint . $sp . $cu;
+		}
+		return $defaultValue;
+	}
+
+	//----------------------------------------
 	// FUNCTION: upgrade version from "small" version number to "big" version number
 	//----------------------------------------
 	function versionFixOld1($version)

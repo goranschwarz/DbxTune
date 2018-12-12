@@ -1414,6 +1414,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		// H2
 		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
 		{
+			// H2 -- override in H2Connection
 		}
 		// ORACLE
 		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
