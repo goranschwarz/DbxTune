@@ -4433,7 +4433,12 @@ implements Cloneable, ITableTooltip
 		{
 			setSampleException(null);
 			beginSqlRefresh();
-			if ( tmpNewSample.getSample(this, conn, getSql()+getSqlWhere(), _pkCols) == false )
+			
+			// construct the SQL to execute
+			String sql = getSql() + getSqlWhere();
+
+			// SAMPLE data
+			if ( tmpNewSample.getSample(this, conn, sql, _pkCols) == false )
 				return -1;
 			
 			// If we want to test some error handling

@@ -1,6 +1,7 @@
 package com.asetune.cm.ase;
 
 import java.sql.Connection;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -142,6 +143,31 @@ extends CountersModelAppend
 		return sql;
 	}
 
+	@Override
+	public String getSql()
+	{
+		// Sample only records we have not seen previously...
+		// But wait: The monErrorLog is a "state" table, so we would only get the last records anyway... or...
+		// True but: if the ASE Connection is lost, we will reconnect... and then we get all old records once again!
+		//           which means that we will report any errors *again*, which does happen!
+		//           So this is as "failsafe" to net report old records after a reconnect-on-communication-failure
+		Timestamp prevSample = getPreviousSampleTime();
+		if (prevSample == null)
+		{
+			// get all rows for the first sample... 
+			// But the sendAlarmRequest() method will stop early... if isFirstTimeSample() is true
+			setSqlWhere(""); 
+		}
+		else
+		{
+			setSqlWhere("WHERE Time > '"+prevSample+"' "); 
+		}
+
+		// Now get the SQL from super method...
+		return super.getSql();
+	}
+
+	
 
 	/**
 	 * Get one row vertically formated
