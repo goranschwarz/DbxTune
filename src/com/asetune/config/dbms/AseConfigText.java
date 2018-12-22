@@ -41,6 +41,7 @@ public abstract class AseConfigText
 		,AseShmDumpConfig
 		,AseMonitorConfig
 		,AseHelpSort
+		,AseResourceGovernor
 		,AseLicenseInfo
 		,AseClusterInfo
 		,AseConfigFile
@@ -96,6 +97,7 @@ public abstract class AseConfigText
 		DbmsConfigTextManager.addInstance(new AseConfigText.ShmDumpConfig());      // ConfigType.AseShmDumpConfig);
 		DbmsConfigTextManager.addInstance(new AseConfigText.MonitorConfig());      // ConfigType.AseMonitorConfig);
 		DbmsConfigTextManager.addInstance(new AseConfigText.HelpSort());           // ConfigType.AseHelpSort);
+		DbmsConfigTextManager.addInstance(new AseConfigText.ResourceGovernor());   // ConfigType.AseResourceGovernor);
 		DbmsConfigTextManager.addInstance(new AseConfigText.LicenceInfo());        // ConfigType.AseLicenseInfo);
 		DbmsConfigTextManager.addInstance(new AseConfigText.ClusterInfo());        // ConfigType.AseClusterInfo);
 		DbmsConfigTextManager.addInstance(new AseConfigText.ConfigFile());         // ConfigType.AseConfigFile);
@@ -1081,6 +1083,15 @@ public abstract class AseConfigText
 		@Override public    String     getConfigType()                     { return getName(); }
 //		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpSort; }
 		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpsort"; }
+	}
+
+	public static class ResourceGovernor extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                       { return "Resource Governor"; }
+		@Override public    String     getName()                           { return ConfigType.AseResourceGovernor.toString(); }
+		@Override public    String     getConfigType()                     { return getName(); }
+//		@Override public    ConfigType getConfigType()                     { return ConfigType.AseHelpResourceLimit; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_help_resource_limit"; }
 	}
 
 	public static class LicenceInfo extends DbmsConfigTextAbstract

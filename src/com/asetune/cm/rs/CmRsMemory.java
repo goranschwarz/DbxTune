@@ -173,13 +173,20 @@ extends CountersModel
 				Double[] dArray = new Double[1];
 				
 				Double totalMemUsed = this.getAbsValueAsDouble("Total", "Memory_Consumed_Mb");
-				//Double memoryPctUsed = totalMemUsed / _memoryLimitSizeMb * 100.0;
-				BigDecimal memoryPctUsed = new BigDecimal(totalMemUsed / _memoryLimitSizeMb * 100.0).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+				if (totalMemUsed == null)
+				{
+					_logger.warn("Skipping GraphUpdate of '"+GRAPH_NAME_MEMORY_PCT+"'. reason: value for 'Total', 'Memory_Consumed_Mb' was not found or null.");
+				}
+				else
+				{
+					//Double memoryPctUsed = totalMemUsed / _memoryLimitSizeMb * 100.0;
+					BigDecimal memoryPctUsed = new BigDecimal(totalMemUsed / _memoryLimitSizeMb * 100.0).setScale(2, BigDecimal.ROUND_HALF_EVEN);
 
-				dArray[0] = memoryPctUsed.doubleValue();
+					dArray[0] = memoryPctUsed.doubleValue();
 
-				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), dArray);
+					// Set the values
+					tgdp.setDataPoint(this.getTimestamp(), dArray);
+				}
 			}
 		}
 
