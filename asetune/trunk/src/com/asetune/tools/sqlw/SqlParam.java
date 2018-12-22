@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -16,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.mozilla.universalchardet.UniversalDetector;
 
 import com.asetune.utils.StringUtil;
 import com.j256.simplemagic.ContentInfo;
@@ -218,6 +220,9 @@ public class SqlParam
 		{
 			p._sqlType = Types.CLOB; 
 			p._val = isNull ? null : readCLobValue(StringUtil.envVariableSubstitution(val)); 
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("CLOB.content=|"+p._val+"|");
 		}
 		// BLOB
 		else if ("blob".equals(type)) 
@@ -231,10 +236,42 @@ public class SqlParam
 //System.out.println("p._val=|"+p._val+"|, obj=" + (p._val == null ? "-null-" : p._val.getClass().getName()) );
 		return p;
 	}
+//	private static String readCLobValue(String urlStr)
+//	{
+//		ByteArrayOutputStream buffer = readLobInputStream(urlStr);
+//		return buffer.toString();
+//	}
 	private static String readCLobValue(String urlStr)
 	{
 		ByteArrayOutputStream buffer = readLobInputStream(urlStr);
-		return buffer.toString();
+		
+		// Try to figgure out file encoding
+		UniversalDetector detector = new UniversalDetector(null);
+		byte[] ba = buffer.toByteArray();
+		detector.handleData(ba, 0, ba.length);
+		detector.dataEnd();
+		String encoding = detector.getDetectedCharset();
+
+		// Convert it into a string using the file encoding
+		if (encoding == null)
+		{
+			_logger.info("CLOB - Charset convertion to charset '"+encoding+"'. using: return ByteArrayOutputStream.toString(). To debug the returned String. Enable debug mode on '"+SqlParam.class.getName()+"'");
+			return buffer.toString();
+		}
+		else
+		{
+			try
+			{
+				_logger.info("CLOB - Charset convertion to charset '"+encoding+"'. using: return new String(byte[], encoding='"+encoding+"'). To debug the returned String. Enable debug mode on '"+SqlParam.class.getName()+"'");
+				return new String(ba, encoding);
+			}
+			catch (UnsupportedEncodingException ex)
+			{
+				_logger.info("Problem creating a string with the encoding '"+encoding+"'. Caught: "+ex, ex);
+				_logger.info("CLOB:Fallback - Charset convertion. using: return ByteArrayOutputStream.toString(). To debug the returned String. Enable debug mode on '"+SqlParam.class.getName()+"'");
+				return buffer.toString();
+			}
+		}
 	}
 	private static byte[] readBLobValue(String urlStr)
 	{
@@ -264,9 +301,16 @@ public class SqlParam
 
 			if (firstChunk != null)
 			{
+				// Try to figgure out file encoding
+				UniversalDetector detector = new UniversalDetector(null);
+				byte[] ba = buffer.toByteArray();
+				detector.handleData(ba, 0, ba.length);
+				detector.dataEnd();
+				String encoding = detector.getDetectedCharset();
+				
 				ContentInfoUtil util = new ContentInfoUtil();
 				ContentInfo info = util.findMatch( firstChunk );
-				_logger.info("Loaded file or URL '"+urlStr+"' which is of Content '" + (info == null ? "unknown" : info.toString()) + "'.");
+				_logger.info("Loaded file or URL '"+urlStr+"', with encoding '"+encoding+"', which is of Content '" + (info == null ? "unknown" : info.toString()) + "'.");
 			}
 		}
 		catch (IOException e)

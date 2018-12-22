@@ -63,6 +63,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
+		<!-- ----- CONFIGURATION ----- -->
+		<LI>
+		<b>View Configuration</b><br>
+		<ul>
+			<li>Added tab: Resource Governor, which does: sp_help_resource_limit</li>
+		</ul>
+		</LI>
+
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
 		<b>CmProcessActivity - tab:Processes</b><br>
@@ -257,6 +265,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<UL>
 		<LI>print EED Parameters for error messages (in ASE, some messages might have extra information attached to the message)</LI>
 		<LI>added 'go tab' to display the output ResultSet(s) in JTabbedPane</LI>
+		<LI>\prep reading clob, now tries to figure out the files encoding using UniversalDetector</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
