@@ -147,7 +147,9 @@ extends CountersModel
 			"      ,VARIABLE_NAME \n" +
 			"      ,cast(VARIABLE_VALUE as signed integer) as VARIABLE_VALUE \n" +
 			"from performance_schema.status_by_user \n" +
-			"where VARIABLE_VALUE REGEXP '^[[:digit:]]+$' \n";
+			"where VARIABLE_VALUE REGEXP '^[[:digit:]]+$' \n" +
+			"  and length(VARIABLE_VALUE) <= 19  -- MaxBigInt=9,223,372,036,854,775,807 so discard numbers that are *big*... Note: the cast to signed int, becomes a bigint \n"
+			;
 
 		return sql;
 	}

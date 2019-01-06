@@ -220,12 +220,38 @@ extends Task
 	private class FileInfo
 	{
 		private File _file; 
+		private Path _path; 
 		private long _savedFileSize;
 		
 		/** Create a new FileInfo */
 		public FileInfo(File f)
 		{
+			init(f, null);
+		}
+
+		/** Create a new FileInfo */
+		public FileInfo(Path path)
+		{
+			init(null, path);
+		}
+
+		/** simply called from the constructors */
+		private void init(File f, Path p)
+		{
+			if (f == null && p == null)
+				throw new NullPointerException("both File andPath can not be null");
+
 			_file = f;
+			_path = p;
+
+			// Create the PATH object from the File
+			if (f != null)
+				_path = f.toPath();
+
+			// Create the FILE object from the Path
+			if (p != null)
+				_file = p.toFile();
+			
 			_savedFileSize = -1;
 
 			if (_file.exists())
@@ -239,6 +265,7 @@ extends Task
 				// set the size again (the current-size might be larger than the saved-size)
 				_savedFileInfo.setProperty(key, _savedFileSize);
 			}
+			
 		}
 
 //		/** Create a new FileInfo */
@@ -271,7 +298,7 @@ extends Task
 			return _savedFileSize;
 		}
 	}
-
+	
 	@Override
 	public void execute(TaskExecutionContext context) throws RuntimeException
 	{
@@ -347,8 +374,8 @@ extends Task
 		}
 
 		double multiplyFactor = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_multiplyFactor, DEFAULT_multiplyFactor);
-		long dateMapMaxSize = getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED);
-		double needSpaceInMb = dateMapMaxSize * multiplyFactor;
+		long   dateMapMaxSize = getMaxSizeMb(dateMap, SizeType.MAX_FILE_OR_SAVED);
+		double needSpaceInMb  = dateMapMaxSize * multiplyFactor;
 		
 		BigDecimal dateMapMaxSizeGb = new BigDecimal( dateMapMaxSize/1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 		BigDecimal needSpaceInGb    = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
@@ -425,15 +452,20 @@ extends Task
 			}
 			
 			_logger.info(_prefix + "CLEANUP will be executed, files will be removed for: "+removeMap.keySet());
-			List<Path> deletedList = new ArrayList<>();
+			List<FileInfo> deletedList = new ArrayList<>();
 			for (Entry<String, List<FileInfo>> removeEntry : removeMap.entrySet())
 			{
 				for (FileInfo removeFile : removeEntry.getValue())
 				{
-					Path dbPath       = removeFile._file.toPath().toAbsolutePath();
-					Path tracePath    = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".trace.db") );
-					Path tempFilePath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".mv.db.tempFile") );
-//					Path fileInfoPath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".mv.db.savedFileInfo") );
+//					Path dbPath       = removeFile._file.toPath().toAbsolutePath();
+//					Path tracePath    = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".trace.db") );
+//					Path tempFilePath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".mv.db.tempFile") );
+////					Path fileInfoPath = Paths.get( dbPath.toAbsolutePath().toString().replace(".mv.db", ".mv.db.savedFileInfo") );
+
+					FileInfo dbPath       = new FileInfo(removeFile._file.toPath().toAbsolutePath() );
+					FileInfo tracePath    = new FileInfo(Paths.get( dbPath._path.toAbsolutePath().toString().replace(".mv.db", ".trace.db") ) );
+					FileInfo tempFilePath = new FileInfo(Paths.get( dbPath._path.toAbsolutePath().toString().replace(".mv.db", ".mv.db.tempFile") ) );
+//					FileInfo fileInfoPath = new FileInfo(Paths.get( dbPath._path.toAbsolutePath().toString().replace(".mv.db", ".mv.db.savedFileInfo") ) );
 					
 					// Maybe: add spillover files to a separate list
 					// ...  matches(".*-SPILL-OVER-DB-[0-9]+")) ...
@@ -443,58 +475,58 @@ extends Task
 					{
 						if (_logger.isDebugEnabled())
 						{
-							_logger.debug(_prefix + "Removing file:             "+dbPath      .toAbsolutePath());
-							_logger.debug(_prefix + "Removing file (if exists): "+tracePath   .toAbsolutePath());
-							_logger.debug(_prefix + "Removing file (if exists): "+tempFilePath.toAbsolutePath());
-//							_logger.debug(_prefix + "Removing file (if exists): "+fileInfoPath.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file:             "+dbPath      ._path.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file (if exists): "+tracePath   ._path.toAbsolutePath());
+							_logger.debug(_prefix + "Removing file (if exists): "+tempFilePath._path.toAbsolutePath());
+//							_logger.debug(_prefix + "Removing file (if exists): "+fileInfoPath._path.toAbsolutePath());
 						}
 
 						if (dryRun) // Dry run do not do deletes
 						{
-							if (Files.exists(tracePath,    LinkOption.NOFOLLOW_LINKS)) deletedList.add(tracePath);
-							if (Files.exists(tempFilePath, LinkOption.NOFOLLOW_LINKS)) deletedList.add(tempFilePath);
-//							if (Files.exists(fileInfoPath, LinkOption.NOFOLLOW_LINKS)) deletedList.add(fileInfoPath);
+							if (Files.exists(tracePath._path,    LinkOption.NOFOLLOW_LINKS)) deletedList.add(tracePath);
+							if (Files.exists(tempFilePath._path, LinkOption.NOFOLLOW_LINKS)) deletedList.add(tempFilePath);
+//							if (Files.exists(fileInfoPath._path, LinkOption.NOFOLLOW_LINKS)) deletedList.add(fileInfoPath);
 							deletedList.add(dbPath);
 						}
 						else 
 						{
-							// Delete the trace file it it exists
-							if (Files.deleteIfExists(tracePath))    deletedList.add(tracePath);
-							if (Files.deleteIfExists(tempFilePath)) deletedList.add(tempFilePath);
-//							if (Files.deleteIfExists(fileInfoPath)) deletedList.add(fileInfoPath);
+							// Delete the trace file if it exists
+							if (Files.deleteIfExists(tracePath._path))    deletedList.add(tracePath);
+							if (Files.deleteIfExists(tempFilePath._path)) deletedList.add(tempFilePath);
+//							if (Files.deleteIfExists(fileInfoPath._path)) deletedList.add(fileInfoPath);
 
 							// Delete the DB FILE
-							Files.delete(dbPath);
+							Files.delete(dbPath._path);
 							deletedList.add(dbPath);
 
 							// Remove the SaveInfo entry
-							_savedFileInfo.remove(dbPath.toFile().getName());
+							_savedFileInfo.remove(dbPath._file.getName());
 						}
 					}
 					catch (IOException e)
 					{
-						_logger.warn(_prefix + "Problems deleting file '"+dbPath.toAbsolutePath()+"'. Skipping and continuing with next. Caught: "+e);
+						_logger.warn(_prefix + "Problems deleting file '"+dbPath._path.toAbsolutePath()+"'. Skipping and continuing with next. Caught: "+e);
 					}
 				}
 			}
 			
 			int maxDelPathLength = 0;
-			for (Path path : deletedList)
-				maxDelPathLength = Math.max(maxDelPathLength, path.toString().length());
-				
+			for (FileInfo fi : deletedList)
+				maxDelPathLength = Math.max(maxDelPathLength, fi._path.toString().length());
+
 			if (dryRun)
 			{
 //				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted: "+deletedList);
 				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted:");
-				for (Path path : deletedList)
-					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+StringUtil.left(path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(path)+" GB, "+FileUtils.byteToMb(path)+" MB, "+FileUtils.byteToKb(path)+" KB]");
+				for (FileInfo fi : deletedList)
+					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+FileUtils.byteToMb(fi.getSavedSize())+" MB, "+FileUtils.byteToKb(fi.getSavedSize())+" KB]");
 			}
 			else
 			{
 //				_logger.info(_prefix + "Deleted the following list of files: "+deletedList);
 				_logger.info(_prefix + "Deleted the following list of files:");
-				for (Path path : deletedList)
-					_logger.info(_prefix + "  -- deleted-file: "+StringUtil.left(path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(path)+" GB, "+FileUtils.byteToMb(path)+" MB, "+FileUtils.byteToKb(path)+" KB]");
+				for (FileInfo fi : deletedList)
+					_logger.info(_prefix + "  -- deleted-file: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+FileUtils.byteToMb(fi.getSavedSize())+" MB, "+FileUtils.byteToKb(fi.getSavedSize())+" KB]");
 			}
 				
 

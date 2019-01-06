@@ -12,7 +12,8 @@
   -->
   <!-- JS: JQuery -->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
-  
+  <script type="text/javascript" src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
   <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
@@ -21,6 +22,9 @@
   <script src="/scripts/popper/1.12.9/popper.min.js"></script>
   <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
 
+  <!-- JS: Selectize -->
+  <script src="/scripts/selectize/js/standalone/selectize.js"></script>
+  
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
 
@@ -29,6 +33,9 @@
     == CSS imports - STYLES SHEETS GOES HERE
     =======================================================================
   -->
+  <!-- CSS: jqueri-ui -->
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css">
+
   <!-- CSS: DbxCentral -->
   <link rel="stylesheet" href="/scripts/css/dbxcentral.css">
 
@@ -38,6 +45,12 @@
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 
+  <!-- CSS: Selectize -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
+  <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
+ 
   <!-- Local CSS -->
   <style type='text/css'>
     /* table {border-collapse: collapse;}
@@ -49,6 +62,20 @@
     .tooltip-inner { max-width: 1000px; }
 
     .jumbotron{ margin-top:-30px; }
+	
+	/* selectize selected items */
+	.ui-sortable-handle {
+		width: 100%;
+	}
+	.selectize-dropdown, .selectize-dropdown.form-control{
+		height: 35vh !important;
+	}
+	.selectize-dropdown-content{
+		max-height: 100% !important;
+		height: 100% !important;
+	}
+
+
   </style>
 
 </head>
@@ -81,45 +108,86 @@
   <main role="main" class="container">
     <div class="jumbotron">
       <h1>DbxTune - Administration</h1>
+<!--
       <p class="lead">Administration of ...</p>
       <p></p>
+-->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- DBMS Server Admin -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='server-admin' class='card border-dark mb-3'>
+        <h5 class='card-header'>DBMS Server Administration</h5>
+        <div class='card-body'>
 
-      Remove Any off the below servers... (a confirm dialog will be displayed)
-      <div id="dbx-remove-server-list">
-          <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
-      </div>
+          <b>Add</b> a new DBMS server... (not yet implemented)
+          <div id="dbx-add-server-div">
+            <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add 'Servers' to the configuration." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add...</a>
+          </div>
 
-      Disable Any off the below servers... (it will not show up in the server list)
-      <div id="dbx-disable-server-list">
-          <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
-      </div>
+          <b>Remove</b> Any off the below servers... (a confirm dialog will be displayed)
+          <div id="dbx-remove-server-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+          </div>
+    
+          <b>Disable</b> Any off the below servers... (it will not show up in the server list)
+          <div id="dbx-disable-server-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+          </div>
+    
+          <b>Enable</b> Any off the below servers... (below list has been disabled)
+          <div id="dbx-enable-server-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
+          </div>
+    
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
 
-      Enable Any off the below servers... (below list has been disabled)
-      <div id="dbx-enable-server-list">
-          <button type="button" class="btn btn-sm btn-primary">Loading server list <i class='fa fa-spinner fa-spin '></i></button>
-      </div>
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- Graph Profiles -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='graph-profiles' class='card border-dark mb-3'>
+        <h5 class='card-header'>Graph Profiles - What Graphs should be visible</h5>
+        <div class='card-body'>
+          <b>Change</b> any of System Profiles
+          <div id="dbx-change-ssp-div">
+            <div id="dbx-change-ssp-product-list">
+                <button type="button" class="btn btn-sm btn-primary">Loading DbxProduct list <i class='fa fa-spinner fa-spin '></i></button>
+            </div>
+            <!--<a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add/change Chart profiles." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add/Change Profile...</a>-->
+    <!--		
+    		<div class="sandbox">
+    			<label for="input-draggable">XXXXXXXXXXXX:</label>
+    			<input type="text" id="input-draggable" class="demo-default" placeholder="Type to Search...">
+    		</div>
+    -->
+          </div>
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
 
-      Add a server
-      <div id="dbx-add-server-div">
-        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add 'Servers' to the configuration." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add...</a>
-      </div>
-
-      Restart DbxCentral
-      <div id="dbx-restart-server-div">
-        <!-- <a class="btn btn-sm btn-primary mb-2" onclick="restartServer()" role="button">Restart</a> -->
-        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance. no collectors will be restarted." onclick="restartServer('normal')">Restart</button>
-        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'compact'. no collectors will be restarted." onclick="restartServer('compact')">Restart (with compact)</button>
-        <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'defrag'. no collectors will be restarted." onclick="restartServer('defrag')">Restart (with defrag)</button>
-        <!-- <span id="dbx-server-restart-spinner"><img src="/images/busy_spinner.gif" height="32" width="32"></span> -->
-        <span id="dbx-server-restart-feedback"></span>
-        <span id="dbx-server-restart-spinner"><img src="/images/ajax-loader.gif"></span>
-      </div>
-
-      <p><br></p>
-      Logout as 'admin'
-      <div id="dbx-logout-div">
-        <button class="btn btn-sm mb-2" data-toggle="tooltip" data-placement="right" title="Logout" onclick="logout()">Logout</button>
-      </div>
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- DBX Central Admin -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbxc-admin' class='card border-dark mb-3'>
+        <h5 class='card-header'>DbxCentral Administration</h5>
+        <div class='card-body'>
+          <b>Restart</b> DbxCentral
+          <div id="dbx-restart-server-div">
+            <!-- <a class="btn btn-sm btn-primary mb-2" onclick="restartServer()" role="button">Restart</a> -->
+            <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance. no collectors will be restarted." onclick="restartServer('normal')">Restart</button>
+            <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'compact'. no collectors will be restarted." onclick="restartServer('compact')">Restart (with compact)</button>
+            <button type="button" class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="bottom" title="Restart the DbxCentral server instance, and do database 'defrag'. no collectors will be restarted." onclick="restartServer('defrag')">Restart (with defrag)</button>
+            <!-- <span id="dbx-server-restart-spinner"><img src="/images/busy_spinner.gif" height="32" width="32"></span> -->
+            <span id="dbx-server-restart-feedback"></span>
+            <span id="dbx-server-restart-spinner"><img src="/images/ajax-loader.gif"></span>
+          </div>
+    
+          <br>
+          <b>Logout</b> as 'admin'
+          <div id="dbx-logout-div">
+            <button class="btn btn-sm mb-2" data-toggle="tooltip" data-placement="right" title="Logout" onclick="logout()">Logout</button>
+          </div>
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
     </div>
   </main>
 
@@ -159,7 +227,41 @@
   </div>  
 
 
+  <!-- Modal Dialog: Change System Supplied Profiles for Graphs -->
+  <div class="modal fade" id="dbx-change-ssp-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-change-ssp-dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dbx-change-ssp-dialog-title">Changing Graph Profile for '<b class="title"></b>'</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Things you can do in this dialog
+          <ul>
+            <li><b>Add a graph</b> - Click the 'Add...' button, or select the input field, then type what you search for...</li>
+            <li><b>Remove a graph</b> - Simply press the 'x' on the Graph Item</li>
+            <li><b>Reorder graph display order</b> - Do <i>drag & drop</i></li>
+            <li><b>Reset this profile</b> - Remove all entries and press 'Save'</li>
+          </ul>
+          <input type="text" id="dbx-change-ssp-input" class="demo-default" placeholder="Type to Search...">
+          <span id="dbx-change-ssp-dialog-select-cnt">X</span> Graphs selected, <span id="dbx-change-ssp-dialog-available-cnt">Y</span> available Graphs
+          <span><button type="button" class="btn btn-default btn-sm btn-add">Add...</button></span>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary btn-ok">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>  
+
+
 <script>
+  // Global variables
+  var _graphDesc = [];
+
   // Hide spinner at start
   $('#dbx-server-restart-spinner').hide();
 
@@ -182,6 +284,162 @@
       $('.btn-ok', this).data('recordId', data.recordId);
   });
 
+  
+	$('#dbx-change-ssp-dialog').on('click', '.btn-add', function(e) {
+		var selectize = $('#dbx-change-ssp-input').selectize()[0].selectize;
+		selectize.open();
+	});
+	$('#dbx-change-ssp-dialog').on('click', '.btn-ok', function(e) {
+		var modalDiv = $(e.delegateTarget);
+		var dbxProduct = $(this).data('recordId');
+		console.log("#dbx-change-ssp-dialog: dbxProduct: "+dbxProduct);
+		modalDiv.addClass('working');
+
+		var selectize = $('#dbx-change-ssp-input').selectize()[0].selectize;
+		var selectedItems = $.map(selectize.items, function(value) {
+			return selectize.options[value];
+		});
+		console.log("#dbx-change-ssp-dialog: selectedItems: "+selectedItems, selectedItems);
+		console.log("#dbx-change-ssp-dialog: selectize.items: "+selectize.items, selectize.items);
+
+		// construct JSON TO Send: [ {graph:"fullGraphName1"}, {graph:"fullGraphName2"}, {graph:"fullGraphName3"}... ]
+		var selectedJson = $.map(selectize.items, function(value) {
+			return { graph: value };
+		});
+		console.log("#dbx-change-ssp-dialog: selectedJson: "+selectedJson, selectedJson);
+		
+		var sendData = {
+			productString:      dbxProduct,
+			userName:           '',
+			profileType:        'SYSTEM_SELECTED',
+			profileName:        '',
+			profileDescription: '',
+			profileValue:       selectedJson,
+			profileUrlOptions:  ''
+		};
+		
+		// send the update request
+		$.ajax({
+//			url: '/api/graph/profiles/' + dbxProduct, 
+			url: '/api/graph/profiles?dbxProduct='+dbxProduct, 
+			type: 'post',
+			dataType: 'json',
+			contentType: 'application/json',
+			data: JSON.stringify(sendData),
+			success: function(data, status) {
+				console.log("success.status: " + status);
+				console.log("success.data: " + data);
+				
+				setTimeout(function() {
+					refreshGraphDescriptions();
+					modalDiv.modal('hide').removeClass('working');
+				}, 10);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		});
+		
+		// removeServer(dbxProduct, modalDiv);
+		// $.ajax({url: '/api/record/' + id, type: 'DELETE'})
+		// $.post('/api/record/' + id).then()
+		// setTimeout(function() {
+		//     modalDiv.modal('hide').removeClass('working');
+		// }, 1000)
+	});
+	$('#dbx-change-ssp-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+		var dbxProduct = data.recordId;
+
+		console.log("#dbx-change-ssp-dialog: dbxProduct: "+dbxProduct);
+
+		var ssp = _graphDesc[dbxProduct];
+		
+		// Get all 'tableName' entries from SSP System Selected Profile
+		let sspEntries = ssp._SSP_.map(a => a.tableName);
+
+//		console.log("#dbx-change-ssp-dialog: preSelectedEntries: "+sspEntries, sspEntries);
+//		console.log("#dbx-change-ssp-dialog: ALL.length: "+ssp._ALL_.length);
+
+//		var selectize = $('#dbx-change-ssp-input').selectize()[0].selectize;
+////		selectize.options = ssp._ALL_;
+////		selectize.items   = sspEntries;
+//
+//		selectize.clearOptions();
+//		selectize.addOption(ssp._ALL_);
+////		selectize.refreshOptions();
+//		
+//		selectize.clear();
+////		selectize.addItem(sspEntries);
+////		selectize.refreshItems();
+//		selectize.setValue(sspEntries);
+
+
+		$('#dbx-change-ssp-input').selectize()[0].selectize.destroy();
+		$('#dbx-change-ssp-input').selectize({
+			plugins: ['drag_drop', 'remove_button'],
+			create: false, // do not allow new entries
+			persist: false,
+			maxItems: null,
+			valueField: 'tableName',
+			searchField: ['cmName', 'graphName', 'graphLabel', 'graphCategory'],
+			options: ssp._ALL_,
+			items:   sspEntries,
+			onItemAdd: function(value, item) {
+				//console.log("onItemAdd()", value, item);
+				setGraphCountSelection();
+			},
+			onItemRemove: function(value) {
+				//console.log("onItemRemove()", value);
+				setGraphCountSelection();
+			},
+			render: {
+				item: function(item, escape) {
+					//console.log("render.item()", item);
+					return '<div>' +
+						'<span>' + escape(item.cmName) + '</span>' +
+						' - <span>' + escape(item.graphName) + '</span>' +
+						' - <span><i>' + escape(item.graphCategory) + '</span></i>' +
+						'<br><span><b>' + escape(item.graphLabel) + '</b></span>' +
+					'</div>';
+				},
+				option: function(item, escape) {
+					//console.log("render.option()", item);
+					return '<div>' +
+						'<span>' + escape(item.cmName) + '</span>' +
+						' - <span>' + escape(item.graphName) + '</span>' +
+						' - <span><i>' + escape(item.graphCategory) + '</i></span>' +
+						' - <span><b>' + escape(item.graphLabel) + '</b></span>' +
+					'</div>';
+				}
+			}
+		});
+		$('#dbx-change-ssp-input').selectize()[0].selectize.setValue(sspEntries);
+//		$('#dbx-change-ssp-input').selectize()[0].selectize.refreshOptions();
+//		$('#dbx-change-ssp-input').selectize()[0].selectize.refreshItems();
+	  
+		setGraphCountSelection();
+
+	  $('.title', this).text(dbxProduct);
+      $('.btn-ok', this).data('recordId', dbxProduct);
+  });
+  
+  /**
+   * set "#dbx-change-ssp-dialog-select-cnt" and "#dbx-change-ssp-dialog-available-cnt"
+   */
+  function setGraphCountSelection() 
+  {
+	let selectedItems   = $('#dbx-change-ssp-input').selectize()[0].selectize.items.length;
+	let availableItems  = $('#dbx-change-ssp-input').selectize()[0].selectize.order;
+	let unSelectedItems = availableItems - selectedItems;
+	
+	$("#dbx-change-ssp-dialog-select-cnt")   .text( selectedItems );
+	$("#dbx-change-ssp-dialog-available-cnt").text( availableItems );
+//	$("#dbx-change-ssp-dialog-unselected-cnt").text( unSelectedItems );
+  }
+  
   /**
    * Restart server
    */
@@ -388,6 +646,33 @@
     });
   }
 
+  /**
+   * refresh Graph Descriptions
+   */
+  function refreshGraphDescriptions()
+  {
+ 	$.ajax(
+ 	{
+		url: "/api/graph/description",
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+		success: function(data, status) 
+		{
+			// console.log("RECEIVED DATA: "+data);
+			var jsonResp = JSON.parse(data);
+
+			_graphDesc = jsonResp;
+			console.log("refreshGraphDescriptions(): new values for _graphDesc.", _graphDesc);
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+  }
+
   //-----------------------------------------------------------
   // get SERVERS
   //-----------------------------------------------------------
@@ -401,55 +686,74 @@
 		{
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
+
+			const dbxProducts = [...new Set(jsonResp.map(item => item.productString))];
+			//console.log("DbxProducts:", dbxProducts);
 			
-      var htmlRemove  = "";
-      var htmlEnable  = "";
-      var htmlDisable = "";
-      for (var i=0; i<jsonResp.length; i++) 
-      {
-          var entry = jsonResp[i];
+			var htmlRemove  = "";
+			var htmlEnable  = "";
+			var htmlDisable = "";
+			for (var i=0; i<jsonResp.length; i++) 
+			{
+				var entry = jsonResp[i];
 
-          var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
-          var lastSampleWarnThresh   = 5; // # minutes
+				var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
+				var lastSampleWarnThresh   = 5; // # minutes
 
-          var tt =
-          "<table class='table table-sm'>"+
-          "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
-          "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
-          "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
-          "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
-          "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
-          "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
-          "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
-          "</table>";
-          // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
-          // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
-          // tt = entry.serverDescription;
+				var tt =
+				"<table class='table table-sm'>"+
+				"  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
+				"  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
+				"  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
+				"  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
+				"  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
+				"  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
+				"  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
+				"</table>";
+				// The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
+				// overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
+				// tt = entry.serverDescription;
 
-          // set button class depending on how long ago since we got any sample for this server
-          var btnClass="btn-danger";
-          // if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
-          //     btnClass="btn-warning";
+				// set button class depending on how long ago since we got any sample for this server
+				var btnClass="btn-danger";
+				// if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
+				//     btnClass="btn-warning";
 
-          var btnClass="btn-danger";
-          var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
+				var btnClass="btn-danger";
+				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
 
-          htmlRemove  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-toggle="modal" data-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
-          if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
-            htmlEnable  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
-          else
-            htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';          
-      }
-      if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-      if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
-      if (htmlEnable  === "") htmlEnable  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
+				htmlRemove  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-danger '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry.serverName+'" data-record-title="'+entry.serverName+'" data-toggle="modal" data-target="#dbx-confirm-delete-dialog">'+entry.serverName+'</button></span>';
+				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
+					htmlEnable  += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("enable",  "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';
+				else
+					htmlDisable += '<span data-toggle="tooltip" data-placement="top" data-html="true" title="'+tt+'"><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'setServerStatus("disable", "'+entry.serverName+'")\'>'+entry.serverName+'</button></span>';          
+			}
+			if (htmlRemove  === "") htmlRemove  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+			if (htmlDisable === "") htmlDisable = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
+			if (htmlEnable  === "") htmlEnable  = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No Servers Found</button>';
 
-      $('#dbx-remove-server-list').html(htmlRemove);
-      $('#dbx-disable-server-list').html(htmlDisable);
-      $('#dbx-enable-server-list').html(htmlEnable);
+			$('#dbx-remove-server-list').html(htmlRemove);
+			$('#dbx-disable-server-list').html(htmlDisable);
+			$('#dbx-enable-server-list').html(htmlEnable);
 
-      // Enable bootstrap tooltip...
-      $('[data-toggle="tooltip"]').tooltip();
+			// Enable bootstrap tooltip...
+			$('[data-toggle="tooltip"]').tooltip();
+
+			// Add buttons for: 'change' System Supplied Profiles
+			var htmlSsp  = "";
+			for (var i=0; i<dbxProducts.length; i++) 
+			{
+				var entry = dbxProducts[i];
+				console.log("DbxProducts["+i+"]:", entry);
+
+				var dbxButtonImage="dbx-button-image dbx-button-"+entry.toLowerCase();
+
+//				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" onclick=\'openChangeSspDialog("'+entry+'")\'>'+entry+'</button></span>';
+				htmlSsp += '<span><button type="button" class="btn btn-sm btn-primary '+dbxButtonImage+'  mb-2 mr-2" data-record-id="'+entry+'" data-record-title="'+entry+'" data-toggle="modal" data-backdrop="static" data-target="#dbx-change-ssp-dialog">'+entry+'</button></span>';
+			}
+			if (htmlSsp === "") 
+				htmlSsp = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No DbxProduct Found</button>';
+			$('#dbx-change-ssp-product-list').html(htmlSsp);
 		},
 		error: function(xhr, desc, err) 
 		{
@@ -490,6 +794,11 @@
 // 		}
 //   }); // end: ajax call
   
+   //-----------------------------------------------------------
+   // get PROFILE DESCRIPTIONS
+   //-----------------------------------------------------------
+   refreshGraphDescriptions();
+
 </script>
 </body>
 </html>

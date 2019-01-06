@@ -527,9 +527,9 @@ extends CountersModel
 		{	
 			Double[] arr = new Double[2];
 
-			arr[0] = this.getRateValueAsDouble("Bytes_received", "VARIABLE_VALUE") / 1024.0;
-			arr[1] = this.getRateValueAsDouble("Bytes_sent",     "VARIABLE_VALUE") / 1024.0;
-
+			arr[0] = this.getRateValueAsDouble("Bytes_received", "VARIABLE_VALUE", 0d) / 1024.0;
+			arr[1] = this.getRateValueAsDouble("Bytes_sent",     "VARIABLE_VALUE", 0d) / 1024.0;
+			
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
@@ -743,7 +743,8 @@ extends CountersModel
 			"select VARIABLE_NAME,cast(VARIABLE_VALUE as signed integer) as VARIABLE_VALUE \n" +
 			"from performance_schema.global_status \n" +
 			"where VARIABLE_VALUE REGEXP '^[[:digit:]]+$' \n" +
-			"  and length(VARIABLE_VALUE) <= 10  -- MaxInt=2,147,483,647 so discard numbers that are *big*... but it might still fail due to larger than 2b"
+//			"  and length(VARIABLE_VALUE) <= 10  -- MaxInt=2,147,483,647 so discard numbers that are *big*... but it might still fail due to larger than 2b \n"
+			"  and length(VARIABLE_VALUE) <= 19  -- MaxBigInt=9,223,372,036,854,775,807 so discard numbers that are *big*... Note: the cast to signed int, becomes a bigint \n"
 			;
 
 		return sql;
