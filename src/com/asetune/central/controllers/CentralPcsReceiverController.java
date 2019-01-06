@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -19,6 +20,7 @@ import com.asetune.central.DbxCentralStatistics.ServerEntry;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.DbxTuneSample;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -32,6 +34,9 @@ extends HttpServlet
 	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
 
 //	private final Map<String, SseEmitter> sseMap = new ConcurrentHashMap<>();
+	
+	public static final String PROPKEY_HOSTS_ALLOWED = "CentralPcsReceiver.hosts.allowed";
+	public static final String DEFAULT_HOSTS_ALLOWED = "";
 
 	public static String getBody(HttpServletRequest request) throws IOException
 	{
@@ -72,6 +77,35 @@ extends HttpServlet
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
+		String remoteHost = req.getRemoteHost();
+		String remoteAddr = req.getRemoteAddr();
+		int    remotePort = req.getRemotePort();
+		String remoteUser = req.getRemoteUser();
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("/api/pcs/receiver: received request from: remoteHost='"+remoteHost+"', remoteAddr='"+remoteAddr+"', remotePort='"+remotePort+"', remoteUser='"+remoteUser+"'");
+
+		// Check if the remote host is allowed to send data.
+		String allowedHosts = Configuration.getCombinedConfiguration().getProperty(PROPKEY_HOSTS_ALLOWED, DEFAULT_HOSTS_ALLOWED);
+		if (StringUtil.hasValue(allowedHosts))
+		{
+			List<String> allowedHostList = StringUtil.commaStrToList(allowedHosts);
+
+			// Check all entries in the allowedHostList using regex 
+			boolean isAllowed = false;
+			for (String regex : allowedHostList)
+			{
+				if (remoteAddr.matches(regex))
+					isAllowed = true;
+			}
+			// If no match, then do NOT allow the hosts to enter data
+			if ( ! isAllowed )
+			{
+				_logger.warn("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data. allowedHostList="+allowedHostList);
+				throw new ServletException("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
+			}
+		}
+		
 		String payload = getBody(req);
 
 		// TODO Auto-generated method stub

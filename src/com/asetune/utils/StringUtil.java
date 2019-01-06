@@ -282,6 +282,132 @@ public class StringUtil
 
 
 
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted("\"", "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted("|", "a", "b", "c")
+	 * Returns: |a|, |b|, |c|
+	 * </pre>
+	 * 
+	 * @param quoteChar chars/str that will be used to suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(String quoteChar, Collection<String> collection)
+	{
+		return toCommaStrQuoted(quoteChar, quoteChar, collection);
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted("\"", "\"", "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted("<", ">", "a", "b", "c")
+	 * Returns: &lt;a&gt;, &lt;b&gt;, &lt;c&gt;
+	 * </pre>
+	 * 
+	 * @param startQuoteChar chars/str that will be used to start-suround all the input strings...
+	 * @param endQuoteChar chars/str that will be used to end-suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(String startQuoteChar, String endQuoteChar, Collection<String> collection)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		for (String name : collection)
+		{
+			sb.append(startQuoteChar).append(name).append(endQuoteChar).append(", ");
+		}
+		// Remove last ", "
+		sb.delete(sb.length()-2, sb.length());
+
+		return sb.toString();
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted("\"", "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted("|", "a", "b", "c")
+	 * Returns: |a|, |b|, |c|
+	 * </pre>
+	 * 
+	 * @param quoteChar chars/str that will be used to suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(String quoteChar, String...names)
+	{
+		return toCommaStrQuoted(quoteChar, quoteChar, names);
+	}
+
+	/**
+	 * Make a quoted string from the input
+	 * <p>
+	 * Example 1:
+	 * <pre>
+	 * toCommaStrQuoted("\"", "\"", "a", "b", "c")
+	 * Returns: "a", "b", "c"
+	 * </pre>
+	 * 
+	 * <p>
+	 * Example 2:
+	 * <pre>
+	 * toCommaStrQuoted("<", ">", "a", "b", "c")
+	 * Returns: &lt;a&gt;, &lt;b&gt;, &lt;c&gt;
+	 * </pre>
+	 * 
+	 * @param startQuoteChar chars/str that will be used to start-suround all the input strings...
+	 * @param endQuoteChar chars/str that will be used to end-suround all the input strings...
+	 * @param names
+	 * @return A string...
+	 */
+	public static String toCommaStrQuoted(String startQuoteChar, String endQuoteChar, String...names)
+	{
+		if (names        == null) return "";
+		if (names.length == 0)    return "";
+
+		StringBuilder sb = new StringBuilder();
+
+		for (String name : names)
+		{
+			sb.append(startQuoteChar).append(name).append(endQuoteChar).append(", ");
+		}
+		// Remove last ", "
+		sb.delete(sb.length()-2, sb.length());
+
+		return sb.toString();
+	}
+
+
+
+
 	public static String toCommaStrMultiMap(Map<String,List<String>> map)
 	{
 		return toCommaStrMultiMap(map, "=", ", ");

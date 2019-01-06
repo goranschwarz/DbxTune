@@ -1377,7 +1377,7 @@ function dbxTuneLoadCharts(destinationDivId)
 			'</tr>' +
 			'</table>' +
 			'Below is a full example<br>' +
-			'<code>http://asetune.company.com/graph.html?sessionName=PROD_A_ASE&startTime=2h&subscribe=true</code>'
+			'<code>http://dbxtune.company.com:8080/graph.html?sessionName=PROD_A_ASE&startTime=2h&subscribe=true</code>'
 		);
 		return;
 

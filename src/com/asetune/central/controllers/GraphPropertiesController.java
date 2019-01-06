@@ -50,7 +50,7 @@ extends HttpServlet
 			// Get available profiles 
 			List<DbxCentralProfile> availableProfiles = reader.getGraphProfiles(null, null);
 
-			// stuff the profile name in a Set
+			// stuff the unique profile names in a Set
 			Set<String> availableProfileNames = new HashSet<>();
 			for (DbxCentralProfile profile : availableProfiles)
 			{

@@ -97,6 +97,11 @@
 	</servlet>
 
 	<servlet>
+		<servlet-name>GraphDescriptionController</servlet-name>
+		<servlet-class>com.asetune.central.controllers.GraphDescriptionController</servlet-class>
+	</servlet>
+
+	<servlet>
 		<servlet-name>GraphDataController</servlet-name>
 		<servlet-class>com.asetune.central.controllers.GraphDataController</servlet-class>
 	</servlet>
@@ -184,6 +189,11 @@
 	<servlet-mapping>
 		<servlet-name>GraphProfilesController</servlet-name>
 		<url-pattern>/api/graph/profiles</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>GraphDescriptionController</servlet-name>
+		<url-pattern>/api/graph/description</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>

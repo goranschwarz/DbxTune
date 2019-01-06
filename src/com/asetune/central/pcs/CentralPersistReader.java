@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -37,12 +38,15 @@ import com.asetune.central.pcs.objects.DbxCentralProfile;
 import com.asetune.central.pcs.objects.DbxCentralServerDescription;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
 import com.asetune.central.pcs.objects.DbxGraphData;
+import com.asetune.central.pcs.objects.DbxGraphDescription;
 import com.asetune.central.pcs.objects.DbxGraphProperties;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class CentralPersistReader
@@ -795,7 +799,7 @@ public class CentralPersistReader
 	 * @param status 
 	 * @return
 	 */
-	public List<DbxCentralSessions> getSessions(boolean onlyLast, int status)
+	public List<DbxCentralSessions> getSessions(boolean onlyLast, int status, String... orderByList)
 	throws SQLException
 	{
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
@@ -804,6 +808,13 @@ public class CentralPersistReader
 			String q = conn.getQuotedIdentifierChar();
 			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
 
+			String orderByStr = " order by " + q + "ServerName" + q + ", " + q + "SessionStartTime" + q;
+			if (orderByList != null && orderByList.length > 0)
+			{
+				StringUtil.toCommaStrQuoted(q, orderByList);
+				orderByStr = " order by " + StringUtil.toCommaStrQuoted(q, orderByList);
+			}
+			
 			String whereStr = "";
 			if (status >= 0)
 				whereStr = " where " + q + "Status" + q + " = " + status;
@@ -824,7 +835,7 @@ public class CentralPersistReader
 						+ " ," + q + "LastSampleTime"          + q
 					+" from " + tabName
 					+ whereStr
-					+" order by " + q + "ServerName" + q + ", " + q + "SessionStartTime" + q;
+					+ orderByStr;
 			List<DbxCentralSessions> list = new ArrayList<>();
 
 			Map<String, DbxCentralServerDescription> sdMap = new HashMap<>();
@@ -937,6 +948,129 @@ public class CentralPersistReader
 	
 
 	/**
+	 * Update Graph Profile<br>
+	 * @return
+	 */
+//	public List<DbxCentralProfile> setGraphProfile(DbxCentralProfile profile)
+	public int setGraphProfile(DbxCentralProfile profile)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			String q = conn.getQuotedIdentifierChar();
+			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_GRAPH_PROFILES, null, true);
+
+			// Table: DbxCentralGraphProfiles
+			//    PK: ProductString, UserName, ProfileName
+
+			String dbxProduct     = profile.getProductString();
+			String dbxUser        = profile.getUserName();
+			String dbxProfileName = profile.getProfileName();
+			
+			String sqlExists = 
+				 " select 1"
+				+" from " + tabName
+				+" where " + q + "ProductString" + q + " = '" + dbxProduct     + "'"
+				+"   and " + q + "UserName"      + q + " = '" + dbxUser        + "'"
+				+"   and " + q + "ProfileName"   + q + " = '" + dbxProfileName + "'"
+				;
+
+			String sqlDelete = 
+				 " delete from " + tabName
+				+" where " + q + "ProductString" + q + " = '" + dbxProduct     + "'"
+				+"   and " + q + "UserName"      + q + " = '" + dbxUser        + "'"
+				+"   and " + q + "ProfileName"   + q + " = '" + dbxProfileName + "'"
+				;
+
+			String sqlUpdate = 
+				 " update " + tabName
+				+" set " + q + "ProfileDescription" + q + " = ?"
+				+"    ," + q + "ProfileValue"       + q + " = ?"
+				+"    ," + q + "ProfileUrlOptions"  + q + " = ?"
+				+" where " + q + "ProductString"    + q + " = '" + dbxProduct     + "'"
+				+"   and " + q + "UserName"         + q + " = '" + dbxUser        + "'"
+				+"   and " + q + "ProfileName"      + q + " = '" + dbxProfileName + "'"
+				;
+
+			String[] insCols = new String[]{"ProductString", "UserName", "ProfileName", "ProfileDescription", "ProfileValue", "ProfileUrlOptions"};
+//			String[] insVals = new String[]{profile.getProductString(), profile.getUserName(), profile.getProfileName(), profile.getProfileDescription(), profile.getProfileValue(), profile.getProfileUrlOptions()};
+			String sqlInsert = 
+				 " insert into " + tabName + " (" + StringUtil.toCommaStrQuoted(q, insCols) + ")"
+//				+" values(" + StringUtil.toCommaStrQuoted(q, insVals) + ")"
+				+" values(?, ?, ?, ?, ?, ?)"
+				;
+
+			boolean rowExists = false;
+			// autoclose: stmnt, rs
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlExists))
+			{
+				while (rs.next())
+					rowExists = true;
+			}
+
+			int rowCount = 0;
+			if (rowExists)
+			{
+				// If profileValue is empty... remove the profile.
+				String profileValue = profile.getProfileValue();
+				if (StringUtil.isNullOrBlank(profileValue) || (profileValue != null && "[]".equals(profileValue.trim())) )
+				{
+					try (Statement stmnt = conn.createStatement())
+					{
+						stmnt.executeUpdate(sqlDelete);
+						rowCount = stmnt.getUpdateCount();
+						if (rowCount != 1)
+						{
+							throw new SQLException("Problems deleting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1");
+						}
+					}
+				}
+				else
+				{
+					try (PreparedStatement pstmnt = conn.prepareStatement(sqlUpdate))
+					{
+						pstmnt.setString(1, profile.getProfileDescription());
+						pstmnt.setString(2, profile.getProfileValue());
+						pstmnt.setString(3, profile.getProfileUrlOptions());
+						
+						pstmnt.executeUpdate();
+						rowCount = pstmnt.getUpdateCount();
+						if (rowCount != 1)
+						{
+							throw new SQLException("Problems updating profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1");
+						}
+					}
+				}
+			}
+			else
+			{
+				try (PreparedStatement pstmnt = conn.prepareStatement(sqlInsert))
+				{
+					pstmnt.setString(1, profile.getProductString());
+					pstmnt.setString(2, profile.getUserName());
+					pstmnt.setString(3, profile.getProfileName());
+					pstmnt.setString(4, profile.getProfileDescription());
+					pstmnt.setString(5, profile.getProfileValue());
+					pstmnt.setString(6, profile.getProfileUrlOptions());
+					
+					pstmnt.executeUpdate();
+					rowCount = pstmnt.getUpdateCount();
+					if (rowCount != 1)
+					{
+						throw new SQLException("Problems inserting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1");
+					}
+				}
+			}
+			return rowCount;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+	
+	/**
 	 * Get Graph Profiles<br>
 	 * @return
 	 */
@@ -958,7 +1092,6 @@ public class CentralPersistReader
 					+ " ," + q + "ProfileUrlOptions"  + q
 				+" from " + tabName
 				+" where 1 = 1"
-				+" order by " + q + "ProfileName" + q
 				;
 
 			if (StringUtil.hasValue(dbxTypeName))
@@ -966,6 +1099,8 @@ public class CentralPersistReader
 
 			if (StringUtil.hasValue(user))
 				sql += "   and " + q + "UserName" + q + " = '" + user + "'";
+			
+			sql += " order by " + q + "ProfileName" + q;
 			
 			List<DbxCentralProfile> list = new ArrayList<>();
 
@@ -978,6 +1113,7 @@ public class CentralPersistReader
 					DbxCentralProfile s = new DbxCentralProfile(
 						rs.getString   (1),
 						rs.getString   (2),
+						"", // profileType is decided by the constructor ("SYSTEM_SELECTED" or "USER_SELECTED") 
 						rs.getString   (3),
 						rs.getString   (4),
 						rs.getString   (5),
@@ -986,12 +1122,111 @@ public class CentralPersistReader
 				}
 			}
 //System.out.println("getGraphProfiles: returns.list=|"+list+"|");
+
+			
+			// get ALL available graphs names avalilable for the different types of DbxTune collectors
+			// 1 - System Selected Graphs for this DbxProduct
+			// 2 - ALL Graphs available for this DbxProduct
+//			addSystemProfiles(conn, list, true);  // onlySystemSelected = true
+//			addSystemProfiles(conn, list, false); // onlySystemSelected = false
 			
 			return list;
 		}
 		finally
 		{
 			releaseConnection(conn);
+		}
+	}
+	
+	private void addSystemProfiles(DbxConnection conn, List<DbxCentralProfile> list, boolean onlySystemSelected)
+	throws SQLException
+	{
+		String tabName;
+		String sql;
+		String q = conn.getQuotedIdentifierChar();
+		
+		// get ALL available graphs names avalilable for the different types of DbxTune collectors
+		// 1 - Get all DbxTune Collectors
+		// 2 - for each server and collector, get GraphNames... save only the server/dbxTune with the most graphs
+		tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+		sql = "select distinct #ServerName#, #ProductString# from " + tabName + " order by 2, 1";
+		sql = sql.replace("#", q);
+		Map<String, String> dbxSrvProductMap = new LinkedHashMap<>();
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while (rs.next())
+				dbxSrvProductMap.put(rs.getString(1), rs.getString(2));
+		}
+
+		// Save a list of graph names for each DbxProduct (only the largest list for each DbxProduct is saved)
+		Map<String, List<String>> dbxProductMapAll = new LinkedHashMap<>();
+		for (String srvName : dbxSrvProductMap.keySet())
+		{
+			String dbxProduct = dbxSrvProductMap.get(srvName);
+			tabName = CentralPersistWriterBase.getTableName(srvName, Table.GRAPH_PROPERTIES, null, true);
+			String whereVisibleAtStart = "";
+			if (onlySystemSelected)
+				whereVisibleAtStart = " and #visibleAtStart# = 1 ";
+			sql = "select #TableName# from " + tabName + " where #SessionStartTime# = (select max(#SessionStartTime#) from " + tabName + ") " + whereVisibleAtStart + " order by #initialOrder#";
+			sql = sql.replace("#", q);
+					
+			List<String> graphNameList = new ArrayList<>();
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					graphNameList.add(rs.getString(1));
+			}
+			List<String> existingList = dbxProductMapAll.get(dbxProduct);
+			if (existingList != null)
+			{
+				if (graphNameList.size() > existingList.size())
+					dbxProductMapAll.put(dbxProduct, graphNameList);
+			}
+			else
+				dbxProductMapAll.put(dbxProduct, graphNameList);
+		}
+
+		// Save a list of graph names for each DbxProduct (only the largest list for each DbxProduct is saved)
+		for (String dbxProduct : dbxProductMapAll.keySet())
+		{
+			// If the record "TYPE_SYSTEM_SELECTED" is already pressent in the list... DO Not add it...
+			boolean addRecord = true;
+			if (onlySystemSelected)
+			{
+				for (DbxCentralProfile entry : list)
+				{
+					if ( entry.getProductString().equals(dbxProduct) && entry.getProfileType().equals(DbxCentralProfile.TYPE_SYSTEM_SELECTED))
+						addRecord = false;
+				}
+			}
+
+			if (addRecord)
+			{
+				List<String> graphList = dbxProductMapAll.get(dbxProduct);
+				StringBuilder sb = new StringBuilder();
+				
+				sb.append("[");
+				for (String entry : graphList)
+				{
+					// append a comma (but not at first iteration)
+					if (sb.length() > 1)
+						sb.append(",");
+
+					// {"graph":"value"}
+					sb.append("{\"graph\":\"").append(entry).append("\"}");
+				}
+				sb.append("]");
+				
+				DbxCentralProfile s = new DbxCentralProfile(
+						dbxProduct, 
+						"", // userName
+						onlySystemSelected ? DbxCentralProfile.TYPE_SYSTEM_SELECTED : DbxCentralProfile.TYPE_SYSTEM_ALL, 
+						"", // profileName
+						"", // profileDescription
+						sb.toString(), 
+						""); // profileUrlOptions
+				list.add(s);
+			}
 		}
 	}
 	
@@ -1184,6 +1419,474 @@ public class CentralPersistReader
 			releaseConnection(conn);
 		}
 	}
+
+	
+//	/**
+//	 * Get Graph Descriptions
+//	 * 
+//	 * @return
+//	 */
+//	public List<DbxGraphDescription> getGraphDescriptions()
+//	throws SQLException
+//	{
+//		// Get sessions
+//		List<DbxCentralSessions> sessions = getSessions(true, -1);
+//		
+//		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+//		try // block with: finally at end to return the connection to the ConnectionPool
+//		{
+//			String q = conn.getQuotedIdentifierChar();
+//			List<DbxGraphDescription> list = new ArrayList<>();
+//			Map<String, DbxGraphDescription> map = new LinkedHashMap<>();
+//
+//			for (DbxCentralSessions session : sessions)
+//			{
+//				String tabName = CentralPersistWriterBase.getTableName(session.getServerName(), Table.GRAPH_PROPERTIES, null, true);
+//				
+//				// Build a where clause
+//				Timestamp sessionStartTime = session.getSessionStartTime();
+//				String whereSessionStartTime = " (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")";
+//				if (sessionStartTime != null)
+//					whereSessionStartTime = "'" + sessionStartTime + "'";
+//				
+//				String sql = "select "
+//							+ "  " + q + "CmName"           + q
+//							+ " ," + q + "GraphName"        + q
+//							+ " ," + q + "TableName"        + q
+//							+ " ," + q + "GraphLabel"       + q
+//							+ " ," + q + "GraphCategory"    + q
+//							+ " ," + q + "isPercentGraph"   + q
+//							+ " ," + q + "visibleAtStart"   + q
+//							+ " ," + q + "initialOrder"     + q
+//						+" from " + tabName
+//						+" where " + q + "SessionStartTime" + q + " = " + whereSessionStartTime
+//						+" order by " + q + "initialOrder" + q
+//						;
+//
+//				// autoclose: stmnt, rs
+//				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//				{
+//					String dbxProduct = session.getProductString();
+//					
+//					while (rs.next())
+//					{
+//						String       cmName           = rs.getString   (1);        
+//						String       graphName        = rs.getString   (2);         
+//						String       tableName        = rs.getString   (3);         
+//						String       graphLabel       = rs.getString   (4);         
+//						String       graphCategory    = rs.getString   (5);         
+//						boolean      isPercentGraph   = rs.getBoolean  (6);         
+//						boolean      visibleAtStartup = rs.getBoolean  (7);         
+//						int          initialOrder     = rs.getInt      (8);        
+//
+//						String key = tableName + "|" + dbxProduct;
+//						
+//						DbxGraphDescription ce = map.get(key);
+//						if (ce != null)
+//						{
+//							List<String> srvList = ce.getServerNameList();
+//							if (srvList == null)
+//								srvList = new ArrayList<String>();
+//
+//							if ( ! srvList.contains(session.getServerName()) ) // I think this is unnececarry, it should already be unique entries...
+//								srvList.add(session.getServerName());
+//						}
+//						else
+//						{
+//							List<String> srvList = new ArrayList<String>();
+//							srvList.add(session.getServerName());
+//							DbxGraphDescription e = new DbxGraphDescription(srvList, dbxProduct, cmName, graphName, tableName, graphLabel, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
+//							map.put(key, e);
+//						}
+//					}
+//				}
+//			}
+//
+//			// Add the Map values to the return list
+//			list.addAll(map.values());
+//
+//			// Should we traverse the map and make new "initialOrder" depending on the current order???
+//			// or should we keep "initialOrder" even that it might be wrong...
+//			if (true && ! list.isEmpty() )
+//			{
+//				int initialOrder = 0;
+//				String curDbxProduct = "dummyEntry";
+//				for (DbxGraphDescription entry : list)
+//				{
+//					if ( ! curDbxProduct.equals(entry.getDbxProduct()) )
+//					{
+//						curDbxProduct = entry.getDbxProduct();
+//						initialOrder = 0;
+//					}
+//					
+//					entry.setInitialOrder(initialOrder);
+//					initialOrder++;
+//				}
+//			}
+//			
+//			return list;
+//		}
+//		finally
+//		{
+//			releaseConnection(conn);
+//		}
+//	}
+//	/**
+//	 * Get Graph Descriptions
+//	 * 
+//	 * @return
+//	 */
+//	public Map<String, List<DbxGraphDescription>> getGraphDescriptions()
+//	throws SQLException
+//	{
+//		// Get sessions
+//		List<DbxCentralSessions> sessions = getSessions(true, -1);
+//		
+//		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+//		try // block with: finally at end to return the connection to the ConnectionPool
+//		{
+//			String q = conn.getQuotedIdentifierChar();
+//			Map<String, List<DbxGraphDescription>> returnMap = new LinkedHashMap<>();
+//
+////			List<DbxGraphDescription> list = new ArrayList<>();
+//			Map<String, List<DbxGraphDescription>> srvDescMap = new LinkedHashMap<>();
+//
+//			// For each session: get all records
+//			// put them in a Map<srvName, List<GraphDescriptions>>
+//			// Next step: "merge them together, starting with the server with most entries"
+//			for (DbxCentralSessions session : sessions)
+//			{
+//				String dbxProduct = session.getProductString();
+//				String srvName    = session.getServerName();
+//				String tabName    = CentralPersistWriterBase.getTableName(srvName, Table.GRAPH_PROPERTIES, null, true);
+//				
+//				// Build a where clause
+//				Timestamp sessionStartTime = session.getSessionStartTime();
+//				String whereSessionStartTime = " (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")";
+//				if (sessionStartTime != null)
+//					whereSessionStartTime = "'" + sessionStartTime + "'";
+//				
+//				String sql = "select "
+//							+ "  " + q + "CmName"           + q
+//							+ " ," + q + "GraphName"        + q
+//							+ " ," + q + "TableName"        + q
+//							+ " ," + q + "GraphLabel"       + q
+//							+ " ," + q + "GraphCategory"    + q
+//							+ " ," + q + "isPercentGraph"   + q
+//							+ " ," + q + "visibleAtStart"   + q
+//							+ " ," + q + "initialOrder"     + q
+//						+" from " + tabName
+//						+" where " + q + "SessionStartTime" + q + " = " + whereSessionStartTime
+//						+" order by " + q + "initialOrder" + q
+//						;
+//
+//				// autoclose: stmnt, rs
+//				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//				{
+//					while (rs.next())
+//					{
+//						String       cmName           = rs.getString   (1);        
+//						String       graphName        = rs.getString   (2);         
+//						String       tableName        = rs.getString   (3);         
+//						String       graphLabel       = rs.getString   (4);         
+//						String       graphCategory    = rs.getString   (5);         
+//						boolean      isPercentGraph   = rs.getBoolean  (6);         
+//						boolean      visibleAtStartup = rs.getBoolean  (7);         
+//						int          initialOrder     = rs.getInt      (8);        
+//
+//						List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
+//						if (srvDescList == null)
+//							srvDescList = new ArrayList<>(); 
+//
+//						DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
+//						srvDescList.add(e);
+//					}
+//				}
+//			} // end: foreach session
+//			
+//			// now, on the serverLevel: merge the entries together (starting with the server with most entries, in each DbxProduct)
+//			Map<String, String> dbxSrvMaxMap = new LinkedHashMap<>(); // key=DbxProduct, val=SrvName
+//			for (Entry<String, List<DbxGraphDescription>> srvEntry : srvDescMap.entrySet())
+//			{
+//				String                    srvName     = srvEntry.getKey();
+//				List<DbxGraphDescription> srvDescList = srvEntry.getValue();
+//
+//				String dbxProduct = srvDescList.get(0).getDbxProduct();
+//				
+//				List<DbxGraphDescription> list = dbxSrvMaxMap.
+//				List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
+//				
+//			}
+//
+//			// Add the Map values to the return list
+//			list.addAll(map.values());
+//
+//			// Should we traverse the map and make new "initialOrder" depending on the current order???
+//			// or should we keep "initialOrder" even that it might be wrong...
+//			if (true && ! list.isEmpty() )
+//			{
+//				int initialOrder = 0;
+//				String curDbxProduct = "dummyEntry";
+//				for (DbxGraphDescription entry : list)
+//				{
+//					if ( ! curDbxProduct.equals(entry.getDbxProduct()) )
+//					{
+//						curDbxProduct = entry.getDbxProduct();
+//						initialOrder = 0;
+//					}
+//					
+//					entry.setInitialOrder(initialOrder);
+//					initialOrder++;
+//				}
+//			}
+//			
+//			return list;
+//		}
+//		finally
+//		{
+//			releaseConnection(conn);
+//		}
+//	}
+	/**
+	 * Get Graph Descriptions
+	 * 
+	 * @return map<key=DbxProduct, val=map< key=srvName, val=description >>
+	 */
+	public Map<String, Map<String, List<DbxGraphDescription>>> getGraphDescriptions()
+	throws SQLException
+	{
+		// Get sessions
+		List<DbxCentralSessions> sessions = getSessions(true, -1);
+
+		// Get System Supplied Graph Profiles
+		List<DbxCentralProfile> cProfileList = getGraphProfiles(null, null);
+		
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			String q = conn.getQuotedIdentifierChar();
+			Map<String, Map<String, List<DbxGraphDescription>>> prodSrvDescMap = new LinkedHashMap<>();
+
+//			List<DbxGraphDescription> list = new ArrayList<>();
+//			Map<String, List<DbxGraphDescription>> srvDescMap = new LinkedHashMap<>();
+
+			// For each session: get all records
+			for (DbxCentralSessions session : sessions)
+			{
+				String dbxProduct = session.getProductString();
+				String srvName    = session.getServerName();
+				String tabName    = CentralPersistWriterBase.getTableName(srvName, Table.GRAPH_PROPERTIES, null, true);
+
+				// add DbxProduct to outer map (if not already there)
+				Map<String, List<DbxGraphDescription>> srvDescMap = prodSrvDescMap.get(dbxProduct);
+				if (srvDescMap == null)
+				{
+					srvDescMap = new LinkedHashMap<>();
+					prodSrvDescMap.put(dbxProduct, srvDescMap);
+				}
+				
+				// Build a where clause
+				Timestamp sessionStartTime = session.getSessionStartTime();
+				String whereSessionStartTime = " (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")";
+				if (sessionStartTime != null)
+					whereSessionStartTime = "'" + sessionStartTime + "'";
+				
+				String sql = "select "
+							+ "  " + q + "CmName"           + q
+							+ " ," + q + "GraphName"        + q
+							+ " ," + q + "TableName"        + q
+							+ " ," + q + "GraphLabel"       + q
+							+ " ," + q + "GraphCategory"    + q
+							+ " ," + q + "isPercentGraph"   + q
+							+ " ," + q + "visibleAtStart"   + q
+							+ " ," + q + "initialOrder"     + q
+						+" from " + tabName
+						+" where " + q + "SessionStartTime" + q + " = " + whereSessionStartTime
+						+" order by " + q + "initialOrder" + q
+						;
+
+				// autoclose: stmnt, rs
+				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+					{
+						String       cmName           = rs.getString   (1);        
+						String       graphName        = rs.getString   (2);         
+						String       tableName        = rs.getString   (3);         
+						String       graphLabel       = rs.getString   (4);         
+						String       graphCategory    = rs.getString   (5);         
+						boolean      isPercentGraph   = rs.getBoolean  (6);         
+						boolean      visibleAtStartup = rs.getBoolean  (7);         
+						int          initialOrder     = rs.getInt      (8);        
+
+						List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
+						if (srvDescList == null)
+						{
+							srvDescList = new ArrayList<>(); 
+							srvDescMap.put(srvName, srvDescList);
+						}
+
+						DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
+						srvDescList.add(e);
+					}
+				}
+			} // end: foreach session
+			
+			// Add an extra srvName "ALL" for each DbxProduct
+			// That entry will contian all graphs for all servers
+			for (Entry<String, Map<String, List<DbxGraphDescription>>> dbxProds : prodSrvDescMap.entrySet())
+			{
+				String dbxProd = dbxProds.getKey();
+				Map<String, List<DbxGraphDescription>> srvMap  = dbxProds.getValue();
+
+				String maxSrvName    = "";
+				int    maxSrvNameCnt = 0;
+				for (Entry<String, List<DbxGraphDescription>> srvEntry : srvMap.entrySet())
+				{
+					String srvName = srvEntry.getKey();
+					List<DbxGraphDescription> descList = srvEntry.getValue();
+					
+					if (descList.size() >= maxSrvNameCnt)
+					{
+						maxSrvName    = srvName;
+						maxSrvNameCnt = descList.size();
+					}
+				}
+				
+//				// In the srvMap add entry "ALL", with a DEEP COPY of the SrvName with the most graph description entries
+				List<DbxGraphDescription> AllDescList = new ArrayList<>();
+				for (DbxGraphDescription gd : srvMap.get(maxSrvName))
+					AllDescList.add( new DbxGraphDescription(gd) );
+
+				// ssp = System Selected Profile
+				List<DbxGraphDescription> sspDescList = new ArrayList<>();
+
+				List<String> sspGraphNames = new ArrayList<>();
+				for (DbxCentralProfile cp : cProfileList)
+				{
+					if (dbxProd.equals(cp.getProductString()) && DbxCentralProfile.TYPE_SYSTEM_SELECTED.equals(cp.getProfileType()))
+					{
+						// parse json "profileValue": [ {"graph": "CmSummary_aaCpuGraph"}, {"graph": "CmSummary_aaReadWriteGraph"}...]'
+						// into List: CmSummary_aaCpuGraph, CmSummary_aaReadWriteGraph...
+						String json = cp.getProfileValue();
+						ObjectMapper mapper = new ObjectMapper();
+						try
+						{
+							JsonNode root = mapper.readTree(json);
+							//System.out.println("JSON: dbxProd=|"+dbxProd+"|, str=|"+json+"|, isArray="+root.isArray());
+							if (root.isArray())
+							{
+								for (JsonNode node : root)
+								{
+									JsonNode graph = node.get("graph");
+									String fullName = graph.textValue();
+
+									//System.out.println("     JSON: fullName=|"+fullName+"|");
+									sspGraphNames.add(fullName);
+								}
+							}
+						}
+						catch (IOException e)
+						{
+							_logger.warn("Problems parsing System Profile for '"+dbxProd+"', Caught: "+e, e);
+						}
+					}
+				}
+				//System.out.println("JSON: dbxProd=|"+dbxProd+"|, sspGraphNames.size()="+sspGraphNames.size()+", sspGraphNames=|"+sspGraphNames+"|.");
+
+				if ( sspGraphNames.isEmpty() )
+				{
+					for (DbxGraphDescription gd : srvMap.get(maxSrvName))
+					{
+						if (gd.isVisibleAtStartup())
+							sspDescList.add( new DbxGraphDescription(gd) );
+					}
+				}
+				else
+				{
+					for (String graphFullName : sspGraphNames)
+					{
+						for (DbxGraphDescription gd : srvMap.get(maxSrvName))
+						{
+							if (gd.getTableName().equals(graphFullName))
+							{
+								sspDescList.add( new DbxGraphDescription(gd) );
+								break; // continue with next: graphFullName
+							}
+						}
+					}
+				}
+
+
+				// insert all Graphs (that is not already part of ALL) from all servers
+				for (Entry<String, List<DbxGraphDescription>> srvEntry : srvMap.entrySet())
+				{
+					String srvName = srvEntry.getKey();
+					List<DbxGraphDescription> descList = srvEntry.getValue();
+
+					for (DbxGraphDescription gd : descList)
+					{
+						boolean exists = false;
+						String fullName = gd.getTableName();  
+						for (DbxGraphDescription allEntry : AllDescList)
+						{
+							if (fullName.equals(allEntry.getTableName()))
+							{
+								allEntry.addServerName(srvName);
+								exists = true;
+								break;
+							}
+						}
+						if ( ! exists )
+						{
+							DbxGraphDescription newEntry = new DbxGraphDescription(gd);
+							newEntry.addServerName(srvName);
+							AllDescList.add( newEntry );
+						}
+					}
+				}
+				
+				// Make new "initialOrder" depending on the current order???
+				if ( ! AllDescList.isEmpty() )
+				{
+					int initialOrder = 0;
+					for (DbxGraphDescription entry : AllDescList)
+					{
+						entry.setInitialOrder(initialOrder);
+						initialOrder++;
+					}
+				}
+
+				// Make new "initialOrder" depending on the current order???
+				if ( ! sspDescList.isEmpty() )
+				{
+					int initialOrder = 0;
+					for (DbxGraphDescription entry : sspDescList)
+					{
+						entry.setInitialOrder(initialOrder);
+						initialOrder++;
+					}
+				}
+
+				// Finally add "ALL" to the srvMap
+//				srvMap.put("-ALL-", AllDescList);
+//				srvMap.put("-SSP-", sspDescList); 
+				srvMap.put("_ALL_", AllDescList);
+				srvMap.put("_SSP_", sspDescList); 
+			}
+			
+			return prodSrvDescMap;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
+
+
+
+
+
 
 	/**
 	 * Get graph data

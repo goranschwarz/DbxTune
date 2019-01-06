@@ -1,5 +1,6 @@
 package com.asetune.central.controllers;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.security.Principal;
@@ -75,6 +76,53 @@ extends HttpServlet
 			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
 		}
 		
+		out.println(payload);
+		
+		out.flush();
+		out.close();
+	}
+	
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+	{
+		ServletOutputStream out = resp.getOutputStream();
+		resp.setContentType("text/html");
+		resp.setCharacterEncoding("UTF-8");
+
+		String dbxProduct = req.getParameter("dbxProduct");
+		System.out.println("dbxProduct="+dbxProduct);
+		
+		StringBuilder sb = new StringBuilder();
+		String line = null;
+		try {
+			BufferedReader reader = req.getReader();
+			while ((line = reader.readLine()) != null)
+				sb.append(line);
+		} catch (Exception e) { /*report an error*/ }
+		String jsonStr = sb.toString();
+		System.out.println("jsonStr="+jsonStr);
+
+		ObjectMapper om = new ObjectMapper();
+//		DbxCentralProfile profile = om.readValue(req.getReader(), DbxCentralProfile.class);
+		DbxCentralProfile profile = om.readValue(jsonStr, DbxCentralProfile.class);
+		
+//		System.out.println("profile="+profile);
+//		System.out.println("profile.getProductString()=|"+profile.getProductString()+"|.");
+//		System.out.println("profile.getProfileValue() =|"+profile.getProfileValue()+"|.");
+//		System.out.println("profile.getProfileName()  =|"+profile.getProfileName()+"|.");
+		
+		try
+		{
+			CentralPersistReader reader = CentralPersistReader.getInstance();
+			reader.setGraphProfile(profile);
+		}
+		catch (Exception e)
+		{
+			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
+			throw new ServletException("Problem accessing db, Caught: "+e, e);
+		}
+		
+		String payload = "{}"; // it seems that I need to return "something"
 		out.println(payload);
 		
 		out.flush();
