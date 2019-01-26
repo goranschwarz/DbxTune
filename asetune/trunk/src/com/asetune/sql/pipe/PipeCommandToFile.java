@@ -231,7 +231,7 @@ extends PipeCommandAbstract
 		options.addOption( "q", "query",            false, "Print Query at the top of the file" );
 		options.addOption( "i", "rsinfo",           false, "Print JDBC ResultSet info in the file" );
 		options.addOption( "n", "noguiquestion",    false, "Do not show GUI questions for file overwrite" );
-		options.addOption( "R", "rfc4180",          false, "Use RFC 8180 to write file" );
+		options.addOption( "R", "rfc4180",          false, "Use RFC 4180 to write file" );
 		options.addOption( "N", "nullValue",        true,  "If null write this value.       DEFAULT=<NULL>" );
 
 		try
@@ -292,7 +292,7 @@ extends PipeCommandAbstract
 		sb.append("  -q,--query                   Print Query at the top of the file\n");
 		sb.append("  -i,--rsinfo                  Print JDBC ResultSet info in the file\n");
 		sb.append("  -n,--noguiquestion           Do not show GUI questions for file overwrite\n");
-		sb.append("  -R,--rfc4180                 Use RFC 8180 to write file.                    DEFAULT=false\n");
+		sb.append("  -R,--rfc4180                 Use RFC 4180 to write file.                    DEFAULT=false\n");
 		sb.append("                                   see: http://tools.ietf.org/html/rfc4180 \n");
 		sb.append("                                   Basically: embeds newline and quotes within a quoted string. \n");
 		sb.append("                                   This sets -f to ',' and -r to '\\r\\n'\n");

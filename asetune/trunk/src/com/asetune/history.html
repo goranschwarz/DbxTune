@@ -47,7 +47,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>Daily Report Message, some smaller changes to the Mail Message structure.</LI>
 		<LI>in GUI Mode: when an Alarm is Raised, you will now get a popup (similar to when you have blocking locks, long transactions...)</LI>
-		<LI>AlarmView Dialog, now also works in offline mode</LI>
+		<LI>AlarmView Dialog - now also works in offline mode</LI>
+		<LI>Connection Dialog - Remember SSH Key for OS Monitoring</LI>
+		<LI>OS Host Monitoring - iostat: improved iostat number of columns parsing (in some cases the iostat version was unpredictable, for how many columns we would expect from iostat)<br>
+		                         &emsp;Now I try to "count" number of columns returned at startup do: ioStatColCount=$(iostat -xdk | grep 'Device:' | wc -w); echo "ioStatColCount=${ioStatColCount}")</LI>
+		<LI>OS Host Monitoring - DiskSpace: some systems printed long lines into 2 or several rows (added -P option to 'df')</LI>
+		<LI>
+			<b>Upgraded some of the third party libraries/jars</b><br>
+			<ul>
+<!--			<li>To version 1.4.198,       Component: H2 database</li> -->
+				<li>To version ASE 16 SP3,PL6 Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li>
+	 			<li>To version 3.0.0,         Component: RSyntaxTextArea, RSTAUI, Autocomplete</li>
+	 			<li>To version 1.14,          Component: simplemagic</li>
+				<li>To version 2.3.0,         Component: juniversalchardet</li>
+			</ul>
+		</LI>
 	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -58,6 +72,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>If we get errors when loading a graph/chart, don't stop, just continue with next.</LI>
 		<LI>Minor layout changes of some html pages</LI>
 		<LI>admin page: New section to change: System Supplied Graphs Profiles.</LI>
+		<LI>new: Login Dialog (default admin password = IP Address on the machine where DbxCentral is running)</LI>
+		<LI>new: Max size of the Historical recordings (this instead of just looking at how much space we got left)<br>
+		    &emsp;controlled by property: DataDirectoryCleaner.max.historical.space.usage.GB = ###, default = -1, which means disabled</LI>
 	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -74,9 +91,29 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
+		<b>CmSummary</b><br>
+		<ul>
+			<li>Added column 'Total (read+Write)', for the graph 'Disk read/write, Global Variables'.)</li>
+			<li>Added column 'Total (received+sent+errors)', for the graph 'Network Packets received/sent, Global Variables'.)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
 		<b>CmProcessActivity - tab:Processes</b><br>
 		<ul>
 			<li>Added column 'LocksHeld', for all ASE Versions, It was simply left out by misstake.)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmObjectActivity - tab:Objects</b><br>
+		<ul>
+			<li>include 'temp worktable' from monProcessObject, this so we can check if there are extensive Logical Reads on "work tables"</li>
+			<li>Added column 'UsageInKb'<br>
+			      &emsp; for 'temp worktable' (monProcessObject) it's column 'PartitionSize' from monProcessObject<br>
+			      &emsp; for all other (monOpenObjectActivity) it's: convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) * (@@maxpagesize/1024))</li>
 		</ul>
 		</LI>
 
@@ -267,6 +304,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>print EED Parameters for error messages (in ASE, some messages might have extra information attached to the message)</LI>
 		<LI>added 'go tab' to display the output ResultSet(s) in JTabbedPane</LI>
 		<LI>\prep reading clob, now tries to figure out the files encoding using UniversalDetector</LI>
+		<LI>Reading ResultSet feedback (blocking popup UI: how many rows we have currently read)<br>
+		    &emsp; Below 100 rows, display each row, above 100 rows display after 100 row read<br>
+		    &emsp; The change is that below 100 rows we report every row (so we easier see if it's slow to read rows)</LI>
+		<LI>PipeCommandBcp - added -t for truncating a destination table</LI>
+		<LI>Tooltip on cell, improved for CLOB/BLOB (Instead of displaying the content directly. Prompt if you want to open in external browser)</LI>
+		<LI>new tools: Import, export, transfer data (not yet 100% completed)</LI>
+		<LI>improved: \loadfile command</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

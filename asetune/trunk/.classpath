@@ -76,12 +76,6 @@
 			<attribute name="javadoc_location" value="http://antlr4.org/api/Java/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/juniversalchardet-1.0.3.jar"/>
-	<classpathentry kind="lib" path="lib/simplemagic-1.6.jar" sourcepath="3pp/rsyntaxtextarea_2.5.2_Source.zip">
-		<attributes>
-			<attribute name="javadoc_location" value="http://256.com/sources/simplemagic/javadoc/simplemagic/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="lib/commons-cli-1.4.jar" sourcepath="3pp/commons-cli-1.4-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="http://commons.apache.org/cli/api-release/index.html"/>
@@ -145,5 +139,7 @@
 	<classpathentry kind="lib" path="lib/h2-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib/cron-utils-7.0.6.jar"/>
 	<classpathentry kind="lib" path="lib/jchart2d-3.3.2.jar" sourcepath="3pp/jchart2d-3.3.2-sources.jar"/>
+	<classpathentry kind="lib" path="lib/simplemagic-1.14.jar"/>
+	<classpathentry kind="lib" path="lib/juniversalchardet-2.3.0.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>

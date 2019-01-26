@@ -7,11 +7,11 @@ extends MonitorIo
 {
 	public MonitorIoVeritas()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorIoVeritas(int utilVersion)
+	public MonitorIoVeritas(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -43,7 +43,7 @@ extends MonitorIo
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

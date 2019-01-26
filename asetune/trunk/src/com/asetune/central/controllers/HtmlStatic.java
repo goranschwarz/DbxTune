@@ -62,8 +62,50 @@ public class HtmlStatic
 		"          <a class='nav-link' href='/desktop_app.html'>Desktop App</a> \n" +
 		"        </li> \n" +
 		"      </ul> \n" +
+		"	  <!-- on the right hand side of the menu... --> \n" +
+		"      <ul class='navbar-nav'> \n" +
+		"	    <!-- IS LOGGED IN --> \n" +
+		"        <div id='dbx-nb-isLoggedIn-div' style='display: none;'> \n" +
+		"          <li class='nav-item dropdown'> \n" +
+		"            <a class='nav-link dropdown-toggle' href='http://example.com' id='navbarDropdownMenuLink' data-toggle='dropdown' aria-haspopup='true' aria-expanded='false'> \n" +
+		"              <i class='fa fa-user'></i> <span id='dbx-nb-isLoggedInUser-div'></span> <!-- current username will be in here --> \n" +
+		"            </a> \n" +
+		"            <div class='dropdown-menu dropdown-menu-right' aria-labelledby='navbarDropdownMenuLink'> \n" +
+		"            <a class='dropdown-item' href='#'> <i class='fa fa-cog'></i> Settings [not-yet-implemented]</a> \n" +
+		"            <a class='dropdown-item' href='/logout'> <i class='fa fa-sign-out'></i> Logout</a> \n" +
+		"            </div> \n" +
+		"          </li> \n" +
+		"        </div> \n" +
+		"	    <!-- IS LOGGED OUT --> \n" +
+		"        <div id='dbx-nb-isLoggedOut-div'> \n" +
+		"          <a class='nav-link' href='/index.html?login'> <i class='fa fa-sign-in'></i> <span data-toggle='tooltip' title='Log in as a specific user.'>Login</span></a> \n" +
+		"        </div> \n" +
+		"      </ul> <!-- end right hand side --> \n" +
 		"    </div> \n" +
 		"  </nav> \n" +
 		"";
+	}
+
+	public static String getJavaScriptAtEnd(boolean addScriptTag)
+	{
+		StringBuilder sb = new StringBuilder();
+		
+		if (addScriptTag)
+			sb.append("<script>");
+
+		sb.append("\n");
+		sb.append("\n");
+		sb.append("	//----------------------------------------------------------- \n");
+		sb.append("	// Check for login and set props \n");
+		sb.append("	//----------------------------------------------------------- \n");
+		sb.append("	isLoggedIn( function(isLogedIn, asUserName)  \n");
+		sb.append("	{ \n");
+		sb.append("		console.log('isLoggedIn-callback: isLogedIn=|'+isLogedIn+'|, asUserName=|'+asUserName+'|.'); \n");
+		sb.append("	}); \n");
+
+		if (addScriptTag)
+			sb.append("</script>");
+		
+		return sb.toString();
 	}
 }

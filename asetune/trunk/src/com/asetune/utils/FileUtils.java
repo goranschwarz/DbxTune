@@ -19,6 +19,7 @@ import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 
 import javax.swing.JButton;
@@ -362,7 +363,8 @@ public class FileUtils
 		String encoding = null;
 		try
 		{
-			byte[] buf = new byte[4096];
+//			byte[] buf = new byte[4096];
+			byte[] buf = new byte[8192];
 			FileInputStream fis = new FileInputStream(file);
 
 			// Construct an instance of org.mozilla.universalchardet.UniversalDetector. 
@@ -399,20 +401,50 @@ public class FileUtils
 	public static String readFile(String filename, String encoding)
 	throws IOException
 	{
+		return readFile(filename, encoding, -1);
+	}
+	public static String readFile(String filename, String encoding, int onlyFirstChuckInBytes)
+	throws IOException
+	{
 		File file = new File(filename);
-		return readFile(file, encoding);
+		return readFile(file, encoding, onlyFirstChuckInBytes);
 	}
 	public static String readFile(File file, String encoding)
 	throws IOException
 	{
+		return readFile(file, encoding, -1);
+	}
+
+	public static String readFile(File file, String encoding, int onlyFirstChuckInBytes)
+	throws IOException
+	{
 		String content = null;
 
-		FileReader reader = new FileReader(file);
-		char[] chars = new char[(int) file.length()];
-		reader.read(chars);
-		content = new String(chars);
-		reader.close();
+		// If file encoding is null, then try to get it...
+		if (encoding == null)
+		{
+			encoding = getFileEncoding(file);
+			if (encoding == null)
+				encoding = Charset.defaultCharset().name();
+		}
 
+		int len = onlyFirstChuckInBytes;
+		if (len < 0)
+			len = (int) file.length();
+		
+//		FileReader reader = new FileReader(file);
+//		char[] chars = new char[len];
+//		reader.read(chars);
+//		content = new String(chars);
+//		reader.close();
+
+		byte[] bytes = new byte[len];
+		FileInputStream fis = new FileInputStream(file);
+		fis.read(bytes);
+		fis.close();
+
+		content = new String(bytes, encoding);
+		
 		return content;
 	}
 

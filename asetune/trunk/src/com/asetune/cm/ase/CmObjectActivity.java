@@ -53,6 +53,7 @@ extends CountersModel
 		"<ul>" +
 		"    <li>ORANGE - An Index (IndID > 0)</li>" +
 		"    <li>VERY_LIGHT_BLUE - BLOB Text/Image Column (IndID = 255).</li>" +
+		"    <li>LIGHT YELLOW - Tempdb Work Tables (LockScheme = 'WORK-TABLE').</li>" +
 		"</ul>" +
 		"</html>";
 
@@ -146,6 +147,10 @@ extends CountersModel
 
 	public static final String  PROPKEY_sample_systemTables           = PROP_PREFIX + ".sample.systemTables";
 	public static final boolean DEFAULT_sample_systemTables           = false;
+
+	public static final String  PROPKEY_sample_tempdbWorkTables       = PROP_PREFIX + ".sample.tempdb.workTables";
+	public static final boolean DEFAULT_sample_tempdbWorkTables       = true;
+
 
 	@Override
 	protected void registerDefaultValues()
@@ -246,10 +251,11 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("Sample Table Row Count", PROPKEY_sample_tabRowCount  , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_tabRowCount  , DEFAULT_sample_tabRowCount  ), DEFAULT_sample_tabRowCount , "Sample Table Row Count using ASE functions row_count() and data_pages()" ));
-		list.add(new CmSettingsHelper("Limit num of rows",      PROPKEY_sample_topRows      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_topRows      , DEFAULT_sample_topRows      ), DEFAULT_sample_topRows     , "Get only first # rows (select top # ...) true or false"                  ));
-		list.add(new CmSettingsHelper("Limit num of rowcount",  PROPKEY_sample_topRowsCount , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount , DEFAULT_sample_topRowsCount ), DEFAULT_sample_topRowsCount, "Get only first # rows (select top # ...), number of rows"                ));
-		list.add(new CmSettingsHelper("Include System Tables",  PROPKEY_sample_systemTables , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemTables , DEFAULT_sample_systemTables ), DEFAULT_sample_systemTables, "Sample ASE System Tables, dbcc traceon(3650)"                            ));
+		list.add(new CmSettingsHelper("Sample Table Row Count",     PROPKEY_sample_tabRowCount      , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_tabRowCount      , DEFAULT_sample_tabRowCount      ), DEFAULT_sample_tabRowCount ,     "Sample Table Row Count using ASE functions row_count() and data_pages()" ));
+		list.add(new CmSettingsHelper("Limit num of rows",          PROPKEY_sample_topRows          , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_topRows          , DEFAULT_sample_topRows          ), DEFAULT_sample_topRows     ,     "Get only first # rows (select top # ...) true or false"                  ));
+		list.add(new CmSettingsHelper("Limit num of rowcount",      PROPKEY_sample_topRowsCount     , Integer.class, conf.getIntProperty    (PROPKEY_sample_topRowsCount     , DEFAULT_sample_topRowsCount     ), DEFAULT_sample_topRowsCount,     "Get only first # rows (select top # ...), number of rows"                ));
+		list.add(new CmSettingsHelper("Include System Tables",      PROPKEY_sample_systemTables     , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_systemTables     , DEFAULT_sample_systemTables     ), DEFAULT_sample_systemTables,     "Sample ASE System Tables, dbcc traceon(3650)"                            ));
+		list.add(new CmSettingsHelper("Include tempdb work Tables", PROPKEY_sample_tempdbWorkTables , Boolean.class, conf.getBooleanProperty(PROPKEY_sample_tempdbWorkTables , DEFAULT_sample_tempdbWorkTables ), DEFAULT_sample_tempdbWorkTables, "Sample 'work tables' used in tempdb. (from monProcessObject)"            ));
 
 		return list;
 	}
@@ -282,10 +288,14 @@ extends CountersModel
 		// so concatinate at least 3 int should be possible... 
 		String bigint = "numeric(10,0)"; // bigint if above 15.0
 
+		if (srvVersion >= Ver.ver(15,0))
+			bigint = "bigint";
+
 		String topRows      = ""; // 'top 500' if only first 500 rows should be displayed
 		
 		String TabRowCount  = "";
 		String UsageInMb    = "";
+		String UsageInKb    = "";
 		String NumUsedPages = "";
 		String RowsPerPage  = "";
 		String DBName       = "DBName=db_name(A.DBID), \n";
@@ -299,14 +309,6 @@ extends CountersModel
 		String ObjectCacheDate       = "";
 		String ase15700_nl           = ""; // NL for this section
 
-		// ASE 15.7 SP100
-		String NumLevel0Waiters    = "";
-		String AvgLevel0WaitTime   = "";
-		String ase1570_SP100_nl    = ""; // NL for this section
-
-		if (srvVersion >= Ver.ver(15,0))
-			bigint = "bigint";
-
 		if (srvVersion >= Ver.ver(15,0,2))
 		{
 			String rowCountOption = "          "; // 16.0 SP2 or 15.7 SP130 (I know it was introduced in SP130, but not in what 16 SP, so lets guess at SP2) 
@@ -315,6 +317,7 @@ extends CountersModel
 
 			TabRowCount  = "TabRowCount  = convert(bigint, row_count(A.DBID, A.ObjectID"+rowCountOption+")),   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			UsageInMb    = "UsageInMb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) / (1024*1024/@@maxpagesize)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
+			UsageInKb    = "UsageInKb    = convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) * (@@maxpagesize/1024)),      -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			NumUsedPages = "NumUsedPages = convert(bigint, data_pages(A.DBID, A.ObjectID, A.IndexID)), -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			RowsPerPage  = "RowsPerPage  = convert(numeric(9,1), 0),                                   -- Disable col with property: "+PROPKEY_sample_tabRowCount+"=false\n";
 			DBName       = "A.DBName, \n";
@@ -336,13 +339,13 @@ extends CountersModel
 			{
 				TabRowCount  = "TabRowCount  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
 				UsageInMb    = "UsageInMb    = convert(int,   -1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
+				UsageInKb    = "UsageInKb    = convert(int,   -1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
 				NumUsedPages = "NumUsedPages = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
 				RowsPerPage  = "RowsPerPage  = convert(bigint,-1), -- column is disabled, enable col with property: "+PROPKEY_sample_tabRowCount+"=true\n";
-				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'UsageInMb', 'NumUsedPages', 'RowsPerPage'.");
+				_logger.info(PROPKEY_sample_tabRowCount+"=false, Disabling the column 'TabRowCount', 'UsageInMb', 'UsageInKb', 'NumUsedPages', 'RowsPerPage'.");
 			}
 		}
-//		if (srvVersion >= 15700)
-//		if (srvVersion >= 1570000)
+
 		if (srvVersion >= Ver.ver(15,7))
 		{
 			SharedLockWaitTime    = "SharedLockWaitTime, ";
@@ -353,7 +356,11 @@ extends CountersModel
 			ase15700_nl           = "\n"; // NL for this section
 		}
 
-//		if (srvVersion >= 1570100)
+		// ASE 15.7 SP100
+		String NumLevel0Waiters    = "";
+		String AvgLevel0WaitTime   = "";
+		String ase1570_SP100_nl    = ""; // NL for this section
+
 		if (srvVersion >= Ver.ver(15,7,0,100))
 		{
 			NumLevel0Waiters    = "NumLevel0Waiters, ";
@@ -367,8 +374,6 @@ extends CountersModel
 		String HkgcPendingDcomp   = "";
 		String HkgcOverflowsDcomp = "";
 		String nl_15701           = ""; // NL for this section
-//		if (srvVersion >= 15701)
-//		if (srvVersion >= 1570010)
 		if (srvVersion >= Ver.ver(15,7,0,1))
 		{
 			HkgcRequestsDcomp  = "HkgcRequestsDcomp, ";
@@ -387,8 +392,7 @@ extends CountersModel
 		String PRSRewriteCount    = ""; // Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String LastPRSRewriteDate = ""; // Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
 		String nl_15702           = ""; // NL for this section
-//		if (srvVersion >= 15702)
-//		if (srvVersion >= 1570020)
+
 		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
 			IOSize1Page        = "IOSize1Page, ";        // DO DIFF CALC
@@ -417,7 +421,6 @@ extends CountersModel
 		String LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
 		String nl_16000           = ""; // NL for this section
 
-//		if (srvVersion >= 1600000)
 		if (srvVersion >= Ver.ver(16,0))
 		{
 			// note: protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days, 20 hours, 31 minutes and 23.647 seconds, the MS difference is overflowned
@@ -498,6 +501,7 @@ extends CountersModel
 		         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
 		         TabRowCount +
 		         UsageInMb + 
+		         UsageInKb + 
 		         NumUsedPages +
 		         RowsPerPage +
 		         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
@@ -634,12 +638,219 @@ extends CountersModel
 		cols2 += MaxQueueWaitTime;
 			cols2 += ase15501_ce_nl; // NL for this section
 
+
+		boolean sampleWorkTables = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_tempdbWorkTables, DEFAULT_sample_tempdbWorkTables);
+		String workTableSql = "";
+		if (sampleWorkTables)
+		{
+			String wt_DBName       = "DBName, \n";
+			String wt_ObjectName   = "ObjectName = ObjectName + ' [SPID=' + convert(varchar(10),SPID)+']', ";
+			String wt_IndexName    = "IndexName  = convert(varchar(30),'WORK-TABLE-DATA'), ";
+
+			String wt_TabRowCount  = "TabRowCount  = -1, \n";
+//			String wt_UsageInMb    = "UsageInMb    = -1, \n";
+			String wt_UsageInMb    = "UsageInMb = PartitionSize / 1024, \n"; // PartitionSize = SizeInKB  ... so this is not good enough (FIXME: small tables will be 0)
+			String wt_UsageInKb    = "UsageInKb = PartitionSize, \n";
+//			String wt_NumUsedPages = "NumUsedPages = -1, \n";
+			String wt_NumUsedPages = "NumUsedPages = PartitionSize / (@@maxpagesize/1024), \n";
+			String wt_RowsPerPage  = "RowsPerPage  = -1, \n";
+			
+			// ASE 15.7
+			String wt_SharedLockWaitTime    = "";
+			String wt_ExclusiveLockWaitTime = "";
+			String wt_UpdateLockWaitTime    = "";
+			String wt_ObjectCacheDate       = "";
+
+			if (srvVersion >= Ver.ver(15,7))
+			{
+				wt_SharedLockWaitTime    = "SharedLockWaitTime = -1, ";
+				wt_ExclusiveLockWaitTime = "ExclusiveLockWaitTime = -1, ";
+				wt_UpdateLockWaitTime    = "UpdateLockWaitTime = -1, ";
+				wt_ObjectCacheDate       = "ObjectCacheDate = convert(datetime, NULL), ";
+			}
+
+			// ASE 15.7 SP100
+			String wt_NumLevel0Waiters    = "";
+			String wt_AvgLevel0WaitTime   = "";
+
+			if (srvVersion >= Ver.ver(15,7,0,100))
+			{
+				wt_NumLevel0Waiters    = "NumLevel0Waiters = -1, ";
+				wt_AvgLevel0WaitTime   = "AvgLevel0WaitTime = -1, ";
+			}
+
+			// ASE 15.7.0 ESD#1
+			String wt_HkgcRequestsDcomp  = "";
+			String wt_HkgcPendingDcomp   = "";
+			String wt_HkgcOverflowsDcomp = "";
+			
+			if (srvVersion >= Ver.ver(15,7,0,1))
+			{
+				wt_HkgcRequestsDcomp  = "HkgcRequestsDcomp = -1, ";
+				wt_HkgcPendingDcomp   = "HkgcPendingDcomp = -1, ";
+				wt_HkgcOverflowsDcomp = "HkgcOverflowsDcomp = -1, ";
+			}
+			
+			// ASE 15.7.0 ESD#2
+			String wt_IOSize1Page        = ""; // Number of 1 page physical reads performed for the object
+			String wt_IOSize2Pages       = ""; // Number of 2 pages physical reads performed for the object
+			String wt_IOSize4Pages       = ""; // Number of 4 pages physical reads performed for the object
+			String wt_IOSize8Pages       = ""; // Number of 8 pages physical reads performed for the object
+			String wt_PRSSelectCount     = ""; // Number of times PRS (Precomputed Result Set) was selected for query rewriting plan during compilation
+			String wt_LastPRSSelectDate  = ""; // Last date the PRS (Precomputed Result Set) was selected for query rewriting plan during compilation
+			String wt_PRSRewriteCount    = ""; // Number of times PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
+			String wt_LastPRSRewriteDate = ""; // Last date the PRS (Precomputed Result Set) was considered valid for query rewriting during compilation
+			
+			if (srvVersion >= Ver.ver(15,7,0,2))
+			{
+				wt_IOSize1Page        = "IOSize1Page = -1, ";        // DO DIFF CALC
+				wt_IOSize2Pages       = "IOSize2Pages = -1, ";       // DO DIFF CALC
+				wt_IOSize4Pages       = "IOSize4Pages = -1, ";       // DO DIFF CALC
+				wt_IOSize8Pages       = "IOSize8Pages = -1, ";       // DO DIFF CALC
+				wt_PRSSelectCount     = "PRSSelectCount = -1, ";     // DO DIFF CALC
+				wt_LastPRSSelectDate  = "LastPRSSelectDate = convert(datetime, NULL), ";
+				wt_PRSRewriteCount    = "PRSRewriteCount = -1, ";    // DO DIFF CALC
+				wt_LastPRSRewriteDate = "LastPRSRewriteDate = convert(datetime, NULL), ";
+			}
+
+			// ASE 16.0
+			String wt_Scans              = ""; // The number of scans on this object
+			String wt_LastScanDate       = ""; // The date of the last scan on this object
+			String wt_LastScanDateDiff   = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+			String wt_Updates            = ""; // The number of updates on this object
+			String wt_LastUpdateDate     = ""; // The date of the last update on this object
+			String wt_LastUpdateDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+			String wt_Inserts            = ""; // The date of the last update on this object
+			String wt_LastInsertDate     = ""; // The date of the last insert on this object
+			String wt_LastInsertDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+			String wt_Deletes            = ""; // The number of deletes on this object
+			String wt_LastDeleteDate     = ""; // The date of the last delete on this object
+			String wt_LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+
+			if (srvVersion >= Ver.ver(16,0))
+			{
+				// note: protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days, 20 hours, 31 minutes and 23.647 seconds, the MS difference is overflowned
+				
+				wt_Scans              = "Scans = -1, ";              // DO DIFF CALC
+				wt_LastScanDate       = "LastScanDate = convert(datetime, NULL), ";
+				wt_LastScanDateDiff   = "LastScanDateDiff = -1, ";
+
+				wt_Updates            = "Updates = -1, ";            // DO DIFF CALC
+				wt_LastUpdateDate     = "LastUpdateDate = convert(datetime, NULL), ";
+				wt_LastUpdateDateDiff = "LastUpdateDateDiff = -1, ";
+		
+				wt_Inserts            = "Inserts = -1, ";            // DO DIFF CALC
+				wt_LastInsertDate     = "LastInsertDate = convert(datetime, NULL), ";
+				wt_LastInsertDateDiff = "LastInsertDateDiff = -1, ";
+
+				wt_Deletes            = "Deletes = -1, ";            // DO DIFF CALC
+				wt_LastDeleteDate     = "LastDeleteDate = convert(datetime, NULL), ";
+				wt_LastDeleteDateDiff = "LastDeleteDateDiff = -1, ";
+			}
+
+			// ASE 16.0 SP3 PL4
+			String wt_MaxInsRowsInXact = ""; // Max number of rows inserted in any transaction for this object
+			String wt_MaxDelRowsInXact = ""; // Max number of rows deleted  in any transaction for this object
+			String wt_MaxUpdRowsInXact = ""; // Max number of rows updated  in any transaction for this object
+
+			if (srvVersion >= Ver.ver(16,0,0, 3,4))
+			{
+				wt_MaxInsRowsInXact = "MaxInsRowsInXact = -1, "; // do NOT do diff calc
+				wt_MaxDelRowsInXact = "MaxDelRowsInXact = -1, "; // do NOT do diff calc
+				wt_MaxUpdRowsInXact = "MaxUpdRowsInXact = -1, "; // do NOT do diff calc
+			}
+
+			
+			String wt_cols1 = "";
+			String wt_cols2 = "";
+			String wt_cols3 = "";
+			if (isClusterEnabled)
+			{
+				wt_cols1 += "InstanceID, ";
+			}
+			
+			wt_cols1 += 
+			         "DBID, ObjectID, \n" +
+			         wt_DBName +
+			         wt_ObjectName + 
+			         "IndexID, \n" +
+			         wt_IndexName +
+			         "LockScheme = convert(varchar(30),'WORK-TABLE'), " +
+			         "Remark = convert(varchar(60), ''), \n" + // this would be a good position after X tests has been done, but put it at the end right now
+			         wt_Scans + wt_LastScanDate + nl_16000 + 
+			         wt_LastScanDateDiff + nl_16000 +
+			         "LockRequests = -1, LockWaits = -1, \n" +
+			         "LockContPct  = convert(numeric(10,1), 0), \n" +
+			         wt_SharedLockWaitTime + wt_ExclusiveLockWaitTime + wt_UpdateLockWaitTime + ase15700_nl +
+			         wt_NumLevel0Waiters + wt_AvgLevel0WaitTime + ase1570_SP100_nl +
+//			         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
+			         "LogicalReads, PhysicalReads, APFReads = PhysicalAPFReads, PagesRead = -1, \n" + // Changes from the monOpenObjectActivity
+			         wt_IOSize1Page + wt_IOSize2Pages + wt_IOSize4Pages + wt_IOSize8Pages + nl_15702 +
+//			         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
+			         "PhysicalWrites = -1, PagesWritten = -1, UsedCount = -1, Operations = -1, \n" + // Changes from the monOpenObjectActivity
+			         wt_TabRowCount +
+			         wt_UsageInMb + 
+			         wt_UsageInKb + 
+			         wt_NumUsedPages +
+			         wt_RowsPerPage +
+			         // RowsInserted + RowsDeleted + RowsUpdated : will overflow if much changes, so individual converts are neccecary
+			         "RowsInsUpdDel=convert("+bigint+",-1), \n" +
+//			         "RowsInserted, RowsDeleted, RowsUpdated, OptSelectCount, \n" +
+			         "RowsInserted = -1, RowsDeleted = -1, RowsUpdated = -1, OptSelectCount = -1, \n" + // Changes from the monOpenObjectActivity
+			         wt_MaxInsRowsInXact              + wt_MaxUpdRowsInXact              + wt_MaxDelRowsInXact   + nl_160_sp3_pl4 +
+			         wt_Inserts                       + wt_Updates                       + wt_Deletes            + nl_16000 +
+			         wt_LastInsertDateDiff + nl_16000 + wt_LastUpdateDateDiff + nl_16000 + wt_LastDeleteDateDiff + nl_16000 +
+			         wt_LastInsertDate                + wt_LastUpdateDate                + wt_LastDeleteDate     + nl_16000 +
+			         ""; // end of cols1
+			wt_cols2 += "";
+			wt_cols3 += wt_ObjectCacheDate + "LastOptSelectDate = convert(datetime, NULL), LastUsedDate = convert(datetime, NULL)";
+			if (srvVersion >= Ver.ver(15,0,2))
+			{
+				wt_cols2 += "HkgcRequests = -1, HkgcPending = -1, HkgcOverflows = -1, \n";
+			}
+			if (srvVersion >= Ver.ver(15,7,0,1))
+			{
+				wt_cols2 += wt_HkgcRequestsDcomp + wt_HkgcPendingDcomp + wt_HkgcOverflowsDcomp + nl_15701;
+			}
+			if (srvVersion >= Ver.ver(15,7,0,2))
+			{
+				wt_cols2 += wt_PRSSelectCount + wt_LastPRSSelectDate + wt_PRSRewriteCount + wt_LastPRSRewriteDate + nl_15702;
+			}
+
+			// FINALLY: Compose a SQL Statement that fetches WORK-TABLES from monProcessObject
+			workTableSql = "\n\n"
+					+ "-----------------------------------------------------------------------\n"
+					+ "-- Get 'work tables' from monProcessObject \n"
+					+ "-- This is a 'union', that is resolved in AseTune (2 ResultSet's merged) \n"
+					+ "-----------------------------------------------------------------------\n"
+					+ "select \n"
+					+ wt_cols1 + wt_cols2 + wt_cols3 + "\n"
+					+ "from master.dbo.monProcessObject A\n"
+					+ "where DBID = 2 \n"
+					+ "  and ObjectName = 'temp worktable' \n"
+					+ "";
+			
+			// If LOWER than ASE 15.5 --- RESET the WORK TABLE SQL
+			if (srvVersion < Ver.ver(15,5))
+			{
+				_logger.info("Resetting 'WORK-TABLE' SQL, since version is to low. need version 15.5 and current version is "+srvVersion);
+				workTableSql = "";
+			}
+			// If Cluster Edition --- RESET the WORK TABLE SQL
+			if (isClusterEnabled)
+			{
+				_logger.info("Resetting 'WORK-TABLE' SQL, since it's a ASE Cluster Edition...");
+				workTableSql = "";
+			}
+		}
+		
 		String sql = 
 			"select " + topRows + cols1 + cols2 + cols3 + "\n" +
-			"from master..monOpenObjectActivity A \n" +
+			"from master.dbo.monOpenObjectActivity A \n" +
 			"where UsedCount > 0 OR LockRequests > 0 OR LogicalReads > 100 \n" +
 //			(isClusterEnabled ? "order by 2,3,4" : "order by 1,2,3") + "\n";
-			"order by LogicalReads desc \n";
+			"order by LogicalReads desc \n" +
+			workTableSql;
 
 		return sql;
 	}

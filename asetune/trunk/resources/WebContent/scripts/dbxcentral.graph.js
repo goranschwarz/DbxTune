@@ -333,6 +333,9 @@ function dbxTuneGraphSubscribe()
 
 	var webSocket;
 
+	if (subscribe === "false")
+		subscribe = false;
+
 	// turn subscribe off if 'endTime' is present
 	if (endTime !== "")
 		subscribe = false;
@@ -370,7 +373,10 @@ function dbxTuneGraphSubscribe()
 		}
 
 		// Create a websocket
-		webSocket = new WebSocket("ws://" + location.host + "/api/chart/broadcast-ws?serverList="+_serverList+"&graphList="+graphList);
+		const wsUrl = "ws://" + location.host + "/api/chart/broadcast-ws?serverList="+_serverList+"&graphList="+encodeURIComponent(graphList);
+		console.log("subscribeConnectWs(): url="+wsUrl);
+		webSocket = new WebSocket(wsUrl);
+		
  
 		webSocket.onmessage = function(e) 
 		{

@@ -60,6 +60,7 @@ extends PipeCommandAbstract
 		boolean _slowBcp   = false;
 		boolean _createTab = false;
 		String  _initStr   = null;
+		boolean _truncate  = false;
 	}
 	
 	private CmdParams _params = null;
@@ -129,6 +130,7 @@ extends PipeCommandAbstract
 					if (cmdLine.hasOption('s')) _params._slowBcp       = true;
 					if (cmdLine.hasOption('c')) _params._createTab     = true;
 					if (cmdLine.hasOption('i')) _params._initStr       = cmdLine.getOptionValue('i');
+					if (cmdLine.hasOption('t')) _params._truncate      = true;
 
 					if ( cmdLine.getArgs() != null && cmdLine.getArgs().length == 1 )
 					{
@@ -158,6 +160,7 @@ extends PipeCommandAbstract
 					System.out.println("BCP Param: _slowBcp       = '"+ _params._slowBcp   + "'.");
 					System.out.println("BCP Param: _createTab     = '"+ _params._createTab + "'.");
 					System.out.println("BCP Param: _initStr       = '"+ _params._initStr   + "'.");
+					System.out.println("BCP Param: _truncate      = '"+ _params._truncate  + "'.");
 				}
 			}
 			else
@@ -224,15 +227,16 @@ extends PipeCommandAbstract
 		Options options = new Options();
 
 		// create the Options
-		options.addOption( "U", "user",        true,  "Username when connecting to server." );
-		options.addOption( "P", "passwd",      true,  "Password when connecting to server. (null=noPasswd)" );
-		options.addOption( "S", "server",      true,  "Server to connect to (SERVERNAME|host:port)." );
-		options.addOption( "u", "url",         true,  "Destination DB URL (if not ASE and -S)" );
-		options.addOption( "D", "dbname",      true,  "Database name in server." );
-		options.addOption( "b", "batchSize",   true,  "Batch size" );
-		options.addOption( "s", "slowBcp",     false, "Do not set ENABLE_BULK_LOAD when connecting to ASE" );
-		options.addOption( "c", "crTable",     false, "Create table if one doesn't exist." );
-		options.addOption( "i", "initStr",     true,  "used to do various settings in destination server." );
+		options.addOption( "U", "user",          true,  "Username when connecting to server." );
+		options.addOption( "P", "passwd",        true,  "Password when connecting to server. (null=noPasswd)" );
+		options.addOption( "S", "server",        true,  "Server to connect to (SERVERNAME|host:port)." );
+		options.addOption( "u", "url",           true,  "Destination DB URL (if not ASE and -S)" );
+		options.addOption( "D", "dbname",        true,  "Database name in server." );
+		options.addOption( "b", "batchSize",     true,  "Batch size" );
+		options.addOption( "s", "slowBcp",       false, "Do not set ENABLE_BULK_LOAD when connecting to ASE" );
+		options.addOption( "c", "crTable",       false, "Create table if one doesn't exist." );
+		options.addOption( "i", "initStr",       true,  "used to do various settings in destination server." );
+		options.addOption( "t", "truncateTable", false, "Truncate table before insert." );
 
 		try
 		{
@@ -290,6 +294,7 @@ extends PipeCommandAbstract
 		sb.append("  -s,--slowBcp              Do not set ENABLE_BULK_LOAD when connecting to ASE.\n");
 		sb.append("  -c,--crTable              If table doesn't exist, create a new (based on the ResultSet). -NOT-YET-IMPLEMENTED-\n");
 		sb.append("  -i,--initStr <sql stmnt>  Used to do various settings in destination server.\n");
+		sb.append("  -t,--truncateTable        truncate table before inserting values.\n");
 		sb.append("  \n");
 		sb.append("  Note 1: -D,--dbname and -s,--slowBcp is only used if you connects to ASE via the -S,--server switch\n");
 		sb.append("  Note 2: if you connect via -u,--url then ordinary JDBC Batch execution will be used.\n");
@@ -303,6 +308,8 @@ extends PipeCommandAbstract
 		private Connection _conn      = null;
 		private CmdParams  _cmdParams = null;
 		private SqlProgressDialog _progressDialog = null;
+		private String _qic = "\""; // Quoted Identifier Char 
+
 //		int	_numcols;
 //
 //		private ArrayList<String>            _type        = new ArrayList<String>();
@@ -376,6 +383,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			try
 			{
 				DatabaseMetaData dbmd = _conn.getMetaData();
+				try {_qic = dbmd.getIdentifierQuoteString(); } catch (SQLException ignore) {}
 				try {_logger.info("BCP: Connected using driver name '"          + dbmd.getDriverName()             +"'."); } catch (SQLException ignore) {}
 				try {_logger.info("BCP: Connected using driver version '"       + dbmd.getDriverVersion()          +"'."); } catch (SQLException ignore) {}
 				try {_logger.info("BCP: Connected to destination DBMS Vendor '" + dbmd.getDatabaseProductName()    +"'."); } catch (SQLException ignore) {}
@@ -390,6 +398,32 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 				Statement stmnt = _conn.createStatement();
 				stmnt.executeUpdate(_cmdParams._initStr);
 				stmnt.close();
+			}
+
+			// Execute truncate table
+			if (_cmdParams._truncate)
+			{
+				String sql = "";
+				// - First try to do:  truncate table ... 
+				// - if that fails do: delete from table
+				try ( Statement stmnt = _conn.createStatement() )
+				{
+					sql = "truncate table " + _qic + _cmdParams._table + _qic;
+					
+					stmnt.executeUpdate(sql);
+					_logger.info("BCP: Truncated destination table, using SQL Stement '"+sql+"'.");
+				}
+				catch(SQLException e)
+				{
+					_logger.info("Problems with '"+sql+"', trying a normal 'DELETE FROM ...'. Caught: Err="+e.getErrorCode()+", State='"+e.getSQLState()+"', msg='"+e.getMessage()+"'.");
+					sql = "DELETE FROM " + _qic + _cmdParams._table + _qic;
+
+					try ( Statement stmnt = _conn.createStatement() )
+					{
+						stmnt.executeUpdate(sql);
+						_logger.info("BCP: Truncated destination table, using SQL Stement '"+sql+"'.");
+					}
+				}
 			}
 		}
 
@@ -439,7 +473,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			}
 			
 			// Do dummy SQL to get RSMD from DEST
-			String destSql    = "select * from "+_cmdParams._table+" where 1=2";
+			String destSql    = "select * from " + _qic + _cmdParams._table + _qic + " where 1=2";
 			_logger.info("Investigating destination table, executing SQL Statement: "+destSql);
 			if (_progressDialog != null)
 				_progressDialog.setState("Checking dest table, SQL: "+destSql);
@@ -514,7 +548,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			valuesStr += ")";
 			
 			// Build insert SQL
-			String insertSql = "insert into " + _cmdParams._table + columnStr + valuesStr;
+			String insertSql = "insert into " + _qic + _cmdParams._table + _qic + columnStr + valuesStr;
 System.out.println("INSERT SQL: "+insertSql);
 			_logger.info("BCP INSERT SQL Statement: "+insertSql);
 

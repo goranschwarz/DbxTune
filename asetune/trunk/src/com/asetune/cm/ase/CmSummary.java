@@ -322,7 +322,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
 			"Disk read/write per second, using @@total_read, @@total_write ("+SHORT_NAME+")", // Label 
-			new String[] { "@@total_read", "@@total_write" }, 
+			new String[] { "Total (read + write)", "@@total_read", "@@total_write" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -333,7 +333,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second, using @@pack_received, @@pack_sent ("+SHORT_NAME+")", // Label 
-			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
+			new String[] { "Total (received + sent + errors)", "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
 			false, // is Percent Graph
@@ -1409,11 +1409,15 @@ extends CountersModel
 		//---------------------------------
 		if (GRAPH_NAME_AA_DISK_READ_WRITE.equals(tgdp.getName()))
 		{	
-			Double[] arr = new Double[2];
+			Double[] arr = new Double[3];
 
-			arr[0] = this.getRateValueAsDouble (0, "io_total_read");
-			arr[1] = this.getRateValueAsDouble (0, "io_total_write");
-			_logger.debug("updateGraphData(aaReadWriteGraph): io_total_read='"+arr[0]+"', io_total_write='"+arr[1]+"'.");
+			Double io_total_read  = this.getRateValueAsDouble (0, "io_total_read");
+			Double io_total_write = this.getRateValueAsDouble (0, "io_total_write");
+			
+			arr[0] = io_total_read + io_total_write;
+			arr[1] = io_total_read;
+			arr[2] = io_total_write;
+			_logger.debug("updateGraphData(aaReadWriteGraph): total='"+arr[0]+"', io_total_read='"+arr[1]+"', io_total_write='"+arr[2]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -1424,12 +1428,17 @@ extends CountersModel
 		//---------------------------------
 		if (GRAPH_NAME_AA_NW_PACKET.equals(tgdp.getName()))
 		{	
-			Double[] arr = new Double[3];
+			Double[] arr = new Double[4];
 
-			arr[0] = this.getRateValueAsDouble (0, "pack_received");
-			arr[1] = this.getRateValueAsDouble (0, "pack_sent");
-			arr[2] = this.getRateValueAsDouble (0, "packet_errors");
-			_logger.debug("updateGraphData(aaPacketGraph): packet_errors='"+arr[0]+"', total_errors='"+arr[1]+"', packet_errors='"+arr[2]+"'.");
+			Double pack_received = this.getRateValueAsDouble (0, "pack_received");
+			Double pack_sent     = this.getRateValueAsDouble (0, "pack_sent");
+			Double packet_errors = this.getRateValueAsDouble (0, "packet_errors");
+
+			arr[0] = pack_received + pack_sent + packet_errors;
+			arr[1] = pack_received;
+			arr[2] = pack_sent;
+			arr[3] = packet_errors;
+			_logger.debug("updateGraphData(aaPacketGraph): total='"+arr[0]+"', pack_received='"+arr[1]+"', pack_sent='"+arr[2]+"', packet_errors='"+arr[3]+"'.");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);

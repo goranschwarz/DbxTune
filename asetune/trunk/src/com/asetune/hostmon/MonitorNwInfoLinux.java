@@ -1,5 +1,7 @@
 package com.asetune.hostmon;
 
+import com.asetune.utils.Configuration;
+
 public class MonitorNwInfoLinux
 extends MonitorNwInfo
 {
@@ -31,11 +33,11 @@ extends MonitorNwInfo
 	
 	public MonitorNwInfoLinux()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorNwInfoLinux(int utilVersion)
+	public MonitorNwInfoLinux(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -52,7 +54,7 @@ extends MonitorNwInfo
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

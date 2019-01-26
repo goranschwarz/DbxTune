@@ -117,7 +117,7 @@ set classpath=%classpath%;%SQLW_HOME%\lib\autocomplete.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\rstaui.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jcommon-1.0.21.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\jfreechart-1.0.17.jar
-set classpath=%classpath%;%SQLW_HOME%\lib\juniversalchardet-1.0.3.jar
+set classpath=%classpath%;%SQLW_HOME%\lib\juniversalchardet-2.3.0.jar
 set classpath=%classpath%;%SQLW_HOME%\lib\DDLGen.jar
 
 set classpath=%classpath%;%SQLW_HOME%\lib\SwingBox-bin.jar

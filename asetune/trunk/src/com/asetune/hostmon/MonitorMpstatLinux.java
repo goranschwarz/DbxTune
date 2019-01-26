@@ -13,11 +13,11 @@ extends MonitorMpstat
 	
 	public MonitorMpstatLinux()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorMpstatLinux(int utilVersion)
+	public MonitorMpstatLinux(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -34,7 +34,7 @@ extends MonitorMpstat
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

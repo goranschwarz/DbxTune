@@ -1434,8 +1434,11 @@ public class OverviewServlet extends HttpServlet
 
 		
 		out.println("</div>");
-		out.println("</body>");
+
+		// Write some JavaScript code
+		out.println(HtmlStatic.getJavaScriptAtEnd(true));
 		
+		out.println("</body>");
 		out.println("</html>");
 		out.flush();
 		out.close();

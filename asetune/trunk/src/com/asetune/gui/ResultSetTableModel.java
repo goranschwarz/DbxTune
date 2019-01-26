@@ -181,7 +181,9 @@ public class ResultSetTableModel
 		try { maxDisplaySize = Integer.parseInt( System.getProperty("ResultSetTableModel.maxDisplaySize", Integer.toString(maxDisplaySize)) ); }
 		catch (NumberFormatException ignore) {};
 
-//		ResultSetMetaData rsmd = rs.getMetaData();
+		if (rsmd == null)
+			rsmd = rs.getMetaData();
+
 		_numcols = rsmd.getColumnCount() + 1;
 		_classType = new Class[_numcols + (_showRowNumber ? 1 : 0)];
 
@@ -302,6 +304,7 @@ public class ResultSetTableModel
 		//---------------------------------------------------
 			
 		_readCount = 0;
+		int readReportMod = 1; // start at 1, max value at 100  (in the begining print report often, then report after every 100 row)
 		int rowCount = 0;
 		while(rs.next())
 		{
@@ -337,8 +340,14 @@ public class ResultSetTableModel
 			_readCount++;
 			if (progress != null)
 			{
-				if ( (_readCount % 100) == 0 )
+				if ( (_readCount % readReportMod) == 0 )
+				{
 					progress.setState(originProgressState + " row "+_readCount);
+
+					// In the begining report OFTEN, but after 100 record, report only every 100 row read
+					if (_readCount > 100)
+						readReportMod =  100;
+				}
 			}
 
 			// read any eventual SQLWarnings that is part of the row

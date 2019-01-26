@@ -84,7 +84,7 @@ set classpath=%classpath%;%PERF_DEMO_HOME%\lib\commons-cli-1.4.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\proxy-vole_20131209.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\ganymed-ssh2-build251beta1.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\antlr-4.0-complete.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\juniversalchardet-1.0.3.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\juniversalchardet-2.3.0.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\DDLGen.jar
 
 rem --- echo %CLASSPATH%

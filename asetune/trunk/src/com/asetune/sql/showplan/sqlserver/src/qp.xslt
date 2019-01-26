@@ -587,20 +587,33 @@
         <xsl:when test="s:CursorPlan/@CursorActualType"><xsl:value-of select="s:CursorPlan/@CursorActualType" /></xsl:when>
         <xsl:when test="@OperationType"><xsl:value-of select="@OperationType" /></xsl:when>
         <xsl:when test="s:IndexScan/@Lookup">KeyLookup</xsl:when>
+        <xsl:when test="s:IndexScan/@Storage = 'ColumnStore'">ColumnStoreIndexScan</xsl:when>
+        <xsl:when test="s:ScalarInsert/s:Object/@Storage = 'ColumnStore'">ColumnStoreIndexInsert</xsl:when>
+        <xsl:when test="s:Update/s:Object/@Storage = 'ColumnStore'">ColumnStoreIndex<xsl:value-of select="@LogicalOp" /></xsl:when>
         <xsl:when test="s:TableValuedFunction">TableValuedFunction</xsl:when>
         <!-- Use the physical operation to determine icon if it is present. -->
         <xsl:when test="@PhysicalOp"><xsl:value-of select="translate(@PhysicalOp, ' ', '')" /></xsl:when>
         <!-- Matches all statements. -->
         <xsl:when test="local-name() = 'StmtSimple'">Statement</xsl:when>
         <xsl:when test="local-name() = 'StmtCursor'">StmtCursor</xsl:when>
+        <xsl:when test="local-name() = 'StmtCond'">StmtCond</xsl:when>
         <!-- Fallback - show the Bitmap icon. -->
         <xsl:otherwise>Catchall</xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="executionMode">
+      <xsl:choose>
+        <xsl:when test="s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualExecutionMode">
+          <xsl:value-of select="s:RunTimeInformation/s:RunTimeCountersPerThread/@ActualExecutionMode" />
+        </xsl:when>
+        <xsl:otherwise><xsl:value-of select="@EstimatedExecutionMode" /></xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
     <xsl:element name="div">
       <xsl:attribute name="class">qp-icon-<xsl:value-of select="$iconName" /></xsl:attribute>
       <xsl:if test="s:Warnings or s:QueryPlan/s:Warnings"><div class="qp-iconwarn" /></xsl:if>
       <xsl:if test="@Parallel='1' or @Parallel='true'"><div class="qp-iconpar" /></xsl:if>
+      <xsl:if test="$executionMode='Batch'"><div class="qp-iconbatch" /></xsl:if>
     </xsl:element>
   </xsl:template>
 
@@ -611,6 +624,8 @@
   The following section contains templates used to determine the first (main) label for a node.
   -->
 
+  <xsl:template match="s:RelOp[s:ScalarInsert/s:Object/@Storage='ColumnStore']" mode="NodeLabel">Columnstore Index Insert</xsl:template>
+  <xsl:template match="s:RelOp[s:Update/s:Object/@Storage='ColumnStore']" mode="NodeLabel">Columnstore Index <xsl:value-of select="@LogicalOp"/></xsl:template>
   <xsl:template match="s:RelOp[s:IndexScan]" mode="NodeLabel">
     <xsl:choose>
       <xsl:when test="s:IndexScan/@Storage='ColumnStore'">Columnstore Index Scan</xsl:when>

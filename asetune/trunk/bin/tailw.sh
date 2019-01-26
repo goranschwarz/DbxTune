@@ -70,7 +70,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jcommon-1.0.21.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jfreechart-1.0.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/antlr-4.0-complete.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-1.0.3.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/juniversalchardet-2.3.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/DDLGen.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/bcprov-jdk15on-157.jar
 

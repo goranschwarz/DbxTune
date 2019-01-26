@@ -3,10 +3,12 @@ package com.asetune.hostmon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Map;
@@ -71,6 +73,10 @@ implements Runnable
 	/** What version is the OS utility of, that is if the OS has different versions of the utility that has different number of columns etc */
 	private int _utilVersion = -1;
 
+	/** What "extra information" does the OS utility has... */
+	private String        _utilExtraInfoStr  = "";
+	private Configuration _utilExtraInfoConf = Configuration.emptyConfiguration();
+
 	private OsVendor _osVendor   = OsVendor.NotSet;
 
 	static
@@ -85,11 +91,12 @@ implements Runnable
 	/**
 	 * Implicitly called by any that extends this class
 	 */
-	public HostMonitor(int utilVersion)
+	public HostMonitor(int utilVersion, String utilExtraInfo)
 	{
-		_utilVersion = utilVersion;
+		setUtilVersion(utilVersion);
+		setUtilExtraInfoStr(utilExtraInfo);
 		
-		setMetaData( createMetaData(_utilVersion) );
+		setMetaData( createMetaData(getUtilVersion(), getUtilExtraInfoConf()) );
 		
 		_sampleHolder = new OsTableSampleHolder(getMetaData());
 		_currentSample = new OsTable(getMetaData());
@@ -125,6 +132,47 @@ implements Runnable
 		return _utilVersion;
 	}
 	
+	public void setUtilExtraInfoStr(String utilExtraInfoStr)
+	{
+		if (_logger.isDebugEnabled())
+			_logger.debug("setUtilExtraInfoStr(): utilExtraInfoStr=|"+utilExtraInfoStr+"|.");
+
+		if (StringUtil.isNullOrBlank(utilExtraInfoStr))
+			return;
+		
+		_utilExtraInfoStr  = utilExtraInfoStr;
+		setUtilExtraInfoConf(null);
+
+		try
+		{
+			Configuration conf = new Configuration();
+			InputStream stream = new ByteArrayInputStream(utilExtraInfoStr.getBytes(StandardCharsets.UTF_8));
+			conf.load(stream);
+			
+			setUtilExtraInfoConf(conf);
+		}
+		catch (IOException ex) 
+		{
+			_logger.info("Problems converting the 'utilExtraInfoStr' String to a property. utilExtraInfoStr=|"+utilExtraInfoStr+"|. Continuing... Configuration object will just be empty." );
+		}
+	}
+	public void setUtilExtraInfoConf(Configuration utilExtraInfo)
+	{
+		_utilExtraInfoConf = utilExtraInfo;
+	}
+
+	public String getUtilExtraInfoStr()
+	{
+		return _utilExtraInfoStr;
+	}
+
+	public Configuration getUtilExtraInfoConf()
+	{
+		if (_utilExtraInfoConf == null)
+			return Configuration.EMPTY_CONFIGURATION;
+		return _utilExtraInfoConf;
+	}
+
 	/** is this monitor connected to the passed vendor ? */
 	public boolean isConnectedToVendor(OsVendor vendor)
 	{
@@ -264,13 +312,14 @@ implements Runnable
 	 * }
 	 * </pre>
 	 * Override this method by any subclass that implements a HostMonitor 
+	 * @param utilExtraInfoConf 
 	 * @return
 	 */
-	abstract public HostMonitorMetaData createMetaData(int utilVersion);
+	abstract public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfoConf);
 
 	public HostMonitorMetaData createMetaData()
 	{
-		return createMetaData(getUtilVersion());		
+		return createMetaData(getUtilVersion(), getUtilExtraInfoConf());		
 	}
 
 	/** Get what the SQL and Parse columns looks like */

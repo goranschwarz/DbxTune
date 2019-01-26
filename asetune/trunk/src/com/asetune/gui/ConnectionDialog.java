@@ -7213,6 +7213,7 @@ if ( ! jdbcSshTunnelUse )
 //					tds._osMonSavePassword  = _hostmonOptionSavePwd_chk.isSelected();
 //					tds._osMonHost          = _hostmonHost_txt         .getText();
 //					tds._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
+//					tds._osMonKeyFile       = _hostmonKeyFile_txt      .getText();
 //				}
 //
 //				if (tds._dbxtuneOptRecordSession)
@@ -7318,6 +7319,7 @@ if ( ! jdbcSshTunnelUse )
 			entry._osMonSavePassword  = _hostmonOptionSavePwd_chk.isSelected();
 			entry._osMonHost          = _hostmonHost_txt         .getText();
 			entry._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
+			entry._osMonKeyFile       = _hostmonKeyFile_txt      .getText();
 		}
 
 		if (entry._dbxtuneOptRecordSession)
@@ -7380,6 +7382,7 @@ if ( ! jdbcSshTunnelUse )
 			_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
 			_hostmonHost_txt         .setText(    entry._osMonHost);
 			_hostmonPort_txt         .setText(    entry._osMonPort+"");
+			_hostmonKeyFile_txt      .setText(    entry._osMonKeyFile);
 		}
 
 		if (entry._dbxtuneOptRecordSession)
@@ -7478,6 +7481,7 @@ if ( ! jdbcSshTunnelUse )
 //						_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
 //						_hostmonHost_txt         .setText(    entry._osMonHost);
 //						_hostmonPort_txt         .setText(    entry._osMonPort+"");
+//						_hostmonKeyFile_txt      .setText(    entry._osMonKeyFile);
 //					}
 //
 //					if (entry._dbxtuneOptRecordSession)

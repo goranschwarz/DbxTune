@@ -3,11 +3,13 @@
  */
 package com.asetune.utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,15 +28,21 @@ import java.util.regex.Pattern;
 
 import javax.swing.JComboBox;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.log4j.Logger;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.bootstrap.DOMImplementationRegistry;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSOutput;
+import org.w3c.dom.ls.LSSerializer;
 import org.xml.sax.InputSource;
-
-import com.sun.org.apache.xml.internal.serialize.OutputFormat;
-import com.sun.org.apache.xml.internal.serialize.XML11Serializer;
 
 /**
  * A String utility class.
@@ -1913,8 +1921,14 @@ public class StringUtil
 		return false;
 	}
 
-	public static String xmlFormat(String xml)
-	{
+//	public static String xmlFormat(String xml)
+//	{
+//		// If the first chars in XML starts with strange chars... remove them... 
+//		String firstChars = xml.substring(0, 40).toLowerCase();
+//		int xmlStart = firstChars.indexOf("<?xml");
+//		if (xmlStart > 0)
+//			xml = xml.substring(xmlStart);
+//
 //		try
 //		{
 //			final InputSource src = new InputSource(new StringReader(xml));
@@ -1936,19 +1950,90 @@ public class StringUtil
 //		{
 //			throw new RuntimeException(e);
 //		}
+//		try
+//		{
+//			final InputSource src = new InputSource(new StringReader(xml));
+//			final Node document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src).getDocumentElement();
+//
+//			// the last parameter sets indenting/pretty-printing to true:
+//			OutputFormat outputFormat = new OutputFormat("WHATEVER", "UTF-8", true);
+//			// line width = 0 means no line wrapping:
+//			outputFormat.setLineWidth(0);
+//			StringWriter sw = new StringWriter();
+//			XML11Serializer writer = new XML11Serializer(sw, outputFormat);
+//			writer.serialize((Element) document);
+//			return sw.toString();
+//		}
+//		catch (Exception e)
+//		{
+//			throw new RuntimeException(e);
+//		}
+//	}
+	
+	/**
+	 * Try to format the XML...
+	 * 
+	 * @param xml
+	 * @return
+	 */
+	public static String xmlFormat(String xml)
+	{
+		// If the first chars in XML starts with strange chars... remove them... 
+		String firstChars = xml.substring(0, 40).toLowerCase();
+		int xmlStart = firstChars.indexOf("<?xml");
+		if (xmlStart > 0)
+			xml = xml.substring(xmlStart);
+		
+//		return prettyFormat1(xml, 2);
+		return prettyFormat2(xml);
+	}
+
+	// https://www.journaldev.com/71/java-xml-formatter-document-xml
+	private static String prettyFormat1(String inputStr, int indentSize)
+	{
+		Source xmlInput = new StreamSource(new StringReader(inputStr));
+		StringWriter stringWriter = new StringWriter();
 		try
 		{
-			final InputSource src = new InputSource(new StringReader(xml));
+			TransformerFactory transformerFactory = TransformerFactory.newInstance();
+			Transformer transformer = transformerFactory.newTransformer();
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+//			transformer.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "yes");
+//			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", String.valueOf(indentSize));
+			transformer.transform(xmlInput, new StreamResult(stringWriter));
+
+			String retStr = stringWriter.toString().trim();
+			return retStr;
+		}
+		catch (Exception e)
+		{
+			throw new RuntimeException(e);
+		}
+	}	
+	private static String prettyFormat2(String inputStr)
+	{
+		try
+		{
+			final Boolean keepDeclaration = Boolean.valueOf(inputStr.startsWith("<?xml"));
+			
+			final InputSource src = new InputSource(new StringReader(inputStr));
 			final Node document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(src).getDocumentElement();
 
-			// the last parameter sets indenting/pretty-printing to true:
-			OutputFormat outputFormat = new OutputFormat("WHATEVER", "UTF-8", true);
-			// line width = 0 means no line wrapping:
-			outputFormat.setLineWidth(0);
-			StringWriter sw = new StringWriter();
-			XML11Serializer writer = new XML11Serializer(sw, outputFormat);
-			writer.serialize((Element) document);
-			return sw.toString();
+			final DOMImplementationLS dom =(DOMImplementationLS) DOMImplementationRegistry.newInstance().getDOMImplementation("LS");
+			final LSSerializer serializer = dom.createLSSerializer();
+			serializer.setNewLine("\n");
+			serializer.getDomConfig().setParameter("format-pretty-print", Boolean.TRUE); // Set this to true if the output needs to be beautified.
+			serializer.getDomConfig().setParameter("xml-declaration", keepDeclaration); // Set this to true if the declaration is needed to be in the output.
+			final LSOutput destination = dom.createLSOutput();
+			destination.setEncoding(StandardCharsets.UTF_8.name());
+
+			final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			destination.setByteStream(bos);
+			serializer.write(document, destination);
+			
+			//return bos.toString();
+			return bos.toString(StandardCharsets.UTF_8.name());
 		}
 		catch (Exception e)
 		{

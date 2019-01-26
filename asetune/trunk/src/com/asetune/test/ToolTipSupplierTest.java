@@ -3,6 +3,8 @@ package com.asetune.test;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.MouseEvent;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -139,6 +141,10 @@ public class ToolTipSupplierTest extends JFrame
 			"<A HREF=\"http://www.dn.se\">http://www.dn.se</A>" +
 			"<br>" +
 
+			"<h3>DN - In External Browser</h3>" +
+			"<A HREF=\"EXTERNAL-BROWSER:http://www.dn.se\">http://www.dn.se</A>" +
+			"<br>" +
+
 			"<h3>gorans</h3>" +
 			"<A HREF=\"http://gorans.org\">http://gorans.org</A>" +
 			"<br>";
@@ -156,12 +162,29 @@ public class ToolTipSupplierTest extends JFrame
 		public ResolverReturn hyperlinkResolv(HyperlinkEvent event)
 		{
 			String desc = event.getDescription();
+			System.out.println("");
+			System.out.println("##################################################################################");
 			System.out.println("hyperlinkResolv(): event.getDescription()  ="+event.getDescription());
 			System.out.println("hyperlinkResolv(): event.getURL()          ="+event.getURL());
 			System.out.println("hyperlinkResolv(): event.getEventType()    ="+event.getEventType());
 			System.out.println("hyperlinkResolv(): event.getSourceElement()="+event.getSourceElement());
 			System.out.println("hyperlinkResolv(): event.getSource()       ="+event.getSource());
 			System.out.println("hyperlinkResolv(): event.toString()        ="+event.toString());
+
+			if (desc.startsWith("EXTERNAL-BROWSER:"))
+			{
+				try
+				{
+					String urlStr = desc.substring("EXTERNAL-BROWSER:".length());
+					URL url = new URL(urlStr);
+					return new ResolverReturn(event, url, ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER);
+				}
+				catch (MalformedURLException e)
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 
 			if (desc.endsWith(".pdf"))
 			{

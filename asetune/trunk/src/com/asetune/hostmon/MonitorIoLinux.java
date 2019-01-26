@@ -11,13 +11,20 @@ extends MonitorIo
 {
 	private static Logger _logger = Logger.getLogger(MonitorIoLinux.class);
 
+	public static String getUtilExtraInfoCommand()
+	{
+		// Get number of columns from iostat (version is sometimes "off")
+		return "ioStatColCount=$(iostat -xdk | grep 'Device:' | wc -w); echo \"ioStatColCount=${ioStatColCount}\"";
+	}
+	
+	
 	public MonitorIoLinux()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorIoLinux(int utilVersion)
+	public MonitorIoLinux(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -42,10 +49,24 @@ extends MonitorIo
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());
+
+		int extraInfo_ioStatColCount = utilExtraInfo.getIntProperty("ioStatColCount", -1);
+
+		int ioStatColCount = -1;
+		if (extraInfo_ioStatColCount > 0)
+		{
+			ioStatColCount = extraInfo_ioStatColCount;
+		}
+		else
+		{
+//			if ( utilVersion >= VersionShort.toInt(9,0,4) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
+			if ( utilVersion >= VersionShort.toInt(9,1,2) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
+				ioStatColCount = 14;
+		}
 
 		// Device:         rrqm/s   wrqm/s     r/s     w/s   rsec/s   wsec/s avgrq-sz avgqu-sz   await  svctm  %util
 		// sda               0.02     1.49    0.16    0.95     3.27    19.52    20.57     0.04   36.29   2.10   0.23
@@ -68,12 +89,10 @@ extends MonitorIo
 		// Also with this version, tickless CPUs will no longer be displayed as offline processors, but as 100% idle ones.
 
 //System.out.println("MonitorIoLinux.createMetaData(utilVersion="+utilVersion+")");
-		_logger.info("When creating meta data for Linux 'iostat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+").");
+		_logger.info("When creating meta data for Linux 'iostat', initializing it using utility version "+VersionShort.toStr(utilVersion)+" (intVer="+utilVersion+"), extraInfo_ioStatColCount="+extraInfo_ioStatColCount+", ioStatColCount="+ioStatColCount+".");
 		_logger.debug("MonitorIoLinux.createMetaData(utilVersion="+utilVersion+")");
 
-//System.out.println("Linux-IOSTAT: utilVersion="+utilVersion+", VersionShort.toInt(9,1,2)="+VersionShort.toInt(9,1,2));
-		if ( utilVersion >= VersionShort.toInt(9,1,2) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
-//		if ( utilVersion >= VersionShort.toInt(9,0,4) || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
+		if ( ioStatColCount >= 14 || utilVersion == -1) // -1 is not defined or "offline" mode... so choose the type with most columns (in the future might save the utilVersion in the offline database)
 		{
 			md.addStrColumn( "device",            1,  1, false,   30, "Disk device name");
 			md.addIntColumn( "samples",           2,  0, true,        "Number of 'sub' sample entries of iostat this value is based on");

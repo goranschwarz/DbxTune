@@ -251,6 +251,7 @@ public class SqlParam
 		detector.handleData(ba, 0, ba.length);
 		detector.dataEnd();
 		String encoding = detector.getDetectedCharset();
+		detector.reset();
 
 		// Convert it into a string using the file encoding
 		if (encoding == null)
@@ -307,6 +308,7 @@ public class SqlParam
 				detector.handleData(ba, 0, ba.length);
 				detector.dataEnd();
 				String encoding = detector.getDetectedCharset();
+				detector.reset();
 				
 				ContentInfoUtil util = new ContentInfoUtil();
 				ContentInfo info = util.findMatch( firstChunk );
