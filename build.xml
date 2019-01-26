@@ -70,7 +70,7 @@
 		<mkdir dir="${build}"/>
 
 		<!-- Compile the java code from ${src} into ${build} -->
-		<javac source="1.7" target="1.7" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
+		<javac source="1.8" target="1.8" srcdir="${src}" destdir="${build}" debug="on" includeantruntime="false">
 			<classpath refid="project.class.path"/>
 		</javac>
 
