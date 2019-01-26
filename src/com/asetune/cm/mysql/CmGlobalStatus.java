@@ -774,3 +774,67 @@ extends CountersModel
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 }
+
+
+/*
+** We might want to take a look at the following counters
+**
+
+From youtube (MySQL Performance Tuning Part 1, MySQL Configuration): speedemy.com
+
+Com_begin
+Com_commit
+Com_delete
+Com_insert
+Com_select
+Com_update
+
+Created_tmp_disk_tables
+Created_tmp_tables
+
+Handler_read_first
+Handler_read_key
+Handler_read_next
+Handler_read_prev
+Handler_read_rnd_next
+
+
+Innodb_buffer_pool_page_flushed 		- Number of pages flushed from buffer pool
+Innodb_buffer_pool_reads		 		- Number of Disk IO calls to read into the buffer pool
+Innodb_data_fsyncs						- Number of fsync() calls executed
+Innodb_data_pending_{fsync|read|write}	- Guages showing a number of pending fsync, read or write calls
+
+Innodb_data_{read|write}				- Number of random read/write disk IO
+Innodb_history_list_length				- Guage - showing a number of transactions that haven't been cleaned up after
+Innodb_ibuf_merges						- Number of insert buffer merge operations. High numbers here could explain intensive IO spikes
+Innodb_log_waits						- number of times log buffers was to small
+Innodb_lsn_current						- number of bytes written to transaction log (helps to tune inoodb redo log size)
+Innodb_mutex_os_waits					- If this is high, you could be having internal mutex contention (a few 100's pr even 100 is high)
+Innodb_rows_{read|inserted|deleted|updated}	- helps you understand internal activity - number of rows read, inserted, deleted or updated
+Innodb_row_lock_time_{avg|max}			- Show how much time is spent on logical locks
+
+
+Opened_tables							- Are file caches sized properly
+Opened_table_definitions				- 
+
+
+Qcache_hits								- Qcache_hits to Com_select % hit 
+Qcache_lowmem_prunes					- 
+Qcache_inserts							- 
+
+
+Select_full_join						- Number of queries that made a table scan during a join (even if join buffer was used). Shows bad indexing.
+Select_full_range_join					- Number of joins that used a range search on reference table. Very rare
+Select_range							- very common range access pattern (FYI only)
+Select_range_check						- joins without keys, with additional key usage check each time row is read. Rare
+Select_scan								- Table scan on the first (or the only) table in the join. Shows bad indexing
+
+
+Threads_cached							- Current number of cached threads 
+Threads_connected						- Threads/users currently connected to the server
+Threads_created							- number of threads created (increase thread_cache_size if this is high)
+Threads_running							- Guage - most interesting counter of them all. Guage showing a number of threads that are currently executing inside MySQL. Doing anything from waiting to commiting data to disk. If this is spyky, you are most likely having pretty serious MySQL Performace Issues
+
+
+INNOTOP - Top like innodb centered MySQL Status monitor - github.com/innotop/innotop
+*/

@@ -451,6 +451,9 @@ public class QueryWindow
 	public static final String ACTION_RS_GENERATE_ALL_DDL       = "RS_GENERATE_ALL_DDL";
 	public static final String ACTION_RS_DUMP_QUEUE             = "RS_DUMP_QUEUE";
 	public static final String ACTION_RS_WHO_IS_DOWN            = "RS_WHO_IS_DOWN";
+	public static final String ACTION_TAB_IMPORT                = "TAB_IMPORT";
+	public static final String ACTION_TAB_EXPORT                = "TAB_EXPORT";
+	public static final String ACTION_TAB_TRANSFER              = "TAB_TRANSFER";
 	public static final String ACTION_ASE_MDA_CONFIG            = "ASE_MDA_CONFIG";
 	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
 	public static final String ACTION_ASE_APP_TRACE             = "ASE_APP_TRACE";
@@ -671,6 +674,9 @@ public class QueryWindow
 	// Tools
 	private JMenu                _tools_m                = new JMenu("Tools");
 	private JMenuItem            _toolDummy_mi           = new JMenuItem("Dummy entry");
+	private JMenuItem            _toolTableImport_mi     = new JMenuItem("Import Data");
+	private JMenuItem            _toolTableExport_mi     = new JMenuItem("Export Data");
+	private JMenuItem            _toolTableTransfer_mi   = new JMenuItem("Transfer Data");
 	private JMenuItem            _aseMdaConfig_mi        = new JMenuItem("Monitor/MDA Configuration...");
 	private JMenuItem            _aseCaptureSql_mi       = new JMenuItem("Capture SQL...");
 	private JMenuItem            _aseAppTrace_mi         = new JMenuItem("ASE Application Tracing...");
@@ -1262,18 +1268,24 @@ public class QueryWindow
 	
 			// TOOLS
 			_tools_m.add(_toolDummy_mi);
+			_tools_m.add(_toolTableImport_mi);
+			_tools_m.add(_toolTableExport_mi);
+			_tools_m.add(_toolTableTransfer_mi);
 			_tools_m.add(_aseMdaConfig_mi);
 			_tools_m.add(_aseCaptureSql_mi);
 			_tools_m.add(_aseAppTrace_mi);
 			_tools_m.add(_asePlanViewer_mi);
 			_tools_m.add(_aseDdlGen_mi);
 
-			_toolDummy_mi    .setVisible(false);
-			_aseMdaConfig_mi .setVisible(false);
-			_aseCaptureSql_mi.setVisible(false);
-			_aseAppTrace_mi  .setVisible(false);
-			_asePlanViewer_mi.setVisible(false);
-			_aseDdlGen_mi    .setVisible(false);
+			_toolDummy_mi        .setVisible(false);
+			_toolTableImport_mi  .setVisible(true);
+			_toolTableExport_mi  .setVisible(true);
+			_toolTableTransfer_mi.setVisible(true);
+			_aseMdaConfig_mi     .setVisible(false);
+			_aseCaptureSql_mi    .setVisible(false);
+			_aseAppTrace_mi      .setVisible(false);
+			_asePlanViewer_mi    .setVisible(false);
+			_aseDdlGen_mi        .setVisible(false);
 
 			
 			_file_m .setMnemonic(KeyEvent.VK_T);
@@ -1370,6 +1382,9 @@ public class QueryWindow
 			_rs_configChangedDdl_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/repserver_config.png"));
 			_rs_dumpQueue_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/view_rs_queue.png"));
 			_rsWhoIsDown_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/rs_admin_who_is_down.png"));
+			_toolTableImport_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_import.png"));
+			_toolTableExport_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_export.png"));
+			_toolTableTransfer_mi  .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_transfer.png"));
 			_aseMdaConfig_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 			_aseCaptureSql_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 			_aseAppTrace_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
@@ -1407,6 +1422,9 @@ public class QueryWindow
 			_rs_configAllDdl_mi         .setActionCommand(ACTION_RS_GENERATE_ALL_DDL);
 			_rs_dumpQueue_mi            .setActionCommand(ACTION_RS_DUMP_QUEUE);
 			_rsWhoIsDown_mi             .setActionCommand(ACTION_RS_WHO_IS_DOWN);
+			_toolTableImport_mi         .setActionCommand(ACTION_TAB_IMPORT);
+			_toolTableExport_mi         .setActionCommand(ACTION_TAB_EXPORT);
+			_toolTableTransfer_mi       .setActionCommand(ACTION_TAB_TRANSFER);
 			_aseMdaConfig_mi            .setActionCommand(ACTION_ASE_MDA_CONFIG);
 			_aseCaptureSql_mi           .setActionCommand(ACTION_ASE_CAPTURE_SQL);
 			_aseAppTrace_mi             .setActionCommand(ACTION_ASE_APP_TRACE);
@@ -1442,6 +1460,9 @@ public class QueryWindow
 			_rs_configAllDdl_mi      .addActionListener(this);
 			_rs_dumpQueue_mi         .addActionListener(this);
 			_rsWhoIsDown_mi          .addActionListener(this);
+			_toolTableImport_mi      .addActionListener(this);
+			_toolTableExport_mi      .addActionListener(this);
+			_toolTableTransfer_mi    .addActionListener(this);
 			_aseMdaConfig_mi         .addActionListener(this);
 			_aseCaptureSql_mi        .addActionListener(this);
 			_aseAppTrace_mi          .addActionListener(this);
@@ -2862,6 +2883,15 @@ public class QueryWindow
 
 		if (ACTION_RS_WHO_IS_DOWN.equals(actionCmd))
 			action_rsWhoIsDown(e);
+
+		if (ACTION_TAB_IMPORT.equals(actionCmd))
+			action_tabImport(e);
+
+		if (ACTION_TAB_EXPORT.equals(actionCmd))
+			action_tabExport(e);
+
+		if (ACTION_TAB_TRANSFER.equals(actionCmd))
+			action_tabTransfer(e);
 
 		if (ACTION_ASE_MDA_CONFIG.equals(actionCmd))
 			action_aseMdaConfig(e);
@@ -5390,6 +5420,83 @@ public class QueryWindow
 			"admin health       \n" +
 			"admin who_is_down  \n", 
 			0, false);
+	}
+
+	private void action_tabImport(ActionEvent e)
+	{
+//		String msg = "<html>"
+//				+ "This will be implemented as a dialog... at some point!<br>\n"
+//				+ "<br>\n"
+//				
+//				+ "In the meantime: table data can be imported with the command '\\loadfile'<br>\n"
+//				+ "<br>\n"
+//
+//				+ "<b>Example:<b><br>\n"
+//				+ "<pre>\n"
+//				+ "\\loadfile --charset utf8 --tablename some_table filename\n"
+//				+ "</pre>\n"
+//				+ "<br>\n"
+//
+//				+ "For full syntax and switches, just execute above without any parameters.<br>\n"
+//				+ "Note: watch the console output for extra information.<br>\n"
+//				+ "</html>";
+//
+//		SwingUtils.showInfoMessage(_window, "Table Import", msg);
+		
+		TableImportDialog.showDialog(_window, this);
+	}
+
+	private void action_tabExport(ActionEvent e)
+	{
+		String msg = "<html>"
+				+ "This will be implemented as a dialog... at some point!<br>\n"
+				+ "<br>\n"
+				
+				+ "In the meantime, table data can be exported with the command 'tofile'<br>\n"
+				+ "<br>\n"
+				
+				+ "<b>Example:<b><br>\n"
+				+ "<pre>\n"
+				+ "SELECT * FROM tablename WHERE ...\n"
+				+ "go | tofile --header --charset utf8 --rfc4180 filename \n"
+				+ "</pre>\n"
+				+ "<br>\n"
+				
+				+ "For full syntax and switches, just execute the above without any parameters.<br>\n"
+				+ "Note: watch the console output for extra information.<br>\n"
+				+ "</html>";
+
+		SwingUtils.showInfoMessage(_window, "Table Export", msg);
+	}
+
+	private void action_tabTransfer(ActionEvent e)
+	{
+		String msg = "<html>"
+				+ "This will be implemented as a dialog... at some point!<br>\n"
+				+ "<br>\n"
+				
+				+ "In the meantime, table data can be transfered between DBMS servers with the command 'bcp'<br>\n"
+				+ "<br>\n"
+				
+				+ "<b>Example 1 (to Sybase/SAP ASE):<b><br>\n"
+				+ "<pre>\n"
+				+ "SELECT * FROM tablename WHERE ...\n"
+				+ "go | bcp --user sa --passwd secret --server aseHost:port \n"
+				+ "</pre>\n"
+				+ "<br>\n"
+				
+				+ "<b>Example 2 (to any JDBC URL):<b><br>\n"
+				+ "<pre>\n"
+				+ "SELECT name, ssn, address FROM person WHERE country = 'sweden'\n"
+				+ "go | bcp --user sa --passwd secret --url 'jdbc:postgresql://hostname:5432/dbname' \n"
+				+ "</pre>\n"
+				+ "<br>\n"
+
+				+ "For full syntax and switches, just execute the above without any parameters.<br>\n"
+				+ "Note: watch the console output for extra information.<br>\n"
+				+ "</html>";
+
+		SwingUtils.showInfoMessage(_window, "Table Transfer", msg);
 	}
 
 	private void action_aseMdaConfig(ActionEvent e)

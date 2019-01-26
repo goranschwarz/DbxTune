@@ -12,7 +12,8 @@
   -->
   <!-- JS: JQuery -->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
-  
+  <script type="text/javascript" src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
   <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
@@ -21,6 +22,9 @@
   <script src="/scripts/popper/1.12.9/popper.min.js"></script>
   <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
 
+  <!-- JS: Selectize -->
+  <script src="/scripts/selectize/js/standalone/selectize.js"></script>
+  
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
 
@@ -38,6 +42,12 @@
   <!-- CSS: Font Awsome -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 
+  <!-- CSS: Selectize -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css"> -->
+  <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.bootstrap3.css"> -->
+  <link rel="stylesheet" href="/scripts/selectize/css/selectize.default.css">
+ 
   <!-- Local CSS -->
   <style type='text/css'>
     /* table {border-collapse: collapse;}
@@ -58,7 +68,23 @@
       /* background-color: rgb(255, 195, 83); */
       background-color: rgba(255, 195, 83, 0.5);
     }
+	.dbx-topHr {
+		border-top: 1px solid black;
+		margin-bottom:6px;
+	}
     
+	/* selectize selected items */
+	.ui-sortable-handle {
+		width: 100%;
+	}
+	.selectize-dropdown, .selectize-dropdown.form-control{
+		height: 35vh !important;
+	}
+	.selectize-dropdown-content{
+		max-height: 100% !important;
+		height: 100% !important;
+	}
+
   </style>
 
 </head>
@@ -84,10 +110,31 @@
           <a class="nav-link" href="/desktop_app.html">Desktop App</a>
         </li>
       </ul>
+	  <!-- on the right hand side of the menu... -->
+      <ul class="navbar-nav">
+	    <!-- IS LOGGED IN -->
+        <div id="dbx-nb-isLoggedIn-div" style="display: none;">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+            <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
+            </div>
+          </li>
+        </div>
+	    <!-- IS LOGGED OUT -->
+        <div id="dbx-nb-isLoggedOut-div">
+          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+        </div>
+      </ul> <!-- end right hand side -->
     </div>
   </nav>
   
-  <!-- Basic info + "QUICK ACCESS" buttons to server graphs... -->
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Basic info + "QUICK ACCESS" buttons to server graphs...
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
   <main role="main" class="container">
     <div class="jumbotron">
       <h1>DbxTune - Central</h1>
@@ -96,27 +143,177 @@
       <!-- <p class="lead">DbxTune Central is the component where all DbxTune collectors can send summary data so it can be easely viewed...</p> -->
       <p><img id="example-graph" src="images/dbxcentral_graph_example.png" alt="Example Graph"></p>
       <p align="right"><font size="-2">Support for: Sybase/SAP: ASE, IQ, <i>RS, RAX, MS SQL-Server, Postgres, MySQL, DB2, Oracle, SAP HANA</i></font></p>
-      <a class="btn btn-lg btn-primary" href="/graph.html" role="button">View charts &raquo;</a>
+<!--      <a class="btn btn-lg btn-primary" href="/graph.html" role="button">View charts &raquo;</a>-->
+<!--      <a class="btn btn-lg btn-primary" role="button" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</a>-->
+      <button type="button" class="btn btn-lg btn-primary btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">View charts &raquo;</button>
+
+
       &nbsp;&nbsp;&nbsp;<span id="dbx-alarm-cnt">0</span> Active Alams<span id="dbx-alarm-srv-cnt">, in 0 Servers.</span> <span id="dbx-alarm-age">0</span> seconds ago. Click <a href='?refresh=60'>here</a> to refresh every 60 seconds
       <p></p>
-      Quick access list
+      <p>
+        <input type="checkbox" name="dbx-openInNewTab-chk" id="dbx-openInNewTab-chk" checked> Open Below Graphs in a new Tab<br>
+        <input type="checkbox" name="dbx-subscribe-chk"    id="dbx-subscribe-chk"    checked> Automatically Update Graphs when new data arrives from Collectors<br>
+		 Display Last <input type="text" name="dbx-hours-txt" id="dbx-hours-txt" style="height:20px;width:30px" size="3" value="2"> Hours when Opening Graphs<br>
+	  </p>
+	  
+      &raquo; Quick access list (show system selected graphs)
       <div id="dbx-quick-access-server-list">
         <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
       </div>
-      Quick access list (show all available graphs)
+      &raquo; Quick access list (show all available graphs)
       <div id="dbx-quick-access-server-all-list">
         <a class="btn btn-sm btn-primary mb-2" href="/graph.html?subscribe=true&startTime=2h&sessionName=DUMMY_ASE&graphList=all" role="button">Loading server list <i class='fa fa-spinner fa-spin '></i></a>
       </div>
-      Profiles
+      &raquo; Profiles
       <div id="dbx-quick-access-profile-list">
-        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>
+<!--        <a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" title="Open a dialog where you can create 'Profiles', which will be displayed to the left of this button." href="/admin/new-profile" role="button">New Profile...</a>-->
+        <button type="button" class="btn btn-sm btn-primary mb-2 btn-ok" data-toggle="modal" data-backdrop="static" data-target="#dbx-choose-graphs-dialog">New Profile...</button>
       </div>
       <!-- Error message: browser support -->
       <div id="browser-not-supported"></div>
     </div>
   </main>
 
+  
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: Choose Graphs to Display
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+  <div class="modal fade" id="dbx-choose-graphs-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-choose-graphs-dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dbx-choose-graphs-dialog-title">Choose Graphs to Display</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Choose any Server(s) and Graph(s) you want to view
+          <ul>
+            <li><b>Add Graphs</b> - Click the 'Add...' button, or select the input field, then type what you search for...<br>
+              &rarr; You can use many words; like: <code>servername category etc...</code>
+            </li>
+            <li><b>Remove a graph</b> - Simply press the 'x' on the Graph Item</li>
+            <li><b>Reorder graph display order</b> - Do <i>drag & drop</i></li>
+          </ul>
 
+          <input type="text" id="dbx-choose-graphs-input" class="demo-default" placeholder="Type to Search...">
+          <span id="dbx-choose-graphs-dialog-select-cnt">X</span> Graphs selected, <span id="dbx-choose-graphs-dialog-available-cnt">Y</span> available Graphs
+          <span>
+            <button type="button" class="btn btn-default btn-sm btn-add">Add...</button>
+            <button type="button" class="btn btn-default btn-sm btn-clear">Clear</button>
+          </span>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary mr-auto btn-saveAsProfile" id="dbx-saveAsProfile-btn" data-toggle="modal" data-backdrop="static" data-target="#dbx-saveAsNewProfile-dialog">Save as new Profile...</button>
+
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary btn-ok">View Graphs</button>
+        </div>
+      </div>
+    </div>
+  </div>  
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: Save as new Profile (called from "Choose Graphs to Display")
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+  <div class="modal fade" id="dbx-saveAsNewProfile-dialog" tabindex="-1" role="dialog" aria-labelledby="dbx-saveAsNewProfile-dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <!--https://www.codeply.com/go/ryhBsmqTkB/bootstrap-4-validation-example-->
+        <!--https://mdbootstrap.com/docs/jquery/forms/validation/-->
+<!--        <form class="container needs-validation" novalidate id="dbx-saveAsNewProfile-form" onsubmit="return saveAsNewProfileSubmit();">-->
+        <form class="container needs-validation" novalidate id="dbx-saveAsNewProfile-form" onsubmit="return false;">
+          <div class="modal-header">
+            <h5 class="modal-title" id="dbx-saveAsNewProfile-dialog-title">Save as New Profile</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <b>Save current Graph Selection as a Profile, that will be visible at the start page</b>
+            <br>
+			<br>
+
+            <div class="form-group">
+              <label class="form-control-label" for="dbx-fld-profileName">Profile Name</label>
+              <input type="text" class="form-control" name="profileName" id="dbx-fld-profileName" placeholder="Name of the Profile, which will be the button label" value="" required />
+              <div class="invalid-feedback">Name must be specified!</div>
+            </div>
+            <div class="form-group">
+              <label class="form-control-label" for="dbx-fld-profileDesc">Profile Descrption</label>
+              <input type="text" class="form-control" name="profileDesciption" id="dbx-fld-profileDesc" placeholder="Describe the profile, shows up in tooltip" value="" required />
+              <div class="invalid-feedback">A Description must be specified!</div>
+            </div>
+            <div class="form-group">
+              <label class="form-control-label" for="dbx-fld-urlOpt">URL Options</label>
+              <input type="text" class="form-control" name="profileUrlOptions" id="dbx-fld-urlOpt" placeholder="Other properties passed to the graph.html page, example: gcols=3" value="" />
+              <div class="valid-feedback"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary btn-ok">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>  
+
+
+  <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   - - Modal Dialog: LOGIN
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+  <div id="dbx-login-dialog" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <!--<h3><i class="fa fa-sign-in"></i> DbxCentral - Login</h3>-->
+                  <h3>DbxCentral - Login</h3>
+                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              </div>
+              <form class="form" role="form" autocomplete="off" id="dbx-login-form" novalidate="" method="POST" action="j_security_check">
+                  <div class="modal-body">
+                      <div class="form-group">
+                          <a href="" class="float-right">Create New User (not-yet-impl)</a>
+
+                          <label for="dbx-login-user-txt">Username</label>
+                          <span class="fa fa-question-circle" data-toggle="tooltip" data-placement="bottom" data-html="true" title="The default 'admin' user is <code>admin</code><br>With the password <code>ip-address</code> where DbxcCentral is running or <code>admin</code>.<br>Check DxcCentral's error log, where the password is written in case no password has been specified for the admin user, search  for ADMIN_USER_PASSWORD<br><br>But hopefully it has been changed on this system :)">&nbsp;</span>
+                          <input type="text" class="form-control" name="j_username" id="dbx-login-user-txt" required="">
+                          <div class="invalid-feedback">Oops, you missed this one.</div>
+                      </div>
+                      <div class="form-group">
+                          <a href="" class="float-right">Forgot password? (not-yet-impl)</a>
+
+                          <labelfor="dbx-login-passwd-txt">Password</label>
+                          <input type="password" class="form-control" name="j_password" id="dbx-login-passwd-txt" required="" autocomplete="new-password">
+                          <div class="invalid-feedback">Enter your password too!<br>Default 'admin' password is IP Address of the DbxCentral hostname.</div>
+                      </div>
+                      <!-- Adding a hidden submit field here, enables: submit on RETURN on any of the input fields, if fields have not been filled in, then the validation will show what's wrong -->  
+                      <input type="submit" hidden />
+
+                      <!--
+                      <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="rememberMe">
+                        <label class="custom-control-label" for="rememberMe">Remember me on this computer</label>
+                      </div>
+                      <div class="form-group py-4">
+                          <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                          <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>
+                      </div>
+                      -->
+                      <div id="dbx-loginFailed-div" class="custom-control" style="display: none;">
+                        <b><font color="red">Login failed!</font></b>
+                      </div>
+                  </div>
+                  <div class="modal-footer">
+                      <button class="btn btn-outline-secondary" data-dismiss="modal" aria-hidden="true">Cancel</button>
+                      <button type="submit" class="btn btn-success float-right" id="dbx-login-btn">Login</button>
+                  </div>
+              </form>
+          </div>
+      </div>
+  </div>
 <!-- 
 <h1>DbxTune - Central</h1>
 
@@ -144,57 +341,445 @@ List of stuff that can be done
 
 
 <script>
-  // Do we support the browser...
-  // Get version of MS: IE or Edge
-  // IE or EDGE are not supported
-  var ieVersion = detectIE();
-  if (ieVersion !== false) 
-  {
-    var browserVersion = ((ieVersion >= 12) ? 'Edge ' : 'IE ') + ieVersion;
-    document.getElementById('browser-not-supported').innerHTML = "<br><br>Current Browser: <b>" + browserVersion + "</b> isn't that well tested. If you have issues use: Chrome, Firefox or Safari";
-    if (ieVersion < 12)
-    {
-      document.getElementById('browser-not-supported').innerHTML = "<br><br><font color='red'>Current Browser: <b>" + browserVersion + "</b> is not supported. Please use Chrome, Firefox or Safari</font>";
-      // alert("Current Browser: " + browserVersion + " is not supported. Please use Chrome, Firefox or Safari");
-      // return;
-    }
-  }
+	// Do we support the browser...
+	// Get version of MS: IE or Edge
+	// IE or EDGE are not supported
+	var ieVersion = detectIE();
+	if (ieVersion !== false) 
+	{
+		var browserVersion = ((ieVersion >= 12) ? 'Edge ' : 'IE ') + ieVersion;
+		document.getElementById('browser-not-supported').innerHTML = "<br><br>Current Browser: <b>" + browserVersion + "</b> isn't that well tested. If you have issues use: Chrome, Firefox or Safari";
+		if (ieVersion < 12)
+		{
+			document.getElementById('browser-not-supported').innerHTML = "<br><br><font color='red'>Current Browser: <b>" + browserVersion + "</b> is not supported. Please use Chrome, Firefox or Safari</font>";
+			// alert("Current Browser: " + browserVersion + " is not supported. Please use Chrome, Firefox or Safari");
+			// return;
+		}
+	}
 
-  //-----------------------------------------------------------
-  // get input parameters
-  //-----------------------------------------------------------
-  var _refresh = getParameter("refresh", 300);
-  var _debug   = getParameter("debug",   0);
+	//-----------------------------------------------------------
+	// get input parameters
+	//-----------------------------------------------------------
+	var _refresh = getParameter("refresh", 300);
+	var _debug   = getParameter("debug",   0);
 
-  console.log("_refresh="+_refresh);
-  console.log("_debug="+_debug);
+	console.log("_refresh="+_refresh);
+	console.log("_debug="  +_debug);
 
-// Enable bootstrap tooltip...
-  // $(document).ready(function(){
-  //     $('[data-toggle="tooltip"]').tooltip();   
-  // });
 
-  function resizeExampleImage() {
-    // Origin size is: 378
-    var exampleImage = document.getElementById("example-graph");
-    // console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
-    if ($(window).height() >  1152) exampleImage.style.height = '';//'378px';
-    if ($(window).height() <= 1024) exampleImage.style.height = '300px';
-    if ($(window).height() <=  768) exampleImage.style.height = '200px';
-    // console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
-  }
+	function resizeExampleImage() {
+		// Origin size is: 378
+		var exampleImage = document.getElementById("example-graph");
+		// console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
+		if ($(window).height() >  1152) exampleImage.style.height = '';//'378px';
+		if ($(window).height() <= 1024) exampleImage.style.height = '300px';
+		if ($(window).height() <=  768) exampleImage.style.height = '200px';
+		// console.log("exampleImageSize="+exampleImage.style.height+", browser.height="+$(window).height());
+	}
 
-  window.addEventListener("resize", function() {
-    resizeExampleImage();
-  });
-  resizeExampleImage();
+	window.addEventListener("resize", function() {
+		resizeExampleImage();
+	});
+	resizeExampleImage();
 
-  //-----------------------------------------------------------
-  // get SERVERS
-  //-----------------------------------------------------------
+	//-----------------------------------------------------------
+	// Store/restore checkbox values
+	//-----------------------------------------------------------
+	// a key must is used for the cookie/storage
+	var storedData = getStorage('dbxtune_checkboxes_');
+
+//	$('div.check input:checkbox').bind('change',function(){
+	$('input[type=checkbox]').bind('change',function(){
+		$('#'+this.id+'txt').toggle($(this).is(':checked'));
+		// save the data on change
+		storedData.set(this.id, $(this).is(':checked')?'checked':'not');
+	}).each(function() {
+		// on load, set the value to what we read from storage:
+		var val = storedData.get(this.id);
+		if (val == 'checked') $(this).attr('checked', 'checked');
+		if (val == 'not') $(this).removeAttr('checked');
+		if (val) $(this).trigger('change');
+	});
+	// Remember TEXT fields
+	$('input[type=text]').bind('change',function(){
+		// save the data on change
+		storedData.set(this.id, $(this).val());
+	}).each(function() {
+		// on load, set the value to what we read from storage:
+		var val = storedData.get(this.id);
+		if (val){
+			$(this).val(val);
+			$(this).trigger('change');
+		}
+	});
+
+	
+	//-----------------------------------------------------------
+	// CHOOSE GRAPHS DIALOG 
+	//-----------------------------------------------------------
+	$('#dbx-choose-graphs-dialog').on('click', '.btn-add', function(e) {
+		var selectize = $('#dbx-choose-graphs-input').selectize()[0].selectize;
+		selectize.open();
+	});
+	$('#dbx-choose-graphs-dialog').on('click', '.btn-clear', function(e) {
+		var selectize = $('#dbx-choose-graphs-input').selectize()[0].selectize;
+		selectize.clear();
+		setGraphCountSelection();
+	});
+	$('#dbx-choose-graphs-dialog').on('click', '.btn-ok', function(e) {
+		var modalDiv = $(e.delegateTarget);
+//		var dbxProduct = $(this).data('recordId');
+//		console.log("#dbx-choose-graphs-dialog: dbxProduct: "+dbxProduct);
+//		modalDiv.addClass('working');
+
+		var selectize = $('#dbx-choose-graphs-input').selectize()[0].selectize;
+		var selectedItems = $.map(selectize.items, function(value) {
+			return selectize.options[value].srvGraph;
+		});
+		console.log("#dbx-choose-graphs-dialog: selectedItems: "+selectedItems, selectedItems);
+//		console.log("#dbx-choose-graphs-dialog: selectize.items: "+selectize.items, selectize.items);
+
+//		// construct JSON TO continue with: [ {srv:"...", graph:"fullGraphName1"}, {srv:"...", graph:"fullGraphName2"}, {srv:"...", graph:"fullGraphName3"}... ]
+//		var selectedJson = $.map(selectize.items, function(value) {
+//			return { graph: value };
+//		});
+//		console.log("#dbx-choose-graphs-dialog: selectedJson: "+selectedJson, selectedJson);
+
+		// Construct a new URL and open it in a new TAB
+		var urlStr = "graph.html?subscribe=true&startTime=2h&graphList=" + encodeURIComponent(JSON.stringify(selectedItems));
+		console.log("graph URL: "+urlStr);
+		var win = window.open(urlStr, '_blank');
+		win.focus();
+		
+		// Close the popup
+		modalDiv.modal('hide').removeClass('working');
+	});
+	$('#dbx-choose-graphs-dialog').on('show.bs.modal', function(e) {
+		var data = $(e.relatedTarget).data();
+		var dbxProduct = data.recordId;
+
+		console.log("#dbx-choose-graphs-dialog: dbxProduct: "+dbxProduct);
+		var graphDesc1 = [];
+		
+		$.ajax(
+		{
+			url: "/api/graph/description",
+			type: 'get',
+			async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+			success: function(data, status) 
+			{
+				// console.log("RECEIVED DATA: "+data);
+				graphDesc1 = JSON.parse(data);
+				//console.log("ajax.success(): new values for graphDesc1.", graphDesc1);
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		}); // end: ajax call
+		//console.log("AFTER: ajax.success(): new values for graphDesc1.", graphDesc1);
+
+		// Transform JSON from: { AseTune: {SRV_1:[{...}], SRV_2:[{...}], SRV_3:[{...}]} }
+		//                  to: { SRV_1:[{...,id:"SRV_1;CmSummary_aaCpuGraph"}], SRV_2:[{...}], SRV_3:[{...}]}
+		var graphDesc2 = [];
+//		var graphDesc2 = graphDesc1.map(graphDesc1, function(value) {
+//			return graphDesc1[value];
+//		});
+//		let sspEntries = graphDesc1.map(a => a.tableName);
+//		for (var i=0; i<graphDesc1.length; i++) {
+//			var entry = graphDesc1[i];
+//			console.log("XXX", entry);
+//		}
+		Object.keys(graphDesc1).forEach(function(dbxProdKey) {
+			var srvEntry = graphDesc1[dbxProdKey];
+			//console.log("dbxProdKey='"+dbxProdKey+"', srvEntry='"+srvEntry+"'.");
+
+			Object.keys(srvEntry).forEach(function(srvKey) {
+				if ( ! srvKey.startsWith("_") )
+				{
+					var gda = srvEntry[srvKey]; // gda = GraphDescriptionArray
+					//console.log("srvKey='"+srvKey+"', gda='"+gda+"'.");
+
+					Object.keys(gda).forEach(function(i) {
+						var gd = gda[i]; // gd = GraphDescription
+						gd.srvName = srvKey;
+						gd.srvGraph = { srv: srvKey, graph: gd.tableName };
+						gd.srvGraphStr = srvKey + "|" + gd.tableName;
+						//console.log("i='"+i+"'.", gd);
+
+						graphDesc2.push(gd);
+					});
+				}
+			});
+		});
+
+		//console.log("AFTER: transform: graphDesc2.", graphDesc2);
+		
+
+		$('#dbx-choose-graphs-input').selectize()[0].selectize.destroy();
+		$('#dbx-choose-graphs-input').selectize({
+			plugins: ['drag_drop', 'remove_button'],
+			create: false, // do not allow new entries
+			persist: false,
+			maxItems: null,
+			valueField: 'srvGraphStr',
+			searchField: ['srvName', 'dbxProduct', 'cmName', 'graphName', 'graphLabel', 'graphCategory'],
+			options: graphDesc2,
+//			options: ssp._ALL_,
+//			items:   sspEntries,
+			onItemAdd: function(value, item) {
+				//console.log("onItemAdd()", value, item);
+				setGraphCountSelection();
+			},
+			onItemRemove: function(value) {
+				//console.log("onItemRemove()", value);
+				setGraphCountSelection();
+			},
+			render: {
+				item: function(item, escape) {
+					//console.log("render.item()", item);
+					return '<div>' +
+						'<span>' + escape(item.srvName) + '@<i>'+escape(item.dbxProduct)+'</i></span>' +
+						' - <span>' + escape(item.cmName) + '</span>' +
+						' - <span>' + escape(item.graphName) + '</span>' +
+						' - <span><i>' + escape(item.graphCategory) + '</span></i>' +
+						'<br><span><b>' + escape(item.graphLabel) + '</b></span>' +
+					'</div>';
+				},
+				option: function(item, escape) {
+					//console.log("render.option()", item);
+					return '<div class="dbx-topHr">' +
+						'<span>' + escape(item.srvName) + '@<i>'+escape(item.dbxProduct)+'</i></span>' +
+						' - <span>' + escape(item.cmName) + '</span>' +
+						' - <span>' + escape(item.graphName) + '</span>' +
+						' - <span><i>' + escape(item.graphCategory) + '</i></span>' +
+						'<br><span><b>' + escape(item.graphLabel) + '</b></span>' +
+					'</div>';
+				}
+			}
+		});
+//		$('#dbx-choose-graphs-input').selectize()[0].selectize.setValue(sspEntries);
+//		$('#dbx-choose-graphs-input').selectize()[0].selectize.refreshOptions();
+//		$('#dbx-choose-graphs-input').selectize()[0].selectize.refreshItems();
+
+		setGraphCountSelection();
+
+		$('.title', this).text(dbxProduct);
+		$('.btn-ok', this).data('recordId', dbxProduct);
+	});
+
+	/**
+	 * set "#dbx-choose-graphs-dialog-select-cnt" and "#dbx-choose-graphs-dialog-available-cnt"
+	 */
+	function setGraphCountSelection() 
+	{
+		let selectedItems   = $('#dbx-choose-graphs-input').selectize()[0].selectize.items.length;
+		let availableItems  = $('#dbx-choose-graphs-input').selectize()[0].selectize.order;
+		let unSelectedItems = availableItems - selectedItems;
+	
+		$("#dbx-choose-graphs-dialog-select-cnt")   .text( selectedItems );
+		$("#dbx-choose-graphs-dialog-available-cnt").text( availableItems );
+//		$("#dbx-choose-graphs-dialog-unselected-cnt").text( unSelectedItems );
+
+		// Enable/Disable the "save as" button
+		$("#dbx-saveAsProfile-btn").prop('disabled', selectedItems === 0);
+	}
+
+	//-----------------------------------------------------------
+	// SAVE AS NEW PROFILE: DIALOG 
+	//-----------------------------------------------------------
+	(function()  // This was grabbed from https://mdbootstrap.com/docs/jquery/forms/validation/
+	{
+		'use strict';
+		window.addEventListener('load', function() 
+		{
+			// Fetch all the forms we want to apply custom Bootstrap validation styles to
+			var forms = document.getElementsByClassName('needs-validation');
+			// Loop over them and prevent submission
+			var validation = Array.prototype.filter.call(forms, function(form) 
+			{
+				form.addEventListener('submit', function(event) 
+				{
+					console.log("EventListener[submit]: .needs-validation: form.checkValidity()");
+					if (form.checkValidity() === false) 
+					{
+						event.preventDefault();
+						event.stopPropagation();
+					}
+					form.classList.add('was-validated');
+					
+					saveAsNewProfileSubmit(event);
+
+				}, false);
+			});
+		}, false);
+	})();
+
+	function saveAsNewProfileSubmit(event)
+	{
+		// Fetch form to apply custom Bootstrap validation
+		var form = $("#dbx-saveAsNewProfile-form");
+
+		console.log("saveAsNewProfile(): OK was called");
+
+		if (form[0].checkValidity() === false) 
+		{
+			console.log("#dbx-saveAsNewProfile-dialog: checkValidity -> NOT-VALID");
+			event.preventDefault();
+			event.stopPropagation();
+		}
+		else
+		{
+			console.log("#dbx-saveAsNewProfile-dialog: checkValidity -> OK");
+			form.addClass('was-validated');
+
+			var modalDiv = $(event.delegateTarget);
+			modalDiv.addClass('working');
+
+		//	console.log("#dbx-saveAsNewProfile-dialog: OK");
+		//	alert("#dbx-saveAsNewProfile-dialog: OK: is NOT-YET-IMPLEMENTED");
+
+			// Perform ajax submit here...
+			var selectize = $('#dbx-choose-graphs-input').selectize()[0].selectize;
+			var selectedItems = $.map(selectize.items, function(value) {
+				return selectize.options[value].srvGraph;
+			});
+			console.log("#xxx: selectedItems: "+selectedItems, selectedItems);
+			//var urlStr = "graph.html?subscribe=true&startTime=2h&graphList=" + encodeURIComponent(JSON.stringify(selectedItems));
+			
+			var sendObject = {
+				productString:      "",
+				userName:           "",
+				profileName:        $("#dbx-fld-profileName").val(),
+				profileDescription: $("#dbx-fld-profileDesc").val(),
+				profileValue:       selectedItems,
+				profileUrlOptions:  $("#dbx-fld-urlOpt").val()
+				
+			};
+			console.log("#dbx-saveAsNewProfile-dialog: SEND_OBJ", sendObject);
+			//alert("DEBUG!   ---READ The Console: to see what JSON To send to backend---");
+
+			event.preventDefault();
+			event.stopPropagation();
+			
+			console.log("POST /api/graph/profiles");
+			$.ajax(
+			{
+				url: "/api/graph/profiles",
+				type: 'POST',
+				//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+				data: JSON.stringify(sendObject),
+				contentType: "application/json; charset=UTF-8",
+
+				success: function(data, status) 
+				{
+					console.log("SUCCESS: POST /api/graph/profiles: ", data, status);
+					
+					// console.log("RECEIVED DATA: "+data);
+					//var jsonResp = JSON.parse(data);
+
+					// Close the popup
+					modalDiv.modal('hide').removeClass('working');
+
+					// instead load the page from start... to reload the new Saved Profile(s)
+					location.reload();
+				},
+				error: function(xhr, desc, err) 
+				{
+					console.log(xhr);
+					console.log("Details: " + desc + "\nError: " + err);
+				}
+			}); // end: ajax call
+		}
+	}
+//	$('#dbx-saveAsNewProfile-dialog').on('click', '.btn-ok', function(e) {
+//		// Fetch form to apply custom Bootstrap validation
+//		var form = $("#dbx-saveAsNewProfile-form");
+//
+//		console.log("#dbx-saveAsNewProfile-dialog: OK was pressed", e, form);
+//
+//		if (form[0].checkValidity() === false) 
+//		{
+//			console.log("#dbx-saveAsNewProfile-dialog: checkValidity -> NOT-VALID");
+//			e.preventDefault();
+//			e.stopPropagation();
+//
+//			form.addClass('is-invalid');
+//		}
+//		else
+//		{
+//			console.log("#dbx-saveAsNewProfile-dialog: checkValidity -> OK");
+//			form.addClass('is-valid');
+//			form.addClass('was-validated');
+//
+//			var modalDiv = $(e.delegateTarget);
+//			modalDiv.addClass('working');
+//
+//			// Perform ajax submit here...
+//			console.log("#dbx-saveAsNewProfile-dialog: OK");
+//			alert("#dbx-saveAsNewProfile-dialog: OK: is NOT-YET-IMPLEMENTED");
+//
+//			var selectize = $('#dbx-choose-graphs-input').selectize()[0].selectize;
+//			var selectedItems = $.map(selectize.items, function(value) {
+//				return selectize.options[value].srvGraph;
+//			});
+//			console.log("#xxx: selectedItems: "+selectedItems, selectedItems);
+//			//var urlStr = "graph.html?subscribe=true&startTime=2h&graphList=" + encodeURIComponent(JSON.stringify(selectedItems));
+//			
+//			var sendObject = {
+//				productString:      "",
+//				userName:           "",
+//				profileName:        $("#dbx-fld-profileName").val(),
+//				profileDescription: $("#dbx-fld-profileDesc").val(),
+//				profileValue:       selectedItems,
+//				profileUrlOptions:  $("#dbx-fld-urlOpt").val()
+//				
+//			};
+//			console.log("#dbx-saveAsNewProfile-dialog: SEND_OBJ", sendObject);
+//
+//			// Do not load new page...
+//			e.preventDefault();
+//			e.stopPropagation();
+//			// instead load the page from start... to reload the new Saved Profile(s)
+////			location.reload();
+//
+//			// Close the popup
+//			modalDiv.modal('hide').removeClass('working');
+//		}
+//	});
+	$('#dbx-saveAsNewProfile-dialog').on('show.bs.modal', function(e) {
+		console.log("#dbx-saveAsNewProfile-dialog: OPEN-MODAL");
+	});
+
+
+
+	//-----------------------------------------------------------
+	// LOGIN - DIALOG 
+	//-----------------------------------------------------------
+//	$("#dbx-login-btn").click(function(event) {
+	$("#dbx-login-form").submit(function(event) {
+		console.log("dbx-login-form.SUBMIT.");
+		//Fetch form to apply custom Bootstrap validation
+		var form = $("#dbx-login-form")
+
+		if (form[0].checkValidity() === false) {
+			event.preventDefault()
+			event.stopPropagation()
+		}
+
+		form.addClass('was-validated');
+	});
+
+
+
+	//-----------------------------------------------------------
+	// get SERVERS
+	//-----------------------------------------------------------
 	$.ajax(
 	{
-    url: "/api/sessions",
+		url: "/api/sessions",
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 		
@@ -203,264 +788,341 @@ List of stuff that can be done
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
 			
-      var html = "";
-      var htmlAll = "";
-      for (var i=0; i<jsonResp.length; i++) {
-        var entry = jsonResp[i];
+			var html = "";
+			var htmlAll = "";
+			for (var i=0; i<jsonResp.length; i++) 
+			{
+				var entry = jsonResp[i];
 
-        if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
-        {
-          console.log("Skipping server '"+entry.serverName+"', since it's in DISABLED Status (status=1)");
-          continue;
-        }
+				if ((parseInt(entry.status) & 1) === 1) // 1=DISABLED
+				{
+					console.log("Skipping server '"+entry.serverName+"', since it's in DISABLED Status (status=1)");
+					continue;
+				}
 
-        var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
-        var lastSampleWarnThresh   = 5; // # minutes
+				var lastSampleTimeDuration = moment.duration(moment().diff(entry.lastSampleTime));
+				var lastSampleWarnThresh   = 5; // # minutes
 
-        var tt =
-          "<table class='table table-sm'>"+
-          "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
-          "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
-          "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
-          "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
-          "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
-          "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
-          "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
-          "</table>";
-          // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
-          // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
-          // tt = entry.serverDescription;
+				var tt =
+				  "<table class='table table-sm'>"+
+				  "  <tr> <th nowrap colspan='2'>"+entry.serverDescription+"</th> </tr>"+
+				  "  <tr> <td nowrap>DBMS Server Name  </td> <td nowrap>"+ entry.serverName              +"</td> </tr>"+
+				  "  <tr> <td nowrap>DBMS On Hostname  </td> <td nowrap>"+ entry.onHostname              +"</td> </tr>"+
+				  "  <tr> <td nowrap>Collector         </td> <td nowrap>"+ entry.productString           +"</td> </tr>"+
+				  "  <tr> <td nowrap>Collector Hostname</td> <td nowrap>"+ entry.collectorHostname       +"</td> </tr>"+
+				  "  <tr> <td nowrap>Collector Interval</td> <td nowrap>"+ entry.collectorSampleInterval +"</td> </tr>"+
+				  "  <tr> <td nowrap>Last Sample       </td> <td nowrap>"+ moment(entry.lastSampleTime).format("YYYY-MM-DD HH:mm:ss") + (lastSampleTimeDuration.asMinutes() < lastSampleWarnThresh ? "" : ", <font color='red'>"+lastSampleTimeDuration.format()+"</font> since last sample" ) + "</td> </tr>"+
+				  "</table>";
+				  // The above tooltip didn't render that well (the table was wider than the "popup", which made it unreadable)
+				  // overide: .tooltip-inner { max-width: 1000px; } in the CSS and it worked better
+				  // tt = entry.serverDescription;
 
-          // set button class depending on how long ago since we got any sample for this server
-          var btnClass="btn-primary";
-          if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
-            btnClass="btn-warning";
+				// set button class depending on how long ago since we got any sample for this server
+				var btnClass="btn-primary";
+				if (lastSampleTimeDuration.asMinutes() >= lastSampleWarnThresh)
+					btnClass="btn-warning";
 
-          var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
+				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
+	<!--		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>'; -->
+	<!--		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>'; -->
 
-        html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
-        htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
-      }
-      if (html === "")
-      {
-        html    = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-        htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
-      }
-      $('#dbx-quick-access-server-list').html(html);
-      $('#dbx-quick-access-server-all-list').html(htmlAll);
+				html    += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+				htmlAll += '<span data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+			}
+			if (html === "")
+			{
+				html    = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+				htmlAll = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">NO-SERVERS-HAS-YET-BEEN-ADDED</button>';
+			}
+			$('#dbx-quick-access-server-list').html(html);
+			$('#dbx-quick-access-server-all-list').html(htmlAll);
 
-      // Enable bootstrap tooltip...
-      $('[data-toggle="tooltip"]').tooltip();
+			// Enable bootstrap tooltip...
+			$('[data-toggle="tooltip"]').tooltip();
 
-      // Get ACTIVE Alarms
-      setTimeout(dbxTuneCheckActiveAlarms, 100);
+			// Get ACTIVE Alarms
+			setTimeout(dbxTuneCheckActiveAlarms, 100);
 		},
 		error: function(xhr, desc, err) 
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
 		}
-  }); // end: ajax call
-  
-  //-----------------------------------------------------------
-  // get PROFILES
-  //-----------------------------------------------------------
-  console.log("get profiles: /api/graph/profiles");
+	}); // end: ajax call
+
+	/** Open any graphs */
+	function openGraphPage(type, name, urlOptions)
+	{
+		if (urlOptions === null)
+			urlOptions = "";
+		if (urlOptions && !urlOptions.startsWith("&")) 
+			urlOptions = "&" + urlOptions;
+
+		console.log("openGraphPage(type='"+type+"', name='"+name+"', urlOptions='"+urlOptions+"')");
+
+		const startTime    = $('#dbx-hours-txt').val() + "h";
+		const subscribe    = $('#dbx-subscribe-chk').is(":checked");
+		const openInNewTab = $('#dbx-openInNewTab-chk').is(":checked");
+		
+		if (type === "server-ssp")
+		{
+			url = "/graph.html?subscribe="+subscribe+"&startTime="+startTime+"&sessionName="+name+urlOptions;
+		}
+		else if (type === "server-all")
+		{
+			url = "/graph.html?subscribe="+subscribe+"&startTime="+startTime+"&sessionName="+name+"&graphList=all"+urlOptions;
+		}
+		else if (type === "profile")
+		{
+			url = "/graph.html?subscribe="+subscribe+"&startTime="+startTime+"&sessionName="+name+urlOptions;
+		}
+		else
+		{
+			console.log("ERROR: unknown type='"+type+"'. Can't continue.");
+		}
+
+		// Open the URL
+		if (openInNewTab)
+		{
+			window.open(url, '_blank');
+		}
+		else
+		{
+			location.href = url;
+		}
+		return false;
+	}
+	
+	//-----------------------------------------------------------
+	// get PROFILES
+	//-----------------------------------------------------------
+	console.log("get profiles: /api/graph/profiles");
 	$.ajax(
 	{
-    url: "/api/graph/profiles",  // status=0 (ONLY ENABLED)
+		url: "/api/graph/profiles",  // status=0 (ONLY ENABLED)
 		type: 'get',
 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 		
 		success: function(data, status) 
 		{
 			console.log("RECEIVED DATA: "+data);
-      var jsonResp = JSON.parse(data);
-      console.log("profiles: jsonResp", jsonResp);
+			var jsonResp = JSON.parse(data);
+			console.log("profiles: jsonResp", jsonResp);
 			
-      var htmlCurrent = $('#dbx-quick-access-profile-list').html();
-      var html = "";
-      for (var i=0; i<jsonResp.length; i++) {
-        var entry = jsonResp[i];
+			var htmlCurrent = $('#dbx-quick-access-profile-list').html();
+			var html = "";
+			for (var i=0; i<jsonResp.length; i++) 
+			{
+				var entry = jsonResp[i];
 
-        console.log("profiles: entry", entry);
-        
-        if (entry.profileName === "")
-          continue;
+				console.log("profiles: entry", entry);
 
-        var urlOptions = entry.profileUrlOptions;
-        if (urlOptions === null)
-          urlOptions = "";
-        if (urlOptions && !urlOptions.startsWith("&")) {
-          urlOptions = "&" + urlOptions;
-        }
-        html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';
-      }
-      $('#dbx-quick-access-profile-list').html(html + htmlCurrent);
+				if (entry.profileName === "")
+					continue;
+
+				//var urlOptions = entry.profileUrlOptions;
+				//if (urlOptions === null)
+				//	urlOptions = "";
+				//if (urlOptions && !urlOptions.startsWith("&")) 
+				//	urlOptions = "&" + urlOptions;
+
+		<!--	html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';-->
+				html += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+entry.profileDescription+'"><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</button></span>';
+			}
+			$('#dbx-quick-access-profile-list').html(html + htmlCurrent);
 		},
 		error: function(xhr, desc, err) 
 		{
 			console.log(xhr);
 			console.log("Details: " + desc + "\nError: " + err);
 		}
-  }); // end: ajax call
-  
-  //-----------------------------------------------------------
-  // get ALARMS
-  //-----------------------------------------------------------
-  function dbxTuneCheckActiveAlarms() 
-  {
-    console.log("get active-alarms: /api/alarm/active");
-    $.ajax(
-    {
-      url: "api/alarm/active",
-      type: 'get',
-      //async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+	}); // end: ajax call
+
+	//-----------------------------------------------------------
+	// get ALARMS
+	//-----------------------------------------------------------
+	function dbxTuneCheckActiveAlarms() 
+	{
+		console.log("get active-alarms: /api/alarm/active");
+		$.ajax(
+		{
+			url: "api/alarm/active",
+			type: 'get',
+			//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
         
-      success: function(data, status) 
-      {
-        // console.log("RECEIVED DATA: "+data);
-        var jsonResp = JSON.parse(data);
-          
-        // update ACTIVE Alarm view (note: there can be several servers)
-        var activeAlarmsDiv = document.getElementById("active-alarms");
+			success: function(data, status) 
+			{
+				// console.log("RECEIVED DATA: "+data);
+				var jsonResp = JSON.parse(data);
 
-        var alarmSrvCount = 0;
-        var alarmSumCount = 0;
+				// update ACTIVE Alarm view (note: there can be several servers)
+				var activeAlarmsDiv = document.getElementById("active-alarms");
 
-        // remove 'btn-danger' from all server buttons
-        let btnQaNormal = document.querySelectorAll('*[id^="btn-qa-normal-"]');
-        let btnQaAll    = document.querySelectorAll('*[id^="btn-qa-all-"]');
-        btnQaNormal.forEach( function(item) { item.classList.remove('btn-danger'); } );
-        btnQaAll   .forEach( function(item) { item.classList.remove('btn-danger'); } );
+				var alarmSrvCount = 0;
+				var alarmSumCount = 0;
 
-        // ADD 'btn-success' from all server buttons (which would be the GOOD STATE)
-        // if we have problems... set it to "danger" if we see errors
-        btnQaNormal.forEach( function(item) { item.classList.add('btn-success'); } );
-        btnQaAll   .forEach( function(item) { item.classList.add('btn-success'); } );
+				// remove 'btn-danger' from all server buttons
+				let btnQaNormal = document.querySelectorAll('*[id^="btn-qa-normal-"]');
+				let btnQaAll    = document.querySelectorAll('*[id^="btn-qa-all-"]');
+				btnQaNormal.forEach( function(item) { item.classList.remove('btn-danger'); } );
+				btnQaAll   .forEach( function(item) { item.classList.remove('btn-danger'); } );
 
-        // remove all old alarms (new/active will be inserted again)
-        let activeAlarmDivs = document.querySelectorAll('*[id^="active-alarms-srv-"]');
-        activeAlarmDivs.forEach( function(item) { item.remove(); } );
+				// ADD 'btn-success' from all server buttons (which would be the GOOD STATE)
+				// if we have problems... set it to "danger" if we see errors
+				btnQaNormal.forEach( function(item) { item.classList.add('btn-success'); } );
+				btnQaAll   .forEach( function(item) { item.classList.add('btn-success'); } );
 
-        // reorder: stuff a outer "map", which is the server, and all it's alarms
-        var srvAlarmMap = {}; // new object (this will be the Map with <String>, Array<AlarmEntry>)
-        for (var i=0; i<jsonResp.length; i++) {
-          var srvName = jsonResp[i].srvName;
+				// remove all old alarms (new/active will be inserted again)
+				let activeAlarmDivs = document.querySelectorAll('*[id^="active-alarms-srv-"]');
+				activeAlarmDivs.forEach( function(item) { item.remove(); } );
 
-          // Check if KEY exists, if NOT create an array, where we will "stuff" AlarmEntries
-          if ( ! srvAlarmMap.hasOwnProperty(srvName) )
-            srvAlarmMap[srvName] = [];
+				// reorder: stuff a outer "map", which is the server, and all it's alarms
+				var srvAlarmMap = {}; // new object (this will be the Map with <String>, Array<AlarmEntry>)
+				for (var i=0; i<jsonResp.length; i++) 
+				{
+					var srvName = jsonResp[i].srvName;
 
-          srvAlarmMap[srvName].push(jsonResp[i]);
-        }
-        if (_debug > 1)
-          console.log("dbxTuneCheckActiveAlarms(): srvAlarmMap:",srvAlarmMap);
+					// Check if KEY exists, if NOT create an array, where we will "stuff" AlarmEntries
+					if ( ! srvAlarmMap.hasOwnProperty(srvName) )
+						srvAlarmMap[srvName] = [];
 
-        // Loop the alarm MAP
-        for (var key in srvAlarmMap) {
-          var entry = srvAlarmMap[key];
-          // var graphServerName = entry.srvName;
-          var graphServerName = key;
+					srvAlarmMap[srvName].push(jsonResp[i]);
+				}
+				if (_debug > 1)
+					console.log("dbxTuneCheckActiveAlarms(): srvAlarmMap:",srvAlarmMap);
 
-          alarmSrvCount++;
+				// Loop the alarm MAP
+				for (var key in srvAlarmMap) 
+				{
+					var entry = srvAlarmMap[key];
+					// var graphServerName = entry.srvName;
+					var graphServerName = key;
 
-          // Set the button to RED if we got an alarm on that server
-          if (document.getElementById("btn-qa-normal-"+graphServerName) != null)
-          {
-            document.getElementById("btn-qa-normal-"+graphServerName).classList.remove('btn-success');
-            document.getElementById("btn-qa-all-"   +graphServerName).classList.remove('btn-success');
+					alarmSrvCount++;
 
-            document.getElementById("btn-qa-normal-"+graphServerName).classList.add('btn-danger');
-            document.getElementById("btn-qa-all-"   +graphServerName).classList.add('btn-danger');
-          }
+					// Set the button to RED if we got an alarm on that server
+					if (document.getElementById("btn-qa-normal-"+graphServerName) != null)
+					{
+						document.getElementById("btn-qa-normal-"+graphServerName).classList.remove('btn-success');
+						document.getElementById("btn-qa-all-"   +graphServerName).classList.remove('btn-success');
 
-          // if (_serverList.indexOf(graphServerName) == -1)
-          // {
-          // 	if (_debug > 1)
-          // 		console.log("dbxTuneCheckActiveAlarms(): SKIPPING... NOT in the server list. graphServerName="+graphServerName+", serverlist:", _serverList);
-          // 	continue;
-          // }
-          if (_debug > 1)
-            console.log("dbxTuneCheckActiveAlarms(): graphServerName="+graphServerName+", entry:", entry);
+						document.getElementById("btn-qa-normal-"+graphServerName).classList.add('btn-danger');
+						document.getElementById("btn-qa-all-"   +graphServerName).classList.add('btn-danger');
+					}
 
-          // If any Active alarms create a new SRV-DIV and a table...
-          if (typeof graphServerName !== 'undefined')
-          {
-            let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
-            if (srvDiv === null)
-            {
-              srvDiv = document.createElement("div");
-              srvDiv.id = "active-alarms-srv-"+graphServerName;
+					// if (_serverList.indexOf(graphServerName) == -1)
+					// {
+					// 	if (_debug > 1)
+					// 		console.log("dbxTuneCheckActiveAlarms(): SKIPPING... NOT in the server list. graphServerName="+graphServerName+", serverlist:", _serverList);
+					// 	continue;
+					// }
+					if (_debug > 1)
+						console.log("dbxTuneCheckActiveAlarms(): graphServerName="+graphServerName+", entry:", entry);
 
-              activeAlarmsDiv.appendChild(srvDiv);
-            }
-            let tab = jsonToTable(entry);
-            srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
-            srvDiv.appendChild(tab);
-            srvDiv.appendChild(document.createElement("br"));
-            
-            alarmSumCount += entry.length;
+					// If any Active alarms create a new SRV-DIV and a table...
+					if (typeof graphServerName !== 'undefined')
+					{
+						let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
+						if (srvDiv === null)
+						{
+							srvDiv = document.createElement("div");
+							srvDiv.id = "active-alarms-srv-"+graphServerName;
 
-            if (_debug > 1)
-              console.log("TABLE for srv'"+graphServerName+"': ", tab);
-          }
-          else // Remove the SRV-DIV if no active alarm
-          {
-            let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
-            if (srvDiv !== null)
-              activeAlarmsDiv.removeChild(srvDiv);
-          }
-        }
+							activeAlarmsDiv.appendChild(srvDiv);
+						}
+						let tab = jsonToTable(entry);
+						srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
+						srvDiv.appendChild(tab);
+						srvDiv.appendChild(document.createElement("br"));
 
-        // should we show the activeAlarmsDiv or not?
-        if (_debug > 0)
-          console.log("activeAlarmsDiv.getElementsByTagName('*').length: "+activeAlarmsDiv.getElementsByTagName('*').length);
-        if (activeAlarmsDiv.getElementsByTagName('*').length > 0)
-        {
-          activeAlarmsDiv.style.visibility = 'visible';
-          pageTitleNotification.on("---ALARM---", 1000);
-        }
-        else
-        {
-          activeAlarmsDiv.style.visibility = 'hidden';
-          pageTitleNotification.off();
-        }
+						alarmSumCount += entry.length;
+
+						if (_debug > 1)
+							console.log("TABLE for srv'"+graphServerName+"': ", tab);
+					}
+					else // Remove the SRV-DIV if no active alarm
+					{
+						let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
+						if (srvDiv !== null)
+							activeAlarmsDiv.removeChild(srvDiv);
+					}
+				}
+
+				// should we show the activeAlarmsDiv or not?
+				if (_debug > 0)
+					console.log("activeAlarmsDiv.getElementsByTagName('*').length: "+activeAlarmsDiv.getElementsByTagName('*').length);
+				if (activeAlarmsDiv.getElementsByTagName('*').length > 0)
+				{
+					activeAlarmsDiv.style.visibility = 'visible';
+					pageTitleNotification.on("---ALARM---", 1000);
+				}
+				else
+				{
+					activeAlarmsDiv.style.visibility = 'hidden';
+					pageTitleNotification.off();
+				}
         
-        // Set how many ACTIVE ALarms we have...
-        document.getElementById('dbx-alarm-cnt').innerHTML = alarmSumCount;
-        // Set how many servers
-        if (alarmSrvCount === 0)
-          document.getElementById('dbx-alarm-srv-cnt').innerHTML = ".";
-        else
-          document.getElementById('dbx-alarm-srv-cnt').innerHTML = ", in " + alarmSrvCount + " Server(s).";
-      },
-      error: function(xhr, desc, err) 
-      {
-        console.log(xhr);
-        console.log("Details: " + desc + "\nError: " + err);
-      }
-    }); // end: ajax call
-  } // end: function
+				// Set how many ACTIVE ALarms we have...
+				document.getElementById('dbx-alarm-cnt').innerHTML = alarmSumCount;
+				// Set how many servers
+				if (alarmSrvCount === 0)
+					document.getElementById('dbx-alarm-srv-cnt').innerHTML = ".";
+				else
+					document.getElementById('dbx-alarm-srv-cnt').innerHTML = ", in " + alarmSrvCount + " Server(s).";
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		}); // end: ajax call
+	} // end: function
 
-  //-----------------------------------------------------------
-  // update "### seconds ago"
-  //-----------------------------------------------------------
-  function updateLastUpdatedClock() {                   
-    var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);
-    document.getElementById('dbx-alarm-age').innerHTML = ageInSec;
+	//-----------------------------------------------------------
+	// update "### seconds ago"
+	//-----------------------------------------------------------
+	function updateLastUpdatedClock() 
+	{
+		var ageInSec = Math.floor((new Date() - lastUpdateTime) / 1000);
+		document.getElementById('dbx-alarm-age').innerHTML = ageInSec;
 
-    // do we need to refresh???
-    if (_refresh > 0 && ageInSec >= _refresh)
-    {
-      dbxTuneCheckActiveAlarms();
-      lastUpdateTime = new Date();
-    }
+		// do we need to refresh???
+		if (_refresh > 0 && ageInSec >= _refresh)
+		{
+			dbxTuneCheckActiveAlarms();
+			lastUpdateTime = new Date();
+		}
 
-    setTimeout(updateLastUpdatedClock, 1000); 
-  }                                                     
-  var lastUpdateTime = new Date();
-  updateLastUpdatedClock();
+		setTimeout(updateLastUpdatedClock, 1000); 
+	}
+	var lastUpdateTime = new Date();
+	updateLastUpdatedClock();
+
+	//-----------------------------------------------------------
+	// If this is a login request... open the dialog
+	//-----------------------------------------------------------
+//	var user = getCurrentLogin();
+//	if (isParameter('login') && user === "")
+//	{
+//		console.log("DO_LOGIN: is true, open modal login dialog.");
+//		setTimeout(function() { $('#dbx-login-dialog').modal('show'); }, 10);
+//	}
+	isLoggedIn( function(isLoggedIn, asUserName) 
+	{
+		console.log("isLoggedIn-callback: isLoggedIn='"+isLoggedIn+"', asUserName='"+asUserName+"'.");
+		if (isParameter('login') && !isLoggedIn)
+		{
+			console.log("isLoggedIn-callback: is true, open modal login dialog.");
+
+			var loginFailed = getParameter("login", "open");
+			if (loginFailed === "failed")
+				$('#dbx-loginFailed-div').css("display", "block");
+
+			$('#dbx-login-dialog').modal({backdrop: 'static', keyboard: false});
+			$('#dbx-login-dialog').modal('show');
+		}
+	});
+
 </script>
 </body>
 </html>

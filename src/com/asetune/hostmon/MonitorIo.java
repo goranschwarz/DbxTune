@@ -10,9 +10,9 @@ import com.asetune.ssh.SshConnection.LinuxUtilType;
 public abstract class MonitorIo
 extends HostMonitor
 {
-	public MonitorIo(int utilVersion)
+	public MonitorIo(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
@@ -60,8 +60,10 @@ extends HostMonitor
 		}
 		else if (osname.equals("Linux"))
 		{
-			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.IOSTAT);
-			mon = new MonitorIoLinux(utilVersion);
+			int    utilVersion   = conn.getLinuxUtilVersion(LinuxUtilType.IOSTAT);
+			String utilExtraInfo = conn.execCommandOutputAsStr(MonitorIoLinux.getUtilExtraInfoCommand());
+			
+			mon = new MonitorIoLinux(utilVersion, utilExtraInfo);
 			mon.setConnectedToVendor(OsVendor.Linux);
 		}
 		else if (osname.equals("AIX"))

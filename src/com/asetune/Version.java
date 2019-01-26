@@ -33,8 +33,8 @@ public class Version
 {
 	public static       String PRODUCT_STRING     = "AseTune";      // Do not have spaces etc in this one
 //	public static final String VERSION_STRING     = "4.0.0";        // Use this for public releases
-	public static final String VERSION_STRING     = "4.0.0.8.dev"; // Use this for early releases
-	public static final String BUILD_STRING       = "2019-01-07/build 257";
+	public static final String VERSION_STRING     = "4.0.0.11.dev"; // Use this for early releases
+	public static final String BUILD_STRING       = "2019-01-16/build 259";
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2020-11-30";  // "YYYY-MM-DD" 

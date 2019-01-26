@@ -49,6 +49,7 @@ implements ICentralPersistWriter
 		CENTRAL_VERSION_INFO, 
 		CENTRAL_SESSIONS,
 		CENTRAL_GRAPH_PROFILES,
+		CENTRAL_USERS,
 		SESSION_SAMPLES,
 		SESSION_SAMPLE_SUM,
 		SESSION_SAMPLE_DETAILS,
@@ -264,6 +265,7 @@ implements ICentralPersistWriter
 		case CENTRAL_VERSION_INFO:     return          q + "DbxCentralVersionInfo"       + q;
 		case CENTRAL_SESSIONS:         return          q + "DbxCentralSessions"          + q;
 		case CENTRAL_GRAPH_PROFILES:   return          q + "DbxCentralGraphProfiles"     + q;
+		case CENTRAL_USERS:            return          q + "DbxCentralUsers"             + q;
 		case SESSION_SAMPLES:          return prefix + q + "DbxSessionSamples"           + q;
 		case SESSION_SAMPLE_SUM:       return prefix + q + "DbxSessionSampleSum"         + q;
 		case SESSION_SAMPLE_DETAILS:   return prefix + q + "DbxSessionSampleDetailes"    + q;
@@ -359,6 +361,18 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(qic+"ProfileUrlOptions"  +qic,40)+" "+fill(getDatatype("varchar", 1024,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("\n");
 				sbSql.append("   ,PRIMARY KEY ("+qic+"ProductString"+qic+", "+qic+"UserName"+qic+", "+qic+"ProfileName"+qic+")\n");
+				sbSql.append(") \n");
+			}
+			else if (Table.CENTRAL_USERS.equals(type))
+			{
+				sbSql.append("create table " + tabName + "\n");
+				sbSql.append("( \n");
+				sbSql.append("    "+fill(qic+"UserName"           +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"Password"           +qic,40)+" "+fill(getDatatype("varchar",   60,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"Email"              +qic,40)+" "+fill(getDatatype("varchar",   60,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(qic+"Roles"              +qic,40)+" "+fill(getDatatype("varchar",  120,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("\n");
+				sbSql.append("   ,PRIMARY KEY ("+qic+"UserName"+qic+")\n");
 				sbSql.append(") \n");
 			}
 			else if (Table.SESSION_SAMPLES.equals(type))
@@ -686,6 +700,17 @@ implements ICentralPersistWriter
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?) \n");
+		}
+		else if (type.equals(Table.CENTRAL_USERS))
+		{
+			sbSql.append("insert into ").append(tabName)  .append(" (");
+			sbSql.append(qic).append("UserName").append(qic).append(", ");
+			sbSql.append(qic).append("Password").append(qic).append(", ");
+			sbSql.append(qic).append("Email")   .append(qic).append(", ");
+			sbSql.append(qic).append("Roles")   .append(qic).append("");
+			sbSql.append(") ");
+			if (addPrepStatementQuestionMarks)
+				sbSql.append("values(?, ?, ?, ?) \n");
 		}
 		else if (type.equals(Table.SESSION_SAMPLES))
 		{

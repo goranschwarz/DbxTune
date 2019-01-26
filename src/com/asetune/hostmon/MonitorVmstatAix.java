@@ -7,11 +7,11 @@ extends MonitorVmstat
 {
 	public MonitorVmstatAix()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorVmstatAix(int utilVersion)
+	public MonitorVmstatAix(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -28,7 +28,7 @@ extends MonitorVmstat
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

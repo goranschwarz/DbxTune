@@ -26,7 +26,6 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
-import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -43,6 +42,7 @@ import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.CentralPersistWriterJdbc;
+import com.asetune.central.pcs.DbxCentralRealm;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbxCentral;
 import com.asetune.gui.GuiLogAppender;
@@ -1338,12 +1338,12 @@ public class DbxTuneCentral
 //			handlers.addHandler(webapp1);
 
 			String webDir = getAppWebDir();
-	        WebAppContext webapp1 = new WebAppContext();
-	        webapp1.setDescriptor(webDir+"/WEB-INF/web.xml");
-	        webapp1.setResourceBase(webDir);
-	        webapp1.setContextPath("/");
-	        webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
-	        webapp1.setParentLoaderPriority(true);
+			WebAppContext webapp1 = new WebAppContext();
+			webapp1.setDescriptor(webDir+"/WEB-INF/web.xml");
+			webapp1.setResourceBase(webDir);
+			webapp1.setContextPath("/");
+			webapp1.getInitParams().put("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false");
+			webapp1.setParentLoaderPriority(true);
 
 //	        // The below 4 lines is to get JSP going????
 //	        webapp1.setAttribute("org.eclipse.jetty.server.webapp.ContainerIncludeJarPattern",".*/[^/]*jstl.*\\.jar$");
@@ -1351,8 +1351,8 @@ public class DbxTuneCentral
 //	        classlist.addAfter("org.eclipse.jetty.webapp.FragmentConfiguration", "org.eclipse.jetty.plus.webapp.EnvConfiguration", "org.eclipse.jetty.plus.webapp.PlusConfiguration");
 //	        classlist.addBefore("org.eclipse.jetty.webapp.JettyWebXmlConfiguration", "org.eclipse.jetty.annotations.AnnotationConfiguration");
 
-	        handlers.addHandler(webapp1);
-	        
+			handlers.addHandler(webapp1);
+
 //			// Creating the second web application context
 //			WebAppContext webapp2 = new WebAppContext();
 //			webapp2.setResourceBase("src/main/webapp2");
@@ -1362,16 +1362,23 @@ public class DbxTuneCentral
 
 
 			// Creating the LoginService for the realm
-			HashLoginService loginService = new HashLoginService("DbxTuneCentralRealm");
+			DbxCentralRealm loginService = new DbxCentralRealm("DbxTuneCentralRealm");
 
-			// Setting the realm configuration there the users, passwords and roles reside
-			String userFile = Configuration.getCombinedConfiguration().getProperty("realm.users.file", webDir+"/dbxtune_central_users.txt");
-			loginService.setConfig(userFile);
-			_logger.info("Web Autentication. Using property 'realm.users.file', which is set to '"+userFile+"'.");
-//			loginService.setConfig("/projects/AseTune/resources/WebContent/dbxtune_central_users.txt");
-//			Map<String, UserIdentity> userMap = new HashMap<>();
-//			userMap.put("xxx", new UserIdentity()
-//			loginService.setUsers();
+//			// Creating the LoginService for the realm
+//			HashLoginService loginService = new HashLoginService("DbxTuneCentralRealm");
+//
+//			// Setting the realm configuration there the users, passwords and roles reside
+//			String userFile = Configuration.getCombinedConfiguration().getProperty("realm.users.file", webDir+"/dbxtune_central_users.txt");
+			// The above file should look like:
+			// admin: admin,admin,user
+			//user1: user1pass,user
+
+//			loginService.setConfig(userFile);
+//			_logger.info("Web Autentication. Using property 'realm.users.file', which is set to '"+userFile+"'.");
+////			loginService.setConfig("/projects/AseTune/resources/WebContent/dbxtune_central_users.txt");
+////			Map<String, UserIdentity> userMap = new HashMap<>();
+////			userMap.put("xxx", new UserIdentity()
+////			loginService.setUsers();
 
 			// Appending the loginService to the Server
 			_server.addBean(loginService);

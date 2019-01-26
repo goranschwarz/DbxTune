@@ -101,6 +101,25 @@
           <a class="nav-link" href="/desktop_app.html">Desktop App</a>
         </li>
       </ul>
+	  <!-- on the right hand side of the menu... -->
+      <ul class="navbar-nav">
+	    <!-- IS LOGGED IN -->
+        <div id="dbx-nb-isLoggedIn-div" style="display: none;">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+            <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
+            </div>
+          </li>
+        </div>
+	    <!-- IS LOGGED OUT -->
+        <div id="dbx-nb-isLoggedOut-div">
+          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+        </div>
+      </ul> <!-- end right hand side -->
     </div>
   </nav>
   
@@ -151,7 +170,7 @@
           <b>Change</b> any of System Profiles
           <div id="dbx-change-ssp-div">
             <div id="dbx-change-ssp-product-list">
-                <button type="button" class="btn btn-sm btn-primary">Loading DbxProduct list <i class='fa fa-spinner fa-spin '></i></button>
+              <button type="button" class="btn btn-sm btn-primary">Loading DbxProduct list <i class='fa fa-spinner fa-spin '></i></button>
             </div>
             <!--<a class="btn btn-sm btn-primary mb-2" data-toggle="tooltip" data-placement="right" title="Open a dialog where you can add/change Chart profiles." href="/admin?op=addServer&name=DUMMY_ASE" role="button">Add/Change Profile...</a>-->
     <!--		
@@ -160,6 +179,18 @@
     			<input type="text" id="input-draggable" class="demo-default" placeholder="Type to Search...">
     		</div>
     -->
+          </div>
+
+          <b>Remove</b> any User Defined Profiles (<b>Warning: NO Confirm dialog!</b>)
+          <div id="dbx-removeUdp-div">
+            <div id="dbx-removeUdp-list">
+              <button type="button" class="btn btn-sm btn-primary">Loading User Defined Profile list <i class='fa fa-spinner fa-spin '></i></button>
+            </div>
+          </div>
+
+          <b>Add</b> any User Defined Profiles
+          <div id="dbx-addUdg-div">
+            <a class="btn btn-sm btn-primary" data-toggle="tooltip" data-placement="right" title="Open the main page." href="/" role="button">This is done from the "main" page...</a>
           </div>
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
@@ -184,10 +215,29 @@
           <br>
           <b>Logout</b> as 'admin'
           <div id="dbx-logout-div">
-            <button class="btn btn-sm mb-2" data-toggle="tooltip" data-placement="right" title="Logout" onclick="logout()">Logout</button>
+<!--            <button class="btn btn-sm mb-2" data-toggle="tooltip" data-placement="right" title="Logout" onclick="logout()">Logout</button>-->
+            <a class="btn btn-sm mb-2 btn-primary" data-toggle="tooltip" data-placement="right" title="Logout" href="/logout" role="button">Logout</a>
           </div>
         </div>  <!-- end: card-body -->
       </div>  <!-- end: card -->
+
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <!-- DBX User(s) Admin -->
+      <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+      <div id='dbxc-user' class='card border-dark mb-3'>
+        <h5 class='card-header'>User Administration</h5>
+        <div class='card-body'>
+          <b>Add</b> User - Done in the main window
+    
+          <br>
+          <b>Change</b> User (Password or Roles) - Not yet implemented
+
+          <br>
+          <b>Remove</b> User - Not yet implemented
+
+        </div>  <!-- end: card-body -->
+      </div>  <!-- end: card -->
+	  
     </div>
   </main>
 
@@ -622,6 +672,7 @@
    * logout from basic authentication...
    * simply make a "dummy" call with a not existing user
    */
+/*
   function logout()
   {
     console.log("logout...");
@@ -645,6 +696,7 @@
       window.location = "/";
     });
   }
+*/
 
   /**
    * refresh Graph Descriptions
@@ -762,43 +814,96 @@
 		}
   }); // end: ajax call
   
-//   //-----------------------------------------------------------
-//   // get PROFILES
-//   //-----------------------------------------------------------
-// 	$.ajax(
-// 	{
-//     url: "/api/graph/profiles",
-// 		type: 'get',
-// 		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-		
-// 		success: function(data, status) 
-// 		{
-// 			// console.log("RECEIVED DATA: "+data);
-// 			var jsonResp = JSON.parse(data);
-			
-//       var htmlCurrent = $('#dbx-quick-access-profile-list').html();
-//       var html = "";
-//       for (var i=0; i<jsonResp.length; i++) {
-//         var entry = jsonResp[i];
-        
-//         if (entry.profileName === "")
-//           continue;
-//         html += '<a class="btn btn-sm btn-primary mb-2 mr-2" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
-//       }
-//       $('#dbx-quick-access-profile-list').html(html + htmlCurrent);
-// 		},
-// 		error: function(xhr, desc, err) 
-// 		{
-// 			console.log(xhr);
-// 			console.log("Details: " + desc + "\nError: " + err);
-// 		}
-//   }); // end: ajax call
-  
-   //-----------------------------------------------------------
-   // get PROFILE DESCRIPTIONS
-   //-----------------------------------------------------------
-   refreshGraphDescriptions();
+	//-----------------------------------------------------------
+	// get PROFILES
+	//-----------------------------------------------------------
+	$.ajax(
+	{
+		url: "/api/graph/profiles",
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
 
+		success: function(data, status) 
+		{
+			// console.log("RECEIVED DATA: "+data);
+			var jsonResp = JSON.parse(data);
+
+			var html = "";
+			for (var i=0; i<jsonResp.length; i++) {
+				var entry = jsonResp[i];
+
+				if (entry.profileName === "")
+					continue;
+//				html += '<a class="btn btn-sm btn-danger mb-2 mr-2" href="/api/FIXME?profileName='+entry.profileName+'" role="button">'+entry.profileName+'</a>';
+				html += '<button type="button" class="btn btn-sm btn-danger mb-2 mr-2" onclick=\'removeUserDefinedProfile("'+entry.profileName+'")\'>'+entry.profileName+'</button>';
+			}
+			if (html === "") 
+				html = '<button type="button" class="btn btn-sm btn-primary mb-2 mr-2">No User Defined Profiles was Found</button>';
+			$('#dbx-removeUdp-list').html(html);
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+  
+	//-----------------------------------------------------------
+	// get PROFILE DESCRIPTIONS
+	//-----------------------------------------------------------
+	refreshGraphDescriptions();
+   
+	/**
+	 * remove User Defined PROFILE
+	 */
+	function removeUserDefinedProfile(profileName)
+	{
+		var sendObject = {
+			productString:      "",
+			userName:           "",
+			profileName:        profileName,
+			profileDescription: "",
+			profileValue:       "", //  empty [] ARRAY, means DELETE the PROFILE NAME
+			profileUrlOptions:  ""
+		};
+		console.log("removeUserDefinedProfile(): SEND_OBJ", sendObject);
+		
+		console.log("Removing PROFILE='"+profileName+"'.");
+		$.ajax(
+		{
+			url: "/api/graph/profiles",
+			type: 'POST',
+			//async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+			data: JSON.stringify(sendObject),
+			contentType: "application/json; charset=UTF-8",
+
+			success: function(data, status) 
+			{
+				console.log("SUCCESS: POST[DELETE] /api/graph/profiles: ", data, status);
+				
+				// console.log("RECEIVED DATA: "+data);
+				//var jsonResp = JSON.parse(data);
+
+				// instead load the page from start... to reload the new Saved Profile(s)
+				location.reload();
+			},
+			error: function(xhr, desc, err) 
+			{
+				console.log(xhr);
+				console.log("Details: " + desc + "\nError: " + err);
+			}
+		}); // end: ajax call
+	}
+   
+
+	//-----------------------------------------------------------
+	// Check for login and set props
+	//-----------------------------------------------------------
+	isLoggedIn( function(isLogedIn, asUserName) 
+	{
+		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"'.");
+	});
+	
 </script>
 </body>
 </html>

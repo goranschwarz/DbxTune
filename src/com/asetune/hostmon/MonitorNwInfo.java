@@ -9,9 +9,9 @@ import com.asetune.ssh.SshConnection;
 public abstract class MonitorNwInfo
 extends HostMonitor
 {
-	public MonitorNwInfo(int utilVersion)
+	public MonitorNwInfo(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)

@@ -19,22 +19,45 @@ public class LogoutServlet extends HttpServlet
 	private static final long	serialVersionUID = 1L;
 	private static final Logger	_logger			 = Logger.getLogger(MethodHandles.lookup().lookupClass());
 
+//	@Override
+//	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+//	{
+//		response.setContentType("text/html;charset=UTF-8");
+//		PrintWriter out = response.getWriter();
+//
+//		request.getRequestDispatcher("index.html").include(request, response);
+//		String username = request.getRemoteUser();
+//        
+//		HttpSession session = request.getSession();
+//		if (session != null)
+//		{
+//			session.invalidate();
+//			_logger.info("Logout: username='"+username+"'.");
+//		}
+//          
+//		out.print("You are successfully logged out!");  
+//		out.close();  
+//	}
+
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		response.setContentType("text/html;charset=UTF-8");
 		PrintWriter out = response.getWriter();
 
-		request.getRequestDispatcher("link.html").include(request, response);  
+		String username = request.getRemoteUser();
         
-		HttpSession session=request.getSession();  
-		session.invalidate();  
-          
-		out.print("You are successfully logged out!");  
-          
-		out.close();  
+		HttpSession session = request.getSession();
+		if (session != null)
+		{
+			session.invalidate();
+			_logger.info("Logout: username='"+username+"'.");
+		}
 
-//		_logger.info("Logout: username='"+username+"'.");
-			
+//		response.sendRedirect(request.getContextPath() + "/index.html");
+		response.sendRedirect(request.getContextPath() + "/");
+		
+		out.print("You are successfully logged out!");  
+		out.close();  
 	}
 }

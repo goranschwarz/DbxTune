@@ -59,7 +59,25 @@ public class DbxCentralProfile
 	@JsonSetter("profileValue")
 	public void setProfileValue(JsonNode profileValue) 
 	{
-		_profileValue = profileValue.toString(); 
+//		String textValue = profileValue.textValue();
+//		String asText    = profileValue.asText();
+//		String toString  = profileValue.toString();
+//		System.out.println("profileValue.textValue = |"+textValue+"|.");
+//		System.out.println("profileValue.asText    = |"+asText+"|.");
+//		System.out.println("profileValue.toString  = |"+toString+"|.");
+
+		
+		// JsonNode.textValue() seems to deliver 'null'          on a JSON text
+		// JsonNode.asText()    seems to deliver ''              on a JSON text
+		// JsonNode.toString()  seems to deliver 'json text str' on a JSON text
+		// JsonNode.toString()  seems to deliver '""'            on an empty JSON field...
+		String value  = profileValue.toString();
+		if (value == null)
+			value = "";
+		if (value.trim().equals("\"\""))
+			value = "";
+		
+		_profileValue = value;
 	}
 	
 	public DbxCentralProfile()
@@ -88,5 +106,11 @@ public class DbxCentralProfile
 				_profileType = TYPE_USER_SELECTED;
 			}
 		}
+	}
+	
+	@Override
+	public String toString()
+	{
+		return super.toString() + " productString='"+_productString+"', userName='"+_userName+"', profileType='"+_profileType+"', profileName='"+_profileName+"', profileDescription='"+_profileDescription+"', profileValue='"+_profileValue+"'.";
 	}
 }

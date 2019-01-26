@@ -1,6 +1,7 @@
 package com.asetune.hostmon;
 
 import com.asetune.ssh.SshConnection;
+import com.asetune.utils.Configuration;
 
 public class MonitorDiskSpaceAllOs
 extends HostMonitor
@@ -9,11 +10,11 @@ extends HostMonitor
 
 	public MonitorDiskSpaceAllOs()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorDiskSpaceAllOs(int utilVersion)
+	public MonitorDiskSpaceAllOs(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -26,7 +27,7 @@ extends HostMonitor
 	public String getCommand()
 	{
 		String cmd = super.getCommand();
-		return cmd != null ? cmd : "df -k | sed '1d'";
+		return cmd != null ? cmd : "df -kP | sed '1d'";
 	}
 
 //	gorans@gorans-ub2:/etc/postgresql/9.5/main$ df -k
@@ -42,7 +43,7 @@ extends HostMonitor
 //	tmpfs            1631564       72   1631492   1% /run/user/1000
 	
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

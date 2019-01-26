@@ -28,6 +28,105 @@ function getParameter(key, defaultValue)
 }
 
 /**
+ * Utility function: Get CHECK if parameter is part of the URL parameters
+ * @param {*} key 
+ */
+function isParameter(key)
+{
+	var vars = [], hash;
+    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+    for(var i = 0; i < hashes.length; i++)
+    {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+	}
+
+	if (vars.hasOwnProperty(key))
+		return true;
+	return false;
+}
+
+///**
+// * Utility function: get Current login name. If we are not logged in a blank field will be returned.
+// * TODO: possibly better to do this async... with a callback function as a parameter
+// */
+//function getCurrentLogin()
+//{
+//	var userName = "";
+//	var isLogin  = false;
+//	console.log("getCurrentLogin(): /login-check");
+//	$.ajax(
+//	{
+//		url: "/login-check",
+//		type: 'get',
+//		async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+//
+//		success: function(data, status)
+//		{
+//			var jsonResp = JSON.parse(data);
+//			console.log("getCurrentLogin(): jsonResp", jsonResp);
+//			
+//			userName = jsonResp.userName;
+//			isLogin  = jsonResp.isLogin;
+//		},
+//		error: function(xhr, desc, err) 
+//		{
+//			console.log(xhr);
+//			console.log("Details: " + desc + "\nError: " + err);
+//		}
+//	}); // end: ajax call
+//	
+//	if (isLogin === false)
+//		return "";
+//	return userName;
+//}
+
+/**
+ * Utility function: check if a user is logged in, a callback function will be called on completion
+ */
+function isLoggedIn(callback)
+{
+	console.log("getCurrentLogin(callback): /login-check");
+	$.ajax(
+	{
+		url: "/login-check",
+		type: 'get',
+		// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
+
+		success: function(data, status)
+		{
+			var jsonResp = JSON.parse(data);
+			console.log("isLoggedIn(): jsonResp", jsonResp);
+			
+			var asUserName = jsonResp.asUserName;
+			var isLoggedIn = jsonResp.isLoggedIn;
+
+			// Set some stuff in the NavigationBar
+			if (isLoggedIn)
+			{
+				document.getElementById("dbx-nb-isLoggedIn-div")    .style.display = "block";
+				document.getElementById("dbx-nb-isLoggedOut-div")   .style.display = "none";
+				document.getElementById("dbx-nb-isLoggedInUser-div").textContent   = asUserName;
+			}
+			else
+			{
+				document.getElementById("dbx-nb-isLoggedIn-div")    .style.display = "none";
+				document.getElementById("dbx-nb-isLoggedOut-div")   .style.display = "block";
+				document.getElementById("dbx-nb-isLoggedInUser-div").textContent   = "";
+			}
+			
+			callback(isLoggedIn, asUserName);
+		},
+		error: function(xhr, desc, err) 
+		{
+			console.log(xhr);
+			console.log("Details: " + desc + "\nError: " + err);
+		}
+	}); // end: ajax call
+}
+
+/**
  * Utility function: Create a HTML Table using a JSON input
  * grabbed from: http://www.encodedna.com/javascript/populate-json-data-to-html-table-using-javascript.htm
  */
@@ -195,3 +294,43 @@ function dbxMaxDt(dt1, dt2)
 		};
 	})();
 }(window, document));
+
+
+
+
+/**
+ * this function will return us an object with a "set" and "get" method
+ * using either localStorage if available, or defaulting to document.cookie
+ */
+function getStorage(key_prefix) 
+{
+    if (window.localStorage) {
+        // use localStorage:
+        return {
+            set: function(id, data) {
+				//console.log("storedData[localStorage].set(): id="+id+", val="+data);
+                localStorage.setItem(key_prefix+id, data);
+            },
+            get: function(id) {
+				var val = localStorage.getItem(key_prefix+id); 
+				//console.log("storedData[localStorage].get(): id="+id+", val="+val);
+                return val;
+            }
+        };
+    } else {
+        // use document.cookie:
+        return {
+            set: function(id, data) {
+				//console.log("storedData[cookie].set(): id="+id+", val="+data);
+                document.cookie = key_prefix+id+'='+encodeURIComponent(data);
+            },
+            get: function(id, data) {
+                var cookies = document.cookie, parsed = {};
+                cookies.replace(/([^=]+)=([^;]*);?\s*/g, function(whole, key, value) {
+                    parsed[key] = unescape(value);
+                });
+                return parsed[key_prefix+id];
+            }
+        };
+    }
+}

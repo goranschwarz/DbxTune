@@ -1424,6 +1424,7 @@ extends CentralPersistWriterBase
 		checkAndCreateTable(conn, null,       Table.CENTRAL_VERSION_INFO);
 		checkAndCreateTable(conn, null,       Table.CENTRAL_SESSIONS);
 		checkAndCreateTable(conn, null,       Table.CENTRAL_GRAPH_PROFILES);
+		checkAndCreateTable(conn, null,       Table.CENTRAL_USERS);
 		
 		// Close connection to db
 		close();
@@ -1677,6 +1678,7 @@ extends CentralPersistWriterBase
 			checkAndCreateTable(conn, null,       Table.CENTRAL_VERSION_INFO);
 			checkAndCreateTable(conn, null,       Table.CENTRAL_SESSIONS);
 			checkAndCreateTable(conn, null,       Table.CENTRAL_GRAPH_PROFILES);
+			checkAndCreateTable(conn, null,       Table.CENTRAL_USERS);
 //			checkAndCreateTable(conn, schemaName, Table.SESSION_PARAMS);
 			checkAndCreateTable(conn, schemaName, Table.SESSION_SAMPLES);
 			checkAndCreateTable(conn, schemaName, Table.SESSION_SAMPLE_SUM);

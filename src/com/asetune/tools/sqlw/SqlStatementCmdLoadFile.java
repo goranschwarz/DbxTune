@@ -11,7 +11,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -46,6 +45,18 @@ extends SqlStatementAbstract
 {
 	private static Logger _logger = Logger.getLogger(SqlStatementCmdLoadFile.class);
 
+	public static final String  DEFAULT_NULL_STRING       = "<NULL>";
+	public static final String  DEFAULT_FIELD_TERM_STRING = ",";
+	public static final String  DEFAULT_ROW_TERM_STRING   = "\\n";
+
+	public static final int     DEFAULT_TRAN_BATCH_SIZE   = 0;
+	public static final int     DEFAULT_SEND_BATCH_SIZE   = 1000;
+	
+	public static final boolean DEFAULT_TRUNCATE_TABLE    = false;
+	public static final boolean DEFAULT_NOHEADER          = false;
+	public static final boolean DEFAULT_SKIP_PROBLEM_ROWS = false;
+	public static final boolean DEFAULT_CHECK_AND_STOP    = false;
+	
 	private String[] _args = null;
 
 	private static class CmdParams
@@ -55,18 +66,18 @@ extends SqlStatementAbstract
 		//-----------------------
 		boolean _preview       = false;
 
-		boolean _truncate      = false;
+		boolean _truncate      = DEFAULT_TRUNCATE_TABLE;
 //		boolean _overwrite     = false;
-		boolean _noheader      = false;
-		String  _fieldTerm     = ",";
-		String  _rowTerm       = "\n";
-		String  _nullValue     = "<NULL>";
+		boolean _noheader      = DEFAULT_NOHEADER;
+		String  _fieldTerm     = DEFAULT_FIELD_TERM_STRING;
+		String  _rowTerm       = DEFAULT_ROW_TERM_STRING;
+		String  _nullValue     = DEFAULT_NULL_STRING;
 		String  _charset       = null;//"UTF-8";
 
-		boolean _skipProblemRows   = false;
+		boolean _skipProblemRows  = DEFAULT_SKIP_PROBLEM_ROWS;
 		boolean _listJavaCharSets = false;
+		boolean _checkAndStop     = DEFAULT_CHECK_AND_STOP;
 
-		boolean _checkAndExit  = false;
 //		boolean _queryInfo     = false;
 //		boolean _rsInfo        = false;
 //		boolean _noGuiQuestion = false;
@@ -75,8 +86,8 @@ extends SqlStatementAbstract
 		String  _filename      = null;
 		String  _tablename     = null;
 		
-		int     _sendBatchSize = 1000;
-		int     _tranBatchSize = 0;
+		int     _tranBatchSize = DEFAULT_TRAN_BATCH_SIZE;
+		int     _sendBatchSize = DEFAULT_SEND_BATCH_SIZE;
 
 		String  _fieldTermReadable; // set in parse()
 		String  _rowTermReadable;   // set in parse()
@@ -90,7 +101,8 @@ extends SqlStatementAbstract
 //	private String  _tabname       = "";
 //	private String  _filename      = "";
 	private List<String>  _tabColumns  = null;
-	private List<Integer> _tabDatatype = null;
+	private List<Integer> _tabDatatypeInt = null;
+	private List<String>  _tabDatatypeStr = null;
 	private Map<Integer, Integer> _f2cMap = null; // Field 2 Column Map
 
 //	private List<String> _fileColumns = null;
@@ -139,6 +151,7 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('f')) _params._fieldTerm     = cmdLine.getOptionValue('f');
 			if (cmdLine.hasOption('r')) _params._rowTerm       = cmdLine.getOptionValue('r');
 			if (cmdLine.hasOption('c')) _params._charset       = cmdLine.getOptionValue('c');
+			if (cmdLine.hasOption('C')) _params._checkAndStop  = true;
 //			if (cmdLine.hasOption('q')) _params._queryInfo     = true;
 //			if (cmdLine.hasOption('i')) _params._rsInfo        = true;
 //			if (cmdLine.hasOption('n')) _params._noGuiQuestion = true;
@@ -224,7 +237,7 @@ extends SqlStatementAbstract
 		options.addOption( "n", "noHeader",         false, "fixme" );
 		options.addOption( "f", "field_terminator", true,  "fixme" );
 		options.addOption( "r", "row_terminator",   true,  "fixme" );
-		options.addOption( "c", "charset",          false, "fixme" );
+		options.addOption( "c", "charset",          true,  "fixme" );
 		options.addOption( "B", "batchSize",        true,  "fixme" );
 		options.addOption( "b", "sendBatchSize",    true,  "fixme" );
 		options.addOption( "C", "checkAndStop",     false, "fixme" );
@@ -244,7 +257,7 @@ extends SqlStatementAbstract
 
 			if ( cmd.getArgs() != null && cmd.getArgs().length == 0 )
 			{
-				String error = "You need to specify an output file";
+				String error = "You need to specify an filename";
 				printHelp(options, error);
 			}
 			if ( cmd.getArgs() != null && cmd.getArgs().length > 1 )
@@ -280,7 +293,7 @@ extends SqlStatementAbstract
 		sb.append("  Reads a file and insert data into a table.\n");
 		sb.append("  This is used to import (a lot of rows) from plain files.\n");
 		sb.append("  The file can be in CSV (Comma Separated Value) format\n");
-		sb.append("  or some other of the known file formats (see -t)\n");
+//		sb.append("  or some other of the known file formats (see -t)\n");
 		sb.append("   \n");
 		sb.append("options: \n");
 		sb.append("  -T,--tablename               Name of the table to insert into.\n");
@@ -293,8 +306,8 @@ extends SqlStatementAbstract
 		sb.append("  -r,--row_terminator <str>    Character(s) to terminate a row DEFAULT=\\n\n");
 		sb.append("  -N,--nullValue <str>         NULL Value representation       DEFAULT=<NULL>\n");
 		sb.append("  -c,--charset <name>          File content Characterset name  DEFAULT=guessed by the content\n");
-		sb.append("  -C,--check_and_stop          Try to add first record, but then rollback\n");
-		sb.append("                               Note: this can be used to check if everything works.\n");
+		sb.append("  -C,--checkAndStop            Try to add first record, but then rollback\n");
+		sb.append("                               Note: this can be used to check if it will work.\n");
 		sb.append("  -B,--batchSize               Commit every X record           DEFAULT=0, All in One tran\n");
 		sb.append("  -b,--sendBatchSize           Send batch of records           DEFAULT=1000\n");
 //		sb.append("  -n,--noGuiQuestion           Do not show GUI questions for file overwrite\n");
@@ -367,8 +380,9 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 		DatabaseMetaData md = _conn.getMetaData();
 		ResultSet rs = md.getColumns(sqlObj.getCatalogNameN(), sqlObj.getSchemaNameN(), sqlObj.getObjectNameN(), "%");
 		int count = 0;
-		_tabColumns  = new ArrayList<String>();
-		_tabDatatype = new ArrayList<Integer>();
+		_tabColumns     = new ArrayList<>();
+		_tabDatatypeInt = new ArrayList<>();
+		_tabDatatypeStr = new ArrayList<>();
 		while (rs.next())
 		{
 			// 1. TABLE_CAT String => table catalog (may be null) 
@@ -380,8 +394,9 @@ System.out.println("fileEncoding=|"+_params._charset+"|.");
 			// 7.COLUMN_SIZE int => column size. 
 			// ...
 
-			_tabColumns.add(rs.getString(4));
-			_tabDatatype.add(rs.getInt(5));
+			_tabColumns    .add(rs.getString(4));
+			_tabDatatypeInt.add(rs.getInt   (5));
+			_tabDatatypeStr.add(rs.getString(6));
 		}
 		rs.close();
 
@@ -690,10 +705,16 @@ addResultMessage("parser format: "+format.toString());
 //FIXME: how do I set -N <BLANK>
 //OR: can we do MetaData.ifNullColumn... then if fValue==null or fValue=="" -->> this means ps.setNull()...
 					String fValue = record.get(fpos);
+//					if ( fValue == null || (fValue != null && fValue.equals(_params._nullValue)) )
+//						ps.setNull(cpos, Types.VARCHAR);
+//					else
+//						ps.setString(cpos, fValue);
+
+					int dtInt = _tabDatatypeInt.get(cpos-1);
 					if ( fValue == null || (fValue != null && fValue.equals(_params._nullValue)) )
-						ps.setNull(cpos, Types.VARCHAR);
+						ps.setNull(cpos, dtInt);
 					else
-						ps.setString(cpos, fValue);
+						ps.setObject(cpos, fValue, dtInt);
 				}
 
 				ps.addBatch();
@@ -723,6 +744,11 @@ addResultMessage("parser format: "+format.toString());
 						_rowsInserted--;
 					}
 				}
+
+				if (_params._checkAndStop)
+				{
+					throw new CheckAndStopException();
+				}
 			}
 			setProgressState("Executing last batch.");
 			ps.executeBatch(); // insert remaining records
@@ -737,6 +763,11 @@ addResultMessage("parser format: "+format.toString());
 			
 			BigDecimal rowsPerSec = new BigDecimal(String.valueOf(_rowsInserted*1000.0/execTime)).setScale(1, BigDecimal.ROUND_HALF_UP);
 			addResultMessage("Added "+_rowsInserted+" rows to table '"+_params._tablename+"'. "+skipInfo+"Using time "+TimeUtils.msToTimeStr("%?HH[:]%MM:%SS.%ms", execTime)+". Which is "+rowsPerSec+" records per second.");
+		}
+		catch (CheckAndStopException e)
+		{
+			_conn.rollback();
+			addResultMessage("Stopped after FIRST Record, reason: flag '--checkAndStop' was specified.");
 		}
 		catch (SQLException e)
 		{
@@ -776,7 +807,105 @@ addResultMessage("parser format: "+format.toString());
 	private static final String	TABLE_REGEX	 = "\\$\\{table\\}";
 	private static final String	KEYS_REGEX	 = "\\$\\{keys\\}";
 	private static final String	VALUES_REGEX = "\\$\\{values\\}";
+
+	private static class CheckAndStopException
+	extends SQLException
+	{
+		private static final long serialVersionUID = 1L;
+	}
+
+
+	/**
+	 * Read X number of records from file.
+	 * 
+	 * @param filename
+	 * @param encoding
+	 * @param rows
+	 * @param noheader
+	 * @param nullStr
+	 * @return
+	 * @throws IOException
+	 */
+	public static PreviewObject readFirstRows(String filename, String encoding, int rows, boolean noheader, String nullStr)
+	throws IOException
+	{
+		// Take a preview at the data in the file
+		int fileColCount = 0;
+
+		CSVFormat format = noheader 
+				? CSVFormat.DEFAULT.withIgnoreEmptyLines() 
+				: CSVFormat.DEFAULT.withHeader().withIgnoreEmptyLines();
+		
+//		CSVFormat format = new CSVFormat(COMMA, DOUBLE_QUOTE_CHAR, null, null, null, false, true, CRLF,
+//	            null, null, null, false, false, false, false, false);
+
+		CSVParser parser = CSVParser.parse(new File(filename), Charset.forName(encoding), format);
+		
+		// Create a list which would hold first X rows, so we can view content.
+		List<List<Object>> filePreview = new ArrayList<>();
+
+		// Copy the header map, if there is one.
+		Map<String, Integer> fileColumnMap = parser.getHeaderMap();
+
+		// Loop first rows and add it 
+		int rowCount=0;
+		int previewCount=rows;
+		for (CSVRecord record : parser)
+		{
+			rowCount++;
+			List<Object> row = new ArrayList<Object>();
+			filePreview.add(row);
+			
+			fileColCount = record.size(); 
+			for (int c=0; c<fileColCount; c++)
+			{
+				String fValue = record.get(c);
+				if ( fValue != null && fValue.equals(nullStr) )
+					fValue = null;
+				
+				row.add(fValue);
+			}
+			if (rowCount >= previewCount)
+				break;
+		}
+		parser.close();
+
+		// if there wasn't any header, create some dummy field headers: f1, f2, f3
+		if (fileColumnMap == null)
+		{
+			fileColumnMap = new LinkedHashMap<String, Integer>();
+			for (int c=0; c<fileColCount; c++)
+				fileColumnMap.put("f"+(c+1), c);
+		}
+		
+		//List<String> fileColList = new ArrayList<String>(fileColumnMap.keySet());
+		//String tableString = StringUtil.toTableString(fileColList, filePreview);
+		//
+		//return tableString;
+		
+		List<String> fileColList = new ArrayList<String>(fileColumnMap.keySet());
+		
+		return new PreviewObject(fileColList, filePreview);
+	}
 	
+	public static class PreviewObject
+	{
+		List<String>       _fileColList; 
+		List<List<Object>> _filePreviewEntries;
+		
+		public PreviewObject(List<String> fileColList, List<List<Object>> filePreviewEntries)
+		{
+			_fileColList        = fileColList;
+			_filePreviewEntries = filePreviewEntries;
+		}
+
+		public String toTableString()
+		{
+			String tableString = StringUtil.toTableString(_fileColList, _filePreviewEntries);
+			return tableString;
+		}
+	}
+
 //	public static class CSVLoader
 //	{
 //

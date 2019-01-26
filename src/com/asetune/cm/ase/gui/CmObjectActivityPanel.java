@@ -39,6 +39,7 @@ extends TabularCntrPanel
 
 	private JCheckBox l_sampleSystemTables_chk;
 	private JCheckBox l_sampleRowCount_chk;
+	private JCheckBox l_sampleTempdbWorkTables_chk;
 
 	public CmObjectActivityPanel(CountersModel cm)
 	{
@@ -81,6 +82,20 @@ extends TabularCntrPanel
 				return false;
 			}
 		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_DATATYPE_BLOB), null));
+
+		// WORK TABLES (in tempdb)
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.tempdbWorkTables");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				String LockScheme = adapter.getString(adapter.getColumnIndex("LockScheme"));
+				if ( "WORK-TABLE".equals(LockScheme))
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, ColorConstants.COLOR_TEMPDB_WORK_TABLE), null));
 	}
 
 	@Override
@@ -277,13 +292,48 @@ extends TabularCntrPanel
 			}
 		});
 		
-		// LAYOUT
-		panel.add(l_sampleRowCount_chk,     "wrap");
-		
-		panel.add(sampleTopRows_chk,      "split");
-		panel.add(sampleTopRowsCount_txt, "wrap");
+		//-----------------------------------------
+		// sample tempdb 'work tables'
+		//-----------------------------------------
+		defaultOpt = conf == null ? CmObjectActivity.DEFAULT_sample_tempdbWorkTables : conf.getBooleanProperty(CmObjectActivity.PROPKEY_sample_tempdbWorkTables, CmObjectActivity.DEFAULT_sample_tempdbWorkTables);
+		l_sampleTempdbWorkTables_chk = new JCheckBox("Include tempdb Work Tables", defaultOpt);
 
-		panel.add(l_sampleSystemTables_chk, "wrap");
+		l_sampleTempdbWorkTables_chk.setName(CmObjectActivity.PROPKEY_sample_tempdbWorkTables);
+		l_sampleTempdbWorkTables_chk.setToolTipText("<html>" +
+				"Include tempdb 'work table' in the output<br>" +
+				"<b>Note 1</b>: This will add a second SELECT statement on table 'monProcessObject'.<br>" +
+				"</html>");
+
+		l_sampleTempdbWorkTables_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				boolean isSelected = ((JCheckBox)e.getSource()).isSelected();
+				
+				// This will force the CM to re-initialize the SQL statement.
+				CountersModel cm = getCm().getCounterController().getCmByName(getName());
+				if (cm != null)
+					cm.setSql(null);
+
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf != null)
+				{
+					conf.setProperty(CmObjectActivity.PROPKEY_sample_tempdbWorkTables, isSelected);
+					conf.save();
+				}
+			}
+		});
+
+		// LAYOUT
+		panel.add(l_sampleRowCount_chk,         "wrap");
+		
+		panel.add(sampleTopRows_chk,            "split");
+		panel.add(sampleTopRowsCount_txt,       "wrap");
+
+		panel.add(l_sampleSystemTables_chk,     "wrap");
+		panel.add(l_sampleTempdbWorkTables_chk, "wrap");
 
 		return panel;
 	}

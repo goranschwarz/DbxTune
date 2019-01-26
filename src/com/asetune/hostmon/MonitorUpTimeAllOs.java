@@ -3,6 +3,7 @@ package com.asetune.hostmon;
 import org.apache.log4j.Logger;
 
 import com.asetune.ssh.SshConnection;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
 
@@ -62,11 +63,11 @@ extends MonitorUpTime
 	
 	public MonitorUpTimeAllOs()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorUpTimeAllOs(int utilVersion)
+	public MonitorUpTimeAllOs(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -83,7 +84,7 @@ extends MonitorUpTime
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

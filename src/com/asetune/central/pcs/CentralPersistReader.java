@@ -37,6 +37,7 @@ import com.asetune.central.pcs.objects.DbxAlarmHistory;
 import com.asetune.central.pcs.objects.DbxCentralProfile;
 import com.asetune.central.pcs.objects.DbxCentralServerDescription;
 import com.asetune.central.pcs.objects.DbxCentralSessions;
+import com.asetune.central.pcs.objects.DbxCentralUser;
 import com.asetune.central.pcs.objects.DbxGraphData;
 import com.asetune.central.pcs.objects.DbxGraphDescription;
 import com.asetune.central.pcs.objects.DbxGraphProperties;
@@ -227,7 +228,7 @@ public class CentralPersistReader
 	 **---------------------------------------------------
 	 */
 	/**
-	 * Gets the <code>Connection</code> to the monitored server.
+	 * Gets a <code>Connection</code> to the Central Database storage (using a Connection Cache, so release the connection after usage with releaseConnection).
 	 */
 //	@Override
 //	public Connection getConnection()
@@ -1009,25 +1010,32 @@ public class CentralPersistReader
 					rowExists = true;
 			}
 
+			_logger.debug("setGraphProfile(): EXISTS="+rowExists+": "+sqlExists);
 			int rowCount = 0;
 			if (rowExists)
 			{
 				// If profileValue is empty... remove the profile.
 				String profileValue = profile.getProfileValue();
+				_logger.debug("setGraphProfile(): profileValue: |"+profileValue+"|.");
+				
 				if (StringUtil.isNullOrBlank(profileValue) || (profileValue != null && "[]".equals(profileValue.trim())) )
 				{
 					try (Statement stmnt = conn.createStatement())
 					{
+						_logger.debug("setGraphProfile(): DELETE: "+sqlDelete);
+						
 						stmnt.executeUpdate(sqlDelete);
 						rowCount = stmnt.getUpdateCount();
 						if (rowCount != 1)
 						{
-							throw new SQLException("Problems deleting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1");
+							throw new SQLException("Problems deleting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1. "+profile);
 						}
 					}
 				}
 				else
 				{
+					_logger.debug("setGraphProfile(): UPDATE: "+sqlUpdate);
+					
 					try (PreparedStatement pstmnt = conn.prepareStatement(sqlUpdate))
 					{
 						pstmnt.setString(1, profile.getProfileDescription());
@@ -1038,13 +1046,22 @@ public class CentralPersistReader
 						rowCount = pstmnt.getUpdateCount();
 						if (rowCount != 1)
 						{
-							throw new SQLException("Problems updating profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1");
+							throw new SQLException("Problems updating profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1. "+profile);
 						}
 					}
 				}
 			}
 			else
 			{
+				_logger.debug("setGraphProfile(): INSERT: "+sqlInsert);
+				
+				// If profileValue is empty... Throw exception
+				String profileValue = profile.getProfileValue();
+				if (StringUtil.isNullOrBlank(profileValue) || (profileValue != null && "[]".equals(profileValue.trim())) )
+				{
+					throw new SQLException("The passed value for 'profileValue' is empty, this is NOT allowed. "+profile);
+				}
+
 				try (PreparedStatement pstmnt = conn.prepareStatement(sqlInsert))
 				{
 					pstmnt.setString(1, profile.getProductString());
@@ -1058,7 +1075,7 @@ public class CentralPersistReader
 					rowCount = pstmnt.getUpdateCount();
 					if (rowCount != 1)
 					{
-						throw new SQLException("Problems inserting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1");
+						throw new SQLException("Problems inserting profile '"+dbxProfileName+"' for DbxProduct '"+dbxProduct+"'. rowcount="+rowCount+", expected rowcount was 1. "+profile);
 					}
 				}
 			}
@@ -1883,6 +1900,53 @@ public class CentralPersistReader
 		}
 	}
 
+
+
+	public DbxCentralUser getDbxCentralUser(String username)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+//			DbxCentralUser xxx = new DbxCentralUser(username, username, "", "admin");
+//			return xxx;
+			
+			String q = conn.getQuotedIdentifierChar();
+			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_USERS, null, true);
+
+			// Build SQL
+			String sql = "select "
+						+ "  " + q + "UserName" + q
+						+ " ," + q + "Password" + q
+						+ " ," + q + "Email"    + q
+						+ " ," + q + "Roles"    + q
+					+" from " + tabName
+					+" where " + q + "UserName" + q + " = '" + username + "'"
+					;
+
+			DbxCentralUser user = null;
+			
+			// autoclose: stmnt, rs
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+				{
+					user = new DbxCentralUser(
+							rs.getString   (1), // UserName
+							rs.getString   (2), // Password
+							rs.getString   (3), // Email
+							rs.getString   (4)  // Roles
+							);
+				}
+			}
+			
+			return user;
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
 
 
 

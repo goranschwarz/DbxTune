@@ -72,6 +72,25 @@
           <a class="nav-link" href="/desktop_app.html">Desktop App</a>
         </li>
       </ul>
+	  <!-- on the right hand side of the menu... -->
+      <ul class="navbar-nav">
+	    <!-- IS LOGGED IN -->
+        <div id="dbx-nb-isLoggedIn-div" style="display: none;">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="http://example.com" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fa fa-user"></i> <span id="dbx-nb-isLoggedInUser-div"></span> <!-- current username will be in here -->
+            </a>
+            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
+            <a class="dropdown-item" href="#"> <i class="fa fa-cog"></i> Settings [not-yet-implemented]</a>
+            <a class="dropdown-item" href="/logout"> <i class="fa fa-sign-out"></i> Logout</a>
+            </div>
+          </li>
+        </div>
+	    <!-- IS LOGGED OUT -->
+        <div id="dbx-nb-isLoggedOut-div">
+          <a class="nav-link" href="/index.html?login"> <i class="fa fa-sign-in"></i> <span data-toggle="tooltip" title="Log in as a specific user.">Login</span></a>
+        </div>
+      </ul> <!-- end right hand side -->
     </div>
   </nav>
   
@@ -125,7 +144,13 @@
 
 
 <script>
-  // Nothing in here yet
+	//-----------------------------------------------------------
+	// Check for login and set props
+	//-----------------------------------------------------------
+	isLoggedIn( function(isLogedIn, asUserName) 
+	{
+		console.log("isLoggedIn-callback: isLogedIn='"+isLogedIn+"', asUserName='"+asUserName+"'.");
+	});
 </script>
 
 </body>

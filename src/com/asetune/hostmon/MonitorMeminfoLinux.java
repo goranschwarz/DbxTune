@@ -1,6 +1,7 @@
 package com.asetune.hostmon;
 
 import com.asetune.ssh.SshConnection;
+import com.asetune.utils.Configuration;
 
 public class MonitorMeminfoLinux
 extends HostMonitor
@@ -61,11 +62,11 @@ extends HostMonitor
 	
 	public MonitorMeminfoLinux()
 	{
-		this(-1);
+		this(-1, null);
 	}
-	public MonitorMeminfoLinux(int utilVersion)
+	public MonitorMeminfoLinux(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	@Override
@@ -82,7 +83,7 @@ extends HostMonitor
 	}
 
 	@Override
-	public HostMonitorMetaData createMetaData(int utilVersion)
+	public HostMonitorMetaData createMetaData(int utilVersion, Configuration utilExtraInfo)
 	{
 		HostMonitorMetaData md = new HostMonitorMetaData();
 		md.setTableName(getModuleName());

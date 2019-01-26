@@ -10,9 +10,9 @@ import com.asetune.ssh.SshConnection.LinuxUtilType;
 public abstract class MonitorVmstat
 extends HostMonitor
 {
-	public MonitorVmstat(int utilVersion)
+	public MonitorVmstat(int utilVersion, String utilExtraInfo)
 	{
-		super(utilVersion);
+		super(utilVersion, utilExtraInfo);
 	}
 
 	public static HostMonitor createMonitor(String host, String user, String passwd, boolean start)
@@ -57,7 +57,7 @@ extends HostMonitor
 		else if (osname.equals("Linux"))
 		{
 			int utilVersion = conn.getLinuxUtilVersion(LinuxUtilType.VMSTAT);
-			mon = new MonitorVmstatLinux(utilVersion);
+			mon = new MonitorVmstatLinux(utilVersion, null);
 			mon.setConnectedToVendor(OsVendor.Linux);
 		}
 		else if (osname.equals("AIX"))

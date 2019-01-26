@@ -62,6 +62,9 @@ extends Task
 	public static final String  PROPKEY_printSpaceInfo = "DataDirectoryCleaner.print.space.info";
 	public static final boolean DEFAULT_printSpaceInfo = true;
 
+	public static final String  PROPKEY_maxHistoricalSpaceUsageInGb = "DataDirectoryCleaner.max.historical.space.usage.GB";
+	public static final int     DEFAULT_maxHistoricalSpaceUsageInGb = -1; // -1 == DISABLED
+
 	public static final String  PROPKEY_LOG_FILE_PATTERN = "DataDirectoryCleaner.log.file.pattern";
 	public static final String  DEFAULT_LOG_FILE_PATTERN    = "%d - %-5p - %m%n";
 	
@@ -174,6 +177,23 @@ extends Task
 	}
 
 	
+	private long getSumSizeMb(Map<String, List<FileInfo>> map, SizeType type)
+	{
+		long sum = 0;
+		
+		for (List<FileInfo> list : map.values())
+		{
+			for (FileInfo fi : list)
+			{
+				if      (SizeType.MAX_FILE_OR_SAVED.equals(type)) sum += fi.getMaxSize();
+				else if (SizeType.FILE_INFO        .equals(type)) sum += fi.getFileSize();
+				else if (SizeType.SAVED_INFO       .equals(type)) sum += fi.getSavedSize();
+			}
+		}
+		
+		return sum / 1024 / 1024;
+	}
+
 	private long getMaxSizeMb(Map<String, List<FileInfo>> map, SizeType type)
 	{
 		long maxSize = 0;
@@ -339,6 +359,12 @@ extends Task
 		File dataDirRes  = dataDir;
 		try { dataDirRes = dataDir.toPath().toRealPath().toFile(); } catch(IOException ex) { _logger.warn("Problems resolving File->Path->File");}
 
+		// How many GB could the historical Databases take
+		// -1 == DISABLED
+		boolean doCleanupDueToExceedingMaxHistorySpace = false;
+		long needSpaceInMb_forExceedingMaxHistorySpace  = 0;
+		long maxHistorySpaceUsageInGb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_maxHistoricalSpaceUsageInGb, DEFAULT_maxHistoricalSpaceUsageInGb);
+		
 //		double beforeFreeMb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0;
 		double beforeFreeMb   = dataDir.getUsableSpace() / 1024.0 / 1024.0;
 		double totalMb        = dataDir.getTotalSpace()  / 1024.0 / 1024.0;
@@ -352,16 +378,36 @@ extends Task
 				totalMb, totalMb / 1024.0, 
 				beforePctUsed));
 		
+		// read a bunch of DB files
+		Map<String, List<FileInfo>> srvMap  = getFilesByServerName();
+		Map<String, List<FileInfo>> dateMap = getFilesByTimeStamp();
+
+		long sumHistoryDbFileUsageGb = getSumSizeMb(srvMap, SizeType.FILE_INFO) / 1024;
+		_logger.info(_prefix + "Summary of Saved Historical Recordings is " + sumHistoryDbFileUsageGb + " GB."); 
+
+		// Check if we exceed 'saved historical recordings' threshold
+		if (maxHistorySpaceUsageInGb > 0)
+		{
+			_logger.info(_prefix + "Max space usage in GB for historical recordings is ENABLED. The value is set to " + maxHistorySpaceUsageInGb + "GB.");
+			if (sumHistoryDbFileUsageGb > maxHistorySpaceUsageInGb)
+			{
+				doCleanupDueToExceedingMaxHistorySpace    = true;
+				needSpaceInMb_forExceedingMaxHistorySpace = (sumHistoryDbFileUsageGb - maxHistorySpaceUsageInGb) * 1024;
+				_logger.info(_prefix + "Cleanup will be attempted due to 'saved historical recordings' of " + sumHistoryDbFileUsageGb + "GB exceeds the max limit of " + maxHistorySpaceUsageInGb + " GB. (specified by property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "')");
+				_logger.info(_prefix + "At least " + needSpaceInMb_forExceedingMaxHistorySpace + " MB will be deleted.");
+			}
+		}
+		else
+		{
+			_logger.info(_prefix + "Max space usage in GB for historical recordings is NOT enabled. This can be enabled by setting property '"+PROPKEY_maxHistoricalSpaceUsageInGb+"'.");
+		}
+
 		// Create a new Configuration object, which holds entries for 'SavedFileInfo'
 		String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(PROPKEY_savedFileInfo_filename, DEFAULT_savedFileInfo_filename);
 		_savedFileInfo = new Configuration(fileName);
 		_logger.info(_prefix + "Using file '"+_savedFileInfo.getFilename()+"' to store File Size Information, with "+_savedFileInfo.size()+" entries.");
 
 
-		// read a bunch of DB files
-		Map<String, List<FileInfo>> srvMap  = getFilesByServerName();
-		Map<String, List<FileInfo>> dateMap = getFilesByTimeStamp();
-		
 		// Save the props file
 		_savedFileInfo.save();
 		
@@ -381,7 +427,7 @@ extends Task
 		BigDecimal needSpaceInGb    = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 
 		_logger.info(_prefix + "Calculated/Esitimated Space Usage for next "+multiplyFactor+" Days is "+needSpaceInMb + " MB ("+needSpaceInGb+" GB). Maximum date-range-space-usage is "+dateMapMaxSize+" MB ("+dateMapMaxSizeGb+" GB).");
-
+			
 		// Should we deduct 'beforeFreeMb' from 'needSpaceInGb'
 //		needSpaceInMb = needSpaceInMb - beforeFreeMb;
 //		needSpaceInGb = new BigDecimal( needSpaceInMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
@@ -389,9 +435,10 @@ extends Task
 //		_logger.info(_prefix + "Calculated/Esitimated space to remove is "+needSpaceInMb + " MB ("+needSpaceInGb+" GB), when Free File System usage of "+beforeFreeMb+" MB ("+beforeFreeGb+" GB) was subtracted.");
 
 
-		boolean doCleanup = needSpaceInMb > beforeFreeMb; 
-//		_logger.info(_prefix + "doCleanup="+doCleanup);
+		// Should we do cleanup
+		boolean doCleanup = needSpaceInMb > beforeFreeMb || doCleanupDueToExceedingMaxHistorySpace; 
 
+		
 		boolean printSpaceInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_printSpaceInfo, DEFAULT_printSpaceInfo);
 		if (printSpaceInfo)
 		{
@@ -448,6 +495,9 @@ extends Task
 				
 				// When we got enough MB to delete, get out of loop
 				if (removeMapSizeMb >= needSpaceInMb)
+					break;
+				
+				if (doCleanupDueToExceedingMaxHistorySpace && needSpaceInMb_forExceedingMaxHistorySpace >= removeMapSizeMb)
 					break;
 			}
 			
