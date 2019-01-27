@@ -2599,6 +2599,28 @@ implements Cloneable, ITableTooltip
 		return _trendGraphsData;
 	}
 
+	public int getTrendGraphCount()
+	{
+		if (getTrendGraphData() == null)
+			return 0;
+		
+		return getTrendGraphData().size();
+	}
+
+	public int getTrendGraphCountWithData()
+	{
+		if (getTrendGraphData() == null)
+			return 0;
+		
+		int cnt = 0;
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values())
+		{
+			if (tgdp.hasData())
+				cnt ++;
+		}
+		return cnt;
+	}
+	
 	/**
 	 * FIXME: describe me 
 	 * 
@@ -7765,7 +7787,8 @@ implements Cloneable, ITableTooltip
 			w.writeFieldName("sampleDetails");
 			w.writeStartObject();
 
-			w.writeNumberField ("graphCount",           getTrendGraphData() == null ? 0 : getTrendGraphData().size());
+			w.writeNumberField ("graphCount",           getTrendGraphCount());
+			w.writeNumberField ("graphCountWithData",   getTrendGraphCountWithData());
 			w.writeNumberField ("absRows",              getAbsRowCount());
 			w.writeNumberField ("diffRows",             getDiffRowCount());
 			w.writeNumberField ("rateRows",             getRateRowCount());
@@ -7836,6 +7859,10 @@ implements Cloneable, ITableTooltip
 			for (String graphName : getTrendGraphData().keySet())
 			{
 				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
+				
+				// Do not write empty graphs
+				if ( ! tgdp.hasData() )
+					continue;
 
 				w.writeStartObject();
 				w.writeStringField ("cmName" ,           getName());

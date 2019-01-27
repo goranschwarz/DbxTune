@@ -3687,53 +3687,63 @@ if (_guiOwner == null)
 			@Override
 			public Object doWork()
 			{
+				List<TableInfo>    tableInfoList    = new ArrayList<>();
+				List<FunctionInfo> functionInfoList = new ArrayList<>();
+
+				//----------------------------------------------------------
+				// Get Table and Columns information
 				try
 				{
-					//----------------------------------------------------------
-					// Get Table and Columns information
 					getWaitDialog().setState("Getting Table Completions.");
-					List<TableInfo> tableInfoList = refreshCompletionForTables(conn, getWaitDialog(), catName, schemaName, objName);
+					tableInfoList = refreshCompletionForTables(conn, getWaitDialog(), catName, schemaName, objName);
 
 					// Add it to the global table so we don't have to do the same lookup next time
 					_tableInfoList.addAll(tableInfoList);
 					if (tableInfoList.size() < 25)
 						refreshCompletionForTableColumns(conn, getWaitDialog(), tableInfoList, false);
+				}
+				catch(SQLException ex)
+				{
+					_logger.info("Problems reading table information for SQL Table code completion. Skipping and continuing.", ex);
+				}
 
-					//----------------------------------------------------------
-					// Get Function and Columns information (for Table Valued Functions)
+				//----------------------------------------------------------
+				// Get Function and Columns information (for Table Valued Functions)
+				try
+				{
 					getWaitDialog().setState("Getting Function Completions.");
-					List<FunctionInfo> functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog(), catName, schemaName, objName);
+					functionInfoList = refreshCompletionForFunctions(conn, getWaitDialog(), catName, schemaName, objName);
 
 					// Add it to the global table so we don't have to do the same lookup next time
 					_functionInfoList.addAll(functionInfoList);
 					if (functionInfoList.size() < 25)
 						refreshCompletionForFunctionColumns(conn, getWaitDialog(), functionInfoList, false);
+				}
+				catch(SQLException ex)
+				{
+					_logger.info("Problems reading table information for SQL Function code completion. Skipping and continuing.", ex);
+				}
 
 
-					// Create completion list for tables
-					getWaitDialog().setState("Creating Table Completions.");
-					for (TableInfo ti : tableInfoList)
+				// Create completion list for tables
+				getWaitDialog().setState("Creating Table Completions.");
+				for (TableInfo ti : tableInfoList)
+				{
+					SqlTableCompletion c = new SqlTableCompletion(CompletionProviderAbstractSql.this, ti, true, _addSchemaName, _quoteTableNames);
+					_tableComplList.add(c);
+					completionList.add(c);
+				}
+
+				// Create completion list for table valued functions
+				getWaitDialog().setState("Creating Table Valued Function Completions.");
+				for (FunctionInfo fi : functionInfoList)
+				{
+					if (fi._isTableValuedFunction)
 					{
-						SqlTableCompletion c = new SqlTableCompletion(CompletionProviderAbstractSql.this, ti, true, _addSchemaName, _quoteTableNames);
-						_tableComplList.add(c);
+						SqlFunctionCompletion c = new SqlFunctionCompletion(CompletionProviderAbstractSql.this, fi, true, _addSchemaName, _quoteTableNames);
+						_functionComplList.add(c);
 						completionList.add(c);
 					}
-
-					// Create completion list for table valued functions
-					getWaitDialog().setState("Creating Table Valued Function Completions.");
-					for (FunctionInfo fi : functionInfoList)
-					{
-						if (fi._isTableValuedFunction)
-						{
-							SqlFunctionCompletion c = new SqlFunctionCompletion(CompletionProviderAbstractSql.this, fi, true, _addSchemaName, _quoteTableNames);
-							_functionComplList.add(c);
-							completionList.add(c);
-						}
-					}
-				}
-				catch (SQLException e)
-				{
-					_logger.info("Problems reading table information for SQL Table code completion.", e);
 				}
 
 				return completionList;
