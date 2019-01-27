@@ -452,6 +452,10 @@ extends PersistWriterBase
 			if ( ! cm.hasData() )
 				continue;
 
+			// if we ONLY write graph data, but there is no graphs with data
+			if ( writeCounters == false  &&  writeGraphs  &&  cm.getTrendGraphCountWithData() == 0)
+				continue;
+			
 			cm.toJson(w, writeCounters, writeGraphs);
 		}
 
@@ -464,6 +468,7 @@ extends PersistWriterBase
 //System.out.println("Writing JSON to file: "+toFileName.getAbsolutePath());
 //
 		String jsonStr = sw.toString();
+//System.out.println(jsonStr);
 //		FileUtils.writeStringToFile(toFileName, jsonStr);
 		
 //		System.out.println("#### END JSON #######################################################################");

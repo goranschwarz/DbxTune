@@ -2064,6 +2064,7 @@ extends CentralPersistWriterBase
 
 				// check and save graph properties (like Graphs Order and Graph Headings/labels)
 				// if we send more graphs than previously: then remove and insert the latest properties
+				// Sending "more graphs" than previously is due to: all graphs might not be sent at "first" sample... (postpone-time, needs-diff-calc, etc...) 
 				checkSaveGraphProperties(conn, cont, schemaName, sessionStartTime, sessionSampleTime);
 
 				// CLOSE the transaction
@@ -2876,6 +2877,22 @@ return -1;
 //		}
 //	}
 	
+	/**
+	 * - get receivedGraphCount in container
+	 * - get savedGraphCount in PCS
+	 * if we received more graphs than stored
+	 *   - delete and insert all graph descriptions
+	 *   
+	 * We will/might receive more graphs at a later send (due to no-diff-values-available-at-first-sample, postponed-cms, etc)
+	 * Then we want to "correct" the "order" in how graphs should be viewed/displayed
+	 * 
+	 * @param conn
+	 * @param cont
+	 * @param schemaName
+	 * @param sessionStartTime
+	 * @param sessionSampleTime
+	 * @throws SQLException
+	 */
 	private void checkSaveGraphProperties(DbxConnection conn, DbxTuneSample cont, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)
 	throws SQLException
 	{
@@ -2897,7 +2914,13 @@ return -1;
 
 			Map<String, GraphEntry> tgdMap = cme._graphMap;
 			if (tgdMap != null)
-				receivedGraphCount += tgdMap.size();
+			{
+				for (GraphEntry ge : tgdMap.values())
+				{
+					if ( ge.hasData() )
+						receivedGraphCount++;
+				}
+			}
 		}
 
 		// Get SAVED number of graphs in PCS (from cachedMap or the PCS DB)
@@ -2930,6 +2953,7 @@ return -1;
 
 		if (_logger.isDebugEnabled())
 			_logger.debug("checkSaveGraphProperties(): receivedGraphCount="+receivedGraphCount+", savedGraphPropsCount="+savedGraphPropsCount);
+//System.out.println("checkSaveGraphProperties(): receivedGraphCount="+receivedGraphCount+", savedGraphPropsCount="+savedGraphPropsCount);
 
 		// DELETE old records and INSERT new records
 		if (receivedGraphCount > savedGraphPropsCount)
@@ -2959,12 +2983,17 @@ return -1;
 				{
 					for (GraphEntry ge : tgdMap.values()) 
 					{
+						if ( ! ge.hasData() )
+							continue;
+						
+						String graphFullName = cme.getName() + "_" + ge.getName();
+						
 						sb = new StringBuilder();
 						sb.append(getTableInsertStr(schemaName, Table.GRAPH_PROPERTIES, null, false));
 						sb.append(" values('").append(sessionStartTime).append("'");
 						sb.append(", '").append(cme.getName()).append("'");
 						sb.append(", '").append(ge.getName()).append("'");
-						sb.append(", '").append(cme.getName()).append("_").append(ge.getName()).append("'"); // cmName_graphName
+						sb.append(", '").append(graphFullName).append("'"); // cmName_graphName
 						sb.append(", ") .append(safeStr(ge.getGraphLabel()));
 						sb.append(", ") .append(safeStr(ge.getGraphCategory()));
 						sb.append(", ") .append(ge.isPercentGraph());
@@ -2976,6 +3005,7 @@ return -1;
 						
 						if (_logger.isTraceEnabled())
 							_logger.trace("checkSaveGraphProperties(): INSERT PCS RECORD: sql="+sql);
+						//System.out.println("checkSaveGraphProperties(): insert: schemaName='"+schemaName+"', tab='"+Table.GRAPH_PROPERTIES+"', graphFullName='"+graphFullName+"', initialOrder="+initialOrder+".");
 						
 						conn.dbExec(sql, false);
 						getStatistics().incInserts();

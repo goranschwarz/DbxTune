@@ -109,4 +109,22 @@ public class DbxGraphDescription
 		this._visibleAtStartup  = gd._visibleAtStartup;
 		this._initialOrder      = gd._initialOrder    ;
 	}
+	
+	@Override
+	public String toString()
+	{
+		// TODO Auto-generated method stub
+		return super.toString() + ":"
+				+   "serverNameList"   + "="  + _serverNameList   + ""
+				+ ", dbxProduct"       + "='" + _dbxProduct       + "'"
+				+ ", cmName"           + "='" + _cmName           + "'"
+				+ ", graphName"        + "='" + _graphName        + "'"
+				+ ", tableName"        + "='" + _tableName        + "'"
+				+ ", graphLabel"       + "='" + _graphLabel       + "'"
+				+ ", graphCategory"    + "='" + _graphCategory    + "'"
+				+ ", isPercentGraph"   + "="  + _isPercentGraph   + ""
+				+ ", visibleAtStartup" + "="  + _visibleAtStartup + ""
+				+ ", initialOrder"     + "="  + _initialOrder     + ""
+				+ ".";
+	}
 }

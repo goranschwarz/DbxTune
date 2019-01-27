@@ -1745,6 +1745,7 @@ public class CentralPersistReader
 
 						DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
 						srvDescList.add(e);
+						//System.out.println("getGraphDescriptions(): srvName='"+srvName+"': "+e);
 					}
 				}
 			} // end: foreach session
