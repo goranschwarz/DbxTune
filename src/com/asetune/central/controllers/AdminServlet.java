@@ -42,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 
 import com.asetune.central.DbxTuneCentral;
+import com.asetune.central.cleanup.DataDirectoryCleaner;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.CentralPcsWriterHandler.NotificationType;
 import com.asetune.central.pcs.CentralPersistReader;
@@ -64,6 +65,36 @@ public class AdminServlet extends HttpServlet
 		return val;
 	}
 
+	private void printHelp(ServletOutputStream out, String msg) 
+	throws IOException
+	{
+		out.println("<html>");
+		out.println("<body>");
+		if (msg != null)
+		{
+			out.println("<br>");
+			out.println("<b>" + msg + "</b><br>");
+		}
+
+		out.println("<br>");
+		out.println("Available commands: /admin?op=name<br>");
+		
+		out.println("<table border=1 cellpadding=1>");
+		out.println("  <tr> <th> Operation Name            </th> <th> Description </th> </tr>");
+		out.println("  <tr> <td> removeServer              </td> <td> Removed a DBMS Server from the system. </td> </tr>");
+		out.println("  <tr> <td> disableServer             </td> <td> Disable a DBMS Server from the system. </td> </tr>");
+		out.println("  <tr> <td> ddc|DataDirectoryCleaner  </td> <td> Execute a 'Data Directory Cleanup'.    </td> </tr>");
+		out.println("</table>");
+		out.println("");
+
+		out.println("</body>");
+		out.println("</html>");
+		out.flush();
+		
+		out.close();
+		return;
+	}
+	
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
@@ -83,7 +114,8 @@ public class AdminServlet extends HttpServlet
 
 		if ("help".equals(inputOp))
 		{
-			out.println("Not yet implemented...");
+			printHelp(out, null);
+			return;
 		}
 		else if ("removeServer".equals(inputOp))
 		{
@@ -140,9 +172,29 @@ public class AdminServlet extends HttpServlet
 		else if ("setConfig".equals(inputOp))
 		{
 		}
+		else if ("DataDirectoryCleaner".equals(inputOp) || "ddc".equals(inputOp))
+		{
+			out.println("<html>");
+			out.println("<body>");
+			out.println(" - START: DataDirectoryCleaner<br>");
+			out.flush();
+			
+			DataDirectoryCleaner t = new DataDirectoryCleaner();
+			t.execute(null);
+
+			out.println(" - END: DataDirectoryCleaner<br>");
+			out.println("</body>");
+			out.println("</html>");
+			out.flush();
+			
+			out.close();
+			return;
+		}
 		else 
 		{
-			throw new ServletException("No operation named '"+inputOp+"'.");
+			printHelp(out, "No operation named '"+inputOp+"'.");
+			return;
+			//throw new ServletException("No operation named '"+inputOp+"'.");
 		}
 		
 		
