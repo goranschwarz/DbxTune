@@ -384,7 +384,15 @@ extends Task
 		boolean doCleanupDueToExceedingMaxHistorySpace = false;
 		long needSpaceInMb_forExceedingMaxHistorySpace  = 0;
 		long maxHistorySpaceUsageInGb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_maxHistoricalSpaceUsageInGb, DEFAULT_maxHistoricalSpaceUsageInGb);
-		
+
+		// Create a new Configuration object, which holds entries for 'SavedFileInfo'
+		String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(PROPKEY_savedFileInfo_filename, DEFAULT_savedFileInfo_filename);
+		_savedFileInfo = new Configuration(fileName);
+		_logger.info(_prefix + "Using file '"+_savedFileInfo.getFilename()+"' to store File Size Information, with "+_savedFileInfo.size()+" entries.");
+
+		// Save the props file
+		//_savedFileInfo.save(); // Why should we save it just after loading it???
+
 //		double beforeFreeMb   = dataDir.getFreeSpace()   / 1024.0 / 1024.0;
 		double beforeFreeMb   = dataDir.getUsableSpace() / 1024.0 / 1024.0;
 		double totalMb        = dataDir.getTotalSpace()  / 1024.0 / 1024.0;
@@ -422,15 +430,6 @@ extends Task
 			_logger.info(_prefix + "Max space usage in GB for historical recordings is NOT enabled. This can be enabled by setting property '"+PROPKEY_maxHistoricalSpaceUsageInGb+"'.");
 		}
 
-		// Create a new Configuration object, which holds entries for 'SavedFileInfo'
-		String fileName = dataDirRes.getAbsolutePath() + File.separatorChar + Configuration.getCombinedConfiguration().getProperty(PROPKEY_savedFileInfo_filename, DEFAULT_savedFileInfo_filename);
-		_savedFileInfo = new Configuration(fileName);
-		_logger.info(_prefix + "Using file '"+_savedFileInfo.getFilename()+"' to store File Size Information, with "+_savedFileInfo.size()+" entries.");
-
-
-		// Save the props file
-		_savedFileInfo.save();
-		
 		if (_logger.isDebugEnabled())
 		{
 			_logger.debug(_prefix + "getFilesByServerName: "+srvMap);
@@ -622,7 +621,7 @@ extends Task
 			}
 		} // end: doCleanup
 
-		// Save the props file, and thow away the object
+		// Save the props file, and throw away the object
 		_logger.info(_prefix + "Saving File Size Information in file '"+_savedFileInfo.getFilename()+"', with "+_savedFileInfo.size()+" entries.");
 		_savedFileInfo.save();
 		_savedFileInfo = null; // It will be read up on next call (we might change it manually...)

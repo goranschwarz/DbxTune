@@ -33,13 +33,16 @@ public class Version
 //	public static final String VERSION_STRING     = "4.0.0";        // Use this for public releases
 	public static final String VERSION_STRING     = "4.0.0.12.dev"; // Use this for early releases
 	public static final String BUILD_STRING       = "2019-01-27/build 260";
+	
+	public static final String GIT_DATE_STRING    = "2019-01-27"; // try to update this
+	public static final String GIT_REVISION_STR   = "500";        // used by CheckForUpdates --- update this on every check-in (emulates Subversion "Revision:" tag)
 
 	public static final boolean IS_DEVELOPMENT_VERSION  = true; // if true: date expiration will be checked on startup
 	public static final String  DEV_VERSION_EXPIRE_STR  = "2020-11-30";  // "YYYY-MM-DD" 
 	public static       Date    DEV_VERSION_EXPIRE_DATE = null;
 
-	public static final String SOURCE_DATE_STRING = "$Date$";
-	public static final String SOURCE_REV_STRING  = "$Revision$";
+	public static final String SOURCE_DATE_STRING = "$Date$";     // Subversion Specific Tag, which GIT do not have
+	public static final String SOURCE_REV_STRING  = "$Revision$"; // Subversion Specific Tag, which GIT do not have
 
 //	public static final String APP_STORE_DIR = System.getProperty("user.home") + File.separator + ".asetune";
 
@@ -79,10 +82,16 @@ public class Version
 
 	public static String getSourceDate()
 	{
+		if (SOURCE_DATE_STRING.equals("$Date$"))
+			return GIT_DATE_STRING;
+
 		return SOURCE_DATE_STRING.replaceFirst("\\$Date: ", "").replaceFirst(" \\$", "").substring(0, "yyyy-mm-dd HH:MM:SS".length());
 	}
 	public static String getSourceRev()
 	{
+		if (SOURCE_REV_STRING.equals("$Revision$"))
+			return GIT_REVISION_STR;
+
 		return SOURCE_REV_STRING.replaceFirst("\\$Revision: ", "").replaceFirst(" \\$", "");
 	}
 }
