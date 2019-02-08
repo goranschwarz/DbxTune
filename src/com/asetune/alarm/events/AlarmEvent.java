@@ -280,6 +280,7 @@ extends Throwable
 	public void         setReRaiseExtendedDescription(String desc, String html) { _reRaiseExtendedDesc = desc; _reRaiseExtendedDescHtml = html; }
 	public void         setData(Object data)                                    { _data                = data; }
 	public void         setReRaiseData(Object data)                             { _reRaiseData         = data; }
+
 	
 
 	public Number getCrossedThreshold()

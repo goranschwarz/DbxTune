@@ -39,8 +39,8 @@ public class HtmlStatic
 		"  <script type='text/javascript' src='/scripts/moment/moment-duration-format.js'></script> \n" +
         " \n" +
 		"  <!-- JS: Bootstrap --> \n" +
-        "  <script src='/scripts/popper/1.12.9/popper.min.js'></script> \n" +
-		"  <script src='/scripts/bootstrap/js/bootstrap.min.js'></script> \n" +
+        "  <script type='text/javascript' src='/scripts/popper/1.12.9/popper.min.js'></script> \n" +
+		"  <script type='text/javascript' src='/scripts/bootstrap/js/bootstrap.min.js'></script> \n" +
         " \n" +
 		"  <!-- JS: DbxCentral --> \n" +
 		"  <script type='text/javascript' src='/scripts/dbxcentral.utils.js'></script> \n" +
@@ -57,7 +57,7 @@ public class HtmlStatic
 		"  <link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> \n" +
         " \n" +
 		"  <!-- CSS: Font Awsome --> \n" +
-		"  <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css'> \n" +
+		"  <link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> \n" +
 		"";
 		
 	}

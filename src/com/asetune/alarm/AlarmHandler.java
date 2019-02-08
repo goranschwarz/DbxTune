@@ -871,6 +871,8 @@ implements Runnable
 	
 	public void shutdown()
 	{
+		_logger.info("Recieved 'stop' request in AlarmHandler.");
+		
 		_running = false;
 		_thread.interrupt();
 	}

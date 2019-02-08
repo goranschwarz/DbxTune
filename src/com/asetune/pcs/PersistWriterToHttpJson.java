@@ -49,7 +49,10 @@ import org.apache.log4j.Logger;
 import com.asetune.CounterController;
 import com.asetune.DbxTune;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.dbxc.AlarmEventDbxCollectorNoData;
+import com.asetune.alarm.events.dbxc.AlarmEventHttpDestinationDown;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.Type;
@@ -73,7 +76,7 @@ extends PersistWriterBase
 {
 	private static Logger _logger = Logger.getLogger(PersistWriterToHttpJson.class);
 
-	/** Everytime the message structure is changed this should be increments so that any receiver knows what fields to expect */
+	/** Every time the message structure is changed this should be increments so that any receiver knows what fields to expect */
 	public static final int MESSAGE_VERSION = 1;
 
 	/** Some statistics for this Writer */
@@ -127,7 +130,7 @@ extends PersistWriterBase
 			// First send old entries in the error queue (no exception is thrown)
 			_confSlot0.sendErrorQueue(cont);
 
-			// Constrct and send JSON
+			// Construct and send JSON
 			jsonStr = toJson(cont, _confSlot0._sendCounters, _confSlot0._sendGraphs);
 			sendMessage(jsonStr, _confSlot0);
 		}
@@ -135,6 +138,9 @@ extends PersistWriterBase
 		{
 			_logger.error("Problems connecting/sending JSON-REST call to '"+_confSlot0._url+"'. The entry will be saved in the 'error-queue' and sent later. Caught: "+ex);
 			_confSlot0.addToErrorQueue(cont, jsonStr);
+			
+			// if destination has been down for some time: Send Alarm ?
+			checkSendAlarm(_confSlot0);
 		}
 		catch (Exception ex)
 		{
@@ -149,7 +155,7 @@ extends PersistWriterBase
 				// First send old entries in the error queue (no exception is thrown)
 				slot.sendErrorQueue(cont);
 				
-				// Constrct and send JSON
+				// Construct and send JSON
 				jsonStr = toJson(cont, slot._sendCounters, slot._sendGraphs);
 				sendMessage(jsonStr, slot);
 			}
@@ -157,6 +163,9 @@ extends PersistWriterBase
 			{
 				_logger.error("Problems connecting/sending JSON-REST call to '"+slot._url+"'. The entry will be saved in the 'error-queue' and sent later. Caught: "+ex);
 				slot.addToErrorQueue(cont, jsonStr);
+
+				// if destination has been down for some time: Send Alarm ?
+				checkSendAlarm(slot);
 			}
 			catch (Exception ex)
 			{
@@ -165,6 +174,27 @@ extends PersistWriterBase
 		}
 	}
 
+	/** Check if we should send alarm, and if so: send the alarm */
+	private void checkSendAlarm(ConfigSlot slot)
+	{
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+
+		// NO Alarm Handler == NO WORK
+		if ( alarmHandler == null )
+			return;
+
+		long lastSendSuccessInSec = (System.currentTimeMillis() - slot._lastSendSuccess) / 1000;
+
+		// Is it time to send Alarm
+		if (lastSendSuccessInSec > slot._errorSendAlarmThresholdInSec)
+		{
+			String collectorName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv") + "[" + Version.getAppName() + "]";
+
+			AlarmEvent alarmEvent = new AlarmEventHttpDestinationDown(collectorName, slot._cfgName, slot._url, lastSendSuccessInSec, slot._errorSendAlarmThresholdInSec);
+			alarmHandler.addAlarm(alarmEvent);
+		}
+	}
+	
 //	private String toJsonGSON(PersistContainer cont, boolean writeCounters, boolean writeGraphs)
 //	throws IOException
 //	{
@@ -513,7 +543,7 @@ extends PersistWriterBase
 		
 		getStatistics().setLastSendTimeInMs(sendTime);
 
-		// Check responce
+		// Check response
 		int responceCode = conn.getResponseCode();
 		if ( responceCode >= 203) // see 'https://httpstatuses.com/' for http codes... or at the bottom of this source code
 		{
@@ -528,7 +558,10 @@ extends PersistWriterBase
 			_logger.debug("Responce code "+responceCode+" ("+HttpUtils.httpResponceCodeToText(responceCode)+"). From URL '"+slot._url+"'. Sent JSON content.length: "+text.length()+", "+(text.length()/1024)+" KB");
 		}
 
-		// Read responce and print the output...
+		// Mark last success time
+		slot._lastSendSuccess = System.currentTimeMillis();
+
+		// Read response and print the output...
 		BufferedReader br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
 
 		String outputRow;
@@ -620,6 +653,9 @@ extends PersistWriterBase
 		_logger.info("Configuration for Persist Writer Module: "+getName());
 		_logger.info("    " + StringUtil.left(key(PROPKEY_url                              ), spaces) + ": " + _confSlot0._url);
 
+		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarm                   ), spaces) + ": " + _confSlot0._errorSendAlarm);
+		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarmThresholdInSec     ), spaces) + ": " + _confSlot0._errorSendAlarmThresholdInSec);
+
 		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDisk                  ), spaces) + ": " + _confSlot0._errorSaveToDisk);
 		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskPath              ), spaces) + ": " + _confSlot0._errorSaveToDiskPath);
 		_logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), spaces) + ": " + _confSlot0._errorSaveToDiskDiscardAfterXDays);
@@ -643,6 +679,9 @@ extends PersistWriterBase
 		for (ConfigSlot slot : _confSlots)
 		{
 			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_url                              , slot._cfgName), spaces) + ": " + slot._url);
+
+			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarm                   , slot._cfgName), spaces) + ": " + slot._errorSendAlarm);
+			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSendAlarmThresholdInSec     , slot._cfgName), spaces) + ": " + slot._errorSendAlarmThresholdInSec);
 
 			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDisk                  , slot._cfgName), spaces) + ": " + slot._errorSaveToDisk);
 			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorSaveToDiskPath              , slot._cfgName), spaces) + ": " + slot._errorSaveToDiskPath);
@@ -699,6 +738,9 @@ extends PersistWriterBase
 		if (_confSlot0._url.endsWith("/api/pcs/receiver"))
 			_confSlot0._cfgName    = "DbxCentral";
 
+		_confSlot0._errorSendAlarm                   = conf.getBooleanProperty (key(PROPKEY_errorSendAlarm                   ), DEFAULT_errorSendAlarm);
+		_confSlot0._errorSendAlarmThresholdInSec     = conf.getIntProperty     (key(PROPKEY_errorSendAlarmThresholdInSec     ), DEFAULT_errorSendAlarmThresholdInSec);
+
 		_confSlot0._errorSaveToDisk                   = conf.getBooleanProperty(key(PROPKEY_errorSaveToDisk                  ), DEFAULT_errorSaveToDisk);
 		_confSlot0._errorSaveToDiskPath               = conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath);
 		_confSlot0._errorSaveToDiskDiscardAfterXDays  = conf.getIntProperty    (key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), DEFAULT_errorSaveToDiskDiscardAfterXDays);
@@ -729,6 +771,9 @@ extends PersistWriterBase
 		{
 			String url                                = conf.getProperty       (key(PROPKEY_url                              , cfgKey), null);
                                    
+			boolean errorSendAlarm                    = conf.getBooleanProperty(key(PROPKEY_errorSendAlarm                   , cfgKey), DEFAULT_errorSendAlarm);
+			int     errorSendAlarmThresholdInSec      = conf.getIntProperty    (key(PROPKEY_errorSendAlarmThresholdInSec     , cfgKey), DEFAULT_errorSendAlarmThresholdInSec);
+
 			boolean errorSaveToDisk                   = conf.getBooleanProperty(key(PROPKEY_errorSaveToDisk                  , cfgKey), DEFAULT_errorSaveToDisk);
 			String  errorSaveToDiskPath               = conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              , cfgKey), DEFAULT_errorSaveToDiskPath);
 			int     errorSaveToDiskDiscardAfterXDays  = conf.getIntProperty    (key(PROPKEY_errorSaveToDiskDiscardAfterXDays , cfgKey), DEFAULT_errorSaveToDiskDiscardAfterXDays);
@@ -761,6 +806,9 @@ extends PersistWriterBase
 				slot._cfgName        = cfgKey;
 				slot._url            = url;
 
+				slot._errorSendAlarm                    = errorSendAlarm;
+				slot._errorSendAlarmThresholdInSec      = errorSendAlarmThresholdInSec;
+				
 				slot._errorSaveToDisk                   = errorSaveToDisk;
 				slot._errorSaveToDiskPath               = errorSaveToDiskPath;
 				slot._errorSaveToDiskDiscardAfterXDays  = errorSaveToDiskDiscardAfterXDays;
@@ -827,6 +875,13 @@ extends PersistWriterBase
 	public static final String  PROPKEY_url               = "PersistWriterToHttpJson.{KEY}.url";
 //	public static final String  DEFAULT_url               = null;
 	public static final String  DEFAULT_url               = "http://localhost:8080/api/pcs/receiver";
+
+	
+	public static final String  PROPKEY_errorSendAlarm                    = "PersistWriterToHttpJson.{KEY}.error.sendAlarm";
+	public static final boolean DEFAULT_errorSendAlarm                    = true;
+                                                          
+	public static final String  PROPKEY_errorSendAlarmThresholdInSec      = "PersistWriterToHttpJson.{KEY}.error.sendAlarm.thresholdInSec";
+	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 15; // 15 minutes
 
 	
 	public static final String  PROPKEY_errorSaveToDisk                   = "PersistWriterToHttpJson.{KEY}.error.saveToDisk";
@@ -906,6 +961,10 @@ extends PersistWriterBase
 		String  _cfgName  = "";
 		String  _url      = "";
 
+		boolean _errorSendAlarm                    = DEFAULT_errorSendAlarm;
+		int     _errorSendAlarmThresholdInSec      = DEFAULT_errorSendAlarmThresholdInSec;
+		long    _lastSendSuccess                   = System.currentTimeMillis(); // used to determine if we should send alarm
+
 		boolean _errorSaveToDisk                   = DEFAULT_errorSaveToDisk;
 		String  _errorSaveToDiskPath               = DEFAULT_errorSaveToDiskPath;
 		int     _errorSaveToDiskDiscardAfterXDays  = DEFAULT_errorSaveToDiskDiscardAfterXDays;
@@ -957,14 +1016,14 @@ extends PersistWriterBase
 				String srv = cont.getServerNameOrAlias(); 
 				File   f   = new File(_errorSaveToDiskPath + File.separatorChar + RECOVER_FILE_PREFIX + srv + "." + _cfgName + "." + ts + ".json");
 
-				_logger.info("addToErrorQueue(DISK): cfgName='"+_cfgName+"'. Saving to file: "+f);
+				_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Saving to file: "+f);
 				try
 				{
 					FileUtils.write(f, jsonStr, StandardCharsets.UTF_8);
 				}
 				catch (IOException ex)
 				{
-					_logger.error("addToErrorQueue(DISK): cfgName='"+_cfgName+"'. Error when saving to file '"+f+"'. Caught: "+ex, ex);
+					_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Error when saving to file '"+f+"'. Caught: "+ex, ex);
 				}
 			}
 			// IN-MEMORY error queue
@@ -1011,7 +1070,7 @@ extends PersistWriterBase
 						String filename = file.getName();
 						if (filename.startsWith(RECOVER_FILE_PREFIX + srv + "." + _cfgName + "."))
 						{
-							_logger.info("sendErrorQueue(DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. trying to recover and send file: "+file);
+							_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. trying to recover and send file: "+file);
 							try
 							{
 								String jsonStr = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
@@ -1030,25 +1089,25 @@ extends PersistWriterBase
 								int sleepThreshold = 5;
 								if (serverSideQueueSize > sleepThreshold)
 								{
-									_logger.info("sendErrorQueue(DISK): serverSideQueueSize="+serverSideQueueSize+", Sleeping "+_errorSaveToDiskSuccessSleepTimeMs+" ms for config name '"+_cfgName+"', srv='"+srv+"', sendCount="+sendCount+", after sending file '"+file+"'. This not to overload the Central Server.");
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize="+serverSideQueueSize+", Sleeping "+_errorSaveToDiskSuccessSleepTimeMs+" ms for config name '"+_cfgName+"', srv='"+srv+"', sendCount="+sendCount+", after sending file '"+file+"'. This not to overload the Central Server.");
 									Thread.sleep(_errorSaveToDiskSuccessSleepTimeMs);
 								}
 							}
 							catch (InterruptedException ex)
 							{
-								_logger.info("sendErrorQueue(DISK): Interupted when doing disk entry recovery at file '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'.");
+								_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'.");
 								break;
 							}
 							catch (ConnectException ex) 
 							{
 								// log WITHOUT stacktrace
-								_logger.info("sendErrorQueue(DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex);
+								_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex);
 								break;
 							}
 							catch (Exception ex) 
 							{
 								// log with STACKTRACE
-								_logger.info("sendErrorQueue(DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex, ex);
+								_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex, ex);
 								break;
 							}
 						} // end: correct file
@@ -1139,6 +1198,9 @@ extends PersistWriterBase
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		list.add( new CmSettingsHelper("URL",           Type.MANDATORY,     key(PROPKEY_url                              ), String .class, conf.getProperty       (key(PROPKEY_url                              ), DEFAULT_url                              ), DEFAULT_url                              , "URL to use when issuing the HTTP POST request", new UrlInputValidator()));
+
+		list.add( new CmSettingsHelper("errorSendAlarm",                    key(PROPKEY_errorSendAlarm                   ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_errorSendAlarm                   ), DEFAULT_errorSendAlarm                   ), DEFAULT_errorSendAlarm                   , "If send errors, Send Alarm.)"));
+		list.add( new CmSettingsHelper("errorSendAlarmThresholdInSec",      key(PROPKEY_errorSendAlarmThresholdInSec     ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorSendAlarmThresholdInSec     ), DEFAULT_errorSendAlarmThresholdInSec     ), DEFAULT_errorSendAlarmThresholdInSec     , "If send errors, Send Alarm, but only after X Seconds.)"));
 
 		list.add( new CmSettingsHelper("errorSaveToDisk",                   key(PROPKEY_errorSaveToDisk                  ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_errorSaveToDisk                  ), DEFAULT_errorSaveToDisk                  ), DEFAULT_errorSaveToDisk                  , "If send errors, save the JSON message to DISK and retry later.)"));
 		list.add( new CmSettingsHelper("errorSaveToDiskPath",               key(PROPKEY_errorSaveToDiskPath              ), String .class, conf.getProperty       (key(PROPKEY_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath              ), DEFAULT_errorSaveToDiskPath              , "Path where to save JSON messages on send errors"));

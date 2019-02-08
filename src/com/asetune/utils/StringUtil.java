@@ -808,6 +808,24 @@ public class StringUtil
 	}
 
 	/**
+	 * Check if "any" of the strings is equal to
+	 * 
+	 * @param strToCheck Sting to check
+	 * @param equalsAny  if strToChack is equal to any of the strings here...
+	 * 
+	 * @return true if any match, otherwise False
+	 */
+	public static boolean equalsAny(String strToCheck, String... equalsAny)
+	{
+		for (String str : equalsAny)
+		{
+			if (strToCheck.equals(str))
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Split the String s into an array of strings. The String s is split at
 	 * each occurrence of the substring <code>splitAt</code> in <code>s</code>.
 	 * <p>
@@ -1471,6 +1489,25 @@ public class StringUtil
 		return false;
 	}
 
+	/**
+	 * Remove last "endStr"
+	 * @param str
+	 * @param endStr
+	 * @return the origin string but if str end with "endStr" 
+	 */
+	public static String removeLastStr(String str, String endStr)
+	{
+		if (str == null)
+			return null;
+
+		str = rtrim(str);
+
+		if (str.endsWith(endStr))
+			str = str.substring(0, str.length()-endStr.length());
+
+		return str;
+	}
+	
 	/**
 	 * Remove last ','
 	 * @param str

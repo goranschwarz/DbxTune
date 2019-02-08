@@ -7417,6 +7417,9 @@ ex.printStackTrace();
 
 			boolean goTabbedPane = false;
 			
+			// Just for DEBUG Purposes: to see what the DBMS is doing if you are NOT closing the Statement
+			boolean debugStatementClose = Configuration.getCombinedConfiguration().getBooleanProperty("sqlw.Statement.close", true);
+
 			// loop all batches
 			for (sql = sr.getSqlBatchString(); sql != null; sql = sr.getSqlBatchString())
 			{
@@ -7734,7 +7737,10 @@ ex.printStackTrace();
 						putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 						
 						// Close the statement
-						stmnt.close();
+						if (debugStatementClose)
+							stmnt.close();
+						else
+							_logger.info("DEBUG: The JDBC Statement will NOT be closed. property 'sqlw.Statement.close' is set to FALSE, please set this to true or remove the property.");
 						progress.setSqlStatement(null);
 
 						// Connection level WARNINGS, Append, messages and Warnings to _resultCompList, if any
@@ -12495,6 +12501,8 @@ checkPanelSize(_resPanel, comp);
 		pw.println("  -v,--version              Display "+Version.getAppName()+" and JVM Version.");
 		pw.println("  -x,--debug <dbg1,dbg2>    Debug options: a comma separated string");
 		pw.println("                            To get available option, do -x list");
+		pw.println("  -J,--javaSystemProp <k=v> set Java System Property, same as java -Dkey=value");
+		
 		pw.println("  -a,--createAppDir         Create application dir (~/.dbxtune) and exit.");
 		pw.println("  ");
 		pw.println("  -U,--user <user>          Username when connecting to server.");
@@ -12544,6 +12552,8 @@ checkPanelSize(_resPanel, comp);
 		options.addOption( "p", "connProfile", true, "Connect using an existing Connection Profile");
 		options.addOption( "q", "sqlStatement",true, "SQL statement to execute" );
 		options.addOption( "i", "inputFile",   true, "Input File to open in editor" );
+
+		options.addOption( Option.builder("J").longOpt("javaSystemProp").hasArgs().valueSeparator('=').build() ); // NOTE the hasArgs() instead of hasArg() *** the 's' at the end of hasArg<s>() does the trick...
 
 		return options;
 	}
@@ -12652,6 +12662,25 @@ checkPanelSize(_resPanel, comp);
 				if ( cmd.hasOption("savedir") )
 					System.setProperty("DBXTUNE_SAVE_DIR", cmd.getOptionValue("savedir"));
 
+				//-------------------------------
+				// Set system properties
+				//-------------------------------
+				if (cmd.hasOption('J'))
+				{
+					Properties javaProps = cmd.getOptionProperties("J");
+
+					for (String key : javaProps.stringPropertyNames())
+					{
+						String val = javaProps.getProperty(key);
+						System.setProperty(key, val);
+
+						boolean debug = true;
+						if (debug)
+							System.out.println(" ----->>>>> SETTING SYSTEM PROPERTY: key=|"+key+"|, val=|"+val+"|.");
+					}
+
+				}
+				
 				new QueryWindow(cmd);
 //				SwingUtilities.invokeLater(new Runnable() 
 //				{

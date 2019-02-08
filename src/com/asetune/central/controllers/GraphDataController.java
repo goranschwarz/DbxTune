@@ -55,7 +55,11 @@ extends HttpServlet
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
 
-		String sessionName    = Helper.getParameter(req, "sessionName");
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "sessionName", "srv", "srvName",    "cmName", "graphName", "startTime", "endTime", "sampleType", "sampleValue"))
+			return;
+
+		String sessionName    = Helper.getParameter(req, new String[] {"sessionName", "srv", "srvName"} );
 		String cmName         = Helper.getParameter(req, "cmName");
 		String graphName      = Helper.getParameter(req, "graphName");
 		String startTime      = Helper.getParameter(req, "startTime");
@@ -87,6 +91,17 @@ extends HttpServlet
 		}
 //System.out.println("GraphData: getGraphData(sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"', endTime='"+endTime+"', avgOverMinutes='"+avgOverMinutes+"'.)");
 
+		// Check that "sessionName" or "srvName" exists
+		if (CentralPersistReader.hasInstance())
+		{
+			CentralPersistReader reader = CentralPersistReader.getInstance();
+			if ( ! reader.hasServerSession(sessionName) )
+			{
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '"+sessionName+"' do not exist in the DBX Central Database.");
+				return;
+			}
+		}
+		
 		String payload;
 		try
 		{

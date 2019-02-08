@@ -223,11 +223,21 @@ public class TimeUtils
 		return format;
 	}
 
+	/** seconds as a string in format %?DD[d ]HH:MM:SS */
+	public static String secToTimeStrLong(long execTimeInSec)
+	{
+		return msToTimeStr("%?DD[d ]%HH:%MM:%SS", execTimeInSec * 1000);
+	}
+	/** seconds as a string in format %?DD[d ]%?HH[:]%MM:%SS */
+	public static String secToTimeStrShort(long execTimeInSec)
+	{
+		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", execTimeInSec * 1000);
+	}
 	/**
 	 * Convert a long into a time string 
 	 * 
 	 * @param format %HH:%MM:%SS.%ms  or %?HH[:]%MM:%SS.%ms where the HH is optional and only filled in if hour is above 0
-	 *        TODO: ?%DD[d ] -->>> optional paramater, which will hold # days (if hours is above 24)
+	 *        ?%DD[d ] -->>> optional parameter, which will hold # days (if hours is above 24)
 	 * @param execTime
 	 * @return a string of the format description
 	 */

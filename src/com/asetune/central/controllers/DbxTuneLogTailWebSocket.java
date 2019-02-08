@@ -62,12 +62,12 @@ public class DbxTuneLogTailWebSocket
 	public void onConnect(Session session) throws IOException
 	{
 		Map<String, List<String>> parameterMap = session.getUpgradeRequest().getParameterMap();
-		System.out.println("xxx: parameterMap='"+parameterMap+"'.");
+//		System.out.println("xxx: parameterMap='"+parameterMap+"'.");
 
 		String filename = parameterMap.get("name").get(0);
 		String remoteHost = session.getRemoteAddress().getHostString(); // or getHostName();
 
-		System.out.println("xxx: filename='"+filename+"', remoteHost='"+remoteHost+"'.");
+//		System.out.println("xxx: filename='"+filename+"', remoteHost='"+remoteHost+"'.");
 		
 		String fullFilename = DbxTuneCentral.getAppLogDir() + File.separatorChar + filename;
 		File f = new File(fullFilename);

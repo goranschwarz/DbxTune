@@ -395,7 +395,8 @@ public class OverviewServlet extends HttpServlet
 	}
 	
 	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) 
+	throws ServletException, IOException
 	{
 		ServletOutputStream out = resp.getOutputStream();
 		resp.setContentType("text/html");
@@ -403,9 +404,12 @@ public class OverviewServlet extends HttpServlet
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
 		
-		String refreshStr = req.getParameter("refresh");
-		if (StringUtil.isNullOrBlank(refreshStr))
-			refreshStr = "0";
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "refresh"))
+			return;
+
+		
+		String refreshStr = Helper.getParameter(req, "refresh", "0");
 
 		int refresh = StringUtil.parseInt(refreshStr, 0);
 
@@ -567,7 +571,7 @@ public class OverviewServlet extends HttpServlet
 		}
 
 		// -----------------------------------------------------------
-		// get enties from the Persist Reader
+		// get entries from the Persist Reader
 		LinkedHashMap<String, DbxCentralSessions> centralSessionMap = new LinkedHashMap<>();
 		List<DbxCentralSessions> centralSessionList = new ArrayList<>();
 		try

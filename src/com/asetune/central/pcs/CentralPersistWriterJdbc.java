@@ -60,6 +60,7 @@ import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbx.DbxConnectInfo;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
@@ -1533,8 +1534,8 @@ extends CentralPersistWriterBase
 			// Loop schemas: if table exists
 			for (String schemaName : schemaSet)
 			{
-				internalDbUpgradeAlarmActiveHistory(conn, step, schemaName, Table.ALARM_ACTIVE);
-				internalDbUpgradeAlarmActiveHistory(conn, step, schemaName, Table.ALARM_HISTORY);
+				internalDbUpgradeAlarmActiveHistory_step7(conn, step, schemaName, Table.ALARM_ACTIVE);
+				internalDbUpgradeAlarmActiveHistory_step7(conn, step, schemaName, Table.ALARM_HISTORY);
 			}
 		}
 
@@ -1564,25 +1565,46 @@ extends CentralPersistWriterBase
 			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
 			for (String schemaName : schemaSet)
 			{
-    			// Add column 'GraphCategory' to table 'DbxGraphProperties' in all "user" schemas
-    			String onlyTabName = getTableName(null, Table.GRAPH_PROPERTIES, null, false);
+				// Add column 'GraphCategory' to table 'DbxGraphProperties' in all "user" schemas
+				String onlyTabName = getTableName(null, Table.GRAPH_PROPERTIES, null, false);
 
-    			// get all columns, this to check if TABLE EXISTS
-    			Set<String> colNames = new LinkedHashSet<>();
-    			ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
-    			while (colRs.next())
-    				colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
-    			colRs.close();
+				// get all columns, this to check if TABLE EXISTS
+				Set<String> colNames = new LinkedHashSet<>();
+				ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
+				while (colRs.next())
+					colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
+				colRs.close();
 
-    			// IF the table TABLE EXISTS 'GraphCategory' do NOT exists, add it
-    			if ( colNames.size() > 0 )
-    			{
-    				if ( ! colNames.contains("GraphCategory"))
-    				{
-    					sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + " add column " + q+"GraphCategory"+q + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
-    					internalDbUpgradeDdlExec(conn, step, sql);
-    				}
-    			}
+				// IF the table TABLE EXISTS 'GraphCategory' do NOT exists, add it
+				if ( colNames.size() > 0 )
+				{
+					if ( ! colNames.contains("GraphCategory"))
+					{
+						sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + " add column " + q+"GraphCategory"+q + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
+						internalDbUpgradeDdlExec(conn, step, sql);
+					}
+				}
+			}
+		}
+
+		if (fromDbVersion <= 8) // below version 9
+		{
+			//--------------------------------
+			step = 10;
+
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = conn.getMetaData().getSchemas();
+			while (schemaRs.next())
+				schemaSet.add(schemaRs.getString(1));
+			schemaRs.close();
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				internalDbUpgradeAlarmActiveHistory_step10(conn, step, schemaName, Table.ALARM_ACTIVE);
+				internalDbUpgradeAlarmActiveHistory_step10(conn, step, schemaName, Table.ALARM_HISTORY);
 			}
 		}
 
@@ -1590,7 +1612,7 @@ extends CentralPersistWriterBase
 		return toDbVersion;
 	}
 
-	private void internalDbUpgradeAlarmActiveHistory(DbxConnection conn, int step, String schemaName, Table table) 
+	private void internalDbUpgradeAlarmActiveHistory_step7(DbxConnection conn, int step, String schemaName, Table table) 
 	throws SQLException
 	{
 		String q = getQuotedIdentifierChar();
@@ -1613,6 +1635,42 @@ extends CentralPersistWriterBase
 				String sql = "alter table " + q+schemaName+q + "." + q+onlyTabName+q + " add column " + q+"category"+q + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
 				internalDbUpgradeDdlExec(conn, step, sql);
 			}
+		}
+	}
+
+	private void internalDbUpgradeAlarmActiveHistory_step10(DbxConnection conn, int step, String schemaName, Table table) 
+	throws SQLException
+	{
+		String q = getQuotedIdentifierChar();
+
+		// H2, Postgres, SqlServer:  ALTER TABLE tabname ALTER COLUMN colname DATATYPE
+		// ASE, MySql, Oracle:       ALTER TABLE tabname MODIFY       colname DATATYPE
+		String dbmsSpecificSyntax_beforeColName = " alter column ";
+		if (DbUtils.isProductName(conn.getDatabaseProductName(), DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MYSQL, DbUtils.DB_PROD_NAME_ORACLE))
+			dbmsSpecificSyntax_beforeColName = " modify ";
+
+		// get table name
+		String onlyTabName = getTableName(null, table, null, false);
+
+		// get all columns, this to check if TABLE EXISTS
+		Set<String> colNames = new LinkedHashSet<>();
+		ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
+		while (colRs.next())
+			colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
+		colRs.close();
+
+		// IF the table exists & column 'category' do NOT exists, add it
+		if ( colNames.size() > 0 )
+		{
+			String sql;
+			
+			// Column 'data'
+			sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + dbmsSpecificSyntax_beforeColName + q+"data"+q + " varchar(180)";
+			internalDbUpgradeDdlExec(conn, step, sql);
+
+			// Column 'lastData'
+			sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + dbmsSpecificSyntax_beforeColName + q+"lastData"+q + " varchar(180)";
+			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 	}
 
@@ -1817,6 +1875,12 @@ extends CentralPersistWriterBase
 				{
 					conn.dbExec(sql);
 					getStatistics().incInserts();
+					
+					// Notify the reader that "things has changed"
+					if (CentralPersistReader.hasInstance())
+					{
+						CentralPersistReader.getInstance().fireSessionChanges();
+					}
 				}
 				catch(SQLException ex)
 				{
@@ -2142,8 +2206,8 @@ extends CentralPersistWriterBase
 					sbSql.append(", ").append(safeStr( ae.getCancelTime() ));
 					sbSql.append(", ").append(safeStr( ae.getTimeToLive() ));
 					sbSql.append(", ").append(safeStr( ae.getThreshold() ));
-					sbSql.append(", ").append(safeStr( ae.getData() ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData() ));
+					sbSql.append(", ").append(safeStr( ae.getData()        , 160 ));
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData() , 160 ));
 					sbSql.append(", ").append(safeStr( ae.getDescription() ));
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription() ));
 					sbSql.append(", ").append(safeStr( ae.getExtendedDescription() ));
@@ -2171,54 +2235,113 @@ extends CentralPersistWriterBase
 				// do not store some stuff
 				if ( ! _alarmEventActionStore.contains(aew.getAction()) )
 					continue;
-				
+
+				String qic = conn.getQuotedIdentifierChar();
 				AlarmEntry ae = aew.getAlarmEntry();
 				
 				// Store some info
 				StringBuilder sbSql = new StringBuilder();
 
-				try
+				// Check that the entry DO NOT EXISTS
+				// YES: I can just get an exception for a duplicate key... but I can print a more friendlier message if I do the check!
+				// CONSEQUENCE: If the PK changes on the table, we also need to change this check
+				// 
+				// PRIMARY KEY (eventTime, action, alarmClass, serviceType, serviceName, serviceInfo, extraInfo)
+				boolean rowExists = false;
+				boolean checkPk = true;
+				if (checkPk)
 				{
-					sbSql.append(getTableInsertStr(schemaName, Table.ALARM_HISTORY, null, false));
-					sbSql.append(" values(");
-					sbSql.append("  ").append(safeStr( sessionStartTime ));
-					sbSql.append(", ").append(safeStr( sessionSampleTime ));
-
-					sbSql.append(", ").append(safeStr( aew.getEventTime() ));
-					sbSql.append(", ").append(safeStr( aew.getAction() ));
-
-					sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() ));
-					sbSql.append(", ").append(safeStr( ae.getServiceType() ));
-					sbSql.append(", ").append(safeStr( ae.getServiceName() ));
-					sbSql.append(", ").append(safeStr( ae.getServiceInfo() ));
-					sbSql.append(", ").append(safeStr( ae.getExtraInfo() ));
-					sbSql.append(", ").append(safeStr( ae.getCategory() ));
-					sbSql.append(", ").append(safeStr( ae.getSeverity() ));
-					sbSql.append(", ").append(safeStr( ae.getState() ));
-					sbSql.append(", ").append(safeStr( ae.getRepeatCnt() ));
-					sbSql.append(", ").append(safeStr( ae.getDuration() ));
-					sbSql.append(", ").append(safeStr( ae.getCreationTime() ));
-					sbSql.append(", ").append(safeStr( ae.getCancelTime() ));
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive() ));
-					sbSql.append(", ").append(safeStr( ae.getThreshold() ));
-					sbSql.append(", ").append(safeStr( ae.getData() ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData() ));
-					sbSql.append(", ").append(safeStr( ae.getDescription() ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription() ));
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription() ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));
-					sbSql.append(")");
-
+					sbSql.append(" select * from ");
+					sbSql.append(getTableName(schemaName, Table.ALARM_HISTORY, null, true));
+					sbSql.append(" where 1 = 1 ");
+					sbSql.append("   and ").append(qic).append("eventTime")  .append(qic).append(" = ").append(safeStr(aew.getEventTime()));
+					sbSql.append("   and ").append(qic).append("action")     .append(qic).append(" = ").append(safeStr(aew.getAction()));
+					sbSql.append("   and ").append(qic).append("alarmClass") .append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getAlarmClassAbriviated()));
+					sbSql.append("   and ").append(qic).append("serviceType").append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceType()));
+					sbSql.append("   and ").append(qic).append("serviceName").append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceName()));
+					sbSql.append("   and ").append(qic).append("serviceInfo").append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceInfo()));
+					sbSql.append("   and ").append(qic).append("extraInfo")  .append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getExtraInfo()));
+					
 					sql = sbSql.toString();
-					conn.dbExec(sql);
-					getStatistics().incInserts();
+
+					try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+					{
+						ResultSetTableModel rstm = new ResultSetTableModel(rs, "pkCheck-ALARM_HISTORY");
+						rowExists = rstm.getRowCount() > 0;
+//						while(rs.next())
+//							rowExists = true;
+
+						// Print some extra
+						if (rowExists)
+						{
+							// Print out the EXISTING ROW
+							String existingRow = rstm.toStringRow(0);
+
+							// Print out the ROW THAT WE WONT add to the database
+							String alarmEntryRecord = ae.toString();
+							
+							_logger.warn("Checking if PK ROW Exists for ALARM_HISTORY, record already exists... The INSERT will NOT be attempted. \n"
+									+ "\t PK Check SQL  = |"+sql+"| \n"
+									+ "\t Existing  row = |"+existingRow+"| \n"
+									+ "\t Incomming row = |"+alarmEntryRecord+"|.");
+						}
+					}
+					catch (SQLException e)
+					{
+						_logger.warn("Error when checking if PK ROW Exists: History Alarm Event(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+						// throws Exception if it's a severe problem
+						isSevereProblem(conn, e);
+					}
 				}
-				catch (SQLException e)
+				
+
+				if ( ! rowExists )
 				{
-					_logger.warn("Error writing History Alarm Event(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
-					// throws Exception if it's a severe problem
-					isSevereProblem(conn, e);
-				}
+					try
+					{
+						sbSql = new StringBuilder();
+						
+						sbSql.append(getTableInsertStr(schemaName, Table.ALARM_HISTORY, null, false));
+						sbSql.append(" values(");
+						sbSql.append("  ").append(safeStr( sessionStartTime ));
+						sbSql.append(", ").append(safeStr( sessionSampleTime ));
+
+						sbSql.append(", ").append(safeStr( aew.getEventTime() ));
+						sbSql.append(", ").append(safeStr( aew.getAction() ));
+
+						sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() ));
+						sbSql.append(", ").append(safeStr( ae.getServiceType() ));
+						sbSql.append(", ").append(safeStr( ae.getServiceName() ));
+						sbSql.append(", ").append(safeStr( ae.getServiceInfo() ));
+						sbSql.append(", ").append(safeStr( ae.getExtraInfo() ));
+						sbSql.append(", ").append(safeStr( ae.getCategory() ));
+						sbSql.append(", ").append(safeStr( ae.getSeverity() ));
+						sbSql.append(", ").append(safeStr( ae.getState() ));
+						sbSql.append(", ").append(safeStr( ae.getRepeatCnt() ));
+						sbSql.append(", ").append(safeStr( ae.getDuration() ));
+						sbSql.append(", ").append(safeStr( ae.getCreationTime() ));
+						sbSql.append(", ").append(safeStr( ae.getCancelTime() ));
+						sbSql.append(", ").append(safeStr( ae.getTimeToLive() ));
+						sbSql.append(", ").append(safeStr( ae.getThreshold() ));
+						sbSql.append(", ").append(safeStr( ae.getData()        , 160 ));
+						sbSql.append(", ").append(safeStr( ae.getReRaiseData() , 160 ));
+						sbSql.append(", ").append(safeStr( ae.getDescription() ));
+						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription() ));
+						sbSql.append(", ").append(safeStr( ae.getExtendedDescription() ));
+						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));
+						sbSql.append(")");
+
+						sql = sbSql.toString();
+						conn.dbExec(sql);
+						getStatistics().incInserts();
+					}
+					catch (SQLException e)
+					{
+						_logger.warn("Error writing History Alarm Event(s) to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
+						// throws Exception if it's a severe problem
+						isSevereProblem(conn, e);
+					}
+				} //end: ! rowExists
 			}
 		}
 	}
@@ -2271,6 +2394,11 @@ extends CentralPersistWriterBase
 	public static String safeStr(Object obj)
 	{
 		return DbUtils.safeStr(obj);
+	}
+
+	public static String safeStr(Object obj, int MaxStrLen)
+	{
+		return DbUtils.safeStr(obj, MaxStrLen);
 	}
 
 	private void saveCounterData(DbxConnection conn, CmEntry cme, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)

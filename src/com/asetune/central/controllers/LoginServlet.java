@@ -40,23 +40,27 @@ public class LoginServlet extends HttpServlet
 	private static final Logger	_logger			 = Logger.getLogger(MethodHandles.lookup().lookupClass());
 
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
 	{
-		response.setContentType("text/html;charset=UTF-8");
-		PrintWriter out = response.getWriter();
+		resp.setContentType("text/html;charset=UTF-8");
+		PrintWriter out = resp.getWriter();
 
-		String username = request.getParameter("username");
-		String password = request.getParameter("password");
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "username", "password"))
+			return;
+
+		String username = Helper.getParameter(req, "username");
+		String password = Helper.getParameter(req, "password");
 
 //		if ( Validate.checkUser(user, pass) )
-		if ( "admin1".equals(username) && "admin1".equals(password) )
+		if ( "admin999".equals(username) && "admin999".equals(password) )
 		{
 			_logger.info("Login SUCCEEDED: username='"+username+"'.");
 
-			RequestDispatcher rs = request.getRequestDispatcher("Welcome");
-			rs.forward(request, response);
+			RequestDispatcher rs = req.getRequestDispatcher("Welcome");
+			rs.forward(req, resp);
 			
-			HttpSession session=request.getSession();
+			HttpSession session=req.getSession();
 			session.setAttribute("username",username);  
 
 		}
@@ -65,8 +69,8 @@ public class LoginServlet extends HttpServlet
 			_logger.info("Login failed: username='"+username+"', password='"+password+"'.");
 			
 			out.println("Username or Password incorrect");
-			RequestDispatcher rs = request.getRequestDispatcher("index.html");
-			rs.include(request, response);
+			RequestDispatcher rs = req.getRequestDispatcher("index.html");
+			rs.include(req, resp);
 		}
 	}
 }

@@ -62,12 +62,25 @@ extends HttpServlet
 //		resp.setCharacterEncoding("UTF-8");
 
 
+		// Check that we have a READER
+		if ( ! CentralPersistReader.hasInstance() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No PCS Reader to: DBX Central Database.");
+			return;
+		}
+		CentralPersistReader reader = CentralPersistReader.getInstance();
+
+
 		String payload;
 		try
 		{
-			String type      = req.getParameter("type");
-			String graphs    = req.getParameter("graphs");
-			String statusStr = req.getParameter("status");
+			// Check for known input parameters
+			if (Helper.hasUnKnownParameters(req, resp, "type", "graphs", "status"))
+				return;
+
+			String type      = Helper.getParameter(req, "type",   "last");
+			String graphs    = Helper.getParameter(req, "graphs", "false");
+			String statusStr = Helper.getParameter(req, "status", "-1");
 
 			if (type == null)
 				type = "last";
@@ -81,7 +94,6 @@ extends HttpServlet
 			int status = StringUtil.parseInt(statusStr, -1);
 			
 			// get Data
-			CentralPersistReader reader = CentralPersistReader.getInstance();
 			List<DbxCentralSessions> list = reader.getSessions( onlyLast, status );
 			
 			// TODO: maybe order the list in the same order as the content of file "conf/SERVER_LIST"

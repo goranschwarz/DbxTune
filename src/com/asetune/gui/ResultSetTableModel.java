@@ -1023,6 +1023,82 @@ public class ResultSetTableModel
 //		}
 //	}
 
+	/** Can for example be used to quote, a value if it looks like a string */
+	public static boolean shouldBeQuoted(int columnType)
+	{
+		switch (columnType)
+		{
+		case java.sql.Types.BIT:           return false;
+		case java.sql.Types.TINYINT:       return false;
+		case java.sql.Types.SMALLINT:      return false;
+		case java.sql.Types.INTEGER:       return false;
+		case java.sql.Types.BIGINT:        return false;
+		case java.sql.Types.FLOAT:         return false;
+		case java.sql.Types.REAL:          return false;
+		case java.sql.Types.DOUBLE:        return false;
+		case java.sql.Types.NUMERIC:       return false;
+		case java.sql.Types.DECIMAL:       return false;
+		case java.sql.Types.CHAR:          return true;
+		case java.sql.Types.VARCHAR:       return true;
+		case java.sql.Types.LONGVARCHAR:   return true;
+		case java.sql.Types.DATE:          return true;
+		case java.sql.Types.TIME:          return true;
+		case java.sql.Types.TIMESTAMP:     return true;
+		case java.sql.Types.BINARY:        return false;
+		case java.sql.Types.VARBINARY:     return false;
+		case java.sql.Types.LONGVARBINARY: return false;
+		case java.sql.Types.NULL:          return false;
+		case java.sql.Types.OTHER:         return false;
+		case java.sql.Types.JAVA_OBJECT:   return true;
+		case java.sql.Types.DISTINCT:      return false;
+		case java.sql.Types.STRUCT:        return false;
+		case java.sql.Types.ARRAY:         return false;
+		case java.sql.Types.BLOB:          return false;
+		case java.sql.Types.CLOB:          return true;
+		case java.sql.Types.REF:           return false;
+		case java.sql.Types.DATALINK:      return false;
+		case java.sql.Types.BOOLEAN:       return false;
+
+		//------------------------- JDBC 4.0 (java 1.6) -----------------------------------
+		case java.sql.Types.ROWID:         return false;
+		case java.sql.Types.NCHAR:         return true;
+		case java.sql.Types.NVARCHAR:      return true;
+		case java.sql.Types.LONGNVARCHAR:  return true;
+		case java.sql.Types.NCLOB:         return true;
+		case java.sql.Types.SQLXML:        return false;
+
+		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
+//		case java.sql.Types.REF_CURSOR:              return false;
+//		case java.sql.Types.TIME_WITH_TIMEZONE:      return false;
+//		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return false;
+		case 2012:                                   return false;
+		case 2013:                                   return true;
+		case 2014:                                   return true;
+		
+
+		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
+		case -100:                         return true;  // "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+		case -101:                         return true;  // "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+		case -102:                         return true;  // "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+		case -103:                         return true;  // "oracle.jdbc.OracleTypes.INTERVALYM";
+		case -104:                         return true;  // "oracle.jdbc.OracleTypes.INTERVALDS";
+		case  -10:                         return false; // "oracle.jdbc.OracleTypes.CURSOR";
+		case  -13:                         return false; // "oracle.jdbc.OracleTypes.BFILE";
+		case 2007:                         return false; // "oracle.jdbc.OracleTypes.OPAQUE";
+		case 2008:                         return false; // "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+		case  -14:                         return false; // "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+		case  100:                         return false; // "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+		case  101:                         return false; // "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+//		case    2:                         return false; // "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+//		case   -2:                         return false; // "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+		case  999:                         return true;  // "oracle.jdbc.OracleTypes.FIXED_CHAR";
+
+		//------------------------- UNHANDLED TYPES  ---------------------------
+		default:
+			return false;
+		}
+	}
+
 
 //	public List<SQLWarning> getSQLWarningList()
 //	{
@@ -1439,6 +1515,44 @@ public class ResultSetTableModel
 		return null;
 	}
 
+	/**
+	 * Print all columns for a specific row
+	 * 
+	 * @param row Row number (starting at 0)
+	 * @return
+	 */
+	public String toStringRow(int row)
+	{
+		if (getRowCount() == 0)
+			return "Table has 0 rows";
+		if (row >= getRowCount())
+			return "Table has "+getRowCount()+" rows, and you wanted to look at row "+row;
+
+		StringBuilder sb = new StringBuilder();
+		
+		ArrayList<Object> rowObj = _rows.get(row);
+		for (int c=0; c<rowObj.size(); c++)
+		{
+			Object  colObj  = rowObj.get(c);
+			String  colName = _rsmdColumnLabel.get(c);
+			int     colType = _rsmdColumnType.get(c);
+			
+			String quote = shouldBeQuoted(colType) ? "'" : "";
+
+			if (colObj == null)
+			{
+				quote = "";
+				colObj = NULL_REPLACE;
+			}
+
+			sb.append(colName).append("=").append(quote).append(colObj).append(quote).append(", ");
+		}
+		if (sb.length() > 2)
+			sb.delete(sb.length()-2, sb.length());
+		
+		return sb.toString();
+	}
+	
 	/**
 	 * Create a ASCII Table
 	 * @return

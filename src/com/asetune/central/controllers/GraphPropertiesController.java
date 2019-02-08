@@ -56,13 +56,25 @@ extends HttpServlet
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
 
+		// Check that we have a READER
+		if ( ! CentralPersistReader.hasInstance() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No PCS Reader to: DBX Central Database.");
+			return;
+		}
+		CentralPersistReader reader = CentralPersistReader.getInstance();
+
+		
 		String payload;
 		try
 		{
-			String sessionName      = req.getParameter("sessionName");
-			String sessionStartTime = req.getParameter("sessionStartTime");
-			
-			CentralPersistReader reader = CentralPersistReader.getInstance();
+			// Check for known input parameters
+			if (Helper.hasUnKnownParameters(req, resp, "sessionName", "srv", "srvName",   "sessionStartTime", "startTime"))
+				return;
+
+			String sessionName      = Helper.getParameter(req, new String[] {"sessionName", "srv", "srvName"});
+			String sessionStartTime = Helper.getParameter(req, new String[] {"sessionStartTime", "startTime"});
+
 			
 			List<String> sessionNameList = StringUtil.commaStrToList(sessionName);
 			List<DbxGraphProperties> list = new ArrayList<>();
@@ -84,7 +96,15 @@ extends HttpServlet
 			{
 				// if the input "sessionName" is a "profileName", then do not get properties for that
 				if ( ! availableProfileNames.contains(name) )
+				{
+					if ( ! reader.hasServerSession(name) )
+					{
+						resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Session/Server name '"+name+"' do not exist in the DBX Central Database.");
+						return;
+					}
+
 					list.addAll(reader.getGraphProperties(name, sessionStartTime));
+				}
 			}
 
 //			payload = "sessionList="+sessionList;
@@ -104,46 +124,4 @@ extends HttpServlet
 		out.flush();
 		out.close();
 	}
-//	@Override
-//	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
-//	{
-//		ServletOutputStream out = resp.getOutputStream();
-//
-//		String payload;
-//		try
-//		{
-//			String sessionName      = req.getParameter("sessionName");
-//			String sessionStartTime = req.getParameter("sessionStartTime");
-//
-//			CentralPersistReader reader = CentralPersistReader.getInstance();
-//
-//			Map<String, DbxGraphProperties> map = new LinkedHashMap<>();
-//
-//			List<String> sessionNameList = StringUtil.commaStrToList(sessionName);
-//			for (String name : sessionNameList)
-//			{
-//				List<DbxGraphProperties> list = reader.getGraphProperties(name, sessionStartTime);
-//				
-//				for (DbxGraphProperties gp : list)
-//					map.put(gp.getTableName(), gp);
-//			}
-//			
-//			
-////			payload = "sessionList="+sessionList;
-//
-//
-//			ObjectMapper om = Helper.createObjectMapper();
-//			payload = om.writeValueAsString(map.values());
-//		}
-//		catch (Exception e)
-//		{
-//			_logger.info("Problem accessing DBMS or writing JSON, Caught: "+e, e);
-//			throw new ServletException("Problem accessing db or writing JSON, Caught: "+e, e);
-//		}
-//		
-//		out.println(payload);
-//		
-//		out.flush();
-//		out.close();
-//	}
 }

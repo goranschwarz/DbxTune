@@ -2556,6 +2556,10 @@ public class PersistWriterJdbc
 	{
 		return DbUtils.safeStr(obj);
 	}
+	public static String safeStr(Object obj, int maxLen)
+	{
+		return DbUtils.safeStr(obj, maxLen);
+	}
 
 	public void saveMonTablesDictionary(DbxConnection conn, MonTablesDictionary mtd, Timestamp sessionStartTime)
 	{
@@ -2717,8 +2721,8 @@ public class PersistWriterJdbc
 					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())  )); // "cancelTime"              datetime      null true    - 12
 					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                   )); // "timeToLive"              int           null true    - 13
 					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"")); // "threshold"               varchar(15)   null true    - 14
-					sbSql.append(", ").append(safeStr( ae.getData()                                                         )); // "data"                    varchar(80)   null true    - 15
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  )); // "lastData"                varchar(80)   null true    - 16
+					sbSql.append(", ").append(safeStr( ae.getData()                                                    ,160 )); // "data"                    varchar(80)   null true    - 15
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                             ,160 )); // "lastData"                varchar(80)   null true    - 16
 					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  )); // "description"             varchar(512)  null false   - 17
 					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           )); // "lastDescription"         varchar(512)  null false   - 18
 					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                          )); // "extendedDescription"     text          null true    - 19

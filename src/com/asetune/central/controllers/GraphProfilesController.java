@@ -54,12 +54,25 @@ extends HttpServlet
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
 
+		// Check that we have a READER
+		if ( ! CentralPersistReader.hasInstance() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No PCS Reader to: DBX Central Database.");
+			return;
+		}
+		CentralPersistReader reader = CentralPersistReader.getInstance();
+
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "name", "user", "dbxTypeName"))
+			return;
+
+		
 		String payload;
 		try
 		{
-			String name = req.getParameter("name");
-			String user = req.getParameter("user");
-			String type = req.getParameter("dbxTypeName");
+			String name = Helper.getParameter(req, "name");
+			String user = Helper.getParameter(req, "user");
+			String type = Helper.getParameter(req, "dbxTypeName");
 
 			if (StringUtil.isNullOrBlank(user))
 			{
@@ -67,8 +80,6 @@ extends HttpServlet
     			if (principal != null)
     				user = principal.getName();
 			}
-
-			CentralPersistReader reader = CentralPersistReader.getInstance();
 
 			if (StringUtil.hasValue(name))
 			{
@@ -108,6 +119,19 @@ extends HttpServlet
 		ServletOutputStream out = resp.getOutputStream();
 		resp.setContentType("text/html");
 		resp.setCharacterEncoding("UTF-8");
+
+//		// Check that we have a READER
+//		if ( ! CentralPersistReader.hasInstance() )
+//		{
+//			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No PCS Reader to: DBX Central Database.");
+//			return;
+//		}
+//		CentralPersistReader reader = CentralPersistReader.getInstance();
+
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "dbxProduct"))
+			return;
+
 
 		String dbxProduct = req.getParameter("dbxProduct");
 		System.out.println("dbxProduct="+dbxProduct);

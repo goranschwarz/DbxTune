@@ -15,8 +15,8 @@
 		<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.min.js'></script> 
 		
 		<!-- JS: Bootstrap --> 
-		<script src='/scripts/popper/1.12.9/popper.min.js'></script> 
-		<script src='/scripts/bootstrap/js/bootstrap.min.js'></script> 
+		<script type="text/javascript" src='/scripts/popper/1.12.9/popper.min.js'></script> 
+		<script type="text/javascript" src='/scripts/bootstrap/js/bootstrap.min.js'></script> 
 		
 		<!--  
 		======================================================================= 
@@ -28,7 +28,7 @@
 		<link rel='stylesheet' href='/scripts/bootstrap/css/bootstrap.min.css'> 
 		
 		<!-- CSS: Font Awsome --> 
-		<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css'> 
+		<link rel='stylesheet' href='/scripts/font-awesome/4.4.0/css/font-awesome.min.css'> 
 	
 
 		<style type='text/css'>
@@ -56,13 +56,15 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>type</td>   <td>
-									<code>last</code> Show info about last available session<br>
-									<code>all</code> Show all available recordings for this server/session<br>
-								</td> </tr>
-			<tr> <td>graphs</td> <td><code>true|false</code> if we should include available graphs for this session in the output</td> </tr>
-			<tr> <td>status</td> <td>Show only with some specific status. </td> </tr>
+			<!--     ======          =================          =========== -->
+			<tr> <th>Name  </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ======          =================          =========== -->
+			<tr> <td>type  </td> <td>last             </td>     <td>
+			                                                        <code>last</code> Show info about last available session<br>
+			                                                        <code>all</code> Show all available recordings for this server/session<br>
+			                                                    </td> </tr>
+			<tr> <td>graphs</td> <td>false            </td>     <td><code>true|false</code> if we should include available graphs for this session in the output</td> </tr>
+			<tr> <td>status</td> <td>all              </td>     <td>Show only with some specific status. </td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -76,9 +78,11 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>sessionName     </td> <td>Name of the server/session/profile</td> </tr>
-			<tr> <td>sessionStartTime</td> <td>Specify a specific start time (default is "last session") </td> </tr>
+			<!--     ================          =================          =========== -->
+			<tr> <th>Name            </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ================          =================          =========== -->
+			<tr> <td>sessionName     </td> <td><b>mandatory</b> </td> <td>Name of the server/session/profile</td> </tr>
+			<tr> <td>sessionStartTime</td> <td>last session     </td> <td>Specify a specific start time (default is "last session") </td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -92,10 +96,12 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>name       </td> <td>name of the profile we want to get details for</td> </tr>
-			<tr> <td>user       </td> <td>If the profile is for a specific user </td> </tr>
-			<tr> <td>dbxTypeName</td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
+			<!--     ===========          =================          =========== -->
+			<tr> <th>Name       </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ===========          =================          =========== -->
+			<tr> <td>name       </td> <td><b>mandatory</b> </td> <td>name of the profile we want to get details for</td> </tr>
+			<tr> <td>user       </td> <td>                 </td> <td>If the profile is for a specific user </td> </tr>
+			<tr> <td>dbxTypeName</td> <td>                 </td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -110,12 +116,38 @@
 		Parameters:
 <!-- 
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>name       </td> <td>name of the profile we want to get details for</td> </tr>
-			<tr> <td>user       </td> <td>If the profile is for a specific user </td> </tr>
-			<tr> <td>dbxTypeName</td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
+			<tr> <th>Name       </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<tr> <td>name       </td> <td>                 </td> <td>name of the profile we want to get details for</td> </tr>
+			<tr> <td>user       </td> <td>                 </td> <td>If the profile is for a specific user </td> </tr>
+			<tr> <td>dbxTypeName</td> <td>                 </td> <td>If the profile is for a specific product (AseTune, RsTune, PostgresTune, SqlServerTune...) </td> </tr>
 		</table>
 -->
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+		
+		<!-- ############################################################################# -->
+		<div id='/api/healthcheck' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/healthcheck</h5>
+		<div class='card-body'>
+		If the server is healthy or not<br>
+		<br>
+		Parameters:
+		<table>
+			<!--     ====             =================          =========== -->
+			<tr> <th>Name   </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ====             =================          =========== -->
+			<tr> <td>srv    </td> <td>all-servers      </td> <td>name of the server we want to get details for</td> </tr>
+			<tr> <td>age    </td> <td>sampleInterval*20</td> <td>Number of minutes the collector has not sent any data to DbxCentral
+			                                                     <ul>
+			                                                         <li><code>Less than 0: </code> Do not check Data Received</li>
+			                                                         <li><code>Equal to 0:  </code> Calculate the threshold by: CollectorSampleInterval * 20 (so for 30 seconds interval, the result will be 10 minutes)</li>
+			                                                         <li><code>Above 0:     </code> Number of <b>minutes</b> we havn't received any data... if above = mark as "not healthy"</li>
+			                                                     </ul>
+			                                                 </td> </tr>
+			<tr> <td>srvInfo</td> <td>true</td>              <td>Include server info in the result</td> </tr>
+			<tr> <td>result </td> <td>array</td>             <td>Result type, can be 'arr', 'array' or 'map'</td> </tr>
+		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 
@@ -129,8 +161,10 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>srv        </td> <td>name of the server we want to get details for</td> </tr>
+			<!--     ====          =================          =========== -->
+			<tr> <th>Name</th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ====          =================          =========== -->
+			<tr> <td>srv </td> <td>all servers      </td> <td>name of the server we want to get details for</td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -144,11 +178,13 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>srv     </td> <td>name of the server we want to get details for</td> </tr>
-			<tr> <td>age     </td> <td>not yet implemented: only within X hours</td> </tr>
-			<tr> <td>type    </td> <td>not yet implemented: only 'RAISE', 'RE-RAISE', 'CANCEL'</td> </tr>
-			<tr> <td>category</td> <td>not yet implemented: only for category 'CPU', 'DISK'...</td> </tr>
+			<!--     ==========        =================          =========== -->
+			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========        =================          =========== -->
+			<tr> <td>srv     </td> <td>                 </td> <td>name of the server we want to get details for</td> </tr>
+			<tr> <td>age     </td> <td>                 </td> <td>not yet implemented: only within X hours</td> </tr>
+			<tr> <td>type    </td> <td>                 </td> <td>not yet implemented: only 'RAISE', 'RE-RAISE', 'CANCEL'</td> </tr>
+			<tr> <td>category</td> <td>                 </td> <td>not yet implemented: only for category 'CPU', 'DISK'...</td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -162,21 +198,23 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>sessionName   </td> <td>Name of the server</td> </tr>
-			<tr> <td>cmName        </td> <td>Name of a specific collector</td> </tr>
-			<tr> <td>graphName     </td> <td>Name of a specific graph</td> </tr>
-			<tr> <td>startTime     </td> <td>Optional: From what time: Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) (default=2h)</td> </tr>
-			<tr> <td>endTime       </td> <td>Optional: To what time Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) if startTime is 'date' then #mhd is added to startTime (default='')</td> </tr>
-			<tr> <td>sampleType    </td> <td>Optional: (default=AUTO)<br>
-											<code>ALL             </code> get <b>all</b> saved data points<br>
-											<code>AUTO            </code> Auto switch to MAX_OVER_SAMPLES when there are to many samples<br>
-											<code>MAX_OVER_SAMPLES</code> Only take the MAX value from X samples, this can be used if there are to many samples<br>
-											<code>MAX_OVER_MINUTES</code> Only take the MAX value from a sample over X minutes, this can be used if there are to many samples<br>
-											<code>AVG_OVER_MINUTES</code> Only take the Average value from a sample over X minutes, this can be used if there are to many samples<br>
-											<code>SUM_OVER_MINUTES</code> Sum all values from a sample over X minutes, this can be used if there are to many samples<br>
-										 </td> </tr>
-			<tr> <td>sampleValue   </td> <td>Optional: Used with 'AUTO' to "skip" data-points if there are to many. (default='360', if we find more than 360 data-points, then switch to 'MAX_OVER_SAMPLES')</td> </tr>
+			<!--     ==============          =================          =========== -->
+			<tr> <th>Name          </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==============          =================          =========== -->
+			<tr> <td>sessionName   </td> <td><b>mandatory</b> </td> <td>Name of the server</td> </tr>
+			<tr> <td>cmName        </td> <td>                 </td> <td>Name of a specific collector</td> </tr>
+			<tr> <td>graphName     </td> <td>                 </td> <td>Name of a specific graph</td> </tr>
+			<tr> <td>startTime     </td> <td>2h               </td> <td>Optional: From what time: Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) (default=2h)</td> </tr>
+			<tr> <td>endTime       </td> <td>                 </td> <td>Optional: To what time Can be a 'iso8601' or '#m|#h|#d' (Minutes, Hours or Day) if startTime is 'date' then #mhd is added to startTime (default='')</td> </tr>
+			<tr> <td>sampleType    </td> <td>AUTO             </td> <td>Optional: (default=AUTO)<br>
+			                                                               <code>ALL             </code> get <b>all</b> saved data points<br>
+			                                                               <code>AUTO            </code> Auto switch to MAX_OVER_SAMPLES when there are to many samples<br>
+			                                                               <code>MAX_OVER_SAMPLES</code> Only take the MAX value from X samples, this can be used if there are to many samples<br>
+			                                                               <code>MAX_OVER_MINUTES</code> Only take the MAX value from a sample over X minutes, this can be used if there are to many samples<br>
+			                                                               <code>AVG_OVER_MINUTES</code> Only take the Average value from a sample over X minutes, this can be used if there are to many samples<br>
+			                                                               <code>SUM_OVER_MINUTES</code> Sum all values from a sample over X minutes, this can be used if there are to many samples<br>
+			                                                               > </tr>
+			<tr> <td>sampleValue   </td> <td>                 </td> <td>Optional: Used with 'AUTO' to "skip" data-points if there are to many. (default='360', if we find more than 360 data-points, then switch to 'MAX_OVER_SAMPLES')</td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -190,9 +228,11 @@
 		<br>
 		Parameters:
 		<table>
-			<tr> <th>Name</th> <th>Description</th> </tr>
-			<tr> <td>serverList</td> <td>comma separated list of server/session names we want to subscribe to</td> </tr>
-			<tr> <td>graphList </td> <td>comma separated list of graph names we want to subscribe to</td> </tr>
+			<!--     ==========          =================          =========== -->
+			<tr> <th>Name      </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========          =================          =========== -->
+			<tr> <td>serverList</td> <td><b>mandatory</b> </td> <td>comma separated list of server/session names we want to subscribe to</td> </tr>
+			<tr> <td>graphList </td> <td></td>                  <td>comma separated list of graph names we want to subscribe to</td> </tr>
 		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
@@ -243,6 +283,19 @@
 		<h5 class='card-header'>/log</h5>
 		<div class='card-body'>
 		Get log file
+		<br>
+		Parameters:
+		<table>
+			<!--     ==========        =================          =========== -->
+			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========        =================          =========== -->
+			<tr> <td>name    </td> <td><b>mandatory</b> </td> <td>Name of the file (only the filename, not full path)</td> </tr>
+<!--		<tr> <td>type    </td> <td>                 </td> <td></td> </tr>-->
+			<tr> <td>method  </td> <td>plain            </td> <td>can be: 'plain', 'json', 'html'</td> </tr>
+			<tr> <td>discard </td> <td>                 </td> <td>Only if method='plain': RegEx for log rows to <b>discard</b> from output</td> </tr>
+			<tr> <td>tail    </td> <td>                 </td> <td>Only if method='plain': Print new output if file is changed (on the server side).</td> </tr>
+		</table>
+		Note: method: 'json', 'html' might be depricated.
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 

@@ -101,7 +101,7 @@ public class ChartBroadcastWebSocket
 	public void onConnect(Session session) throws IOException
 	{
 		Map<String, List<String>> parameterMap = session.getUpgradeRequest().getParameterMap();
-		System.out.println("xxx: parameterMap='"+parameterMap+"'.");
+//		System.out.println("xxx: parameterMap='"+parameterMap+"'.");
 
 		String serverList = parameterMap.get("serverList").get(0);
 		String graphList  = parameterMap.get("graphList").get(0);

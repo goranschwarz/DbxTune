@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxAlarmActive;
+import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AlarmActiveController 
@@ -51,16 +52,35 @@ extends HttpServlet
 //		resp.setContentType("application/json");
 //		resp.setCharacterEncoding("UTF-8");
 
+		// Check that we have a READER
+		if ( ! CentralPersistReader.hasInstance() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No PCS Reader to: DBX Central Database.");
+			return;
+		}
+		CentralPersistReader reader = CentralPersistReader.getInstance();
+
 
 		String payload;
 		try
 		{
-			// get parameter 'srv' or 'srvName'
-			String srv = req.getParameter("srv");
-			if (srv == null) srv = req.getParameter("srvName");
+			// Check for known input parameters
+			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName"))
+				return;
+			
+			String srv = Helper.getParameter(req, new String[] {"srv", "srvName"} );
+
+			// Check that "srv" exists
+			if (StringUtil.hasValue(srv))
+			{
+				if ( ! reader.hasServerSession(srv) )
+				{
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '"+srv+"' do not exist in the DBX Central Database.");
+					return;
+				}
+			}
 
 			// get Data
-			CentralPersistReader reader = CentralPersistReader.getInstance();
 			List<DbxAlarmActive> list = reader.getAlarmActive(srv);
 
 			// to JSON

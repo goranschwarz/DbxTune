@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.central.DbxCentralStatistics;
 import com.asetune.central.DbxCentralStatistics.ServerEntry;
+import com.asetune.central.check.ReceiverAlarmCheck;
 import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.DbxTuneSample;
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
@@ -122,7 +123,9 @@ extends HttpServlet
 			if ( ! isAllowed )
 			{
 				_logger.warn("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data. allowedHostList="+allowedHostList);
-				throw new ServletException("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
+				resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
+				return;
+				//throw new ServletException("The hostname '"+remoteHost+"' is NOT allowed to send Performance Counter Data.");
 			}
 		}
 		
@@ -162,8 +165,16 @@ extends HttpServlet
 			}
 			_logger.debug(sb.toString());
 		}
+		
+		// Maintain alarm functionality
+		// Just notifies the 'ReceiverAlarmCheck' that we have received data from a specififc collector 
+		// The 'ReceiverAlarmCheck' periodically checks if we havn't received data from a specific server/instance in a "while", then do: alarm
+		if (ReceiverAlarmCheck.hasInstance())
+		{
+			ReceiverAlarmCheck.getInstance().receivedData(sample);
+		}
 
-		// Send "live" data to any web "subscribers", so the subscibing browsers can be updated there graphs/charts
+		// Send "live" data to any web "subscribers", so the subscribing browsers can be updated there graphs/charts
 //		ChartBroadcastServlet.fireGraphData(sample);
 		ChartBroadcastWebSocket.fireGraphData(sample);
 		
@@ -183,6 +194,7 @@ extends HttpServlet
 			out.close();
 		}
 	}
+
 	/**
 	 * Send a Server Sent Event to any clients that has registered on: /api/pcs/graph-data/{name}
 	 * @param sample 
@@ -201,7 +213,7 @@ extends HttpServlet
 		// Add it to PCS for storage
 		CentralPcsWriterHandler.getInstance().add(sample);
 
-		// Increement some statistics
+		// Increment some statistics
 		String      srvName = sample.getServerName();
 		ServerEntry srvStat = DbxCentralStatistics.getInstance().getServerEntry(srvName, sample);
 

@@ -855,6 +855,8 @@ implements Runnable
 	 */
 	public void stop(boolean clearQueues, int maxWaitTimeInMs)
 	{
+		_logger.info("Received 'stop' request in CentralPcsWriterHandler. with clearQueues="+clearQueues+", maxWaitTimeInMs="+maxWaitTimeInMs);
+
 		_running = false;
 
 		if (clearQueues)

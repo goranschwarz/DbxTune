@@ -25,7 +25,9 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
+import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,14 +74,64 @@ public class Helper
 	{
 		String value = req.getParameter(parameterName);
 		
-		if (value == null)
+		if (StringUtil.isNullOrBlank(value))
 			return defaultValue;
 		
 		if (value.equals("undefined"))
-			return null;
+			return defaultValue;
 		
 		return value;
 	}
 	
+	public static String getParameter(HttpServletRequest req, String[] parameterNameArr)
+	{
+		return getParameter(req, parameterNameArr, null);
+	}
+	public static String getParameter(HttpServletRequest req, String[] parameterNameArr, String defaultValue)
+	{
+		String value = null;
+		for (String param : parameterNameArr)
+		{
+			value = req.getParameter(param);
+			if (value != null)
+				break;
+		}
+
+		if (StringUtil.isNullOrBlank(value))
+			return defaultValue;
+		
+		if (value.equals("undefined"))
+			return defaultValue;
+		
+		return value;
+	}
+
+	/** 
+	 * Check for unknown input parameters<br>
+	 * If any parameter is <i>unknown</i>, then: 
+	 * <pre>
+	 * resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramater 'xxx' is an unknown parameter. Known Parameters: 'aaa', 'bbb', 'ccc'");
+	 * </pre>
+	 * and return true
+	 * 
+	 * @param req
+	 * @param knownParams a list of known parameters
+	 * @return true if any is unknown
+	 * @throws IOException 
+	 */
+	public static boolean hasUnKnownParameters(HttpServletRequest req, HttpServletResponse resp, String... knownParams) 
+	throws IOException
+	{
+		// Check known input parameters
+		for (String p : req.getParameterMap().keySet() )
+		{
+			if ( ! StringUtil.equalsAny(p, knownParams) )
+			{
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Paramater '"+p+"' is an unknown parameter. Known Parameters: "+ StringUtil.toCommaStrQuoted("'", knownParams));
+				return true;
+			}
+		}
+		return false;
+	}
 	
 }

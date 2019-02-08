@@ -3,6 +3,7 @@
  */
 package com.asetune.central.pcs;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -16,6 +17,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -24,13 +26,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.EventListenerList;
-
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
+import com.asetune.central.check.ReceiverAlarmCheck;
 import com.asetune.central.pcs.CentralPersistWriterBase.Table;
 import com.asetune.central.pcs.objects.DbxAlarmActive;
 import com.asetune.central.pcs.objects.DbxAlarmHistory;
@@ -44,6 +43,7 @@ import com.asetune.central.pcs.objects.DbxGraphProperties;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.DbxConnectionPool;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -51,20 +51,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class CentralPersistReader
-//implements Runnable//, ConnectionProvider
 {
 	private static Logger _logger = Logger.getLogger(CentralPersistReader.class);
 
-//	private static final String CMD_loadTimelineSlider      = "loadTimelineSlider";
-//	private static final String CMD_loadSessionGraphs       = "loadSessionGraphs";
-//	private static final String CMD_loadSessionCms          = "loadSessionCms";
-//	private static final String CMD_loadSessionCmIndicators = "loadSessionCmIndicators";
-//	private static final String CMD_loadSummaryCm           = "loadSummaryCm";
-//	private static final String CMD_loadSessions            = "loadSessions";
-//	
-//	/** A connection to the PersitentCounter Storage back end */
-////	private Connection _conn = null;
-//	private DbxConnection _conn = null;
+	public static final String  PROPKEY_SERVER_LIST_SORT = "CentralPersistReader.server.list.sort";
+	public static final boolean DEFAULT_SERVER_LIST_SORT = true;
+	
 	
 	/** implements singleton pattern */
 	private static CentralPersistReader _instance = null;
@@ -78,6 +70,9 @@ public class CentralPersistReader
 
 	private DbxConnectionPool _connectionPool = null;
 
+	// Cache all session/server names
+	private Set<String> _sessionNames = null;
+	
 	/** Different ways we can use to get data from the storage tables */
 	public enum SampleType
 	{
@@ -711,88 +706,111 @@ public class CentralPersistReader
 	}
 
 
-//	/**
-//	 * Get LAST Session
-//	 * @param conn
-//	 * @param serverName
-//	 * @return
-//	 * @throws SQLException
-//	 */
-//	public DbxCentralSessions getLastSession(DbxConnection conn, String serverName)
-//	throws SQLException
-//	{
-//		if (conn == null)
-//			throw new SQLException("Connection must be valid, conn="+conn);
-//
-//		String q = conn.getQuotedIdentifierChar();
-//		String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
-//
-//		String sql = "select "
-//					+ "  " + q + "SessionStartTime"        + q
-//					+ " ," + q + "Status"                  + q
-//					+ " ," + q + "ServerName"              + q
-//					+ " ," + q + "OnHostname"              + q
-//					+ " ," + q + "ProductString"           + q
-//					+ " ," + q + "VersionString"           + q
-//					+ " ," + q + "BuildString"             + q
-//					+ " ," + q + "CollectorHostname"       + q
-//					+ " ," + q + "CollectorSampleInterval" + q
-//					+ " ," + q + "CollectorCurrentUrl"     + q
-//					+ " ," + q + "CollectorInfoFile"       + q
-//					+ " ," + q + "NumOfSamples"            + q
-//					+ " ," + q + "LastSampleTime"          + q
-//				+" from " + tabName
-//				+" where " + q + "ServerName"       + q + " = '" + serverName + "'"
-//				+"   and " + q + "SessionStartTime" + q + " = (select max("+q+"SessionStartTime"+q+") from "+tabName+" where "+q+"ServerName"+q+" = '"+serverName+"') "
-//				+"";
-//
-//		// autoclose: stmnt, rs
-//		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
-//		{
-//			DbxCentralSessions s = null;
-//			while (rs.next())
-//			{
-//				s = new DbxCentralSessions(
-//					rs.getTimestamp(1),  // "SessionStartTime"       
-//					rs.getInt      (2),  // "Status"
-//					rs.getString   (3),  // "ServerName"             
-//					rs.getString   (4),  // "OnHostname"             
-//					rs.getString   (5),  // "ProductString"          
-//					rs.getString   (6),  // "VersionString"          
-//					rs.getString   (7),  // "BuildString"            
-//					rs.getString   (8),  // "CollectorHostname"      
-//					rs.getInt      (9),  // "CollectorSampleInterval"
-//					rs.getString   (10), // "CollectorCurrentUrl"
-//					rs.getString   (11), // "CollectorInfoFile"
-//					rs.getInt      (12), // "NumOfSamples"           
-//					rs.getTimestamp(13), // "LastSampleTime"         
-//					"", // serverDescrption,
-//					"", // serverExtraInfo,
-//					null);
-//			}
-//			return s;
-//		}
-//	}
-//	
-//	/**
-//	 * Get LAST Session (using a connection from the connection pool)
-//	 * @param serverName
-//	 * @return
-//	 * @throws SQLException
-//	 */
-//	public DbxCentralSessions getLastSession(String serverName)
-//	throws SQLException
-//	{
-//		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
-//		try // block with: finally at end to return the connection to the ConnectionPool
-//		{
-//			return getLastSession(conn, serverName);
-//		}
-//		finally
-//		{
-//			releaseConnection(conn);
-//		}
-//	}
+	/**
+	 * Get LAST Session
+	 * @param conn
+	 * @param serverName
+	 * @return
+	 * @throws SQLException
+	 */
+	public DbxCentralSessions getLastSession(DbxConnection conn, String serverName)
+	throws SQLException
+	{
+		if (conn == null)
+			throw new SQLException("Connection must be valid, conn="+conn);
+
+		String q = conn.getQuotedIdentifierChar();
+		String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+
+		String sql = "select "
+					+ "  " + q + "SessionStartTime"        + q
+					+ " ," + q + "Status"                  + q
+					+ " ," + q + "ServerName"              + q
+					+ " ," + q + "OnHostname"              + q
+					+ " ," + q + "ProductString"           + q
+					+ " ," + q + "VersionString"           + q
+					+ " ," + q + "BuildString"             + q
+					+ " ," + q + "CollectorHostname"       + q
+					+ " ," + q + "CollectorSampleInterval" + q
+					+ " ," + q + "CollectorCurrentUrl"     + q
+					+ " ," + q + "CollectorInfoFile"       + q
+					+ " ," + q + "NumOfSamples"            + q
+					+ " ," + q + "LastSampleTime"          + q
+				+" from " + tabName
+				+" where " + q + "ServerName"       + q + " = '" + serverName + "'"
+				+"   and " + q + "SessionStartTime" + q + " = (select max("+q+"SessionStartTime"+q+") from "+tabName+" where "+q+"ServerName"+q+" = '"+serverName+"') "
+				+"";
+
+		// Get server order/description file
+		Map<String, DbxCentralServerDescription> sdMap = new HashMap<>();
+		try 
+		{
+			sdMap = DbxCentralServerDescription.getFromFile();
+		}
+		catch (IOException ex)
+		{
+			_logger.warn("Problems reading file '"+DbxCentralServerDescription.getDefaultFile()+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+		}
+		
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			DbxCentralSessions s = null;
+			while (rs.next())
+			{
+				// Get: serverDescrption & serverExtraInfo
+				String srvName          = rs.getString(3);
+				String serverDescrption = "";
+				String serverExtraInfo  = "";
+				DbxCentralServerDescription sd = sdMap.get(srvName);
+				if (sd != null)
+				{
+					serverDescrption = sd.getDescription();
+					serverExtraInfo  = sd.getExtraInfo();
+				}
+
+				int c = 1;
+				s = new DbxCentralSessions(
+					rs.getTimestamp(c++), // "SessionStartTime"       
+					rs.getInt      (c++), // "Status"
+					rs.getString   (c++), // "ServerName"             
+					rs.getString   (c++), // "OnHostname"             
+					rs.getString   (c++), // "ProductString"          
+					rs.getString   (c++), // "VersionString"          
+					rs.getString   (c++), // "BuildString"            
+					rs.getString   (c++), // "CollectorHostname"      
+					rs.getInt      (c++), // "CollectorSampleInterval"
+					rs.getString   (c++), // "CollectorCurrentUrl"
+					rs.getString   (c++), // "CollectorInfoFile"
+					rs.getInt      (c++), // "NumOfSamples"           
+					rs.getTimestamp(c++), // "LastSampleTime"         
+					serverDescrption,    // serverDescrption,
+					serverExtraInfo,     // serverExtraInfo,
+					null);               // graphProperties
+			}
+			return s;
+		}
+	}
+	
+	/**
+	 * Get LAST Session (using a connection from the connection pool)
+	 * @param serverName
+	 * @return
+	 * @throws SQLException
+	 */
+	public DbxCentralSessions getLastSession(String serverName)
+	throws SQLException
+	{
+		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
+		try // block with: finally at end to return the connection to the ConnectionPool
+		{
+			return getLastSession(conn, serverName);
+		}
+		finally
+		{
+			releaseConnection(conn);
+		}
+	}
 	
 	/**
 	 * Get a list of session names (a session is stored in a schema with the same name)
@@ -880,9 +898,9 @@ public class CentralPersistReader
 						rs.getString   (c++), // "CollectorInfoFile"
 						rs.getInt      (c++), // "NumOfSamples"           
 						rs.getTimestamp(c++), // "LastSampleTime"         
-						serverDescrption,
-						serverExtraInfo,
-						null);
+						serverDescrption,     // serverDescrption
+						serverExtraInfo,      // serverExtraInfo
+						null);                // graphProperties
 					list.add(s);
 				}
 				if (onlyLast)
@@ -2985,34 +3003,34 @@ public class CentralPersistReader
 	** BEGIN: Listener stuff
 	**---------------------------------------------------
 	*/
-	EventListenerList   _listenerList  = new EventListenerList();
-
-	/** Add any listeners that want to see changes */
-	public void addChangeListener(ChangeListener l)
-	{
-		_listenerList.add(ChangeListener.class, l);
-	}
-
-	/** Remove the listener */
-	public void removeChangeListener(ChangeListener l)
-	{
-		_listenerList.remove(ChangeListener.class, l);
-	}
-
-	/** Kicked off when new entries are added */
-//	protected void fireStateChanged()
-	protected void fireNewSessionsIsAvalilable()
-	{
-		Object aobj[] = _listenerList.getListenerList();
-		for (int i = aobj.length - 2; i >= 0; i -= 2)
-		{
-			if (aobj[i] == ChangeListener.class)
-			{
-				ChangeEvent changeEvent = new ChangeEvent(this);
-				((ChangeListener) aobj[i + 1]).stateChanged(changeEvent);
-			}
-		}
-	}
+//	EventListenerList   _listenerList  = new EventListenerList();
+//
+//	/** Add any listeners that want to see changes */
+//	public void addChangeListener(ChangeListener l)
+//	{
+//		_listenerList.add(ChangeListener.class, l);
+//	}
+//
+//	/** Remove the listener */
+//	public void removeChangeListener(ChangeListener l)
+//	{
+//		_listenerList.remove(ChangeListener.class, l);
+//	}
+//
+//	/** Kicked off when new entries are added */
+////	protected void fireStateChanged()
+//	protected void fireNewSessionsIsAvalilable()
+//	{
+//		Object aobj[] = _listenerList.getListenerList();
+//		for (int i = aobj.length - 2; i >= 0; i -= 2)
+//		{
+//			if (aobj[i] == ChangeListener.class)
+//			{
+//				ChangeEvent changeEvent = new ChangeEvent(this);
+//				((ChangeListener) aobj[i + 1]).stateChanged(changeEvent);
+//			}
+//		}
+//	}
 	/*---------------------------------------------------
 	** END: Listener stuff
 	**---------------------------------------------------
@@ -3069,12 +3087,16 @@ public class CentralPersistReader
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())
 			{
-				return stmnt.executeUpdate(sql);
+				int rowc = stmnt.executeUpdate(sql);
+				return rowc;
 			}
 		}
 		finally
 		{
 			releaseConnection(conn);
+
+			// Notify any listeners that Sessions has been changed
+			fireSessionChanges();
 		}
 	}
 
@@ -3160,16 +3182,136 @@ public class CentralPersistReader
 		finally
 		{
 			releaseConnection(conn);
+
+			// Notify any listeners that Sessions has been changed
+			fireSessionChanges();
 		}
 	}
 
 
 
+	/**
+	 * Check if DBX Central database has a server named<br>
+	 * The server names are cached, so this should be a cheep call
+	 * 
+	 * @param sessionName name of the server
+	 * @return true | false
+	 */
+	public boolean hasServerSession(String sessionName)
+	{
+		refreshServerSessions(false);
+		
+		return _sessionNames.contains(sessionName);
+	}
+	
+	public Set<String> getServerSessions()
+	{
+		refreshServerSessions(false);
+		
+		return _sessionNames;
+	}
 
+	private synchronized void refreshServerSessions(boolean force)
+	{
+		if (force)
+			_sessionNames = null;
+		
+		if (_sessionNames == null)
+		{
+			_sessionNames = new LinkedHashSet<>();
+
+			try
+			{
+				boolean onlyLast  = true;
+				for (DbxCentralSessions s : getSessions( onlyLast, -1 ))
+				{
+					_sessionNames.add(s.getServerName());
+				}
+				
+				// if we want to sort according to 'conf/SERVER_LIST'
+				boolean sort = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_SERVER_LIST_SORT, DEFAULT_SERVER_LIST_SORT);
+				if (sort)
+				{
+					File srvDescFile = new File(DbxCentralServerDescription.getDefaultFile());
+					if (srvDescFile.exists())
+					{
+						// GET Entries
+						Map<String, DbxCentralServerDescription> srvDescMap = new HashMap<>();
+						try 
+						{
+							srvDescMap = DbxCentralServerDescription.getFromFile();
+						}
+						catch (IOException ex)
+						{
+							_logger.warn("Problems reading file '"+srvDescFile+"'. This is used to sort the 'sessions list'. Skipping this... Caught: "+ex);
+						}
+						
+						// Sort if we have any entries
+						if ( ! srvDescMap.isEmpty() )
+						{
+							Set<String> tmp = new LinkedHashSet<>();
+
+							// Loop ServerDescMap
+							//   - move entries from "current structure" into a "new/tmp structure"
+							//   - entries in the "current structure" but NOT in the ServerDescMap, will be appended to "new/tmp structure"
+							//   - at the end "swap" new/tmp->current
+							for (String srvName : srvDescMap.keySet())
+							{
+								Iterator<String> i = _sessionNames.iterator();
+								while (i.hasNext())
+								{
+									String entry = i.next();
+									if (srvName.equals(entry))
+									{
+										tmp.add(entry);
+										i.remove();
+									}
+								}
+							}
+
+							// copy all the entries that was NOT part of the SERVER_LIST file
+							tmp.addAll(_sessionNames);
+							
+							// swap the structures
+							_sessionNames = tmp;
+						}
+					}
+				} // end: sort
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting sessions from DBX Central Database.", ex);
+				_sessionNames = null;
+			}
+		}
+	}
 	/*---------------------------------------------------
 	** END: Remove/cleanup functionality (should this be in the reader???)
 	**---------------------------------------------------
 	*/
+
+
+
+	public void fireSessionChanges()
+	{
+		// Empty the sessions set, it will be populated on next call to: hasServerSession()
+		_sessionNames = null;
+
+		// TODO: create a add/remove listeners, so we can notify registered listeners about changes
+
+		// Notify any listeners
+//		for (SessionListenerInterface l : _sessionListeners)
+//		{
+//			l.sessionChanges(possiblyListOfCurrentSessions);
+//		}
+		if (ReceiverAlarmCheck.hasInstance())
+		{
+			ReceiverAlarmCheck.getInstance().refresh();
+		}
+	}
+
+
+
 
 
 

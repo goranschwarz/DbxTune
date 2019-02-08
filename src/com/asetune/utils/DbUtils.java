@@ -1674,6 +1674,10 @@ public class DbUtils
 	 */
 	public static String safeStr(Object obj)
 	{
+		return safeStr(obj, -1);
+	}
+	public static String safeStr(Object obj, int maxStrLen)
+	{
 		if (obj == null)
 			return "NULL";
 
@@ -1684,14 +1688,29 @@ public class DbUtils
 		else
 		{
 			String str = obj.toString();
-    		StringBuilder sb = new StringBuilder();
-    
-    		// add ' around the string...
-    		// and replace all ' into ''
-    		sb.append("'");
-    		sb.append(str.replace("'", "''"));
-    		sb.append("'");
-    		return sb.toString();
+
+			if ( maxStrLen > 0 && str.length() > maxStrLen )
+			{
+				// Put '...' at the end to mark the string as "truncated"
+				// Unless it's a "short" string, then just truncate to the maxLen
+				String truncStr;
+				if (maxStrLen >= 4)
+					truncStr = str.substring(0, maxStrLen-3) + "...";
+				else
+					truncStr = str.substring(0, maxStrLen);
+					
+				_logger.debug("DbUtils.safeStr(): MaxLen="+maxStrLen+". Truncating value |"+str+"|, into |"+truncStr+"|.");
+				str = truncStr;
+			}
+
+			StringBuilder sb = new StringBuilder();
+
+			// add ' around the string...
+			// and replace all ' into ''
+			sb.append("'");
+			sb.append(str.replace("'", "''"));
+			sb.append("'");
+			return sb.toString();
 		}
 	}
 	

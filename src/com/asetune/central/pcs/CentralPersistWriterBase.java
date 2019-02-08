@@ -52,16 +52,17 @@ implements ICentralPersistWriter
 	 * <br>
 	 * <ul>
 	 *   <li> 1 - First version</li>
-	 *   <li> 2 - Add column 'CollectorSampleInterval'           to table 'DbxCentralSessions' </li>
-	 *   <li> 3 - Add column 'ProfileDescription'                to table 'DbxCentralGraphProfiles' </li>
-	 *   <li> 4 - Add column 'CollectorCurrentUrl', 'Status'     to table 'DbxCentralSessions' </li>
-	 *   <li> 5 - Add column 'CollectorInfoFile'                 to table 'DbxCentralSessions' </li>
-	 *   <li> 6 - Add column 'category'                          to table 'ALARM_ACTIVE, ALARM_HISTORY' in all schemas</li>
-	 *   <li> 7 - Add column 'ProfileUrlOptions'                 to table 'DbxCentralGraphProfiles' </li>
-	 *   <li> 7 - Add column 'GraphCategory'                     to table 'DbxGraphProperties' </li>
+	 *   <li> 2 - Add    column 'CollectorSampleInterval'                      to table 'DbxCentralSessions' </li>
+	 *   <li> 3 - Add    column 'ProfileDescription'                           to table 'DbxCentralGraphProfiles' </li>
+	 *   <li> 4 - Add    column 'CollectorCurrentUrl', 'Status'                to table 'DbxCentralSessions' </li>
+	 *   <li> 5 - Add    column 'CollectorInfoFile'                            to table 'DbxCentralSessions' </li>
+	 *   <li> 6 - Add    column 'category'                                     to table 'ALARM_ACTIVE, ALARM_HISTORY' in all schemas</li>
+	 *   <li> 7 - Add    column 'ProfileUrlOptions'                            to table 'DbxCentralGraphProfiles' </li>
+	 *   <li> 8 - Add    column 'GraphCategory'                                to table 'DbxGraphProperties' </li>
+	 *   <li> 9 - Change column 'data', 'lastData' from varchar(80) -> 160     in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
 	 * </ul> 
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 8;
+	public static int DBX_CENTRAL_DB_VERSION = 9;
 	
 	
 	public enum Table
@@ -489,8 +490,8 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(qic+"cancelTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"timeToLive"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"threshold"                  +qic,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"description"                +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"lastDescription"            +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"extendedDescription"        +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");
@@ -522,8 +523,8 @@ implements ICentralPersistWriter
 				sbSql.append("   ,"+fill(qic+"cancelTime"                 +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"timeToLive"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"threshold"                  +qic,40)+" "+fill(getDatatype("varchar",   15,-1,-1),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
-				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",   80,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"data"                       +qic,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(qic+"lastData"                   +qic,40)+" "+fill(getDatatype("varchar",  160,-1,-1),20)+" "+getNullable(true )+"\n");
 				sbSql.append("   ,"+fill(qic+"description"                +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"lastDescription"            +qic,40)+" "+fill(getDatatype("varchar",  512,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("   ,"+fill(qic+"extendedDescription"        +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true )+"\n");

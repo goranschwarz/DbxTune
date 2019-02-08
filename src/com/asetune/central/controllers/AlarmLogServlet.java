@@ -62,9 +62,13 @@ public class AlarmLogServlet extends HttpServlet
 		out = resp.getOutputStream();
 
 		
-		String inputName = req.getParameter("name");
-		String inputType = req.getParameter("type");
-		String inputMethod = req.getParameter("method");
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "name", "type", "method"))
+			return;
+
+		String inputName   = Helper.getParameter(req, "name");
+		String inputType   = Helper.getParameter(req, "type");
+		String inputMethod = Helper.getParameter(req, "method");
 		
 		System.out.println("AlarmLogServlet: name = '"+inputName+"'.");
 		System.out.println("AlarmLogServlet: type = '"+inputType+"'.");
@@ -86,12 +90,14 @@ public class AlarmLogServlet extends HttpServlet
 
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");
+
 			asCode(inputName, inputType);
 		}
 		else if ("pcs".equalsIgnoreCase(inputMethod))
 		{
 			resp.setContentType("text/html");
 			resp.setCharacterEncoding("UTF-8");
+
 			fromPcsAsHtmlTable(inputName, inputType);
 		}
 		else

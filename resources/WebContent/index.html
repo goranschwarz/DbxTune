@@ -12,18 +12,18 @@
   -->
   <!-- JS: JQuery -->
   <script type="text/javascript" src="/scripts/jquery/jquery-3.2.1.min.js"></script>
-  <script type="text/javascript" src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery/ui/1.11.3/jquery-ui.min.js"></script>
 
   <!-- JS: Moment; used by: ChartJs, DateRangePicker -->
   <script type="text/javascript" src="/scripts/moment/moment.js"></script>
   <script type="text/javascript" src="/scripts/moment/moment-duration-format.js"></script>
 
   <!-- JS: Bootstrap -->
-  <script src="/scripts/popper/1.12.9/popper.min.js"></script>
-  <script src="/scripts/bootstrap/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="/scripts/popper/1.12.9/popper.min.js"></script>
+  <script type="text/javascript" src="/scripts/bootstrap/js/bootstrap.min.js"></script>
 
   <!-- JS: Selectize -->
-  <script src="/scripts/selectize/js/standalone/selectize.js"></script>
+  <script type="text/javascript" src="/scripts/selectize/js/standalone/selectize.js"></script>
   
   <!-- JS: DbxCentral -->
   <script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
@@ -40,7 +40,7 @@
   <link rel="stylesheet" href="/scripts/bootstrap/css/bootstrap.min.css">
 
   <!-- CSS: Font Awsome -->
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/scripts/font-awesome/4.4.0/css/font-awesome.min.css">
 
   <!-- CSS: Selectize -->
   <!-- <link rel="stylesheet" href="/scripts/selectize/css/selectize.css"> -->
@@ -823,11 +823,16 @@ List of stuff that can be done
 					btnClass="btn-warning";
 
 				var dbxButtonImage="dbx-button-image dbx-button-"+entry.productString.toLowerCase();
-	<!--		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>'; -->
-	<!--		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>'; -->
+		//		html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'">'+entry.serverName+'</a>';
+		//		htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.serverName+'&graphList=all">'+entry.serverName+'</a>';
 
-				html    += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
-				htmlAll += '<span data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+		//		html    += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'"><button type="button" id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+		//		htmlAll += '<span data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'"><button type="button" id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</button></span>';
+
+				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
+				const startTime = $('#dbx-hours-txt').val() + "h";
+				html    += '<a id="btn-qa-normal-'+entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="top"    data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'"               onclick=\'return openGraphPage("server-ssp", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
+				htmlAll += '<a id="btn-qa-all-'   +entry.serverName+'" class="btn btn-sm '+btnClass+' '+dbxButtonImage+' mb-2 mr-2" role="button" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+tt+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.serverName+'&graphList=all" onclick=\'return openGraphPage("server-all", "'+entry.serverName+'", "")\'>'+entry.serverName+'</a>';
 			}
 			if (html === "")
 			{
@@ -920,14 +925,19 @@ List of stuff that can be done
 				if (entry.profileName === "")
 					continue;
 
-				//var urlOptions = entry.profileUrlOptions;
-				//if (urlOptions === null)
-				//	urlOptions = "";
-				//if (urlOptions && !urlOptions.startsWith("&")) 
-				//	urlOptions = "&" + urlOptions;
+				var urlOptions = entry.profileUrlOptions;
+				if (urlOptions === null)
+					urlOptions = "";
+				if (urlOptions && !urlOptions.startsWith("&")) 
+					urlOptions = "&" + urlOptions;
 
-		<!--	html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';-->
-				html += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+entry.profileDescription+'"><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</button></span>';
+				const startTime = $('#dbx-hours-txt').val() + "h";
+
+			//	html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime=2h&sessionName='+entry.profileName+urlOptions+'" role="button">'+entry.profileName+'</a>';
+			//	html += '<span data-toggle="tooltip" data-placement="top"    data-html="true" title="'+entry.profileDescription+'"><button type="button" class="btn btn-sm btn-primary mb-2 mr-2" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</button></span>';
+
+				// Below is a LINK Button, so you can both do right click on the link to open, and click to open (using the properties: open-in-{here|tab}, time, subscribe)
+				html += '<a class="btn btn-sm btn-primary mb-2 mr-2" data-toggle="tooltip" data-placement="bottom" data-html="true" title="'+entry.profileDescription+'" href="/graph.html?subscribe=true&startTime='+startTime+'&sessionName='+entry.profileName+urlOptions+'" role="button" onclick=\'return openGraphPage("profile", "'+entry.profileName+'", "'+entry.profileUrlOptions+'")\'>'+entry.profileName+'</a>';
 			}
 			$('#dbx-quick-access-profile-list').html(html + htmlCurrent);
 		},

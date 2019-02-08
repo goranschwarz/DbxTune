@@ -65,9 +65,9 @@ public class DbxTuneConfServlet extends HttpServlet
 		if (StringUtil.isNullOrBlank(inputMethod))
 			inputMethod = "plain";
 
-		System.out.println("DbxTuneConfServlet: name   = '"+inputName+"'.");
-		System.out.println("DbxTuneConfServlet: type   = '"+inputType+"'.");
-		System.out.println("DbxTuneConfServlet: method = '"+inputMethod+"'.");
+//		System.out.println("DbxTuneConfServlet: name   = '"+inputName+"'.");
+//		System.out.println("DbxTuneConfServlet: type   = '"+inputType+"'.");
+//		System.out.println("DbxTuneConfServlet: method = '"+inputMethod+"'.");
 
 		if (StringUtil.isNullOrBlank(inputName))
 			throw new ServletException("No input parameter named 'name'.");

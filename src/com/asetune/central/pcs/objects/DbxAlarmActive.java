@@ -22,6 +22,7 @@ package com.asetune.central.pcs.objects;
 
 import java.sql.Timestamp;
 
+import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 //1> select * from GORAN_UB3_DS.DbxAlarmActive
@@ -89,11 +90,11 @@ public class DbxAlarmActive
 	public int       getTimeToLive             () { return _timeToLive             ; }
 	public String    getThreshold              () { return _threshold              ; }
 	public String    getData                   () { return _data                   ; }
-	public String    getLastData               () { return _lastData               ; }
+	public String    getLastData               () { return StringUtil.hasValue(_lastData) ? _lastData : getData(); }
 	public String    getDescription            () { return _description            ; }
-	public String    getLastDescription        () { return _lastDescription        ; }
+	public String    getLastDescription        () { return StringUtil.hasValue(_lastDescription) ? _lastDescription : getDescription(); }
 	public String    getExtendedDescription    () { return _extendedDescription    ; }
-	public String    getLastExtendedDescription() { return _lastExtendedDescription; }
+	public String    getLastExtendedDescription() { return StringUtil.hasValue(_lastExtendedDescription) ? _lastExtendedDescription : getExtendedDescription(); }
 	
 	public void setSrvName                (String    srvName                ) { _srvName                 = srvName                ; }
 	public void setAlarmClass             (String    alarmClass             ) { _alarmClass              = alarmClass             ; }

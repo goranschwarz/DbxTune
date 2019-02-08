@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.regex.Pattern;
@@ -61,12 +63,15 @@ public class DbxTuneLogServlet extends HttpServlet
 		_resp = resp;
 		out = resp.getOutputStream();
 
+		// Check for known input parameters
+		if (Helper.hasUnKnownParameters(req, resp, "name", "type", "method", "discard", "tail"))
+			return;
 		
-		String inputName     = req.getParameter("name");
-		String inputType     = req.getParameter("type");
-		String inputMethod   = req.getParameter("method");
-		String discardRegExp = req.getParameter("discard");
-		String tailParam     = req.getParameter("tail");
+		String inputName     = Helper.getParameter(req, "name");
+		String inputType     = Helper.getParameter(req, "type");
+		String inputMethod   = Helper.getParameter(req, "method",  "plain");
+		String discardRegExp = Helper.getParameter(req, "discard");
+		String tailParam     = Helper.getParameter(req, "tail");
 
 		int numOfLines = -1; // All lines
 		if (tailParam != null)
@@ -75,20 +80,45 @@ public class DbxTuneLogServlet extends HttpServlet
 				numOfLines = Integer.parseInt(tailParam);
 			} catch (NumberFormatException e) {
 				_logger.error("Parameter 'tail' is not a number. tailParam='"+tailParam+"'.");
+
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Parameter 'tail' is not a number. tailParam='"+tailParam+"'.");
+				return;
 			}
 		}
 
-		if (StringUtil.isNullOrBlank(inputMethod))
-			inputMethod = "plain";
+//		System.out.println("DbxTuneLogServlet: name   = '"+inputName+"'.");
+//		System.out.println("DbxTuneLogServlet: type   = '"+inputType+"'.");
+//		System.out.println("DbxTuneLogServlet: method = '"+inputMethod+"'.");
+//		System.out.println("DbxTuneLogServlet: tail   = '"+tailParam+"'.");
 
-		System.out.println("DbxTuneLogServlet: name   = '"+inputName+"'.");
-		System.out.println("DbxTuneLogServlet: type   = '"+inputType+"'.");
-		System.out.println("DbxTuneLogServlet: method = '"+inputMethod+"'.");
-		System.out.println("DbxTuneLogServlet: tail   = '"+tailParam+"'.");
 
+		// Check for mandatory parameters
 		if (StringUtil.isNullOrBlank(inputName))
-			throw new ServletException("No input parameter named 'name'.");
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Could not find mandatory parameter 'name'.");
+			return;
+		}
 
+
+		// CHECK: that the input file really INSIDE the LOG_DIR and not outside (for example /tmp/filename or /var/log/message)
+		Path logDirPath   = Paths.get(LOG_DIR);
+		Path inputPath    = Paths.get(LOG_DIR+"/"+inputName);
+		Path relativePath = logDirPath.relativize(inputPath);
+		if (relativePath.startsWith(".."))
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputPath + "' must be located in the LOG dir '" + logDirPath + "'.");
+			return;
+		}
+	
+		// Check if file EXISTS
+		File inputFile = new File(LOG_DIR+"/"+inputName);
+		if ( ! inputFile.exists() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Sorry the file '" + inputFile + "' doesn't exist.");
+			return;
+		}
+
+		
 		if  ("json".equalsIgnoreCase(inputMethod))
 		{
 			resp.setContentType("text/html");
@@ -204,6 +234,9 @@ public class DbxTuneLogServlet extends HttpServlet
 
 		out.println("<html> ");
 		
+		out.println("<head> ");
+		out.println("<title>"+inputName+"</title> ");
+		
 		out.println("<style type='text/css'> ");
 		out.println("body {                  ");
 		out.println("	  height: 100%;      ");
@@ -217,14 +250,33 @@ public class DbxTuneLogServlet extends HttpServlet
 //		out.println("	}                    ");
 		out.println("</style> ");
 
+		out.println("");
+		out.println("<script type='text/javascript'>");
+
+		out.println("");
+		out.println("function refreshWithFilter(msg) ");
+		out.println("{ ");
+		out.println("  // Get regExp from a field ");
+		out.println("  var discardText    = document.getElementById('logLine-discardText').value; ");
+		out.println("  var tailNumOfLines = document.getElementById('tail-numOfLines').value; ");
+		out.println("  var currentUrl     = window.location.href; ");
+		out.println("");
+//		out.println("  window.location.href = currentUrl + '&discard=' + discardText;");
+		out.println("  const url = new URL(currentUrl); ");
+		out.println("  const params = new URLSearchParams(url.search); ");
+		out.println("  params.set('discard', discardText); ");
+		out.println("  params.set('tail',    tailNumOfLines); ");
+		out.println("");
+//		out.println("  window.history.replaceState({}, '', `${location.pathname}?${params}`); ");
+		out.println("  window.location.href = `${location.pathname}?${params}`;");
+		out.println("} ");
+		out.println("");
+
 		// Write javascript code to
 		// - connect to the websocket that sends new rows
 		// - etc
 		if (tailNumOfLines > 0)
 		{
-			out.println("");
-			out.println("<script type='text/javascript'>");
-			
 //			out.println("");
 //			out.println("/** ");
 //			out.println(" * Is element within visible region of a scrollable container ");
@@ -274,23 +326,6 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("  let minute = '' + now.getMinutes();     if (minute.length == 1) { minute = '0' + minute; } ");
 			out.println("  let second = '' + now.getSeconds();     if (second.length == 1) { second = '0' + second; } ");
 			out.println("  return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second; ");
-			out.println("} ");
-			out.println("");
-
-			out.println("");
-			out.println("function refreshWithFilter(msg) ");
-			out.println("{ ");
-			out.println("  // Get regExp from a field ");
-			out.println("  var discardText = document.getElementById('logLine-discardText').value; ");
-			out.println("  var currentUrl  = window.location.href; ");
-			out.println("");
-//			out.println("  window.location.href = currentUrl + '&discard=' + discardText;");
-			out.println("  const url = new URL(currentUrl); ");
-			out.println("  const params = new URLSearchParams(url.search); ");
-			out.println("  params.set('discard', discardText); ");
-			out.println("");
-//			out.println("  window.history.replaceState({}, '', `${location.pathname}?${params}`); ");
-			out.println("  window.location.href = `${location.pathname}?${params}`;");
 			out.println("} ");
 			out.println("");
 
@@ -387,14 +422,10 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("    alert('The browser does not support WebSocket, log-tail will not be done.'); ");
 			out.println("  } ");
 			out.println("} ");
-			out.println("</script>");
 			out.println("");
 		}
 		else
 		{
-			out.println("");
-			out.println("<script type='text/javascript'>");
-			
 			out.println("//----------------------------------------------------------------------");
 			out.println("// When window is loaded...");
 			out.println("//----------------------------------------------------------------------");
@@ -404,9 +435,12 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
 			out.println("} ");
 			
-			out.println("</script>");
-			out.println("");
 		}
+		out.println("</script>");
+		out.println("");
+
+		out.println("</head> ");
+		out.println("");
 
 		out.println("<body> ");
 		out.println("<h2>"+f.getAbsolutePath()+"</h2>");
@@ -513,7 +547,9 @@ public class DbxTuneLogServlet extends HttpServlet
 			// Add a field se we can discard records locally
 			out.println("<div id='logLine-discard'>");
 			out.println("<b>Filter out some text on new records (regexp can be used):</b> <br>");
-			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/>");
+			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/><br>");
+			out.println("<b>Tail number of records:</b> <br>");
+			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 500) + "'/><br>");
 			out.println("<br>");
 			out.println("<button onclick='refreshWithFilter()'>Refresh page with above filter</button>");
 			out.println("</div>");
@@ -526,7 +562,18 @@ public class DbxTuneLogServlet extends HttpServlet
 		}
 		else
 		{
-			out.println("Tail is not enabled.<br>");
+			out.println("<font color='red'>Tail is not enabled.</font><br>");
+			out.println("<br>");
+			// Add a field se we can discard records locally
+			out.println("<div id='logLine-discard'>");
+			out.println("<b>Filter out some text on new records (regexp can be used):</b> <br>");
+			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/><br>");
+			out.println("<b>Tail number of records:</b> <br>");
+			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 500) + "'/><br>");
+			out.println("<br>");
+			out.println("<button onclick='refreshWithFilter()'>Refresh page AND Start Tail - with above filter</button>");
+			out.println("</div>");
+			out.println("<br>");
 		}
 		
 		// FIXME: move codemirror to local resource
@@ -572,6 +619,9 @@ public class DbxTuneLogServlet extends HttpServlet
 	{
 		
 		out.println("<html>");
+		
+		out.println("<head> ");
+		out.println("<title>"+inputName+"</title> ");
 
 //		out.println("<style type='text/css'>");
 //		out.println("  table {border-collapse: collapse;}");
@@ -621,6 +671,8 @@ public class DbxTuneLogServlet extends HttpServlet
 		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
 //		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
 
+		out.println("</head> ");
+		out.println(" ");
 		
 		out.println("<body>");
 		out.println("<h1>" + inputName + "</h1>");

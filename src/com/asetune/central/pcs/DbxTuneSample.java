@@ -490,6 +490,44 @@ public class DbxTuneSample
 		public void setReRaiseData               (String    reRaiseData)               { _reRaiseData                = reRaiseData; }
 		public void setReRaiseDescription        (String    reRaiseDescription)        { _reRaiseDescription         = reRaiseDescription; }
 		public void setReRaiseExtendedDescription(String    reRaiseExtendedDescription){ _reRaiseExtendedDescription = reRaiseExtendedDescription; }
+		
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+
+			sb.append(super.toString());
+			sb.append("[");
+			
+			sb.append("='").append(_alarmClass                ).append("'").append(","); // String    _alarmClass                 ;
+			sb.append("='").append(_alarmClassAbriviated      ).append("'").append(","); // String    _alarmClassAbriviated       ;
+			sb.append("='").append(_serviceType               ).append("'").append(","); // String    _serviceType                ;
+			sb.append("='").append(_serviceName               ).append("'").append(","); // String    _serviceName                ;
+			sb.append("='").append(_serviceInfo               ).append("'").append(","); // String    _serviceInfo                ;
+			sb.append("='").append(_extraInfo                 ).append("'").append(","); // String    _extraInfo                  ;
+			sb.append("='").append(_category                  ).append("'").append(","); // String    _category                   ;
+			sb.append("='").append(_severity                  ).append("'").append(","); // String    _severity                   ;
+			sb.append("='").append(_state                     ).append("'").append(","); // String    _state                      ;
+			sb.append("=") .append(_repeatCnt                 ).append("") .append(","); // int       _repeatCnt                  ;
+			sb.append("='").append(_duration                  ).append("'").append(","); // String    _duration                   ;
+			sb.append("=") .append(_creationAgeInMs           ).append("") .append(","); // int       _creationAgeInMs            ;
+			sb.append("='").append(_creationTime              ).append("'").append(","); // Timestamp _creationTime               ;
+			sb.append("='").append(_reRaiseTime               ).append("'").append(","); // Timestamp _reRaiseTime                ;
+			sb.append("='").append(_cancelTime                ).append("'").append(","); // Timestamp _cancelTime                 ;
+			sb.append("=") .append(_TimeToLive                ).append("") .append(","); // int       _TimeToLive                 ;
+			sb.append("=") .append(_threshold                 ).append("") .append(","); // Number    _threshold                  ;
+			sb.append("='").append(_data                      ).append("'").append(","); // String    _data                       ;
+			sb.append("='").append(_description               ).append("'").append(","); // String    _description                ;
+			sb.append("='").append(_extendedDescription       ).append("'").append(","); // String    _extendedDescription        ;
+			sb.append("='").append(_reRaiseData               ).append("'").append(","); // String    _reRaiseData                ;
+			sb.append("='").append(_reRaiseDescription        ).append("'").append(","); // String    _reRaiseDescription         ;
+			sb.append("='").append(_reRaiseExtendedDescription).append("'").append("");  // String    _reRaiseExtendedDescription ;
+			
+			sb.append("]");
+			
+			return sb.toString();
+		}
+		
 	}
 
 	public static class AlarmEntryWrapper

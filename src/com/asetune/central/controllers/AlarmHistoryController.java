@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.objects.DbxAlarmHistory;
+import com.asetune.utils.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AlarmHistoryController 
@@ -52,18 +53,39 @@ extends HttpServlet
 //		resp.setCharacterEncoding("UTF-8");
 
 
+		// Check that we have a READER
+		if ( ! CentralPersistReader.hasInstance() )
+		{
+			resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "No PCS Reader to: DBX Central Database.");
+			return;
+		}
+		CentralPersistReader reader = CentralPersistReader.getInstance();
+
+
 		String payload;
 		try
 		{
-			String srv      = req.getParameter("srv");
-			String age      = req.getParameter("age");
-			String type     = req.getParameter("type");
-			String category = req.getParameter("category");
+			// Check for known input parameters
+			if (Helper.hasUnKnownParameters(req, resp, "srv", "srvName", "age", "type", "category"))
+				return;
+
+			String srv      = Helper.getParameter(req, new String[] {"srv", "srvName"});
+			String age      = Helper.getParameter(req, "age");
+			String type     = Helper.getParameter(req, "type");
+			String category = Helper.getParameter(req, "category");
+
+			// Check that "srv" exists
+			if (StringUtil.hasValue(srv))
+			{
+				if ( ! reader.hasServerSession(srv) )
+				{
+					resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Server name '"+srv+"' do not exist in the DBX Central Database.");
+					return;
+				}
+			}
 
 			// get Data
-			CentralPersistReader reader = CentralPersistReader.getInstance();
 			List<DbxAlarmHistory> list = reader.getAlarmHistory( srv, age, type, category );
-//			List<DbxAlarmHistory> list = reader.getAlarmHistory( srv );
 
 			// to JSON
 			ObjectMapper om = Helper.createObjectMapper();

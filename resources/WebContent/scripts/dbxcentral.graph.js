@@ -222,6 +222,8 @@ var _serverList = [];  // What servers does the URL reflect
 var _graphMap   = [];  // Graphs that are displaied / instantiated
 var _debug      = 0;   // Debug level: 0=off, 1=more, 2=evenMore, 3...
 
+var _showSrvTimer = null;
+
 
 function dbxTuneCheckActiveAlarms()
 {
@@ -346,22 +348,37 @@ function dbxTuneGraphSubscribe()
 	/** 
 	 * Update clock... on when last subscription event was received
 	 */
+	function startUpdateSubscribeClock()
+	{
+		updateSubscribeClock();
+		setTimeout(startUpdateSubscribeClock, 1000);
+	}
+
 	function updateSubscribeClock()
 	{
 		let ageInSec = Math.floor((moment() - dbxLastSubscribeTime) / 1000);
+
+		$("#subscribe-feedback-msg").css("display", "none");
 		$("#subscribe-feedback-time").css("color", "");
-		$("#subscribe-feedback-time").html(", " + ageInSec + " seconds ago.");
+//		$("#subscribe-feedback-time").html(", " + ageInSec + " seconds ago.");
+		$("#subscribe-feedback-time").html("&nbsp;" + ageInSec + "s");
 
 		if (ageInSec > 120)
+		{
+			$("#subscribe-feedback-msg").css("display", "block");
 			$("#subscribe-feedback-time").css("color", "red");
+		}
 
+		let msgText = $("#subscribe-feedback-msg").text();
+		if ( ! msgText.startsWith("data") )
+			$("#subscribe-feedback-msg").css("display", "block");
+		
+		
 		// TEST: pageTitleNotification
 		// if (ageInSec > 10 && ageInSec < 20)
 		// 	pageTitleNotification.on("---DUMMY---", 1000);
 		// else
 		//  	pageTitleNotification.off();
-
-		setTimeout(updateSubscribeClock, 1000);
 	}
 
 	function subscribeConnectWs() 
@@ -410,7 +427,7 @@ function dbxTuneGraphSubscribe()
 	$("#subscribe-feedback-time").html("subscribe="+subscribe);
 	if (subscribe)
 	{
-		updateSubscribeClock(); // is automatically executed every second
+		startUpdateSubscribeClock(); // is automatically executed every second
 
 		// if (!!window.EventSource)
 		// {
@@ -488,7 +505,7 @@ function dbxTuneGraphSubscribe()
 		let graphHead       = graphJson.head;
 		let graphServerName = graphHead.serverName;
 		let graphCollectors = graphJson.collectors;
-
+		
 		// TODO:
 		// to let the Browser update it's GUI it would have been nice with a yield() method
 		// but we might be able to do something like:
@@ -592,6 +609,21 @@ function dbxTuneGraphSubscribe()
 
 		// Update fisrt/last timestamp in the navbar
 		updateNavbarInfo();
+
+		// Show LAST Received "Server name" in navbar, and after X seconds fade out 
+		$("#subscribe-feedback-srv").css("display", "block");
+		$("#subscribe-feedback-srv").html("<i class='fa fa-mail-forward'></i> " + graphServerName + " <i class='fa fa-line-chart'></i> "); // fa fa-mail-forward SRVNAME -> 
+		updateSubscribeClock();
+
+		// Cancel previous timer
+		if (_showSrvTimer !== null)
+			clearTimeout(_showSrvTimer);
+
+		// Kick off a new timer
+		_showSrvTimer = setTimeout(function() { 
+			$('#subscribe-feedback-srv').fadeToggle(1000);
+			_showSrvTimer = null;
+		}, 4000); // hide after 4s
 	}
 } // end: function
 

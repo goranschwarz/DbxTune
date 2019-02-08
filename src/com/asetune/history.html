@@ -53,6 +53,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>OS Host Monitoring - iostat: improved iostat number of columns parsing (in some cases the iostat version was unpredictable, for how many columns we would expect from iostat)<br>
 		                         &emsp;Now I try to "count" number of columns returned at startup do: ioStatColCount=$(iostat -xdk | grep 'Device:' | wc -w); echo "ioStatColCount=${ioStatColCount}")</LI>
 		<LI>OS Host Monitoring - DiskSpace: some systems printed long lines into 2 or several rows (added -P option to 'df')</LI>
+		<LI>Sends Alarm if DbxCentral are down (default after 15 minutes)</LI>
+		<LI>AlarmWriterToMail: small modification to get SSL/TSL (to live.com) to work</LI>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
@@ -61,6 +63,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 3.0.0,         Component: RSyntaxTextArea, RSTAUI, Autocomplete</li>
 	 			<li>To version 1.14,          Component: simplemagic</li>
 				<li>To version 2.3.0,         Component: juniversalchardet</li>
+				<li>To version 5.2,           Component: Miglayout</li>
 			</ul>
 		</LI>
 	</UL>
@@ -76,7 +79,15 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>new: Login Dialog (default admin password = IP Address on the machine where DbxCentral is running)</LI>
 		<LI>new: Max size of the Historical recordings (this instead of just looking at how much space we got left)<br>
 		    &emsp;controlled by property: DataDirectoryCleaner.max.historical.space.usage.GB = ###, default = -1, which means disabled</LI>
-	</UL>
+		<LI>Graph Page - do hard refresh every 24 hour, so dashboards gets new javascript code every now and then</LI>
+		<LI>Script files are now loaded from dbxcental's web service and not from various Internet places</LI>
+		<LI>/api/healthcheck - Let other monitors check how all monitored servers are doing. Results as JSON</LI>
+		<LI>Send Alarm if any of the Collectors has not sent any data for a while (default: 10*collectorSampleTime so 10 minutes if sample time is 30 seconds)</LI>
+		<LI>First step into a Daily Summary Report, which is constructed by DbxCentral (a complement to the Collectors Daily Report)</LI>
+		<LI>Added alternate parameters for a bunch of the 'api' url's for example 'srv', 'srvName' and 'sessionName' is the same (just different names)</LI>
+		<LI>Better error handling for parameters in most 'api' url's (instead of throwing Exception, a "sendError()" is done)</LI>
+		<LI>log file view has been improved, so that you can just press a button at the end of the page to start "tail"</LI>
+ 	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
 	<H3>AseTune - Sybase/SAP Adaptive Server Enterprise</H3>

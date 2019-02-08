@@ -56,6 +56,8 @@ import com.asetune.NormalExitException;
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.writers.AlarmWriterToMail;
+import com.asetune.central.check.ReceiverAlarmCheck;
+import com.asetune.central.cleanup.CentralDailyReportSender;
 import com.asetune.central.cleanup.CentralH2Defrag;
 import com.asetune.central.cleanup.CentralPcsJdbcCleaner;
 import com.asetune.central.cleanup.DataDirectoryCleaner;
@@ -449,6 +451,9 @@ public class DbxTuneCentral
 		// Start the Alarm Handler
 		startAlarmHandler();
 
+		// Start Receiver Alarm Checker
+		startReceiverAlarmChecker();
+		
 		// Start the Web Server
 		startWebServer();
 
@@ -644,8 +649,10 @@ public class DbxTuneCentral
 		try
 		{
 			stopWebServer();
-			stopCentralPcs();
-			stopScheduler();
+			stopReceiverAlarmChecker();     // Do not send any "missing data from xxxTune collector"
+			stopAlarmHandler();             // No more Alarms will be sent
+			stopScheduler();                // No more "cron" jobs
+			stopCentralPcs();               // if it's a H2 DB, it might take time to stop (if defrag/compress is requested)
 
 			sendCounterUsageInfo();
 		}
@@ -1245,6 +1252,47 @@ public class DbxTuneCentral
 			_scheduler.schedule(cron, new CentralH2Defrag());
 		}
 
+		//--------------------------------------------
+		// Central Daily Summary REPORT
+		//--------------------------------------------
+		boolean centralDailyReportStart = Configuration.getCombinedConfiguration().getBooleanProperty(CentralDailyReportSender.PROPKEY_start, CentralDailyReportSender.DEFAULT_start);
+		if (centralDailyReportStart)
+		{
+			File logFile = Logging.getBaseLogFile("_" + CentralDailyReportSender.class.getSimpleName() + ".log");
+			if (logFile != null)
+			{
+				String pattern = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_LOG_FILE_PATTERN, CentralDailyReportSender.DEFAULT_LOG_FILE_PATTERN);
+				PatternLayout layout = new PatternLayout(pattern);
+				_logger.info("Adding separate log file for '"+CentralDailyReportSender.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+				
+				// Create a Rolling Log File
+				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+				appender.setMaxFileSize("10MB");
+				appender.setMaxBackupIndex(3);
+				appender.setName(CentralDailyReportSender.EXTRA_LOG_NAME);
+
+				// Only log messages from 'CentralDailyReportSender' in this appender
+				appender.addFilter(new Filter()
+				{
+					@Override
+					public int decide(LoggingEvent event)
+					{
+						if (event.getLogger().getName().equals(CentralDailyReportSender.class.getName()))
+							return Filter.NEUTRAL;
+
+						return Filter.DENY;
+					}
+				});
+
+				// Add the appender
+				Logger.getRootLogger().addAppender(appender);
+			}
+
+			String cron  = Configuration.getCombinedConfiguration().getProperty(CentralDailyReportSender.PROPKEY_cron,  CentralDailyReportSender.DEFAULT_cron);
+			_logger.info("Adding 'Central Daily Summary Report' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_scheduler.schedule(cron, new CentralDailyReportSender());
+		}
+		
 		
 		//--------------------------------------------
 		// Start the scheduler
@@ -1563,41 +1611,49 @@ public class DbxTuneCentral
 		// ALARM Handling
 		//--------------------------------------------------------
 //		boolean enableAlarmHandler = Configuration.getCombinedConfiguration().getBooleanProperty(AlarmHandler.PROPKEY_enable, AlarmHandler.DEFAULT_enable);
-		boolean enableAlarmHandler = false; // FIXME: implement/check how often we receive info from each collector, and alarm if it's been to long...
+//		boolean enableAlarmHandler = false; // FIXME: implement/check how often we receive info from each collector, and alarm if it's been to long...
+		boolean enableAlarmHandler = true; // FIXME: implement/check how often we receive info from each collector, and alarm if it's been to long...
 		if (enableAlarmHandler)
 		{
 			//--------------------------------------------------------
 			// Alarm Handler
 			//--------------------------------------------------------
+//System.setProperty("AlarmHandler.WriterClass",                 "com.asetune.alarm.writers.AlarmWriterToStdout");
 //System.setProperty("AlarmHandler.WriterClass",                 "com.asetune.alarm.writers.AlarmWriterToStdout, com.asetune.alarm.writers.AlarmWriterToFile");
-//System.setProperty("AlarmWriterToFile.alarms.active.filename", "c:\\tmp\\AseTune_alarm_active.log");
-//System.setProperty("AlarmWriterToFile.alarms.log.filename",    "c:\\tmp\\AseTune_alarm.log");
+//System.setProperty("AlarmWriterToFile.alarms.active.filename", "c:\\tmp\\DbxCentral_alarm_active.log");
+//System.setProperty("AlarmWriterToFile.alarms.log.filename",    "c:\\tmp\\DbxCentral_alarm.log");
 
 			try
 			{
 				Configuration conf = Configuration.getCombinedConfiguration();
 				
-				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);
-				if (StringUtil.hasValue(alarmWriters))
-				{
-					//--------------------------------------------------------
-					// User Defined Alarm Handler
-					// Compiling some dynamic java classes
-					//--------------------------------------------------------
-//					UserDefinedAlarmHandler udah = new UserDefinedAlarmHandler();
-//					udah.init(conf);
-//					UserDefinedAlarmHandler.setInstance(udah);
-
-					// Initialize the alarm handler
-					AlarmHandler ah = new AlarmHandler();
-					AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
-					ah.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
-					ah.start();
-				}
-				else
-				{
-					_logger.warn("No 'Alarm Writers' was found in the current configuration '"+conf.getFilename()+"'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '"+AlarmHandler.PROPKEY_WriterClass+"'.");
-				}
+				// Initialize the alarm handler
+				AlarmHandler ah = new AlarmHandler();
+				AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
+				ah.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
+				ah.start();
+				
+//				String alarmWriters = conf.getProperty(AlarmHandler.PROPKEY_WriterClass);
+//				if (StringUtil.hasValue(alarmWriters))
+//				{
+//					//--------------------------------------------------------
+//					// User Defined Alarm Handler
+//					// Compiling some dynamic java classes
+//					//--------------------------------------------------------
+////					UserDefinedAlarmHandler udah = new UserDefinedAlarmHandler();
+////					udah.init(conf);
+////					UserDefinedAlarmHandler.setInstance(udah);
+//
+//					// Initialize the alarm handler
+//					AlarmHandler ah = new AlarmHandler();
+//					AlarmHandler.setInstance(ah); // Set this before init() if it throws an exception and we are in GUI more, we still want to fix the error...
+//					ah.init(conf, false, true, true); // createTableModelWriter=false, createPcsWriter=true, createToApplicationLog=true
+//					ah.start();
+//				}
+//				else
+//				{
+//					_logger.warn("No 'Alarm Writers' was found in the current configuration '"+conf.getFilename()+"'. Alarm Handler will NOT be enabled. To enable the AlarmHandler, please specify any Alarm Writer classes using the configuration key '"+AlarmHandler.PROPKEY_WriterClass+"'.");
+//				}
 			}
 			catch (Exception ex)
 			{
@@ -1605,8 +1661,43 @@ public class DbxTuneCentral
 				throw ex;
 			}
 		}
-		
 	}
+	public static void stopAlarmHandler()
+	{
+		if (AlarmHandler.hasInstance())
+		{
+			AlarmHandler.getInstance().shutdown();
+		}
+	}
+
+	public static void startReceiverAlarmChecker()
+	throws Exception
+	{
+		try
+		{
+			Configuration conf = Configuration.getCombinedConfiguration();
+			ReceiverAlarmCheck checker = new ReceiverAlarmCheck();
+			
+			checker.init(conf);
+			checker.start();
+
+			ReceiverAlarmCheck.setInstance(checker);
+		}
+		catch (Exception ex)
+		{
+			_logger.error("Problems Initializing the Receiver Alarm Check Module", ex);
+			throw ex;
+		}
+	}
+	public static void stopReceiverAlarmChecker() 
+	{
+		if (ReceiverAlarmCheck.hasInstance())
+		{
+			ReceiverAlarmCheck.getInstance().shutdown();
+		}
+	}
+
+
 
 	//---------------------------------------------------
 	// MAIN

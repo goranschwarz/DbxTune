@@ -102,9 +102,13 @@ extends AlarmWriterAbstract
 				email.setSSLOnConnect(_useSsl);
 
 			// SSL PORT
-			if (_useSsl && _sslPort >= 0)
+			if (_sslPort >= 0)
 				email.setSslSmtpPort(_sslPort+""); // Hmm why is this a String parameter?
 
+			// START TLS
+			if (_startTls)
+				email.setStartTLSEnabled(_startTls);
+			
 			// AUTHENTICATION
 			if (StringUtil.hasValue(_username))
 				email.setAuthentication(_username, _password);
@@ -157,6 +161,7 @@ extends AlarmWriterAbstract
 		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,               Integer.class, conf.getIntProperty    (PROPKEY_smtpPort              , DEFAULT_smtpPort              ), DEFAULT_smtpPort              , "What port number is the SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                Integer.class, conf.getIntProperty    (PROPKEY_sslPort               , DEFAULT_sslPort               ), DEFAULT_sslPort               , "What port number is the SSL-SMTP server on (-1 = use the default)"));
 		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                 Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                , DEFAULT_useSsl                ), DEFAULT_useSsl                , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
+		list.add( new CmSettingsHelper("start-tls",                        PROPKEY_startTls,               Boolean.class, conf.getBooleanProperty(PROPKEY_startTls              , DEFAULT_startTls              ), DEFAULT_startTls              , "Set required STARTTLS encryption. "));
 		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,      Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout     , DEFAULT_connectionTimeout     ), DEFAULT_connectionTimeout     , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
 
 		list.add( new CmSettingsHelper("DbxCentralUrl",                    PROPKEY_dbxCentralUrl,          String .class, conf.getProperty       (PROPKEY_dbxCentralUrl         , DEFAULT_dbxCentralUrl         ), DEFAULT_dbxCentralUrl         , "Where is the DbxCentral located, if you want your template/messages to include it using ${dbxCentralUrl}", new UrlInputValidator()));
@@ -180,6 +185,7 @@ extends AlarmWriterAbstract
 	private int     _smtpPort               = -1;
 	private int     _sslPort                = -1;
 	private boolean _useSsl                 = DEFAULT_useSsl;
+	private boolean _startTls               = DEFAULT_startTls;
 	private int     _smtpConnectTimeout     = -1;
 
 	private List<String> _toList     = new ArrayList<>();
@@ -206,6 +212,7 @@ extends AlarmWriterAbstract
 		_smtpPort               = conf.getIntProperty    (PROPKEY_smtpPort,               DEFAULT_smtpPort);
 		_sslPort                = conf.getIntProperty    (PROPKEY_sslPort,                DEFAULT_sslPort);
 		_useSsl                 = conf.getBooleanProperty(PROPKEY_useSsl,                 DEFAULT_useSsl);
+		_startTls               = conf.getBooleanProperty(PROPKEY_startTls,               DEFAULT_startTls);
 		_smtpConnectTimeout     = conf.getIntProperty    (PROPKEY_connectionTimeout,      DEFAULT_connectionTimeout);
 
 		//------------------------------------------
@@ -246,6 +253,7 @@ extends AlarmWriterAbstract
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort              , spaces) + ": " + _smtpPort);
 		_logger.info("    " + StringUtil.left(PROPKEY_sslPort               , spaces) + ": " + _sslPort);
 		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                , spaces) + ": " + _useSsl);
+		_logger.info("    " + StringUtil.left(PROPKEY_startTls              , spaces) + ": " + _startTls);
 		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout     , spaces) + ": " + _smtpConnectTimeout);
 	}
 
@@ -286,6 +294,9 @@ extends AlarmWriterAbstract
                                                                
 	public static final String  PROPKEY_useSsl                 = "AlarmWriterToMail.ssl.use";
 	public static final boolean DEFAULT_useSsl                 = false;
+                                                               
+	public static final String  PROPKEY_startTls               = "AlarmWriterToMail.start.tls";
+	public static final boolean DEFAULT_startTls               = false;
                                                                
 	public static final String  PROPKEY_connectionTimeout      = "AlarmWriterToMail.smtp.connect.timeout";
 	public static final int     DEFAULT_connectionTimeout      = -1;
