@@ -41,26 +41,26 @@ So if you are looking for help... I can help you... Contact me at: goran_schwarz
 
 All the below tools need enhancements, please let me know what, and how you can contribute with ideas and/or code :)
 
-| Name          | Status             | Description                                                  |
-| ------------- | ------------------ | ------------------------------------------------------------ |
-| AseTune       | Excellent          | Tune Sybase/SAP Adaptive Server Enterprise                   |
-| IqTune        | Good               | Tune Sybase/SAP IQ - The Column Store database               |
-| SqlServerTune | Needs Improvements | Tune Microsoft SQL-Server                                    |
-| PostgresTune  | Needs Improvements | Tune Postgres DBMS                                           |
-| MySqlTune     | Needs Improvements | Tune MySQL DBMS (5.7 and later)                              |
-| OracleTune    | Initial State      | Tune Oracle DBMS                                             |
-| DB2Tune       | Initial State      | Tune DB2 LUW DBMS (LUW = Linux Unix Windows, mainframe is **not** supported) |
-| RaxTune       | Good               | Tune Sybase/SAP Replication Agent X (not a DBMS, but still possible to capture statistics) |
-| RsTune        | Good               | Tune Sybase/SAP Replication Server  (not a DBMS, but still possible to capture statistics) |
-| HanaTune      | Needs Improvements | Tune SAP HANA - The In-Memory combined Column/Row Store database |
+| Name              | Status             | Description                                                  |
+| ----------------- | ------------------ | ------------------------------------------------------------ |
+| **Ase**Tune       | Excellent          | Tune Sybase/SAP Adaptive Server Enterprise                   |
+| **Iq**Tune        | Good               | Tune Sybase/SAP IQ - The Column Store database               |
+| **SqlServer**Tune | Needs Improvements | Tune Microsoft SQL-Server                                    |
+| **Postgres**Tune  | Needs Improvements | Tune Postgres DBMS                                           |
+| **MySql**Tune     | Needs Improvements | Tune MySQL DBMS (5.7 and later)                              |
+| **Oracle**Tune    | Initial State      | Tune Oracle DBMS                                             |
+| **DB2**Tune       | Initial State      | Tune DB2 LUW DBMS (LUW = Linux Unix Windows, mainframe is **not** supported) |
+| **Rax**Tune       | Good               | Tune Sybase/SAP Replication Agent X (not a DBMS, but still possible to capture statistics) |
+| **Rs**Tune        | Good               | Tune Sybase/SAP Replication Server  (not a DBMS, but still possible to capture statistics) |
+| **Hana**Tune      | Needs Improvements | Tune SAP HANA - The In-Memory combined Column/Row Store database |
 
 ### Other tools
-| Name        | Status | Description                                                  |
-| ----------- | ------ | ------------------------------------------------------------ |
-| DbxCentral  | Beta   | A WebServer that handles centralized metrics if/when you use NO-GUI collectors (see below for more info) |
-| SQL Window  | Good   | Simple Query tool, connect to all of the above server types and execute commands (and any JDBC compliant DBMS) |
-| Tail Window | Good   | Tail any file, if the file is located on Unix/Linux, simply open a SSH connection for the tail. |
-| PerfDemo    | Beta   | A tool that can be used to stress load ASE - used for demo purposes of AseTune |
+| Name            | Status | Description                                                  |
+| --------------- | ------ | ------------------------------------------------------------ |
+| **DbxCentral**  | Beta   | A WebServer that handles centralized metrics if/when you use NO-GUI collectors (see below for more info) |
+| **SQL Window**  | Good   | Simple Query tool, connect to all of the above server types and execute commands (and any JDBC compliant DBMS) |
+| **Tail Window** | Good   | Tail any file, if the file is located on Unix/Linux, simply open a SSH connection for the tail. |
+| **PerfDemo**    | Beta   | A tool that can be used to stress load ASE - used for demo purposes of AseTune |
 
 
 
@@ -92,7 +92,14 @@ _Note:_ Please be gentle with the system :)
 
 
 
+## Overview
+
+FIXME: ... add picture of how Collectors, DbxCentral & Recording databases fits together...
+
+
+
 ## Some comments from Sourceforge
+
 - I just downloaded it and started randomly pointing and clicking, but the ease of use and the amount of data that is available is really impressive. 
 - This new version is a great piece of work. Thank you! Mr. Schwarz. I was immediately able to see poorly-performing queries on our production box and figure out what indices needed to be added, including creating covering indices. If you administer ASE, you **need** this. Period.
 - After using Sybase ASE for a quarter century and writing a million dumb scripts to try and sus out perf data, AseTune is revolutionary. I am in awe of what you've done here, and I hope I can convince my employer they ought to contribute.

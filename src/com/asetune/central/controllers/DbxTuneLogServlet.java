@@ -381,7 +381,9 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("    document.getElementById('log').insertAdjacentHTML('beforeend', '<b><font color=\"blue\"><<<<<<--------- log tail STARTED (' + dateToIsoStr(new Date()) + ') --------->>>>>> \\n</font></b>'); ");
 			out.println("");
 			out.println("    // scroll to the end of the page");
-			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
+//			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
+			out.println("    var lastElement = document.getElementById('logLine-feedback'); ");
+			out.println("    setTimeout(function() { lastElement.scrollIntoView(); }, 0); ");
 			out.println("  } ");
 			out.println("");
 			out.println("  logTailWebSocket.onmessage = function(event) ");
@@ -389,8 +391,11 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("    setTimeout(function() { ");
 			out.println("      dbxLastLogLineTime = Date.now(); ");
 			out.println("      appendLogLine(event.data + '\\n'); ");
-			out.println("      if (checkVisible(document.getElementById('logLine-feedback'))) ");
-			out.println("        window.scrollBy(0, 100000000000000000); ");
+			out.println("      if (checkVisible(document.getElementById('logLine-feedback'))) { ");
+//			out.println("        window.scrollBy(0, 100000000000000000); ");
+			out.println("        var lastElement = document.getElementById('logLine-feedback'); ");
+			out.println("        setTimeout(function() { lastElement.scrollIntoView(); }, 0); ");
+			out.println("      }");
 			out.println("    },0); ");
 			out.println("  } ");
 			out.println("");
@@ -432,7 +437,9 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("window.onload = function() ");
 			out.println("{ ");
 			out.println("    // scroll to the end of the page");
-			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
+//			out.println("    setTimeout(function() { window.scrollBy(0, 100000000000000000); }, 0); ");
+			out.println("    var lastElement = document.getElementById('logLine-feedback'); ");
+			out.println("    setTimeout(function() { lastElement.scrollIntoView(); }, 0); ");
 			out.println("} ");
 			
 		}
