@@ -1,5 +1,23 @@
 # DbxTune
-DbxTune is a collection of programs to **Tune**/Monitor various DBMS dialects.  
+
+It's all about: Whats happening **inside** the DBMS... 
+- What SQL statements are currently beeing executed in the DBMS
+- How much CPU is the DBMS consuming for the moment
+- What tables are the most accessed ones
+- What tables do I have locking conficts on
+- What is a specific _spid/user_ doing for the moment
+- What is the DBMS waiting for
+- And why not:
+  * Send Alarms/Alerts when specific thresholds are crossed
+  * Record everything and view data at a later time
+
+This is exactly what DbxTune does for you...
+
+Various monitoring tables are great, but it's so _hard_ too see what's _changed!_  
+DbxTune work out the difference from privious sample, which make the counter data _readable!_
+
+
+So: DbxTune is a collection of programs to **Tune**/Monitor various DBMS dialects.  
 
 The project started out as AseMon, which later was renamed to AseTune.  
 ASE due to the fact that the tool only could talk to Sybase/SAP Adaptive Server Enterprise   
