@@ -1511,11 +1511,22 @@ function dbxChartPrintApiHelp()
 			'  <li>IO Summary for last 7 days, 2 hours every day.<br>' +
 			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2h&graphList=CmSummary_aaReadWriteGraph&mdc=-7</code></li>' + 
 			'  <li>CPU and IO Summary from 2019-02-01 11:00 and 3 days forward, 4 hours every day, 1 chart per row<br>' +
-			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2019-02-01 11:00&graphList=CmSummary_aaReadWriteGraph&mdc=3&endTime=4h&gcols=1</code></li>' + 
+			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2019-02-01 11:00&graphList=CmSummary_aaCpuGraph,CmSummary_aaReadWriteGraph&mdc=3&endTime=4h&gcols=1</code></li>' + 
 			'  <li>All default charts, for last 5 days, last 2 hours every day, 5 charts per row (one day per column in the chart view)<br>' +
 			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2h&mdc=4&gcols=5</code></li>' + 
 			'</ul>' + 
 			'<b>default:</b> not enabled<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' +
+			'<td>mdcp</td>' + 
+			'<td>Multi Day Chart <b>Pivot</b><br>' + 
+			'Just how you do the Graph Layout! (graphs first, or days first)<br>' + 
+			'<ul>' + 
+			'  <li>false - First: Loop on graph names, Then: Loop on mdc-days    </li>' +
+			'  <li>true  - First: Loop on mdc-days,    Then: Loop on graph names </li>' +
+			'</ul>' + 
+			'<b>default:</b> false<br>' + 
 			'</td>' + 
 		'</tr>' +
 		'<tr>' + 
@@ -1588,6 +1599,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	var   startTime      = getParameter("startTime",     "2h");
 	var   endTime        = getParameter("endTime",       "");
 	var   multiDayChart  = getParameter("mdc",           "");
+	var   mdcPivot       = getParameter("mdcp",          false);
 	var   subscribe      = getParameter("subscribe",     false);
 	const debug          = getParameter("debug",         0);
 	const gheight        = getParameter("gheight",       200);
@@ -1968,45 +1980,94 @@ function dbxTuneLoadCharts(destinationDivId)
 			// In what order should the graphs be created/loaded
 			let createOrder = createGraphLoadOrder(graphProfile, jsonResp, loadAllGraphs);
 
-			for(let i = 0; i < createOrder.length; i++) 
+			if ( mdcPivot === false)
 			{
-				const entry = createOrder[i];
-				
-				//const initStartTime   = startTime;
-				const initEndTime     = endTime;
-				const initSampleType  = sampleType;
-				const initSampleValue = sampleValue;
-				const isMultiDayChart = startTimeArr.length > 1;
+				console.log("Graph layout: mdcPivot="+mdcPivot+", ---Normal--- layout. First=graphList, Then=startTimeArr/mdc");
+			
+				for(let i = 0; i < createOrder.length; i++) 
+				{
+					const entry = createOrder[i];
+					
+					//const initStartTime   = startTime;
+					const initEndTime     = endTime;
+					const initSampleType  = sampleType;
+					const initSampleValue = sampleValue;
+					const isMultiDayChart = startTimeArr.length > 1;
+
+					// loop the Multi Day Chart (at least 1 entry in this array)
+					for(let s = 0; s < startTimeArr.length; s++)
+					{
+						var startTimeEntry = startTimeArr[s];
+						
+						// Create graph object
+						const dbxGraph = new DbxGraph(
+							destinationDivId,  // put it in "div" that has id
+							entry.serverName,
+							entry.cmName,
+							entry.graphName,
+							entry.graphLabel,
+							entry.graphCategory,
+							entry.percentGraph,
+							subscribeAgeInSec,
+							gheight,
+							gwidth,
+							debug,
+							startTimeEntry,
+							initEndTime,
+							initSampleType,
+							initSampleValue,
+							isMultiDayChart
+						);
+
+						// add it to the global list/map
+						_graphMap.push(dbxGraph);
+					}
+				} // end: for loop
+			}
+			else
+			{
+				console.log("Graph layout: mdcPivot="+mdcPivot+", ---PIVOT--- layout. First=startTimeArr/mdc, Then=graphList");
 
 				// loop the Multi Day Chart (at least 1 entry in this array)
 				for(let s = 0; s < startTimeArr.length; s++)
 				{
 					var startTimeEntry = startTimeArr[s];
-					
-					// Create graph object
-					const dbxGraph = new DbxGraph(
-						destinationDivId,  // put it in "div" that has id
-						entry.serverName,
-						entry.cmName,
-						entry.graphName,
-						entry.graphLabel,
-						entry.graphCategory,
-						entry.percentGraph,
-						subscribeAgeInSec,
-						gheight,
-						gwidth,
-						debug,
-						startTimeEntry,
-						initEndTime,
-						initSampleType,
-						initSampleValue,
-						isMultiDayChart
-					);
+						
+					for(let i = 0; i < createOrder.length; i++) 
+					{
+						const entry = createOrder[i];
+						
+						//const initStartTime   = startTime;
+						const initEndTime     = endTime;
+						const initSampleType  = sampleType;
+						const initSampleValue = sampleValue;
+						const isMultiDayChart = startTimeArr.length > 1;
 
-					// add it to the global list/map
-					_graphMap.push(dbxGraph);
+						// Create graph object
+						const dbxGraph = new DbxGraph(
+							destinationDivId,  // put it in "div" that has id
+							entry.serverName,
+							entry.cmName,
+							entry.graphName,
+							entry.graphLabel,
+							entry.graphCategory,
+							entry.percentGraph,
+							subscribeAgeInSec,
+							gheight,
+							gwidth,
+							debug,
+							startTimeEntry,
+							initEndTime,
+							initSampleType,
+							initSampleValue,
+							isMultiDayChart
+						);
+
+						// add it to the global list/map
+						_graphMap.push(dbxGraph);
+					} // end: for loop
 				}
-			} // end: for loop
+			}
 
 			//-------------------------------------------------------------------
 			// Load initial data for each of the created graphs in: _graphMap	
