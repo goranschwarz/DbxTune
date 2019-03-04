@@ -1567,7 +1567,7 @@ public class PersistWriterJdbc
 					int    getDatabaseMajorVersion   = -1;
 					int    getDatabaseMinorVersion   = -1;
 
-					String getIdentifierQuoteString  = "\"";
+//					String getIdentifierQuoteString  = "\"";
 
 					try	{ getDriverName             = dbmd.getDriverName();             } catch (Throwable ignore) {}
 					try	{ getDriverVersion          = dbmd.getDriverVersion();          } catch (Throwable ignore) {}
@@ -1581,7 +1581,7 @@ public class PersistWriterJdbc
 					try	{ getDatabaseMajorVersion   = dbmd.getDatabaseMajorVersion();   } catch (Throwable ignore) {}
 					try	{ getDatabaseMinorVersion   = dbmd.getDatabaseMinorVersion();   } catch (Throwable ignore) {}
 
-					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
+//					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
 
 					_logger.info("Connected using JDBC driver Name='"+getDriverName
 							+"', Version='"         +getDriverVersion
@@ -1599,8 +1599,8 @@ public class PersistWriterJdbc
 					// Set what type of database we are connected to.
 					setDatabaseProductName(getDatabaseProductName == null ? "" : getDatabaseProductName);
 
-					// Get and set the QuotedIdentifier Character
-					setQuotedIdentifierChar(getIdentifierQuoteString == null ? "\"" : getIdentifierQuoteString);
+//					// Get and set the QuotedIdentifier Character
+//					setQuotedIdentifierChar(getIdentifierQuoteString == null ? "\"" : getIdentifierQuoteString);
 				}
 			}
 
@@ -2012,7 +2012,7 @@ public class PersistWriterJdbc
 	private boolean checkAndCreateTable(DbxConnection conn, int tabId)
 	throws SQLException
 	{
-		String tabName = getTableName(tabId, null, false);
+		String tabName = getTableName(conn, tabId, null, false);
 
 		if ( ! isDdlCreated(tabName) )
 		{
@@ -2037,10 +2037,10 @@ public class PersistWriterJdbc
 				_logger.info("Creating table '" + tabName + "'.");
 				getStatistics().incCreateTables();
 				
-				String sql = getTableDdlString(tabId, null);
+				String sql = getTableDdlString(conn, tabId, null);
 				dbDdlExec(conn, sql);
 
-				sql = getIndexDdlString(tabId, null);
+				sql = getIndexDdlString(conn, tabId, null);
 				if (sql != null)
 				{
 					dbDdlExec(conn, sql);
@@ -2091,13 +2091,13 @@ public class PersistWriterJdbc
 				_logger.info("Creating table '" + tabName + "'.");
 				getStatistics().incCreateTables();
 				
-				String sql = sqlCapBroker.getTableDdlString(dbmd, tabName);
+				String sql = sqlCapBroker.getTableDdlString(conn, dbmd, tabName);
 				if (sql != null)
 				{
 					dbDdlExec(conn, sql);
 				}
 
-				List<String> list = sqlCapBroker.getIndexDdlString(dbmd, tabName);
+				List<String> list = sqlCapBroker.getIndexDdlString(conn, dbmd, tabName);
 				if (list != null && !list.isEmpty())
 				{
 					for (String indexDdl : list)
@@ -2145,7 +2145,7 @@ public class PersistWriterJdbc
 		try
 		{
 			// Get the SQL statement
-			String sql = getTableInsertStr(SESSION_PARAMS, null, true);
+			String sql = getTableInsertStr(conn, SESSION_PARAMS, null, true);
 //			PreparedStatement pst = conn.prepareStatement( sql );
 			PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
 	
@@ -2240,7 +2240,7 @@ public class PersistWriterJdbc
 			
 			StringBuffer sbSql = new StringBuffer();
 //			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(VERSION_INFO, null, false));
+			sbSql.append(getTableInsertStr(conn, VERSION_INFO, null, false));
 			sbSql.append(" values(");
 			sbSql.append("  '").append(cont.getSessionStartTime() ).append("'");
 			sbSql.append(", '").append(Version.getAppName()       ).append("'");
@@ -2259,14 +2259,14 @@ public class PersistWriterJdbc
 
 			sbSql = new StringBuffer();
 //			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(SESSIONS, null, false));
+			sbSql.append(getTableInsertStr(conn, SESSIONS, null, false));
 			sbSql.append(" values('").append(cont.getSessionStartTime()).append("', '").append(cont.getServerName()).append("', 0, null)");
 
 			dbExec(conn, sbSql.toString());
 			getStatistics().incInserts();
 			
 
-			_logger.info("Storing CounterModel information in table "+getTableName(SESSION_PARAMS, null, false));
+			_logger.info("Storing CounterModel information in table "+getTableName(conn, SESSION_PARAMS, null, false));
 			//--------------------------------
 			// LOOP ALL THE CM's and store some information
 //			tabName = getTableName(SESSION_PARAMS, null, true);
@@ -2289,7 +2289,7 @@ public class PersistWriterJdbc
 				insertSessionParam(conn, ts, "cm", prefix+".graphNames",Arrays.deepToString(cm.getTrendGraphNames()));
 			}
 			
-			_logger.info("Storing "+Version.getAppName()+" configuration information in table "+getTableName(SESSION_PARAMS, null, false));
+			_logger.info("Storing "+Version.getAppName()+" configuration information in table "+getTableName(conn, SESSION_PARAMS, null, false));
 			//--------------------------------
 			// STORE the configuration file
 			Configuration conf;
@@ -2366,7 +2366,7 @@ public class PersistWriterJdbc
 
 	public void saveDbmsConfigText(DbxConnection conn, Timestamp sessionStartTime)
 	{
-		_logger.info("Storing Various DBMS Text Configuration in table "+getTableName(SESSION_DBMS_CONFIG_TEXT, null, false));
+		_logger.info("Storing Various DBMS Text Configuration in table "+getTableName(conn, SESSION_DBMS_CONFIG_TEXT, null, false));
 
 		if (conn == null)
 		{
@@ -2413,10 +2413,10 @@ public class PersistWriterJdbc
 			//
 			for (IDbmsConfigText dbmsConfigText : DbmsConfigTextManager.getInstanceList())
 			{
-				_logger.info("Storing DBMS Configuration Text for '"+dbmsConfigText.getName()+"' in table "+getTableName(SESSION_DBMS_CONFIG_TEXT, null, false));
+				_logger.info("Storing DBMS Configuration Text for '"+dbmsConfigText.getName()+"' in table "+getTableName(conn, SESSION_DBMS_CONFIG_TEXT, null, false));
 
 				sbSql = new StringBuffer();
-				sbSql.append(getTableInsertStr(SESSION_DBMS_CONFIG_TEXT, null, false));
+				sbSql.append(getTableInsertStr(conn, SESSION_DBMS_CONFIG_TEXT, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("' \n");
 				sbSql.append("       ,'"+dbmsConfigText.getName()+"' \n");
 				sbSql.append("       ,").append(safeStr(dbmsConfigText.getConfig()))  .append(" \n");
@@ -2450,7 +2450,7 @@ public class PersistWriterJdbc
 
 	public void saveDbmsConfig(DbxConnection conn, IDbmsConfig dbmsCfg, Timestamp sessionStartTime)
 	{
-		_logger.info("Storing DBMS Server Configuration in table "+getTableName(SESSION_DBMS_CONFIG, null, false));
+		_logger.info("Storing DBMS Server Configuration in table "+getTableName(conn, SESSION_DBMS_CONFIG, null, false));
 
 		if (conn == null)
 		{
@@ -2480,7 +2480,7 @@ public class PersistWriterJdbc
 			{
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(tabName).append(" \n");
-				sbSql.append(getTableInsertStr(SESSION_DBMS_CONFIG, null, false));
+				sbSql.append(getTableInsertStr(conn, SESSION_DBMS_CONFIG, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("' \n");
 
 				for (int c=0; c<dbmsCfg.getColumnCount(); c++)
@@ -2569,7 +2569,7 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		_logger.info("Storing monTables & monTableColumns dictionary in table "+getTableName(SESSION_MON_TAB_DICT, null, false)+" and "+getTableName(SESSION_MON_TAB_COL_DICT, null, false));
+		_logger.info("Storing monTables & monTableColumns dictionary in table "+getTableName(conn, SESSION_MON_TAB_DICT, null, false)+" and "+getTableName(conn, SESSION_MON_TAB_COL_DICT, null, false));
 		if (conn == null)
 		{
 			_logger.error("No database connection to Persistent Storage DB.'");
@@ -2597,7 +2597,7 @@ public class PersistWriterJdbc
 			{
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(monTabName).append(" \n");
-				sbSql.append(getTableInsertStr(SESSION_MON_TAB_DICT, null, false));
+				sbSql.append(getTableInsertStr(conn, SESSION_MON_TAB_DICT, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("', \n");
 				sbSql.append("         ").append(mte._tableID)    .append(", \n");
 				sbSql.append("         ").append(mte._columns)    .append(", \n");
@@ -2615,7 +2615,7 @@ public class PersistWriterJdbc
 				{
 					sbSql = new StringBuffer();
 //					sbSql.append(" insert into ").append(monTabColName).append(" \n");
-					sbSql.append(getTableInsertStr(SESSION_MON_TAB_COL_DICT, null, false));
+					sbSql.append(getTableInsertStr(conn, SESSION_MON_TAB_COL_DICT, null, false));
 					sbSql.append(" values('").append(sessionStartTime) .append("', \n");
 					sbSql.append("         ").append(mtce._tableID)    .append(", \n");
 					sbSql.append("         ").append(mtce._columnID)   .append(", \n");
@@ -2681,7 +2681,7 @@ public class PersistWriterJdbc
 		Timestamp sessionSampleTime = cont.getMainSampleTime();
 		
 		// Delete all ACTIVE alarms
-		String sql = "delete from " + getTableName(ALARM_ACTIVE, null, true);
+		String sql = "delete from " + getTableName(conn, ALARM_ACTIVE, null, true);
 		try
 		{
 			int count = conn.dbExec(sql);
@@ -2705,7 +2705,7 @@ public class PersistWriterJdbc
 
 				try
 				{
-					sbSql.append(getTableInsertStr(ALARM_ACTIVE, null, false));
+					sbSql.append(getTableInsertStr(conn, ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
 					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         )); // "alarmClass"              varchar(80)   null false   - 1
 					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  )); // "serviceType"             varchar(80)   null false   - 2
@@ -2753,7 +2753,7 @@ public class PersistWriterJdbc
 		if (alarmList.isEmpty())
 			return;
 
-		// Loop all the allrms and insert them into the database...
+		// Loop all the alarms and insert them into the database...
 		for (AlarmEventWrapper aew : alarmList)
 		{
 			AlarmEvent ae = aew.getAlarmEvent();
@@ -2761,7 +2761,7 @@ public class PersistWriterJdbc
 			try
 			{
 				// Get the SQL statement
-				sql = getTableInsertStr(ALARM_HISTORY, null, true);
+				sql = getTableInsertStr(conn, ALARM_HISTORY, null, true);
 				PreparedStatement pst = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
 		
 //System.out.println("saveAlarms(): SQL="+sql);
@@ -2820,8 +2820,7 @@ public class PersistWriterJdbc
 	public void saveSample(PersistContainer cont)
 	{
 		DbxConnection conn = _mainConn;
-		String qic = getQuotedIdentifierChar();
-		
+
 		if (conn == null)
 		{
 			_logger.error("No database connection to Persistent Storage DB.'");
@@ -2833,6 +2832,9 @@ public class PersistWriterJdbc
 			return;
 		}
 
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		
 		boolean checkForDummyShutdown = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_isSevereProblem_simulateDiskFull, DEFAULT_isSevereProblem_simulateDiskFull);
 		if (checkForDummyShutdown)
 		{
@@ -2869,19 +2871,19 @@ public class PersistWriterJdbc
 
 				sbSql = new StringBuffer();
 //				sbSql.append(" insert into ").append(tabName);
-				sbSql.append(getTableInsertStr(SESSION_SAMPLES, null, false));
+				sbSql.append(getTableInsertStr(conn, SESSION_SAMPLES, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
 
 				dbExec(conn, sbSql.toString());
 				getStatistics().incInserts();
 
 				// Increment the "counter" column and set LastSampleTime in the SESSIONS table
-				String tabName = getTableName(SESSIONS, null, true);
+				String tabName = getTableName(conn, SESSIONS, null, true);
 				sbSql = new StringBuffer();
 				sbSql.append(" update ").append(tabName);
-				sbSql.append("    set ").append(qic).append("NumOfSamples")  .append(qic).append(" = ").append(qic).append("NumOfSamples").append(qic).append(" + 1,");
-				sbSql.append("        ").append(qic).append("LastSampleTime").append(qic).append(" = '").append(sessionSampleTime).append("'");
-				sbSql.append("  where ").append(qic).append("SessionStartTime").append(qic).append(" = '").append(sessionStartTime).append("'");
+				sbSql.append("    set ").append(lq).append("NumOfSamples")    .append(rq).append(" = ").append(lq).append("NumOfSamples").append(rq).append(" + 1,");
+				sbSql.append("        ").append(lq).append("LastSampleTime")  .append(rq).append(" = '").append(sessionSampleTime).append("'");
+				sbSql.append("  where ").append(lq).append("SessionStartTime").append(rq).append(" = '").append(sessionStartTime).append("'");
 
 				dbExec(conn, sbSql.toString());
 				getStatistics().incUpdates();
@@ -2929,7 +2931,7 @@ public class PersistWriterJdbc
 		DatabaseMetaData dbmd = conn.getMetaData();
 
 
-		tabName = getTableName(type, cm, false);
+		tabName = getTableName(conn, type, cm, false);
 
 		ArrayList<String> existingCols = new ArrayList<String>();
 		rs = dbmd.getColumns(null, null, tabName, "%");
@@ -2982,8 +2984,8 @@ public class PersistWriterJdbc
 		{
 			_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel '" + cm.getName() + "'.");
 
-			String sqlTable = getTableDdlString(type, cm);
-			String sqlIndex = getIndexDdlString(type, cm);
+			String sqlTable = getTableDdlString(conn, type, cm);
+			String sqlIndex = getIndexDdlString(conn, type, cm);
 
 			dbDdlExec(conn, sqlTable);
 			dbDdlExec(conn, sqlIndex);
@@ -3118,13 +3120,16 @@ public class PersistWriterJdbc
 		}
 
 		// Store some info
-		StringBuilder sbSql = new StringBuilder();
+		String sql = "";
+
 //		String tabName = getTableName(SESSION_SAMPLE_DETAILES, null, true);
 
 		try
 		{
+			StringBuilder sbSql = new StringBuilder();
+			
 //			sbSql.append(" insert into ").append(tabName);
-			sbSql.append(getTableInsertStr(SESSION_SAMPLE_DETAILES, null, false));
+			sbSql.append(getTableInsertStr(conn, SESSION_SAMPLE_DETAILES, null, false));
 			sbSql.append(" values('").append(sessionStartTime).append("'");
 			sbSql.append(", '").append(sessionSampleTime).append("'");
 			sbSql.append(", '").append(cm.getName()).append("'");
@@ -3145,12 +3150,14 @@ public class PersistWriterJdbc
 			sbSql.append(", ") .append(safeStr(StringUtil.exceptionToString(cm.getSampleException()))); // FIXME: maybe we can store it as a serialized object... and deserialize it on retrival 
 			sbSql.append(")");
 
-			dbExec(conn, sbSql.toString());
+			sql = sbSql.toString();
+			
+			dbExec(conn, sql);
 			getStatistics().incInserts();
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
 			isSevereProblem(conn, e);
 		}
 
@@ -3162,30 +3169,41 @@ public class PersistWriterJdbc
 		}
 
 		// SUMMARY INFO for the whole session
-		String tabName = getTableName(SESSION_SAMPLE_SUM, null, true);
+		String tabName = getTableName(conn, SESSION_SAMPLE_SUM, null, true);
 
-		sbSql = new StringBuilder();
+		StringBuilder sbSql = new StringBuilder();
 		sbSql.append(" update ").append(tabName);
-		sbSql.append(" set \"absSamples\"  = \"absSamples\"  + ").append( (absRows  > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("     \"diffSamples\" = \"diffSamples\" + ").append( (diffRows > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("     \"rateSamples\" = \"rateSamples\" + ").append( (rateRows > 0 ? 1 : 0) ).append("");
-		sbSql.append(" where \"SessionStartTime\" = '").append(sessionStartTime).append("'");
-		sbSql.append("   and \"CmName\" = '").append(cm.getName()).append("'");
+		sbSql.append(" set [absSamples]  = [absSamples]  + ").append( (absRows  > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("     [diffSamples] = [diffSamples] + ").append( (diffRows > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("     [rateSamples] = [rateSamples] + ").append( (rateRows > 0 ? 1 : 0) ).append("");
+		sbSql.append(" where [SessionStartTime] = '").append(sessionStartTime).append("'");
+		sbSql.append("   and [CmName] = '").append(cm.getName()).append("'");
+
+		sql = sbSql.toString();
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = conn.quotifySqlString(sql);
 
 		try
 		{
 			Statement stmnt = conn.createStatement();
-			int updCount = stmnt.executeUpdate(sbSql.toString());
+			int updCount = stmnt.executeUpdate(sql);
 			
 			if (updCount == 0)
 			{
-				sbSql = new StringBuilder();
-//				sbSql.append(" insert into ").append(tabName);
-				sbSql.append(getTableInsertStr(SESSION_SAMPLE_SUM, null, false));
-				sbSql.append(" values('").append(sessionStartTime).append("'");
-				sbSql.append(", '").append(cm.getName()).append("', 1, 1, 1)");
+				StringBuilder sbSql2 = new StringBuilder();
 
-				updCount = stmnt.executeUpdate(sbSql.toString());
+//				sbSql2.append(" insert into ").append(tabName);
+				sbSql2.append(getTableInsertStr(conn, SESSION_SAMPLE_SUM, null, false));
+				sbSql2.append(" values('").append(sessionStartTime).append("'");
+				sbSql2.append(", '").append(cm.getName()).append("', 1, 1, 1)");
+
+				sql = sbSql2.toString();
+
+				// replace all '[' and ']' into DBMS Vendor Specific Chars
+				sql = conn.quotifySqlString(sql);
+				
+				updCount = stmnt.executeUpdate(sql);
 				getStatistics().incInserts();
 			}
 			else
@@ -3195,7 +3213,7 @@ public class PersistWriterJdbc
 		}
 		catch (SQLException e)
 		{
-			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sbSql.toString(), e);
+			_logger.warn("Error writing to Persistent Counter Store. getErrorCode()="+e.getErrorCode()+", SQL: "+sql, e);
 			isSevereProblem(conn, e);
 		}
 	}
@@ -3243,7 +3261,7 @@ public class PersistWriterJdbc
 			return -1;
 		}
 
-		String tabName = getTableName(whatData, cm, false);
+		String tabName = getTableName(conn, whatData, cm, false);
 //		String tabName = cm.getName();
 //		if      (whatData == CountersModel.DATA_ABS)  tabName += "_abs";
 //		else if (whatData == CountersModel.DATA_DIFF) tabName += "_diff";
@@ -3301,7 +3319,7 @@ public class PersistWriterJdbc
 		String sql = "";
 		try
 		{
-			sql = getTableInsertStr(whatData, cm, true, cols);
+			sql = getTableInsertStr(conn, whatData, cm, true, cols);
 //			PreparedStatement pstmt = conn.prepareStatement(sql);
 //			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(conn, sql);
 			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
@@ -3445,7 +3463,7 @@ public class PersistWriterJdbc
 		if (cm   == null) throw new IllegalArgumentException("The passed CM can't be null");
 		if (tgdp == null) throw new IllegalArgumentException("The passed TGDP can't be null");
 
-		String tabName = getTableName(cm, tgdp, false);
+		String tabName = getTableName(conn, cm, tgdp, false);
 
 		if ( ! tgdp.hasData() )
 		{
@@ -3460,7 +3478,7 @@ public class PersistWriterJdbc
 
 		StringBuilder sb = new StringBuilder();
 //		sb.append("insert into ").append(qic).append(tabName).append(qic);
-		String tabInsStr = getTableInsertStr(cm, tgdp, false);
+		String tabInsStr = getTableInsertStr(conn, cm, tgdp, false);
 		sb.append(tabInsStr);
 		sb.append(" values(");
 
@@ -3579,8 +3597,8 @@ public class PersistWriterJdbc
 			{
 				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+tabName+"'", 37, true)+" for CounterModel graph '" + tgdp.getName() + "'.");
 
-				String sqlTable = getGraphTableDdlString(tabName, tgdp);
-				String sqlIndex = getGraphIndexDdlString(tabName, tgdp);
+				String sqlTable = getGraphTableDdlString(conn, tabName, tgdp);
+				String sqlIndex = getGraphIndexDdlString(conn, tabName, tgdp);
 
 				dbDdlExec(conn, sqlTable);
 				dbDdlExec(conn, sqlIndex);
@@ -3679,11 +3697,14 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		String tabName = getTableName(DDL_STORAGE, null, false);
+		String tabName = getTableName(conn, DDL_STORAGE, null, false);
 
 		String sql = 
-			" select \"dbname\", \"objectName\" " +
+			" select [dbname], [objectName] " +
 			" from " + tabName;
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = conn.quotifySqlString(sql);
 
 		int rows = 0;
 		try
@@ -3840,7 +3861,7 @@ public class PersistWriterJdbc
 		{
 			_logger.debug("DEBUG: saveDdlDetails() SAVING " + ddlDetails.getFullObjectName());
 
-			String sql = getTableInsertStr(DDL_STORAGE, null, true);
+			String sql = getTableInsertStr(conn, DDL_STORAGE, null, true);
 //			PreparedStatement pstmt = conn.prepareStatement(sql);
 //			PreparedStatement pstmt = PreparedStatementCache.getPreparedStatement(conn, sql);
 			PreparedStatement pstmt = _cachePreparedStatements ? PreparedStatementCache.getPreparedStatement(conn, sql) : conn.prepareStatement(sql);
@@ -4016,7 +4037,7 @@ public class PersistWriterJdbc
 			{
 				// FIRST entry in each of the lists should be the table name where to store the information.
 				String tabName = (String) row.get(0);
-				String sql = sqlCaptureBroker.getInsertStatement(tabName);
+				String sql = sqlCaptureBroker.getInsertStatement(conn, tabName);
 //System.out.println("saveSqlCaptureDetails(): tabName=|"+tabName+"|.");
 //System.out.println("saveSqlCaptureDetails(): sql=|"+sql+"|.");
 //System.out.println("saveSqlCaptureDetails(): row="+row);

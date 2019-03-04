@@ -162,79 +162,79 @@ extends SqlCaptureBrokerAse
 	public static void createTables(DbxConnection conn)
 	throws SQLException
 	{
-		conn.dbExec(""
-			    + "create table \"monSysStatement\" ( \n"
-			    + "	\"SPID\"                            int                              not null, \n"
-			    + "	\"InstanceID\"                      tinyint                          not null, \n"
-			    + "	\"KPID\"                            int                              not null, \n"
-			    + "	\"DBID\"                            int                              not null, \n"
-			    + "	\"ProcedureID\"                     int                              not null, \n"
-			    + "	\"PlanID\"                          int                              not null, \n"
-			    + "	\"BatchID\"                         int                              not null, \n"
-			    + "	\"ContextID\"                       int                              not null, \n"
-			    + "	\"LineNumber\"                      int                              not null, \n"
-			    + "	\"CpuTime\"                         int                              not null, \n"
-			    + "	\"WaitTime\"                        int                              not null, \n"
-			    + "	\"MemUsageKB\"                      int                              not null, \n"
-			    + "	\"PhysicalReads\"                   bigint                           not null, \n"
-			    + "	\"LogicalReads\"                    bigint                           not null, \n"
-			    + "	\"PagesModified\"                   bigint                           not null, \n"
-			    + "	\"PacketsSent\"                     int                              not null, \n"
-			    + "	\"PacketsReceived\"                 int                              not null, \n"
-			    + "	\"NetworkPacketSize\"               int                              not null, \n"
-			    + "	\"PlansAltered\"                    int                              not null, \n"
-			    + "	\"RowsAffected\"                    int                              not null, \n"
-			    + "	\"ErrorStatus\"                     int                              not null, \n"
-			    + "	\"HashKey\"                         int                              not null, \n"
-			    + "	\"SsqlId\"                          int                              not null, \n"
-			    + "	\"ProcNestLevel\"                   int                              not null, \n"
-			    + "	\"StatementNumber\"                 int                              not null, \n"
-			    + "	\"DBName\"                          varchar(30)                          null, \n"
-			    + "	\"StartTime\"                       datetime                             null, \n"
-			    + "	\"EndTime\"                         datetime                             null \n"
+		conn.dbExec(conn.quotifySqlString(""
+			    + "create table [monSysStatement] ( \n"
+			    + "	[SPID]                            int                              not null, \n"
+			    + "	[InstanceID]                      tinyint                          not null, \n"
+			    + "	[KPID]                            int                              not null, \n"
+			    + "	[DBID]                            int                              not null, \n"
+			    + "	[ProcedureID]                     int                              not null, \n"
+			    + "	[PlanID]                          int                              not null, \n"
+			    + "	[BatchID]                         int                              not null, \n"
+			    + "	[ContextID]                       int                              not null, \n"
+			    + "	[LineNumber]                      int                              not null, \n"
+			    + "	[CpuTime]                         int                              not null, \n"
+			    + "	[WaitTime]                        int                              not null, \n"
+			    + "	[MemUsageKB]                      int                              not null, \n"
+			    + "	[PhysicalReads]                   bigint                           not null, \n"
+			    + "	[LogicalReads]                    bigint                           not null, \n"
+			    + "	[PagesModified]                   bigint                           not null, \n"
+			    + "	[PacketsSent]                     int                              not null, \n"
+			    + "	[PacketsReceived]                 int                              not null, \n"
+			    + "	[NetworkPacketSize]               int                              not null, \n"
+			    + "	[PlansAltered]                    int                              not null, \n"
+			    + "	[RowsAffected]                    int                              not null, \n"
+			    + "	[ErrorStatus]                     int                              not null, \n"
+			    + "	[HashKey]                         int                              not null, \n"
+			    + "	[SsqlId]                          int                              not null, \n"
+			    + "	[ProcNestLevel]                   int                              not null, \n"
+			    + "	[StatementNumber]                 int                              not null, \n"
+			    + "	[DBName]                          varchar(30)                          null, \n"
+			    + "	[StartTime]                       datetime                             null, \n"
+			    + "	[EndTime]                         datetime                             null \n"
 			    + ") \n"
-			    + "");
+			    + ""));
 
-		conn.dbExec(""
-			    + "create table \"monSysSQLText\" ( \n"
-			    + "	\"SPID\"                            int                              not null, \n"
-			    + "	\"InstanceID\"                      tinyint                          not null, \n"
-			    + "	\"KPID\"                            int                              not null, \n"
-			    + "	\"ServerUserID\"                    int                              not null, \n"
-			    + "	\"BatchID\"                         int                              not null, \n"
-			    + "	\"SequenceInBatch\"                 int                              not null, \n"
-			    + "	\"SQLText\"                         varchar(255)                         null \n"
+		conn.dbExec(conn.quotifySqlString(""
+			    + "create table [monSysSQLText] ( \n"
+			    + "	[SPID]                            int                              not null, \n"
+			    + "	[InstanceID]                      tinyint                          not null, \n"
+			    + "	[KPID]                            int                              not null, \n"
+			    + "	[ServerUserID]                    int                              not null, \n"
+			    + "	[BatchID]                         int                              not null, \n"
+			    + "	[SequenceInBatch]                 int                              not null, \n"
+			    + "	[SQLText]                         varchar(255)                         null \n"
 			    + ") \n"
-			    + "");
+			    + ""));
+
+	    conn.dbExec(conn.quotifySqlString(""
+			    + "create table [monSysPlanText] ( \n"
+			    + "	[PlanID]                          int                              not null, \n"
+			    + "	[InstanceID]                      tinyint                          not null, \n"
+			    + "	[SPID]                            int                              not null, \n"
+			    + "	[KPID]                            int                              not null, \n"
+			    + "	[BatchID]                         int                              not null, \n"
+			    + "	[ContextID]                       int                              not null, \n"
+			    + "	[SequenceNumber]                  int                              not null, \n"
+			    + "	[DBID]                            int                              not null, \n"
+			    + "	[ProcedureID]                     int                              not null, \n"
+			    + "	[DBName]                          varchar(30)                          null, \n"
+			    + "	[PlanText]                        varchar(160)                         null \n"
+			    + ") \n"
+			    + ""));
 
 	    conn.dbExec(""
-			    + "create table \"monSysPlanText\" ( \n"
-			    + "	\"PlanID\"                          int                              not null, \n"
-			    + "	\"InstanceID\"                      tinyint                          not null, \n"
-			    + "	\"SPID\"                            int                              not null, \n"
-			    + "	\"KPID\"                            int                              not null, \n"
-			    + "	\"BatchID\"                         int                              not null, \n"
-			    + "	\"ContextID\"                       int                              not null, \n"
-			    + "	\"SequenceNumber\"                  int                              not null, \n"
-			    + "	\"DBID\"                            int                              not null, \n"
-			    + "	\"ProcedureID\"                     int                              not null, \n"
-			    + "	\"DBName\"                          varchar(30)                          null, \n"
-			    + "	\"PlanText\"                        varchar(160)                         null \n"
-			    + ") \n"
-			    + "");
-
-	    conn.dbExec(""
-			    + "create table \"sysprocesses\" ( \n"
-			    + "	\"spid\"                          int                              not null, \n"
-			    + "	\"program_name\"                  varchar(30)                          null, \n"
+			    + "create table [sysprocesses] ( \n"
+			    + "	[spid]                          int                              not null, \n"
+			    + "	[program_name]                  varchar(30)                          null, \n"
 			    + ") \n"
 			    + "");
 	}
 	public static void truncSourceTables(DbxConnection conn)
 	{
-		conn.dbExecNoException("delete from \"monSysStatement\"");
-		conn.dbExecNoException("delete from \"monSysSQLText\"");
-		conn.dbExecNoException("delete from \"monSysPlanText\"");
+		conn.dbExecNoException(conn.quotifySqlString("delete from [monSysStatement]"));
+		conn.dbExecNoException(conn.quotifySqlString("delete from [monSysSQLText]"));
+		conn.dbExecNoException(conn.quotifySqlString("delete from [monSysPlanText]"));
 	}
 
 	public static void insertSysStatement(DbxConnection conn, int SPID, int InstanceID, int KPID, int DBID, int ProcedureID, int PlanID, int BatchID, int ContextID, int LineNumber, int CpuTime, int WaitTime, int MemUsageKB, int PhysicalReads, int LogicalReads, int PagesModified, int PacketsSent, int PacketsReceived, int NetworkPacketSize, int PlansAltered, int RowsAffected, int ErrorStatus, int HashKey, int SsqlId, int ProcNestLevel, int StatementNumber, String DBName, String StartTimeStr, String EndTimeStr)
@@ -256,27 +256,29 @@ extends SqlCaptureBrokerAse
 	}
 	public static void insertSysStatement(DbxConnection conn, int SPID, int InstanceID, int KPID, int DBID, int ProcedureID, int PlanID, int BatchID, int ContextID, int LineNumber, int CpuTime, int WaitTime, int MemUsageKB, int PhysicalReads, int LogicalReads, int PagesModified, int PacketsSent, int PacketsReceived, int NetworkPacketSize, int PlansAltered, int RowsAffected, int ErrorStatus, int HashKey, int SsqlId, int ProcNestLevel, int StatementNumber, String DBName, Timestamp StartTime, Timestamp EndTime)
 	{
-		conn.dbExecNoException("insert into \"monSysStatement\" (\"SPID\", \"InstanceID\", \"KPID\", \"DBID\", \"ProcedureID\", \"PlanID\", \"BatchID\", \"ContextID\", \"LineNumber\", \"CpuTime\", \"WaitTime\", \"MemUsageKB\", \"PhysicalReads\", \"LogicalReads\", \"PagesModified\", \"PacketsSent\", \"PacketsReceived\", \"NetworkPacketSize\", \"PlansAltered\", \"RowsAffected\", \"ErrorStatus\", \"HashKey\", \"SsqlId\", \"ProcNestLevel\", \"StatementNumber\", \"DBName\", \"StartTime\", \"EndTime\") "
-				+ "values(" + SPID + ", " + InstanceID + ", " + KPID + ", " + DBID + ", " + ProcedureID + ", " + PlanID + ", " + BatchID + ", " + ContextID + ", " + LineNumber + ", " + CpuTime + ", " + WaitTime + ", " + MemUsageKB + ", " + PhysicalReads + ", " + LogicalReads + ", " + PagesModified + ", " + PacketsSent + ", " + PacketsReceived + ", " + NetworkPacketSize + ", " + PlansAltered + ", " + RowsAffected + ", " + ErrorStatus + ", " + HashKey + ", " + SsqlId + ", " + ProcNestLevel + ", " + StatementNumber + ", '" + DBName + "', '" + StartTime + "', '" + EndTime + "')  ");
+		conn.dbExecNoException(conn.quotifySqlString("insert into [monSysStatement] ([SPID], [InstanceID], [KPID], [DBID], [ProcedureID], [PlanID], [BatchID], [ContextID], [LineNumber], [CpuTime], [WaitTime], [MemUsageKB], [PhysicalReads], [LogicalReads], [PagesModified], [PacketsSent], [PacketsReceived], [NetworkPacketSize], [PlansAltered], [RowsAffected], [ErrorStatus], [HashKey], [SsqlId], [ProcNestLevel], [StatementNumber], [DBName], [StartTime], [EndTime]) "
+				+ "values(" + SPID + ", " + InstanceID + ", " + KPID + ", " + DBID + ", " + ProcedureID + ", " + PlanID + ", " + BatchID + ", " + ContextID + ", " + LineNumber + ", " + CpuTime + ", " + WaitTime + ", " + MemUsageKB + ", " + PhysicalReads + ", " + LogicalReads + ", " + PagesModified + ", " + PacketsSent + ", " + PacketsReceived + ", " + NetworkPacketSize + ", " + PlansAltered + ", " + RowsAffected + ", " + ErrorStatus + ", " + HashKey + ", " + SsqlId + ", " + ProcNestLevel + ", " + StatementNumber + ", '" + DBName + "', '" + StartTime + "', '" + EndTime + "')  "));
 	}
 
 	public static void insertSysSQLText(DbxConnection conn, int SPID, int InstanceID, int KPID, int ServerUserID, int BatchID, int SequenceInBatch, String SQLText)
 	{
 		SQLText = SQLText.replace("'", "''");
-		conn.dbExecNoException("insert into \"monSysSQLText\" (\"SPID\", \"InstanceID\", \"KPID\", \"ServerUserID\", \"BatchID\", \"SequenceInBatch\", \"SQLText\") "
-				+ "values(" + SPID + ", " + InstanceID + ", " + KPID + ", " + ServerUserID + ", " + BatchID + ", " + SequenceInBatch + ", '" + SQLText + "')  ");
+		conn.dbExecNoException(conn.quotifySqlString("insert into [monSysSQLText] ([SPID], [InstanceID], [KPID], [ServerUserID], [BatchID], [SequenceInBatch], [SQLText]) "
+				+ "values(" + SPID + ", " + InstanceID + ", " + KPID + ", " + ServerUserID + ", " + BatchID + ", " + SequenceInBatch + ", '" + SQLText + "')  "));
 	}
 	public static void insertSysPlanText(DbxConnection conn, int PlanID, int InstanceID, int SPID, int KPID, int BatchID, int ContextID, int SequenceNumber, int DBID, int ProcedureID, String DBName, String PlanText)
 	{
 		PlanText = PlanText.replace("'", "''");
-		conn.dbExecNoException("insert into \"monSysPlanText\" (\"PlanID\", \"InstanceID\", \"SPID\", \"KPID\", \"BatchID\", \"ContextID\", \"SequenceNumber\", \"DBID\", \"ProcedureID\", \"DBName\", \"PlanText\") "
-				+ "values(" + PlanID + ", " + InstanceID + ", " + SPID + ", " + KPID + ", " + BatchID + ", " + ContextID + ", " + SequenceNumber + ", " + DBID + ", " + ProcedureID + ", '" + DBName + "', '" + PlanText + "')   ");
+		conn.dbExecNoException(conn.quotifySqlString("insert into [monSysPlanText] ([PlanID], [InstanceID], [SPID], [KPID], [BatchID], [ContextID], [SequenceNumber], [DBID], [ProcedureID], [DBName], [PlanText]) "
+				+ "values(" + PlanID + ", " + InstanceID + ", " + SPID + ", " + KPID + ", " + BatchID + ", " + ContextID + ", " + SequenceNumber + ", " + DBID + ", " + ProcedureID + ", '" + DBName + "', '" + PlanText + "')   "));
 	}
 	
 	public static void selectFrom(DbxConnection conn, String tabName)
 	throws SQLException
 	{
-		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery("select * from \""+tabName+"\""); )
+		String sql = conn.quotifySqlString("select * from ["+tabName+"]");
+		
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "dummy");
 			System.out.println("\n#### Table: "+tabName+ "\n" + rstm.toAsciiTableString());

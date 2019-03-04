@@ -594,7 +594,7 @@ public class StatusBar extends JPanel
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))           productNameShort = "H2";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))       productNameShort = "ORA";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MSSQL))        productNameShort = "MS-SQL";
-			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX))       productNameShort = "DB2";
+			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW))      productNameShort = "DB2";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      productNameShort = "DB2-MF";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_MYSQL))        productNameShort = "MySQL";
 			else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        productNameShort = "DERBY";

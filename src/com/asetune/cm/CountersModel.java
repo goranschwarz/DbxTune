@@ -1598,7 +1598,9 @@ implements Cloneable, ITableTooltip
 	public boolean isPctColumn(int col)      { return _isPctCol      == null ? false : _isPctCol[col]; }
 
 //	public boolean discardDiffPctHighlighterOnAbsTable() { return _dataSource == DATA_ABS; }
-	public boolean discardDiffPctHighlighterOnAbsTable() { return getDataSource() == DATA_ABS; }
+	public boolean discardDiffHighlighterOnAbsTable() { return getDataSource() == DATA_ABS; }
+	public boolean discardPctHighlighterOnAbsTable()  { return false; } // false == SHOW PCT values as RED even in ABS samples
+
 
 	public List<String> getPk()
 	{

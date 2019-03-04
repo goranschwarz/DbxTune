@@ -61,7 +61,7 @@ public class ConnectionProfile
 		JDBC_HSQL,
 		JDBC_MSSQL,
 		JDBC_ORACLE,
-		JDBC_DB2_UX,
+		JDBC_DB2_LUW,
 		JDBC_DB2_ZOS,
 		JDBC_MYSQL,
 		JDBC_DERBY,
@@ -98,7 +98,7 @@ public class ConnectionProfile
 	
 	public static SrvType getServerType(Type type, String productName)
 	{
-		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX      )) return SrvType.JDBC_DB2_UX;
+		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW     )) return SrvType.JDBC_DB2_LUW;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS     )) return SrvType.JDBC_DB2_ZOS;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY       )) return SrvType.JDBC_DERBY;
 		if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2          )) return SrvType.JDBC_H2;
@@ -302,11 +302,42 @@ public class ConnectionProfile
 		return "";
 	}
 
+	/**
+	 * For any of the entry (TDS|JDBC|OFFLINE) get the username used to connect to the DBMS
+	 */
 	public String getDbUserName()
 	{
 		if (_tdsEntry     != null) return _tdsEntry    ._tdsUsername;
 		if (_jdbcEntry    != null) return _jdbcEntry   ._jdbcUsername;
 		if (_offlineEntry != null) return _offlineEntry._jdbcUsername;
+		return "";
+	}
+	
+	/**
+	 * For any of the entry (TDS|JDBC|OFFLINE) get the password used to connect to the DBMS
+	 */
+	public String getDbPassword()
+	{
+		if (_tdsEntry     != null) return _tdsEntry    ._tdsPassword;
+		if (_jdbcEntry    != null) return _jdbcEntry   ._jdbcPassword;
+		if (_offlineEntry != null) return _offlineEntry._jdbcPassword;
+		return "";
+	}
+	
+	/**
+	 * Get the SERVERNAME or the URL for the profile.<br>
+	 * Note: to check if it's a TDS/Servername or a JDBC URL, you can check if the entry starts with "jdbc:", then it's a jdbc URL
+	 * <ul>
+	 *    <li>TDS - Get the SERVERNAME</li>
+	 *    <li>JDBC - get the jdbc URL</li>
+	 *    <li>OFFLINE - get the jdbc URL</li>
+	 * </ul>
+	 */
+	public String getDbServerOrUrl()
+	{
+		if (_tdsEntry     != null) return _tdsEntry    ._tdsServer;
+		if (_jdbcEntry    != null) return _jdbcEntry   ._jdbcUrl;
+		if (_offlineEntry != null) return _offlineEntry._jdbcUrl;
 		return "";
 	}
 	

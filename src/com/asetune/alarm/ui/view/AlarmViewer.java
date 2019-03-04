@@ -392,8 +392,7 @@ implements ActionListener
 			{
 				DbxConnection conn = MainFrame.getOfflineConnection();
 
-				String sql = "select * from #MonAlarmActive#";
-				sql = sql.replace("#", conn.getQuotedIdentifierChar());
+				String sql = conn.quotifySqlString("select * from [MonAlarmActive]");
 						
 				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 				{
@@ -687,9 +686,8 @@ implements ActionListener
 			{
 				DbxConnection conn = MainFrame.getOfflineConnection();
 
-				String sql = "select * from #MonAlarmHistory#";
-				sql = sql.replace("#", conn.getQuotedIdentifierChar());
-						
+				String sql = conn.quotifySqlString("select * from [MonAlarmHistory]");
+
 				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 				{
 					ResultSetTableModel rstm = new ResultSetTableModel(rs, "alarmView.historyTable");

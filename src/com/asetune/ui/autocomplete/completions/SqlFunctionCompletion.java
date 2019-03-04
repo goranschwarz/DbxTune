@@ -36,6 +36,9 @@ extends SqlCompletion
 
 	public FunctionInfo _functionInfo = null;
 
+	//-------------------------
+	// helper called from constructor
+	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, FunctionInfo ti, boolean addCatalog, boolean addSchema, boolean quoteNames)
 	{
 		String q = provider.getDbIdentifierQuoteString();
@@ -57,18 +60,28 @@ extends SqlCompletion
 		
 		return out;
 	}
+
+	//-------------------------
+	// CONSTRUCTOR
+	//-------------------------
 	public SqlFunctionCompletion(CompletionProviderAbstractSql provider, FunctionInfo fi, boolean addCatalog, boolean addSchema, boolean quoteNames)
 	{
 		super(provider, fi._funcName, createReplacementText(provider, fi, addCatalog, addSchema, quoteNames));
 		_functionInfo = fi;
 
 		String shortDesc = 
-			"<font color=\"blue\">"+fi._funcType+"</font>" +
-//			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._funcRemark) ? "No Description" : ti._funcRemark) + "</font></i>";
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(fi._funcRemark) ? "" : stripMultiLineHtml(fi._funcRemark)) + "</font></i>";
+			"<font color='blue'>"+fi._funcType+"</font>" +
+//			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._funcRemark) ? "No Description" : ti._funcRemark) + "</font></i>";
+			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(fi._funcRemark) ? "" : stripMultiLineHtml(fi._funcRemark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_functionInfo.toHtmlString());
 	}
+	
+
+
+	//-------------------------
+	// OVERIDE METHODS
+	//-------------------------
 	
 	public String getType()
 	{

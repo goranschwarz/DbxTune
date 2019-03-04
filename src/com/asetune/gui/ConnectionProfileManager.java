@@ -44,6 +44,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -59,6 +62,7 @@ import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -163,7 +167,7 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_16_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_16.png");
 //	public static final ImageIcon ICON_DB_PROD_NAME_16_MSSQL_BLACK      = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_black_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_16.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_16.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_LUW          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_16.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_16_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_16.png");
@@ -196,7 +200,7 @@ public class ConnectionProfileManager
 	public static final ImageIcon ICON_DB_PROD_NAME_32_MSSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_32.png");
 //	public static final ImageIcon ICON_DB_PROD_NAME_32_MSSQL_BLACK      = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mssql_black_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_ORACLE           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_oracle_32.png");
-	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_UX           = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_32.png");
+	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_LUW          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_ux_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_DB2_ZOS          = SwingUtils.readImageIcon(Version.class, "images/conn_profile_db2_zos_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_MYSQL            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_mysql_32.png");
 	public static final ImageIcon ICON_DB_PROD_NAME_32_DERBY            = SwingUtils.readImageIcon(Version.class, "images/conn_profile_derby_32.png");
@@ -208,11 +212,12 @@ public class ConnectionProfileManager
 
 	//-------------------------------------------------------------------------------------------------------------------
 	// XML Strings for the Catalog and ConnProfile Tree
-	private final static String XML_PROFILE_TREE                     = "ProfileTree";
-	private final static String XML_PROFILE_TREE_CATALOG             = "Catalog";
-	private final static String XML_PROFILE_TREE_CATALOG_ATTR_NAME   = "name";
-	private final static String XML_PROFILE_TREE_ENTRY               = "Entry";
-	private final static String XML_PROFILE_TREE_ENTRY_ATTR_NAME     = "name";
+	private final static String XML_PROFILE_TREE                       = "ProfileTree";
+	private final static String XML_PROFILE_TREE_CATALOG               = "Catalog";
+	private final static String XML_PROFILE_TREE_CATALOG_ATTR_NAME     = "name";
+	private final static String XML_PROFILE_TREE_CATALOG_ATTR_EXPANDED = "expanded";
+	private final static String XML_PROFILE_TREE_ENTRY                 = "Entry";
+	private final static String XML_PROFILE_TREE_ENTRY_ATTR_NAME       = "name";
 
 	//-------------------------------------------------------------------------------------------------------------------
 	//  XML Strings for the ProfileTypes
@@ -656,8 +661,9 @@ public class ConnectionProfileManager
 	 * 
 	 * @param connProfile the profile to add
 	 * @param addToTree true if we want to add the profile to the Tree as well
+	 * @param fromProfileNode 
 	 */
-	public void addProfile(ConnectionProfile connProfile, boolean addToTree)
+	public void addProfile(ConnectionProfile connProfile, boolean addToTree, DefaultMutableTreeNode catalogNode, DefaultMutableTreeNode originProfileNode)
 	{
 		_profileMap.put(connProfile.getName(), connProfile);
 //		_keyMap    .put(connProfile.getKey(),  connProfile);
@@ -671,10 +677,27 @@ public class ConnectionProfileManager
 			{
 				try
 				{
+					DefaultMutableTreeNode insertAtNode = _profileTreeRoot;
+					if (catalogNode != null)
+						insertAtNode = catalogNode;
+
+					// Determine WHERE to insert the node in the tree "path"
+					// if    originProfileNode was passed: add it AFTER that entry
+					// else: put it at the end of the current "path"
+					int insIndex = insertAtNode.getChildCount();
+					if (originProfileNode != null)
+					{
+						int tmpInsIndex = insertAtNode.getIndex(originProfileNode);
+						if (tmpInsIndex != -1)
+						{
+							insIndex = tmpInsIndex + 1;
+						}
+					}
+					
 					_profileTreeModel.insertNodeInto(
 							new DefaultMutableTreeNode(connProfile), 
-							_profileTreeRoot, 
-							_profileTreeRoot.getChildCount());
+							insertAtNode, 
+							insIndex);
 				}
 				catch (Throwable t) 
 				{
@@ -683,6 +706,14 @@ public class ConnectionProfileManager
 			}
 		}
 //		save();
+	}
+	
+	public void addProfile(ConnectionProfile connProfile, boolean addToTree, String catalogName)
+	{
+		// get current selected TreeNode (so we can add the new profile in the correct directory)
+		DefaultMutableTreeNode catalogNode = getCatalogTreeNodeForEntry(catalogName);
+		
+		addProfile(connProfile, addToTree, catalogNode, null);
 	}
 
 	/**
@@ -921,7 +952,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 
 	public static ImageIcon getIcon16(String productName)
 	{
-		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX      )) return ICON_DB_PROD_NAME_16_DB2_UX;
+		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW     )) return ICON_DB_PROD_NAME_16_DB2_LUW;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS     )) return ICON_DB_PROD_NAME_16_DB2_ZOS;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY       )) return ICON_DB_PROD_NAME_16_DERBY;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2          )) return ICON_DB_PROD_NAME_16_H2;
@@ -945,7 +976,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 	}
 	public static ImageIcon getIcon32(String productName)
 	{
-		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX      )) return ICON_DB_PROD_NAME_32_DB2_UX;
+		if      (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW     )) return ICON_DB_PROD_NAME_32_DB2_LUW;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS     )) return ICON_DB_PROD_NAME_32_DB2_ZOS;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY       )) return ICON_DB_PROD_NAME_32_DERBY;
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2          )) return ICON_DB_PROD_NAME_32_H2;
@@ -969,7 +1000,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 	}
 	public static ImageIcon getIcon16(SrvType srvType)
 	{
-		if      (SrvType.JDBC_DB2_UX     .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_UX;
+		if      (SrvType.JDBC_DB2_LUW    .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_LUW;
 		else if (SrvType.JDBC_DB2_ZOS    .equals(srvType)) return ICON_DB_PROD_NAME_16_DB2_ZOS;
 		else if (SrvType.JDBC_DERBY      .equals(srvType)) return ICON_DB_PROD_NAME_16_DERBY;
 		else if (SrvType.JDBC_H2         .equals(srvType)) return ICON_DB_PROD_NAME_16_H2;
@@ -998,7 +1029,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 
 	public static ImageIcon getIcon32(SrvType srvType)
 	{
-		if      (SrvType.JDBC_DB2_UX     .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_UX;
+		if      (SrvType.JDBC_DB2_LUW    .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_LUW;
 		else if (SrvType.JDBC_DB2_ZOS    .equals(srvType)) return ICON_DB_PROD_NAME_32_DB2_ZOS;
 		else if (SrvType.JDBC_DERBY      .equals(srvType)) return ICON_DB_PROD_NAME_32_DERBY;
 		else if (SrvType.JDBC_H2         .equals(srvType)) return ICON_DB_PROD_NAME_32_H2;
@@ -1039,7 +1070,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 		else if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return ICON_DB_PROD_NAME_16_ORACLE;
 		else if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return ICON_DB_PROD_NAME_16_MSSQL;
 		else if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return ICON_DB_PROD_NAME_16_MSSQL;
-		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_16_DB2_UX;
+		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_16_DB2_LUW;
 		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_16_POSTGRES;
 		else if (jdbcUrl.startsWith("jdbc:hive2:"))               return ICON_DB_PROD_NAME_16_APACHE_HIVE;
 		else if (jdbcUrl.startsWith("jdbc:mysql:"))               return ICON_DB_PROD_NAME_16_MYSQL;
@@ -1062,7 +1093,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 		else if (jdbcUrl.startsWith("jdbc:oracle:thin:"))         return ICON_DB_PROD_NAME_32_ORACLE;
 		else if (jdbcUrl.startsWith("jdbc:microsoft:sqlserver:")) return ICON_DB_PROD_NAME_32_MSSQL;
 		else if (jdbcUrl.startsWith("jdbc:sqlserver:"))           return ICON_DB_PROD_NAME_32_MSSQL;
-		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_32_DB2_UX;
+		else if (jdbcUrl.startsWith("jdbc:db2:"))                 return ICON_DB_PROD_NAME_32_DB2_LUW;
 		else if (jdbcUrl.startsWith("jdbc:postgresql:"))          return ICON_DB_PROD_NAME_32_POSTGRES;
 		else if (jdbcUrl.startsWith("jdbc:hive2:"))               return ICON_DB_PROD_NAME_32_APACHE_HIVE;
 		else if (jdbcUrl.startsWith("jdbc:mysql:"))               return ICON_DB_PROD_NAME_32_MYSQL;
@@ -1100,7 +1131,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			if ( ! afterSuccessfulConnect )
 				connProfile.setSrvTypeUnknown();
 
-			SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfile, afterSuccessfulConnect, showProfileOverride);
+			SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfile, connProfile, afterSuccessfulConnect, showProfileOverride);
 			saveAs.showPossibly();
 		}
 		else 
@@ -1151,6 +1182,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 //		private String            _inKey        = null;
 		private String            _dbServerName = null;
 		private ConnectionProfile _connProfile  = null;
+		private ConnectionProfile _originConnProfile = null;
 		@SuppressWarnings("unused")
 		private boolean           _afterSuccessfulConnect = false;
 
@@ -1178,14 +1210,15 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 		private JButton           _ok_but     = new JButton("OK");
 		private JButton           _cancel_but = new JButton("Cancel");
 
-		public SaveAsDialog(JDialog owner, String dbServerName, ConnectionProfile connProfile, boolean afterSuccessfulConnect, boolean showProfileOverride)
+		public SaveAsDialog(JDialog owner, String dbServerName, ConnectionProfile originConnProfile, ConnectionProfile connProfile, boolean afterSuccessfulConnect, boolean showProfileOverride)
 		{
 			super(owner, "Add Server", true);
 			
-			_owner        = owner;
-//			_inKey        = inKey;
-			_dbServerName = dbServerName;
-			_connProfile  = connProfile;
+			_owner                  = owner;
+//			_inKey                  = inKey;
+			_dbServerName           = dbServerName;
+			_originConnProfile      = originConnProfile;
+			_connProfile            = connProfile;
 			_afterSuccessfulConnect = afterSuccessfulConnect;
 			
 			init(showProfileOverride);
@@ -1441,10 +1474,17 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 					// Add Profile
 					if (_profileNameQ1_rbt.isSelected())
 					{
+						String prevName = _originConnProfile == null ? null : _originConnProfile.getName();
+						
 						String entry = StringUtil.getSelectedItemString(_profileName_cbx);
 						_connProfile.setName(entry);
 
-						addProfile(_connProfile, true);
+						// get current selected TreeNode (so we can add the new profile in the correct directory)
+						DefaultMutableTreeNode catalogNode = getCatalogTreeNodeForEntry(prevName);
+						DefaultMutableTreeNode profileNode = getProfileTreeNodeForEntry(prevName);
+
+						// Add the profile (in catalog)
+						addProfile(_connProfile, true, catalogNode, profileNode);
 					}
 					//-----------------------------------
 					// Not This Time
@@ -1581,7 +1621,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			connProfileCopy.setEntry(newConnProfileEntry);
 //			setProfileEntry(connProfileCopy, newConnProfileEntry);
 
-    		SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfileCopy, afterSuccessfulConnect, showProfileOverride);
+    		SaveAsDialog saveAs = new SaveAsDialog(owner, dbServerName, connProfile, connProfileCopy, afterSuccessfulConnect, showProfileOverride);
     		saveAs.showPossibly();
     		return false;
 		}
@@ -1970,9 +2010,31 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 				// Hide Server types of NOT desired products
 				if (StringUtil.hasValue(_filterProfileName))
 				{
+//					String profileName = connProfile.getName();
+//					if ( profileName.indexOf(_filterProfileName) < 0 )
+//						show = false;
+					
 					String profileName = connProfile.getName();
-					if ( profileName.indexOf(_filterProfileName) < 0 )
-						show = false;
+					
+					try
+					{
+						Pattern pattern = Pattern.compile(_filterProfileName);
+						Matcher matcher = pattern.matcher(profileName);
+						if ( ! matcher.find() )
+							show = false;
+					}
+					catch(PatternSyntaxException ex)
+					{
+						SwingUtils.showErrorMessage(null, "Faulty Regex", 
+								  "<html>"
+								+ "The regex '<b>"+_filterProfileName+"</b>' is not valid.<br>"
+								+ "Error:"
+								+ "<pre>"
+								+ StringUtil.toHtmlString(ex.getMessage())
+								+ "</pre>"
+								+ "</html>", ex);
+						throw ex;
+					}
 				}
 			}
 			return show;
@@ -2017,8 +2079,76 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			return getChildCount(node) < 1;
 		}
 		
+		public static DefaultMutableTreeNode findTreeNode(DefaultMutableTreeNode root, String str)
+		{
+			@SuppressWarnings("unchecked")
+			Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+			while (e.hasMoreElements())
+			{
+				DefaultMutableTreeNode node = e.nextElement();
+//				if ( node.toString().equalsIgnoreCase(str) )
+				if ( node.toString().equals(str) )
+				{
+					return node;
+				}
+			}
+			return null;
+		}
+
+		@SuppressWarnings("unused")
+		public static TreePath findTreePath(DefaultMutableTreeNode root, String str)
+		{
+			@SuppressWarnings("unchecked")
+			Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+			while (e.hasMoreElements())
+			{
+				DefaultMutableTreeNode node = e.nextElement();
+//				if ( node.toString().equalsIgnoreCase(str) )
+				if ( node.toString().equals(str) )
+				{
+					return new TreePath(node.getPath());
+				}
+			}
+			return null;
+		}
 	}
 
+	public DefaultMutableTreeNode getCatalogTreeNodeForEntry(String profileName)
+	{
+		if (profileName == null)
+			return null;
+		
+		DefaultMutableTreeNode profileNode = FilteredTreeModel.findTreeNode(_profileTreeRoot, profileName);
+		if (profileNode == null)
+			return null;
+		
+		DefaultMutableTreeNode parentTreeNode = (DefaultMutableTreeNode) profileNode.getParent();
+		Object parentObj = parentTreeNode.getUserObject();
+		if (parentObj instanceof ConnectionProfileCatalog)
+		{
+			return parentTreeNode;
+		}
+		return null;
+	}
+
+	public DefaultMutableTreeNode getProfileTreeNodeForEntry(String profileName)
+	{
+		if (profileName == null)
+			return null;
+		
+		DefaultMutableTreeNode profileNode = FilteredTreeModel.findTreeNode(_profileTreeRoot, profileName);
+		if (profileNode == null)
+			return null;
+		
+		Object userObj = profileNode.getUserObject();
+		if (userObj instanceof ConnectionProfile)
+		{
+			return profileNode;
+		}
+		return null;
+	}
+
+	
 	/**
 	 * Creates a default layout of the Connection Profile XML storage file
 	 * 
@@ -2159,13 +2289,13 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 					{
 						sb.setLength(0);
 						
-						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Production").append("\">\n");
+						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Production") .append("\" ").append(XML_PROFILE_TREE_CATALOG_ATTR_EXPANDED).append("=\"").append(true).append("\">\n");
 						sb.append("    ").append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
 						sb.append("\n");
-						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Development").append("\">\n");
+						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Development").append("\" ").append(XML_PROFILE_TREE_CATALOG_ATTR_EXPANDED).append("=\"").append(true).append("\">\n");
 						sb.append("    ").append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
 						sb.append("\n");
-						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Test").append("\">\n");
+						sb.append("    ").append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append("Test")       .append("\" ").append(XML_PROFILE_TREE_CATALOG_ATTR_EXPANDED).append("=\"").append(true).append("\">\n");
 						sb.append("    ").append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
 						
 						byteBuffer = ByteBuffer.wrap(sb.toString().getBytes(Charset.forName("UTF-8")));
@@ -2347,9 +2477,10 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			}
 			else if (o instanceof ConnectionProfileCatalog)
 			{
-				String name = ((ConnectionProfileCatalog)o).getName();
-
-				sb.append(indentStr).append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append(name).append("\">\n");
+				String name           = ((ConnectionProfileCatalog)o).getName();
+				String expandedMapStr = ((ConnectionProfileCatalog)o).getExpandedMapStr();
+				
+				sb.append(indentStr).append("<").append(XML_PROFILE_TREE_CATALOG).append(" ").append(XML_PROFILE_TREE_CATALOG_ATTR_NAME).append("=\"").append(name).append("\" ").append(XML_PROFILE_TREE_CATALOG_ATTR_EXPANDED).append("=\"").append(expandedMapStr).append("\">\n");
 				sb.append(getXmlProfileTree(thisNode, nestLevel+1));
 				sb.append(indentStr).append("</").append(XML_PROFILE_TREE_CATALOG).append(">\n");
 			}
@@ -2399,7 +2530,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 					try
 					{
 						ConnectionProfile entry = TdsEntry.parseXml((Element) node);
-						addProfile(entry, false);
+						addProfile(entry, false, (String)null);
 					}
 					catch (Throwable tr)
 					{
@@ -2421,7 +2552,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 					try
 					{
 						ConnectionProfile entry = JdbcEntry.parseXml((Element) node);
-						addProfile(entry, false);
+						addProfile(entry, false, (String)null);
 					}
 					catch (Throwable tr)
 					{
@@ -2443,7 +2574,7 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 					try
 					{
 						ConnectionProfile entry = OfflineEntry.parseXml((Element) node);
-						addProfile(entry, false);
+						addProfile(entry, false, (String)null);
 					}
 					catch (Throwable tr)
 					{
@@ -2502,9 +2633,9 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 			}
 			if (_profileTreeRoot.getChildCount() == 0)
 			{
-				_profileTreeRoot.add(new DefaultMutableTreeNode(new ConnectionProfileCatalog("Production"),  true));
-				_profileTreeRoot.add(new DefaultMutableTreeNode(new ConnectionProfileCatalog("Development"), true));
-				_profileTreeRoot.add(new DefaultMutableTreeNode(new ConnectionProfileCatalog("Test"),        true));
+				_profileTreeRoot.add(new DefaultMutableTreeNode(new ConnectionProfileCatalog("Production",  true), true));
+				_profileTreeRoot.add(new DefaultMutableTreeNode(new ConnectionProfileCatalog("Development", true), true));
+				_profileTreeRoot.add(new DefaultMutableTreeNode(new ConnectionProfileCatalog("Test",        true), true));
 			}
 			
 			
@@ -2572,9 +2703,10 @@ System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+c
 
 				if (XML_PROFILE_TREE_CATALOG.equals(tagName))
 				{
-					String name = ((Element)node).getAttribute(XML_PROFILE_TREE_CATALOG_ATTR_NAME);
-					
-					DefaultMutableTreeNode newTreeNode = new DefaultMutableTreeNode(new ConnectionProfileCatalog(name), true);
+					String name        = ((Element)node).getAttribute(XML_PROFILE_TREE_CATALOG_ATTR_NAME);
+					String expandedStr = ((Element)node).getAttribute(XML_PROFILE_TREE_CATALOG_ATTR_EXPANDED);
+
+					DefaultMutableTreeNode newTreeNode = new DefaultMutableTreeNode(new ConnectionProfileCatalog(name, expandedStr), true);
 					treeNode.add(newTreeNode);
 
 					addToProfileTree(newTreeNode, node.getChildNodes());

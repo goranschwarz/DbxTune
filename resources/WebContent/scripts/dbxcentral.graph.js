@@ -218,9 +218,10 @@ function dbxMaxDt(dt1, dt2)
 /* **********************************************************************
 ** ** GLOBAL VARIABLES
 ** **********************************************************************/
-var _serverList = [];  // What servers does the URL reflect
-var _graphMap   = [];  // Graphs that are displaied / instantiated
-var _debug      = 0;   // Debug level: 0=off, 1=more, 2=evenMore, 3...
+var _serverList = [];    // What servers does the URL reflect
+var _graphMap   = [];    // Graphs that are displaied / instantiated
+var _debug      = 0;     // Debug level: 0=off, 1=more, 2=evenMore, 3...
+var _subscribe  = false; // If we should subscribe to Graph data from the server
 
 var _showSrvTimer = null;
 
@@ -328,19 +329,25 @@ function dbxTuneGraphSubscribe()
 {
 	const sessionName = getParameter("sessionName");
 	const graphList   = getParameter("graphList", "");
-	var   subscribe   = getParameter("subscribe", false);
+//	var   subscribe   = getParameter("subscribe", false);
 	// const debug       = getParameter("debug",     0);
 	const endTime     = getParameter("endTime",   "");
-	console.log("Passed subscribe="+subscribe);
+//	console.log("Passed subscribe="+subscribe);
 
 	var webSocket;
 
-	if (subscribe === "false")
-		subscribe = false;
+//	if (subscribe === "false")
+//		subscribe = false;
+//
+//	// turn subscribe off if 'endTime' is present
+//	if (endTime !== "")
+//		subscribe = false;
 
-	// turn subscribe off if 'endTime' is present
-	if (endTime !== "")
-		subscribe = false;
+	if ( ! _subscribe )
+	{
+		$("#subscribe-feedback-msg").html("<s>subscribe</s>");
+		return;
+	}
 
 	// data the updates every time we get a new message
 	var dbxLastSubscribeTime = moment();
@@ -383,6 +390,9 @@ function dbxTuneGraphSubscribe()
 
 	function subscribeConnectWs() 
 	{
+		if ( ! _subscribe )
+			return;
+			
 		// open the connection if one does not exist
 		if (webSocket !== undefined && webSocket.readyState !== WebSocket.CLOSED) 
 		{
@@ -424,47 +434,11 @@ function dbxTuneGraphSubscribe()
 	}
 	
 
-	$("#subscribe-feedback-time").html("subscribe="+subscribe);
-	if (subscribe)
+	console.log("dbxTuneGraphSubscribe(): _subscribe="+_subscribe+", expr="+(_subscribe===true));
+	$("#subscribe-feedback-time").html("subscribe="+_subscribe);
+	if (_subscribe)
 	{
 		startUpdateSubscribeClock(); // is automatically executed every second
-
-		// if (!!window.EventSource)
-		// {
-		// 	// const eventSource = new EventSource("/api/chart/broadcast-sse?serverList="+sessionName+"&graphList="+graphList);
-		// 	const eventSource = new EventSource("/api/chart/broadcast?serverList="+_serverList+"&graphList="+graphList);
-		// 	const elements = document.getElementById("messages");
-
-		// 	console.log("Entering subscribe mode: eventSourceUrl: "+eventSource.url);
-
-		// 	eventSource.onmessage = function (e) {
-		// 		// var jsonData = JSON.parse(e.data);
-		// 		// var message = e.data;
-		// 		// console.log(e);
-		// 		dbxLastSubscribeTime = moment();
-		// 		addData(e.data);
-		// 		addSubscribeFeedback('data', e.data);
-		// 		//addToDummyChart(e.data);
-		// 	};
-		// 	eventSource.onopen = function (e) {
-		// 		dbxLastSubscribeTime = moment();
-		// 		addSubscribeFeedback('ws', 'conn opened');
-		// 	};
-		// 	eventSource.onerror = function (e) {
-		// 		dbxLastSubscribeTime = moment();
-		// 		if (e.readyState == EventSource.CONNECTING) {
-		// 			addSubscribeFeedback('ws', 'CONNECTING');
-		// 		} else if (e.readyState == EventSource.OPEN) {
-		// 			addSubscribeFeedback('ws', 'OPEN');
-		// 		} else if (e.readyState == EventSource.CLOSING) {
-		// 			addSubscribeFeedback('ws', 'CLOSING');
-		// 		} else if (e.readyState == EventSource.CLOSED) {
-		// 			addSubscribeFeedback('ws', 'CLOSED');
-		// 		}
-		// 	};
-		// } else {
-		// 	alert('The browser does not support Server-Sent Events');
-		// }
 
 		if (!!window.WebSocket)
 		{
@@ -514,11 +488,13 @@ function dbxTuneGraphSubscribe()
 		// or maybe something like this: http://debuggable.com/posts/run-intense-js-without-freezing-the-browser:480f4dd6-f864-4f72-ae16-41cccbdd56cb
 		//-----------------------------------------------------------------------------------
 		// Note the below code takes too looooong when we have many graphs... the above "queue"/setTimeout() stuff might be a viable solution.
-		for(let gc=0; gc<graphCollectors.length; gc++) {
+		for(let gc=0; gc<graphCollectors.length; gc++) 
+		{
 			let collector = graphCollectors[gc];
 
 			// console.log("addDate(): collector="+collector, collector);
-			for(let g=0; g<collector.graphs.length; g++) {
+			for(let g=0; g<collector.graphs.length; g++) 
+			{
 				const graph = collector.graphs[g];
 
 				// console.log("addDate(): graph="+graph, graph);
@@ -540,27 +516,6 @@ function dbxTuneGraphSubscribe()
 				}
 			}
 		}
-		//--- removed below (switch to ordinary loop) because some browers (safari) did not like => (arrow functionality)... I really start to hate JavaScript at this point...
-		// graphCollectors.forEach(collector => 
-		// {
-		// 	collector.graphs.forEach(graph =>
-		// 	{
-		// 		var cmName          = graph.cmName;
-		// 		var graphName       = graph.graphName;
-
-		// 		for(var i=0; i<_graphMap.length; i++)
-		// 		{
-		// 			const dbxGraph = _graphMap[i];
-
-		// 			if (dbxGraph.getServerName() === graphServerName && dbxGraph.getCmName() === cmName && dbxGraph.getGraphName() === graphName)
-		// 			{
-		// 				if (_debug > 0)
-		// 					console.log("Sending Subscribe Graph Data for cmName="+cmName+", graphName="+graphName+", to Graph name="+dbxGraph.getFullName()+": ", graph);
-		// 				dbxGraph.addSubscribeData( [ graph ] );  // as a array with 1 entry
-		// 			}
-		// 		}
-		// 	});
-		// });
 
 		// update ACTIVE Alarm view (note: there can be several servers)
 		var activeAlarmsDiv = document.getElementById("active-alarms");
@@ -605,8 +560,6 @@ function dbxTuneGraphSubscribe()
 		}
 
 
-
-
 		// Update fisrt/last timestamp in the navbar
 		updateNavbarInfo();
 
@@ -635,7 +588,7 @@ function dbxTuneGraphSubscribe()
 //--------------------------------------------------------------------
 class DbxGraph
 {
-	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphCategory, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug)
+	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphCategory, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug, initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart)
 	{
 		// Properties/fields
 		this._serverName        = serverName;
@@ -648,6 +601,12 @@ class DbxGraph
 		this._subscribeAgeInSec = subscribeAgeInSec;
 		this._debug             = debug;
 
+		this._initStartTime     = initStartTime;
+		this._initEndTime       = initEndTime;
+		this._initSampleType    = initSampleType;
+		this._initSampleValue   = initSampleValue;
+		this._isMultiDayChart   = isMultiDayChart;
+		
 		// this._graphHeight = 150;
 		this._graphHeight = 200;
 		this._graphHeight = gheight;
@@ -656,6 +615,39 @@ class DbxGraph
 		this._series = [];
 		this._initialized = false;
 
+		if (_debug > 0)
+			console.log("Creating DbxGraph: " 
+				+   "_serverName       ='" + this._serverName        + "'\n"
+				+ ", _cmName           ='" + this._cmName            + "'\n"
+				+ ", _graphName        ='" + this._graphName         + "'\n"
+				+ ", _fullName         ='" + this._fullName          + "'\n"
+				+ ", _graphLabel       ='" + this._graphLabel        + "'\n"
+				+ ", _graphCategory    ='" + this._graphCategory     + "'\n"
+				+ ", _isPercentGraph   ='" + this._isPercentGraph    + "'\n"
+				+ ", _subscribeAgeInSec='" + this._subscribeAgeInSec + "'\n"
+				+ ", _debug            ='" + this._debug             + "'\n"
+
+				+ ", _initStartTime    ='" + this._initStartTime     + "'\n"
+				+ ", _initEndTime      ='" + this._initEndTime       + "'\n"
+				+ ", _initSampleType   ='" + this._initSampleType    + "'\n"
+				+ ", _initSampleValue  ='" + this._initSampleValue   + "'\n"
+				+ ", _isMultiDayChart  ='" + this._isMultiDayChart   + "'\n"
+		);
+				
+		
+		let chartLabel = this._graphLabel + " ::: [" + this._serverName + "]";
+		if ( this._isMultiDayChart )
+		{
+			// this will fail, if the startDate is '2h'... so redo this...
+			let lblDateStr = moment(this._initStartTime).format("ddd YYYY-MM-DD");
+
+			this._initStartTime
+			//chartLabel = this._graphLabel + " ::: [" + this._serverName + "] at [" + lblDateStr + "]";
+			chartLabel = this._graphLabel + " ::: [" + this._serverName + "] @ " + lblDateStr;
+		}
+
+		var thisDbxChart = this;
+
 		this._chartConfig = 
 		{
 			type: 'line',
@@ -663,11 +655,12 @@ class DbxGraph
 				labels: [],
 				datasets: []
 			},        
-			// plugins: [{
-			// 	afterDraw: function() {
-			// 		console.log("afterDraw(): cmName='"+cmName+"', graphName='"+graphName+"'.");
-			// 	}
-			// }],
+			plugins: [{
+				afterDraw: function() {
+					//console.log("afterDraw(): cmName='"+cmName+"', graphName='"+graphName+"'.");
+					thisDbxChart.checkForNoDataInChart();
+				}
+			}],
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
@@ -677,7 +670,8 @@ class DbxGraph
 //					text: this._graphLabel
 //					text: this._cmName + ":" + this._graphName + " ##### " + this._graphLabel
 //					text: this._graphLabel + " ::: [" + this._serverName + "] " + this._cmName + ":" + this._graphName
-					text: this._graphLabel + " ::: [" + this._serverName + "]"
+//					text: this._graphLabel + " ::: [" + this._serverName + "]"
+					text: chartLabel
 				},
 				legend: {
 					position: 'bottom',
@@ -892,18 +886,8 @@ class DbxGraph
 		this._canvasCtx = ctx;
 
 		//---------------------------------------------------------------------------------------------------------
-		// on right click: "reset zoome" on ALL charts
+		// on right click: 
 		//---------------------------------------------------------------------------------------------------------
-		// newCanvas.addEventListener("contextmenu", function(event) {
-		// 	event.preventDefault();
-		// 	if (this._debug > 0)
-		// 		console.log("xxxx", event);
-		// 	for(var i=0; i<_graphMap.length; i++)
-		// 	{
-		// 		const dbxGraph = _graphMap[i];
-		// 		dbxGraph._chartObject.resetZoom();
-		// 	}
-		// });
 		try {
 			$.contextMenu({
 				selector: '.dbx-graph-context-menu',
@@ -954,6 +938,9 @@ class DbxGraph
 							// $("#dbx-filter-dialog").modal('show');
 						}
 					},
+
+					separator1: "-----",
+
 					showThisInNewTab: {
 						name: "Open this graph in new Tab",
 						callback: function(key, opt) 
@@ -972,6 +959,156 @@ class DbxGraph
 							// Change/set some parameters
 							params.set('sessionName', srvName);
 							params.set('graphList',   graphName);
+							params.set('gcols',       1);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+					showThisInNewTabLast7Days: {
+						name: "Open this graph (last 7 days) in new Tab",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+
+							// Get serverName this graph is for
+							var srvName = getGraphByName(graphName).getServerName();
+
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Get current timespan
+							var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
+							if (isNaN(currentHourSpan))
+								currentHourSpan = 2;
+							if (currentHourSpan === 0)
+								currentHourSpan = 2;
+							if (currentHourSpan > 24)
+								currentHourSpan = 24;
+
+							// Change/set some parameters
+							params.set('mdc',         "-6");
+							params.set('endTime',     currentHourSpan + "h");
+							params.set('sessionName', srvName);
+							params.set('graphList',   graphName);
+							params.set('gcols',       1);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+					showThisInNewTabLast30Days: {
+						name: "Open this graph (last 30 days) in new Tab",
+						callback: function(key, opt) 
+						{
+							var graphName = $(this).attr('id');
+							console.log("contextMenu(graphName="+graphName+"): key='"+key+"'.");
+
+							// Get serverName this graph is for
+							var srvName = getGraphByName(graphName).getServerName();
+
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Get current timespan
+							var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
+							if (isNaN(currentHourSpan))
+								currentHourSpan = 2;
+							if (currentHourSpan === 0)
+								currentHourSpan = 2;
+							if (currentHourSpan > 24)
+								currentHourSpan = 24;
+							
+							// Change/set some parameters
+							params.set('mdc',         "-30");
+							params.set('endTime',     currentHourSpan + "h");
+							params.set('sessionName', srvName);
+							params.set('graphList',   graphName);
+							params.set('gcols',       1);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+
+					separator2: "-----",
+					
+					showAllInNewTabLast3Days: {
+						name: "Open ALL graphs in view (last 3 days) in new Tab",
+						callback: function(key, opt) 
+						{
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Get current timespan
+							var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
+							if (isNaN(currentHourSpan))
+								currentHourSpan = 2;
+							if (currentHourSpan === 0)
+								currentHourSpan = 2;
+							if (currentHourSpan > 24)
+								currentHourSpan = 24;
+
+							// Change/set some parameters
+							params.set('endTime',     currentHourSpan + "h");
+							params.set('mdc',         "-2");
+							params.set('gcols',       3);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+					showAllInNewTabLast5Days: {
+						name: "Open ALL graphs in view (last 5 days) in new Tab",
+						callback: function(key, opt) 
+						{
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Get current timespan
+							var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
+							if (isNaN(currentHourSpan))
+								currentHourSpan = 2;
+							if (currentHourSpan === 0)
+								currentHourSpan = 2;
+							if (currentHourSpan > 24)
+								currentHourSpan = 24;
+
+							// Change/set some parameters
+							params.set('endTime',     currentHourSpan + "h");
+							params.set('mdc',         "-4");
+							params.set('gcols',       5);
+
+							window.open(`${location.pathname}?${params}`, '_blank');
+						}
+					},
+					showAllInNewTabLast7Days: {
+						name: "Open ALL graphs in view (last 7 days) in new Tab",
+						callback: function(key, opt) 
+						{
+							// Get Get current URL
+							var currentUrl  = window.location.href;
+							const url = new URL(currentUrl);
+							const params = new URLSearchParams(url.search);
+
+							// Get current timespan
+							var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
+							if (isNaN(currentHourSpan))
+								currentHourSpan = 2;
+							if (currentHourSpan === 0)
+								currentHourSpan = 2;
+							if (currentHourSpan > 24)
+								currentHourSpan = 24;
+
+							// Change/set some parameters
+							params.set('endTime',     currentHourSpan + "h");
+							params.set('mdc',         "-6");
+							params.set('gcols',       7);
 
 							window.open(`${location.pathname}?${params}`, '_blank');
 						}
@@ -998,7 +1135,7 @@ class DbxGraph
 			//	}, i+1); 
 			}
 
-			var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(evtent)
+			var activePoints = thisClass._chartObject.getElementsAtEvent(event); // getPointsAtEvent(event)
 			// console.log("activePoints: ", activePoints)
 			var firstPoint = activePoints[0];
 			if(firstPoint !== undefined) 
@@ -1046,17 +1183,46 @@ class DbxGraph
 		});
 	}
 
-	setInitialized()   { this._initialized = true; }
-	isInitialized()    { return this._initialized; }
+	setInitialized()     { this._initialized = true; }
+	isInitialized()      { return this._initialized; }
+                         
+	getHeight()          { return this._graphHeight; }
+	getServerName()      { return this._serverName; }
+	getCmName()          { return this._cmName; }
+	getGraphName()       { return this._graphName; }
+	getFullName()        { return this._fullName; }
+	getGraphLabel()      { return this._graphLabel; }
+	getGraphCategory()   { return this._graphCategory; }
 
-	getHeight()        { return this._graphHeight; }
-	getServerName()    { return this._serverName; }
-	getCmName()        { return this._cmName; }
-	getGraphName()     { return this._graphName; }
-	getFullName()      { return this._fullName; }
-	getGraphLabel()    { return this._graphLabel; }
-	getGraphCategory() { return this._graphCategory; }
+	getInitStartTime()   { return this._initStartTime;   }
+	getInitEndTime()     { return this._initEndTime;     }
+	getInitSampleType()  { return this._initSampleType;  }
+	getInitSampleValue() { return this._initSampleValue; }
+	isMultiDayChart()    { return this._isMultiDayChart; }
 
+	checkForNoDataInChart()
+	{ 
+		// No data is present (write in chart object)
+		if (this._chartObject.data.datasets.length === 0) 
+		{
+			var ctx      = this._chartObject.chart.ctx;
+			var width    = this._chartObject.chart.width;
+			var height   = this._chartObject.chart.height
+			var labelTxt = 'No data was found. startTime='+this._initStartTime+', endTime='+this._initEndTime;
+			//this._chartObject.clear();
+			
+			//setTimeout(function() { 
+				ctx.save();
+				ctx.textAlign    = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillStyle    = "#ff0000";
+				ctx.font         = "16px normal 'Helvetica Nueue'";
+				ctx.fillText(labelTxt, width / 2, height / 2);
+				ctx.restore();
+			//}, 1000);
+		}
+	}
+		
 	getOldestTs() 
 	{ 
 		return this._chartObject.data.labels[0]; 
@@ -1133,8 +1299,11 @@ class DbxGraph
 
 	// method: addData()
 	addData(jsonData)
-	{ 
-		// console.log("DbxGraph.addData(): jsonData: ", jsonData);
+	{
+		if (_debug > 2)
+			console.log("DbxGraph.addData(): jsonData: ", jsonData);
+		if (_debug > 0)
+			console.log("DbxGraph.addData(): jsonData.length=", jsonData.length);
 
 		for (let i=0; i<jsonData.length; i++) 
 		{
@@ -1254,13 +1423,159 @@ class DbxGraph
 			}
 		}
 
-		if (jsonData.length === 0) {
-			this._chartFeedback.innerHTML = "<font color='red'>No data was found.</font>";
+		if (jsonData.length === 0) 
+		{
+			//this.checkForNoDataInChart();
+			//this._chartFeedback.innerHTML = "<font color='red'>No data was found. startTime="+this._initStartTime+", endTime="+this._initEndTime+"</font>";
 		} else {
 			this._chartFeedback.innerHTML = "";
 			// this._chartFeedback.innerHTML = jsonData.length + " data points in chart";
 		}
 	}
+}
+
+
+
+function dbxChartPrintApiHelp()
+{
+	// alert("Specify 'sessionName=NAME' as a parameter in the URL.");
+	// return;
+	$("#api-feedback").css("color", "red");
+	$("#api-feedback").html(
+		'<h2>Error: Missing mandatory parameter <code>sessionName</code> and/or <code>graphList</code>.</h2>' +
+		'There should be a Dialog, where you can choose what you want to "graph"...<br>' +
+		'But that has not yet been implemented<br>' +
+		'<br>' +
+		'Until then, please use the below paraemeters (note the below is priliminary, and can be changed "any" time)' +
+		'<table border="1">' +
+		'<tr> <th>ParameterName</th> <th>Description</th> </tr>' +
+		'<tr>' + 
+			'<td>sessionName</td>' + 
+			'<td>Server Name you want to choose graphs for, Note: This can be a comma (,) separated list of server names (all is a shorthand, for all servers)<br>' +
+			'This can also be a saved <i>template/profile</i> stored in the DbxTuneCentral database. To get available profiles: <a href="/api/graph/profiles">/api/graph/profiles</a><br>' +
+			'Example 1: <code>PROD_A_ASE</code><br>' +
+			'Example 2: <code>PROD_A_ASE,PROD_B_ASE</code><br>' +
+			'Example 3: <code>someProfileName</code><br>' +
+			'Example 4: <code>all</code><br>' +
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>graphList</td>' + 
+			'<td>A JSON Object that contains what you want to display graphs for, or a comma separated list of graph names<br>' + 
+			'Example 1: <code>[{"srv":"PROD_A_ASE","graph":"CmSummary_aaCpuGraph"},{"srv":"PROD_B_ASE","graph":"CmSummary_aaCpuGraph"}]</code><br>' +
+			'Example 2: <code>[{"graph":"CmSummary_aaCpuGraph"},{"graph":"CmSummary_OldestTranInSecGraph"}]</code><br>' +
+			'Example 3: <code>all</code> Special word to choose all graph names.<br>' +
+			'Example 4: <code>CmSummary_aaCpuGraph,CmSummary_OldestTranInSecGraph</code> only the 2 graphs specified in the comma separeted list.<br>' +
+			'Note 1: Available SRV_NAME(S) or "sessions" can be fetched using: <a href="/api/sessions">/api/sessions</a><br>' +
+			'Note 2: Name of graph(s) for a SERVER can be fetched using: <a href="/api/graphs?sessionName=replace-me-with-a-SRV_NAME-from-note-1">/api/graphs?sessionName=replace-me-with-a-SRV_NAME-from-note-1</a><br>' +
+			'Note 3: If the "srv":"SRV_NAME" is specified (as in example 1). the <code>sessionName</code> parameter wont have to be specified<br>' +
+			'Note 4: If only "graph":"CmName_graphName" is specified (as in example 2), or "all" (as in example 3). the <code>sessionName</code> parameter has to be specified, and if you specify more that one server, the graph(s) will be displayed for all servers<br>' +
+			'Note 5: If a comma separated list is specified (as in example 4). the <code>sessionName</code> parameter has to be specified.<br>' +
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>startTime</td>' + 
+			'<td>A start time from when to show graphs.<br>' + 
+			'This can be specified in various formats.<br>' + 
+			'<ul>' + 
+			'  <li>120m - Start time 120 minutes from current time</li>' + 
+			'  <li>2h - Start time 2 hours from current time</li>' + 
+			'  <li>1d - 1 day (24 hours) from current time</li>' + 
+			'  <li>2018-02-18 18:00 - A Specififc date in time</li>' + 
+			'</ul>' + 
+			'<b>default:</b> 2h<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>endTime</td>' + 
+			'<td>A end time.<br>' + 
+			'This can be specified in various formats.<br>' + 
+			'<ul>' + 
+			'  <li>120m - 120 minutes from the start time</li>' + 
+			'  <li>2h - 2 hours from the start time</li>' + 
+			'  <li>1d - 1 day (24 hours) from the start time</li>' + 
+			'  <li>now - Current time</li>' + 
+			'  <li>2018-02-18 23:30 - A Specififc date in time</li>' + 
+			'</ul>' + 
+			'<b>default:</b> 2h<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' +
+			'<td>mdc</td>' + 
+			'<td>Multi Day Chart<br>' + 
+			'If you want to compare several charts in the "time line".<br>' + 
+			'Lets say you want to compare 2 hours for the whole week (or more) to see any differences.<br>' + 
+			'The easiest way to get a MultiDayChart is to right click on a chart and choose "Open this graph (last # days) in new tab".<br>' + 
+			'Here is a couple of examples.<br>' + 
+			'<ul>' + 
+			'  <li>IO Summary for last 7 days, 2 hours every day.<br>' +
+			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2h&graphList=CmSummary_aaReadWriteGraph&mdc=-7</code></li>' + 
+			'  <li>CPU and IO Summary from 2019-02-01 11:00 and 3 days forward, 4 hours every day, 1 chart per row<br>' +
+			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2019-02-01 11:00&graphList=CmSummary_aaReadWriteGraph&mdc=3&endTime=4h&gcols=1</code></li>' + 
+			'  <li>All default charts, for last 5 days, last 2 hours every day, 5 charts per row (one day per column in the chart view)<br>' +
+			'  <code>graph.html?sessionName=GORAN_UB3_DS&startTime=2h&mdc=4&gcols=5</code></li>' + 
+			'</ul>' + 
+			'<b>default:</b> not enabled<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>debug</td>' + 
+			'<td>How much "debug" messages we want to print to the "console.log". <br>' +
+			'This is a integer from 0-10<br>' + 
+			'<b>default:</b> 2h<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
+			'<td>gheight</td>' + 
+			'<td>Minimum Height in pixels for the graphs<br>' + 
+			'<b>default:</b> 200<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
+			'<td>gwidth</td>' + 
+			'<td>Minimum Width in pixels for the graphs<br>' + 
+			'<b>default:</b> 650<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
+			'<td>gcols</td>' + 
+			'<td>Number of graph columns. This is an automatic way to set gwidth. It just takes current browser width, divides it with <code>gcols</code>, then sets <code>gwidth</code> to that value.<br>' + 
+			'<b>default:</b> not specified, meaning: it depends on your current browser size, but normally from 1 to 3<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
+			'<td>sampleType</td>' + 
+			'<td>Data point about the graph can be fetched by different "methods".<br>' + 
+			'Here are the methods:<br>' + 
+			'<ul>' + 
+			'  <li>ALL - Get all data points</li>' + 
+			'  <li>AUTO - Uses a automatic formula using MAX_OVER_SAMPLES, with a <code>sampleValue=320</code></li>' + 
+			'  <li>MAX_OVER_SAMPLES - Get MAX values over X number of data points</li>' + 
+			'  <li>MAX_OVER_MINUTES - Get MAX values over X minutes of data points</li>' + 
+			'  <li>AVG_OVER_MINUTES - Get AVERAGE values over X minutes of data points</li>' + 
+			'  <li>SUM_OVER_MINUTES - Get SUM values over X minutes of data points</li>' + 
+			'</ul>' + 
+			'<b>default:</b> AUTO<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'<tr>' + 
+			'<td>sampleValue</td>' + 
+			'<td>Used by <code>sampleType</code>' + 
+			'<ul>' + 
+			'  <li>ALL - not used</li>' + 
+			'  <li>AUTO - not used (same as specify <code>sampleType=MAX_OVER_SAMPLES&sampleValue=320</code>)</li>' + 
+			'  <li>MAX_OVER_SAMPLES - A number value...</li>' + 
+			'  <li>MAX_OVER_MINUTES - A number value...</li>' + 
+			'  <li>AVG_OVER_MINUTES - A number value...</li>' + 
+			'  <li>SUM_OVER_MINUTES - A number value... there are 60 minutes in one hour, and 1440 minutes in one day</li>' + 
+			'</ul>' + 
+			'<b>default:</b> ""<br>' + 
+			'</td>' + 
+		'</tr>' +
+		'</table>' +
+		'Below is a full example<br>' +
+		'<code>http://dbxtune.company.com:8080/graph.html?sessionName=PROD_A_ASE&startTime=2h&subscribe=true</code>'
+	);
 }
 
 
@@ -1270,14 +1585,15 @@ function dbxTuneLoadCharts(destinationDivId)
 	// get query string parameter
 	const sessionName    = getParameter("sessionName");
 	var   graphList      = getParameter("graphList");
-	const startTime      = getParameter("startTime",   "2h");
-	const endTime        = getParameter("endTime",     "");
-	const subscribe      = getParameter("subscribe",   false);
-	const debug          = getParameter("debug",       0);
-	const gheight        = getParameter("gheight",     200);
-	const gwidth         = getParameter("gwidth",      650);
-	const sampleType     = getParameter("sampleType",  "");
-	const sampleValue    = getParameter("sampleValue", "");
+	var   startTime      = getParameter("startTime",     "2h");
+	var   endTime        = getParameter("endTime",       "");
+	var   multiDayChart  = getParameter("mdc",           "");
+	var   subscribe      = getParameter("subscribe",     false);
+	const debug          = getParameter("debug",         0);
+	const gheight        = getParameter("gheight",       200);
+	const gwidth         = getParameter("gwidth",        650);
+	const sampleType     = getParameter("sampleType",    "");
+	const sampleValue    = getParameter("sampleValue",   "");
 
 	_debug = debug;
 
@@ -1285,6 +1601,17 @@ function dbxTuneLoadCharts(destinationDivId)
 	console.log("Passed graphList="+graphList);
 	console.log("Passed startTime="+startTime);
 	console.log("Passed endTime="+endTime);
+	console.log("Passed mdc="+multiDayChart); // Multi Day Chart
+
+	if (subscribe === "false")
+		subscribe = false;
+
+	// turn subscribe off if 'endTime' is present
+	if (endTime !== "")
+		subscribe = false;
+
+	// Set the global variable
+	_subscribe = subscribe;
 
 	var loadAllGraphs = false;
 	if (graphList !== undefined && graphList === "all")
@@ -1294,215 +1621,162 @@ function dbxTuneLoadCharts(destinationDivId)
 	}
 
 	window.addEventListener("resize", function() { console.log("received-resize-event"); });
-		
+
+	// Print HELP and EXIT
 	if ( sessionName == null && graphList == null)
 	{
-		// alert("Specify 'sessionName=NAME' as a parameter in the URL.");
-		// return;
-		$("#api-feedback").css("color", "red");
-		$("#api-feedback").html(
-			'<h2>Error: Missing mandatory parameter <code>sessionName</code> and/or <code>graphList</code>.</h2>' +
-			'There should be a Dialog, where you can choose what you want to "graph"...<br>' +
-			'But that has not yet been implemented<br>' +
-			'<br>' +
-			'Until then, please use the below paraemeters (note the below is priliminary, and can be changed "any" time)' +
-			'<table border="1">' +
-			'<tr> <th>ParameterName</th> <th>Description</th> </tr>' +
-			'<tr>' + 
-				'<td>sessionName</td>' + 
-				'<td>Server Name you want to choose graphs for, Note: This can be a comma (,) separated list of server names (all is a shorthand, for all servers)<br>' +
-				'This can also be a saved <i>template/profile</i> stored in the DbxTuneCentral database. To get available profiles: <a href="/api/graph/profiles">/api/graph/profiles</a><br>' +
-				'Example 1: <code>PROD_A_ASE</code><br>' +
-				'Example 2: <code>PROD_A_ASE,PROD_B_ASE</code><br>' +
-				'Example 3: <code>someProfileName</code><br>' +
-				'Example 4: <code>all</code><br>' +
-				'</td>' + 
-			'</tr>' +
-			'<tr>' + 
-				'<td>graphList</td>' + 
-				'<td>A JSON Object that contains what you want to display graphs for, or a comma separated list of graph names<br>' + 
-				'Example 1: <code>[{"srv":"PROD_A_ASE","graph":"CmSummary_aaCpuGraph"},{"srv":"PROD_B_ASE","graph":"CmSummary_aaCpuGraph"}]</code><br>' +
-				'Example 2: <code>[{"graph":"CmSummary_aaCpuGraph"},{"graph":"CmSummary_OldestTranInSecGraph"}]</code><br>' +
-				'Example 3: <code>all</code> Special word to choose all graph names.<br>' +
-				'Example 4: <code>CmSummary_aaCpuGraph,CmSummary_OldestTranInSecGraph</code> only the 2 graphs specified in the comma separeted list.<br>' +
-				'Note 1: Available SRV_NAME(S) or "sessions" can be fetched using: <a href="/api/sessions">/api/sessions</a><br>' +
-				'Note 2: Name of graph(s) for a SERVER can be fetched using: <a href="/api/graphs?sessionName=replace-me-with-a-SRV_NAME-from-note-1">/api/graphs?sessionName=replace-me-with-a-SRV_NAME-from-note-1</a><br>' +
-				'Note 3: If the "srv":"SRV_NAME" is specified (as in example 1). the <code>sessionName</code> parameter wont have to be specified<br>' +
-				'Note 4: If only "graph":"CmName_graphName" is specified (as in example 2), or "all" (as in example 3). the <code>sessionName</code> parameter has to be specified, and if you specify more that one server, the graph(s) will be displayed for all servers<br>' +
-				'Note 5: If a comma separated list is specified (as in example 4). the <code>sessionName</code> parameter has to be specified.<br>' +
-				'</td>' + 
-			'</tr>' +
-			'<tr>' + 
-				'<td>startTime</td>' + 
-				'<td>A start time from when to show graphs.<br>' + 
-				'This can be specified in various formats.<br>' + 
-				'<ul>' + 
-				'  <li>120m - Start time 120 minutes from current time</li>' + 
-				'  <li>2h - Start time 2 hours from current time</li>' + 
-				'  <li>1d - 1 day (24 hours) from current time</li>' + 
-				'  <li>2018-02-18 18:00 - A Specififc date in time</li>' + 
-				'</ul>' + 
-				'<b>default:</b> 2h<br>' + 
-				'</td>' + 
-			'</tr>' +
-			'<tr>' + 
-				'<td>endTime</td>' + 
-				'<td>A end time.<br>' + 
-				'This can be specified in various formats.<br>' + 
-				'<ul>' + 
-				'  <li>120m - 120 minutes from the start time</li>' + 
-				'  <li>2h - 2 hours from the start time</li>' + 
-				'  <li>1d - 1 day (24 hours) from the start time</li>' + 
-				'  <li>now - Current time</li>' + 
-				'  <li>2018-02-18 23:30 - A Specififc date in time</li>' + 
-				'</ul>' + 
-				'<b>default:</b> 2h<br>' + 
-				'</td>' + 
-			'</tr>' +
-			'<tr>' + 
-				'<td>debug</td>' + 
-				'<td>How much "debug" messages we want to print to the "console.log". <br>' +
-				'This is a integer from 0-10<br>' + 
-				'<b>default:</b> 2h<br>' + 
-				'</td>' +
-			'</tr>' +
-			'<tr>' + 
-				'<td>gheight</td>' + 
-				'<td>Minimum Height in pixels for the graphs<br>' + 
-				'<b>default:</b> 200<br>' + 
-				'</td>' +
-			'</tr>' +
-			'<tr>' + 
-				'<td>gwidth</td>' + 
-				'<td>Minimum Width in pixels for the graphs<br>' + 
-				'<b>default:</b> 650<br>' + 
-				'</td>' +
-			'</tr>' +
-			'<tr>' + 
-				'<td>gcols</td>' + 
-				'<td>Number of graph columns. This is an automatic way to set gwidth. It just takes current browser width, divides it with <code>gcols</code>, then sets <code>gwidth</code> to that value.<br>' + 
-				'<b>default:</b> not specified, meaning: it depends on your current browser size, but normally from 1 to 3<br>' + 
-				'</td>' +
-			'</tr>' +
-			'<tr>' + 
-				'<td>sampleType</td>' + 
-				'<td>Data point about the graph can be fetched by different "methods".<br>' + 
-				'Here are the methods:<br>' + 
-				'<ul>' + 
-				'  <li>ALL - Get all data points</li>' + 
-				'  <li>AUTO - Uses a automatic formula using MAX_OVER_SAMPLES, with a <code>sampleValue=320</code></li>' + 
-				'  <li>MAX_OVER_SAMPLES - Get MAX values over X number of data points</li>' + 
-				'  <li>MAX_OVER_MINUTES - Get MAX values over X minutes of data points</li>' + 
-				'  <li>AVG_OVER_MINUTES - Get AVERAGE values over X minutes of data points</li>' + 
-				'  <li>SUM_OVER_MINUTES - Get SUM values over X minutes of data points</li>' + 
-				'</ul>' + 
-				'<b>default:</b> AUTO<br>' + 
-				'</td>' + 
-			'</tr>' +
-			'<tr>' + 
-				'<td>sampleValue</td>' + 
-				'<td>Used by <code>sampleType</code>' + 
-				'<ul>' + 
-				'  <li>ALL - not used</li>' + 
-				'  <li>AUTO - not used (same as specify <code>sampleType=MAX_OVER_SAMPLES&sampleValue=320</code>)</li>' + 
-				'  <li>MAX_OVER_SAMPLES - A number value...</li>' + 
-				'  <li>MAX_OVER_MINUTES - A number value...</li>' + 
-				'  <li>AVG_OVER_MINUTES - A number value...</li>' + 
-				'  <li>SUM_OVER_MINUTES - A number value... there are 60 minutes in one hour, and 1440 minutes in one day</li>' + 
-				'</ul>' + 
-				'<b>default:</b> ""<br>' + 
-				'</td>' + 
-			'</tr>' +
-			'</table>' +
-			'Below is a full example<br>' +
-			'<code>http://dbxtune.company.com:8080/graph.html?sessionName=PROD_A_ASE&startTime=2h&subscribe=true</code>'
-		);
+		dbxChartPrintApiHelp();
 		return;
-
 	}
 
-	// $('#toolbar').w2toolbar({
-	//     name: 'toolbar',
-	//     items: [
-	//         { type: 'menu', id: 'item1', text: 'Menu', icon: 'fa-table', count: 17, items: [
-	//             { text: 'Item 1', icon: 'fa-camera', count: 5 },
-	//             { text: 'Item 2', icon: 'fa-picture', disabled: true },
-	//             { text: 'Item 3', icon: 'fa-glass', count: 12 }
-	//         ]},
-	//         { type: 'break' },
-	//         { type: 'menu-radio', id: 'item2', icon: 'fa-star',
-	//             text: function (item) {
-	//                 var text = item.selected;
-	//                 var el   = this.get('item2:' + item.selected);
-	//                 return 'Radio: ' + el.text;
-	//             },
-	//             selected: 'id3',
-	//             items: [
-	//                 { id: 'id1', text: 'Item 1', icon: 'fa-camera' },
-	//                 { id: 'id2', text: 'Item 2', icon: 'fa-picture' },
-	//                 { id: 'id3', text: 'Item 3', icon: 'fa-glass', count: 12 }
-	//             ]
-	//         },
-	//         // { type: 'break' },
-	//         // { type: 'menu-check', id: 'item3', text: 'Check', icon: 'fa-heart',
-	//         //     selected: ['id3', 'id4'],
-	//         //     onRefresh: function (event) {
-	//         //         event.item.count = event.item.selected.length;
-	//         //     },
-	//         //     items: [
-	//         //         { id: 'id1', text: 'Item 1', icon: 'fa-camera' },
-	//         //         { id: 'id2', text: 'Item 2', icon: 'fa-picture' },
-	//         //         { id: 'id3', text: 'Item 3', icon: 'fa-glass', count: 12 },
-	//         //         { text: '--' },
-	//         //         { id: 'id4', text: 'Item 4', icon: 'fa-glass' }
-	//         //     ]
-	//         // },
-	//         { type: 'break' },
-	//         { type: 'drop',  id: 'item4', text: 'Dropdown', icon: 'fa-plus',
-	//             html: '<div style="padding: 10px; line-height: 1.5">You can put any HTML in the drop down.<br>Include tables, images, etc.</div>'
-	//         },
-	//         { type: 'break', id: 'break3' },
-	//         { type: 'html',  id: 'item5',
-	//             html: function (item) {
-	//                 var html =
-	//                   '<div style="padding: 3px 10px;">'+
-	//                   ' CUSTOM:'+
-	//                   '    <input size="10" onchange="var el = w2ui.toolbar.set(\'item5\', { value: this.value });" '+
-	//                   '         style="padding: 3px; border-radius: 2px; border: 1px solid silver" value="'+ (item.value || '') + '"/>'+
-	//                   '</div>';
-	//                 return html;
-	//             }
-	//         },
-	//         { type: 'spacer' },
-	//         { type: 'button',  id: 'item6',  text: 'Item 6', icon: 'fa-flag' }
-	//     ]
-	// });
+	// Extract MultiDayChart info from "startTime": which may look like "[5]2h" or "[5]2019-02-01 10:00"
+	// if "startTime" starts with [], then put that value inside the [] into multiDayChart... and remove the [] content from startTime
+//	var startTimeHasMdcSpec = startTime.match(/\[(.*?)\]/);
+//	if (startTimeHasMdcSpec)
+//	{
+//		multiDayChart = startTimeHasMdcSpec[1];
+//		startTime     = startTime.replace(/\[(.*?)\]/, "");
+//
+//		console.log("startTime has MultiDayChart Spec, setting new values for: multiDayChart="+multiDayChart+", startTime="+startTime);
+//	}
 
-	// w2ui.toolbar.on('*', function (event) {
-	//     console.log('EVENT: '+ event.type + ' TARGET: '+ event.target, event);
-	// });
-	
-	// Remove old data in graphs when subscribibg to data. This is the age for when to remove < 0 == do not remove
-	var subscribeAgeInSec = -1;
-	if (subscribe)
+	// startTime: 2019-02-03+18:00  --- remove the +
+	if (startTime.match("^[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9][+]"))
+		startTime = startTime.replace("+", " ");
+
+	// endTime: 2019-02-03+18:00  --- remove the +
+	if (endTime.match("^[0-9][0-9][0-9][0-9][-][0-9][0-9][-][0-9][0-9][+]"))
+		endTime = endTime.replace("+", " ");
+
+	// Check the startTime
+	// If it's a valid data, if not it might be some strange chars, which can be removed
+	//if ( ! moment(startTime).isValid() )
+	//{
+	//}
+
+
+	// add MultiDayChart to "startTimeArr"
+	// Even if NO MultiDayChart, then add 1 entry to "startTimeArr"
+	var startTimeArr = [];
+	console.log(">>>>>>>>>>>>>>>>>>>>> multiDayChart=|"+multiDayChart+"|.");
+	if (multiDayChart === "") // NO mdc, then push "current" time
 	{
-		var multiPlayer = 60;
+		startTimeArr.push( startTime );
+	}
+	else
+	{
+		// subscribe is not supported in MultiDayChart
+		_subscribe = false;
+		
+		// Check the startTime
+		// If it's a valid data, if not then try to figure out if it's '2h' or similar
+		if ( moment(startTime).isValid() )
+		{
+			if (_debug > 0)
+				console.log(">>>>>>>>>>>>>>>>>>>>> startTime: VALID");
+
+			if (endTime === "")
+				endTime = "2h";
+		}
+		else
+		{
+			if (_debug > 0)
+				console.log(">>>>>>>>>>>>>>>>>>>>> startTime: --not-a-valid-YYYY-MM-DD hh:mm-- startTime=|"+startTime+"|");
+
+			var multiplier = 60;
+			var localStartTime = startTime;
+			if (localStartTime.match("^[0-9]+[mhdlMHDL]$")) // If value starts with a number and ends with m, h, d  m=minutes, h=hour, d=day
+			{
+				var lastChar = localStartTime.substring(localStartTime.length-1).toLowerCase();
+				if ("m" === lastChar) multiplier = 0;       // Minutes
+				if ("h" === lastChar) multiplier = 60;      // Hours
+				if ("d" === lastChar) multiplier = 60 * 24; // Days
+	
+				localStartTime = localStartTime.substring(0, localStartTime.length-1);
+			}
+			var inMinutes = parseInt(localStartTime) * multiplier; 
+			if (isNaN(inMinutes))
+				inMinutes = 120;
+
+			endTime	  = startTime; // Set end time to '2h' or whatever the startTime was before it was parsed
+			startTime = moment().subtract(inMinutes, "minutes").format("YYYY-MM-DD HH:mm");
+		}
+
+		var multiDayChartDays = parseInt(multiDayChart); 
+		if (isNaN(multiDayChartDays))
+		{
+			console.log("Can't parse multiDayChart='"+multiDayChart+"', into a number. Using 7 has hard coded value.");
+			multiDayChartDays = -7;
+		}
+		
+		// if TODAY and multiDayChartDays is Positive number then make it a negative number
+		if (moment(startTime).isSame(moment(), 'day') && multiDayChartDays > 0)
+		{
+			multiDayChartDays = -Math.abs(multiDayChartDays); // positive to negative number
+		}
+
+		// use startTmp endTmp in a loop later on
+		// for NEGATIVE NUMBER: move START back in time, and set END to passed
+		// for POSITIVE NUMBER: move START to "startTime" and END to number of days
+		var startTmp = moment(startTime);
+		var endTmp   = moment(startTime);
+		if (multiDayChartDays < 0)
+		{
+			if (_debug > 0)
+				console.log(">>>>>>>>>>>>>>>>>>>>> MDC - NEGATIVE: "+multiDayChartDays);
+
+			startTmp = startTmp.add(multiDayChartDays, 'days');
+			endTmp   = moment(startTime);
+		}
+		else
+		{
+			if (_debug > 0)
+				console.log(">>>>>>>>>>>>>>>>>>>>> MDC - POSITIVE: "+multiDayChartDays);
+
+			endTmp   = startTmp.add(multiDayChartDays, 'days');
+			startTmp = moment(startTime);
+			
+			// Do NOT display dates AFTER today
+			if ( endTmp.isAfter(moment()) )
+			{
+				endTmp = moment();
+				console.log("NOTE: altering end-time to '"+endTmp+"', due to overrunning current day.");
+			}
+		}
+
+		if (_debug > 0)
+			console.log(">>>>>>>>>>>>>>>>>>>>> startTmp=|"+startTmp.format("YYYY-MM-DD HH:mm")+"|, endTmp=|"+endTmp.format("YYYY-MM-DD HH:mm")+"|, startTime=|"+startTime+"|, endTime=|"+endTime+"|");
+
+		while (startTmp.isSameOrBefore(endTmp))
+		{
+			startTimeArr.push( startTmp.format("YYYY-MM-DD HH:mm") );
+			startTmp = startTmp.add(1, 'days');
+		}
+	}
+	if (_debug > 0)
+		console.log(">>>>>>>>>>>>>>>>>>>>> startTimeArr:", startTimeArr);
+	
+	// Remove old data in graphs when subscribing to data. This is the age for when to remove < 0 == do not remove
+	var subscribeAgeInSec = -1;
+	if (_subscribe)
+	{
+		var multiplier = 60;
 		var localStartTime = startTime;
 		if (localStartTime.match("^[0-9]+[mhdlMHDL]$")) // If value starts with a number and ends with m, h, d  m=minutes, h=hour, d=day
 		{
 			var lastChar = localStartTime.substring(localStartTime.length-1).toLowerCase();
-			if ("m" === lastChar) multiPlayer = 60;           // Minutes
-			if ("h" === lastChar) multiPlayer = 60 * 60;      // Hours
-			if ("d" === lastChar) multiPlayer = 60 * 60 * 24; // Days
+			if ("m" === lastChar) multiplier = 60;           // Minutes
+			if ("h" === lastChar) multiplier = 60 * 60;      // Hours
+			if ("d" === lastChar) multiplier = 60 * 60 * 24; // Days
 
 			localStartTime = localStartTime.substring(0, localStartTime.length-1);
 		}
-		subscribeAgeInSec = parseInt(localStartTime) * multiPlayer; 
+		subscribeAgeInSec = parseInt(localStartTime) * multiplier; 
 		if (isNaN(subscribeAgeInSec))
 			subscribeAgeInSec = -1;
 	}
-	console.log("subscribe="+subscribe+", subscribeAgeInSec="+subscribeAgeInSec);
-
+	if (_debug > 0)
+		console.log("subscribe="+subscribe+", subscribeAgeInSec="+subscribeAgeInSec);
 
 	// Set the window/tab title name
 	document.title = sessionName;
@@ -1684,7 +1958,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	{
 		url: url,
 		type: 'get',
-		async: false,   // (async: true = do it in the background)
+//		async: false,   // (async: true = do it in the background)
 		success: function(data, status) 
 		{
 			const jsonResp = JSON.parse(data);
@@ -1697,130 +1971,48 @@ function dbxTuneLoadCharts(destinationDivId)
 			for(let i = 0; i < createOrder.length; i++) 
 			{
 				const entry = createOrder[i];
+				
+				//const initStartTime   = startTime;
+				const initEndTime     = endTime;
+				const initSampleType  = sampleType;
+				const initSampleValue = sampleValue;
+				const isMultiDayChart = startTimeArr.length > 1;
 
-				// Create graph object
-				const dbxGraph = new DbxGraph(
-					destinationDivId,  // put it in "div" that has id
-					entry.serverName,
-					entry.cmName,
-					entry.graphName,
-					entry.graphLabel,
-					entry.graphCategory,
-					entry.percentGraph,
-					subscribeAgeInSec,
-					gheight,
-					gwidth,
-					debug
-				);
+				// loop the Multi Day Chart (at least 1 entry in this array)
+				for(let s = 0; s < startTimeArr.length; s++)
+				{
+					var startTimeEntry = startTimeArr[s];
+					
+					// Create graph object
+					const dbxGraph = new DbxGraph(
+						destinationDivId,  // put it in "div" that has id
+						entry.serverName,
+						entry.cmName,
+						entry.graphName,
+						entry.graphLabel,
+						entry.graphCategory,
+						entry.percentGraph,
+						subscribeAgeInSec,
+						gheight,
+						gwidth,
+						debug,
+						startTimeEntry,
+						initEndTime,
+						initSampleType,
+						initSampleValue,
+						isMultiDayChart
+					);
 
-				// add it to the global list/map
-				_graphMap.push(dbxGraph);
-			}
+					// add it to the global list/map
+					_graphMap.push(dbxGraph);
+				}
+			} // end: for loop
 
+			//-------------------------------------------------------------------
+			// Load initial data for each of the created graphs in: _graphMap	
+			//-------------------------------------------------------------------
+			loadDataForGraph(0);
 
-			// //------------------------------------------------------------------
-			// // Order entries in the order we want to display them in.
-			// // - add all MATCH indexes to an array
-			// // - move the MATCHING slots in the array from 'resp' to 'data'
-			// // - then move the rest of 'resp' to 'data'
-			// const indexArr = [];
-			// for(let i = 0; i < graphProfile.length; i++) 
-			// {
-			// 	const fullGraphName = graphProfile[i].graph;
-			// 	const serverName    = (graphProfile[i]["srv"] === undefined) ? sessionName : graphProfile[i].srv;
-
-			// 	for(var j = 0; j < jsonResp.length; j++) 
-			// 	{
-			// 		const entry = jsonResp[j];
-			// 		//console.log("entry.tableName=|"+entry.tableName+"|, fullGraphName=|"+fullGraphName+"|, entry.serverName=|"+entry.serverName+"|, serverName=|"+serverName+"|, entry:", entry);
-			// 		if (entry.tableName === fullGraphName && entry.serverName === serverName) 
-			// 		{
-			// 			//console.log("push="+j);
-			// 			indexArr.push(j);
-			// 			break;
-			// 		}
-			// 	}
-			// }
-			// const jsonData = [];
-			// for(let i = 0; i < indexArr.length; i++) 
-			// {
-			// 	const jsonPos = indexArr[i];
-			// 	jsonData.push( jsonResp[jsonPos] );  // Add it to data
-			// 	jsonResp.splice(jsonPos, 1);         // remove it from responce
-			// }
-			// for(let i = 0; i < jsonResp.length; i++) 
-			// 	jsonData.push( jsonResp[i] );
-
-			// // for(let i = 0; i < jsonData.length; i++) 
-			// // 	console.log( "jsonData["+i+"]:", jsonData[i] );
-
-			// //------------------------------------------------------------------
-			// // Loop the JSON DATA and create GRAPH objects (which is an array off graph names)
-			// for(let i = 0; i < jsonData.length; i++) 
-			// {
-			// 	const entry = jsonData[i];
-			// 	if (entry === undefined)
-			// 		continue;
-
-			// 	// console.log( "entry at["+i+"]:", entry );
-
-			// 	let addThisGraph = false;
-
-			// 	// If we DO NOT have a graphProfile - use visibleAtStartup from the database
-			// 	if (graphProfile.length === 0)
-			// 	{
-			// 		if ( entry.visibleAtStartup === true )
-			// 			addThisGraph = true;
-			// 	}				
-			// 	else // If we HAVA a graphProfile - create/display ONLY the graphs in the profile
-			// 	{
-			// 		for(var p = 0; p < graphProfile.length; p++) 
-			// 		{
-			// 			// console.log("graphProfile["+p+"]:", graphProfile[i]);
-			// 			if (graphProfile[p].graph === entry.tableName)
-			// 				addThisGraph = true;
-			// 		}
-			// 	}
-
-			// 	// Always display UserDefinedGraphs
-			// 	// if ( ! entry.cmName.startsWith("Cm") )
-			// 	// 	addThisGraph = true;
-			// 	if (loadAllGraphs)
-			// 		addThisGraph = true;
-
-			// 	//console.log("xxxx: addThisGraph="+addThisGraph+", entry.tableName="+entry.tableName+", graphProfile="+graphProfile);
-
-			// 	if ( addThisGraph === false )
-			// 	{
-			// 		if (_debug > 0)
-			// 		{
-			// 			let msg = "visibleAtStartup===false";
-			// 			if (graphProfile.length > 0)
-			// 				msg = "not-in-profile";
-			// 			console.log("Skipping graph due to '"+msg+"'. serverName="+entry.serverName+", cmName="+entry.cmName+", graphName="+entry.graphName, entry);
-			// 		}
-			// 		continue;
-			// 	}
-
-			// 	const dbxGraph = new DbxGraph(
-			// 		destinationDivId,  // put it in div id
-			// 		// "graphs",  // put it in div id
-			// 		// sessionName,
-			// 		entry.serverName,
-			// 		entry.cmName,
-			// 		entry.graphName,
-			// 		entry.graphLabel,
-			// 		entry.percentGraph,
-			// 		subscribeAgeInSec,
-			// 		gheight,
-			// 		gwidth,
-			// 		debug
-			// 	);
-
-			// 	// add it to the global list/map
-			// 	_graphMap.push(dbxGraph);
-
-			// } // end: for loop
 		},
 		error: function(xhr, desc, err) 
 		{
@@ -1832,70 +2024,6 @@ function dbxTuneLoadCharts(destinationDivId)
 	}); // end ajax call
 	// $("#api-feedback").html("SUCCESS: Graphs NAMES.");
 
-
-	//-------------------------------------------------------------------
-	// Load initial data for each of the created graphs in: _graphMap
-	//-------------------------------------------------------------------
-	loadDataForGraph(0, startTime, endTime, sampleType, sampleValue);
-// 	for(var i = 0; i < _graphMap.length; i++)
-// 	{
-// 		const dbxGraph = _graphMap[i];
-
-// 		const serverName = dbxGraph.getServerName();
-// 		const cmName     = dbxGraph.getCmName();
-// 		const graphName  = dbxGraph.getGraphName();
-// 		const url        = '/api/graph/data?sessionName='+serverName+'&cmName='+cmName+'&graphName='+graphName+"&startTime="+startTime+"&endTime="+endTime+"&sampleType="+sampleType+"&sampleValue="+sampleValue;
-
-// 		// $("#api-feedback").html("Loading Graphs DATA for serverName="+serverName+", cmName="+cmName+", graphName="+graphName+" from url: "+url);
-// 		if (_debug > 0)
-// 			console.log("AJAX Call: "+url);
-
-// 		// $( "#progressbar" ).html(i+'% - START - cmName='+cmName+', graphName='+graphName);
-// 		$('#progressBar').css('width', '0%');
-// 		var progressCnt = 0;
-// 		$.ajax(
-// 		{
-// 			url: url,
-// 			type: 'get',
-// 			// async: false,   // to call it one by one (async: true = spawn away a bunch of them in the background)
-			
-// 			success: function(data, status) 
-// 			{
-// 				// console.log("RECEIVED DATA: "+data);
-// 				var jsonResp = JSON.parse(data);
-				
-// 				console.time('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName);
-// 				dbxGraph.addData(jsonResp);
-// 				console.timeEnd('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName);
-				
-// 				if (_debug > 0)
-// 					console.log('DONE: loading data for cmName='+cmName+', graphName='+graphName);
-
-// 				progressCnt++
-// 				const pct = Math.round( progressCnt / _graphMap.length * 100);
-// 				$('#progressBar').css('width', pct+'%');
-// 				$('#progressBar').html(pct+'%');
-// 				// $('#progressDiv').html("Done loading: "+cmName+' - '+graphName);
-// 				if (pct === 100)
-// 				{
-// 					$('#progressDiv').hide();
-// 					$("#api-feedback").html("Loaded "+progressCnt+" Graphs.");
-
-// 					if (_debug > 0)
-// 						console.log("DONE: loading ALL data...");
-// 				}
-// 			},
-// 			error: function(xhr, desc, err) 
-// 			{
-// 				console.log(xhr);
-// 				console.log("Details: " + desc + "\nError: " + err);
-// 				$("#feedback_"+cmName+"_"+graphName).html("<strong>ERROR Details:</strong> " + desc + "<br /><strong>Error:</strong> " + err + "<br /><strong>ResponseText:</strong> " + xhr["responseText"] + "<br />");
-// //				$("#api-feedback").html("<strong>ERROR Details:</strong> " + desc + "<br /><strong>Error:</strong> " + err + "<br /><strong>ResponseText:</strong> " + xhr["responseText"] + "<br />");
-// //				$("#dialog-tab-prevReviewNote").html("<strong>ERROR Details:</strong> " + desc + "<br /><strong>Error:</strong> " + err + "<br /><strong>ResponseText:</strong> " + xhr["responseText"] + "<br />");
-// //				$("#dialog-tab-prevReviewNote").css("color", "red");
-// 			}
-// 		}); // end: ajax call
-// 	} // end: for loop
 } // end: function
 
 
@@ -2015,17 +2143,22 @@ function createGraphLoadOrder(graphProfile, graphObjects, loadAllGraphs)
  * @param {*} sampleType 
  * @param {*} sampleValue 
  */
-function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleValue)
+function loadDataForGraph(indexToLoad)
 {
 	if (indexToLoad >= _graphMap.length)
 		return;
 
 	const dbxGraph = _graphMap[indexToLoad];
 
-	const serverName = dbxGraph.getServerName();
-	const cmName     = dbxGraph.getCmName();
-	const graphName  = dbxGraph.getGraphName();
-	const url        = '/api/graph/data?sessionName='+serverName+'&cmName='+cmName+'&graphName='+graphName+"&startTime="+startTime+"&endTime="+endTime+"&sampleType="+sampleType+"&sampleValue="+sampleValue;
+	const serverName  = dbxGraph.getServerName();
+	const cmName      = dbxGraph.getCmName();
+	const graphName   = dbxGraph.getGraphName();
+	const startTime   = dbxGraph.getInitStartTime();
+	const endTime     = dbxGraph.getInitEndTime();
+	const sampleType  = dbxGraph.getInitSampleType();
+	const sampleValue = dbxGraph.getInitSampleValue();
+
+	const url         = '/api/graph/data?sessionName='+serverName+'&cmName='+cmName+'&graphName='+graphName+"&startTime="+startTime+"&endTime="+endTime+"&sampleType="+sampleType+"&sampleValue="+sampleValue;
 
 	$("#api-feedback").html("Loading: "+(indexToLoad+1)+"/"+_graphMap.length+" - "+serverName+" - "+cmName+"_"+graphName);
 	if (_debug > 0)
@@ -2044,9 +2177,9 @@ function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleVal
 			// console.log("RECEIVED DATA: "+data);
 			var jsonResp = JSON.parse(data);
 			
-			console.time('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName);
+			console.time('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName+', startTime='+startTime+', endTime='+endTime);
 			dbxGraph.addData(jsonResp);
-			console.timeEnd('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName);
+			console.timeEnd('dbxGraph.addData:: cmName='+cmName+', graphName='+graphName+', startTime='+startTime+', endTime='+endTime);
 			
 			if (_debug > 0)
 				console.log('DONE: loading data for cmName='+cmName+', graphName='+graphName);
@@ -2062,8 +2195,8 @@ function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleVal
 			}
 			else
 			{
-				// Load next GRAPH in 10 ms
-				setTimeout( loadDataForGraph(indexToLoad + 1, startTime, endTime, sampleType, sampleValue), 1);
+				// Load next GRAPH in 1 ms
+				setTimeout( loadDataForGraph(indexToLoad + 1), 1);
 			}
 		},
 		error: function(xhr, desc, err) 
@@ -2086,8 +2219,8 @@ function loadDataForGraph(indexToLoad, startTime, endTime, sampleType, sampleVal
 			}
 			else
 			{
-				// Load next GRAPH in 10 ms
-				setTimeout( loadDataForGraph(indexToLoad + 1, startTime, endTime, sampleType, sampleValue), 1);
+				// Load next GRAPH in 1 ms
+				setTimeout( loadDataForGraph(indexToLoad + 1), 1);
 			}
 		}
 	}); // end: ajax call
@@ -2151,16 +2284,20 @@ function updateNavbarInfo()
 		oldestTs = dbxMinDt(oldestTs, dbxGraph.getOldestTs());
 		newestTs = dbxMaxDt(newestTs, dbxGraph.getNewestTs());
 	}
-	$("#dbx-start-time").html(oldestTs.format("YYYY-MM-DD HH:mm"));
-	$("#dbx-end-time"  ).html(newestTs.format("YYYY-MM-DD HH:mm"));
 
-	$('#dbx-report-range span').html(oldestTs.format('YYYY-MM-DD HH:mm') + ' - ' + newestTs.format('YYYY-MM-DD HH:mm'));
+	// if we got oldestTs...
+	if (typeof oldestTs !== 'undefined') 
+	{
+		$("#dbx-start-time").html(oldestTs.format("YYYY-MM-DD HH:mm"));
+		$("#dbx-end-time"  ).html(newestTs.format("YYYY-MM-DD HH:mm"));
 
-	var hourDiff = Math.round(newestTs.diff(oldestTs, 'hours', true));
-	$("#dbx-sample-time").html(hourDiff+"h");
-	
+		$('#dbx-report-range span').html(oldestTs.format('YYYY-MM-DD HH:mm') + ' - ' + newestTs.format('YYYY-MM-DD HH:mm'));
 
-	console.log("oldestTs: "+oldestTs+" ["+oldestTs.format("YYYY-MM-DD HH:mm:ss")+"], newestTs: "+newestTs+" ["+newestTs.format("YYYY-MM-DD HH:mm:ss")+"], hourDiff="+hourDiff);
+		var hourDiff = Math.round(newestTs.diff(oldestTs, 'hours', true));
+		$("#dbx-sample-time").html(hourDiff+"h");
+		
 
+		console.log("oldestTs: "+oldestTs+" ["+oldestTs.format("YYYY-MM-DD HH:mm:ss")+"], newestTs: "+newestTs+" ["+newestTs.format("YYYY-MM-DD HH:mm:ss")+"], hourDiff="+hourDiff);
+	}
 	// window.dispatchEvent(new Event('resize'));
 }

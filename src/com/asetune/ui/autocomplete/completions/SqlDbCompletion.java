@@ -33,20 +33,36 @@ extends SqlCompletion
 
 	public DbInfo _dbInfo = null;
 	
+	//-------------------------
+	// helper called from constructor
+	//-------------------------
+	public static String createReplacementText(CompletionProviderAbstractSql provider, DbInfo di)
+	{
+		return provider.fixStrangeNames(di._dbName);
+	}
+
+	//-------------------------
+	// CONSTRUCTOR(S)
+	//-------------------------
 	public SqlDbCompletion(CompletionProviderAbstractSql provider, DbInfo di)
 	{
-		super(provider, di._dbName, provider.fixStrangeNames(di._dbName));
+		super(provider, di._dbName, createReplacementText(provider, di));
 
 		_dbInfo = di;
 
 		String shortDesc = 
-			"<font color=\"blue\">"+di._dbType+"</font>" +
-//			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(di._dbRemark) ? "No Description" : di._dbRemark) + "</font></i>";
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(di._dbRemark) ? "" : stripMultiLineHtml(di._dbRemark)) + "</font></i>";
+			"<font color='blue'>"+di._dbType+"</font>" +
+//			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(di._dbRemark) ? "No Description" : di._dbRemark) + "</font></i>";
+			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(di._dbRemark) ? "" : stripMultiLineHtml(di._dbRemark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_dbInfo.toHtmlString());
 	}
 
+
+	//-------------------------
+	// OVERIDE METHODS
+	//-------------------------
+	
 	@Override
 	public String getSummary()
 	{

@@ -125,9 +125,10 @@ extends PipeCommandAbstract
 		     || input.startsWith("egrep ") || input.equals("egrep")
 		   )
 		{
-			String params = input.substring(input.indexOf(' ') + 1).trim();
-
-			CommandLine cmdLine = parseCmdLine(params);
+//			String params = input.substring(input.indexOf(' ') + 1).trim();
+//			CommandLine cmdLine = parseCmdLine(params);
+			CommandLine cmdLine = parseCmdLine(input);
+			
 			if (cmdLine.hasOption('v')) _optV = true; 
 			if (cmdLine.hasOption('x')) _optX = true;
 			if (cmdLine.hasOption('r')) _type = _type | TYPE_RESULTSET;
@@ -212,7 +213,7 @@ extends PipeCommandAbstract
 	private CommandLine parseCmdLine(String args)
 	throws PipeCommandException
 	{
-		return parseCmdLine(StringUtil.translateCommandline(args));
+		return parseCmdLine(StringUtil.translateCommandline(args, true));
 //		return parseCmdLine(args.split(" "));
 	}
 	private CommandLine parseCmdLine(String[] args)

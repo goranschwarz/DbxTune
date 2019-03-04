@@ -94,6 +94,8 @@ public class DbxTuneConfServlet extends HttpServlet
 		out.println("<html> ");
 		
 		out.println("<head> ");
+		out.println("<title>"+inputName+"</title> ");
+
 		out.println("<style type='text/css'> ");
 		out.println("body {                  ");
 		out.println("	  height: 100%;      ");
@@ -205,6 +207,9 @@ public class DbxTuneConfServlet extends HttpServlet
 		
 		out.println("<html>");
 
+		out.println("<head> ");
+		out.println("<title>"+inputName+"</title> ");
+
 		out.println("<script type='text/javascript' src='/scripts/jquery/jquery-3.2.1.js'></script>");
 		
 		out.println("<!-- Tablesorter theme, note in the init section use: $('.tablesorter').tablesorter({ theme: 'metro-dark' }) --> ");
@@ -216,6 +221,7 @@ public class DbxTuneConfServlet extends HttpServlet
 		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/jquery.tablesorter.widgets.js'></script> ");
 //		out.println("<script type='text/javascript' src='/scripts/tablesorter/js/widgets/widget-scroller.js'></script> ");
 
+		out.println("</head> ");
 		
 		out.println("<body>");
 		out.println("<h1>" + inputName + "</h1>");

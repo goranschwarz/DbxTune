@@ -80,6 +80,8 @@ import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
@@ -240,7 +242,8 @@ public class ConnectionDialog
 	private int                  _lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
 	private JSplitPane           _connSplitPane;
 	private JPanel               _connProfilePanel;
-	private JTree                _connProfileTree;
+	private GTree                _connProfileTree;
+	private boolean              _treeExpansionListenerEnabled = true;
 	private JPanel               _connTabbedPanel;
 	private GTabbedPane          _tab;
 	private JPanel               _okCancelPanel;
@@ -686,8 +689,11 @@ public class ConnectionDialog
 	public void setDesiredProductName(String productName)
 	{
 		_desiredProductName = productName;
+		
+		_treeExpansionListenerEnabled = false;
 		ConnectionProfileManager.getInstance().setTreeModelFilterOnProductName(productName);
-		expandTree(_connProfileTree);
+		restoreToSavedTreeExpansionState(_connProfileTree);
+		_treeExpansionListenerEnabled = true;
 	}
 
 	/**
@@ -1022,7 +1028,7 @@ public class ConnectionDialog
 			serverName = AseConnectionUtils.getAseServername(conn);
 		}
 		// DB2
-		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX))
+		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_LUW))
 		{
 			serverName = DbUtils.getDb2Servername(conn);
 		}
@@ -1433,7 +1439,7 @@ public class ConnectionDialog
 		_connProfileTree.setDropMode(DropMode.ON_OR_INSERT);
 		_connProfileTree.setTransferHandler(new TreeTransferHandler());
 		_connProfileTree.getSelectionModel().setSelectionMode(TreeSelectionModel.CONTIGUOUS_TREE_SELECTION);  
-		expandTree(_connProfileTree);
+		restoreToSavedTreeExpansionState(_connProfileTree);
 
 		// Right click Pop-up Menu and there Actions
 		JPopupMenu popup = new JPopupMenu();
@@ -1444,6 +1450,7 @@ public class ConnectionDialog
 		final AbstractAction connProfileAddCatalogAction       = new ConnProfileAddCatalogAction();
 		final AbstractAction connProfileDeleteAction           = new ConnProfileDeleteAction();
 		final AbstractAction connProfileRenameAction           = new ConnProfileRenameAction();
+		final AbstractAction connProfileDuplicateAction        = new ConnProfileDuplicateAction();
 		final AbstractAction connProfileMoveAction             = new ConnProfileMoveAction();
 		final AbstractAction connProfileReLoadAction           = new ConnProfileReloadAction();
 		final AbstractAction connProfileChangeFile             = new ConnProfileChangeFileAction();
@@ -1466,6 +1473,7 @@ public class ConnectionDialog
 		popup.add(new JMenuItem(connProfileAddCatalogAction));
 		popup.add(new JMenuItem(connProfileDeleteAction));
 		popup.add(new JMenuItem(connProfileRenameAction));
+		popup.add(new JMenuItem(connProfileDuplicateAction));
 		popup.add(new JMenuItem(connProfileMoveAction));
 		popup.add(new JSeparator());
 		popup.add(new JMenuItem(connProfileReLoadAction));
@@ -1489,6 +1497,7 @@ public class ConnectionDialog
 				connProfileAddCatalogAction   .setEnabled(true);  // always to true
 				connProfileDeleteAction       .setEnabled(false);
 				connProfileRenameAction       .setEnabled(false);
+				connProfileDuplicateAction    .setEnabled(false);
 				connProfileMoveAction         .setEnabled(false);
 				connProfileChangeFile         .setEnabled(true);  // always to true
 
@@ -1500,6 +1509,7 @@ public class ConnectionDialog
 
 					connProfileDeleteAction       .setEnabled(true);
 					connProfileRenameAction       .setEnabled(true);
+					connProfileDuplicateAction    .setEnabled(true);
 					connProfileMoveAction         .setEnabled(true);
 
 					if (o instanceof ConnectionProfile)
@@ -1730,6 +1740,50 @@ public class ConnectionDialog
 		nodeSelectionTimer.setRepeats(false);
 		_logger.debug("nodeSelectionTimerInterval="+nodeSelectionTimerInterval);
 
+		// Tree Expand Listener... save the state on Dialog OK/CLOSE
+		_connProfileTree.addTreeExpansionListener(new TreeExpansionListener()
+		{
+			@Override
+			public void treeExpanded(TreeExpansionEvent event)
+			{
+				if ( ! _treeExpansionListenerEnabled )
+					return;
+				
+				Object o = event.getPath().getLastPathComponent();
+				if (o instanceof DefaultMutableTreeNode)
+				{
+					Object userObj = ((DefaultMutableTreeNode)o).getUserObject();
+					//System.out.println("ConnectionDialogTree.treeExpanded(): userObj="+userObj+" - "+userObj.getClass().getName());
+					//new Exception("DUMMY").printStackTrace();
+					
+					if (userObj instanceof ConnectionProfileCatalog)
+					{
+						((ConnectionProfileCatalog)userObj).setExpanded(true);
+					}
+				}
+			}
+			
+			@Override
+			public void treeCollapsed(TreeExpansionEvent event)
+			{
+				if ( ! _treeExpansionListenerEnabled )
+					return;
+				
+				Object o = event.getPath().getLastPathComponent();
+				if (o instanceof DefaultMutableTreeNode)
+				{
+					Object userObj = ((DefaultMutableTreeNode)o).getUserObject();
+					//System.out.println("ConnectionDialogTree.treeCollapsed(): userObj="+userObj+" - "+userObj.getClass().getName());
+					//new Exception("DUMMY").printStackTrace();
+					
+					if (userObj instanceof ConnectionProfileCatalog)
+					{
+						((ConnectionProfileCatalog)userObj).setExpanded(false);
+					}
+				}
+			}
+		});
+
 		_connProfileTree.addTreeSelectionListener(new TreeSelectionListener()
 		{			
 			@Override
@@ -1783,7 +1837,11 @@ public class ConnectionDialog
 		final JLabel     filter_lbl = new JLabel(" Filter");
 		final JTextField filter_txt = new JTextField();
 
-		filter_lbl.setToolTipText("Show only profile names that matches the filter.");
+		filter_lbl.setToolTipText("<html>"
+				+ "Show only profile names that matches the filter. <br>"
+				+ "<b>Tip 1</b>: Regular Expresions can be used<br>"
+				+ "<b>Tip 2</b>: To see <b>all</b> entries... Closed catalogs will temporarily be expanded: type '.', which is a regex for any character."
+				+ "</html>");
 		filter_txt.setToolTipText(filter_lbl.getToolTipText());
 
 		if ( StringUtil.hasValue(ConnectionProfileManager.getInstance().getTreeModelFilterOnProfileName()) )
@@ -1798,8 +1856,13 @@ public class ConnectionDialog
 				String filterStr = filter_txt.getText();
 
 				// Set the profile name to look for in the model
+				_treeExpansionListenerEnabled = false;
 				ConnectionProfileManager.getInstance().setTreeModelFilterOnProfileName(filterStr);
-				expandTree(_connProfileTree);
+				if (StringUtil.hasValue(filterStr))
+					treeExpandAll(_connProfileTree);
+				else
+					restoreToSavedTreeExpansionState(_connProfileTree);
+				_treeExpansionListenerEnabled = true;
 
 				// set focus back to the filter
 				SwingUtilities.invokeLater(new Runnable()
@@ -1827,21 +1890,121 @@ public class ConnectionDialog
 		return panel;
 	}
 
-	@SuppressWarnings("rawtypes")
-	private void expandTree(JTree tree)
+	private void restoreToSavedTreeExpansionState(JTree tree)
 	{
 		DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
-		Enumeration e = root.breadthFirstEnumeration();
+
+		// First Expand all nodes
+		// And as a second step, collapse the ones that we want to close
+		// If we do it the other way: top-down, then catalogs at top level will be open (even if they should be closed)
+		treeExpandAll(tree);
+		
+		collapseChildNodes(tree, root, 0);
+	}
+
+	private void treeExpandAll(JTree tree)
+	{
+		DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+
+		// Expand all nodes
+		Enumeration<?> e = root.breadthFirstEnumeration();
 		while (e.hasMoreElements())
 		{
 			DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
 			if ( node.isLeaf() )
 				continue;
+
 			int row = tree.getRowForPath(new TreePath(node.getPath()));
 			tree.expandRow(row);
 		}
 	}
+	
+	private void collapseChildNodes(JTree tree, DefaultMutableTreeNode node, int nestLevel)
+	{
+		String indentStr = StringUtil.replicate(" ", nestLevel*2);
 
+		@SuppressWarnings("rawtypes")
+		Enumeration e = node.children();
+		while (e.hasMoreElements())
+		{
+			DefaultMutableTreeNode thisNode = (DefaultMutableTreeNode) e.nextElement();
+			Object userObj = thisNode.getUserObject();
+
+			if (userObj instanceof ConnectionProfileCatalog)
+			{
+				String  name     = ((ConnectionProfileCatalog)userObj).getName();
+				boolean expanded = ((ConnectionProfileCatalog)userObj).isExpanded();
+				//System.out.println(indentStr+(expanded?"++":"--")+"catalog: name='"+name+"', expanded="+expanded);
+
+				// recursive call needs to be done BEFORE: collapsePath()
+				collapseChildNodes(tree, thisNode, nestLevel+1);
+
+				// Collapse the Path
+				if ( ! expanded )
+				{
+					TreePath treePath = new TreePath(thisNode.getPath());
+//					//System.out.println(indentStr+"treePath="+treePath+", catalog: name='"+name+"', expanded="+expanded);
+					tree.collapsePath(treePath);
+					
+//					int row = tree.getRowForPath(treePath);
+//					System.out.println(indentStr+"row="+row+", catalog: name='"+name+"', expanded="+expanded);
+//					tree.collapseRow(row);
+				}
+				
+//				// Expand the Path
+//				if (expanded)
+//				{
+//					TreePath treePath = new TreePath(thisNode.getPath());
+//					System.out.println(indentStr+"treePath="+treePath+", catalog: name='"+name+"', expanded="+expanded);
+//					tree.expandPath(treePath);
+//				}
+//				// recursive call needs to be done AFTER: expandPath()
+//				expandChildNodes(tree, thisNode, nestLevel+1);
+
+			}
+//			else if (userObj instanceof ConnectionProfile)
+//			{
+//				String name = ((ConnectionProfile)userObj).getName();
+//				System.out.println(indentStr+">> profile: name='"+name+"'.");
+//			}
+//			else
+//			{
+//				String name = userObj.toString();
+//				System.out.println(indentStr+"## profile: name='"+name+"'.");
+//			}
+		}
+	}
+
+	// NOTE: This did NOT work (any expanded 'dirs' below a closed 'dir' ias maked as "collapsed" in this way... so go with TreeExpansionListener instead)
+//	private void saveTreeExpansionState(JTree tree)
+//	{
+//		DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+//
+//		// First Expand all nodes
+//		// And as a second step, collapse the ones that we want to close
+//		// If we do it the other way: top-down, then catalogs at top level will be open (even if they should be closed)
+////		Enumeration<?> e = root.breadthFirstEnumeration();
+//		Enumeration<?> e = root.preorderEnumeration();
+//		while (e.hasMoreElements())
+//		{
+//			DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+//			if ( node.isLeaf() )
+//				continue;
+//
+//			TreePath treePath = new TreePath(node.getPath());
+//			boolean isExpanded = tree.isExpanded(treePath);
+//			
+//			Object userObj = node.getUserObject();
+//			if (userObj instanceof ConnectionProfileCatalog)
+//			{
+//				ConnectionProfileCatalog cat = (ConnectionProfileCatalog)userObj;
+//				cat.setExpanded(isExpanded);
+//				
+//System.out.println("saveTreeExpansionState(): catalog: "+(isExpanded?"++":"--")+"expanded="+isExpanded+", name='"+cat.getName()+"', treePath="+treePath);
+//			}
+//		}
+//	}
+	
 	private JPanel createConnTabbedPanel()
 	{
 		JPanel panel = new JPanel();
@@ -6234,6 +6397,9 @@ if ( ! jdbcSshTunnelUse )
 				catch (SQLException ignore) {}
 			}
 
+			// Save the connection profile if tree expanded/collapsed has changed
+			saveConnectionProfile();
+			
 			// SET CONNECTION TYP and "CLOSE" the dialog
 			_connectionType = CANCEL;
 			setVisible(false);
@@ -6266,6 +6432,9 @@ if ( ! jdbcSshTunnelUse )
 				else throw new RuntimeException("Sorry I can't figgure out where to connect, please choose tab '"+TAB_TITLE_ASE+"' or '"+TAB_TITLE_JDBC+"'.");
 			}
 
+			// Save the connection profile if tree expanded/collapsed has changed
+			saveConnectionProfile();
+			
 			action_connect(connType, null);
 		} // end OK
 
@@ -6399,6 +6568,18 @@ if ( ! jdbcSshTunnelUse )
 		updateEnabledForPcsDdlLookupAndSqlCapture();
 		
 		validateContents();
+	}
+
+	private void saveConnectionProfile()
+	{
+		if ( ! ConnectionProfileManager.hasInstance() )
+			return;
+
+		// Loop and SET expanded properties for the tree
+		//saveTreeExpansionState(_connProfileTree);
+		
+		// Save the info to file
+		ConnectionProfileManager.getInstance().save();
 	}
 
 	private void action_ConnectionProfileTypeIsSelected(JComboBox<ProfileType> profileType_cbx, JComboBox<String> profile_cbx)
@@ -9102,7 +9283,7 @@ if ( ! jdbcSshTunnelUse )
 			if (dialog.pressedOk())
 			{
 				String name = dialog.getName();
-				ConnectionProfileManager.getInstance().addCatalog(new ConnectionProfileCatalog(name));
+				ConnectionProfileManager.getInstance().addCatalog(new ConnectionProfileCatalog(name, true));
 			}
 		}
 	}
@@ -9212,6 +9393,87 @@ if ( ! jdbcSshTunnelUse )
 		}
 	}
 	
+	private class ConnProfileDuplicateAction
+	extends AbstractAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static final String NAME = "Duplicate...";
+//		private static final String ICON = "images/conn_profile_tree_rename.png";
+		private static final String ICON = "";
+
+		public ConnProfileDuplicateAction()
+		{
+			super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+
+			putValue(SHORT_DESCRIPTION,	"<html>Duplicate Connection Profile Entry.</html>");
+			//putValue(MNEMONIC_KEY, mnemonic);
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+//			TreePath selPath = _connProfileTree.getSelectionPath();
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) _connProfileTree.getLastSelectedPathComponent();
+			Object o = node.getUserObject();
+			String name = "";
+			ConnectionProfileCatalog catalogEntry = null;
+			ConnectionProfile        profileEntry = null;
+			if (o instanceof ConnectionProfileCatalog)
+			{
+				SwingUtils.showWarnMessage(ConnectionDialog.this, "NOT supported", "Duplication of Connection Profile Catalog is NOT supported!", null);
+				return;
+				// catalogEntry = (ConnectionProfileCatalog)o;
+				// name = catalogEntry.getName();
+			}
+			else if (o instanceof ConnectionProfile)
+			{
+				profileEntry = (ConnectionProfile)o;
+				name = profileEntry.getName();
+			}
+			
+			name += "_copy";
+
+			RenameOrAddDialog dialog = new RenameOrAddDialog(ConnectionDialog.this, name, "<html><b>Duplicate a Connection Profile</b></html>");
+			dialog.setVisible(true);
+			if (dialog.pressedOk())
+			{
+				String newName = dialog.getName();
+
+				//if (catalogEntry != null)
+				//{
+				//	catalogEntry.copy(newName);
+				//	catalogEntry.setName(newName);
+				//}
+				if (profileEntry != null)
+				{
+					if (ConnectionProfileManager.hasInstance())
+					{
+						DefaultMutableTreeNode catalogNode = null;
+						DefaultMutableTreeNode parentTreeNode = (DefaultMutableTreeNode) node.getParent();
+						Object parentObj = parentTreeNode.getUserObject();
+						if (parentObj instanceof ConnectionProfileCatalog)
+						{
+							catalogNode = parentTreeNode;
+							//catalogName = ((ConnectionProfileCatalog)parentObj).getName();							
+						}
+
+						// Create a new ConnectionProfile Entry
+						ConnectionProfile newConnProfile = profileEntry.copy(profileEntry, newName);
+
+						// Add the profile to the Manager
+						ConnectionProfileManager.getInstance().addProfile(newConnProfile, true, catalogNode, node);
+
+						((DefaultTreeModel)_connProfileTree.getModel()).nodeChanged(parentTreeNode);
+					}
+				}
+			}
+
+
+//			SwingUtils.showInfoMessage(FavoriteCommandDialog.this, "Select a entry", "No entry is selected");
+		}
+	}
+	
 	private class ConnProfileReloadAction
 	extends AbstractAction
 	{
@@ -9236,8 +9498,10 @@ if ( ! jdbcSshTunnelUse )
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
+			_treeExpansionListenerEnabled = false;
 			ConnectionProfileManager.getInstance().reload();
-			expandTree(_connProfileTree);
+			restoreToSavedTreeExpansionState(_connProfileTree);
+			_treeExpansionListenerEnabled = true;
 		}
 	}
 

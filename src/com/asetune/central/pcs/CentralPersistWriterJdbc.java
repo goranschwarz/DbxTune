@@ -459,7 +459,7 @@ extends CentralPersistWriterBase
 					int    getDatabaseMajorVersion   = -1;
 					int    getDatabaseMinorVersion   = -1;
 
-					String getIdentifierQuoteString  = "\"";
+//					String getIdentifierQuoteString  = "\"";
 
 					try	{ getDriverName             = dbmd.getDriverName();             } catch (Throwable ignore) {}
 					try	{ getDriverVersion          = dbmd.getDriverVersion();          } catch (Throwable ignore) {}
@@ -473,7 +473,7 @@ extends CentralPersistWriterBase
 					try	{ getDatabaseMajorVersion   = dbmd.getDatabaseMajorVersion();   } catch (Throwable ignore) {}
 					try	{ getDatabaseMinorVersion   = dbmd.getDatabaseMinorVersion();   } catch (Throwable ignore) {}
 
-					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
+//					try	{ getIdentifierQuoteString  = dbmd.getIdentifierQuoteString();  } catch (Throwable ignore) {}
 					
 					_logger.info("Connected using JDBC driver Name='"+getDriverName
 							+"', Version='"         +getDriverVersion
@@ -492,7 +492,7 @@ extends CentralPersistWriterBase
 					setDatabaseProductName(getDatabaseProductName == null ? "" : getDatabaseProductName);
 
 					// Get and set the QuotedIdentifier Character
-					setQuotedIdentifierChar(getIdentifierQuoteString == null ? "\"" : getIdentifierQuoteString);
+					//setQuotedIdentifierChar(getIdentifierQuoteString == null ? "\"" : getIdentifierQuoteString);
 				}
 			}
 
@@ -1262,10 +1262,11 @@ extends CentralPersistWriterBase
 	private boolean checkAndCreateTable(DbxConnection conn, String schemaName, Table table)
 	throws SQLException
 	{
-		String fullTabName = getTableName(schemaName, table, null, false);
-		String onlyTabName = getTableName(null,       table, null, false);
+		String fullTabName = getTableName(conn, schemaName, table, null, false);
+		String onlyTabName = getTableName(conn, null,       table, null, false);
 
-		String q = getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		String sql = "";
 		
 		if ( ! isDdlCreated(fullTabName) )
@@ -1285,7 +1286,7 @@ extends CentralPersistWriterBase
 					// FIXME: check if "VersionString" is the same as Version.getVersionStr()
 					//        if not, just throw a WARNING message to the log
 					int currentDbVersion = -1;
-					sql = "select "+q+"DbVersion"+q+" from "+q+onlyTabName+q; // possibly: where ProductString = Version.getAppName()
+					sql = "select "+lq+"DbVersion"+rq+" from "+lq+onlyTabName+rq; // possibly: where ProductString = Version.getAppName()
 					Statement stmnt = conn.createStatement();
 					rs = stmnt.executeQuery(sql);
 					while (rs.next())
@@ -1305,7 +1306,7 @@ extends CentralPersistWriterBase
 						
 						if (newDbxCentralVersion != currentDbVersion)
 						{
-							sql = "update " + q+onlyTabName+q + "set " + q+"DbVersion"+q+ " = " + newDbxCentralVersion + " where " + q+"DbVersion"+q+ " = " + currentDbVersion;
+							sql = "update " + lq+onlyTabName+rq + "set " + lq+"DbVersion"+rq+ " = " + newDbxCentralVersion + " where " + lq+"DbVersion"+rq+ " = " + currentDbVersion;
 							stmnt = conn.createStatement();
 							stmnt.executeUpdate(sql);
 							stmnt.close();
@@ -1327,11 +1328,11 @@ extends CentralPersistWriterBase
 				getStatistics().incCreateTables();
 				
 				// Create the table
-				sql = getTableDdlString(schemaName, table, null);
+				sql = getTableDdlString(conn, schemaName, table, null);
 				dbDdlExec(conn, sql);
 
 				// Create indexes
-				sql = getIndexDdlString(schemaName, table, null);
+				sql = getIndexDdlString(conn, schemaName, table, null);
 				if (sql != null)
 				{
 					dbDdlExec(conn, sql);
@@ -1345,7 +1346,7 @@ extends CentralPersistWriterBase
 					catch(Throwable t) { _logger.warn("Problems getting Database Product Name from the Storage connection. Caught: "+t); }
 					
 					StringBuffer sbSql = new StringBuffer();
-					sbSql.append(getTableInsertStr(schemaName, Table.CENTRAL_VERSION_INFO, null, false));
+					sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_VERSION_INFO, null, false));
 					sbSql.append(" values(");
 					sbSql.append("  '").append(Version.getAppName()       ).append("'");
 					sbSql.append(", '").append(Version.getVersionStr()    ).append("'");
@@ -1362,7 +1363,7 @@ extends CentralPersistWriterBase
 					}
 					catch(SQLException ex)
 					{
-						_logger.warn("Problems inserting values to '"+getTableName(schemaName, Table.CENTRAL_VERSION_INFO, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+						_logger.warn("Problems inserting values to '"+getTableName(conn, schemaName, Table.CENTRAL_VERSION_INFO, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
 					}
 				}
 
@@ -1373,7 +1374,7 @@ extends CentralPersistWriterBase
 
 					// AseTune
 					StringBuffer sbSql = new StringBuffer();
-					sbSql.append(getTableInsertStr(schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false));
+					sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false));
 					sbSql.append(" values(");
 					sbSql.append("  '").append("AseTune").append("'");
 					sbSql.append(", '").append("").append("'"); // UserName           '' = default
@@ -1387,7 +1388,7 @@ extends CentralPersistWriterBase
 
 					// SqlServerTune
 //					sbSql = new StringBuffer();
-//					sbSql.append(getTableInsertStr(schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false));
+//					sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false));
 //					sbSql.append(" values(");
 //					sbSql.append("  '").append("SqlServerTune").append("'");
 //					sbSql.append(", '").append(""       ).append("'");
@@ -1403,13 +1404,13 @@ extends CentralPersistWriterBase
 						sql = insertStmnt;
 						try
 						{
-							_logger.info("Inserting base data into '"+getTableName(schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Using SQL: "+sql);
+							_logger.info("Inserting base data into '"+getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Using SQL: "+sql);
 							conn.dbExec(sql);
 							getStatistics().incInserts();
 						}
 						catch(SQLException ex)
 						{
-							_logger.warn("Problems inserting values to '"+getTableName(schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+							_logger.warn("Problems inserting values to '"+getTableName(conn, schemaName, Table.CENTRAL_GRAPH_PROFILES, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
 						}
 					}
 				}
@@ -1462,7 +1463,9 @@ extends CentralPersistWriterBase
 			return fromDbVersion;
 		}
 
-		String q    = getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		
 		String sql  = "";
 		int    step = -1;
 
@@ -1473,8 +1476,8 @@ extends CentralPersistWriterBase
 			//--------------------------------
 			step = 1;
 			// Add column 'CollectorSampleInterval' to table 'DbxCentralSessions'
-			String onlyTabName = getTableName(null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + q+onlyTabName+q + " add column " + q+"CollectorSampleInterval"+q + " int null"; // NOTE: 'not null' is not supported at upgrades
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorSampleInterval"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1483,8 +1486,8 @@ extends CentralPersistWriterBase
 			//--------------------------------
 			step = 2;
 			// Add column 'ProfileDescription' to table 'DbxCentralGraphProfiles'
-			String onlyTabName = getTableName(null, Table.CENTRAL_GRAPH_PROFILES, null, false);
-			sql = "alter table " + q+onlyTabName+q + " add column " + q+"ProfileDescription"+q + " text null"; // NOTE: 'not null' is not supported at upgrades
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, false);
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"ProfileDescription"+rq + " text null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1493,18 +1496,18 @@ extends CentralPersistWriterBase
 			//--------------------------------
 			step = 3;
 			// Add column 'CollectorCurrentUrl' to table 'DbxCentralSessions'
-			String onlyTabName = getTableName(null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + q+onlyTabName+q + " add column " + q+"CollectorCurrentUrl"+q + " varchar(80) null"; // NOTE: 'not null' is not supported at upgrades
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorCurrentUrl"+rq + " varchar(80) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			step = 4;
 			// Add column 'Status' to table 'DbxCentralSessions'
-			sql = "alter table " + q+onlyTabName+q + " add column " + q+"Status"+q + " int null"; // NOTE: 'not null' is not supported at upgrades
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"Status"+rq + " int null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			step = 5;
 			// Set column 'Status' to be 0
-			sql = "update " + q+onlyTabName+q + " set " + q+"Status"+q + " = 0"; 
+			sql = "update " + lq+onlyTabName+rq + " set " + lq+"Status"+rq + " = 0"; 
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1513,8 +1516,8 @@ extends CentralPersistWriterBase
 			//--------------------------------
 			step = 6;
 			// Add column 'CollectorInfoFile' to table 'DbxCentralSessions'
-			String onlyTabName = getTableName(null, Table.CENTRAL_SESSIONS, null, false);
-			sql = "alter table " + q+onlyTabName+q + " add column " + q+"CollectorInfoFile"+q + " varchar(256) null"; // NOTE: 'not null' is not supported at upgrades
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_SESSIONS, null, false);
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"CollectorInfoFile"+rq + " varchar(256) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 		
@@ -1544,8 +1547,8 @@ extends CentralPersistWriterBase
 			//--------------------------------
 			step = 8;
 			// Add column 'ProfileDescription' to table 'DbxCentralGraphProfiles'
-			String onlyTabName = getTableName(null, Table.CENTRAL_GRAPH_PROFILES, null, false);
-			sql = "alter table " + q+onlyTabName+q + " add column " + q+"ProfileUrlOptions"+q + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
+			String onlyTabName = getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, false);
+			sql = "alter table " + lq+onlyTabName+rq + " add column " + lq+"ProfileUrlOptions"+rq + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 
@@ -1566,7 +1569,7 @@ extends CentralPersistWriterBase
 			for (String schemaName : schemaSet)
 			{
 				// Add column 'GraphCategory' to table 'DbxGraphProperties' in all "user" schemas
-				String onlyTabName = getTableName(null, Table.GRAPH_PROPERTIES, null, false);
+				String onlyTabName = getTableName(conn, null, Table.GRAPH_PROPERTIES, null, false);
 
 				// get all columns, this to check if TABLE EXISTS
 				Set<String> colNames = new LinkedHashSet<>();
@@ -1580,7 +1583,7 @@ extends CentralPersistWriterBase
 				{
 					if ( ! colNames.contains("GraphCategory"))
 					{
-						sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + " add column " + q+"GraphCategory"+q + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
+						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq+"GraphCategory"+rq + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
 						internalDbUpgradeDdlExec(conn, step, sql);
 					}
 				}
@@ -1615,10 +1618,11 @@ extends CentralPersistWriterBase
 	private void internalDbUpgradeAlarmActiveHistory_step7(DbxConnection conn, int step, String schemaName, Table table) 
 	throws SQLException
 	{
-		String q = getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
 		// get table name
-		String onlyTabName = getTableName(null, table, null, false);
+		String onlyTabName = getTableName(conn, null, table, null, false);
 
 		// get all columns
 		Set<String> colNames = new LinkedHashSet<>();
@@ -1632,7 +1636,7 @@ extends CentralPersistWriterBase
 		{
 			if ( ! colNames.contains("category"))
 			{
-				String sql = "alter table " + q+schemaName+q + "." + q+onlyTabName+q + " add column " + q+"category"+q + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
+				String sql = "alter table " + lq+schemaName+rq + "." + lq+onlyTabName+rq + " add column " + lq+"category"+rq + " varchar(20) null"; // NOTE: 'not null' is not supported at upgrades
 				internalDbUpgradeDdlExec(conn, step, sql);
 			}
 		}
@@ -1641,7 +1645,8 @@ extends CentralPersistWriterBase
 	private void internalDbUpgradeAlarmActiveHistory_step10(DbxConnection conn, int step, String schemaName, Table table) 
 	throws SQLException
 	{
-		String q = getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
 		// H2, Postgres, SqlServer:  ALTER TABLE tabname ALTER COLUMN colname DATATYPE
 		// ASE, MySql, Oracle:       ALTER TABLE tabname MODIFY       colname DATATYPE
@@ -1650,7 +1655,7 @@ extends CentralPersistWriterBase
 			dbmsSpecificSyntax_beforeColName = " modify ";
 
 		// get table name
-		String onlyTabName = getTableName(null, table, null, false);
+		String onlyTabName = getTableName(conn, null, table, null, false);
 
 		// get all columns, this to check if TABLE EXISTS
 		Set<String> colNames = new LinkedHashSet<>();
@@ -1665,11 +1670,11 @@ extends CentralPersistWriterBase
 			String sql;
 			
 			// Column 'data'
-			sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + dbmsSpecificSyntax_beforeColName + q+"data"+q + " varchar(180)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"data"+rq + " varchar(180)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 
 			// Column 'lastData'
-			sql = "alter table " + q+schemaName+q + "." + q + onlyTabName + q + dbmsSpecificSyntax_beforeColName + q+"lastData"+q + " varchar(180)";
+			sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + dbmsSpecificSyntax_beforeColName + lq+"lastData"+rq + " varchar(180)";
 			internalDbUpgradeDdlExec(conn, step, sql);
 		}
 	}
@@ -1740,6 +1745,8 @@ extends CentralPersistWriterBase
 //			return;
 //		}
 
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
 		try
 		{
@@ -1834,8 +1841,8 @@ extends CentralPersistWriterBase
 			boolean sessionExists = false;
 			sbSql = new StringBuffer();
 			sbSql.append(" select * \n");
-			sbSql.append(" from ").append(getTableName(schemaName, Table.CENTRAL_SESSIONS, null, true)).append("\n");
-			sbSql.append(" where ").append(_qic).append("SessionStartTime").append(_qic).append(" = '").append(cont.getSessionStartTime()).append("'").append("\n");
+			sbSql.append(" from ").append(getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, true)).append("\n");
+			sbSql.append(" where ").append(lq).append("SessionStartTime").append(rq).append(" = '").append(cont.getSessionStartTime()).append("'").append("\n");
 
 			sql = sbSql.toString();
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -1845,7 +1852,7 @@ extends CentralPersistWriterBase
 			}
 			catch(SQLException ex)
 			{
-				_logger.warn("Problems getting/checking existence from table '"+getTableName(schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+				_logger.warn("Problems getting/checking existence from table '"+getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
 			}
 			
 			// Now insert the record to CENTRAL_SESSIONS if it do NOT exist
@@ -1853,7 +1860,7 @@ extends CentralPersistWriterBase
 			{
 				//StringBuffer sbSql = new StringBuffer();
 				sbSql = new StringBuffer();
-				sbSql.append(getTableInsertStr(schemaName, Table.CENTRAL_SESSIONS, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, Table.CENTRAL_SESSIONS, null, false));
 				sbSql.append(" values(");
 				sbSql.append("  ").append(DbUtils.safeStr(cont.getSessionStartTime()       ));
 				sbSql.append(", ").append(DbUtils.safeStr(0                                )); // Status is not in the container, so always add 0
@@ -1884,7 +1891,7 @@ extends CentralPersistWriterBase
 				}
 				catch(SQLException ex)
 				{
-					_logger.warn("Problems inserting values to '"+getTableName(schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
+					_logger.warn("Problems inserting values to '"+getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, false)+"'. Continuing anyway. sql='"+sql+"', Caught: "+ex);
 				}
 			}
 			
@@ -2029,6 +2036,16 @@ extends CentralPersistWriterBase
 	@Override
 	public void notification(NotificationType type, String notifyStr)
 	{
+		DbxConnection conn = _mainConn;
+		
+		String lq = getLeftQuoteReplace();
+		String rq = getLeftQuoteReplace();
+		if (conn != null)
+		{
+			lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		}
+		
 		if (NotificationType.DROP_SERVER.equals(type))
 		{
 			_logger.info("Received notification '"+type+"'. I will remove schema '"+notifyStr+"' from DDL cache.");
@@ -2036,7 +2053,7 @@ extends CentralPersistWriterBase
 			List<String> removeEntries = new ArrayList<>();
 			for (String str : _ddlSet)
 			{
-				if (str.startsWith(notifyStr + ".") || str.startsWith(_qic + notifyStr + _qic + "."))
+				if (str.startsWith(notifyStr + ".") || str.startsWith(lq + notifyStr + rq + "."))
 					removeEntries.add(str);
 			}
 			_ddlSet.removeAll(removeEntries);
@@ -2048,7 +2065,6 @@ extends CentralPersistWriterBase
 	throws Exception
 	{
 		DbxConnection conn = _mainConn;
-		String qic = getQuotedIdentifierChar();
 		
 		if (conn == null)
 		{
@@ -2061,6 +2077,9 @@ extends CentralPersistWriterBase
 //			return;
 //		}
 
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		
 
 		String    schemaName          = cont.getServerName();
 		Timestamp sessionStartTime    = cont.getSessionStartTime();
@@ -2093,23 +2112,23 @@ extends CentralPersistWriterBase
 				// INSERT THE ROW
 				//
 				sbSql = new StringBuffer();
-				sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLES, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, Table.SESSION_SAMPLES, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("', '").append(sessionSampleTime).append("')");
 
 				conn.dbExec(sbSql.toString());
 				getStatistics().incInserts();
 
 				// Increment the "counter" column and set LastSampleTime in the SESSIONS table
-				String tabName = getTableName(schemaName, Table.CENTRAL_SESSIONS, null, true);
+				String tabName = getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, true);
 				sbSql = new StringBuffer();
 				sbSql.append(" update ").append(tabName).append("\n");
-				sbSql.append("    set  ").append(qic).append("NumOfSamples")       .append(qic).append(" = ").append(qic).append("NumOfSamples").append(qic).append(" + 1").append("\n");
-				sbSql.append("        ,").append(qic).append("LastSampleTime")     .append(qic).append(" = '").append(sessionSampleTime).append("'").append("\n");
+				sbSql.append("    set  ").append(lq).append("NumOfSamples")       .append(rq).append(" = ").append(lq).append("NumOfSamples").append(lq).append(" + 1").append("\n");
+				sbSql.append("        ,").append(lq).append("LastSampleTime")     .append(rq).append(" = '").append(sessionSampleTime).append("'").append("\n");
 
 				if (StringUtil.hasValue(collectorCurrentUrl))
-					sbSql.append("        ,").append(qic).append("CollectorCurrentUrl").append(qic).append(" = '").append(collectorCurrentUrl).append("'").append("\n");
+					sbSql.append("        ,").append(lq).append("CollectorCurrentUrl").append(rq).append(" = '").append(collectorCurrentUrl).append("'").append("\n");
 
-				sbSql.append("  where ").append(qic).append("SessionStartTime")   .append(qic).append(" = '").append(sessionStartTime).append("'").append("\n");
+				sbSql.append("  where ").append(lq).append("SessionStartTime")   .append(rq).append(" = '").append(sessionStartTime).append("'").append("\n");
 
 				conn.dbExec(sbSql.toString());
 				getStatistics().incUpdates();
@@ -2166,8 +2185,11 @@ extends CentralPersistWriterBase
 	{
 //		System.out.println("saveAlarms(schemaName='"+schemaName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'): ActiveAlarmCnt="+cont.getActiveAlarms().size()+", AlarmEntriesCnt="+cont.getAlarmEntries().size());
 
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
 		// Delete all ACTIVE alarms
-		String sql = "delete from " + getTableName(schemaName, Table.ALARM_ACTIVE, null, true);
+		String sql = "delete from " + getTableName(conn, schemaName, Table.ALARM_ACTIVE, null, true);
 		try
 		{
 			int count = conn.dbExec(sql);
@@ -2190,7 +2212,7 @@ extends CentralPersistWriterBase
 
 				try
 				{
-					sbSql.append(getTableInsertStr(schemaName, Table.ALARM_ACTIVE, null, false));
+					sbSql.append(getTableInsertStr(conn, schemaName, Table.ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
 					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated() ));
 					sbSql.append(", ").append(safeStr( ae.getServiceType() ));
@@ -2236,7 +2258,7 @@ extends CentralPersistWriterBase
 				if ( ! _alarmEventActionStore.contains(aew.getAction()) )
 					continue;
 
-				String qic = conn.getQuotedIdentifierChar();
+//				String qic = conn.getQuotedIdentifierChar();
 				AlarmEntry ae = aew.getAlarmEntry();
 				
 				// Store some info
@@ -2252,15 +2274,15 @@ extends CentralPersistWriterBase
 				if (checkPk)
 				{
 					sbSql.append(" select * from ");
-					sbSql.append(getTableName(schemaName, Table.ALARM_HISTORY, null, true));
+					sbSql.append(getTableName(conn, schemaName, Table.ALARM_HISTORY, null, true));
 					sbSql.append(" where 1 = 1 ");
-					sbSql.append("   and ").append(qic).append("eventTime")  .append(qic).append(" = ").append(safeStr(aew.getEventTime()));
-					sbSql.append("   and ").append(qic).append("action")     .append(qic).append(" = ").append(safeStr(aew.getAction()));
-					sbSql.append("   and ").append(qic).append("alarmClass") .append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getAlarmClassAbriviated()));
-					sbSql.append("   and ").append(qic).append("serviceType").append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceType()));
-					sbSql.append("   and ").append(qic).append("serviceName").append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceName()));
-					sbSql.append("   and ").append(qic).append("serviceInfo").append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceInfo()));
-					sbSql.append("   and ").append(qic).append("extraInfo")  .append(qic).append(" = ").append(safeStr(aew.getAlarmEntry().getExtraInfo()));
+					sbSql.append("   and ").append(lq).append("eventTime")  .append(rq).append(" = ").append(safeStr(aew.getEventTime()));
+					sbSql.append("   and ").append(lq).append("action")     .append(rq).append(" = ").append(safeStr(aew.getAction()));
+					sbSql.append("   and ").append(lq).append("alarmClass") .append(rq).append(" = ").append(safeStr(aew.getAlarmEntry().getAlarmClassAbriviated()));
+					sbSql.append("   and ").append(lq).append("serviceType").append(rq).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceType()));
+					sbSql.append("   and ").append(lq).append("serviceName").append(rq).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceName()));
+					sbSql.append("   and ").append(lq).append("serviceInfo").append(rq).append(" = ").append(safeStr(aew.getAlarmEntry().getServiceInfo()));
+					sbSql.append("   and ").append(lq).append("extraInfo")  .append(rq).append(" = ").append(safeStr(aew.getAlarmEntry().getExtraInfo()));
 					
 					sql = sbSql.toString();
 
@@ -2301,7 +2323,7 @@ extends CentralPersistWriterBase
 					{
 						sbSql = new StringBuilder();
 						
-						sbSql.append(getTableInsertStr(schemaName, Table.ALARM_HISTORY, null, false));
+						sbSql.append(getTableInsertStr(conn, schemaName, Table.ALARM_HISTORY, null, false));
 						sbSql.append(" values(");
 						sbSql.append("  ").append(safeStr( sessionStartTime ));
 						sbSql.append(", ").append(safeStr( sessionSampleTime ));
@@ -2404,8 +2426,6 @@ extends CentralPersistWriterBase
 	private void saveCounterData(DbxConnection conn, CmEntry cme, String schemaName, Timestamp sessionStartTime, Timestamp sessionSampleTime)
 	throws SQLException
 	{
-		String q = getQuotedIdentifierChar();
-
 		if (cme == null)
 		{
 			_logger.debug("saveCounterData: cme == null.");
@@ -2420,6 +2440,9 @@ extends CentralPersistWriterBase
 			_logger.info("SaveCounterData: Discard entry due to 'ShutdownWithNoWait'.");
 			return;
 		}
+
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
 		_logger.debug("Persisting Counters for CounterModel='"+cme.getName()+"'.");
 
@@ -2485,7 +2508,7 @@ extends CentralPersistWriterBase
 		{
 			try
 			{
-				sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLE_DETAILS, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, Table.SESSION_SAMPLE_DETAILS, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("'");
 				sbSql.append(", '").append(sessionSampleTime).append("'");
 				sbSql.append(", '").append(cme.getName()).append("'");
@@ -2529,16 +2552,16 @@ extends CentralPersistWriterBase
 		}
 
 		// SUMMARY INFO for the whole session
-		String tabName = getTableName(schemaName, Table.SESSION_SAMPLE_SUM, null, true);
+		String tabName = getTableName(conn, schemaName, Table.SESSION_SAMPLE_SUM, null, true);
 
 		sbSql = new StringBuilder();
 		sbSql.append(" update ").append(tabName);
-		sbSql.append(" set   "+q+"graphSamples"+q+" = "+q+"graphSamples"+q+" + ").append( (graphSaveCount > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("       "+q+"absSamples"+q+"   = "+q+"absSamples"+q+"   + ").append( (absSaveRows    > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("       "+q+"diffSamples"+q+"  = "+q+"diffSamples"+q+"  + ").append( (diffSaveRows   > 0 ? 1 : 0) ).append(", ");
-		sbSql.append("       "+q+"rateSamples"+q+"  = "+q+"rateSamples"+q+"  + ").append( (rateSaveRows   > 0 ? 1 : 0) ).append("");
-		sbSql.append(" where "+q+"SessionStartTime"+q+" = '").append(sessionStartTime).append("'");
-		sbSql.append("   and "+q+"CmName"+q+" = '").append(cme.getName()).append("'");
+		sbSql.append(" set   "+lq+"graphSamples"+rq+" = "+lq+"graphSamples"+rq+" + ").append( (graphSaveCount > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("       "+lq+"absSamples"+rq+"   = "+lq+"absSamples"+rq+"   + ").append( (absSaveRows    > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("       "+lq+"diffSamples"+rq+"  = "+lq+"diffSamples"+rq+"  + ").append( (diffSaveRows   > 0 ? 1 : 0) ).append(", ");
+		sbSql.append("       "+lq+"rateSamples"+rq+"  = "+lq+"rateSamples"+rq+"  + ").append( (rateSaveRows   > 0 ? 1 : 0) ).append("");
+		sbSql.append(" where "+lq+"SessionStartTime"+rq+" = '").append(sessionStartTime).append("'");
+		sbSql.append("   and "+lq+"CmName"+rq+" = '").append(cme.getName()).append("'");
 
 		try
 		{
@@ -2548,7 +2571,7 @@ extends CentralPersistWriterBase
 			if (updCount == 0)
 			{
 				sbSql = new StringBuilder();
-				sbSql.append(getTableInsertStr(schemaName, Table.SESSION_SAMPLE_SUM, null, false));
+				sbSql.append(getTableInsertStr(conn, schemaName, Table.SESSION_SAMPLE_SUM, null, false));
 				sbSql.append(" values('").append(sessionStartTime).append("'");
 				sbSql.append(", '").append(cme.getName()).append("'");
 				sbSql.append(", ").append(graphSaveCount > 0 ? 1 : 0);
@@ -2810,13 +2833,17 @@ return -1;
 	}
 
 	/** Helper method to get a table name for GRAPH tables */
-	public static String getTableName(String schemaName, CmEntry cme, GraphEntry ge, boolean addQuotedIdentifierChar)
+	public static String getTableName(DbxConnection conn, String schemaName, CmEntry cme, GraphEntry ge, boolean addQuotedIdentifierChar)
 	{
-		String q = "";
+		String lq = "";
+		String rq = "";
 		if (addQuotedIdentifierChar)
-			q = getQuotedIdentifierChar();
+		{
+			lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+		}
 
-		String tabName = q + schemaName + q + "." + q + cme.getName() + "_" + ge.getName() + q;
+		String tabName = lq + schemaName + rq + "." + lq + cme.getName() + "_" + ge.getName() + rq;
 		return tabName;
 	}
 
@@ -2826,9 +2853,11 @@ return -1;
 		if (cme == null) throw new IllegalArgumentException("The passed CmEntry can't be null");
 		if (ge  == null) throw new IllegalArgumentException("The passed GraphEntry can't be null");
 
-		String q = getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
 		String onlyTabName = cme.getName() + "_" + ge.getName();
-		String fullTabName = q + schemaName + q + "." + q + cme.getName() + "_" + ge.getName() + q;
+		String fullTabName = lq + schemaName + rq + "." + lq + cme.getName() + "_" + ge.getName() + rq;
 
 		if ( ! ge.hasData() )
 		{
@@ -2846,11 +2875,11 @@ return -1;
 //		String tabInsStr = getTableInsertStr(cm, tgdp, false);
 //		sb.append(tabInsStr);
 		sb.append("(");
-		sb.append(q).append("SessionStartTime").append(q).append(", ");
-		sb.append(q).append("SessionSampleTime").append(q).append(", ");
-		sb.append(q).append("CmSampleTime").append(q);
+		sb.append(lq).append("SessionStartTime").append(rq).append(", ");
+		sb.append(lq).append("SessionSampleTime").append(rq).append(", ");
+		sb.append(lq).append("CmSampleTime").append(rq);
 		for (String label : ge._labelValue.keySet())
-			sb.append(", ").append(q).append(label).append(q);
+			sb.append(", ").append(lq).append(label).append(rq);
 		sb.append(")\n");
 			
 		sb.append(" values(");
@@ -3031,7 +3060,9 @@ return -1;
 		}
 
 		StringBuilder sb = new StringBuilder();
-		String q = getQuotedIdentifierChar();
+
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
 		// Get number of graphs in the container
 		int receivedGraphCount = 0;
@@ -3058,10 +3089,10 @@ return -1;
 		if (_graphPropertiesCountMap.get(key) == null)
 		{
 			sb = new StringBuilder();
-			String tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
+			String tabName = getTableName(conn, schemaName, Table.GRAPH_PROPERTIES, null, true);
 			sb.append("select count(*)");
 			sb.append(" from ").append(tabName);
-			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
+			sb.append(" where ").append(lq).append("SessionStartTime").append(rq).append(" = '").append(sessionStartTime).append("' ");
 			String sql = sb.toString();
 
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql);)
@@ -3088,9 +3119,9 @@ return -1;
 		{
 			// DELETE old records
 			sb = new StringBuilder();
-			String tabName = getTableName(schemaName, Table.GRAPH_PROPERTIES, null, true);
+			String tabName = getTableName(conn, schemaName, Table.GRAPH_PROPERTIES, null, true);
 			sb.append("delete from ").append(tabName);
-			sb.append(" where ").append(q).append("SessionStartTime").append(q).append(" = '").append(sessionStartTime).append("' ");
+			sb.append(" where ").append(lq).append("SessionStartTime").append(rq).append(" = '").append(sessionStartTime).append("' ");
 			String sql = sb.toString();
 
 			if (_logger.isDebugEnabled())
@@ -3117,7 +3148,7 @@ return -1;
 						String graphFullName = cme.getName() + "_" + ge.getName();
 						
 						sb = new StringBuilder();
-						sb.append(getTableInsertStr(schemaName, Table.GRAPH_PROPERTIES, null, false));
+						sb.append(getTableInsertStr(conn, schemaName, Table.GRAPH_PROPERTIES, null, false));
 						sb.append(" values('").append(sessionStartTime).append("'");
 						sb.append(", '").append(cme.getName()).append("'");
 						sb.append(", '").append(ge.getName()).append("'");
@@ -3195,8 +3226,8 @@ return -1;
 //System.out.println("########################################## saveGraphDataDdl(): ---NOT-EXISTS--- schemaName='"+schemaName+"', tabName='"+tabName+"', GraphEntry='"+ge+"'.");
 				_logger.info("Persistent Counter DB: Creating table "+StringUtil.left("'"+schemaName+"."+tabName+"'", schemaName.length()+50, true)+" for CounterModel graph '" + ge.getName() + "'.");
 
-				String sqlTable = getGraphTableDdlString(schemaName, tabName, ge);
-				String sqlIndex = getGraphIndexDdlString(schemaName, tabName, ge);
+				String sqlTable = getGraphTableDdlString(conn, schemaName, tabName, ge);
+				String sqlIndex = getGraphIndexDdlString(conn, schemaName, tabName, ge);
 
 				dbDdlExec(conn, sqlTable);
 				dbDdlExec(conn, sqlIndex);

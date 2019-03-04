@@ -34,22 +34,23 @@ extends AlarmEvent
 	/**
 	 * HTTP Destination seems to be down
 	 * 
-	 * @param name
-	 * @param url
-	 * @param secSinceLastSuccessSend
-	 * @param threshold
+	 * @param srvName                 - Name of the source SRV that is monitored 
+	 * @param cfgName                 - Name of the configuration that sends any JSON information to a HTTP/REST destination
+	 * @param url                     - URL destination
+	 * @param secSinceLastSuccessSend - Number of seconds since last successfully sent was done
+	 * @param threshold               - The threshold that was used/crossed
 	 */
-	public AlarmEventHttpDestinationDown(String collectorName, String name, String url, long secSinceLastSuccessSend, int threshold)
+	public AlarmEventHttpDestinationDown(String srvName, String cfgName, String url, long secSinceLastSuccessSend, int threshold)
 	{
 		super(
 				Version.getAppName(), // serviceType
-				name,                 // serviceName
-				collectorName,        // serviceInfo
+				srvName,              // serviceName
+				cfgName,              // serviceInfo
 				url,                  // extraInfo
 				AlarmEvent.Category.OTHER,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"HTTP Destination could not send data to '" + name + "' with URL '" + url + "' for " + TimeUtils.msToTimeStr("%HH:%MM:%SS", secSinceLastSuccessSend*1000)+" (HH:MM:SS) (thresholdInSec="+threshold+")",
+				"HTTP Destination could not send data to '" + cfgName + "' with URL '" + url + "' for " + TimeUtils.msToTimeStr("%HH:%MM:%SS", secSinceLastSuccessSend*1000)+" (HH:MM:SS) (thresholdInSec="+threshold+")",
 				threshold
 				);
 
@@ -57,6 +58,6 @@ extends AlarmEvent
 		//setTimeToLive(cm);
 
 		// Set the raw data carrier
-		setData("name="+name+", url='"+url+"', secSinceLastSuccessSend="+secSinceLastSuccessSend); // note: limit is 80 characters...
+		setData("cfgName"+cfgName+", url='"+url+"', secSinceLastSuccessSend="+secSinceLastSuccessSend); // note: limit is 80 characters...
 	}
 }

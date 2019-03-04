@@ -339,11 +339,11 @@ implements ActionListener, FocusListener
 //	// Do PopupMenu
 //	final JPopupMenu popupMenu = new JPopupMenu();
 //
-//	final JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
+//	final JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color='green'>Hower over words in the editor to get help</font></i></html>");
 //	
 //	// Menu items for Code Completion
 //	//---------------------------------------------------
-////	JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
+////	JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color='green'>Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
 ////	popupMenu.add(codeCompl_m);
 //	
 //	// When the Code Completion popup becoms visible, the menu are refreshed/recreated
@@ -356,19 +356,19 @@ implements ActionListener, FocusListener
 //			// remove all old items (if any)
 //			popupMenu.removeAll();
 //
-//			JMenuItem cc_exec_mi   = new JMenuItem("<html><b>Open</b>      - <i><font color=\"green\">Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
-//			JMenuItem cc_reset_mi  = new JMenuItem("<html><b>Clear</b>     - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
-//			JMenuItem cc_config_mi = new JMenuItem("<html><b>Configure</b> - <i><font color=\"green\">Configure what types of objects should be fetched.</font></i></html>");
+//			JMenuItem cc_exec_mi   = new JMenuItem("<html><b>Open</b>      - <i><font color='green'>Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
+//			JMenuItem cc_reset_mi  = new JMenuItem("<html><b>Clear</b>     - <i><font color='green'>Clear the in memory cache for the Code Completion.</font></i></html>");
+//			JMenuItem cc_config_mi = new JMenuItem("<html><b>Configure</b> - <i><font color='green'>Configure what types of objects should be fetched.</font></i></html>");
 //
-//			JMenuItem cc_stat_mi   = new JCheckBoxMenuItem("<html><b>Static Commands</b>                 - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
-//			JMenuItem cc_misc_mi   = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                    - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
-//			JMenuItem cc_db_mi     = new JCheckBoxMenuItem("<html><b>Database Info</b>                   - <i><font color=\"green\">Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
-//			JMenuItem cc_tn_mi     = new JCheckBoxMenuItem("<html><b>Table Name Info</b>                 - <i><font color=\"green\">Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
-//			JMenuItem cc_tc_mi     = new JCheckBoxMenuItem("<html><b>Table Column Info</b>               - <i><font color=\"green\">Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
-//			JMenuItem cc_pn_mi     = new JCheckBoxMenuItem("<html><b>Procedure Info</b>                  - <i><font color=\"green\">Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
-//			JMenuItem cc_pp_mi     = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
-//			JMenuItem cc_spn_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Info</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
-//			JMenuItem cc_spp_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
+//			JMenuItem cc_stat_mi   = new JCheckBoxMenuItem("<html><b>Static Commands</b>                 - <i><font color='green'>Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
+//			JMenuItem cc_misc_mi   = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                    - <i><font color='green'>Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
+//			JMenuItem cc_db_mi     = new JCheckBoxMenuItem("<html><b>Database Info</b>                   - <i><font color='green'>Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
+//			JMenuItem cc_tn_mi     = new JCheckBoxMenuItem("<html><b>Table Name Info</b>                 - <i><font color='green'>Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
+//			JMenuItem cc_tc_mi     = new JCheckBoxMenuItem("<html><b>Table Column Info</b>               - <i><font color='green'>Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
+//			JMenuItem cc_pn_mi     = new JCheckBoxMenuItem("<html><b>Procedure Info</b>                  - <i><font color='green'>Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
+//			JMenuItem cc_pp_mi     = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info</b>        - <i><font color='green'>Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
+//			JMenuItem cc_spn_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Info</b>           - <i><font color='green'>Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
+//			JMenuItem cc_spp_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info</b> - <i><font color='green'>Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
 //
 //			// exec/open action
 //			cc_exec_mi.addActionListener(new ActionListener()
@@ -466,10 +466,10 @@ implements ActionListener, FocusListener
 //			// remove all old items (if any)
 //			ttProviderPopupMenu.removeAll();
 //
-//			JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
+//			JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color='green'>Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
 //
-//			JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color=\"green\">Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
-////			JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color=\"green\">describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
+//			JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color='green'>Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
+////			JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color='green'>describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
 //
 //			// Reset action
 //			cc_reset_mi.addActionListener(new ActionListener()
@@ -526,12 +526,12 @@ implements ActionListener, FocusListener
 //		"<br>" +
 //		"<b>Various Tips how it can be used</b>:<br>" +
 //		"<ul>" +
-//		"  <li><code>aaa</code><b>&lt;Ctrl-Space&gt;</b>                              - <i><font color=\"green\">Get list of tables/views/etc that starts with <b><code>aaa</code></b>   </font></i></li>" +
-//		"  <li><code>select t.<b>&lt;Ctrl-Space&gt;</b> from tabname t</code>         - <i><font color=\"green\">Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
-//		"  <li><code>select * from tabname t where t.<b>&lt;Ctrl-Space&gt;</b></code> - <i><font color=\"green\">Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
-//		"  <li><code>exec</code> <b>&lt;Ctrl-Space&gt;</b>                            - <i><font color=\"green\">Get stored procedures   </font></i></li>" +
-//		"  <li><code>:s</code><b>&lt;Ctrl-Space&gt;</b>                               - <i><font color=\"green\">Get schemas   </font></i></li>" +
-//		"  <li><code>use </code><b>&lt;Ctrl-Space&gt;</b>                             - <i><font color=\"green\">Get list of databases/catalogs  </font></i></li>" +
+//		"  <li><code>aaa</code><b>&lt;Ctrl-Space&gt;</b>                              - <i><font color='green'>Get list of tables/views/etc that starts with <b><code>aaa</code></b>   </font></i></li>" +
+//		"  <li><code>select t.<b>&lt;Ctrl-Space&gt;</b> from tabname t</code>         - <i><font color='green'>Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
+//		"  <li><code>select * from tabname t where t.<b>&lt;Ctrl-Space&gt;</b></code> - <i><font color='green'>Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
+//		"  <li><code>exec</code> <b>&lt;Ctrl-Space&gt;</b>                            - <i><font color='green'>Get stored procedures   </font></i></li>" +
+//		"  <li><code>:s</code><b>&lt;Ctrl-Space&gt;</b>                               - <i><font color='green'>Get schemas   </font></i></li>" +
+//		"  <li><code>use </code><b>&lt;Ctrl-Space&gt;</b>                             - <i><font color='green'>Get list of databases/catalogs  </font></i></li>" +
 //		"</ul>" +
 //		"</html>");
 //

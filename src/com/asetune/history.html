@@ -49,18 +49,32 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Daily Report Message, some smaller changes to the Mail Message structure.</LI>
 		<LI>in GUI Mode: when an Alarm is Raised, you will now get a popup (similar to when you have blocking locks, long transactions...)</LI>
 		<LI>AlarmView Dialog - now also works in offline mode</LI>
-		<LI>Connection Dialog - Remember SSH Key for OS Monitoring</LI>
 		<LI>OS Host Monitoring - iostat: improved iostat number of columns parsing (in some cases the iostat version was unpredictable, for how many columns we would expect from iostat)<br>
 		                         &emsp;Now I try to "count" number of columns returned at startup do: ioStatColCount=$(iostat -xdk | grep 'Device:' | wc -w); echo "ioStatColCount=${ioStatColCount}")</LI>
 		<LI>OS Host Monitoring - DiskSpace: some systems printed long lines into 2 or several rows (added -P option to 'df')</LI>
 		<LI>Sends Alarm if DbxCentral are down (default after 15 minutes)</LI>
 		<LI>AlarmWriterToMail: small modification to get SSL/TSL (to live.com) to work</LI>
+		<LI>Internal re-make of DBMS Quoted Identifier Characters. Source code SQL Statements should use [identifier].<br>
+		    The Writers/Readers then translates the right/left brackets to use DBMS Specific chars: MySQL=`, mostOthers=", SQL-Server=[], SybaseASE=[], SqlAnywhere=[]<br>
+		    The DBMS Specific char is fetched from the JDBC MetaData methods. and there is are methods with DbxConnection that ca "quotify" SQL Strings (which replaces the [] into correct chars)<br>
+		   </LI>
+		<LI>Host Monitoring: Negative Diff Counters did not work as expected</LI>
+		<LI>CmOsDiskSpace: Now has 3 graphs (Space Used MB/Pct, Space Available MB) so we can follow space usage on a longer term basis (if sent to DbxCentral)</LI>
+		<LI>ConnectionDialog changes
+			<ul>
+				<LI>Remember SSH Key for OS Monitoring</LI>
+				<LI>Try to remember the state of Expanded/Collapsed trees (different tree-states are remembered for each tool)</LI>
+				<LI>Saving new entries "close" to the "source entry" in the tree-states</LI>
+				<LI>Cloning/Duplicating connection profiles (using right click menu)</LI>
+			</ul>
+		</LI>
+		<LI>Performance Counter Panels: added shortcut ctrl-1 = view ABS Counter, ctrl-2 = view DIFF Counters, ctrl-3 = view RATE Counters</LI>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
-<!--			<li>To version 1.4.198,       Component: H2 database</li> -->
+				<li>To version 1.4.198,       Component: H2 database</li>
 				<li>To version ASE 16 SP3,PL6 Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li>
-	 			<li>To version 3.0.0,         Component: RSyntaxTextArea, RSTAUI, Autocomplete</li>
+	 			<li>To version 3.0.0,         Component: RSyntaxTextArea(3.0.2), RSTAUI, Autocomplete</li>
 	 			<li>To version 1.14,          Component: simplemagic</li>
 				<li>To version 2.3.0,         Component: juniversalchardet</li>
 				<li>To version 5.2,           Component: Miglayout</li>
@@ -87,6 +101,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added alternate parameters for a bunch of the 'api' url's for example 'srv', 'srvName' and 'sessionName' is the same (just different names)</LI>
 		<LI>Better error handling for parameters in most 'api' url's (instead of throwing Exception, a "sendError()" is done)</LI>
 		<LI>log file view has been improved, so that you can just press a button at the end of the page to start "tail"</LI>
+		<LI>Added '&lt;&lt;' and '&gt;&gt;' to goto previous/next day, with same time period (see same # hour period, but prev/next day)</LI>
+		<LI>Added Multi Day Chart 'mdc' option, for example to view CPU usage over X day... (simply add mdc=# to the URL), where # is number of days to view<br>
+			There are shortcuts for this when you right click a chart<br>
+			- Open this graph (last # days) in new Tab<br>
+			- Open ALL graphs in view (last # days) in new Tab
+			</LI>
+		<LI>Viewing log files:<br>
+			- add title, so it's easier to see what file we are viewing<br>
+			- tail: Scroll to bottom when new rows is received did not work on Safari
+			</LI>
  	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -196,6 +220,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
+		<b>CmStmntCacheDetails</b><br>
+		<ul>
+			<li>added some columns (*Diff) so that it's easier in the diff/rate section to see Absolute values combined with some *Diff columns.</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
 		<b>View DBMS Configuration</b><br>
 		<ul>
 			<li>on startup check for various strange DBMS configuration(s)
@@ -287,6 +319,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>No need to have the initial connection pointing to the 'postgres' database for collectors that iterates over databases</LI>
 		<LI>in DatabaseIterator only lookup the databases where we are authorized</LI>
 		<LI>CmPgTableSize: do NOT include schema 'information_schema', 'pg_catalog', 'pg_toast'</LI>
+		<LI>CmPgDatabase: New Columns 'tup_fetched_in_slide, tup_returned_in_slide, fetch_efficency_slide_pct' and a new graph 'Row Fetch Efficiency SLIDE'<br>
+			This is "the same as" graphs for 'Row Fetch Efficiency' and 'Row Fetch Efficiency ABS' but uses a 15 minute slide/range from which the Efficiency is calculated
+			</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -304,7 +339,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>Db2Tune - IBM DB2 LWU</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>bug fix: Connections to Linux was only possible (now "hopefully" accepting for more LUW platforms, all starting with "DB2/")</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -323,6 +358,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Tooltip on cell, improved for CLOB/BLOB (Instead of displaying the content directly. Prompt if you want to open in external browser)</LI>
 		<LI>new tools: Import, export, transfer data (not yet 100% completed)</LI>
 		<LI>improved: \loadfile command</LI>
+		<LI>new command 'go | graph' (or chart) to display a graph/chart of the ResultSet</LI>
+		<LI>also right click on a ResultSet table, and choose 'Create Graph/Chart on Table Content...'</LI>
+		<LI>new command 'go | diff' to diff ResultSet between different servers and DBMS Vendors (NOTE: Work in progress, not yet completed...)</LI>
+		<LI>improved 'go | bcp' to transfer data/ResultSet between different servers and DBMS Vendors (NOTE: Still not production stable)</LI>
+		<LI>added 'go skiprs #' and 'go keeprs #' to discard and keep specific ResultSet (can for example be used with 'go | chart')</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

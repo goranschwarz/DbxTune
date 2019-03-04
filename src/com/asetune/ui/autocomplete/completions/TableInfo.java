@@ -243,7 +243,7 @@ implements Serializable
 //		}
 //		return pk;
 //	}
-	public List<String> getPkOrFirstUniqueIndex(Connection conn, String cat, String schema, String name)
+	public static List<String> getPkOrFirstUniqueIndex(Connection conn, String cat, String schema, String name)
 	throws SQLException
 	{
 		DatabaseMetaData dbmd = conn.getMetaData();
@@ -298,30 +298,30 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat).append(".<B>").append(_tabName).append("</B> - <font color=\"blue\">").append(_tabType).append("</font>");
+		sb.append(StringUtil.hasValue(_tabSchema) ? _tabSchema : _tabCat).append(".<B>").append(_tabName).append("</B> - <font color='blue'>").append(_tabType).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_tabRemark) ? "not available" : _tabRemark).append("<BR>");
 		sb.append("<BR>");
 		sb.append("<B>Columns:</B> ").append("<BR>");
-		sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=1\">");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Pk")         .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Name")       .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Datatype")   .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Length")     .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Nulls")      .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Pos")        .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Description").append("</B></FONT></TD>");
+		sb.append("<TABLE ALIGN='left' BORDER=0 CELLSPACING=0 CELLPADDING=1>");
+		sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffff'>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Pk")         .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Name")       .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Datatype")   .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Length")     .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Nulls")      .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Pos")        .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Description").append("</B></FONT></TD>");
 		sb.append("</TR>");
 		int r=0;
 		for (TableColumnInfo ci : _columns)
 		{
 			r++;
 			if ( (r % 2) == 0 )
-				sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
+				sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffff'>");
 			else
-				sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffcc\">");
+				sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffcc'>");
 			sb.append("	<TD NOWRAP>").append( isColPartOfPk(ci._colName) ? "&bull;" : "&nbsp;").append("</TD>");
 			sb.append("	<TD NOWRAP>").append(ci._colName)      .append("</TD>");
 			sb.append("	<TD NOWRAP>").append(ci._colType)      .append("</TD>");

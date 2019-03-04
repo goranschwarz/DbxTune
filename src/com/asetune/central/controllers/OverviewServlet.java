@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandles;
+import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -423,6 +424,8 @@ public class OverviewServlet extends HttpServlet
 		out.println("<html>");
 		out.println("<head>");
 
+		out.println("<title>Server Overview</title> ");
+		
 		if (refresh > 0)
 			out.println("<meta http-equiv='refresh' content='"+refresh+"' />");
 
@@ -1176,19 +1179,22 @@ public class OverviewServlet extends HttpServlet
 				try
 				{
 					conn = reader.getConnection();
-					String q = conn.getQuotedIdentifierChar();
+
+					String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+					String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
 					sql = ""
 					    + "select \n"
-					    + "	   " + q + "ServerName" + q + ", \n"
-					    + "	   " + q + "OnHostname" + q + ", \n"
-					    + "	   " + q + "ProductString" + q + ", \n"
-					    + "	   min(" + q + "SessionStartTime" + q + ") as " + q + "FirstSample" + q + ", \n"
-					    + "	   max(" + q + "LastSampleTime" + q + ")   as " + q + "LastSample" + q + ", \n"
-//					    + "	   sum(" + q + "NumOfSamples" + q + ")     as " + q + "NumOfSamples" + q + ", \n" // Note this might be off/faulty after a: Data Retention Cleanup
-					    + "	   datediff(day, max(" + q + "LastSampleTime" + q + "), CURRENT_TIMESTAMP)   as " + q + "LastSampleAgeInDays" + q + ", \n"
-					    + "	   datediff(day, min(" + q + "SessionStartTime" + q + "), max(" + q + "LastSampleTime" + q + ")) as " + q + "NumOfDaysSampled" + q + " \n"
-					    + "from " + q + "DbxCentralSessions" + q + " \n"
-					    + "group by " + q + "ServerName" + q + ", " + q + "OnHostname" + q + ", " + q + "ProductString" + q + " \n"
+					    + "	   " + lq + "ServerName"    + rq + ", \n"
+					    + "	   " + lq + "OnHostname"    + rq + ", \n"
+					    + "	   " + lq + "ProductString" + rq + ", \n"
+					    + "	   min(" + lq + "SessionStartTime" + rq + ") as " + lq + "FirstSample" + rq + ", \n"
+					    + "	   max(" + lq + "LastSampleTime"   + rq + ") as " + lq + "LastSample"  + rq + ", \n"
+//					    + "	   sum(" + lq + "NumOfSamples"     + rq + ") as " + lq + "NumOfSamples" + rq + ", \n" // Note this might be off/faulty after a: Data Retention Cleanup
+					    + "	   datediff(day, max(" + lq + "LastSampleTime"   + rq + "), CURRENT_TIMESTAMP)   as " + lq + "LastSampleAgeInDays" + rq + ", \n"
+					    + "	   datediff(day, min(" + lq + "SessionStartTime" + rq + "), max(" + lq + "LastSampleTime" + rq + ")) as " + lq + "NumOfDaysSampled" + rq + " \n"
+					    + "from " + lq + "DbxCentralSessions" + rq + " \n"
+					    + "group by " + lq + "ServerName" + rq + ", " + lq + "OnHostname" + rq + ", " + lq + "ProductString" + rq + " \n"
 					    + "order by 1 \n"
 					    + "";
 					
@@ -1291,10 +1297,14 @@ public class OverviewServlet extends HttpServlet
 		double totalGb  = dataDir.getTotalSpace()  / 1024.0 / 1024.0 / 1024.0;
 		double pctUsed  = 100.0 - (freeGb / totalGb * 100.0);
 		
+		long       sumH2RecordingsUsageMb = DataDirectoryCleaner.getH2RecodingFileSizeMb();
+		BigDecimal sumH2RecordingsUsageGb = new BigDecimal( sumH2RecordingsUsageMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
 		out.println("<p>");
 		out.println("File system usage at '"+dataDir+"', resolved to '"+dataDirRes+"'.<br>");
 //		out.println(String.format("Free = %.1f GB, Usable = %.1f GB, Total = %.1f GB <br>", freeGb, usableGb, totalGb));
 		out.println(String.format("Free = %.1f GB, Total = %.1f GB, Percent Used = %.1f %%<br>", freeGb, totalGb, pctUsed));
+		out.println("With H2 Database Recordings Size of " + sumH2RecordingsUsageMb + " MB (" + sumH2RecordingsUsageGb + " GB).");
 		out.println("</p>");
 
 		// Get the same "saved file size info" as DataDirectoryCleaner

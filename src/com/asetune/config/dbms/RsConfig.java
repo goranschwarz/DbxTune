@@ -89,12 +89,12 @@ extends DbmsConfigAbstract
 
 	private static String GET_CONFIG_OFFLINE_SQL = 
 		"select * " +
-		"from " + PersistWriterJdbc.getTableName(PersistWriterJdbc.SESSION_DBMS_CONFIG, null, true) + " \n" +
-		"where \"SessionStartTime\" = SESSION_START_TIME \n";
+		"from [" + PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + " \n" +
+		"where [SessionStartTime] = SESSION_START_TIME \n";
 
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
-		" (select max(\"SessionStartTime\") " +
-		"  from "+PersistWriterJdbc.getTableName(PersistWriterJdbc.SESSION_DBMS_CONFIG, null, true) + 
+		" (select max([SessionStartTime]) " +
+		"  from ["+PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
 
@@ -412,6 +412,9 @@ extends DbmsConfigAbstract
 					tsStr = "'" + ts + "'";
 
 				sql = sql.replace("SESSION_START_TIME", tsStr);
+
+				// replace all '[' and ']' into DBMS Vendor Specific Chars
+				sql = conn.quotifySqlString(sql);
 
 				// Then execute the Real query
 				ResultSet rs = stmt.executeQuery(sql);

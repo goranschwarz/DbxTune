@@ -142,11 +142,11 @@ public class AboutBox
 		panel.setLayout(new MigLayout("ins 0","[fill]",""));
 
 		JTabbedPane tab = new JTabbedPane();
-		tab.add("About",          initTabAbout());
-//		tab.add("Todo",           initTabTodo());
-		tab.add("History",        initTabHistory());
-		tab.add("System Info",    initTabSystemInfo());
-		tab.add("Combind Config", initTabCombinedConfig());
+		tab.add("About",           initTabAbout());
+//		tab.add("Todo",            initTabTodo());
+		tab.add("History",         initTabHistory());
+		tab.add("System Info",     initTabSystemInfo());
+		tab.add("Combined Config", initTabCombinedConfig());
 
 		panel.add(tab,                 "height 100%, wrap 15");
 		panel.add(_checkForUpdate_but, "        gapleft  15, bottom, left, split");

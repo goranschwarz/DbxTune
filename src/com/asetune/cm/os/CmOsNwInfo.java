@@ -54,9 +54,13 @@ extends CounterModelHostMonitor
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
+	public static final boolean  IS_SYSTEM_CM                   = true;
+	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 //	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
-//	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
 	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
 
 	/**
@@ -72,7 +76,7 @@ extends CounterModelHostMonitor
 
 	public CmOsNwInfo(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, CM_TYPE, null, true);
+		super(CM_NAME, GROUP_NAME, CM_TYPE, null, NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
 
 		setDisplayName(SHORT_NAME);
 		setDescription(HTML_DESC);

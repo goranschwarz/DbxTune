@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.sql.pipe;
 
+import java.util.List;
+
 import com.asetune.sql.SqlProgressDialog;
 
 public interface IPipeCommand
@@ -35,4 +37,12 @@ public interface IPipeCommand
 
 	public String getCmdStr();
 	public String getSqlString();
+
+	boolean hasMessages();
+	List<PipeMessage> getMessages();
+	void clearMessages();
+	void addDebugMessage  (String msg);
+	void addInfoMessage   (String msg);
+	void addWarningMessage(String msg);
+	void addErrorMessage  (String msg);
 }

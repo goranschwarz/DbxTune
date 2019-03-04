@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultRowSorter;
@@ -57,6 +58,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.RowSorter;
@@ -1106,7 +1108,7 @@ implements
 		loadProps();
 		initComponentActions();
 	}
-
+	
 	protected void setSplitPaneOptions(JSplitPane mainSplitPane, JPanel dataPanel, JPanel extendedInfoPanel)
 	{
 		mainSplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
@@ -1971,9 +1973,9 @@ implements
 		_counterPct2_lbl.setForeground(Color.RED);
 
 		_counterRows_lbl.setToolTipText("Number of rows in the actual/visible. Where acual is numer of rows in the data model, and visible is rows after filtering...");
-		_counterAbs_rb  .setToolTipText("Absolute values of the counters.");
-		_counterDelta_rb.setToolTipText("What is the difference since previous sample. Displayed with blue color.");
-		_counterRate_rb .setToolTipText("Divide the difference between two samples with time elipsed since last sample, then we get diff or rate per second. Displayed with blue color");
+		_counterAbs_rb  .setToolTipText("Absolute values of the counters. Keyboard shortcut: Ctrl-1");
+		_counterDelta_rb.setToolTipText("What is the difference since previous sample. Displayed with blue color. Keyboard shortcut: Ctrl-2");
+		_counterRate_rb .setToolTipText("Divide the difference between two samples with time elipsed since last sample, then we get diff or rate per second. Displayed with blue color Keyboard shortcut: Ctrl-3");
 
 		ButtonGroup group = new ButtonGroup();
 		group.add(_counterAbs_rb);
@@ -2529,7 +2531,9 @@ implements
 	 */
 	private void initComponentActions()
 	{
+		//---------------------------------------
 		// ---- FILTER PANEL -----
+		//---------------------------------------
 		_filterColumn_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -2612,7 +2616,10 @@ implements
 			}
 		});
 
+
+		//---------------------------------------
 		// ---- COUNTER TYPE PANEL -----
+		//---------------------------------------
 		_counterAbs_rb.addActionListener(new ActionListener()
 		{
 			@Override
@@ -2661,7 +2668,23 @@ implements
 			}
 		});
 
+		// Shortcuts for ABS, DIFF, RATE
+		KeyStroke ctrl_1 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_1, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
+		KeyStroke ctrl_2 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_2, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
+		KeyStroke ctrl_3 = KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_3, Toolkit.getDefaultToolkit().getMenuShortcutKeyMask());
+		
+		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(ctrl_1, "counter.choose.abs");
+		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(ctrl_2, "counter.choose.diff");
+		getInputMap(WHEN_IN_FOCUSED_WINDOW).put(ctrl_3, "counter.choose.rate");
+
+		getActionMap().put("counter.choose.abs" , new AbstractAction() { private static final long serialVersionUID = 1L; @Override public void actionPerformed(ActionEvent e) { _counterAbs_rb  .doClick(); } });
+		getActionMap().put("counter.choose.diff", new AbstractAction() { private static final long serialVersionUID = 1L; @Override public void actionPerformed(ActionEvent e) { _counterDelta_rb.doClick(); } });
+		getActionMap().put("counter.choose.rate", new AbstractAction() { private static final long serialVersionUID = 1L; @Override public void actionPerformed(ActionEvent e) { _counterRate_rb .doClick(); } });
+
+
+		//---------------------------------------
 		// ---- SAMPLE TIME PANEL -----
+		//---------------------------------------
 		_timePostponeIsEnabled_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -2784,7 +2807,9 @@ implements
 			}
 		});
 
+		//---------------------------------------
 		// ---- OPTIONS PANEL -----
+		//---------------------------------------
 		_optionPauseDataPolling_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -4117,7 +4142,7 @@ implements
 	
 			if ( cm == null )                                return false;
 			if ( !cm.isDataInitialized() )                   return false;
-			if (  cm.discardDiffPctHighlighterOnAbsTable() ) return false;
+			if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
 			return cm.isDiffColumn(adapter.convertColumnIndexToModel(adapter.column));
 		}
 	};
@@ -4132,7 +4157,7 @@ implements
 
 			if ( cm == null )                                return false;
 			if ( !cm.isDataInitialized() )                   return false;
-			if (  cm.discardDiffPctHighlighterOnAbsTable() ) return false;
+			if (  cm.discardPctHighlighterOnAbsTable() )     return false;
 			return cm.isPctColumn(adapter.convertColumnIndexToModel(adapter.column));
 		}
 	};
@@ -4147,7 +4172,7 @@ implements
 
 			if ( cm == null )                                return false;
 			if ( !cm.isDataInitialized() )                   return false;
-			if (  cm.discardDiffPctHighlighterOnAbsTable() ) return false;
+			if (  cm.discardDiffHighlighterOnAbsTable() )    return false;
 			if ( !cm.isNewDeltaOrRateRowHighlightEnabled() ) return false;
 			return cm.isNewDeltaOrRateRow(adapter.convertRowIndexToModel(adapter.row));
 		}

@@ -108,10 +108,10 @@ extends CountersModel
 			"<H2>Comparison of Spinlocks to Other Synchronization Mechanisms</H2> \n" +
 			"<P> \n" +
 			"<TABLE BORDER=1 CELLSPACING=1 CELLPADDING=1> \n" +
-			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TH>Type                       </TH> <TH>Complexity</TH> <TH>CPU overhead</TH> <TH>Wait time            </TH> </TR> \n" +
-			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TD>Spinlock                   </TD> <TD>Low       </TD> <TD>High        </TD> <TD>Very low             </TD> </TR> \n" +
-			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TD>Latch                      </TD> <TD>Moderate  </TD> <TD>Low         </TD> <TD>Should be small      </TD> </TR> \n" +
-			"  <TR ALIGN=\"left\" VALIGN=\"left\"> <TD>Table/page/row/address Lock</TD> <TD>High      </TD> <TD>Low         </TD> <TD>Can vary considerably</TD> </TR> \n" +
+			"  <TR ALIGN='left' VALIGN='left'> <TH>Type                       </TH> <TH>Complexity</TH> <TH>CPU overhead</TH> <TH>Wait time            </TH> </TR> \n" +
+			"  <TR ALIGN='left' VALIGN='left'> <TD>Spinlock                   </TD> <TD>Low       </TD> <TD>High        </TD> <TD>Very low             </TD> </TR> \n" +
+			"  <TR ALIGN='left' VALIGN='left'> <TD>Latch                      </TD> <TD>Moderate  </TD> <TD>Low         </TD> <TD>Should be small      </TD> </TR> \n" +
+			"  <TR ALIGN='left' VALIGN='left'> <TD>Table/page/row/address Lock</TD> <TD>High      </TD> <TD>Low         </TD> <TD>Can vary considerably</TD> </TR> \n" +
 			"</TABLE> \n" +
 			"</P> \n" +
 			" \n" +

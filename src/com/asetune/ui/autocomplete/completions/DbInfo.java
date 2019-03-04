@@ -50,7 +50,7 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append("<B>").append(_dbName).append("</B> - <font color=\"blue\">").append(_dbType).append("</font>");
+		sb.append("<B>").append(_dbName).append("</B> - <font color='blue'>").append(_dbType).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_dbRemark) ? "not available" : _dbRemark).append("<BR>");

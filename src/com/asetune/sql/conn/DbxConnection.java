@@ -92,20 +92,21 @@ implements Connection
 	
 	private   long   _connectTime = 0;
 	
-	protected String _databaseProductName    = null;
-	protected String _databaseProductVersion = null;
-	protected String _databaseServerName     = null;
-	protected long   _dbmsVersionNumber      = -1;
-	protected String _dbmsVersionStr         = null;
+	protected String _databaseProductName     = null;
+	protected String _databaseProductVersion  = null;
+	protected String _databaseServerName      = null;
+	protected long   _dbmsVersionNumber       = -1;
+	protected String _dbmsVersionStr          = null;
 	
-	protected String _dbmsPageSizeInKb       = null;
-	protected String _dbmsCharsetName        = null;
-	protected String _dbmsCharsetId          = null;
-	protected String _dbmsSortOrderName      = null;
-	protected String _dbmsSortOrderId        = null;
+	protected String _dbmsPageSizeInKb        = null;
+	protected String _dbmsCharsetName         = null;
+	protected String _dbmsCharsetId           = null;
+	protected String _dbmsSortOrderName       = null;
+	protected String _dbmsSortOrderId         = null;
 	
-	protected String _quotedIdentifierChar = null;
-
+	protected String _dbIdentifierQuoteString = null;
+	protected String _dbExtraNameCharacters   = null;
+	
 	/** When did we connect. 
 	 * @return 0 if no connection has been made, otherwise the 'long' from System.currentTimeMillis()
 	 */
@@ -563,7 +564,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RAX))   return new RaxConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return new RsDraConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_SYBASE_RSDA))  return new RsDaConnection(conn);
-		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX))       return new Db2Connection(conn);
+		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW))      return new Db2Connection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_ZOS))      return new Db2Connection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DERBY))        return new DerbyConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_H2))           return new H2Connection(conn);
@@ -611,8 +612,219 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	/** Some application names might want to have some specific properties added, if not already in the URL */
 	private static HashMap<String, Properties> _defaultAppNameProps = new HashMap<String, Properties>();
 
+
 	
-	
+	//----------------------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------
+	// Quoted Identifiers methods
+	//----------------------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------
+
+	/** get what character to use (on the left side) of a Database Identifier that needs to be quoted, normally it's the same character on both sides */
+	public String getLeftQuote()
+	{
+		String dbProductName = getDatabaseProductNameNoThhrow("");
+		String dbQuoteString = getDbQuotedIdentifierChar();
+
+		return (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(dbProductName) || DbUtils.DB_PROD_NAME_MSSQL.equals(dbProductName)) ? "[" : dbQuoteString; 
+	}
+
+	/** get what character to use (on the right side) of a Database Identifier that needs to be quoted, normally it's the same character on both sides */
+	public String getRightQuote() 
+	{ 
+		String dbProductName = getDatabaseProductNameNoThhrow("");
+		String dbQuoteString = getDbQuotedIdentifierChar();
+
+		return (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(dbProductName) || DbUtils.DB_PROD_NAME_MSSQL.equals(dbProductName)) ? "]" : dbQuoteString; 
+	}
+
+	/**
+	 * Helper method to Replace "fake" begin/end Quoted Identifier Chars into DBMS Vendor Specific Quoted Identifier
+	 * 
+	 * @param sql   SQL Statement text where '[' and ']' will be replaced with DBMS Vendor Specific Quoted Identifier
+	 * 
+	 * @return The quotified string
+	 */
+	public String quotifySqlString(String sql)
+	{
+		return quotifySqlString(sql, '[', ']');
+	}
+
+	/**
+	 * Helper method to Replace "fake" begin/end Quoted Identifier Chars into DBMS Vendor Specific Quoted Identifier
+	 * 
+	 * @param sql       SQL Statement text where '[' and ']' will be replaced with DBMS Vendor Specific Quoted Identifier
+	 * @param leftChar  character representing a "left" side of a Quoted Identifier that should be replaced
+	 * @param rightChar character representing a "right" side of a Quoted Identifier that should be replaced
+	 * 
+	 * @return The quotified string
+	 */
+	public String quotifySqlString(String sql, char leftChar, char rightChar)
+	{
+		String lq = getLeftQuote();
+		String rq = getRightQuote();
+		
+		StringBuilder sb = new StringBuilder(sql.length());
+		
+		for (int i=0; i<sql.length(); i++)
+		{
+			char c = sql.charAt(i);
+
+			if      ( c == leftChar  ) sb.append(lq);
+			else if ( c == rightChar ) sb.append(rq);
+			else                       sb.append(c);
+		}
+		
+		return sb.toString();
+	}
+
+	/**
+	 * Add DBMS Vendor Specific Quoted Identifier Chars around the input string<br>
+	 * 
+	 * @param str one or more
+	 * @return
+	 */
+	public String quotify(String... name)
+	{
+		if (name == null)
+			return "";
+		
+		if (name.length == 0)
+			return "";
+
+		if (name.length == 1 && StringUtil.isNullOrBlank(name[0]))
+			return "";
+		
+		StringBuilder sb = new StringBuilder();
+
+		if (name.length == 1)
+		{
+			sb.append(getLeftQuote()).append(name[0]).append(getRightQuote());
+		}
+		else
+		{
+			for (String str : name)
+			{
+				sb.append(getLeftQuote()).append(str).append(getRightQuote()).append(", ");
+			}
+			// Remove last ", "
+			sb.delete(sb.length()-2, sb.length());
+		}
+		
+		return sb.toString();
+	}
+
+	/**
+	 * Add DBMS Quoted Identifier Chars around the input string<br>
+	 * if input string is empty it will simply be returned untouched.
+	 * 
+	 * @param cat   Catalog or database name
+	 * @param sch   Schema name
+	 * @param obj   Object name
+	 * 
+	 * @return
+	 */
+	public String quotifyObj(String cat, String sch, String obj)  
+	{
+		if (StringUtil.isNullOrBlank(cat) && StringUtil.isNullOrBlank(sch) && StringUtil.isNullOrBlank(obj))
+			return "";
+		
+		StringBuilder sb = new StringBuilder();
+
+		cat = quotify( cat );
+		sch = quotify( sch );
+		obj = quotify( obj );
+
+		if (StringUtil.hasValue(cat)) sb.append(cat).append(".");
+		if (StringUtil.hasValue(sch)) sb.append(sch).append(".");
+		if (StringUtil.hasValue(obj)) sb.append(obj);
+
+		return sb.toString();
+	}
+
+	/**
+	 * Add DBMS Vendor Specific Quoted Identifier Chars around the input string, if it needs it...<br>
+	 * if input string is empty it will simply be returned untouched.
+	 * 
+	 * @param str
+	 * @return
+	 */
+	public String quotifyIfNeeded(String... name)  
+	{ 
+		if (name == null)
+			return "";
+		
+		if (name.length == 0)
+			return "";
+
+		if (name.length == 1 && StringUtil.isNullOrBlank(name[0]))
+			return "";
+		
+		// What "extra" characters does the DBMS allow in table name WITHOUT quotation
+		String dbExtraNameCharacters = getDbExtraNameCharacters();
+
+		StringBuilder sb = new StringBuilder();
+
+		for (String str : name)
+		{
+			boolean normalChars = true;
+			for (int i=0; i<str.length(); i++)
+			{
+				char c = str.charAt(i);
+
+				// goto next character for any "allowed" characters
+				if ( Character.isLetterOrDigit(c) ) continue;
+				if ( c == '_' )                     continue;
+
+				if (dbExtraNameCharacters != null && dbExtraNameCharacters.indexOf(c) >= 0) continue;
+
+				// if any other chars, then break and signal "non-normal-char" detected
+				normalChars = false;
+				break;
+			}
+
+			if ( normalChars )
+				sb.append(str);
+			else
+				sb.append(quotify(str));
+				
+			sb.append(", ");
+		}
+		// Remove last ", "
+		sb.delete(sb.length()-2, sb.length());
+		
+		return sb.toString();
+	}
+
+	/**
+	 * Add DBMS Quoted Identifier Chars around the input string, if it needs it...<br>
+	 * if input string is empty it will simply be returned untouched.
+	 * 
+	 * @param cat   Catalog or database name
+	 * @param sch   Schema name
+	 * @param obj   Object name
+	 * 
+	 * @return
+	 */
+	public String quotifyObjIfNeeded(String cat, String sch, String obj)  
+	{
+		if (StringUtil.isNullOrBlank(cat) && StringUtil.isNullOrBlank(sch) && StringUtil.isNullOrBlank(obj))
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+
+		cat = quotifyIfNeeded( cat );
+		sch = quotifyIfNeeded( sch );
+		obj = quotifyIfNeeded( obj );
+
+		if (StringUtil.hasValue(cat)) sb.append(cat).append(".");
+		if (StringUtil.hasValue(sch)) sb.append(sch).append(".");
+		if (StringUtil.hasValue(obj)) sb.append(obj);
+
+		return sb.toString();
+	}
+
+
 	//----------------------------------------------------------------------------------------------
 	//----------------------------------------------------------------------------------------------
 	// Normal methods
@@ -621,18 +833,19 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	
 	public void clearCachedValues()
 	{
-		_databaseProductName    = null;
-		_databaseProductVersion = null;
-		_databaseServerName     = null;
-		_dbmsVersionNumber      = -1;
-		_dbmsVersionStr         = null;  // more or less the same as _databaseProductVersion, but ASE 16 is not returning the FULL string, so this is a wrapper around  
+		_databaseProductName     = null;
+		_databaseProductVersion  = null;
+		_databaseServerName      = null;
+		_dbmsVersionNumber       = -1;
+		_dbmsVersionStr          = null;  // more or less the same as _databaseProductVersion, but ASE 16 is not returning the FULL string, so this is a wrapper around  
 
-		_dbmsCharsetName        = null;
-		_dbmsCharsetId          = null;
-		_dbmsSortOrderName      = null;
-		_dbmsSortOrderId        = null;
+		_dbmsCharsetName         = null;
+		_dbmsCharsetId           = null;
+		_dbmsSortOrderName       = null;
+		_dbmsSortOrderId         = null;
 		
-		_quotedIdentifierChar   = null;
+		_dbIdentifierQuoteString = null;
+		_dbExtraNameCharacters   = null;
 		
 		_connectTime = 0;
 	}
@@ -783,6 +996,20 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			throw e;
 		}
 	}
+
+	/** same as getDatabaseProductName() but instead of throwing SQLException, then use the default value */
+	public String getDatabaseProductNameNoThhrow(String defaultValueOnException) 
+	{
+		try
+		{
+			return getDatabaseProductName();
+		}
+		catch (SQLException ex)
+		{
+			return defaultValueOnException;
+		}
+	}
+	
 	/**
 	 * Get the connected database version string, simply call jdbc.getMetaData().getDatabaseProductName();
 	 * @return null if not connected else: Retrieves the version number of this database product.
@@ -938,22 +1165,38 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 * @param str Name of the product to test for
 	 * @return true if equal
 	 */
-	public boolean isDatabaseProduct(String str)
+	public boolean isDatabaseProduct(String... names)
 	{
-		if (str == null)
-			return false;
-
+		String currentDbProductName = null;
 		try
 		{
-			String currentDbProductName = getDatabaseProductName();
-			return str.equals(currentDbProductName);
+			currentDbProductName = getDatabaseProductName();
 		}
 		catch (SQLException e)
 		{
 			_logger.debug("isDatabaseProduct() Caught: "+e, e);
 			return false;
 		}
+		
+		return DbUtils.isProductName(currentDbProductName, names);
 	}
+
+//	public boolean isDatabaseProduct(String str)
+//	{
+//		if (str == null)
+//			return false;
+//
+//		try
+//		{
+//			String currentDbProductName = getDatabaseProductName();
+//			return str.equals(currentDbProductName);
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("isDatabaseProduct() Caught: "+e, e);
+//			return false;
+//		}
+//	}
 
 	/**
 	 * Get the connected database server/instance name.
@@ -1370,7 +1613,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 //		{
 //		}
 		// DB2
-		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX, DbUtils.DB_PROD_NAME_DB2_ZOS))
+		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_LUW, DbUtils.DB_PROD_NAME_DB2_ZOS))
 		{
 			versionStr = DbUtils.getDb2VersionStr(_conn);
 		}
@@ -1447,7 +1690,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 //			dbmsVersionNumber = DbUtils.getSqlServerVersionNumber(_conn);
 //		}
 		// DB2
-		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_UX, DbUtils.DB_PROD_NAME_DB2_ZOS))
+		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_LUW, DbUtils.DB_PROD_NAME_DB2_ZOS))
 		{
 			dbmsVersionNumber = DbUtils.getDb2VersionNumber(_conn);
 		}
@@ -2021,7 +2264,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			extraInfo  = "<br>" +
 					"<b>Try a Workaround for the problem, SQL State 'JZ0IB'</b><br>" +
 					"In the Connection Dialog, in the field 'URL Option' specify:<br>" +
-					"<font size=\"4\">" +
+					"<font size='4'>" +
 					"  <code>CHARSET=iso_1</code><br>" +
 					"</font>" +
 					"<i>This will hopefully get you going, but characters might not converted correctly</i><br>" +
@@ -2133,27 +2376,51 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		return false;
 	}
 
-	public String getQuotedIdentifierChar()
+//	getQuotedIdentifierChar
+	public String getDbQuotedIdentifierChar()
+//	public String getQuotedIdentifierChar()
 	{
 		// return at once if the string is cached
-		if (_quotedIdentifierChar != null)
-			return _quotedIdentifierChar;
+		if (_dbIdentifierQuoteString != null)
+			return _dbIdentifierQuoteString;
 
 		// Get the data if it wasn't cached
 		try 
 		{
 			DatabaseMetaData md = getMetaData();
-			_quotedIdentifierChar = md.getIdentifierQuoteString();
+			_dbIdentifierQuoteString = md.getIdentifierQuoteString();
 		}
 		catch (SQLException ex) 
 		{
 			_logger.warn("Problems when getting Quoted Identifier. returning char '\"'. DatabaseMetaData.getIdentifierQuoteString() caught: "+ex);
+			return "\"";
+		}
+		
+		return _dbIdentifierQuoteString;
+	}
+
+	public String getDbExtraNameCharacters()
+	{
+		// return at once if the string is cached
+		if (_dbExtraNameCharacters != null)
+			return _dbExtraNameCharacters;
+
+		// Get the data if it wasn't cached
+		try 
+		{
+			DatabaseMetaData md = getMetaData();
+			_dbExtraNameCharacters = md.getExtraNameCharacters();
+		}
+		catch (SQLException ex) 
+		{
+			_logger.warn("Problems when getting Extra Name Characters for without Quoted Identifier. returning char ''. DatabaseMetaData.getExtraNameCharacters() caught: "+ex);
 			return "";
 		}
 		
-		return _quotedIdentifierChar;
+		return _dbExtraNameCharacters;
 	}
 
+	
 	/**
 	 * Get information object about the connection status.<br>
 	 * This could/will be used to check if the connection for example:
@@ -2246,9 +2513,9 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 
 		DatabaseMetaData md = getMetaData();
 		
-		String qic = md.getIdentifierQuoteString();
-		if (StringUtil.isNullOrBlank(qic))
-			qic = "\"";
+//		String qic = md.getIdentifierQuoteString();
+//		if (StringUtil.isNullOrBlank(qic))
+//			qic = "\"";
 
 		ResultSet rs = md.getSchemas();
 		while(rs.next())
@@ -2272,8 +2539,8 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 */
 	public void createSchema(String schemaName) throws SQLException
 	{
-		String qic = getMetaData().getIdentifierQuoteString();
-		dbExec("create schema "+qic+schemaName+qic);
+//		String qic = getMetaData().getIdentifierQuoteString();
+		dbExec("create schema " + getLeftQuote() + schemaName + getRightQuote());
 	}
 
 	/**
@@ -2288,8 +2555,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 * <pre>
 	 * public void createSchemaIfNotExists(String schemaName) throws SQLException
 	 * {
-	 * 	String qic = getMetaData().getIdentifierQuoteString();
-	 * 	dbExec("create schema if not exists "+qic+schemaName+qic);
+	 * 	dbExec("create schema " + getLeftQuote() + schemaName + getRightQuote());
 	 * }
 	 * </pre>
 	 * @param schemaName
@@ -2310,8 +2576,8 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 */
 	public void dropSchema(String schemaName) throws SQLException
 	{
-		String qic = getMetaData().getIdentifierQuoteString();
-		dbExec("drop schema "+qic+schemaName+qic);
+//		String qic = getMetaData().getIdentifierQuoteString();
+		dbExec("drop schema " + getLeftQuote() + schemaName + getRightQuote());
 	}
 
 	//-------------------------------------------------

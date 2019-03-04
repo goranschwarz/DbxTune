@@ -1260,8 +1260,13 @@ implements ICounterController
 			if (guiController != null && guiController.hasGUI())
 				guiController.splashWindowProgress("Loading: UD Host Counter Model '"+name+"'");
 
+			
+			boolean negativeDiffCountersToZero = true;
+			boolean systemCm = false;
+			int     defaultPostponeTime = 0;
+
 			@SuppressWarnings("serial")
-			CountersModel cm = new CounterModelHostMonitor(name, MainFrame.TCP_GROUP_HOST_MONITOR, CounterModelHostMonitor.HOSTMON_UD_CLASS, name, false)
+			CountersModel cm = new CounterModelHostMonitor(name, MainFrame.TCP_GROUP_HOST_MONITOR, CounterModelHostMonitor.HOSTMON_UD_CLASS, name, negativeDiffCountersToZero, systemCm, defaultPostponeTime)
 			{
 				@Override
 				protected JPanel createGui()

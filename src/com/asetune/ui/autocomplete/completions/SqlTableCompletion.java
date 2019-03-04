@@ -35,6 +35,9 @@ extends SqlCompletion
 
 	public TableInfo _tableInfo = null;
 
+	//-------------------------
+	// helper called from constructor
+	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, TableInfo ti, boolean addCatalog, boolean addSchema, boolean quoteNames)
 	{
 		String q = provider.getDbIdentifierQuoteString();
@@ -56,18 +59,28 @@ extends SqlCompletion
 		
 		return out;
 	}
+
+	//-------------------------
+	// CONSTRUCTOR(S)
+	//-------------------------
 	public SqlTableCompletion(CompletionProviderAbstractSql provider, TableInfo ti, boolean addCatalog, boolean addSchema, boolean quoteNames)
 	{
 		super(provider, ti._tabName, createReplacementText(provider, ti, addCatalog, addSchema, quoteNames));
 		_tableInfo = ti;
 
 		String shortDesc = 
-			"<font color=\"blue\">"+ti._tabType+"</font>" +
-//			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : stripMultiLineHtml(ti._tabRemark)) + "</font></i>";
+			"<font color='blue'>"+ti._tabType+"</font>" +
+//			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
+			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : stripMultiLineHtml(ti._tabRemark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_tableInfo.toHtmlString());
 	}
+	
+
+
+	//-------------------------
+	// OVERIDE METHODS
+	//-------------------------
 	
 	public String getType()
 	{

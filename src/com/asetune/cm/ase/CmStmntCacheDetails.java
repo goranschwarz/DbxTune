@@ -84,9 +84,9 @@ extends CountersModel
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
 		"UseCountDiff", "NumRecompilesPlanFlushes", "NumRecompilesSchemaChanges", 
-		"LockWaits", "LockWaitTime", "SortCount", "SortSpilledCount", "TotalSortTime", 
+		"LockWaitsDiff", "LockWaitTimeDiff", "SortCountDiff", "SortSpilledCount", "TotalSortTimeDiff", 
 		"ParallelDegreeReduced", "ParallelPlanRanSerial", "WorkerThreadDeficit",
-		"TotalPIO", "TotalLIO", "TotalCpuTime", "TotalElapsedTime"};
+		"TotalPioDiff", "TotalLioDiff", "TotalCpuTimeDiff", "TotalElapsedTimeDiff"};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
 	public static final boolean  IS_SYSTEM_CM                   = true;
@@ -314,10 +314,14 @@ extends CountersModel
 		String AvgQualifyingWriteRows = ""; // Average qualifying data rows for write DML per execution
 		String MaxQualifyingWriteRows = ""; // Maximum qualifying data rows for write DML per execution
 		String LockWaits              = ""; // Total number of lock waits
+		String LockWaitsDiff          = ""; // Total number of lock waits
 		String LockWaitTime	          = ""; // Total lock-wait time (ms)
+		String LockWaitTimeDiff	      = ""; // Total lock-wait time (ms)
 		String SortCount              = ""; // Total number of sort operations
+		String SortCountDiff          = ""; // Total number of sort operations
 		String SortSpilledCount       = ""; // Total number of sort operations spilling to disk
 		String TotalSortTime          = ""; // Total sort time (ms)
+		String TotalSortTimeDiff      = "";
 		String MaxSortTime            = ""; // Maximum sort time (ms)
 		String ParallelDegreeReduced  = ""; // The number of times the degree of parallelism in the plan was reduced but it still executed as a parallel query (parallel plans only)
 		String ParallelPlanRanSerial  = ""; // The number of times a parallel query plan was adjusted so that it executed without parallelism (parallel plans only)
@@ -327,36 +331,49 @@ extends CountersModel
 //		if (srvVersion >= 1570020)
 		if (srvVersion >= Ver.ver(15,7,0,2))
 		{
-			AvgScanRows			   = "AvgScanRows, ";             // no Diff
-			MaxScanRows            = "MaxScanRows, ";             // no Diff
-			AvgQualifyingReadRows  = "AvgQualifyingReadRows, ";   // no Diff
-			MaxQualifyingReadRows  = "MaxQualifyingReadRows, ";   // no Diff
-			AvgQualifyingWriteRows = "AvgQualifyingWriteRows, ";  // no Diff
-			MaxQualifyingWriteRows = "MaxQualifyingWriteRows, ";  // no Diff
-			LockWaits              = "LockWaits, ";               // DIFF COUNTER
-			LockWaitTime           = "LockWaitTime, ";            // DIFF COUNTER
-			SortCount              = "SortCount, ";               // DIFF COUNTER
-			SortSpilledCount       = "SortSpilledCount, ";        // DIFF COUNTER
-			TotalSortTime          = "TotalSortTime, ";           // DIFF COUNTER
-			MaxSortTime            = "MaxSortTime, ";             // no diff
-			ParallelDegreeReduced  = "ParallelDegreeReduced, ";   // DIFF COUNTER
-			ParallelPlanRanSerial  = "ParallelPlanRanSerial, ";   // DIFF COUNTER
-			WorkerThreadDeficit    = "WorkerThreadDeficit, ";     // DIFF COUNTER
+			AvgScanRows			   = "AvgScanRows, ";                       // no Diff
+			MaxScanRows            = "MaxScanRows, ";                       // no Diff
+			AvgQualifyingReadRows  = "AvgQualifyingReadRows, ";             // no Diff
+			MaxQualifyingReadRows  = "MaxQualifyingReadRows, ";             // no Diff
+			AvgQualifyingWriteRows = "AvgQualifyingWriteRows, ";            // no Diff
+			MaxQualifyingWriteRows = "MaxQualifyingWriteRows, ";            // no Diff
+			LockWaits              = "LockWaits, ";                         // no Diff
+			LockWaitsDiff          = "LockWaitsDiff = LockWaits, ";         // DIFF COUNTER
+			LockWaitTime           = "LockWaitTime, ";                      // no Diff
+			LockWaitTimeDiff       = "LockWaitTimeDiff = LockWaitTime, ";   // DIFF COUNTER
+			SortCount              = "SortCount, ";                         // no Diff
+			SortCountDiff          = "SortCountDiff = SortCount, ";         // DIFF COUNTER
+			SortSpilledCount       = "SortSpilledCount, ";                  // DIFF COUNTER
+			TotalSortTime          = "TotalSortTime, ";                     // no Diff
+			TotalSortTimeDiff      = "TotalSortTimeDiff = TotalSortTime, "; // DIFF COUNTER
+			MaxSortTime            = "MaxSortTime, ";                       // no diff
+			ParallelDegreeReduced  = "ParallelDegreeReduced, ";             // DIFF COUNTER
+			ParallelPlanRanSerial  = "ParallelPlanRanSerial, ";             // DIFF COUNTER
+			WorkerThreadDeficit    = "WorkerThreadDeficit, ";               // DIFF COUNTER
 			nl_15702           = "\n";
 		}
 
 		// ASE 16.0 (back ported to 15.7 SP130)
-		String TotalPIO            = ""; // The total PIO value.
-		String TotalLIO            = ""; // The total LIO value.
-		String TotalCpuTime        = ""; // The total execution time value. (ms)
-		String TotalElapsedTime    = ""; // The total elapsed time value. (ms)
+		String TotalPIO                = ""; // The total PIO value.
+		String TotalLIO                = ""; // The total LIO value.
+		String TotalCpuTime            = ""; // The total execution time value. (ms)
+		String TotalElapsedTime        = ""; // The total elapsed time value. (ms)
+		String TotalPioDiff            = ""; // The total PIO value.
+		String TotalLioDiff            = ""; // The total LIO value.
+		String TotalCpuTimeDiff        = ""; // The total execution time value. (ms)
+		String TotalElapsedTimeDiff    = ""; // The total elapsed time value. (ms)
 //		if (srvVersion >= Ver.ver(16,0))
 		if (srvVersion >= Ver.ver(15,7,0, 130))
 		{
-			TotalPIO		 = "TotalPIO, ";         // DIFF COUNTER
-			TotalLIO         = "TotalLIO, ";         // DIFF COUNTER
-			TotalCpuTime     = "TotalCpuTime, ";     // DIFF COUNTER
-			TotalElapsedTime = "TotalElapsedTime, "; // DIFF COUNTER
+			TotalPIO		     = "TotalPIO,         ";
+			TotalLIO             = "TotalLIO,         ";
+			TotalCpuTime         = "TotalCpuTime,     ";
+			TotalElapsedTime     = "TotalElapsedTime, ";
+
+			TotalPioDiff		 = "TotalPioDiff         = TotalPIO, ";         // DIFF COUNTER
+			TotalLioDiff         = "TotalLioDiff         = TotalLIO, ";         // DIFF COUNTER
+			TotalCpuTimeDiff     = "TotalCpuTimeDiff     = TotalCpuTime, ";     // DIFF COUNTER
+			TotalElapsedTimeDiff = "TotalElapsedTimeDiff = TotalElapsedTime, "; // DIFF COUNTER
 		}
 
 		
@@ -391,13 +408,13 @@ extends CountersModel
 			sql_hasXmlPlan +
 			" UseCount, \n" +                   // The number of times this statement was used.
 			" UseCountDiff = UseCount, \n" +    // The number of times this statement was used.
-			LockWaits + LockWaitTime + nl_15702 +
-			SortCount + SortSpilledCount + TotalSortTime + MaxSortTime + nl_15702 + 
+			LockWaits + LockWaitTime + LockWaitsDiff + LockWaitTimeDiff + nl_15702 +
+			MaxSortTime + SortSpilledCount + SortCount + TotalSortTime + SortCountDiff + TotalSortTimeDiff + nl_15702 + 
 			" MetricsCount, \n" +               // Number of executions over which query metrics were captured.
-			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, "+ TotalElapsedTime + "\n" + // Elapsed time value.
-			" MaxLIO,         MinLIO,         AvgLIO,         "+ TotalLIO         + "\n" + // Logical IO
-			" MaxPIO,         MinPIO,         AvgPIO,         "+ TotalPIO         + "\n" + // Physical IO
-			" MaxCpuTime,     MinCpuTime,     AvgCpuTime,     "+ TotalCpuTime     + "\n" + // Execution time.
+			" MaxElapsedTime, MinElapsedTime, AvgElapsedTime, "+ TotalElapsedTime + TotalElapsedTimeDiff + "\n" + // Elapsed time value.
+			" MaxLIO,         MinLIO,         AvgLIO,         "+ TotalLIO         + TotalLioDiff         + "\n" + // Logical IO
+			" MaxPIO,         MinPIO,         AvgPIO,         "+ TotalPIO         + TotalPioDiff         + "\n" + // Physical IO
+			" MaxCpuTime,     MinCpuTime,     AvgCpuTime,     "+ TotalCpuTime     + TotalCpuTimeDiff     + "\n" + // Execution time.
 			" LastUsedDate, \n" +               // Date when this statement was last used.
 			" LastRecompiledDate, \n" +         // Date when this statement was last recompiled.
 			" CachedDate, \n" +                 // Date when this statement was cached.

@@ -148,15 +148,16 @@ extends Task
 	private void doCleanup(DbxConnection conn)
 	throws Exception
 	{
-		String q = conn.getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
 		int keepDays = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_keepDays, DEFAULT_keepDays);
 		Timestamp olderThan = new Timestamp( DateUtils.addDays(new Date(), -keepDays).getTime() );
 		_logger.info(_prefix + "Retention period is "+keepDays+", so data that is older than "+keepDays+" days (or older than '"+olderThan+"') will be deleted. This can be changed with property '"+PROPKEY_keepDays+"'.");
 
 		// Get "ServerNames" so we know what DBMS schemas we should iterate
-		String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
-		String sql = "select distinct "+q+"ServerName"+q+" from "+tabName+" order by 1";
+		String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
+		String sql = "select distinct "+lq+"ServerName"+rq+" from "+tabName+" order by 1";
 		List<String> schemaList = new ArrayList<>();
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -208,14 +209,16 @@ extends Task
 	private int doCleanupForSchema(DbxConnection conn, String schema, Timestamp olderThan)
 	throws Exception
 	{
-		String q = conn.getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
 		String tabName;
 		String sql;
 
 		// Get expected number of samples to delete
 		int sessionsSampleCount = -99;
-		tabName = CentralPersistWriterBase.getTableName(schema, Table.SESSION_SAMPLES, null, true);
-		sql = "select count(*) from "+tabName+" where "+q+"SessionSampleTime"+q+" < ?";
+		tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.SESSION_SAMPLES, null, true);
+		sql = "select count(*) from "+tabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
 		try (PreparedStatement pstmnt = conn.prepareStatement(sql))
 		{
 			pstmnt.setTimestamp(1, olderThan);
@@ -238,8 +241,8 @@ extends Task
 		
 		// Get "graph" tables
 		List<String> graphTables = new ArrayList<>();
-		tabName = CentralPersistWriterBase.getTableName(schema, Table.GRAPH_PROPERTIES, null, true);
-		sql = "select distinct "+q+"TableName"+q+" from "+tabName+" order by 1";
+		tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.GRAPH_PROPERTIES, null, true);
+		sql = "select distinct "+lq+"TableName"+rq+" from "+tabName+" order by 1";
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
 			while (rs.next())
@@ -251,7 +254,7 @@ extends Task
 		{
 			// TODO: delete TOP #### from ... in a loop so we do not use up to much transaction log for some databases
 			
-			sql = "delete from "+q+schema+q+"."+q+name+q+" where "+q+"SessionSampleTime"+q+" < ?";
+			sql = "delete from "+lq+schema+rq+"."+lq+name+rq+" where "+lq+"SessionSampleTime"+rq+" < ?";
 
 			String dryRunComment = "";
 			if (_dryRun)
@@ -284,18 +287,20 @@ extends Task
 
 	private int doCleanupForDbxTableInSchema(DbxConnection conn, String schema, Table table, Timestamp olderThan)
 	{
-		String q = conn.getQuotedIdentifierChar();
-		String fullTabName  = CentralPersistWriterBase.getTableName(schema, table, null, true);
-		String shortTabName = CentralPersistWriterBase.getTableName(null,   table, null, false);
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String fullTabName  = CentralPersistWriterBase.getTableName(conn, schema, table, null, true);
+		String shortTabName = CentralPersistWriterBase.getTableName(conn, null,   table, null, false);
 
 		String sql = null;
 //		String sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
 		if      (Table.ALARM_ACTIVE          .equals(table)) return 0; // Do not delete from this
-		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
-		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from "+fullTabName+" where "+q+"SessionStartTime"+q+" < ?";
-		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
-		else if (Table.SESSION_SAMPLES       .equals(table)) sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
-		else if (Table.SESSION_SAMPLE_SUM    .equals(table)) sql = "delete from "+fullTabName+" where "+q+"SessionStartTime"+q+" < ?";
+		else if (Table.ALARM_HISTORY         .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
+		else if (Table.GRAPH_PROPERTIES      .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime" +rq+" < ?";
+		else if (Table.SESSION_SAMPLE_DETAILS.equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
+		else if (Table.SESSION_SAMPLES       .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionSampleTime"+rq+" < ?";
+		else if (Table.SESSION_SAMPLE_SUM    .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime" +rq+" < ?";
 
 		if (StringUtil.isNullOrBlank(sql))
 			return 0;
@@ -323,15 +328,17 @@ extends Task
 	
 	private int doCleanupForCentralDbxTable(DbxConnection conn, Table table, Timestamp olderThan)
 	{
-		String q = conn.getQuotedIdentifierChar();
-		String fullTabName  = CentralPersistWriterBase.getTableName(null, table, null, true);
-		String shortTabName = CentralPersistWriterBase.getTableName(null, table, null, false);
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String fullTabName  = CentralPersistWriterBase.getTableName(conn, null, table, null, true);
+		String shortTabName = CentralPersistWriterBase.getTableName(conn, null, table, null, false);
 
 		String sql = null;
 //		String sql = "delete from "+fullTabName+" where "+q+"SessionSampleTime"+q+" < ?";
 		if      (Table.CENTRAL_VERSION_INFO  .equals(table)) return 0; // Do not delete from this
 		else if (Table.CENTRAL_GRAPH_PROFILES.equals(table)) return 0; // Do not delete from this
-		else if (Table.CENTRAL_SESSIONS      .equals(table)) sql = "delete from "+fullTabName+" where "+q+"SessionStartTime"+q+" < ?";
+		else if (Table.CENTRAL_SESSIONS      .equals(table)) sql = "delete from "+fullTabName+" where "+lq+"SessionStartTime"+rq+" < ?";
 
 		if (StringUtil.isNullOrBlank(sql))
 			return 0;

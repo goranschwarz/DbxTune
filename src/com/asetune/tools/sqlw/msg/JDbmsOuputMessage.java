@@ -30,8 +30,8 @@ extends JAseMessage
 	
 	private static String getDbmsType(String connectedToProductName)
 	{
-		if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE)) return "Oracle";
-		if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX)) return "DB2";
+		if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE )) return "Oracle";
+		if (DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_LUW)) return "DB2";
 		return "Oracle/DB2";
 	}
 

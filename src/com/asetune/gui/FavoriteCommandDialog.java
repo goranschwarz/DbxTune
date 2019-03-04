@@ -2339,7 +2339,7 @@ implements ActionListener, FocusListener //, ChangeListener
 		else if (VendorType.MAXDB      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MAXDB       )) return true;
 		else if (VendorType.ORACLE     .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE      )) return true;
 		else if (VendorType.MSSQL      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL       )) return true;
-		else if (VendorType.DB2        .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX      )) return true;
+		else if (VendorType.DB2        .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DB2_LUW     )) return true;
 		else if (VendorType.HSQL       .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_HSQL        )) return true;
 		else if (VendorType.MYSQL      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_MYSQL       )) return true;
 		else if (VendorType.DERBY      .equals(vendorType) && DbUtils.isProductName(connectedToProductName, DbUtils.DB_PROD_NAME_DERBY       )) return true;

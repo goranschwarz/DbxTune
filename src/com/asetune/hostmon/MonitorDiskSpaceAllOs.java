@@ -87,6 +87,8 @@ extends HostMonitor
 
 		md.setPkCol("MountedOn");
 		
+		md.setDiffCol( "Used-KB", "Available-KB", "Used-MB", "Available-MB" );
+
 		// Skip the header line
 //		md.setSkipRows("Filesystem", "Filesystem");
 

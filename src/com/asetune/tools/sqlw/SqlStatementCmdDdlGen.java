@@ -97,7 +97,7 @@ extends SqlStatementAbstract
 //		String params = input.substring(input.indexOf(' ') + 1).trim();
 		String params = input.replace("\\ddlgen", "").trim();
 
-		_args = StringUtil.translateCommandline(params);
+		_args = StringUtil.translateCommandline(params, false);
 
 		if (_args.length >= 1)
 		{

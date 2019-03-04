@@ -36,6 +36,9 @@ extends SqlCompletion
 
 	public ProcedureInfo _procInfo = null;
 	
+	//-------------------------
+	// helper called from constructor
+	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, ProcedureInfo pi, boolean addCatalog, String catName, boolean addSchema, boolean quoteNames)
 	{
 		String tmpCatalogName = pi._procCat;
@@ -73,6 +76,9 @@ extends SqlCompletion
 		return out;
 	}
 
+	//-------------------------
+	// CONSTRUCTOR(S)
+	//-------------------------
 //	public SqlProcedureCompletion(CompletionProviderAbstractSql provider, ProcedureInfo pi)
 	public SqlProcedureCompletion(CompletionProviderAbstractSql provider, ProcedureInfo pi, boolean addCatalog, String catalogName, boolean addSchema, boolean quoteNames)
 	{
@@ -80,10 +86,10 @@ extends SqlCompletion
 		_procInfo = pi;
 
 		String shortDesc = 
-			"<font color=\"blue\">"+(pi._oraPackageName==null?"":"PACKAGE ")+pi._procType+"</font>" +
+			"<font color='blue'>"+(pi._oraPackageName==null?"":"PACKAGE ")+pi._procType+"</font>" +
 			(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName="+pi._procSpecificName) +
-//			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : stripMultiLineHtml(pi._procRemark)) + "</font></i>";
+//			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
+			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : stripMultiLineHtml(pi._procRemark)) + "</font></i>";
 		setShortDescription(shortDesc);
 		//setSummary(_procInfo.toHtmlString());
 	}

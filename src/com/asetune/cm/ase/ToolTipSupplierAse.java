@@ -248,10 +248,10 @@ extends CmToolTipSupplierDefault
 //											sb.append("<table BORDER=1 CELLSPACING=0 CELLPADDING=0>\n");
 
 											sb.append("<tr>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Column Name")      .append("</b></font></td>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Absolute Counters").append("</b></font></td>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Diff Counters")    .append("</b></font></td>");
-											sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append("Rate Counters")    .append("</b></font></td>");
+											sb.append("<td nowrap bgcolor='#cccccc'><font color='#000000'><b>").append("Column Name")      .append("</b></font></td>");
+											sb.append("<td nowrap bgcolor='#cccccc'><font color='#000000'><b>").append("Absolute Counters").append("</b></font></td>");
+											sb.append("<td nowrap bgcolor='#cccccc'><font color='#000000'><b>").append("Diff Counters")    .append("</b></font></td>");
+											sb.append("<td nowrap bgcolor='#cccccc'><font color='#000000'><b>").append("Rate Counters")    .append("</b></font></td>");
 											sb.append("</tr>\n");
 
 											for (int c=0; c<ctmRate.getColumnCount(); c++)
@@ -259,11 +259,11 @@ extends CmToolTipSupplierDefault
 //												System.out.println("XXXX: colName='"+ctm.getColumnName(c)+"', value='"+ctm.getValueAt(r, c)+"'.");
 
 												if ( (c % 2) == 0 )
-													sb.append("<tr bgcolor=\"#ffffff\">"); // white
+													sb.append("<tr bgcolor='#ffffff'>"); // white
 												else
-													sb.append("<tr bgcolor=\"#ffffcc\">"); // light yellow
+													sb.append("<tr bgcolor='#ffffcc'>"); // light yellow
 
-												sb.append("<td nowrap bgcolor=\"#cccccc\"><font color=\"#000000\"><b>").append(ctmRate.getColumnName(c)).append("</b></font></td>");
+												sb.append("<td nowrap bgcolor='#cccccc'><font color='#000000'><b>").append(ctmRate.getColumnName(c)).append("</b></font></td>");
 
 												sb.append("<td nowrap>").append(ctmAbs ==null?"":ctmAbs .getValueAt(r, c)).append("</td>");
 												sb.append("<td nowrap>").append(ctmDiff==null?"":ctmDiff.getValueAt(r, c)).append("</td>");

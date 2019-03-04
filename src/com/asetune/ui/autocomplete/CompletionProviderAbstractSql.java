@@ -68,6 +68,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.OracleConnection;
 import com.asetune.tools.ddlgen.DdlGen;
@@ -104,6 +105,14 @@ public abstract class CompletionProviderAbstractSql
 extends CompletionProviderAbstract
 {
 	private static Logger _logger = Logger.getLogger(CompletionProviderAbstractSql.class);
+	
+	
+	public final static String  PROPKEY_PREFIX_alwaysQuoteTableNames  = "sqlw.CompletionProviderAbstractSql.always.quote.table.names.";
+	public final static boolean DEFAULT_alwaysQuoteTableNames         = false;
+	
+	public final static String  PROPKEY_PREFIX_alwaysQuoteColumnNames = "sqlw.CompletionProviderAbstractSql.always.quote.column.names.";
+	public final static boolean DEFAULT_alwaysQuoteColumnNames        = false;
+
 
 	public CompletionProviderAbstractSql(Window owner, ConnectionProvider connectionProvider)
 	{
@@ -128,38 +137,43 @@ extends CompletionProviderAbstract
 	protected List<SqlProcedureCompletion>  _systemProcComplList = new ArrayList<SqlProcedureCompletion>();
 	
 	/** put quotes around the "tableNames" */
-	protected boolean _quoteTableNames              = false;
+	protected boolean _quoteTableNames              = DEFAULT_alwaysQuoteTableNames;
+	protected boolean _quoteColumnNames             = DEFAULT_alwaysQuoteColumnNames;
 	protected boolean _addSchemaName                = true;
 
 	protected String  _dbProductName                = "";
 	protected String  _dbExtraNameCharacters        = "";
 	protected String  _dbIdentifierQuoteString      = "\"";
+//	protected String  _dbIdentifierQuoteStringStart = "\""; // FIXME Implement this EVERYWHERE (for SQL_Server and Sybase it should be '[') so we do not have to relay on "set quoted identifier on"
+//	protected String  _dbIdentifierQuoteStringEnd   = "\""; // FIXME Implement this EVERYWHERE (for SQL_Server and Sybase it should be ']') so we do not have to relay on "set quoted identifier on"
+//	protected String[] _dbIdentifierQuoteString     = new String[] {"\"", "\""}; // Or we can use an ARRAY with 2 fields
 	protected boolean _dbStoresUpperCaseIdentifiers = false;
 	protected boolean _dbSupportsSchema             = true; // so far it's only MySQL that do not support schema it uses the catalog as schemas...
 	
 	protected String _currentCatalog                = null;
 	protected String _currentServerName             = null;
 
-	private DbxConnection _localConn    = null; 
-	private String        _localCatName = null; 
+	private DbxConnection _localConn        = null; 
+	private String        _localCatalogName = null; 
 
 	@Override
 	public void disconnect()
 	{
 		super.disconnect();
-		
-		_quoteTableNames         = false;
+
+		_quoteTableNames         = DEFAULT_alwaysQuoteTableNames;
+		_quoteColumnNames        = DEFAULT_alwaysQuoteColumnNames;
 		_addSchemaName           = true;
-		
+
 		_dbProductName                = "";
 		_dbExtraNameCharacters        = "";
 		_dbIdentifierQuoteString      = "\"";
 		_dbStoresUpperCaseIdentifiers = false;
 		_dbSupportsSchema             = true;
-		
+
 		_currentCatalog          = null;
 		_currentServerName       = null;
-		
+
 		_schemaNames             .clear();
 		_dbInfoList              .clear();
 		_dbComplList             .clear();
@@ -171,15 +185,15 @@ extends CompletionProviderAbstract
 		_procedureComplList      .clear();
 		_systemProcInfoList      .clear();
 		_systemProcComplList     .clear();
-		
+
 		if (_localConn != null)
 		{
 			try { _localConn.close(); }
 			catch(SQLException ignore) {}
-			_localCatName = null;
+			_localCatalogName = null;
 		}
 	}
-	
+
 	public void addSqlCompletion(Completion c)
 	{
 		super.addCompletion(c);
@@ -211,7 +225,7 @@ extends CompletionProviderAbstract
 			return;
 
 		// Set this early, if the CompletionProvider isn't yet used; we will set it when first connection is made.
-		_localCatName = catName;
+		_localCatalogName = catName;
 
 		if (_localConn == null)
 			return;
@@ -222,7 +236,7 @@ extends CompletionProviderAbstract
 		}
 		catch(SQLException ex) 
 		{ 
-			_logger.error("Problems setting catalog name to '"+_localCatName+"'. Caught: "+ex);
+			_logger.error("Problems setting catalog name to '"+_localCatalogName+"'. Caught: "+ex);
 		}
 	}
 
@@ -231,7 +245,7 @@ extends CompletionProviderAbstract
 		if (_localConn == null)
 		{
 			_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Completion");
-			setCatalog(_localCatName);
+			setCatalog(_localCatalogName);
 		}
 		
 		if (_localConn != null)
@@ -958,14 +972,21 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 		if (enteredText != null) enteredText = enteredText.replace('%', '*'); // Change any SQL WildCardChar '%' into a more RegExp Friendly '*'
 		if (currentWord != null) currentWord = currentWord.replace('%', '*'); // Change any SQL WildCardChar '%' into a more RegExp Friendly '*'
-//System.out.println("START: enteredText='"+enteredText+"'.");
-//System.out.println("START: currentWord='"+currentWord+"'.");
+		
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("START: enteredText='"+enteredText+"'.");
+			_logger.debug("START: currentWord='"+currentWord+"'.");
+		}
 
-SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, false);
-//SqlObjectName cwId = new SqlObjectName(currentWord);
+		SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema, false);
+		//SqlObjectName cwId = new SqlObjectName(currentWord);
 
-//System.out.println("START: enteredText IDENTIFIER: "+ etId);
-//System.out.println("START: currentWord IDENTIFIER: "+ cwId);
+		if (_logger.isDebugEnabled())
+		{
+			_logger.debug("START: enteredText(etId) IDENTIFIER: "+ etId);
+//			_logger.debug("START: currentWord(cwId) IDENTIFIER: "+ cwId);
+		}
 
 //		System.out.println("-----------------------------------");
 //		System.out.println("enteredText = '"+enteredText+"'.");
@@ -988,7 +1009,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		if (needRefresh())
 			refresh();
 
-//System.out.println("getCompletionsSql(): _schemaNames="+_schemaNames);		
+		if (_logger.isDebugEnabled())
+			_logger.debug("getCompletionsSql(): _schemaNames="+_schemaNames);
 
 		//-----------------------------------------------------------
 		// Complete DATABASES
@@ -1021,7 +1043,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		//
 		if ( enteredText.equals(":") )
 		{
-//System.out.println(">>> in: :s SCHEMA REPLACEMENT");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :s SCHEMA REPLACEMENT");
+
 			ArrayList<Completion> cList = new ArrayList<Completion>();
 
 			cList.add( new BasicCompletion(CompletionProviderAbstractSql.this, ":s",  "Show all schemas") );
@@ -1039,7 +1063,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		//
 		if ( enteredText.equalsIgnoreCase(":s") )
 		{
-//System.out.println(">>> in: :s SCHEMA REPLACEMENT");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :s SCHEMA REPLACEMENT");
+
 			ArrayList<Completion> cList = new ArrayList<Completion>();
 
 			// lets return all schemas/owners
@@ -1053,12 +1079,17 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		// Only show USER TABLES 
 		if (enteredText.equalsIgnoreCase(":t"))
 		{
-//System.out.println(">>> in: :t TABLE REPLACEMENT");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :t TABLE REPLACEMENT");
+
 			ArrayList<Completion> clist = new ArrayList<Completion>();
 			for (SqlTableCompletion tc : _tableComplList)
 			{
 				TableInfo ti = tc._tableInfo;
-//System.out.println("type='"+ti._tabType+"', name='"+ti._tabName+"'.");
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("type='"+ti._tabType+"', name='"+ti._tabName+"'.");
+
 				if ("TABLE".equals(ti._tabType))
 					clist.add(tc);
 			}
@@ -1071,7 +1102,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		// Only show VIEW 
 		if (enteredText.equalsIgnoreCase(":v"))
 		{
-//System.out.println(">>> in: :v VIEW REPLACEMENT");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :v VIEW REPLACEMENT");
+
 			ArrayList<Completion> clist = new ArrayList<Completion>();
 			for (SqlTableCompletion tc : _tableComplList)
 			{
@@ -1088,7 +1121,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		// Only show SYSTEM VIEW 
 		if (enteredText.equalsIgnoreCase(":sv"))
 		{
-//System.out.println(">>> in: :sv SYSTEM VIEW REPLACEMENT");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :sv SYSTEM VIEW REPLACEMENT");
+
 			ArrayList<Completion> clist = new ArrayList<Completion>();
 			for (SqlTableCompletion tc : _tableComplList)
 			{
@@ -1105,7 +1140,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		// Only show SYSTEM TABLES 
 		if (enteredText.equalsIgnoreCase(":st"))
 		{
-//System.out.println(">>> in: :st SYSTEM-TABLE REPLACEMENT");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :st SYSTEM-TABLE REPLACEMENT");
+
 			ArrayList<Completion> clist = new ArrayList<Completion>();
 			for (SqlTableCompletion tc : _tableComplList)
 			{
@@ -1125,43 +1162,48 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		//
 		if ( "exec".equalsIgnoreCase(prevWord1) || "execute".equalsIgnoreCase(prevWord1) || "call".equalsIgnoreCase(prevWord1) )
 		{
-//System.out.println(">>> in: Complete STORED PROCS");
-//System.out.println("SqlObjectName: "+etId);
+			if (_logger.isDebugEnabled())
+			{
+				_logger.debug(">>> in: Complete STORED PROCS");
+				_logger.debug("SqlObjectName: "+etId);
+			}
+
 			ArrayList<Completion> procList = new ArrayList<Completion>();
 
 			// OTHER_DB_LOOKUP: Procedures in other databases, do lookup "on the fly"
 			if (etId.isFullyQualifiedObject()) // CATALOG.SCHEMA.OBJECT
 			{
-//System.out.println(">>> in: Complete STORED PROCS: isFullyQualifiedObject");
-//				Connection conn = _connectionProvider.getConnection();
+				if (_logger.isDebugEnabled())
+					_logger.debug(">>> in: Complete STORED PROCS: isFullyQualifiedObject");
+
 				DbxConnection conn = getConnection();
 				if (conn == null)
 					return null;
 
 				// Add matching procedures in specified database
 				// but NOT if specified database is "sybsystemprocs" and input text starts with sp_
-				if ( "sybsystemprocs".equalsIgnoreCase(etId._catName) && etId._objName.startsWith("sp_"))
+				if ( "sybsystemprocs".equalsIgnoreCase(etId.getCatalogName()) && etId.getObjectName().startsWith("sp_"))
 				{
 					// do not add sp_* if current working database is sybsystemprocs...
 					// if entered text is 'sp_' those procs will be added a bit down (last in this section)
 				}
 				else
 				{
-					List<Completion> list = getProcedureListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
+					List<Completion> list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName());
 					if ( list != null && ! list.isEmpty() )
 						procList.addAll(list);
 				}
 
 				// System stored procs, which should be executed in a specific database context
-				if (etId._objName.startsWith("sp_"))
+				if (etId.getObjectName().startsWith("sp_"))
 				{
 					// NOTE: _systemProcComplList probably does NOT have a completion with the database name in it.
 					for (SqlProcedureCompletion pc : _systemProcComplList)
 					{
 						ProcedureInfo pi = pc._procInfo;
-						if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+						if (startsWithIgnoreCaseOrRegExp(pi._procName, etId.getObjectName()))
 						{
-							SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, false, etId._catName, false, _quoteTableNames);
+							SqlProcedureCompletion c = new SqlProcedureCompletion(CompletionProviderAbstractSql.this, pi, false, etId.getCatalogName(), false, _quoteTableNames);
 							procList.add(c);
 						}
 					}
@@ -1175,22 +1217,29 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			// NOTE: make this test AFTER: OTHER_DB_LOOKUP, otherwise the regexp
 			if (etId.isSchemaQualifiedObject()) // SCHEMA.OBJECT
 			{
-//System.out.println("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): etId._schName='"+etId._schName+"', etId._objName='"+etId._objName+"'.");
+				if (_logger.isDebugEnabled())
+					_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): etId.getSchemaName()='"+etId.getSchemaName()+"', etId.getObjectName()='"+etId.getObjectName()+"'.");
+
 				// Get from the schemas
-				List<Completion> list = getProcedureCompletionsFromSchema(_procedureComplList, etId._schName, etId._objName);
-//System.out.println("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
+				List<Completion> list = getProcedureCompletionsFromSchema(_procedureComplList, etId.getSchemaName(), etId.getObjectName());
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
 
 				// If cached schema lookup failed, the option might be OFF do a on-the-fly lookup...
 				if (list.isEmpty())
 				{
-//System.out.println("EXEC: SCHEMA.OBJECT: NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
-//					Connection conn = _connectionProvider.getConnection();
+					if (_logger.isDebugEnabled())
+						_logger.debug("EXEC: SCHEMA.OBJECT: NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
+
 					DbxConnection conn = getConnection();
 					if (conn == null)
 						return null;
 
-					list = getProcedureListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
-//System.out.println("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
+					list = getProcedureListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName());
+					
+					if (_logger.isDebugEnabled())
+						_logger.debug("EXEC: SCHEMA.OBJECT: getProcedureCompletionsFromSchema(): list.size() = "+list.size());
 				}
 
 				return list;
@@ -1198,7 +1247,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 
 			// Add matching procedures in local database
 			// but NOT if current working database is "sybsystemprocs" and input text starts with sp_
-			if ( "sybsystemprocs".equalsIgnoreCase(_currentCatalog) && etId._objName.startsWith("sp_"))
+			if ( "sybsystemprocs".equalsIgnoreCase(_currentCatalog) && etId.getObjectName().startsWith("sp_"))
 			{
 				// do not add sp_* if current working database is sybsystemprocs...
 				// if entered text is 'sp_' those procs will be added a bit down (last in this section)
@@ -1209,7 +1258,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				for (SqlProcedureCompletion pc : _procedureComplList)
 				{
 					ProcedureInfo pi = pc._procInfo;
-					if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+					if (startsWithIgnoreCaseOrRegExp(pi._procName, etId.getObjectName()))
 						procList.add(pc);
 				}
 			}
@@ -1218,32 +1267,38 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			for (SqlDbCompletion dc : _dbComplList)
 			{
 				DbInfo di = dc._dbInfo;
-				if (startsWithIgnoreCaseOrRegExp(di._dbName, etId._objName))
+				if (startsWithIgnoreCaseOrRegExp(di._dbName, etId.getObjectName()))
 					procList.add(dc);
 			}
 
 			// Add matching schemas
 			for (String schemaName : _schemaNames)
 			{
-//System.out.println("EXEC(add matching schemas): schemaName='"+schemaName+"', etId._objName='"+etId._objName+"'.");
-				if (startsWithIgnoreCaseOrRegExp(schemaName, etId._objName))
+				if (_logger.isDebugEnabled())
+					_logger.debug("EXEC(add matching schemas): schemaName='"+schemaName+"', etId.getObjectName()='"+etId.getObjectName()+"'.");
+
+				if (startsWithIgnoreCaseOrRegExp(schemaName, etId.getObjectName()))
 					procList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, schemaName) );
 			}
 
 			// Add matching 'sp_*' from system procedures
-			if (startsWithIgnoreCaseOrRegExp(etId._objName, "sp_"))
+			if (startsWithIgnoreCaseOrRegExp(etId.getObjectName(), "sp_"))
 			{
-//System.out.println("SYSTEM PROC LOOKUP: schName='"+etId._schName+"', objName='"+etId._objName+"'.");
+				if (_logger.isDebugEnabled())
+					_logger.debug("SYSTEM PROC LOOKUP: schName='"+etId.getSchemaName()+"', objName='"+etId.getObjectName()+"'.");
 
 				for (SqlProcedureCompletion pc : _systemProcComplList)
 				{
 					ProcedureInfo pi = pc._procInfo;
-					if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+					if (startsWithIgnoreCaseOrRegExp(pi._procName, etId.getObjectName()))
 						procList.add(pc);
 				}
 			}
-//System.out.println("<<<---PROC_LIST.size(): "+procList.size());
-//System.out.println("<<<---PROC_LIST: "+procList);
+			if (_logger.isDebugEnabled())
+			{
+				_logger.debug("<<<---PROC_LIST.size(): "+procList.size());
+				_logger.debug("<<<---PROC_LIST: "+procList);
+			}
 			return procList;
 		} // end: exec
 
@@ -1251,17 +1306,20 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		// TABLES in other databases, do lookup 'on the fly'
 		// Check for database..tab<ctrl+space> 
 		//
-//System.out.println(">>> etId: "+etId);
+		if (_logger.isDebugEnabled())
+			_logger.debug(">>> etId: "+etId);
+
 		if (etId.isFullyQualifiedObject()) // CATALOG.SCHEMA.OBJECT
 		{
-//System.out.println(">>> in: TABLES in other databases, (isFullyQualifiedObject=TRUE, CATALOG.SCHEMA.OBJECT) do lookup 'on the fly' for: "+etId);
-//			Connection conn = _connectionProvider.getConnection();
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: TABLES in other databases, (isFullyQualifiedObject=TRUE, CATALOG.SCHEMA.OBJECT) do lookup 'on the fly' for: "+etId);
+
 			DbxConnection conn = getConnection();
 			if (conn == null)
 				return null;
 
 			// Note: this will also check for table-valued-functions, but right now that doesn't work :( at least for MS-SQL which I was testing against
-			return getTableListWithGuiProgress(conn, etId._catName, etId._schName, etId._objName);
+			return getTableListWithGuiProgress(conn, etId.getCatalogName(), etId.getSchemaName(), etId.getObjectName());
 		}
 
 		//-----------------------------------------------------------
@@ -1279,7 +1337,8 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 		//
 		if (enteredText.indexOf('.') >= 0)
 		{
-//System.out.println(">>> in: TAB_ALIAS.COLUMN_NAME or SCHEMA.TAB or SCHEMA completion");
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: TAB_ALIAS.COLUMN_NAME or SCHEMA.TAB or SCHEMA completion");
 
 			String text = enteredText;
 
@@ -1287,17 +1346,20 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			
 			String colName      = text.substring(lastDot+1);
 			String tabAliasName = text.substring(0, lastDot);
-//System.out.println("1-tabAliasName='"+tabAliasName+"'.");
+			if (_logger.isDebugEnabled())
+				_logger.debug("1-tabAliasName='"+tabAliasName+"'.");
 
 			while(tabAliasName.indexOf('.') >= 0)
 			{
 				tabAliasName = tabAliasName.substring(tabAliasName.lastIndexOf('.')+1);
-//System.out.println("2-tabAliasName='"+tabAliasName+"'.");
+				if (_logger.isDebugEnabled())
+					_logger.debug("2-tabAliasName='"+tabAliasName+"'.");
 			}
 
 			colName      = SqlObjectName.stripQuote(colName     , _dbIdentifierQuoteString);
 			tabAliasName = SqlObjectName.stripQuote(tabAliasName, _dbIdentifierQuoteString);
-//System.out.println("3-tabAliasName='"+tabAliasName+"'.");
+			if (_logger.isDebugEnabled())
+				_logger.debug("3-tabAliasName='"+tabAliasName+"'.");
 
 			// If the "alias" name (word before the dot) is NOT A column, but a SCHEMA name (in the local database, cached in _schemaNames)
 			// then continue lookup tables by schema name
@@ -1305,25 +1367,34 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			if ( CollectionUtils.containsIgnoreCase(_schemaNames, tabAliasName) )
 			{
 				String objNamePattern = colName;
-//System.out.println("IN LOCAL SCHEMA: schema='"+tabAliasName+"', objNamePattern='"+objNamePattern+"'.");
+				if (_logger.isDebugEnabled())
+					_logger.debug("IN LOCAL SCHEMA: schema='"+tabAliasName+"', objNamePattern='"+objNamePattern+"'.");
+
 				// do completion, but only for tables in a specific schema
 //				List<Completion> tables    = getTableCompletionsFromSchema   (completions, tabAliasName, objNamePattern);
 //				List<Completion> functions = getFunctionCompletionsFromSchema(completions, tabAliasName, objNamePattern);
 //				tables.addAll(functions);
 //				return tables;
 				List<Completion> tables    = getTableAndFuncCompletionsFromSchema(completions, tabAliasName, objNamePattern);
-//System.out.println("<<<---returns: "+tables);
+				
+				if (_logger.isDebugEnabled())
+					_logger.debug("<<<---returns: "+tables);
+
 				return tables;
 			}
 			else // alias is NOT in the "locals" schemas (so hopefully it's a column, but we will discover that...)
 			{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: start");
+				if (_logger.isDebugEnabled())
+					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: start");
+
 				// Try to figure out what's the "real" table name for this alias
 				// If we find it, display columns for the table (alias)
 //				String tabName = getTableNameForAlias(comp, tabAliasName, true);
 				String        aliasTabName     = getTableNameForAlias(comp, tabAliasName, false);
-				SqlObjectName aliasFullTabName = new SqlObjectName( aliasTabName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: aliasTabName='"+aliasTabName+"', aliasFullTabName='"+aliasFullTabName+"'.");
+				SqlObjectName aliasFullTabName = new SqlObjectName( aliasTabName, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema);
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: aliasTabName='"+aliasTabName+"', aliasFullTabName='"+aliasFullTabName+"'.");
 
 				// Columns to show, will end up in here
 				ArrayList<Completion> colList = new ArrayList<Completion>();
@@ -1331,25 +1402,27 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				// tablename has no Catalog specification, then do local/cached lookup 
 				if ( ! aliasFullTabName.hasCatalogName() )
 				{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP ---");
+					if (_logger.isDebugEnabled())
+						_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP ---");
+
 					// Search the cached table information.
-					TableInfo ti = getTableInfo(aliasFullTabName._objName);
+					TableInfo ti = getTableInfo(aliasFullTabName.getObjectName());
 					if (ti != null)
 					{
 						for (TableColumnInfo tci : ti._columns)
 						{
 							if (startsWithIgnoreCaseOrRegExp(tci._colName, colName))
-								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, tci._colName, ti));
+								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, tci._colName, ti, _quoteColumnNames));
 						}
 					}
 					// Search the cached function information.
-					FunctionInfo fi = getFunctionInfo(aliasFullTabName._objName);
+					FunctionInfo fi = getFunctionInfo(aliasFullTabName.getObjectName());
 					if (fi != null)
 					{
 						for (FunctionColumnInfo fci : fi._columns)
 						{
 							if (startsWithIgnoreCaseOrRegExp(fci._colName, colName))
-								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, fci._colName, ti));
+								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, fci._colName, ti, _quoteColumnNames));
 						}
 					}
 					// If not any columns was found "in cache", for this table, then do "on the fly" lookup
@@ -1357,7 +1430,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					// For the "non cached lookup" we need the catalog name, so set this...
 					if (colList.isEmpty())
 					{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP FAILED, found 0 column entries in cache --- (_currentCatalog='"+_currentCatalog+"'.)");
+						if (_logger.isDebugEnabled())
+							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- CACHED LOOKUP FAILED, found 0 column entries in cache --- (_currentCatalog='"+_currentCatalog+"'.)");
+
 						aliasFullTabName.setCatalogName(_currentCatalog);
 					}
 				}
@@ -1365,35 +1440,43 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 				// If cached column lookup failed to find any cached entries, the option might be OFF do a on the fly lookup...
 				if (colList.isEmpty())
 				{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
-//					Connection conn = _connectionProvider.getConnection();
+					if (_logger.isDebugEnabled())
+						_logger.debug("XXXX NOT-IN LOCAL SCHEMA: -- ON-THE-FLY LOOKUP ---");
+
 					DbxConnection conn = getConnection();
 					if (conn == null)
 						return null;
 
-//					List<Completion> tabList = getTableListWithGuiProgress(conn, aliasFullTabName._catName, aliasFullTabName._schName, aliasFullTabName._objName);
-					List<Completion> tabList;
-					if (_dbSupportsSchema)
-						tabList = getTableListWithGuiProgress(conn, aliasFullTabName._catName, aliasFullTabName._schName, aliasFullTabName._objName);
-					else
-						tabList = getTableListWithGuiProgress(conn, aliasFullTabName._schName, null, aliasFullTabName._objName);
+					List<Completion> tabList = getTableListWithGuiProgress(conn, aliasFullTabName);
+////					List<Completion> tabList = getTableListWithGuiProgress(conn, aliasFullTabName.getCatalogName(), aliasFullTabName.getSchemaName(), aliasFullTabName.getObjectName());
+//					List<Completion> tabList;
+//					if (_dbSupportsSchema)
+//						tabList = getTableListWithGuiProgress(conn, aliasFullTabName.getCatalogName(), aliasFullTabName.getSchemaName(), aliasFullTabName.getObjectName());
+//					else
+//						tabList = getTableListWithGuiProgress(conn, aliasFullTabName.getSchemaName(), null, aliasFullTabName.getObjectName());
 					
-//System.out.println("    LOOKUP-RESULT: " + tabList);
-//System.out.println("    LOOKUP-RESULT: size="+tabList.size());
+					if (_logger.isDebugEnabled())
+					{
+						_logger.debug("    LOOKUP-RESULT: " + tabList);
+						_logger.debug("    LOOKUP-RESULT: size="+tabList.size());
+					}
 
 					// search the *tables* found when doing lookup (it might return several suggestions)
 					// STOP after first *exact* TABLE match
 					Completion c = null;
 					for (Completion ce : tabList)
 					{
-//System.out.println("    COMP.getInputText()='"+ce.getInputText()+"'.");
-						if (aliasFullTabName._objName.equalsIgnoreCase(ce.getInputText()))
+						if (_logger.isDebugEnabled())
+							_logger.debug("    COMP.getInputText()='"+ce.getInputText()+"'.");
+
+						if (aliasFullTabName.getObjectName().equalsIgnoreCase(ce.getInputText()))
 						{
 							c = ce;
 							break;
 						}
 					}
-//System.out.println("    C = "+c);
+					if (_logger.isDebugEnabled())
+						_logger.debug("    C = "+c);
 
 					// If we found a TABLE, lets get columns that are matching up to currently entered text
 					if (c != null && c instanceof SqlTableCompletion)
@@ -1402,7 +1485,7 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 						for (TableColumnInfo tci : jdbcCompl._tableInfo._columns)
 						{
 							if (startsWithIgnoreCaseOrRegExp(tci._colName, colName))
-								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, tci._colName, jdbcCompl._tableInfo));
+								colList.add( new SqlColumnCompletion(CompletionProviderAbstractSql.this, tabAliasName, tci._colName, jdbcCompl._tableInfo, _quoteColumnNames));
 						}
 					}
 				}
@@ -1417,13 +1500,16 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					int xdot1 = text.indexOf('.');
 					final String catName = SqlObjectName.stripQuote( text.substring(0, xdot1), _dbIdentifierQuoteString);
 					final String schName = SqlObjectName.stripQuote( text.substring(xdot1+1) , _dbIdentifierQuoteString);
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP catName='"+catName+"', schName='"+schName+"'.");
+					if (_logger.isDebugEnabled())
+						_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP catName='"+catName+"', schName='"+schName+"'.");
 
 					// Search all known catalogs/databases
 					for (SqlDbCompletion dc : _dbComplList)
 					{
 						DbInfo di = dc._dbInfo;
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: searching catalog, di._dbName='"+di._dbName+"'.");
+						if (_logger.isDebugEnabled())
+							_logger.debug("XXXX NOT-IN LOCAL SCHEMA: searching catalog, di._dbName='"+di._dbName+"'.");
+
 						if (catName.equalsIgnoreCase(di._dbName))
 						{
 							// if entered catalog/db name is current working catalog/db
@@ -1432,7 +1518,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 							//   get available schemas for the specified catalog/db (NOT cached) 
 							if (catName.equalsIgnoreCase(_currentCatalog))
 							{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... in CURRENT-CATALOG.");
+								if (_logger.isDebugEnabled())
+									_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... in CURRENT-CATALOG.");
+
 								// lets return all schemas/owners
 								for (String schemaName : _schemaNames)
 									colList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, catName+"."+schemaName) );
@@ -1446,20 +1534,26 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 
 								if (_dbSupportsSchema)
 								{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... LOOKUP-ON-THE-FLY.");
+									if (_logger.isDebugEnabled())
+										_logger.debug("XXXX NOT-IN LOCAL SCHEMA: DO SCHEMA-LOOKUP... LOOKUP-ON-THE-FLY.");
+
 									List<Completion> list = getSchemaListWithGuiProgress(conn, catName, schName);
 									if ( list != null && ! list.isEmpty() )
 										colList.addAll(list);
 								}
 								else
 								{
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'.");
+									if (_logger.isDebugEnabled())
+										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'.");
+
 //									List<Completion> list = getTableListWithGuiProgress(conn, catName, schName, colName);
 									List<Completion> list = getTableListWithGuiProgress(conn, catName, null, colName); // note: colName contains here the start of the table name 
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'. list.size()=" + (list==null?"NULL":list.size()) );
+
+									if (_logger.isDebugEnabled())
+										_logger.debug("XXXX NOT-IN LOCAL SCHEMA(_dbSupportsSchema="+_dbSupportsSchema+"): DO CATALOG-LOOKUP... LOOKUP-ON-THE-FLY. catName='"+catName+"', schName=*null*, colName='"+colName+"'. list.size()=" + (list==null?"NULL":list.size()) );
+
 									if ( list != null && ! list.isEmpty() )
 										colList.addAll(list);
-									
 								}
 							}
 
@@ -1468,7 +1562,9 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 					}
 				}
 	
-//System.out.println("XXXX NOT-IN LOCAL SCHEMA: RETURN: colList.size: "+colList.size());
+				if (_logger.isDebugEnabled())
+					_logger.debug("XXXX NOT-IN LOCAL SCHEMA: RETURN: colList.size: "+colList.size());
+
 				return colList;
 			}
 		} // end ALIAS check: if (enteredText.indexOf('.') >= 0)
@@ -1484,14 +1580,14 @@ SqlObjectName etId = new SqlObjectName(enteredText, _dbProductName, _dbIdentifie
 			for (SqlProcedureCompletion pc : _systemProcComplList)
 			{
 				ProcedureInfo pi = pc._procInfo;
-				if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+				if (startsWithIgnoreCaseOrRegExp(pi._procName, etId.getObjectName()))
 					procList.add(pc);
 			}
 			// Local DB Procedures
 			for (SqlProcedureCompletion pc : _procedureComplList)
 			{
 				ProcedureInfo pi = pc._procInfo;
-				if (startsWithIgnoreCaseOrRegExp(pi._procName, etId._objName))
+				if (startsWithIgnoreCaseOrRegExp(pi._procName, etId.getObjectName()))
 					procList.add(pc);
 			}
 			
@@ -1903,6 +1999,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		try { _dbIdentifierQuoteString      = dbmd.getIdentifierQuoteString();   } catch(SQLException ignore) {}
 		try { _dbStoresUpperCaseIdentifiers = dbmd.storesUpperCaseIdentifiers(); } catch(SQLException ignore) {}
 
+		// Note: this is also implemented in: DbUtils.isSchemaSupported(_conn);
 		String schemaTerm       = "";
 		int    maxSchemaNameLen = 0;
 		try { schemaTerm       = dbmd.getSchemaTerm();          } catch(SQLException ignore) {}
@@ -1910,7 +2007,6 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (maxSchemaNameLen <= 0 && StringUtil.isNullOrBlank(schemaTerm))
 		{
 			_dbSupportsSchema = false;
-//			_addSchemaName    = false;
 		}
 		
 		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '"+_dbProductName+"'.");
@@ -1919,6 +2015,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		_logger.info("JDBC DatabaseMetaData.storesUpperCaseIdentifiers() is '"+_dbStoresUpperCaseIdentifiers+"'.");
 		_logger.info("JDBC DatabaseMetaData.getSchemaTerm()              is '"+schemaTerm       + "' (dbSupportsSchema = "+_dbSupportsSchema+").");
 		_logger.info("JDBC DatabaseMetaData.getMaxSchemaNameLength()     is " +maxSchemaNameLen + " (dbSupportsSchema = "+_dbSupportsSchema+").");
+		_logger.info("JDBC _dbSupportsSchema                             is " +_dbSupportsSchema);
 
 		// get current catalog/dbName
 		_currentCatalog = conn.getCatalog();
@@ -1946,21 +2043,58 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		}
 //_logger.info("getTableTypes\n"           +new ResultSetTableModel(dbmd.getTableTypes(),            "getTableTypes").toTableString());
 
+		// ALWAYS Quote Table and Column Names
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String PROPKEY_alwaysQuoteTableNames  = PROPKEY_PREFIX_alwaysQuoteTableNames  + _dbProductName;
+		String PROPKEY_alwaysQuoteColumnNames = PROPKEY_PREFIX_alwaysQuoteColumnNames + _dbProductName;
+		if (conf.hasProperty(PROPKEY_alwaysQuoteTableNames))  _quoteTableNames  = conf.getBooleanProperty(PROPKEY_alwaysQuoteTableNames,  DEFAULT_alwaysQuoteTableNames);
+		if (conf.hasProperty(PROPKEY_alwaysQuoteColumnNames)) _quoteColumnNames = conf.getBooleanProperty(PROPKEY_alwaysQuoteColumnNames, DEFAULT_alwaysQuoteColumnNames);
+
+		// For some DBMS go and check stuff and "override" defaults
 		if (DbUtils.DB_PROD_NAME_H2.equals(_dbProductName))
 		{
 			waitDialog.setState("Getting H2 database settings");
 
 			// if 'DATABASE_TO_UPPER' is true, then table names must be quoted
-			String sql = "select VALUE from INFORMATION_SCHEMA.SETTINGS where NAME = 'DATABASE_TO_UPPER'";
+		//	String sql = "select VALUE from INFORMATION_SCHEMA.SETTINGS where NAME = 'DATABASE_TO_UPPER'";
+			String sql = "select NAME, VALUE from INFORMATION_SCHEMA.SETTINGS";
 			try
 			{
 				Statement stmnt = conn.createStatement();
 				ResultSet rs = stmnt.executeQuery(sql);
 				while(rs.next())
 				{
-					String value = StringUtils.trim(rs.getString(1));
-					
-					_quoteTableNames = value.trim().equalsIgnoreCase("true");
+					String name  = StringUtils.trim(rs.getString(1));
+					String value = StringUtils.trim(rs.getString(2));
+
+					//--------------------------------------------------------------------------
+					// https://www.h2database.com/javadoc/org/h2/engine/DbSettings.html
+					// Database setting DATABASE_TO_UPPER (default: true).
+					// Database short names are converted to uppercase for the DATABASE() function, and in the CATALOG column of all database meta data methods. 
+					// Setting this to "false" is experimental. When set to false, all identifier names (table names, column names) are case sensitive (except aggregate, built-in functions, data types, and keywords).
+					//--------------------------------------------------------------------------
+					if ("DATABASE_TO_UPPER".equals(name))
+					{
+						_quoteTableNames  = value.trim().equalsIgnoreCase("true");
+						//_quoteTableNames  = value.trim().equalsIgnoreCase("false");
+						_quoteColumnNames = _quoteTableNames;
+					}
+
+					//--------------------------------------------------------------------------
+					// When I checked my DATABASE it's not part of the INFORMATION_SCHEMA.SETTINGS
+					// But it exists according to: http://www.h2database.com/html/grammar.html#set_ignorecase
+					//
+					// If IGNORECASE is enabled, text columns in newly created tables will be case-insensitive. 
+					// Already existing tables are not affected. The effect of case-insensitive columns is similar to using a collation with strength PRIMARY. 
+					// Case-insensitive columns are compared faster than when using a collation. String literals and parameters are however still considered case sensitive even if this option is set.
+					// Admin rights are required to execute this command, as it affects all connections. This command commits an open transaction in this connection. 
+					// This setting is persistent. This setting can be appended to the database URL: jdbc:h2:test;IGNORECASE=TRUE
+					//--------------------------------------------------------------------------
+					//if ("IGNORECASE".equals(name))  
+					//{
+					//	_quoteTableNames  = value.trim().equalsIgnoreCase("true");
+					//	_quoteColumnNames = _quoteTableNames;
+					//}
 				}
 				rs.close();
 				stmnt.close();
@@ -1972,6 +2106,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		}
 	}
 
+	
 	/**
 	 * Add either schema or catalog name to _schemaNames
 	 * 
@@ -2276,7 +2411,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		String[] types = getTableTypes(conn);
 
 		if (_logger.isDebugEnabled())
-			_logger.debug("refreshCompletionForTables(): calling dbmd.getTables(catalog='"+catalogName+"', schema=null, table='"+tableName+"', types='"+StringUtil.toCommaStr(types)+"')");
+			_logger.debug("refreshCompletionForTables(): calling dbmd.getTables(catalog='"+catalogName+"', schema='"+schemaName+"', table='"+tableName+"', types='"+StringUtil.toCommaStr(types)+"')");
 
 		ResultSet rs = dbmd.getTables(catalogName, schemaName, tableName, types);
 		
@@ -3654,6 +3789,37 @@ if (_guiOwner == null)
     }
 
 	/**
+	 * 
+	 * @param conn
+	 * @param sqlObj
+	 * @return
+	 */
+	public List<Completion> getTableListWithGuiProgress(DbxConnection conn, SqlObjectName sqlObj)
+	{
+		List<Completion> tabList;
+		
+		// get tables
+		if (sqlObj._dbSupportsSchema)
+			tabList = getTableListWithGuiProgress(conn, sqlObj.getCatalogName(), sqlObj.getSchemaName(), sqlObj.getObjectName());
+		else
+			tabList = getTableListWithGuiProgress(conn, sqlObj.getSchemaName(), null, sqlObj.getObjectName());
+
+		// NONE FOUND: Check once again... but with the *original* text that was put into SqlObjectName
+		if ( tabList == null || (tabList != null && tabList.isEmpty()) )
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug("getTableListWithGuiProgress(DbxConnection, SqlObjectName): NO Tables was found, TRY ORIGIN NAMES.");
+			
+			if (sqlObj._dbSupportsSchema)
+				tabList = getTableListWithGuiProgress(conn, sqlObj.getCatalogNameOrigin(), sqlObj.getSchemaNameOrigin(), sqlObj.getObjectNameOrigin());
+			else
+				tabList = getTableListWithGuiProgress(conn, sqlObj.getSchemaNameOrigin(), null, sqlObj.getObjectNameOrigin());
+		}
+
+		return tabList;
+	}
+
+	/**
 	 * Lookup TABLES "on the fly", do not cache
 	 * 
 	 * @param conn
@@ -3704,7 +3870,7 @@ if (_guiOwner == null)
 				}
 				catch(SQLException ex)
 				{
-					_logger.info("Problems reading table information for SQL Table code completion. Skipping and continuing.", ex);
+					_logger.info("Problems reading table information for SQL Table code completion. Skipping Tables and continuing.", ex);
 				}
 
 				//----------------------------------------------------------
@@ -3721,7 +3887,7 @@ if (_guiOwner == null)
 				}
 				catch(SQLException ex)
 				{
-					_logger.info("Problems reading table information for SQL Function code completion. Skipping and continuing.", ex);
+					_logger.info("Problems reading table information for SQL Function code completion. Skipping Functions and continuing.", ex);
 				}
 
 
@@ -3746,6 +3912,9 @@ if (_guiOwner == null)
 					}
 				}
 
+				if (_logger.isDebugEnabled())
+					_logger.debug("getTableListWithGuiProgress(): BgExecutor.doWork(): returned completionList.size() = " + (completionList == null ? null : completionList.size()) );
+
 				return completionList;
 			}
 		}; // END: new WaitForExecDialog.BgExecutor()
@@ -3757,6 +3926,9 @@ if (_guiOwner == null)
 			if (doWork.hasException())
 				_logger.error("Problems when refreshing Code Completion (for getTableListWithGuiProgress). Caught:"+doWork.getException(), doWork.getException());
 		}
+
+		if (_logger.isDebugEnabled())
+			_logger.debug("getTableListWithGuiProgress(): returned list.size() = " + (list == null ? null : list.size()) );
 
 		return list;
 	}
@@ -3944,7 +4116,7 @@ if (_guiOwner == null)
 				try
 				{
 					//----------------------------------------------------------
-					// Get Table and Columns informaation
+					// Get Table and Columns information
 					if (isLookupTableName())
 					{
 						List<SchemaInfo> schemaInfoList = refreshCompletionForSchemas(conn, getWaitDialog(), catName, schemaName);
@@ -4062,9 +4234,9 @@ if (_guiOwner == null)
 //			_dbInfo = di;
 //
 //			String shortDesc = 
-//				"<font color=\"blue\">"+di._dbType+"</font>" +
-////				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(di._dbRemark) ? "No Description" : di._dbRemark) + "</font></i>";
-//				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(di._dbRemark) ? "" : di._dbRemark) + "</font></i>";
+//				"<font color='blue'>"+di._dbType+"</font>" +
+////				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(di._dbRemark) ? "No Description" : di._dbRemark) + "</font></i>";
+//				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(di._dbRemark) ? "" : di._dbRemark) + "</font></i>";
 //			setShortDescription(shortDesc);
 ////			setSummary(_dbInfo.toHtmlString());
 //		}
@@ -4100,8 +4272,8 @@ if (_guiOwner == null)
 //			super(provider, schemaName, fixStrangeNames(schemaName)+".");
 //
 //			String shortDesc = 
-//				"<font color=\"blue\">"+schemaName+"</font>" +
-//				" -- <i><font color=\"green\">SCHEMA</font></i>";
+//				"<font color='blue'>"+schemaName+"</font>" +
+//				" -- <i><font color='green'>SCHEMA</font></i>";
 //			setShortDescription(shortDesc);
 //		}
 //
@@ -4124,8 +4296,8 @@ if (_guiOwner == null)
 //			_schemaInfo = si;
 //
 //			String shortDesc = 
-//				"<font color=\"blue\">"+si._name+"</font>" +
-//				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(si._remark) ? "" : si._remark) + "</font></i>";
+//				"<font color='blue'>"+si._name+"</font>" +
+//				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(si._remark) ? "" : si._remark) + "</font></i>";
 //			setShortDescription(shortDesc);
 ////			setSummary(_schemaInfo.toHtmlString());
 //		}
@@ -4185,9 +4357,9 @@ if (_guiOwner == null)
 //			_tableInfo = ti;
 //
 //			String shortDesc = 
-//				"<font color=\"blue\">"+ti._tabType+"</font>" +
-////				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
-//				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : ti._tabRemark) + "</font></i>";
+//				"<font color='blue'>"+ti._tabType+"</font>" +
+////				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "No Description" : ti._tabRemark) + "</font></i>";
+//				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(ti._tabRemark) ? "" : ti._tabRemark) + "</font></i>";
 //			setShortDescription(shortDesc);
 ////			setSummary(_tableInfo.toHtmlString());
 //		}
@@ -4274,10 +4446,10 @@ if (_guiOwner == null)
 //			_procInfo = pi;
 //
 //			String shortDesc = 
-//				"<font color=\"blue\">"+pi._procType+"</font>" +
+//				"<font color='blue'>"+pi._procType+"</font>" +
 //				(StringUtil.isNullOrBlank(pi._procSpecificName) ? "" : ", SpecificName="+pi._procSpecificName) +
-////				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
-//				" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : pi._procRemark) + "</font></i>";
+////				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(pi._procRemark) ? "No Description" : pi._procRemark) + "</font></i>";
+//				" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(pi._procRemark) ? "" : pi._procRemark) + "</font></i>";
 //			setShortDescription(shortDesc);
 //			//setSummary(_procInfo.toHtmlString());
 //		}
@@ -4344,8 +4516,8 @@ if (_guiOwner == null)
 //				colPos = "pos="+ci._colPos+", ";
 //
 //			String shortDesc = 
-//				"<font color=\"blue\">"+_tableInfo.getColDdlDesc(colname)+"</font>" +
-//				" -- <i><font color=\"green\">" + colPos + _tableInfo.getColDescription(colname) + "</font></i>";
+//				"<font color='blue'>"+_tableInfo.getColDdlDesc(colname)+"</font>" +
+//				" -- <i><font color='green'>" + colPos + _tableInfo.getColDescription(colname) + "</font></i>";
 //			setShortDescription(shortDesc);
 //			//setSummary(_tableInfo.toHtmlString(colname));
 //		}
@@ -4424,7 +4596,7 @@ if (_guiOwner == null)
 //		{
 //			StringBuilder sb = new StringBuilder();
 ////			sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-//			sb.append("<B>").append(_dbName).append("</B> - <font color=\"blue\">").append(_dbType).append("</font>");
+//			sb.append("<B>").append(_dbName).append("</B> - <font color='blue'>").append(_dbType).append("</font>");
 //			sb.append("<HR>");
 //			sb.append("<BR>");
 //			sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_dbRemark) ? "not available" : _dbRemark).append("<BR>");
@@ -4470,7 +4642,7 @@ if (_guiOwner == null)
 //		{
 //			StringBuilder sb = new StringBuilder();
 ////			sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-//			sb.append("<B>").append(_name).append("</B> - <font color=\"blue\">").append(_cat).append("</font>");
+//			sb.append("<B>").append(_name).append("</B> - <font color='blue'>").append(_cat).append("</font>");
 //			sb.append("<HR>");
 //			sb.append("<BR>");
 //			sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_remark) ? "not available" : _remark).append("<BR>");
@@ -4633,7 +4805,7 @@ if (_guiOwner == null)
 //		{
 //			StringBuilder sb = new StringBuilder();
 ////			sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-//			sb.append(_tabSchema).append(".<B>").append(_tabName).append("</B> - <font color=\"blue\">").append(_tabType).append("</font>");
+//			sb.append(_tabSchema).append(".<B>").append(_tabName).append("</B> - <font color='blue'>").append(_tabType).append("</font>");
 //			sb.append("<HR>");
 //			sb.append("<BR>");
 //			sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_tabRemark) ? "not available" : _tabRemark).append("<BR>");
@@ -4686,7 +4858,7 @@ if (_guiOwner == null)
 //				return "Column name '"+colname+"', was not found in table '"+_tabName+"'.";
 //
 //			StringBuilder sb = new StringBuilder();
-//			sb.append(_tabSchema).append(".<B>").append(_tabName).append(".").append(ci._colName).append("</B> - <font color=\"blue\">").append(_tabType).append(" - COLUMN").append("</font>");
+//			sb.append(_tabSchema).append(".<B>").append(_tabName).append(".").append(ci._colName).append("</B> - <font color='blue'>").append(_tabType).append(" - COLUMN").append("</font>");
 //			sb.append("<HR>"); // add Horizontal Ruler: ------------------
 //			sb.append("<BR>");
 //			sb.append("<B>Table Description:</B> ").append(StringUtil.isNullOrBlank(_tabRemark) ? "not available" : _tabRemark).append("<BR>");
@@ -4821,372 +4993,6 @@ if (_guiOwner == null)
 		return null;
 	}
 
-//	/**
-//	 * Holds information about procedures
-//	 */
-//	protected static class ProcedureInfo
-//	implements Serializable
-//	{
-//		private static final long serialVersionUID = 1L;
-//
-//		public String _procCat     = null;
-//		public String _procSchema  = null;
-//		public String _procName    = null;
-//		public String _procType    = null;
-//		public String _procRemark  = null;
-//		public String _procSpecificName = null;
-//		
-//		public boolean _needParamsRefresh = true;
-//		public boolean isParamsRefreshed() {return ! _needParamsRefresh;}
-//
-//		public ArrayList<ProcedureParameterInfo> _parameters = new ArrayList<ProcedureParameterInfo>();
-//
-//		public void addParameter(ProcedureParameterInfo ci)
-//		{
-//			_parameters.add(ci);
-//		}
-//
-//		public void refreshParameterInfo(ConnectionProvider connProvider)
-//		{
-//			try
-//			{
-//				final Connection conn = connProvider.getConnection();
-//				if (conn == null)
-//					return;
-//
-//				DatabaseMetaData dbmd = conn.getMetaData();
-//
-//				int colId = 0;
-//				ResultSet rs = dbmd.getProcedureColumns(_procCat, _procSchema, _procName, "%");
-//
-//				while(rs.next())
-//				{
-//					colId++;
-//
-//					ProcedureParameterInfo ppi = new ProcedureParameterInfo();
-//					ppi._paramName       = StringUtils.trim(rs.getString("COLUMN_NAME"));
-//					ppi._paramPos        = colId;
-//					ppi._paramInOutType  = procInOutDecode( rs.getShort("COLUMN_TYPE")); // IN - OUT - INOUT
-//					ppi._paramType       = StringUtils.trim(rs.getString("TYPE_NAME"));
-//					ppi._paramLength     =                  rs.getInt   ("LENGTH");
-//					ppi._paramIsNullable =                  rs.getInt   ("NULLABLE");
-//					ppi._paramRemark     = StringUtils.trim(rs.getString("REMARKS"));
-//					ppi._paramDefault    = StringUtils.trim(rs.getString("COLUMN_DEF"));
-//					ppi._paramScale      =                  rs.getInt   ("SCALE");
-//					
-//					addParameter(ppi);
-//				}
-//				rs.close();
-//
-//				_needParamsRefresh = false;
-//			}
-//			catch (SQLException e)
-//			{
-//				_logger.warn("Problems looking up Parmeter MetaData for procedure '"+_procName+"'. Caught: "+e);
-//			}
-//		}
-//
-//		@Override
-//		public String toString()
-//		{
-//			return super.toString() + ": cat='"+_procCat+"', schema='"+_procSchema+"', name='"+_procName+"', type='"+_procType+"', remark='"+_procRemark+"'";
-//		}
-//
-//		public String toHtmlString()
-//		{
-//			StringBuilder sb = new StringBuilder();
-////			sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-//			sb.append(_procSchema).append(".<B>").append(_procName).append("</B> - <font color=\"blue\">").append(_procType).append("</font>");
-//			sb.append("<HR>");
-//			sb.append("<BR>");
-//			sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_procRemark) ? "not available" : _procRemark).append("<BR>");
-//			sb.append("<BR>");
-//			sb.append("<B>Columns:</B> ").append("<BR>");
-//			sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=1\">");
-//			sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Name")       .append("</B></FONT></TD>");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("ParamType")  .append("</B></FONT></TD>");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Datatype")   .append("</B></FONT></TD>");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Length")     .append("</B></FONT></TD>");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Nulls")      .append("</B></FONT></TD>");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Pos")        .append("</B></FONT></TD>");
-//			sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Description").append("</B></FONT></TD>");
-//			sb.append("</TR>");
-//			int r=0;
-//			for (ProcedureParameterInfo pi : _parameters)
-//			{
-//				r++;
-//				if ( (r % 2) == 0 )
-//					sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
-//				else
-//					sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffcc\">");
-//				sb.append("	<TD NOWRAP>").append(pi._paramName)      .append("</TD>");
-//				sb.append("	<TD NOWRAP>").append(pi._paramInOutType) .append("</TD>");
-//				sb.append("	<TD NOWRAP>").append(pi._paramType)      .append("</TD>");
-//				sb.append("	<TD NOWRAP>").append(pi._paramLength)    .append("</TD>");
-//				sb.append("	<TD NOWRAP>").append(pi._paramIsNullable).append("</TD>");
-//				sb.append("	<TD NOWRAP>").append(pi._paramPos)       .append("</TD>");
-//				sb.append("	<TD NOWRAP>").append(pi._paramRemark != null ? pi._paramRemark : "not available").append("</TD>");
-//				sb.append("</TR>");
-//			}
-//			sb.append("</TABLE>");
-//			sb.append("<HR>");
-//			sb.append("-end-<BR><BR>");
-//			
-//			return sb.toString();
-//		}
-//
-//		public String toHtmlString(String paramName)
-//		{
-//			ProcedureParameterInfo pi = null;
-//			for (ProcedureParameterInfo e : _parameters)
-//			{
-//				if (paramName.equalsIgnoreCase(e._paramName))
-//				{
-//					pi = e;
-//					break;
-//				}
-//			}
-//			if (pi == null)
-//				return "Parameter name '"+paramName+"', was not found in procedure '"+_procName+"'.";
-//
-//			StringBuilder sb = new StringBuilder();
-//			sb.append(_procSchema).append(".<B>").append(_procName).append(".").append(pi._paramName).append("</B> - <font color=\"blue\">").append(_procType).append(" - COLUMN").append("</font>");
-//			sb.append("<HR>"); // add Horizontal Ruler: ------------------
-//			sb.append("<BR>");
-//			sb.append("<B>Procedure Description:</B> ").append(StringUtil.isNullOrBlank(_procRemark) ? "not available" : _procRemark).append("<BR>");
-//			sb.append("<BR>");
-//			sb.append("<B>Column Description:</B> ").append(StringUtil.isNullOrBlank(pi._paramRemark) ? "not available" : pi._paramRemark).append("<BR>");
-//			sb.append("<BR>");
-//			sb.append("<B>Name:</B> ")       .append(pi._paramName)      .append("<BR>");
-//			sb.append("<B>In/Out:</B> ")     .append(pi._paramInOutType) .append("<BR>");
-//			sb.append("<B>Type:</B> ")       .append(pi._paramType)      .append("<BR>");
-//			sb.append("<B>Length:</B> ")     .append(pi._paramLength)    .append("<BR>");
-//			sb.append("<B>Is Nullable:</B> ").append(pi._paramIsNullable).append("<BR>");
-//			sb.append("<B>Pos:</B> ")        .append(pi._paramPos)       .append("<BR>");
-//			sb.append("<B>Default:</B> ")    .append(pi._paramDefault)   .append("<BR>");
-//			sb.append("<HR>");
-//			sb.append("-end-<BR><BR>");
-//			
-//			return sb.toString();
-//		}
-//
-//		public ProcedureParameterInfo getParameterInfo(String colname)
-//		{
-//			ProcedureParameterInfo ci = null;
-//			for (ProcedureParameterInfo e : _parameters)
-//			{
-//				if (colname.equalsIgnoreCase(e._paramName))
-//				{
-//					ci = e;
-//					break;
-//				}
-//			}
-//			return ci;
-//		}
-//
-//		public String getParamDdlDesc(String paramName)
-//		{
-//			ProcedureParameterInfo pi = getParameterInfo(paramName);
-//			if (pi == null)
-//				return "Parameter name '"+paramName+"', was not found in procedure '"+_procName+"'.";
-//
-//			String nulls    = pi._paramIsNullable == DatabaseMetaData.columnNoNulls ? "<b>NOT</b> NULL" : "    NULL";
-//			String datatype = pi._paramType;
-//
-//			// Compose data type
-//			String dtlower = datatype.toLowerCase();
-//			if ( dtlower.equals("char") || dtlower.equals("varchar") )
-//				datatype = datatype + "(" + pi._paramLength + ")";
-//			
-//			if ( dtlower.equals("numeric") || dtlower.equals("decimal") )
-//				datatype = datatype + "(" + pi._paramLength + "," + pi._paramScale + ")";
-//
-//			return datatype + " " + nulls;
-//		}
-//
-//		public String getColDescription(String paramName)
-//		{
-//			ProcedureParameterInfo pi = getParameterInfo(paramName);
-//			if (pi == null)
-//				return "Column name '"+paramName+"', was not found in table '"+_procName+"'.";
-//
-//			if (StringUtil.isNullOrBlank(pi._paramRemark))
-////				return "No Description";
-//				return "";
-//			return pi._paramRemark;
-//		}
-//	}
-
-
-
-//	/**
-//	 * Helper class to put in a object name, and get all the individual parts.
-//	 * @author gorans
-//	 *
-//	 */
-//	private static class SqlObjectName
-//	{
-//		public String _fullName  = "";
-//		public String _catName   = "";
-//		public String _schName   = "";
-//		public String _objName   = "";
-//		
-//		public String _originFullName = "";
-//		public String _originCatName  = "";
-//		public String _originSchName  = "";
-//		public String _originObjName  = "";
-//		
-//		public String getFullName   ()       { return _fullName; }
-//		public String getCatalogName()       { return _catName; }
-//		public String getSchemaName ()       { return _schName; }
-//		public String getObjectName ()       { return _objName; }
-//
-//		public String getOriginFullName   () { return _originFullName; }
-//		public String getOriginCatalogName() { return _originCatName; }
-//		public String getOriginSchemaName () { return _originSchName; }
-//		public String getOriginObjectName () { return _originObjName; }
-//
-//		/** 
-//		 * constructor using full name [catalog.][schema.][object] 
-//		 */
-//		public SqlObjectName(final String name)
-//		{
-//			setFullName(name);
-//		}
-//
-//		/**
-//		 * Set the fullname, which will be parsed to set all the individual parts<br>
-//		 * <br>
-//		 * Strip out quote characters and square brackets at start/end of the 
-//		 * string '"name"' and '[name]' will be 'name' <br>
-//		 * <br>
-//		 * The "unstriped" names is available in methods getOrigin{Full|Catalog|Schema|Object}Name()
-//		 *
-//		 * @param name [catalog.][schema.][object]
-//		 */
-//		public void setFullName   (String name) 
-//		{ 
-//			// Dont need to continue if it's empty...
-//			if (StringUtil.isNullOrBlank(name))
-//				return;
-//
-//			_originFullName = name;
-//			_originCatName  = "";
-//			_originSchName  = "";
-//			_originObjName  = name;
-//			
-//			int dot1 = name.indexOf('.');
-//			if (dot1 >= 0)
-//			{
-//				_originSchName = name.substring(0, dot1);
-//				_originObjName = name.substring(dot1+1);
-//
-//				int dot2 = name.indexOf('.', dot1+1);
-//				if (dot2 >= 0)
-//				{
-//					_originCatName = name.substring(0, dot1);
-//					_originSchName = name.substring(dot1+1, dot2);
-//					_originObjName = name.substring(dot2+1);
-//				}
-//			}
-//			
-//			// in some cases check schema/owner name
-//			if (DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_dbProductName) || DbUtils.DB_PROD_NAME_MSSQL.equals(_dbProductName))
-//			{
-//				// if empty schema/owner, add 'dbo'
-//				if (StringUtil.isNullOrBlank(_originSchName))
-//					_originSchName = "dbo";
-//			}
-//			
-//			_fullName = stripQuote( _originFullName );
-//			setCatalogName(_originCatName);
-//			setSchemaName (_originSchName);
-//			setObjectName (_originObjName);
-//		}
-//
-//		/**
-//		 * Set the catalog name<br>
-//		 * <br>
-//		 * Strip out quote characters and square brackets at start/end of the 
-//		 * string '"name"' and '[name]' will be 'name' <br>
-//		 * <br>
-//		 * The "unstriped" names is available in methods getOriginCatalogName()
-//		 *
-//		 * @param name catalog name
-//		 */
-//		public void setCatalogName(String name) 
-//		{
-//			_originCatName = name;
-//			_catName       = stripQuote( name  );
-//		}
-//
-//		/**
-//		 * Set the schema name<br>
-//		 * <br>
-//		 * Strip out quote characters and square brackets at start/end of the 
-//		 * string '"name"' and '[name]' will be 'name' <br>
-//		 * <br>
-//		 * The "unstriped" names is available in methods getOriginSchemaName()
-//		 *
-//		 * @param name schema name
-//		 */
-//		public void setSchemaName (String name) 
-//		{
-//			_originSchName = name;
-//			_schName       = stripQuote( name  );
-//		}
-//
-//		/**
-//		 * Set the object name<br>
-//		 * <br>
-//		 * Strip out quote characters and square brackets at start/end of the 
-//		 * string '"name"' and '[name]' will be 'name' <br>
-//		 * <br>
-//		 * The "unstriped" names is available in methods getOriginObjectName
-//		 *
-//		 * @param name object name
-//		 */
-//		public void setObjectName (String name) 
-//		{
-//			_originObjName = name;
-//			_objName       = stripQuote( name  );
-//		}
-//
-////		/** make: schemaName -> catalaogName and objectName -> schemaName and blank-out objectName */
-////		public void shiftLeft()
-////		{
-////			_originCatName = _originSchName;
-////			_originSchName = _originObjName;
-////			_originObjName = "";
-////
-////			_catName = _schName;
-////			_schName = _objName;
-////			_objName = "";
-////		}
-//
-//		public boolean hasCatalogName() { return ! StringUtil.isNullOrBlank(_catName); }
-//		public boolean hasSchemaName()  { return ! StringUtil.isNullOrBlank(_schName); }
-//		public boolean hasObjectName()  { return ! StringUtil.isNullOrBlank(_objName); }
-//
-//		/** true if it has CatalogName and SchemaName and ObjectName
-//		 * @return hasCatalogName() && hasScemaName() */
-//		public boolean isFullyQualifiedObject()  { return hasCatalogName() && hasSchemaName(); }
-//		
-//		/** true if it has schemaName and objectName, but NOT catalogName <br>
-//		 *  @return !hasCatalogName() && hasScemaName() */
-//		public boolean isSchemaQualifiedObject()  { return !hasCatalogName() && hasSchemaName(); }
-//		
-//		/** true if it has objectName, but NOT catalogName and schemaName <br>
-//		 *  @return !hasCatalogName() && !hasScemaName() */
-//		public boolean isSimpleQualifiedObject()  { return !hasCatalogName() && !hasSchemaName(); }
-//		
-//		@Override
-//		public String toString() 
-//		{
-//			return super.toString() + " catName='"+_catName+"', schName='"+_schName+"', objName='"+_objName+"', isFullyQualifiedObject="+isFullyQualifiedObject()+", isSchemaQualifiedObject="+isSchemaQualifiedObject()+", isSimpleQualifiedObject="+isSimpleQualifiedObject()+".";
-//		}
-//	}
 
 
 	/**
@@ -5253,7 +5059,7 @@ if (_guiOwner == null)
 		if (needRefresh())
 			refresh();
 
-		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
+		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema);
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();
@@ -5379,7 +5185,7 @@ if (_guiOwner == null)
 		if (needRefresh())
 			refresh();
 
-		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers);
+		SqlObjectName sqlObj = new SqlObjectName(word, _dbProductName, _dbIdentifierQuoteString, _dbStoresUpperCaseIdentifiers, _dbSupportsSchema);
 
 		// For completion, lets not assume "dbo"
 		String schemaName = sqlObj.getSchemaName();

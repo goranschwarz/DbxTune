@@ -875,7 +875,7 @@ public class AseStackTraceAnalyzer
 				{
 					BigDecimal pctVal = new BigDecimal( (_count*1.0 / _root._count) * 100.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
 					if ( pctVal.doubleValue() >= 0.1 )
-						pctValStr = " <i><font color=\"green\">(" + pctVal + "%)</font></i>";
+						pctValStr = " <i><font color='green'>(" + pctVal + "%)</font></i>";
 				}
 				catch (RuntimeException rte) {}
 			}
@@ -884,7 +884,7 @@ public class AseStackTraceAnalyzer
 				(_isFilterFunctionMatch ? "<b>" : "") +
 				_name + 
 				(_isFilterFunctionMatch ? "</b>" : "") +
-				" : <b><font color=\"blue\">" + 
+				" : <b><font color='blue'>" + 
 				_count + 
 				"</font></b>" +
 				pctValStr +
@@ -1279,9 +1279,9 @@ public class AseStackTraceAnalyzer
 										sb.append("<tr> <td>").append(s).append("</td>");
 										for (int e=0; e<matrix[s].length; e++)
 										{
-											sb.append("<td align=\"center\">");
+											sb.append("<td align='center'>");
 											if (matrix[s][e])
-												sb.append("<b><font color=\"red\">&bull;</font></b>");
+												sb.append("<b><font color='red'>&bull;</font></b>");
 											sb.append("</td>");
 										}
 										sb.append("</tr>");
@@ -1302,7 +1302,7 @@ public class AseStackTraceAnalyzer
 										String key = entry.getKey();
 										int    val = entry.getValue();
 
-										tip += "Parent Stack='"+key+"', count=<b><font color=\"blue\">" + val + "</font></b><br>";
+										tip += "Parent Stack='"+key+"', count=<b><font color='blue'>" + val + "</font></b><br>";
 									}
 									tip += "</html>";
 								}

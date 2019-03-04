@@ -98,15 +98,15 @@ implements Runnable, ConnectionProvider
 	private int _numOfSamplesNow           = -1;
 	
 	private static String GET_ALL_SESSIONS = 
-		"select \"SessionStartTime\", \"ServerName\", \"NumOfSamples\", \"LastSampleTime\" " +
-		"from " + PersistWriterBase.getTableName(PersistWriterBase.SESSIONS, null, true) + " "+
-		"order by \"SessionStartTime\"";
+		"select [SessionStartTime], [ServerName], [NumOfSamples], [LastSampleTime] " +
+		"from [" + PersistWriterBase.getTableName(null, PersistWriterBase.SESSIONS, null, false) + "] " +
+		"order by [SessionStartTime]";
 
 	private static String GET_SESSION = 
-		"select \"SessionStartTime\", \"SessionSampleTime\" " +
-		"from " + PersistWriterBase.getTableName(PersistWriterBase.SESSION_SAMPLES, null, true) + " "+
-		"where \"SessionStartTime\" = ? " +
-		"order by \"SessionSampleTime\"";
+		"select [SessionStartTime], [SessionSampleTime] " +
+		"from [" + PersistWriterBase.getTableName(null, PersistWriterBase.SESSION_SAMPLES, null, false) + "] " +
+		"where [SessionStartTime] = ? " +
+		"order by [SessionSampleTime]";
 
 	//////////////////////////////////////////////
 	//// Constructors
@@ -288,7 +288,7 @@ implements Runnable, ConnectionProvider
 		// Go and check for Tables
 		try
 		{
-			String tabName = PersistWriterBase.getTableName(PersistWriterBase.SESSIONS, null, false);
+			String tabName = PersistWriterBase.getTableName(null, PersistWriterBase.SESSIONS, null, false);
 
 			// Obtain a DatabaseMetaData object from our current connection        
 			DatabaseMetaData dbmd = conn.getMetaData();
@@ -742,18 +742,21 @@ implements Runnable, ConnectionProvider
 		
 		HashMap<String,MonTableEntry> monTablesMap = new HashMap<String,MonTableEntry>();
 
-		String monTables       = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
-		String monTableColumns = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
+		String monTables       = PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
+		String monTableColumns = PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
 
-		final String SQL_TABLES                = "select \"TableID\", \"Columns\", \"Parameters\", \"Indicators\", \"Size\", \"TableName\", \"Description\" from "+monTables;
-		final String SQL_COLUMNS               = "select \"TableID\", \"ColumnID\", \"TypeID\", \"Precision\", \"Scale\", \"Length\", \"Indicators\", \"TableName\", \"ColumnName\", \"TypeName\", \"Description\" from "+monTableColumns;
+		final String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from "+monTables;
+		final String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from "+monTableColumns;
 
 		String sessionStartTime = sampleId.toString();
 		String sql = null;
 		try
 		{
 			Statement stmt = _conn.createStatement();
-			sql = SQL_TABLES + " where \"SessionStartTime\" = '"+sessionStartTime+"'";
+			sql = SQL_TABLES + " where [SessionStartTime] = '"+sessionStartTime+"'";
+
+			// replace all '[' and ']' into DBMS Vendor Specific Chars
+			sql = _conn.quotifySqlString(sql);
 
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
@@ -801,7 +804,10 @@ implements Runnable, ConnectionProvider
 			try
 			{
 				Statement stmt = _conn.createStatement();
-				sql = SQL_COLUMNS + " where \"SessionStartTime\" = '"+sessionStartTime+"' and \"TableName\" = '"+monTableEntry._tableName+"'";
+				sql = SQL_COLUMNS + " where [SessionStartTime] = '"+sessionStartTime+"' and [TableName] = '"+monTableEntry._tableName+"'";
+
+				// replace all '[' and ']' into DBMS Vendor Specific Chars
+				sql = _conn.quotifySqlString(sql);
 
 				ResultSet rs = stmt.executeQuery(sql);
 				while ( rs.next() )
@@ -847,12 +853,15 @@ implements Runnable, ConnectionProvider
 	public Configuration getUdcProperties(Timestamp sampleId)
 	{
 		String sql = 
-			"select \"ParamName\", \"ParamValue\" \n" +
-			"from \"MonSessionParams\" \n" +
+			"select [ParamName], [ParamValue] \n" +
+			"from [MonSessionParams] \n" +
 			"where 1=1 \n" +
-			"  and \"SessionStartTime\" = '"+sampleId+"' \n" +
-			"  and \"Type\"            in ('system.config', 'user.config', 'temp.config') \n" +
-			"  and \"ParamName\"     like 'udc.%' \n";
+			"  and [SessionStartTime] = '"+sampleId+"' \n" +
+			"  and [Type]            in ('system.config', 'user.config', 'temp.config') \n" +
+			"  and [ParamName]     like 'udc.%' \n";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		try
 		{
@@ -894,24 +903,28 @@ implements Runnable, ConnectionProvider
 		cmName = getNameTranslateCmToDb(cmName);
 		// Rewind to previous cmName that has data
 //		String sql = 
-//			"select top 1 \"SessionSampleTime\" \n" +
-//			"from \"MonSessionSampleDetailes\" \n" +
-////			"where \"SessionStartTime\"  = ? \n" +
+//			"select top 1 [SessionSampleTime] \n" +
+//			"from [MonSessionSampleDetailes] \n" +
+////			"where [SessionStartTime]  = ? \n" +
 //			"where 1=1 \n" +
-//			"  and \"SessionSampleTime\" < ? \n" +
-//			"  and \"CmName\"            = ? \n" +
-//			"  and (\"absRows\" > 0 or \"diffRows\" > 0 or \"rateRows\" > 0) \n" +
-//			"order by \"SessionSampleTime\" desc";
+//			"  and [SessionSampleTime] < ? \n" +
+//			"  and [CmName]            = ? \n" +
+//			"  and ([absRows] > 0 or [diffRows] > 0 or [rateRows] > 0) \n" +
+//			"order by [SessionSampleTime] desc";
 		String sql = 
-			"select top 1 \"SessionSampleTime\" \n" +
-			"from \"MonSessionSampleDetailes\" \n" +
-//			"where \"SessionStartTime\"  = '"+sampleId+"' \n" +
+			"select top 1 [SessionSampleTime] \n" +
+			"from [MonSessionSampleDetailes] \n" +
+//			"where [SessionStartTime]  = '"+sampleId+"' \n" +
 			"where 1=1 \n" +
-			"  and \"SessionSampleTime\" < '"+currentSampleTime+"' \n" +
-			"  and \"CmName\"            = '"+cmName+"' \n" +
-			"  and (\"absRows\" > 0 or \"diffRows\" > 0 or \"rateRows\" > 0) \n" +
-			"order by \"SessionSampleTime\" desc";
+			"  and [SessionSampleTime] < '"+currentSampleTime+"' \n" +
+			"  and [CmName]            = '"+cmName+"' \n" +
+			"  and ([absRows] > 0 or [diffRows] > 0 or [rateRows] > 0) \n" +
+			"order by [SessionSampleTime] desc";
 //System.out.println("getPrevSample.sql=\n"+sql);
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+
 		try
 		{
 //			PreparedStatement pstmnt = _conn.prepareStatement(sql);
@@ -969,23 +982,27 @@ implements Runnable, ConnectionProvider
 		cmName = getNameTranslateCmToDb(cmName);
 		// Fast Forward to next cmName that has data
 //		String sql = 
-//			"select top 1 \"SessionSampleTime\" \n" +
-//			"from \"MonSessionSampleDetailes\" \n" +
-////			"where \"SessionStartTime\"  = ? \n" +
+//			"select top 1 [SessionSampleTime] \n" +
+//			"from [MonSessionSampleDetailes] \n" +
+////			"where [SessionStartTime]  = ? \n" +
 //			"where 1=1 \n" +
-//			"  and \"SessionSampleTime\" > ? \n" +
-//			"  and \"CmName\"            = ? \n" +
-//			"  and (\"absRows\" > 0 or \"diffRows\" > 0 or \"rateRows\" > 0) \n" +
-//			"order by \"SessionSampleTime\" asc";
+//			"  and [SessionSampleTime] > ? \n" +
+//			"  and [CmName]            = ? \n" +
+//			"  and ([absRows] > 0 or [diffRows] > 0 or [rateRows] > 0) \n" +
+//			"order by [SessionSampleTime] asc";
 		String sql = 
-			"select top 1 \"SessionSampleTime\" \n" +
-			"from \"MonSessionSampleDetailes\" \n" +
-//			"where \"SessionStartTime\"  = '"+sampleId+"' \n" +
+			"select top 1 [SessionSampleTime] \n" +
+			"from [MonSessionSampleDetailes] \n" +
+//			"where [SessionStartTime]  = '"+sampleId+"' \n" +
 			"where 1=1 \n" +
-			"  and \"SessionSampleTime\" > '"+currentSampleTime+"' \n" +
-			"  and \"CmName\"            = '"+cmName+"' \n" +
-			"  and (\"absRows\" > 0 or \"diffRows\" > 0 or \"rateRows\" > 0) \n" +
-			"order by \"SessionSampleTime\" asc";
+			"  and [SessionSampleTime] > '"+currentSampleTime+"' \n" +
+			"  and [CmName]            = '"+cmName+"' \n" +
+			"  and ([absRows] > 0 or [diffRows] > 0 or [rateRows] > 0) \n" +
+			"order by [SessionSampleTime] asc";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+
 //System.out.println("getNextSample.sql=\n"+sql);
 
 		try
@@ -1028,8 +1045,12 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			"select * \n" +
-			"from \"MonSessions\" \n" +
-			"order by \"LastSampleTime\" \n";
+			"from [MonSessions] \n" +
+			"order by [LastSampleTime] \n";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+		
 		try
 		{
 			Statement stmnt = _conn.createStatement();
@@ -1406,12 +1427,15 @@ implements Runnable, ConnectionProvider
 		//   "label_2"            VARCHAR(30)         NULL,
 		//   "data_2"             NUMERIC(10, 1)      NULL
 
-		String sql = "select * from \""+cmName+"_"+graphName+"\" " +
-		             "where \"SessionStartTime\" = ? " +
-		             "  AND \"SessionSampleTime\" >= ? " +
-		             "  AND \"SessionSampleTime\" <= ? " +
-		             "order by \"SessionSampleTime\"";
+		String sql = "select * from ["+cmName+"_"+graphName+"] " +
+		             "where [SessionStartTime] = ? " +
+		             "  AND [SessionSampleTime] >= ? " +
+		             "  AND [SessionSampleTime] <= ? " +
+		             "order by [SessionSampleTime]";
 
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+		
 		// If we expect a big graph, load only every X row
 		// if we add to many to the graph, the JVM takes 100% CPU, I'm guessing it 
 		// has to do too many repaints, we could do an "average" of X rows during the load
@@ -1616,12 +1640,16 @@ implements Runnable, ConnectionProvider
 
 		mf.resetOfflineSlider();
 		
-		String sql = "select \"SessionSampleTime\" " +
-		             "from " + PersistWriterBase.getTableName(PersistWriterBase.SESSION_SAMPLES, null, true) + " "+
-		             "where \"SessionStartTime\" = ? " +
-		             "  AND \"SessionSampleTime\" >= ? " +
-		             "  AND \"SessionSampleTime\" <= ? " +
-		             "order by \"SessionSampleTime\"";
+		String sql = "select [SessionSampleTime] " +
+		             "from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLES, null, true) + " "+
+		             "where [SessionStartTime] = ? " +
+		             "  AND [SessionSampleTime] >= ? " +
+		             "  AND [SessionSampleTime] <= ? " +
+		             "order by [SessionSampleTime]";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+
 		try
 		{
 			PreparedStatement pstmnt = _conn.prepareStatement(sql);
@@ -1741,8 +1769,8 @@ implements Runnable, ConnectionProvider
 		//     "col2"              datatype     null,
 		//     "...."              datatype     null,
 		//
-//		String sql  = "select * from \""+cmName+"_"+typeStr+"\" where \"SessionSampleTime\" = ? ";
-		String sql2 = "select * from \""+cmName+"_"+typeStr+"\" where \"SessionSampleTime\" = '"+sampleTs+"' ";
+//		String sql  = "select * from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = ? ";
+		String sql2 = "select * from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"' ";
 
 		if (cm instanceof CountersModelAppend)
 		{
@@ -1752,14 +1780,17 @@ implements Runnable, ConnectionProvider
 //				Timestamp sessionStartTime = summaryCm.getSampleTimeHead();
 //				Timestamp sessionStartTime = _lastKnowSessionStartTime;
 
-				sql2 = "select * from \""+cmName+"_"+typeStr+"\" " +
-//				       "where \"SessionStartTime\" = '"+sessionStartTime+"' " +
-				       "where \"SessionStartTime\" = (select min(\"SessionStartTime\") from \""+cmName+"_"+typeStr+"\" where \"SessionSampleTime\" = '"+sampleTs+"') " +
-				       "  and \"SessionSampleTime\" <= '"+sampleTs+"' ";
+				sql2 = "select * from ["+cmName+"_"+typeStr+"] " +
+//				       "where [SessionStartTime] = '"+sessionStartTime+"' " +
+				       "where [SessionStartTime] = (select min([SessionStartTime]) from ["+cmName+"_"+typeStr+"] where [SessionSampleTime] = '"+sampleTs+"') " +
+				       "  and [SessionSampleTime] <= '"+sampleTs+"' ";
 //System.out.println("offline:append: sql2=|"+sql2+"|.");
 			}
 		}
 		
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql2 = _conn.quotifySqlString(sql2);
+
 		try
 		{
 //			PreparedStatement pstmnt = _conn.prepareStatement(sql);
@@ -1923,8 +1954,11 @@ implements Runnable, ConnectionProvider
 //		//   rateSamples       int           null
 //		//)
 //		String sql = "select * from " + PersistWriterBase.getTableName(PersistWriterBase.SESSION_SAMPLE_SUM, null, true) + " " +
-//		             "where \"SessionStartTime\" = ? ";
+//		             "where [SessionStartTime] = ? ";
 //
+//    	// replace all '[' and ']' into DBMS Vendor Specific Chars
+//    	sql = _conn.quotifySqlString(sql);
+//    
 //		try
 //		{
 //			PreparedStatement pstmnt = _conn.prepareStatement(sql);
@@ -1998,8 +2032,11 @@ implements Runnable, ConnectionProvider
 		//   diffRows          int           null,
 		//   rateRows          int           null
 		//)
-		String sql = "select * from " + PersistWriterBase.getTableName(PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
-		             "where \"SessionSampleTime\" = ? ";
+		String sql = "select * from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
+		             "where [SessionSampleTime] = ? ";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		try
 		{
@@ -2200,10 +2237,15 @@ implements Runnable, ConnectionProvider
 
 		List<SessionInfo> sessions = new LinkedList<SessionInfo>();
 
+		String sql = GET_ALL_SESSIONS;
+		
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+
 		try
 		{
 			Statement stmnt   = _conn.createStatement();
-			ResultSet rs      = stmnt.executeQuery(GET_ALL_SESSIONS);
+			ResultSet rs      = stmnt.executeQuery(sql);
 			while (rs.next())
 			{
 				Timestamp sessionId      = rs.getTimestamp("SessionStartTime");
@@ -2235,9 +2277,14 @@ implements Runnable, ConnectionProvider
 
 		List<Timestamp> list = new LinkedList<Timestamp>();
 
+		String sql = GET_SESSION;
+		
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
+
 		try
 		{
-			PreparedStatement pstmnt = _conn.prepareStatement(GET_SESSION);
+			PreparedStatement pstmnt = _conn.prepareStatement(sql);
 //			pstmnt.setTimestamp(1, sessionId);
 			pstmnt.setString(1, sessionId.toString());
 
@@ -2282,8 +2329,11 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			"select * " +
-			"from " + PersistWriterBase.getTableName(PersistWriterBase.SESSION_SAMPLE_SUM, null, true) + " " +
-			"where \"SessionStartTime\" = ? ";
+			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLE_SUM, null, true) + " " +
+			"where [SessionStartTime] = ? ";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		try
 		{
@@ -2342,9 +2392,12 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			"select * " +
-			"from " + PersistWriterBase.getTableName(PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
-			"where \"SessionStartTime\" = ? " +
-			"order by \"SessionSampleTime\" ";
+			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.SESSION_SAMPLE_DETAILES, null, true) + " " +
+			"where [SessionStartTime] = ? " +
+			"order by [SessionSampleTime] ";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		SampleCmCounterInfo scmci = null;
 		try
@@ -2424,8 +2477,11 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			"select * " +
-			"from " + PersistWriterBase.getTableName(PersistWriterBase.VERSION_INFO, null, true) + " " +
-			"where \"SessionStartTime\" = ? ";
+			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.VERSION_INFO, null, true) + " " +
+			"where [SessionStartTime] = ? ";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		try
 		{
@@ -2865,11 +2921,14 @@ implements Runnable, ConnectionProvider
 
 		String sql = 
 			" select * " +
-			" from " + PersistWriterBase.getTableName(PersistWriterBase.DDL_STORAGE, null, true) + " " +
-			" where \"dbname\"     = ? " +
-			"   and \"type\"       = ? " +
-			"   and \"objectName\" = ? " +
-			"   and \"owner\"      = ? ";
+			" from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.DDL_STORAGE, null, true) + " " +
+			" where [dbname]     = ? " +
+			"   and [type]       = ? " +
+			"   and [objectName] = ? " +
+			"   and [owner]      = ? ";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		DdlDetails ddlDetails = null;
 		try
@@ -2928,14 +2987,17 @@ implements Runnable, ConnectionProvider
 
 		String blobCols = "";
 		if (addBlobs)
-			blobCols = ", \"objectText\", \"dependsText\", \"optdiagText\", \"extraInfoText\" ";
+			blobCols = ", [objectText], [dependsText], [optdiagText], [extraInfoText] ";
 
 		String sql = 
 //			"select * " +
-			"select \"dbname\", \"owner\", \"objectName\", \"type\", \"crdate\", \"sampleTime\", \"source\", \"dependParent\", \"dependLevel\", \"dependList\" " + blobCols +
-//			"select \"dbname\", \"owner\", \"objectName\", \"type\", \"crdate\", \"sampleTime\", \"source\", \"dependLevel\", \"dependList\" " + blobCols +
-			"from " + PersistWriterBase.getTableName(PersistWriterBase.DDL_STORAGE, null, true) + " " +
-			"order by \"dbname\", \"type\", \"objectName\", \"owner\" ";
+			"select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [source], [dependParent], [dependLevel], [dependList] " + blobCols +
+//			"select [dbname], [owner], [objectName], [type], [crdate], [sampleTime], [source], [dependLevel], [dependList] " + blobCols +
+			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.DDL_STORAGE, null, true) + " " +
+			"order by [dbname], [type], [objectName], [owner] ";
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = _conn.quotifySqlString(sql);
 
 		try
 		{

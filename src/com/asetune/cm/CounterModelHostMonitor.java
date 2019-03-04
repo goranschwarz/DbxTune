@@ -95,11 +95,13 @@ extends CountersModel
 	//----------------------------------------------------------------------------
 	// BEGIN: Constructors
 	//----------------------------------------------------------------------------
-	public CounterModelHostMonitor(String name,	String groupName, int type, String udModuleName, boolean systemCm)
+	public CounterModelHostMonitor(String name,	String groupName, int type, String udModuleName, boolean negativeDiffCountersToZero, boolean systemCm, int defaultPostponeTime)
 	{
 		super.setName(name);
 		super.setGroupName(groupName);
+		super.setNegativeDiffCountersToZero(negativeDiffCountersToZero, false);
 		super.setSystemCm(systemCm);
+		super.setPostponeTime(defaultPostponeTime, false);
 
 		_udModuleName = udModuleName;
 		_hostMonType = type;
@@ -864,7 +866,8 @@ extends CountersModel
 		OsTableRow diffRow;
 
 		boolean isCountersCleared          = false;
-		boolean negativeDiffCountersToZero = true; // diffCnt.getNegativeDiffCountersToZero();
+//		boolean negativeDiffCountersToZero = true; // diffCnt.getNegativeDiffCountersToZero();
+		boolean negativeDiffCountersToZero = super.isNegativeDiffCountersToZero();
 		String  newSampleName              = getName() + "-diff";   // newSample.getName()
 		
 		// Special case, only one row for each sample, no key

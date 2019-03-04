@@ -27,6 +27,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import com.asetune.sql.pipe.PipeCommand;
@@ -83,16 +85,18 @@ public class AseSqlScriptReader
 	private int             _batchNumber           = -1;
 	private int             _totalBatchCount       = -1;
 	
-	private int             _topRows               = -1; // option 'top #'
-	private int             _bottomRows            = -1; // option 'bottom #'
-	private int             _rowCount              = -1; // option 'rowc'
-	private int             _asPlainText           = -1; // option 'plain'
-	private int             _asTabbedPane          = -1; // option 'tab'
-	private int             _noData                = -1; // option 'nodata'
-	private int             _appendOutput          = -1; // option 'append'
-	private int             _printSql              = -1; // option 'psql' -- print SQL Statement
-	private int             _printRsi              = -1; // option 'prsi' -- print ResultSet Information
-	private int             _printClientTiming     = -1; // option 'time' -- print client timing
+	private int             _topRows               = -1;   // option 'top #'
+	private int             _bottomRows            = -1;   // option 'bottom #'
+	private int             _rowCount              = -1;   // option 'rowc'
+	private int             _asPlainText           = -1;   // option 'plain'
+	private int             _asTabbedPane          = -1;   // option 'tab'
+	private int             _noData                = -1;   // option 'nodata'
+	private int             _appendOutput          = -1;   // option 'append'
+	private int             _printSql              = -1;   // option 'psql' -- print SQL Statement
+	private int             _printRsi              = -1;   // option 'prsi' -- print ResultSet Information
+	private int             _printClientTiming     = -1;   // option 'time' -- print client timing
+	private List<Integer>   _keepRs                = null; // option 'keeprs #[,#...]'
+	private List<Integer>   _skipRs                = null; // option 'skiprs #[,#...]'
 	
 	/** keep track of where in the file we are */
 	private int             _lineInReader          = 0;
@@ -623,6 +627,8 @@ public class AseSqlScriptReader
 	public boolean hasOption_printSql()          { return _printSql          > 0; }
 	public boolean hasOption_printRsi()          { return _printRsi          > 0; }
 	public boolean hasOption_printClientTiming() { return _printClientTiming > 0; }
+	public boolean hasOption_keepRs()            { return _keepRs != null && _keepRs.size() > 0; }
+	public boolean hasOption_skipRs()            { return _skipRs != null && _skipRs.size() > 0; }
 
 	// Below boolean methods, yes we use "int opt = -1" as "not specified"
 	public int     getOption_topRows()           { return _topRows; }
@@ -635,6 +641,8 @@ public class AseSqlScriptReader
 	public boolean getOption_printSql()          { return _printSql          > 0; }
 	public boolean getOption_printRsi()          { return _printRsi          > 0; }
 	public boolean getOption_printClientTiming() { return _printClientTiming > 0; }
+	public List<Integer> getOption_keepRs()      { return _keepRs; }
+	public List<Integer> getOption_skipRs()      { return _skipRs; }
 
 	/**
 	 * When we have a 'go | someSubCommand', we needs to apply some filter.
@@ -673,7 +681,9 @@ public class AseSqlScriptReader
 		_printSql          = -1;
 		_printRsi          = -1;
 		_printClientTiming = -1;
-		
+		_keepRs            = null;
+		_skipRs            = null;
+
 		// Get lines from the reader
 		String row;
 		for (row = _bReader.readLine(); row != null; row = _bReader.readLine())
@@ -907,6 +917,34 @@ public class AseSqlScriptReader
 										if (StringUtil.hasValue(word2))
 											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
 									}
+									else if ("keeprs".equalsIgnoreCase(word1))
+									{
+										_keepRs = new ArrayList<>();
+										//List<String> strList = StringUtil.parseCommaStrToList(word2);
+										String[] strList = word2.split(":");
+										for (String str : strList)
+										{
+											try { _keepRs.add( new Integer(str) ); }
+											catch (NumberFormatException nfe)
+											{
+												error = "Sub command 'keeprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;
+											}
+										}
+									}
+									else if ("skiprs".equalsIgnoreCase(word1))
+									{
+										_skipRs = new ArrayList<>();
+										//List<String> strList = StringUtil.parseCommaStrToList(word2);
+										String[] strList = word2.split(":");
+										for (String str : strList)
+										{
+											try { _skipRs.add( new Integer(str) ); }
+											catch (NumberFormatException nfe)
+											{
+												error = "Sub command 'skiprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;
+											}
+										}
+									}
 									else
 									{
 										error = "Unknown sub command '"+word1+"'.";
@@ -924,12 +962,13 @@ public class AseSqlScriptReader
 										String desc = 
 											error +" \n" +
 											"\n" +
-											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time]'\n" +
+											"Syntax is 'go [#1] [,top #2] [,bottom #3] [,wait #4] [,plain] [,tab] [,nodata] [,append] [,psql] [,prsi] [,time] [,keeprs #5[:#5]] [,skiprs #5[:#5]]'\n" +
 											"\n" +
 											"#1 = Number of times to repeat the command\n" +
 											"#2 = Rows to read from a ResultSet.\n" +
 											"#3 = Last rows to display from a ResultSet.\n" +
 											"#4 = Ms to sleep after each SQL Batch send/execution.\n" +
+											"#5 = ResultSet to keep (starting at 1).\n" +
 											"\n" +
 											"Description of sub commands\n" +
 											"top #    - Read only first # rows in the result set\n" +
@@ -943,6 +982,8 @@ public class AseSqlScriptReader
 											"prsi     - Print info about the ResultSet data types etc in the output\n" +
 											"time     - Print how long time the SQL Batch took, from the clients perspective\n" +
 											"rowc     - Print the rowcount from JDBC driver, not the number of rows actually returned\n" +
+											"skiprs   - If you have multiple ResultSet, skip some ResultSet(s) (starting at 1). Example skip rs   1 and 2: go keeprs 1:2\n" +
+											"keeprs   - If you have multiple ResultSet, keep only ResultSet(s) (starting at 1). Example Keep only 2 : go keeprs 2\n" +
 											"\n" +
 											"Example:\n" +
 											"select * from tabName where ...\n" +

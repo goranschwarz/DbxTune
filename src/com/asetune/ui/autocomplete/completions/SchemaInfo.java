@@ -46,7 +46,7 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append("<B>").append(_name).append("</B> - <font color=\"blue\">").append(_cat).append("</font>");
+		sb.append("<B>").append(_name).append("</B> - <font color='blue'>").append(_cat).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_remark) ? "not available" : _remark).append("<BR>");

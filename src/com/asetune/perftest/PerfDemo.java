@@ -1164,6 +1164,14 @@ implements ActionListener
 		}
 	}
 
+	/**
+	 * Note: we need to get rid of <br>
+	 * Look at:  http://greatratrace.blogspot.com/2010/01/throttling-swingworker-using.html  <br>
+	 * it might have a solution, but right now Keep PerfDemoSwingWorker <br>
+	 * <br>
+	 * Another solution is to "remove" PerfDemo application...<br>
+	 * 
+	 */
 	private class QueueConsumer
 	extends PerfDemoSwingWorker<String, String>
 	{

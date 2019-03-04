@@ -68,8 +68,9 @@ extends PipeCommandAbstract
 		     || input.startsWith("iconv ")    || input.equals("iconv")
 		   )
 		{
-			String params = input.substring(input.indexOf(' ') + 1).trim();
-			_args = StringUtil.translateCommandline(params);
+//			String params = input.substring(input.indexOf(' ') + 1).trim();
+//			_args = StringUtil.translateCommandline(params);
+			_args = StringUtil.translateCommandline(input, true);
 
 			CommandLine cmdLine = parseCmdLine(_args);
 			if (cmdLine.hasOption('f')) _fromCharset = cmdLine.getOptionValue('f');
@@ -147,7 +148,8 @@ extends PipeCommandAbstract
 	private CommandLine parseCmdLine(String args)
 	throws PipeCommandException
 	{
-		return parseCmdLine(StringUtil.translateCommandline(args));
+		return parseCmdLine(StringUtil.translateCommandline(args, true));
+//		return parseCmdLine(StringUtil.translateCommandline(args));
 //		return parseCmdLine(args.split(" "));
 	}
 	private CommandLine parseCmdLine(String[] args)

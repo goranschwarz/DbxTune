@@ -26,7 +26,8 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({ 
-	JdbcUrlParserTest.class 
+	JdbcUrlParserTest.class,
+	SqlObjectNameTest.class 
 })
 public class AllTests
 {

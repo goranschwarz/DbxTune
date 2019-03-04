@@ -187,9 +187,9 @@ extends PersistWriterBase
 		// Is it time to send Alarm
 		if (lastSendSuccessInSec > slot._errorSendAlarmThresholdInSec)
 		{
-			String collectorName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv") + "[" + Version.getAppName() + "]";
+			String sourceSrvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv-"+slot._cfgName);
 
-			AlarmEvent alarmEvent = new AlarmEventHttpDestinationDown(collectorName, slot._cfgName, slot._url, lastSendSuccessInSec, slot._errorSendAlarmThresholdInSec);
+			AlarmEvent alarmEvent = new AlarmEventHttpDestinationDown(sourceSrvName, slot._cfgName, slot._url, lastSendSuccessInSec, slot._errorSendAlarmThresholdInSec);
 			alarmHandler.addAlarm(alarmEvent);
 		}
 	}

@@ -273,16 +273,16 @@ implements DbxConnectionStateInfo
 		String hadrInfo    = "";
 
 		if (_tranCount > 0)
-			tranCount = "TranCount=<b><font color=\"red\">" + _tranCount        + "</font></b>";
+			tranCount = "TranCount=<b><font color='red'>" + _tranCount        + "</font></b>";
 
 		if ( isNonNormalTranState() )
-			tranState = "TranState=<b><font color=\"red\">" + getTranStateStr() + "</font></b>";
+			tranState = "TranState=<b><font color='red'>" + getTranStateStr() + "</font></b>";
 		
 		if (_tranCount > 0)
-			tranChained = "TranChained=<b><font color=\"red\">" + _tranChained    + "</font></b>";
+			tranChained = "TranChained=<b><font color='red'>" + _tranChained    + "</font></b>";
 
 		if (_lockCount > 0)
-			lockCount = "LockCount=<b><font color=\"red\">" + _lockCount    + "</font></b>";
+			lockCount = "LockCount=<b><font color='red'>" + _lockCount    + "</font></b>";
 
 		if (_hadrModeInt >= 0) // -1 == Disabled
 		{
@@ -333,7 +333,7 @@ implements DbxConnectionStateInfo
 		// If we are in CHAINED mode, and do NOT hold any locks, set state to "normal"
 		if (_tranChained == 1 && _lockCount == 0)
 		{ // color #B45F04 = dark yellow/orange
-			text = "<html><font color=\"#B45F04\">CHAINED mode</font>, " + spid + ", " + dbname + ", " + username + ", " + susername + hadrInfo + "</html>";
+			text = "<html><font color='#B45F04'>CHAINED mode</font>, " + spid + ", " + dbname + ", " + username + ", " + susername + hadrInfo + "</html>";
 		}
 
 		return text;
@@ -348,7 +348,7 @@ implements DbxConnectionStateInfo
 
 		String lockCountStr = _lockCount +"";
 		if (_lockCount == -999)
-			lockCountStr = "<font color=\"red\"> To see lock count/table you need permission 'VIEW SERVER STATE'</font>";
+			lockCountStr = "<font color='red'> To see lock count/table you need permission 'VIEW SERVER STATE'</font>";
 
 		String hadrTooltip = "";
 		if (_hadrModeInt >= 0) // -1 == Disabled

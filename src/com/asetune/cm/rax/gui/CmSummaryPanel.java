@@ -525,7 +525,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 
 
-		tooltip = "<html>Number of LTL Commands Sent to Replication Server from the RA (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
+		tooltip = "<html>Number of LTL Commands Sent to Replication Server from the RA (abs, <font color='blue'>diff, <i>rate</i></font>)";
 		_originToolTip        .put    ("Number of LTL commands sent", tooltip);
 		_ltlSentToRs_lbl      .setText("LTL Cmds Sent");
 		_ltlSentToRs_lbl      .setToolTipText(tooltip);
@@ -539,7 +539,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlSentToRs_Rate_txt.setForeground(Color.BLUE);
 		_ltlSentToRs_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "<html>Total Log Operations Scanned (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
+		tooltip = "<html>Total Log Operations Scanned (abs, <font color='blue'>diff, <i>rate</i></font>)";
 		_originToolTip        .put    ("Total operations scanned", tooltip);
 		_lrScanned_lbl        .setText("Log Op Scanned");
 		_lrScanned_lbl        .setToolTipText(tooltip);
@@ -553,7 +553,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lrScanned_Rate_txt.setForeground(Color.BLUE);
 		_lrScanned_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "<html>Total Transactions processed (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
+		tooltip = "<html>Total Transactions processed (abs, <font color='blue'>diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total transactions processed", tooltip);
 		_lrTranProcessed_lbl      .setText("Tran Processed");
 		_lrTranProcessed_lbl      .setToolTipText(tooltip);
@@ -567,7 +567,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_lrTranProcessed_Rate_txt.setForeground(Color.BLUE);
 		_lrTranProcessed_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "<html>Bytes Sent by the RepAgent to RepServer (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
+		tooltip = "<html>Bytes Sent by the RepAgent to RepServer (abs, <font color='blue'>diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total bytes sent", tooltip);
 		_ltlBytesSentToRs_lbl      .setText("Bytes Sent to RS");
 		_ltlBytesSentToRs_lbl      .setToolTipText(tooltip);
@@ -581,7 +581,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlBytesSentToRs_Rate_txt.setForeground(Color.BLUE);
 		_ltlBytesSentToRs_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "<html>KB Sent by the RepAgent to RepServer (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
+		tooltip = "<html>KB Sent by the RepAgent to RepServer (abs, <font color='blue'>diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total bytes sent - KB", tooltip);
 		_ltlKbSentToRs_lbl      .setText("KB Sent to RS");
 		_ltlKbSentToRs_lbl      .setToolTipText(tooltip);
@@ -595,7 +595,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ltlKbSentToRs_Rate_txt.setForeground(Color.BLUE);
 		_ltlKbSentToRs_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "<html>MB Sent by the RepAgent to RepServer (abs, <font color=\"blue\">diff, <i>rate</i></font>)";
+		tooltip = "<html>MB Sent by the RepAgent to RepServer (abs, <font color='blue'>diff, <i>rate</i></font>)";
 		_originToolTip            .put    ("Total bytes sent - MB", tooltip);
 		_ltlMbSentToRs_lbl      .setText("MB Sent to RS");
 		_ltlMbSentToRs_lbl      .setToolTipText(tooltip);
@@ -671,7 +671,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_maxRecovery_txt      .setToolTipText(tooltip);
 //		_maxRecovery_txt      .setEditable(false);
 //		
-//		tooltip = "<html>Number of transactions executed (abs, <font color=\"blue\">diff, <i>rate</i></font>), Only available from 15.0.3 CE or 15.5 (not to be trusted in a Cluster Server).";
+//		tooltip = "<html>Number of transactions executed (abs, <font color='blue'>diff, <i>rate</i></font>), Only available from 15.0.3 CE or 15.5 (not to be trusted in a Cluster Server).";
 //		_originToolTip        .put    ("Transactions", tooltip);
 //		_Transactions_lbl     .setText("Transactions");
 //		_Transactions_lbl     .setToolTipText(tooltip);
@@ -685,7 +685,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Transactions_Rate_txt.setForeground(Color.BLUE);
 //		_Transactions_Rate_txt.setFont(RATE_FONT);
 //		
-//		tooltip = "<html>Total number of transactions that have been rolled back on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of transactions that have been rolled back on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip      .put    ("Rollbacks", tooltip);
 //		_Rollbacks_lbl      .setText("Rollbacks");
 //		_Rollbacks_lbl      .setToolTipText(tooltip);
@@ -699,7 +699,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Rollbacks_Rate_txt.setForeground(Color.BLUE);
 //		_Rollbacks_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of select operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of select operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip    .put    ("Selects", tooltip);
 //		_Selects_lbl      .setText("Selects");
 //		_Selects_lbl      .setToolTipText(tooltip);
@@ -713,7 +713,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Selects_Rate_txt.setForeground(Color.BLUE);
 //		_Selects_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of update operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of update operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip    .put    ("Updates", tooltip);
 //		_Updates_lbl      .setText("Updates");
 //		_Updates_lbl      .setToolTipText(tooltip);
@@ -727,7 +727,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Updates_Rate_txt.setForeground(Color.BLUE);
 //		_Updates_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of insert operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of insert operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip    .put    ("Inserts", tooltip);
 //		_Inserts_lbl      .setText("Inserts");
 //		_Inserts_lbl      .setToolTipText(tooltip);
@@ -741,7 +741,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Inserts_Rate_txt.setForeground(Color.BLUE);
 //		_Inserts_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of delete operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of delete operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip    .put    ("Deletes", tooltip);
 //		_Deletes_lbl      .setText("Deletes");
 //		_Deletes_lbl      .setToolTipText(tooltip);
@@ -755,7 +755,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Deletes_Rate_txt.setForeground(Color.BLUE);
 //		_Deletes_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of merge operations that have been executed on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of merge operations that have been executed on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip   .put    ("Merges", tooltip);
 //		_Merges_lbl      .setText("Merges");
 //		_Merges_lbl      .setToolTipText(tooltip);
@@ -769,7 +769,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_Merges_Rate_txt.setForeground(Color.BLUE);
 //		_Merges_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of pages where data was retrieved without an index on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of pages where data was retrieved without an index on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip          .put    ("TableAccesses", tooltip);
 //		_TableAccesses_lbl      .setText("TableAccesses");
 //		_TableAccesses_lbl      .setToolTipText(tooltip);
@@ -783,7 +783,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_TableAccesses_Rate_txt.setForeground(Color.BLUE);
 //		_TableAccesses_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of pages where data was retrieved using an index on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of pages where data was retrieved using an index on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip          .put    ("IndexAccesses", tooltip);
 //		_IndexAccesses_lbl      .setText("IndexAccesses");
 //		_IndexAccesses_lbl      .setToolTipText(tooltip);
@@ -797,7 +797,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_IndexAccesses_Rate_txt.setForeground(Color.BLUE);
 //		_IndexAccesses_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of temporary tables created on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of temporary tables created on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip          .put    ("TempDbObjects", tooltip);
 //		_TempDbObjects_lbl      .setText("TempDbObjects");
 //		_TempDbObjects_lbl      .setToolTipText(tooltip);
@@ -811,7 +811,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_TempDbObjects_Rate_txt.setForeground(Color.BLUE);
 //		_TempDbObjects_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of work tables created on the server, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of work tables created on the server, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip       .put    ("WorkTables", tooltip);
 //		_WorkTables_lbl      .setText("WorkTables");
 //		_WorkTables_lbl      .setToolTipText(tooltip);
@@ -825,7 +825,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_WorkTables_Rate_txt.setForeground(Color.BLUE);
 //		_WorkTables_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Total number of times the User Log Cache was flushed, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Total number of times the User Log Cache was flushed, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip       .put    ("ULCFlushes", tooltip);
 //		_ULCFlushes_lbl      .setText("ULCFlushes");
 //		_ULCFlushes_lbl      .setToolTipText(tooltip);
@@ -839,7 +839,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_ULCFlushes_Rate_txt.setForeground(Color.BLUE);
 //		_ULCFlushes_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of times the User Log Cache was flushed because it was full, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of times the User Log Cache was flushed because it was full, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip         .put    ("ULCFlushFull", tooltip);
 //		_ULCFlushFull_lbl      .setText("ULCFlushFull");
 //		_ULCFlushFull_lbl      .setToolTipText(tooltip);
@@ -853,7 +853,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_ULCFlushFull_Rate_txt.setForeground(Color.BLUE);
 //		_ULCFlushFull_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of kilobytes written to the user log cache, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of kilobytes written to the user log cache, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip         .put    ("ULCKBWritten", tooltip);
 //		_ULCKBWritten_lbl      .setText("ULCKBWritten");
 //		_ULCKBWritten_lbl      .setToolTipText(tooltip);
@@ -867,7 +867,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_ULCKBWritten_Rate_txt.setForeground(Color.BLUE);
 //		_ULCKBWritten_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of pages read on server wide, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of pages read on server wide, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip      .put    ("PagesRead", tooltip);
 //		_PagesRead_lbl      .setText("PagesRead");
 //		_PagesRead_lbl      .setToolTipText(tooltip);
@@ -881,7 +881,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_PagesRead_Rate_txt.setForeground(Color.BLUE);
 //		_PagesRead_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of pages written on server wide, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of pages written on server wide, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip         .put    ("PagesWritten", tooltip);
 //		_PagesWritten_lbl      .setText("PagesWritten");
 //		_PagesWritten_lbl      .setToolTipText(tooltip);
@@ -895,7 +895,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_PagesWritten_Rate_txt.setForeground(Color.BLUE);
 //		_PagesWritten_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of buffers read from the disk, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of buffers read from the disk, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip          .put    ("PhysicalReads", tooltip);
 //		_PhysicalReads_lbl      .setText("PhysicalReads");
 //		_PhysicalReads_lbl      .setToolTipText(tooltip);
@@ -909,7 +909,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_PhysicalReads_Rate_txt.setForeground(Color.BLUE);
 //		_PhysicalReads_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of buffers written to the disk, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of buffers written to the disk, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip           .put    ("PhysicalWrites", tooltip);
 //		_PhysicalWrites_lbl      .setText("PhysicalWrites");
 //		_PhysicalWrites_lbl      .setToolTipText(tooltip);
@@ -923,7 +923,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_PhysicalWrites_Rate_txt.setForeground(Color.BLUE);
 //		_PhysicalWrites_Rate_txt.setFont(RATE_FONT);
 //
-//		tooltip = "<html>Number of buffers read from cache, (abs, <font color=\"blue\">diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
+//		tooltip = "<html>Number of buffers read from cache, (abs, <font color='blue'>diff, <i>rate</i></font>). Only available from ASE 15.7 SP100.";
 //		_originToolTip         .put    ("LogicalReads", tooltip);
 //		_LogicalReads_lbl      .setText("LogicalReads");
 //		_LogicalReads_lbl      .setToolTipText(tooltip);
@@ -1009,7 +1009,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 //		_ioTotalWriteDiff_txt  .setToolTipText(tooltip);
 //		_ioTotalWriteDiff_txt.setForeground(Color.BLUE);
 //
-//		tooltip = "<html>Total Connection that was attemped to make to the ASE Server, even those that failes. Global variable @@connections. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+//		tooltip = "<html>Total Connection that was attemped to make to the ASE Server, even those that failes. Global variable @@connections. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 //		_aaConnections_lbl     .setText("Connections Tried");
 //		_aaConnections_lbl     .setToolTipText(tooltip);
 //		_aaConnectionsAbs_txt  .setEditable(false);
@@ -1539,7 +1539,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				// Set Tooltip
 				if (hasNonConfiguredMonitoringHappened)
 				{
-					String tooltip = "<html><font color=\"red\">" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
+					String tooltip = "<html><font color='red'>" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
 					label    .setToolTipText(tooltip);
 					absField .setToolTipText(tooltip);
 					diffField.setToolTipText(tooltip);

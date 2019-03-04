@@ -707,7 +707,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 
 		
-		tooltip = "<html>Number of server threads that are currently handling a request. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Number of server threads that are currently handling a request. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip      .put    ("ActiveReq", tooltip);
 		_ActiveReq_lbl      .setText("ActiveReq");
 		_ActiveReq_lbl      .setToolTipText(tooltip);
@@ -721,7 +721,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ActiveReq_Rate_txt.setForeground(Color.BLUE);
 		_ActiveReq_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Number of bytes received during client/server communications. This value is updated for HTTP and HTTPS connections. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Number of bytes received during client/server communications. This value is updated for HTTP and HTTPS connections. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip          .put    ("BytesReceived", tooltip);
 		_BytesReceived_lbl      .setText("BytesReceived");
 		_BytesReceived_lbl      .setToolTipText(tooltip);
@@ -735,7 +735,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_BytesReceived_Rate_txt.setForeground(Color.BLUE);
 		_BytesReceived_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Number of bytes sent during client/server communications. This value is updated for HTTP and HTTPS connections. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Number of bytes sent during client/server communications. This value is updated for HTTP and HTTPS connections. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip      .put    ("BytesSent", tooltip);
 		_BytesSent_lbl      .setText("BytesSent");
 		_BytesSent_lbl      .setToolTipText(tooltip);
@@ -749,7 +749,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_BytesSent_Rate_txt.setForeground(Color.BLUE);
 		_BytesSent_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Number of checkpoints that have been performed. . (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Number of checkpoints that have been performed. . (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip  .put    ("Chkpt", tooltip);
 		_Chkpt_lbl      .setText("Chkpt");
 		_Chkpt_lbl      .setToolTipText(tooltip);
@@ -763,7 +763,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_Chkpt_Rate_txt.setForeground(Color.BLUE);
 		_Chkpt_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>current cache size, in kilobytes. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>current cache size, in kilobytes. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip                .put    ("CurrentCacheSize_Kb", tooltip);
 		_CurrentCacheSize_Kb_lbl      .setText("CurrentCacheSize_Kb");
 		_CurrentCacheSize_Kb_lbl      .setToolTipText(tooltip);
@@ -777,7 +777,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_CurrentCacheSize_Kb_Rate_txt.setForeground(Color.BLUE);
 		_CurrentCacheSize_Kb_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of heap pages locked in the cache. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of heap pages locked in the cache. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip            .put    ("LockedHeapPages", tooltip);
 		_LockedHeapPages_lbl      .setText("LockedHeapPages");
 		_LockedHeapPages_lbl      .setToolTipText(tooltip);
@@ -791,7 +791,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_LockedHeapPages_Rate_txt.setForeground(Color.BLUE);
 		_LockedHeapPages_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of bytes used for global server data structures. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of bytes used for global server data structures. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip          .put    ("MainHeapBytes", tooltip);
 		_MainHeapBytes_lbl      .setText("MainHeapBytes");
 		_MainHeapBytes_lbl      .setToolTipText(tooltip);
@@ -805,7 +805,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_MainHeapBytes_Rate_txt.setForeground(Color.BLUE);
 		_MainHeapBytes_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of pages used for global server data structures. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of pages used for global server data structures. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip          .put    ("MainHeapPages", tooltip);
 		_MainHeapPages_lbl      .setText("MainHeapPages");
 		_MainHeapPages_lbl      .setToolTipText(tooltip);
@@ -819,7 +819,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_MainHeapPages_Rate_txt.setForeground(Color.BLUE);
 		_MainHeapPages_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>maximum cache size allowed, in kilobytes. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>maximum cache size allowed, in kilobytes. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip         .put    ("MaxCacheSize", tooltip);
 		_MaxCacheSize_lbl      .setText("MaxCacheSize");
 		_MaxCacheSize_lbl      .setToolTipText(tooltip);
@@ -833,7 +833,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_MaxCacheSize_Rate_txt.setForeground(Color.BLUE);
 		_MaxCacheSize_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>minimum cache size allowed, in kilobytes. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>minimum cache size allowed, in kilobytes. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip         .put    ("MinCacheSize", tooltip);
 		_MinCacheSize_lbl      .setText("MinCacheSize");
 		_MinCacheSize_lbl      .setToolTipText(tooltip);
@@ -847,7 +847,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_MinCacheSize_Rate_txt.setForeground(Color.BLUE);
 		_MinCacheSize_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of multi-packet requests received during client/server communications. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of multi-packet requests received during client/server communications. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip                 .put    ("MultiPacketsReceived", tooltip);
 		_MultiPacketsReceived_lbl      .setText("MultiPacketsReceived");
 		_MultiPacketsReceived_lbl      .setToolTipText(tooltip);
@@ -861,7 +861,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_MultiPacketsReceived_Rate_txt.setForeground(Color.BLUE);
 		_MultiPacketsReceived_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of multi-packet responses sent during client/server communications. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of multi-packet responses sent during client/server communications. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip             .put    ("MultiPacketsSent", tooltip);
 		_MultiPacketsSent_lbl      .setText("MultiPacketsSent");
 		_MultiPacketsSent_lbl      .setToolTipText(tooltip);
@@ -875,7 +875,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_MultiPacketsSent_Rate_txt.setForeground(Color.BLUE);
 		_MultiPacketsSent_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>FIXME. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>FIXME. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip               .put    ("NumProcessorsAvail", tooltip);
 		_NumProcessorsAvail_lbl      .setText("NumProcessorsAvail");
 		_NumProcessorsAvail_lbl      .setToolTipText(tooltip);
@@ -889,7 +889,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_NumProcessorsAvail_Rate_txt.setForeground(Color.BLUE);
 		_NumProcessorsAvail_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of client/server communication packets received. This value is not updated for HTTP or HTTPS connections. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of client/server communication packets received. This value is not updated for HTTP or HTTPS connections. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip            .put    ("PacketsReceived", tooltip);
 		_PacketsReceived_lbl      .setText("PacketsReceived");
 		_PacketsReceived_lbl      .setToolTipText(tooltip);
@@ -903,7 +903,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_PacketsReceived_Rate_txt.setForeground(Color.BLUE);
 		_PacketsReceived_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of client/server communication packets sent. This value is not updated for HTTP or HTTPS connections. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of client/server communication packets sent. This value is not updated for HTTP or HTTPS connections. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip        .put    ("PacketsSent", tooltip);
 		_PacketsSent_lbl      .setText("PacketsSent");
 		_PacketsSent_lbl      .setToolTipText(tooltip);
@@ -917,7 +917,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_PacketsSent_Rate_txt.setForeground(Color.BLUE);
 		_PacketsSent_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Returns CPU usage for the database server process. Values are in seconds. This property is supported on Windows and Unix. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Returns CPU usage for the database server process. Values are in seconds. This property is supported on Windows and Unix. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip             .put    ("ProcessCPU", tooltip);
 		_ProcessCPU_lbl      .setText("ProcessCPU");
 		_ProcessCPU_lbl      .setToolTipText(tooltip);
@@ -931,7 +931,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ProcessCPU_Rate_txt.setForeground(Color.BLUE);
 		_ProcessCPU_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Returns system CPU usage for the database server process CPU. This is the amount of CPU time that the database server spent inside the operating system kernel. Values are in seconds. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Returns system CPU usage for the database server process CPU. This is the amount of CPU time that the database server spent inside the operating system kernel. Values are in seconds. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip             .put    ("ProcessCPUSystem", tooltip);
 		_ProcessCPUSystem_lbl      .setText("ProcessCPUSystem");
 		_ProcessCPUSystem_lbl      .setToolTipText(tooltip);
@@ -945,7 +945,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ProcessCPUSystem_Rate_txt.setForeground(Color.BLUE);
 		_ProcessCPUSystem_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Returns user CPU usage for the database server process. Values are in seconds. This excludes the amount of CPU time that the database server spent inside the operating system kernel. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Returns user CPU usage for the database server process. Values are in seconds. This excludes the amount of CPU time that the database server spent inside the operating system kernel. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip           .put    ("ProcessCPUUser", tooltip);
 		_ProcessCPUUser_lbl      .setText("ProcessCPUUser");
 		_ProcessCPUUser_lbl      .setToolTipText(tooltip);
@@ -959,7 +959,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ProcessCPUUser_Rate_txt.setForeground(Color.BLUE);
 		_ProcessCPUUser_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>FIXME. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>FIXME. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip    .put    ("threads", tooltip);
 		_threads_lbl      .setText("threads");
 		_threads_lbl      .setToolTipText(tooltip);
@@ -973,7 +973,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_threads_Rate_txt.setForeground(Color.BLUE);
 		_threads_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>Returns the number of connections to the database. The property value does not include connections used for firing events or other internal operations, but it does include connections used for external environment support. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>Returns the number of connections to the database. The property value does not include connections used for firing events or other internal operations, but it does include connections used for external environment support. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip      .put    ("ConnCount", tooltip);
 		_ConnCount_lbl      .setText("ConnCount");
 		_ConnCount_lbl      .setToolTipText(tooltip);
@@ -987,7 +987,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_ConnCount_Rate_txt.setForeground(Color.BLUE);
 		_ConnCount_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of requests that are currently queued up waiting for an available server thread. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of requests that are currently queued up waiting for an available server thread. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip     .put    ("UnschReq", tooltip);
 		_UnschReq_lbl      .setText("UnschReq");
 		_UnschReq_lbl      .setToolTipText(tooltip);
@@ -1001,7 +1001,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_UnschReq_Rate_txt.setForeground(Color.BLUE);
 		_UnschReq_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of logical processors the database server will use. On Windows, use the -gtc option to change the number of logical processors used. See -gtc server option. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of logical processors the database server will use. On Windows, use the -gtc option to change the number of logical processors used. See -gtc server option. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip                     .put    ("NumLogicalProcessorsUsed", tooltip);
 		_NumLogicalProcessorsUsed_lbl      .setText("NumLogicalProcessorsUsed");
 		_NumLogicalProcessorsUsed_lbl      .setToolTipText(tooltip);
@@ -1015,7 +1015,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_NumLogicalProcessorsUsed_Rate_txt.setForeground(Color.BLUE);
 		_NumLogicalProcessorsUsed_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of physical processors the database server will use. The personal server is limited to one processor on some platforms. On Windows, you can use the -gt option to change the number of physical processors used by the network database server. See -gt server option. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of physical processors the database server will use. The personal server is limited to one processor on some platforms. On Windows, you can use the -gt option to change the number of physical processors used by the network database server. See -gt server option. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip                      .put    ("NumPhysicalProcessorsUsed", tooltip);
 		_NumPhysicalProcessorsUsed_lbl      .setText("NumPhysicalProcessorsUsed");
 		_NumPhysicalProcessorsUsed_lbl      .setToolTipText(tooltip);
@@ -1029,7 +1029,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_NumPhysicalProcessorsUsed_Rate_txt.setForeground(Color.BLUE);
 		_NumPhysicalProcessorsUsed_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>FIXME. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>FIXME. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip   .put    ("Commit", tooltip);
 		_Commit_lbl      .setText("Commit");
 		_Commit_lbl      .setToolTipText(tooltip);
@@ -1043,7 +1043,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_Commit_Rate_txt.setForeground(Color.BLUE);
 		_Commit_Rate_txt.setFont(RATE_FONT);
 
-		tooltip = "<html>number of client/server communication requests or round trips. It is different from PacketsReceived in that multi-packet requests count as one request, and liveness packets are not included. (abs, <font color=\"blue\">diff, <i>rate</i></font>)</html>";
+		tooltip = "<html>number of client/server communication requests or round trips. It is different from PacketsReceived in that multi-packet requests count as one request, and liveness packets are not included. (abs, <font color='blue'>diff, <i>rate</i></font>)</html>";
 		_originToolTip             .put    ("RequestsReceived", tooltip);
 		_RequestsReceived_lbl      .setText("RequestsReceived");
 		_RequestsReceived_lbl      .setToolTipText(tooltip);
@@ -2153,7 +2153,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				// Set Tooltip
 				if (hasNonConfiguredMonitoringHappened)
 				{
-					String tooltip = "<html><font color=\"red\">" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
+					String tooltip = "<html><font color='red'>" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
 					label    .setToolTipText(tooltip);
 					absField .setToolTipText(tooltip);
 					diffField.setToolTipText(tooltip);

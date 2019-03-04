@@ -116,7 +116,7 @@ public class DdlGenAse extends DdlGen
 			name = name.replace("${password}", cp.getPassword());
 			name = name.replace("${hostport}", hostPort);
 
-			String[] args = StringUtil.translateCommandline(name);
+			String[] args = StringUtil.translateCommandline(name, false);
 			for (String arg : args)
 				argList.add(arg);
 		}
@@ -132,7 +132,7 @@ public class DdlGenAse extends DdlGen
 		String extraParams = getExtraParams();
 		if (StringUtil.hasValue(extraParams))
 		{
-			String[] args = StringUtil.translateCommandline(extraParams);
+			String[] args = StringUtil.translateCommandline(extraParams, false);
 			for (String arg : args)
 				argList.add(arg);
 		}

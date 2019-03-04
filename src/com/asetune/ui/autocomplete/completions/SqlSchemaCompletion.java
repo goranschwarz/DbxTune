@@ -33,16 +33,9 @@ extends SqlCompletion
 
 	public SchemaInfo _schemaInfo = null;
 	
-	public SqlSchemaCompletion(CompletionProviderAbstractSql provider, String schemaName)
-	{
-		super(provider, schemaName, provider.fixStrangeNames(schemaName)+".");
-
-		String shortDesc = 
-			"<font color=\"blue\">"+schemaName+"</font>" +
-			" -- <i><font color=\"green\">SCHEMA</font></i>";
-		setShortDescription(shortDesc);
-	}
-
+	//-------------------------
+	// helper called from constructor
+	//-------------------------
 	public static String createReplacementText(CompletionProviderAbstractSql provider, SchemaInfo si, String catName, boolean quoteNames)
 	{
 		String q = provider.getDbIdentifierQuoteString();
@@ -55,6 +48,10 @@ extends SqlCompletion
 		
 		return out;
 	}
+
+	//-------------------------
+	// CONSTRUCTOR(S)
+	//-------------------------
 	public SqlSchemaCompletion(CompletionProviderAbstractSql provider, SchemaInfo si, String catName, boolean quoteNames)
 	{
 		super(provider, si._name, createReplacementText(provider, si, catName, quoteNames));
@@ -62,12 +59,28 @@ extends SqlCompletion
 		_schemaInfo = si;
 
 		String shortDesc = 
-			"<font color=\"blue\">"+si._name+"</font>" +
-			" -- <i><font color=\"green\">" + (StringUtil.isNullOrBlank(si._remark) ? "" : stripMultiLineHtml(si._remark)) + "</font></i>";
+			"<font color='blue'>"+si._name+"</font>" +
+			" -- <i><font color='green'>" + (StringUtil.isNullOrBlank(si._remark) ? "" : stripMultiLineHtml(si._remark)) + "</font></i>";
 		setShortDescription(shortDesc);
 //		setSummary(_schemaInfo.toHtmlString());
 	}
 
+	public SqlSchemaCompletion(CompletionProviderAbstractSql provider, String schemaName)
+	{
+		super(provider, schemaName, provider.fixStrangeNames(schemaName)+".");
+
+		String shortDesc = 
+			"<font color='blue'>"+schemaName+"</font>" +
+			" -- <i><font color='green'>SCHEMA</font></i>";
+		setShortDescription(shortDesc);
+	}
+
+
+
+	//-------------------------
+	// OVERIDE METHODS
+	//-------------------------
+	
 	@Override
 	public String getSummary()
 	{

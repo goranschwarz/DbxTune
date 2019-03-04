@@ -114,7 +114,7 @@ implements DbxConnectionStateInfo
 		String autocommit = "AutoCommit=" + getAutoCommit();
 
 		if ( ! getAutoCommit() )
-			autocommit = "AutoCommit=<b><font color=\"red\">" + getAutoCommit() + "</font></b>";
+			autocommit = "AutoCommit=<b><font color='red'>" + getAutoCommit() + "</font></b>";
 
 		String text = "ac="+getAutoCommit();
 		if ( ! getAutoCommit() )

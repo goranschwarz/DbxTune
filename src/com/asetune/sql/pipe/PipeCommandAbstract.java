@@ -20,7 +20,11 @@
  ******************************************************************************/
 package com.asetune.sql.pipe;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.sql.pipe.PipeMessage.Severity;
 
 public abstract class PipeCommandAbstract
 implements IPipeCommand
@@ -29,6 +33,7 @@ implements IPipeCommand
 
 	protected String _cmdStr = null;
 	protected String _sqlStr = null;
+	protected List<PipeMessage> _pipeMsgList = new ArrayList<>();
 	
 	public PipeCommandAbstract(String input, String sqlString)
 	{
@@ -49,6 +54,33 @@ implements IPipeCommand
 	}
 
 	@Override abstract public String getConfig();
+	
+	@Override 
+	public boolean hasMessages()
+	{
+		if (_pipeMsgList == null)
+			return false;
+
+		return _pipeMsgList.size() > 0;
+	}
+	
+	@Override 
+	public List<PipeMessage> getMessages()
+	{
+		return _pipeMsgList;
+	}
+
+	@Override 
+	public void clearMessages()
+	{
+		_pipeMsgList = new ArrayList<>();
+	}
+	
+	@Override public void addDebugMessage  (String msg) { _pipeMsgList.add(new PipeMessage(Severity.DEBUG  , msg)); }
+	@Override public void addInfoMessage   (String msg) { _pipeMsgList.add(new PipeMessage(Severity.INFO   , msg)); }
+	@Override public void addWarningMessage(String msg) { _pipeMsgList.add(new PipeMessage(Severity.WARNING, msg)); }
+	@Override public void addErrorMessage  (String msg) { _pipeMsgList.add(new PipeMessage(Severity.ERROR  , msg)); }
+	
 	
 	@Override
 	public void open() 

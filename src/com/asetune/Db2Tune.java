@@ -75,7 +75,7 @@ extends DbxTune
 	@Override
 	public String getSupportedProductName()
 	{
-		return DbUtils.DB_PROD_NAME_DB2_UX;
+		return DbUtils.DB_PROD_NAME_DB2_LUW;
 	}
 
 	@Override

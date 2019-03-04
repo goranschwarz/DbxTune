@@ -856,7 +856,7 @@ extends CountersModel
 		         "BuffersToLRU, \n" +
 		         "CacheReplacementPct        = convert(numeric(12,1), 1.0*PagesRead / (AllocatedKB*(1024.0/@@maxpagesize))), \n" +
 		         "CacheReplacementSlidePct   = convert(numeric(12,1), 0), \n" +
-		         "CacheSlideTime             = convert(varchar(30), 'not-for-absulute-values'), \n" +
+		         "CacheSlideTime             = convert(varchar(30), 'not-for-absolute-values'), \n" +
 		         "PagesReadInSlide           = convert(int, 0), \n" +
 		         "CacheEfficiency  = CASE \n" +
 		         "                      WHEN PagesRead > 0 \n" +

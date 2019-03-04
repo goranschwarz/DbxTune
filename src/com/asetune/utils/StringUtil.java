@@ -14,6 +14,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -2537,12 +2538,17 @@ public class StringUtil
 	/**
 	 * Crack a command line.
 	 *
-	 * @param toProcess  the command line to process
+	 * @param toProcess    the command line to process
+	 * @param removeFirst  If you want to remove the first word (which may be the application name)
 	 * @return the command line broken into strings. An empty or null toProcess parameter results in a zero sized array
 	 *         
 	 * NOTE: code was borrowed from Apache Commons Library, but it was made private...
 	 */
-	public static String[] translateCommandline(final String toProcess) 
+//	public static String[] translateCommandline(final String toProcess) 
+//	{
+//		return translateCommandline(toProcess, true);
+//	}
+	public static String[] translateCommandline(final String toProcess, boolean removeFirst) 
 	{
 		if (toProcess == null || toProcess.length() == 0) 
 		{
@@ -2624,6 +2630,11 @@ public class StringUtil
 		if (state == inQuote || state == inDoubleQuote) 
 		{
 			throw new IllegalArgumentException("Unbalanced quotes in " + toProcess);
+		}
+		
+		if (removeFirst && ! list.isEmpty())
+		{
+			list.remove(0);
 		}
 
 		final String[] args = new String[list.size()];
@@ -3265,6 +3276,36 @@ public class StringUtil
 	public static String format(String format, Object... args)
 	{
 		return String.format(format, args);
+	}
+
+	/**
+	 * Add single quotes around the object if it looks like something that can be a String
+	 * 
+	 * @param obj
+	 */
+	public static String quotify(Object obj, String leftQuote, String rightQuote)
+	{
+		if (obj == null)
+			return null;
+
+		boolean addQuotes = false;
+		if      (obj instanceof String) addQuotes = true;
+		else if (obj instanceof Date  ) addQuotes = true;
+
+		if ( ! addQuotes )
+			return obj.toString();
+
+		StringBuilder sb = new StringBuilder();
+		sb.append(leftQuote).append(obj).append(rightQuote);
+		return sb.toString();
+	}
+	public static String quotify(Object obj)
+	{
+		return quotify(obj, "'", "'");
+	}
+	public static String quotify(Object obj, String quoteStr)
+	{
+		return quotify(obj, quoteStr, quoteStr);
 	}
 	
 	/////////////////////////////////////////////////////////////////////////////

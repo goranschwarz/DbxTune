@@ -112,9 +112,25 @@ public class PipeCommand
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
+		else if (   _cmdStr.startsWith("graph ") || _cmdStr.equals("graph")
+		         || _cmdStr.startsWith("chart ") || _cmdStr.equals("chart")
+		        )
+		{
+			IPipeCommand cmd = new PipeCommandGraph(_cmdStr, _sqlStr);
+			_pipeList.add(cmd);
+			_cmd = cmd;
+			// for the moment this doesn't support MULTIPLE commands in the pipe
+		}
+		else if ( _cmdStr.startsWith("diff ") || _cmdStr.equals("diff") )
+		{
+			IPipeCommand cmd = new PipeCommandDiff(_cmdStr, _sqlStr);
+			_pipeList.add(cmd);
+			_cmd = cmd;
+			// for the moment this doesn't support MULTIPLE commands in the pipe
+		}
 		else
 		{
-			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, convert, iconv");
+			throw new PipeCommandException("PipeCommand, cmd='"+_cmdStr+"' is unknown. Available commands is: grep, egrep, bcp, tofile, convert, iconv, graph, chart, diff");
 		}
 	}
 	

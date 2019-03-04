@@ -114,6 +114,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.html.HTMLEditorKit;
@@ -134,6 +135,8 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
 
 import com.asetune.AppDir;
 import com.asetune.DebugOptions;
@@ -166,6 +169,7 @@ import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
 import com.asetune.gui.ConnectionDialog;
 import com.asetune.gui.ConnectionProfileManager;
+import com.asetune.gui.CreateGraphDialog;
 import com.asetune.gui.FavoriteCommandDialog;
 import com.asetune.gui.FavoriteCommandDialog.FavoriteCommandEntry;
 import com.asetune.gui.FavoriteCommandDialog.VendorType;
@@ -188,17 +192,22 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
 import com.asetune.parser.ParserProperties;
 import com.asetune.sql.CommonEedInfo;
+import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.SqlPickList;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.SqlServerConnection;
 import com.asetune.sql.conn.TdsConnection;
+import com.asetune.sql.pipe.IPipeCommand;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandBcp;
+import com.asetune.sql.pipe.PipeCommandDiff;
 import com.asetune.sql.pipe.PipeCommandException;
+import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.pipe.PipeCommandToFile;
+import com.asetune.sql.pipe.PipeMessage;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
@@ -216,7 +225,9 @@ import com.asetune.tools.sqlw.msg.JAseRowCount;
 import com.asetune.tools.sqlw.msg.JBcpWarning;
 import com.asetune.tools.sqlw.msg.JClientExecTime;
 import com.asetune.tools.sqlw.msg.JDbmsOuputMessage;
+import com.asetune.tools.sqlw.msg.JGraphResultSet;
 import com.asetune.tools.sqlw.msg.JOracleMessage;
+import com.asetune.tools.sqlw.msg.JPipeMessage;
 import com.asetune.tools.sqlw.msg.JPlainResultSet;
 import com.asetune.tools.sqlw.msg.JResultSetInfo;
 import com.asetune.tools.sqlw.msg.JSQLExceptionMessage;
@@ -232,7 +243,6 @@ import com.asetune.ui.autocomplete.CompletionProviderAse;
 import com.asetune.ui.autocomplete.CompletionProviderJdbc;
 import com.asetune.ui.autocomplete.CompletionProviderRax;
 import com.asetune.ui.autocomplete.CompletionProviderRepServer;
-import com.asetune.ui.autocomplete.SqlObjectName;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.AsetuneTokenMaker;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -1932,7 +1942,7 @@ public class QueryWindow
 
 		// Add components to Control Panel
 		_controlPane.add(_cntrlPrefix_sep,       "grow, gap 30, hidemode 3");
-		_controlPane.add(_dbnames_cbx,           "hidemode 2");
+		_controlPane.add(_dbnames_cbx,           "hidemode 3");
 		_controlPane.add(_exec_but,              "");
 		_controlPane.add(_execGuiShowplan_but,   "hidemode 3");
 		_controlPane.add(_appOptions_but,        "gap 30");
@@ -3077,7 +3087,7 @@ public class QueryWindow
 			{
 				// For DBMS Vendors that you can't "move" around from database to database (use dbname), lets print the initial connected catalog 
 				if (DbUtils.isProductName(_connectedToProductName, 
-						DbUtils.DB_PROD_NAME_DB2_UX,
+						DbUtils.DB_PROD_NAME_DB2_LUW,
 						DbUtils.DB_PROD_NAME_DERBY,
 						DbUtils.DB_PROD_NAME_H2, 
 						DbUtils.DB_PROD_NAME_HANA,
@@ -3917,7 +3927,7 @@ public class QueryWindow
 				monTableDict.initialize(_conn, true);
 			}
 			// DB2
-			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX))
+			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_LUW))
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
@@ -4271,7 +4281,7 @@ public class QueryWindow
 			_execGuiShowplan_but       .setVisible(false);
 		}
 		
-		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_UX))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_LUW))
 		{
 			_enableDbmsOutput_chk.setVisible(true);
 		}
@@ -6596,6 +6606,46 @@ public class QueryWindow
 		});
 
 
+		//------------------------------------------------------------------------------------
+		// Create Graph/Chart on Table Content...
+		//------------------------------------------------------------------------------------
+		JMenuItem createGraph = new JMenuItem("Create Graph/Chart on Table Content...");
+		createGraph.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+		popup.add(createGraph);
+		
+		createGraph.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Component invoker = TablePopupFactory.getPopupMenuInvoker((JMenuItem)e.getSource());
+				if (invoker instanceof JTable)
+				{
+					JTable tab = (JTable) invoker;
+					TableModel tm = tab.getModel();
+					if (tm instanceof ResultSetTableModel)
+					{
+						ResultSetTableModel rstm = (ResultSetTableModel) tm;
+//System.out.println("TM="+rstm);
+						CreateGraphDialog.showDialog(_window, rstm);
+					}
+					
+				}
+
+//				String msg = "<html>"
+//						+ "Sorry, No Dialog has yet been implemented<br>"
+//						+ "<br>"
+//						+ "<b>But you can still use:</b>"
+//						+ "<pre>"
+//						+ "select ... from t1 where ...\n"
+//						+ "go | graph --type {auto|bar|area|line|pie|timeseries} ...\n"
+//						+ "</pre>"
+//						+ "</html>";
+//				SwingUtils.showInfoMessage(_window, "Not Yet Implemented", msg);
+			}
+		});
+
+
 		// create pupup depending on what we are connected to
 		String propPostfix = "";
 		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
@@ -6626,7 +6676,7 @@ public class QueryWindow
 		{
 			propPostfix = "ora.";
 		}
-		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_UX))
+		else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_DB2_LUW))
 		{
 			propPostfix = "db2.";
 		}
@@ -7115,7 +7165,8 @@ ex.printStackTrace();
 							// but not for print statement
 							if (_getObjectTextOnError_chk.isSelected() && ceedi.getSeverity() > 10)
 							{
-								SqlObjectName sqlObj = new SqlObjectName(searchForName, _connectedToProductName, "\"", false);
+//								SqlObjectName sqlObj = new SqlObjectName(searchForName, _connectedToProductName, "\"", false);
+								SqlObjectName sqlObj = new SqlObjectName(_conn, searchForName);
 
 //								if ( DbUtils.DB_PROD_NAME_SYBASE_ASE.equals(_connectedToProductName) )
 								if ( DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE) )
@@ -7526,9 +7577,42 @@ ex.printStackTrace();
 								_statusBar.setMsg("Reading resultset "+rsCount+".");
 								progress.setState("Reading resultset "+rsCount+".");
 			
-								// Get next resultset to work with
+								// Get next ResultSet to work with
 								ResultSet rs = stmnt.getResultSet();
 
+								// If we should NOT keep the ResultSet, simply discard the resultset and continue with next
+								if (sr.hasOption_keepRs() || sr.hasOption_skipRs())
+								{
+									boolean keepRs = true;
+
+									List<Integer> keepRsList = sr.getOption_keepRs();
+									List<Integer> skipRsList = sr.getOption_skipRs();
+									
+									if (sr.hasOption_keepRs())
+									{
+    									if ( ! keepRsList.contains(rsCount) )
+    										keepRs = false;
+									}
+									
+									if (sr.hasOption_skipRs())
+									{
+										if ( skipRsList.contains(rsCount) )
+											keepRs = false;
+									}
+									
+									if ( ! keepRs )
+									{
+										_resultCompList.add( new JAseMessage("SKIPPING ResultSet number "+rsCount+" due to: keepList="+keepRsList+", skipList="+skipRsList, sql) );
+										while(rs.next())
+											; // Just Read every row in the RS to "clear" it...
+										rs.close();
+
+										// Get NEXT ResultSet and start from the TOP (in the do {})
+										hasRs = stmnt.getMoreResults();
+						/*<----------*/ continue;
+									}
+								}
+								
 								ResultSetTableModel rstm = null;
 			
 								// Append, messages and Warnings to _resultCompList, if any
@@ -7537,7 +7621,10 @@ ex.printStackTrace();
 	
 								// Check for BCP pipe command
 								PipeCommand pipeCmd = sr.getPipeCmd();
-//								if (pipeCmd != null && pipeCmd.isBcp())
+
+								//---------------------------------
+								// PIPE - BCP
+								//---------------------------------
 								if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandBcp))
 								{
 									try
@@ -7564,6 +7651,9 @@ ex.printStackTrace();
 									if (bcpSqlWarnings != null)
 										_resultCompList.add( new JBcpWarning(bcpSqlWarnings, pipeCmd, sql) );
 								}
+								//---------------------------------
+								// PIPE - ToFile
+								//---------------------------------
 								else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandToFile))
 								{
 									try
@@ -7590,6 +7680,38 @@ ex.printStackTrace();
 									if (toFileMessage != null)
 										_resultCompList.add( new JToFileMessage(toFileMessage, pipeCmd, sql) );
 								}
+								//---------------------------------
+								// PIPE - Diff
+								//---------------------------------
+								else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandDiff))
+								{
+									try
+									{
+										pipeCmd.getCmd().doEndPoint(rs, progress);
+									}
+									catch (Exception e)
+									{
+										progress.setState("Canceling the query (if the JDBC driver supports this).");
+										_logger.info("Calling stmnt.cancel() to Canceling the query (if the JDBC driver supports this).");
+										stmnt.cancel(); // Cancel big queries
+										throw e;
+									}
+									
+//									int rowsSelected = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsSelected);
+//									int rowsInserted = (Integer) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.rowsInserted);
+//									incRsRowsCount(rowsSelected);
+//									incIudRowsCount(rowsInserted);
+//
+//									if (_showRowCount_chk.isSelected() || sr.hasOption_rowCount() || sr.hasOption_noData())
+//										_resultCompList.add( new JAseRowCount(rowsInserted, sql) );
+//
+//									SQLWarning bcpSqlWarnings = (SQLWarning) pipeCmd.getCmd().getEndPointResult(PipeCommandBcp.sqlWarnings);
+//									if (bcpSqlWarnings != null)
+//										_resultCompList.add( new JBcpWarning(bcpSqlWarnings, pipeCmd, sql) );
+								}
+								//---------------------------------
+								// Normal ResultSet handling
+								//---------------------------------
 								else
 								{
 									int limitRsRowsCount = -1; // do not limit
@@ -7640,25 +7762,46 @@ ex.printStackTrace();
 					
 										execReadRsSum += rstm.getResultSetReadTime();
 
-										// Create the JTable, using the just created TableModel/ResultSet
-//										JXTable tab = new ResultSetJXTable(rstm);
-//										tab.setSortable(true);
-//										tab.setSortOrderCycle(SortOrder.ASCENDING, SortOrder.DESCENDING, SortOrder.UNSORTED);
-//										tab.packAll(); // set size so that all content in all cells are visible
-//										tab.setColumnControlVisible(true);
-////										tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-//										tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-//		
-//										// Add a popup menu
-//										tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
 		
 										if (_printRsInfo_chk.isSelected() || sr.hasOption_printRsi())
 											_resultCompList.add( new JResultSetInfo(rstm, sql, sr.getSqlBatchStartLine() + startRowInSelection) );
 
-										// Add the JTable to a list for later use
-//										_resultCompList.add(tab);
-										_resultCompList.add(new JTableResultSet(rstm));
-										// FIXME: use a callback interface instead
+
+										// ADD TO: _resultCompList
+
+										//---------------------------------
+										// PIPE - Graph/Chart
+										//---------------------------------
+										if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandGraph))
+										{
+											PipeCommandGraph pipeCmdGraph = (PipeCommandGraph)pipeCmd.getCmd();
+
+											// Add a Graph/Chart DATA to the _resultCompList
+											JGraphResultSet grs = new JGraphResultSet(rstm, pipeCmdGraph);
+											if ( pipeCmdGraph.isWindowEnabled() )
+											{
+    											grs.createWindow();
+											}
+											else
+											{
+    											grs.createChart(); // Create the chart object NOW so we can retrieve any messages
+    											for (PipeMessage pmsg : pipeCmdGraph.getMessages())
+    												_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
+    											pipeCmdGraph.clearMessages();
+    
+    											// Add the GRAPH to the results list
+    											_resultCompList.add( grs );
+											}
+										    
+											// Also add the DATA TABLE (if we have stated that)
+											if (pipeCmdGraph.isAddDataEnabled())
+												_resultCompList.add(new JTableResultSet(rstm));
+										}
+										else
+										{
+											_resultCompList.add(new JTableResultSet(rstm));
+											// FIXME: use a callback interface instead
+										}
 										
 										if (rstm.isCancelled())
 											_resultCompList.add(new JAseCancelledResultSet(sql));
@@ -7669,11 +7812,18 @@ ex.printStackTrace();
 										if (rstm.wasBottomApplied())
 											_resultCompList.add(new JAseLimitedResultSetBottom(rstm.getBottomXRowsDiscarded(), sr.getOption_bottomRows(), sql));
 									}
-								} // end: normal read result set
+								} // end: NORMAL read ResultSet
 			
 								// Append, messages and Warnings to _resultCompList, if any
 								putSqlWarningMsgs(stmnt, _resultCompList, sr.getPipeCmd(), "-before-rs.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
-	
+
+								// Messages from PIPE Commands
+								if (pipeCmd != null && pipeCmd.getCmd().hasMessages())
+								{
+									for (PipeMessage pmsg : pipeCmd.getCmd().getMessages())
+										_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
+								}
+
 								// Get rowcount from the ResultSetTableModel
 								if (rstm != null)
 								{
@@ -8027,6 +8177,14 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 checkPanelSize(_resPanel, p);
 					rowCount = tableRs.getRowCount();
 				}
+				else if (jcomp instanceof JGraphResultSet)
+				{
+					JGraphResultSet graphRs = (JGraphResultSet)jcomp;
+					JComponent p = createGraphPanel(graphRs, false);
+
+					_resPanel.add(p, graphRs.getMigLayoutConstrains());
+					rowCount = graphRs.getRowCount();
+				}
 				else if (jcomp instanceof JPlainResultSet)
 				{
 					JPlainResultSet plainRs = (JPlainResultSet)jcomp;
@@ -8146,6 +8304,28 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 
 						rowCount += tableRs.getRowCount();
 					}
+					else if (jcomp instanceof JGraphResultSet)
+					{
+						JGraphResultSet graphRs = (JGraphResultSet)jcomp;
+						JComponent p = createGraphPanel(graphRs, true);
+
+						final String titleName = "ResultSet "+(i++);
+						_resTabbedPane.addTab(titleName, p);
+						
+						// Add "link" buttom in the MSG Panel
+						JButton viewRsButton = new JButton("View "+titleName);
+						viewRsButton.addActionListener(new ActionListener()
+						{
+							@Override
+							public void actionPerformed(ActionEvent e)
+							{
+								_resTabbedPane.setSelectedTitle(titleName);
+							}
+						});
+						msgPanel.add(viewRsButton);
+
+						rowCount += graphRs.getRowCount();
+					}
 					else if (jcomp instanceof JPlainResultSet)
 					{
 						JPlainResultSet plainRs = (JPlainResultSet)jcomp;
@@ -8261,6 +8441,17 @@ System.out.println("----- NOTE: this section should NOT be used anymore.....");
 						_resPanel.add(p, "");
 checkPanelSize(_resPanel, p);
 						rowCount = tableRs.getRowCount();
+					}
+					else if (jcomp instanceof JGraphResultSet)
+					{
+						JGraphResultSet graphRs = (JGraphResultSet)jcomp;
+						JComponent p = createGraphPanel(graphRs, false);
+
+						Border border = BorderFactory.createTitledBorder("ResultSet "+(i++));
+						p.setBorder(border);
+
+						_resPanel.add(p, "grow, push");
+						rowCount = graphRs.getRowCount();
 					}
 					else if (jcomp instanceof JPlainResultSet)
 					{
@@ -8556,9 +8747,9 @@ checkPanelSize(_resPanel, comp);
 	{
 //		if ( _useAltExecTermStr_chk.isSelected() )
 //		{
-			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA))   return "/";
-			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE)) return "/";
-			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_UX)) return "/";
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_HANA   )) return "/";
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE )) return "/";
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_DB2_LUW)) return "/";
 //		}
 		return null;
 	}
@@ -8568,7 +8759,7 @@ checkPanelSize(_resPanel, comp);
 	private void enableOrDisableVendorSpecifics(Connection conn)
 	{
 		// Setup Oracle specific stuff
-		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_UX))
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_LUW))
 		{
 			if ( _enableDbmsOutput_chk.isSelected() )
 			{
@@ -8621,7 +8812,7 @@ checkPanelSize(_resPanel, comp);
 	private void readVendorSpecificResults(Connection conn, SqlProgressDialog progress, ArrayList<JComponent> resultCompList, int startRowInSelection, int scriptReaderSqlBatchStartLine, String originSql)
 	{
 		// Get Oracle/DB2 specific DBMS_OUTPUT  messages
-		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_UX) && _enableDbmsOutput_chk.isSelected())
+		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_LUW) && _enableDbmsOutput_chk.isSelected())
 		{
 			progress.setState("Getting Oracle: DBMS_OUTPUT");
 
@@ -9117,6 +9308,9 @@ checkPanelSize(_resPanel, comp);
 			if (jcomp instanceof JTableResultSet)
 				count++;
 
+			if (jcomp instanceof JGraphResultSet)
+				count++;
+
 			if (jcomp instanceof JPlainResultSet)
 				count++;
 		}
@@ -9155,6 +9349,32 @@ checkPanelSize(_resPanel, comp);
 		return p;
 	}
 
+	private JComponent createGraphPanel(JGraphResultSet jgrs, boolean asTabbedPane)
+	{
+//		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
+		
+//		JFreeChart chart = jgrs.createChart();
+		JFreeChart chart = jgrs.getChart();
+		ChartPanel chartPanel = new ChartPanel(chart);
+		
+		if (asTabbedPane)
+		{
+			return new JScrollPane(chartPanel);
+		}
+		else
+		{
+			return chartPanel;
+//			// Add a filter field if "number of records in table" is above the threshold
+//			int rowcountForFilterActivation = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_rsFilterRowThresh, DEFAULT_rsFilterRowThresh);
+//			if (tab.getRowCount() >= rowcountForFilterActivation)
+//				p.add(new GTableFilter(tab, GTableFilter.ROW_COUNT_LAYOUT_LEFT), "growx, pushx, span, wrap");
+//
+//			// JScrollPane is on _resPanel
+//			// So we need to display the table header ourself
+//			p.add(tab.getTableHeader(), "wrap");
+//			p.add(tab,                  "wrap");
+		}
+	}
 	private JComponent createTablePanel(JTableResultSet jtrs, boolean asTabbedPane)
 	{
 		ResultSetJXTable tab = new ResultSetJXTable(jtrs.getResultSetTableModel());
@@ -9208,10 +9428,10 @@ checkPanelSize(_resPanel, comp);
 		{
 //System.out.println("checkPanelSize(): innerpanel.getPreferredSize()="+innerPanel.getPreferredSize());
 			JLabel warning = new JLabel("<html>"
-					+ "<FONT COLOR=\"red\" size=\"+1\">"
+					+ "<FONT COLOR='red' size='+1'>"
 					+ "<B>WARNING: the above table probably has MORE rows... </B><br>"
 					+ "</FONT>"
-					+ "<FONT COLOR=\"red\">"
+					+ "<FONT COLOR='red'>"
 					+ "To view all rows please execute with option 'As Plain Text' or 'ResultSets in Tabs' <br>"
 					+ "Sorry this is an internal limitation that I'm trying to work around."
 					+ "</FONT>"
@@ -9425,11 +9645,11 @@ checkPanelSize(_resPanel, comp);
 				// remove all old items (if any)
 				popupMenu.removeAll();
 
-				final JMenuItem ascii_mi  = new JRadioButtonMenuItem("<html><b>ASCII</b>          - <i><font color=\"green\">Tables will be copied into ascii format         </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_ASCII, DEFAULT_COPY_RESULTS_ASCII));
-				final JMenuItem html_mi   = new JRadioButtonMenuItem("<html><b>HTML</b>           - <i><font color=\"green\">Copy as HTML Tags                               </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML));
-				final JMenuItem excel_mi  = new JRadioButtonMenuItem("<html><b>Excel</b>          - <i><font color=\"green\">Write to a Excel file                           </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL));
-				final JMenuItem csv_mi    = new JRadioButtonMenuItem("<html><b>CSV</b>            - <i><font color=\"green\">Commas Separated Values Format                  </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV));
-				final JMenuItem csvCfg_mi = new JMenuItem           ("<html><b>CSV, Config...</b> - <i><font color=\"green\">Opens a Dialog, where you can set separators etc</font></i></html>");
+				final JMenuItem ascii_mi  = new JRadioButtonMenuItem("<html><b>ASCII</b>          - <i><font color='green'>Tables will be copied into ascii format         </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_ASCII, DEFAULT_COPY_RESULTS_ASCII));
+				final JMenuItem html_mi   = new JRadioButtonMenuItem("<html><b>HTML</b>           - <i><font color='green'>Copy as HTML Tags                               </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_HTML,  DEFAULT_COPY_RESULTS_HTML));
+				final JMenuItem excel_mi  = new JRadioButtonMenuItem("<html><b>Excel</b>          - <i><font color='green'>Write to a Excel file                           </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_EXCEL, DEFAULT_COPY_RESULTS_EXCEL));
+				final JMenuItem csv_mi    = new JRadioButtonMenuItem("<html><b>CSV</b>            - <i><font color='green'>Commas Separated Values Format                  </font></i></html>", conf.getBooleanProperty(PROPKEY_COPY_RESULTS_CSV,   DEFAULT_COPY_RESULTS_CSV));
+				final JMenuItem csvCfg_mi = new JMenuItem           ("<html><b>CSV, Config...</b> - <i><font color='green'>Opens a Dialog, where you can set separators etc</font></i></html>");
 
 				ButtonGroup group = new ButtonGroup();
 				group.add(ascii_mi);
@@ -10110,7 +10330,7 @@ checkPanelSize(_resPanel, comp);
 			// Add entry
 			JCheckBoxMenuItem mi;
 
-			String miText = "<html>set <b>"+opt.getText()+"</b> - <i><font color=\"green\">"+opt.getTooltip()+"</font></i></html>";
+			String miText = "<html>set <b>"+opt.getText()+"</b> - <i><font color='green'>"+opt.getTooltip()+"</font></i></html>";
 			String toolTipText = "<html>"+opt.getTooltip()+"<br>" +
 					"<br>" +
 					"SQL used to set <b>on</b>: <code>"+opt.getSqlOn()+"</code><br>" +
@@ -10314,24 +10534,24 @@ checkPanelSize(_resPanel, comp);
 
 		// ok lets not create new objects, lets resue already created objects
 		// But change the text a bit...
-		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                  - <i><font color=\"green\">Simulate <b>isql</b> output, do not use GUI Tables</font></i> 'go plain'</html>");
-		_appendResults_chk         .setText("<html><b>Append Results</b>                 - <i><font color=\"green\">Do <b>not</b> clear results from previous executions. Append at the end.</font></i> 'go append'</html>");
-		_showRowCount_chk          .setText("<html><b>Row Count</b>                      - <i><font color=\"green\">Print the rowcount from jConnect and not number of rows returned.</font></i> 'go rowc'</html>");
+		_asPlainText_chk           .setText("<html><b>As Plain Text</b>                  - <i><font color='green'>Simulate <b>isql</b> output, do not use GUI Tables</font></i> 'go plain'</html>");
+		_appendResults_chk         .setText("<html><b>Append Results</b>                 - <i><font color='green'>Do <b>not</b> clear results from previous executions. Append at the end.</font></i> 'go append'</html>");
+		_showRowCount_chk          .setText("<html><b>Row Count</b>                      - <i><font color='green'>Print the rowcount from jConnect and not number of rows returned.</font></i> 'go rowc'</html>");
 		_limitRsRowsRead_chk       .setText("SET_LATER: _limitRsRowsRead_chk");
-		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b>   - <i><font color=\"green\">Open a dialog to change settings for limiting rows</font></i></html>");
-		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>       - <i><font color=\"green\">Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
-		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>           - <i><font color=\"green\">Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
-		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>             - <i><font color=\"green\">Do you want to remove leading/trailing blanks from \"strings\"</html>");
-		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>                - <i><font color=\"green\">Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
-		_clientTiming_chk          .setText("<html><b>Client Timing</b>                  - <i><font color=\"green\">How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
-		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>          - <i><font color=\"green\">Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
-		_enableDbmsOutput_chk      .setText("<html><b>Enable dbms_output.get_line</b>    - <i><font color=\"green\">Receive Oracle/DB2 DBMS Output trace statements.</font></i></html>");
-		_rsInTabs_chk              .setText("<html><b>ResultSets in Tabs</b>              - <i><font color=\"green\">Use a GUI Tabed Pane for each Resultset</font></i></html>");
-		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>       - <i><font color=\"green\">Show proc source code in error message</font></i></html>");
-//		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>                - <i><font color=\"green\">Enable/disable AutoCommit in JDBC</font></i></html>");
-		_sendCommentsOnly_chk      .setText("<html><b>Send <i>empty</i> SQL Batches</b>  - <i><font color=\"green\">If SQL is only comments, do send it to the server.</font></i></html>");
+		_limitRsRowsReadDialog_mi  .setText("<html><b>Limit ResultSet, settings...</b>   - <i><font color='green'>Open a dialog to change settings for limiting rows</font></i></html>");
+		_showSentSql_chk           .setText("<html><b>Print Sent SQL Statement</b>       - <i><font color='green'>Print the Executed SQL Statement in the output.</font></i> 'go psql'</html>");
+		_printRsInfo_chk           .setText("<html><b>Print ResultSet Info</b>           - <i><font color='green'>Print Info about the ResultSet in the output.</font></i> 'go prsi'</html>");
+		_rsTrimStrings_chk         .setText("<html><b>Trim String values</b>             - <i><font color='green'>Do you want to remove leading/trailing blanks from \"strings\"</html>");
+		_rsShowRowNumber_chk       .setText("<html><b>Show Row Number</b>                - <i><font color='green'>Add a Row Number as first column '"+ResultSetTableModel.ROW_NUMBER_COLNAME+"' when displaying data</html>");
+		_clientTiming_chk          .setText("<html><b>Client Timing</b>                  - <i><font color='green'>How long does a SQL Statement takes from the clients perspective.</font></i> 'go time'</html>");
+		_useSemicolonHack_chk      .setText("<html><b>Use Semicolon to Send</b>          - <i><font color='green'>Use semicolon ';' at the end of a line to send SQL to Server.</font></i></html>");
+		_enableDbmsOutput_chk      .setText("<html><b>Enable dbms_output.get_line</b>    - <i><font color='green'>Receive Oracle/DB2 DBMS Output trace statements.</font></i></html>");
+		_rsInTabs_chk              .setText("<html><b>ResultSets in Tabs</b>             - <i><font color='green'>Use a GUI Tabed Pane for each Resultset</font></i></html>");
+		_getObjectTextOnError_chk  .setText("<html><b>Show Proc Text on errors</b>       - <i><font color='green'>Show proc source code in error message</font></i></html>");
+//		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>                - <i><font color='green'>Enable/disable AutoCommit in JDBC</font></i></html>");
+		_sendCommentsOnly_chk      .setText("<html><b>Send <i>empty</i> SQL Batches</b>  - <i><font color='green'>If SQL is only comments, do send it to the server.</font></i></html>");
 		_sqlBatchTermDialog_mi     .setText("SET_LATER: _sqlBatchTermDialog_mi");
-		_tableTooltipOnCells_chk   .setText("<html><b>Use Table Tooltip on Cells</b>     - <i><font color=\"green\">Display all columns in a table tooltip when hovering over a cell.</font></i></html>");
+		_tableTooltipOnCells_chk   .setText("<html><b>Use Table Tooltip on Cells</b>     - <i><font color='green'>Display all columns in a table tooltip when hovering over a cell.</font></i></html>");
 
 		// For dialogs set special icon
 		_limitRsRowsReadDialog_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings_dialog_12.png"));
@@ -10455,13 +10675,13 @@ checkPanelSize(_resPanel, comp);
 					if (_limitRsRowsRead_chk.equals(comp))
 					{
 						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_limitRsRowsReadCount, DEFAULT_limitRsRowsReadCount+"");
-						String label  = "<html><b>Limit ResultSet to "+config+" rows</b> - <i><font color=\"green\"><b>Stop</b> reading the ResultSet after <b>"+config+"</b> rows.</font></i> 'go top "+config+"'</html>";
+						String label  = "<html><b>Limit ResultSet to "+config+" rows</b> - <i><font color='green'><b>Stop</b> reading the ResultSet after <b>"+config+"</b> rows.</font></i> 'go top "+config+"'</html>";
 						_limitRsRowsRead_chk.setText(label);
 					}
 					if (_sqlBatchTermDialog_mi.equals(comp))
 					{
 						String config = Configuration.getCombinedConfiguration().getProperty(PROPKEY_sqlBatchTerminator, DEFAULT_sqlBatchTerminator);
-						String label  = "<html><b>Change SQL Batch 'Send' Terminator...</b> - <i><font color=\"green\">Current terminator is '<b>"+config+"</b>'</font></i></html>";
+						String label  = "<html><b>Change SQL Batch 'Send' Terminator...</b> - <i><font color='green'>Current terminator is '<b>"+config+"</b>'</font></i></html>";
 						_sqlBatchTermDialog_mi.setText(label);
 					}
 				}
@@ -10475,7 +10695,7 @@ checkPanelSize(_resPanel, comp);
 		
 //		// Menu items for Code Completion
 //		//---------------------------------------------------
-//		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
+//		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color='green'>Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
 //		popupMenu.add(codeCompl_m);
 //		
 //		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
@@ -10488,17 +10708,17 @@ checkPanelSize(_resPanel, comp);
 //				// remove all old items (if any)
 //				codeComplPopupMenu.removeAll();
 //
-//				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
+//				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color='green'>Clear the in memory cache for the Code Completion.</font></i></html>");
 //
-//				JMenuItem cc_stat_mi  = new JCheckBoxMenuItem("<html><b>Static Commands</b>                   - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
-//				JMenuItem cc_misc_mi  = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                      - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
-//				JMenuItem cc_db_mi    = new JCheckBoxMenuItem("<html><b>Database Info x</b>                   - <i><font color=\"green\">Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
-//				JMenuItem cc_tn_mi    = new JCheckBoxMenuItem("<html><b>Table Name Info x</b>                 - <i><font color=\"green\">Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
-//				JMenuItem cc_tc_mi    = new JCheckBoxMenuItem("<html><b>Table Column Info x</b>               - <i><font color=\"green\">Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
-//				JMenuItem cc_pn_mi    = new JCheckBoxMenuItem("<html><b>Procedure Info x</b>                  - <i><font color=\"green\">Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
-//				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _ationProviderAbstract.isLookupProcedureColumns());
-//				JMenuItem cc_spn_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Info x</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
-//				JMenuItem cc_spp_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info x</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
+//				JMenuItem cc_stat_mi  = new JCheckBoxMenuItem("<html><b>Static Commands</b>                   - <i><font color='green'>Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
+//				JMenuItem cc_misc_mi  = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                      - <i><font color='green'>Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
+//				JMenuItem cc_db_mi    = new JCheckBoxMenuItem("<html><b>Database Info x</b>                   - <i><font color='green'>Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
+//				JMenuItem cc_tn_mi    = new JCheckBoxMenuItem("<html><b>Table Name Info x</b>                 - <i><font color='green'>Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
+//				JMenuItem cc_tc_mi    = new JCheckBoxMenuItem("<html><b>Table Column Info x</b>               - <i><font color='green'>Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
+//				JMenuItem cc_pn_mi    = new JCheckBoxMenuItem("<html><b>Procedure Info x</b>                  - <i><font color='green'>Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
+//				JMenuItem cc_pp_mi    = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info x</b>        - <i><font color='green'>Get Procedure Parameter Info</font></i></html>",                                                     _ationProviderAbstract.isLookupProcedureColumns());
+//				JMenuItem cc_spn_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Info x</b>           - <i><font color='green'>Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
+//				JMenuItem cc_spp_mi   = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info x</b> - <i><font color='green'>Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
 //
 //				// Reset action
 //				cc_reset_mi.addActionListener(new ActionListener()
@@ -10545,7 +10765,7 @@ checkPanelSize(_resPanel, comp);
 //
 //		// Menu items for Code Completion
 //		//---------------------------------------------------
-//		JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
+//		JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color='green'>Hower over words in the editor to get help</font></i></html>");
 //		popupMenu.add(ttProvider_m);
 //		
 //		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
@@ -10558,10 +10778,10 @@ checkPanelSize(_resPanel, comp);
 //				// remove all old items (if any)
 //				ttProviderPopupMenu.removeAll();
 //
-//				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
+//				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color='green'>Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
 //
-//				JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color=\"green\">Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
-////				JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color=\"green\">describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
+//				JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color='green'>Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
+////				JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color='green'>describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
 //
 //				// Reset action
 //				cc_reset_mi.addActionListener(new ActionListener()
@@ -10646,11 +10866,11 @@ checkPanelSize(_resPanel, comp);
 		// Do PopupMenu
 		final JPopupMenu popupMenu = new JPopupMenu();
 
-		final JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color=\"green\">Hower over words in the editor to get help</font></i></html>");
+		final JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color='green'>Hower over words in the editor to get help</font></i></html>");
 		
 		// Menu items for Code Completion
 		//---------------------------------------------------
-//		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color=\"green\">Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
+//		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color='green'>Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
 //		popupMenu.add(codeCompl_m);
 		
 		// When the Code Completion popup becoms visible, the menu are refreshed/recreated
@@ -10663,20 +10883,20 @@ checkPanelSize(_resPanel, comp);
 				// remove all old items (if any)
 				popupMenu.removeAll();
 
-				JMenuItem cc_exec_mi    = new JMenuItem("<html><b>Open</b>      - <i><font color=\"green\">Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
-				JMenuItem cc_reset_mi   = new JMenuItem("<html><b>Clear</b>     - <i><font color=\"green\">Clear the in memory cache for the Code Completion.</font></i></html>");
-				JMenuItem cc_refresh_mi = new JMenuItem("<html><b>Refresh</b>   - <i><font color=\"green\">Refreshes the in memory cache for the Code Completion.</font></i></html>");
-				JMenuItem cc_config_mi  = new JMenuItem("<html><b>Configure</b> - <i><font color=\"green\">Configure what types of objects should be fetched.</font></i></html>");
+				JMenuItem cc_exec_mi    = new JMenuItem("<html><b>Open</b>      - <i><font color='green'>Open the Code Completion window. Just like pressing <code><b>Ctrl+Space</b><code/></font></i></html>");
+				JMenuItem cc_reset_mi   = new JMenuItem("<html><b>Clear</b>     - <i><font color='green'>Clear the in memory cache for the Code Completion.</font></i></html>");
+				JMenuItem cc_refresh_mi = new JMenuItem("<html><b>Refresh</b>   - <i><font color='green'>Refreshes the in memory cache for the Code Completion.</font></i></html>");
+				JMenuItem cc_config_mi  = new JMenuItem("<html><b>Configure</b> - <i><font color='green'>Configure what types of objects should be fetched.</font></i></html>");
 
-//				JMenuItem cc_stat_mi   = new JCheckBoxMenuItem("<html><b>Static Commands</b>                 - <i><font color=\"green\">Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
-//				JMenuItem cc_misc_mi   = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                    - <i><font color=\"green\">Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
-//				JMenuItem cc_db_mi     = new JCheckBoxMenuItem("<html><b>Database Info</b>                   - <i><font color=\"green\">Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
-//				JMenuItem cc_tn_mi     = new JCheckBoxMenuItem("<html><b>Table Name Info</b>                 - <i><font color=\"green\">Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
-//				JMenuItem cc_tc_mi     = new JCheckBoxMenuItem("<html><b>Table Column Info</b>               - <i><font color=\"green\">Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
-//				JMenuItem cc_pn_mi     = new JCheckBoxMenuItem("<html><b>Procedure Info</b>                  - <i><font color=\"green\">Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
-//				JMenuItem cc_pp_mi     = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info</b>        - <i><font color=\"green\">Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
-//				JMenuItem cc_spn_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Info</b>           - <i><font color=\"green\">Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
-//				JMenuItem cc_spp_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info</b> - <i><font color=\"green\">Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
+//				JMenuItem cc_stat_mi   = new JCheckBoxMenuItem("<html><b>Static Commands</b>                 - <i><font color='green'>Get Static Commands or Templates that can be used <code><b>Ctrl+Space</b><code/></font></i></html>", _compleationProviderAbstract.isLookupStaticCmds());
+//				JMenuItem cc_misc_mi   = new JCheckBoxMenuItem("<html><b>Miscelanious</b>                    - <i><font color='green'>Get Miscelanious Info, like ASE Monitoring tables</font></i></html>",                                _compleationProviderAbstract.isLookupMisc());
+//				JMenuItem cc_db_mi     = new JCheckBoxMenuItem("<html><b>Database Info</b>                   - <i><font color='green'>Get Database Info, prev word is <code><b>use</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupDb());
+//				JMenuItem cc_tn_mi     = new JCheckBoxMenuItem("<html><b>Table Name Info</b>                 - <i><font color='green'>Get Table Name Info, use <code><b>Ctrl+Space</b><code/></font></i></html>",                          _compleationProviderAbstract.isLookupTableName());
+//				JMenuItem cc_tc_mi     = new JCheckBoxMenuItem("<html><b>Table Column Info</b>               - <i><font color='green'>Get Table Column Info, current word start with <code><b>tableAlias.</b><code/></font></i></html>",   _compleationProviderAbstract.isLookupTableColumns());
+//				JMenuItem cc_pn_mi     = new JCheckBoxMenuItem("<html><b>Procedure Info</b>                  - <i><font color='green'>Get Procedure Info, prev word is <code><b>exec</b><code/></font></i></html>",                        _compleationProviderAbstract.isLookupProcedureName());
+//				JMenuItem cc_pp_mi     = new JCheckBoxMenuItem("<html><b>Procedure Parameter Info</b>        - <i><font color='green'>Get Procedure Parameter Info</font></i></html>",                                                     _compleationProviderAbstract.isLookupProcedureColumns());
+//				JMenuItem cc_spn_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Info</b>           - <i><font color='green'>Get System Procedure Info, prev word is <code><b>exec sp_</b><code/></font></i></html>",             _compleationProviderAbstract.isLookupSystemProcedureName());
+//				JMenuItem cc_spp_mi    = new JCheckBoxMenuItem("<html><b>System Procedure Parameter Info</b> - <i><font color='green'>Get System Procedure Parameter Info</font></i></html>",                                              _compleationProviderAbstract.isLookupSystemProcedureColumns());
 
 				// exec/open action
 				cc_exec_mi.addActionListener(new ActionListener()
@@ -10795,10 +11015,10 @@ checkPanelSize(_resPanel, comp);
 				// remove all old items (if any)
 				ttProviderPopupMenu.removeAll();
 
-				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color=\"green\">Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
+				JMenuItem cc_reset_mi = new JMenuItem("<html><b>Clear</b> - <i><font color='green'>Clear the in memory cache for the Code Completion / ToolTip Provider.</font></i></html>");
 
-				JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color=\"green\">Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
-//				JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color=\"green\">describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
+				JMenuItem cc_show_mi  = new JCheckBoxMenuItem("<html><b>Show Table/Column information</b> - <i><font color='green'>Show table/column information when mouse is over a table name</font></i></html>", (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getShowTableInformation() : ToolTipSupplierAbstract.DEFAULT_SHOW_TABLE_INFO);
+//				JMenuItem cc_xxxx_mi  = new JCheckBoxMenuItem("<html><b>describeme</b>                    - <i><font color='green'>describeme</font></i></html>",                                                    (_tooltipProviderAbstract != null) ? _tooltipProviderAbstract.getXXX() : ToolTipSupplierAbstract.DEFAULT_XXX);
 
 				// Reset action
 				cc_reset_mi.addActionListener(new ActionListener()
@@ -10855,12 +11075,12 @@ checkPanelSize(_resPanel, comp);
 			"<br>" +
 			"<b>Various Tips how it can be used</b>:<br>" +
 			"<ul>" +
-			"  <li><code>aaa</code><b>&lt;Ctrl-Space&gt;</b>                              - <i><font color=\"green\">Get list of tables/views/etc that starts with <b><code>aaa</code></b>   </font></i></li>" +
-			"  <li><code>select t.<b>&lt;Ctrl-Space&gt;</b> from tabname t</code>         - <i><font color=\"green\">Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
-			"  <li><code>select * from tabname t where t.<b>&lt;Ctrl-Space&gt;</b></code> - <i><font color=\"green\">Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
-			"  <li><code>exec</code> <b>&lt;Ctrl-Space&gt;</b>                            - <i><font color=\"green\">Get stored procedures   </font></i></li>" +
-			"  <li><code>:s</code><b>&lt;Ctrl-Space&gt;</b>                               - <i><font color=\"green\">Get schemas   </font></i></li>" +
-			"  <li><code>use </code><b>&lt;Ctrl-Space&gt;</b>                             - <i><font color=\"green\">Get list of databases/catalogs  </font></i></li>" +
+			"  <li><code>aaa</code><b>&lt;Ctrl-Space&gt;</b>                              - <i><font color='green'>Get list of tables/views/etc that starts with <b><code>aaa</code></b>   </font></i></li>" +
+			"  <li><code>select t.<b>&lt;Ctrl-Space&gt;</b> from tabname t</code>         - <i><font color='green'>Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
+			"  <li><code>select * from tabname t where t.<b>&lt;Ctrl-Space&gt;</b></code> - <i><font color='green'>Get column names for the table aliased as <b><code>t</code></b>   </font></i></li>" +
+			"  <li><code>exec</code> <b>&lt;Ctrl-Space&gt;</b>                            - <i><font color='green'>Get stored procedures   </font></i></li>" +
+			"  <li><code>:s</code><b>&lt;Ctrl-Space&gt;</b>                               - <i><font color='green'>Get schemas   </font></i></li>" +
+			"  <li><code>use </code><b>&lt;Ctrl-Space&gt;</b>                             - <i><font color='green'>Get list of databases/catalogs  </font></i></li>" +
 			"</ul>" +
 			"</html>");
 

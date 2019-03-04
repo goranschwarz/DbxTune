@@ -39,8 +39,8 @@ extends MonTablesDictionary
 	private static String TAB_NAME                  = "?TAB_NAME?";
 //	private static String SQL_TABLES                = "select TableID, Columns, Parameters, Indicators, Size, TableName, Description from master..monTables";
 //	private static String SQL_COLUMNS               = "select TableID, ColumnID, TypeID, Precision, Scale, Length, Indicators, TableName, ColumnName, TypeName, Description from master..monTableColumns where TableName = '?TAB_NAME?'";
-	private static String SQL_TABLES                = "select \"TableID\", \"Columns\", \"Parameters\", \"Indicators\", \"Size\", \"TableName\", \"Description\" from "+FROM_TAB_NAME;
-	private static String SQL_COLUMNS               = "select \"TableID\", \"ColumnID\", \"TypeID\", \"Precision\", \"Scale\", \"Length\", \"Indicators\", \"TableName\", \"ColumnName\", \"TypeName\", \"Description\" from "+FROM_TAB_NAME+" where \"TableName\" = '"+TAB_NAME+"'";
+	private static String SQL_TABLES                = "select [TableID], [Columns], [Parameters], [Indicators], [Size], [TableName], [Description] from "+FROM_TAB_NAME;
+	private static String SQL_COLUMNS               = "select [TableID], [ColumnID], [TypeID], [Precision], [Scale], [Length], [Indicators], [TableName], [ColumnName], [TypeName], [Description] from "+FROM_TAB_NAME+" where [TableName] = '"+TAB_NAME+"'";
 //	private static String SQL_TABLES                = "select TableID, Columns, Parameters, Indicators, Size, TableName, Description from "+FROM_TAB_NAME;
 //	private static String SQL_COLUMNS               = "select TableID, ColumnID, TypeID, Precision, Scale, Length, Indicators, TableName, ColumnName, TypeName, Description from "+FROM_TAB_NAME+" where TableName = '"+TAB_NAME+"'";
 //	private static String SQL_TABLES                = "select * from "+FROM_TAB_NAME;
@@ -399,7 +399,7 @@ extends MonTablesDictionary
 						"Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' and check it's status by executing: <code>sp_version</code>. <br>" +
 						"<br>" +
 						"Do the following on the machine that hosts the ASE:<br>" +
-						"<font size=\"4\">" +
+						"<font size='4'>" +
 						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 						"</font>" +
 						"<br>" +
@@ -428,7 +428,7 @@ extends MonTablesDictionary
 						"To fix the issue Please apply '$SYBASE/$SYBASE_ASE/scripts/installmaster' again and check it's status by executing: <code>sp_version</code>. <br>" +
 						"<br>" +
 						"Do the following on the machine that hosts the ASE:<br>" +
-						"<font size=\"4\">" +
+						"<font size='4'>" +
 						"  <code>isql -Usa -Psecret -SSRVNAME -w999 -i$SYBASE/$SYBASE_ASE/scripts/installmaster</code><br>" +
 						"</font>" +
 						"<br>" +
@@ -666,8 +666,8 @@ extends MonTablesDictionary
 		String monTableColumns = "master.dbo.monTableColumns";
 		if (offline)
 		{
-			monTables       = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
-			monTableColumns = PersistWriterBase.getTableName(PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
+			monTables       = PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_MON_TAB_DICT,     null, true);
+			monTableColumns = PersistWriterBase.getTableName(conn, PersistWriterBase.SESSION_MON_TAB_COL_DICT, null, true);
 		}
 		
 		String sql = null;
@@ -680,8 +680,11 @@ extends MonTablesDictionary
 				if (getDbmsExecutableVersionNum() >= Ver.ver(15,7))
 					sql += " where Language = 'en_US' ";
 
-				sql = sql.replace("\"", "");
+				//sql = sql.replace("\"", "");
 			}
+
+			// replace all '[' and ']' into DBMS Vendor Specific Chars
+			sql = conn.quotifySqlString(sql);
 
 			ResultSet rs = stmt.executeQuery(sql);
 			while ( rs.next() )
@@ -740,8 +743,11 @@ extends MonTablesDictionary
 					if (getDbmsExecutableVersionNum() >= Ver.ver(15,7))
 						sql += " and Language = 'en_US' ";
 
-					sql = sql.replace("\"", "");
+					//sql = sql.replace("\"", "");
 				}
+
+				// replace all '[' and ']' into DBMS Vendor Specific Chars
+				sql = conn.quotifySqlString(sql);
 
 				ResultSet rs = stmt.executeQuery(sql);
 				while ( rs.next() )

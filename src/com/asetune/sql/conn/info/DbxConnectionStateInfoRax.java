@@ -99,7 +99,7 @@ implements DbxConnectionStateInfo
 		String action = "Action="  + _action;
 
 		if ( ! isNormalState() )
-			state = "State=<b><font color=\"red\">" + _state + "</font></b>";
+			state = "State=<b><font color='red'>" + _state + "</font></b>";
 
 		String text = "<html>"
 				+ state  + ", "

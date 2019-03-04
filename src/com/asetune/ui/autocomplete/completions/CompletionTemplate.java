@@ -82,7 +82,7 @@ public class CompletionTemplate
 			{
 				return getInputText();
 			}
-			return "<html>" + getInputText() + " -- <i><font color=\"green\">" + shortDesc + "</font></i></html>";
+			return "<html>" + getInputText() + " -- <i><font color='green'>" + shortDesc + "</font></i></html>";
 		}
 //		@Override
 //		public String getSummary()

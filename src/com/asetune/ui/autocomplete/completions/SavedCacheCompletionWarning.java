@@ -36,7 +36,7 @@ extends ShorthandCompletionX
 
 	public SavedCacheCompletionWarning(CompletionProviderAbstract provider, File file, int restoredSize)
 	{
-		super(provider, "warning", "warning", "WARNING - <font color=\"red\">The Completion list has been restored, it may not reflect what's in the database.</font>"); 
+		super(provider, "warning", "warning", "WARNING - <font color='red'>The Completion list has been restored, it may not reflect what's in the database.</font>"); 
 
 		_file         = file;
 		_restoredSize = restoredSize;
@@ -46,7 +46,7 @@ extends ShorthandCompletionX
 	public String getSummary()
 	{
 		StringBuilder sb = new StringBuilder();
-		sb.append("<B>WARNING</B> - <font color=\"red\">The Completion list has been restored, it may not reflect what's in the database</font>");
+		sb.append("<B>WARNING</B> - <font color='red'>The Completion list has been restored, it may not reflect what's in the database</font>");
 		sb.append("<HR>"); // add Horizontal Ruler: ------------------
 		sb.append("<BR>");
 		sb.append("<B>Restored entries:</B> ")  .append(_restoredSize).append("<BR>");

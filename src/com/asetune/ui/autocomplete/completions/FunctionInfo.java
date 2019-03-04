@@ -132,29 +132,29 @@ if (existingCi._colName == null || ci._colName == null)
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_funcType).append(" - <B>").append(_funcName).append("</B>");
-		sb.append(_funcSchema).append(".<B>").append(_funcName).append("</B> - <font color=\"blue\">").append(_funcType).append("</font>");
+		sb.append(_funcSchema).append(".<B>").append(_funcName).append("</B> - <font color='blue'>").append(_funcType).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_funcRemark) ? "not available" : _funcRemark).append("<BR>");
 		sb.append("<BR>");
 		sb.append("<B>Columns:</B> ").append("<BR>");
-		sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=1\">");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Name")       .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Datatype")   .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Length")     .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Nulls")      .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Pos")        .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Description").append("</B></FONT></TD>");
+		sb.append("<TABLE ALIGN='left' BORDER=0 CELLSPACING=0 CELLPADDING=1>");
+		sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffff'>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Name")       .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Datatype")   .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Length")     .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Nulls")      .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Pos")        .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Description").append("</B></FONT></TD>");
 		sb.append("</TR>");
 		int r=0;
 		for (FunctionColumnInfo ci : _columns)
 		{
 			r++;
 			if ( (r % 2) == 0 )
-				sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
+				sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffff'>");
 			else
-				sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffcc\">");
+				sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffcc'>");
 			sb.append("	<TD NOWRAP>").append(ci._colName)      .append("</TD>");
 			sb.append("	<TD NOWRAP>").append(ci._colType)      .append("</TD>");
 			sb.append("	<TD NOWRAP>").append(ci._colLength)    .append("</TD>");
@@ -185,7 +185,7 @@ if (existingCi._colName == null || ci._colName == null)
 			return "Column name '"+colname+"', was not found in table '"+_funcName+"'.";
 
 		StringBuilder sb = new StringBuilder();
-		sb.append(_funcSchema).append(".<B>").append(_funcName).append(".").append(ci._colName).append("</B> - <font color=\"blue\">").append(_funcType).append(" - COLUMN").append("</font>");
+		sb.append(_funcSchema).append(".<B>").append(_funcName).append(".").append(ci._colName).append("</B> - <font color='blue'>").append(_funcType).append(" - COLUMN").append("</font>");
 		sb.append("<HR>"); // add Horizontal Ruler: ------------------
 		sb.append("<BR>");
 		sb.append("<B>Function Description:</B> ").append(StringUtil.isNullOrBlank(_funcRemark) ? "not available" : _funcRemark).append("<BR>");

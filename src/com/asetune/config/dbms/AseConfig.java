@@ -140,24 +140,24 @@ extends DbmsConfigAbstract
 
 	private static String GET_CONFIG_OFFLINE_SQL = 
 		"select * " +
-		"from " + PersistWriterJdbc.getTableName(PersistWriterJdbc.SESSION_DBMS_CONFIG, null, true) + " \n" +
-		"where \"SessionStartTime\" = SESSION_START_TIME \n";
+		"from [" + PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "] \n" +
+		"where [SessionStartTime] = SESSION_START_TIME \n";
 
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL = 
-		" (select max(\"SessionStartTime\") " +
-		"  from "+PersistWriterJdbc.getTableName(PersistWriterJdbc.SESSION_DBMS_CONFIG, null, true) + 
+		" (select max([SessionStartTime]) " +
+		"  from ["+PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
 	// NOTE THE BELOW will be used if table MonSessionDbSrvConfig isn't found (2015-04-18 I changed the name, from Ase to DbSrv to be more generic)
 	private static String GET_CONFIG_OFFLINE_SQL_BACKWARD_COMP = 
 		"select * " +
-		"from \"MonSessionAseConfig\" \n" +
-		"where \"SessionStartTime\" = SESSION_START_TIME \n";
+		"from [MonSessionAseConfig] \n" +
+		"where [SessionStartTime] = SESSION_START_TIME \n";
 
 	// NOTE THE BELOW will be used if table MonSessionDbSrvConfig isn't found (2015-04-18 I changed the name, from Ase to DbSrv to be more generic)
 	private static String GET_CONFIG_OFFLINE_MAX_SESSION_SQL_BACKWARD_COMP = 
-		" (select max(\"SessionStartTime\") " +
-		"from \"MonSessionAseConfig\" \n" +
+		" (select max([SessionStartTime]) " +
+		"from [MonSessionAseConfig] \n" +
 		" ) ";
 		
 	/** hashtable with MonTableEntry */
@@ -340,8 +340,10 @@ extends DbmsConfigAbstract
 				tsStr = "'" + ts + "'";
 			}
 			sql = sql.replace("SESSION_START_TIME", tsStr);
-
 		}
+
+		// replace all [] into DBMS Vendor Specific Chars
+		sql = conn.quotifySqlString(sql);
 
 		try
 		{

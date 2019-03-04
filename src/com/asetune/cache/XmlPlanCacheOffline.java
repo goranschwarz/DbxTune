@@ -47,7 +47,9 @@ extends XmlPlanCache
 		if (conn == null)
 			return null;
 
-		String sql = "select \"extraInfoText\" from " + PersistWriterBase.getTableName(PersistWriterBase.DDL_STORAGE, null, true) + " where \"objectName\" = '"+planName+"' and \"type\" = 'SS'";
+		String sql = "select [extraInfoText] from " + PersistWriterBase.getTableName(conn, PersistWriterBase.DDL_STORAGE, null, true) + " where [objectName] = '"+planName+"' and [type] = 'SS'";
+		sql = conn.quotifySqlString(sql);
+		
 		String xmlPlan = null;
 		try
 		{

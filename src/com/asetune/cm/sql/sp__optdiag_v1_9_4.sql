@@ -23,12 +23,12 @@ go
 -------------------------------------------------------------
 -- Make sure we are NOT in master database
 -------------------------------------------------------------
-if ( (select db_name()) = "master" )
+if ( (select db_name()) = 'master' )
 begin
-	print "WRONG DATABASE: you should be in a USER DATABASE when creating this procedure."
+	print 'WRONG DATABASE: you should be in a USER DATABASE when creating this procedure.'
 end
 go
-if ( (select db_name()) = "master" )
+if ( (select db_name()) = 'master' )
 begin
 	select syb_quit()
 end
@@ -44,13 +44,13 @@ go
 if (select object_id('sp__optdiag')) is not null
 begin
 	drop procedure sp__optdiag
-	print "Dropping procedure sp__optdiag"
+	print 'Dropping procedure sp__optdiag'
 end
 go
 
 declare @dbname varchar(255)
 select @dbname = db_name()
-print "Creating procedure '%1!.%2!.%3!'.", @dbname, "dbo", "sp__optdiag"
+print 'Creating procedure ''%1!.%2!.%3!''.', @dbname, 'dbo', 'sp__optdiag'
 go
 
 -----------------------------------------------------------------
@@ -63,7 +63,7 @@ create procedure sp__optdiag
         @tabname        varchar(62) = null,  /* user table name */
         @colname        varchar(30) = null,     /* column name */
         @option         varchar(60) = null              /* output format */
- , @proc_version varchar(78) = "sp__optdiag/1.9.4/0/P/KJS/AnyPlat/AnyOS/G/Mon Feb 02 14:48:15 2004"
+ , @proc_version varchar(78) = 'sp__optdiag/1.9.4/0/P/KJS/AnyPlat/AnyOS/G/Mon Feb 02 14:48:15 2004'
 
 as
 /*************************************************************************************************
@@ -72,10 +72,10 @@ as
 **
 **      Options:  NULL - default
 **
-**                "V/?/HELP/H" - will print the current version string of this proc
+**                'V/?/HELP/H' - will print the current version string of this proc
 **
 **      Future Info:  Other options can be added in the future
-**               using the @option parameter.  I'm thinking of putting in "simulate" functionality.
+**               using the @option parameter.  I'm thinking of putting in 'simulate' functionality.
 **
 **      Dependencies:  This proc relies on the object_id built-in
 **                    and sp_namecrack
@@ -90,7 +90,7 @@ as
 **               For distribution to newsgroups, list-server, et. al.
 **
 ** Disclaimer:
-**      - Please note this is not intended as a "production reliable" tool, but rather as a
+**      - Please note this is not intended as a 'production reliable' tool, but rather as a
 **        development tool or reference utility.
 **      - This stored procedure has been tested on ASE versions 11.9.2 through 12.5.0.3, but only
 **        on HP-UX, Sun, and NT.
@@ -113,32 +113,32 @@ as
 **               05/11/2001 (ksherlock) 0.6
 **                  Allows system tables as arguments
 **               08/31/2001 (ksherlock) 0.7
-**                  - Fixed bug related to creating the "column group" text using the length of colid
+**                  - Fixed bug related to creating the 'column group' text using the length of colid
 **               10/01/2001 (ksherlock) 0.8
-**                  - Compatible with "little-endian" systems
+**                  - Compatible with 'little-endian' systems
 **               01/11/2002 (ksherlock) 0.9
 **                  - Adds optdiag 12.0 like output with two new derived values for
-**                                "Space utilization" and "Large io efficiency"
-**                                "Large io efficiency" calculation is not available yet however
+**                                'Space utilization' and 'Large io efficiency'
+**                                'Large io efficiency' calculation is not available yet however
 **                  - Adds support for Larger Page sizes (available starting with ASE 12.5)
 **                  - Cleaned up the histogram cursor code to take up less space
 **                    (and be more readable?) :)
 **                  - Added disclaimers to comments in header
 **               02/27/2002 (ksherlock) 0.9.1
-**                  - Fixed bug when processing "sysgams" table, which also affected null tablename
+**                  - Fixed bug when processing 'sysgams' table, which also affected null tablename
 **                    option to produce output for all tables in a database
 **                  - When specifying NULL for tablename, only produce stats for user tables
 **                    note: Previous functionality can be obtained by using a wildcard for tablename
 **                    IE: sp__optdiag null - will print out all user tables only
-**                        sp__optdiag "%"  - will print out all user and system tables
+**                        sp__optdiag '%'  - will print out all user and system tables
 **               07/10/2002 (ksherlock) 0.9.2
-**                  - Fixed bug in cursor nostats_cursor to accomodate "little-endian"
+**                  - Fixed bug in cursor nostats_cursor to accomodate 'little-endian'
 **                    systems.
-**                  - Fixed bug in "column group" SQL to better and more accurately walk
+**                  - Fixed bug in 'column group' SQL to better and more accurately walk
 **                    the colidarray structure to produce a column group listing.
 **
 **               06/17/2003 (ksherlock) 0.9.3
-**                  - Checks for "read_only" database before attempting to flushstats
+**                  - Checks for 'read_only' database before attempting to flushstats
 **                  - Bug fix to handle negative numerics in histogram
 **
 **               03/27/2003 (ksherlock) 1.9.3
@@ -147,7 +147,7 @@ as
 **                    and up!
 **
 **               02/02/2004 (ksherlock) 1.9.4
-**                  - Compatibility with ASE 12.5 new datatypes "date" and "time"
+**                  - Compatibility with ASE 12.5 new datatypes 'date' and 'time'
 **
 *************************************************************************************************/
 
@@ -233,13 +233,13 @@ set transaction isolation level 1
 set nocount on
 set flushmessage on
 
-if ( (select lower(@option)) in ("v","version","?","h","help") )
+if ( (select lower(@option)) in ('v','version','?','h','help') )
 begin
-   print "%1!",@proc_version
+   print '%1!',@proc_version
    return 0
 end
 
-exec sp_namecrack @tabname, " ", @s_dbname out, @s_tabowner out, @s_tabname out
+exec sp_namecrack @tabname, ' ', @s_dbname out, @s_tabowner out, @s_tabname out
 select @s_dbname = isnull(@s_dbname,db_name())
         /* 0.5, determine length of syscolumns.colid which changed in 12.5 */
       ,@colid_len = col_length('syscolumns','colid')
@@ -255,11 +255,11 @@ select  id,
         /* 0.9, pg_hdr = 32 for APL, 44 plus 2 bytes for timestamp for DOL */
         pg_hdr = 32 +  ( abs(sign(sysstat2 & 49152)) * (12 + 2) )
 from sysobjects
-where user_name(uid) like isnull(@s_tabowner,"%")
-and   name like isnull(@s_tabname,"%")
-and type in ("U", case
+where user_name(uid) like isnull(@s_tabowner,'%')
+and   name like isnull(@s_tabname,'%')
+and type in ('U', case
                   when @s_tabname is null then null
-                  else "S"
+                  else 'S'
                   end )
 order by user_name(uid), name
 for read only
@@ -298,10 +298,10 @@ select  sc.colid,
         ltrim(str(round(convert(double precision,ss.c11),16),24,16))
 from syscolumns sc, sysstatistics ss, systypes st
 where sc.id = @tabid
-and   sc.name like isnull(@colname,"%")
+and   sc.name like isnull(@colname,'%')
 and   ss.id = sc.id
 and   convert(int,ss.c6) *= st.type
-and   st.name not in ("timestamp","sysname", "nchar", "nvarchar")
+and   st.name not in ('timestamp','sysname', 'nchar', 'nvarchar')
 and   st.usertype < 100
 and   substring(ss.colidarray,1,@colid_len) = convert(varbinary,sc.colid)
 and   ss.formatid = 100
@@ -402,27 +402,27 @@ for read only
 /** Wow, I'm glad that's over **/
 /** Let's get on with the business at hand **/
 
-print "%1!",@proc_version
-print "%1!",@@version
+print '%1!',@proc_version
+print '%1!',@@version
 print ''
 
 /** Standard optdiag output **/
 begin
-   print 'Server name:                            "%1!"',@@servername
+   print 'Server name:                            ''%1!''',@@servername
    print ''
-   print 'Specified database:                     "%1!"',@s_dbname
+   print 'Specified database:                     ''%1!''',@s_dbname
    if (@s_tabowner is null)
      print 'Specified table owner:                  not specified'
    else
-     print 'Specified table owner:                  "%1!"',@s_tabowner
+     print 'Specified table owner:                  ''%1!''',@s_tabowner
    if (@s_tabname is null)
      print 'Specified table:                        not specified'
    else
-     print 'Specified table:                        "%1!"',@s_tabname
+     print 'Specified table:                        ''%1!''',@s_tabname
    if (@colname is null)
      print 'Specified column:                       not specified'
    else
-     print 'Specified column:                       "%1!"',@colname
+     print 'Specified column:                       ''%1!''',@colname
    print ''
 
 /*
@@ -437,8 +437,8 @@ begin
 
 while (@@sqlstatus = 0)
 begin
-   print 'Table owner:                            "%1!"',@u_tabowner
-   print 'Table name:                             "%1!"',@u_tabname
+   print 'Table owner:                            ''%1!''',@u_tabowner
+   print 'Table name:                             ''%1!''',@u_tabname
    print ''
 
    /* v0.9.3 - check for read_only database before flushstats */
@@ -446,8 +446,8 @@ begin
                   select 1
                   from master..sysdatabases d, master..spt_values v
                   where d.status & v.number = v.number
-                  and   v.type = "D"
-                  and v.name = "read only"
+                  and   v.type = 'D'
+                  and v.name = 'read only'
                   and d.dbid = @u_dbid
                  )
                  dbcc flushstats(@u_dbid, @tabid)
@@ -470,7 +470,7 @@ begin
       while (@keycnt > 0)
       begin
          select @index_cols = substring(', ' ,abs(sign(@keycnt - 1)),2)
-                            + '"' + index_col(@u_tabname, @indid, @keycnt, user_id(@u_tabowner)) + '"'
+                            + '''' + index_col(@u_tabname, @indid, @keycnt, user_id(@u_tabowner)) + ''''
                             + @index_cols
          select @keycnt = @keycnt - 1
       end
@@ -494,15 +494,15 @@ begin
              @spare1 = ltrim(convert(varchar(32),convert(int,i.spare1))),
              @spare2 = ltrim(convert(varchar(32),str(round(convert(double precision,i.spare2),16),32,16))),
              @spc_utl = ltrim(convert(varchar(32),
-               str(round(convert(double precision,derived_stat(i.id,i.indid,"space utilization")),16),32,16))),
+               str(round(convert(double precision,derived_stat(i.id,i.indid,'space utilization')),16),32,16))),
              @dpcr = ltrim(convert(varchar(32),
-               str(round(convert(double precision,derived_stat(i.id,i.indid,"data page cluster ratio")),16),32,16))),
+               str(round(convert(double precision,derived_stat(i.id,i.indid,'data page cluster ratio')),16),32,16))),
              @ipcr = ltrim(convert(varchar(32),
-               str(round(convert(double precision,derived_stat(i.id,i.indid,"index page cluster ratio")),16),32,16))),
+               str(round(convert(double precision,derived_stat(i.id,i.indid,'index page cluster ratio')),16),32,16))),
              @drcr = ltrim(convert(varchar(32),
-               str(round(convert(double precision,derived_stat(i.id,i.indid,"data row cluster ratio")),16),32,16))),
+               str(round(convert(double precision,derived_stat(i.id,i.indid,'data row cluster ratio')),16),32,16))),
              @lrgioeff = ltrim(convert(varchar(32),
-               str(round(convert(double precision,derived_stat(i.id,i.indid,"large io efficiency")),16),32,16)))
+               str(round(convert(double precision,derived_stat(i.id,i.indid,'large io efficiency')),16),32,16)))
       from systabstats d,
            systabstats i,
            master..spt_values v
@@ -510,18 +510,18 @@ begin
         and i.id = d.id
         and d.indid between 0 and 1
         and v.number = 1
-        and v.type = "E"
+        and v.type = 'E'
 
       ----------------------
       -- print index info --
       ----------------------
 
       if (@indid = 0)
-         print 'Statistics for table:                   "%1!"',@index_name
+         print 'Statistics for table:                   ''%1!''',@index_name
       else if (1 in (@clustered,@dol_clustered))
-         print 'Statistics for index:                   "%1!" (clustered)',@index_name
+         print 'Statistics for index:                   ''%1!'' (clustered)',@index_name
       else
-         print 'Statistics for index:                   "%1!" (nonclustered)',@index_name
+         print 'Statistics for index:                   ''%1!'' (nonclustered)',@index_name
       if (@indid > 0)
          print 'Index column list:                      %1!',@index_cols
       else
@@ -596,7 +596,7 @@ begin
       while (@@sqlstatus = 0)
       begin
          if (@steps_act is not null)
-            print 'Statistics for column:                  "%1!"',@colname
+            print 'Statistics for column:                  ''%1!''',@colname
          else
          begin   -- BUILD A COLUMN GROUP NAME
             select @colgroup_name = null
@@ -606,7 +606,7 @@ begin
             begin
                select @colgroup_name =
                                 substring(', ' ,1-sign(1-sign(@colidarray_len - @colid_len)),2)
-                              + '"' + name + '"'
+                              + '''' + name + ''''
                               + @colgroup_name
                from syscolumns
                where id = @tabid
@@ -659,16 +659,16 @@ begin
                 and  sequence = @seq
             end
 
-            print 'Histogram for column:                   "%1!"',@colname
-            if (@typename in ("int","intn"))
-               select @typename = "integer"
-            if (@typename = "float" and @collength = "4")
-               select @typename = "real"
-            if (@typename = "float" and @collength = "8")
-               select @typename = "double precision"
-            if (@typename in ("varchar","nvarchar","char","nchar","binary","varbinary","float","floatn"))
+            print 'Histogram for column:                   ''%1!''',@colname
+            if (@typename in ('int','intn'))
+               select @typename = 'integer'
+            if (@typename = 'float' and @collength = '4')
+               select @typename = 'real'
+            if (@typename = 'float' and @collength = '8')
+               select @typename = 'double precision'
+            if (@typename in ('varchar','nvarchar','char','nchar','binary','varbinary','float','floatn'))
                print 'Column datatype:                        %1!(%2!)',@typename,@collength
-            else if (@typename in ("numeric","decimal","numericn","decimaln"))
+            else if (@typename in ('numeric','decimal','numericn','decimaln'))
                print 'Column datatype:                        %1!(%2!,%3!)',@typename,@precision,@scale
             else
                print 'Column datatype:                        %1!',@typename
@@ -686,20 +686,20 @@ begin
                select
                  @value_c =
                      CASE
-                      WHEN @typename in ("varchar","nvarchar","char","nchar")
-                       THEN '"' + convert(varchar(255),@value_raw) + '"'
+                      WHEN @typename in ('varchar','nvarchar','char','nchar')
+                       THEN '''' + convert(varchar(255),@value_raw) + ''''
 
-                      WHEN @typename in ("int","intn","integer")
+                      WHEN @typename in ('int','intn','integer')
                        THEN str(convert(int,@value_raw),11)
 
-                      WHEN @typename in ("smallint")
+                      WHEN @typename in ('smallint')
                        THEN str(convert(smallint,@value_raw),11)
 
-                      WHEN @typename in ("tinyint")
+                      WHEN @typename in ('tinyint')
                        THEN str(convert(tinyint,@value_raw),11)
 
                       /** Oh, oh, a scaled numeric, where does the decimal place go??? **/
-                      WHEN (@typename in ("numeric","decimal","numericn","decimaln") and convert(smallint,@scale) > 0)
+                      WHEN (@typename in ('numeric','decimal','numericn','decimaln') and convert(smallint,@scale) > 0)
                        THEN str(convert(numeric(38),substring(@value_raw,1,1)
                                     + right(replicate(0x00,255-convert(int,@collength))
                                     + right(@value_raw,convert(int,@collength) - 1),16))
@@ -708,44 +708,44 @@ begin
                               /* make room for @precision, minus, and decimal signs */
                                , convert(smallint,@precision)+2,convert(smallint,@scale))
 
-                      WHEN (@typename in ("numeric","decimal","numericn","decimaln") and @scale = "0")
+                      WHEN (@typename in ('numeric','decimal','numericn','decimaln') and @scale = '0')
                        THEN str(convert(numeric(38),substring(@value_raw,1,1)
                                     + right(replicate(0x00,255-convert(int,@collength))
                                     + right(@value_raw,convert(int,@collength) - 1),16))
                                 , convert(smallint,@precision))
 
-                      WHEN (@typename in ("float","floatn","real") and @collength = "4")
+                      WHEN (@typename in ('float','floatn','real') and @collength = '4')
                        THEN str(convert(real,@value_raw),40,8)
 
-                      WHEN (@typename in ("float","floatn","double precision") and @collength = "8")
+                      WHEN (@typename in ('float','floatn','double precision') and @collength = '8')
                        THEN str(convert(double precision,@value_raw),40,16)
 
-                      WHEN @typename in ("money","moneyn","smallmoney")
+                      WHEN @typename in ('money','moneyn','smallmoney')
                        THEN str(convert(money,@value_raw),22,2)
 
-                      WHEN @typename in ("datetime","datetimn")
-                       THEN '"' + convert(varchar(255),convert(datetime,@value_raw),109) + '"'
+                      WHEN @typename in ('datetime','datetimn')
+                       THEN '''' + convert(varchar(255),convert(datetime,@value_raw),109) + ''''
 
-                      WHEN @typename in ("smalldatetime")
-                       THEN '"' + convert(varchar(255),convert(smalldatetime,@value_raw),100) + '"'
+                      WHEN @typename in ('smalldatetime')
+                       THEN '''' + convert(varchar(255),convert(smalldatetime,@value_raw),100) + ''''
 
-                      WHEN @typename in ("date","daten")
-                       THEN '"' + substring(convert(varchar(255),convert(datetime,@value_raw+0x00000000),101),1,11) + '"'
+                      WHEN @typename in ('date','daten')
+                       THEN '''' + substring(convert(varchar(255),convert(datetime,@value_raw+0x00000000),101),1,11) + ''''
 
-                      WHEN @typename in ("time","timen")
-                       THEN '"' + substring(convert(varchar(255),convert(datetime,0x00000000+@value_raw)),12,8) + '"'
+                      WHEN @typename in ('time','timen')
+                       THEN '''' + substring(convert(varchar(255),convert(datetime,0x00000000+@value_raw)),12,8) + ''''
 
                       ELSE @value_raw
                      END
 
                if (@value_raw is null)
-                 select @freq_cell =1 , @prev_step = @step, @prev_weight = @weight, @value_c = "null"
+                 select @freq_cell =1 , @prev_step = @step, @prev_weight = @weight, @value_c = 'null'
                else
                begin
                  select @value_c = ltrim(@value_c)
                  if (@freq_cell = 1)
                  begin /* Printing a frequency cell */
-                    if (@typename in ("binary","varbinary","timestamp"))
+                    if (@typename in ('binary','varbinary','timestamp'))
                     begin
                        print '%1!     %2!        <       %3!',@prev_step,@prev_weight,@value_raw
                        print '%1!     %2!        =       %3!',@step,@weight,@value_raw
@@ -758,7 +758,7 @@ begin
                  end
                  else /* NOT printing a frequency cell */
                  begin
-                    if (@typename in ("binary","varbinary","timestamp"))
+                    if (@typename in ('binary','varbinary','timestamp'))
                        print '%1!     %2!       <=       %3!',@step,@weight,@value_raw
                     else
                        print '%1!     %2!       <=       %3!',@step,@weight,@value_c
@@ -795,11 +795,11 @@ begin
       begin
          select @keycnt = @keycnt + 1
          if (@keycnt = 1)
-            print 'No statistics for remaining columns:    "%1!"',@colname
+            print 'No statistics for remaining columns:    ''%1!''',@colname
          else if (@keycnt = 2)
-            print '(default values used)                   "%1!"',@colname
+            print '(default values used)                   ''%1!''',@colname
          else
-            print '                                        "%1!"',@colname
+            print '                                        ''%1!''',@colname
          fetch nostats_cursor into @colname
       end
       close nostats_cursor
@@ -830,9 +830,9 @@ go
 declare @dbname varchar(255)
 select @dbname = db_name()
 if ((select object_id('sp__optdiag')) is not null)
-	print "Creating procedure '%1!.%2!.%3!'. SUCCEEDED", @dbname, "dbo", "sp__optdiag"
+	print 'Creating procedure ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', 'sp__optdiag'
 else
-	print "Creating procedure '%1!.%2!.%3!'. FAILED", @dbname, "dbo", "sp__optdiag"
+	print 'Creating procedure ''%1!.%2!.%3!''. FAILED', @dbname, 'dbo', 'sp__optdiag'
 go
 
 use master

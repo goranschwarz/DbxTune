@@ -20,7 +20,6 @@
  ******************************************************************************/
 package com.asetune.sql.pipe;
 
-import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -34,16 +33,19 @@ import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
+import com.asetune.gui.ConnectionProfile;
+import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressCallback;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.SqlProgressDialog;
-import com.asetune.ui.autocomplete.SqlObjectName;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
@@ -67,20 +69,48 @@ extends PipeCommandAbstract
 		//-----------------------
 		// PARAMS for TO SERVER
 		//-----------------------
-		String  _db        = null; // extracted from _destTable
-		String  _table     = null; // [[dbname.]owner.]tablename
-		String  _user      = null;
-		String  _passwd    = null;
-		String  _server    = null;
-		String  _url       = null;
-		String  _driver    = null; // not yet used
-//		String  _host      = null;
-//		String  _port      = null;
-		int     _batchSize = 0;
-		boolean _slowBcp   = false;
-		boolean _createTab = false;
-		String  _initStr   = null;
-		boolean _truncate  = false;
+		String  _profile            = null; // extracted from _destTable
+		String  _db                 = null; // extracted from _destTable
+		String  _table              = null; // [[dbname.]owner.]tablename
+		String  _user               = null;
+		String  _passwd             = null;
+		String  _server             = null;
+		String  _url                = null;
+		String  _driver             = null; // not yet used
+		int     _batchSize          = 0;
+		boolean _slowBcp            = false;
+		boolean _createTab          = false;
+		String  _initStr            = null;
+		boolean _truncate           = false;
+		boolean _useQuotesOnDestTab = false;
+		boolean _debug              = false;
+
+		@Override
+		public String toString()
+		{
+			StringBuilder sb = new StringBuilder();
+
+			String passwd = _debug ? _passwd : "*secret*";
+
+			sb.append(""  ).append("profile           ".trim()).append("=").append(StringUtil.quotify(_profile           ));
+			sb.append(""  ).append("db                ".trim()).append("=").append(StringUtil.quotify(_db                ));
+			sb.append(", ").append("table             ".trim()).append("=").append(StringUtil.quotify(_table             ));
+			sb.append(", ").append("user              ".trim()).append("=").append(StringUtil.quotify(_user              ));
+			sb.append(", ").append("passwd            ".trim()).append("=").append(StringUtil.quotify( passwd            ));
+			sb.append(", ").append("server            ".trim()).append("=").append(StringUtil.quotify(_server            ));
+			sb.append(", ").append("url               ".trim()).append("=").append(StringUtil.quotify(_url               ));
+			sb.append(", ").append("driver            ".trim()).append("=").append(StringUtil.quotify(_driver            ));
+			sb.append(", ").append("batchSize         ".trim()).append("=").append(StringUtil.quotify(_batchSize         ));
+			sb.append(", ").append("slowBcp           ".trim()).append("=").append(StringUtil.quotify(_slowBcp           ));
+			sb.append(", ").append("createTab         ".trim()).append("=").append(StringUtil.quotify(_createTab         ));
+			sb.append(", ").append("initStr           ".trim()).append("=").append(StringUtil.quotify(_initStr           ));
+			sb.append(", ").append("truncate          ".trim()).append("=").append(StringUtil.quotify(_truncate          ));
+			sb.append(", ").append("useQuotesOnDestTab".trim()).append("=").append(StringUtil.quotify(_useQuotesOnDestTab));
+			sb.append(", ").append("debug             ".trim()).append("=").append(StringUtil.quotify(_debug             ));
+			sb.append(".");
+
+			return sb.toString();
+		}
 	}
 	
 	private CmdParams _params = null;
@@ -122,9 +152,10 @@ extends PipeCommandAbstract
 	{
 		if (input.startsWith("bcp ") || input.equals("bcp"))
 		{
-			String params = input.substring(input.indexOf(' ') + 1).trim();
+//			String params = input.substring(input.indexOf(' ') + 1).trim();
 
-			_args = StringUtil.translateCommandline(params);
+//			_args = StringUtil.translateCommandline(params);
+			_args = StringUtil.translateCommandline(input, true);
 //			_args = params.split(" ");
 //			for (int i = 0; i < _args.length; i++)
 //				_args[i] = _args[i].trim();
@@ -141,6 +172,7 @@ extends PipeCommandAbstract
 				else // TO OTHER SERVER
 				{
 					CommandLine cmdLine = parseCmdLine(_args);
+					if (cmdLine.hasOption('p')) _params._profile       = cmdLine.getOptionValue('p');
 					if (cmdLine.hasOption('U')) _params._user          = cmdLine.getOptionValue('U');
 					if (cmdLine.hasOption('P')) _params._passwd        = cmdLine.getOptionValue('P');
 					if (cmdLine.hasOption('S')) _params._server        = cmdLine.getOptionValue('S');
@@ -151,6 +183,8 @@ extends PipeCommandAbstract
 					if (cmdLine.hasOption('c')) _params._createTab     = true;
 					if (cmdLine.hasOption('i')) _params._initStr       = cmdLine.getOptionValue('i');
 					if (cmdLine.hasOption('t')) _params._truncate      = true;
+					if (cmdLine.hasOption('q')) _params._useQuotesOnDestTab = true;
+					if (cmdLine.hasOption('x')) _params._debug         = true;
 
 					if ( cmdLine.getArgs() != null && cmdLine.getArgs().length == 1 )
 					{
@@ -170,18 +204,12 @@ extends PipeCommandAbstract
 //								_params._table = "dbo" + _params._table;
 //						}
 					}
-					System.out.println("BCP Param: _destDb        = '"+ _params._db        + "'.");
-					System.out.println("BCP Param: _destTable     = '"+ _params._table     + "'.");
-					System.out.println("BCP Param: _destUser      = '"+ _params._user      + "'.");
-					System.out.println("BCP Param: _destPasswd    = '"+ _params._passwd    + "'.");
-					System.out.println("BCP Param: _destServer    = '"+ _params._server    + "'.");
-					System.out.println("BCP Param: _destUrl       = '"+ _params._url       + "'.");
-					System.out.println("BCP Param: _destBatchSize = '"+ _params._batchSize + "'.");
-					System.out.println("BCP Param: _slowBcp       = '"+ _params._slowBcp   + "'.");
-					System.out.println("BCP Param: _createTab     = '"+ _params._createTab + "'.");
-					System.out.println("BCP Param: _initStr       = '"+ _params._initStr   + "'.");
-					System.out.println("BCP Param: _truncate      = '"+ _params._truncate  + "'.");
 				}
+				
+				checkParsedParameters(_params);
+
+				if (_params._debug)
+					addDebugMessage("CmdLineSwitches: "+_params);
 			}
 			else
 			{
@@ -194,6 +222,44 @@ extends PipeCommandAbstract
 		}
 	}
 	
+	/**
+	 * Check for mandatory parameters etc...
+	 * 
+	 * @param params
+	 * @throws PipeCommandException
+	 */
+	private void checkParsedParameters(CmdParams params)
+	throws PipeCommandException
+	{
+		// Passed Password == CURRENT ::: get it from the current connection
+		if (StringUtil.hasValue(params._passwd) && params._passwd.equals("CURRENT"))
+		{
+			// hmmm... how can we do this??? (get the DbxConnection and if it has ConnectionProperties, we can extract it from there)
+			// FIXME: lets implement that later...
+		}
+
+		// -p ::: Get user/passwd/server from the Profile
+		if (StringUtil.hasValue(params._profile) && ConnectionProfileManager.hasInstance())
+		{
+			ConnectionProfile cp = ConnectionProfileManager.getInstance().getProfile(params._profile);
+			if (cp == null)
+				throw new PipeCommandException("Profile not found in the ProfileManager. profile name '"+params._profile+"'.");
+			else
+			{
+				params._user   = cp.getDbUserName();
+				params._passwd = cp.getDbPassword();
+				String serverOrUrlStr = cp.getDbServerOrUrl();
+				if (serverOrUrlStr != null)
+				{
+					if (serverOrUrlStr.startsWith("jdbc:"))
+						params._url = serverOrUrlStr;
+					else
+						params._server = serverOrUrlStr;
+				}
+			}
+		}
+	}
+
 	@Override
 	public void doEndPoint(Object input, SqlProgressDialog progress) 
 	throws Exception 
@@ -247,6 +313,7 @@ extends PipeCommandAbstract
 		Options options = new Options();
 
 		// create the Options
+		options.addOption( "p", "profile",       true,  "Profile to get '-U -P -S|-u' from." );
 		options.addOption( "U", "user",          true,  "Username when connecting to server." );
 		options.addOption( "P", "passwd",        true,  "Password when connecting to server. (null=noPasswd)" );
 		options.addOption( "S", "server",        true,  "Server to connect to (SERVERNAME|host:port)." );
@@ -257,11 +324,13 @@ extends PipeCommandAbstract
 		options.addOption( "c", "crTable",       false, "Create table if one doesn't exist." );
 		options.addOption( "i", "initStr",       true,  "used to do various settings in destination server." );
 		options.addOption( "t", "truncateTable", false, "Truncate table before insert." );
+		options.addOption( "q", "quoteDestTable",false, "Use Quoted Identifier on the Destination Table." );
+		options.addOption( "x", "debug",         false, "Debug mode." );
 
 		try
 		{
 			// create the command line com.asetune.parser
-			CommandLineParser parser = new PosixParser();
+			CommandLineParser parser = new DefaultParser();
 
 			// parse the command line arguments
 			CommandLine cmd = parser.parse( options, args );
@@ -305,6 +374,7 @@ extends PipeCommandAbstract
 		sb.append("usage: bcp [[dbname.]owner.]tablename [-U user] [-P passwd] [-S servername|host:port] [-D dbname] [-u url] [-b batchSize] [-s] [-i initStr]\n");
 		sb.append("   \n");
 		sb.append("options: \n");
+		sb.append("  -p,--profile <name>       Profile to get '-U -P -S|-u' from. \n");
 		sb.append("  -U,--user <user>          Username when connecting to server. \n");
 		sb.append("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd \n");
 		sb.append("  -S,--server <server>      Server to connect to (SERVERNAME|host:port). \n");
@@ -315,6 +385,8 @@ extends PipeCommandAbstract
 		sb.append("  -c,--crTable              If table doesn't exist, create a new (based on the ResultSet). -NOT-YET-IMPLEMENTED-\n");
 		sb.append("  -i,--initStr <sql stmnt>  Used to do various settings in destination server.\n");
 		sb.append("  -t,--truncateTable        truncate table before inserting values.\n");
+		sb.append("  -q,--quoteDestTable       Use Quoted Identifier on the Destination Table.\n");
+		sb.append("  -x,--debug                Debug mode.\n");
 		sb.append("  \n");
 		sb.append("  Note 1: -D,--dbname and -s,--slowBcp is only used if you connects to ASE via the -S,--server switch\n");
 		sb.append("  Note 2: if you connect via -u,--url then ordinary JDBC Batch execution will be used.\n");
@@ -323,12 +395,12 @@ extends PipeCommandAbstract
 		throw new PipeCommandException(sb.toString());
 	}
 	
-	private static class TransferTable
+	private class TransferTable
 	{
-		private Connection _conn      = null;
-		private CmdParams  _cmdParams = null;
+		private DbxConnection _conn      = null;
+		private CmdParams     _cmdParams = null;
 		private SqlProgressDialog _progressDialog = null;
-		private String _qic = "\""; // Quoted Identifier Char 
+//		private String _qic = "\""; // Quoted Identifier Char 
 
 //		int	_numcols;
 //
@@ -358,12 +430,15 @@ extends PipeCommandAbstract
     				boolean slowBcpDoDynamicPrepare = Configuration.getCombinedConfiguration().getBooleanProperty("PipeCommandBcp.slowBcp.DYNAMIC_PREPARE", true);
     				if (slowBcpDoDynamicPrepare)
     				{
-    					_logger.info("Slow BCP has been enabled. Instead of jConnect URL option 'ENABLE_BULK_LOAD=true', lets use 'DYNAMIC_PREPARE=true' (note this can be disabled with property 'PipeCommandBcp.slowBcp.DYNAMIC_PREPARE=false')");
+    					String msg = "Slow BCP has been enabled. Instead of jConnect URL option 'ENABLE_BULK_LOAD=true', lets use 'DYNAMIC_PREPARE=true' (note this can be disabled with property 'PipeCommandBcp.slowBcp.DYNAMIC_PREPARE=false')";
+    					_logger.info(msg);
+   						addInfoMessage(msg);
     					props.setProperty("DYNAMIC_PREPARE", "true");
     				}
     			}
     			else
     			{
+					addInfoMessage("Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.");
     				props.setProperty("ENABLE_BULK_LOAD", "true");
     			}
 
@@ -376,11 +451,13 @@ extends PipeCommandAbstract
     			if (StringUtil.isNullOrBlank(hostPortStr))
     				throw new Exception("Can't find server name information about '"+_cmdParams._server+"', hostPortStr=null. Please try with -S hostname:port");
 
-    			_conn = AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null);
+				if (_cmdParams._debug)
+					addDebugMessage("Creating connection to ASE: hostPortStr='"+hostPortStr+"', dbname='"+_cmdParams._db+"', user='"+_cmdParams._user+"', applicationName='sqlw-bcp'.");
+
+				_conn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
 
     			if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
     				AseConnectionUtils.useDbname(_conn, _cmdParams._db);
-System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'");
 			}
 			else
 			{
@@ -395,26 +472,36 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 				props.put("user", _cmdParams._user);
 				props.put("password", _cmdParams._passwd);
 		
-				_logger.debug("Try getConnection to driver='"+_cmdParams._driver+"', url='"+_cmdParams._url+"', user='"+_cmdParams._user+"'.");
-				_conn = DriverManager.getConnection(_cmdParams._url, props);
+				String msg = "Try getConnection to driver='"+_cmdParams._driver+"', url='"+_cmdParams._url+"', user='"+_cmdParams._user+"'.";
+				addDebugMessage(msg);
+				_logger.debug(msg);
+				_conn = DbxConnection.createDbxConnection(DriverManager.getConnection(_cmdParams._url, props));
 			}
+
+			// Get current catalog
 
 			// Print out some destination information
 			try
 			{
 				DatabaseMetaData dbmd = _conn.getMetaData();
-				try {_qic = dbmd.getIdentifierQuoteString(); } catch (SQLException ignore) {}
-				try {_logger.info("BCP: Connected using driver name '"          + dbmd.getDriverName()             +"'."); } catch (SQLException ignore) {}
-				try {_logger.info("BCP: Connected using driver version '"       + dbmd.getDriverVersion()          +"'."); } catch (SQLException ignore) {}
-				try {_logger.info("BCP: Connected to destination DBMS Vendor '" + dbmd.getDatabaseProductName()    +"'."); } catch (SQLException ignore) {}
-				try {_logger.info("BCP: Connected to destination DBMS Version '"+ dbmd.getDatabaseProductVersion() +"'."); } catch (SQLException ignore) {}
+				String msg;
+//				try {_qic = dbmd.getIdentifierQuoteString(); } catch (SQLException ignore) {}
+				try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Current Catalog in the destination srv '" + _conn.getCatalog()               +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 			}
 			catch (SQLException ignore) {}
 
 			// Execute the SQL InitString
 			if (StringUtil.hasValue(_cmdParams._initStr))
 			{
-				_logger.info("BCP: executing initialization SQL Stement '"+_cmdParams._initStr+"'.");
+				String msg = "executing initialization SQL Stement '"+_cmdParams._initStr+"'.";
+				addInfoMessage(msg);
+				_logger.info(msg);
+
 				Statement stmnt = _conn.createStatement();
 				stmnt.executeUpdate(_cmdParams._initStr);
 				stmnt.close();
@@ -423,25 +510,39 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			// Execute truncate table
 			if (_cmdParams._truncate)
 			{
+				SqlObjectName sqlObj = new SqlObjectName(_conn, _cmdParams._table);
+
+				String tabName = sqlObj.getFullNameUnModified();
+				if (_cmdParams._useQuotesOnDestTab)
+					tabName = sqlObj.getFullNameOriginQuoted();
+				
 				String sql = "";
 				// - First try to do:  truncate table ... 
 				// - if that fails do: delete from table
 				try ( Statement stmnt = _conn.createStatement() )
 				{
-					sql = "truncate table " + _qic + _cmdParams._table + _qic;
+					sql = "truncate table " + tabName;
 					
 					stmnt.executeUpdate(sql);
-					_logger.info("BCP: Truncated destination table, using SQL Stement '"+sql+"'.");
+					
+					String msg = "Truncating destination table, using SQL Stement '"+sql+"'.";
+					addInfoMessage(msg);
+					_logger.info(msg);
 				}
 				catch(SQLException e)
 				{
-					_logger.info("Problems with '"+sql+"', trying a normal 'DELETE FROM ...'. Caught: Err="+e.getErrorCode()+", State='"+e.getSQLState()+"', msg='"+e.getMessage()+"'.");
-					sql = "DELETE FROM " + _qic + _cmdParams._table + _qic;
+					String msg = "Problems with '"+sql+"', trying a normal 'DELETE FROM ...'. Caught: Err="+e.getErrorCode()+", State='"+e.getSQLState()+"', msg='"+e.getMessage()+"'.";
+					addInfoMessage(msg);
+					_logger.info(msg);
+					sql = "DELETE FROM " + tabName;
 
 					try ( Statement stmnt = _conn.createStatement() )
 					{
 						stmnt.executeUpdate(sql);
-						_logger.info("BCP: Truncated destination table, using SQL Stement '"+sql+"'.");
+						
+						msg = "Truncated destination table, using SQL Stement '"+sql+"'.";
+						addInfoMessage(msg);
+						_logger.info(msg);
 					}
 				}
 			}
@@ -450,7 +551,15 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 		public void close()
 		throws Exception
 		{
-			_conn.close();
+			if (_conn != null)
+			{
+				String msg = "Closing connection to '" + _conn.getMetaData().getURL() + "'.";
+				if (_cmdParams._debug)
+					addDebugMessage(msg);
+				_logger.info(msg);
+
+				_conn.close();
+			}
 		}
 
 		public int doTransfer(ResultSet sourceRs, PipeCommandBcp pipeCmd)
@@ -471,13 +580,14 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 				sourceSqlTypeInt.add(sourceRsmd.getColumnType(c));
 			}
 
+			SqlObjectName sqlObj = new SqlObjectName(_conn, _cmdParams._table);
+			
 			// Check if the table exists in the destination database
 			// If it doesn't exist, try to create it
 			if (_cmdParams._createTab)
 			{
-				SqlObjectName sqlObj = new SqlObjectName(_cmdParams._table, null, null, false);
 				DatabaseMetaData md = _conn.getMetaData();
-				ResultSet rs = md.getTables(sqlObj.getCatalogNameN(), sqlObj.getSchemaNameN(), sqlObj.getObjectNameN(), null);
+				ResultSet rs = md.getTables(sqlObj.getCatalogNameOriginNull(), sqlObj.getSchemaNameOriginNull(), sqlObj.getObjectNameOriginNull(), null);
 				int count = 0;
 				while (rs.next())
 					count++;
@@ -493,8 +603,16 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			}
 			
 			// Do dummy SQL to get RSMD from DEST
-			String destSql    = "select * from " + _qic + _cmdParams._table + _qic + " where 1=2";
-			_logger.info("Investigating destination table, executing SQL Statement: "+destSql);
+			String tabName = sqlObj.getFullNameUnModified();
+			if (_cmdParams._useQuotesOnDestTab)
+				tabName = sqlObj.getFullNameOriginQuoted();
+//			String destSql    = "select * from " + _qic + _cmdParams._table + _qic + " where 1=2";
+			String destSql    = "select * from " + tabName + " where 1=2";
+
+			String msg = "Investigating destination table, executing SQL Statement: "+destSql;
+			if (_cmdParams._debug)
+				addDebugMessage(msg);
+			_logger.info(msg);
 			if (_progressDialog != null)
 				_progressDialog.setState("Checking dest table, SQL: "+destSql);
 
@@ -543,7 +661,7 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 					String sourceColName = sourceColNames.get(c);
 					String destColName   = destColNames  .get(c);
 
-					String warning = "BCP: Possible column datatype missmatch for column "+(c+1)+". Source column name '"+sourceColName+"', jdbcType '"+sourceJdbcTypeStr+"'. Destination column name '"+destColName+"', jdbcType '"+destJdbcTypeStr+"'. I will still try to do the transfer, hopefully the destination server can/will convert the datatype, so it will work... lets try!"; 
+					String warning = "Possible column datatype missmatch for column "+(c+1)+". Source column name '"+sourceColName+"', jdbcType '"+sourceJdbcTypeStr+"'. Destination column name '"+destColName+"', jdbcType '"+destJdbcTypeStr+"'. I will still try to do the transfer, hopefully the destination server can/will convert the datatype, so it will work... lets try!"; 
 					_logger.warn(warning);
 					
 					if (pipeCmd._sqlWarnings == null)
@@ -568,9 +686,16 @@ System.out.println("getDbname(): '" + AseConnectionUtils.getDbname(_conn) + "'")
 			valuesStr += ")";
 			
 			// Build insert SQL
-			String insertSql = "insert into " + _qic + _cmdParams._table + _qic + columnStr + valuesStr;
+			String intoTabName = sqlObj.getFullNameUnModified();
+			if (_cmdParams._useQuotesOnDestTab)
+				intoTabName = sqlObj.getFullNameOriginQuoted();
+			
+			String insertSql = "insert into " + intoTabName + columnStr + valuesStr;
 System.out.println("INSERT SQL: "+insertSql);
-			_logger.info("BCP INSERT SQL Statement: "+insertSql);
+			msg = "BCP INSERT SQL Statement: "+insertSql;
+			if (_cmdParams._debug)
+				addDebugMessage(msg);
+			_logger.info(msg);
 
 			// Create the Prepared Statement
 			PreparedStatement pstmt = _conn.prepareStatement(insertSql);
@@ -600,6 +725,9 @@ System.out.println("INSERT SQL: "+insertSql);
 					}
 					catch (SQLException sqle)
 					{
+						msg = "ROW: "+totalCount+" - Problems setting column c="+c+", sourceName='"+sourceColNames.get(c-1)+"', destName='"+destColNames.get(c-1)+"'. Caught: "+sqle;
+						addErrorMessage(msg);
+
 System.out.println("ROW: "+totalCount+" - Problems setting column c="+c+", sourceName='"+sourceColNames.get(c-1)+"', destName='"+destColNames.get(c-1)+"'. Caught: "+sqle);
 						throw sqle;
 					}
@@ -611,6 +739,10 @@ System.out.println("ROW: "+totalCount+" - Problems setting column c="+c+", sourc
 				if (_cmdParams._batchSize > 0 && batchCount >= _cmdParams._batchSize )
 				{
 System.out.println("BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
+                    msg = "BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount;
+                    if (_cmdParams._debug)
+                    	addDebugMessage(msg);
+                    
 					if (_progressDialog != null)
 						_progressDialog.setState("Executing batch insert, at row count "+totalCount);
 
@@ -624,6 +756,10 @@ System.out.println("BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchS
 						_progressDialog.setState("Adding row "+totalCount+" to the transfer.");
 				}
 			}
+            msg = "END OF TRANSFER: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount;
+            if (_cmdParams._debug)
+            	addDebugMessage(msg);
+
 System.out.println("END OF TRANSFER: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
             if (_progressDialog != null)
             	_progressDialog.setState("Executing final batch insert, at row count "+totalCount);
@@ -635,6 +771,10 @@ System.out.println("END OF TRANSFER: Executing batch: _batchSize="+_cmdParams._b
 			
 //			if (pipeCmd._sqlWarnings != null)
 //				throw pipeCmd._sqlWarnings;
+
+            msg = "BCP Transferred "+totalCount+" rows to the destination table '"+tabName+"'.";
+           	addInfoMessage(msg);
+			_logger.info(msg);
 
 			return totalCount;
 		}

@@ -107,7 +107,8 @@ public class CountersModelAppend
 	**---------------------------------------------------
 	*/
 
-	@Override public boolean discardDiffPctHighlighterOnAbsTable() { return true; }
+	@Override public boolean discardDiffHighlighterOnAbsTable() { return true; }
+	@Override public boolean discardPctHighlighterOnAbsTable()  { return true; }
 	@Override public boolean isDiffCalcEnabled()     { return false; }
 	@Override public boolean isDiffColumn(int index) { return false; }
 	@Override public boolean isPctColumn (int index) { return false; }

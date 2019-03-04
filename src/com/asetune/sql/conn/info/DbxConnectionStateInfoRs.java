@@ -112,9 +112,9 @@ implements DbxConnectionStateInfo
 		String quiesce = "Quiesce=" + _quiesce;
 		String status  = "Status="  + _status;
 
-		if ( ! NORMAL_MODE   .equals(_mode)    ) mode    = "Mode=<b><font color=\"red\">"     + _mode    + "</font></b>";
-		if ( ! NORMAL_QUIESCE.equals(_quiesce) ) quiesce = "Quiesce=<b><font color=\"blue\">" + _quiesce + "</font></b>";
-		if ( ! NORMAL_STATUS .equals(_status)  ) status  = "Status=<b><font color=\"red\">"   + _status  + "</font></b>";
+		if ( ! NORMAL_MODE   .equals(_mode)    ) mode    = "Mode=<b><font color='red'>"     + _mode    + "</font></b>";
+		if ( ! NORMAL_QUIESCE.equals(_quiesce) ) quiesce = "Quiesce=<b><font color='blue'>" + _quiesce + "</font></b>";
+		if ( ! NORMAL_STATUS .equals(_status)  ) status  = "Status=<b><font color='red'>"   + _status  + "</font></b>";
 
 		String text = "<html>"
 				+ mode    + ", "

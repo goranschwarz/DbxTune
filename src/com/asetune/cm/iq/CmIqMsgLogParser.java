@@ -543,7 +543,8 @@ System.out.println("NOTE: iqMsgFile was changed from '"+_iqMsgFile+"' to '"+name
 		return super.getToolTipTextOnTableColumnHeader(colname);
 	}
 
-	@Override public boolean discardDiffPctHighlighterOnAbsTable() { return false; }
+	@Override public boolean discardDiffHighlighterOnAbsTable() { return false; }
+	@Override public boolean discardPctHighlighterOnAbsTable()  { return false; }
 	@Override public boolean isDiffCalcEnabled() { return false; }
 	@Override public boolean isDiffColumn(int index) { return false; }
 	@Override public boolean isPctColumn (int index) 

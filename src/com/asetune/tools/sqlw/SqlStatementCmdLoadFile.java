@@ -52,10 +52,10 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
+import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.pipe.PipeCommandException;
-import com.asetune.ui.autocomplete.SqlObjectName;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
@@ -156,7 +156,7 @@ extends SqlStatementAbstract
 //		String params = input.substring(input.indexOf(' ') + 1).trim();
 		String params = input.replace("\\loadfile", "").trim();
 
-		_args = StringUtil.translateCommandline(params);
+		_args = StringUtil.translateCommandline(params, false);
 
 		if (_args.length >= 1)
 		{
@@ -396,9 +396,10 @@ extends SqlStatementAbstract
 System.out.println("fileEncoding=|"+_params._charset+"|.");
 
 		// Check if the table exists
-		SqlObjectName sqlObj = new SqlObjectName(_params._tablename, _conn.getDatabaseProductName(), null, false);
+//		SqlObjectName sqlObj = new SqlObjectName(_params._tablename, _conn.getDatabaseProductName(), null, false);
+		SqlObjectName sqlObj = new SqlObjectName(_conn, _params._tablename);
 		DatabaseMetaData md = _conn.getMetaData();
-		ResultSet rs = md.getColumns(sqlObj.getCatalogNameN(), sqlObj.getSchemaNameN(), sqlObj.getObjectNameN(), "%");
+		ResultSet rs = md.getColumns(sqlObj.getCatalogNameNull(), sqlObj.getSchemaNameNull(), sqlObj.getObjectNameNull(), "%");
 		int count = 0;
 		_tabColumns     = new ArrayList<>();
 		_tabDatatypeInt = new ArrayList<>();

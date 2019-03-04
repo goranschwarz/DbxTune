@@ -91,6 +91,7 @@ import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxUtilitiesX;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.TimeUtils;
@@ -795,6 +796,17 @@ implements ActionListener, ChangeListener//, MouseListener
 
 		if (_searchRange_list != null)
 		{
+			if (lowVal < 0)
+			{
+				_logger.info("stateChanged(): lowVal < 0    [lowVal="+lowVal+"]");
+				return;
+			}
+			if (highVal >= _searchRange_list.size())
+			{
+				_logger.info("stateChanged(): highVal >= _searchRange_list.size()    [highVal="+highVal+", _searchRange_list.size()="+_searchRange_list.size()+"]");
+				return;
+			}
+				
 			Timestamp from = _searchRange_list.get(lowVal);
 			Timestamp to   = _searchRange_list.get(highVal);
 
@@ -902,7 +914,7 @@ implements ActionListener, ChangeListener//, MouseListener
 			ResultSet rs;
 			RSyntaxTextAreaX ta;
 
-			String where = " where \"SPID\" = "+spid+" and \"KPID\" = "+kpid+" and \"BatchID\" = "+batchId;
+			String where = " where [SPID] = "+spid+" and [KPID] = "+kpid+" and [BatchID] = "+batchId;
 			
 			DbxConnection conn = getConnection();
 			Statement stmnt = conn.createStatement();
@@ -910,8 +922,8 @@ implements ActionListener, ChangeListener//, MouseListener
 
 			// GET SQL TEXT
 			ta = _sqlText_txt;
-			tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
-			sql = "select \"SQLText\" from " + tabName + where;
+			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+			sql = conn.quotifySqlString("select [SQLText] from " + tabName + where);
 
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
@@ -932,8 +944,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			
 			// GET SHOWPLAN TEXT
 			ta = _showplan_txt;
-			tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_PLANS, null, true);
-			sql = "select \"PlanText\" from " + tabName + where;
+			tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_PLANS, null, true);
+			sql = conn.quotifySqlString("select [PlanText] from " + tabName + where);
 
 			rs = stmnt.executeQuery(sql);
 			ta.setText("");
@@ -978,8 +990,8 @@ implements ActionListener, ChangeListener//, MouseListener
 			// GET STATEMENTS for this batch (put it in the SQL TExt for now, later on a separate JTable)
 			if (loadStatements)
 			{
-				tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
-				sql = "select * from " + tabName + where;
+				tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+				sql = conn.quotifySqlString("select * from " + tabName + where);
 				rs = stmnt.executeQuery(sql);
 				ResultSetTableModel rstm = new ResultSetTableModel(rs, "SQL_CAPTURE_STATEMENTS");
 				_sqlText_txt.append("\n");
@@ -1270,218 +1282,300 @@ implements ActionListener, ChangeListener//, MouseListener
 	 */
 	private String getSqlFor_StatementsTab()
 	{
+		// Get a Connection and hope for the best
+		DbxConnection conn = null;
+		try {conn = getConnection();}
+		catch (RuntimeException ignore) {}
+
 		// Build where clause
 		String fromDate = _searchFrom_dtp.getText();
 		String toDate   = _searchTo_dtp.getText();
 		String where    = " where 1=1 \n";
-		String columns  = "  CASE WHEN t.\"SQLText\" is NULL THEN convert(0, bit) ELSE convert(1, bit) END as \"hasSqlText\", \n" +
-		                  "  s.\"sampleTime\", s.\"StartTime\", s.\"EndTime\", s.\"Elapsed_ms\", s.\"SPID\", s.\"KPID\", s.\"BatchID\", s.\"LineNumber\", s.\"DBName\", s.\"ProcName\", \n" + 
-		                  "  s.\"CpuTime\", s.\"WaitTime\", s.\"MemUsageKB\", s.\"PhysicalReads\", s.\"LogicalReads\", s.\"RowsAffected\", s.\"ErrorStatus\", s.\"ProcNestLevel\",  \n" + 
-		                  "  s.\"StatementNumber\", s.\"QueryOptimizationTime\", s.\"PagesModified\", s.\"PacketsSent\", s.\"PacketsReceived\", s.\"NetworkPacketSize\",  \n" + 
-		                  "  s.\"PlansAltered\", s.\"ContextID\", s.\"HashKey\", s.\"SsqlId\", s.\"ObjOwnerID\", s.\"InstanceID\", s.\"DBID\", s.\"ProcedureID\", s.\"PlanID\", \n" +
-		                  "  s.\"NormJavaSqlHashCode\", s.\"JavaSqlHashCode\", t.\"SQLText\", t.\"NormSQLText\" ";
+		String columns  = "  CASE WHEN t.[SQLText] is NULL THEN convert(0, bit) ELSE convert(1, bit) END as [hasSqlText], \n" +
+		                  "  s.[sampleTime], s.[StartTime], s.[EndTime], s.[Elapsed_ms], s.[SPID], s.[KPID], s.[BatchID], s.[LineNumber], s.[DBName], s.[ProcName], \n" + 
+		                  "  s.[CpuTime], s.[WaitTime], s.[MemUsageKB], s.[PhysicalReads], s.[LogicalReads], s.[RowsAffected], s.[ErrorStatus], s.[ProcNestLevel],  \n" + 
+		                  "  s.[StatementNumber], s.[QueryOptimizationTime], s.[PagesModified], s.[PacketsSent], s.[PacketsReceived], s.[NetworkPacketSize],  \n" + 
+		                  "  s.[PlansAltered], s.[ContextID], s.[HashKey], s.[SsqlId], s.[ObjOwnerID], s.[InstanceID], s.[DBID], s.[ProcedureID], s.[PlanID], \n" +
+		                  "  s.[NormJavaSqlHashCode], s.[JavaSqlHashCode], t.[SQLText], t.[NormSQLText] ";
 
 //		if (StringUtil.hasValue(fromDate))
-//			where += " and \"sampleTime\" >= '"+fromDate+"' \n";
+//			where += " and [sampleTime] >= '"+fromDate+"' \n";
 //		if (StringUtil.hasValue(toDate))
-//			where += " and \"sampleTime\" <= '"+toDate+"' \n";
+//			where += " and [sampleTime] <= '"+toDate+"' \n";
 		if (StringUtil.hasValue(fromDate) && StringUtil.hasValue(toDate))
 		{
-			where = "WHERE s.\"StartTime\" between '" + fromDate + "' and '" + toDate + "' \n" +
-			        "   OR s.\"EndTime\"   between '" + fromDate + "' and '" + toDate + "' \n" +
-			        "   OR '" + fromDate + "' between s.\"StartTime\" and s.\"EndTime\" \n " +
-			        "ORDER BY s.\"StartTime\"";
+			where = "WHERE s.[StartTime] between '" + fromDate + "' and '" + toDate + "' \n" +
+			        "   OR s.[EndTime]   between '" + fromDate + "' and '" + toDate + "' \n" +
+			        "   OR '" + fromDate + "' between s.[StartTime] and s.[EndTime] \n " +
+			        "ORDER BY s.[StartTime]";
 			
 			columns = 
 				"\n" +
 				"  CASE \n" +
 				"    -- Execution WITHIN current time limit \n" + 
-				"    WHEN s.\"StartTime\" between '" + fromDate + "' and '" + toDate + "' AND s.\"EndTime\" between '" + fromDate + "' and '" + toDate + "' \n"+
-				"    THEN '<html><b><font color=\"green\" face=\"monospace\">&gt;&lt;</font></b> -- <i>Exec-Within</i></html>'  \n" +
+				"    WHEN s.[StartTime] between '" + fromDate + "' and '" + toDate + "' AND s.[EndTime] between '" + fromDate + "' and '" + toDate + "' \n"+
+				"    THEN '<html><b><font color=''green'' face=''monospace''>&gt;&lt;</font></b> -- <i>Exec-Within</i></html>'  \n" +
 				"\n" +
 				"    -- Execution started BEFORE and ended WITHIN current time limit \n" + 
-				"    WHEN s.\"StartTime\" < '" + fromDate + "' AND s.\"EndTime\" between '" + fromDate + "' and '" + toDate + "' \n"+
-				"    THEN '<html><b><font color=\"orange\" face=\"monospace\">&lt;!</font></b> -- <i>Start-Before</i></html>'  \n" +
+				"    WHEN s.[StartTime] < '" + fromDate + "' AND s.[EndTime] between '" + fromDate + "' and '" + toDate + "' \n"+
+				"    THEN '<html><b><font color=''orange'' face=''monospace''>&lt;!</font></b> -- <i>Start-Before</i></html>'  \n" +
 				"\n" +
 				"    -- Execution started AFTER  and ended WITHIN current time limit \n" + 
-				"    WHEN s.\"StartTime\" > '" + fromDate + "' AND s.\"EndTime\" > '" + toDate + "' \n"+
-				"    THEN '<html><b><font color=\"orange\" face=\"monospace\">!&gt;</font></b> -- <i>End-After</i></html>'  \n" +
+				"    WHEN s.[StartTime] > '" + fromDate + "' AND s.[EndTime] > '" + toDate + "' \n"+
+				"    THEN '<html><b><font color=''orange'' face=''monospace''>!&gt;</font></b> -- <i>End-After</i></html>'  \n" +
 				"\n" +
 				"    -- Execution started BEFORE and are STILL_RUNNING (not finished within current time limit) \n" + 
-				"    WHEN s.\"StartTime\" < '" + fromDate + "' AND s.\"EndTime\" > '" + toDate + "' \n" +
-				"    THEN '<html><b><font color=\"red\" face=\"monospace\">&lt;&gt;</font></b> -- <i>StartEnd-Outside</i></html>'  \n" +
+				"    WHEN s.[StartTime] < '" + fromDate + "' AND s.[EndTime] > '" + toDate + "' \n" +
+				"    THEN '<html><b><font color=''red'' face=''monospace''>&lt;&gt;</font></b> -- <i>StartEnd-Outside</i></html>'  \n" +
 				"\n" +
 				"    -- This should not happen... \n" + 
-				"    ELSE '<html><b><font face=\"monospace\">??</font></b> -- <i>???</i></html>'  \n" +
-				"  END as \"Indicator\", \n" +
+				"    ELSE '<html><b><font face=''monospace''>??</font></b> -- <i>???</i></html>'  \n" +
+				"  END as [Indicator], \n" +
 				columns
 				;
 		}
 		else if (StringUtil.hasValue(fromDate) || StringUtil.hasValue(toDate))
 		{
 			if (StringUtil.hasValue(fromDate))
-				where += " and s.\"sampleTime\" >= '"+fromDate+"' \n";
+				where += " and s.[sampleTime] >= '"+fromDate+"' \n";
 			if (StringUtil.hasValue(toDate))
-				where += " and s.\"sampleTime\" <= '"+toDate+"' \n";
+				where += " and s.[sampleTime] <= '"+toDate+"' \n";
 		}
 
 		// Build SELECT
-		String tabNameStmnt   = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
-		String tabNameSqlText = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, true);
+		String tabNameStmnt   = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+		String tabNameSqlText = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, true);
 		String sql = "SELECT " + columns + " \n"
 				+ "FROM " + tabNameStmnt + " s \n"
-				+ "LEFT OUTER JOIN "+tabNameSqlText+" t ON s.\"SPID\" = t.\"SPID\" AND s.\"KPID\" = t.\"KPID\" AND s.\"BatchID\" = t.\"BatchID\" \n"
+				+ "LEFT OUTER JOIN "+tabNameSqlText+" t ON s.[SPID] = t.[SPID] AND s.[KPID] = t.[KPID] AND s.[BatchID] = t.[BatchID] \n"
 				+ where;
+
+		if (conn != null)
+			sql = conn.quotifySqlString(sql);
+
 		return sql;
 	}
 
 	private String getSqlFor_SqlTextTab()
 	{
+		// Get a Connection and hope for the best
+		DbxConnection conn = null;
+		try {conn = getConnection();}
+		catch (RuntimeException ignore) {}
+
 		// Build where clause
 		String fromDate = _searchFrom_dtp.getText();
 		String toDate   = _searchTo_dtp.getText();
 		String where    = " where 1=1 \n";
 
 		if (StringUtil.hasValue(fromDate))
-			where += " and \"sampleTime\" >= '"+fromDate+"' \n";
+			where += " and [sampleTime] >= '"+fromDate+"' \n";
 		if (StringUtil.hasValue(toDate))
-			where += " and \"sampleTime\" <= '"+toDate+"' \n";
+			where += " and [sampleTime] <= '"+toDate+"' \n";
 		
 		// Build SELECT
-		String tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
 		String sql = "select * \n"
 				+ "from " + tabName + "\n"
 				+ where;
+
+		if (conn != null)
+			sql = conn.quotifySqlString(sql);
+
 		return sql;
 	}
 
 	private String getSqlFor_SumStatementsTab()
 	{
-		String tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
+		// Get a Connection and hope for the best
+		DbxConnection conn = null;
+		try {conn = getConnection();}
+		catch (RuntimeException ignore) {}
+
+		// different "top" syntax for different DBMS Vendors
+		String sqlTop    = "";
+		String sqlLimit  = "";
+		String oraRownum = "";
+
+		int topRows = _statementsSum_spm.getNumber().intValue();
+		
+		if (conn != null)
+		{
+			if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MSSQL, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ))
+				sqlTop   = "top " + topRows;
+			else if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_ORACLE))
+				oraRownum = "  and ROWNUM <= " + topRows + "\n";
+			else
+				sqlLimit = "limit " + topRows + "\n";
+		}
+		
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, true);
 		String sql = ""
 				+ "------------------------------------------------------------- \n"
 				+ "-- Get Statements... \n"
-				+ "-- Note: SQL that is not withing the StatementCache is presented with a \"ProcName\" of NULL \n"
+				+ "-- Note: SQL that is not withing the StatementCache is presented with a [ProcName] of NULL \n"
 				+ "--       If you have alot of those you need to compose some other query \n"
 				+ "------------------------------------------------------------- \n"
-				+ "select top " + _statementsSum_spm.getNumber().intValue() + " \n"
-				+ "    \"ProcName\" \n"
-				+ "   ,\"LineNumber\" \n"
-				+ "   ,count(*)                       as \"records\" \n"
-				+ "   ,avg(\"Elapsed_ms\")            as \"avgElapsed_ms\" \n"
-				+ "   ,avg(\"CpuTime\")               as \"avgCpuTime\" \n"
-				+ "   ,avg(\"WaitTime\")              as \"avgWaitTime\" \n"
-				+ "   ,avg(\"MemUsageKB\")            as \"avgMemUsageKB\" \n"
-				+ "   ,avg(\"PhysicalReads\")         as \"avgPhysicalReads\" \n"
-				+ "   ,avg(\"LogicalReads\")          as \"avgLogicalReads\" \n"
-				+ "   ,avg(\"RowsAffected\")          as \"avgRowsAffected\" \n"
-				+ "   ,avg(\"QueryOptimizationTime\") as \"avgQueryOptimizationTime\" \n"
-				+ "   ,avg(\"PagesModified\")         as \"avgPagesModified\" \n"
-				+ "   ,avg(\"PacketsSent\")           as \"avgPacketsSent\" \n"
-				+ "   ,avg(\"PacketsReceived\")       as \"avgPacketsReceived\" \n"
+				+ "select " + sqlTop + " \n"
+				+ "    [ProcName] \n"
+				+ "   ,[LineNumber] \n"
+				+ "   ,count(*)                     as [records] \n"
+				+ "   ,avg([Elapsed_ms])            as [avgElapsed_ms] \n"
+				+ "   ,avg([CpuTime])               as [avgCpuTime] \n"
+				+ "   ,avg([WaitTime])              as [avgWaitTime] \n"
+				+ "   ,avg([MemUsageKB])            as [avgMemUsageKB] \n"
+				+ "   ,avg([PhysicalReads])         as [avgPhysicalReads] \n"
+				+ "   ,avg([LogicalReads])          as [avgLogicalReads] \n"
+				+ "   ,avg([RowsAffected])          as [avgRowsAffected] \n"
+				+ "   ,avg([QueryOptimizationTime]) as [avgQueryOptimizationTime] \n"
+				+ "   ,avg([PagesModified])         as [avgPagesModified] \n"
+				+ "   ,avg([PacketsSent])           as [avgPacketsSent] \n"
+				+ "   ,avg([PacketsReceived])       as [avgPacketsReceived] \n"
 				+ "from " + tabName + " \n"
 				+ "where 1 = 1 \n"
-				+ "group by \"ProcName\", \"LineNumber\" \n"
-//				+ "having count(*) > " + _statementsSum_spm.getNumber().intValue() + " \n"
-				+ "order by \"records\" desc \n"
+				+ oraRownum
+				+ "group by [ProcName], [LineNumber] \n"
+//				+ "having count(*) > " + topRows + " \n"
+				+ "order by [records] desc \n"
+				+ sqlLimit
 				+ " \n"
 				+ "------------------------------------------------------------- \n"
 				+ "-- Get Statements... NOT IN PROCS or STATEMENT-CACHE, by: JavaSqlHashCode \n"
 				+ "-- to execute below: Copy it to 'User Defined Query' \n"
 				+ "------------------------------------------------------------- \n"
 				+ "/* \n"
-				+ "select top " + _statementsSum_spm.getNumber().intValue() + " \n"
-				+ "    \"JavaSqlHashCode\" \n"
-				+ "   ,count(*)                       as \"records\" \n"
-				+ "   ,avg(\"Elapsed_ms\")            as \"avgElapsed_ms\" \n"
-				+ "   ,avg(\"CpuTime\")               as \"avgCpuTime\" \n"
-				+ "   ,avg(\"WaitTime\")              as \"avgWaitTime\" \n"
-				+ "   ,avg(\"MemUsageKB\")            as \"avgMemUsageKB\" \n"
-				+ "   ,avg(\"PhysicalReads\")         as \"avgPhysicalReads\" \n"
-				+ "   ,avg(\"LogicalReads\")          as \"avgLogicalReads\" \n"
-				+ "   ,avg(\"RowsAffected\")          as \"avgRowsAffected\" \n"
-				+ "   ,avg(\"QueryOptimizationTime\") as \"avgQueryOptimizationTime\" \n"
-				+ "   ,avg(\"PagesModified\")         as \"avgPagesModified\" \n"
-				+ "   ,avg(\"PacketsSent\")           as \"avgPacketsSent\" \n"
-				+ "   ,avg(\"PacketsReceived\")       as \"avgPacketsReceived\" \n"
+				+ "select " + sqlTop + " \n"
+				+ "    [JavaSqlHashCode] \n"
+				+ "   ,count(*)                     as [records] \n"
+				+ "   ,avg([Elapsed_ms])            as [avgElapsed_ms] \n"
+				+ "   ,avg([CpuTime])               as [avgCpuTime] \n"
+				+ "   ,avg([WaitTime])              as [avgWaitTime] \n"
+				+ "   ,avg([MemUsageKB])            as [avgMemUsageKB] \n"
+				+ "   ,avg([PhysicalReads])         as [avgPhysicalReads] \n"
+				+ "   ,avg([LogicalReads])          as [avgLogicalReads] \n"
+				+ "   ,avg([RowsAffected])          as [avgRowsAffected] \n"
+				+ "   ,avg([QueryOptimizationTime]) as [avgQueryOptimizationTime] \n"
+				+ "   ,avg([PagesModified])         as [avgPagesModified] \n"
+				+ "   ,avg([PacketsSent])           as [avgPacketsSent] \n"
+				+ "   ,avg([PacketsReceived])       as [avgPacketsReceived] \n"
 				+ "from " + tabName + " \n"
-				+ "where \"ProcName\" is NULL \n"
-				+ "group by \"JavaSqlHashCode\" \n"
-//				+ "having count(*) " + _statementsSum_spm.getNumber().intValue() + " \n"
-				+ "order by \"records\" desc \n"
+				+ "where [ProcName] is NULL \n"
+				+ oraRownum
+				+ "group by [JavaSqlHashCode] \n"
+//				+ "having count(*) " + topRows + " \n"
+				+ "order by [records] desc \n"
+				+ sqlLimit
 				+ "*/ \n"
 				+ "------------------------------------------------------------- \n"
 				+ "-- Get Statements... NOT IN PROCS or STATEMENT-CACHE, by: NormJavaSqlHashCode \n"
 				+ "-- to execute below: Copy it to 'User Defined Query' \n"
 				+ "------------------------------------------------------------- \n"
 				+ "/* \n"
-				+ "select top " + _statementsSum_spm.getNumber().intValue() + " \n"
-				+ "    \"NormJavaSqlHashCode\" \n"
-				+ "   ,count(*)                       as \"records\" \n"
-				+ "   ,avg(\"Elapsed_ms\")            as \"avgElapsed_ms\" \n"
-				+ "   ,avg(\"CpuTime\")               as \"avgCpuTime\" \n"
-				+ "   ,avg(\"WaitTime\")              as \"avgWaitTime\" \n"
-				+ "   ,avg(\"MemUsageKB\")            as \"avgMemUsageKB\" \n"
-				+ "   ,avg(\"PhysicalReads\")         as \"avgPhysicalReads\" \n"
-				+ "   ,avg(\"LogicalReads\")          as \"avgLogicalReads\" \n"
-				+ "   ,avg(\"RowsAffected\")          as \"avgRowsAffected\" \n"
-				+ "   ,avg(\"QueryOptimizationTime\") as \"avgQueryOptimizationTime\" \n"
-				+ "   ,avg(\"PagesModified\")         as \"avgPagesModified\" \n"
-				+ "   ,avg(\"PacketsSent\")           as \"avgPacketsSent\" \n"
-				+ "   ,avg(\"PacketsReceived\")       as \"avgPacketsReceived\" \n"
+				+ "select " + sqlTop + " \n"
+				+ "    [NormJavaSqlHashCode] \n"
+				+ "   ,count(*)                     as [records] \n"
+				+ "   ,avg([Elapsed_ms])            as [avgElapsed_ms] \n"
+				+ "   ,avg([CpuTime])               as [avgCpuTime] \n"
+				+ "   ,avg([WaitTime])              as [avgWaitTime] \n"
+				+ "   ,avg([MemUsageKB])            as [avgMemUsageKB] \n"
+				+ "   ,avg([PhysicalReads])         as [avgPhysicalReads] \n"
+				+ "   ,avg([LogicalReads])          as [avgLogicalReads] \n"
+				+ "   ,avg([RowsAffected])          as [avgRowsAffected] \n"
+				+ "   ,avg([QueryOptimizationTime]) as [avgQueryOptimizationTime] \n"
+				+ "   ,avg([PagesModified])         as [avgPagesModified] \n"
+				+ "   ,avg([PacketsSent])           as [avgPacketsSent] \n"
+				+ "   ,avg([PacketsReceived])       as [avgPacketsReceived] \n"
 				+ "from " + tabName + " \n"
-				+ "where \"ProcName\" is NULL \n"
-				+ "group by \"NormJavaSqlHashCode\" \n"
-//				+ "having count(*) " + _statementsSum_spm.getNumber().intValue() + " \n"
-				+ "order by \"records\" desc \n"
+				+ "where [ProcName] is NULL \n"
+				+ oraRownum
+				+ "group by [NormJavaSqlHashCode] \n"
+//				+ "having count(*) " + topRows + " \n"
+				+ "order by [records] desc \n"
+				+ sqlLimit
 				+ "*/ \n"
 				+ "";
+
+		if (conn != null)
+			sql = conn.quotifySqlString(sql);
+
 		return sql;
 	}
 
 	private String getSqlFor_SumSqlTextTab()
 	{
-		String tabName = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
+		// Get a Connection and hope for the best
+		DbxConnection conn = null;
+		try {conn = getConnection();}
+		catch (RuntimeException ignore) {}
+
+		// different "top" syntax for different DBMS Vendors
+		String sqlTop    = "";
+		String sqlLimit  = "";
+		String oraRownum = "";
+
+		int topRows = _sqlSum_spm.getNumber().intValue();
+		
+		if (conn != null)
+		{
+			if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2, DbUtils.DB_PROD_NAME_SYBASE_ASE, DbUtils.DB_PROD_NAME_MSSQL, DbUtils.DB_PROD_NAME_SYBASE_ASA, DbUtils.DB_PROD_NAME_SYBASE_IQ))
+				sqlTop   = "top "   + topRows;
+			else if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_ORACLE))
+				oraRownum = "  and ROWNUM <= " + topRows + "\n";
+			else
+				sqlLimit = "limit " + topRows + "\n";
+		}
+		
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.SQL_CAPTURE_SQLTEXT, null, true);
 		String sql = ""
 				+ "------------------------------------------------------------- \n"
 				+ "-- Get SQL Text that has been executed mostly \n"
 				+ "------------------------------------------------------------- \n"
-				+ "select top " + _sqlSum_spm.getNumber().intValue() + " \n"
-				+ "    count(*) as \"records\" \n"
-				+ "   ,\"SQLText\" \n"
+				+ "select " + sqlTop + " \n"
+				+ "    count(*) as [records] \n"
+				+ "   ,[SQLText] \n"
 				+ "from " + tabName + " \n"
 				+ "where 1 = 1 \n"
-				+ "group by \"SQLText\" \n"
-//				+ "having count(*) > " + _sqlSum_spm.getNumber().intValue() + " \n"
-				+ "order by \"records\" desc \n"
+				+ oraRownum
+				+ "group by [SQLText] \n"
+//				+ "having count(*) > " + topRows + " \n"
+				+ "order by [records] desc \n"
+				+ sqlLimit
 				+ "\n"
 				+ "\n"
 				+ "/*----------------------------------------------------------- \n"
 				+ " *---- to execute below: Copy it to 'User Defined Query' \n"
 				+ " *----------------------------------------------------------- \n"
-				+ "select top " + _sqlSum_spm.getNumber().intValue() + " \n"
-				+ "    \"JavaSqlHashCode\" \n"
-				+ "   ,count(*) as \"records\" \n"
+				+ "select " + sqlTop + " \n"
+				+ "    [JavaSqlHashCode] \n"
+				+ "   ,count(*) as [records] \n"
 				+ "from " + tabName + " \n"
 				+ "where 1 = 1 \n"
-				+ "group by \"JavaSqlHashCode\" \n"
-//				+ "having count(*) > " + _sqlSum_spm.getNumber().intValue() + " \n"
-				+ "order by \"records\" desc \n"
+				+ oraRownum
+				+ "group by [JavaSqlHashCode] \n"
+//				+ "having count(*) > " + topRows + " \n"
+				+ "order by [records] desc \n"
+				+ sqlLimit
 				+ "------------------------------------------------------------- */ \n"
 				+ "\n"
 				+ "/*----------------------------------------------------------- \n"
 				+ "  ---- to execute below: Copy it to 'User Defined Query' \n"
 				+ "  ----------------------------------------------------------- \n"
-				+ "select top " + _sqlSum_spm.getNumber().intValue() + " \n"
-				+ "    \"NormJavaSqlHashCode\" \n"
-				+ "   ,count(*) as \"records\" \n"
+				+ "select " + sqlTop + " \n"
+				+ "    [NormJavaSqlHashCode] \n"
+				+ "   ,count(*) as [records] \n"
 				+ "from " + tabName + " \n"
 				+ "where 1 = 1 \n"
-				+ "group by \"NormJavaSqlHashCode\" \n"
-//				+ "having count(*) > " + _sqlSum_spm.getNumber().intValue() + " \n"
-				+ "order by \"records\" desc \n"
+				+ oraRownum
+				+ "group by [NormJavaSqlHashCode] \n"
+//				+ "having count(*) > " + topRows + " \n"
+				+ "order by [records] desc \n"
+				+ sqlLimit
 				+ "------------------------------------------------------------- */ \n"
 				+ "";
+
+		if (conn != null)
+			sql = conn.quotifySqlString(sql);
+
 		return sql;
 	}
 

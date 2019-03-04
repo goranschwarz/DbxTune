@@ -118,30 +118,30 @@ implements Serializable
 	{
 		StringBuilder sb = new StringBuilder();
 //		sb.append(_tabType).append(" - <B>").append(_tabName).append("</B>");
-		sb.append(_procSchema).append(".<B>").append(_procName).append("</B> - <font color=\"blue\">").append(_oraPackageName==null?"":"PACKAGE ").append(_procType).append("</font>");
+		sb.append(_procSchema).append(".<B>").append(_procName).append("</B> - <font color='blue'>").append(_oraPackageName==null?"":"PACKAGE ").append(_procType).append("</font>");
 		sb.append("<HR>");
 		sb.append("<BR>");
 		sb.append("<B>Description:</B> ").append(StringUtil.isNullOrBlank(_procRemark) ? "not available" : _procRemark).append("<BR>");
 		sb.append("<BR>");
 		sb.append("<B>Columns:</B> ").append("<BR>");
-		sb.append("<TABLE ALIGN=\"left\" BORDER=0 CELLSPACING=0 CELLPADDING=1\">");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Name")       .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("ParamType")  .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Datatype")   .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Length")     .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Nulls")      .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Pos")        .append("</B></FONT></TD>");
-		sb.append(" <TD NOWRAP BGCOLOR=\"#cccccc\"><FONT COLOR=\"#000000\"><b>").append("Description").append("</B></FONT></TD>");
+		sb.append("<TABLE ALIGN='left' BORDER=0 CELLSPACING=0 CELLPADDING=1>");
+		sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffff'>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Name")       .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("ParamType")  .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Datatype")   .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Length")     .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Nulls")      .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Pos")        .append("</B></FONT></TD>");
+		sb.append(" <TD NOWRAP BGCOLOR='#cccccc'><FONT COLOR='#000000'><b>").append("Description").append("</B></FONT></TD>");
 		sb.append("</TR>");
 		int r=0;
 		for (ProcedureParameterInfo pi : _parameters)
 		{
 			r++;
 			if ( (r % 2) == 0 )
-				sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffff\">");
+				sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffff'>");
 			else
-				sb.append("<TR ALIGN=\"left\" VALIGN=\"top\" BGCOLOR=\"#ffffcc\">");
+				sb.append("<TR ALIGN='left' VALIGN='top' BGCOLOR='#ffffcc'>");
 			sb.append("	<TD NOWRAP>").append(pi._paramName)      .append("</TD>");
 			sb.append("	<TD NOWRAP>").append(pi._paramInOutType) .append("</TD>");
 			sb.append("	<TD NOWRAP>").append(pi._paramType)      .append("</TD>");
@@ -173,7 +173,7 @@ implements Serializable
 			return "Parameter name '"+paramName+"', was not found in procedure '"+_procName+"'.";
 
 		StringBuilder sb = new StringBuilder();
-		sb.append(_procSchema).append(".<B>").append(_procName).append(".").append(pi._paramName).append("</B> - <font color=\"blue\">").append(_procType).append(" - COLUMN").append("</font>");
+		sb.append(_procSchema).append(".<B>").append(_procName).append(".").append(pi._paramName).append("</B> - <font color='blue'>").append(_procType).append(" - COLUMN").append("</font>");
 		sb.append("<HR>"); // add Horizontal Ruler: ------------------
 		sb.append("<BR>");
 		sb.append("<B>Procedure Description:</B> ").append(StringUtil.isNullOrBlank(_procRemark) ? "not available" : _procRemark).append("<BR>");

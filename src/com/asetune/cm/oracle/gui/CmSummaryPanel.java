@@ -580,7 +580,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 
 
 		
-		tooltip = "<html>Number of transactions executed (abs, <font color=\"blue\">diff, <i>rate</i></font>).</html>";
+		tooltip = "<html>Number of transactions executed (abs, <font color='blue'>diff, <i>rate</i></font>).</html>";
 		_originToolTip        .put    ("Transactions", tooltip);
 		_Transactions_lbl     .setText("Transactions");
 		_Transactions_lbl     .setToolTipText(tooltip);
@@ -594,7 +594,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 		_Transactions_Rate_txt.setForeground(Color.BLUE);
 		_Transactions_Rate_txt.setFont(RATE_FONT);
 		
-		tooltip = "<html>Total number of transactions that have been rolled back on the server (abs, <font color=\"blue\">diff, <i>rate</i></font>).</html>";
+		tooltip = "<html>Total number of transactions that have been rolled back on the server (abs, <font color='blue'>diff, <i>rate</i></font>).</html>";
 		_originToolTip      .put    ("Rollbacks", tooltip);
 		_Rollbacks_lbl      .setText("Rollbacks");
 		_Rollbacks_lbl      .setToolTipText(tooltip);
@@ -1529,7 +1529,7 @@ implements ISummaryPanel, TableModelListener, GTabbedPane.ShowProperties
 				// Set Tooltip
 				if (hasNonConfiguredMonitoringHappened)
 				{
-					String tooltip = "<html><font color=\"red\">" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
+					String tooltip = "<html><font color='red'>" + getCm().getNonConfiguredMonitoringMessage(false) + "</font></html>";
 					label    .setToolTipText(tooltip);
 					absField .setToolTipText(tooltip);
 					diffField.setToolTipText(tooltip);

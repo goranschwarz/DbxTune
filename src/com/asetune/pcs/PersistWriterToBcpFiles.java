@@ -228,11 +228,11 @@ public class PersistWriterToBcpFiles
 			//
 			// FIRST CHECK IF THE TABLE EXISTS, IF NOT CREATE IT
 			//
-			String tabName = getTableName(SESSIONS, null, false);
+			String tabName = getTableName(null, SESSIONS, null, false);
 
 			if ( ! isDdlCreated(tabName) )
 			{
-				String sql = getTableDdlString(SESSIONS, null);
+				String sql = getTableDdlString(null, SESSIONS, null);
 				sql += "\n";
 				sql += "go";
 				sql += "\n";
@@ -346,10 +346,10 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// ABS
 			//-------------
-			ddlTabWriter.write(getTableDdlString(ABS, cm));
+			ddlTabWriter.write(getTableDdlString(null, ABS, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
-			ddlTabWriter.write(getIndexDdlString(ABS, cm));
+			ddlTabWriter.write(getIndexDdlString(null, ABS, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
 			ddlTabWriter.write("\n\n\n\n\n\n");
@@ -357,10 +357,10 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// DIFF
 			//-------------
-			ddlTabWriter.write(getTableDdlString(DIFF, cm));
+			ddlTabWriter.write(getTableDdlString(null, DIFF, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
-			ddlTabWriter.write(getIndexDdlString(DIFF, cm));
+			ddlTabWriter.write(getIndexDdlString(null, DIFF, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
 			ddlTabWriter.write("\n\n\n\n\n\n");
@@ -368,10 +368,10 @@ public class PersistWriterToBcpFiles
 			//-------------
 			// RATE
 			//-------------
-			ddlTabWriter.write(getTableDdlString(RATE, cm));
+			ddlTabWriter.write(getTableDdlString(null, RATE, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
-			ddlTabWriter.write(getIndexDdlString(RATE, cm));
+			ddlTabWriter.write(getIndexDdlString(null, RATE, cm));
 			ddlTabWriter.write("go\n");
 			ddlTabWriter.write("\n");
 			ddlTabWriter.write("\n\n\n\n\n\n");

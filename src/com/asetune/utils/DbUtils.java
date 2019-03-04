@@ -57,7 +57,8 @@ public class DbUtils
 	public static final String DB_PROD_NAME_HSQL         = "HSQL Database Engine"; // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_MSSQL        = "Microsoft SQL Server"; // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_ORACLE       = "Oracle";               // got this from web, so might not be correct
-	public static final String DB_PROD_NAME_DB2_UX       = "DB2/Linux";            // got this from web, so might not be correct
+//	public static final String DB_PROD_NAME_DB2_UX       = "DB2/Linux";            // got this from web, so might not be correct
+	public static final String DB_PROD_NAME_DB2_LUW      = "DB2/"; 
 	public static final String DB_PROD_NAME_DB2_ZOS      = "DB2";                  // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_MYSQL        = "MySQL";                // got this from web, so might not be correct
 	public static final String DB_PROD_NAME_DERBY        = "Apache Derby";         // got this from web, so might not be correct
@@ -87,7 +88,7 @@ public class DbUtils
 
 			// Special stuff for DB2... since it's not a static value
 			// for DB2 Linux it looks like: 'DB2/LINUXX8664'
-			if (DB_PROD_NAME_DB2_UX.equals(name))
+			if (DB_PROD_NAME_DB2_LUW.equals(name))
 			{
 				if (checkProductName.toLowerCase().startsWith(name.toLowerCase()))
 					return true;
@@ -118,6 +119,28 @@ public class DbUtils
 		}
 	}
 
+	/**
+	 * Try figure out if the DBMS support schema
+	 * 
+	 * @param conn   Connection (can not be null)
+	 */
+	public static boolean isSchemaSupported(Connection conn)
+	throws SQLException
+	{
+		DatabaseMetaData dbmd = conn.getMetaData();
+
+		String schemaTerm       = "";
+		int    maxSchemaNameLen = 0;
+		
+		try { schemaTerm       = dbmd.getSchemaTerm();          } catch(SQLException ex) { _logger.debug("Problems executing: conn.getMetaData().getSchemaTerm(): Caught: "+ex); }
+		try { maxSchemaNameLen = dbmd.getMaxSchemaNameLength(); } catch(SQLException ex) { _logger.debug("Problems executing: conn.getMetaData().getMaxSchemaNameLength() Caught: "+ex); }
+
+		if (maxSchemaNameLen <= 0 && StringUtil.isNullOrBlank(schemaTerm))
+			return false;
+
+		return true;
+	}
+	
 	/**
 	 * Calls getAutoCommit(), but catches errors<br>
 	 * If errors true will be returned, since that is the normal default for JDBC
@@ -540,8 +563,8 @@ public class DbUtils
 		if (StringUtil.isNullOrBlank(dbProduct))
 			dbProduct = getDatabaseProductName(conn);
 
-		if      (isProductName(dbProduct, DB_PROD_NAME_ORACLE)) return isInTransactionOracle(conn);
-		else if (isProductName(dbProduct, DB_PROD_NAME_DB2_UX)) return isInTransactionDb2(conn);
+		if      (isProductName(dbProduct, DB_PROD_NAME_ORACLE )) return isInTransactionOracle(conn);
+		else if (isProductName(dbProduct, DB_PROD_NAME_DB2_LUW)) return isInTransactionDb2(conn);
 
 		return false;
 	}

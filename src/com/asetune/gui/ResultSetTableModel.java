@@ -1467,6 +1467,11 @@ public class ResultSetTableModel
 	//////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////
 
+	public String getGuessedDbmsDatatype(int column)
+	{
+		return _rsmdColumnTypeNameStr.get(column);
+	}
+
 	public int getSqlType(int column)
 	{
 		return _rsmdColumnType.get(column).intValue();
@@ -2017,6 +2022,29 @@ public class ResultSetTableModel
 			return null;
 		}
 	}
+	public Timestamp getValueAsTimestamp(int mrow, int mcol)
+	{
+		Object o = getValueAsObject(mrow, mcol);
+
+		if (o == null)
+			return null;
+		
+		if (o instanceof Timestamp)
+			return ((Timestamp)o);
+
+		try
+		{
+			SimpleDateFormat sdf = new SimpleDateFormat();
+			java.util.Date date = sdf.parse(o.toString());
+			return new Timestamp(date.getTime());
+		}
+		catch(ParseException e)
+		{
+			String colName = getColumnName(mcol);
+			_logger.warn("Problem reading Timestamp value for mrow="+mrow+", mcol="+mcol+", column='"+colName+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
 
 	public BigDecimal getValueAsBigDecimal(int mrow, String colName)
 	{
@@ -2087,6 +2115,22 @@ public class ResultSetTableModel
 		}
 		return o;
 	}
+	public Object getValueAsObject(int mrow, int mcol)
+	{
+		TableModel tm = this;
+
+		Object o = tm.getValueAt(mrow, mcol);
+		if (tm instanceof ResultSetTableModel)
+		{
+			if (o != null && o instanceof String)
+			{
+				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(o))
+					return null;
+			}
+		}
+		return o;
+	}
+
 	//------------------------------------------------------------
 	//-- END: getValueAsXXXXX using column name
 	//------------------------------------------------------------

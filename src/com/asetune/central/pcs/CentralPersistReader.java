@@ -350,7 +350,7 @@ public class CentralPersistReader
 	 * 
 	 * @return true if this looks like a offline db, otherwise false
 	 */
-	public static boolean isDbxCentralDb(Connection conn)
+	public static boolean isDbxCentralDb(DbxConnection conn)
 	{
 		// First check if we are connected
 		if (conn == null) 
@@ -368,7 +368,7 @@ public class CentralPersistReader
 		// Go and check for Tables
 		try
 		{
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_VERSION_INFO, null, false);
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_VERSION_INFO, null, false);
 
 			// Obtain a DatabaseMetaData object from our current connection        
 			DatabaseMetaData dbmd = conn.getMetaData();
@@ -406,7 +406,7 @@ public class CentralPersistReader
 			}
 			else // for ALL SCHEMAS
 			{
-				String onlyTabName = CentralPersistWriterBase.getTableName(null, Table.ALARM_ACTIVE, null, false);
+				String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.ALARM_ACTIVE, null, false);
 
 				// Obtain a DatabaseMetaData object from our current connection
 				DatabaseMetaData dbmd = conn.getMetaData();
@@ -443,34 +443,39 @@ public class CentralPersistReader
 	private void getAlarmActive(DbxConnection conn, List<DbxAlarmActive> list, String schema)
 	throws SQLException
 	{
-		String q = conn.getQuotedIdentifierChar();
-		String tabName = CentralPersistWriterBase.getTableName(schema, Table.ALARM_ACTIVE, null, true);
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.ALARM_ACTIVE, null, true);
 
 		String sql = "select "
-					+ "  '"+schema+"' as " + q + "srvName" + q
-					+ " ," + q + "alarmClass"              + q
-					+ " ," + q + "serviceType"             + q
-					+ " ," + q + "serviceName"             + q
-					+ " ," + q + "serviceInfo"             + q
-					+ " ," + q + "extraInfo"               + q
-					+ " ," + q + "category"                + q
-					+ " ," + q + "severity"                + q
-					+ " ," + q + "state"                   + q
-					+ " ," + q + "repeatCnt"               + q
-					+ " ," + q + "duration"                + q
-					+ " ," + q + "createTime"              + q
-					+ " ," + q + "cancelTime"              + q
-					+ " ," + q + "timeToLive"              + q
-					+ " ," + q + "threshold"               + q
-					+ " ," + q + "data"                    + q
-					+ " ," + q + "lastData"                + q
-					+ " ," + q + "description"             + q
-					+ " ," + q + "lastDescription"         + q
-					+ " ," + q + "extendedDescription"     + q
-					+ " ," + q + "lastExtendedDescription" + q
+					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ " ," + lq + "alarmClass"              + rq
+					+ " ," + lq + "serviceType"             + rq
+					+ " ," + lq + "serviceName"             + rq
+					+ " ," + lq + "serviceInfo"             + rq
+					+ " ," + lq + "extraInfo"               + rq
+					+ " ," + lq + "category"                + rq
+					+ " ," + lq + "severity"                + rq
+					+ " ," + lq + "state"                   + rq
+					+ " ," + lq + "repeatCnt"               + rq
+					+ " ," + lq + "duration"                + rq
+					+ " ," + lq + "createTime"              + rq
+					+ " ," + lq + "cancelTime"              + rq
+					+ " ," + lq + "timeToLive"              + rq
+					+ " ," + lq + "threshold"               + rq
+					+ " ," + lq + "data"                    + rq
+					+ " ," + lq + "lastData"                + rq
+					+ " ," + lq + "description"             + rq
+					+ " ," + lq + "lastDescription"         + rq
+					+ " ," + lq + "extendedDescription"     + rq
+					+ " ," + lq + "lastExtendedDescription" + rq
 				+" from " + tabName
-				+" order by " + q+"createTime"+q + ", " +q+"cancelTime"+q;
+				+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
 
+		// Change '[' and ']' into DBMS Vendor Specific Identity Quote Chars
+		sql = conn.quotifySqlString(sql);
+		
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
@@ -526,7 +531,7 @@ public class CentralPersistReader
 			}
 			else // for ALL SCHEMAS
 			{
-				String onlyTabName = CentralPersistWriterBase.getTableName(null, Table.ALARM_HISTORY, null, false);
+				String onlyTabName = CentralPersistWriterBase.getTableName(conn, null, Table.ALARM_HISTORY, null, false);
 
 				// Obtain a DatabaseMetaData object from our current connection
 				DatabaseMetaData dbmd = conn.getMetaData();
@@ -562,19 +567,21 @@ public class CentralPersistReader
 	private void getAlarmHistory(DbxConnection conn, List<DbxAlarmHistory> list, String schema, String age, String type, String category)
 	throws SQLException
 	{
-		String q = conn.getQuotedIdentifierChar();
-		String tabName = CentralPersistWriterBase.getTableName(schema, Table.ALARM_HISTORY, null, true);
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String tabName = CentralPersistWriterBase.getTableName(conn, schema, Table.ALARM_HISTORY, null, true);
 
 		// Build a where string
 		String whereStr = " where 1 = 1 \n";
 
 		// action = ${type}
 		if (StringUtil.hasValue(type))
-			whereStr += "   and " + q + "action" + q + " = '" + type.trim() + "' \n";
+			whereStr += "   and " + lq + "action" + rq + " = '" + type.trim() + "' \n";
 		
 		// category = ${category}
 		if (StringUtil.hasValue(category))
-			whereStr += "   and " + q + "category" + q + " = '" + category.trim() + "' \n";
+			whereStr += "   and " + lq + "category" + rq + " = '" + category.trim() + "' \n";
 		
 		// If we only want the last X number of records
 		int onlyLastXNumOfRecords = 0;
@@ -615,7 +622,7 @@ public class CentralPersistReader
 					int intVal = Integer.parseInt(age);
 					Timestamp ts = new Timestamp( System.currentTimeMillis() - (intVal * multiPlayer * 1000L)); // NOTE: the long/L after 1000 otherwise we will have int overflow 
 					
-					whereStr += "   and " + q + "eventTime" + q + " >= '" + ts.toString() + "' \n";
+					whereStr += "   and " + lq + "eventTime" + rq + " >= '" + ts.toString() + "' \n";
 				}
 			}
 			catch (NumberFormatException nfe)
@@ -623,41 +630,41 @@ public class CentralPersistReader
 				if ( ! "all".equals(age))
 				{
 					// lets hope the "age" is a valid date/timestamp
-					whereStr += "   and " + q + "eventTime" + q + " >= '" + age + "' \n";
+					whereStr += "   and " + lq + "eventTime" + rq + " >= '" + age + "' \n";
 				}
 			}
 		}
 		
 		String sql = "select "
-					+ "  '"+schema+"' as " + q + "srvName" + q
-					+ " ," + q + "SessionStartTime"        + q
-					+ " ," + q + "SessionSampleTime"       + q
-					+ " ," + q + "eventTime"               + q
-					+ " ," + q + "action"                  + q
-					+ " ," + q + "alarmClass"              + q
-					+ " ," + q + "serviceType"             + q
-					+ " ," + q + "serviceName"             + q
-					+ " ," + q + "serviceInfo"             + q
-					+ " ," + q + "extraInfo"               + q
-					+ " ," + q + "category"                + q
-					+ " ," + q + "severity"                + q
-					+ " ," + q + "state"                   + q
-					+ " ," + q + "repeatCnt"               + q
-					+ " ," + q + "duration"                + q
-					+ " ," + q + "createTime"              + q
-					+ " ," + q + "cancelTime"              + q
-					+ " ," + q + "timeToLive"              + q
-					+ " ," + q + "threshold"               + q
-					+ " ," + q + "data"                    + q
-					+ " ," + q + "lastData"                + q
-					+ " ," + q + "description"             + q
-					+ " ," + q + "lastDescription"         + q
-					+ " ," + q + "extendedDescription"     + q
-					+ " ," + q + "lastExtendedDescription" + q
+					+ "  '"+schema+"' as " + lq + "srvName" + rq
+					+ " ," + lq + "SessionStartTime"        + rq
+					+ " ," + lq + "SessionSampleTime"       + rq
+					+ " ," + lq + "eventTime"               + rq
+					+ " ," + lq + "action"                  + rq
+					+ " ," + lq + "alarmClass"              + rq
+					+ " ," + lq + "serviceType"             + rq
+					+ " ," + lq + "serviceName"             + rq
+					+ " ," + lq + "serviceInfo"             + rq
+					+ " ," + lq + "extraInfo"               + rq
+					+ " ," + lq + "category"                + rq
+					+ " ," + lq + "severity"                + rq
+					+ " ," + lq + "state"                   + rq
+					+ " ," + lq + "repeatCnt"               + rq
+					+ " ," + lq + "duration"                + rq
+					+ " ," + lq + "createTime"              + rq
+					+ " ," + lq + "cancelTime"              + rq
+					+ " ," + lq + "timeToLive"              + rq
+					+ " ," + lq + "threshold"               + rq
+					+ " ," + lq + "data"                    + rq
+					+ " ," + lq + "lastData"                + rq
+					+ " ," + lq + "description"             + rq
+					+ " ," + lq + "lastDescription"         + rq
+					+ " ," + lq + "extendedDescription"     + rq
+					+ " ," + lq + "lastExtendedDescription" + rq
 				+" from " + tabName
 				+whereStr
-			//	+" order by " + q+"createTime"+q + ", " +q+"cancelTime"+q;
-				+" order by " + q+"SessionStartTime"+q + ", " +q+"SessionSampleTime"+q + ", " +q+"eventTime"+q;
+			//	+" order by " + lq+"createTime"+rq + ", " +lq+"cancelTime"+rq;
+				+" order by " + lq+"SessionStartTime"+rq + ", " +lq+"SessionSampleTime"+rq + ", " +lq+"eventTime"+rq;
 
 		// autoclose: stmnt, rs
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -719,26 +726,28 @@ public class CentralPersistReader
 		if (conn == null)
 			throw new SQLException("Connection must be valid, conn="+conn);
 
-		String q = conn.getQuotedIdentifierChar();
-		String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+		String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
 
 		String sql = "select "
-					+ "  " + q + "SessionStartTime"        + q
-					+ " ," + q + "Status"                  + q
-					+ " ," + q + "ServerName"              + q
-					+ " ," + q + "OnHostname"              + q
-					+ " ," + q + "ProductString"           + q
-					+ " ," + q + "VersionString"           + q
-					+ " ," + q + "BuildString"             + q
-					+ " ," + q + "CollectorHostname"       + q
-					+ " ," + q + "CollectorSampleInterval" + q
-					+ " ," + q + "CollectorCurrentUrl"     + q
-					+ " ," + q + "CollectorInfoFile"       + q
-					+ " ," + q + "NumOfSamples"            + q
-					+ " ," + q + "LastSampleTime"          + q
+					+ "  " + lq + "SessionStartTime"        + rq
+					+ " ," + lq + "Status"                  + rq
+					+ " ," + lq + "ServerName"              + rq
+					+ " ," + lq + "OnHostname"              + rq
+					+ " ," + lq + "ProductString"           + rq
+					+ " ," + lq + "VersionString"           + rq
+					+ " ," + lq + "BuildString"             + rq
+					+ " ," + lq + "CollectorHostname"       + rq
+					+ " ," + lq + "CollectorSampleInterval" + rq
+					+ " ," + lq + "CollectorCurrentUrl"     + rq
+					+ " ," + lq + "CollectorInfoFile"       + rq
+					+ " ," + lq + "NumOfSamples"            + rq
+					+ " ," + lq + "LastSampleTime"          + rq
 				+" from " + tabName
-				+" where " + q + "ServerName"       + q + " = '" + serverName + "'"
-				+"   and " + q + "SessionStartTime" + q + " = (select max("+q+"SessionStartTime"+q+") from "+tabName+" where "+q+"ServerName"+q+" = '"+serverName+"') "
+				+" where " + lq + "ServerName"       + rq + " = '" + serverName + "'"
+				+"   and " + lq + "SessionStartTime" + rq + " = (select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+serverName+"') "
 				+"";
 
 		// Get server order/description file
@@ -824,34 +833,36 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
-			String orderByStr = " order by " + q + "ServerName" + q + ", " + q + "SessionStartTime" + q;
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
+
+			String orderByStr = " order by " + lq + "ServerName" + rq + ", " + lq + "SessionStartTime" + rq;
 			if (orderByList != null && orderByList.length > 0)
 			{
-				StringUtil.toCommaStrQuoted(q, orderByList);
-				orderByStr = " order by " + StringUtil.toCommaStrQuoted(q, orderByList);
+				StringUtil.toCommaStrQuoted(lq, rq, orderByList);
+				orderByStr = " order by " + StringUtil.toCommaStrQuoted(lq, rq, orderByList);
 			}
 			
 			String whereStr = "";
 			if (status >= 0)
-				whereStr = " where " + q + "Status" + q + " = " + status;
+				whereStr = " where " + lq + "Status" + rq + " = " + status;
 			
 			String sql = "select "
-						+ "  " + q + "SessionStartTime"        + q
-						+ " ," + q + "Status"                  + q
-						+ " ," + q + "ServerName"              + q
-						+ " ," + q + "OnHostname"              + q
-						+ " ," + q + "ProductString"           + q
-						+ " ," + q + "VersionString"           + q
-						+ " ," + q + "BuildString"             + q
-						+ " ," + q + "CollectorHostname"       + q
-						+ " ," + q + "CollectorSampleInterval" + q
-						+ " ," + q + "CollectorCurrentUrl"     + q
-						+ " ," + q + "CollectorInfoFile"       + q
-						+ " ," + q + "NumOfSamples"            + q
-						+ " ," + q + "LastSampleTime"          + q
+						+ "  " + lq + "SessionStartTime"        + rq
+						+ " ," + lq + "Status"                  + rq
+						+ " ," + lq + "ServerName"              + rq
+						+ " ," + lq + "OnHostname"              + rq
+						+ " ," + lq + "ProductString"           + rq
+						+ " ," + lq + "VersionString"           + rq
+						+ " ," + lq + "BuildString"             + rq
+						+ " ," + lq + "CollectorHostname"       + rq
+						+ " ," + lq + "CollectorSampleInterval" + rq
+						+ " ," + lq + "CollectorCurrentUrl"     + rq
+						+ " ," + lq + "CollectorInfoFile"       + rq
+						+ " ," + lq + "NumOfSamples"            + rq
+						+ " ," + lq + "LastSampleTime"          + rq
 					+" from " + tabName
 					+ whereStr
 					+ orderByStr;
@@ -935,19 +946,20 @@ public class CentralPersistReader
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
 			String sql = "";
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
 
 			String sessionStartTime = null;
-			sql = "select max("+q+"SessionStartTime"+q+") from "+tabName+" where "+q+"ServerName"+q+" = '"+sessionName+"'";
+			sql = "select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+sessionName+"'";
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 			{
 				while (rs.next())
 					sessionStartTime = rs.getString(1);
 			}
 			
-			tabName = CentralPersistWriterBase.getTableName(sessionName, Table.GRAPH_PROPERTIES, null, true);
-			sql = "select "+q+"TableName"+q+" from "+tabName+" where "+q+"SessionStartTime"+q+" = '"+sessionStartTime+"'";
+			tabName = CentralPersistWriterBase.getTableName(conn, sessionName, Table.GRAPH_PROPERTIES, null, true);
+			sql = "select "+lq+"TableName"+rq+" from "+tabName+" where "+lq+"SessionStartTime"+rq+" = '"+sessionStartTime+"'";
 			List<String> list = new ArrayList<>();
 
 			// autoclose: stmnt, rs
@@ -977,8 +989,10 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_GRAPH_PROFILES, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+			
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, true);
 
 			// Table: DbxCentralGraphProfiles
 			//    PK: ProductString, UserName, ProfileName
@@ -990,32 +1004,32 @@ public class CentralPersistReader
 			String sqlExists = 
 				 " select 1"
 				+" from " + tabName
-				+" where " + q + "ProductString" + q + " = '" + dbxProduct     + "'"
-				+"   and " + q + "UserName"      + q + " = '" + dbxUser        + "'"
-				+"   and " + q + "ProfileName"   + q + " = '" + dbxProfileName + "'"
+				+" where " + lq + "ProductString" + rq + " = '" + dbxProduct     + "'"
+				+"   and " + lq + "UserName"      + rq + " = '" + dbxUser        + "'"
+				+"   and " + lq + "ProfileName"   + rq + " = '" + dbxProfileName + "'"
 				;
 
 			String sqlDelete = 
 				 " delete from " + tabName
-				+" where " + q + "ProductString" + q + " = '" + dbxProduct     + "'"
-				+"   and " + q + "UserName"      + q + " = '" + dbxUser        + "'"
-				+"   and " + q + "ProfileName"   + q + " = '" + dbxProfileName + "'"
+				+" where " + lq + "ProductString" + rq + " = '" + dbxProduct     + "'"
+				+"   and " + lq + "UserName"      + rq + " = '" + dbxUser        + "'"
+				+"   and " + lq + "ProfileName"   + rq + " = '" + dbxProfileName + "'"
 				;
 
 			String sqlUpdate = 
 				 " update " + tabName
-				+" set " + q + "ProfileDescription" + q + " = ?"
-				+"    ," + q + "ProfileValue"       + q + " = ?"
-				+"    ," + q + "ProfileUrlOptions"  + q + " = ?"
-				+" where " + q + "ProductString"    + q + " = '" + dbxProduct     + "'"
-				+"   and " + q + "UserName"         + q + " = '" + dbxUser        + "'"
-				+"   and " + q + "ProfileName"      + q + " = '" + dbxProfileName + "'"
+				+" set " + lq + "ProfileDescription" + rq + " = ?"
+				+"    ," + lq + "ProfileValue"       + rq + " = ?"
+				+"    ," + lq + "ProfileUrlOptions"  + rq + " = ?"
+				+" where " + lq + "ProductString"    + rq + " = '" + dbxProduct     + "'"
+				+"   and " + lq + "UserName"         + rq + " = '" + dbxUser        + "'"
+				+"   and " + lq + "ProfileName"      + rq + " = '" + dbxProfileName + "'"
 				;
 
 			String[] insCols = new String[]{"ProductString", "UserName", "ProfileName", "ProfileDescription", "ProfileValue", "ProfileUrlOptions"};
 //			String[] insVals = new String[]{profile.getProductString(), profile.getUserName(), profile.getProfileName(), profile.getProfileDescription(), profile.getProfileValue(), profile.getProfileUrlOptions()};
 			String sqlInsert = 
-				 " insert into " + tabName + " (" + StringUtil.toCommaStrQuoted(q, insCols) + ")"
+				 " insert into " + tabName + " (" + StringUtil.toCommaStrQuoted(lq, rq, insCols) + ")"
 //				+" values(" + StringUtil.toCommaStrQuoted(q, insVals) + ")"
 				+" values(?, ?, ?, ?, ?, ?)"
 				;
@@ -1115,27 +1129,29 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_GRAPH_PROFILES, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, true);
 
 			String sql = "select "
-					+ "  " + q + "ProductString"      + q
-					+ " ," + q + "UserName"           + q
-					+ " ," + q + "ProfileName"        + q
-					+ " ," + q + "ProfileDescription" + q
-					+ " ," + q + "ProfileValue"       + q
-					+ " ," + q + "ProfileUrlOptions"  + q
+					+ "  " + lq + "ProductString"      + rq
+					+ " ," + lq + "UserName"           + rq
+					+ " ," + lq + "ProfileName"        + rq
+					+ " ," + lq + "ProfileDescription" + rq
+					+ " ," + lq + "ProfileValue"       + rq
+					+ " ," + lq + "ProfileUrlOptions"  + rq
 				+" from " + tabName
 				+" where 1 = 1"
 				;
 
 			if (StringUtil.hasValue(dbxTypeName))
-				sql += "   and " + q + "ProductString" + q + " = '" + dbxTypeName + "'";
+				sql += "   and " + lq + "ProductString" + rq + " = '" + dbxTypeName + "'";
 
 			if (StringUtil.hasValue(user))
-				sql += "   and " + q + "UserName" + q + " = '" + user + "'";
+				sql += "   and " + lq + "UserName" + rq + " = '" + user + "'";
 			
-			sql += " order by " + q + "ProfileName" + q;
+			sql += " order by " + lq + "ProfileName" + rq;
 			
 			List<DbxCentralProfile> list = new ArrayList<>();
 
@@ -1178,14 +1194,14 @@ public class CentralPersistReader
 	{
 		String tabName;
 		String sql;
-		String q = conn.getQuotedIdentifierChar();
+//		String q = conn.getQuotedIdentifierChar();
 		
 		// get ALL available graphs names avalilable for the different types of DbxTune collectors
 		// 1 - Get all DbxTune Collectors
 		// 2 - for each server and collector, get GraphNames... save only the server/dbxTune with the most graphs
-		tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
-		sql = "select distinct #ServerName#, #ProductString# from " + tabName + " order by 2, 1";
-		sql = sql.replace("#", q);
+		tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
+		sql = "select distinct [ServerName], [ProductString] from " + tabName + " order by 2, 1";
+		sql = conn.quotifySqlString(sql);
 		Map<String, String> dbxSrvProductMap = new LinkedHashMap<>();
 		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
@@ -1198,12 +1214,12 @@ public class CentralPersistReader
 		for (String srvName : dbxSrvProductMap.keySet())
 		{
 			String dbxProduct = dbxSrvProductMap.get(srvName);
-			tabName = CentralPersistWriterBase.getTableName(srvName, Table.GRAPH_PROPERTIES, null, true);
+			tabName = CentralPersistWriterBase.getTableName(conn, srvName, Table.GRAPH_PROPERTIES, null, true);
 			String whereVisibleAtStart = "";
 			if (onlySystemSelected)
-				whereVisibleAtStart = " and #visibleAtStart# = 1 ";
-			sql = "select #TableName# from " + tabName + " where #SessionStartTime# = (select max(#SessionStartTime#) from " + tabName + ") " + whereVisibleAtStart + " order by #initialOrder#";
-			sql = sql.replace("#", q);
+				whereVisibleAtStart = " and [visibleAtStart] = 1 ";
+			sql = "select [TableName] from " + tabName + " where [SessionStartTime] = (select max([SessionStartTime]) from " + tabName + ") " + whereVisibleAtStart + " order by [initialOrder]";
+			sql = conn.quotifySqlString(sql);
 					
 			List<String> graphNameList = new ArrayList<>();
 			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -1320,16 +1336,18 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_GRAPH_PROFILES, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
-			String sql = "select " + q + "ProfileValue" + q
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_GRAPH_PROFILES, null, true);
+
+			String sql = "select " + lq + "ProfileValue" + rq
 					+" from " + tabName
-					+" where " + q + "ProfileName" + q + " = '" + name + "'"
-					+"   and " + q + "UserName"    + q + " = '" + user + "'"
+					+" where " + lq + "ProfileName" + rq + " = '" + name + "'"
+					+"   and " + lq + "UserName"    + rq + " = '" + user + "'"
 					;
 			if (StringUtil.hasValue(dbxTypeName))
-				sql += "   and " + q + "ProductString" + q + " = '" + dbxTypeName + "'";
+				sql += "   and " + lq + "ProductString" + rq + " = '" + dbxTypeName + "'";
 			
 			String result = "";
 
@@ -1357,13 +1375,15 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
-			String sql = "select " + q + "ProductString" + q
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
+
+			String sql = "select " + lq + "ProductString" + rq
 					+" from " + tabName
-					+" where " + q + "ServerName"       + q + " = '" + name + "'"
-					+"   and " + q + "SessionStartTime" + q + " = (select max("+q+"SessionStartTime"+q+") from "+tabName+" where "+q+"ServerName"+q+" = '"+name+"')"
+					+" where " + lq + "ServerName"       + rq + " = '" + name + "'"
+					+"   and " + lq + "SessionStartTime" + rq + " = (select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+name+"')"
 					;
 
 			String result = "";
@@ -1399,30 +1419,32 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(sessionName, Table.GRAPH_PROPERTIES, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+			String tabName = CentralPersistWriterBase.getTableName(conn, sessionName, Table.GRAPH_PROPERTIES, null, true);
 
 			// Build a where clause
-			String whereSessionStartTime = " (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")";
+			String whereSessionStartTime = " (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + ")";
 			if (StringUtil.hasValue(sessionStartTime))
 				whereSessionStartTime = "'" + sessionStartTime + "'";
 			
 			String sql = "select "
-						+ "  " + q + "SessionStartTime" + q
-						+ " ," + q + "CmName"           + q
-						+ " ," + q + "GraphName"        + q
-						+ " ," + q + "TableName"        + q
-						+ " ," + q + "GraphLabel"       + q
-						+ " ," + q + "GraphCategory"    + q
-						+ " ," + q + "isPercentGraph"   + q
-						+ " ," + q + "visibleAtStart"   + q
-						+ " ," + q + "initialOrder"     + q
+						+ "  " + lq + "SessionStartTime" + rq
+						+ " ," + lq + "CmName"           + rq
+						+ " ," + lq + "GraphName"        + rq
+						+ " ," + lq + "TableName"        + rq
+						+ " ," + lq + "GraphLabel"       + rq
+						+ " ," + lq + "GraphCategory"    + rq
+						+ " ," + lq + "isPercentGraph"   + rq
+						+ " ," + lq + "visibleAtStart"   + rq
+						+ " ," + lq + "initialOrder"     + rq
 					+" from " + tabName
-					+" where " + q + "SessionStartTime" + q + " = " + whereSessionStartTime
-			//		+"   and " + q + "visibleAtStart"   + q + " = 1"
-			//		+"   and " + q + "CmName"    + q + " = 'CmSummary' " 
-			//		+"   and " + q + "GraphName" + q + " like 'aa%' " 
-					+" order by " + q + "initialOrder" + q
+					+" where " + lq + "SessionStartTime" + rq + " = " + whereSessionStartTime
+			//		+"   and " + lq + "visibleAtStart"   + rq + " = 1"
+			//		+"   and " + lq + "CmName"    + rq + " = 'CmSummary' " 
+			//		+"   and " + lq + "GraphName" + rq + " like 'aa%' " 
+					+" order by " + lq + "initialOrder" + rq
 					;
 
 			List<DbxGraphProperties> list = new ArrayList<>();
@@ -1699,7 +1721,9 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
 			Map<String, Map<String, List<DbxGraphDescription>>> prodSrvDescMap = new LinkedHashMap<>();
 
 //			List<DbxGraphDescription> list = new ArrayList<>();
@@ -1710,7 +1734,7 @@ public class CentralPersistReader
 			{
 				String dbxProduct = session.getProductString();
 				String srvName    = session.getServerName();
-				String tabName    = CentralPersistWriterBase.getTableName(srvName, Table.GRAPH_PROPERTIES, null, true);
+				String tabName    = CentralPersistWriterBase.getTableName(conn, srvName, Table.GRAPH_PROPERTIES, null, true);
 
 				// add DbxProduct to outer map (if not already there)
 				Map<String, List<DbxGraphDescription>> srvDescMap = prodSrvDescMap.get(dbxProduct);
@@ -1722,22 +1746,22 @@ public class CentralPersistReader
 				
 				// Build a where clause
 				Timestamp sessionStartTime = session.getSessionStartTime();
-				String whereSessionStartTime = " (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")";
+				String whereSessionStartTime = " (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + ")";
 				if (sessionStartTime != null)
 					whereSessionStartTime = "'" + sessionStartTime + "'";
 				
 				String sql = "select "
-							+ "  " + q + "CmName"           + q
-							+ " ," + q + "GraphName"        + q
-							+ " ," + q + "TableName"        + q
-							+ " ," + q + "GraphLabel"       + q
-							+ " ," + q + "GraphCategory"    + q
-							+ " ," + q + "isPercentGraph"   + q
-							+ " ," + q + "visibleAtStart"   + q
-							+ " ," + q + "initialOrder"     + q
+							+ "  " + lq + "CmName"           + rq
+							+ " ," + lq + "GraphName"        + rq
+							+ " ," + lq + "TableName"        + rq
+							+ " ," + lq + "GraphLabel"       + rq
+							+ " ," + lq + "GraphCategory"    + rq
+							+ " ," + lq + "isPercentGraph"   + rq
+							+ " ," + lq + "visibleAtStart"   + rq
+							+ " ," + lq + "initialOrder"     + rq
 						+" from " + tabName
-						+" where " + q + "SessionStartTime" + q + " = " + whereSessionStartTime
-						+" order by " + q + "initialOrder" + q
+						+" where "    + lq + "SessionStartTime" + rq + " = " + whereSessionStartTime
+						+" order by " + lq + "initialOrder" + rq
 						;
 
 				// autoclose: stmnt, rs
@@ -1930,17 +1954,19 @@ public class CentralPersistReader
 //			DbxCentralUser xxx = new DbxCentralUser(username, username, "", "admin");
 //			return xxx;
 			
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_USERS, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_USERS, null, true);
 
 			// Build SQL
 			String sql = "select "
-						+ "  " + q + "UserName" + q
-						+ " ," + q + "Password" + q
-						+ " ," + q + "Email"    + q
-						+ " ," + q + "Roles"    + q
+						+ "  " + lq + "UserName" + rq
+						+ " ," + lq + "Password" + rq
+						+ " ," + lq + "Email"    + rq
+						+ " ," + lq + "Roles"    + rq
 					+" from " + tabName
-					+" where " + q + "UserName" + q + " = '" + username + "'"
+					+" where " + lq + "UserName" + rq + " = '" + username + "'"
 					;
 
 			DbxCentralUser user = null;
@@ -1990,7 +2016,8 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
 			String sql;
 			String tabName;
@@ -2001,20 +2028,20 @@ public class CentralPersistReader
 
 
 			// Get graph properties, (Label, and isPercentGraph) for this graph
-			tabName = CentralPersistWriterBase.getTableName(sessionName, Table.GRAPH_PROPERTIES, null, true);
+			tabName = CentralPersistWriterBase.getTableName(conn, sessionName, Table.GRAPH_PROPERTIES, null, true);
 			
 			String  graphLabel     = "";
 			String  graphCategory  = "";
 			boolean isPercentGraph = false;
 
 			sql = "select "
-				+ "  " + q + "GraphLabel"       + q
-				+ " ," + q + "GraphCategory"    + q
-				+ " ," + q + "isPercentGraph"   + q
+				+ "  " + lq + "GraphLabel"       + rq
+				+ " ," + lq + "GraphCategory"    + rq
+				+ " ," + lq + "isPercentGraph"   + rq
 				+" from " + tabName
-				+" where " + q + "CmName"           + q + " = '" + cmName + "'"
-				+"   and " + q + "GraphName"        + q + " = '" + graphName + "'"
-				+"   and " + q + "SessionStartTime" + q + " = (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")"
+				+" where " + lq + "CmName"           + rq + " = '" + cmName + "'"
+				+"   and " + lq + "GraphName"        + rq + " = '" + graphName + "'"
+				+"   and " + lq + "SessionStartTime" + rq + " = (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + ")"
 				;
 
 			// autoclose: stmnt, rs
@@ -2032,10 +2059,10 @@ public class CentralPersistReader
 
 			
 			// sessionName.cmName_graphName
-			tabName = q + sessionName + q + "." + q + cmName + "_" + graphName + q;
+			tabName = lq + sessionName + rq + "." + lq + cmName + "_" + graphName + rq;
 
 			// If we only should "keep" last x records
-			// Note: This cant be done in SQL, so just keep last records
+			// Note: This can't be done in SQL, so just keep last records
 			int onlyLastXNumOfRecords = 0;
 
 			// Build a where string
@@ -2079,7 +2106,7 @@ public class CentralPersistReader
 				{
 					if ("all".equalsIgnoreCase(startTime) || "ls".equalsIgnoreCase(startTime)) // ls = Last Session
 					{
-						whereSessionSampleTime = " (select max(" + q + "SessionStartTime" + q + ") from " + tabName + ")";
+						whereSessionSampleTime = " (select max(" + lq + "SessionStartTime" + rq + ") from " + tabName + ")";
 					}
 					// Parse startTime and also add endTime
 					else
@@ -2133,7 +2160,7 @@ public class CentralPersistReader
 						if (endTimeTs == null)
 							endTimeTs = new Timestamp( startTimeTs.getTime() + 3600 * 1000);
 
-						whereSessionSampleTime = "'" + startTimeTs + "' and " + q + "SessionSampleTime" + q + " <= '" + endTimeTs + "' ";
+						whereSessionSampleTime = "'" + startTimeTs + "' and " + lq + "SessionSampleTime" + rq + " <= '" + endTimeTs + "' ";
 					}
 				}
 			}
@@ -2155,7 +2182,7 @@ public class CentralPersistReader
 				
 				sql = "select count(*) "
 						+" from " + tabName
-						+" where " + q + "SessionSampleTime" + q + " >= " + whereSessionSampleTime
+						+" where " + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
 						;
 				// autoclose: stmnt, rs
 				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
@@ -2183,8 +2210,8 @@ public class CentralPersistReader
 
 			sql = "select * "
 					+" from " + tabName
-					+" where " + q + "SessionSampleTime" + q + " >= " + whereSessionSampleTime
-					+" order by " + q + "SessionSampleTime" + q 
+					+" where "    + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
+					+" order by " + lq + "SessionSampleTime" + rq 
 					;
 
 			List<DbxGraphData> list = new ArrayList<>();
@@ -3079,10 +3106,12 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 
-			String sql = "delete from " + tabName + " where " + q + "ServerName" + q + " = '" + name + "'";
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
+
+			String sql = "delete from " + tabName + " where " + lq + "ServerName" + rq + " = '" + name + "'";
 
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())
@@ -3136,13 +3165,15 @@ public class CentralPersistReader
 		DbxConnection conn = getConnection(); // Get connection from a ConnectionPool
 		try // block with: finally at end to return the connection to the ConnectionPool
 		{
-			String q = conn.getQuotedIdentifierChar();
-			String tabName = CentralPersistWriterBase.getTableName(null, Table.CENTRAL_SESSIONS, null, true);
+			String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+			String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
+			String tabName = CentralPersistWriterBase.getTableName(conn, null, Table.CENTRAL_SESSIONS, null, true);
 
 			String sqlGet = 
-					" select max(" + q + "Status" + q + ")" + 
+					" select max(" + lq + "Status" + rq + ")" + 
 					" from " + tabName + 
-					" where " + q + "ServerName" + q + " = '" + name + "'";
+					" where " + lq + "ServerName" + rq + " = '" + name + "'";
 
 			int rowc = 0;
 			int currentStatus = 0;
@@ -3168,8 +3199,8 @@ public class CentralPersistReader
 
 			String sqlApply = 
 					" update " + tabName + 
-					" set " + q + "Status" + q + " = " + newStatus + 
-					" where " + q + "ServerName" + q + " = '" + name + "'";
+					" set "   + lq + "Status"     + rq + " = " + newStatus + 
+					" where " + lq + "ServerName" + rq + " = '" + name + "'";
 
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())

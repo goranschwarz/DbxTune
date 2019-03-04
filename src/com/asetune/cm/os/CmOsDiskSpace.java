@@ -40,6 +40,9 @@ import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.os.gui.CmOsUptimePanel;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.Category;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.hostmon.OsTable;
@@ -63,9 +66,13 @@ extends CounterModelHostMonitor
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_HOST_MONITOR;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-//	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
+	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
+	public static final boolean  IS_SYSTEM_CM                   = true;
+	public static final int      DEFAULT_POSTPONE_TIME          = 0;
+
+	@Override public int     getDefaultPostponeTime()                 { return DEFAULT_POSTPONE_TIME; }
 //	@Override public int     getDefaultQueryTimeout()                 { return DEFAULT_QUERY_TIMEOUT; }
-//	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
+	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
 	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
 
 	/**
@@ -81,7 +88,7 @@ extends CounterModelHostMonitor
 
 	public CmOsDiskSpace(ICounterController counterController, IGuiController guiController)
 	{
-		super(CM_NAME, GROUP_NAME, CM_TYPE, null, true);
+		super(CM_NAME, GROUP_NAME, CM_TYPE, null, NEGATIVE_DIFF_COUNTERS_TO_ZERO, IS_SYSTEM_CM, DEFAULT_POSTPONE_TIME);
 
 		setDisplayName(SHORT_NAME);
 		setDescription(HTML_DESC);
@@ -91,54 +98,64 @@ extends CounterModelHostMonitor
 		setCounterController(counterController);
 		setGuiController(guiController);
 		
-		setDataSource(DATA_ABS, false);
+		// Normally for HostMonitor is ABS
+		setDataSource(DATA_RATE, false);
+//		setDataSource(DATA_ABS, false);
 		
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
 	}
 
-
-	@Override 
-	public boolean discardDiffPctHighlighterOnAbsTable() 
-	{
-		// SHOW PCT values as RED even in ABS samples (because we only have ABD rows in this CM)
-		return false; 
-	}
-	
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-//	public static final String GRAPH_NAME_LOAD_AVERAGE     = "LoadAverage";
-//	public static final String GRAPH_NAME_ADJ_LOAD_AVERAGE = "AdjLoadAverage";
-//
-//	private void addTrendGraphs()
-//	{
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_LOAD_AVERAGE,
-//			"uptime: Load Average", 	                                    // Menu CheckBox text
-//			"uptime: Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//			new String[] { "loadAverage_1Min",    "loadAverage_5Min",    "loadAverage_15Min" }, 
-//			LabelType.Static,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-//
-//		// GRAPH
-//		addTrendGraph(GRAPH_NAME_ADJ_LOAD_AVERAGE,
-//			"uptime: Adjusted Load Average", 	                                    // Menu CheckBox text
-//			"uptime: Adjusted Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
-//			new String[] { "adjLoadAverage_1Min", "adjLoadAverage_5Min", "adjLoadAverage_15Min" }, 
-//			LabelType.Static,
-//			false, // is Percent Graph
-//			false, // visible at start
-//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//			-1);   // minimum height
-//	}
+	public static final String GRAPH_NAME_USED_MB      = "FsUsedMb";
+	public static final String GRAPH_NAME_USED_PCT     = "FsUsedPct";
+	public static final String GRAPH_NAME_AVAILABLE_MB = "FsAvailableMb";
+
 	private void addTrendGraphs()
 	{
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_USED_MB,
+			"df: Space Used in MB, at MountPoint", 	                                    // Menu CheckBox text
+			"df: Space Used in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			null, 
+			LabelType.Dynamic,
+			Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_USED_PCT,
+			"df: Space Used in Percent, at MountPoint", 	                                    // Menu CheckBox text
+			"df: Space Used in Percent, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			null, 
+			LabelType.Dynamic,
+			Category.DISK,
+			true,  // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_AVAILABLE_MB,
+			"df: Space Available in MB, at MountPoint", 	                                    // Menu CheckBox text
+			"df: Space Available in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			null, 
+			LabelType.Dynamic,
+			Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 	}
+//	private void addTrendGraphs()
+//	{
+//	}
 	
 	@Override
 	protected TabularCntrPanel createGui()
@@ -196,33 +213,54 @@ extends CounterModelHostMonitor
 		}
 	}
 
-//	@Override
-//	public void updateGraphData(TrendGraphDataPoint tgdp)
-//	{
-//		if (GRAPH_NAME_LOAD_AVERAGE.equals(tgdp.getName()))
-//		{
-//			Double[] arr = new Double[3];
-//
-//			// NOTE: only ABS values are present in CounterModelHostMonitor
-//			arr[0] = this.getAbsValueAvg("loadAverage_1Min");
-//			arr[1] = this.getAbsValueAvg("loadAverage_5Min");
-//			arr[2] = this.getAbsValueAvg("loadAverage_15Min");
-//
-//			tgdp.setDataPoint(this.getTimestamp(), arr);
-//		}
-//
-//		if (GRAPH_NAME_ADJ_LOAD_AVERAGE.equals(tgdp.getName()))
-//		{
-//			Double[] arr = new Double[3];
-//
-//			// NOTE: only ABS values are present in CounterModelHostMonitor
-//			arr[0] = this.getAbsValueAvg("adjLoadAverage_1Min");
-//			arr[1] = this.getAbsValueAvg("adjLoadAverage_5Min");
-//			arr[2] = this.getAbsValueAvg("adjLoadAverage_15Min");
-//
-//			tgdp.setDataPoint(this.getTimestamp(), arr);
-//		}
-//	}
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+		if (GRAPH_NAME_USED_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.getRowCount()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString       (i, "MountedOn");
+				dArray[i] = this.getAbsValueAsDouble(i, "Used-MB");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+		
+		if (GRAPH_NAME_USED_PCT.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.getRowCount()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString       (i, "MountedOn");
+				dArray[i] = this.getAbsValueAsDouble(i, "UsedPct");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+		
+		if (GRAPH_NAME_AVAILABLE_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every device
+			Double[] dArray = new Double[this.getRowCount()];
+			String[] lArray = new String[dArray.length];
+			for (int i = 0; i < dArray.length; i++)
+			{
+				lArray[i] = this.getAbsString       (i, "MountedOn");
+				dArray[i] = this.getAbsValueAsDouble(i, "Available-MB");
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+	}
 	
 
 	@Override

@@ -33,10 +33,30 @@ extends SqlCompletion
 	private static final long serialVersionUID = 1L;
 
 	private TableInfo _tableInfo = null;
-	
-	public SqlColumnCompletion(CompletionProviderAbstractSql provider, String tabAliasName, String colname, TableInfo tableInfo)
+
+	//-------------------------
+	// helper called from constructor
+	//-------------------------
+	public static String createReplacementText(CompletionProviderAbstractSql provider, String tabAliasName, String colname, TableInfo tableInfo, boolean quoteNames)
 	{
-		super(provider, provider.fixStrangeNames(colname), (tabAliasName == null ? colname : tabAliasName+"."+colname));
+		String q = provider.getDbIdentifierQuoteString();
+
+		String finalColName = quoteNames ? q+colname+q : provider.fixStrangeNames(colname);
+		
+		if (tabAliasName == null)
+			return finalColName;
+		else
+			return tabAliasName + "." + finalColName;
+	}
+
+	
+	//-------------------------
+	// CONSTRUCTOR(S)
+	//-------------------------
+	public SqlColumnCompletion(CompletionProviderAbstractSql provider, String tabAliasName, String colname, TableInfo tableInfo, boolean quoteNames)
+	{
+//		super(provider, provider.fixStrangeNames(colname), (tabAliasName == null ? colname : tabAliasName+"."+colname));
+		super(provider, provider.fixStrangeNames(colname), createReplacementText(provider, tabAliasName, colname, tableInfo, quoteNames));
 		_tableInfo = tableInfo;
 
 		TableColumnInfo ci = _tableInfo.getColumnInfo(colname);
@@ -45,12 +65,17 @@ extends SqlCompletion
 			colPos = "pos="+ci._colPos+", ";
 
 		String shortDesc = 
-			"<font color=\"blue\">"+_tableInfo.getColDdlDesc(colname)+"</font>" +
-			" -- <i><font color=\"green\">" + colPos + _tableInfo.getColDescription(colname) + "</font></i>";
+			"<font color='blue'>"+_tableInfo.getColDdlDesc(colname)+"</font>" +
+			" -- <i><font color='green'>" + colPos + _tableInfo.getColDescription(colname) + "</font></i>";
 		setShortDescription(shortDesc);
 		//setSummary(_tableInfo.toHtmlString(colname));
 	}
 
+
+	//-------------------------
+	// OVERIDE METHODS
+	//-------------------------
+	
 	@Override
 	public String getSummary()
 	{

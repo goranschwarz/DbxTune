@@ -92,8 +92,10 @@ then
 else
 	echo ""
 	echo " * Starting DbxTune CENTRAL (with nohup in background), output to ${dbxCentralBase}/log/DBX_CENTRAL.console)."
-#	nohup ${dbxCentralBase}/bin/start_dbxcentral.sh | egrep -v '(Persisting Counters using|Sent subscription data)' > ${dbxCentralBase}/log/DBX_CENTRAL.console 2>&1 &
 	nohup ${dbxCentralBase}/bin/start_dbxcentral.sh > ${dbxCentralBase}/log/DBX_CENTRAL.console 2>&1 &
+	## Stop writing to console file after 100M, so we don't use to much space... During statup, the interesting things are at the start of the file 
+#	nohup stdbuf -i0 -o0 -e0 ${dbxCentralBase}/bin/start_dbxcentral.sh 2>&1 | head -c 100M > ${dbxCentralBase}/log/DBX_CENTRAL.console &
+
 	lastBgPid=$!
 	echo "   Sleeping for ${sleepTime} before continuing with next server"
 	sleep ${sleepTime}
@@ -149,8 +151,9 @@ do
 		
 			echo ""
 			echo " * Starting monitoring of server '${srvName}' (with nohup in background, output to ${dbxCentralBase}/log/${srvName}.console)."
-#			nohup ${startCmdEval} | egrep -v 'Persisting Counters using' > ${dbxCentralBase}/log/${srvName}.console 2>&1 &
 			nohup ${startCmdEval} > ${dbxCentralBase}/log/${srvName}.console 2>&1 &
+			## Stop writing to console file after 100M, so we don't use to much space... During statup, the interesting things are at the start of the file 
+#			nohup ${startCmdEval} 2>&1 | head -c 100M > ${dbxCentralBase}/log/${srvName}.console &
 			#echo "################## startCmd: ${startCmd}"
 			#echo "############## startCmdEval: ${startCmdEval}"
 			lastBgPid=$!

@@ -114,9 +114,10 @@ extends PipeCommandAbstract
 	{
 		if (input.startsWith("tofile ") || input.equals("tofile"))
 		{
-			String params = input.substring(input.indexOf(' ') + 1).trim();
+//			String params = input.substring(input.indexOf(' ') + 1).trim();
+//			_args = StringUtil.translateCommandline(params);
 
-			_args = StringUtil.translateCommandline(params);
+			_args = StringUtil.translateCommandline(input, true);
 
 			if (_args.length >= 1)
 			{

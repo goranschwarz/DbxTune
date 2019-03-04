@@ -77,13 +77,12 @@ extends DailySummaryReportAbstract
 	{
 		DbxConnection conn = getConnection();
 		String sql;
-		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
-		sql = "select #createTime#, #alarmClass#, #serviceInfo#, #extraInfo#, #severity#, #state#, #description# \n" +
-		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_ACTIVE, null, false) + "#\n" +
-		      "order by #createTime#";
-		sql = sql.replace("#", q);
+		sql = "select [createTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
+		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "] \n" +
+		      "order by [createTime]";
+		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
 			_alarmsActiveShortRstm = new ResultSetTableModel(rs, "Active Alarms Short");
@@ -104,32 +103,31 @@ extends DailySummaryReportAbstract
 	{
 		DbxConnection conn = getConnection();
 		String sql;
-		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
 		sql = "select \n" +
-		      "     #createTime#,             \n" +
-		      "     #alarmClass#,             \n" +
-		      "     #serviceType#,            \n" +
-		      "     #serviceName#,            \n" +
-		      "     #serviceInfo#,            \n" +
-		      "     #extraInfo#,              \n" +
-		      "     #category#,               \n" +
-		      "     #severity#,               \n" +
-		      "     #state#,                  \n" +
-		      "     #repeatCnt#,              \n" +
-		      "     #cancelTime#,             \n" +
-		      "     #timeToLive#,             \n" +
-		      "     #threshold#,              \n" +
-		      "     #data#,                   \n" +
-		      "     #lastData#,               \n" +
-		      "     #description#,            \n" +
-		      "     #lastDescription#,        \n" +
-		      "     #extendedDescription#,    \n" +
-		      "     #lastExtendedDescription# \n" +
-		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_ACTIVE, null, false) + "#\n" +
-		      "order by #createTime#";
-		sql = sql.replace("#", q);
+		      "     [createTime],             \n" +
+		      "     [alarmClass],             \n" +
+		      "     [serviceType],            \n" +
+		      "     [serviceName],            \n" +
+		      "     [serviceInfo],            \n" +
+		      "     [extraInfo],              \n" +
+		      "     [category],               \n" +
+		      "     [severity],               \n" +
+		      "     [state],                  \n" +
+		      "     [repeatCnt],              \n" +
+		      "     [cancelTime],             \n" +
+		      "     [timeToLive],             \n" +
+		      "     [threshold],              \n" +
+		      "     [data],                   \n" +
+		      "     [lastData],               \n" +
+		      "     [description],            \n" +
+		      "     [lastDescription],        \n" +
+		      "     [extendedDescription],    \n" +
+		      "     [lastExtendedDescription] \n" +
+		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "]\n" +
+		      "order by [createTime]";
+		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
 			_alarmsActiveFullRstm = new ResultSetTableModel(rs, "Active Alarms Full");
@@ -150,14 +148,13 @@ extends DailySummaryReportAbstract
 	{
 		DbxConnection conn = getConnection();
 		String sql;
-		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
-		sql = "select #action#, #duration#, #eventTime#, #alarmClass#, #serviceInfo#, #extraInfo#, #severity#, #state#, #description# \n" +
-		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_HISTORY, null, false) + "#\n" +
-		      "where #action# not in('END-OF-SCAN', 'RE-RAISE') \n" +
-		      "order by #eventTime#";
-		sql = sql.replace("#", q);
+		sql = "select [action], [duration], [eventTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
+		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
+		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
+		      "order by [eventTime]";
+		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
 			_alarmsHistoryShortRstm = new ResultSetTableModel(rs, "Alarm History Short");
@@ -178,36 +175,35 @@ extends DailySummaryReportAbstract
 	{
 		DbxConnection conn = getConnection();
 		String sql;
-		String q = conn.getQuotedIdentifierChar();
 
 		// Get Alarms
 		sql = "select \n" +
-		      "     #action#,                 \n" +
-		      "     #duration#,               \n" +
-		      "     #eventTime#,              \n" +
-		      "     #alarmClass#,             \n" +
-		      "     #serviceType#,            \n" +
-		      "     #serviceName#,            \n" +
-		      "     #serviceInfo#,            \n" +
-		      "     #extraInfo#,              \n" +
-		      "     #category#,               \n" +
-		      "     #severity#,               \n" +
-		      "     #state#,                  \n" +
-		      "     #repeatCnt#,              \n" +
-		      "     #createTime#,             \n" +
-		      "     #cancelTime#,             \n" +
-		      "     #timeToLive#,             \n" +
-		      "     #threshold#,              \n" +
-		      "     #data#,                   \n" +
-		      "     #lastData#,               \n" +
-		      "     #description#,            \n" +
-		      "     #lastDescription#,        \n" +
-		      "     #extendedDescription#,    \n" +
-		      "     #lastExtendedDescription# \n" +
-		      "from #"+PersistWriterBase.getTableName(PersistWriterBase.ALARM_HISTORY, null, false) + "#\n" +
-		      "where #action# not in('END-OF-SCAN', 'RE-RAISE') \n" +
-		      "order by #eventTime#";
-		sql = sql.replace("#", q);
+		      "     [action],                 \n" +
+		      "     [duration],               \n" +
+		      "     [eventTime],              \n" +
+		      "     [alarmClass],             \n" +
+		      "     [serviceType],            \n" +
+		      "     [serviceName],            \n" +
+		      "     [serviceInfo],            \n" +
+		      "     [extraInfo],              \n" +
+		      "     [category],               \n" +
+		      "     [severity],               \n" +
+		      "     [state],                  \n" +
+		      "     [repeatCnt],              \n" +
+		      "     [createTime],             \n" +
+		      "     [cancelTime],             \n" +
+		      "     [timeToLive],             \n" +
+		      "     [threshold],              \n" +
+		      "     [data],                   \n" +
+		      "     [lastData],               \n" +
+		      "     [description],            \n" +
+		      "     [lastDescription],        \n" +
+		      "     [extendedDescription],    \n" +
+		      "     [lastExtendedDescription] \n" +
+		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
+		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
+		      "order by [eventTime]";
+		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
 		{
 			_alarmsHistoryFullRstm = new ResultSetTableModel(rs, "Alarm History Full");

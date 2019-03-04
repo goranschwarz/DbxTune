@@ -106,6 +106,16 @@ extends Task
 
 	private Configuration _savedFileInfo = null;
 
+	public static long getH2RecodingFileSizeMb()
+	{
+		DataDirectoryCleaner ddc = new DataDirectoryCleaner();
+		
+		Map<String, List<FileInfo>> srvMap = ddc.getFilesByServerName();
+		long       sumHistoryDbFileUsageMb = ddc.getSumSizeMb(srvMap, SizeType.FILE_INFO);
+
+		return sumHistoryDbFileUsageMb;
+	}
+
 	private List<String> getFilesH2Dbs()
 	{
 		String directory = DATA_DIR;
@@ -294,7 +304,7 @@ extends Task
 			
 			_savedFileSize = -1;
 
-			if (_file.exists())
+			if (_file.exists() && _savedFileInfo != null)
 			{
 				String key = _file.getName();
 				long savedSize = _savedFileInfo.getLongProperty(key, -1);
@@ -421,8 +431,8 @@ extends Task
 			{
 				doCleanupDueToExceedingMaxHistorySpace    = true;
 				needSpaceInMb_forExceedingMaxHistorySpace = (sumHistoryDbFileUsageGb - maxHistorySpaceUsageInGb) * 1024;
-				_logger.info(_prefix + "Cleanup will be attempted due to 'saved historical recordings' of " + sumHistoryDbFileUsageGb + "GB exceeds the max limit of " + maxHistorySpaceUsageInGb + " GB. (specified by property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "')");
-				_logger.info(_prefix + "At least " + needSpaceInMb_forExceedingMaxHistorySpace + " MB will be deleted.");
+				_logger.info(_prefix + "Cleanup will be attempted due to 'saved historical recordings' of " + sumHistoryDbFileUsageGb + " GB exceeds the max limit of " + maxHistorySpaceUsageInGb + " GB. (specified by property '" + PROPKEY_maxHistoricalSpaceUsageInGb + "')");
+				_logger.info(_prefix + "At least " + needSpaceInMb_forExceedingMaxHistorySpace + " MB ("+(needSpaceInMb_forExceedingMaxHistorySpace/1024)+" GB) will be deleted.");
 			}
 		}
 		else
@@ -504,6 +514,8 @@ extends Task
 		}
 		else
 		{
+			needSpaceInMb = Math.max(needSpaceInMb, needSpaceInMb_forExceedingMaxHistorySpace);
+			
 			// Compose what to be deleted
 			Map<String, List<FileInfo>> removeMap = new LinkedHashMap<>();
 			long removeMapSizeMb = 0;
@@ -516,8 +528,8 @@ extends Task
 				if (removeMapSizeMb >= needSpaceInMb)
 					break;
 				
-				if (doCleanupDueToExceedingMaxHistorySpace && needSpaceInMb_forExceedingMaxHistorySpace >= removeMapSizeMb)
-					break;
+//				if (doCleanupDueToExceedingMaxHistorySpace && removeMapSizeMb >= needSpaceInMb_forExceedingMaxHistorySpace)
+//					break;
 			}
 			
 			_logger.info(_prefix + "CLEANUP will be executed, files will be removed for: "+removeMap.keySet());
@@ -588,14 +600,14 @@ extends Task
 //				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted: "+deletedList);
 				_logger.info(_prefix + "DRY-RUN: The following list of files could have been deleted:");
 				for (FileInfo fi : deletedList)
-					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+FileUtils.byteToMb(fi.getSavedSize())+" MB, "+FileUtils.byteToKb(fi.getSavedSize())+" KB]");
+					_logger.info(_prefix + "  -- DRY-RUN: delete-not-done-on: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+StringUtil.right(FileUtils.byteToMb(fi.getSavedSize())+"",6)+" MB, "+StringUtil.right(FileUtils.byteToKb(fi.getSavedSize())+"",9)+" KB]");
 			}
 			else
 			{
 //				_logger.info(_prefix + "Deleted the following list of files: "+deletedList);
 				_logger.info(_prefix + "Deleted the following list of files:");
 				for (FileInfo fi : deletedList)
-					_logger.info(_prefix + "  -- deleted-file: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+FileUtils.byteToMb(fi.getSavedSize())+" MB, "+FileUtils.byteToKb(fi.getSavedSize())+" KB]");
+					_logger.info(_prefix + "  -- deleted-file: "+StringUtil.left(fi._path.toString(), maxDelPathLength)+"     ["+FileUtils.byteToGb(fi.getSavedSize())+" GB, "+StringUtil.right(FileUtils.byteToMb(fi.getSavedSize())+"",6)+" MB, "+StringUtil.right(FileUtils.byteToKb(fi.getSavedSize())+"",9)+" KB]");
 			}
 				
 
@@ -603,6 +615,12 @@ extends Task
 			double afterFreeMb   = dataDir.getUsableSpace() / 1024.0 / 1024.0;
 			double afterPctUsed  = 100.0 - (afterFreeMb / 1024.0 / totalGb * 100.0);
 
+			// Sum H2 recording databases, size AFTER Cleanup 
+			Map<String, List<FileInfo>> afterSrvMap = getFilesByServerName();
+			long       afterSumHistoryDbFileUsageMb = getSumSizeMb(afterSrvMap, SizeType.FILE_INFO);
+			BigDecimal afterSumHistoryDbFileUsageGb = new BigDecimal( afterSumHistoryDbFileUsageMb /1024.0 ).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+
+			
 			_logger.info(_prefix + "---------------------------");
 			_logger.info(String.format(_prefix + "After cleanup. File system usage at '%s', resolved to '%s'. Free = %.0f MB (%.1f GB). %.0f MB (%.1f GB) was removed/deleted. Space Usage in Percent is now %.1f %%", 
 					dataDir.getAbsolutePath(), 
@@ -610,6 +628,7 @@ extends Task
 					afterFreeMb, afterFreeMb/1024.0,  
 					afterFreeMb - beforeFreeMb, (afterFreeMb - beforeFreeMb) / 1024.0, 
 					afterPctUsed));
+			_logger.info(_prefix + "After cleanup. Summary of Saved Historical Recordings is " + afterSumHistoryDbFileUsageMb + " MB (" + afterSumHistoryDbFileUsageGb + " GB)."); 
 			_logger.info(_prefix + "---------------------------");
 
 			// If we did NOT succeed (in freeing enough space), then write some extra info

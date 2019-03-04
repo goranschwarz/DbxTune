@@ -83,8 +83,8 @@ public interface ISqlCaptureBroker
 	throws Exception;
 
 	public List<String> getTableNames();
-	public String getTableDdlString(DatabaseMetaData dbmd, String tabName);
-	public List<String> getIndexDdlString(DatabaseMetaData dbmd, String tabName);
+	public String getTableDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
+	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName);
 
 	/**
 	 * Check if table columns are ok, or if we need to alter table, returns a list of alter statements to execute
@@ -99,7 +99,7 @@ public interface ISqlCaptureBroker
 
 	public int doSqlCapture(DbxConnection conn, PersistentCounterHandler persistentCounterHandler);
 
-	public String getInsertStatement(String tabName);
+	public String getInsertStatement(DbxConnection conn, String tabName);
 
 	/**
 	 * Initialize the Broker with the same configuartion as the PersistenceCounterHandler

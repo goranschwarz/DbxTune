@@ -68,9 +68,9 @@ extends SqlCaptureBrokerAbstract
 
 	private boolean _isNonConfiguredMonitoringAllowed = PersistentCounterHandler.DEFAULT_sqlCap_isNonConfiguredMonitoringAllowed;
 	
-	protected static final String MON_SQL_TEXT      = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false); // "MonSqlCapSqlText";
-	protected static final String MON_SQL_STATEMENT = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false); // "MonSqlCapStatements";
-	protected static final String MON_SQL_PLAN      = PersistWriterBase.getTableName(PersistWriterBase.SQL_CAPTURE_PLANS,      null, false); // "MonSqlCapPlans";
+	protected static final String MON_SQL_TEXT      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_SQLTEXT,    null, false); // "MonSqlCapSqlText";
+	protected static final String MON_SQL_STATEMENT = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_STATEMENTS, null, false); // "MonSqlCapStatements";
+	protected static final String MON_SQL_PLAN      = PersistWriterBase.getTableName(null, PersistWriterBase.SQL_CAPTURE_PLANS,      null, false); // "MonSqlCapPlans";
 
 	private static final List<String> _storegeTableNames = Arrays.asList(MON_SQL_TEXT, MON_SQL_STATEMENT, MON_SQL_PLAN);
 
@@ -238,7 +238,9 @@ extends SqlCaptureBrokerAbstract
 	@Override
 	public List<String> checkTableDdl(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
 	{
-		String qic = conn.getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+
 		List<String> colNames = new ArrayList<>();
 		List<String> list = new ArrayList<>();
 		
@@ -261,7 +263,7 @@ extends SqlCaptureBrokerAbstract
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
 			if ( ! colNames.contains("NormJavaSqlHashCode") )
-				list.add("alter table " +qic+tabName+qic+ " add  "+ fill(qic+"NormJavaSqlHashCode"+qic,40)+" "+fill(getDatatype("int", -1,-1,-1),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype("int", -1,-1,-1),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
 			return list;
 		}
@@ -270,13 +272,13 @@ extends SqlCaptureBrokerAbstract
 		if (MON_SQL_TEXT.equals(tabName))
 		{
 			if ( ! colNames.contains("AddMethod") )
-				list.add("alter table " +qic+tabName+qic+ " add  "+ fill(qic+"AddMethod"+qic,40)+" "+fill(getDatatype("int",-1,-1,-1),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"AddMethod"+rq,40)+" "+fill(getDatatype("int",-1,-1,-1),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
 			if ( ! colNames.contains("NormJavaSqlHashCode") )
-				list.add("alter table " +qic+tabName+qic+ " add  "+ fill(qic+"NormJavaSqlHashCode"+qic,40)+" "+fill(getDatatype("int", -1,-1,-1),20)+" "+getNullable(true)+"\n");
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormJavaSqlHashCode"+rq,40)+" "+fill(getDatatype("int", -1,-1,-1),20)+" "+getNullable(true)+"\n");
 
 			if ( ! colNames.contains("NormSQLText") )
-				list.add("alter table " +qic+tabName+qic+ " add  "+ fill(qic+"NormSQLText"+qic,40)+" "+fill(getDatatype("varchar", 65536,-1,-1),20)+" "+getNullable(true)+"\n");
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"NormSQLText"+rq,40)+" "+fill(getDatatype("varchar", 65536,-1,-1),20)+" "+getNullable(true)+"\n");
 
 			return list;
 		}
@@ -285,7 +287,7 @@ extends SqlCaptureBrokerAbstract
 		if (MON_SQL_PLAN.equals(tabName))
 		{
 			if ( ! colNames.contains("AddMethod") )
-				list.add("alter table " +qic+tabName+qic+ " add  "+ fill(qic+"AddMethod"+qic,40)+" "+fill(getDatatype("int",-1,-1,-1),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
+				list.add("alter table " +lq+tabName+rq+ " add  "+ fill(lq+"AddMethod"+rq,40)+" "+fill(getDatatype("int",-1,-1,-1),20)+" "+getNullable(true)+"\n"); // needs: getNullable(true) when adding col
 
 			return list;
 		}
@@ -294,9 +296,10 @@ extends SqlCaptureBrokerAbstract
 	}
 	
 	@Override
-	public String getTableDdlString(DatabaseMetaData dbmd, String tabName)
+	public String getTableDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
 	{
-		String qic = PersistWriterBase.getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
 		if (MON_SQL_TEXT.equals(tabName))
 		{
@@ -304,21 +307,21 @@ extends SqlCaptureBrokerAbstract
 
 			sbSql.append("create table " + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(qic+"sampleTime"          +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"InstanceID"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"SPID"                +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"KPID"                +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"BatchID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ServerLogin"         +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"AddMethod"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"JavaSqlLength"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"JavaSqlHashCode"     +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//			sbSql.append("   ,"+fill(qic+"SQLText"             +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(qic+"SQLText"             +qic,40)+" "+fill(getDatatype("varchar",65536,-1,-1),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(qic+"NormJavaSqlHashCode" +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(qic+"NormSQLText"         +qic,40)+" "+fill(getDatatype("varchar",65536,-1,-1),20)+" "+getNullable(true) +"\n");
+			sbSql.append("    "+fill(lq+"sampleTime"          +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"InstanceID"          +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SPID"                +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"KPID"                +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BatchID"             +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ServerLogin"         +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"AddMethod"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"JavaSqlLength"       +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"     +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"SQLText"             +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+			sbSql.append("   ,"+fill(lq+"SQLText"             +rq,40)+" "+fill(getDatatype("varchar",65536,-1,-1),20)+" "+getNullable(true) +"\n");
+			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode" +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true) +"\n");
+			sbSql.append("   ,"+fill(lq+"NormSQLText"         +rq,40)+" "+fill(getDatatype("varchar",65536,-1,-1),20)+" "+getNullable(true) +"\n");
 //			sbSql.append("\n");
-//			sbSql.append("   ,PRIMARY KEY ("+qic+"SPID"+qic+", "+qic+"KPID"+qic+", "+qic+"InstanceID"+qic+", "+qic+"BatchID"+qic+")\n");
+//			sbSql.append("   ,PRIMARY KEY ("+lq+"SPID"+rq+", "+lq+"KPID"+rq+", "+lq+"InstanceID"+rq+", "+lq+"BatchID"+rq+")\n");
 			sbSql.append(") \n");
 
 			return sbSql.toString();
@@ -330,43 +333,43 @@ extends SqlCaptureBrokerAbstract
 
 			sbSql.append("create table " + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(qic+"sampleTime"           +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"InstanceID"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"SPID"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
-			sbSql.append("   ,"+fill(qic+"KPID"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
-			sbSql.append("   ,"+fill(qic+"DBID"                 +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ProcedureID"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PlanID"               +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"BatchID"              +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
-			sbSql.append("   ,"+fill(qic+"ContextID"            +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"LineNumber"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ObjOwnerID"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"DBName"               +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"HashKey"              +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"SsqlId"               +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ProcName"             +qic,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true)+"\n"); // NULLABLE
-			sbSql.append("   ,"+fill(qic+"Elapsed_ms"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"CpuTime"              +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"WaitTime"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"MemUsageKB"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PhysicalReads"        +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"LogicalReads"         +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"RowsAffected"         +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ErrorStatus"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ProcNestLevel"        +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"StatementNumber"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"QueryOptimizationTime"+qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PagesModified"        +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PacketsSent"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PacketsReceived"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"NetworkPacketSize"    +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PlansAltered"         +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"StartTime"            +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"EndTime"              +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"JavaSqlHashCode"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"NormJavaSqlHashCode"  +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("    "+fill(lq+"sampleTime"           +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"InstanceID"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SPID"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_SPID_pos
+			sbSql.append("   ,"+fill(lq+"KPID"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_KPID_pos
+			sbSql.append("   ,"+fill(lq+"DBID"                 +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcedureID"          +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PlanID"               +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BatchID"              +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n"); // NOTE If this pos is changed: alter _stmnt_BatchID_pos
+			sbSql.append("   ,"+fill(lq+"ContextID"            +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"LineNumber"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ObjOwnerID"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"DBName"               +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"HashKey"              +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SsqlId"               +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcName"             +rq,40)+" "+fill(getDatatype("varchar",  255,-1,-1),20)+" "+getNullable(true)+"\n"); // NULLABLE
+			sbSql.append("   ,"+fill(lq+"Elapsed_ms"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"CpuTime"              +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"WaitTime"             +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"MemUsageKB"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PhysicalReads"        +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"LogicalReads"         +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"RowsAffected"         +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ErrorStatus"          +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcNestLevel"        +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"StatementNumber"      +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"QueryOptimizationTime"+rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PagesModified"        +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PacketsSent"          +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PacketsReceived"      +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"NetworkPacketSize"    +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PlansAltered"         +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"StartTime"            +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"EndTime"              +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"JavaSqlHashCode"      +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"NormJavaSqlHashCode"  +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(true)+"\n"); // NULLABLE
 //			sbSql.append("\n");
-//			sbSql.append("   ,PRIMARY KEY ("+qic+"SPID"+qic+", "+qic+"KPID"+qic+", "+qic+"InstanceID"+qic+", "+qic+"BatchID"+qic+")\n");
+//			sbSql.append("   ,PRIMARY KEY ("+lq+"SPID"+rq+", "+lq+"KPID"+rq+", "+lq+"InstanceID"+rq+", "+lq+"BatchID"+rq+")\n");
 			sbSql.append(") \n");
 
 			return sbSql.toString();
@@ -378,21 +381,21 @@ extends SqlCaptureBrokerAbstract
 			
 			sbSql.append("create table " + tabName + "\n");
 			sbSql.append("( \n");
-			sbSql.append("    "+fill(qic+"sampleTime"       +qic,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"InstanceID"       +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"SPID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"KPID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"PlanID"           +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"BatchID"          +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ContextID"        +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"DBID"             +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"DBName"           +qic,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"ProcedureID"      +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-			sbSql.append("   ,"+fill(qic+"AddMethod"        +qic,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
-//			sbSql.append("   ,"+fill(qic+"PlanText"         +qic,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
-			sbSql.append("   ,"+fill(qic+"PlanText"         +qic,40)+" "+fill(getDatatype("varchar",65536,-1,-1),20)+" "+getNullable(true) +"\n");
+			sbSql.append("    "+fill(lq+"sampleTime"       +rq,40)+" "+fill(getDatatype("datetime",  -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"InstanceID"       +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"SPID"             +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"KPID"             +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"PlanID"           +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"BatchID"          +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ContextID"        +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"DBID"             +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"DBName"           +rq,40)+" "+fill(getDatatype("varchar",   30,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"ProcedureID"      +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+			sbSql.append("   ,"+fill(lq+"AddMethod"        +rq,40)+" "+fill(getDatatype("int",       -1,-1,-1),20)+" "+getNullable(false)+"\n");
+//			sbSql.append("   ,"+fill(lq+"PlanText"         +rq,40)+" "+fill(getDatatype("text",      -1,-1,-1),20)+" "+getNullable(true) +"\n");
+			sbSql.append("   ,"+fill(lq+"PlanText"         +rq,40)+" "+fill(getDatatype("varchar",65536,-1,-1),20)+" "+getNullable(true) +"\n");
 //			sbSql.append("\n");
-//			sbSql.append("   ,PRIMARY KEY ("+qic+"SPID"+qic+", "+qic+"KPID"+qic+", "+qic+"InstanceID"+qic+", "+qic+"BatchID"+qic+")\n");
+//			sbSql.append("   ,PRIMARY KEY ("+lq+"SPID"+rq+", "+lq+"KPID"+rq+", "+lq+"InstanceID"+rq+", "+lq+"BatchID"+rq+")\n");
 			sbSql.append(") \n");
 
 			return sbSql.toString();
@@ -401,59 +404,86 @@ extends SqlCaptureBrokerAbstract
 		return null;
 	}
 
-	private String dbmsQuotify(String qic, String...names)
-	{
-		StringBuilder sb = new StringBuilder();
-
-		for (String name : names)
-		{
-			sb.append(qic).append(name).append(qic).append(", ");
-		}
-		// Remove last ", "
-		sb.delete(sb.length()-2, sb.length());
-
-		return sb.toString();
-	}
+//	private String dbmsQuotify(String qic, String...names)
+//	{
+//		StringBuilder sb = new StringBuilder();
+//
+//		for (String name : names)
+//		{
+//			sb.append(qic).append(name).append(qic).append(", ");
+//		}
+//		// Remove last ", "
+//		sb.delete(sb.length()-2, sb.length());
+//
+//		return sb.toString();
+//	}
+//
+//	@Override
+//	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
+//	{
+//		// NOTE: The DatabaseMetaData is to the PCS Writer/Storage Connection
+//		String dbmsProductName = "unknown";
+//		String qic             = "\"";
+//		try { dbmsProductName = dbmd.getDatabaseProductName();   } catch(SQLException ex) { _logger.warn("Problems getting 'dbmd.getDatabaseProductName()', Caught: "+ex); }
+//		try { qic             = dbmd.getIdentifierQuoteString(); } catch(SQLException ex) { _logger.warn("Problems getting 'dbmd.getIdentifierQuoteString()', Caught: "+ex); }
+//		
+//		String iQic = qic; // indexNameQic
+//		if ( DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE) )
+//			iQic = "";
+//
+//		// Put indexes in this list that will be returned
+//		List<String> list = new ArrayList<>();
+//
+//		if (MON_SQL_TEXT.equals(tabName))
+//		{
+//			conn.quotify(name)
+//			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix1") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "BatchID", "SPID", "KPID") + ")\n");
+//		}
+//
+//		if (MON_SQL_STATEMENT.equals(tabName))
+//		{
+//			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix1") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "BatchID", "SPID", "KPID") + ")\n");
+//			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix2") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "StartTime", "EndTime")    + ")\n");
+//		}
+//
+//		if (MON_SQL_PLAN.equals(tabName))
+//		{
+//			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix1") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "BatchID", "SPID", "KPID") + ")\n");
+//		}
+//
+//		return list;
+//	}
 
 	@Override
-	public List<String> getIndexDdlString(DatabaseMetaData dbmd, String tabName)
+	public List<String> getIndexDdlString(DbxConnection conn, DatabaseMetaData dbmd, String tabName)
 	{
-		// NOTE: The DatabaseMetaData is to the PCS Writer/Storage Connection
-		String dbmsProductName = "unknown";
-		String qic             = "\"";
-		try { dbmsProductName = dbmd.getDatabaseProductName();   } catch(SQLException ex) { _logger.warn("Problems getting 'dbmd.getDatabaseProductName()', Caught: "+ex); }
-		try { qic             = dbmd.getIdentifierQuoteString(); } catch(SQLException ex) { _logger.warn("Problems getting 'dbmd.getIdentifierQuoteString()', Caught: "+ex); }
-		
-		String iQic = qic; // indexNameQic
-		if ( DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE) )
-			iQic = "";
-
 		// Put indexes in this list that will be returned
 		List<String> list = new ArrayList<>();
 
 		if (MON_SQL_TEXT.equals(tabName))
 		{
-			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix1") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "BatchID", "SPID", "KPID") + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
 		}
 
 		if (MON_SQL_STATEMENT.equals(tabName))
 		{
-			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix1") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "BatchID", "SPID", "KPID") + ")\n");
-			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix2") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "StartTime", "EndTime")    + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix2") + " on " + conn.quotify(tabName) + "(" + conn.quotify("StartTime", "EndTime")    + ")\n");
 		}
 
 		if (MON_SQL_PLAN.equals(tabName))
 		{
-			list.add("create index " + dbmsQuotify(iQic, tabName+"_ix1") + " on " + dbmsQuotify(qic, tabName) + "(" + dbmsQuotify(qic, "BatchID", "SPID", "KPID") + ")\n");
+			list.add("create index " + conn.quotify(tabName+"_ix1") + " on " + conn.quotify(tabName) + "(" + conn.quotify("BatchID", "SPID", "KPID") + ")\n");
 		}
 
 		return list;
 	}
 
 	@Override
-	public String getInsertStatement(String tabName)
+	public String getInsertStatement(DbxConnection conn, String tabName)
 	{
-		String qic = PersistWriterBase.getQuotedIdentifierChar();
+		String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+		String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
 		
 		if (MON_SQL_TEXT.equals(tabName))
 		{
@@ -461,18 +491,18 @@ extends SqlCaptureBrokerAbstract
 
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(qic).append("sampleTime"         ).append(qic); // 1
-			sbSql.append(",").append(qic).append("InstanceID"         ).append(qic); // 2
-			sbSql.append(",").append(qic).append("SPID"               ).append(qic); // 3
-			sbSql.append(",").append(qic).append("KPID"               ).append(qic); // 4
-			sbSql.append(",").append(qic).append("BatchID"            ).append(qic); // 5
-			sbSql.append(",").append(qic).append("ServerLogin"        ).append(qic); // 6
-			sbSql.append(",").append(qic).append("AddMethod"          ).append(qic); // 7
-			sbSql.append(",").append(qic).append("JavaSqlLength"      ).append(qic); // 8
-			sbSql.append(",").append(qic).append("JavaSqlHashCode"    ).append(qic); // 9
-			sbSql.append(",").append(qic).append("SQLText"            ).append(qic); // 10
-			sbSql.append(",").append(qic).append("NormJavaSqlHashCode").append(qic); // 11
-			sbSql.append(",").append(qic).append("NormSQLText"        ).append(qic); // 12
+			sbSql.append(" ").append(lq).append("sampleTime"         ).append(rq); // 1
+			sbSql.append(",").append(lq).append("InstanceID"         ).append(rq); // 2
+			sbSql.append(",").append(lq).append("SPID"               ).append(rq); // 3
+			sbSql.append(",").append(lq).append("KPID"               ).append(rq); // 4
+			sbSql.append(",").append(lq).append("BatchID"            ).append(rq); // 5
+			sbSql.append(",").append(lq).append("ServerLogin"        ).append(rq); // 6
+			sbSql.append(",").append(lq).append("AddMethod"          ).append(rq); // 7
+			sbSql.append(",").append(lq).append("JavaSqlLength"      ).append(rq); // 8
+			sbSql.append(",").append(lq).append("JavaSqlHashCode"    ).append(rq); // 9
+			sbSql.append(",").append(lq).append("SQLText"            ).append(rq); // 10
+			sbSql.append(",").append(lq).append("NormJavaSqlHashCode").append(rq); // 11
+			sbSql.append(",").append(lq).append("NormSQLText"        ).append(rq); // 12
 			sbSql.append(") \n");
 			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 10 question marks
 			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12
@@ -486,41 +516,41 @@ extends SqlCaptureBrokerAbstract
 
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(qic).append("sampleTime"           ).append(qic);  //  1
-			sbSql.append(",").append(qic).append("InstanceID"           ).append(qic);  //  2
-			sbSql.append(",").append(qic).append("SPID"                 ).append(qic);  //  3
-			sbSql.append(",").append(qic).append("KPID"                 ).append(qic);  //  4
-			sbSql.append(",").append(qic).append("DBID"                 ).append(qic);  //  5
-			sbSql.append(",").append(qic).append("ProcedureID"          ).append(qic);  //  6
-			sbSql.append(",").append(qic).append("PlanID"               ).append(qic);  //  7
-			sbSql.append(",").append(qic).append("BatchID"              ).append(qic);  //  8
-			sbSql.append(",").append(qic).append("ContextID"            ).append(qic);  //  9
-			sbSql.append(",").append(qic).append("LineNumber"           ).append(qic);  // 10
-			sbSql.append(",").append(qic).append("ObjOwnerID"           ).append(qic);  // 11
-			sbSql.append(",").append(qic).append("DBName"               ).append(qic);  // 12
-			sbSql.append(",").append(qic).append("HashKey"              ).append(qic);  // 13
-			sbSql.append(",").append(qic).append("SsqlId"               ).append(qic);  // 14
-			sbSql.append(",").append(qic).append("ProcName"             ).append(qic);  // 15
-			sbSql.append(",").append(qic).append("Elapsed_ms"           ).append(qic);  // 16
-			sbSql.append(",").append(qic).append("CpuTime"              ).append(qic);  // 17
-			sbSql.append(",").append(qic).append("WaitTime"             ).append(qic);  // 18
-			sbSql.append(",").append(qic).append("MemUsageKB"           ).append(qic);  // 19
-			sbSql.append(",").append(qic).append("PhysicalReads"        ).append(qic);  // 20
-			sbSql.append(",").append(qic).append("LogicalReads"         ).append(qic);  // 21
-			sbSql.append(",").append(qic).append("RowsAffected"         ).append(qic);  // 22
-			sbSql.append(",").append(qic).append("ErrorStatus"          ).append(qic);  // 23
-			sbSql.append(",").append(qic).append("ProcNestLevel"        ).append(qic);  // 24
-			sbSql.append(",").append(qic).append("StatementNumber"      ).append(qic);  // 25
-			sbSql.append(",").append(qic).append("QueryOptimizationTime").append(qic);  // 26
-			sbSql.append(",").append(qic).append("PagesModified"        ).append(qic);  // 27
-			sbSql.append(",").append(qic).append("PacketsSent"          ).append(qic);  // 28
-			sbSql.append(",").append(qic).append("PacketsReceived"      ).append(qic);  // 29
-			sbSql.append(",").append(qic).append("NetworkPacketSize"    ).append(qic);  // 30
-			sbSql.append(",").append(qic).append("PlansAltered"         ).append(qic);  // 31
-			sbSql.append(",").append(qic).append("StartTime"            ).append(qic);  // 32
-			sbSql.append(",").append(qic).append("EndTime"              ).append(qic);  // 33
-			sbSql.append(",").append(qic).append("JavaSqlHashCode"      ).append(qic);  // 34
-			sbSql.append(",").append(qic).append("NormJavaSqlHashCode"  ).append(qic);  // 35
+			sbSql.append(" ").append(lq).append("sampleTime"           ).append(rq);  //  1
+			sbSql.append(",").append(lq).append("InstanceID"           ).append(rq);  //  2
+			sbSql.append(",").append(lq).append("SPID"                 ).append(rq);  //  3
+			sbSql.append(",").append(lq).append("KPID"                 ).append(rq);  //  4
+			sbSql.append(",").append(lq).append("DBID"                 ).append(rq);  //  5
+			sbSql.append(",").append(lq).append("ProcedureID"          ).append(rq);  //  6
+			sbSql.append(",").append(lq).append("PlanID"               ).append(rq);  //  7
+			sbSql.append(",").append(lq).append("BatchID"              ).append(rq);  //  8
+			sbSql.append(",").append(lq).append("ContextID"            ).append(rq);  //  9
+			sbSql.append(",").append(lq).append("LineNumber"           ).append(rq);  // 10
+			sbSql.append(",").append(lq).append("ObjOwnerID"           ).append(rq);  // 11
+			sbSql.append(",").append(lq).append("DBName"               ).append(rq);  // 12
+			sbSql.append(",").append(lq).append("HashKey"              ).append(rq);  // 13
+			sbSql.append(",").append(lq).append("SsqlId"               ).append(rq);  // 14
+			sbSql.append(",").append(lq).append("ProcName"             ).append(rq);  // 15
+			sbSql.append(",").append(lq).append("Elapsed_ms"           ).append(rq);  // 16
+			sbSql.append(",").append(lq).append("CpuTime"              ).append(rq);  // 17
+			sbSql.append(",").append(lq).append("WaitTime"             ).append(rq);  // 18
+			sbSql.append(",").append(lq).append("MemUsageKB"           ).append(rq);  // 19
+			sbSql.append(",").append(lq).append("PhysicalReads"        ).append(rq);  // 20
+			sbSql.append(",").append(lq).append("LogicalReads"         ).append(rq);  // 21
+			sbSql.append(",").append(lq).append("RowsAffected"         ).append(rq);  // 22
+			sbSql.append(",").append(lq).append("ErrorStatus"          ).append(rq);  // 23
+			sbSql.append(",").append(lq).append("ProcNestLevel"        ).append(rq);  // 24
+			sbSql.append(",").append(lq).append("StatementNumber"      ).append(rq);  // 25
+			sbSql.append(",").append(lq).append("QueryOptimizationTime").append(rq);  // 26
+			sbSql.append(",").append(lq).append("PagesModified"        ).append(rq);  // 27
+			sbSql.append(",").append(lq).append("PacketsSent"          ).append(rq);  // 28
+			sbSql.append(",").append(lq).append("PacketsReceived"      ).append(rq);  // 29
+			sbSql.append(",").append(lq).append("NetworkPacketSize"    ).append(rq);  // 30
+			sbSql.append(",").append(lq).append("PlansAltered"         ).append(rq);  // 31
+			sbSql.append(",").append(lq).append("StartTime"            ).append(rq);  // 32
+			sbSql.append(",").append(lq).append("EndTime"              ).append(rq);  // 33
+			sbSql.append(",").append(lq).append("JavaSqlHashCode"      ).append(rq);  // 34
+			sbSql.append(",").append(lq).append("NormJavaSqlHashCode"  ).append(rq);  // 35
 			sbSql.append(") \n");
 			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 32 question marks
 			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35
@@ -534,18 +564,18 @@ extends SqlCaptureBrokerAbstract
 
 			sbSql.append("insert into ").append(tabName);
 			sbSql.append("(");
-			sbSql.append(" ").append(qic).append("sampleTime" ).append(qic); // 1
-			sbSql.append(",").append(qic).append("InstanceID" ).append(qic); // 2
-			sbSql.append(",").append(qic).append("SPID"       ).append(qic); // 3
-			sbSql.append(",").append(qic).append("KPID"       ).append(qic); // 4
-			sbSql.append(",").append(qic).append("PlanID"     ).append(qic); // 5
-			sbSql.append(",").append(qic).append("BatchID"    ).append(qic); // 6
-			sbSql.append(",").append(qic).append("ContextID"  ).append(qic); // 7
-			sbSql.append(",").append(qic).append("DBID"       ).append(qic); // 8
-			sbSql.append(",").append(qic).append("DBName"     ).append(qic); // 9
-			sbSql.append(",").append(qic).append("ProcedureID").append(qic); // 10
-			sbSql.append(",").append(qic).append("AddMethod"  ).append(qic); // 11
-			sbSql.append(",").append(qic).append("PlanText"   ).append(qic); // 12
+			sbSql.append(" ").append(lq).append("sampleTime" ).append(rq); // 1
+			sbSql.append(",").append(lq).append("InstanceID" ).append(rq); // 2
+			sbSql.append(",").append(lq).append("SPID"       ).append(rq); // 3
+			sbSql.append(",").append(lq).append("KPID"       ).append(rq); // 4
+			sbSql.append(",").append(lq).append("PlanID"     ).append(rq); // 5
+			sbSql.append(",").append(lq).append("BatchID"    ).append(rq); // 6
+			sbSql.append(",").append(lq).append("ContextID"  ).append(rq); // 7
+			sbSql.append(",").append(lq).append("DBID"       ).append(rq); // 8
+			sbSql.append(",").append(lq).append("DBName"     ).append(rq); // 9
+			sbSql.append(",").append(lq).append("ProcedureID").append(rq); // 10
+			sbSql.append(",").append(lq).append("AddMethod"  ).append(rq); // 11
+			sbSql.append(",").append(lq).append("PlanText"   ).append(rq); // 12
 			sbSql.append(") \n");
 			sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n"); // 12 question marks
 			//                   1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12

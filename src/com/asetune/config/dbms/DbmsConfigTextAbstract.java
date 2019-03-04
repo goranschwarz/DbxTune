@@ -104,19 +104,19 @@ implements IDbmsConfigText
 	{
 		boolean oldNameExists = DbUtils.checkIfTableExistsNoThrow(conn, null, null, "MonSessionAseConfigText");
 
-		String tabName = oldNameExists ? "\"MonSessionAseConfigText\"" : PersistWriterJdbc.getTableName(PersistWriterJdbc.SESSION_DBMS_CONFIG_TEXT, null, true);
+		String tabName = oldNameExists ? "[MonSessionAseConfigText]" : PersistWriterJdbc.getTableName(conn, PersistWriterJdbc.SESSION_DBMS_CONFIG_TEXT, null, true);
 
 		String sql = 
-			"select \"configText\" \n" +
+			"select [configText] \n" +
 			"from " + tabName + " \n" +
-			"where \"configName\"       = '"+getConfigType().toString()+"' \n" +
-			"  and \"SessionStartTime\" = ";
+			"where [configName]       = '"+getConfigType().toString()+"' \n" +
+			"  and [SessionStartTime] = ";
 
 		if (ts == null)
 		{
 			// Do a sub-select to get last timestamp
 			sql += 
-				" (select max(\"SessionStartTime\") " +
+				" (select max([SessionStartTime]) " +
 				"  from " + tabName + 
 				" ) ";
 		}
@@ -125,6 +125,9 @@ implements IDbmsConfigText
 			// use the passed timestamp value
 			sql += "'" + ts + "'";
 		}
+
+		// replace all '[' and ']' into DBMS Vendor Specific Chars
+		sql = conn.quotifySqlString(sql);
 
 		return sql;
 	}

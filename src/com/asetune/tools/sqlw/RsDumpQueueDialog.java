@@ -1843,7 +1843,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 		@Override
 		public String toString()
 		{
-			return "<html><font color=\"blue\">" + _logicalName + "</font> -- <i><font color=\"green\"><b>Active</b> "+_activeName+", <b>Standby</b> "+_standbyName+"</font></i></html>";
+			return "<html><font color='blue'>" + _logicalName + "</font> -- <i><font color='green'><b>Active</b> "+_activeName+", <b>Standby</b> "+_standbyName+"</font></i></html>";
 		}
 	}
 	/** class to be added to JComboBox */
@@ -1857,7 +1857,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 		@Override
 		public String toString()
 		{
-			return "<html><font color=\"blue\">" + _name + "</font></html>";
+			return "<html><font color='blue'>" + _name + "</font></html>";
 		}
 	}
 	/** class to be added to JComboBox */
@@ -1871,7 +1871,7 @@ System.out.println("----- setQueueType(): queueType="+queueType+".");
 		@Override
 		public String toString()
 		{
-			return "<html><font color=\"blue\">" + _name + "</font></html>";
+			return "<html><font color='blue'>" + _name + "</font></html>";
 		}
 	}
 
