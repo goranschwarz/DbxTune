@@ -709,6 +709,51 @@ class DbxGraph
 						// 	return [];
 						// }
 					},
+					onClick: function(e, legendItem) 
+					{
+						if ( ! e.ctrlKey )
+						{
+							// ORIGINAL CODE -- Toggle Current 
+							var index = legendItem.datasetIndex;
+							var ci = this.chart;
+							var meta = ci.getDatasetMeta(index);
+
+							// See controller.isDatasetVisible comment
+							meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+
+							// We hid a dataset ... rerender the chart
+							ci.update();
+						}
+						else
+						{
+							// CTRL -- Toggle Everything else than the current
+							var index = legendItem.datasetIndex;
+							var ci = this.chart;
+							var alreadyHidden = (ci.getDatasetMeta(index).hidden === null) ? false : ci.getDatasetMeta(index).hidden;
+
+							ci.data.datasets.forEach(function(e, i) 
+							{
+								var meta = ci.getDatasetMeta(i);
+
+								if (i !== index) 
+								{
+									if (!alreadyHidden) 
+									{
+										meta.hidden = meta.hidden === null ? !meta.hidden : null;
+									} else if (meta.hidden === null) 
+									{
+										meta.hidden = true;
+									}
+								} 
+								else if (i === index) 
+								{
+									meta.hidden = null;
+								}
+							});
+
+							ci.update();
+						}
+					},
 				},
 				scales: {
 					xAxes: [{
