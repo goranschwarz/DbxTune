@@ -40,6 +40,7 @@ import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
 import com.asetune.cm.sqlserver.CmExecCursors;
+import com.asetune.cm.sqlserver.CmExecFunctionStats;
 import com.asetune.cm.sqlserver.CmExecProcedureStats;
 import com.asetune.cm.sqlserver.CmExecQueryStats;
 import com.asetune.cm.sqlserver.CmExecRequests;
@@ -126,6 +127,7 @@ extends CounterControllerAbstract
 		CmIndexOpStat       .create(counterController, guiController);
 		CmExecQueryStats    .create(counterController, guiController);
 		CmExecProcedureStats.create(counterController, guiController);
+		CmExecFunctionStats .create(counterController, guiController);
 		CmExecTriggerStats  .create(counterController, guiController);
 		CmExecCursors       .create(counterController, guiController);
 

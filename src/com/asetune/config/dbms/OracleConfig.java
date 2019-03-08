@@ -67,24 +67,24 @@ extends DbmsConfigAbstract
 		{NON_DEFAULT,          false,    Boolean.class, "bit",          "True if the value is not configured to the default value. (same as for sp_configure 'nondefault')"},
 		{SECTION_NAME,         true,     String .class, "varchar(60)",  "Configuration Group"},
 		{CONFIG_NAME,          true,     String .class, "varchar(60)",  "Name of the configuration, same as the name in sp_configure."},
-		{CONFIG_VALUE,         false,    Integer.class, "bigint",       "Value of the configuration."},
+		{CONFIG_VALUE,         true,     Integer.class, "bigint",       "Value of the configuration."},
 		{PENDING,              false,    Boolean.class, "bit",          "The Configuration has not yet taken effect, probably needs restart to take effect."},
-		{PENDING_VALUE,        false,    Integer.class, "bigint",       "The value which will be configured on next restart, if PENDING is true."},
-		{DEFAULT_VALUE,        false,    Integer.class, "varchar(100)", "The default configuration value."},            // it's a String but, RIGHT align it with Integer
-		{MEMORY_USED,          false,    Integer.class, "varchar(30)",  "Memory Used by this configuration parameter"}, // it's a String but, RIGHT align it with Integer
-		{CONFIG_UNIT,          false,    String .class, "varchar(30)",  "In what unit is this configuration"},
+		{PENDING_VALUE,        true,     Integer.class, "bigint",       "The value which will be configured on next restart, if PENDING is true."},
+		{DEFAULT_VALUE,        true,     Integer.class, "varchar(100)", "The default configuration value."},            // it's a String but, RIGHT align it with Integer
+		{MEMORY_USED,          true,     Integer.class, "varchar(30)",  "Memory Used by this configuration parameter"}, // it's a String but, RIGHT align it with Integer
+		{CONFIG_UNIT,          true,     String .class, "varchar(30)",  "In what unit is this configuration"},
 		{RESTART_IS_REQ,       false,    Boolean.class, "bit",          "ASE needs to be rebooted for the configuration to take effect."},
-		{CFG_VAL_STR,          false,    String .class, "varchar(100)", "The char value of the configuration."},
-		{CFG_VAL_STR_PENDNING, false,    String .class, "varchar(100)", "The pending char configuration."},
+		{CFG_VAL_STR,          true,     String .class, "varchar(100)", "The char value of the configuration."},
+		{CFG_VAL_STR_PENDNING, true,     String .class, "varchar(100)", "The pending char configuration."},
 		{READ_ONLY,            false,    Boolean.class, "bit",          "This config is a read only value"},
-		{TYPE,                 false,    String .class, "varchar(30)",  "dynamic or static"},
-		{MIN_VALUE,            false,    Integer.class, "bigint",       "integer minimum value of the configuration"},
-		{MAX_VALUE,            false,    Integer.class, "bigint",       "integer maximum value of the configuration"},
+		{TYPE,                 true,     String .class, "varchar(30)",  "dynamic or static"},
+		{MIN_VALUE,            true,     Integer.class, "bigint",       "integer minimum value of the configuration"},
+		{MAX_VALUE,            true,     Integer.class, "bigint",       "integer maximum value of the configuration"},
 		{DESCRIPTION,          true,     String .class, "varchar(255)", "Description of the configuration."},
-		{CONFIG_ID,            false,    Integer.class, "bigint",       "Internal ID number for this configuration."},
-		{SECTION_ID,           false,    Integer.class, "bigint",       "Configuration Group ID"},
-		{DISPLAY_LEVEL,        false,    Integer.class, "bigint",       ""},
-		{DATA_TYPE,            false,    Integer.class, "bigint",       ""}
+		{CONFIG_ID,            true,     Integer.class, "bigint",       "Internal ID number for this configuration."},
+		{SECTION_ID,           true,     Integer.class, "bigint",       "Configuration Group ID"},
+		{DISPLAY_LEVEL,        true,     Integer.class, "bigint",       ""},
+		{DATA_TYPE,            true,     Integer.class, "bigint",       ""}
 	};
 
 //

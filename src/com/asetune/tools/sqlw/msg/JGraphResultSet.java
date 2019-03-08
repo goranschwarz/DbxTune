@@ -44,6 +44,8 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryAxis;
+import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.labels.CategoryItemLabelGenerator;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
@@ -434,6 +436,22 @@ extends JComponent
 			{
 				_pipeCmd.addWarningMessage("Not possible to use --showShapes for "+graphType+". (plot instance '"+plot.getClass().getSimpleName()+"' is not handled)");
 			}
+		}
+
+		//
+		// Rotate category labels
+		//
+		if (_pipeCmd.getRotateCategoryLabels() > 0)
+		{
+			int degree = _pipeCmd.getRotateCategoryLabels();
+
+			CategoryAxis axis = _chart.getCategoryPlot().getDomainAxis();
+			
+			if      (degree == 1) axis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+			else if (degree == 2) axis.setCategoryLabelPositions(CategoryLabelPositions.UP_90);
+			else if (degree == 3) axis.setCategoryLabelPositions(CategoryLabelPositions.DOWN_45);
+			else if (degree == 4) axis.setCategoryLabelPositions(CategoryLabelPositions.DOWN_90);
+			else                  axis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
 		}
 
 		if (_chart != null)

@@ -335,7 +335,7 @@ implements
 		_tableRowFilterList.add(_tableRowFilterDiffCntIsZero);
 		_tableRowFilter = RowFilter.andFilter(_tableRowFilterList);
 		
-		// Install "freetext" filter
+		// Install "free-text" filter
 		_tableFreetextFilter = new GTableFilter(_dataTable, GTableFilter.ROW_COUNT_LAYOUT_LEFT, true);
 
 		initComponents();
@@ -1747,6 +1747,135 @@ implements
 		copySepComma.add(menuItem);
 	}
 
+	public void createToolTipControlMenu(JPopupMenu popup)
+	{
+		// Separator
+		popup.addSeparator();
+
+		JCheckBoxMenuItem menuItem = null;
+
+		JMenu ttm = new JMenu("Cell Tooltip options");
+		ttm.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+		popup.add(ttm);
+
+		// ----------------------------------------
+		// Use Focusable ToolTip
+		// ----------------------------------------
+		menuItem = new JCheckBoxMenuItem("On cell tooltip, use Focusable Tooltip, from which you can do Copy Paste");
+		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+
+		ttm.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object o = e.getSource();
+				if (o instanceof JCheckBoxMenuItem)
+				{
+					boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_FOCUSABLE.replace("<CMNAME>", _cm.getName()), toValue);
+						_logger.info("Setting 'On cell tooltip, use Focusable Tooltip' to '"+toValue+"' for CounterModel '"+_cm.getName()+"'.");
+					}
+				}
+			}
+		});
+		final JCheckBoxMenuItem useFocusableTt_mi = menuItem;
+
+
+		// ----------------------------------------
+		// show PK
+		// ----------------------------------------
+		menuItem = new JCheckBoxMenuItem("Show PrimaryKey value(s) on cell tooltip");
+		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+
+		ttm.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object o = e.getSource();
+				if (o instanceof JCheckBoxMenuItem)
+				{
+					boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK.replace("<CMNAME>", _cm.getName()), toValue);
+						_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+_cm.getName()+"'.");
+					}
+				}
+			}
+		});
+		final JCheckBoxMenuItem showPkCols_mi = menuItem;
+
+		// ----------------------------------------
+		// show ALL
+		// ----------------------------------------
+		menuItem = new JCheckBoxMenuItem("Show ALL value(s) on cell tooltip");
+		menuItem.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+
+		ttm.add(menuItem);
+
+		menuItem.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object o = e.getSource();
+				if (o instanceof JCheckBoxMenuItem)
+				{
+					boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+					Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+					if (conf != null)
+					{
+						conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_ALL.replace("<CMNAME>", _cm.getName()), toValue);
+						_logger.info("Setting 'Show ALL value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+_cm.getName()+"'.");
+					}
+				}
+			}
+		});
+		final JCheckBoxMenuItem showAllCols_mi = menuItem;
+
+		
+		// Add popup listener to set STATE of the CheckBoxes
+		popup.addPopupMenuListener(new PopupMenuListener()
+		{
+			@Override
+			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+			{
+				Configuration conf = Configuration.getCombinedConfiguration();
+				
+				boolean useFocusableTt = conf.getBooleanProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_FOCUSABLE.replace("<CMNAME>", _cm.getName()), CmToolTipSupplierDefault.DEFAULT_TABLE_TOOLTIP_FOCUSABLE); 
+				boolean showPkCols     = conf.getBooleanProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK  .replace("<CMNAME>", _cm.getName()), CmToolTipSupplierDefault.DEFAULT_TABLE_TOOLTIP_SHOW_PK); 
+				boolean showAllCols    = conf.getBooleanProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_ALL .replace("<CMNAME>", _cm.getName()), CmToolTipSupplierDefault.DEFAULT_TABLE_TOOLTIP_SHOW_ALL); 
+
+				useFocusableTt_mi.setSelected(useFocusableTt);
+				showPkCols_mi    .setSelected(showPkCols);
+				showAllCols_mi   .setSelected(showAllCols);
+			}
+			
+			@Override
+			public void popupMenuWillBecomeInvisible(PopupMenuEvent e)
+			{
+			}
+			
+			@Override
+			public void popupMenuCanceled(PopupMenuEvent e)
+			{
+			}
+		});
+	}
+
 	/**
 	 * Creates the JMenu on the Component, this can be overrided by a subclass.
 	 * <p>
@@ -1763,6 +1892,8 @@ implements
 		createColumnControlMenu(popup);
 
 		createCopyPasteMenu(popup);
+
+		createToolTipControlMenu(popup);
 
 //		TablePopupFactory.createMenu(popup, TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
 //		TablePopupFactory.createMenu(popup, _displayName.replaceAll(" ", "") + "." + TablePopupFactory.TABLE_PUPUP_MENU_PREFIX, Configuration.getCombinedConfiguration(), _dataTable, this);
@@ -2220,6 +2351,60 @@ implements
 								{
 									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_PK.replace("<CMNAME>", cm.getName()), toValue);
 									_logger.info("Setting 'Show PrimaryKey value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+								}
+							}
+						}
+					});
+					popupMenu.add(mi);
+
+					// Show PK value on Cell tooltip
+					boolean showAllCols = Configuration.getCombinedConfiguration().getBooleanProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_ALL.replace("<CMNAME>", cm.getName()), CmToolTipSupplierDefault.DEFAULT_TABLE_TOOLTIP_SHOW_ALL); 
+
+					mi = new JCheckBoxMenuItem();
+					mi.setText("<html>Show ALL value(s) on cell tooltip</html>");
+					mi.setSelected(showAllCols);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JCheckBoxMenuItem)
+							{
+								boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+								if (conf != null)
+								{
+									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_SHOW_ALL.replace("<CMNAME>", cm.getName()), toValue);
+									_logger.info("Setting 'Show ALL value(s) on cell tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
+								}
+							}
+						}
+					});
+					popupMenu.add(mi);
+
+					// Show PK value on Cell tooltip
+					boolean useFocusable = Configuration.getCombinedConfiguration().getBooleanProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_FOCUSABLE.replace("<CMNAME>", cm.getName()), CmToolTipSupplierDefault.DEFAULT_TABLE_TOOLTIP_FOCUSABLE); 
+
+					mi = new JCheckBoxMenuItem();
+					mi.setText("<html>On cell tooltip, use Focusable Tooltip, from which you can do Copy Paste</html>");
+					mi.setSelected(useFocusable);
+					mi.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							Object o = e.getSource();
+							if (o instanceof JCheckBoxMenuItem)
+							{
+								boolean toValue = ((JCheckBoxMenuItem)o).isSelected();
+
+								Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+								if (conf != null)
+								{
+									conf.setProperty(CmToolTipSupplierDefault.PROPKEY_TABLE_TOOLTIP_FOCUSABLE.replace("<CMNAME>", cm.getName()), toValue);
+									_logger.info("Setting 'On cell tooltip, use Focusable Tooltip' to '"+toValue+"' for CounterModel '"+cm.getName()+"'.");
 								}
 							}
 						}

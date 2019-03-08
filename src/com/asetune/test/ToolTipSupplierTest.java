@@ -24,7 +24,6 @@ import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.MouseEvent;
 import java.net.MalformedURLException;
-import java.net.URL;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -196,8 +195,7 @@ public class ToolTipSupplierTest extends JFrame
 				try
 				{
 					String urlStr = desc.substring("EXTERNAL-BROWSER:".length());
-					URL url = new URL(urlStr);
-					return new ResolverReturn(event, url, ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER);
+					return ResolverReturn.createOpenInExternalBrowser(event, urlStr);
 				}
 				catch (MalformedURLException e)
 				{
@@ -208,12 +206,14 @@ public class ToolTipSupplierTest extends JFrame
 
 			if (desc.endsWith(".pdf"))
 			{
-				return new ResolverReturn(event, ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER);
+				return ResolverReturn.createOpenInExternalBrowser(event);
+				//return new ResolverReturn(event, ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER);
 			}
 
 			if (desc.equals("String Functions"))
 			{
-				return new ResolverReturn(event, "<html><h1>"+desc+"<h1></html>");
+				return ResolverReturn.createOpenInCurrentTooltipWindow(event, "<html><h1>"+desc+"<h1></html>");
+				//return new ResolverReturn(event, "<html><h1>"+desc+"<h1></html>");
 			}
 
 //			if (desc.indexOf("help.sap.com") >= 0)
@@ -221,7 +221,7 @@ public class ToolTipSupplierTest extends JFrame
 //				return new ResolverReturn(event, Type.OPEN_URL_IN_EXTERNAL_BROWSER);
 //			}
 
-			return new ResolverReturn(event);
+			return ResolverReturn.createOpenInCurrentTooltipWindow(event);
 		}
 	}
 }

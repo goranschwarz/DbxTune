@@ -32,4 +32,16 @@ extends AbstractTableModel
 	abstract public int    getRowNumberForPkValue(String pkStr);
 	abstract public String getPkValue(int row);
 	abstract public List<String> getColNames();
+
+	public int findColumn(String colName, boolean caseSensitive)
+	{
+		for (int c=0; c < getColumnCount(); c++) 
+		{
+			if ( caseSensitive ? colName.equals(getColumnName(c)) : colName.equalsIgnoreCase(getColumnName(c)) ) 
+				return c;
+		}
+		return -1;
+	}
+	
+
 }

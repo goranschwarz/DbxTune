@@ -102,6 +102,7 @@ import com.asetune.cm.CounterTableModel;
 import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
+import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.tools.sqlw.ResultSetJXTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -1608,7 +1609,18 @@ extends JXTable
 						return tip;
 
 					if (_focusableTip == null) 
-						_focusableTip = new FocusableTip(this);
+					{
+						// Try to get a "Tool Tip Resolver" from the CounterModels, ToolsTip Supplier
+						ToolTipHyperlinkResolver resolver = null;
+						if (model instanceof CountersModel)
+						{
+							ITableTooltip ttSupplier = ((CountersModel)model).getToolTipSupplier();
+							if (ttSupplier != null && ttSupplier instanceof ToolTipHyperlinkResolver)
+								resolver = (ToolTipHyperlinkResolver) ttSupplier;
+						}
+
+						_focusableTip = new FocusableTip(this, null, resolver);
+					}
 
 //						_focusableTip.setImageBase(imageBase);
 					_focusableTip.toolTipRequested(e, tip);

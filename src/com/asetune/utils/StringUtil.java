@@ -2016,8 +2016,13 @@ public class StringUtil
 	 */
 	public static String xmlFormat(String xml)
 	{
+		if (xml == null)
+			return null;
+
+		int len = Math.min(40, xml.length());
+		
 		// If the first chars in XML starts with strange chars... remove them... 
-		String firstChars = xml.substring(0, 40).toLowerCase();
+		String firstChars = xml.substring(0, len).toLowerCase();
 		int xmlStart = firstChars.indexOf("<?xml");
 		if (xmlStart > 0)
 			xml = xml.substring(xmlStart);

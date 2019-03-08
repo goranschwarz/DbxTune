@@ -77,10 +77,10 @@ extends DbmsConfigAbstract
 		{SECTION_NAME,         true,     String .class, "varchar(60)",  "Configuration Group"},
 		{CONFIG_NAME,          true,     String .class, "varchar(60)",  "Name of the configuration, same as the name in ra_config."},
 		{CONFIG_TYPE,          true,     String .class, "varchar(30)",  "What type of parameter is this."},
-		{CURENT_VALUE,         false,    String .class, "varchar(255)", "Value of the configuration."},
+		{CURENT_VALUE,         true,     String .class, "varchar(255)", "Value of the configuration."},
 		{PENDING,              false,    Boolean.class, "bit",          "The Configuration has not yet taken effect, probably needs restart to take effect."},
-		{PENDING_VALUE,        false,    String .class, "varchar(255)", "The value which will be configured on next restart, if PENDING is true."},
-		{DEFAULT_VALUE,        false,    String .class, "varchar(100)", "The default configuration value."},
+		{PENDING_VALUE,        true,     String .class, "varchar(255)", "The value which will be configured on next restart, if PENDING is true."},
+		{DEFAULT_VALUE,        true,     String .class, "varchar(100)", "The default configuration value."},
 		{RESTART_IS_REQ,       false,    Boolean.class, "bit",          "ASE needs to be rebooted for the configuration to take effect."},
 		{LEGAL_VALUES,         true,     String .class, "varchar(60)",  "What legal values can this configuration hold"},
 		{DESCRIPTION,          true,     String .class, "varchar(255)", "Description of the configuration."}

@@ -57,6 +57,8 @@ extends PipeCommandAbstract
 		String    _titleName       = null;
 		String    _labelCategory   = null;
 		String    _labelValue      = null;
+
+		int       _rotateCategoryLabels = 0;
 		
 		boolean   _use3d           = false;
 
@@ -82,23 +84,24 @@ extends PipeCommandAbstract
 		{
 			StringBuilder sb = new StringBuilder();
 
-			sb.append(""  ).append("data          ".trim()).append("=").append(StringUtil.quotify(_data           ));
-			sb.append(", ").append("graphType     ".trim()).append("=").append(StringUtil.quotify(_graphType      ));
-			sb.append(", ").append("pivot         ".trim()).append("=").append(StringUtil.quotify(_pivot          ));
-			sb.append(", ").append("titleName     ".trim()).append("=").append(StringUtil.quotify(_titleName      ));
-			sb.append(", ").append("labelCategory ".trim()).append("=").append(StringUtil.quotify(_labelCategory  ));
-			sb.append(", ").append("labelValue    ".trim()).append("=").append(StringUtil.quotify(_labelValue     ));
-			sb.append(", ").append("use3d         ".trim()).append("=").append(StringUtil.quotify(_use3d          ));
-			sb.append(", ").append("keyCols       ".trim()).append("=").append(StringUtil.quotify(_keyCols        ));
-			sb.append(", ").append("valCols       ".trim()).append("=").append(StringUtil.quotify(_valCols        ));
-			sb.append(", ").append("str2num       ".trim()).append("=").append(StringUtil.quotify(_str2num        ));
-			sb.append(", ").append("removeRegEx   ".trim()).append("=").append(StringUtil.quotify(_removeRegEx    ));
-			sb.append(", ").append("widthMLC      ".trim()).append("=").append(StringUtil.quotify(_widthMLC       ));
-			sb.append(", ").append("heightMLC     ".trim()).append("=").append(StringUtil.quotify(_heightMLC      ));
-			sb.append(", ").append("showDataValues".trim()).append("=").append(StringUtil.quotify(_showDataValues ));
-			sb.append(", ").append("showShapes    ".trim()).append("=").append(StringUtil.quotify(_showShapes     ));
-			sb.append(", ").append("window        ".trim()).append("=").append(StringUtil.quotify(_window         ));
-			sb.append(", ").append("debug         ".trim()).append("=").append(StringUtil.quotify(_debug          ));
+			sb.append(""  ).append("data                ".trim()).append("=").append(StringUtil.quotify(_data                ));
+			sb.append(", ").append("graphType           ".trim()).append("=").append(StringUtil.quotify(_graphType           ));
+			sb.append(", ").append("pivot               ".trim()).append("=").append(StringUtil.quotify(_pivot               ));
+			sb.append(", ").append("titleName           ".trim()).append("=").append(StringUtil.quotify(_titleName           ));
+			sb.append(", ").append("labelCategory       ".trim()).append("=").append(StringUtil.quotify(_labelCategory       ));
+			sb.append(", ").append("labelValue          ".trim()).append("=").append(StringUtil.quotify(_labelValue          ));
+			sb.append(", ").append("rotateCategoryLabels".trim()).append("=").append(StringUtil.quotify(_rotateCategoryLabels));
+			sb.append(", ").append("use3d               ".trim()).append("=").append(StringUtil.quotify(_use3d               ));
+			sb.append(", ").append("keyCols             ".trim()).append("=").append(StringUtil.quotify(_keyCols             ));
+			sb.append(", ").append("valCols             ".trim()).append("=").append(StringUtil.quotify(_valCols             ));
+			sb.append(", ").append("str2num             ".trim()).append("=").append(StringUtil.quotify(_str2num             ));
+			sb.append(", ").append("removeRegEx         ".trim()).append("=").append(StringUtil.quotify(_removeRegEx         ));
+			sb.append(", ").append("widthMLC            ".trim()).append("=").append(StringUtil.quotify(_widthMLC            ));
+			sb.append(", ").append("heightMLC           ".trim()).append("=").append(StringUtil.quotify(_heightMLC           ));
+			sb.append(", ").append("showDataValues      ".trim()).append("=").append(StringUtil.quotify(_showDataValues      ));
+			sb.append(", ").append("showShapes          ".trim()).append("=").append(StringUtil.quotify(_showShapes          ));
+			sb.append(", ").append("window              ".trim()).append("=").append(StringUtil.quotify(_window              ));
+			sb.append(", ").append("debug               ".trim()).append("=").append(StringUtil.quotify(_debug               ));
 			sb.append(".");
 
 			return sb.toString();
@@ -108,25 +111,26 @@ extends PipeCommandAbstract
 	private CmdParams _params = null;
 
 	
-	public String        getCmdLineParams()   { return _params.toString();       }
-	
-	public boolean       isAddDataEnabled()   { return _params._data;            }
-	public GraphType     getGraphType()       { return _params._graphType;       }
-	public boolean       isPivotEnabled()     { return _params._pivot;           }
-	public String        getGraphTitle()      { return _params._titleName;       }
-	public String        getLabelCategory()   { return _params._labelCategory;   }
-	public String        getLabelValue()      { return _params._labelValue;      }
-	public boolean       is3dEnabled()        { return _params._use3d;           }
-//	public List<Integer> getKeyCols()         { return _params._keyCols;         }
-//	public List<Integer> getValCols()         { return _params._valCols;         }
-	public List<String>  getKeyCols()         { return _params._keyCols;         }
-	public List<String>  getValCols()         { return _params._valCols;         }
-	public boolean       isStr2NumEnabled()   { return _params._str2num;         }
-	public String        getRemoveRegEx()     { return _params._removeRegEx;     }
-	public boolean       isShowDataValues()   { return _params._showDataValues;  }
-	public boolean       isShowShapes()       { return _params._showShapes;      }
-	public boolean       isWindowEnabled()    { return _params._window;          }
-	public boolean       isDebugEnabled()     { return _params._debug;           }
+	public String        getCmdLineParams()        { return _params.toString();            }
+	                                                                                       
+	public boolean       isAddDataEnabled()        { return _params._data;                 }
+	public GraphType     getGraphType()            { return _params._graphType;            }
+	public boolean       isPivotEnabled()          { return _params._pivot;                }
+	public String        getGraphTitle()           { return _params._titleName;            }
+	public String        getLabelCategory()        { return _params._labelCategory;        }
+	public String        getLabelValue()           { return _params._labelValue;           }
+	public boolean       is3dEnabled()             { return _params._use3d;                }
+//	public List<Integer> getKeyCols()              { return _params._keyCols;              }
+//	public List<Integer> getValCols()              { return _params._valCols;              }
+	public List<String>  getKeyCols()              { return _params._keyCols;              }
+	public List<String>  getValCols()              { return _params._valCols;              }
+	public boolean       isStr2NumEnabled()        { return _params._str2num;              }
+	public String        getRemoveRegEx()          { return _params._removeRegEx;          }
+	public boolean       isShowDataValues()        { return _params._showDataValues;       }
+	public boolean       isShowShapes()            { return _params._showShapes;           }
+	public boolean       isWindowEnabled()         { return _params._window;               }
+	public boolean       isDebugEnabled()          { return _params._debug;                }
+	public int           getRotateCategoryLabels() { return _params._rotateCategoryLabels; }
 
 	public void setPivot(boolean b) { _params._pivot = b; }
 
@@ -223,25 +227,26 @@ extends PipeCommandAbstract
 			_args = StringUtil.translateCommandline(input, true);
 
 			CommandLine cmdLine = parseCmdLine(_args);
-			if (cmdLine.hasOption('d')) _params._data            = true;
-			if (cmdLine.hasOption('t')) _params._graphType       = GraphType.fromString(cmdLine.getOptionValue('t'));
-			if (cmdLine.hasOption('p')) _params._pivot           = true;
-			if (cmdLine.hasOption('n')) _params._titleName       = cmdLine.getOptionValue('n');
-			if (cmdLine.hasOption('3')) _params._use3d           = true;
-//			if (cmdLine.hasOption('k')) _params._keyCols         = parseCommaStrToIntArray(cmdLine.getOptionValue('k'));
-//			if (cmdLine.hasOption('v')) _params._valCols         = parseCommaStrToIntArray(cmdLine.getOptionValue('v'));
-			if (cmdLine.hasOption('k')) _params._keyCols         = StringUtil.commaStrToList(cmdLine.getOptionValue('k'));
-			if (cmdLine.hasOption('v')) _params._valCols         = StringUtil.commaStrToList(cmdLine.getOptionValue('v'));
-			if (cmdLine.hasOption('c')) _params._str2num         = true;
-			if (cmdLine.hasOption('r')) _params._removeRegEx     = cmdLine.getOptionValue('r');
-			if (cmdLine.hasOption('l')) _params._labelCategory   = cmdLine.getOptionValue('l');
-			if (cmdLine.hasOption('L')) _params._labelValue      = cmdLine.getOptionValue('L');
-			if (cmdLine.hasOption('w')) _params._widthMLC        = cmdLine.getOptionValue('w');
-			if (cmdLine.hasOption('h')) _params._heightMLC       = cmdLine.getOptionValue('h');
-			if (cmdLine.hasOption('D')) _params._showDataValues  = true;
-			if (cmdLine.hasOption('S')) _params._showShapes      = true;
-			if (cmdLine.hasOption('W')) _params._window          = true;
-			if (cmdLine.hasOption('x')) _params._debug           = true;
+			if (cmdLine.hasOption('d')) _params._data                 = true;
+			if (cmdLine.hasOption('t')) _params._graphType            = GraphType.fromString(cmdLine.getOptionValue('t'));
+			if (cmdLine.hasOption('p')) _params._pivot                = true;
+			if (cmdLine.hasOption('n')) _params._titleName            = cmdLine.getOptionValue('n');
+			if (cmdLine.hasOption('3')) _params._use3d                = true;
+//			if (cmdLine.hasOption('k')) _params._keyCols              = parseCommaStrToIntArray(cmdLine.getOptionValue('k'));
+//			if (cmdLine.hasOption('v')) _params._valCols              = parseCommaStrToIntArray(cmdLine.getOptionValue('v'));
+			if (cmdLine.hasOption('k')) _params._keyCols              = StringUtil.commaStrToList(cmdLine.getOptionValue('k'));
+			if (cmdLine.hasOption('v')) _params._valCols              = StringUtil.commaStrToList(cmdLine.getOptionValue('v'));
+			if (cmdLine.hasOption('c')) _params._str2num              = true;
+			if (cmdLine.hasOption('r')) _params._removeRegEx          = cmdLine.getOptionValue('r');
+			if (cmdLine.hasOption('l')) _params._labelCategory        = cmdLine.getOptionValue('l');
+			if (cmdLine.hasOption('L')) _params._labelValue           = cmdLine.getOptionValue('L');
+			if (cmdLine.hasOption('R')) _params._rotateCategoryLabels = StringUtil.parseInt(cmdLine.getOptionValue('R'), 0);
+			if (cmdLine.hasOption('w')) _params._widthMLC             = cmdLine.getOptionValue('w');
+			if (cmdLine.hasOption('h')) _params._heightMLC            = cmdLine.getOptionValue('h');
+			if (cmdLine.hasOption('D')) _params._showDataValues       = true;
+			if (cmdLine.hasOption('S')) _params._showShapes           = true;
+			if (cmdLine.hasOption('W')) _params._window               = true;
+			if (cmdLine.hasOption('x')) _params._debug                = true;
 		}
 		else
 		{
@@ -272,25 +277,26 @@ extends PipeCommandAbstract
 	{
 		Options options = new Options();
 
-		// Switches       short long Option        hasParam Description (not really used)
-		//                ----- ------------------ -------- ------------------------------------------
-		options.addOption( "d", "data",            false,   "Also add table data to the output" );
-		options.addOption( "t", "type",            true,    "What type of graph do you want to produce." );
-		options.addOption( "p", "pivot",           false,   "" );
-		options.addOption( "n", "name",            true,    "Name of the graph" );
-		options.addOption( "3", "3d",              false,   "Use 3D graphs if possible" );
-		options.addOption( "k", "keyCols",         true,    "" );
-		options.addOption( "v", "valCols",         true,    "" );
-		options.addOption( "c", "str2num",         false,   "Try to convert String columns to numbers." );
-		options.addOption( "r", "removeRegEx",     true,    "In combination with '-c', remove some strings using a RegEx" );
-		options.addOption( "l", "labelCategory",   true,    "" );
-		options.addOption( "L", "labelValue",      true,    "" );
-		options.addOption( "w", "width",           true,    "" );
-		options.addOption( "h", "height",          true,    "" );
-		options.addOption( "D", "showDataValues",  false,   "" );
-		options.addOption( "S", "showShapes",      false,   "" );
-		options.addOption( "W", "window",          false,   "" );
-		options.addOption( "x", "debug",           false,   "debug" );
+		// Switches       short long Option              hasParam Description (not really used)
+		//                ----- ------------------------ -------- ------------------------------------------
+		options.addOption( "d", "data",                  false,   "Also add table data to the output" );
+		options.addOption( "t", "type",                  true,    "What type of graph do you want to produce." );
+		options.addOption( "p", "pivot",                 false,   "" );
+		options.addOption( "n", "name",                  true,    "Name of the graph" );
+		options.addOption( "3", "3d",                    false,   "Use 3D graphs if possible" );
+		options.addOption( "k", "keyCols",               true,    "" );
+		options.addOption( "v", "valCols",               true,    "" );
+		options.addOption( "c", "str2num",               false,   "Try to convert String columns to numbers." );
+		options.addOption( "r", "removeRegEx",           true,    "In combination with '-c', remove some strings using a RegEx" );
+		options.addOption( "l", "labelCategory",         true,    "" );
+		options.addOption( "L", "labelValue",            true,    "" );
+		options.addOption( "R", "rotateCategoryLabels",  true,    "" );
+		options.addOption( "w", "width",                 true,    "" );
+		options.addOption( "h", "height",                true,    "" );
+		options.addOption( "D", "showDataValues",        false,   "" );
+		options.addOption( "S", "showShapes",            false,   "" );
+		options.addOption( "W", "window",                false,   "" );
+		options.addOption( "x", "debug",                 false,   "debug" );
 
 		try
 		{
@@ -366,6 +372,7 @@ extends PipeCommandAbstract
 		sb.append("  -n,--name          name   Name of the graph. (printed on top) \n");
 		sb.append("  -l,--labelCategory name   Label for Categories \n");
 		sb.append("  -L,--labelValue    name   Label for Values \n");
+		sb.append("  -R,--rotateCategoryLabels Rotate Category Labels [1=45_UP, 2=UP_90, 3=DOWN_45, 4=DOWN_90, else=45_UP]\n");
 		sb.append("  -c,--str2num              Try to convert String Columns to numbers. \n");
 		sb.append("  -r,--removeRegEx   str    In combination with '-c', remove some strings column content using a RegEx \n");
 		sb.append("                             - example to remove KB or KB from columns: go | graph -c -r '(KB|MB)'\n");

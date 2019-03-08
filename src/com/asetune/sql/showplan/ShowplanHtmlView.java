@@ -95,15 +95,56 @@ public abstract class ShowplanHtmlView
 	{
 		try
 		{
-    		validateTempDir();
-    		
-    		File filename = createHtmlFile(xmlPlan);
-    		if (filename != null)
-    			viewHtmlFile(filename);
+			validateTempDir();
+			
+			File filename = createHtmlFile(xmlPlan);
+			if (filename != null)
+				viewHtmlFile(filename);
 		}
 		catch(Exception e)
 		{
 			showError("Problems Creating a HTML Showplan", e);
+		}
+	}
+
+	public static File createHtmlFile(Type type, String xmlPlan)
+	{
+		if (Type.SQLSERVER.equals(type))
+		{
+			ShowplanSqlServerExternalHtmlView sqlserverPlan = new ShowplanSqlServerExternalHtmlView();
+			return sqlserverPlan.createDestFile(xmlPlan);
+		}
+		else if (Type.ASE.equals(type))
+		{
+			System.out.println("ASE-XML-SHOWPLAN: \n"+xmlPlan);
+			throw new RuntimeException("Sybase ASE Showplan HTML Viewer has not yet been implemented.");
+//			ShowplanAseExternalHtmlView asePlan = new ShowplanAseExternalHtmlView();
+//			asePlan.show(xmlPlan);
+		}
+		else
+		{
+			throw new IllegalArgumentException("Unknown Showplan type");
+		}
+	}
+
+	/**
+	 * show the HTML Entry in the default HTML Browser<br>
+	 * But first, validate that the temp directory exists, and copy all resources/templates to the directory
+	 *  
+	 * @param xmlPlan The XML ShowPlan content (note: not a file, but the actual XML Content)
+	 */
+	protected File createDestFile(String xmlPlan)
+	{
+		try
+		{
+			validateTempDir();
+			
+			return createHtmlFile(xmlPlan);
+		}
+		catch(Exception e)
+		{
+			showError("Problems Creating a HTML Showplan", e);
+			return null;
 		}
 	}
 
@@ -430,15 +471,17 @@ public abstract class ShowplanHtmlView
 			out.write("    <META http-equiv='Content-Type' content='text/html; charset=UTF-8'>   \n");
 			out.write("    <title>Execution plan</title>                                         \n");
 			out.write("    <link rel='stylesheet' type='text/css' href='css/qp.css'>             \n");
-			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
+//			out.write("    <script src='lib/qp.js' type='text/javascript'></script>              \n");
+			out.write("    <script src='dist/qp.js' type='text/javascript'></script>             \n");
 			out.write("</head>                                                                   \n");
 			out.write("                                                                          \n");
 			out.write("<body>                                                                    \n");
 			out.write("<h2>" + Version.getAppName() + " - Simple Showplan viewer</h2>            \n");
 			out.write("The query plan is embedded in the HTML Source text...<br>                 \n");
-			out.write("Feel free to copy the shoplan xml and past it into some other tool...<br> \n");
+			out.write("Feel free to copy the showplan xml and past it into some other tool...<br> \n");
 			out.write("For example the online tool: <a target='_blank' href='http://www.supratimas.com/'>http://www.supratimas.com/</a><br> \n");
-			out.write("<button onclick='copyShowplanToClipboard()'>Copy Showplan</button> <br>   \n");
+			out.write("<button onclick='copyShowplanToClipboard()'>Copy Showplan</button>        \n");
+			out.write("<div id='copy-done'></div>                                                \n");
 			out.write("<br>                                                                      \n");
 			out.write("<hr>                                                                      \n");
 			out.write("<br>                                                                      \n");
@@ -456,21 +499,43 @@ public abstract class ShowplanHtmlView
 			out.write(xmlPlan);
 			out.write("`;\n");                     // note the backtick char
 			out.write("    QP.showPlan(document.getElementById('container'), showplanText);      \n");
-//			out.write("</script>                                                                 \n");
 
+//			out.write("                                                                          \n");
+//			out.write("function copyShowplanToClipboard()                                        \n");
+//			out.write("{                                                                         \n");
+//			out.write("    window.prompt('Copy to clipboard: Ctrl+C, Enter', showplanText);      \n");
+//			out.write("}                                                                         \n");
 			out.write("                                                                          \n");
-//			out.write("<script>                                                                  \n");
 			out.write("function copyShowplanToClipboard()                                        \n");
 			out.write("{                                                                         \n");
-			out.write("    window.prompt('Copy to clipboard: Ctrl+C, Enter', showplanText);      \n");
-//			out.write("    showplanText.select();                                                \n");
-//			out.write("    document.execCommand('Copy');                                         \n");
-//			out.write("    console.log('Copied the text: ' + copyText.value);                    \n");
-//			out.write("    alert('Copied the text: ' + copyText.value);                          \n");
+			out.write("    var copyFeedback = document.getElementById('copy-done');              \n");
+			out.write("                                                                          \n");
+			out.write("    // Set feedback                                                       \n");
+			out.write("    copyFeedback.innerHTML     = 'The Query Plan was copied to Clipboard';\n");
+			out.write("    copyFeedback.style.display = 'block';                                 \n");
+			out.write("                                                                          \n");
+			out.write("    // Copy to clipboard                                                  \n");
+			out.write("    copyStringToClipboard(showplanText);                                  \n");
+			out.write("                                                                          \n");
+			out.write("    // Hide feedback                                                      \n");
+			out.write("    setTimeout( function(){                                               \n");
+			out.write("        copyFeedback.style.display = 'none';                              \n");
+			out.write("    }, 3000);                                                             \n");
+			out.write("}                                                                         \n");
+			out.write("                                                                          \n");
+			out.write("function copyStringToClipboard (string) {                                 \n");
+			out.write("    function handler (event)                                              \n");
+			out.write("    {                                                                     \n");
+			out.write("        event.clipboardData.setData('text/plain', string);                \n");
+			out.write("        event.preventDefault();                                           \n");
+			out.write("        document.removeEventListener('copy', handler, true);              \n");
+			out.write("    }                                                                     \n");
+			out.write("                                                                          \n");
+			out.write("    document.addEventListener('copy', handler, true);                     \n");
+			out.write("    document.execCommand('copy');                                         \n");
 			out.write("}                                                                         \n");
 			out.write("</script>                                                                 \n");
 			out.write("                                                                          \n");
-
 			out.write("</body>                                                                   \n");
 			out.write("                                                                          \n");
 			out.write("</html>                                                                   \n");

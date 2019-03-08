@@ -1574,6 +1574,15 @@ function dbxChartPrintApiHelp()
 			'<b>default:</b> false<br>' + 
 			'</td>' + 
 		'</tr>' +
+		'<tr>' +
+			'<td>mdcwd</td>' + 
+			'<td>Multi Day Chart <b>Week Day</b><br>' + 
+			'If you just want some day of the week to be part of the "mdc/Multi Day Chart"<br>' + 
+			'This is a comma separated list of numbers.<br>' + 
+			'Where: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday<br>' + 
+			'<b>default:</b> 1,2,3,4,5,6,7 (all days)<br>' + 
+			'</td>' + 
+		'</tr>' +
 		'<tr>' + 
 			'<td>debug</td>' + 
 			'<td>How much "debug" messages we want to print to the "console.log". <br>' +
@@ -1645,6 +1654,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	var   endTime        = getParameter("endTime",       "");
 	var   multiDayChart  = getParameter("mdc",           "");
 	var   mdcPivot       = getParameter("mdcp",          false);
+	var   mdcWeekDays    = getParameter("mdcwd",         "1,2,3,4,5,6,7");
 	var   subscribe      = getParameter("subscribe",     false);
 	const debug          = getParameter("debug",         0);
 	const gheight        = getParameter("gheight",       200);
@@ -1659,6 +1669,8 @@ function dbxTuneLoadCharts(destinationDivId)
 	console.log("Passed startTime="+startTime);
 	console.log("Passed endTime="+endTime);
 	console.log("Passed mdc="+multiDayChart); // Multi Day Chart
+	console.log("Passed mdcp="+mdcPivot);     // Multi Day Chart - Pivot
+	console.log("Passed mdcwd="+mdcWeekDays); // Multi Day Chart - WeekDays
 
 	if (subscribe === "false")
 		subscribe = false;
@@ -1804,9 +1816,18 @@ function dbxTuneLoadCharts(destinationDivId)
 		if (_debug > 0)
 			console.log(">>>>>>>>>>>>>>>>>>>>> startTmp=|"+startTmp.format("YYYY-MM-DD HH:mm")+"|, endTmp=|"+endTmp.format("YYYY-MM-DD HH:mm")+"|, startTime=|"+startTime+"|, endTime=|"+endTime+"|");
 
+		var mdcWeekDaysArr = mdcWeekDays.split(",").map(Number);
+		
+		// Add entries to: startTimeArr
 		while (startTmp.isSameOrBefore(endTmp))
 		{
-			startTimeArr.push( startTmp.format("YYYY-MM-DD HH:mm") );
+			var dayOfWeekNumber = startTmp.isoWeekday(); // make it into string
+			if (mdcWeekDaysArr.includes(dayOfWeekNumber))
+				startTimeArr.push( startTmp.format("YYYY-MM-DD HH:mm") );
+			else
+				console.log("MultiDayChart: Skipping '"+startTmp.format("YYYY-MM-DD")+"', dayOfWeekNumber="+dayOfWeekNumber+", since it's NOT part of the desired days '"+mdcWeekDaysArr+"' you want to include in the graphs.", mdcWeekDaysArr);
+
+			// next day...
 			startTmp = startTmp.add(1, 'days');
 		}
 	}

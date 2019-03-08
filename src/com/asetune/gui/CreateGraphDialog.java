@@ -119,6 +119,11 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 	private JLabel                   _labelValue_lbl     = new JLabel("Name for the Value Axis (Left side)");
 	private JTextField               _labelValue_txt     = new JTextField("");
 
+	private JLabel                   _rotateCatLab_swl   = new JLabel("--rotateCategoryLabels");
+	private JLabel                   _rotateCatLab_lbl   = new JLabel("Rotate Category Labels");
+//	private JCheckBox                _rotateCatLab_chk   = new JCheckBox("Rotate Category Labels", false);
+	private JTextField               _rotateCatLab_txt   = new JTextField("");
+
 	private JLabel                   _str2num_swl        = new JLabel("--str2num");
 	private JCheckBox                _str2num_chk        = new JCheckBox("Try to Convert 'string' Columns to Numbers (use --removeRegEx to remove some chars)", false);
 
@@ -287,6 +292,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		_graphName_swl     .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_labelCategory_swl .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_labelValue_swl    .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
+		_rotateCatLab_swl  .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_str2num_swl       .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_removeRegEx_swl   .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 		_layoutWidth_swl   .setFont(f.deriveFont(f.getStyle() | Font.BOLD));
@@ -325,6 +331,11 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		panel.add(_labelValue_lbl    , "");
 		panel.add(_labelValue_txt    , "growx, wrap");
 
+		panel.add(_rotateCatLab_swl  , "");
+//		panel.add(_rotateCatLab_chk  , "skip 1, wrap");
+		panel.add(_rotateCatLab_lbl  , "");
+		panel.add(_rotateCatLab_txt  , "growx, wrap");
+		
 		panel.add(_str2num_swl       , "");
 		panel.add(_str2num_chk       , "skip 1, wrap");
 		
@@ -384,6 +395,11 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		_labelValue_txt    .addActionListener(this);
 		_labelValue_txt    .addFocusListener(this);
 		_labelValue_txt    .addKeyListener(this);
+
+//		_rotateCatLab_chk  .addActionListener(this);
+		_rotateCatLab_txt  .addActionListener(this);
+		_rotateCatLab_txt  .addFocusListener(this);
+		_rotateCatLab_txt  .addKeyListener(this);
 
 		_str2num_chk       .addActionListener(this);
 		_removeRegEx_txt   .addActionListener(this);
@@ -582,6 +598,23 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		if (StringUtil.hasValue(_labelValue_txt.getText()))
 			sqlCmd += "--labelValue '"+_labelValue_txt.getText()+"' ";
 
+		// --rotateCategoryLabels
+//		if (_rotateCatLab_chk.isSelected())
+//			sqlCmd += "--rotateCategoryLabels 90 ";
+		if (StringUtil.hasValue(_rotateCatLab_txt.getText()))
+		{
+			String rotateStr = _rotateCatLab_txt.getText().trim();
+			if ( rotateStr.equals("0") || rotateStr.equals("1") || rotateStr.equals("2") || rotateStr.equals("3") || rotateStr.equals("4") )
+			{
+				sqlCmd += "--rotateCategoryLabels "+rotateStr+" ";
+			}
+			else
+			{
+				SwingUtils.showWarnMessage(this, "Wrong value", "Sorry, value can only be: 0,1,2,3,4\n\n 0 = disabled\n 1 = UP_45\n 2 = UP_90\n 3 = DOWN_45\n 4 = DOWN_90\n", null);
+				_rotateCatLab_txt.setText("1");
+			}
+		}
+			
 		// --str2num
 		if (_str2num_chk.isSelected())
 			sqlCmd += "--str2num ";

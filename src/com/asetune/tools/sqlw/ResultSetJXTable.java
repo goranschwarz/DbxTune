@@ -57,6 +57,7 @@ import org.jdesktop.swingx.renderer.StringValue;
 import org.jdesktop.swingx.table.TableColumnExt;
 import org.mozilla.universalchardet.UniversalDetector;
 
+import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.focusabletip.ResolverReturn;
@@ -406,9 +407,22 @@ implements ToolTipHyperlinkResolver
 				if (tooltip == null)
 				{
 					boolean useAllColumnsTableTooltip = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS, DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS);
+
+					String msgPrefix = "<a href='" + CmToolTipSupplierDefault.SET_PROPERTY_TEMP + PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS + "=" + (!useAllColumnsTableTooltip) + "'>" + (useAllColumnsTableTooltip ? "Disable" : "Enable") + "</a> - Show row as tooltip table.<br>";
+
 					if (useAllColumnsTableTooltip)
 					{
-						tooltip = rstm.toHtmlTableString(row, false, true, true); // borders=false, stripedRows=true, addOuterHtmlTags=true
+						String  startMsg         = msgPrefix + "<hr>";
+						String  endMsg           = "";
+						boolean borders          = false;
+						boolean stripedRows      = true;
+						boolean addOuterHtmlTags = true;
+
+						tooltip = rstm.toHtmlTableString(row, startMsg, endMsg, borders, stripedRows, addOuterHtmlTags);
+					}
+					else
+					{
+						tooltip = "<html>" + msgPrefix + "</html>";
 					}
 				}
 
@@ -439,8 +453,8 @@ implements ToolTipHyperlinkResolver
 	}
 
 
-	/** internally used to specify that a HTML LINK should be opened in EXTERNAL Browser */
-	private static final String OPEN_IN_EXTERNAL_BROWSER = "OPEN-IN-EXTERNAL-BROWSER:";
+//	/** internally used to specify that a HTML LINK should be opened in EXTERNAL Browser */
+//	private static final String OPEN_IN_EXTERNAL_BROWSER = "OPEN-IN-EXTERNAL-BROWSER:";
 	
 	@Override
 	public ResolverReturn hyperlinkResolv(HyperlinkEvent event)
@@ -458,13 +472,12 @@ implements ToolTipHyperlinkResolver
 			_logger.debug("hyperlinkResolv(): event.toString()        ="+event.toString());
 		}
 
-		if (desc.startsWith(OPEN_IN_EXTERNAL_BROWSER))
+		if (desc.startsWith(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER))
 		{
-			String urlStr = desc.substring(OPEN_IN_EXTERNAL_BROWSER.length());
+			String urlStr = desc.substring(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER.length());
 			try
 			{
-				URL url = new URL(urlStr);
-				return new ResolverReturn(event, url, ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER);
+				return ResolverReturn.createOpenInExternalBrowser(event, urlStr);
 			}
 			catch (MalformedURLException e)
 			{
@@ -472,7 +485,13 @@ implements ToolTipHyperlinkResolver
 			}
 		}
 
-		return new ResolverReturn(event);
+		if (desc.startsWith(CmToolTipSupplierDefault.SET_PROPERTY_TEMP))
+		{
+			String str = desc.substring(CmToolTipSupplierDefault.SET_PROPERTY_TEMP.length());
+			return ResolverReturn.createSetProperyTemp(event, str);
+		}
+
+		return ResolverReturn.createOpenInCurrentTooltipWindow(event);
 	}
 
 	/**
@@ -631,7 +650,7 @@ implements ToolTipHyperlinkResolver
 							sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 							sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
 							sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
-							sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+							sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
 							sb.append("<hr>");
 							
 							sb.append("<pre><code>");
@@ -649,7 +668,7 @@ implements ToolTipHyperlinkResolver
 								"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
 								+ "Caught: <b>" + ex + "</b><br>"
 								+ "<hr>"
-								+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
+								+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
 								+ "Or copy the above filename, and open it in any application or text editor<br>"
 								+ "<html/>";
 						}
@@ -699,7 +718,7 @@ implements ToolTipHyperlinkResolver
 						sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 						sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
 						sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
-						sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
 						sb.append("<hr>");
 
 						int maxDisplayLenKb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB, DEFAULT_TOOLTIP_XML_INLINE_MAX_SIZE_KB);
@@ -727,7 +746,7 @@ implements ToolTipHyperlinkResolver
 							"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
 							+ "Caught: <b>" + ex + "</b><br>"
 							+ "<hr>"
-							+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
+							+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
 							+ "Or copy the above filename, and open it in any application or text editor<br>"
 							+ "<html/>";
 					}
@@ -773,7 +792,7 @@ implements ToolTipHyperlinkResolver
 					sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 					sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
 					sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
-					sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.txt'</b> will be used)<br>");
+					sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.txt'</b> will be used)<br>");
 					sb.append("<hr>");
 					
 					String truncatedMsg = "";
@@ -801,7 +820,7 @@ implements ToolTipHyperlinkResolver
 						"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
 						+ "Caught: <b>" + ex + "</b><br>"
 						+ "<hr>"
-						+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.txt'</b> will be used)<br>"
+						+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.txt'</b> will be used)<br>"
 						+ "Or copy the above filename, and open it in any application or text editor<br>"
 						+ "<html/>";
 				}
@@ -899,7 +918,7 @@ implements ToolTipHyperlinkResolver
 								sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 								sb.append("Width/Height: <code>").append(originSize.width).append(" x ").append(originSize.height).append("</code><br>");
 								sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
-								sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for mime type <b>'").append(mimeType).append("'</b> will be used)<br>");
+								sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for mime type <b>'").append(mimeType).append("'</b> will be used)<br>");
 								sb.append("<hr>");
 
 								sb.append("<img src=\"file:///").append(tmpFile).append("\" alt=\"").append(info).append("\" width=\"").append(newSize.width).append("\" height=\"").append(newSize.height).append("\">");
@@ -915,7 +934,7 @@ implements ToolTipHyperlinkResolver
 									"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
 									+ "Caught: <b>" + ex + "</b><br>"
 									+ "<hr>"
-									+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> will be used)<br>"
+									+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> will be used)<br>"
 									+ "Or copy the above filename, and open it in any application or text editor<br>"
 									+ "<html/>";
 							}
@@ -1006,7 +1025,7 @@ implements ToolTipHyperlinkResolver
 						sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 						sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
 						sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
-						sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for mime type <b>'").append(mimeType).append("'</b> will be used)<br>");
+						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for mime type <b>'").append(mimeType).append("'</b> will be used)<br>");
 						sb.append("<hr>");
 
 						int maxDisplayLenKb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB, DEFAULT_TOOLTIP_XML_INLINE_MAX_SIZE_KB);
@@ -1035,7 +1054,7 @@ implements ToolTipHyperlinkResolver
 							"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
 							+ "Caught: <b>" + ex + "</b><br>"
 							+ "<hr>"
-							+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> will be used)<br>"
+							+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> will be used)<br>"
 							+ "Or copy the above filename, and open it in any application or text editor<br>"
 							+ "<html/>";
 					}
@@ -1209,7 +1228,7 @@ implements ToolTipHyperlinkResolver
 					sb.append("<hr>");
 					sb.append("How do you want to view the content?");
 					sb.append("<ul>");
-					sb.append("  <li><a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for mime type <b>'").append(mimeType).append("'</b> or file extention <b>'").append(fileExt).append("'</b> will be used)</li>");
+					sb.append("  <li><a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for mime type <b>'").append(mimeType).append("'</b> or file extention <b>'").append(fileExt).append("'</b> will be used)</li>");
 					sb.append("  <li><a href='").append(url                           ).append("'>Try to Open in this window</a></li>");
 					sb.append("</ul>");
 					sb.append("</html>");
@@ -1233,7 +1252,7 @@ implements ToolTipHyperlinkResolver
 						"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
 						+ "Caught: <b>" + ex + "</b><br>"
 						+ "<hr>"
-						+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> or file extention <b>'" + fileExt + "'</b> will be used)<br>"
+						+ "<a href='" + CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for mime type <b>'" + mimeType + "'</b> or file extention <b>'" + fileExt + "'</b> will be used)<br>"
 						+ "Or copy the above filename, and open it in any application or text editor<br>"
 						+ "<html/>";
 				}

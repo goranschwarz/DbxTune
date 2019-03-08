@@ -669,8 +669,20 @@ public class SshConnection
 				+ message.replace("\n", "<br>")
 				+ "</html>";
 
-			/* Now ask the user */
-			int choice = JOptionPane.showConfirmDialog( (hasWaitForDialog() ? getWaitForDialog() : getGuiOwner()), htmlMsg);
+			/* if we have a "parent" GUI --- Now ask the user for input */
+			Component parentComponent = hasWaitForDialog() ? getWaitForDialog() : getGuiOwner();
+			int choice;
+//			if (parentComponent == null)
+//				parentComponent = FocusManager.getCurrentManager().getActiveWindow();//KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+
+			if (parentComponent != null)
+				choice = JOptionPane.showConfirmDialog( parentComponent, htmlMsg);
+			else
+			{
+				choice = JOptionPane.YES_OPTION;
+				_logger.warn("SSH Host Key database was updated without user interaction, since 'parentComponent' was null. adding entry for host '"+hostname+"' to file '"+_knownHostPath+"'.");
+			}
+			
 			if (choice == JOptionPane.YES_OPTION)
 			{
 				/* Be really paranoid. We use a hashed hostname entry */

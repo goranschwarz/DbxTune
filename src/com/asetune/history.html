@@ -69,6 +69,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			</ul>
 		</LI>
 		<LI>Performance Counter Panels: added shortcut ctrl-1 = view ABS Counter, ctrl-2 = view DIFF Counters, ctrl-3 = view RATE Counters</LI>
+		<LI>Tooltip on Cells in CounterModel - You can choose to see 'PK' or 'ALL' columns, you can also set if it should be a Focusable ToolTip (change settings with right click, context menu)</LI>
+		<li>View DBMS Configuration for all vendors: Changed most fields to be "editable", to make it easier to copy information from the cells</li>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
@@ -105,7 +107,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Added Multi Day Chart 'mdc' option, for example to view CPU usage over X day... (simply add mdc=# to the URL), where # is number of days to view<br>
 			There are shortcuts for this when you right click a chart<br>
 			- Open this graph (last # days) in new Tab<br>
-			- Open ALL graphs in view (last # days) in new Tab
+			- Open ALL graphs in view (last # days) in new Tab<br>
+			- with mdcwd=1,2,3 (you can specify to only show some of the week days)<br>
+			- with mdcp=true|false (you can specify to layout in Pivot mode, just in what order the graphs are added to the layout)<br>
 			</LI>
 		<LI>Viewing log files:<br>
 			- add title, so it's easier to see what file we are viewing<br>
@@ -322,6 +326,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>CmPgDatabase: New Columns 'tup_fetched_in_slide, tup_returned_in_slide, fetch_efficency_slide_pct' and a new graph 'Row Fetch Efficiency SLIDE'<br>
 			This is "the same as" graphs for 'Row Fetch Efficiency' and 'Row Fetch Efficiency ABS' but uses a 15 minute slide/range from which the Efficiency is calculated
 			</LI>
+		<LI>Added Collector for Function Stats</LI>
+		<LI>Cell tooltip on 'ObjectName' on all collectors - now shows some information about the table (in online mode)</LI>
+		<LI>Cell tooltip on 'plan_handle' on all collectors - now able to show a GUI ShowPlan in an external HTML Browser (by clicking on a link in the tooltip window)</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

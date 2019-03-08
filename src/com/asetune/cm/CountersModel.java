@@ -1739,6 +1739,11 @@ implements Cloneable, ITableTooltip
 		return null;
 	}
 
+	public GTable.ITableTooltip getToolTipSupplier()
+	{
+		return _cmToolTipSupplier;
+	}
+
 	/**
 	 * Get tooltip for a specific Table Column
 	 * @param colName
@@ -6388,15 +6393,15 @@ implements Cloneable, ITableTooltip
 	}
 
 	// 
-	private Double getValueAsDouble(int whatData, int rowId, String colname)
+	private Double getValueAsDouble(int whatData, int rowId, String colname, boolean caseSensitive)
 	{
-		return getValueAsDouble(whatData, rowId, colname, null);
+		return getValueAsDouble(whatData, rowId, colname, caseSensitive, null);
 	}
 
 	// 
-	private synchronized Double getValueAsDouble(int whatData, int rowId, String colname, Double def)
+	private synchronized Double getValueAsDouble(int whatData, int rowId, String colname, boolean caseSensitive, Double def)
 	{
-		Object o = getValue(whatData, rowId, colname);
+		Object o = getValue(whatData, rowId, colname, caseSensitive);
 		if (o == null)
 			return def;
 
@@ -6407,13 +6412,13 @@ implements Cloneable, ITableTooltip
 	}
 
 	// Return the value of a cell by ROWID (rowId, ColumnName)
-	private synchronized Object getValue(int whatData, int rowId, String colname)
+	protected synchronized Object getValue(int whatData, int rowId, String colname, boolean caseSensitive)
 	{
-		return getValue(whatData, rowId, colname, null);
+		return getValue(whatData, rowId, colname, caseSensitive, null);
 	}
 
 	// Return the value of a cell by ROWID (rowId, ColumnName)
-	private synchronized Object getValue(int whatData, int rowId, String colname, Object def)
+	private synchronized Object getValue(int whatData, int rowId, String colname, boolean caseSensitive, Object def)
 	{
 		CounterTableModel data = null;
 
@@ -6426,8 +6431,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return def;
 
-//		int idCol = data.getColNames().indexOf(colname);
-		int idCol = data.findColumn(colname);
+		int idCol = data.findColumn(colname, caseSensitive);
 		if (idCol == -1)
 		{
 			if (_logger.isDebugEnabled()) 
@@ -6473,15 +6477,15 @@ implements Cloneable, ITableTooltip
 	}
 
 	// 
-	private Double getValueAsDouble(int whatData, String pkStr, String colname)
+	private Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive)
 	{
-		return getValueAsDouble(whatData, pkStr, colname, null);
+		return getValueAsDouble(whatData, pkStr, colname, caseSensitive, null);
 	}
 
 	// 
-	private synchronized Double getValueAsDouble(int whatData, String pkStr, String colname, Double def)
+	private synchronized Double getValueAsDouble(int whatData, String pkStr, String colname, boolean caseSensitive, Double def)
 	{
-		Object o = getValue(whatData, pkStr, colname);
+		Object o = getValue(whatData, pkStr, colname, caseSensitive);
 		if (o == null)
 			return def;
 
@@ -6491,9 +6495,9 @@ implements Cloneable, ITableTooltip
 			return new Double(Double.parseDouble(o.toString()));
 	}
 
-	private Object getValue(int whatData, String pkStr, String colname)
+	private Object getValue(int whatData, String pkStr, String colname, boolean caseSensitive)
 	{
-		return getValue(whatData, pkStr, colname, null);
+		return getValue(whatData, pkStr, colname, caseSensitive, null);
 	}
 	/**
 	 *  Return the value of a cell by ROWID (rowId, colId)
@@ -6503,7 +6507,7 @@ implements Cloneable, ITableTooltip
 	 */
 	// Return the value of a cell by keyVal, (keyVal, ColumnName)
 //	private synchronized Double getValue(int whatData, String pkStr, String colname)
-	private synchronized Object getValue(int whatData, String pkStr, String colname, Object def)
+	private synchronized Object getValue(int whatData, String pkStr, String colname, boolean caseSensitive, Object def)
 	{
 		CounterTableModel data = null;
 
@@ -6530,7 +6534,7 @@ implements Cloneable, ITableTooltip
 		}
 
 		// Got object for the RowID and column name
-		Object o = getValue(whatData, rowId, colname);
+		Object o = getValue(whatData, rowId, colname, caseSensitive);
 		if (o == null)
 		{
 			if (_logger.isDebugEnabled()) 
@@ -6551,7 +6555,7 @@ implements Cloneable, ITableTooltip
 	 * @param colvalue Value to search for in the above column name
 	 * @return int[] an array of integers where rows meets above search criteria, if nothing was found return null
 	 */
-	private int[] getRowIdsWhere(int whatData, String colname, String colvalue)
+	private int[] getRowIdsWhere(int whatData, String colname, boolean caseSensitive, String colvalue)
 	{
 		CounterTableModel data = null;
 
@@ -6565,7 +6569,7 @@ implements Cloneable, ITableTooltip
 			return null;
 
 //		int idCol = data.getColNames().indexOf(colname);
-		int idCol = data.findColumn(colname);
+		int idCol = data.findColumn(colname, caseSensitive);
 		if (idCol == -1)
 		{
 			_logger.info("getRowIdsWhere: Can't find the column '" + colname + "'.");
@@ -6595,7 +6599,7 @@ implements Cloneable, ITableTooltip
 		return ia;
 	}
 
-	private synchronized Double getMaxValue(int whatData, int[] rowIds, String colname)
+	private synchronized Double getMaxValue(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
 
@@ -6608,7 +6612,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-		int colPos = data.findColumn(colname);
+		int colPos = data.findColumn(colname, caseSensitive);
 		if (colPos == -1)
 		{
 			_logger.info("getMaxValue: Can't find the column '" + colname + "'.");
@@ -6678,7 +6682,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	// Return the MIN of the values of a column (ColumnName)
-	private synchronized Double getMinValue(int whatData, int[] rowIds, String colname)
+	private synchronized Double getMinValue(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
 
@@ -6691,7 +6695,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-		int colPos = data.findColumn(colname);
+		int colPos = data.findColumn(colname, caseSensitive);
 		if (colPos == -1)
 		{
 			_logger.info("getMinValue: Can't find the column '" + colname + "'.");
@@ -6761,7 +6765,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	// Return the sum of the values of a Long column (ColumnName)
-	private synchronized Double getSumValue(int whatData, int[] rowIds, String colname)
+	private synchronized Double getSumValue(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
 
@@ -6774,7 +6778,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-		int colPos = data.findColumn(colname);
+		int colPos = data.findColumn(colname, caseSensitive);
 		if (colPos == -1)
 		{
 			_logger.info("getSumValue: Can't find the column '" + colname + "'.");
@@ -6844,7 +6848,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	// Return the sum of the values of a Long column (ColumnName)
-	private synchronized int getCountGtZero(int whatData, int[] rowIds, String colname)
+	private synchronized int getCountGtZero(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
 
@@ -6857,7 +6861,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return 0;
 
-		int colPos = data.findColumn(colname);
+		int colPos = data.findColumn(colname, caseSensitive);
 		if (colPos == -1)
 		{
 			_logger.info("getMaxValue: Can't find the column '" + colname + "'.");
@@ -6918,7 +6922,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
-	private synchronized Double getAvgValue(int whatData, int[] rowIds, String colname)
+	private synchronized Double getAvgValue(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
 
@@ -6931,7 +6935,7 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-		Double sum = getSumValue(whatData, rowIds, colname);
+		Double sum = getSumValue(whatData, rowIds, colname, caseSensitive);
 		if (sum == null)
 			return null;
 
@@ -6974,7 +6978,7 @@ implements Cloneable, ITableTooltip
 	}
 
 	// Return the AVG of the values of a Long column (ColumnName)
-	private synchronized Double getAvgValueGtZero(int whatData, int[] rowIds, String colname)
+	private synchronized Double getAvgValueGtZero(int whatData, int[] rowIds, String colname, boolean caseSensitive)
 	{
 		CounterTableModel data = null;
 
@@ -6987,11 +6991,11 @@ implements Cloneable, ITableTooltip
 		if (data == null)
 			return null;
 
-		Double sum = getSumValue(whatData, rowIds, colname);
+		Double sum = getSumValue(whatData, rowIds, colname, caseSensitive);
 		if (sum == null)
 			return null;
 
-		int count = getCountGtZero(whatData, rowIds, colname);
+		int count = getCountGtZero(whatData, rowIds, colname, caseSensitive);
 		
 		if (count == 0)
 			return new Double(0);
@@ -7045,104 +7049,202 @@ implements Cloneable, ITableTooltip
 	//--------------------------------------------------------------
 	// Wrapper functions to read ABSOLUTE values
 	//--------------------------------------------------------------
-	public String getAbsString        (int    rowId, int    colPos)              { Object o = getValue     (DATA_ABS, rowId, colPos);  return (o==null)?"":o.toString(); }
-	public String getAbsString        (int    rowId, String colname)             { Object o = getValue     (DATA_ABS, rowId, colname); return (o==null)?"":o.toString(); }
-	public String getAbsString        (String pkStr, String colname)             { Object o = getValue     (DATA_ABS, pkStr, colname); return (o==null)?"":o.toString(); }
-	public Object getAbsValue         (int    rowId, int    colPos)              { Object o = getValue     (DATA_ABS, rowId, colPos);  return o; }
-	public Object getAbsValue         (int    rowId, String colname)             { return getValue         (DATA_ABS, rowId, colname); }
-	public Object getAbsValue         (String pkStr, String colname)             { return getValue         (DATA_ABS, pkStr, colname); }
-	public Double getAbsValueAsDouble (int    rowId, int    colPos)              { return getValueAsDouble (DATA_ABS, rowId, colPos);  }
-	public Double getAbsValueAsDouble (int    rowId, int    colPos, Double def)  { return getValueAsDouble (DATA_ABS, rowId, colPos, def);  }
-	public Double getAbsValueAsDouble (int    rowId, String colname)             { return getValueAsDouble (DATA_ABS, rowId, colname); }
-	public Double getAbsValueAsDouble (int    rowId, String colname, Double def) { return getValueAsDouble (DATA_ABS, rowId, colname, def); }
-	public Double getAbsValueAsDouble (String pkStr, String colname)             { return getValueAsDouble (DATA_ABS, pkStr, colname); }
-	public Double getAbsValueAsDouble (String pkStr, String colname, Double def) { return getValueAsDouble (DATA_ABS, pkStr, colname, def); }
-	public Double getAbsValueMax      (int    colPos)                            { return getMaxValue      (DATA_ABS, null,  colPos);  }
-	public Double getAbsValueMax      (String colname)                           { return getMaxValue      (DATA_ABS, null,  colname); }
-	public Double getAbsValueMin      (int    colPos)                            { return getMinValue      (DATA_ABS, null,  colPos);  }
-	public Double getAbsValueMin      (String colname)                           { return getMinValue      (DATA_ABS, null,  colname); }
-	public Double getAbsValueAvg      (int    colPos)                            { return getAvgValue      (DATA_ABS, null,  colPos);  }
-	public Double getAbsValueAvg      (String colname)                           { return getAvgValue      (DATA_ABS, null,  colname); }
-	public Double getAbsValueAvgGtZero(int    colPos)                            { return getAvgValueGtZero(DATA_ABS, null,  colPos);  }
-	public Double getAbsValueAvgGtZero(String colname)                           { return getAvgValueGtZero(DATA_ABS, null,  colname); }
-	public Double getAbsValueSum      (int    colPos)                            { return getSumValue      (DATA_ABS, null,  colPos);  }
-	public Double getAbsValueSum      (String colname)                           { return getSumValue      (DATA_ABS, null,  colname); }
-	public String getAbsPkValue       (int    rowId)                             { return getPkValue       (DATA_ABS, rowId  ); }
+	public String getAbsString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos);        return (o==null)?"":o.toString(); }
+	public String getAbsString        (int    rowId, String colname)                         { Object o = getValue     (DATA_ABS, rowId, colname, true); return (o==null)?"":o.toString(); }
+	public String getAbsString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, rowId, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getAbsString        (String pkStr, String colname)                         { Object o = getValue     (DATA_ABS, pkStr, colname, true); return (o==null)?"":o.toString(); }
+	public String getAbsString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_ABS, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	
+	public Object getAbsValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_ABS, rowId, colPos); return o; }
+	public Object getAbsValue         (int    rowId, String colname)                         { return getValue         (DATA_ABS, rowId, colname, true); }
+	public Object getAbsValue         (int    rowId, String colname, boolean cs)             { return getValue         (DATA_ABS, rowId, colname,   cs); }
+	public Object getAbsValue         (String pkStr, String colname)                         { return getValue         (DATA_ABS, pkStr, colname, true); }
+	public Object getAbsValue         (String pkStr, String colname, boolean cs)             { return getValue         (DATA_ABS, pkStr, colname,   cs); }
+	
+	public Double getAbsValueAsDouble (int    rowId, int    colPos)                          { return getValueAsDouble (DATA_ABS, rowId, colPos);             }
+	public Double getAbsValueAsDouble (int    rowId, int    colPos, Double def)              { return getValueAsDouble (DATA_ABS, rowId, colPos, def);        }
+	public Double getAbsValueAsDouble (int    rowId, String colname)                         { return getValueAsDouble (DATA_ABS, rowId, colname, true);      }
+	public Double getAbsValueAsDouble (int    rowId, String colname, boolean cs)             { return getValueAsDouble (DATA_ABS, rowId, colname,   cs);      }
+	public Double getAbsValueAsDouble (int    rowId, String colname, Double def)             { return getValueAsDouble (DATA_ABS, rowId, colname, true, def); }
+	public Double getAbsValueAsDouble (int    rowId, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_ABS, rowId, colname,   cs, def); }
+	public Double getAbsValueAsDouble (String pkStr, String colname)                         { return getValueAsDouble (DATA_ABS, pkStr, colname, true);      }
+	public Double getAbsValueAsDouble (String pkStr, String colname, boolean cs)             { return getValueAsDouble (DATA_ABS, pkStr, colname,   cs);      }
+	public Double getAbsValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_ABS, pkStr, colname, true, def); }
+	public Double getAbsValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_ABS, pkStr, colname,   cs, def); }
+	
+	public Double getAbsValueMax      (int    colPos)                                        { return getMaxValue      (DATA_ABS, null,  colPos);        }
+	public Double getAbsValueMax      (String colname)                                       { return getMaxValue      (DATA_ABS, null,  colname, true); }
+	public Double getAbsValueMax      (String colname, boolean cs)                           { return getMaxValue      (DATA_ABS, null,  colname,   cs); }
+	
+	public Double getAbsValueMin      (int    colPos)                                        { return getMinValue      (DATA_ABS, null,  colPos);        }
+	public Double getAbsValueMin      (String colname)                                       { return getMinValue      (DATA_ABS, null,  colname, true); }
+	public Double getAbsValueMin      (String colname, boolean cs)                           { return getMinValue      (DATA_ABS, null,  colname,   cs); }
+	
+	public Double getAbsValueAvg      (int    colPos)                                        { return getAvgValue      (DATA_ABS, null,  colPos);        }
+	public Double getAbsValueAvg      (String colname)                                       { return getAvgValue      (DATA_ABS, null,  colname, true); }
+	public Double getAbsValueAvg      (String colname, boolean cs)                           { return getAvgValue      (DATA_ABS, null,  colname,   cs); }
+	
+	public Double getAbsValueAvgGtZero(int    colPos)                                        { return getAvgValueGtZero(DATA_ABS, null,  colPos);        }
+	public Double getAbsValueAvgGtZero(String colname)                                       { return getAvgValueGtZero(DATA_ABS, null,  colname, true); }
+	public Double getAbsValueAvgGtZero(String colname, boolean cs)                           { return getAvgValueGtZero(DATA_ABS, null,  colname,   cs); }
+	
+	public Double getAbsValueSum      (int    colPos)                                        { return getSumValue      (DATA_ABS, null,  colPos);        }
+	public Double getAbsValueSum      (String colname)                                       { return getSumValue      (DATA_ABS, null,  colname, true); }
+	public Double getAbsValueSum      (String colname, boolean cs)                           { return getSumValue      (DATA_ABS, null,  colname,   cs); }
+	
+	public String getAbsPkValue       (int    rowId)                                         { return getPkValue       (DATA_ABS, rowId  ); }
                                                                                  
-	public int[]  getAbsRowIdsWhere   (String colname, String colval)            { return getRowIdsWhere   (DATA_ABS, colname, colval); }
-	public Double getAbsValueMax      (int[] rowIds, String colname)             { return getMaxValue      (DATA_ABS, rowIds,  colname); }
-	public Double getAbsValueMin      (int[] rowIds, String colname)             { return getMinValue      (DATA_ABS, rowIds,  colname); }
-	public Double getAbsValueAvg      (int[] rowIds, String colname)             { return getAvgValue      (DATA_ABS, rowIds,  colname); }
-	public Double getAbsValueAvgGtZero(int[] rowIds, String colname)             { return getAvgValueGtZero(DATA_ABS, rowIds,  colname); }
-	public Double getAbsValueSum      (int[] rowIds, String colname)             { return getSumValue      (DATA_ABS, rowIds,  colname); }
+	public int[]  getAbsRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_ABS, colname, true, colval); }
+	public int[]  getAbsRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_ABS, colname,   cs, colval); }
+	
+	public Double getAbsValueMax      (int[] rowIds, String colname)                         { return getMaxValue      (DATA_ABS, rowIds,  colname, true); }
+	public Double getAbsValueMax      (int[] rowIds, String colname, boolean cs)             { return getMaxValue      (DATA_ABS, rowIds,  colname,   cs); }
+	
+	public Double getAbsValueMin      (int[] rowIds, String colname)                         { return getMinValue      (DATA_ABS, rowIds,  colname, true); }
+	public Double getAbsValueMin      (int[] rowIds, String colname, boolean cs)             { return getMinValue      (DATA_ABS, rowIds,  colname,   cs); }
+	
+	public Double getAbsValueAvg      (int[] rowIds, String colname)                         { return getAvgValue      (DATA_ABS, rowIds,  colname, true); }
+	public Double getAbsValueAvg      (int[] rowIds, String colname, boolean cs)             { return getAvgValue      (DATA_ABS, rowIds,  colname,   cs); }
+	
+	public Double getAbsValueAvgGtZero(int[] rowIds, String colname)                         { return getAvgValueGtZero(DATA_ABS, rowIds,  colname, true); }
+	public Double getAbsValueAvgGtZero(int[] rowIds, String colname, boolean cs)             { return getAvgValueGtZero(DATA_ABS, rowIds,  colname,   cs); }
+	
+	public Double getAbsValueSum      (int[] rowIds, String colname)                         { return getSumValue      (DATA_ABS, rowIds,  colname, true); }
+	public Double getAbsValueSum      (int[] rowIds, String colname, boolean cs)             { return getSumValue      (DATA_ABS, rowIds,  colname,   cs); }
 
+	
 	//--------------------------------------------------------------
 	// Wrapper functions to read DIFF (new-old) values
 	//--------------------------------------------------------------
-	public String getDiffString        (int    rowId, int    colPos)              { Object o = getValue     (DATA_DIFF, rowId, colPos);  return (o==null)?"":o.toString(); }
-	public String getDiffString        (int    rowId, String colname)             { Object o = getValue     (DATA_DIFF, rowId, colname); return (o==null)?"":o.toString(); }
-	public String getDiffString        (String pkStr, String colname)             { Object o = getValue     (DATA_DIFF, pkStr, colname); return (o==null)?"":o.toString(); }
-	public Object getDiffValue         (int    rowId, int    colPos)              { Object o = getValue     (DATA_DIFF, rowId, colPos);  return o; }
-	public Object getDiffValue         (int    rowId, String colname)             { return getValue         (DATA_DIFF, rowId, colname); }
-	public Object getDiffValue         (String pkStr, String colname)             { return getValue         (DATA_DIFF, pkStr, colname); }
-	public Double getDiffValueAsDouble (int    rowId, int    colPos)              { return getValueAsDouble (DATA_DIFF, rowId, colPos);  }
-	public Double getDiffValueAsDouble (int    rowId, int    colPos, Double def)  { return getValueAsDouble (DATA_DIFF, rowId, colPos, def);  }
-	public Double getDiffValueAsDouble (int    rowId, String colname)             { return getValueAsDouble (DATA_DIFF, rowId, colname); }
-	public Double getDiffValueAsDouble (int    rowId, String colname, Double def) { return getValueAsDouble (DATA_DIFF, rowId, colname, def); }
-	public Double getDiffValueAsDouble (String pkStr, String colname)             { return getValueAsDouble (DATA_DIFF, pkStr, colname); }
-	public Double getDiffValueAsDouble (String pkStr, String colname, Double def) { return getValueAsDouble (DATA_DIFF, pkStr, colname, def); }
-	public Double getDiffValueMax      (int    colPos)                            { return getMaxValue      (DATA_DIFF, null,  colPos);  }
-	public Double getDiffValueMax      (String colname)                           { return getMaxValue      (DATA_DIFF, null,  colname); }
-	public Double getDiffValueMin      (int    colPos)                            { return getMinValue      (DATA_DIFF, null,  colPos);  }
-	public Double getDiffValueMin      (String colname)                           { return getMinValue      (DATA_DIFF, null,  colname); }
-	public Double getDiffValueAvg      (int    colPos)                            { return getAvgValue      (DATA_DIFF, null,  colPos);  }
-	public Double getDiffValueAvg      (String colname)                           { return getAvgValue      (DATA_DIFF, null,  colname); }
-	public Double getDiffValueAvgGtZero(int    colPos)                            { return getAvgValueGtZero(DATA_DIFF, null,  colPos);  }
-	public Double getDiffValueAvgGtZero(String colname)                           { return getAvgValueGtZero(DATA_DIFF, null,  colname); }
-	public Double getDiffValueSum      (int    colPos)                            { return getSumValue      (DATA_DIFF, null,  colPos);  }
-	public Double getDiffValueSum      (String colname)                           { return getSumValue      (DATA_DIFF, null,  colname); }
-	public String getDiffPkValue       (int    rowId)                             { return getPkValue       (DATA_DIFF, rowId  ); }
-                                                                                  
-	public int[]  getDiffRowIdsWhere   (String colname, String colval)            { return getRowIdsWhere   (DATA_DIFF, colname, colval); }
-	public Double getDiffValueMax      (int[] rowIds, String colname)             { return getMaxValue      (DATA_DIFF, rowIds,  colname); }
-	public Double getDiffValueMin      (int[] rowIds, String colname)             { return getMinValue      (DATA_DIFF, rowIds,  colname); }
-	public Double getDiffValueAvg      (int[] rowIds, String colname)             { return getAvgValue      (DATA_DIFF, rowIds,  colname); }
-	public Double getDiffValueAvgGtZero(int[] rowIds, String colname)             { return getAvgValueGtZero(DATA_DIFF, rowIds,  colname); }
-	public Double getDiffValueSum      (int[] rowIds, String colname)             { return getSumValue      (DATA_DIFF, rowIds,  colname); }
+	public String getDiffString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_DIFF, rowId, colPos);        return (o==null)?"":o.toString(); }
+	public String getDiffString        (int    rowId, String colname)                         { Object o = getValue     (DATA_DIFF, rowId, colname, true); return (o==null)?"":o.toString(); }
+	public String getDiffString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, rowId, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getDiffString        (String pkStr, String colname)                         { Object o = getValue     (DATA_DIFF, pkStr, colname, true); return (o==null)?"":o.toString(); }
+	public String getDiffString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_DIFF, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	
+	public Object getDiffValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_DIFF, rowId, colPos);  return o; }
+	public Object getDiffValue         (int    rowId, String colname)                         { return getValue         (DATA_DIFF, rowId, colname, true); }
+	public Object getDiffValue         (int    rowId, String colname, boolean cs)             { return getValue         (DATA_DIFF, rowId, colname,   cs); }
+	public Object getDiffValue         (String pkStr, String colname)                         { return getValue         (DATA_DIFF, pkStr, colname, true); }
+	public Object getDiffValue         (String pkStr, String colname, boolean cs)             { return getValue         (DATA_DIFF, pkStr, colname,   cs); }
+	
+	public Double getDiffValueAsDouble (int    rowId, int    colPos)                          { return getValueAsDouble (DATA_DIFF, rowId, colPos);             }
+	public Double getDiffValueAsDouble (int    rowId, int    colPos, Double def)              { return getValueAsDouble (DATA_DIFF, rowId, colPos, def);        }
+	public Double getDiffValueAsDouble (int    rowId, String colname)                         { return getValueAsDouble (DATA_DIFF, rowId, colname, true);      }
+	public Double getDiffValueAsDouble (int    rowId, String colname, boolean cs)             { return getValueAsDouble (DATA_DIFF, rowId, colname,   cs);      }
+	public Double getDiffValueAsDouble (int    rowId, String colname, Double def)             { return getValueAsDouble (DATA_DIFF, rowId, colname, true, def); }
+	public Double getDiffValueAsDouble (int    rowId, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_DIFF, rowId, colname,   cs, def); }
+	public Double getDiffValueAsDouble (String pkStr, String colname)                         { return getValueAsDouble (DATA_DIFF, pkStr, colname, true);      }
+	public Double getDiffValueAsDouble (String pkStr, String colname, boolean cs)             { return getValueAsDouble (DATA_DIFF, pkStr, colname,   cs);      }
+	public Double getDiffValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_DIFF, pkStr, colname, true, def); }
+	public Double getDiffValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_DIFF, pkStr, colname,   cs, def); }
+	
+	public Double getDiffValueMax      (int    colPos)                                        { return getMaxValue      (DATA_DIFF, null,  colPos);        }
+	public Double getDiffValueMax      (String colname)                                       { return getMaxValue      (DATA_DIFF, null,  colname, true); }
+	public Double getDiffValueMax      (String colname, boolean cs)                           { return getMaxValue      (DATA_DIFF, null,  colname,   cs); }
+	
+	public Double getDiffValueMin      (int    colPos)                                        { return getMinValue      (DATA_DIFF, null,  colPos);        }
+	public Double getDiffValueMin      (String colname)                                       { return getMinValue      (DATA_DIFF, null,  colname, true); }
+	public Double getDiffValueMin      (String colname, boolean cs)                           { return getMinValue      (DATA_DIFF, null,  colname,   cs); }
+	
+	public Double getDiffValueAvg      (int    colPos)                                        { return getAvgValue      (DATA_DIFF, null,  colPos);        }
+	public Double getDiffValueAvg      (String colname)                                       { return getAvgValue      (DATA_DIFF, null,  colname, true); }
+	public Double getDiffValueAvg      (String colname, boolean cs)                           { return getAvgValue      (DATA_DIFF, null,  colname,   cs); }
 
+	public Double getDiffValueAvgGtZero(int    colPos)                                        { return getAvgValueGtZero(DATA_DIFF, null,  colPos);        }
+	public Double getDiffValueAvgGtZero(String colname)                                       { return getAvgValueGtZero(DATA_DIFF, null,  colname, true); }
+	public Double getDiffValueAvgGtZero(String colname, boolean cs)                           { return getAvgValueGtZero(DATA_DIFF, null,  colname,   cs); }
+	
+	public Double getDiffValueSum      (int    colPos)                                        { return getSumValue      (DATA_DIFF, null,  colPos);        }
+	public Double getDiffValueSum      (String colname)                                       { return getSumValue      (DATA_DIFF, null,  colname, true); }
+	public Double getDiffValueSum      (String colname, boolean cs)                           { return getSumValue      (DATA_DIFF, null,  colname,   cs); }
+	
+	public String getDiffPkValue       (int    rowId)                                         { return getPkValue       (DATA_DIFF, rowId  ); }
+                                                                                  
+	public int[]  getDiffRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_DIFF, colname, true, colval); }
+	public int[]  getDiffRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_DIFF, colname,   cs, colval); }
+	
+	public Double getDiffValueMax      (int[] rowIds, String colname)                         { return getMaxValue      (DATA_DIFF, rowIds,  colname, true); }
+	public Double getDiffValueMax      (int[] rowIds, String colname, boolean cs)             { return getMaxValue      (DATA_DIFF, rowIds,  colname,   cs); }
+	
+	public Double getDiffValueMin      (int[] rowIds, String colname)                         { return getMinValue      (DATA_DIFF, rowIds,  colname, true); }
+	public Double getDiffValueMin      (int[] rowIds, String colname, boolean cs)             { return getMinValue      (DATA_DIFF, rowIds,  colname,   cs); }
+	
+	public Double getDiffValueAvg      (int[] rowIds, String colname)                         { return getAvgValue      (DATA_DIFF, rowIds,  colname, true); }
+	public Double getDiffValueAvg      (int[] rowIds, String colname, boolean cs)             { return getAvgValue      (DATA_DIFF, rowIds,  colname,   cs); }
+	
+	public Double getDiffValueAvgGtZero(int[] rowIds, String colname)                         { return getAvgValueGtZero(DATA_DIFF, rowIds,  colname, true); }
+	public Double getDiffValueAvgGtZero(int[] rowIds, String colname, boolean cs)             { return getAvgValueGtZero(DATA_DIFF, rowIds,  colname,   cs); }
+	
+	public Double getDiffValueSum      (int[] rowIds, String colname)                         { return getSumValue      (DATA_DIFF, rowIds,  colname, true); }
+	public Double getDiffValueSum      (int[] rowIds, String colname, boolean cs)             { return getSumValue      (DATA_DIFF, rowIds,  colname,   cs); }
+
+	
 	//--------------------------------------------------------------
 	// Wrapper functions to read RATE DIFF/time values
 	//--------------------------------------------------------------
-	public String getRateString        (int    rowId, int    colPos)              { Object o = getValue     (DATA_RATE, rowId, colPos);  return (o==null)?"":o.toString(); }
-	public String getRateString        (int    rowId, String colname)             { Object o = getValue     (DATA_RATE, rowId, colname); return (o==null)?"":o.toString(); }
-	public String getRateString        (String pkStr, String colname)             { Object o = getValue     (DATA_RATE, pkStr, colname); return (o==null)?"":o.toString(); }
-	public Object getRateValue         (int    rowId, int    colPos)              { Object o = getValue     (DATA_RATE, rowId, colPos);  return o; }
-	public Object getRateValue         (int    rowId, String colname)             { return getValue         (DATA_RATE, rowId, colname); }
-	public Object getRateValue         (String pkStr, String colname)             { return getValue         (DATA_RATE, pkStr, colname); }
-	public Double getRateValueAsDouble (int    rowId, int    colPos)              { return getValueAsDouble (DATA_RATE, rowId, colPos);  }
-	public Double getRateValueAsDouble (int    rowId, int    colPos, Double def)  { return getValueAsDouble (DATA_RATE, rowId, colPos, def);  }
-	public Double getRateValueAsDouble (int    rowId, String colname)             { return getValueAsDouble (DATA_RATE, rowId, colname); }
-	public Double getRateValueAsDouble (int    rowId, String colname, Double def) { return getValueAsDouble (DATA_RATE, rowId, colname, def); }
-	public Double getRateValueAsDouble (String pkStr, String colname)             { return getValueAsDouble (DATA_RATE, pkStr, colname); }
-	public Double getRateValueAsDouble (String pkStr, String colname, Double def) { return getValueAsDouble (DATA_RATE, pkStr, colname, def); }
-	public Double getRateValueMax      (int    colPos)                            { return getMaxValue      (DATA_RATE, null,  colPos);  }
-	public Double getRateValueMax      (String colname)                           { return getMaxValue      (DATA_RATE, null,  colname); }
-	public Double getRateValueMin      (int    colPos)                            { return getMinValue      (DATA_RATE, null,  colPos);  }
-	public Double getRateValueMin      (String colname)                           { return getMinValue      (DATA_RATE, null,  colname); }
-	public Double getRateValueAvg      (int    colPos)                            { return getAvgValue      (DATA_RATE, null,  colPos);  }
-	public Double getRateValueAvg      (String colname)                           { return getAvgValue      (DATA_RATE, null,  colname); }
-	public Double getRateValueAvgGtZero(int    colPos)                            { return getAvgValueGtZero(DATA_RATE, null,  colPos);  }
-	public Double getRateValueAvgGtZero(String colname)                           { return getAvgValueGtZero(DATA_RATE, null,  colname); }
-	public Double getRateValueSum      (int    colPos)                            { return getSumValue      (DATA_RATE, null,  colPos);  }
-	public Double getRateValueSum      (String colname)                           { return getSumValue      (DATA_RATE, null,  colname); }
-	public String getRatePkValue       (int    rowId)                             { return getPkValue       (DATA_RATE, rowId  ); }
+	public String getRateString        (int    rowId, int    colPos)                          { Object o = getValue     (DATA_RATE, rowId, colPos);  return (o==null)?"":o.toString(); }
+	public String getRateString        (int    rowId, String colname)                         { Object o = getValue     (DATA_RATE, rowId, colname, true); return (o==null)?"":o.toString(); }
+	public String getRateString        (int    rowId, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, rowId, colname,   cs); return (o==null)?"":o.toString(); }
+	public String getRateString        (String pkStr, String colname)                         { Object o = getValue     (DATA_RATE, pkStr, colname, true); return (o==null)?"":o.toString(); }
+	public String getRateString        (String pkStr, String colname, boolean cs)             { Object o = getValue     (DATA_RATE, pkStr, colname,   cs); return (o==null)?"":o.toString(); }
+	
+	public Object getRateValue         (int    rowId, int    colPos)                          { Object o = getValue     (DATA_RATE, rowId, colPos);  return o; }
+	public Object getRateValue         (int    rowId, String colname)                         { return getValue         (DATA_RATE, rowId, colname, true); }
+	public Object getRateValue         (int    rowId, String colname, boolean cs)             { return getValue         (DATA_RATE, rowId, colname,   cs); }
+	public Object getRateValue         (String pkStr, String colname)                         { return getValue         (DATA_RATE, pkStr, colname, true); }
+	public Object getRateValue         (String pkStr, String colname, boolean cs)             { return getValue         (DATA_RATE, pkStr, colname,   cs); }
+	
+	public Double getRateValueAsDouble (int    rowId, int    colPos)                          { return getValueAsDouble (DATA_RATE, rowId, colPos);             }
+	public Double getRateValueAsDouble (int    rowId, int    colPos, Double def)              { return getValueAsDouble (DATA_RATE, rowId, colPos, def);        }
+	public Double getRateValueAsDouble (int    rowId, String colname)                         { return getValueAsDouble (DATA_RATE, rowId, colname, true);      }
+	public Double getRateValueAsDouble (int    rowId, String colname, boolean cs)             { return getValueAsDouble (DATA_RATE, rowId, colname,   cs);      }
+	public Double getRateValueAsDouble (int    rowId, String colname, Double def)             { return getValueAsDouble (DATA_RATE, rowId, colname, true, def); }
+	public Double getRateValueAsDouble (int    rowId, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_RATE, rowId, colname,   cs, def); }
+	public Double getRateValueAsDouble (String pkStr, String colname)                         { return getValueAsDouble (DATA_RATE, pkStr, colname, true);      }
+	public Double getRateValueAsDouble (String pkStr, String colname, boolean cs)             { return getValueAsDouble (DATA_RATE, pkStr, colname,   cs);      }
+	public Double getRateValueAsDouble (String pkStr, String colname, Double def)             { return getValueAsDouble (DATA_RATE, pkStr, colname, true, def); }
+	public Double getRateValueAsDouble (String pkStr, String colname, boolean cs, Double def) { return getValueAsDouble (DATA_RATE, pkStr, colname,   cs, def); }
+	
+	public Double getRateValueMax      (int    colPos)                                        { return getMaxValue      (DATA_RATE, null,  colPos);        }
+	public Double getRateValueMax      (String colname)                                       { return getMaxValue      (DATA_RATE, null,  colname, true); }
+	public Double getRateValueMax      (String colname, boolean cs)                           { return getMaxValue      (DATA_RATE, null,  colname,   cs); }
+	
+	public Double getRateValueMin      (int    colPos)                                        { return getMinValue      (DATA_RATE, null,  colPos);        }
+	public Double getRateValueMin      (String colname)                                       { return getMinValue      (DATA_RATE, null,  colname, true); }
+	public Double getRateValueMin      (String colname, boolean cs)                           { return getMinValue      (DATA_RATE, null,  colname,   cs); }
+	
+	public Double getRateValueAvg      (int    colPos)                                        { return getAvgValue      (DATA_RATE, null,  colPos);        }
+	public Double getRateValueAvg      (String colname)                                       { return getAvgValue      (DATA_RATE, null,  colname, true); }
+	public Double getRateValueAvg      (String colname, boolean cs)                           { return getAvgValue      (DATA_RATE, null,  colname,   cs); }
+	
+	public Double getRateValueAvgGtZero(int    colPos)                                        { return getAvgValueGtZero(DATA_RATE, null,  colPos);        }
+	public Double getRateValueAvgGtZero(String colname)                                       { return getAvgValueGtZero(DATA_RATE, null,  colname, true); }
+	public Double getRateValueAvgGtZero(String colname, boolean cs)                           { return getAvgValueGtZero(DATA_RATE, null,  colname,   cs); }
+	
+	public Double getRateValueSum      (int    colPos)                                        { return getSumValue      (DATA_RATE, null,  colPos);        }
+	public Double getRateValueSum      (String colname)                                       { return getSumValue      (DATA_RATE, null,  colname, true); }
+	public Double getRateValueSum      (String colname, boolean cs)                           { return getSumValue      (DATA_RATE, null,  colname,   cs); }
+	
+	public String getRatePkValue       (int    rowId)                                         { return getPkValue       (DATA_RATE, rowId  ); }
                                                                                   
-	public int[]  getRateRowIdsWhere   (String colname, String colval)            { return getRowIdsWhere   (DATA_RATE, colname, colval); }
-	public Double getRateValueMax      (int[] rowIds, String colname)             { return getMaxValue      (DATA_RATE, rowIds,  colname); }
-	public Double getRateValueMin      (int[] rowIds, String colname)             { return getMinValue      (DATA_RATE, rowIds,  colname); }
-	public Double getRateValueAvg      (int[] rowIds, String colname)             { return getAvgValue      (DATA_RATE, rowIds,  colname); }
-	public Double getRateValueAvgGtZero(int[] rowIds, String colname)             { return getAvgValueGtZero(DATA_RATE, rowIds,  colname); }
-	public Double getRateValueSum      (int[] rowIds, String colname)             { return getSumValue      (DATA_RATE, rowIds,  colname); }
+	public int[]  getRateRowIdsWhere   (String colname, String colval)                        { return getRowIdsWhere   (DATA_RATE, colname, true, colval); }
+	public int[]  getRateRowIdsWhere   (String colname, boolean cs, String colval)            { return getRowIdsWhere   (DATA_RATE, colname,   cs, colval); }
+	
+	public Double getRateValueMax      (int[] rowIds, String colname)                         { return getMaxValue      (DATA_RATE, rowIds,  colname, true); }
+	public Double getRateValueMax      (int[] rowIds, String colname, boolean cs)             { return getMaxValue      (DATA_RATE, rowIds,  colname,   cs); }
+	
+	public Double getRateValueMin      (int[] rowIds, String colname)                         { return getMinValue      (DATA_RATE, rowIds,  colname, true); }
+	public Double getRateValueMin      (int[] rowIds, String colname, boolean cs)             { return getMinValue      (DATA_RATE, rowIds,  colname,   cs); }
+	
+	public Double getRateValueAvg      (int[] rowIds, String colname)                         { return getAvgValue      (DATA_RATE, rowIds,  colname, true); }
+	public Double getRateValueAvg      (int[] rowIds, String colname, boolean cs)             { return getAvgValue      (DATA_RATE, rowIds,  colname,   cs); }
+	
+	public Double getRateValueAvgGtZero(int[] rowIds, String colname)                         { return getAvgValueGtZero(DATA_RATE, rowIds,  colname, true); }
+	public Double getRateValueAvgGtZero(int[] rowIds, String colname, boolean cs)             { return getAvgValueGtZero(DATA_RATE, rowIds,  colname,   cs); }
+	
+	public Double getRateValueSum      (int[] rowIds, String colname)                         { return getSumValue      (DATA_RATE, rowIds,  colname, true); }
+	public Double getRateValueSum      (int[] rowIds, String colname, boolean cs)             { return getSumValue      (DATA_RATE, rowIds,  colname,   cs); }
 
 	
 

@@ -1758,15 +1758,23 @@ public class ResultSetTableModel
 	 * Left column is column names (in bold)<br>
 	 * Right column is row content
 	 * 
-	 * @param mrow
+	 * @param mrow               The row number
+	 * @param startMsg           Add a message string at the beginning
+	 * @param endMsg             Add a message string at the end
+	 * @param borders            Add borders to the HTML Table
+	 * @param stripedRows        Make striped rows in the HTML Table
+	 * @param addOuterHtmlTags   If we should surround the content with &lt;html&gt;...&lt;/html&gt; tags
 	 * @return
 	 */
-	public String toHtmlTableString(int mrow, boolean borders, boolean stripedRows, boolean addOuterHtmlTags)
+	public String toHtmlTableString(int mrow, String startMsg, String endMsg, boolean borders, boolean stripedRows, boolean addOuterHtmlTags)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
 		if (addOuterHtmlTags)
 			sb.append("<html>");
+
+		if (StringUtil.hasValue(startMsg))
+			sb.append(startMsg);
 
 		int cols = getColumnCount();
 		String border      = borders ? " border=1"      : " border=0";
@@ -1803,6 +1811,9 @@ public class ResultSetTableModel
 			sb.append("</tr>\n");
 		}
 		sb.append("</table>\n");
+
+		if (StringUtil.hasValue(endMsg))
+			sb.append(endMsg);
 
 		if (addOuterHtmlTags)
 			sb.append("</html>");

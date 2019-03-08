@@ -73,6 +73,8 @@ import javax.swing.event.MouseInputAdapter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 
+import com.asetune.utils.Configuration;
+
 
 /**
  * The actual tool tip component.
@@ -685,6 +687,10 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 								try
 								{
 									desktop.browse(rr.getUrl().toURI());
+
+									// Should we close the current tool tip window or not?
+									if (rr.isCloseToolTipWindowEnabled())
+										ft.possiblyDisposeOfTipWindow();
 								}
 								catch (Exception ex)
 								{
@@ -695,15 +701,43 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 						return;
 					}
 					
+					if (rr.getType() == ResolverReturn.Type.SET_PROPERTY_TEMP)
+					{
+						Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+						if (conf == null)
+							return;
+
+						String str = rr.getStringValue();
+						int firstEqual = str.indexOf("=");
+						if (firstEqual == -1)
+						{
+							throw new RuntimeException("ToolTipHyperlinkResolver SET_PROPERTY_TEMP, not a properly formed KeyValString. it should have key=val. Can't find any '=' char in the string '"+str+"'.");
+						}
+						else
+						{
+							String propName  = str.substring(0, firstEqual).trim();
+							String propValue = str.substring(firstEqual + 1).trim();
+
+							conf.setProperty(propName, propValue);
+							conf.save();
+
+							// Should we close the current tool tip window or not? 
+							if (rr.isCloseToolTipWindowEnabled())
+								ft.possiblyDisposeOfTipWindow();
+						}
+						
+						return;
+					}
+					
 					// OK lets load the requested URL 
 					if (rr.hasUrl())
 					{
 						showPage(rr.getUrl());
 					}
 					// Or the String returned from the resolver
-					else if (rr.hasHtmlText())
+					else if (rr.hasStingValue())
 					{
-						showPage(rr.getHtmlText());
+						showPage(rr.getStringValue());
 					}
 					// Unknown return type
 					else 

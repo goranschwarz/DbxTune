@@ -2326,6 +2326,13 @@ public class SwingUtils
 	 */
 	public static Window getParentWindowByFocus()
 	{
+		// also check:
+//		System.out.println("getActiveWindow()          : "+ FocusManager.getCurrentManager().getActiveWindow()          );
+//		System.out.println("getCurrentFocusCycleRoot() : "+ FocusManager.getCurrentManager().getCurrentFocusCycleRoot() );
+//		System.out.println("getFocusedWindow()         : "+ FocusManager.getCurrentManager().getFocusedWindow()         );
+//		System.out.println("getFocusOwner()            : "+ FocusManager.getCurrentManager().getFocusOwner()            );
+//		System.out.println("getPermanentFocusOwner()   : "+ FocusManager.getCurrentManager().getPermanentFocusOwner()   );
+
 		return getParentWindow(KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner());
 	}
 	
