@@ -728,8 +728,8 @@ implements ActionListener, KeyListener, FocusListener
 		SshTunnelInfo sshInfo = new SshTunnelInfo();
 
 		// Guess Destination host by: first NON localhost entry in list will be destination server 
-		String guessDestHost = "";
-		String guessDestPort = "-1";
+		String guessDestHostStr = "";
+		String guessDestPortStr = "-1";
 		List<String> hostPostList = StringUtil.parseCommaStrToList(hostPortStr);
 		for (String str : hostPostList)
 		{
@@ -743,10 +743,13 @@ implements ActionListener, KeyListener, FocusListener
 			if (host.equals("localhost") || host.equals("127.0.0.1"))
 				continue;
 
-			guessDestHost = host;
-			guessDestPort = port;
+			guessDestHostStr = host;
+			guessDestPortStr = port;
 			break;
 		}
+		// MAYBE: set default port (not to -1) but to default port based on URL (which isn't passed here) 
+		int guessDestPortInt = StringUtil.parseInt(guessDestPortStr, -1);
+		
 
 		// Get config
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -771,10 +774,10 @@ implements ActionListener, KeyListener, FocusListener
 
 
 		// DESTINATION *
-		strVal = conf.getProperty(PROP_PREFIX +"destination.host."+hostPortStr, guessDestHost);
+		strVal = conf.getProperty(PROP_PREFIX +"destination.host."+hostPortStr, guessDestHostStr);
 		sshInfo.setDestHost(strVal);
 
-		intVal = conf.getIntProperty(PROP_PREFIX +"destination.port."+hostPortStr, guessDestPort);
+		intVal = conf.getIntProperty(PROP_PREFIX +"destination.port."+hostPortStr, guessDestPortInt);
 		sshInfo.setDestPort(intVal);
 		
 		// Below, get hostPortStr first, then get basename as a fallback

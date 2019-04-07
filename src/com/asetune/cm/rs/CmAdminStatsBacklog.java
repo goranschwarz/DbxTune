@@ -26,6 +26,8 @@ import java.util.List;
 
 import javax.naming.NameNotFoundException;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.cm.CmSybMessageHandler;
@@ -44,7 +46,7 @@ import com.asetune.gui.MainFrame;
 public class CmAdminStatsBacklog
 extends CountersModel
 {
-//	private static Logger        _logger          = Logger.getLogger(CmAdminStatsBacklog.class);
+	private static Logger        _logger          = Logger.getLogger(CmAdminStatsBacklog.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final String   CM_NAME          = CmAdminStatsBacklog.class.getSimpleName();
@@ -167,30 +169,37 @@ extends CountersModel
 			for (int i = 0; i < this.size(); i++)
 			{
 				String monitorVal = this.getAbsString       (i, "Monitor");
-				Double Max        = this.getAbsValueAsDouble(i, "Max");
-				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Max > 0.0)
+				Double Obs        = this.getAbsValueAsDouble(i, "Obs");
+				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
 					size++;
 			}
 			
-			// Write 1 "line" for every SQMRBacklogSeg row
-			Double[] dArray = new Double[size];
-			String[] lArray = new String[dArray.length];
-			int i2 = 0;
-//			for (int i = 0; i < dArray.length; i++)
-			for (int i = 0; i < this.size(); i++)
+			if (size == 0)
 			{
-				String monitorVal = this.getAbsString       (i, "Monitor");
-				Double Max        = this.getAbsValueAsDouble(i, "Max");
-				if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Max > 0.0)
-				{
-					lArray[i2] = this.getAbsString       (i, "Instance");
-					dArray[i2] = this.getAbsValueAsDouble(i, "Last");
-					i2++;
-				}
+				_logger.info("Skipping adding entry to graph '"+tgdp.getName()+"'. There are NO 'Monitor' (SQMRBacklogSeg) values with a 'Obs' value above 0");
 			}
+			else
+			{
+				// Write 1 "line" for every SQMRBacklogSeg row
+				Double[] dArray = new Double[size];
+				String[] lArray = new String[dArray.length];
+				int i2 = 0;
+//				for (int i = 0; i < dArray.length; i++)
+				for (int i = 0; i < this.size(); i++)
+				{
+					String monitorVal = this.getAbsString       (i, "Monitor");
+					Double Obs        = this.getAbsValueAsDouble(i, "Obs");
+					if (monitorVal.indexOf("SQMRBacklogSeg") >= 0 && Obs > 0.0)
+					{
+						lArray[i2] = this.getAbsString       (i, "Instance");
+						dArray[i2] = this.getAbsValueAsDouble(i, "Last");
+						i2++;
+					}
+				}
 
-			// Set the values
-			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+			}
 		}
 	}
 	

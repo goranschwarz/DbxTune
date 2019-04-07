@@ -498,31 +498,31 @@ public class DbxTuneSample
 
 			sb.append(super.toString());
 			sb.append("[");
-			
-			sb.append("='").append(_alarmClass                ).append("'").append(","); // String    _alarmClass                 ;
-			sb.append("='").append(_alarmClassAbriviated      ).append("'").append(","); // String    _alarmClassAbriviated       ;
-			sb.append("='").append(_serviceType               ).append("'").append(","); // String    _serviceType                ;
-			sb.append("='").append(_serviceName               ).append("'").append(","); // String    _serviceName                ;
-			sb.append("='").append(_serviceInfo               ).append("'").append(","); // String    _serviceInfo                ;
-			sb.append("='").append(_extraInfo                 ).append("'").append(","); // String    _extraInfo                  ;
-			sb.append("='").append(_category                  ).append("'").append(","); // String    _category                   ;
-			sb.append("='").append(_severity                  ).append("'").append(","); // String    _severity                   ;
-			sb.append("='").append(_state                     ).append("'").append(","); // String    _state                      ;
-			sb.append("=") .append(_repeatCnt                 ).append("") .append(","); // int       _repeatCnt                  ;
-			sb.append("='").append(_duration                  ).append("'").append(","); // String    _duration                   ;
-			sb.append("=") .append(_creationAgeInMs           ).append("") .append(","); // int       _creationAgeInMs            ;
-			sb.append("='").append(_creationTime              ).append("'").append(","); // Timestamp _creationTime               ;
-			sb.append("='").append(_reRaiseTime               ).append("'").append(","); // Timestamp _reRaiseTime                ;
-			sb.append("='").append(_cancelTime                ).append("'").append(","); // Timestamp _cancelTime                 ;
-			sb.append("=") .append(_TimeToLive                ).append("") .append(","); // int       _TimeToLive                 ;
-			sb.append("=") .append(_threshold                 ).append("") .append(","); // Number    _threshold                  ;
-			sb.append("='").append(_data                      ).append("'").append(","); // String    _data                       ;
-			sb.append("='").append(_description               ).append("'").append(","); // String    _description                ;
-			sb.append("='").append(_extendedDescription       ).append("'").append(","); // String    _extendedDescription        ;
-			sb.append("='").append(_reRaiseData               ).append("'").append(","); // String    _reRaiseData                ;
-			sb.append("='").append(_reRaiseDescription        ).append("'").append(","); // String    _reRaiseDescription         ;
-			sb.append("='").append(_reRaiseExtendedDescription).append("'").append("");  // String    _reRaiseExtendedDescription ;
-			
+
+			sb.append("alarmClass                ".trim()).append("='").append(_alarmClass                ).append("'").append(","); // String    _alarmClass                 ;
+			sb.append("alarmClassAbriviated      ".trim()).append("='").append(_alarmClassAbriviated      ).append("'").append(","); // String    _alarmClassAbriviated       ;
+			sb.append("serviceType               ".trim()).append("='").append(_serviceType               ).append("'").append(","); // String    _serviceType                ;
+			sb.append("serviceName               ".trim()).append("='").append(_serviceName               ).append("'").append(","); // String    _serviceName                ;
+			sb.append("serviceInfo               ".trim()).append("='").append(_serviceInfo               ).append("'").append(","); // String    _serviceInfo                ;
+			sb.append("extraInfo                 ".trim()).append("='").append(_extraInfo                 ).append("'").append(","); // String    _extraInfo                  ;
+			sb.append("category                  ".trim()).append("='").append(_category                  ).append("'").append(","); // String    _category                   ;
+			sb.append("severity                  ".trim()).append("='").append(_severity                  ).append("'").append(","); // String    _severity                   ;
+			sb.append("state                     ".trim()).append("='").append(_state                     ).append("'").append(","); // String    _state                      ;
+			sb.append("repeatCnt                 ".trim()).append("=") .append(_repeatCnt                 ).append("") .append(","); // int       _repeatCnt                  ;
+			sb.append("duration                  ".trim()).append("='").append(_duration                  ).append("'").append(","); // String    _duration                   ;
+			sb.append("creationAgeInMs           ".trim()).append("=") .append(_creationAgeInMs           ).append("") .append(","); // int       _creationAgeInMs            ;
+			sb.append("creationTime              ".trim()).append("='").append(_creationTime              ).append("'").append(","); // Timestamp _creationTime               ;
+			sb.append("reRaiseTime               ".trim()).append("='").append(_reRaiseTime               ).append("'").append(","); // Timestamp _reRaiseTime                ;
+			sb.append("cancelTime                ".trim()).append("='").append(_cancelTime                ).append("'").append(","); // Timestamp _cancelTime                 ;
+			sb.append("TimeToLive                ".trim()).append("=") .append(_TimeToLive                ).append("") .append(","); // int       _TimeToLive                 ;
+			sb.append("threshold                 ".trim()).append("=") .append(_threshold                 ).append("") .append(","); // Number    _threshold                  ;
+			sb.append("data                      ".trim()).append("='").append(_data                      ).append("'").append(","); // String    _data                       ;
+			sb.append("description               ".trim()).append("='").append(_description               ).append("'").append(","); // String    _description                ;
+			sb.append("extendedDescription       ".trim()).append("='").append(_extendedDescription       ).append("'").append(","); // String    _extendedDescription        ;
+			sb.append("reRaiseData               ".trim()).append("='").append(_reRaiseData               ).append("'").append(","); // String    _reRaiseData                ;
+			sb.append("reRaiseDescription        ".trim()).append("='").append(_reRaiseDescription        ).append("'").append(","); // String    _reRaiseDescription         ;
+			sb.append("reRaiseExtendedDescription".trim()).append("='").append(_reRaiseExtendedDescription).append("'").append("");  // String    _reRaiseExtendedDescription ;
+
 			sb.append("]");
 			
 			return sb.toString();

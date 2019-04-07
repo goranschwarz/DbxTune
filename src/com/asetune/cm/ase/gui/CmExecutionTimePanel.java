@@ -96,6 +96,9 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_generateExecutionTimePerCnt = PROP_PREFIX + ".graph.generate.ExecutionTimePerCnt";
 	private static final boolean DEFAULT_generateExecutionTimePerCnt = true;
 
+	private static final String  PROPKEY_generateCpuUsagePct         = PROP_PREFIX + ".graph.generate.CpuUsagePct";
+	private static final boolean DEFAULT_generateCpuUsagePct         = true;
+
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_generateDummy,               DEFAULT_generateDummy);
@@ -105,6 +108,7 @@ extends TabularCntrPanel
 		Configuration.registerDefaultValue(PROPKEY_generateExecutionCnt,        DEFAULT_generateExecutionCnt);
 		Configuration.registerDefaultValue(PROPKEY_generateExecutionTime,       DEFAULT_generateExecutionTime);
 		Configuration.registerDefaultValue(PROPKEY_generateExecutionTimePerCnt, DEFAULT_generateExecutionTimePerCnt);
+		Configuration.registerDefaultValue(PROPKEY_generateCpuUsagePct,         DEFAULT_generateCpuUsagePct);
 	}
 
 	public CmExecutionTimePanel(CountersModel cm)
@@ -128,6 +132,7 @@ extends TabularCntrPanel
 		boolean generateExecutionCnt        = conf.getBooleanProperty(PROPKEY_generateExecutionCnt,        DEFAULT_generateExecutionCnt);
 		boolean generateExecutionTime       = conf.getBooleanProperty(PROPKEY_generateExecutionTime,       DEFAULT_generateExecutionTime);
 		boolean generateExecutionTimePerCnt = conf.getBooleanProperty(PROPKEY_generateExecutionTimePerCnt, DEFAULT_generateExecutionTimePerCnt);
+		boolean generateCpuUsagePct         = conf.getBooleanProperty(PROPKEY_generateCpuUsagePct,         DEFAULT_generateCpuUsagePct);
 
 		DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -137,11 +142,13 @@ extends TabularCntrPanel
 			int ExecutionCnt_pos        = dataTable.findViewColumn("ExecutionCnt");
 			int ExecutionTime_pos       = dataTable.findViewColumn("ExecutionTime");
 			int ExecutionTimePerCnt_pos = dataTable.findViewColumn("ExecutionTimePerCnt");
+			int CpuUsagePct_pos         = dataTable.findViewColumn("CpuUsagePct");
 
 			CountersModel cm = getDisplayCm();
 			if (cm == null)
 				cm = getCm();
 
+			double CpuUsagePctSUM = 0; // Sum of ALL CpuUsagePct rows... then we can calculate "idle" 
 			if (cm != null)
 			{
 				for(int r=0; r<dataTable.getRowCount(); r++)
@@ -150,19 +157,28 @@ extends TabularCntrPanel
 					Number ExecutionCnt        = (Number)dataTable.getValueAt(r, ExecutionCnt_pos);
 					Number ExecutionTime       = (Number)dataTable.getValueAt(r, ExecutionTime_pos);
 					Number ExecutionTimePerCnt = (Number)dataTable.getValueAt(r, ExecutionTimePerCnt_pos);
+					Number CpuUsagePct         = (Number)dataTable.getValueAt(r, CpuUsagePct_pos);
 
 					if (_logger.isDebugEnabled())
-						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": OperationName("+OperationName_pos+")='"+OperationName+"', ExecutionCnt("+ExecutionCnt_pos+")='"+ExecutionCnt+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"'.");
+						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": OperationName("+OperationName_pos+")='"+OperationName+"', ExecutionCnt("+ExecutionCnt_pos+")='"+ExecutionCnt+"', ExecutionTime("+ExecutionTime_pos+")='"+ExecutionTime+"', ExecutionTimePerCnt("+ExecutionTimePerCnt_pos+")='"+ExecutionTimePerCnt+"', CpuUsagePct("+CpuUsagePct_pos+")='"+CpuUsagePct+"'.");
 
 					// add 0 if null value...
 					if (ExecutionCnt       == null) ExecutionCnt        = new Double(0);
 					if (ExecutionTime      == null) ExecutionTime       = new Double(0);
 					if (ExecutionTimePerCnt== null) ExecutionTimePerCnt = new Double(0);
+					if (CpuUsagePct        == null) CpuUsagePct         = new Double(0);
 
 					if (generateExecutionCnt)        dataset.addValue(ExecutionCnt       .doubleValue(), OperationName, "ExecutionCnt");
 					if (generateExecutionTime)       dataset.addValue(ExecutionTime      .doubleValue(), OperationName, "ExecutionTime");
 					if (generateExecutionTimePerCnt) dataset.addValue(ExecutionTimePerCnt.doubleValue(), OperationName, "ExecutionTimePerCnt");
+					if (generateCpuUsagePct)         dataset.addValue(CpuUsagePct        .doubleValue(), OperationName, "CpuUsagePct");
+					
+					CpuUsagePctSUM += CpuUsagePct.doubleValue();
 				}
+				
+				// Add CPU IDLE value for CpuUsagePct Graph
+				if (dataTable.getRowCount() > 0)
+					if (generateCpuUsagePct) dataset.addValue( (100.0 - CpuUsagePctSUM), "IDLE", "CpuUsagePct");
 			}
 		}
 		else
@@ -398,6 +414,7 @@ extends TabularCntrPanel
 		final JCheckBox enableExecutionCnt_chk        = new JCheckBox("ExecutionCnt");
 		final JCheckBox enableExecutionTime_chk       = new JCheckBox("ExecutionTime");
 		final JCheckBox enableExecutionTimePerCnt_chk = new JCheckBox("ExecutionTimePerCnt");
+		final JCheckBox enableCpuUsagePct_chk         = new JCheckBox("CpuUsagePct");
 
 		final JCheckBox enableGraph_chk     = new JCheckBox("Show Graph");
 		final JCheckBox showLegend_chk      = new JCheckBox("Show Legend");
@@ -420,6 +437,7 @@ extends TabularCntrPanel
 		enableExecutionCnt_chk        .setToolTipText("Show number of Execution Count per type");
 		enableExecutionTime_chk       .setToolTipText("Show Execution Time per type");
 		enableExecutionTimePerCnt_chk .setToolTipText("Show Execution Time for each Execution Count per type");
+		enableCpuUsagePct_chk         .setToolTipText("Show CPU Usage per 'operations category'");
 
 		tooltip = "<html>Do you want the Graph to be presented as 'Pie' or 'Bar' Graphs.<br></html>";
 		graphType_lbl.setToolTipText(tooltip);
@@ -439,6 +457,7 @@ extends TabularCntrPanel
 		enableExecutionCnt_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateExecutionCnt,        DEFAULT_generateExecutionCnt));
 		enableExecutionTime_chk      .setSelected(conf.getBooleanProperty(PROPKEY_generateExecutionTime,       DEFAULT_generateExecutionTime));
 		enableExecutionTimePerCnt_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateExecutionTimePerCnt, DEFAULT_generateExecutionTimePerCnt));
+		enableCpuUsagePct_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateCpuUsagePct,         DEFAULT_generateCpuUsagePct));
 
 		graphType_cbx.addActionListener(new ActionListener()
 		{
@@ -501,6 +520,14 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateExecutionTimePerCnt, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
+		enableCpuUsagePct_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(PROPKEY_generateCpuUsagePct, ((JCheckBox)e.getSource()).isSelected());
+			}
+		});
 
 		// ADD to panel
 		panel.add(enableGraph_chk,      "split");
@@ -509,7 +536,8 @@ extends TabularCntrPanel
 
 		panel.add(enableExecutionCnt_chk,        "split");
 		panel.add(enableExecutionTime_chk,       "");
-		panel.add(enableExecutionTimePerCnt_chk, "wrap");
+		panel.add(enableExecutionTimePerCnt_chk, "");
+		panel.add(enableCpuUsagePct_chk,         "wrap");
 
 		panel.add(showLegend_chk,       "wrap");
 

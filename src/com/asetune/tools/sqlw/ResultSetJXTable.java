@@ -231,9 +231,12 @@ implements ToolTipHyperlinkResolver
 			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
 			{
 				// Check NULL value
-				String cellValue = adapter.getString();
-				if (cellValue == null || ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(cellValue))
+				Object cellObj = adapter.getValue();
+				if (cellObj == null || ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(cellObj))
 					return true;
+//				String cellValue = adapter.getString();
+//				if (cellValue == null || ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(cellValue))
+//					return true;
 				
 				// Check ROWID Column
 				int mcol = adapter.convertColumnIndexToModel(adapter.column);

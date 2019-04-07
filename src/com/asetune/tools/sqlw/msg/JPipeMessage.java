@@ -21,8 +21,7 @@
 package com.asetune.tools.sqlw.msg;
 
 import com.asetune.sql.pipe.IPipeCommand;
-import com.asetune.sql.pipe.PipeMessage;
-import com.asetune.sql.pipe.PipeMessage.Severity;
+import com.asetune.tools.sqlw.msg.Message.Severity;
 import com.asetune.utils.ColorUtils;
 
 public class JPipeMessage
@@ -30,9 +29,18 @@ extends JAseMessage
 {
 	private static final long serialVersionUID = 1L;
 
-	public JPipeMessage(final PipeMessage pmsg, IPipeCommand pipeCommand)
+	public JPipeMessage(final Message pmsg, IPipeCommand pipeCommand)
 	{
-		super(pmsg.toString(), pipeCommand.getSqlString());
+		this(pmsg, pipeCommand, null);
+	}
+	public JPipeMessage(final Message pmsg, String originCommand)
+	{
+		this(pmsg, null, originCommand);
+	}
+
+	private JPipeMessage(final Message pmsg, IPipeCommand pipeCommand, String originCommand)
+	{
+		super(pmsg.toString(), pipeCommand != null ? pipeCommand.getSqlString() : originCommand);
 
 		Severity s = pmsg.getSeverity();
 		if      (Severity.DEBUG  .equals(s)) setForeground(ColorUtils.DEBUG);

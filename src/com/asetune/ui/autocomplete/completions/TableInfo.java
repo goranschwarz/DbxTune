@@ -253,6 +253,9 @@ implements Serializable
 		ResultSetTableModel rstm = new ResultSetTableModel(rs, "getPrimaryKeys");
 		rs.close();
 
+		// It looks like "KEY_SEQ" can be out of order, so lets sort...
+		rstm.sort("KEY_SEQ");
+		
 		List<String> pk = new ArrayList<String>();
 		for (int r=0; r<rstm.getRowCount(); r++)
 		{
@@ -264,6 +267,9 @@ implements Serializable
 		{
 			rs = dbmd.getIndexInfo(cat, schema, name, true, false);
 			rstm = new ResultSetTableModel(rs, "getIndexInfo");
+
+			// Lets try to sort this as well
+			rstm.sort("ORDINAL_POSITION");
 
 			for (int r=0; r<rstm.getRowCount(); r++)
 			{

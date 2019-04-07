@@ -672,6 +672,64 @@ public class DbUtils
 		return rsList;
 	}
 
+//	/**
+//	 * Execute a SQL Statement, if any ResultSets are produced, they will be returned as a List
+//	 * 
+//	 * @param conn a valid connection
+//	 * @param sql SQL Statement to execute in the server
+//	 * @return a list of ResultSets if any
+//	 * @throws SQLException if we had problems
+//	 */
+//	public static ResultSet execAndReturnFirstRs(Connection conn, String sql, int timeout)
+//	throws SQLException
+//	{
+//		if (conn == null)
+//			return null;
+//
+//		ResultSet rs = null;
+//		
+//		Statement stmnt = conn.createStatement();
+//		if (timeout > 0)
+//		{
+//			stmnt.setQueryTimeout(timeout);
+//		}
+//
+//		boolean hasRs = stmnt.execute(sql);
+//		int rowsAffected = 0;
+//
+//		// iterate through each result set
+//		do
+//		{
+//			if(hasRs)
+//			{
+//				// Get next ResultSet to work with
+//				if (rs == null)
+//					rs = stmnt.getResultSet();
+//				else
+//				{
+//					ResultSet dummyRs = stmnt.getResultSet();
+//					dummyRs.close();
+//				}
+//			}
+//			else
+//			{
+//				rowsAffected = stmnt.getUpdateCount();
+//				if (rowsAffected >= 0)
+//				{
+//				}
+//			}
+//
+//			// Check if we have more ResultSets
+//			hasRs = stmnt.getMoreResults();
+//		}
+//		while (hasRs || rowsAffected != -1);
+//
+//		// Close the statement
+//		//stmnt.close();
+//		
+//		return rs;
+//	}
+
 	/**
 	 * Simply calls DatabaseMetaData.getMetaData().getTables(cat, schema, tableName) to check if the table exists.
 	 * 

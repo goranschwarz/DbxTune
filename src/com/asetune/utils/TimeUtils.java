@@ -233,6 +233,14 @@ public class TimeUtils
 	{
 		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS", execTimeInSec * 1000);
 	}
+
+
+	/** seconds as a string in format %?DD[d ]%?HH[:]%MM:%SS.%ms */
+	public static String msToTimeStrShort(long execTimeInMs)
+	{
+		return msToTimeStr("%?DD[d ]%?HH[:]%MM:%SS.%ms", execTimeInMs);
+	}
+
 	/**
 	 * Convert a long into a time string 
 	 * 

@@ -207,7 +207,6 @@ import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.pipe.PipeCommandToFile;
-import com.asetune.sql.pipe.PipeMessage;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
@@ -216,6 +215,7 @@ import com.asetune.tools.ddlgen.DdlGen.Type;
 import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlw.ResultSetJXTable.DmlOperation;
 import com.asetune.tools.sqlw.StatusBar.ServerInfo;
+import com.asetune.tools.sqlw.msg.IMessageAware;
 import com.asetune.tools.sqlw.msg.JAseCancelledResultSet;
 import com.asetune.tools.sqlw.msg.JAseLimitedResultSetBottom;
 import com.asetune.tools.sqlw.msg.JAseLimitedResultSetTop;
@@ -235,6 +235,7 @@ import com.asetune.tools.sqlw.msg.JSentSqlStatement;
 import com.asetune.tools.sqlw.msg.JSkipSendSqlStatement;
 import com.asetune.tools.sqlw.msg.JTableResultSet;
 import com.asetune.tools.sqlw.msg.JToFileMessage;
+import com.asetune.tools.sqlw.msg.Message;
 import com.asetune.tools.sqlw.msg.StatisticsIoTableModel;
 import com.asetune.tools.tailw.LogTailWindow;
 import com.asetune.ui.autocomplete.CompletionProviderAbstract;
@@ -464,6 +465,7 @@ public class QueryWindow
 	public static final String ACTION_TAB_IMPORT                = "TAB_IMPORT";
 	public static final String ACTION_TAB_EXPORT                = "TAB_EXPORT";
 	public static final String ACTION_TAB_TRANSFER              = "TAB_TRANSFER";
+	public static final String ACTION_TAB_DIFF                  = "TAB_DIFF";
 	public static final String ACTION_ASE_MDA_CONFIG            = "ASE_MDA_CONFIG";
 	public static final String ACTION_ASE_CAPTURE_SQL           = "ASE_CAPTURE_SQL";
 	public static final String ACTION_ASE_APP_TRACE             = "ASE_APP_TRACE";
@@ -587,6 +589,8 @@ public class QueryWindow
 	private String      _currentDbName                    = null; // probably only maintained for ASE
 	private boolean     _dbmsOutputIsEnabled              = false; // only maintained for Oracle & DB2
 
+	private String      _postExecGeneratedSql             = null; // This is set if any SqlStatementCmd (DbDiff) is just a "preprocessor" that generates Commands to be executed.
+
 	/** if DB returns a error message, stop executions */
 	private boolean     _abortOnDbMessages                = false;
 	
@@ -687,6 +691,7 @@ public class QueryWindow
 	private JMenuItem            _toolTableImport_mi     = new JMenuItem("Import Data");
 	private JMenuItem            _toolTableExport_mi     = new JMenuItem("Export Data");
 	private JMenuItem            _toolTableTransfer_mi   = new JMenuItem("Transfer Data");
+	private JMenuItem            _toolTableDiff_mi       = new JMenuItem("Diff Data");
 	private JMenuItem            _aseMdaConfig_mi        = new JMenuItem("Monitor/MDA Configuration...");
 	private JMenuItem            _aseCaptureSql_mi       = new JMenuItem("Capture SQL...");
 	private JMenuItem            _aseAppTrace_mi         = new JMenuItem("ASE Application Tracing...");
@@ -1281,6 +1286,7 @@ public class QueryWindow
 			_tools_m.add(_toolTableImport_mi);
 			_tools_m.add(_toolTableExport_mi);
 			_tools_m.add(_toolTableTransfer_mi);
+			_tools_m.add(_toolTableDiff_mi);
 			_tools_m.add(_aseMdaConfig_mi);
 			_tools_m.add(_aseCaptureSql_mi);
 			_tools_m.add(_aseAppTrace_mi);
@@ -1291,6 +1297,7 @@ public class QueryWindow
 			_toolTableImport_mi  .setVisible(true);
 			_toolTableExport_mi  .setVisible(true);
 			_toolTableTransfer_mi.setVisible(true);
+			_toolTableDiff_mi    .setVisible(true);
 			_aseMdaConfig_mi     .setVisible(false);
 			_aseCaptureSql_mi    .setVisible(false);
 			_aseAppTrace_mi      .setVisible(false);
@@ -1395,6 +1402,7 @@ public class QueryWindow
 			_toolTableImport_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_import.png"));
 			_toolTableExport_mi    .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_export.png"));
 			_toolTableTransfer_mi  .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_transfer.png"));
+			_toolTableDiff_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/table_diff.png"));
 			_aseMdaConfig_mi       .setIcon(SwingUtils.readImageIcon(Version.class, "images/config_ase_mon.png"));
 			_aseCaptureSql_mi      .setIcon(SwingUtils.readImageIcon(Version.class, "images/capture_sql_tool.gif"));
 			_aseAppTrace_mi        .setIcon(SwingUtils.readImageIcon(Version.class, "images/ase_app_trace_tool.png"));
@@ -1435,6 +1443,7 @@ public class QueryWindow
 			_toolTableImport_mi         .setActionCommand(ACTION_TAB_IMPORT);
 			_toolTableExport_mi         .setActionCommand(ACTION_TAB_EXPORT);
 			_toolTableTransfer_mi       .setActionCommand(ACTION_TAB_TRANSFER);
+			_toolTableDiff_mi           .setActionCommand(ACTION_TAB_DIFF);
 			_aseMdaConfig_mi            .setActionCommand(ACTION_ASE_MDA_CONFIG);
 			_aseCaptureSql_mi           .setActionCommand(ACTION_ASE_CAPTURE_SQL);
 			_aseAppTrace_mi             .setActionCommand(ACTION_ASE_APP_TRACE);
@@ -1473,6 +1482,7 @@ public class QueryWindow
 			_toolTableImport_mi      .addActionListener(this);
 			_toolTableExport_mi      .addActionListener(this);
 			_toolTableTransfer_mi    .addActionListener(this);
+			_toolTableDiff_mi        .addActionListener(this);
 			_aseMdaConfig_mi         .addActionListener(this);
 			_aseCaptureSql_mi        .addActionListener(this);
 			_aseAppTrace_mi          .addActionListener(this);
@@ -2902,6 +2912,9 @@ public class QueryWindow
 
 		if (ACTION_TAB_TRANSFER.equals(actionCmd))
 			action_tabTransfer(e);
+
+		if (ACTION_TAB_DIFF.equals(actionCmd))
+			action_tabDiff(e);
 
 		if (ACTION_ASE_MDA_CONFIG.equals(actionCmd))
 			action_aseMdaConfig(e);
@@ -5498,7 +5511,7 @@ public class QueryWindow
 				+ "<b>Example 2 (to any JDBC URL):<b><br>\n"
 				+ "<pre>\n"
 				+ "SELECT name, ssn, address FROM person WHERE country = 'sweden'\n"
-				+ "go | bcp --user sa --passwd secret --url 'jdbc:postgresql://hostname:5432/dbname' \n"
+				+ "go | bcp --user xxx --passwd secret --url 'jdbc:postgresql://hostname:5432/dbname' \n"
 				+ "</pre>\n"
 				+ "<br>\n"
 
@@ -5507,6 +5520,49 @@ public class QueryWindow
 				+ "</html>";
 
 		SwingUtils.showInfoMessage(_window, "Table Transfer", msg);
+	}
+
+	private void action_tabDiff(ActionEvent e)
+	{
+		String msg = "<html>"
+				+ "This will be implemented as a dialog... at some point!<br>\n"
+				+ "<br>\n"
+				
+				+ "In the meantime, table data can be Difference checked between DBMS servers with the commands 'diff' or '\\tabdiff'<br>\n"
+				+ "<br>\n"
+				
+				+ "<b>Example 1 (between Sybase/SAP ASE):<b><br>\n"
+				+ "<pre>\n"
+				+ "SELECT * FROM tablename WHERE ...\n"
+				+ "go | diff --user sa --passwd secret --server aseHost:port -Ddbname\n"
+				+ "</pre>\n"
+				+ "<br>\n"
+				
+				+ "<b>Example 2 (usung the \\tabdiff command):<b><br>\n"
+				+ "<pre>\n"
+				+ "\\tabdiff --left tab1 --right schema1.tab1 --profile 'MySQL atHome'\n"
+				+ "</pre>\n"
+				+ "<br>\n"
+
+				+ "<b>Example 3 (between servers using a connection profile):<b><br>\n"
+				+ "<pre>\n"
+				+ "SELECT * FROM tablename \n"
+				+ "go | diff --profile 'GORAN_UB3_DS - sa - ssh' -Ddbname\n"
+				+ "</pre>\n"
+				+ "<br>\n"
+				
+				+ "<b>Example 4 (between any JDBC URL):<b><br>\n"
+				+ "<pre>\n"
+				+ "SELECT name, ssn, address FROM person WHERE country = 'sweden' order by name, ssn\n"
+				+ "go | diff --user xxx --passwd secret --url 'jdbc:postgresql://hostname:5432/dbname' --keyCols 'name, ssn'\n"
+				+ "</pre>\n"
+				+ "<br>\n"
+
+				+ "For full syntax and switches, just execute the above without any parameters.<br>\n"
+				+ "Note: watch the console output for extra information.<br>\n"
+				+ "</html>";
+
+		SwingUtils.showInfoMessage(_window, "Table Diff", msg);
 	}
 
 	private void action_aseMdaConfig(ActionEvent e)
@@ -6629,19 +6685,43 @@ public class QueryWindow
 //System.out.println("TM="+rstm);
 						CreateGraphDialog.showDialog(_window, rstm);
 					}
-					
 				}
+			}
+		});
 
-//				String msg = "<html>"
-//						+ "Sorry, No Dialog has yet been implemented<br>"
-//						+ "<br>"
-//						+ "<b>But you can still use:</b>"
-//						+ "<pre>"
-//						+ "select ... from t1 where ...\n"
-//						+ "go | graph --type {auto|bar|area|line|pie|timeseries} ...\n"
-//						+ "</pre>"
-//						+ "</html>";
-//				SwingUtils.showInfoMessage(_window, "Not Yet Implemented", msg);
+
+		//------------------------------------------------------------------------------------
+		// Cell Content Tooltip max length ...
+		//------------------------------------------------------------------------------------
+		JMenuItem tableCellContentTooltipMaxLen = new JMenuItem("Cell Content Tooltip max length...");
+		tableCellContentTooltipMaxLen.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+		popup.add(tableCellContentTooltipMaxLen);
+		
+		tableCellContentTooltipMaxLen.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null)
+					return;
+				
+				int maxStrLen = Configuration.getCombinedConfiguration().getIntProperty(ResultSetTableModel.PROPKEY_HtmlToolTip_maxCellLength, ResultSetTableModel.DEFAULT_HtmlToolTip_maxCellLength);
+
+				String key1 = "Max Length for Cell Tooltip";
+
+				LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+				in.put(key1, Integer.toString(maxStrLen));
+
+				Map<String,String> results = ParameterDialog.showParameterDialog(_window, "Max Length for Cell Tooltip", in, false);
+
+				if (results != null)
+				{
+					int newMaxLen = Integer.parseInt(results.get(key1));
+
+					conf.setProperty(ResultSetTableModel.PROPKEY_HtmlToolTip_maxCellLength, newMaxLen);
+					saveProps();
+				}
 			}
 		});
 
@@ -6794,7 +6874,17 @@ public class QueryWindow
 
 	public void displayQueryResults(final String sql, final int startRowInSelection, final boolean guiShowplanExec)
 	{
+		_postExecGeneratedSql = null;
+
 		displayQueryResults(sql, startRowInSelection, guiShowplanExec, false);
+		
+		// If the SqlStatement instructed us to do something extra (like SqlStatementCmdDbDiff), then lets execute it here...
+		// In this case the SqlStatementCmd is just a "preprocessor" that generated Commands that we should run 
+		if (_postExecGeneratedSql != null)
+		{
+			displayQueryResults(_postExecGeneratedSql, startRowInSelection, guiShowplanExec, /*append=*/true);
+			_postExecGeneratedSql = null;
+		}
 	}
 	public void displayQueryResults(final String sql, final int startRowInSelection, final boolean guiShowplanExec, final boolean appendToCurrentResults)
 	{
@@ -7511,11 +7601,12 @@ ex.printStackTrace();
 					break;
 				
 				// Substitute variables ${varname} in the text.
-				String[] skipList = {"\\ddlgen "};
+				String[] skipList = {"\\ddlgen ", "\\tabdiff ", "\\dbdiff"};
 				sql = SqlStatementCmdSet.substituteVariables(sql, skipList, _resultCompList);
 				
 				progress.setCurrentSqlText(sql, batchCount, sr.getMultiExecCount());
 				
+				SqlStatement sqlStmntInfo = null;
 				
 				// if 'go 10' we need to execute this 10 times
 				for (int execCnt=0; execCnt<sr.getMultiExecCount(); execCnt++)
@@ -7535,7 +7626,7 @@ ex.printStackTrace();
 						// RPC handling if the text starts with '\exec '
 						// The for of this would be: {?=call procName(parameters)}
 //						SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
-						SqlStatement sqlStmntInfo = SqlStatementFactory.create(_conn, sql, _connectedToProductName, _resultCompList, progress, _window);
+						sqlStmntInfo = SqlStatementFactory.create(_conn, sql, _connectedToProductName, _resultCompList, progress, _window);
 
 						if (_showSentSql_chk.isSelected() || sr.hasOption_printSql())
 							_resultCompList.add( new JSentSqlStatement(sql, sr.getSqlBatchStartLine() + startRowInSelection) );
@@ -7557,6 +7648,16 @@ ex.printStackTrace();
 						// Keep a summary of the time to read ResultSet
 						long execReadRsSum = 0;
 	
+						// Check for Any messages in the sqlStmntInfo
+						if (sqlStmntInfo instanceof IMessageAware)
+						{
+							IMessageAware ma = (IMessageAware)sqlStmntInfo;
+							
+							for (Message msg : ma.getMessages())
+								_resultCompList.add( new JPipeMessage(msg, sql) );
+							ma.clearMessages();
+						}
+
 						progress.setState("Waiting for Server to return resultset.");
 						_statusBar.setMsg("Waiting for Server to return resultset.");
 			
@@ -7621,6 +7722,8 @@ ex.printStackTrace();
 	
 								// Check for BCP pipe command
 								PipeCommand pipeCmd = sr.getPipeCmd();
+								if (pipeCmd != null)
+									pipeCmd.getCmd().setGuiOwner(_window);
 
 								//---------------------------------
 								// PIPE - BCP
@@ -7685,9 +7788,26 @@ ex.printStackTrace();
 								//---------------------------------
 								else if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandDiff))
 								{
+									PipeCommandDiff pipeCmdDiff = (PipeCommandDiff)pipeCmd.getCmd();
+									
+									// Diff command needs the initial Connection, to get Connection Properties, in case the --keyCols are empty
+									// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
+									pipeCmdDiff.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
+
 									try
 									{
-										pipeCmd.getCmd().doEndPoint(rs, progress);
+										pipeCmdDiff.doEndPoint(rs, progress);
+										
+										for (Message pmsg : pipeCmdDiff.getMessages())
+											_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
+										pipeCmdDiff.clearMessages();
+										
+										if (pipeCmdDiff.hasDiffTableMode())
+										{
+//											_resultCompList.add(new JTableResultSet(rstm));
+											_resultCompList.add(new JTableResultSet(pipeCmdDiff.getDiffTableMode()));
+//											System.out.println("FIXME: ADD THE TABLE MODEL TO THE RESULTS");
+										}
 									}
 									catch (Exception e)
 									{
@@ -7785,7 +7905,7 @@ ex.printStackTrace();
 											else
 											{
     											grs.createChart(); // Create the chart object NOW so we can retrieve any messages
-    											for (PipeMessage pmsg : pipeCmdGraph.getMessages())
+    											for (Message pmsg : pipeCmdGraph.getMessages())
     												_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
     											pipeCmdGraph.clearMessages();
     
@@ -7820,7 +7940,7 @@ ex.printStackTrace();
 								// Messages from PIPE Commands
 								if (pipeCmd != null && pipeCmd.getCmd().hasMessages())
 								{
-									for (PipeMessage pmsg : pipeCmd.getCmd().getMessages())
+									for (Message pmsg : pipeCmd.getCmd().getMessages())
 										_resultCompList.add( new JPipeMessage(pmsg, pipeCmd.getCmd()) );
 								}
 
@@ -7896,6 +8016,20 @@ ex.printStackTrace();
 						// Connection level WARNINGS, Append, messages and Warnings to _resultCompList, if any
 						putSqlWarningMsgs(_conn, _resultCompList, sr.getPipeCmd(), "-before-stmnt.close()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 	
+						// Check for Any messages in the sqlStmntInfo
+						if (sqlStmntInfo instanceof IMessageAware)
+						{
+							IMessageAware ma = (IMessageAware)sqlStmntInfo;
+							
+							for (Message msg : ma.getMessages())
+								_resultCompList.add( new JPipeMessage(msg, sql) );
+							ma.clearMessages();
+						}
+
+						// if the statement wants us to execute any post commands.
+						// In this case the SqlStatementCmd is just a "preprocessor" that generated Commands that we should run 
+						_postExecGeneratedSql = sqlStmntInfo.getPostExecSqlCommands();
+						
 						// How long did it take
 						long execFinnishTime = System.currentTimeMillis();
 						if (_clientTiming_chk.isSelected() || sr.hasOption_printClientTiming())
@@ -7920,6 +8054,16 @@ ex.printStackTrace();
 
 						incSqlExceptionCount();
 						progress.setSqlStatement(null);
+
+						// Check for Any messages in the sqlStmntInfo
+						if (sqlStmntInfo != null && sqlStmntInfo instanceof IMessageAware)
+						{
+							IMessageAware ma = (IMessageAware)sqlStmntInfo;
+							
+							for (Message msg : ma.getMessages())
+								_resultCompList.add( new JPipeMessage(msg, sql) );
+							ma.clearMessages();
+						}
 
 						// If something goes wrong, clear the message line
 						_statusBar.setMsg("Error: "+ex.getMessage());
@@ -7971,6 +8115,20 @@ ex.printStackTrace();
 						// Now that you understand what’s going on and why, the next question is: who should be processing those results?  You guessed it: the app.
 						if (stmnt != null)
 							stmnt.close();
+
+						if (sqlStmntInfo != null)
+						{
+							sqlStmntInfo.close();
+
+							if (sqlStmntInfo instanceof IMessageAware)
+							{
+								IMessageAware ma = (IMessageAware)sqlStmntInfo;
+								
+								for (Message msg : ma.getMessages())
+									_resultCompList.add( new JPipeMessage(msg, sql) );
+								ma.clearMessages();
+							}
+						}
 
 						// Read some extra stuff, yes do this even if a SQLException was thrown
 						readVendorSpecificResults(conn, progress, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);

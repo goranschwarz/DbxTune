@@ -926,8 +926,10 @@ public abstract class CheckForUpdates
 //			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches, for ASE Version '"+mtd.getAseExecutableVersionNum()+"'.");
 			_logger.info("sendMdaInfo: Starting to send "+rowCountSum+" MDA information entries in "+sendQueryList.size()+" batches.");
 			long startTime = System.currentTimeMillis();
+			int batchId = 0;
 			for (QueryString urlEntry : sendQueryList)
 			{
+				batchId++;
 				try
 				{
 					// SEND OFF THE REQUEST
@@ -942,11 +944,11 @@ public abstract class CheckForUpdates
 					String responseLines = "";
 					while ((line = lr.readLine()) != null)
 					{
-						_logger.debug("response line "+lr.getLineNumber()+": " + line);
+						_logger.debug("batchId="+batchId+", response line "+lr.getLineNumber()+": " + line);
 						responseLines += line;
 						if (line.startsWith("ERROR:"))
 						{
-							_logger.warn("When doing MDA info 'ERROR:' response row, which looked like '" + line + "'.");
+							_logger.warn("When doing MDA info 'ERROR:' at batchId="+batchId+", response row, which looked like '" + line + "'.");
 						}
 						if (line.startsWith("DONE:"))
 						{
@@ -957,8 +959,16 @@ public abstract class CheckForUpdates
 				}
 				catch (IOException ex)
 				{
-					_logger.debug("when trying to send MDA info, we had problems", ex);
+					_logger.warn("when trying to send MDA info, batchId="+batchId+" (of "+sendQueryList.size()+"), we had problems. Caught: "+ex);
+					_logger.debug("when trying to send MDA info, batchId="+batchId+"(of "+sendQueryList.size()+"), we had problems", ex);
+					
+					// FIXME: add records to a "retry" list, and try again in a couple of seconds.
+					//        for now sleeping 100ms seemed to workaround the issue...
 				}
+				
+				// Sets sleep for a *short* period... to not overload the server...
+				try { Thread.sleep(100); }
+				catch(InterruptedException ignore) {}
 			}
 			String execTimeStr = TimeUtils.msToTimeStr(System.currentTimeMillis() - startTime);
 			_logger.info("sendMdaInfo: this took '"+execTimeStr+"' for all "+sendQueryList.size()+" batches, rows send was "+rowCountSum+".");

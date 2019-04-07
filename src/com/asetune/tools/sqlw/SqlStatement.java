@@ -28,10 +28,16 @@ import javax.swing.JComponent;
 
 public interface SqlStatement
 {
-	public Statement getStatement();
+	public Statement getStatement() throws SQLException;
 	
 	public boolean execute() throws SQLException;
 
 	public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList, boolean asPlainText) 
 	throws SQLException;
+
+	/** If we want some extra SQL to be executed AFTER this execution. This is used by some SqlStatementCmd's (SqlStatementCmdDbDiff)*/
+	public String getPostExecSqlCommands();
+	
+	/** Close any resources assosiated with this */
+	public void close();
 }

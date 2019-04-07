@@ -462,7 +462,7 @@ extends PipeCommandAbstract
 			else
 			{
 //				throw new Exception("-u|--url option has not yet been implemented.");
-				
+
 				if (StringUtil.hasValue(_cmdParams._driver))
 				{
 					try { Class.forName(_cmdParams._driver).newInstance(); }
@@ -471,10 +471,12 @@ extends PipeCommandAbstract
 				Properties props = new Properties();
 				props.put("user", _cmdParams._user);
 				props.put("password", _cmdParams._passwd);
-		
+
 				String msg = "Try getConnection to driver='"+_cmdParams._driver+"', url='"+_cmdParams._url+"', user='"+_cmdParams._user+"'.";
-				addDebugMessage(msg);
+				if (_cmdParams._debug)
+					addDebugMessage(msg);
 				_logger.debug(msg);
+
 				_conn = DbxConnection.createDbxConnection(DriverManager.getConnection(_cmdParams._url, props));
 			}
 

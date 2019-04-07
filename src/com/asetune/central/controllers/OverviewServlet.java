@@ -620,7 +620,7 @@ public class OverviewServlet extends HttpServlet
 			long   refreshAge  = session.getLastSampleAgeInSec();
 			String collectHost = session.getCollectorHostname();
 			String collectUrl  = session.getCollectorCurrentUrl();
-			String url         = "jdbc:h2:tcp://"+collectHost+":19092/"+srvName+"_"+(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
+			String url         = "jdbc:h2:tcp://"+collectHost+":19092/"+srvName+"_"+(new SimpleDateFormat("yyyy-MM-dd").format(new Date())+";IFEXISTS=TRUE");
 
 			String logContentFull    = "NOT Local/Available";
 			String logContentDiscard = "NOT Local/Available";
@@ -1122,7 +1122,7 @@ public class OverviewServlet extends HttpServlet
 				if (session != null)
 					collectorHostname = session.getCollectorHostname(); 
 
-				String jdbcUrl  = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName;
+				String jdbcUrl  = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName + ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE";
 				String webUrl   = "http://"+collectorHostname+":8082" + "/login.jsp?url=" + jdbcUrl + "&driver=org.h2.Driver&user=sa";
 				
 				String sizeInGB = String.format("%.1f GB", f.length() / 1024.0 / 1024.0 / 1024.0);
@@ -1156,6 +1156,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("<ul>");
 			fn = "DBX_CENTRAL.console";                   out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
 			fn = "DBX_CENTRAL.log";                       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
+			fn = "DBX_CENTRAL_H2WriterStatCronTask.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
 			fn = "DBX_CENTRAL_CentralH2Defrag.log";       out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
 			fn = "DBX_CENTRAL_DataDirectoryCleaner.log";  out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
 			fn = "DBX_CENTRAL_CentralPcsJdbcCleaner.log"; out.println("  <li><a href='/log?name=" + fn + "'>plain</a> | <a href='/log?name=" + fn+urlDiscardStr + "'>discard</a> | <a href='/log?name=" + fn + "&tail=500'>tail</a> | <a href='/log?name=" + fn+urlDiscardStr + "&tail=500'>tail+discard</a> &#8680; <a href='/log?name="+fn+"'>"+fn+"</a> </li>");
@@ -1392,7 +1393,7 @@ public class OverviewServlet extends HttpServlet
 				dbxTuneName       = session.getProductString();
 			}
 
-			String url        = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName;
+			String url        = "jdbc:h2:tcp://" + collectorHostname + "/" + dbName + ";IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE";
 //			String dbxTuneUrl = dbxTuneGuiUrl + url;
 			String dbxTuneUrl  = dbxTuneGuiUrl.replace(":PORT/", ":"+DbxTune.getGuiWebPort(dbxTuneName)+"/") + url;
 

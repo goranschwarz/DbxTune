@@ -75,7 +75,7 @@ extends CountersModel
 	public static final String[] NEED_ROLES       = new String[] {"mon_role"};
 	public static final String[] NEED_CONFIG      = new String[] {"enable monitoring=1", "execution time monitoring=1"};
 
-	public static final String[] PCT_COLUMNS      = new String[] {};
+	public static final String[] PCT_COLUMNS      = new String[] {"CpuUsagePct"};
 //	public static final String[] DIFF_COLUMNS     = new String[] {"ExecutionTimeDiff", "ExecutionCntDiff"};
 	public static final String[] DIFF_COLUMNS     = new String[] {"ExecutionTime", "ExecutionCnt"};
 
@@ -129,6 +129,7 @@ extends CountersModel
 	public static final String GRAPH_NAME_EXECUTION_COUNT          = "CountGraph"; //String x=GetCounters.XXX;
 	public static final String GRAPH_NAME_EXECUTION_TIME           = "TimeGraph"; //String x=GetCounters.XXX;
 	public static final String GRAPH_NAME_EXECUTION_TIME_PER_COUNT = "TimePerCountGraph"; //String x=GetCounters.XXX;
+	public static final String GRAPH_NAME_CPU_USAGE_PCT            = "CpuUsagePct";
 
 	private void addTrendGraphs()
 	{
@@ -174,46 +175,17 @@ extends CountersModel
 			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new TrendGraph(GRAPH_NAME_EXECUTION_COUNT,
-//				"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
-//				"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME,
-//				"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
-//				"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new TrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
-//				"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
-//				"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_CPU_USAGE_PCT,
+			"ASE SubSystem Execution CPU Usage Percent", 	                                 // Menu CheckBox text
+			"ASE SubSystem Operations - CPU Usage Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.CPU,
+			true, // is Percent Graph
+			false, // visible at start
+			Ver.ver(15,7,0,100),     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
 	}
 
 	@Override
@@ -238,6 +210,16 @@ extends CountersModel
 			                                                                     "ExecutionTime in Micro Seconds for each individual ExecutionCount<br>" +
 			                                                                     "<b>Formula</b>: ExecutionTime / ExecutionCnt<br>" +
 			                                                                 "</html>");
+			mtd.addColumn("monSysExecutionTime",  "CpuUsagePct",             "<html>" +
+			                                                                     "How much CPU Time (in Percent) does this 'operation category' consume of the total CPU Time/slots available.<br>" +
+			                                                                     "<b>Formula ABS</b>:  ((abs.ExecutionTime/1000000) / (<i>srvRunningForSec*engCnt</i>)) * 100.0<br>" +
+			                                                                     "<b>Formula RATE</b>: used_ExecuationTimeInMicroSeconds_inThisPeriod / total_MicroSecondsPossibleForScheduling_forAllEngines_inThisPeriod. or detailed: val = (rate_ExecutionTime / (1_000_000.0 * rate_EngineCount)) * 100.0<br>" +
+			                                                                     "<b>Formula DIFF</b>: same as RATE<br>" +
+			                                                                 "</html>");
+			mtd.addColumn("monSysExecutionTime",  "EngineCount",             "<html>" +
+			                                                                     "How many engines does the ASE has avilable<br>" +
+			                                                                     "<b>Formula</b>: count(*) from master.dbo.monEngine where Status = 'online' <br>" +
+			                                                                 "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -257,11 +239,29 @@ extends CountersModel
 	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
 	{
 		String sql = 
-			"select InstanceID, OperationID, OperationName, ExecutionCnt, ExecutionTime, \n" +
+			"declare @engCnt int \n" +
+			"declare @srvRunningForSec int \n" +
+			" \n" +
+			"select @srvRunningForSec = datediff(second, StartDate, getdate()) from master.dbo.monState \n" +
+			"select @engCnt = count(*) from master.dbo.monEngine where Status = 'online' \n" +
+			" \n" +
+			"select InstanceID, \n" +
+			"       OperationID, \n" +
+			"       OperationName, \n" +
+			"       ExecutionCnt, \n" +
+			"       ExecutionTime, \n" +
 			"       ExecutionTimePerCnt = CASE WHEN ExecutionCnt > 0 \n" +
 			"                                  THEN convert(numeric(10,1), (ExecutionTime + 0.0) / (ExecutionCnt + 0.0) ) \n" +
 			"                                  ELSE convert(numeric(10,1), null) \n" +
-			"                             END \n" +
+			"                             END, \n" +
+//			"       -- The below is NOT the same calculation as the Java Code per sample (the below is granularity on seconds instead of microsec, due to 'Arithmetic overflow' if server has been running for # days) \n" +
+//			"       CpuUsagePct = convert(numeric(9,1), ( (ExecutionTime/1000000) / (@srvRunningForSec*1.0*@engCnt) ) * 100.0), \n" +
+			"       CpuUsagePct = CASE \n" +
+			"                       WHEN ExecutionTime/1000000 > @srvRunningForSec -- discard values out-of-scope \n" +
+			"                       THEN convert(numeric(8,1), NULL) \n" +
+			"                       ELSE convert(numeric(8,1), ( (ExecutionTime/1000000) / (@srvRunningForSec*1.0*@engCnt) ) * 100.0) \n" +
+			"                     END, \n" +
+			"       EngineCount = @engCnt \n" +
 //			"       ExecutionCntDiff = ExecutionCnt, ExecutionTimeDiff = ExecutionTime \n" +
 //			"       description  = CASE \n" +
 //			"                           WHEN OperationID = 0 THEN convert(varchar(255), '') \n" +
@@ -281,7 +281,7 @@ extends CountersModel
 	{
 		if (GRAPH_NAME_EXECUTION_COUNT.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every database
+			// Write 1 "line" for every rowInTable
 			Double[] dArray = new Double[this.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
@@ -296,7 +296,7 @@ extends CountersModel
 
 		if (GRAPH_NAME_EXECUTION_TIME.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every database
+			// Write 1 "line" for every rowInTable
 			Double[] dArray = new Double[this.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
@@ -311,7 +311,7 @@ extends CountersModel
 
 		if (GRAPH_NAME_EXECUTION_TIME_PER_COUNT.equals(tgdp.getName()))
 		{
-			// Write 1 "line" for every database
+			// Write 1 "line" for every rowInTable
 			Double[] dArray = new Double[this.size()];
 			String[] lArray = new String[dArray.length];
 			for (int i = 0; i < dArray.length; i++)
@@ -319,6 +319,37 @@ extends CountersModel
 				lArray[i] = this.getRateString       (i, "OperationName");
 				dArray[i] = this.getRateValueAsDouble(i, "ExecutionTimePerCnt");
 			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		if (GRAPH_NAME_CPU_USAGE_PCT.equals(tgdp.getName()))
+		{
+			// Summary of ALL CPU lines
+			double sum = 0;
+			
+			// Write 1 "line" for every rowInTable
+			Double[] dArray = new Double[this.size() + 1];
+			String[] lArray = new String[dArray.length];
+
+			for (int ap = 0; ap < dArray.length; ap++)
+			{
+				// ArrayPos 0 holds: SUMMARY which will be added at the end
+				if (ap == 0)
+					continue;
+
+				int row = ap - 1;
+				
+				lArray[ap] = this.getRateString       (row, "OperationName");
+				dArray[ap] = this.getRateValueAsDouble(row, "CpuUsagePct");
+				
+				sum += dArray[ap]; 
+			}
+			
+			// Finally Write the SUMMARY
+			lArray[0] = "SumAllCategories";
+			dArray[0] = sum;
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
@@ -348,7 +379,7 @@ extends CountersModel
 		// Loop on all diffData rows
 		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 		{
-			ExecutionCnt  = ((Number) diffData.getValueAt(rowId, ExecutionCnt_pos)) .longValue();
+			ExecutionCnt  = ((Number) diffData.getValueAt(rowId, ExecutionCnt_pos )).longValue();
 			ExecutionTime = ((Number) diffData.getValueAt(rowId, ExecutionTime_pos)).longValue();
 
 			if (ExecutionCnt > 0)
@@ -360,6 +391,49 @@ extends CountersModel
 			}
 			else
 				diffData.setValueAt(new BigDecimal(0), rowId, ExecutionTimePerCnt_pos);
+		}
+	}
+	
+	@Override
+	public void localCalculationRatePerSec(CounterSample rateData, CounterSample diffData)
+	{
+		int  ExecutionTime_pos = -1;
+		int  CpuUsagePct_pos   = -1;
+		int  EngineCount_pos   = -1;
+
+		// Find column Id's
+		List<String> colNames = diffData.getColNames();
+		if (colNames == null)
+			return;
+		for (int colId = 0; colId < colNames.size(); colId++)
+		{
+			String colName = (String) colNames.get(colId);
+			if      (colName.equals("ExecutionTime"))       ExecutionTime_pos       = colId;
+			else if (colName.equals("EngineCount"))         EngineCount_pos         = colId;
+			else if (colName.equals("CpuUsagePct"))         CpuUsagePct_pos         = colId;
+		}
+
+		// Loop on all rate/diff Data rows
+		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
+		{
+			double rate_ExecutionTime = ((Number) rateData.getValueAt(rowId, ExecutionTime_pos)).doubleValue();
+			int    rate_EngineCount   = ((Number) rateData.getValueAt(rowId, EngineCount_pos  )).intValue();
+
+			// CpuUsagePct
+			if (rate_EngineCount > 0)
+			{
+				// Basic Algorithm: used_ExecuationTimeInMicroSeconds_inThisPeriod / total_MicroSecondsPossibleForScheduling_forAllEngines_inThisPeriod
+
+				// Should we filter out "out-of-bound" values here as well?
+				// that would be: if (rate_ExecutionTime > 1_000_000.0 * rate_EngineCount) ...
+				
+				// ExecutionTime                  / allEngines*1000000 == PossibleExecutionSlotsInMicroSec
+				double calc = (rate_ExecutionTime / (1_000_000.0 * rate_EngineCount)) * 100.0;
+
+				BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+				diffData.setValueAt(newVal, rowId, CpuUsagePct_pos);
+				rateData.setValueAt(newVal, rowId, CpuUsagePct_pos);
+			}
 		}
 	}
 }

@@ -65,6 +65,7 @@ import com.asetune.central.pcs.CentralPcsWriterHandler;
 import com.asetune.central.pcs.CentralPersistReader;
 import com.asetune.central.pcs.CentralPersistWriterJdbc;
 import com.asetune.central.pcs.DbxCentralRealm;
+import com.asetune.central.pcs.H2WriterStatCronTask;
 import com.asetune.check.CheckForUpdates;
 import com.asetune.check.CheckForUpdatesDbxCentral;
 import com.asetune.gui.GuiLogAppender;
@@ -1148,6 +1149,47 @@ public class DbxTuneCentral
 			String cron  = Configuration.getCombinedConfiguration().getProperty(DataDirectoryCleaner.PROPKEY_cron,  DataDirectoryCleaner.DEFAULT_cron);
 			_logger.info("Adding 'Data Directory Cleanup' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
 			_scheduler.schedule(cron, new DataDirectoryCleaner());
+		}
+
+		//--------------------------------------------
+		// H2 Database Writer Statistics - Scheduling Task
+		//--------------------------------------------
+		boolean h2WriterStatisticsStart = Configuration.getCombinedConfiguration().getBooleanProperty(H2WriterStatCronTask.PROPKEY_start, H2WriterStatCronTask.DEFAULT_start);
+		if (h2WriterStatisticsStart)
+		{
+			File logFile = Logging.getBaseLogFile("_" + H2WriterStatCronTask.class.getSimpleName() + ".log");
+			if (logFile != null)
+			{
+				String pattern = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_LOG_FILE_PATTERN, H2WriterStatCronTask.DEFAULT_LOG_FILE_PATTERN);
+				PatternLayout layout = new PatternLayout(pattern);
+				_logger.info("Adding separate log file for '"+H2WriterStatCronTask.EXTRA_LOG_NAME+"' using file '"+logFile.getAbsolutePath()+"' with pattern '"+pattern+"'.");
+				
+				// Create a Rolling Log File
+				RollingFileAppender appender = new RollingFileAppender(layout, logFile.getAbsolutePath(), true);
+				appender.setMaxFileSize("10MB");
+				appender.setMaxBackupIndex(3);
+				appender.setName(H2WriterStatCronTask.EXTRA_LOG_NAME);
+
+				// Only log messages from 'H2WriterStatCronTask' in this appender
+				appender.addFilter(new Filter()
+				{
+					@Override
+					public int decide(LoggingEvent event)
+					{
+						if (event.getLogger().getName().equals(H2WriterStatCronTask.class.getName()))
+							return Filter.NEUTRAL;
+
+						return Filter.DENY;
+					}
+				});
+
+				// Add the appender
+				Logger.getRootLogger().addAppender(appender);
+			}
+
+			String cron  = Configuration.getCombinedConfiguration().getProperty(H2WriterStatCronTask.PROPKEY_cron,  H2WriterStatCronTask.DEFAULT_cron);
+			_logger.info("Adding 'H2 Writer File Size Statistics' scheduling with cron entry '"+cron+"', human readable '"+CronUtils.getCronExpressionDescription(cron)+"'.");
+			_scheduler.schedule(cron, new H2WriterStatCronTask());
 		}
 
 		//--------------------------------------------

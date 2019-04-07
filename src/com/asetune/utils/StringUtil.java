@@ -2789,6 +2789,43 @@ public class StringUtil
 	}
 
 	/**
+	 * Check if the list contains a string (case insensitive)
+	 * 
+	 * @param list
+	 * @param find
+	 * @return
+	 */
+	public static boolean containsIgnoreCase(final List<String> list, final String find)
+	{
+		for (String str : list)
+		{
+			if (str.equalsIgnoreCase(find))
+				return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Get index of a list (case insensitive)
+	 * 
+	 * @param list
+	 * @param find
+	 * @return -1 if NOT found, else the position in the list
+	 */
+	public static int indexOfIgnoreCase(final List<String> list, final String find)
+	{
+		int index = 0;
+		for (String str : list)
+		{
+			if (str.equalsIgnoreCase(find))
+				return index;
+			index++;
+		}
+		return -1;
+	}
+	
+	
+	/**
 	 * Transform a string into a string according to RFC 4180<br>
 	 * see: <a href="http://tools.ietf.org/html/rfc4180">http://tools.ietf.org/html/rfc4180</a>
 	 * @param data a String value

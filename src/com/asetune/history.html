@@ -39,6 +39,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventConfigResourceIsUsedUp -- When DBMS is out off configured resources</LI>
 				<LI>new: AlarmEventErrorLogEntry          -- When some defined error messages is written to the DBMS Error log</LI>
 				<LI>new: AlarmEventOldTranLogBackup       -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
+				<LI>new: AlarmEventConfigChanges          -- Fires when a configuration changes is detected from the error log</LI>
+				<LI>new: AlarmEventProcessInfected        -- Fires if we find 'Process Infected' is found in the error log, this so we can easily see the stack trace.</LI>
 				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
 				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
 				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>
@@ -66,6 +68,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Try to remember the state of Expanded/Collapsed trees (different tree-states are remembered for each tool)</LI>
 				<LI>Saving new entries "close" to the "source entry" in the tree-states</LI>
 				<LI>Cloning/Duplicating connection profiles (using right click menu)</LI>
+				<LI>Copy a profile name. (ctrl-c and/or right click menu to copy a profile name)</LI>
 			</ul>
 		</LI>
 		<LI>Performance Counter Panels: added shortcut ctrl-1 = view ABS Counter, ctrl-2 = view DIFF Counters, ctrl-3 = view RATE Counters</LI>
@@ -74,7 +77,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
-				<li>To version 1.4.198,       Component: H2 database</li>
+				<li>To version 1.4.199,       Component: H2 database</li>
 				<li>To version ASE 16 SP3,PL6 Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li>
 	 			<li>To version 3.0.0,         Component: RSyntaxTextArea(3.0.2), RSTAUI, Autocomplete</li>
 	 			<li>To version 1.14,          Component: simplemagic</li>
@@ -114,7 +117,11 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Viewing log files:<br>
 			- add title, so it's easier to see what file we are viewing<br>
 			- tail: Scroll to bottom when new rows is received did not work on Safari
+			- tail: on enter in the fields '# rows' & 'filter text', automatically press 'reload' button 
 			</LI>
+		<LI>Changed url to 'load offline session' in *tune applications (added IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE)</LI>
+		<LI>Changes in shutdown sequence. (wait for current entry to be saved before shutdown)</LI>
+		<LI>Write some extra H2 statistics on every "persist".</LI>
  	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -181,6 +188,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
+		<b>CmExecutionTime</b><br>
+		<ul>
+			<li>added column: CpuUsagePct - How much Percent of ALL available CPU time does this category use</li>
+			<li>added column: EngineCount used in above calculation</li>
+			<li>added graph:  ASE SubSystem Execution CPU Usage Percent</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
 		<b>CmDeadlock</b><br>
 		<ul>
 			<li>Will now be saved to PCS when you record a session</li>
@@ -232,6 +249,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
+		<b>Host Monitor -&gt; OS Load Average(uptime) - CmOsUptime</b><br>
+		<ul>
+			<li>Bugfix: Uptime less than 1 our was unable to parse</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
 		<b>View DBMS Configuration</b><br>
 		<ul>
 			<li>on startup check for various strange DBMS configuration(s)
@@ -275,7 +300,31 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>RsTune - Sybase/SAP Replication Server</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmAdminStatBacklog</b><br>
+		<ul>
+			<li>Changed algorithm for what to show in trend graphs (from 'Max' to 'Obs' above 0)</li>
+		</ul>
+		</LI>
+
+	
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>RsMemory</b><br>
+		<ul>
+			<li>In 15.7.1 SP300 (i think) the column name 'Object/State' was changed to 'Object(State)'</li>
+		</ul>
+		</LI>
+
+	
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CounterSampleWsIterator</b><br>
+		<ul>
+			<li>Changed exception handling to "exit late" instead of "early" (faster into a "normal" state after a ASE Reboot)</li>
+		</ul>
+		</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -359,17 +408,27 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>added 'go tab' to display the output ResultSet(s) in JTabbedPane</LI>
 		<LI>\prep reading clob, now tries to figure out the files encoding using UniversalDetector</LI>
 		<LI>Reading ResultSet feedback (blocking popup UI: how many rows we have currently read)<br>
-		    &emsp; Below 100 rows, display each row, above 100 rows display after 100 row read<br>
-		    &emsp; The change is that below 100 rows we report every row (so we easier see if it's slow to read rows)</LI>
+		    &emsp; Below 100 rows, report each row.<br>
+		    &emsp; After that report every 100ms</LI>
 		<LI>PipeCommandBcp - added -t for truncating a destination table</LI>
 		<LI>Tooltip on cell, improved for CLOB/BLOB (Instead of displaying the content directly. Prompt if you want to open in external browser)</LI>
 		<LI>new tools: Import, export, transfer data (not yet 100% completed)</LI>
 		<LI>improved: \loadfile command</LI>
 		<LI>new command 'go | graph' (or chart) to display a graph/chart of the ResultSet</LI>
 		<LI>also right click on a ResultSet table, and choose 'Create Graph/Chart on Table Content...'</LI>
-		<LI>new command 'go | diff' to diff ResultSet between different servers and DBMS Vendors (NOTE: Work in progress, not yet completed...)</LI>
 		<LI>improved 'go | bcp' to transfer data/ResultSet between different servers and DBMS Vendors (NOTE: Still not production stable)</LI>
 		<LI>added 'go skiprs #' and 'go keeprs #' to discard and keep specific ResultSet (can for example be used with 'go | chart')</LI>
+		<LI>new Commands to do data content diff over servers (and possibly DBMS vendors):
+		  <ul>
+		  	<li>go | diff ... -- Do difference on ResultSet</li>
+		  	<li>\tabdiff ...  -- Do difference on a Table level</li>
+		  	<li>\dbdiff  ...  -- Do difference on a database level</li>
+		  </ul>
+		  </LI>
+		<LI>new command: \rsql is new command to execute SQL at a remote DBMS (any vendor)</LI>
+		<LI>Cell tooltip is a bit more configurable now (max size, display all columns, or just current, etc...)</LI>
+		<LI>code completion: for command \rsql,\tabdiff,\dbdiff etc, if '-p' or '--profile' switch -- do: lookup any Connection Profile names</LI>
+		<LI>code completion: for 'go' -- do: Lookup any parameters and pipe commands that are available for 'go'</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

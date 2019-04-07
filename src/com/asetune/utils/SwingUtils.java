@@ -1481,6 +1481,34 @@ public class SwingUtils
 		return sb.toString();
 	}
 
+
+	public static String tableToHtmlString(TableModel tm)
+	{
+		StringBuilder sb = new StringBuilder();
+		int rows = tm.getRowCount();
+		int cols = tm.getColumnCount();
+
+		sb.append("<TABLE>\n");
+
+		// Headers
+		sb.append("  <TR>");
+		for (int c=0; c<cols; c++) 
+			sb.append(" <TH>").append(tm.getColumnName(c)).append("</TH>");
+		sb.append(" </TR>\n");
+
+		// Rows
+		for (int r=0; r<rows; r++) 
+		{
+			sb.append("  <TR>");
+			for (int c=0; c<cols; c++) 
+				sb.append(" <TD>").append(tm.getValueAt(r, c)).append("</TD>");
+			sb.append(" </TR>\n");
+		}
+		sb.append("</TABLE>\n");
+
+		return sb.toString();
+	}
+
 	public static String tableToHtmlString(JTable table)
 	{
 		StringBuilder sb = new StringBuilder();

@@ -48,6 +48,7 @@ import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -68,7 +69,7 @@ extends CountersModel
 	public static final String   GROUP_NAME       = MainFrame.TCP_GROUP_SERVER;
 	public static final String   GUI_ICON_FILE    = "images/"+CM_NAME+".png";
 
-	public static final long     NEED_SRV_VERSION = 0;
+	public static final long     NEED_SRV_VERSION = Ver.ver(15,7,1, 303);   // above 15.7.1 SP203 DOES NOT have it. lets guess SP 300 (doc says that SP 303 has it, but I can't find 300,301,302)
 	public static final long     NEED_CE_VERSION  = 0;
 
 	public static final String[] MON_TABLES       = new String[] {"mem_detail_stats"};
@@ -105,6 +106,44 @@ extends CountersModel
 	|CMD/DSIE     |0              |0                 |0                     |
 	|Total        |167029761      |159               |320                   |
 	+-------------+---------------+------------------+----------------------+
+	 */
+	
+	/*
+	 * Reference Manual says: https://help.sap.com/viewer/075940003f1549159206fcc89d020515/16.0.3.4/en-US/fe67b8bbbd1c10149c6ca97c2a0e5c6b.html
+	 * 
+	 * But I have seen in the dbxtune.com errorlog: 
+	 * setSampleException() for cm 'CmRsMemory'. java.lang.RuntimeException: sample, can't find all the primary keys in the ResultSet. 
+	 * pkList='[Object/State]', 
+	 * _colNames='[Object(State), Memory_Consumed, Memory_Consumed_Mb, Max_Memory_Consumed_Mb, Avg_Memory_Consumed_Mb, Memory_Threshold_Mb, Memory_Ctrl_Time(s)]', tmpPkPos='[]'.
+	 * 
+	 * WHERE the column name looks like 'Object(State)' -- that is WITHOUT the space in the column name...  
+	 * 
+
+        Object (State)  Memory_Consumed  Memory_Consumed_Mb  Max_Memory_Consumed_Mb 
+        –––––––––––––-  ––––––––––––––-  –––––––––––––––––-  –––––––––––––––––––––-
+        Misc (Norm)     17370307         16                  16
+        CI   (Norm)     0                0                   0
+        EXEC (Norm)     27392            0                   0
+        IBQ  (Norm)     1196960          1                   1
+        SQT  (Norm)     108408           0                   0
+        DIST (Norm)     218456           0                   0
+        OBQ  (Norm)     1381880          1                   1
+        DSIS (Norm)     369800           0                   0
+        DSIE (Norm)     439776           0                   0
+        Total(Norm)     21112979         20                  20
+                            
+        Avg_Memory_Consumed_Mb  Memory_Threshold_Mb  Memory_Ctrl_Time(s)
+        –––––––––––––––––––––-  ––––––––––––––––––-  –––––––––––––––––--
+        16                      99                   0
+        0                       299                  0
+        0                       99                   0
+        1                       99                   0
+        0                       159                  0
+        0                       99                   0
+        0                       199                  0
+        0                       399                  0
+        0                       539                  0
+        N/A                     1997                 0
 	 */
 	
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = true;
@@ -258,7 +297,14 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-		pkCols.add("Object/State");
+		if (srvVersion >= Ver.ver(16,0,0, 3,4)) // 16.0 SP3 PL4 --- NOT Sure in what EXACT version this was introduced, but SAP RefManuals says: SP3 PL4
+		{
+			pkCols.add("Object(State)");
+		}
+		else // IN earlier versions (15.7.1 SP303 -> 16.0 SP3 PL3)
+		{
+			pkCols.add("Object/State");
+		}
 
 		return pkCols;
 	}

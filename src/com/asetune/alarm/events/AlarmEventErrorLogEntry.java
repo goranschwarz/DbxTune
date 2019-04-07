@@ -60,7 +60,10 @@ extends AlarmEvent
 		int ttlSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_timeToLiveInSeconds, DEFAULT_alarm_timeToLiveInSeconds);
 		setTimeToLive( ttlSec * 1000 );
 
+		// Set data
+		setData("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim());
+
 		// Set the description 
-		setDescription("Num="+errorNumber+" Severity="+errorSeverity+", Text=" + errorMessage.trim()+ " ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
+		setDescription("Num="+errorNumber+", Severity="+errorSeverity+", Text=" + errorMessage.trim()+ ", ExtraInfo=[AlarmEventSeverity="+alarmSeverity+", "+PROPKEY_alarm_timeToLiveInSeconds+"="+ttlSec+", severityThreshold="+severityThreshold+"]");
 	}
 }

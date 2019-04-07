@@ -513,6 +513,26 @@ extends DefaultCompletionProvider
 
 
 	/**
+	 * Get current whole Line as a String
+	 */
+	protected String getCurrentLineStr(RTextArea textArea)
+	{
+		try
+		{
+			int caretOffset = textArea.getCaretPosition();
+			int lineNumber  = textArea.getLineOfOffset(caretOffset);
+			int startOffset = textArea.getLineStartOffset(lineNumber);
+			int endOffset   = textArea.getLineEndOffset(lineNumber);
+			
+			return textArea.getText(startOffset, endOffset-startOffset);
+		}
+		catch (BadLocationException e)
+		{
+		}
+		return "";
+	}
+
+	/**
 	 * Get current whole word
 	 */
 	protected String getCurrentWord(RTextArea textArea)

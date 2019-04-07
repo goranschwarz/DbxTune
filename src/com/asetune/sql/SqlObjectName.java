@@ -731,6 +731,16 @@ public class SqlObjectName
 		if (rightQuote == null) rightQuote = "";
 		
 		StringBuilder sb = new StringBuilder();
+		
+		// Check some extra stuff
+		// in some cases the obj name contains 'XXX.YYY.tabname', so check if 'cat' and 'sch' is part of 'obj', then just reset cat and obj
+		if (StringUtil.hasValue(obj))
+		{
+			if (StringUtil.hasValue(cat) && obj.startsWith(cat+"."))
+				cat = "";
+			if (StringUtil.hasValue(sch) && obj.indexOf(sch+".") != -1)
+				sch = "";
+		}
 
 		if (StringUtil.hasValue(cat)) sb.append(leftQuote).append(cat).append(rightQuote).append(".");
 		if (StringUtil.hasValue(sch)) sb.append(leftQuote).append(sch).append(rightQuote).append(".");

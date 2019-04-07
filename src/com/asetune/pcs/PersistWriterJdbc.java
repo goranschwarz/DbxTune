@@ -43,6 +43,7 @@ import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
+import com.asetune.central.pcs.H2WriterStat;
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.CountersModelAppend;
 import com.asetune.config.dbms.DbmsConfigManager;
@@ -65,6 +66,7 @@ import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseUrlHelper;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.NetUtils;
@@ -1386,6 +1388,47 @@ public class PersistWriterJdbc
 //					_logger.info("H2 URL add option: REUSE_SPACE=FALSE");
 //					urlMap.put("REUSE_SPACE",  "FALSE");
 //				}
+				if ( ! urlMap.containsKey("REUSE_SPACE") )
+				{
+					String h2ReuseSpace = getConfig().getProperty("dbxtune.h2.REUSE_SPACE", null);
+					if (h2ReuseSpace != null)
+					{
+						h2ReuseSpace = h2ReuseSpace.toUpperCase().trim();
+						if (h2ReuseSpace.equals("TRUE") || h2ReuseSpace.equals("FALSE"))
+						{
+							change = true;
+							_logger.info("H2 URL add option: REUSE_SPACE="+h2ReuseSpace);
+							urlMap.put("REUSE_SPACE",  h2ReuseSpace);
+						}
+						else
+						{
+							_logger.warn("H2 URL OPTION 'dbxtune.h2.reuseSpace' must be 'TRUE' or 'FALSE'. the passed option was '" + h2ReuseSpace + "'.");
+						}
+					}
+				}
+
+				// This property is only used when using the MVStore storage engine. How long to retain old, persisted data, in milliseconds. 
+				// The default is 45000 (45 seconds), 0 means overwrite data as early as possible. 
+				// It is assumed that a file system and hard disk will flush all write buffers within this time. 
+				// Using a lower value might be dangerous, unless the file system and hard disk flush the buffers earlier. 
+				// To manually flush the buffers, use CHECKPOINT SYNC, however please note that according to various tests this 
+				// does not always work as expected depending on the operating system and hardware.
+				//
+				// Admin rights are required to execute this command, as it affects all connections. 
+				// This command commits an open transaction in this connection. This setting is persistent. 
+				// This setting can be appended to the database URL: jdbc:h2:test;RETENTION_TIME=0
+				if ( ! urlMap.containsKey("RETENTION_TIME") )
+				{
+//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 600_000); // default 10 minutes
+					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", -1); // default 10 minutes
+					if (h2RetentionTime > -1) // set to -1 to disable this option
+					{
+						change = true;
+						_logger.info("H2 URL add option: RETENTION_TIME="+h2RetentionTime);
+						urlMap.put("RETENTION_TIME",  Integer.toString(h2RetentionTime));
+					}
+				}
+				
 
 				// If we want to bump up the cache... Default is 64M per GB the JVM has
 				if ( ! urlMap.containsKey("CACHE_SIZE") )
@@ -1428,9 +1471,15 @@ public class PersistWriterJdbc
 				// Maybe MVStore has some more specific options RETENTION_TIME... may be something to look at
 				if ( ! urlMap.containsKey("WRITE_DELAY") )
 				{
-					change = true;
-					_logger.info("H2 URL add option: WRITE_DELAY=30000");
-					urlMap.put("WRITE_DELAY",  "30000");
+					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 2_000);
+//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
+//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", -1);
+					if (h2WriteDelay > -1) // set to -1 to disable this option
+					{
+						change = true;
+						_logger.info("H2 URL add option: WRITE_DELAY="+h2WriteDelay);
+						urlMap.put("WRITE_DELAY",  h2WriteDelay+"");
+					}
 				}
 
 //				// DATABASE_EVENT_LISTENER mode
@@ -1612,6 +1661,26 @@ public class PersistWriterJdbc
 				setH2SpecificSettings(_mainConn);
 				setH2SpecificSettings(_ddlStorageConn);
 				setH2SpecificSettings(_sqlCaptureStorageConn);
+				
+				// instantiate a small H2 Performance Counter Collector
+//				H2WriterStat h2stat = new H2WriterStat(new H2WriterStat.DbxTuneH2PerfCounterConnectionProvider());
+				H2WriterStat h2stat = new H2WriterStat(new ConnectionProvider()
+				{
+					@Override
+					public DbxConnection getConnection()
+					{
+						// NOTE: Will this work if the _mainConn is already in use...
+						return _mainConn;
+					}
+
+					@Override
+					public DbxConnection getNewConnection(String appname)
+					{
+						throw new RuntimeException("getNewConnection(appname): -NOT-IMPLEMENTED-");
+					}
+					
+				});
+				H2WriterStat.setInstance(h2stat);
 			}
 
 			// if ASE, turn off error message like: Scale error during implicit conversion of NUMERIC value '1.2920528650283813' to a NUMERIC field.
@@ -1985,6 +2054,8 @@ public class PersistWriterJdbc
 			}
 
 			Statement s = conn.createStatement();
+			s.setQueryTimeout(0); // Do not timeout on DDL 
+
 			s.execute(sql);
 			s.close();
 

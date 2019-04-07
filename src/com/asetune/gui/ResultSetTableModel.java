@@ -13,9 +13,12 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
@@ -304,8 +307,12 @@ public class ResultSetTableModel
 		//---------------------------------------------------
 			
 		_readCount = 0;
-		int readReportMod = 1; // start at 1, max value at 100  (in the begining print report often, then report after every 100 row)
 		int rowCount = 0;
+		
+		long lastProgresUpdate = 0;
+		long progresUpdatePeriodMs = 100;
+		NumberFormat nf = NumberFormat.getInstance();
+
 		while(rs.next())
 		{
 			if ( progress != null && progress.isCancelled() )
@@ -340,13 +347,10 @@ public class ResultSetTableModel
 			_readCount++;
 			if (progress != null)
 			{
-				if ( (_readCount % readReportMod) == 0 )
+				if ( _readCount < 100 ||  System.currentTimeMillis() - lastProgresUpdate > progresUpdatePeriodMs )
 				{
-					progress.setState(originProgressState + " row "+_readCount);
-
-					// In the begining report OFTEN, but after 100 record, report only every 100 row read
-					if (_readCount > 100)
-						readReportMod =  100;
+					lastProgresUpdate = System.currentTimeMillis();
+					progress.setState(originProgressState + " row " + nf.format(_readCount));
 				}
 			}
 
@@ -861,12 +865,12 @@ public class ResultSetTableModel
 		case java.sql.Types.SQLXML:        return "java.sql.Types.SQLXML";
 
 		//------------------------- JDBC 4.2 (java 1.8) -----------------------------------
-//		case java.sql.Types.REF_CURSOR:              return "java.sql.Types.REF_CURSOR";
-//		case java.sql.Types.TIME_WITH_TIMEZONE:      return "java.sql.Types.TIME_WITH_TIMEZONE";
-//		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return "java.sql.Types.TIMESTAMP_WITH_TIMEZONE";
-		case 2012:                                   return "java.sql.Types.REF_CURSOR";
-		case 2013:                                   return "java.sql.Types.TIME_WITH_TIMEZONE";
-		case 2014:                                   return "java.sql.Types.TIMESTAMP_WITH_TIMEZONE";
+		case java.sql.Types.REF_CURSOR:              return "java.sql.Types.REF_CURSOR";
+		case java.sql.Types.TIME_WITH_TIMEZONE:      return "java.sql.Types.TIME_WITH_TIMEZONE";
+		case java.sql.Types.TIMESTAMP_WITH_TIMEZONE: return "java.sql.Types.TIMESTAMP_WITH_TIMEZONE";
+//		case 2012:                                   return "java.sql.Types.REF_CURSOR";
+//		case 2013:                                   return "java.sql.Types.TIME_WITH_TIMEZONE";
+//		case 2014:                                   return "java.sql.Types.TIMESTAMP_WITH_TIMEZONE";
 		
 
 		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
@@ -1893,7 +1897,96 @@ public class ResultSetTableModel
 	}
 
 
+	//------------------------------------------------------------
+	//-- BEGIN: sort
+	//------------------------------------------------------------
+	/**
+	 * Fins the Position (starting at 0)
+	 * @param colName Name to search for
+	 * @return -1 if not found
+	 */
+	public int findColumnNoCase(String colName)
+	{
+		for (int i = 0; i < getColumnCount(); i++) 
+		{
+			if (colName.equalsIgnoreCase(getColumnName(i))) 
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * 
+	 * @param colName
+	 * @return false if column was NOT found. true if we did a sort
+	 */
+	public boolean sort(final String colName)
+	{
+		final boolean isCaseInSensitive = false;
+
+		final int colPos = findColumnNoCase(colName);
+		if (colPos == -1)
+			return false;
+				
+		Comparator<List<Object>> comparator = new Comparator<List<Object>>()
+		{
+			@Override
+			public int compare(List<Object> leftList, List<Object> rightList)
+			{
+				Object left  = leftList .get(colPos);
+				Object right = rightList.get(colPos);
+				
+				if (left == right)
+					return 0;
+
+				if (left == null)
+					return -1;
+
+				if (right == null)
+					return 1;
+
+				if ( isCaseInSensitive )
+				{
+					if (left instanceof String && right instanceof String)
+						return String.CASE_INSENSITIVE_ORDER.compare( (String) left, (String) right );
+				}
+				
+				// COMPARABLE, which would be the normal thing
+				if (left instanceof Comparable)
+					return ((Comparable)left).compareTo(right);
+				
+				if ( left instanceof byte[] && right instanceof byte[] )
+					return byteCompare((byte[])left, (byte[])right);
+
+				// End of line...
+				throw new RuntimeException("Comparator on object, colName='"+colName+"', problem: Left do not implement 'Comparable' and is not equal to right. Left.obj=|"+left.getClass().getCanonicalName()+"|, Right.obj=|"+right.getClass().getCanonicalName()+"|, Left.toString=|"+left+"|, Right.toString=|"+right+"|.");
+			}
+
+			private int byteCompare(byte[] left, byte[] right)
+			{
+				for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++)
+				{
+					int a = (left[i] & 0xff);
+					int b = (right[j] & 0xff);
+					if ( a != b )
+					{
+						return a - b;
+					}
+				}
+				return left.length - right.length;
+			}
+		};
+		
+		Collections.sort(_rows, comparator);
+		return true;
+	}
+	//------------------------------------------------------------
+	//-- END: sort
+	//------------------------------------------------------------
 	
+
 	//------------------------------------------------------------
 	//-- BEGIN: getValueAsXXXXX using column name
 	//          more methods will be added as they are needed

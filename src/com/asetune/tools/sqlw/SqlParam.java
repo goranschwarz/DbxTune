@@ -130,6 +130,30 @@ public class SqlParam
 				p._val = new String(StringUtil.envVariableSubstitution(val));
 			}
 		}
+		// STRING as N...
+		else if ("nstring".equals(type) || "nstr".equals(type) || "nvarchar".equals(type)) 
+		{
+			p._sqlType = Types.NVARCHAR; 
+
+			if (isNull)
+				p._val = null;
+			else
+			{
+				p._val = new String(StringUtil.envVariableSubstitution(val));
+			}
+		}
+		// STRING as NCHAR
+		else if ("char".equals(type)) 
+		{
+			p._sqlType = Types.NCHAR; 
+
+			if (isNull)
+				p._val = null;
+			else
+			{
+				p._val = new String(StringUtil.envVariableSubstitution(val));
+			}
+		}
 		// STRING as CHAR
 		else if ("char".equals(type)) 
 		{
@@ -235,6 +259,15 @@ public class SqlParam
 				catch (ParseException e) { throw new RuntimeException("Problems parsing value '"+val+"' to a Time using the format '"+fmt+"'. For format see: http://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html", e); }
 			}
 		}
+		// NCLOB
+		else if ("nclob".equals(type)) 
+		{
+			p._sqlType = Types.NCLOB; 
+			p._val = isNull ? null : readCLobValue(StringUtil.envVariableSubstitution(val)); 
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("NCLOB.content=|"+p._val+"|");
+		}
 		// CLOB
 		else if ("clob".equals(type)) 
 		{
@@ -251,7 +284,7 @@ public class SqlParam
 			p._val = isNull ? null : readBLobValue(StringUtil.envVariableSubstitution(val)); 
 		}
 		// UNKNOWN
-		else throw new RuntimeException("Unknown RPC Datatype '"+type+"'. known datatypes 'int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob|ora_rs'");
+		else throw new RuntimeException("Unknown RPC Datatype '"+type+"'. known datatypes 'int|bigint|string|nstring|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob|ora_rs'");
 
 //System.out.println("p._val=|"+p._val+"|, obj=" + (p._val == null ? "-null-" : p._val.getClass().getName()) );
 		return p;
@@ -375,7 +408,7 @@ public class SqlParam
 
 		List<String> tmp = StringUtil.splitOnCommasAllowQuotes(rpcParamsStr, true);
 		if ( tmp.size() == 0 && StringUtil.isNullOrBlank(tmp.get(0)) )
-			throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|bigint|string|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob = value' or 'ora_rs'.");
+			throw new RuntimeException("Problem parsing RPC Parameter String '"+rpcParamsStr+"', it looks like it's empty. Expecting: 'int|bigint|string|nstring|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob = value' or 'ora_rs'.");
 		
 		for (int i=0; i<tmp.size(); i++)
 		{

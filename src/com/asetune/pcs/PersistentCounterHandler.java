@@ -20,6 +20,7 @@ import com.asetune.CounterController;
 import com.asetune.ICounterController;
 import com.asetune.Version;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
+import com.asetune.central.pcs.H2WriterStat;
 import com.asetune.cm.CountersModel;
 import com.asetune.pcs.inspection.IObjectLookupInspector;
 import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
@@ -569,11 +570,13 @@ implements Runnable
 		if (qsize > _warnQueueSizeThresh)
 		{
 			long currentConsumeTimeMs    = System.currentTimeMillis() -_currentConsumeStartTime;
-			String currentConsumeTimeStr = "The consumer is currently not active.";
+			String currentConsumeTimeStr = "The consumer is currently not active. ";
 			if (_currentConsumeStartTime > 0)
-				currentConsumeTimeStr = "The current consumer has been active for " + TimeUtils.msToTimeStr(currentConsumeTimeMs);
+				currentConsumeTimeStr = "The current consumer has been active for " + TimeUtils.msToTimeStr(currentConsumeTimeMs) + ". ";
 
-			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. "+currentConsumeTimeStr);
+			String h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
+			
+			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
 
 			// call each writes to let them know about this.
 			for (IPersistWriter pw : _writerClasses)
@@ -2163,15 +2166,30 @@ implements Runnable
 	 * @param ddlSaveCount */
 	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp mainSampleTime, int persistTimeInMs, PersistWriterStatistics writerStatistics)
 	{
-		String longTimeStr = "";
-		if (persistTimeInMs > 30000) // more than 30 seconds, write it if format HH:MM:SS.ms
-			longTimeStr = "(" + TimeUtils.msToTimeStr(persistTimeInMs) + "). ";
-		
-		_logger.info("Persisting Counters using '"+persistWriterName+"' for serverName='"+serverName+"', sessionStartTime='"+sessionStartTime+"', mainSampleTime='"+mainSampleTime+"'. This persist took "+persistTimeInMs+" ms. jvmMemoryLeftInMB="+Memory.getMemoryLeftInMB()+". "+ longTimeStr + writerStatistics.getStatisticsString() );
+		int    pcsQueueSize = _containerQueue.size();
+		String h2WriterStat = "";
+		if ("PersistWriterJdbc".equals(persistWriterName))
+			h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
+
+		_maxLenPersistWriterName = Math.max(_maxLenPersistWriterName, persistWriterName.length());
+		_maxLenServerName        = Math.max(_maxLenServerName,        serverName       .length());
+
+		_logger.info("Persisting Counters using " + StringUtil.left("'"+persistWriterName+"', ", _maxLenPersistWriterName+4)
+				+ "for serverName="               + StringUtil.left("'"+serverName       +"', ", _maxLenServerName+4)
+				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime+"",23)     + "', "
+				+ "mainSampleTime='"              + StringUtil.left(mainSampleTime  +"",23)     + "'. "
+				+ "This persist took ["           + TimeUtils.msToTimeStrShort(persistTimeInMs) + "] " + StringUtil.left(persistTimeInMs + " ms. ", 10)
+				+ "qs="                           + StringUtil.left(pcsQueueSize+".", 4) // ###.
+				+ "jvmMemoryLeftInMB="            + Memory.getMemoryLeftInMB() + ". " 
+				+ h2WriterStat 
+				+ writerStatistics.getStatisticsString() );
 
 		for (PcsQueueChange l : _queueChangeListeners)
 			l.pcsConsumeInfo(persistWriterName, sessionStartTime, mainSampleTime, persistTimeInMs, writerStatistics);
 	}
+	// Below are just used for formating the above string (for readability)
+	private int _maxLenPersistWriterName = 0;
+	private int _maxLenServerName        = 0;
 
 
 

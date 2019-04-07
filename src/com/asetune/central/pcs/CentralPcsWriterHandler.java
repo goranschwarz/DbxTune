@@ -11,11 +11,13 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.central.pcs.DbxTuneSample.CmEntry;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.Memory;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
 
@@ -164,6 +166,8 @@ implements Runnable
 	private BlockingQueue<DbxTuneSample> _containerQueue = new LinkedBlockingQueue<DbxTuneSample>();
 	private int _warnQueueSizeThresh = DEFAULT_warnQueueSizeThresh;
 
+	/** Flag to state that we are waiting for input on the queue. Meaning it's OK to send "interrupt" to the thread */
+	private boolean _waitingOnQueueInput = false;
 
 	/*---------------------------------------------------
 	** Constructors
@@ -426,11 +430,13 @@ implements Runnable
 		if (qsize > _warnQueueSizeThresh)
 		{
 			long currentConsumeTimeMs    = System.currentTimeMillis() -_currentConsumeStartTime;
-			String currentConsumeTimeStr = "The consumer is currently not active.";
+			String currentConsumeTimeStr = "The consumer is currently not active. ";
 			if (_currentConsumeStartTime > 0)
-				currentConsumeTimeStr = "The current consumer has been active for " + TimeUtils.msToTimeStr(currentConsumeTimeMs);
+				currentConsumeTimeStr = "The current consumer has been active for " + TimeUtils.msToTimeStr(currentConsumeTimeMs) + ". ";
+			
+			String h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
 
-			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. "+currentConsumeTimeStr);
+			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
 
 			// call each writes to let them know about this.
 			for (ICentralPersistWriter pw : _writerClasses)
@@ -780,16 +786,21 @@ implements Runnable
 
 			try 
 			{
-				DbxTuneSample cont = _containerQueue.take();
-				fireQueueSizeChange();
+				DbxTuneSample cont = null;
+				try
+				{
+					_waitingOnQueueInput = true;
+					cont = _containerQueue.take();
+					fireQueueSizeChange();
+				}
+				finally
+				{
+					_waitingOnQueueInput = false;
+				}
 
 				// Make sure the container isn't empty.
 				if (cont == null || (cont != null && cont.isEmpty()) )
 					continue;
-//				// Make sure the container isn't empty.
-//				if (cont == null)                     continue;
-//				if (cont.getCollectors() == null)	  continue;
-//				if (cont.getCollectors().size() <= 0) continue;
 
 				// if we are about to STOP the service
 				if ( ! isRunning() )
@@ -869,7 +880,17 @@ implements Runnable
 
 		if (_thread != null)
 		{
-			_thread.interrupt();
+			// interrupt the queue.take() ... or possibly(a better solution) send a "STOP" queue object on the queue
+			if (_waitingOnQueueInput)
+			{
+				_logger.info("WaitingOnQueueInput: Interrupting the Thread that is waiting for queue input.");
+				_thread.interrupt();
+			}
+			else
+			{
+				_logger.info("The thread '"+_thread.getName()+"' is currently (not waiting on Queue Input), so it's probably storing last received Queue Message in the datastore. We will NOT send interrupt, but instead wait for the message to be persisted in the datastore.");
+			}
+
 			_thread = null;
 		}
 
@@ -988,17 +1009,28 @@ implements Runnable
 //	}
 	public void firePcsConsumeInfo(String persistWriterName, String serverName, Timestamp sessionStartTime, Timestamp sessionSampleTime, int persistTimeInMs, CentralPcsWriterStatistics writerStatistics)
 	{
-		String longTimeStr = "";
-		if (persistTimeInMs > 30000) // more than 30 seconds, write it if format HH:MM:SS.ms
-			longTimeStr = "(" + TimeUtils.msToTimeStr(persistTimeInMs) + "). ";
+		String h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
+		int    pcsQueueSize = _containerQueue.size();
+
+		_maxLenPersistWriterName = Math.max(_maxLenPersistWriterName, persistWriterName.length());
+		_maxLenServerName        = Math.max(_maxLenServerName,        serverName       .length());
 		
-		_logger.info("Persisting Counters using '"+persistWriterName+"' for serverName='"+serverName+"', sessionStartTime='"+sessionStartTime+"', sessionSampleTime='"+sessionSampleTime+"'. This persist took "+persistTimeInMs+" ms. jvmMemoryLeftInMB="+Memory.getMemoryLeftInMB()+". "+ longTimeStr + writerStatistics.getStatisticsString() );
+		_logger.info("Persisting Counters using " + StringUtil.left("'"+persistWriterName+"', ", _maxLenPersistWriterName+4)
+				+ "for serverName="               + StringUtil.left("'"+serverName       +"', ", _maxLenServerName+4)
+				+ "sessionStartTime='"            + StringUtil.left(sessionStartTime +"",23)   + "', "
+				+ "sessionSampleTime='"           + StringUtil.left(sessionSampleTime+"",23)   + "'. "
+				+ "This persist took ["           + TimeUtils.msToTimeStrShort(persistTimeInMs) + "] " + StringUtil.left(persistTimeInMs + " ms. ", 10)
+				+ "qs="                           + StringUtil.left(pcsQueueSize+".", 4) // ###.
+				+ "jvmMemoryLeftInMB="            + Memory.getMemoryLeftInMB() + ". " 
+				+ h2WriterStat 
+				+ writerStatistics.getStatisticsString() );
 
 		for (PcsQueueChange l : _queueChangeListeners)
 			l.pcsConsumeInfo(persistWriterName, sessionStartTime, sessionSampleTime, persistTimeInMs, writerStatistics);
 	}
-
-
+	// Below are just used for formating the above string (for readability)
+	private int _maxLenPersistWriterName = 0;
+	private int _maxLenServerName        = 0;
 
 	//////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////

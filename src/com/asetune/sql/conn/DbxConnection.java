@@ -289,6 +289,13 @@ implements Connection
 			Connection conn;
 			if (guiOwner == null)
 			{
+				if (sshTunnelInfo != null)
+				{
+					String msg = "SSH Tunnel is NOT-YET-IMPLEMENTED when guiOwner is null, for now: Please pass GUI Owner for this to work.";
+					System.out.println("WARNING: "+msg);
+					_logger.warn(msg, new Exception(msg));
+				}
+
 				conn = DriverManager.getConnection(url, props);
 			}
 			else
@@ -914,7 +921,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			 *        - _conn is the Vendors implementation (for example SybConnection)
 			 *        - this is the DbxConnection where we can override isValid()
 			 */
-			if ( ! this.isValid(2) )
+			if ( ! this.isValid(1) ) // timeout in seconds
 			{
 				msg = "The Connection object is NOT connected.";
 				_logger.debug(msg);

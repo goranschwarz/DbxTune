@@ -77,7 +77,7 @@ extends MonitorUpTime
 
  	RHEL:    17:45:24  up 48 days,     5:04,  1 user,    load average: 1.56, 4.28, 2.45
  	RHEL:    17:45:44  up              3:14,  1 user,    load average: 0.04, 0.04, 0.05      <<<< note: "### days" is blank if the machine has been restarted today...
-
+    RHEL:    15:01:55  up            18 min,  1 user     load average: 0.00, 0.08, 0.16      <<<< note: if less than 1 hour it will say '## min' instead of '0:18'
 
 	*/
 	
@@ -159,11 +159,42 @@ extends MonitorUpTime
 			// Are the "## days" missing (it has been restarted today)
 			if (preParsed.length < md.getParseColumnCount())
 			{
-				// Typically 2 fields are missing, see below: ## days
-				if (preParsed.length == md.getParseColumnCount()-2)
+				// Typically 1 fields are missing, (if it has only been running for less than 60 minutes)
+				if (preParsed.length == md.getParseColumnCount()-1)
 				{
 					if (_logger.isDebugEnabled())
-						_logger.debug(">>>>>>>> PRE-FIX(missing fields '## days') >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+						_logger.debug(">>>>>>>> PRE-FIX-1(missing fields '## days', but probably has 'min,' since started less than 1 hour) >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
+
+					// 1 field are missing: it has only been running for less than 60 minutes, the third column is "min,"
+					if (preParsed[3].equals("min,")) // Note the ',' at the end
+					{
+						String[] tmp = new String[md.getParseColumnCount()];
+						
+						// RHEL:    17:45:24  up 48 days,     5:04,  1 user,    load average: 1.56, 4.28, 2.45
+						// RHEL:    17:45:44  up              3:14,  1 user,    load average: 0.04, 0.04, 0.05      <<<< note: "### days" is blank if the machine has been restarted today...
+					    // RHEL:    15:01:55  up            18 min,  1 user     load average: 0.00, 0.08, 0.16      <<<< note: if less than 1 hour it will say '## min' instead of '0:18'
+
+						tmp[0]  = preParsed[0]; // current time
+						tmp[1]  = preParsed[1]; // str 'up'
+						tmp[2]  = "0";          // str '##'    --->>> Just fill in with '0'
+						tmp[3]  = "days";       // str 'days'  --->>> Just fill in with 'days'
+						tmp[4]  = "00:" + preParsed[2]; // HH:MM -- hoursUp  (preParsed[2] will only hold minutes... one or 2 chars, and we SKIP preParsed[3] since it will say "min,")
+						tmp[5]  = preParsed[4]; // # ------ users
+						tmp[6]  = preParsed[5]; // str 'user'
+						tmp[7]  = preParsed[6]; // str 'load'
+						tmp[8]  = preParsed[7]; // str 'average' 
+						tmp[9]  = preParsed[8]; // 1 minute
+						tmp[10] = preParsed[9]; // 5 minutes
+						tmp[11] = preParsed[10]; // 15 minutes
+						
+						preParsed = tmp;
+					}
+				}
+				// Typically 2 fields are missing, see below: ## days
+				else if (preParsed.length == md.getParseColumnCount()-2)
+				{
+					if (_logger.isDebugEnabled())
+						_logger.debug(">>>>>>>> PRE-FIX-2(missing fields '## days') >>>>>>>> "+getModuleName()+".parseRow(): Checking preParsed column count fail. preParsed.length="+preParsed.length+", expectedCount="+md.getParseColumnCount()+", preParsed=["+StringUtil.toCommaStrQuoted('"', preParsed)+"].");
 
 					// but instead the third column is "HH:MM"
 					if (preParsed[2].matches("[0-9]?[0-9]:[0-9][0-9],")) // Note the ',' at the end

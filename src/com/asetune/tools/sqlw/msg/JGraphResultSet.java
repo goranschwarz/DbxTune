@@ -74,7 +74,6 @@ import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGraph.GraphType;
-import com.asetune.sql.pipe.PipeMessage;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -164,7 +163,7 @@ extends JComponent
 		//frame.setIconImages(icons);
 
 		// Add informational messages (created in createChart()) to the Information Panel 
-		for (PipeMessage pmsg : _pipeCmd.getMessages())
+		for (Message pmsg : _pipeCmd.getMessages())
 		{
 			info_txt.append(pmsg.toString());
 			info_txt.append("\n");

@@ -283,6 +283,10 @@ extends CounterModelHostMonitor
 			}
 			else
 			{
+				// if prev sample is smaller than current row... get next row...
+				if (prevOsSampleTable.getRowCount() < r)
+					continue;
+					
 				String pk       = (String) prevOsSampleTable.getValueAt(r, pos_memoryType);
 				Long   thisUsed = (Long)   thisOsSampleTable.getValueAt(r, pos_used);
 				Long   prevUsed = (Long)   prevOsSampleTable.getRowByPk(pk).getValue(pos_used+1); // The model starts at pos 1

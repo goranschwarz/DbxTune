@@ -46,7 +46,7 @@ public class SqlStatementFactory
 		if (sql.startsWith("\\"))
 		{
 			// A set of known commands
-			String[] knownCommands  = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile", "\\ddlgen", "\\ssh", "\\set"};
+			String[] knownCommands  = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile", "\\ddlgen", "\\ssh", "\\set", "\\tabdiff", "\\dbdiff", "\\rsql"};
 			String[] mustHaveParams = {"\\exec", "\\rpc", "\\call", "\\prep", "\\ssh"};
 
 			// Get first and seconds word
@@ -66,20 +66,26 @@ public class SqlStatementFactory
 				String msg = 
 					  "Unknown Local Command (or no parameters to it): " + w1 + "\n"
 					+ "\n"
-					+ "Local Commands available: \n"
+					+ "Local Commands Available: \n"
+					+ "    \\loadfile -T tabname filename              -- load a (CSV) file into a table\n"
+					+ "    \\ddlgen -h | -t tabname                    -- generate DDL and open editor\n"
+					+ "    \\ssh [user@host] cmd                       -- execute a command on the remote host\n"
+					+ "    \\rsql                                      -- Execute SQL Statement on a remote DBMS\n"
+					+ "    \\set [-u] [var=val]                        -- Set a variable to a value. Varaibles can be used in text as ${varname}\n"
+					+ "    \\tabdiff                                   -- Do data 'diff' on two tables (on different servers, or DBMS's)\n"
+					+ "    \\dbdiff                                    -- Do data 'diff' on all tables in two databases (on different servers, or DBMS's)\n"
+					+ "\n"
+					+ "Local JDBC Extention Calls Available: \n"
 					+ "    \\exec procName ? ? :(params)               -- exec using Callable Statement\n"
 					+ "    \\rpc  procName ? ? :(params)               -- exec using Callable Statement\n"
 					+ "    \\call procName ? ? :(params)               -- exec using Callable Statement\n"
 					+ "    \\prep insert inti t1 values(? ?) :(params) -- exec using Prepared Statement\n"
-					+ "    \\loadfile -T tabname filename              -- load a (CSV) file into a table\n"
-					+ "    \\ddlgen -h | -t tabname                    -- generate DDL and open editor\n"
-					+ "    \\ssh [user@host] cmd                       -- execute a command on the remote host\n"
-					+ "    \\set [-u] [var=val]                        -- Set a variable to a value. Varaibles can be used in text as ${varname}\n"
 					+ "\n"
-					+ "param description: \n"
+					+ "param description (for JDBC Extentions): \n"
 					+ "    Type        Value               java.sql.Types  Example: replace question mark(?) with value\n"
 					+ "    ---------   ------------------- --------------- --------------------------------------------\n"
 					+ "    string    = 'a string value'    Types.VARCHAR   string='it''s a string', string=null\n"
+					+ "    nstring   = 'a string value'    Types.NVARCHAR  string='it''s a string', string=null\n"
 					+ "    int       = integer             Types.INTEGER   int=99, int=null\n"
 					+ "    bigint    = long                Types.BIGINT    bigint=9999999999999999999, int=null\n"
 					+ "    numeric   = bigdecimal          Types.NUMERIC   numeric=1.12, numeric=null\n"
@@ -87,6 +93,7 @@ public class SqlStatementFactory
 					+ "    timestamp = 'datetime str'      Types.TIMESTAMP timestamp='2015-01-10 14:20:10', timestamp(dd/MM/yyyy HH.mm)='31/12/2014 14.00', timestamp=null\n"
 					+ "    date      = 'date str'          Types.DATE      date='2015-01-10', date(dd/MM/yyyy)='31/12/2014', date=null\n"
 					+ "    time      = 'time str'          Types.TIME      time='14:20:10', time(HH.mm)='14.00', time=null\n"
+					+ "    nclob     = 'filename|url'      Types.NCLOB     clob='c:\\xxx.txt, clob='http://dbxtune.com'\n"
 					+ "    clob      = 'filename|url'      Types.CLOB      clob='c:\\xxx.txt, clob='http://dbxtune.com'\n"
 					+ "    blob      = 'filename|url'      Types.BLOB      blob='c:\\xxx.jpg, blob='http://www.dbxtune.com/images/sample3.png'\n"
 					+ "    ora_rs                          -10             a ResultSet OUTPUT parameter, from an Oracle Procedure\n"
@@ -104,10 +111,14 @@ public class SqlStatementFactory
 		}
 
 		// Decide what to create
-		if      (w1.equals("\\loadfile")) return new SqlStatementCmdLoadFile(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\ddlgen"))   return new SqlStatementCmdDdlGen  (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\ssh"))      return new SqlStatementCmdSsh     (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\set"))      return new SqlStatementCmdSet     (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\loadfile")) return new SqlStatementCmdLoadFile  (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\ddlgen"))   return new SqlStatementCmdDdlGen    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\ssh"))      return new SqlStatementCmdSsh       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\rsql"))     return new SqlStatementCmdRemoteSql (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\set"))      return new SqlStatementCmdSet       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\tabdiff"))  return new SqlStatementCmdTabDiff   (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\dbdiff"))   return new SqlStatementCmdDbDiff    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+
 //		else if (w1.equals("\\exec"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\rpc" ))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\call"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);

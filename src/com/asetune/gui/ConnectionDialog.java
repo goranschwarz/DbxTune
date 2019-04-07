@@ -43,6 +43,7 @@ import java.util.Vector;
 
 import javax.naming.NameNotFoundException;
 import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DropMode;
 import javax.swing.Icon;
@@ -1446,6 +1447,7 @@ public class ConnectionDialog
 		final AbstractAction connProfileLoadAction             = new ConnProfileLoadAction();
 		final AbstractAction connProfileLoadOnNodeSelectAction = new ConnProfileLoadOnNodeSelectAction();
 		final AbstractAction connProfileConnectAction          = new ConnProfileConnectAction();
+		final AbstractAction connProfileCopyNameAction         = new ConnProfileCopyNameAction();
 		final AbstractAction connProfileAddProfileAction       = new ConnProfileAddProfileAction();
 		final AbstractAction connProfileAddCatalogAction       = new ConnProfileAddCatalogAction();
 		final AbstractAction connProfileDeleteAction           = new ConnProfileDeleteAction();
@@ -1468,6 +1470,7 @@ public class ConnectionDialog
 		popup.add(new JMenuItem(connProfileLoadAction));
 		popup.add(connProfileLoadOnNodeSelect_mi);
 		popup.add(new JMenuItem(connProfileConnectAction));
+		popup.add(new JMenuItem(connProfileCopyNameAction));
 		popup.add(new JSeparator());
 		popup.add(new JMenuItem(connProfileAddProfileAction));
 		popup.add(new JMenuItem(connProfileAddCatalogAction));
@@ -1878,6 +1881,10 @@ public class ConnectionDialog
 		
 //		JScrollPane treeScroll = new JScrollPane(_connProfileTree, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		JScrollPane treeScroll = new JScrollPane(_connProfileTree);
+
+		// Ctrl-C == Copy Profile Name
+		ActionMap actionMap = _connProfileTree.getActionMap();
+		actionMap.put("copy", connProfileCopyNameAction);
 		
 		panel.add( heading );
 		panel.add( filter_lbl, "split" );
@@ -9474,6 +9481,48 @@ if ( ! jdbcSshTunnelUse )
 		}
 	}
 	
+	private class ConnProfileCopyNameAction
+	extends AbstractAction
+	{
+		private static final long serialVersionUID = 1L;
+
+		private static final String NAME = "Copy Profile Name";
+		private static final String ICON = "";
+
+		public ConnProfileCopyNameAction()
+		{
+			super(NAME, SwingUtils.readImageIcon(Version.class, ICON));
+
+			putValue(SHORT_DESCRIPTION,	
+					"<html>"
+					+ "Copy the Profile Name to Copy/Paste buffer<br>"
+					+ "</html>");
+			//putValue(MNEMONIC_KEY, mnemonic);
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			DefaultMutableTreeNode node = (DefaultMutableTreeNode) _connProfileTree.getLastSelectedPathComponent();
+			Object o = node.getUserObject();
+			String name = "";
+			ConnectionProfileCatalog catalogEntry = null;
+			ConnectionProfile        profileEntry = null;
+			if (o instanceof ConnectionProfileCatalog)
+			{
+				catalogEntry = (ConnectionProfileCatalog)o;
+				name = catalogEntry.getName();
+			}
+			else if (o instanceof ConnectionProfile)
+			{
+				profileEntry = (ConnectionProfile)o;
+				name = profileEntry.getName();
+			}
+			
+			SwingUtils.setClipboardContents(name);
+		}
+	}
+
 	private class ConnProfileReloadAction
 	extends AbstractAction
 	{

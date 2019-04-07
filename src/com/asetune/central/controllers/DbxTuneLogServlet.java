@@ -270,7 +270,6 @@ public class DbxTuneLogServlet extends HttpServlet
 //		out.println("  window.history.replaceState({}, '', `${location.pathname}?${params}`); ");
 		out.println("  window.location.href = `${location.pathname}?${params}`;");
 		out.println("} ");
-		out.println("");
 
 		// Write javascript code to
 		// - connect to the websocket that sends new rows
@@ -558,6 +557,7 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("<div id='logLine-discard'>");
 			out.println("<b>Filter out some text on new records (regexp can be used):</b> <br>");
 			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/><br>");
+			out.println("<br>");
 			out.println("<b>Tail number of records:</b> <br>");
 			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 500) + "'/><br>");
 			out.println("<br>");
@@ -578,6 +578,7 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("<div id='logLine-discard'>");
 			out.println("<b>Filter out some text on new records (regexp can be used):</b> <br>");
 			out.println("<input id='logLine-discardText' type='text' size='100' value='" + (StringUtil.hasValue(discardRegExp) ? discardRegExp : "") + "'/><br>");
+			out.println("<br>");
 			out.println("<b>Tail number of records:</b> <br>");
 			out.println("<input id='tail-numOfLines' type='text' size='10' value='" + (tailNumOfLines > 0 ? tailNumOfLines : 500) + "'/><br>");
 			out.println("<br>");
@@ -585,6 +586,14 @@ public class DbxTuneLogServlet extends HttpServlet
 			out.println("</div>");
 			out.println("<br>");
 		}
+		out.println("");
+		out.println("<script type='text/javascript'>");
+		out.println("// refresh on enter ");
+		out.println("document.getElementById('logLine-discardText').addEventListener('keyup', function(event) { event.preventDefault(); if (event.keyCode === 13) { refreshWithFilter(); } } ); ");
+		out.println("document.getElementById('tail-numOfLines')    .addEventListener('keyup', function(event) { event.preventDefault(); if (event.keyCode === 13) { refreshWithFilter(); } } ); ");
+		out.println("</script>");
+		out.println("");
+
 		
 		// FIXME: move codemirror to local resource
 //		out.println("<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.34.0/codemirror.css'> ");

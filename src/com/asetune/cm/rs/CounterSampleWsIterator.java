@@ -476,6 +476,8 @@ extends CounterSample
 		if ( ! cm.hasResultSetMetaData() )
 			cm.setResultSetMetaData( rsmd );
 		
+		// To remember exception in the entire loop
+		List<SQLException> sqlExList = new ArrayList<>();
 		
 //		String originCatalog = "";
 		try
@@ -565,13 +567,21 @@ extends CounterSample
 							dbConn.closeNoThrow();
 						}
 					}
+					catch (SQLException sqlEx)
+					{
+						_logger.warn("CounterSample("+getName()+").getCnt : ACTIVE='"+name+"', Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
+						if (dbConn != null)
+							dbConn.closeNoThrow();
+
+						sqlExList.add(sqlEx);
+					}
 					finally 
 					{
 						releaseConnection(cm, dbConn,  name);
 					}
 				}
 				
-				// wiat "a while" for the records to be replicated...
+				// wait "a while" for the records to be replicated...
 				while (TimeUtils.msDiffNow(startTime) < maxWaitTimeMs)
 				{
 					if (cm != null && cm.getGuiController() != null)
@@ -802,9 +812,16 @@ extends CounterSample
 				catch (SQLException sqlEx)
 				{
 					// Closing the connection... for example if the Gateway connection has failed and we are still in RepServer...
-					_logger.warn("CounterSample("+getName()+").getCnt : Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
-					dbConn.closeNoThrow();
-					throw sqlEx;
+					_logger.warn("CounterSample("+getName()+").getCnt : STANDBY='"+name+"', Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. Inner-ACTION: Closing the connection.");
+					if (dbConn != null)
+						dbConn.closeNoThrow();
+					
+					// If we throw the exception here, it will abort this "refresh"
+					// It's better to continue to loop until we have "all" done ALL dbnames in the list.
+					// and THROW it AFTER the loop...
+					//throw sqlEx;
+
+					sqlExList.add(sqlEx);
 				}
 				finally 
 				{
@@ -812,14 +829,30 @@ extends CounterSample
 				}
 			} // end: loop dbnames
 
+			if (sqlExList.size() > 0)
+				throw new SQLException("In the Active/Standby check we had "+sqlExList.size()+" SQLException(only first Exception): "+sqlExList.get(0));
+
 			return true;
 		}
 		catch (SQLException sqlEx)
 		{
-			_logger.warn("CounterSample("+getName()+").getCnt : Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
-			if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
+			if (sqlExList.size() == 0)
 			{
-				_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+				_logger.warn("CounterSample("+getName()+").getCnt : Error=" + sqlEx.getErrorCode() + ", Message=|" + sqlEx.getMessage() + "|. SQL: "+sql, sqlEx);
+				if (sqlEx.toString().indexOf("SocketTimeoutException") > 0)
+				{
+					_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+				}
+			}
+			else
+			{
+				for (SQLException x : sqlExList)
+				{
+					if (x.toString().indexOf("SocketTimeoutException") > 0)
+					{
+						_logger.info("QueryTimeout in '"+getName()+"', with query timeout '"+queryTimeout+"'. This can be changed with the config option '"+getName()+".queryTimeout=seconds' in the config file.");
+					}
+				}
 			}
 
 			//return false;

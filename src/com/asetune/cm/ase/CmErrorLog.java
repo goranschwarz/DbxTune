@@ -31,9 +31,11 @@ import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventConfigChanges;
 import com.asetune.alarm.events.AlarmEventConfigResourceIsUsedUp;
 import com.asetune.alarm.events.AlarmEventErrorLogEntry;
 import com.asetune.alarm.events.AlarmEventFullTranLog;
+import com.asetune.alarm.events.AlarmEventProcessInfected;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -344,8 +346,11 @@ extends CountersModelAppend
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("TransactionLogFull"))
 			{
+				// ### maybe: ErrorNumber=2812, Severity=16, ErrorMessage=Stored procedure 'sp_thresholdaction' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
+
+				// ErrorNumber=7412, Severity=10, ErrorMessage=Space available in segment 'logsegment' has fallen critically low in database 'master'. All future modifications to this database will be suspended until the transaction log is successfully dumped and space becomes available.
 				// ErrorNumber=7413, Severity=10, ErrorMessage=1 task(s) are sleeping waiting for space to become available in the log segment for database GAS_prod.
-				if (errorNumber == 7413)
+				if (errorNumber == 7412 || errorNumber == 7413)
 				{
 					String extendedDescText = ErrorMessage;
 					String extendedDescHtml = ErrorMessage;
@@ -356,6 +361,7 @@ extends CountersModelAppend
 					alarmHandler.addAlarm( ae );
 				}
 			}
+
 
 			//-------------------------------------------------------
 			// Severity
@@ -449,6 +455,80 @@ extends CountersModelAppend
 					}
 				}
 			}
+
+			
+			//-------------------------------------------------------
+			// ConfigChanges
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ConfigChanges"))
+			{
+				// 00:0002:00000:00036:2019/03/26 01:41:39.17 server  The configuration option 'auditing' has been changed by 'sa' from '0' to '1'.
+				// ErrorNumber=???, Severity=??, ErrorMessage=
+				if (ErrorMessage.indexOf("The configuration option '") >= 0 && ErrorMessage.indexOf("' has been changed by ") >= 0)
+				{
+					String configName = "unknown";
+					String extendedDescText = ErrorMessage;
+					String extendedDescHtml = ErrorMessage;
+
+					// Get the configuration name
+					int startPos = ErrorMessage.indexOf("'");
+					if (startPos != -1)
+					{
+						startPos++;
+						int endPos = ErrorMessage.indexOf("'", startPos);
+						if (endPos != -1)
+							configName = ErrorMessage.substring(startPos, endPos);
+					}
+					
+					AlarmEvent ae = new AlarmEventConfigChanges(this, configName, ErrorMessage);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+					alarmHandler.addAlarm( ae );
+				}
+			}
+
+
+			//-------------------------------------------------------
+			// ProcessInfected
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ProcessInfected"))
+			{
+				// START ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
+				//            ... collect anything in between, as the message ...
+				//   END ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
+				// ErrorNumber=???, Severity=??, ErrorMessage=
+				if (ErrorMessage.indexOf("Current process (") >= 0 && ErrorMessage.indexOf(") infected with ") >= 0)
+				{
+					// Read messages until 'end of stack trace, ' and stuff it in the below StringBuilder
+					StringBuilder sb = new StringBuilder();
+
+					// Continue to read messages (but do not move the "original r", create a new "rr" to loop on
+					for (int rr=r; rr<lastRefreshRows.size(); rr++)
+					{
+						List<Object> rrRow = lastRefreshRows.get(rr);
+
+						String ee_ErrorMessage = rrRow.get(col_ErrorMessage_pos) + "";
+						sb.append( ee_ErrorMessage ).append("\n");
+						
+						// STOP Looping when we find 'end of stack trace, '
+						if (ee_ErrorMessage.startsWith("end of stack trace, "))
+							break;
+
+						// OK: something is probably wrong (we didn't find 'end of stack trace, '), break the loop after 200 rows...
+						if (rr >= 200)
+							break;
+					}
+					String fullErrorMessage = sb.toString();
+						
+					String extendedDescText = fullErrorMessage;
+					String extendedDescHtml = "<pre>\n" + fullErrorMessage + "\n</pre>";
+
+					AlarmEvent ae = new AlarmEventProcessInfected(this, fullErrorMessage);
+					ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+					alarmHandler.addAlarm( ae );
+				}
+			}
 		}
 	}
 
@@ -464,18 +544,117 @@ extends CountersModelAppend
 	public static final String  PROPKEY_alarm_ErrorNumberSkipList   = CM_NAME + ".alarm.system.errorNumber.skip.list";
 	public static final String  DEFAULT_alarm_ErrorNumberSkipList   = "";
 
+	public static final String  PROPKEY_alarm_ConfigChanges         = CM_NAME + ".alarm.system.on.ConfigChanges";
+	public static final boolean DEFAULT_alarm_ConfigChanges         = true;
+
+	public static final String  PROPKEY_alarm_ProcessInfected       = CM_NAME + ".alarm.system.on.ProcessInfected";
+	public static final boolean DEFAULT_alarm_ProcessInfected       = true;
+
 	@Override
 	public List<CmSettingsHelper> getLocalAlarmSettings()
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
-		
-		list.add(new CmSettingsHelper("UserConnections"        , PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEvent FIXME'." ));
+
+		list.add(new CmSettingsHelper("UserConnections"        , PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
 		list.add(new CmSettingsHelper("TransactionLogFull"     , PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("Severity"               , PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEvent FIXME'." ));
+		list.add(new CmSettingsHelper("ConfigChanges"          , PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
+		list.add(new CmSettingsHelper("ProcessInfected"        , PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
+
+		list.add(new CmSettingsHelper("Severity"               , PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
 		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)", PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
 
 		return list;
 	}
 }
 
+
+
+/*
+ * 
+
+FIXME: Info "alarm" on config changes
+	look for: 
+	"The configuration option '.*' has been changed by"
+	00:0002:00000:00036:2019/03/26 01:41:39.17 server  The configuration option 'auditing' has been changed by 'sa' from '0' to '1'.
+
+
+FIXME: alarm on Stacktace in ASE log
+	look for START: 
+		"Current process .* infected with signal"
+		Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
+	look for END/UNTIL: 
+		"end of stack trace, spid "
+		end of stack trace, spid 308, kpid 732758348, suid 1
+		
+	check if we can use error number or "timestamp" to "group" the message... (instead of: start, end)
+
+
+FIXME: SQL-Server errorlog
+    sp_readerrorlog
+    xp_readerrorlog -1, 1, NULL, NULL, '2019-01-14 00:00'
+
+
+
+
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Address 0x0x0000000000f43be0 (query_text+0x1dd), siginfo (code, address) = (1, 0x0x0000000000000158)
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  **** Saved signal context (0x0x00002aaab78b0700): ****
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  uc_flags: 0x1, uc_link: 0x(nil)
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  uc_sigmask: 0x416000 0xb 0x1 0x158
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  uc_stack: ss_sp: 0x(nil), ss_size: 0x0, ss_flags: 0x2
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  General Registers (uc_mcontext.gregs):
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       PC : 0x0000000000f43be0 (query_text+0x1dd)
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel          RAX : 0x00002aab46894800  RBX : (nil)
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel          RCX : 0x6c6e6f2064610072  RDX : 0x0000000009090a79
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       RBP : 0x00002aaab78b4cf0  RSP : 0x00002aaab78b0cb0
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       R8  : 0x000000000000000c  R9  : 0x00002aab46894800
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       R10 : (nil)  R11 : 0x00007ffff5c71454
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       R12 : 0x00002aab45339e48  R13 : 0x00002aab0fe68318
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       R14 : 0x00002aaab78b5678  R15 : 0x00002aab46894800
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       RDI : 0x00002aab468948e4  RSI : 0x00002aab45339f70
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       RIP : 0x0000000000f43be0  CSGSFS : 0x0000000000000033
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       TRAPNO : 0x000000000000000e  ERR : 0x0000000000000004
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel       EFL : 0x0000000000010246
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  **** end of signal context ****
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  ************************************
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  SQL causing error : exec sp_showplan 86, null, null, null, 'long'
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current statement number: 57 Current line number: 139
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  ************************************
+00:0004:00000:00308:2018/05/04 19:37:01.48 server  SQL Text: exec sp_showplan 86, null, null, null, 'long'
+00:0004:00000:00308:2018/05/04 19:37:01.48 server  SQL Text: select @a = query_text(@spid)
+
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  curdb = 1 tempdb = 2 pstat = 0x10000 p2stat = 0x101000
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  p3stat = 0x800 p4stat = 0x0 p5stat = 0xc008 p6stat = 0x10000011 p7stat = 0x10000
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  lasterror = 0 preverror = 0 transtate = 1
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  curcmd = 193 program = AseTune-nogui
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  extended error information: hostname: dbxtune login: sa
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x00000000012aee1c pcstkwalk+0x46e()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x00000000012ae7ef ucstkgentrace+0x20f()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x00000000012ab99e ucbacktrace+0x50()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x000000000155496c terminate_process+0xf4c()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x00000000012dfe54 kisignal+0x31b()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000000f43be0 query_text+0x1dd()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x00000000015acba2 LeRun+0x8562()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x00000000015a16fd LeEvals::LeEvRun(LeRunMode, LeRunStack*, short, LeDataRow*, unsigned char*, int*)+0x4d()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001dffe3e LeScalarOp::_LeOpNext(ExeCtxt&)+0x4e()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001ded8cf LeEmitNoSndOp::_LeOpNext(ExeCtxt&)+0x1af()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001586603 LePlanNext+0x7d3()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001b5aaa0 le_execerr installed by the following function:-]
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001b5bd86 exec_lava+0x506()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001be19a5 s_execute+0xfb5()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001c362a0 hdl_stack installed by the following function:-]
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001c059d0 s_handle installed by the following function:-]
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001c09621 sequencer+0xcb1()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001bf44dc execproc+0x76c()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001be42ca s_execute+0x38da()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001c362a0 hdl_stack installed by the following function:-]
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001c059d0 s_handle installed by the following function:-]
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x0000000001c09621 sequencer+0xcb1()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x000000000156d1f9 tdsrecv_language+0x1d9()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001d13540 ut_handle installed by the following function:-]
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x000000000157c788 conn_hdlr+0xef8()
+00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
+
+
+*/

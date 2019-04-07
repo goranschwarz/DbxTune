@@ -20,11 +20,11 @@
  ******************************************************************************/
 package com.asetune.sql.pipe;
 
-import java.util.List;
-
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.tools.sqlw.msg.IMessageAware;
 
 public interface IPipeCommand
+extends IMessageAware
 {
 	public String getConfig();
 	
@@ -37,12 +37,4 @@ public interface IPipeCommand
 
 	public String getCmdStr();
 	public String getSqlString();
-
-	boolean hasMessages();
-	List<PipeMessage> getMessages();
-	void clearMessages();
-	void addDebugMessage  (String msg);
-	void addInfoMessage   (String msg);
-	void addWarningMessage(String msg);
-	void addErrorMessage  (String msg);
 }

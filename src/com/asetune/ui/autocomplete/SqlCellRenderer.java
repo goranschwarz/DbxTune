@@ -173,6 +173,9 @@ extends DefaultListCellRenderer
 			return ICON_TEMPLATE;
 		}
 
+		if (completion.getIcon() != null)
+			return completion.getIcon();
+
 		return ICON_TEMPLATE;
 //		return ICON_UNKNOWN_TYPE;
 	}

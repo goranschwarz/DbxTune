@@ -264,11 +264,16 @@ extends SqlStatementAbstract
 			{
 				if (val.startsWith(skip))
 				{
-					String msg = "NOTE: substituteVariables(): The input string starts with '"+skip+"', which is part of the 'skip list'... Skipping variable substitution of this statement before execution.";
-					if (resultCompList == null)
-						System.out.println(msg);
-					else
-						resultCompList.add(new JAseMessage(msg, val));
+					// Only print if we can find a variable in the input text
+					Pattern compiledRegex = Pattern.compile("\\$\\{.*\\}"); // or maybe: "\\$\\{[A-Za-z0-9_]+\\}"
+					if (compiledRegex.matcher(val).find())
+					{
+    					String msg = "NOTE: substituteVariables(): The input string starts with '"+skip+"', which is part of the 'skip list'... Skipping variable substitution of this statement before execution.";
+    					if (resultCompList == null)
+    						System.out.println(msg);
+    					else
+    						resultCompList.add(new JAseMessage(msg, val));
+					}
 
 					// Return original String
 					return val;

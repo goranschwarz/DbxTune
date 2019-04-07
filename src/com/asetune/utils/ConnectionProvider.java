@@ -11,7 +11,6 @@ public interface ConnectionProvider
 	 * Returns a connection, which is currently used...
 	 * @return
 	 */
-//	public Connection getConnection();
 	public DbxConnection getConnection();
 	
 	/**
@@ -19,6 +18,14 @@ public interface ConnectionProvider
 	 * @param appname
 	 * @return
 	 */
-//	public Connection getNewConnection(String appname);
 	public DbxConnection getNewConnection(String appname);
+
+	/**
+	 * If we have a connection pool, we might want to release the connection
+	 * @param conn
+	 */
+	default void releaseConnection(DbxConnection conn)
+	{
+		// do nothing
+	}
 }

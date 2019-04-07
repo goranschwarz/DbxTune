@@ -31,9 +31,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -65,6 +68,8 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.gui.ConnectionProfile;
+import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
@@ -949,7 +954,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 	{
 		RSyntaxTextArea textArea = (RSyntaxTextArea)comp;
 
-		String allowedChars = "_.*/:%[]$\""; // []" will be stripped off when doing comparisons
+		String allowedChars = "-_.*/:%[]$\""; // []" will be stripped off when doing comparisons
 		setCharsAllowedInWordCompletion(allowedChars);
 		if ( ! StringUtil.isNullOrBlank(_dbExtraNameCharacters) )
 			setCharsAllowedInWordCompletion( allowedChars + _dbExtraNameCharacters );
@@ -960,6 +965,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 //		String currentWord = getCurrentWord(textArea);
 
+		String currentLineStr = getCurrentLineStr(textArea);
 		String enteredText = getAlreadyEnteredText(textArea);
 		String currentWord = getCurrentWord(textArea);
 //		String curFullWord = getCurrentFullWord(textArea);
@@ -1012,6 +1018,52 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		if (_logger.isDebugEnabled())
 			_logger.debug("getCompletionsSql(): _schemaNames="+_schemaNames);
 
+		
+		//-----------------------------------------------------------
+		// 'go' completion
+		//
+		if (currentLineStr.length() >= 2)
+		{
+			int endPos = Math.min(3, currentLineStr.length());
+			String first3Chars = currentLineStr.substring(0, endPos).toLowerCase().trim();
+			if (first3Chars.equals("go"))
+			{
+				if (enteredText.toLowerCase().equals("go"))
+					return createGoCompletions();
+				else
+					return getCompletionsFrom(createGoCompletions(), enteredText);
+			}
+		}
+		
+		//-----------------------------------------------------------
+		// Complete Connection Profiles
+		//
+		if (currentLineStr != null && currentLineStr.startsWith("\\") && (prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile")))
+		{
+			if (ConnectionProfileManager.hasInstance())
+			{
+				ArrayList<Completion> cList = new ArrayList<Completion>();
+
+				ConnectionProfileManager cpm = ConnectionProfileManager.getInstance();
+				Map<String, ConnectionProfile> profiles = cpm.getProfiles();
+				
+				for (String name : profiles.keySet())
+				{
+					ConnectionProfile cp = profiles.get(name);
+					
+					if (name.startsWith(enteredText))
+					{
+						ImageIcon icon = ConnectionProfileManager.getIcon16(cp.getSrvType());
+						BasicCompletion c = new BasicCompletion(this, name, null, cp.getToolTipText());
+						c.setIcon(icon);
+
+						cList.add(c);
+					}
+				}
+				return cList;
+			}
+		}
+		
 		//-----------------------------------------------------------
 		// Complete DATABASES
 		//
@@ -1632,6 +1684,197 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		return getCompletionsFrom(completions, enteredText);
 	}
 
+
+	private List<Completion> createGoCompletions()
+	{
+		ArrayList<Completion> cList = new ArrayList<Completion>();
+
+		cList.add( new BasicCompletion(this, "#"        , "Number of times to repeat/execute the command batch",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select 1\n"
+		                                                  + "go 10\n"
+		                                                  + "</pre><br>"
+		                                                  + "Executes 'select 1' 10 times.<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "top #"    , "Read only first # rows in the result set",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                   + "select * from t1\n"
+		                                                   + "go top 10\n"
+		                                                   + "</pre><br>"
+		                                                   + "First 10 rows of the ResultSet will be read, the rest will be skipped.<br>"
+		                                                   + "This if the Statement doesn't allow 'top' or 'limit'.<br>"
+		                                                   + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "bottom #" , "Only display last # rows in the result set",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1\n"
+		                                                  + "go bottom 10\n"
+		                                                  + "</pre><br>"
+		                                                  + "Last 10 rows of the ResultSet will be read, the rest will be skipped.<br>"
+		                                                  + "This if the Statement doesn't allow 'last' or 'bottom', which <i>nobody</i> does.<br>"
+		                                                  + "</html>") );
+
+		cList.add( new BasicCompletion(this, "wait #"   , "Wait #ms after the SQL Batch has been sent, probably used in conjunction with (multi go) 'go 10'",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select count(*) from t1\n"
+		                                                  + "go 1000 wait 100\n"
+		                                                  + "</pre><br>"
+		                                                  + "Execute Statement 1000 times, but after each execution: wait for 100 ms.<br>"
+		                                                  + "This is good if you want to test something, but don't want to monopolize the server.<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "plain"    , "Do NOT use a GUI table for result set, instead print as plain text.",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1\n"
+		                                                  + "go plain\n"
+		                                                  + "</pre><br>"
+		                                                  + "Execute Statement but do not show the results in a GUI table, instead print the output as plain text.<br>"
+		                                                  + "This is good if the rows contains newlines etc, that can be hard to display in the GUI table.<br>"
+		                                                  + "</html>") );
+
+		cList.add( new BasicCompletion(this, "tab"      , "Present ResultSet(s) in Tabbed Panel.",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "select * from t2 \n"
+		                                                  + "select * from t3 \n"
+		                                                  + "go tab\n"
+		                                                  + "</pre><br>"
+		                                                  + "Execute Statement, but do not show the results in GUI tables after each other, instead put each ResultSet in a 'gui-tab'.<br>"
+		                                                  + "This is good if the ResultSet contains <b>many<b> rows, which the <i>normal<i> table mode have a problem to display.<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "nodata"   , "Do NOT read the result set rows, just read the column headers. just do rs.next(), no rs.getString(col#)",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go nodata\n"
+		                                                  + "</pre><br>"
+		                                                  + "Execute Statement, but do not show the results, instaed just read the rows and <i>throw</i> them away.<br>"
+		                                                  + "This is good if you want to test <i>end-to-end</i> comunication time without involving the GUI creation of table.<br>"
+		                                                  + "</html>") );
+
+		cList.add( new BasicCompletion(this, "append"   , "Do NOT clear results from previous executions. Append at the end.",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select getdate() \n"
+		                                                  + "go append\n"
+		                                                  + "</pre><br>"
+		                                                  + "Execute Statement, but do not <i>clear</i> previous results.<br>"
+		                                                  + "This is good if you want to visually compare two (or more) results.<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "psql"     , "Print the executed SQL Statement in the output",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go psql\n"
+		                                                  + "</pre><br>"
+		                                                  + "Print the just executed SQL Statement in the output.<br>"
+		                                                  + "This is good if you want to <i>copy and paste</i> any examples in a mail or similar.<br>"
+		                                                  + "</html>") );
+
+		cList.add( new BasicCompletion(this, "prsi"     , "Print info about the ResultSet data types etc in the output",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go prsi\n"
+		                                                  + "</pre><br>"
+		                                                  + "Execute Statement and print more information about the ResultSet: Column names, data types, etc...<br>"
+		                                                  + "This is good to determen if the result is a String or an Integer.<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "time"     , "Print how long time the SQL Batch took, from the clients perspective",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go time\n"
+		                                                  + "</pre><br>"
+		                                                  + "Trace how long a Statement took to execute and read the ResultSet<br>"
+		                                                  + "It also prints the time the command was executed.<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "rowc"     , "Print the rowcount from JDBC driver, not the number of rows actually returned",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go rowc\n"
+		                                                  + "</pre><br>"
+		                                                  + "Print number of rows that was affected by the Statement<br>"
+		                                                  + "</html>") );
+
+		cList.add( new BasicCompletion(this, "skiprs"   , "If you have multiple ResultSet, skip some ResultSet(s) (starting at 1). Example skip ResultSet 1 and 2: go skiprs 1:2",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "exec sp_who \n"
+		                                                  + "go skiprs 1:2\n"
+		                                                  + "</pre><br>"
+		                                                  + "<br>"
+		                                                  + "Execute the procedure 'sp_who' but <i>discard</i> first and seconds ResultSet.<br>"
+		                                                  + "Good if you want to use a specififc ResultSet for something like | chart...<br>"
+		                                                  + "</html>") );
+
+		cList.add( new BasicCompletion(this, "keeprs"   , "If you have multiple ResultSet, keep only ResultSet(s) (starting at 1). Example Keep only 2 : go keeprs 2",
+		                                                  "<html>"
+		                                                  + "<b>Example:<br><pre>"
+		                                                  + "exec sp_spaceused t1 \n"
+		                                                  + "go keeprs 2\n"
+		                                                  + "</pre><br>"
+		                                                  + "<br>"
+		                                                  + "Execute the procedure 'sp_spaceused' but <i>discard</i> everything but the seconds ResultSet.<br>"
+		                                                  + "Good if you want to use a specififc ResultSet for something like | chart... to create a graphical representation of any procedure that returns several ResultSets<br>"
+		                                                  + "</html>") );
+		
+		cList.add( new BasicCompletion(this, "| pipe"  ,   "If you want to pipe ResultSet to any post processing",
+		                                                  "<html>"
+		                                                  + "Execute statement and pass the ResultSet to any post processing.<br>"
+		                                                  + "<br>"
+
+		                                                  + "<b>Example 1: </b>Create a PIE chart from second ResultSet ('graph' or 'chart' can be used)<br><pre>"
+		                                                  + "exec sp_spaceused \n"
+		                                                  + "go keeprs 2 | chart --str2num --removeRegEx '(KB|MB)'\n"
+		                                                  + "</pre>"
+		                                                  + "<br>"
+
+		                                                  + "<b>Example 2: </b>Write the ResultSet to a CSV file (according to RFC 4180), NULL values will be <i>empty string</i><br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go | tofile --header --rfc4180 -N none c:\\filename.csv \n"
+		                                                  + "</pre>"
+		                                                  + "<br>"
+
+		                                                  + "<b>Example 3: </b>Copy/transfer the ResultSet into table toTableName' on another server (possibly another DBMS Vendor)<br><pre>"
+		                                                  + "select * from t1 \n"
+		                                                  + "go | bcp toTableName --profile 'MySQL at Home' --truncateTable\n"
+		                                                  + "</pre>"
+		                                                  + "<br>"
+
+		                                                  + "<b>Example 4: </b>DIFF the ResultSet with another server (and possibly another DBMS Vendor)<br><pre>"
+		                                                  + "select id1, id2, c1, c2, c3, c4 \n"
+		                                                  + "from someTableName \n"
+		                                                  + "where country = 'sweden' \n"
+		                                                  + "order by id1, id2 \n"
+		                                                  + "go | diff --profile 'PROD_1B_ASE - sa' -Dtempdb --keyCols 'id1, id2'\n"
+		                                                  + "</pre>"
+		                                                  + "<br>"
+		                                                  + "<b>Note: </b>For Data Content <b>DIFF</b> you can also use <code>\\tabdiff</code> or the <code>\\dbdiff</code> command."
+		                                                  + "<br>"
+
+		                                                  + "<b>Note: </b>To list other available <code>pipe</code> commands, execute: <code>go | help</code>"
+		                                                  + "<br>"
+
+		                                                  + "<b>Note: </b>To list other available <code>\\localCmd</code> commands, execute: <code>\\help</code>"
+		                                                  + "<br>"
+
+		                                                  + "</html>") );
+
+		return cList;
+	}
 
 	protected List<Completion> getTableAndFuncCompletionsFromSchema(List<Completion> completions, String schemaName, String lastPart)
 	{

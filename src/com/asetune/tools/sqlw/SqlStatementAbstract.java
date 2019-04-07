@@ -29,8 +29,10 @@ import javax.swing.JComponent;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.tools.sqlw.msg.JLoadfileMessage;
+import com.asetune.tools.sqlw.msg.MessageAwareAbstract;
 
 public abstract class SqlStatementAbstract
+extends MessageAwareAbstract
 implements SqlStatement
 {
 	protected DbxConnection _conn;
@@ -66,5 +68,17 @@ implements SqlStatement
 	{
 		if (_resultCompList != null)
 			_resultCompList.add(new JLoadfileMessage(msg, _sqlOrigin));
+	}
+
+	@Override
+	public String getPostExecSqlCommands()
+	{
+		return null;
+	}
+
+	@Override
+	public void close()
+	{
+		// do nothing
 	}
 }

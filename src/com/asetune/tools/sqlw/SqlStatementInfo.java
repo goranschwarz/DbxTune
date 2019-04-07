@@ -127,6 +127,7 @@ implements SqlStatement
 					+ "    Type        Value               java.sql.Types  Example: replace question mark(?) with value\n"
 					+ "    ---------   ------------------- --------------- --------------------------------------------\n"
 					+ "    string    = 'a string value'    Types.VARCHAR   string='it''s a string', string=null\n"
+					+ "    nstring   = 'a string value'    Types.NVARCHAR  string='it''s a string', string=null\n"
 					+ "    int       = integer             Types.INTEGER   int=99, int=null\n"
 					+ "    bigint    = long                Types.BIGINT    bigint=9999999999999999999, int=null\n"
 					+ "    numeric   = bigdecimal          Types.NUMERIC   numeric=1.12, numeric=null\n"
@@ -134,6 +135,7 @@ implements SqlStatement
 					+ "    timestamp = 'datetime str'      Types.TIMESTAMP timestamp='2015-01-10 14:20:10', timestamp(dd/MM/yyyy HH.mm)='31/12/2014 14.00', timestamp=null\n"
 					+ "    date      = 'date str'          Types.DATE      date='2015-01-10', date(dd/MM/yyyy)='31/12/2014', date=null\n"
 					+ "    time      = 'time str'          Types.TIME      time='14:20:10', time(HH.mm)='14.00', time=null\n"
+					+ "    nclob     = 'filename|url'      Types.NCLOB     nclob='c:\\xxx.txt, clob='http://dbxtune.com'\n"
 					+ "    clob      = 'filename|url'      Types.CLOB      clob='c:\\xxx.txt, clob='http://dbxtune.com'\n"
 					+ "    blob      = 'filename|url'      Types.BLOB      blob='c:\\xxx.jpg, blob='http://www.dbxtune.com/images/sample3.png'\n"
 					+ "    ora_rs                          -10             a ResultSet OUTPUT parameter, from an Oracle Procedure\n"
@@ -304,7 +306,7 @@ implements SqlStatement
 //System.out.println("SqlStatementInfo(): questionMarkCount="+questionMarkCount+", sqlParamsStr.length()="+sqlParamsStr.length()+", _sqlParams.size()="+_sqlParams.size()+".");
 			if (_callableStatement && questionMarkCount == 0 && sqlParamsStr.length() > 0)
 			{
-				String rpcParamSpec        = ":( {int|bigint|string|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob} = val [ out] [,...] )";
+				String rpcParamSpec        = ":( {int|bigint|string|nstring|numeric|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob} = val [ out] [,...] )";
 				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\\filename.txt', clob='http://google.com' )";
 				String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 
@@ -332,7 +334,7 @@ implements SqlStatement
 			}
 			if (questionMarkCount != _sqlParams.size())
 			{
-				String rpcParamSpec        = ":( {int|bigint|string|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|clob|blob} = val [ out] [,...] )";
+				String rpcParamSpec        = ":( {int|bigint|string|nstring|numeric|double|timestamp[(fmt)]|date[(fmt)]|time[(fmt)]|nclob|clob|blob} = val [ out] [,...] )";
 				String rpcParamSpecExample = ":( int = 99, string = 'abc', int = 999 out, clob='c:\\filename.txt', clob='http://google.com' )";
 				String rpcfullExample      = "\\exec sp_who ? :( string = '2' )";
 				
@@ -383,20 +385,14 @@ implements SqlStatement
 						if (param.getSqlType() == Types.BLOB)
 						{
 							_cstmnt.setBytes(pos, (byte[])param.getValue());
-//							if (param._val instanceof InputStream)
-////								_cstmnt.setBlob(pos, (InputStream)param._val);
-//								_cstmnt.setBinaryStream(pos, (InputStream)param._val);
-//							else
-//								throw new SQLException("INTERNAL ERROR: Input parameter "+pos+" must be of InputStream...");
 						}
 						else if (param.getSqlType() == Types.CLOB)
 						{
 							_cstmnt.setString(pos, (String)param.getValue());
-//							if (param._val instanceof InputStream)
-////								_cstmnt.setClob(pos, new InputStreamReader( (InputStream)param._val) );
-//								_cstmnt.setAsciiStream(pos, (InputStream)param._val );
-//							else
-//								throw new SQLException("INTERNAL ERROR: Input parameter "+pos+" must be of InputStream...");
+						}
+						else if (param.getSqlType() == Types.NCLOB || param.getSqlType() == Types.NCHAR || param.getSqlType() == Types.NVARCHAR)
+						{
+							_cstmnt.setNString(pos, (String)param.getValue());
 						}
 						else if (param.getSqlType() == Types.NUMERIC)
 						{
@@ -514,7 +510,18 @@ implements SqlStatement
 		}
 	} // end: method
 
+	@Override
+	public String getPostExecSqlCommands()
+	{
+		return null;
+	}
 	
+	@Override
+	public void close()
+	{
+		// Do nothing
+	}
+
 	//###########################################################################################
 	//###########################################################################################
 	// Some test code
