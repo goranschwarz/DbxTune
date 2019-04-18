@@ -233,13 +233,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -249,9 +249,15 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
-		String sql = "select * from sys.dm_exec_requests";
+		String dm_exec_requests = "dm_exec_requests";
+		
+		if (isAzure)
+			dm_exec_requests = "dm_exec_requests";  // SAME NAME IN AZURE ???
+
+		
+		String sql = "select * from sys." + dm_exec_requests;
 
 		return sql;
 	}

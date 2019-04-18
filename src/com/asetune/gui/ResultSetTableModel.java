@@ -230,7 +230,8 @@ public class ResultSetTableModel
 			String columnTypeNameRaw = "-unknown-";
 			try {  columnTypeNameRaw = rsmd.getColumnTypeName(c); } catch(SQLException ignore) {}; // sometimes this caused SQLException, especially for 'compute by' 
 			int    columnType        = rsmd.getColumnType(c);
-			int    columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
+//			int    columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length());
+			int    columnDisplaySize = Math.max(Math.max(rsmd.getColumnDisplaySize(c), rsmd.getColumnLabel(c).length()), rsmd.getPrecision(c));
 
 			if (columnDisplaySize > maxDisplaySize)
 			{
@@ -243,7 +244,8 @@ public class ResultSetTableModel
 				}
 				else
 				{
-					_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+getName()+"'");
+//					_logger.info("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+getName()+"'");
+					_logger.debug("For column '"+columnLabel+"', columnDisplaySize is '"+columnDisplaySize+"', which is above max value of '"+maxDisplaySize+"', using max value. The max value can be changed with java parameter '-DResultSetTableModel.maxDisplaySize=sizeInBytes'. ResultSetTableModel.name='"+getName()+"'");
 					columnDisplaySize = maxDisplaySize;
 				}
 			}
@@ -705,7 +707,7 @@ public class ResultSetTableModel
 				     || columnType == java.sql.Types.VARBINARY
 				   )
 				{
-					int columnDisplaySize = rsmd.getColumnDisplaySize(col);
+					int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
 					
 //					if (columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
 //						columnDisplaySize += 2; // just in case we need the extra length when storing a binary with the prefix '0x'
@@ -727,7 +729,7 @@ public class ResultSetTableModel
 			try
 			{
 				int columnType        = rsmd.getColumnType(col);
-				int columnDisplaySize = rsmd.getColumnDisplaySize(col);
+				int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
 				int precision         = 0;
 				int scale             = 0;
 

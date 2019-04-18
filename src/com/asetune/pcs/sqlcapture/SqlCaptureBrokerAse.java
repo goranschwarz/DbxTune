@@ -1430,6 +1430,18 @@ extends SqlCaptureBrokerAbstract
 					int SPID    = rs.getInt(SPID_pos);
 					int KPID    = rs.getInt(KPID_pos);
 					int BatchID = rs.getInt(BatchID_pos);
+					
+					// This is where we can update for example:
+					//   - How many "dynamic SQL Prepare" ---> 'create proc dyn###'
+					//   - etc, etc..
+					if (_sqlTextStatistics != null)
+					{
+						int SequenceInBatch = rs.getInt   (SequenceInBatch_pos);
+						String sqlText      = rs.getString(SQLText_pos);
+
+						updateSqlTextStats(SPID, KPID, BatchID, SequenceInBatch, sqlText);
+					}
+
 
 					// If not same PK as previous row, create a new PK Object
 					if ( ! pk.equals(SPID, KPID, BatchID) )
@@ -1783,6 +1795,9 @@ extends SqlCaptureBrokerAbstract
 	}
 
 
+	//--------------------------------------------------------------------------
+	// BEGIN: Statement Statistics
+	//--------------------------------------------------------------------------
 	/**
 	 * Update Statement Statistics, which is used by a CM to report exeution times within known spans. 
 	 * <p>
@@ -1843,7 +1858,7 @@ extends SqlCaptureBrokerAbstract
 		{
 			// If we already have an object
 			// - create a new object
-			// - the old/current stats object will be deleivered to the CM
+			// - the old/current statistics object will be delivered to the CM
 			// NOTE: do we need a critical section for this
 			SqlCaptureStatementStatisticsSample newStmntStatObj = new SqlCaptureStatementStatisticsSample();
 			SqlCaptureStatementStatisticsSample retStmntStatObj = _statementStatistics;
@@ -1855,6 +1870,64 @@ extends SqlCaptureBrokerAbstract
 
 	/** This will be NULL untill we call getStatementStats() for the first time. */
 	private SqlCaptureStatementStatisticsSample _statementStatistics = null;
+
+	//--------------------------------------------------------------------------
+	// END: Statement Statistics
+	//--------------------------------------------------------------------------
+
+
+
+	
+	//--------------------------------------------------------------------------
+	// BEGIN: SQL Text Statistics
+	//--------------------------------------------------------------------------
+	private void updateSqlTextStats(int sPID, int kPID, int batchID, int sequenceInBatch, String sqlText)
+	{
+		if (_sqlTextStatistics == null)
+			return;
+		
+		_sqlTextStatistics.addSqlTextStats(sPID, kPID, batchID, sequenceInBatch, sqlText);
+	}
+
+	public void closeSqlTextStats()
+	{
+		_sqlTextStatistics = null;
+	}
+
+	public SqlCaptureSqlTextStatisticsSample getSqlTextStats(boolean reset)
+	{
+		// If we DO NOT have an object create one
+		// This will happen only first time when the CM tries to retrive data.
+		if (_sqlTextStatistics == null)
+		{
+			_sqlTextStatistics = new SqlCaptureSqlTextStatisticsSample();
+			return _sqlTextStatistics;
+		}
+		
+		if ( ! reset)
+		{
+			return _sqlTextStatistics;
+		}
+		else
+		{
+			// If we already have an object
+			// - create a new object
+			// - the old/current statistics object will be delivered to the CM
+			// NOTE: do we need a critical section for this
+			SqlCaptureSqlTextStatisticsSample newSqlTextStatObj = new SqlCaptureSqlTextStatisticsSample();
+			SqlCaptureSqlTextStatisticsSample retSqlTextStatObj = _sqlTextStatistics;
+			
+			_sqlTextStatistics = newSqlTextStatObj;
+			return retSqlTextStatObj;
+		}
+	}
+
+	/** This will be NULL untill we call getSqlTextStats() for the first time. */
+	private SqlCaptureSqlTextStatisticsSample _sqlTextStatistics = null;
+
+	//--------------------------------------------------------------------------
+	// END: SQL Text Statistics
+	//--------------------------------------------------------------------------
 
 
 

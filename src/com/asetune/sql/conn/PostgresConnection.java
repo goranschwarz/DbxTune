@@ -33,6 +33,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.sql.conn.info.DbxConnectionStateInfoPostgres;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -51,7 +52,7 @@ public class PostgresConnection extends DbxConnection
 	@Override
 	public DbxConnectionStateInfo refreshConnectionStateInfo()
 	{
-		DbxConnectionStateInfo csi = new DbxConnectionStateInfoGenericJdbc(this);
+		DbxConnectionStateInfo csi = new DbxConnectionStateInfoPostgres(this);
 		setConnectionStateInfo(csi);
 		return csi;
 	}

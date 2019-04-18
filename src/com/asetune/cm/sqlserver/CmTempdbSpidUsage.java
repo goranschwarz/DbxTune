@@ -79,12 +79,12 @@ extends CountersModel
 
 	public static final String[] PCT_COLUMNS      = new String[] {};
 	public static final String[] DIFF_COLUMNS     = new String[] {
-		"TotalAllocationUserObjects",
-		"NetAllocationUserObjects",
-		"TotalAllocationInternalObjects",
-		"NetAllocationInternalObjects",
-		"TotalAllocation",
-		"NetAllocation"
+		"TotalAllocationUserObjectsMb",
+		"CurrentAllocationUserObjectsMb",
+		"TotalAllocationInternalObjectsMb",
+		"CurrentAllocationInternalObjectsMb",
+		"TotalAllocationMb",
+		"CurrentAllocationMb"
 		};
 
 	public static final boolean  NEGATIVE_DIFF_COUNTERS_TO_ZERO = false;
@@ -172,13 +172,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -189,8 +189,19 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_db_task_space_usage    = "dm_db_task_space_usage";
+		String dm_db_session_space_usage = "dm_db_session_space_usage";
+		String dm_exec_connections       = "dm_exec_connections";
+		
+		if (isAzure)
+		{
+			dm_db_task_space_usage    = "dm_pdw_nodes_db_task_space_usage";
+			dm_db_session_space_usage = "dm_pdw_nodes_db_session_space_usage";
+			dm_exec_connections       = "dm_pdw_exec_connections";
+		}
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_systemThreads  = conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);
 
@@ -213,39 +224,47 @@ extends CountersModel
 			"        T1.request_id , \n" +
 			"        COALESCE(T1.database_id, T2.database_id) as [database_id], \n" +
 			"        db_name(COALESCE(T1.database_id, T2.database_id)) as [database_name], \n" +
-			"        COALESCE(T1.[TotalAllocationUserObjects],     0) + T2.[TotalAllocationUserObjects]     as [TotalAllocationUserObjects], \n" +
-			"        COALESCE(T1.[NetAllocationUserObjects],       0) + T2.[NetAllocationUserObjects]       as [NetAllocationUserObjects], \n" +
-			"        COALESCE(T1.[TotalAllocationInternalObjects], 0) + T2.[TotalAllocationInternalObjects] as [TotalAllocationInternalObjects] , \n" +
-			"        COALESCE(T1.[NetAllocationInternalObjects],   0) + T2.[NetAllocationInternalObjects]   as [NetAllocationInternalObjects] , \n" +
-			"        COALESCE(T1.[TotalAllocation],                0) + T2.[TotalAllocation]                as [TotalAllocation] , \n" +
-			"        COALESCE(T1.[NetAllocation],                  0) + T2.[NetAllocation]                  as [NetAllocation] , \n" +
-			"        COALESCE(T1.[QueryText], T2.[QueryText])                                               as [QueryText] \n" +
+			"        COALESCE(T1.[TotalAllocationUserObjects],       0) + T2.[TotalAllocationUserObjects]       as [TotalAllocationUserObjectsMb], \n" +
+			"        COALESCE(T1.[CurrentAllocationUserObjects],     0) + T2.[CurrentAllocationUserObjects]     as [CurrentAllocationUserObjectsMb], \n" +
+			"        COALESCE(T1.[TotalAllocationInternalObjects],   0) + T2.[TotalAllocationInternalObjects]   as [TotalAllocationInternalObjectsMb] , \n" +
+			"        COALESCE(T1.[CurrentAllocationInternalObjects], 0) + T2.[CurrentAllocationInternalObjects] as [CurrentAllocationInternalObjectsMb] , \n" +
+			"        COALESCE(T1.[TotalAllocation],                  0) + T2.[TotalAllocation]                  as [TotalAllocationMb] , \n" +
+			"        COALESCE(T1.[CurrentAllocation],                0) + T2.[CurrentAllocation]                as [CurrentAllocationMb] , \n" +
+			"        COALESCE(T1.[QueryText], T2.[QueryText])                                                   as [LastQueryText] \n" +
 			"FROM    ( SELECT    TS.session_id , \n" +
 			"                    TS.request_id , \n" +
 			"                    TS.database_id , \n" +
-			"                    CAST(  TS.user_objects_alloc_page_count                                                / 128 AS DECIMAL(15, 2)) [TotalAllocationUserObjects] , \n" +
-			"                    CAST(( TS.user_objects_alloc_page_count     - TS.user_objects_dealloc_page_count )     / 128 AS DECIMAL(15, 2)) [NetAllocationUserObjects] , \n" +
-			"                    CAST(  TS.internal_objects_alloc_page_count                                            / 128 AS DECIMAL(15, 2)) [TotalAllocationInternalObjects] , \n" +
-			"                    CAST(( TS.internal_objects_alloc_page_count - TS.internal_objects_dealloc_page_count ) / 128 AS DECIMAL(15, 2)) [NetAllocationInternalObjects] , \n" +
-			"                    CAST(( TS.user_objects_alloc_page_count     + TS.internal_objects_alloc_page_count )   / 128 AS DECIMAL(15, 2)) [TotalAllocation] , \n" +
-			"                    CAST(( TS.user_objects_alloc_page_count     + TS.internal_objects_alloc_page_count - TS.internal_objects_dealloc_page_count - TS.user_objects_dealloc_page_count ) / 128 AS DECIMAL(15, 2)) [NetAllocation] , \n" +
+			"                    CAST(  TS.user_objects_alloc_page_count                                                / 128.0 AS DECIMAL(15, 1)) [TotalAllocationUserObjects] , \n" +
+			"                    CAST(( TS.user_objects_alloc_page_count     - TS.user_objects_dealloc_page_count )     / 128.0 AS DECIMAL(15, 1)) [CurrentAllocationUserObjects] , \n" +
+			"                    CAST(  TS.internal_objects_alloc_page_count                                            / 128.0 AS DECIMAL(15, 1)) [TotalAllocationInternalObjects] , \n" +
+			"                    CAST(( TS.internal_objects_alloc_page_count - TS.internal_objects_dealloc_page_count ) / 128.0 AS DECIMAL(15, 1)) [CurrentAllocationInternalObjects] , \n" +
+			"                    CAST(( TS.user_objects_alloc_page_count     + TS.internal_objects_alloc_page_count )   / 128.0 AS DECIMAL(15, 1)) [TotalAllocation] , \n" +
+			"                    CAST(( TS.user_objects_alloc_page_count     + TS.internal_objects_alloc_page_count - TS.internal_objects_dealloc_page_count - TS.user_objects_dealloc_page_count ) / 128.0 AS DECIMAL(15, 1)) [CurrentAllocation] , \n" +
 			"                    T.text [QueryText] \n" +
-			"          FROM      sys.dm_db_task_space_usage TS \n" +
+			"          FROM      tempdb.sys." + dm_db_task_space_usage + " TS \n" +
 			"                    INNER JOIN sys.dm_exec_requests ER ON ER.request_id = TS.request_id AND ER.session_id = TS.session_id \n" +
 			"                    OUTER APPLY sys.dm_exec_sql_text(ER.sql_handle) T \n" +
+			"          WHERE TS.user_objects_alloc_page_count       > 0 \n" + 
+			"             OR TS.user_objects_dealloc_page_count     > 0 \n" +
+			"             OR TS.internal_objects_alloc_page_count   > 0 \n" +
+			"             OR TS.internal_objects_dealloc_page_count > 0 \n" +
 			"        ) T1 \n" +
 			"        RIGHT JOIN ( SELECT SS.session_id , \n" +
 			"                            SS.database_id , \n" +
-			"                            CAST(  SS.user_objects_alloc_page_count                                                / 128 AS DECIMAL(15, 2)) [TotalAllocationUserObjects] , \n" +
-			"                            CAST(( SS.user_objects_alloc_page_count     - SS.user_objects_dealloc_page_count )     / 128 AS DECIMAL(15, 2)) [NetAllocationUserObjects] , \n" +
-			"                            CAST(  SS.internal_objects_alloc_page_count                                            / 128 AS DECIMAL(15, 2)) [TotalAllocationInternalObjects] , \n" +
-			"                            CAST(( SS.internal_objects_alloc_page_count - SS.internal_objects_dealloc_page_count ) / 128 AS DECIMAL(15, 2)) [NetAllocationInternalObjects] , \n" +
-			"                            CAST(( SS.user_objects_alloc_page_count     + SS.internal_objects_alloc_page_count )   / 128 AS DECIMAL(15, 2)) [TotalAllocation] , \n" +
-			"                            CAST(( SS.user_objects_alloc_page_count     + SS.internal_objects_alloc_page_count - SS.internal_objects_dealloc_page_count - SS.user_objects_dealloc_page_count ) / 128 AS DECIMAL(15, 2)) [NetAllocation] , \n" +
+			"                            CAST(  SS.user_objects_alloc_page_count                                                / 128.0 AS DECIMAL(15, 1)) [TotalAllocationUserObjects] , \n" +
+			"                            CAST(( SS.user_objects_alloc_page_count     - SS.user_objects_dealloc_page_count )     / 128.0 AS DECIMAL(15, 1)) [CurrentAllocationUserObjects] , \n" +
+			"                            CAST(  SS.internal_objects_alloc_page_count                                            / 128.0 AS DECIMAL(15, 1)) [TotalAllocationInternalObjects] , \n" +
+			"                            CAST(( SS.internal_objects_alloc_page_count - SS.internal_objects_dealloc_page_count ) / 128.0 AS DECIMAL(15, 1)) [CurrentAllocationInternalObjects] , \n" +
+			"                            CAST(( SS.user_objects_alloc_page_count     + SS.internal_objects_alloc_page_count )   / 128.0 AS DECIMAL(15, 1)) [TotalAllocation] , \n" +
+			"                            CAST(( SS.user_objects_alloc_page_count     + SS.internal_objects_alloc_page_count - SS.internal_objects_dealloc_page_count - SS.user_objects_dealloc_page_count ) / 128.0 AS DECIMAL(15, 1)) [CurrentAllocation] , \n" +
 			"                            T.text [QueryText] \n" +
-			"                     FROM   sys.dm_db_session_space_usage SS \n" +
-			"                            LEFT JOIN sys.dm_exec_connections CN ON CN.session_id = SS.session_id \n" +
+			"                     FROM   tempdb.sys." + dm_db_session_space_usage + " SS \n" +
+			"                            LEFT JOIN sys." + dm_exec_connections + " CN ON CN.session_id = SS.session_id \n" +
 			"                            OUTER APPLY sys.dm_exec_sql_text(CN.most_recent_sql_handle) T \n" +
+			"                     WHERE SS.user_objects_alloc_page_count       > 0 \n" + 
+			"                        OR SS.user_objects_dealloc_page_count     > 0 \n" +
+			"                        OR SS.internal_objects_alloc_page_count   > 0 \n" +
+			"                        OR SS.internal_objects_dealloc_page_count > 0 \n" +
 			"                   ) T2 ON T1.session_id = T2.session_id \n" +
 			sql_sample_systemThreads;
 

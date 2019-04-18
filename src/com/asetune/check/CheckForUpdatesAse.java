@@ -353,7 +353,16 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 				(mtd.getDbmsMonTableVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTables = 
-				"select type='T', t.TableName, t.TableID, ColumnName='ColumnID=NumOfCols', ColumnID=t.Columns, TypeName='Length=NumOfParameters', Length=t.Parameters, t.Indicators, t.Description  \n" +
+				"select "
+						+ "type       = 'T', "
+						+ "t.TableName, "
+						+ "t.TableID, "
+						+ "ColumnName = 'ColumnID=NumOfCols', "
+						+ "ColumnID   = t.Columns, "
+						+ "TypeName   = 'Length=NumOfParameters', "
+						+ "Length     = t.Parameters, "
+						+ "t.Indicators, "
+						+ "t.Description  \n" +
 			    "from master.dbo.monTables t \n" +
 				(mtd.getDbmsMonTableVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 
@@ -363,7 +372,16 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 				(mtd.getDbmsMonTableVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 
 			String sql_monTableColumns = 
-				"select type='C', c.TableName, c.TableID, c.ColumnName, c.ColumnID, c.TypeName, c.Length, c.Indicators, c.Description  \n" +
+				"select "
+						+ "type = 'C', "
+						+ "c.TableName, "
+						+ "c.TableID, "
+						+ "c.ColumnName, "
+						+ "c.ColumnID, "
+						+ "c.TypeName, "
+						+ "c.Length, "
+						+ "c.Indicators, "
+						+ "c.Description  \n" +
 			    "from master.dbo.monTableColumns c " +
 				(mtd.getDbmsMonTableVersion() >= Ver.ver(15,7) ? "where Language = 'en_US' \n" : "");
 			
@@ -372,7 +390,16 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 				"select count(*) from master.dbo.monTableParameters \n";
 
 			String sql_monTableParameters = 
-				"select type='P', p.TableName, p.TableID, p.ParameterName, p.ParameterID, p.TypeName, p.Length, Indicators=-1, p.Description  \n" +
+				"select "
+						+ "type = 'P', "
+						+ "p.TableName, "
+						+ "p.TableID, "
+						+ "p.ParameterName, "
+						+ "p.ParameterID, "
+						+ "p.TypeName, "
+						+ "p.Length, "
+						+ "Indicators=-1, "
+						+ "p.Description  \n" +
 			    "from master.dbo.monTableParameters p \n";
 
 			// sysobjects
@@ -384,7 +411,16 @@ public class CheckForUpdatesAse extends CheckForUpdatesDbx
 				"  and o.type = 'U' \n" +
 				"";
 			String sql_sysobjects = 
-				"select type='S', TableName = o.name, TableID = o.id, ColumnName = c.name, ColumnID = c.colid, TypeName = t.name, Length = t.length, Indicators = -1, Description = '' \n" +
+				"select "
+						+ "type        = 'S', "
+						+ "TableName   = o.name, "
+						+ "TableID     = o.id, "
+						+ "ColumnName  = c.name, "
+						+ "ColumnID    = c.colid, "
+						+ "TypeName    = t.name, "
+						+ "Length      = t.length, "
+						+ "Indicators  = -1, "
+						+ "Description = '' \n" +
 				"from sysobjects o, syscolumns c, systypes t \n" +
 				"where o.id = c.id \n" +
 				"  and c.usertype = t.usertype \n" +

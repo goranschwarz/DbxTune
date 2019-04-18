@@ -463,7 +463,7 @@ extends TabularCntrPanel
 	}
 
 	@Override
-	protected void updateExtendedInfoPanel()
+	public void updateExtendedInfoPanel()
 	{
 		JPanel panel     = getExtendedInfoPanel();
 		GTable dataTable = getDataTable();

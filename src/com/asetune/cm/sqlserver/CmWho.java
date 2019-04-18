@@ -173,13 +173,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -190,7 +190,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 		boolean sample_systemThreads  = conf.getBooleanProperty(PROPKEY_sample_systemThreads, DEFAULT_sample_systemThreads);

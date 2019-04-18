@@ -394,8 +394,8 @@ public class DiffTest
 		GenerateSqlText lSqlGen = new GenerateSqlText(context, _conn);
 		GenerateSqlText rSqlGen = new GenerateSqlText(context, _conn);
 		
-		List<String> leftFix  = lSqlGen.getSql(DiffSide.LEFT);
-		List<String> rightFix = rSqlGen.getSql(DiffSide.RIGHT);
+		List<String> leftFix  = lSqlGen.getSql(DiffSide.LEFT, null);
+		List<String> rightFix = rSqlGen.getSql(DiffSide.RIGHT, null);
 		
 		assertEquals("Expected 1 in left-fix-comment",  1, lSqlGen.getCommentCount());
 		assertEquals("Expected 0 in left-fix-insert",   0, lSqlGen.getInsertCount());

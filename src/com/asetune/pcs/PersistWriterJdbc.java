@@ -1419,8 +1419,10 @@ public class PersistWriterJdbc
 				// This setting can be appended to the database URL: jdbc:h2:test;RETENTION_TIME=0
 				if ( ! urlMap.containsKey("RETENTION_TIME") )
 				{
-//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 600_000); // default 10 minutes
-					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", -1); // default 10 minutes
+//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", -1); // default 10 minutes
+//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 45_000); // This is the H2 DEFAULT value
+//TODO: set this to 45_000 but right now we seems to have a problem so REVERT back to what we know "worked"
+					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 600_000); // default 10 minutes
 					if (h2RetentionTime > -1) // set to -1 to disable this option
 					{
 						change = true;
@@ -1471,9 +1473,10 @@ public class PersistWriterJdbc
 				// Maybe MVStore has some more specific options RETENTION_TIME... may be something to look at
 				if ( ! urlMap.containsKey("WRITE_DELAY") )
 				{
-					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 2_000);
-//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
 //					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", -1);
+//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 2_000);
+					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
+//TODO: set this to 2_000 but right now we seems to have a problem so REVERT back to what we know "worked"
 					if (h2WriteDelay > -1) // set to -1 to disable this option
 					{
 						change = true;
@@ -3469,7 +3472,8 @@ public class PersistWriterJdbc
 //							int allowedLength = rsmd.getPrecision( c + 1 ); // seems to be zero for strings
 
 							// NOTE: column in JDBC starts at 1, not 0
-							int allowedLength = rsmd.getColumnDisplaySize( c + 1 ); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
+//							int allowedLength = rsmd.getColumnDisplaySize( c + 1 ); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
+							int allowedLength = Math.max(rsmd.getColumnDisplaySize(c+1), rsmd.getPrecision(c+1)); // getColumnDisplaySize() is used when creating the tables, so this should hopefully work
 							int jdbcDataType  = rsmd.getColumnType(c + 1);
 //							if (jdbcDataType == Types.BINARY || jdbcDataType == Types.VARBINARY)
 //								allowedLength += 2; // binary may need the extra 2 chars if it's prefixed with a 0x

@@ -199,10 +199,10 @@ extends SqlStatementAbstract
 
 
 
-	public SqlStatementCmdDbDiff(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public SqlStatementCmdDbDiff(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		parse(sqlOrigin);
 		init();
 	}

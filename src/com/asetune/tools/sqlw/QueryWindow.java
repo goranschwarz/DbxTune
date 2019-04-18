@@ -55,6 +55,7 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -168,6 +169,7 @@ import com.asetune.gui.AboutBox;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.CommandHistoryDialog;
 import com.asetune.gui.ConnectionDialog;
+import com.asetune.gui.ConnectionProfile;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.CreateGraphDialog;
 import com.asetune.gui.FavoriteCommandDialog;
@@ -192,14 +194,16 @@ import com.asetune.gui.swing.WaitForExecDialog.BgExecutor;
 import com.asetune.gui.swing.debug.EventDispatchThreadHangMonitor;
 import com.asetune.parser.ParserProperties;
 import com.asetune.sql.CommonEedInfo;
+import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.SqlPickList;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.conn.DbxConnectionPool;
+import com.asetune.sql.conn.DbxConnectionPoolMap;
 import com.asetune.sql.conn.SqlServerConnection;
 import com.asetune.sql.conn.TdsConnection;
-import com.asetune.sql.pipe.IPipeCommand;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandBcp;
 import com.asetune.sql.pipe.PipeCommandDiff;
@@ -2048,9 +2052,35 @@ public class QueryWindow
 					catch (SQLException ex) {/*ignore*/}
 				}
 				
-				if ( ! isConnected )
-					action_connect(null);
-				_exec_but.doClick();
+				// Check if it's cmd: '\connect' then allow it (and let the "execution" handle the connect request) 
+				String curCmd = _query_txt.getSelectedText();
+				if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\connect"))
+				{
+					// - button '_exec_but' is disabled, so we can't click it  
+					// - and we can't do: actionExecute(null, false);
+					//   since it depends on a connection...
+					// So lets try to do the connect request here.
+					String params = curCmd.replace("\\connect", "").trim();
+
+					String[] args = StringUtil.translateCommandline(params, false);
+
+					if (args.length >= 1)
+					{
+						String profileName = args[0];
+System.out.println("ACTION_EXECUTE: CONNECTION... doConnect() --- profileName=|"+profileName+"|.");
+						doConnect(profileName);
+					}
+					else
+					{
+						SwingUtils.showErrorMessage(_window, "Connect", "The '\\connect' must have a 'profilename' as a parameter.", null);;
+					}
+				}
+				else
+				{
+					if ( ! isConnected )
+						action_connect(null);
+					_exec_but.doClick();
+				}
 			}
 		});
 		_query_txt.getActionMap().put(ACTION_EXECUTE_GUI_SHOWPLAN, new AbstractAction(ACTION_EXECUTE_GUI_SHOWPLAN)
@@ -3554,9 +3584,11 @@ public class QueryWindow
 					// Connection Profile
 					if ( ! isNull(ppe.getProperty(key, "connProfile")) )
 					{
+System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... connProfile");
 						connDialog.setConnProfileName(ppe.getProperty(key, "connProfile"));
 					}
 
+System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... ConnectionDialog.ACTION_OK");
 					connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
 				}
 				catch(Exception ex)
@@ -3605,6 +3637,7 @@ public class QueryWindow
 //					setDbNames();
 
 					_compleationProviderAbstract = CompletionProviderAse.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+					_compleationProviderAbstract.setCreateLocalConnection(true); // true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
 					_tooltipProviderAbstract     = new ToolTipSupplierAse(_window, _compleationProviderAbstract, this);
 					_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
 					
@@ -3922,6 +3955,7 @@ public class QueryWindow
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+				//_compleationProviderAbstract.setCreateLocalConnection(true); // POSSIBLE: true: since the original connection can have "showplan on" etc... and this will case issues with messages printing, slow lookup... etc...
 
 				// Sortorder & charset
 				//_connectedSrvCharset   = DbUtils.getMsSqlCharset(_conn);
@@ -3968,6 +4002,7 @@ public class QueryWindow
 			{
 				// Code Completion 
 				_compleationProviderAbstract = CompletionProviderJdbc.installAutoCompletion(_query_txt, _queryScroll, _queryErrStrip, _window, this);
+				_compleationProviderAbstract.setCreateLocalConnection(false); // false: ConnectionProvider.getConnection() is called from the CompletionProvider
 
 				// Tooltip supplier
 				_tooltipProviderAbstract = new ToolTipSupplierJdbc(_window, _compleationProviderAbstract, this);
@@ -4016,7 +4051,11 @@ public class QueryWindow
 		}
 		
 		// Refresh the database list
-		if (_conn.isDatabaseAware())
+		boolean databaseAware = _conn.isDatabaseAware();
+		if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
+			databaseAware = true;
+
+		if (databaseAware)
 		{
 			setDbNames();
 			// DO below to notify the CodeCompletion that the initial database... Everything after this will be handled by the _dbnames_cbx action
@@ -4310,7 +4349,9 @@ public class QueryWindow
 		}
 		
 		// Should the DB-LIST be visible
-		boolean isDatabaseAware = _conn != null && _conn.isDatabaseAware(); 
+		boolean isDatabaseAware = _conn != null && _conn.isDatabaseAware();
+		if (_conn != null && _conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES)) // Special Case for Postgres
+			isDatabaseAware = true;
 		_dbnames_cbx.setEnabled(isDatabaseAware);
 		_dbnames_cbx.setVisible(isDatabaseAware);
 
@@ -4427,6 +4468,9 @@ public class QueryWindow
 			}
 		}
 		setBorderForConnectionProfileType(null);
+
+		// If we were using connection pool for this connection close all 
+		closeConnPool();
 	}
 
 	private void action_commit(ActionEvent e)
@@ -6227,6 +6271,176 @@ public class QueryWindow
 //		}
 //	}
 
+	
+	private DbxConnectionPoolMap _connPoolMap = new DbxConnectionPoolMap();
+
+	public void closeConnPool()
+	{
+		if (_connPoolMap != null)
+			_connPoolMap.close();
+		
+//		_connPoolMap = null;
+		_connPoolMap = new DbxConnectionPoolMap();
+	}
+	
+	private DbxConnection getConnectionFromPool(DbxConnection srvConn, String dbname)
+	throws SQLException
+	{
+		if (srvConn == null)
+			throw new RuntimeException("The 'template' Connection can not be null.");
+		
+		if (_connPoolMap == null)
+			throw new RuntimeException("Connection pool Map is not initialized");
+
+		// Are we in GUI mode or not (connections can then use)
+		Window guiOwner = _window;
+
+		// reuse a connection if one exists
+		if (_connPoolMap.hasMapping(dbname))
+		{
+//			// Set status
+//			if (cm != null && cm.getGuiController() != null)
+//				cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "get conn to db '"+dbname+"'");
+			
+			_logger.info("Reusing a Connection for db '"+dbname+"', which was cached in a connection pool.");
+			return _connPoolMap.getPool(dbname).getConnection(guiOwner);
+		}
+
+		// Grab the ConnectionProperty from the template Connection
+		ConnectionProp connProp = srvConn.getConnProp();
+		if (connProp == null)
+			throw new SQLException("No ConnectionProperty object could be found at the template connection.");
+		
+		// Clone the ConnectionProp
+		connProp = new ConnectionProp(connProp);
+
+		// Set the new database name
+		String url = connProp.getUrl();
+		JdbcUrlParser p = JdbcUrlParser.parse(url); 
+		p.setPath("/"+dbname); // set the new database name
+
+		url = p.toUrl();
+		connProp.setUrl(url);
+		
+		// Create a new connection pool for this DB
+//		DbxConnectionPool cp = new DbxConnectionPool(this.getClass().getSimpleName(), connProp, 5); // Max size = 5
+		DbxConnectionPool cp = new DbxConnectionPool(dbname, connProp, 5); // Max size = 5
+
+		// Set status in GUI if available
+//		if (cm != null && cm.getGuiController() != null)
+//			cm.getGuiController().setStatus(MainFrame.ST_STATUS2_FIELD, "Connecting to db '"+dbname+"'");
+
+		// grab a new connection.
+		DbxConnection dbConn = cp.getConnection(guiOwner);
+
+		_logger.info("Created a new Connection for db '"+dbname+"', which will be cached in a connection pool. with maxSize=5, url='"+url+"', connProp="+connProp);
+		
+		// when first connection is successful, add the connection pool to the MAP
+		_connPoolMap.setPool(dbname, cp);
+		
+		return dbConn;
+	}
+
+	/**
+	 * Release a connection
+	 * 
+	 * @param cm
+	 * @param dbConn
+	 * @param dbname
+	 */
+	private void releaseConnectionToPool(DbxConnection dbConn, String dbname)
+	{
+		if (dbConn == null)
+			return;
+		
+		if (_connPoolMap == null)
+			throw new RuntimeException("Connection pool Map is not initialized");
+		
+		if (StringUtil.isNullOrBlank(dbname))
+		{
+			try { dbname = dbConn.getCatalog(); }
+			catch(SQLException ignore) {}
+		}
+
+		_logger.info("releaseConnectionToPool(): dbname='"+dbname+"'.");
+		
+		if (_connPoolMap.hasMapping(dbname))
+		{
+			_connPoolMap.getPool(dbname).releaseConnection(dbConn);
+		}
+		else
+		{
+			ConnectionProp connProp = dbConn.getConnProp();
+			if (connProp == null)
+				throw new RuntimeException("No ConnectionProperty object could be found at the connection passed to releaseConnectionToPool(dbname='"+dbname+"').");
+			
+			// The connection pool did not exists, create a pool and add it to that 
+			// Create a new connection pool for this DB
+			DbxConnectionPool cp = new DbxConnectionPool(dbname, connProp, 5); // Max size = 5
+
+			_connPoolMap.setPool(dbname, cp);
+		}
+	}
+
+	public void doDisconnect()
+	{
+		_disconnect_but.doClick();
+	}
+	
+	public void doConnect(String profileName)
+	//throws SQLException
+	{
+		doDisconnect();
+//		System.out.println("DO_CONNECT: NOT-YET-IMPLEMENTED");
+
+		// Check if the Profile exists
+		if (ConnectionProfileManager.hasInstance())
+		{
+			ConnectionProfileManager cpm = ConnectionProfileManager.getInstance();
+			ConnectionProfile cp = cpm.getProfile(profileName);
+			
+			if (cp == null)
+			{
+				SwingUtils.showErrorMessage(_window, "Connect", "Connection Profile '"+profileName+"' was not found.", null);;
+				//throw new SQLException("Connection Profile '"+profileName+"' was not found.");
+				return;
+			}
+			
+//			ConnectionDialog connDialog = new ConnectionDialog(_jframe);
+//			connDialog.connect(cp);
+			
+//			return;
+		}
+		
+		// Create a "connection request"
+		// And the send it...
+		final String ppeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + "={connProfile=" + profileName + "}";
+		
+		Runnable deferedAction = new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					// We need a CommandLine object, which we can pass into action_connect()
+					// TODO: refactor this in another way...
+					Options options = new Options();
+					CommandLineParser parser = new DefaultParser();	
+					CommandLine cmd = parser.parse( options, new String[] {""} );
+				
+					QueryWindow.this.action_connect(new ActionEvent(cmd, 1, ppeStr));
+				}
+				catch(ParseException ex)
+				{
+System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
+					ex.printStackTrace();
+				}
+			}
+		};
+		SwingUtilities.invokeLater(deferedAction);
+	}
+	
 	/**
 	 * Change database context in the ASE 
 	 * @param dbname name of the database to change to
@@ -6237,15 +6451,104 @@ public class QueryWindow
 		if (dbname == null || (dbname!=null && dbname.trim().equals("")))
 			return false;
 
+		String currentCatalog = "";
+		// If database has NOT been changed... exit early
+		try
+		{
+			currentCatalog = _conn.getCatalog();
+			if (dbname.equals(currentCatalog))
+			{
+				getCurrentDb();
+				return false;
+			}
+		}
+		catch(SQLException ignore) {}
+		
 //System.out.println(">>>>>>>>>>>>>>> QueryWindow.setCurrentDb(): dbname='"+dbname+"'.");
 //new Exception("DUMMY TO TRACK CALLERS").printStackTrace();
 		try
 		{
-			_conn.setCatalog(dbname);
-			if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
+			// Special Case for Postgres
+			// Make another connection, and put it in a ConnectionCache (since Postgres can't change database)
+			if (_conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
 			{
-				((CompletionProviderAbstractSql)_compleationProviderAbstract).setCatalog(dbname);
+				String  PROPKEY_showInfo = "QueryWindow.show.info.useCatalog.newConnection";
+				boolean DEFAULT_showInfo = true;
+				
+				boolean showInfoPopup = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showInfo, DEFAULT_showInfo);
+				if (showInfoPopup)
+				{
+					String vendorName = _conn.getDatabaseProductName();
+					String htmlMsg = "<html>"
+							+ "<h2>Changing database <i>is not really</i> supported by " + vendorName + "</h2>"
+							+ "Changing database context is <i>emulated</i> by creating a new connection to the database/catalog '"+dbname+"'.<br>"
+							+ "<i>note: The connection will be reused when/if changing back to previous '"+currentCatalog+"' database.</i><br>"
+							+ "<br>"
+							+ "This is <b>important to keep in mind</b>, when thinking about <b>transaction scope!</b><br>"
+							+ "The <b>connection id</b> is displayed in the status bar (at the bottom of the window).<br>"
+							+ "<br>"
+							+ "</html>"
+							;
+
+					Object[] options = {"Close: and do NOT show this msg again", "Close: and SHOW this msg next time", "CANCEL this and stay in current database"};
+
+					int answer = JOptionPane.showOptionDialog(_window, 
+							htmlMsg,
+							"Change database not supported", // title
+							JOptionPane.YES_NO_CANCEL_OPTION,
+							JOptionPane.INFORMATION_MESSAGE,
+							null,     //do not use a custom Icon
+							options,  //the titles of buttons
+							options[0]); //default button title
+	
+					// Save "DO NOT SHOW AGAIN"
+					if (answer == 0)
+					{
+						Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+						if (tmpConf != null)
+						{
+							tmpConf.setProperty(PROPKEY_showInfo, ! DEFAULT_showInfo);
+							tmpConf.save();
+						}
+					}
+					if (answer == 2) // DO NOT CHANGE
+					{
+						getCurrentDb();
+						return false;
+					}
+				} // end: show info message
+				
+				// Reusing code from: CounterSampleCatalogIteratorPostgres
+				releaseConnectionToPool(_conn, null);
+
+				_conn = getConnectionFromPool(_conn, dbname);
+				//_conn.setCatalog(dbname);
+
+				// CompleationProvider reuses THIS connection by ConnectionProvider.getConnection()
+				// it does NOT have a local connection
+//				if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
+//				{
+//					CompletionProviderAbstractSql complProvider = (CompletionProviderAbstractSql)_compleationProviderAbstract;
+//					complProvider.releaseConnection(); // this will simply close the connection, and next time it's used the getNewConnection() is called
+//					complProvider.setCatalog(dbname);  // and this simply sets _catname wich we will change to after next getNewConnection() is called
+//				}
 			}
+			else // NORMAL CASE
+			{
+				_conn.setCatalog(dbname);
+				if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
+				{
+					// Set catalog, but only if the CompleationProvider HAS a local connection. note: this is handled internally in: setCatalog(dbname)
+					CompletionProviderAbstractSql complProvider = (CompletionProviderAbstractSql)_compleationProviderAbstract;
+					complProvider.setCatalog(dbname);
+				}
+			}
+
+			// CHECK that we actually succeeded in changing database.
+			String newCurrentCatalog = _conn.getCatalog();
+			if ( ! dbname.equals(newCurrentCatalog) )
+				throw new SQLException("Change Catalog/Database request did not succeed. Requested='"+dbname+"', Current='"+newCurrentCatalog+"'.");
+
 			return true;
 		}
 		catch(SQLException e)
@@ -6336,6 +6639,27 @@ public class QueryWindow
 //		}
 //	}
 
+	public void setDbName(String dbname)
+	throws SQLException
+	{
+		if (StringUtil.isNullOrBlank(dbname))
+			throw new SQLException("You need to pass a database name.");
+
+		if (_dbnames_cbx.getItemCount() == 0)
+			throw new SQLException("No databases available.");
+
+		if ( ! _dbnames_cbx.contains(dbname) )
+			throw new SQLException("Database '"+dbname+"' isn't available.");
+
+		_dbnames_cbx.setSelectedItem(dbname);
+	}
+
+	/** get list of databases from the combobox */
+	public List<String> getDbNames()
+	{
+		return _dbnames_cbx.getDbList();
+	}
+
 	private boolean setDbNames()
 	{
 		_currentDbName = _dbnames_cbx.refresh(_conn);
@@ -6348,7 +6672,8 @@ public class QueryWindow
 		private static final long serialVersionUID = 1L;
 
 		public  static final String NO_DATABASE_IS_SELECTED = "<No DB is selected>";
-
+		
+		private List<String> _list = new ArrayList<>();
 		/**
 		 * remove all items
 		 */
@@ -6357,6 +6682,23 @@ public class QueryWindow
 			DefaultComboBoxModel<String> cbm = new DefaultComboBoxModel<String>();
 			cbm.addElement(NO_DATABASE_IS_SELECTED);
 			setModel(cbm);
+			_list = new ArrayList<>();
+		}
+
+		public boolean contains(String dbname)
+		{
+			if (_list == null)
+				return false;
+			
+			return _list.contains(dbname);
+		}
+
+		public List<String> getDbList()
+		{
+			if (_list == null)
+				return Collections.emptyList();
+
+			return _list;
 		}
 
 		/**
@@ -6371,12 +6713,15 @@ public class QueryWindow
 				String currentDb = "";
 				DefaultComboBoxModel<String> cbm = new DefaultComboBoxModel<String>();
 
-				ResultSet rs = conn.getMetaData().getCatalogs();
-				while (rs.next())
+				if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
+					_list = getCatalogListPostgres(conn);
+				else
+					_list = getCatalogListGeneric(conn);
+
+				for (String cat : _list)
 				{
-					cbm.addElement(rs.getString(1));
+					cbm.addElement(cat);
 				}
-				rs.close();
 
 				// Get current dbname
 				currentDb = conn.getCatalog();
@@ -6418,9 +6763,48 @@ public class QueryWindow
 				DefaultComboBoxModel<String> cbm = new DefaultComboBoxModel<String>();
 				cbm.addElement("Problems getting dbnames");
 				setModel(cbm);
+				_list = new ArrayList<>();
 				return "";
 			}
+		}
+
+		private List<String> getCatalogListGeneric(DbxConnection conn)
+		throws SQLException
+		{
+			ArrayList<String> list = new ArrayList<String>();
+
+			ResultSet rs = conn.getMetaData().getCatalogs();
+			while (rs.next())
+			{
+				String dbname = rs.getString(1);
+				list.add(dbname);
+			}
+			rs.close();
 			
+			return list;
+		}
+		private List<String> getCatalogListPostgres(DbxConnection conn)
+		throws SQLException
+		{
+			ArrayList<String> list = new ArrayList<String>();
+			
+			String sql 
+				= "select datname \n"
+				+ "from pg_catalog.pg_database \n"
+				+ "where datname not like 'template%' \n"
+				+ "  and pg_catalog.has_database_privilege(datname, 'CONNECT') \n" // Possibly add this to only lookup databases that we have access to
+				+ "order by 1 \n";
+
+			Statement stmnt = conn.createStatement();
+			ResultSet rs = stmnt.executeQuery(sql);
+			while(rs.next())
+			{
+				String dbname = rs.getString(1);
+				list.add(dbname);
+			}
+			rs.close();
+			
+			return list;
 		}
 	}
 
@@ -7626,7 +8010,7 @@ ex.printStackTrace();
 						// RPC handling if the text starts with '\exec '
 						// The for of this would be: {?=call procName(parameters)}
 //						SqlStatementInfo sqlStmntInfo = new SqlStatementInfo(_conn, sql, _connectedToProductName, _resultCompList);
-						sqlStmntInfo = SqlStatementFactory.create(_conn, sql, _connectedToProductName, _resultCompList, progress, _window);
+						sqlStmntInfo = SqlStatementFactory.create(_conn, sql, _connectedToProductName, _resultCompList, progress, _window, this);
 
 						if (_showSentSql_chk.isSelected() || sr.hasOption_printSql())
 							_resultCompList.add( new JSentSqlStatement(sql, sr.getSqlBatchStartLine() + startRowInSelection) );
@@ -11026,7 +11410,7 @@ checkPanelSize(_resPanel, comp);
 
 		final JMenu ttProvider_m = new JMenu("<html><b>ToolTip Provider</b> - <i><font color='green'>Hower over words in the editor to get help</font></i></html>");
 		
-		// Menu items for Code Completion
+		// Menu items for Code ion
 		//---------------------------------------------------
 //		JMenu codeCompl_m = new JMenu("<html><b>Code Completion/Assist</b> - <i><font color='green'>Use <code><b>Ctrl+Space</b></code> to get Code Completion</font></i></html>");
 //		popupMenu.add(codeCompl_m);

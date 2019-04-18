@@ -22,19 +22,28 @@
 package com.asetune.central.pcs;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventOsLoadAverage;
 import com.asetune.pcs.PersistReader;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.H2UrlHelper;
 import com.asetune.utils.StringUtil;
@@ -61,6 +70,18 @@ public class H2WriterStat
 	// implements singleton pattern
 	private static H2WriterStat _instance = null;
 
+	public static final String      PROPKEY_sampleOsLoadAverage   = "H2WriterStat.sample.osLoadAverage";
+	public static final boolean     DEFAULT_sampleOsLoadAverage   = true;
+
+	public static final String      PROPKEY_AlarmOsLoadAverage1m  = "H2WriterStat.alarm.osLoadAverage.1m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverage1m  = 99.0; // more or less DISABLED
+
+	public static final String      PROPKEY_AlarmOsLoadAverage5m  = "H2WriterStat.alarm.osLoadAverage.5m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverage5m  = 99.0; // more or less DISABLED
+
+	public static final String      PROPKEY_AlarmOsLoadAverage15m = "H2WriterStat.alarm.osLoadAverage.15m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverage15m = 4.0;
+
 	private static final String     DEFAULT_sampleTimeFormat = "%?DD[d ]%?HH[:]%MM:%SS.%ms";
 
 	private String                  _sampleTimeFormat = DEFAULT_sampleTimeFormat;
@@ -72,7 +93,14 @@ public class H2WriterStat
 	
 	private ConnectionProvider _connProvider = null;
 	private File _h2DbFile = null;
-	
+
+	// If we should get OS load average or not
+	private boolean _get_osLoadAverage  = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sampleOsLoadAverage, DEFAULT_sampleOsLoadAverage);
+	private double  _osLoadAverage1min  = -1;
+	private double  _osLoadAverage5min  = -1;
+	private double  _osLoadAverage15min = -1;
+	private LinkedList<OsLoadAvgEntry> _osLoadAverageList = null;
+
 	public static final String FILE_READ  = "info.FILE_READ";
 	public static final String FILE_WRITE = "info.FILE_WRITE";
 	public static final String PAGE_COUNT = "info.PAGE_COUNT";
@@ -280,10 +308,150 @@ public class H2WriterStat
 		{
 			_logger.warn("Problems refreshing H2 Performance Counters. Caught: " + ex);
 		}
-		
+
+		// Get "Load Average" from the OS (only 1 minute is available from the MxBean)
+		if (_get_osLoadAverage)
+		{
+			calcLoadAverage();
+			
+			checkForAlarms();
+		}
+
 		_lastRefresh = System.currentTimeMillis();
 		return this;
 	}
+
+	private void calcLoadAverage()
+	{
+		OperatingSystemMXBean os  = ManagementFactory.getOperatingSystemMXBean();
+		double osLoadAverage1min  = os.getSystemLoadAverage();
+		long now = System.currentTimeMillis();
+	
+		// if NOT SUPPORTED, do nothing...
+//		if (osLoadAverage1min == -1)
+//			return;
+		
+		if (_osLoadAverageList == null)
+			_osLoadAverageList = new LinkedList<>();
+
+		// Calculate 5 and 15 minute
+		long   ms5m   = 300_000; // 5 * 60 * 1000;
+		int    cnt5m  = 0;
+		double sum5m  = 0;
+
+		long   ms15m  = 1500_000; // 15 * 60 * 1000;
+		int    cnt15m = 0;
+		double sum15m = 0;
+
+		// Add current entry to the list
+		_osLoadAverageList.add(new OsLoadAvgEntry(now, osLoadAverage1min));
+
+		//
+		// Get oldest entry so we can check if we have enough time/samples to calculate 5 and 15 minute values 
+		//
+		// 15 minute and 5 minute would typically be HIGH at start time (since it's the same value as 1 minute)... 
+		// So we might want to "skip" those until we have enough data point to measure (or similar)
+		// Otherwise we will have *ALARMS* that are "faulty".
+		OsLoadAvgEntry oldestEntry = _osLoadAverageList.getFirst(); // note: new entries are added at "END", so oldest entry would be FIRST
+		long oldestAgeInMs = -1;
+		if (oldestEntry != null)
+			oldestAgeInMs = now - oldestEntry._ts;
+
+		// Loop the list and remove old entries
+		// and calculate the Average for 5 and 15 minutes
+		for(Iterator<OsLoadAvgEntry> i = _osLoadAverageList.iterator(); i.hasNext();) 
+		{
+			OsLoadAvgEntry entry = i.next();
+			long   ts  = entry._ts;
+			double val = entry._val;
+
+			// Remove entries that are older than 15 minutes
+			if ( (now-ts) > ms15m )
+			{
+				i.remove();
+				continue;
+			}
+			
+			// 15 minute average  (but only add values if we have enough samples... in this case approx 7.5 minutes)
+			// Since we removed everything older than 15 minutes above... 
+			// we can do calculation without an if statement here 
+			if (oldestAgeInMs > ms15m / 2)
+			{
+				cnt15m++;
+				sum15m += val;
+			}
+
+			
+			// continue if older than 5 minutes
+			if ( (now-ts) > ms5m )
+				continue;
+
+			// 5 minute average (but only add values if we have enough samples... in this case approx 2.5 minutes)
+			if (oldestAgeInMs > ms5m / 2)
+			{
+				cnt5m++;
+				sum5m += val;
+			}
+		}
+		
+		_osLoadAverage1min  = osLoadAverage1min;
+		_osLoadAverage5min  = cnt5m  == 0 ? -1 : sum5m  / (cnt5m  * 1.0);
+		_osLoadAverage15min = cnt15m == 0 ? -1 : sum15m / (cnt15m * 1.0);
+	}
+	/** Small Class to keep OsLoadAverage history values... so we can calculate 5 and 15 minute values */
+	private static class OsLoadAvgEntry
+	{
+		long   _ts;
+		double _val;
+		public OsLoadAvgEntry(long ts, double val)
+		{
+			_ts  = ts;
+			_val = val;
+		}
+	}
+
+	private void checkForAlarms()
+	{
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		Configuration conf = Configuration.getCombinedConfiguration();
+		AlarmHandler ah = AlarmHandler.getInstance();
+		
+		double loadAverage_1m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage1m,  DEFAULT_AlarmOsLoadAverage1m);
+		double loadAverage_5m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage5m,  DEFAULT_AlarmOsLoadAverage5m);
+		double loadAverage_15m_threshold = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage15m, DEFAULT_AlarmOsLoadAverage15m);
+
+		String serviceInfoName = "H2WriterStat";
+		String hostname        = Version.getAppName() + "@" + StringUtil.getHostname();
+
+		double threshold;
+
+		// 1 minute
+		threshold = loadAverage_1m_threshold;
+		if (_osLoadAverage1min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_1_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			ah.addAlarm(ae);
+		}
+
+		// 5 minute
+		threshold = loadAverage_5m_threshold;
+		if (_osLoadAverage5min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_5_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			ah.addAlarm(ae);
+		}
+
+		// 15 minute
+		threshold = loadAverage_15m_threshold;
+		if (_osLoadAverage15min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_15_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			ah.addAlarm(ae);
+		}
+	}
+
 
 	public String getH2FileName()
 	{
@@ -351,7 +519,12 @@ public class H2WriterStat
 		if (_lastIntervallInMs == 0)
 			return "";
 		
+		String osLoadAvg    = "";
+		if (_osLoadAverage1min != -1) // Note: NOT supported on some OS (Windows), so do not print it
+			osLoadAvg    = String.format("OsLoadAvg[1m=%.2f, 5m=%.2f, 15m=%.2f], ", _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+		
 		String prefix       = "H2-PerfCounters{sampleTime=" + TimeUtils.msToTimeStr(getSampleTimeFormat(), _lastIntervallInMs) + ", ";
+//		String osLoadAvg    = "MxOsLoadAvg"     + "[1m="  + _osLoadAverage1min           + ", 5m="   + _osLoadAverage5min            + ", 15m="  + _osLoadAverage15min           + "], ";
 		String fileRead     = "FILE_READ"       + "[abs=" + getAbsValue(FILE_READ)       + ", diff=" + getDiffValue(FILE_READ)       + ", rate=" + getRateValue(FILE_READ)       + "], ";
 		String fileWrite    = "FILE_WRITE"      + "[abs=" + getAbsValue(FILE_WRITE)      + ", diff=" + getDiffValue(FILE_WRITE)      + ", rate=" + getRateValue(FILE_WRITE)      + "], ";
 		String pageCount    = "PAGE_COUNT"      + "[abs=" + getAbsValue(PAGE_COUNT)      + ", diff=" + getDiffValue(PAGE_COUNT)      + ", rate=" + getRateValue(PAGE_COUNT)      + "], ";
@@ -361,6 +534,7 @@ public class H2WriterStat
 		
 		// Remember max length for next print
 		_strMaxLen_prefix       = Math.max(_strMaxLen_prefix      , prefix      .length());
+		_strMaxLen_osLoadAvg    = Math.max(_strMaxLen_osLoadAvg   , osLoadAvg   .length());
 		_strMaxLen_fileRead     = Math.max(_strMaxLen_fileRead    , fileRead    .length());
 		_strMaxLen_fileWrite    = Math.max(_strMaxLen_fileWrite   , fileWrite   .length());
 		_strMaxLen_pageCount    = Math.max(_strMaxLen_pageCount   , pageCount   .length());
@@ -370,6 +544,7 @@ public class H2WriterStat
 
 		// Add space at the end to of each section. (for readability)
 		prefix       = StringUtil.left(prefix      , _strMaxLen_prefix      );
+		osLoadAvg    = StringUtil.left(osLoadAvg   , _strMaxLen_osLoadAvg   );
 		fileRead     = StringUtil.left(fileRead    , _strMaxLen_fileRead    );
 		fileWrite    = StringUtil.left(fileWrite   , _strMaxLen_fileWrite   );
 		pageCount    = StringUtil.left(pageCount   , _strMaxLen_pageCount   );
@@ -377,10 +552,11 @@ public class H2WriterStat
 		h2FileSizeMb = StringUtil.left(h2FileSizeMb, _strMaxLen_h2FileSizeMb);
 		postFix      = StringUtil.left(postFix     , _strMaxLen_postFix     );
 		
-		return prefix + fileRead + fileWrite + pageCount + h2FileSizeKb + h2FileSizeMb + postFix;
+		return prefix + osLoadAvg + fileRead + fileWrite + pageCount + h2FileSizeKb + h2FileSizeMb + postFix;
 	}
 	// used to format the length of the string
 	private int _strMaxLen_prefix       = 0;
+	private int _strMaxLen_osLoadAvg    = 0;
 	private int _strMaxLen_fileRead     = 0;
 	private int _strMaxLen_fileWrite    = 0;
 	private int _strMaxLen_pageCount    = 0;

@@ -36,9 +36,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
 import javax.swing.JTextField;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -46,6 +44,7 @@ import javax.swing.event.ChangeListener;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
 
+import com.asetune.IGuiController;
 import com.asetune.cm.CountersModel;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
 import com.asetune.ui.rsyntaxtextarea.RSyntaxTextAreaX;
@@ -54,7 +53,6 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.RTextUtility;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
-import com.asetune.utils.Ver;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -84,32 +82,34 @@ extends JDialog implements ActionListener, ChangeListener
 	private JLabel             _initialized_false_lbl = new JLabel("<html>This Performance Counter has <b>not</b> yet been initialized.</html>");
 
 	// Version info
-	private JLabel             _testVersion_lbl      = new JLabel("Server Version");
-	private JLabel             _testVersionMajor_lbl = new JLabel("Major");
-	private SpinnerNumberModel _testVersionMajor_spm = new SpinnerNumberModel(12, 12, 99, 1); // value, min, max, step
-	private JSpinner           _testVersionMajor_sp  = new JSpinner(_testVersionMajor_spm);
+	private DbmsVersionPanelAbstract _versionPanel;
 
-	private JLabel             _testVersionMinor_lbl = new JLabel("Minor");
-	private SpinnerNumberModel _testVersionMinor_spm = new SpinnerNumberModel(5, 0, 9, 1); // value, min, max, step
-	private JSpinner           _testVersionMinor_sp  = new JSpinner(_testVersionMinor_spm);
-
-	private JLabel             _testVersionMaint_lbl = new JLabel("Maint");
-	private SpinnerNumberModel _testVersionMaint_spm = new SpinnerNumberModel(0, 0, 9, 1); // value, min, max, step
-	private JSpinner           _testVersionMaint_sp  = new JSpinner(_testVersionMaint_spm);
-
-	private JLabel             _testVersionEsd_lbl   = new JLabel("ESD#/SP");
-	private SpinnerNumberModel _testVersionEsd_spm   = new SpinnerNumberModel(3, 0, 999, 1); // value, min, max, step
-	private JSpinner           _testVersionEsd_sp    = new JSpinner(_testVersionEsd_spm);
-
-	private JLabel             _testVersionPl_lbl    = new JLabel("Patch Level");
-	private SpinnerNumberModel _testVersionPl_spm    = new SpinnerNumberModel(0, 0, 99, 1); // value, min, max, step
-	private JSpinner           _testVersionPl_sp     = new JSpinner(_testVersionPl_spm);
-
-	private JCheckBox          _testVersionIsCe_chk  = new JCheckBox("Cluster Edition", false);
-
-	private JLabel             _testVersionShort_lbl   = new JLabel("Server Short Version");
-	private JTextField         _testVersionShort_txt   = new JTextField();
-	private JTextField         _testVersionInt_txt     = new JTextField();
+//	private JLabel             _testVersion_lbl      = new JLabel("Server Version");
+//	private JLabel             _testVersionMajor_lbl = new JLabel("Major");
+//	private SpinnerNumberModel _testVersionMajor_spm = new SpinnerNumberModel(12, 12, 99, 1); // value, min, max, step
+//	private JSpinner           _testVersionMajor_sp  = new JSpinner(_testVersionMajor_spm);
+//
+//	private JLabel             _testVersionMinor_lbl = new JLabel("Minor");
+//	private SpinnerNumberModel _testVersionMinor_spm = new SpinnerNumberModel(5, 0, 9, 1); // value, min, max, step
+//	private JSpinner           _testVersionMinor_sp  = new JSpinner(_testVersionMinor_spm);
+//
+//	private JLabel             _testVersionMaint_lbl = new JLabel("Maint");
+//	private SpinnerNumberModel _testVersionMaint_spm = new SpinnerNumberModel(0, 0, 9, 1); // value, min, max, step
+//	private JSpinner           _testVersionMaint_sp  = new JSpinner(_testVersionMaint_spm);
+//
+//	private JLabel             _testVersionEsd_lbl   = new JLabel("ESD#/SP");
+//	private SpinnerNumberModel _testVersionEsd_spm   = new SpinnerNumberModel(3, 0, 999, 1); // value, min, max, step
+//	private JSpinner           _testVersionEsd_sp    = new JSpinner(_testVersionEsd_spm);
+//
+//	private JLabel             _testVersionPl_lbl    = new JLabel("Patch Level");
+//	private SpinnerNumberModel _testVersionPl_spm    = new SpinnerNumberModel(0, 0, 99, 1); // value, min, max, step
+//	private JSpinner           _testVersionPl_sp     = new JSpinner(_testVersionPl_spm);
+//
+//	private JCheckBox          _testVersionIsCe_chk  = new JCheckBox("Cluster Edition", false);
+//
+//	private JLabel             _testVersionShort_lbl   = new JLabel("Server Short Version");
+//	private JTextField         _testVersionShort_txt   = new JTextField();
+//	private JTextField         _testVersionInt_txt     = new JTextField();
 	
 	// Fields
 	private JLabel             _sqlInit_lbl          = new JLabel("SQL Init - Only executed once, before first sample");
@@ -226,19 +226,26 @@ extends JDialog implements ActionListener, ChangeListener
 		// ADD ACTIONS TO COMPONENTS
 		_ok_but.addActionListener(this);
 
-		_testVersionMajor_spm.addChangeListener(this);
-		_testVersionMinor_spm.addChangeListener(this);
-		_testVersionMaint_spm.addChangeListener(this);
-		_testVersionEsd_spm  .addChangeListener(this);
-		_testVersionPl_spm   .addChangeListener(this);
-
-		_testVersionShort_txt .addActionListener(this);
-		_testVersionIsCe_chk  .addActionListener(this);
+//		_testVersionMajor_spm.addChangeListener(this);
+//		_testVersionMinor_spm.addChangeListener(this);
+//		_testVersionMaint_spm.addChangeListener(this);
+//		_testVersionEsd_spm  .addChangeListener(this);
+//		_testVersionPl_spm   .addChangeListener(this);
+//
+//		_testVersionShort_txt .addActionListener(this);
+//		_testVersionIsCe_chk  .addActionListener(this);
 		_pkColsHighlight_chk  .addActionListener(this);
 		_diffColsHighlight_chk.addActionListener(this);
 		_pctColsHighlight_chk .addActionListener(this);
 	}
 
+	private DbmsVersionPanelAbstract createDbmsVersionPanel()
+	{
+		IGuiController guiController = _cm.getGuiController();
+
+		return guiController.createDbmsVersionPanel(this);
+	}
+	
 	protected JPanel init()
 	{
 		JPanel panel = new JPanel();
@@ -271,27 +278,27 @@ extends JDialog implements ActionListener, ChangeListener
 		_initialized_false_lbl.setToolTipText("<html>No connection to any Server, so you need to specify for what Server Version you want information on.</html>");
 
 
-		_testVersion_lbl      .setToolTipText("<html>Specify what Server Version you want to see information about</html>");
-		_testVersionMajor_lbl .setToolTipText("<html>Major version of the Server, Example: <b>15</b>.0.3</html>");
-		_testVersionMajor_sp  .setToolTipText("<html>Major version of the Server, Example: <b>15</b>.0.3</html>");
-
-		_testVersionMinor_lbl .setToolTipText("<html>Minor version of the Server, Example: 15.<b>0</b>.3</html>");
-		_testVersionMinor_sp  .setToolTipText("<html>Minor version of the Server, Example: 15.<b>0</b>.3</html>");
-
-		_testVersionMaint_lbl .setToolTipText("<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
-		_testVersionMaint_sp  .setToolTipText("<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
-
-		_testVersionEsd_lbl   .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
-		_testVersionEsd_sp    .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
-
-		_testVersionPl_lbl    .setToolTipText("<html>PL -Patch Level of the Server Version, Example: 16.0 SP01 <b>PL01</b><br>SAP is using Patch Level to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>Note: This is introduced in ASE 16.0</html>");
-		_testVersionPl_sp     .setToolTipText(_testVersionPl_lbl.getToolTipText());
-
-		_testVersionIsCe_chk  .setToolTipText("<html>Generate SQL Information for a Cluster Edition Server</html>");
-
-		_testVersionShort_lbl .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
-		_testVersionShort_txt .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
-		_testVersionInt_txt   .setToolTipText("<html>Internal INTEGER used as version number.</html>");
+//		_testVersion_lbl      .setToolTipText("<html>Specify what Server Version you want to see information about</html>");
+//		_testVersionMajor_lbl .setToolTipText("<html>Major version of the Server, Example: <b>15</b>.0.3</html>");
+//		_testVersionMajor_sp  .setToolTipText("<html>Major version of the Server, Example: <b>15</b>.0.3</html>");
+//
+//		_testVersionMinor_lbl .setToolTipText("<html>Minor version of the Server, Example: 15.<b>0</b>.3</html>");
+//		_testVersionMinor_sp  .setToolTipText("<html>Minor version of the Server, Example: 15.<b>0</b>.3</html>");
+//
+//		_testVersionMaint_lbl .setToolTipText("<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
+//		_testVersionMaint_sp  .setToolTipText("<html>Mintenance version of the Server, Example: 15.0.<b>3</b></html>");
+//
+//		_testVersionEsd_lbl   .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
+//		_testVersionEsd_sp    .setToolTipText("<html>ESD or SP (ESD = Electronic Software Distribution, SP = Service Pack) Level of the Server, Example: 15.0.3 <b>ESD#2</b> or <b>SP100</b><br>SAP is using Service Packs to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>The Service Pack consist of three numbers. Here I will try to simulate ESD into SP. Example ESD#4 will be SP040 and ESD#4.1 will be SP041<br>In the summer of 2013 Sybase/SAP changed from ESD into SP.</html>");
+//
+//		_testVersionPl_lbl    .setToolTipText("<html>PL -Patch Level of the Server Version, Example: 16.0 SP01 <b>PL01</b><br>SAP is using Patch Level to handle <i>bug fixes</i> and <i>minor enhancements</i>. <br>Note: This is introduced in ASE 16.0</html>");
+//		_testVersionPl_sp     .setToolTipText(_testVersionPl_lbl.getToolTipText());
+//
+//		_testVersionIsCe_chk  .setToolTipText("<html>Generate SQL Information for a Cluster Edition Server</html>");
+//
+//		_testVersionShort_lbl .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
+//		_testVersionShort_txt .setToolTipText("<html>Here you can specify a Version string, which will be parsed into a number.</html>");
+//		_testVersionInt_txt   .setToolTipText("<html>Internal INTEGER used as version number.</html>");
 
 
 		_sqlInit_lbl          .setToolTipText("<html>What SQL statement will be executed before we do first data sample</html>");
@@ -337,8 +344,11 @@ extends JDialog implements ActionListener, ChangeListener
 		_toolTipMonTables_txt .setToolTipText("<html>Monitor Tables in the query. This is used to do lookup for column tooltip.</html>");
 		//------------ END: TOOLTIP
 		
-		
-		long    srvVersion  = Ver.ver(12,5,0,3);
+		_versionPanel = createDbmsVersionPanel();
+		_versionPanel.addFieldsToPanel();
+
+//		long    srvVersion  = Ver.ver(12,5,0,3);
+		long    srvVersion  = _versionPanel == null ? 0 : _versionPanel.getMinVersion();
 		boolean isCeEnabled = false;
 
 		if (_cm.isRuntimeInitialized())
@@ -387,7 +397,7 @@ extends JDialog implements ActionListener, ChangeListener
 		_diffColsHighlight_chk.setSelected( Configuration.getCombinedConfiguration().getBooleanProperty("ShowCmPropertiesDialog.highlight.diffCols", _diffColsHighlight_chk.isSelected()) );
 		_pctColsHighlight_chk .setSelected( Configuration.getCombinedConfiguration().getBooleanProperty("ShowCmPropertiesDialog.highlight.pctCols",  _pctColsHighlight_chk .isSelected()) );
 		
-		_testVersionInt_txt.setEditable(false);
+//		_testVersionInt_txt.setEditable(false);
 
 		namePanel.add(_cmShortName_lbl, "");
 		namePanel.add(_cmShortName_txt, "growx, pushx, wrap");
@@ -398,23 +408,23 @@ extends JDialog implements ActionListener, ChangeListener
 		aseVerPanel.add(_initialized_true_lbl,  "span, hidemode 3, wrap 20");
 		aseVerPanel.add(_initialized_false_lbl, "span, hidemode 3, wrap 20");
 
-		aseVerPanel.add(_testVersionMajor_lbl, "w 10mm, skip 1, span, split");
-		aseVerPanel.add(_testVersionMinor_lbl, "w 10mm");
-		aseVerPanel.add(_testVersionMaint_lbl, "w 10mm");
-		aseVerPanel.add(_testVersionEsd_lbl,   "w 10mm");
-		aseVerPanel.add(_testVersionPl_lbl,    "w 10mm, wrap");
-
-		aseVerPanel.add(_testVersion_lbl,      "");
-		aseVerPanel.add(_testVersionMajor_sp,  "w 10mm, span, split");
-		aseVerPanel.add(_testVersionMinor_sp,  "w 10mm, ");
-		aseVerPanel.add(_testVersionMaint_sp,  "w 10mm, ");
-		aseVerPanel.add(_testVersionEsd_sp,    "w 10mm, ");
-		aseVerPanel.add(_testVersionPl_sp,     "w 10mm, ");
-		aseVerPanel.add(_testVersionIsCe_chk,  "wrap");
-
-		aseVerPanel.add(_testVersionShort_lbl, "");
-		aseVerPanel.add(_testVersionShort_txt, "growx, pushx");
-		aseVerPanel.add(_testVersionInt_txt,   "wrap");
+//		aseVerPanel.add(_testVersionMajor_lbl, "w 10mm, skip 1, span, split");
+//		aseVerPanel.add(_testVersionMinor_lbl, "w 10mm");
+//		aseVerPanel.add(_testVersionMaint_lbl, "w 10mm");
+//		aseVerPanel.add(_testVersionEsd_lbl,   "w 10mm");
+//		aseVerPanel.add(_testVersionPl_lbl,    "w 10mm, wrap");
+//
+//		aseVerPanel.add(_testVersion_lbl,      "");
+//		aseVerPanel.add(_testVersionMajor_sp,  "w 10mm, span, split");
+//		aseVerPanel.add(_testVersionMinor_sp,  "w 10mm, ");
+//		aseVerPanel.add(_testVersionMaint_sp,  "w 10mm, ");
+//		aseVerPanel.add(_testVersionEsd_sp,    "w 10mm, ");
+//		aseVerPanel.add(_testVersionPl_sp,     "w 10mm, ");
+//		aseVerPanel.add(_testVersionIsCe_chk,  "wrap");
+//
+//		aseVerPanel.add(_testVersionShort_lbl, "");
+//		aseVerPanel.add(_testVersionShort_txt, "growx, pushx");
+//		aseVerPanel.add(_testVersionInt_txt,   "wrap");
 
 		sqlPanel.add(_sqlInit_lbl,             "wrap");
 //		sqlPanel.add(_sqlInitScroll,           "span, growx, pushx, wrap");
@@ -464,12 +474,16 @@ extends JDialog implements ActionListener, ChangeListener
 		otherPanel.add(_toolTipMonTables_txt,  "skip, growx, pushx, wrap");
 
 		panel.add(namePanel,   "growx, pushx, wrap");
-		panel.add(aseVerPanel, "wrap");
+//		panel.add(aseVerPanel, "wrap");
+		panel.add(_versionPanel, "wrap");
 		panel.add(sqlPanel,    "wrap");
 		panel.add(otherPanel,  "growx, pushx, wrap");
 		
 		loadFieldsUsingVersion(srvVersion, isCeEnabled);
 
+		
+		_versionPanel.addActionsListeners();
+		
 		return panel;
 	}
 
@@ -485,8 +499,8 @@ extends JDialog implements ActionListener, ChangeListener
 			dispose();
 		}
 
-		if ( _testVersionIsCe_chk.equals(source) ) 
-			stateChanged(null);
+//		if ( _testVersionIsCe_chk.equals(source) ) 
+//			stateChanged(null);
 
 		if ( _pkColsHighlight_chk.equals(source) )
 		{
@@ -516,60 +530,60 @@ extends JDialog implements ActionListener, ChangeListener
 			}
 		}
 
-		if ( _testVersionShort_txt.equals(source) )
-		{
-			String versionStr = _testVersionShort_txt.getText();
-			parseVersionString(versionStr);
-		}
+//		if ( _testVersionShort_txt.equals(source) )
+//		{
+//			String versionStr = _testVersionShort_txt.getText();
+//			parseVersionString(versionStr);
+//		}
 	}
 	@Override
 	public void stateChanged(ChangeEvent e)
 	{
-		int major = _testVersionMajor_spm.getNumber().intValue();
-		int minor = _testVersionMinor_spm.getNumber().intValue();
-		int maint = _testVersionMaint_spm.getNumber().intValue();
-		int esd   = _testVersionEsd_spm  .getNumber().intValue();
-		int pl    = _testVersionPl_spm   .getNumber().intValue();
-
-//		int ver = (major * 1000) + (minor * 100) + (maint * 10) + esd;
-//		int ver = (major * 100000) + (minor * 10000) + (maint * 1000) + esd;
-//System.out.println("stateChanged: ver="+ver+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+".");
-		long ver = Ver.ver(major, minor, maint, esd, pl);
-
-		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
-
-		loadFieldsUsingVersion(ver, isCeEnabled);
+//		int major = _testVersionMajor_spm.getNumber().intValue();
+//		int minor = _testVersionMinor_spm.getNumber().intValue();
+//		int maint = _testVersionMaint_spm.getNumber().intValue();
+//		int esd   = _testVersionEsd_spm  .getNumber().intValue();
+//		int pl    = _testVersionPl_spm   .getNumber().intValue();
+//
+////		int ver = (major * 1000) + (minor * 100) + (maint * 10) + esd;
+////		int ver = (major * 100000) + (minor * 10000) + (maint * 1000) + esd;
+////System.out.println("stateChanged: ver="+ver+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+".");
+//		long ver = Ver.ver(major, minor, maint, esd, pl);
+//
+//		boolean isCeEnabled = _testVersionIsCe_chk.isSelected();
+//
+//		loadFieldsUsingVersion(ver, isCeEnabled);
 	}
 
-	private void parseVersionString(String versionStr)
-	{
-		if (StringUtil.isNullOrBlank(versionStr) || "0.0.0".equals(versionStr))
-			versionStr = "00.0.0"; // then the below sybVersionStringToNumber() work better
-		
-		// if 1.2 --> 01.2
-		if (versionStr.matches("^[0-9]\\.[0-9].*"))
-			versionStr = "0" + versionStr; // then the below sybVersionStringToNumber() work better
+//	private void parseVersionString(String versionStr)
+//	{
+//		if (StringUtil.isNullOrBlank(versionStr) || "0.0.0".equals(versionStr))
+//			versionStr = "00.0.0"; // then the below sybVersionStringToNumber() work better
+//		
+//		// if 1.2 --> 01.2
+//		if (versionStr.matches("^[0-9]\\.[0-9].*"))
+//			versionStr = "0" + versionStr; // then the below sybVersionStringToNumber() work better
+//
+//		long version = Ver.sybVersionStringToNumber(versionStr);
+//		
+//		int major = Ver.versionNumPart(version, Ver.VERSION_MAJOR);
+//		int minor = Ver.versionNumPart(version, Ver.VERSION_MINOR);
+//		int maint = Ver.versionNumPart(version, Ver.VERSION_MAINTENANCE);
+//		int esd   = Ver.versionNumPart(version, Ver.VERSION_SERVICE_PACK);
+//		int pl    = Ver.versionNumPart(version, Ver.VERSION_PATCH_LEVEL);
+//
+////System.out.println("parseVersionString: versionStr='"+versionStr+"', version="+version+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+", pl="+pl+".");
+//		_testVersionMajor_spm.setValue(major);
+//		_testVersionMinor_spm.setValue(minor);
+//		_testVersionMaint_spm.setValue(maint);
+//		_testVersionEsd_spm  .setValue(esd);
+//		_testVersionPl_spm   .setValue(pl);
+//
+////		_testVersionShort_txt.setText(AseConnectionUtils.versionNumToStr(version));
+//		_testVersionInt_txt  .setText(" " + Long.toString(version) );
+//	}
 
-		long version = Ver.sybVersionStringToNumber(versionStr);
-		
-		int major = Ver.versionNumPart(version, Ver.VERSION_MAJOR);
-		int minor = Ver.versionNumPart(version, Ver.VERSION_MINOR);
-		int maint = Ver.versionNumPart(version, Ver.VERSION_MAINTENANCE);
-		int esd   = Ver.versionNumPart(version, Ver.VERSION_SERVICE_PACK);
-		int pl    = Ver.versionNumPart(version, Ver.VERSION_PATCH_LEVEL);
-
-//System.out.println("parseVersionString: versionStr='"+versionStr+"', version="+version+", major="+major+", minor="+minor+", maint="+maint+", esd="+esd+", pl="+pl+".");
-		_testVersionMajor_spm.setValue(major);
-		_testVersionMinor_spm.setValue(minor);
-		_testVersionMaint_spm.setValue(maint);
-		_testVersionEsd_spm  .setValue(esd);
-		_testVersionPl_spm   .setValue(pl);
-
-//		_testVersionShort_txt.setText(AseConnectionUtils.versionNumToStr(version));
-		_testVersionInt_txt  .setText(" " + Long.toString(version) );
-	}
-
-	private void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
+	public void loadFieldsUsingVersion(long srvVersion, boolean isCeEnabled)
 	{
 //		Connection conn = AseTune.getCounterCollector().getMonConnection();
 //		Connection conn = CounterController.getInstance().getMonConnection();
@@ -600,12 +614,17 @@ extends JDialog implements ActionListener, ChangeListener
 		_sqlWhere.setText(sqlWhere);
 		_sqlClose.setText(sqlClose);
 
-		String srvVersionStr = Ver.versionNumToStr(srvVersion);
+//		String srvVersionStr = Ver.versionNumToStr(srvVersion);
 //System.out.println("loadFieldsUsingVersion(): version="+srvVersion+", srvVersionStr='"+srvVersionStr+"'.");
-		_testVersionShort_txt.setText(srvVersionStr);
-		parseVersionString(srvVersionStr);
+//		_testVersionShort_txt.setText(srvVersionStr);
+//		parseVersionString(srvVersionStr);
+//
+//		_testVersionIsCe_chk.setSelected(isCeEnabled);
 
-		_testVersionIsCe_chk.setSelected(isCeEnabled);
+		// Call the version Panel
+		if (_versionPanel != null)
+			_versionPanel.loadFieldsUsingVersion(srvVersion, isCeEnabled);
+		
 
 		_pkCols_txt          .setText(pkCols);
 		_diffCols_txt        .setText(diffCols);

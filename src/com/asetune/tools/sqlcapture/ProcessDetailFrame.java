@@ -55,7 +55,10 @@ import org.apache.log4j.Logger;
 import com.asetune.IGuiController;
 import com.asetune.Version;
 import com.asetune.gui.AsePlanViewer;
+import com.asetune.gui.DbmsVersionPanelAbstract;
+import com.asetune.gui.DbmsVersionPanelAse;
 import com.asetune.gui.LineNumberedPaper;
+import com.asetune.gui.ShowCmPropertiesDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.AbstractComponentDecorator;
 import com.asetune.gui.swing.GPanel;
@@ -2472,6 +2475,12 @@ public class ProcessDetailFrame
 	public Component getGuiHandle()
 	{
 		return this;
+	}
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelAse(showCmPropertiesDialog);
 	}
 	//-----------------------------------------------------------------------
 	// END: implement IGuiController

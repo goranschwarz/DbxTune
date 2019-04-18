@@ -22,7 +22,6 @@ package com.asetune.tools.sqlw;
 
 import java.awt.Component;
 import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -34,7 +33,6 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfile;
 import com.asetune.gui.ConnectionProfile.ConnProfileEntry;
@@ -106,10 +104,10 @@ extends SqlStatementAbstract
 	private CmdParams _params = new CmdParams();
 	
 
-	public SqlStatementCmdRemoteSql(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public SqlStatementCmdRemoteSql(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		parse(sqlOrigin);
 		init();
 	}

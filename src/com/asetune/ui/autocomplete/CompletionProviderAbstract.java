@@ -150,6 +150,10 @@ extends DefaultCompletionProvider
 
 	protected List<CompletionTemplate> _completionTemplates = null;
 
+	private boolean       _createLocalConn  = false;  // Set to true if we should create local connection or reuse sqlw conn: true = _connProvider.getNewConnection(), false = _connProvider.getConnection()
+	public void    setCreateLocalConnection(boolean b) { _createLocalConn = b; } 
+	public boolean isCreateLocalConnection()           { return _createLocalConn; } 
+	
 	public CompletionProviderAbstract(Window owner, ConnectionProvider connectionProvider)
 	{
 		_guiOwner           = owner;

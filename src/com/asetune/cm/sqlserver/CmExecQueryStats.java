@@ -246,13 +246,13 @@ extends CountersModel
 
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -266,8 +266,14 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_exec_query_stats = "dm_exec_query_stats";
+		
+		if (isAzure)
+			dm_exec_query_stats = "dm_pdw_nodes_exec_query_stats";
+
+
 		Configuration conf = Configuration.getCombinedConfiguration();
 		String  sample_extraWhereClause = conf.getProperty(       PROPKEY_sample_extraWhereClause, DEFAULT_sample_extraWhereClause);
 		boolean sample_lastXminutes     = conf.getBooleanProperty(PROPKEY_sample_lastXminutes,     DEFAULT_sample_lastXminutes);
@@ -282,7 +288,7 @@ extends CountersModel
 		if (sample_lastXminutes)
 			sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
 
-		String sql = "select * from sys.dm_exec_query_stats \n" +
+		String sql = "select * from sys." + dm_exec_query_stats + "\n" +
 				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
 				sql_sample_extraWhereClause +
 				sql_sample_lastXminutes;

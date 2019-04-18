@@ -218,11 +218,11 @@ function dbxMaxDt(dt1, dt2)
 /* **********************************************************************
 ** ** GLOBAL VARIABLES
 ** **********************************************************************/
-var _serverList = [];    // What servers does the URL reflect
-var _graphMap   = [];    // Graphs that are displaied / instantiated
-var _debug      = 0;     // Debug level: 0=off, 1=more, 2=evenMore, 3...
-var _subscribe  = false; // If we should subscribe to Graph data from the server
-
+var _serverList   = [];      // What servers does the URL reflect
+var _graphMap     = [];      // Graphs that are displaied / instantiated
+var _debug        = 0;       // Debug level: 0=off, 1=more, 2=evenMore, 3...
+var _subscribe    = false;   // If we should subscribe to Graph data from the server
+var _colorSchema  = "white"; // Color schema, can be: "white" or "dark"
 var _showSrvTimer = null;
 
 
@@ -768,7 +768,11 @@ class DbxGraph
 						},
 						ticks: {
 							beginAtZero: true,  // if true, scale will include 0 if it is not already included.
-						}
+						},
+						gridLines: {
+							color: 'rgba(0, 0, 0, 0.1)',
+							zeroLineColor: 'rgba(0, 0, 0, 0.25)'
+						},
 					}],
 					yAxes: [{
 						ticks: {
@@ -802,7 +806,11 @@ class DbxGraph
 								//return value.toString();
 								//return value.toLocaleString();
 							}
-						}
+						},
+						gridLines: {
+							color: 'rgba(0, 0, 0, 0.1)',
+							zeroLineColor: 'rgba(0, 0, 0, 0.25)'
+						},
 					}],
 				},
 				// pan: { // Container for pan options
@@ -848,8 +856,11 @@ class DbxGraph
 							return data.datasets[tooltipItems.datasetIndex].label + ': ' + tooltipItems.yLabel.toLocaleString();
 						}
 					}
-				}
+				},
 //				plugins: {
+//					colorschemes: {
+//						scheme: 'brewer.Paired12'
+//					}
 //					datalabels: {
 //						formatter: function(value, context) {
 //							return numeral(value).format(0,0);
@@ -886,6 +897,24 @@ class DbxGraph
 			this._chartConfig.options.scales.yAxes[0].ticks.suggestedMax = 100; // Adjustment used when calculating the maximum  data value
 			this._chartConfig.options.scales.yAxes[0].ticks.suggestedMin = 0;   // Adjustment used when calculating the minimum data value
 		}
+		
+		if (_colorSchema === "dark")
+		{
+//			var chartJsColorScheme = 'brewer.RdYlBu11';
+//			this._chartConfig.options.plugins.colorschemes.scheme = chartJsColorScheme;
+			
+			Chart.defaults.global.defaultFontColor = '#ccc';
+
+			this._chartConfig.options.tooltips.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+			this._chartConfig.options.tooltips.titleFontColor  = '#000';
+			this._chartConfig.options.tooltips.bodyFontColor   = '#000';
+			this._chartConfig.options.scales.xAxes[0].gridLines.color         = 'rgba(255, 255, 255, 0.2)';
+			this._chartConfig.options.scales.xAxes[0].gridLines.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
+			this._chartConfig.options.scales.yAxes[0].gridLines.color         = 'rgba(255, 255, 255, 0.2)';
+			this._chartConfig.options.scales.yAxes[0].gridLines.zeroLineColor = 'rgba(255, 255, 255, 0.5)';
+
+//			Chart.defaults.global.defaultColor = 'rgba(255, 255, 255, 0.2)';
+		}
 
 		// Get the outer DIV (where we will insert the graph)
 		const _outerChartDiv = document.getElementById(outerChartDiv);
@@ -900,6 +929,12 @@ class DbxGraph
 		// and add it to the outer div
 		const newDiv = document.createElement("div");
 		newDiv.setAttribute("id", this._fullName);
+		newDiv.style.border = "1px dotted gray";
+		if (_colorSchema === "dark")
+		{
+			newDiv.style.background = "#343a40";  // same as color as bootstrap "dark"
+			document.body.style.background = "#343a40";  // same as color as bootstrap "dark"
+		}
 		newDiv.style.border = "1px dotted gray";
 		newDiv.classList.add("dbx-graph-context-menu"); // add right click menu to the graph, using jQuery contextMenu plugin
 		_outerChartDiv.appendChild(newDiv);
@@ -1260,7 +1295,7 @@ class DbxGraph
 				ctx.save();
 				ctx.textAlign    = 'center';
 				ctx.textBaseline = 'middle';
-				ctx.fillStyle    = "#ff0000";
+				ctx.fillStyle    = "#FF7F50";   // coral, #FF7F50, rgb(255,127,80)
 				ctx.font         = "16px normal 'Helvetica Nueue'";
 				ctx.fillText(labelTxt, width / 2, height / 2);
 				ctx.restore();
@@ -1609,6 +1644,12 @@ function dbxChartPrintApiHelp()
 			'</td>' +
 		'</tr>' +
 		'<tr>' + 
+			'<td>cs</td>' + 
+			'<td>Color Schema... If you want a <i>dark</i> theme... use: <code>cs=dark</code><br>' + 
+			'<b>default:</b> white<br>' + 
+			'</td>' +
+		'</tr>' +
+		'<tr>' + 
 			'<td>sampleType</td>' + 
 			'<td>Data point about the graph can be fetched by different "methods".<br>' + 
 			'Here are the methods:<br>' + 
@@ -1661,8 +1702,10 @@ function dbxTuneLoadCharts(destinationDivId)
 	const gwidth         = getParameter("gwidth",        650);
 	const sampleType     = getParameter("sampleType",    "");
 	const sampleValue    = getParameter("sampleValue",   "");
+	const colorSchema    = getParameter("cs",            "white");
 
 	_debug = debug;
+	_colorSchema = colorSchema;
 
 	console.log("Passed sessionName="+sessionName);
 	console.log("Passed graphList="+graphList);
@@ -1671,6 +1714,7 @@ function dbxTuneLoadCharts(destinationDivId)
 	console.log("Passed mdc="+multiDayChart); // Multi Day Chart
 	console.log("Passed mdcp="+mdcPivot);     // Multi Day Chart - Pivot
 	console.log("Passed mdcwd="+mdcWeekDays); // Multi Day Chart - WeekDays
+	console.log("Passed colorSchema="+colorSchema);
 
 	if (subscribe === "false")
 		subscribe = false;
@@ -2418,7 +2462,11 @@ function updateNavbarInfo()
 		$("#dbx-start-time").html(oldestTs.format("YYYY-MM-DD HH:mm"));
 		$("#dbx-end-time"  ).html(newestTs.format("YYYY-MM-DD HH:mm"));
 
-		$('#dbx-report-range span').html(oldestTs.format('YYYY-MM-DD HH:mm') + ' - ' + newestTs.format('YYYY-MM-DD HH:mm'));
+		// today: only print HH:MM, else: YYYY-MM-DD HH:mm
+		if (moment(oldestTs).isSame(moment(), 'day') && moment(newestTs).isSame(moment(), 'day'))
+			$('#dbx-report-range span').html(oldestTs.format('HH:mm') + ' - ' + newestTs.format('HH:mm'));
+		else
+			$('#dbx-report-range span').html(oldestTs.format('YYYY-MM-DD HH:mm') + ' - ' + newestTs.format('YYYY-MM-DD HH:mm'));
 
 		var hourDiff = Math.round(newestTs.diff(oldestTs, 'hours', true));
 		$("#dbx-sample-time").html(hourDiff+"h");

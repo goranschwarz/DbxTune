@@ -214,13 +214,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -233,7 +233,7 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 //		RS> 29   row_lock_count                     java.sql.Types.BIGINT   bigint           
 //		RS> 30   row_lock_wait_count                java.sql.Types.BIGINT   bigint           
@@ -253,11 +253,16 @@ extends CountersModel
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("page_lock_wait_count", c++));
 		addPreferredColumnOrder(new ColumnHeaderPropsEntry("page_lock_wait_in_ms", c++));
 
+		String dm_db_index_operational_stats = "dm_db_index_operational_stats";
+		
+		if (isAzure)
+			dm_db_index_operational_stats = "dm_db_index_operational_stats";   // IS THIS THE SAME NAME IN AZURE ?????
+
 		String sql = "select \n"
 				+ "    dbname=db_name(database_id), \n"
 				+ "    objectName=object_name(object_id, database_id), \n"
 				+ "    *\n"
-				+ "from sys.dm_db_index_operational_stats(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
+				+ "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
 				+ "where object_id > 100";
 
 		return sql;

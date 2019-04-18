@@ -41,12 +41,10 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.gui.CmActiveStatementsPanel;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
-import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.XmlFormatter;
 
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
@@ -175,13 +173,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -192,8 +190,24 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_exec_sessions    = "dm_exec_sessions";
+		String dm_exec_requests    = "dm_exec_requests";
+		String dm_exec_connections = "dm_exec_connections";
+		String dm_exec_sql_text    = "dm_exec_sql_text";
+		String dm_exec_query_plan  = "dm_exec_query_plan";
+		
+		if (isAzure)
+		{
+			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
+			dm_exec_requests    = "dm_exec_requests";            // SAME NAME IN AZURE ????
+			dm_exec_connections = "dm_pdw_exec_connections";
+			dm_exec_sql_text    = "dm_exec_sql_text";            // SAME NAME IN AZURE ????
+			dm_exec_query_plan  = "dm_exec_query_plan";            // SAME NAME IN AZURE ????
+		}
+
+
 		String sql1 =
 			"SELECT  \n" +
 			"    monSource    = convert(varchar(10), 'ACTIVE'), \n" +
@@ -237,11 +251,11 @@ extends CountersModel
 			"               ELSE der.statement_end_offset  \n" +
 			"          END - der.statement_start_offset ) / 2) AS [lastKnownSql], \n" +
 			"    deqp.query_plan \n" +
-			"FROM sys.dm_exec_sessions des \n" +
-			"LEFT JOIN sys.dm_exec_requests der ON des.session_id = der.session_id \n" +
-//			"LEFT JOIN sys.dm_exec_connections dec ON des.session_id = dec.session_id \n" +
-			"CROSS APPLY sys.dm_exec_sql_text(der.sql_handle) dest \n" +
-			"CROSS APPLY sys.dm_exec_query_plan(der.plan_handle) deqp \n" +
+			"FROM sys." + dm_exec_sessions + " des \n" +
+			"LEFT JOIN sys." + dm_exec_requests + " der ON des.session_id = der.session_id \n" +
+//			"LEFT JOIN sys." + dm_exec_connections + " dec ON des.session_id = dec.session_id \n" +
+			"CROSS APPLY sys." + dm_exec_sql_text + "(der.sql_handle) dest \n" +
+			"CROSS APPLY sys." + dm_exec_query_plan + "(der.plan_handle) deqp \n" +
 			"WHERE des.session_id != @@spid";
 
 		String sql2 = 
@@ -289,7 +303,7 @@ extends CountersModel
 			"    dest.text, \n" +
 			"    '' --deqp.query_plan  \n" +
 			"FROM sys.sysprocesses p1 \n" +
-			"CROSS APPLY sys.dm_exec_sql_text(p1.sql_handle) dest  \n" +
+			"CROSS APPLY sys." + dm_exec_sql_text + "(p1.sql_handle) dest  \n" +
 			"WHERE p1.spid in (select p2.blocked from sys.sysprocesses p2 where p2.blocked > 0) \n" + 
 			"";
 			
@@ -311,15 +325,6 @@ extends CountersModel
 		if ("lastKnownSql".equals(colName))
 		{
 			return cellValue == null ? null : toHtmlString( cellValue.toString() );
-		}
-
-		if ("query_plan".equals(colName))
-		{
-			if (cellValue == null)
-				return null;
-			
-			String formatedXml = new XmlFormatter().format(cellValue.toString());
-			return toHtmlString( formatedXml );
 		}
 
 		// 'HasSqlText' STUFF
@@ -345,20 +350,16 @@ extends CountersModel
 			int pos_ShowPlanText = findColumn("query_plan");
 			if (pos_ShowPlanText > 0)
 			{
-				Object cellVal = getValueAt(modelRow, pos_ShowPlanText);
-				if (cellVal instanceof String)
-					return (String) cellVal;
+				Object o_ShowPlanText = getValueAt(modelRow, pos_ShowPlanText);
+				if (o_ShowPlanText instanceof String)
+				{
+					String xmlPlan = (String)o_ShowPlanText;
+					//return (String) cellVal;
+					return ToolTipSupplierSqlServer.createXmlPlanTooltip(xmlPlan);
+				}
 			}
 		}
 		
-		if ("wait_type".equals(colName) || "last_wait_type".equals(colName))
-		{
-			if (cellValue == null)
-				return null;
-			
-			return SqlServerWaitTypeDictionary.getInstance().getDescriptionHtml((String)cellValue);
-		}
-
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate line breaks into <br> */

@@ -38,28 +38,27 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfile;
-import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProfile.ConnProfileEntry;
 import com.asetune.gui.ConnectionProfile.JdbcEntry;
 import com.asetune.gui.ConnectionProfile.TdsEntry;
+import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.sql.diff.DiffContext;
+import com.asetune.sql.diff.DiffContext.DiffSide;
 import com.asetune.sql.diff.DiffSink;
 import com.asetune.sql.diff.DiffTable;
-import com.asetune.sql.diff.DiffContext.DiffSide;
 import com.asetune.sql.diff.actions.DiffTableModel;
 import com.asetune.sql.diff.actions.GenerateSqlText;
 import com.asetune.sql.pipe.PipeCommandDiff.ActionType;
+import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.tools.sqlw.msg.JPipeMessage;
 import com.asetune.tools.sqlw.msg.JTableResultSet;
 import com.asetune.tools.sqlw.msg.Message;
-import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
@@ -68,7 +67,7 @@ import com.asetune.utils.SwingUtils;
 public class SqlStatementCmdTabDiff 
 extends SqlStatementAbstract
 {
-	private static Logger _logger = Logger.getLogger(SqlStatementCmdTabDiff.class);
+//	private static Logger _logger = Logger.getLogger(SqlStatementCmdTabDiff.class);
 
 	private String[] _args = null;
 	private String _originCmd = null;
@@ -94,6 +93,9 @@ extends SqlStatementAbstract
 		String    _rightTable      = null;
 		String    _whereClause     = null;
 
+		int       _leftFetchSize   = -1;
+		int       _rightFetchSize  = -1;
+
 //And for other DBMSs... supply a switch --no-xxx-in-where-clauses-bla-bla-bla
 //		boolean   _dbmsDoNotUseLongDatatypesInGeneratedPkOrOrderBy = false;
 //FIXME: implement the below
@@ -103,6 +105,7 @@ extends SqlStatementAbstract
 		
 		ActionType _action         = null; 
 		String     _actionOutFile  = null; 
+		String     _goString       = "\\ngo"; 
 		String     _execBeforeSync = null;
 		String     _execAfterSync  = null;
 		boolean    _execSyncInTran = true;
@@ -135,6 +138,7 @@ extends SqlStatementAbstract
 			sb.append(", ").append("skipLobCols   ".trim()).append("=").append(StringUtil.quotify(_skipLobCols   ));
 			sb.append(", ").append("action        ".trim()).append("=").append(StringUtil.quotify(_action        ));
 			sb.append(", ").append("actionOutFile ".trim()).append("=").append(StringUtil.quotify(_actionOutFile ));
+			sb.append(", ").append("goString      ".trim()).append("=").append(StringUtil.quotify(_goString      ));
 			sb.append(", ").append("execBeforeSync".trim()).append("=").append(StringUtil.quotify(_execBeforeSync));
 			sb.append(", ").append("execAfterSync ".trim()).append("=").append(StringUtil.quotify(_execAfterSync ));
 			sb.append(", ").append("execSyncInTran".trim()).append("=").append(StringUtil.quotify(_execSyncInTran));
@@ -152,15 +156,15 @@ extends SqlStatementAbstract
 	
 //	public String        getQuery()           { return _params._query;           }
 	public List<String>  getKeyCols()         { return _params._keyCols;         }
-	public boolean       isDebugEnabled()     { return _params._debug;           }
+//	public boolean       isDebugEnabled()     { return _params._debug;           }
 
 
 
 
-	public SqlStatementCmdTabDiff(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public SqlStatementCmdTabDiff(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		parse(sqlOrigin);
 		init();
 	}
@@ -196,15 +200,18 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('x')) _params._debug           = true;
 			if (cmdLine.hasOption('X')) _params._trace           = true;
 			if (cmdLine.hasOption('Y')) _params._toStdout        = true;
-			if (cmdLine.hasOption('U')) _params._user          = cmdLine.getOptionValue('U');
-			if (cmdLine.hasOption('P')) _params._passwd        = cmdLine.getOptionValue('P');
-			if (cmdLine.hasOption('S')) _params._server        = cmdLine.getOptionValue('S');
-			if (cmdLine.hasOption('D')) _params._db            = cmdLine.getOptionValue('D');
-			if (cmdLine.hasOption('u')) _params._url           = cmdLine.getOptionValue('u');
-			if (cmdLine.hasOption('p')) _params._profile       = cmdLine.getOptionValue('p');
-			if (cmdLine.hasOption('A')) _params._action        = ActionType.fromString(cmdLine.getOptionValue('A'));
-			if (cmdLine.hasOption('o')) _params._actionOutFile = cmdLine.getOptionValue('o');
-			if (cmdLine.hasOption('L')) _params._skipLobCols   = true;
+			if (cmdLine.hasOption('U')) _params._user            = cmdLine.getOptionValue('U');
+			if (cmdLine.hasOption('P')) _params._passwd          = cmdLine.getOptionValue('P');
+			if (cmdLine.hasOption('S')) _params._server          = cmdLine.getOptionValue('S');
+			if (cmdLine.hasOption('D')) _params._db              = cmdLine.getOptionValue('D');
+			if (cmdLine.hasOption('u')) _params._url             = cmdLine.getOptionValue('u');
+			if (cmdLine.hasOption('p')) _params._profile         = cmdLine.getOptionValue('p');
+			if (cmdLine.hasOption('f')) _params._leftFetchSize   = StringUtil.parseInt(cmdLine.getOptionValue('f'), -1);
+			if (cmdLine.hasOption('F')) _params._rightFetchSize  = StringUtil.parseInt(cmdLine.getOptionValue('F'), -1);
+			if (cmdLine.hasOption('A')) _params._action          = ActionType.fromString(cmdLine.getOptionValue('A'));
+			if (cmdLine.hasOption('o')) _params._actionOutFile   = cmdLine.getOptionValue('o');
+			if (cmdLine.hasOption('g')) _params._goString        = cmdLine.getOptionValue('g');
+			if (cmdLine.hasOption('L')) _params._skipLobCols     = true;
 
 			if (cmdLine.hasOption('?'))
 				printHelp(null, "You wanted help...");
@@ -267,6 +274,10 @@ extends SqlStatementAbstract
 
 		if (StringUtil.isNullOrBlank(_params._rightTable))
 			_params._rightTable = _params._leftTable;
+
+		// if --leftFetchSize is specified but not --rightFetchSize: then set rightFetchSize to same value as leftFetchSize
+		if (_params._leftFetchSize >= 0 && _params._rightFetchSize == -1)
+			_params._rightFetchSize = _params._leftFetchSize;
 	}
 
 	private CommandLine parseCmdLine(String[] args)
@@ -287,8 +298,11 @@ extends SqlStatementAbstract
 		options.addOption( "r", "right",           true,    "Table name on the RIGHT side" );
 		options.addOption( "w", "where",           true,    "" );
 		options.addOption( "k", "keyCols",         true,    "" );
+		options.addOption( "f", "leftFetchSize",   true,    "" );
+		options.addOption( "F", "rightFetchSize",  true,    "" );
 		options.addOption( "A", "action",          true,    "what action to do with difference" );
 		options.addOption( "o", "actionOutFile",   true,    "Write actions to file" );
+		options.addOption( "g", "go",              true,    "go string" );
 		options.addOption( "L", "skipLobCols",     false,   "" );
 		options.addOption( "x", "debug",           false,   "debug" );
 		options.addOption( "X", "trace",           false,   "trace" );
@@ -361,8 +375,11 @@ extends SqlStatementAbstract
 		sb.append("  -r,--right <tableName>    Table name on the RIGHT side. (default same as '--left') \n");
 		sb.append("  -w,--where <str>          Append a 'where clause' to just compare some rows. \n");
 		sb.append("  -k,--keyCols <c1,c2...>   Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
+		sb.append("  -f,--leftFetchSize <num>  Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=-1)\n");
+		sb.append("  -F,--rightFetchSize <num> Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=same as --leftFetchSize)\n");
 		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
 		sb.append("  -o,--actionOutFile <name> Write the action out put to a file. \n");
+		sb.append("  -g,--go <termStr>         Use this as a command execution string. (default=\\ngo)\n");
 		sb.append("  -L,--skipLobCols          Skip LOB columns in the select list. (that is LONG* types adn *LOB) \n");
 		sb.append("  -x,--debug                Debug, print some extra info \n");
 		sb.append("  -X,--trace                Trace, print some extra info (more than debug)\n");
@@ -381,6 +398,10 @@ extends SqlStatementAbstract
 		sb.append("    in what order it should read the next row from (left or right ResultSet) \n");
 		sb.append("     - When it can't find the current rows PK Columns on the other side: The full row will be reported.\n");
 		sb.append("     - When we have a PK Value \"match\": all columns will be checked for value differences.\n");
+		sb.append("  - For Postgres *FetchSize will automatically be changed to 1000, to disable this, use: -f 0 -F 0 \n");
+		sb.append("    This because Postgres fetches ALL records into the client before reading first row. \n");
+		sb.append("    With big tables, this means Out-Of-Memoy. If you want to do this for other DBMS with the same \n");
+		sb.append("    behaviour, please use the --leftFetchSize #### and --rightFetchSize #### \n");
 		sb.append("\n");
 		sb.append("Example: \n");
 		sb.append("    -- check difference on the whole table with another server (in the below case a Sybase ASE)\n");
@@ -458,265 +479,327 @@ extends SqlStatementAbstract
 ////context.setMessageDebugLevel(2);  setMessageDebugLevel(2);
 //context.setMessageToStdout(true); setMessageToStdout(true);
 
-
-		// Connect to RIGHT hand side
-		if (_progress != null) _progress.setState("Connecting to RIGHT hand side DBMS");
-		if (_params._debug)     addDebugMessage(  "Connecting to RIGHT hand side DBMS");
-
-		DbxConnection rightConn = getRightConnection();
-		
-
-		ConnectionProp leftConnProps  = leftConn  == null ? null : leftConn .getConnProp();
-		ConnectionProp rightConnProps = rightConn == null ? null : rightConn.getConnProp();
-
-
-		// PRE Query on LEFT and RIGHT to see if table exists
-		// and also to collect PK info etc
-		String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 = 2"; 
-		String rightPreQuery = "select * from " + _params._rightTable + " where 1 = 2";; 
-
-
-		// PRE LEFT
-		if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
-		if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
-
-		
-		ResultSet leftPreRs = null;
-		try 
-		{
-			Statement leftPreStmt = leftConn.createStatement();
-			leftPreRs   = leftPreStmt.executeQuery(leftPreQuery);
-		}
-		catch (SQLException ex)
-		{
-			addErrorMessage("Problems executing PRE-SQL on LEFT hand side. SQL='"+leftPreQuery+"'. Caught: "+ex);
-			throw ex;
-		}
-		
-
-		
-		// PRE RIGHT
-		if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
-		if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
-
-		ResultSet rightPreRs = null;
-		try 
-		{
-			Statement rightPreStmt = rightConn.createStatement();
-			rightPreRs = rightPreStmt.executeQuery(rightPreQuery);
-		}
-		catch (SQLException ex)
-		{
-			addErrorMessage("Problems executing PRE-SQL on RIGHT hand side. SQL='"+rightPreQuery+"'. Caught: "+ex);
-			throw ex;
-		}
-
-
-		context.setPkColumns(_params._keyCols);
-		DiffTable leftPreDt  = new DiffTable(DiffSide.LEFT,  context, leftPreRs,  leftConn);//leftConnProps);
-		DiffTable rightPreDt = new DiffTable(DiffSide.RIGHT, context, rightPreRs, rightConn);//rightConnProps);
-
-		// Transfer messages that was generated during PRE Stage
-		if (context.hasMessages())
-		{
-			addMessages(context.getMessages());
-			context.clearMessages();
-		}
-		
-		// NOW CONSTRUCT SQL TEXT for the REAL SQL Query on the LEFT and RIGHT
-		String whereClause = "";
-		if (StringUtil.hasValue(_params._whereClause))
-			whereClause = " where " + _params._whereClause;
-
-		boolean skipLobColumns = _params._skipLobCols;
-		String leftQuery  = "select " + leftPreDt .getColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote(), skipLobColumns) + " from " + _params._leftTable  + whereClause + " order by " + leftPreDt .getPkColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote());
-		String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) + " from " + _params._rightTable + whereClause + " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
-		
-		if (skipLobColumns)
-		{
-			int cnt = leftPreDt .getLobColumnNames().size() + rightPreDt .getLobColumnNames().size();
-			if (cnt > 0)
-			{
-				addInfoMessage("Skipping LOB columns on LEFT  SIDE: " + leftPreDt .getLobColumnNames());
-				addInfoMessage("Skipping LOB columns on RIGHT SIDE: " + rightPreDt.getLobColumnNames());
-			}
-		}
-
-		// SET the PK found in the PreQuery (or from the _params._keyCols, which was specified earlier)
-		addDebugMessage("Setting/Using PK Columns in the context to use: "+leftPreDt.getPkColumnNames());
-		context.setPkColumns(leftPreDt.getPkColumnNames());
-
-		leftPreDt .close();
-		rightPreDt.close();
-
-		
-		
-		// Execute query LEFT SIDE
-		if (_progress != null) _progress.setState("Executing SQL at LEFT hand side DBMS, SQL: "+leftQuery);
-		if (_params._debug)     addDebugMessage(  "Executing SQL at LEFT hand side DBMS, SQL: "+leftQuery);
-
-		// Execute SQL at RIGHT Hand side
-		ResultSet leftRs = null; // FIXME: close this and the Statement "somewhere"
-		try
-		{
-			Statement leftStmt = leftConn.createStatement();
-			leftRs = leftStmt.executeQuery(leftQuery);
-		}
-		catch (SQLException ex)
-		{
-			addErrorMessage("Problems executing on LEFT hand side. SQL='"+leftQuery+"'. Caught: "+ex);
-			throw ex;
-		}
-
-
-		// Execute query RIGHT SIDE
-		if (_progress != null) _progress.setState("Executing SQL at RIGHT hand side DBMS, SQL: "+rightQuery);
-		if (_params._debug)     addDebugMessage(  "Executing SQL at RIGHT hand side DBMS, SQL: "+rightQuery);
-
-		// Execute SQL at RIGHT Hand side
-		ResultSet rightRs = null; // FIXME: close this and the Statement "somewhere"
-		try
-		{
-			Statement targetStmt = rightConn.createStatement();
-			rightRs = targetStmt.executeQuery(rightQuery);
-		}
-		catch (SQLException ex)
-		{
-			addErrorMessage("Problems executing on RIGHT hand side. SQL='"+rightQuery+"'. Caught: "+ex);
-			throw ex;
-		}
-
-
-		if (_progress != null) _progress.setState("Initializing and validating DIFF Engine...");
-		if (_params._debug)     addDebugMessage  ("Initializing and validating DIFF Engine...");
-
-
-		// Set the REAL RESULT SETS
-		context.setDiffTable(DiffSide.LEFT,  leftRs,  leftConnProps);
-		context.setDiffTable(DiffSide.RIGHT, rightRs, rightConnProps);
-
-		context.validate();
-
-		if (_progress != null) _progress.setState("Do DIFF Logic...");
-		if (_params._debug)     addDebugMessage  ("Do DIFF Logic...");
-
-		//----------------------
-		// DIFF LOGIC
-		int diffCount = context.doDiff();
-
-		if (_progress != null) _progress.setState("Done: Total Diff Count = " + diffCount);
-		if (_params._debug)     addDebugMessage  ("Done: Total Diff Count = " + diffCount);
-
-		// Transfer messages that was generated during "diff" to "this" message system
-		if (context.hasMessages())
-			addMessages(context.getMessages());
-
-		// Check results
-//		String tabInfo = "[" + context.getLeftDt().getFullTableName() + ", " + context.getRightDt().getFullTableName() + "]";
-		String tabInfo = "[" + context.getLeftDt().getShortTableName() + "]";
-		if (diffCount == 0)
-		{
-			addInfoMessage("OK - " + tabInfo + " Left and Right ResultSet has NO difference \n"
-					+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'.\n"
-					+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'."
-					);
-		}
-		else
-		{
-			DiffSink diffSink = context.getSink();
-			String msg 
-					= "        Total Diff Count = "     + diffSink.getCurrentDiffCount() 
-					                  + ", Left Missing Rows = "  + diffSink.getLeftMissingRows() .size()
-					                  + ", Right Missing Rows = " + diffSink.getRightMissingRows().size()
-					                  + ", Column Diff Rows = "   + diffSink.getDiffColumnValues().size() + ".\n"
-					+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'.\n"
-					+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'.\n"
-					+ "        NOTE: You can turn on debugging '-x' to see what SQL that is issued on left/right hand side."
-					;
-
-			addErrorMessage(tabInfo + "Left and Right ResultSet is DIFFERENT. \n" + msg);
-		}
-		
-
 		DiffTableModel diffTableModel = null;
+
+		DbxConnection rightConn = null;
 		
-		// has DIFFERENCE, do some extra stuff
-		if (diffCount != 0)
+		// NOTE: Postgres (and possibly other DBMS's) tries to read ALL records in the ResultSet into memory when executing a query
+		//       This is possibly a way to get around this...
+		//       https://jdbc.postgresql.org/documentation/head/query.html#fetchsize-example
+
+		boolean leftConnDoFetchInTransaction  = false;
+		boolean rightConnDoFetchInTransaction = false;
+
+		// Get current state of Auto Commit so we can restore it later
+		boolean leftConnOriginAutoCommit  = true;
+		boolean rightConnOriginAutoCommit = true;
+
+		String leftExtraInfoMsg  = "";
+		String rightExtraInfoMsg = "";
+
+
+		try
 		{
-			// Actions to be taken on the DIFF Results
-			if (ActionType.TABLE.equals(_params._action) || _params._action == null)
+			// Connect to RIGHT hand side
+			if (_progress != null) _progress.setState("Connecting to RIGHT hand side DBMS");
+			if (_params._debug)     addDebugMessage(  "Connecting to RIGHT hand side DBMS");
+
+			rightConn = getRightConnection();
+			
+
+			ConnectionProp leftConnProps  = leftConn  == null ? null : leftConn .getConnProp();
+			ConnectionProp rightConnProps = rightConn == null ? null : rightConn.getConnProp();
+
+
+			// PRE Query on LEFT and RIGHT to see if table exists
+			// and also to collect PK info etc
+			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 = 2"; 
+			String rightPreQuery = "select * from " + _params._rightTable + " where 1 = 2";; 
+
+
+			// PRE LEFT
+			if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
+			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
+
+			
+			ResultSet leftPreRs = null;
+			try 
 			{
-				diffTableModel = new DiffTableModel(context);
+				Statement leftPreStmt = leftConn.createStatement();
+				leftPreRs   = leftPreStmt.executeQuery(leftPreQuery);
+			}
+			catch (SQLException ex)
+			{
+				addErrorMessage("Problems executing PRE-SQL on LEFT hand side. SQL='"+leftPreQuery+"'. Caught: "+ex);
+				throw ex;
+			}
+			
 
-				// Write to OUTPUT File
-				if (StringUtil.hasValue(_params._actionOutFile))
+			
+			// PRE RIGHT
+			if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
+			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
+
+			ResultSet rightPreRs = null;
+			try 
+			{
+				Statement rightPreStmt = rightConn.createStatement();
+				rightPreRs = rightPreStmt.executeQuery(rightPreQuery);
+			}
+			catch (SQLException ex)
+			{
+				addErrorMessage("Problems executing PRE-SQL on RIGHT hand side. SQL='"+rightPreQuery+"'. Caught: "+ex);
+				throw ex;
+			}
+
+
+			context.setPkColumns(_params._keyCols);
+			DiffTable leftPreDt  = new DiffTable(DiffSide.LEFT,  context, leftPreRs,  leftConn);//leftConnProps);
+			DiffTable rightPreDt = new DiffTable(DiffSide.RIGHT, context, rightPreRs, rightConn);//rightConnProps);
+
+			// Transfer messages that was generated during PRE Stage
+			if (context.hasMessages())
+			{
+				addMessages(context.getMessages());
+				context.clearMessages();
+			}
+			
+			// NOW CONSTRUCT SQL TEXT for the REAL SQL Query on the LEFT and RIGHT
+			String whereClause = "";
+			if (StringUtil.hasValue(_params._whereClause))
+				whereClause = " where " + _params._whereClause;
+
+			boolean skipLobColumns = _params._skipLobCols;
+			String leftQuery  = "select " + leftPreDt .getColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote(), skipLobColumns) + " from " + _params._leftTable  + whereClause + " order by " + leftPreDt .getPkColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote());
+			String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) + " from " + _params._rightTable + whereClause + " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
+			
+			if (skipLobColumns)
+			{
+				int cnt = leftPreDt .getLobColumnNames().size() + rightPreDt .getLobColumnNames().size();
+				if (cnt > 0)
 				{
-					File f = new File(_params._actionOutFile);
-					addInfoMessage("Saving "+_params._action+" output to file: "+f);
-
-					//String tableStr = ""; SwingUtils.tableToString(_diffTableModel); // FIXME: strip out ALL HTML tags
-					String tableStr = SwingUtils.tableToHtmlString(diffTableModel);
-					FileUtils.write(f, tableStr, StandardCharsets.UTF_8);
+					addInfoMessage("Skipping LOB columns on LEFT  SIDE: " + leftPreDt .getLobColumnNames());
+					addInfoMessage("Skipping LOB columns on RIGHT SIDE: " + rightPreDt.getLobColumnNames());
 				}
 			}
-			else if (ActionType.SQL_LEFT.equals(_params._action))
+
+			// SET the PK found in the PreQuery (or from the _params._keyCols, which was specified earlier)
+			addDebugMessage("Setting/Using PK Columns in the context to use: "+leftPreDt.getPkColumnNames());
+			context.setPkColumns(leftPreDt.getPkColumnNames());
+
+			leftPreDt .close();
+			rightPreDt.close();
+
+
+			// NOTE: Postgres (and possibly other DBMS's) tries to read ALL records in the ResultSet into memory when executing a query
+			//       This is possibly a way to get around this...
+			//       https://jdbc.postgresql.org/documentation/head/query.html#fetchsize-example
+			leftConnOriginAutoCommit  = leftConn .getAutoCommit();
+			rightConnOriginAutoCommit = rightConn.getAutoCommit();
+
+			if ((_params._leftFetchSize < 0 && leftConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES)) || _params._leftFetchSize > 0)
 			{
-				GenerateSqlText sqlGen = new GenerateSqlText(context, leftConn);
-				List<String> dmlList = sqlGen.getSql(DiffSide.LEFT);
+				leftConnDoFetchInTransaction = true;
+				_params._leftFetchSize       = 1_000;
+				leftConn.setAutoCommit(false); // Start a transaction
 
-				for (String dml : dmlList)
-					addPlainMessage(dml);
+				addDebugMessage("LEFT Connection is '"+leftConn.getDatabaseProductName()+"', FetchSize will be set to "+_params._leftFetchSize+" and we will start a Transaction where the diff is made (row fetch).");
+				leftExtraInfoMsg += " DbmsVendor='"+leftConn.getDatabaseProductName()+"',FetchSize="+_params._leftFetchSize+",FetchInTran=true";
+			}
 
-				// Write to OUTPUT File
-				if (StringUtil.hasValue(_params._actionOutFile))
+			if ((_params._rightFetchSize < 0 && rightConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES)) || _params._rightFetchSize > 0)
+			{
+				rightConnDoFetchInTransaction = true;
+				_params._rightFetchSize       = 1_000;
+				rightConn.setAutoCommit(false); // Start a transaction
+
+				addDebugMessage("RIGHT Connection is '"+rightConn.getDatabaseProductName()+"', FetchSize will be set to "+_params._rightFetchSize+" and we will start a Transaction where the diff is made (row fetch).");
+				rightExtraInfoMsg += " DbmsVendor='"+rightConn.getDatabaseProductName()+"',FetchSize="+_params._leftFetchSize+",FetchInTran=true";
+			}
+
+
+			// Execute query LEFT SIDE
+			if (_progress != null) _progress.setState("Executing SQL at LEFT hand side DBMS, SQL: "+leftQuery);
+			if (_params._debug)     addDebugMessage(  "Executing SQL at LEFT hand side DBMS, SQL: "+leftQuery);
+
+			// Execute SQL at LEFT Hand side
+			ResultSet leftRs = null; // FIXME: close this and the Statement "somewhere"
+			try
+			{
+				Statement leftStmt = leftConn.createStatement();
+				if (_params._leftFetchSize > 0)
+					leftStmt.setFetchSize(_params._leftFetchSize);
+				leftRs = leftStmt.executeQuery(leftQuery);
+			}
+			catch (SQLException ex)
+			{
+				addErrorMessage("Problems executing on LEFT hand side. SQL='"+leftQuery+"'. Caught: "+ex);
+				throw ex;
+			}
+
+
+			// Execute query RIGHT SIDE
+			if (_progress != null) _progress.setState("Executing SQL at RIGHT hand side DBMS, SQL: "+rightQuery);
+			if (_params._debug)     addDebugMessage(  "Executing SQL at RIGHT hand side DBMS, SQL: "+rightQuery);
+
+			// Execute SQL at RIGHT Hand side
+			ResultSet rightRs = null; // FIXME: close this and the Statement "somewhere"
+			try
+			{
+				Statement rightStmt = rightConn.createStatement();
+				if (_params._rightFetchSize > 0)
+					rightStmt.setFetchSize(_params._rightFetchSize);
+				rightRs = rightStmt.executeQuery(rightQuery);
+			}
+			catch (SQLException ex)
+			{
+				addErrorMessage("Problems executing on RIGHT hand side. SQL='"+rightQuery+"'. Caught: "+ex);
+				throw ex;
+			}
+
+
+			if (_progress != null) _progress.setState("Initializing and validating DIFF Engine...");
+			if (_params._debug)     addDebugMessage  ("Initializing and validating DIFF Engine...");
+
+
+			// Set the REAL RESULT SETS
+			context.setDiffTable(DiffSide.LEFT,  leftRs,  leftConnProps);
+			context.setDiffTable(DiffSide.RIGHT, rightRs, rightConnProps);
+
+			context.validate();
+
+			if (_progress != null) _progress.setState("Do DIFF Logic...");
+			if (_params._debug)     addDebugMessage  ("Do DIFF Logic...");
+
+			//----------------------
+			// DIFF LOGIC
+			int diffCount = context.doDiff();
+
+			//----------------------
+			// RESTORE AutoCommit...
+			if (leftConnDoFetchInTransaction)  leftConn .setAutoCommit(leftConnOriginAutoCommit);
+			if (rightConnDoFetchInTransaction) rightConn.setAutoCommit(rightConnOriginAutoCommit);
+
+
+			if (_progress != null) _progress.setState("Done: Total Diff Count = " + diffCount);
+			if (_params._debug)     addDebugMessage  ("Done: Total Diff Count = " + diffCount);
+
+			// Transfer messages that was generated during "diff" to "this" message system
+			if (context.hasMessages())
+				addMessages(context.getMessages());
+
+			// Check results
+//			String tabInfo = "[" + context.getLeftDt().getFullTableName() + ", " + context.getRightDt().getFullTableName() + "]";
+			String tabInfo = "[" + context.getLeftDt().getShortTableName() + "]";
+			if (diffCount == 0)
+			{
+				addInfoMessage("OK - " + tabInfo + " Left and Right ResultSet has NO difference \n"
+						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'." + leftExtraInfoMsg + "\n"
+						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'." + rightExtraInfoMsg
+						);
+			}
+			else
+			{
+				DiffSink diffSink = context.getSink();
+				String msg 
+						= "        Total Diff Count = "     + diffSink.getCurrentDiffCount() 
+						                  + ", Left Missing Rows = "  + diffSink.getLeftMissingRows() .size()
+						                  + ", Right Missing Rows = " + diffSink.getRightMissingRows().size()
+						                  + ", Column Diff Rows = "   + diffSink.getDiffColumnValues().size() + ".\n"
+						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'." + leftExtraInfoMsg  + "\n"
+						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'." + rightExtraInfoMsg + "\n"
+						+ "        NOTE: You can turn on debugging '-x' to see what SQL that is issued on left/right hand side."
+						;
+
+				addErrorMessage(tabInfo + "Left and Right ResultSet is DIFFERENT. \n" + msg);
+			}
+			
+
+			// has DIFFERENCE, do some extra stuff
+			if (diffCount != 0)
+			{
+				// Actions to be taken on the DIFF Results
+				if (ActionType.TABLE.equals(_params._action) || _params._action == null)
 				{
-					File f = new File(_params._actionOutFile);
-					addInfoMessage("Saving "+_params._action+" output to file: "+f);
+					diffTableModel = new DiffTableModel(context);
 
-					FileUtils.writeLines(f, dmlList);
+					// Write to OUTPUT File
+					if (StringUtil.hasValue(_params._actionOutFile))
+					{
+						File f = new File(_params._actionOutFile);
+						addInfoMessage("Saving "+_params._action+" output to file: "+f);
+
+						//String tableStr = ""; SwingUtils.tableToString(_diffTableModel); // FIXME: strip out ALL HTML tags
+						String tableStr = SwingUtils.tableToHtmlString(diffTableModel);
+						FileUtils.write(f, tableStr, StandardCharsets.UTF_8);
+					}
 				}
-			}
-			else if (ActionType.SQL_RIGHT.equals(_params._action))
-			{
-				GenerateSqlText sqlGen = new GenerateSqlText(context, leftConn);
-				List<String> dmlList = sqlGen.getSql(DiffSide.RIGHT);
-				
-				for (String dml : dmlList)
-					addPlainMessage(dml);
-
-				// Write to OUTPUT File
-				if (StringUtil.hasValue(_params._actionOutFile))
+				else if (ActionType.SQL_LEFT.equals(_params._action))
 				{
-					File f = new File(_params._actionOutFile);
-					addInfoMessage("Saving "+_params._action+" output to file: "+f);
+					GenerateSqlText sqlGen = new GenerateSqlText(context, leftConn);
+					List<String> dmlList = sqlGen.getSql(DiffSide.LEFT, _params._goString);
 
-					FileUtils.writeLines(f, dmlList);
+					for (String dml : dmlList)
+						addPlainMessage(dml);
+
+					// Write to OUTPUT File
+					if (StringUtil.hasValue(_params._actionOutFile))
+					{
+						File f = new File(_params._actionOutFile);
+						addInfoMessage("Saving "+_params._action+" output to file: "+f);
+
+						FileUtils.writeLines(f, dmlList);
+					}
 				}
-			}
-			else if (ActionType.SYNC_LEFT.equals(_params._action))
-			{
-				addErrorMessage("SYNC_LEFT is not yet implemented, instead a difference table will be generated.");
-				diffTableModel = new DiffTableModel(context);
-			}
-			else if (ActionType.SYNC_RIGHT.equals(_params._action))
-			{
-				addErrorMessage("SYNC_RIGHT is not yet implemented, instead a difference table will be generated.");
-				diffTableModel = new DiffTableModel(context);
-			}
-		} // end: has DIFFERENCE
+				else if (ActionType.SQL_RIGHT.equals(_params._action))
+				{
+					GenerateSqlText sqlGen = new GenerateSqlText(context, leftConn);
+					List<String> dmlList = sqlGen.getSql(DiffSide.RIGHT, _params._goString);
+					
+					for (String dml : dmlList)
+						addPlainMessage(dml);
 
-		
-		for (Message pmsg : getMessages())
-			_resultCompList.add( new JPipeMessage(pmsg, _originCmd) );
-		clearMessages();
-		
-		if (diffTableModel != null)
-		{
-			_resultCompList.add(new JTableResultSet(diffTableModel));
+					// Write to OUTPUT File
+					if (StringUtil.hasValue(_params._actionOutFile))
+					{
+						File f = new File(_params._actionOutFile);
+						addInfoMessage("Saving "+_params._action+" output to file: "+f);
+
+						FileUtils.writeLines(f, dmlList);
+					}
+				}
+				else if (ActionType.SYNC_LEFT.equals(_params._action))
+				{
+					addErrorMessage("SYNC_LEFT is not yet implemented, instead a difference table will be generated.");
+					diffTableModel = new DiffTableModel(context);
+				}
+				else if (ActionType.SYNC_RIGHT.equals(_params._action))
+				{
+					addErrorMessage("SYNC_RIGHT is not yet implemented, instead a difference table will be generated.");
+					diffTableModel = new DiffTableModel(context);
+				}
+			} // end: has DIFFERENCE
 		}
+		finally
+		{
+			for (Message pmsg : getMessages())
+				_resultCompList.add( new JPipeMessage(pmsg, _originCmd) );
+			clearMessages();
+			
+			if (diffTableModel != null)
+			{
+				_resultCompList.add(new JTableResultSet(diffTableModel));
+			}
 
-		// close RIGHT Connection
-		rightConn.close();
+			//----------------------
+			// RESTORE AutoCommit...
+			if (leftConn  != null && leftConnDoFetchInTransaction)  leftConn .setAutoCommit(leftConnOriginAutoCommit);
+			if (rightConn != null && rightConnDoFetchInTransaction) rightConn.setAutoCommit(rightConnOriginAutoCommit);
+
+			// close RIGHT Connection
+			if (rightConn != null)
+				rightConn.close();
+		}
 
 		return false; // true=We Have A ResultSet, false=No ResultSet
 	}

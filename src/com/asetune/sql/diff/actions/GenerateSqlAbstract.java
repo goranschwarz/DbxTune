@@ -47,7 +47,7 @@ public abstract class GenerateSqlAbstract
 	private int _updateCount  = 0;
 
 	private DbxConnection _conn;
-
+	
 	// used to check that IDENTITY/AUTO_INCREMENT is enabled on some columns
 	// we should do the following before after inserting into such tables:
 	// Sybase-ASE:           BEFORE: 'set identity_insert <tabname> on' AFTER: 'set identity_insert <tabname> off'
@@ -69,8 +69,9 @@ public abstract class GenerateSqlAbstract
 	}
 	public GenerateSqlAbstract(DiffSink sink, DbxConnection conn)
 	{
-		_sink = sink;
-		_conn = conn;
+		_sink     = sink;
+		_conn     = conn;
+		
 		if (conn != null)
 		{
 			setLeftQuote(  conn.getLeftQuote()  );
@@ -116,15 +117,20 @@ public abstract class GenerateSqlAbstract
 	/**
 	 * 
 	 * @param side
+	 * @param goString 
 	 * @return
 	 */
-	protected List<String> generateSqlFix(DiffSide side)
+	protected List<String> generateSqlFix(DiffSide side, String goString)
 	throws SQLException
 	{
 		List<String> list = new ArrayList<>();
+
+		if (goString == null)
+			goString = "";
 		
 		if (_sink.getContext().isTraceEnabled())
 		{
+			_sink.getContext().addTraceMessage("GO_STRING: " + goString);
 			for ( Object[] row : _sink.getLeftMissingRows())    _sink.getContext().addTraceMessage("LEFT  MISSING: " + StringUtil.toCommaStr(row));
 			for ( Object[] row : _sink.getRightMissingRows())   _sink.getContext().addTraceMessage("RIGHT MISSING: " + StringUtil.toCommaStr(row));
 			
@@ -142,24 +148,25 @@ public abstract class GenerateSqlAbstract
 				list.add("\n"
 						+ "-------------------------------------------------------------------------------------------------------------------- \n"
 						+ "-- INSERT Records on the LEFT hand side that existed on the RIGHT hand side, but was MISSING on the LEFT hands side. \n"
-						+ "--------------------------------------------------------------------------------------------------------------------");
+						+ "--------------------------------------------------------------------------------------------------------------------"
+						+ goString);
 				
 				String identityInsert = generateSqlInsertPre(DiffSide.LEFT);
 				if (identityInsert != null)
-					list.add(identityInsert);
+					list.add(identityInsert + goString);
 			}
 
 			for ( Object[] row : _sink.getLeftMissingRows()) 
 			{
 				_insertCount++;
-				list.add(generateSqlInsert(side, row));
+				list.add(generateSqlInsert(side, row) + goString);
 			}
 
 			if (_sink.getLeftMissingRows().size() > 0) 
 			{
 				String identityInsert = generateSqlInsertPost(DiffSide.LEFT);
 				if (identityInsert != null)
-					list.add(identityInsert);
+					list.add(identityInsert + goString);
 			}
 	
 			//-------------------------------
@@ -171,13 +178,14 @@ public abstract class GenerateSqlAbstract
 				list.add("\n"
 						+ "-------------------------------------------------------------------------------------------------------------------- \n"
 						+ "-- DELETE Records on the LEFT side that exists on LEFT side, but do NOT exists on RIGHT hand side. \n"
-						+ "--------------------------------------------------------------------------------------------------------------------");
+						+ "--------------------------------------------------------------------------------------------------------------------"
+						+  goString);
 			}
 			
 			for ( Object[] row : _sink.getRightMissingRows()) 
 			{
 				_deleteCount++;
-				list.add(generateSqlDelete(side, row));
+				list.add(generateSqlDelete(side, row) + goString);
 			}
 
 			//-------------------------------
@@ -189,13 +197,14 @@ public abstract class GenerateSqlAbstract
 				list.add("\n"
 						+ "-------------------------------------------------------------------------------------------------------------------- \n"
 						+ "-- UPDATE Records on the LEFT side with values from the RIGHT side, where column was NOT the same. \n"
-						+ "--------------------------------------------------------------------------------------------------------------------");
+						+ "--------------------------------------------------------------------------------------------------------------------"
+						+ goString);
 			}
 
 			for ( DiffColumnValues dcv : _sink.getDiffColumnValues()) 
 			{
 				_updateCount++;
-				list.add(generateSqlUpdate(side, dcv));
+				list.add(generateSqlUpdate(side, dcv) + goString);
 			}
 		}
 
@@ -210,24 +219,25 @@ public abstract class GenerateSqlAbstract
 				list.add("\n"
 						+ "-------------------------------------------------------------------------------------------------------------------- \n"
 						+ "-- INSERT Records on the RIGHT hand side that existed on the LEFT hand side, but was MISSING on the RIGHT hands side. \n"
-						+ "--------------------------------------------------------------------------------------------------------------------");
+						+ "--------------------------------------------------------------------------------------------------------------------"
+						+ goString);
 
 				String identityInsert = generateSqlInsertPre(DiffSide.RIGHT);
 				if (identityInsert != null)
-					list.add(identityInsert);
+					list.add(identityInsert + goString);
 			}
 
 			for ( Object[] row : _sink.getRightMissingRows())
 			{
 				_insertCount++;
-				list.add(generateSqlInsert(side, row));
+				list.add(generateSqlInsert(side, row) + goString);
 			}
 
 			if (_sink.getRightMissingRows().size() > 0) 
 			{
 				String identityInsert = generateSqlInsertPost(DiffSide.RIGHT);
 				if (identityInsert != null)
-					list.add(identityInsert);
+					list.add(identityInsert + goString);
 			}
 
 			//-------------------------------
@@ -239,13 +249,14 @@ public abstract class GenerateSqlAbstract
 				list.add("\n"
 						+ "-------------------------------------------------------------------------------------------------------------------- \n"
 						+ "-- DELETE Records on the RIGHT side that exists on RIGHT side, but do NOT exists on LEFT hand side. \n"
-						+ "--------------------------------------------------------------------------------------------------------------------");
+						+ "--------------------------------------------------------------------------------------------------------------------"
+						+ goString);
 			}
 
 			for ( Object[] row : _sink.getLeftMissingRows()) 
 			{
 				_deleteCount++;
-				list.add(generateSqlDelete(side, row));
+				list.add(generateSqlDelete(side, row) + goString);
 			}
 
 			//-------------------------------
@@ -257,13 +268,14 @@ public abstract class GenerateSqlAbstract
 				list.add("\n"
 						+ "-------------------------------------------------------------------------------------------------------------------- \n"
 						+ "-- UPDATE Records on the RIGHT side with values from the LEFT side, where column was NOT the same. \n"
-						+ "--------------------------------------------------------------------------------------------------------------------");
+						+ "--------------------------------------------------------------------------------------------------------------------"
+						+ goString);
 			}
 			
 			for ( DiffColumnValues dcv : _sink.getDiffColumnValues()) 
 			{
 				_updateCount++;
-				list.add(generateSqlUpdate(side, dcv));
+				list.add(generateSqlUpdate(side, dcv) + goString);
 			}
 		}
 		

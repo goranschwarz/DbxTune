@@ -184,4 +184,11 @@ extends MainFrame
 
 		return super.addTabGroup(groupName);
 	}
+
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelRax(showCmPropertiesDialog);
+	}
 }

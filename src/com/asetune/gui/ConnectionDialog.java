@@ -1318,8 +1318,18 @@ public class ConnectionDialog
 	 */
 	public void setConnProfileName(String name)
 	{
-		_logger.warn("setConnProfileName(name): NOT YET IMPLEMENTED");
-		throw new RuntimeException("setConnProfileName(name): NOT YET IMPLEMENTED");
+		ConnectionProfileManager cpm = ConnectionProfileManager.getInstance();
+		ConnectionProfile cp = cpm.getProfile(name);
+		
+		if (cp == null)
+		{
+			SwingUtils.showErrorMessage(this, "Connect", "Connection Profile '"+name+"' was not found.", null);;
+			//throw new SQLException("Connection Profile '"+profileName+"' was not found.");
+			return;
+		}
+
+		// Load the connection Profile, and switch to the correct tab
+		load(cp);
 	}
 	
 //	public static Connection showConnectionDialog(Frame owner, Map input)

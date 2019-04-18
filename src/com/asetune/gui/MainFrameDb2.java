@@ -185,4 +185,10 @@ extends MainFrame
 			return false;
 		return super.addTabGroup(groupName);
 	}
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelDb2(showCmPropertiesDialog);
+	}
 }

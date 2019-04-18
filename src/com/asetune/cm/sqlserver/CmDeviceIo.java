@@ -316,13 +316,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		try 
 		{
@@ -364,7 +364,7 @@ extends CountersModel
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -375,8 +375,18 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_io_virtual_file_stats = "dm_io_virtual_file_stats";
+		String master_files             = "master_files";
+		
+		if (isAzure)
+		{
+			dm_io_virtual_file_stats = "dm_pdw_nodes_io_virtual_file_stats";
+			master_files             = "master_files";  // SAME NAME IN AZURE ????
+		}
+
+
 		String cols;
 
 		String TotalIOs = "(a.num_of_reads + a.num_of_writes)";
@@ -422,8 +432,8 @@ extends CountersModel
 
 		String sql = 
 			"select " + cols +
-			"FROM sys.dm_io_virtual_file_stats (NULL, NULL) a \n" +
-			"JOIN sys.master_files b ON a.file_id = b.file_id AND a.database_id = b.database_id \n" +
+			"FROM sys." + dm_io_virtual_file_stats + " (NULL, NULL) a \n" +
+			"JOIN sys." + master_files +" b ON a.file_id = b.file_id AND a.database_id = b.database_id \n" +
 //			"ORDER BY a.io_stall DESC \n";
 			"ORDER BY a.database_id, a.file_id \n";
 

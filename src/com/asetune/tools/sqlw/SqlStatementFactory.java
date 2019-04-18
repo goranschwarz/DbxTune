@@ -34,7 +34,7 @@ import com.asetune.utils.StringUtil;
 
 public class SqlStatementFactory
 {
-	public static SqlStatement create(DbxConnection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public static SqlStatement create(DbxConnection conn, String sql, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException, PipeCommandException
 	{
 		String sqlOrigin = sql;
@@ -46,8 +46,31 @@ public class SqlStatementFactory
 		if (sql.startsWith("\\"))
 		{
 			// A set of known commands
-			String[] knownCommands  = {"\\exec", "\\rpc", "\\call", "\\prep", "\\loadfile", "\\ddlgen", "\\ssh", "\\set", "\\tabdiff", "\\dbdiff", "\\rsql"};
-			String[] mustHaveParams = {"\\exec", "\\rpc", "\\call", "\\prep", "\\ssh"};
+			String[] knownCommands  = {
+					"\\exec", 
+					"\\rpc", 
+					"\\call", 
+					"\\prep", 
+					"\\loadfile", 
+					"\\ddlgen", 
+					"\\ssh", 
+					"\\set", 
+					"\\connect", 
+					"\\disconnect", 
+					"\\dc", 
+					"\\use", 
+					"\\tabdiff", 
+					"\\dbdiff", 
+					"\\rsql"
+					};
+
+			String[] mustHaveParams = {
+					"\\exec", 
+					"\\rpc", 
+					"\\call", 
+					"\\prep", 
+					"\\ssh"
+					};
 
 			// Get first and seconds word
 			StringTokenizer st = new StringTokenizer(sql);
@@ -72,6 +95,9 @@ public class SqlStatementFactory
 					+ "    \\ssh [user@host] cmd                       -- execute a command on the remote host\n"
 					+ "    \\rsql                                      -- Execute SQL Statement on a remote DBMS\n"
 					+ "    \\set [-u] [var=val]                        -- Set a variable to a value. Varaibles can be used in text as ${varname}\n"
+					+ "    \\connect profileName                       -- Connect to any saved connection profile\n"
+					+ "    \\disconnect                                -- Disconnect from current DBMS.\n"
+					+ "    \\use                                       -- Use/switch db Connection (used with DBMS that do not support cross db access, like Postgres and DB2)\n"
 					+ "    \\tabdiff                                   -- Do data 'diff' on two tables (on different servers, or DBMS's)\n"
 					+ "    \\dbdiff                                    -- Do data 'diff' on all tables in two databases (on different servers, or DBMS's)\n"
 					+ "\n"
@@ -111,13 +137,17 @@ public class SqlStatementFactory
 		}
 
 		// Decide what to create
-		if      (w1.equals("\\loadfile")) return new SqlStatementCmdLoadFile  (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\ddlgen"))   return new SqlStatementCmdDdlGen    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\ssh"))      return new SqlStatementCmdSsh       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\rsql"))     return new SqlStatementCmdRemoteSql (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\set"))      return new SqlStatementCmdSet       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\tabdiff"))  return new SqlStatementCmdTabDiff   (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
-		if      (w1.equals("\\dbdiff"))   return new SqlStatementCmdDbDiff    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		if      (w1.equals("\\loadfile"))   return new SqlStatementCmdLoadFile  (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\ddlgen"))     return new SqlStatementCmdDdlGen    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\ssh"))        return new SqlStatementCmdSsh       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\rsql"))       return new SqlStatementCmdRemoteSql (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\set"))        return new SqlStatementCmdSet       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\connect"))    return new SqlStatementCmdConnect   (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\disconnect")) return new SqlStatementCmdDisconnect(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\dc"))         return new SqlStatementCmdDisconnect(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\use"))        return new SqlStatementCmdUse       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\tabdiff"))    return new SqlStatementCmdTabDiff   (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
+		if      (w1.equals("\\dbdiff"))     return new SqlStatementCmdDbDiff    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 
 //		else if (w1.equals("\\exec"))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);
 //		else if (w1.equals("\\rpc" ))     return new SqlStatementCallPrep(conn, sqlOrigin, dbProductName, resultCompList, progress);

@@ -192,15 +192,7 @@
 	// SELECT count(*) from asemon_mda_info where srvVersion = $srvVersion and isClusterEnabled = $isClusterEnabled
 	if ( $clientAppName == "AseTune" )
 	{
-		$sql = "
-			IF EXISTS (SELECT 1 FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled)
-			THEN
-				SELECT 1 as 'has_ase_version';
-			ELSE
-				SELECT 0 as 'has_ase_version';
-			END IF;
-			";
-		$sql = "SELECT count(*) FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled ";
+		$sql = "SELECT count(*) FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled and clientAppName = 'AseTune' ";
 
 		if ( $debug == "true" )
 			echo "DEBUG EXECUTING SQL: $sql\n";
@@ -233,8 +225,34 @@
 	else if ( $clientAppName == "IqTune" )
 	{
 	}
-	else if ( $clientAppName == "HanaTune" )
+	else if ( $clientAppName == "SqlServerTune" )
 	{
+		$sql = "SELECT count(*) FROM asemon_mda_info WHERE srvVersion = $srvVersion AND isClusterEnabled = $isClusterEnabled and clientAppName = 'SqlServerTune' ";
+
+		if ( $debug == "true" )
+			echo "DEBUG EXECUTING SQL: $sql\n";
+
+		$hasMdaInfo = 1;
+		$result = mysqli_query($dbconn, $sql);
+		if (!$result)
+		{
+			if ( $debug == "true" )
+				echo "DEBUG NO resultset for query\n";
+		}
+		else
+		{
+			while($row = mysqli_fetch_row($result))
+			{
+				$hasMdaInfo = $row[0];
+				if ( $debug == "true" )
+					echo "DEBUG read row: $hasMdaInfo \n";
+			}
+			mysqli_free_result($result);
+		}
+		if ( $debug == "true" )
+			echo "DEBUG hasMdaInfo: $hasMdaInfo \n";
+		if ($hasMdaInfo == 0)
+			echo "SEND_MDA_INFO: true\n";
 	}
 
 

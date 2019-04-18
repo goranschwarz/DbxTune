@@ -22,6 +22,7 @@ package com.asetune.config.dict;
 
 import java.util.HashMap;
 
+import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.utils.StringUtil;
 
 public class SqlServerWaitTypeDictionary
@@ -81,12 +82,22 @@ public class SqlServerWaitTypeDictionary
 
 	public String getDescriptionHtml(String waitName)
 	{
+		String extraInfo = "<br><hr>External Description, from: Paul Randal, www.sqlskills.com<br>"
+				+ "Open in Tooltip Window:   <A HREF='https://www.sqlskills.com/help/waits/"+waitName+"'>https://www.sqlskills.com/help/waits/"+waitName+"</A><br>"
+				+ "Open in External Browser: <A HREF='"+CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER+"https://www.sqlskills.com/help/waits/"+waitName+"'>https://www.sqlskills.com/help/waits/"+waitName+"</A><br>"
+				+ "</html>";
+
 		WaitTypeRecord rec = _waitTypes.get(waitName);
 		if (rec != null)
-			return rec._description;
+		{
+			String str = rec._description;
+			
+			str = str.replace("</html>", extraInfo);
+			return str;
+		}
 
 		// Compose an empty one
-		return "<html><code>"+waitName+"</code> not found in dictionary.</html>";
+		return "<html><code>"+waitName+"</code> not found in dictionary."+extraInfo;
 	}
 
 

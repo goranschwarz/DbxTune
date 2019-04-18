@@ -131,7 +131,7 @@ extends CountersModel
 //	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		try 
 		{
@@ -152,13 +152,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -168,8 +168,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_os_spinlock_stats = "dm_os_spinlock_stats";
+		
+		if (isAzure)
+			dm_os_spinlock_stats = "dm_os_spinlock_stats"; // IS THIS THE SAME OR DOESNT IT EXISTS...????
+
 		String sql = 
 			"select \n" +
 			"    s.name, \n" +
@@ -180,7 +185,7 @@ extends CountersModel
 			"    s.sleep_time, \n" +
 			"    s.backoffs, \n" +
 			"    Description = convert(varchar(1024), '') \n" +
-			"from sys.dm_os_spinlock_stats s \n" +
+			"from sys." + dm_os_spinlock_stats + " s \n" +
 			"order by s.spins_per_collision desc \n" +
 			"";
 

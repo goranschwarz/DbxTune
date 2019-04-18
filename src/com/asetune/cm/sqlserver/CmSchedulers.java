@@ -381,7 +381,7 @@ extends CountersModel
 	}
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		try 
 		{
@@ -463,13 +463,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -479,9 +479,14 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
-		String sql = "select * from sys.dm_os_schedulers";
+		String dm_os_schedulers = "dm_os_schedulers";
+		
+		if (isAzure)
+			dm_os_schedulers = "dm_pdw_nodes_os_schedulers";
+		
+		String sql = "select * from sys." + dm_os_schedulers;
 
 		return sql;
 	}

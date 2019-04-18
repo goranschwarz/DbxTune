@@ -190,6 +190,19 @@ extends PersistWriterBase
 			String sourceSrvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME", "srv-"+slot._cfgName);
 
 			AlarmEvent alarmEvent = new AlarmEventHttpDestinationDown(sourceSrvName, slot._cfgName, slot._url, lastSendSuccessInSec, slot._errorSendAlarmThresholdInSec);
+
+			// Set the time to live
+			// But why ????
+			// IF:   the "other" PCS Writers takes a long time (longer than the "sample interval" in the Collector thread
+			// THEN: It will not see any Alarms from here... so it will see that as a "CANCEL" (since no re-rease has happened)
+			// SO:   Set the TimeToLive to "maxSaveTime" for "any" of the PCS Writers in the PCS Handler
+			long timeToLive = 120*1000; // 2 minutes by default
+			if (PersistentCounterHandler.hasInstance())
+				timeToLive = Math.max(PersistentCounterHandler.getInstance().getMaxConsumeTime(), timeToLive);
+			alarmEvent.setTimeToLive(timeToLive);
+			// NOTE: This will probably just decrease number of "FALSE" Alarms, so wee probably need to think of a better solution here...
+
+			// Finally add the Alarm
 			alarmHandler.addAlarm(alarmEvent);
 		}
 	}

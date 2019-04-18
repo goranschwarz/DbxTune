@@ -39,7 +39,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 
 public abstract class CentralPersistWriterBase

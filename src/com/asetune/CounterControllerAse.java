@@ -84,6 +84,7 @@ import com.asetune.cm.ase.CmSpidCpuWait;
 import com.asetune.cm.ase.CmSpidWait;
 import com.asetune.cm.ase.CmSpinlockActivity;
 import com.asetune.cm.ase.CmSpinlockSum;
+import com.asetune.cm.ase.CmSqlDynamic;
 import com.asetune.cm.ase.CmSqlStatement;
 import com.asetune.cm.ase.CmStatementCache;
 import com.asetune.cm.ase.CmStmntCacheDetails;
@@ -226,7 +227,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 	throws Exception
 	{
 		if (isInitialized())
-		return;
+			return;
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
 			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
@@ -380,6 +381,7 @@ public class CounterControllerAse extends CounterControllerAbstract
 		CmActiveStatements .create(counterController, guiController);
 		CmObjectActivity   .create(counterController, guiController);
 		CmSqlStatement     .create(counterController, guiController);
+		CmSqlDynamic       .create(counterController, guiController);
 		CmActiveObjects    .create(counterController, guiController);
 		CmProcCallStack    .create(counterController, guiController);
 		CmLocks            .create(counterController, guiController);

@@ -156,15 +156,23 @@ extends CountersModel
 	//------------------------------------------------------------
 	// Implementation
 	//------------------------------------------------------------
-	public static final String GRAPH_NAME_SQL_STATEMENT_SEC            = "SqlStmnt";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_ALL  = "SqlStmntTSpanAll";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_NOOP = "SqlStmntTSpanNoOp";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_0    = "SqlStmntTSpan0";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_1    = "SqlStmntTSpan1";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_2    = "SqlStmntTSpan2";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_3    = "SqlStmntTSpan3";
-	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_4    = "SqlStmntTSpan4";
-	
+	public static final String GRAPH_NAME_SQL_STATEMENT_SEC               = "SqlStmnt";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_ALL     = "SqlStmntTSpanAll";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_NOOP    = "SqlStmntTSpanNoOp";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_0       = "SqlStmntTSpan0";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_1       = "SqlStmntTSpan1";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_2       = "SqlStmntTSpan2";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_3       = "SqlStmntTSpan3";
+	public static final String GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_4       = "SqlStmntTSpan4";
+
+//TODO: implement the below graphs (the most important one is probably: LOGICAL_READ, so we can see what response time "span" does the most logical IO... so we can have a start "where" too look)
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME     = "SqlStmntSumExecMs";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_LOGICAL_READ  = "SqlStmntSumLRead";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_PHYSICAL_READ = "SqlStmntSumPRead";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME      = "SqlStmntSumCpuTime";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME     = "SqlStmntSumWaitTime";
+	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED = "SqlStmntSumRowsAfct";
+
 //	public static final String GRAPH_NAME_XXX = "xxxGraph"; //String x=GetCounters.XXX;
 //
 //	private void addTrendGraphs()
@@ -278,6 +286,84 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+
+		
+		//--------------------------------------------------------------------------------------
+		//----- Sum XXXXX Over SQL Response Time
+		//--------------------------------------------------------------------------------------
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME,
+			"Sum Exec Time Over SQL Response Time", // Menu CheckBox text
+			"Sum Exec Time Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_LOGICAL_READ,
+			"Sum Logical Reads Over SQL Response Time", // Menu CheckBox text
+			"Sum Logical Reads Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_PHYSICAL_READ,
+			"Sum Physical Reads Over SQL Response Time", // Menu CheckBox text
+			"Sum Physical Reads Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME,
+			"Sum CPU Time Over SQL Response Time", // Menu CheckBox text
+			"Sum CPU Time Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME,
+			"Sum Wait Time Over SQL Response Time", // Menu CheckBox text
+			"Sum Wait Time Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED,
+			"Sum Rows Affected Over SQL Response Time", // Menu CheckBox text
+			"Sum Rows Affected Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 	}
 
 	@Override
@@ -302,79 +388,81 @@ extends CountersModel
 		// -----------------------------------------------------------------------------------------
 		if (GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_ALL.equals(tgdp.getName()))
 		{
-			// TODO: rewrite to use: this.getAbsValueAsDouble(pk, "calculated_value");
-			Double[] arr = new Double[18];
+			allResponseTimesForColumnName(tgdp, "totalCount");
 
-			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
-			String pk0  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_0ms_0lr_0pr   );
-			String pk1  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_0_to_1_ms     );
-			String pk2  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_1_to_2_ms     );
-			String pk3  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_2_to_5_ms     );
-			String pk4  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_5_to_10_ms    );
-			String pk5  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_10_to_20_ms   );
-			String pk6  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_20_to_50_ms   );
-			String pk7  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_50_to_100_ms  );
-			String pk8  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_100_to_200_ms );
-			String pk9  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_200_to_500_ms );
-			String pk10 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_500_to_1000_ms);
-			String pk11 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_1_to_2_sec    );
-			String pk12 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_2_to_5_sec    );
-			String pk13 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_5_to_10_sec   );
-			String pk14 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_10_to_20_sec  );
-			String pk15 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_20_to_50_sec  );
-			String pk16 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_50_to_100_sec );
-			String pk17 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_ABOVE_100_sec );
-
-			Double val0  = this.getRateValueAsDouble(pk0 , "totalCount");
-			Double val1  = this.getRateValueAsDouble(pk1 , "totalCount");
-			Double val2  = this.getRateValueAsDouble(pk2 , "totalCount");
-			Double val3  = this.getRateValueAsDouble(pk3 , "totalCount");
-			Double val4  = this.getRateValueAsDouble(pk4 , "totalCount");
-			Double val5  = this.getRateValueAsDouble(pk5 , "totalCount");
-			Double val6  = this.getRateValueAsDouble(pk6 , "totalCount");
-			Double val7  = this.getRateValueAsDouble(pk7 , "totalCount");
-			Double val8  = this.getRateValueAsDouble(pk8 , "totalCount");
-			Double val9  = this.getRateValueAsDouble(pk9 , "totalCount");
-			Double val10 = this.getRateValueAsDouble(pk10, "totalCount");
-			Double val11 = this.getRateValueAsDouble(pk11, "totalCount");
-			Double val12 = this.getRateValueAsDouble(pk12, "totalCount");
-			Double val13 = this.getRateValueAsDouble(pk13, "totalCount");
-			Double val14 = this.getRateValueAsDouble(pk14, "totalCount");
-			Double val15 = this.getRateValueAsDouble(pk15, "totalCount");
-			Double val16 = this.getRateValueAsDouble(pk16, "totalCount");
-			Double val17 = this.getRateValueAsDouble(pk17, "totalCount");
-			
-			if (val0 != null && val1 != null && val2 != null && val3 != null && val4 != null && val5 != null && val6 != null && val7 != null && val8 != null && val9 != null && val10 != null && val11 != null && val12 != null && val13 != null && val14 != null && val15 != null && val16 != null && val17 != null)
-			{
-				// Calculate
-				arr[0 ] = val0 ;
-				arr[1 ] = val1 ;
-				arr[2 ] = val2 ;
-				arr[3 ] = val3 ;
-				arr[4 ] = val4 ;
-				arr[5 ] = val5 ;
-				arr[6 ] = val6 ;
-				arr[7 ] = val7 ;
-				arr[8 ] = val8 ;
-				arr[9 ] = val9 ;
-				arr[10] = val10;
-				arr[11] = val11;
-				arr[12] = val12;
-				arr[13] = val13;
-				arr[14] = val14;
-				arr[15] = val15;
-				arr[16] = val16;
-				arr[17] = val17;
-
-				// Set the values
-				tgdp.setDataPoint(this.getTimestamp(), arr);
-			}
-			else
-			{
-				TrendGraph tg = getTrendGraph(tgdp.getName());
-				if (tg != null)
-					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk1+"'='"+val1+"'.");
-			}
+//			// TODO: rewrite to use: this.getAbsValueAsDouble(pk, "calculated_value");
+//			Double[] arr = new Double[18];
+//
+//			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+//			String pk0  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_0ms_0lr_0pr   );
+//			String pk1  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_0_to_1_ms     );
+//			String pk2  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_1_to_2_ms     );
+//			String pk3  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_2_to_5_ms     );
+//			String pk4  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_5_to_10_ms    );
+//			String pk5  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_10_to_20_ms   );
+//			String pk6  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_20_to_50_ms   );
+//			String pk7  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_50_to_100_ms  );
+//			String pk8  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_100_to_200_ms );
+//			String pk9  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_200_to_500_ms );
+//			String pk10 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_500_to_1000_ms);
+//			String pk11 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_1_to_2_sec    );
+//			String pk12 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_2_to_5_sec    );
+//			String pk13 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_5_to_10_sec   );
+//			String pk14 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_10_to_20_sec  );
+//			String pk15 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_20_to_50_sec  );
+//			String pk16 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_50_to_100_sec );
+//			String pk17 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_ABOVE_100_sec );
+//
+//			Double val0  = this.getRateValueAsDouble(pk0 , "totalCount");
+//			Double val1  = this.getRateValueAsDouble(pk1 , "totalCount");
+//			Double val2  = this.getRateValueAsDouble(pk2 , "totalCount");
+//			Double val3  = this.getRateValueAsDouble(pk3 , "totalCount");
+//			Double val4  = this.getRateValueAsDouble(pk4 , "totalCount");
+//			Double val5  = this.getRateValueAsDouble(pk5 , "totalCount");
+//			Double val6  = this.getRateValueAsDouble(pk6 , "totalCount");
+//			Double val7  = this.getRateValueAsDouble(pk7 , "totalCount");
+//			Double val8  = this.getRateValueAsDouble(pk8 , "totalCount");
+//			Double val9  = this.getRateValueAsDouble(pk9 , "totalCount");
+//			Double val10 = this.getRateValueAsDouble(pk10, "totalCount");
+//			Double val11 = this.getRateValueAsDouble(pk11, "totalCount");
+//			Double val12 = this.getRateValueAsDouble(pk12, "totalCount");
+//			Double val13 = this.getRateValueAsDouble(pk13, "totalCount");
+//			Double val14 = this.getRateValueAsDouble(pk14, "totalCount");
+//			Double val15 = this.getRateValueAsDouble(pk15, "totalCount");
+//			Double val16 = this.getRateValueAsDouble(pk16, "totalCount");
+//			Double val17 = this.getRateValueAsDouble(pk17, "totalCount");
+//			
+//			if (val0 != null && val1 != null && val2 != null && val3 != null && val4 != null && val5 != null && val6 != null && val7 != null && val8 != null && val9 != null && val10 != null && val11 != null && val12 != null && val13 != null && val14 != null && val15 != null && val16 != null && val17 != null)
+//			{
+//				// Calculate
+//				arr[0 ] = val0 ;
+//				arr[1 ] = val1 ;
+//				arr[2 ] = val2 ;
+//				arr[3 ] = val3 ;
+//				arr[4 ] = val4 ;
+//				arr[5 ] = val5 ;
+//				arr[6 ] = val6 ;
+//				arr[7 ] = val7 ;
+//				arr[8 ] = val8 ;
+//				arr[9 ] = val9 ;
+//				arr[10] = val10;
+//				arr[11] = val11;
+//				arr[12] = val12;
+//				arr[13] = val13;
+//				arr[14] = val14;
+//				arr[15] = val15;
+//				arr[16] = val16;
+//				arr[17] = val17;
+//
+//				// Set the values
+//				tgdp.setDataPoint(this.getTimestamp(), arr);
+//			}
+//			else
+//			{
+//				TrendGraph tg = getTrendGraph(tgdp.getName());
+//				if (tg != null)
+//					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk1+"'='"+val1+"'.");
+//			}
 		}
 
 		// -----------------------------------------------------------------------------------------
@@ -562,6 +650,142 @@ extends CountersModel
 				if (tg != null)
 					tg.setWarningLabel("Failed to get value for 'some' pk-row: '"+pk14+"'='"+val14+"'.");
 			}
+		}
+//		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME     = "SqlStmntSumExecMs";
+//		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_LOGICAL_READ  = "SqlStmntSumLRead";
+//		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_PHYSICAL_READ = "SqlStmntSumPRead";
+//		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME      = "SqlStmntSumCpuTime";
+//		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME     = "SqlStmntSumWaitTime";
+//		public static final String GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED = "SqlStmntSumRowsAfct";
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumExecTimeMs");
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_LOGICAL_READ.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumLogicalReads");
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_PHYSICAL_READ.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumPhysicalReads");
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumCpuTime");
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumWaitTime");
+		}
+
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED.equals(tgdp.getName()))
+		{
+			allResponseTimesForColumnName(tgdp, "sumRowsAffected");
+		}
+	}
+	
+	private void allResponseTimesForColumnName(TrendGraphDataPoint tgdp, String colName)
+	{
+		Double[] arr = new Double[18];
+
+		String pk0  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_0ms_0lr_0pr   );
+		String pk1  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_0_to_1_ms     );
+		String pk2  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_1_to_2_ms     );
+		String pk3  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_2_to_5_ms     );
+		String pk4  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_5_to_10_ms    );
+		String pk5  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_10_to_20_ms   );
+		String pk6  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_20_to_50_ms   );
+		String pk7  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_50_to_100_ms  );
+		String pk8  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_100_to_200_ms );
+		String pk9  = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_200_to_500_ms );
+		String pk10 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_500_to_1000_ms);
+		String pk11 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_1_to_2_sec    );
+		String pk12 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_2_to_5_sec    );
+		String pk13 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_5_to_10_sec   );
+		String pk14 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_10_to_20_sec  );
+		String pk15 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_20_to_50_sec  );
+		String pk16 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_50_to_100_sec );
+		String pk17 = createPkStr(SqlCaptureStatementStatisticsSample.EXEC_SPAN_ABOVE_100_sec );
+
+		Double val0  = this.getRateValueAsDouble(pk0 , colName);
+		Double val1  = this.getRateValueAsDouble(pk1 , colName);
+		Double val2  = this.getRateValueAsDouble(pk2 , colName);
+		Double val3  = this.getRateValueAsDouble(pk3 , colName);
+		Double val4  = this.getRateValueAsDouble(pk4 , colName);
+		Double val5  = this.getRateValueAsDouble(pk5 , colName);
+		Double val6  = this.getRateValueAsDouble(pk6 , colName);
+		Double val7  = this.getRateValueAsDouble(pk7 , colName);
+		Double val8  = this.getRateValueAsDouble(pk8 , colName);
+		Double val9  = this.getRateValueAsDouble(pk9 , colName);
+		Double val10 = this.getRateValueAsDouble(pk10, colName);
+		Double val11 = this.getRateValueAsDouble(pk11, colName);
+		Double val12 = this.getRateValueAsDouble(pk12, colName);
+		Double val13 = this.getRateValueAsDouble(pk13, colName);
+		Double val14 = this.getRateValueAsDouble(pk14, colName);
+		Double val15 = this.getRateValueAsDouble(pk15, colName);
+		Double val16 = this.getRateValueAsDouble(pk16, colName);
+		Double val17 = this.getRateValueAsDouble(pk17, colName);
+		
+		if (val0 != null && val1 != null && val2 != null && val3 != null && val4 != null && val5 != null && val6 != null && val7 != null && val8 != null && val9 != null && val10 != null && val11 != null && val12 != null && val13 != null && val14 != null && val15 != null && val16 != null && val17 != null)
+		{
+			// Calculate
+			arr[0 ] = val0 ;
+			arr[1 ] = val1 ;
+			arr[2 ] = val2 ;
+			arr[3 ] = val3 ;
+			arr[4 ] = val4 ;
+			arr[5 ] = val5 ;
+			arr[6 ] = val6 ;
+			arr[7 ] = val7 ;
+			arr[8 ] = val8 ;
+			arr[9 ] = val9 ;
+			arr[10] = val10;
+			arr[11] = val11;
+			arr[12] = val12;
+			arr[13] = val13;
+			arr[14] = val14;
+			arr[15] = val15;
+			arr[16] = val16;
+			arr[17] = val17;
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+		else
+		{
+			TrendGraph tg = getTrendGraph(tgdp.getName());
+			if (tg != null)
+				tg.setWarningLabel("Failed to get value for 'some' pk-row:"
+					+ " '" + pk0  + "'='" + val0  + "'"
+					+ ",'" + pk1  + "'='" + val1  + "'"
+					+ ",'" + pk2  + "'='" + val2  + "'"
+					+ ",'" + pk3  + "'='" + val3  + "'"
+					+ ",'" + pk4  + "'='" + val4  + "'"
+					+ ",'" + pk5  + "'='" + val5  + "'"
+					+ ",'" + pk6  + "'='" + val6  + "'"
+					+ ",'" + pk7  + "'='" + val7  + "'"
+					+ ",'" + pk8  + "'='" + val8  + "'"
+					+ ",'" + pk9  + "'='" + val9  + "'"
+					+ ",'" + pk10 + "'='" + val10 + "'"
+					+ ",'" + pk11 + "'='" + val11 + "'"
+					+ ",'" + pk12 + "'='" + val12 + "'"
+					+ ",'" + pk13 + "'='" + val13 + "'"
+					+ ",'" + pk14 + "'='" + val14 + "'"
+					+ ",'" + pk15 + "'='" + val15 + "'"
+					+ ",'" + pk16 + "'='" + val16 + "'"
+					+ ",'" + pk17 + "'='" + val17 + "'"
+					+ ".");
 		}
 	}
 	

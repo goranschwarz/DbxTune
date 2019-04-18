@@ -169,4 +169,11 @@ extends MainFrame
 		else if (TCP_GROUP_MULTIPLEX.equals(groupName)) return "<html>IQ Multiplex/Cluster Performace Counters</html>";
 		else return super.getGroupToolTipText(groupName);
 	}
+
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelIq(showCmPropertiesDialog);
+	}
 }

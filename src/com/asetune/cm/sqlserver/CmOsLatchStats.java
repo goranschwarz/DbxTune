@@ -125,13 +125,13 @@ extends CountersModel
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -148,8 +148,13 @@ extends CountersModel
 //	RS> 4    max_wait_time_ms       java.sql.Types.BIGINT   bigint            -none-      
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_os_latch_stats = "dm_os_latch_stats";
+		
+		if (isAzure)
+			dm_os_latch_stats = "dm_pdw_nodes_os_latch_stats";
+
 		String sql = 
 				  "select "
 				+ "    latch_class, \n"
@@ -161,7 +166,7 @@ extends CountersModel
 				+ "                            ELSE 0 \n"
 				+ "                       END, \n"
 				+ "    Description = convert(varchar(1500), '') \n"
-				+ "from sys.dm_os_latch_stats \n"
+				+ "from sys." + dm_os_latch_stats
 				+ "";
 
 		return sql;

@@ -28,6 +28,8 @@ import com.asetune.IGuiController;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
+import com.asetune.graph.TrendGraphDataPoint;
+import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 
 /**
@@ -126,24 +128,20 @@ extends CountersModel
 	// Implementation
 	//------------------------------------------------------------
 	
-	private void addTrendGraphs()
-	{
-	}
-
 //	@Override
 //	protected TabularCntrPanel createGui()
 //	{
-//		return new CmRaSysmonPanel(this);
+//		return new CmWaitingTasksPanel(this);
 //	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 //		List <String> pkCols = new LinkedList<String>();
 //
@@ -156,14 +154,162 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
-		String sql = 
-			"select * \n" +
-			"from sys.dm_os_waiting_tasks \n" +
-			"where session_id is not null \n" +
-			"";
+//		String sql = 
+//			"select * \n" +
+//			"from sys.dm_os_waiting_tasks \n" +
+//			"where session_id is not null \n" +
+//			"";
+
+		String dm_os_waiting_tasks = "dm_os_waiting_tasks";
+		String dm_os_tasks         = "dm_os_tasks";
+		String dm_exec_sessions    = "dm_exec_sessions";
+		String dm_exec_requests    = "dm_exec_requests";
+		String dm_exec_sql_text    = "dm_exec_sql_text";
+		String dm_exec_query_plan  = "dm_exec_query_plan";
+		
+		if (isAzure)
+		{
+			dm_os_waiting_tasks = "dm_pdw_nodes_os_waiting_tasks";
+			dm_os_tasks         = "dm_pdw_nodes_os_tasks";
+			dm_exec_sessions    = "dm_pdw_nodes_exec_sessions";
+			dm_exec_requests    = "dm_exec_requests";            // SAME NAME IN AZURE ????
+			dm_exec_sql_text    = "dm_exec_sql_text";            // SAME NAME IN AZURE ????
+			dm_exec_query_plan  = "dm_exec_query_plan";          // SAME NAME IN AZURE ????
+		}
+
+		
+		String sql = ""
+			    + "/*============================================================================ \n"
+			    + "  File:     WaitingTasks.sql \n"
+			    + " \n"
+			    + "  Summary:  Snapshot of waiting tasks \n"
+			    + " \n"
+			    + "  SQL Server Versions: 2005 onwards \n"
+			    + "------------------------------------------------------------------------------ \n"
+			    + "  Written by Paul S. Randal, SQLskills.com \n"
+			    + " \n"
+			    + "  (c) 2015, SQLskills.com. All rights reserved. \n"
+			    + " \n"
+			    + "  For more scripts and sample code, check out \n"
+			    + "    http://www.SQLskills.com \n"
+			    + " \n"
+			    + "  You may alter this code for your own *non-commercial* purposes. You may \n"
+			    + "  republish altered code as long as you include this copyright and give due \n"
+			    + "  credit, but you must obtain prior permission before blogging this code. \n"
+			    + " \n"
+			    + "  THIS CODE AND INFORMATION ARE PROVIDED \"AS IS\" WITHOUT WARRANTY OF \n"
+			    + "  ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED \n"
+			    + "  TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A \n"
+			    + "  PARTICULAR PURPOSE. \n"
+			    + "============================================================================*/ \n"
+			    + "SELECT \n"
+			    + "    [owt].[session_id], \n"
+			    + "    [owt].[exec_context_id], \n"
+			    + "    [ot].[scheduler_id], \n"
+			    + "    [owt].[wait_duration_ms], \n"
+			    + "    [owt].[wait_type], \n"
+			    + "    [owt].[blocking_session_id], \n"
+			    + "    [owt].[resource_description], \n"
+			    + "    CASE [owt].[wait_type] \n"
+			    + "        WHEN N'CXPACKET' THEN \n"
+			    + "            RIGHT ([owt].[resource_description], \n"
+			    + "                CHARINDEX (N'=', REVERSE ([owt].[resource_description])) - 1) \n"
+			    + "        ELSE NULL \n"
+			    + "    END AS [Node ID], \n"
+			    + "    [es].[program_name], \n"
+			    + "    [est].text, \n"
+			    + "    [er].[database_id], \n"
+			    + "    [eqp].[query_plan], \n"
+			    + "    [er].[cpu_time] \n"
+			    + "FROM sys." + dm_os_waiting_tasks + " [owt] \n"
+			    + "INNER JOIN sys." + dm_os_tasks + " [ot] ON \n"
+			    + "    [owt].[waiting_task_address] = [ot].[task_address] \n"
+			    + "INNER JOIN sys." + dm_exec_sessions + " [es] ON \n"
+			    + "    [owt].[session_id] = [es].[session_id] \n"
+			    + "INNER JOIN sys." + dm_exec_requests + " [er] ON \n"
+			    + "    [es].[session_id] = [er].[session_id] \n"
+			    + "OUTER APPLY sys." + dm_exec_sql_text + " ([er].[sql_handle]) [est] \n"
+			    + "OUTER APPLY sys." + dm_exec_query_plan + " ([er].[plan_handle]) [eqp] \n"
+			    + "WHERE \n"
+			    + "    [es].[is_user_process] = 1 \n"
+			    + "ORDER BY \n"
+			    + "    [owt].[session_id], \n"
+			    + "    [owt].[exec_context_id] \n"
+			    + "";
 
 		return sql;
+	}
+
+
+	//---------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------
+	// Graph stuff
+	//---------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------
+	
+	public static final String   GRAPH_NAME_WAIT_COUNT      = "WaitCount";
+	public static final String   GRAPH_NAME_WAIT_MAX_TIME   = "WaitMaxTime";
+	
+
+	private void addTrendGraphs()
+	{
+		addTrendGraph(GRAPH_NAME_WAIT_COUNT,
+			"Number of Current Wait Tasks", 	                   // Menu CheckBox text
+			"Number of Current Wait Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] {"WaitCount"},
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			-1);  // minimum height
+
+		addTrendGraph(GRAPH_NAME_WAIT_MAX_TIME,
+			"Max Wait Time in ms for Current Tasks", 	                   // Menu CheckBox text
+			"Max Wait Time in ms for Current Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] {"wait_duration_ms"},
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			-1);  // minimum height
+	}
+	
+	@Override
+	public void updateGraphData(TrendGraphDataPoint tgdp)
+	{
+//		long   srvVersion = getServerVersion();
+		String graphName  = tgdp.getName();
+		
+		if (GRAPH_NAME_WAIT_COUNT.equals(graphName))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = new Double( this.getCounterDataAbs().getRowCount() );
+			
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+
+		if (GRAPH_NAME_WAIT_MAX_TIME.equals(graphName))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getAbsValueMax("wait_duration_ms");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
+	}
+
+	/** Normal updateGraphData() skips update if no rows in table... but we still want to update */
+	@Override
+	public void updateGraphData()
+	{
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values()) 
+			updateGraphData(tgdp);
 	}
 }

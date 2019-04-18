@@ -41,8 +41,9 @@ implements SqlStatement
 	protected ArrayList<JComponent> _resultCompList;
 	protected SqlProgressDialog _progress;
 	protected Component _owner;
+	protected QueryWindow _queryWindow;
 	
-	public SqlStatementAbstract(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public SqlStatementAbstract(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException
 	{
 		_conn           = conn;
@@ -51,6 +52,7 @@ implements SqlStatement
 		_resultCompList = resultCompList;
 		_progress       = progress;
 		_owner          = owner;
+		_queryWindow    = queryWindow;
 	}
 
 	@Override

@@ -23,7 +23,6 @@ package com.asetune.central.pcs.report;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.pcs.report.IDailySummaryReport;
 import com.asetune.sql.conn.DbxConnection;

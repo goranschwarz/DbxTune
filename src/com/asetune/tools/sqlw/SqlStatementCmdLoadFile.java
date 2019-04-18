@@ -130,10 +130,10 @@ extends SqlStatementAbstract
 	private List<List<Object>> _filePreview = null;
 
 	
-	public SqlStatementCmdLoadFile(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public SqlStatementCmdLoadFile(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		parse(sqlOrigin);
 		init();
 	}

@@ -502,7 +502,8 @@ public class DiffTable
 	{
 		if (colVal == null)
 		{
-			return "NULL";
+			return ResultSetTableModel.DEFAULT_NULL_REPLACE;
+//			return "NULL";
 		}
 		else
 		{

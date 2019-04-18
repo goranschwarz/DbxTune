@@ -24,6 +24,8 @@ import java.awt.Component;
 
 import javax.swing.JPanel;
 
+import com.asetune.gui.DbmsVersionPanelAbstract;
+import com.asetune.gui.ShowCmPropertiesDialog;
 import com.asetune.gui.swing.GTabbedPane;
 
 public interface IGuiController
@@ -64,4 +66,11 @@ public interface IGuiController
 	 * @return for example: "ase", "iq", "rs", "hana", "oracle", "sqlserver"
 	 */
 	public String getTablePopupDbmsVendorString();
+
+	/**
+	 * Create a DBMS Version specific Version Panel, which is used in TabularCntrlPanel when clicking 'Properties...'
+	 * @param showCmPropertiesDialog
+	 * @return
+	 */
+	DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog);
 }

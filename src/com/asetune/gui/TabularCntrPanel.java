@@ -2489,7 +2489,7 @@ implements
 	 * Update the panel that sit's "above" the JTable, this can include various information that 
 	 * extends the JTable with alternate graphical representation.
 	 */
-	protected void updateExtendedInfoPanel()
+	public void updateExtendedInfoPanel()
 	{
 	}
 

@@ -42,9 +42,9 @@ extends GenerateSqlAbstract
 		super(sink, conn);
 	}
 
-	public List<String> getSql(DiffSide side)
+	public List<String> getSql(DiffSide side, String goString)
 	throws SQLException
 	{
-		return generateSqlFix(side);
+		return generateSqlFix(side, goString);
 	}
 }

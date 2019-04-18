@@ -100,6 +100,7 @@
 	<script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-zoom.js"></script>
 	<script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-annotation.js"></script>
 <!--<script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-datalabels.js"></script>-->
+<!--<script type="text/javascript" src="/scripts/chartjs/plugins/chartjs-plugin-colorschemes.js"></script>-->
 
 	<!-- JS: DbxCentral -->
 	<script type="text/javascript" src="/scripts/dbxcentral.utils.js"></script>
@@ -426,7 +427,11 @@
 					console.log("window.location.ref: "+url);
 					window.location.assign(url);
 				}
-				$('#dbx-report-range span').html(start.format('YYYY-MM-DD HH:mm') + ' - ' + end.format('YYYY-MM-DD HH:mm'));
+				//$('#dbx-report-range span').html(start.format('YYYY-MM-DD HH:mm') + ' - ' + end.format('YYYY-MM-DD HH:mm'));
+				if (moment(start).isSame(moment(), 'day') && moment(end).isSame(moment(), 'day'))
+					$('#dbx-report-range span').html(start.format('HH:mm') + ' - ' + end.format('HH:mm'));
+				else
+					$('#dbx-report-range span').html(start.format('YYYY-MM-DD HH:mm') + ' - ' + end.format('YYYY-MM-DD HH:mm'));
 			}
   
 			$('#dbx-report-range').daterangepicker({
@@ -468,8 +473,8 @@
 				if (startEndDate.length === 2)
 				{
 					console.log("on 'dbx-report-range': show(): setting: startDate=|"+startEndDate[0]+"|, endDate=|"+startEndDate[1]+"|.");
-					picker.startDate = moment(startEndDate[0]);
-					picker.endDate   = moment(startEndDate[1]);
+					picker.startDate = parseDate(startEndDate[0]);
+					picker.endDate   = parseDate(startEndDate[1]);
 				}
 
 				// TODO: if graph[0] has a "timeline marker", then set the surounding time of 2 hours...
@@ -491,6 +496,21 @@
 				setNextPrevDay('next');
 			});
 
+			function parseDate(dateString)
+			{
+				var longRegEx = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/;
+				if (dateString.match(longRegEx) != null)
+					return moment(dateString);
+
+				var shortRegEx = /^\d{2}:\d{2}/;
+				if (dateString.match(shortRegEx) != null)
+					return moment(dateString, 'HH:mm');
+
+				var msg = "parseDat(): unknown date '"+dateString+"' was passed. do not match 'YYYY-MM-DD HH:mm' or 'HH:mm'";
+				console.log(msg);
+				return msg;
+			}
+			
 			function setNextPrevTime(type)
 			{
 				var currentHourSpan = parseInt( $("#dbx-sample-time").html().replace("h", "") );
@@ -503,8 +523,8 @@
 				if (startEndDate.length === 2)
 				{
 					console.log("button: "+type+"-time: currentHourSpan=|"+currentHourSpan+"|, startDate=|"+startEndDate[0]+"|, endDate=|"+startEndDate[1]+"|.");
-					var startDate = moment(startEndDate[0]);
-					var endDate   = moment(startEndDate[1]);
+					var startDate = parseDate(startEndDate[0]);
+					var endDate   = parseDate(startEndDate[1]);
 
 					if (type === "prev") {
 						startDate = startDate.subtract(currentHourSpan, 'hours');
@@ -532,8 +552,8 @@
 				var startEndDate = $('#dbx-report-range span').html().split(" - ");
 				if (startEndDate.length === 2)
 				{
-					var startDate = moment(startEndDate[0]);
-					var endDate   = moment(startEndDate[1]);
+					var startDate = parseDate(startEndDate[0]);
+					var endDate   = parseDate(startEndDate[1]);
 
 					if (type === "prev") {
 						startDate = startDate.subtract(1, 'days');

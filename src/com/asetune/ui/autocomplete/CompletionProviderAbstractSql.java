@@ -235,6 +235,7 @@ extends CompletionProviderAbstract
 		if (_localConn == null)
 			return;
 
+		_logger.info("Setting local catalog to '"+_localCatalogName+"' in Completion Provider.");
 		try 
 		{
 			_localConn.setCatalog(catName);
@@ -245,30 +246,56 @@ extends CompletionProviderAbstract
 		}
 	}
 
-	public DbxConnection getConnection()
+	public void releaseConnection()
 	{
 		if (_localConn == null)
-		{
-			_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Completion");
-			setCatalog(_localCatalogName);
-		}
+			return;
 		
-		if (_localConn != null)
+		//_connectionProvider.releaseConnection(_localConn);
+		try { _logger.info("Closing connection to: "+_localConn.getMetaData().getURL()); }
+		catch(SQLException ignore) {}
+
+		// Close and reset the connection
+		try { _localConn.close(); }
+		catch(SQLException ex) {}
+		_localConn = null;
+	}
+	
+	public DbxConnection getConnection()
+	{
+		if (isCreateLocalConnection())
 		{
-			if ( ! _localConn.isConnectionOk(false, _guiOwner) )
+			if (_localConn == null)
 			{
-				try
+				_localConn = _connectionProvider.getNewConnection(Version.getAppName() + "-Completion");
+				
+				try { _logger.info("Compleation Provider created a new connection to URL: "+_localConn.getMetaData().getURL()); }
+				catch(SQLException ignore) {}
+				
+				setCatalog(_localCatalogName);
+			}
+			
+			if (_localConn != null)
+			{
+				if ( ! _localConn.isConnectionOk(false, _guiOwner) )
 				{
-					_localConn.reConnect(_guiOwner);
-				}
-				catch(Exception ex)
-				{
-					_logger.error("Problems in Code Compleation: When trying to re-connect to DBMS there was problems. Caught: "+ex);
+					try
+					{
+						_localConn.reConnect(_guiOwner);
+					}
+					catch(Exception ex)
+					{
+						_logger.error("Problems in Code Compleation: When trying to re-connect to DBMS there was problems. Caught: "+ex);
+					}
 				}
 			}
+			
+			return _localConn;
 		}
-		
-		return _localConn;
+		else
+		{
+			return _connectionProvider.getConnection();
+		}
 	}
 
 	@Override
@@ -1038,7 +1065,7 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 		//-----------------------------------------------------------
 		// Complete Connection Profiles
 		//
-		if (currentLineStr != null && currentLineStr.startsWith("\\") && (prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile")))
+		if (currentLineStr != null && currentLineStr.startsWith("\\") && (currentLineStr.startsWith("\\connect") || prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile")))
 		{
 			if (ConnectionProfileManager.hasInstance())
 			{
@@ -1051,22 +1078,47 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 				{
 					ConnectionProfile cp = profiles.get(name);
 					
-					if (name.startsWith(enteredText))
-					{
-						ImageIcon icon = ConnectionProfileManager.getIcon16(cp.getSrvType());
-						BasicCompletion c = new BasicCompletion(this, name, null, cp.getToolTipText());
-						c.setIcon(icon);
+					String replaceWith = name;
+					if (name.indexOf(" ") >= 0 || name.indexOf("-") >= 0)
+						replaceWith = "'" + name + "'"; // Quote the string if it contains spaces etc...
 
-						cList.add(c);
-					}
+					ImageIcon icon = ConnectionProfileManager.getIcon16(cp.getSrvType());
+					BasicCompletion c = new BasicCompletion(this, replaceWith, null, cp.getToolTipText());
+					c.setIcon(icon);
+
+					cList.add(c);
 				}
-				return cList;
+				return getCompletionsFrom(cList, enteredText);
 			}
 		}
 		
 		//-----------------------------------------------------------
 		// Complete DATABASES
 		//
+		if ( currentLineStr != null && (currentLineStr.startsWith("\\use ") || currentLineStr.startsWith("\\USE ")) )
+		{
+			ConnectionProvider connProvider = getConnectionProvider();
+			if (connProvider instanceof QueryWindow)
+			{
+				List<Completion> cList = new ArrayList<Completion>();
+
+				// Get DBLIST from the QueryWindows ComboBox
+				// - Add the databases to the Completion list
+				// - return the databases that matching the current input
+				QueryWindow queryWindow = (QueryWindow)connProvider;
+				List<String> dblist = queryWindow.getDbNames();
+				for (String dbname : dblist)
+				{
+					DbInfo dbinfo = new DbInfo();
+					dbinfo._dbName = dbname;
+					cList.add( new SqlDbCompletion(this, dbinfo));
+				}
+
+				String catName = SqlObjectName.stripQuote(enteredText, _dbIdentifierQuoteString);
+				return getCompletionsFrom(cList, catName);
+			}
+		}
+
 		if ("use".equalsIgnoreCase(prevWord1))
 		{
 			ArrayList<Completion> dbList = new ArrayList<Completion>();
@@ -1081,13 +1133,17 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			}
 			return dbList;
 		}
-		if ( enteredText.equalsIgnoreCase(":db") )
+
+		if ( enteredText.startsWith(":db") )
 		{
+			String name = enteredText.substring(":db".length());
+
 			ArrayList<Completion> cList = new ArrayList<Completion>();
 			for (SqlDbCompletion dc : _dbComplList)
 				cList.add(dc);
 			
-			return cList;
+			return getCompletionsFrom(cList, name);
+//			return cList;
 		}
 
 		//-----------------------------------------------------------
@@ -1110,30 +1166,79 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			return cList;
 		}
 
+		//-------------------------------------
+		// Only show SYSTEM VIEW ---------------------- NOTE: needs to be before ':s'
+		if (enteredText.startsWith(":sv"))
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :sv SYSTEM VIEW REPLACEMENT");
+
+			String name = enteredText.substring(":sv".length());
+			
+			ArrayList<Completion> clist = new ArrayList<Completion>();
+			for (SqlTableCompletion tc : _tableComplList)
+			{
+				TableInfo ti = tc._tableInfo;
+				if ("SYSTEM VIEW".equals(ti._tabType))
+					clist.add(tc);
+			}
+
+			if ( ! clist.isEmpty() )
+				return getCompletionsFrom(clist, name);
+//				return clist;
+		}
+
+		//-------------------------------------
+		// Only show SYSTEM TABLES ---------------------- NOTE: needs to be before ':s'
+		if (enteredText.startsWith(":st"))
+		{
+			if (_logger.isDebugEnabled())
+				_logger.debug(">>> in: :st SYSTEM-TABLE REPLACEMENT");
+
+			String name = enteredText.substring(":st".length());
+			
+			ArrayList<Completion> clist = new ArrayList<Completion>();
+			for (SqlTableCompletion tc : _tableComplList)
+			{
+				TableInfo ti = tc._tableInfo;
+				if ("SYSTEM".equals(ti._tabType) || "SYSTEM TABLE".equals(ti._tabType) || "MDA Table".equals(ti._tabType))
+					clist.add(tc);
+			}
+
+			if ( ! clist.isEmpty() )
+				return getCompletionsFrom(clist, name);
+//				return clist;
+		}
+
+
 		//-----------------------------------------------------------
 		// :s = show schemas in current database
 		//
-		if ( enteredText.equalsIgnoreCase(":s") )
+		if ( enteredText.startsWith(":s") )
 		{
 			if (_logger.isDebugEnabled())
 				_logger.debug(">>> in: :s SCHEMA REPLACEMENT");
 
+			String name = enteredText.substring(":s".length());
+			
 			ArrayList<Completion> cList = new ArrayList<Completion>();
-
 			// lets return all schemas/owners
 			for (String schemaName : _schemaNames)
 				cList.add( new SqlSchemaCompletion(CompletionProviderAbstractSql.this, schemaName) );
 			
-			return cList;
+			return getCompletionsFrom(cList, name);
+			//return cList;
 		}
 
 		//-------------------------------------
 		// Only show USER TABLES 
-		if (enteredText.equalsIgnoreCase(":t"))
+		if (enteredText.startsWith(":t"))
 		{
 			if (_logger.isDebugEnabled())
 				_logger.debug(">>> in: :t TABLE REPLACEMENT");
 
+			String name = enteredText.substring(":t".length());
+			
 			ArrayList<Completion> clist = new ArrayList<Completion>();
 			for (SqlTableCompletion tc : _tableComplList)
 			{
@@ -1147,16 +1252,19 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			}
 
 			if ( ! clist.isEmpty() )
-				return clist;
+				return getCompletionsFrom(clist, name);
+//				return clist;
 		}
 
 		//-------------------------------------
 		// Only show VIEW 
-		if (enteredText.equalsIgnoreCase(":v"))
+		if (enteredText.startsWith(":v"))
 		{
 			if (_logger.isDebugEnabled())
 				_logger.debug(">>> in: :v VIEW REPLACEMENT");
 
+			String name = enteredText.substring(":v".length());
+			
 			ArrayList<Completion> clist = new ArrayList<Completion>();
 			for (SqlTableCompletion tc : _tableComplList)
 			{
@@ -1166,47 +1274,9 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 			}
 
 			if ( ! clist.isEmpty() )
-				return clist;
+				return getCompletionsFrom(clist, name);
+//				return clist;
 		}
-
-		//-------------------------------------
-		// Only show SYSTEM VIEW 
-		if (enteredText.equalsIgnoreCase(":sv"))
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug(">>> in: :sv SYSTEM VIEW REPLACEMENT");
-
-			ArrayList<Completion> clist = new ArrayList<Completion>();
-			for (SqlTableCompletion tc : _tableComplList)
-			{
-				TableInfo ti = tc._tableInfo;
-				if ("SYSTEM VIEW".equals(ti._tabType))
-					clist.add(tc);
-			}
-
-			if ( ! clist.isEmpty() )
-				return clist;
-		}
-
-		//-------------------------------------
-		// Only show SYSTEM TABLES 
-		if (enteredText.equalsIgnoreCase(":st"))
-		{
-			if (_logger.isDebugEnabled())
-				_logger.debug(">>> in: :st SYSTEM-TABLE REPLACEMENT");
-
-			ArrayList<Completion> clist = new ArrayList<Completion>();
-			for (SqlTableCompletion tc : _tableComplList)
-			{
-				TableInfo ti = tc._tableInfo;
-				if ("SYSTEM".equals(ti._tabType) || "SYSTEM TABLE".equals(ti._tabType) || "MDA Table".equals(ti._tabType))
-					clist.add(tc);
-			}
-
-			if ( ! clist.isEmpty() )
-				return clist;
-		}
-
 
 		//-----------------------------------------------------------
 		// Complete STORED PROCS, if the previous word is EXEC
@@ -2230,6 +2300,11 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		if (waitDialog.wasCancelPressed())
 			return;
 
+		if (StringUtil.hasValue(_localCatalogName))
+		{
+			setCatalog(_localCatalogName);
+		}
+
 		// Obtain a DatabaseMetaData object from our current connection        
 		DatabaseMetaData dbmd = conn.getMetaData();
 
@@ -2252,6 +2327,9 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 			_dbSupportsSchema = false;
 		}
 		
+		// get current catalog/dbName
+		try {_currentCatalog = conn.getCatalog(); }  catch(SQLException ignore) {}
+
 		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '"+_dbProductName+"'.");
 		_logger.info("JDBC DatabaseMetaData.getExtraNameCharacters()     is '"+_dbExtraNameCharacters+"'.");
 		_logger.info("JDBC DatabaseMetaData.getIdentifierQuoteString()   is '"+_dbIdentifierQuoteString+"'.");
@@ -2259,9 +2337,7 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		_logger.info("JDBC DatabaseMetaData.getSchemaTerm()              is '"+schemaTerm       + "' (dbSupportsSchema = "+_dbSupportsSchema+").");
 		_logger.info("JDBC DatabaseMetaData.getMaxSchemaNameLength()     is " +maxSchemaNameLen + " (dbSupportsSchema = "+_dbSupportsSchema+").");
 		_logger.info("JDBC _dbSupportsSchema                             is " +_dbSupportsSchema);
-
-		// get current catalog/dbName
-		_currentCatalog = conn.getCatalog();
+		_logger.info("JDBC _currentCatalog                               is " +_currentCatalog);
 
 		if (false || _logger.isDebugEnabled())
 		{

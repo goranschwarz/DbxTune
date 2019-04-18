@@ -111,6 +111,16 @@ implements ICounterController
 	/** Keep a list of all CounterModels that you have initialized */
 	protected List<CountersModel> _CmList = new ArrayList<CountersModel>();
 
+	/** 
+	 * Store DBMS properties, Would normally be populated when connecting to a DBMS that we monitor.<br>
+	 * We would get some extra information that is NOT generic over all databases, like 'Edition', or 'PageSize'...<br>
+	 * or some other specifics for that DBMS Vendor that is NOT populated by another vendor.<br> 
+	 * 
+	 * Initial use of this would be to check if we connected to a SQL-Server 'Azure' instance<br>
+	 * In that case the Dynamic Management Views will an alternate name.
+	 */
+	private Configuration _dbmsProperties = new Configuration();
+
 //	/** is sp_configure 'capture missing statistics' set or not */
 //	protected boolean _config_captureMissingStatistics = false;
 //
@@ -2292,5 +2302,45 @@ implements ICounterController
 	}
 	//==================================================================
 	// END: NO-GUI methods
+	//==================================================================
+
+	//==================================================================
+	// BEGIN: DBMS Properties
+	//==================================================================
+	/** 
+	 * Set a DBMS property, Would normally be done when connecting to it.<br>
+	 * We would get some extra information that is NOT generic over all databases, like 'Edition', or 'PageSize'...<br>
+	 * or some other specifics for that DBMS Vendor that is NOT populated by another vendor.<br> 
+	 * 
+	 * Initial use of this would be to check if we connected to a SQL-Server 'Azure' instance<br>
+	 * In that case the Dynamic Management Views will an alternate name.
+	 * 
+	 * @return The previous value stored here (null if no value existed)
+	 */
+	@Override public Object  setDbmsProperty(String name, String  value) { return _dbmsProperties.setProperty(name, value); }
+	@Override public int     setDbmsProperty(String name, int     value) { return _dbmsProperties.setProperty(name, value); }
+	@Override public boolean setDbmsProperty(String name, boolean value) { return _dbmsProperties.setProperty(name, value); }
+
+	/** Check if we have a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
+	@Override
+	public boolean hasDbmsProperty(String name)
+	{
+		return _dbmsProperties.hasProperty(name);
+	}
+
+	/** Get a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
+	@Override public String  getDbmsProperty    (String name, String  defaultValue) { return _dbmsProperties.getProperty       (name, defaultValue); }
+	@Override public int     getDbmsPropertyInt (String name, int     defaultValue) { return _dbmsProperties.getIntProperty    (name, defaultValue); }
+	@Override public boolean getDbmsPropertyBool(String name, boolean defaultValue) { return _dbmsProperties.getBooleanProperty(name, defaultValue); }
+
+	/** Get a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
+	@Override
+	public Configuration getDbmsProperty()
+	{
+		return _dbmsProperties;
+	}
+
+	//==================================================================
+	// END: DBMS Properties
 	//==================================================================
 }

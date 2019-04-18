@@ -72,7 +72,7 @@ extends TabularCntrPanel
 	}
 
 	@Override
-	protected void updateExtendedInfoPanel()
+	public void updateExtendedInfoPanel()
 	{
 		JPanel  panel = getExtendedInfoPanel();
 		if (panel == null) 

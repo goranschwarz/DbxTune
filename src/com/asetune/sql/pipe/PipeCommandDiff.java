@@ -116,6 +116,7 @@ extends PipeCommandAbstract
 
 		ActionType _action         = null; 
 		String     _actionOutFile  = null; 
+		String     _goString       = "\\ngo"; 
 		String     _execBeforeSync = null;
 		String     _execAfterSync  = null;
 		boolean    _execSyncInTran = true;
@@ -144,6 +145,7 @@ extends PipeCommandAbstract
 			sb.append(", ").append("query         ".trim()).append("=").append(StringUtil.quotify(_query         ));
 			sb.append(", ").append("action        ".trim()).append("=").append(StringUtil.quotify(_action        ));
 			sb.append(", ").append("actionOutFile ".trim()).append("=").append(StringUtil.quotify(_actionOutFile ));
+			sb.append(", ").append("goString      ".trim()).append("=").append(StringUtil.quotify(_goString      ));
 			sb.append(", ").append("execBeforeSync".trim()).append("=").append(StringUtil.quotify(_execBeforeSync));
 			sb.append(", ").append("execAfterSync ".trim()).append("=").append(StringUtil.quotify(_execAfterSync ));
 			sb.append(", ").append("execSyncInTran".trim()).append("=").append(StringUtil.quotify(_execSyncInTran));
@@ -217,6 +219,7 @@ extends PipeCommandAbstract
 				if (cmdLine.hasOption('p')) _params._profile       = cmdLine.getOptionValue('p');
 				if (cmdLine.hasOption('A')) _params._action        = ActionType.fromString(cmdLine.getOptionValue('A'));
 				if (cmdLine.hasOption('o')) _params._actionOutFile = cmdLine.getOptionValue('o');
+				if (cmdLine.hasOption('g')) _params._goString        = cmdLine.getOptionValue('g');
 			}
 			else
 			{
@@ -301,6 +304,7 @@ extends PipeCommandAbstract
 		options.addOption( "k", "keyCols",         true,    "" );
 		options.addOption( "A", "action",          true,    "what action to do with difference" );
 		options.addOption( "o", "actionOutFile",   true,    "Write actions to file" );
+		options.addOption( "g", "go",              true,    "go string" );
 		options.addOption( "x", "debug",           false,   "debug" );
 		options.addOption( "X", "trace",           false,   "trace" );
 		options.addOption( "Y", "stdout",          false,   "print debug messages to Stdout" );
@@ -409,6 +413,7 @@ extends PipeCommandAbstract
 		sb.append("  -k,--keyCols <c1,c2...>   Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
 		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
 		sb.append("  -o,--actionOutFile <name> Write the action out put to a file. \n");
+		sb.append("  -g,--go <termStr>         Use this as a command execution string. (default=\\ngo)\n");
 		sb.append("  -x,--debug                Debug, print some extra info \n");
 		sb.append("  -X,--trace                Trace, print some extra info (more than debug)\n");
 		sb.append("  -Y,--stdout               Print debug/trace messages to stdout as well\n");
@@ -656,7 +661,7 @@ extends PipeCommandAbstract
 			else if (ActionType.SQL_LEFT.equals(_params._action))
 			{
 				GenerateSqlText sqlGen = new GenerateSqlText(context, leftConn);
-				List<String> dmlList = sqlGen.getSql(DiffSide.LEFT);
+				List<String> dmlList = sqlGen.getSql(DiffSide.LEFT, _params._goString);
 
 				for (String dml : dmlList)
 					addPlainMessage(dml);
@@ -673,7 +678,7 @@ extends PipeCommandAbstract
 			else if (ActionType.SQL_RIGHT.equals(_params._action))
 			{
 				GenerateSqlText sqlGen = new GenerateSqlText(context, leftConn);
-				List<String> dmlList = sqlGen.getSql(DiffSide.RIGHT);
+				List<String> dmlList = sqlGen.getSql(DiffSide.RIGHT, _params._goString);
 				
 				for (String dml : dmlList)
 					addPlainMessage(dml);

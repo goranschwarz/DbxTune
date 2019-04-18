@@ -226,4 +226,11 @@ extends MainFrame
 		if (TCP_GROUP_MC.equals(groupName)) return "<html>RS Monitor & Performace Counters</html>";
 		else return super.getGroupToolTipText(groupName);
 	}
+
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelRs(showCmPropertiesDialog);
+	}
 }

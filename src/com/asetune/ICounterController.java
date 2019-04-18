@@ -33,6 +33,7 @@ import com.asetune.pcs.PersistContainer.HeaderInfo;
 import com.asetune.sql.DbmsDataTypeResolver;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
+import com.asetune.utils.Configuration;
 
 public interface ICounterController
 {
@@ -231,4 +232,30 @@ public interface ICounterController
 	void setDefaultSleepTimeInSec(int sleepTime);
 	/** Get the normal sleep time between refresh */
 	int  getDefaultSleepTimeInSec();
+	
+	/** 
+	 * Set a DBMS property, Would normally be done when connecting to it.<br>
+	 * We would get some extra information that is NOT generic over all databases, like 'Edition', or 'PageSize'...<br>
+	 * or some other specifics for that DBMS Vendor that is NOT populated by another vendor.<br> 
+	 * 
+	 * Initial use of this would be to check if we connected to a SQL-Server 'Azure' instance<br>
+	 * In that case the Dynamic Management Views will an alternate name.
+	 * 
+	 * @return The previous value stored here (null if no value existed)
+	 */
+	Object  setDbmsProperty(String name, String  value);
+	int     setDbmsProperty(String name, int     value);
+	boolean setDbmsProperty(String name, boolean value);
+	
+	/** Check if we have a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
+	boolean hasDbmsProperty(String name);
+	
+	/** Get a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
+	String  getDbmsProperty    (String name, String  defaultValue);
+	int     getDbmsPropertyInt (String name, int     defaultValue);
+	boolean getDbmsPropertyBool(String name, boolean defaultValue);
+
+	/** Get a DBMS property, This is DBMS Vendor Specific Settings... but NOT DBMS Configurations */
+	Configuration getDbmsProperty();
+
 }

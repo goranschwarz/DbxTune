@@ -381,21 +381,26 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 		return pkCols;
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_tran_database_transactions = "dm_tran_database_transactions";
+		
+		if (isAzure)
+			dm_tran_database_transactions = "dm_pdw_nodes_tran_database_transactions";
+
 		String sql = "" +
 				"select \n" +
 				"  srvVersion         = @@version  \n" +
@@ -406,18 +411,18 @@ extends CountersModel
 				", utcTimeDiff        = datediff(mi, getutcdate(), getdate())  \n" +
 				", NetworkAddressInfo = convert(varchar(100), SERVERPROPERTY('MachineName')) \n" +
 				", srvPageSize        = convert(int, 8196)--@@maxpagesize  \n" +
-				", LockWaits          = (select count(*) from master..sysprocesses where blocked != 0 and waittime >= 5000) \n" +
+				", LockWaits          = (select count(*) from sys.sysprocesses where blocked != 0 and waittime >= 5000) \n" +
 				", LockWaitThreshold  = convert(int, 5000) \n" +
 				", cpu_busy           = @@cpu_busy  \n" +
 				", cpu_io             = @@io_busy  \n" +
 				", cpu_idle           = @@idle  \n" +
 				", io_total_read      = @@total_read  \n" +
 				", io_total_write     = @@total_write  \n" +
-				", Connections        = (select count(*) from master..sysprocesses where sid != 0x01)  \n" + 
+				", Connections        = (select count(*) from sys.sysprocesses where sid != 0x01)  \n" + 
 				", aaConnections      = @@connections  \n" +
-				", distinctLogins     = (select count(distinct sid) from master..sysprocesses where sid != 0x01)  \n" +
+				", distinctLogins     = (select count(distinct sid) from sys.sysprocesses where sid != 0x01)  \n" +
 				", fullTranslogCount  = convert(int, 0)  \n" +
-				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) from sys.dm_tran_database_transactions) \n" +
+				", oldestOpenTranInSec= (select max(isnull(datediff(ss, database_transaction_begin_time, getdate()),0)) from sys." + dm_tran_database_transactions + ") \n" +
 				", oldestOpenTranInSecThreshold = convert(int, 10) \n" +
 				", maxSqlExecTimeInSec= (select max(isnull(datediff(ss, start_time, getdate()),0)) from sys.dm_exec_requests x where x.connection_id is not null and x.transaction_id > 0) \n" +
 				", StartDate          =               (select login_time from sys.dm_exec_sessions where session_id = 1) \n" +

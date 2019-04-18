@@ -381,6 +381,7 @@ extends AlarmWriterAbstract
 			+ "  <tr> <td><b>Type:      </b></td> <td>${type}                 </td> </tr>\n"
 			+ "#if (${type} == 'CANCEL' || ${type} == 'RE-RAISE')\n"
 			+ "  <tr> <td><b>Duration:  </b></td> <td>${duration} (MM:SS)     </td> </tr>\n"
+			+ "  <tr> <td><b>ReRaiseCnt:</b></td> <td>${reRaiseCount}         </td> </tr>\n"
 			+ "#end\n"
 			+ "  <tr> <td><b>Active Cnt:</b></td> <td>${activeAlarmCount}     </td> </tr>\n"
 			+ "\n"
@@ -421,6 +422,26 @@ extends AlarmWriterAbstract
 			+ "<b>Extended Description:</b>\n"
 			+ "<hr>\n"
 			+ "${extendedDescription}\n"
+			+ "#end\n"
+			
+			// Only on CANCEL -- write last known Description
+			+ "#if ( ${type} == 'CANCEL' && ${reRaiseDescription} != '' )\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<b>Last Known Description:</b>\n"
+			+ "<hr>\n"
+			+ "${reRaiseDescription}\n"
+			+ "#end\n"
+
+			// Only on CANCEL -- write last known EXTENDED Description
+			+ "#if ( ${type} == 'CANCEL' && ${reRaiseExtendedDescription} != '' )\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<br>\n"
+			+ "<b>Last Known Extended Description:</b>\n"
+			+ "<hr>\n"
+			+ "${reRaiseExtendedDescription}\n"
 			+ "#end\n"
 			
 			+ "</html>\n"

@@ -71,10 +71,10 @@ extends SqlStatementAbstract
 	private CmdParams _params = new CmdParams();
 	
 
-	public SqlStatementCmdDdlGen(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner)
+	public SqlStatementCmdDdlGen(DbxConnection conn, String sqlOrigin, String dbProductName, ArrayList<JComponent> resultCompList, SqlProgressDialog progress, Component owner, QueryWindow queryWindow)
 	throws SQLException, PipeCommandException
 	{
-		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner);
+		super(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		parse(sqlOrigin);
 		init();
 	}

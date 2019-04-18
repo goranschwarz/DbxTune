@@ -74,6 +74,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Performance Counter Panels: added shortcut ctrl-1 = view ABS Counter, ctrl-2 = view DIFF Counters, ctrl-3 = view RATE Counters</LI>
 		<LI>Tooltip on Cells in CounterModel - You can choose to see 'PK' or 'ALL' columns, you can also set if it should be a Focusable ToolTip (change settings with right click, context menu)</LI>
 		<li>View DBMS Configuration for all vendors: Changed most fields to be "editable", to make it easier to copy information from the cells</li>
+		<li>All DbxTools does now have a Version Sensitive Information in the Counter Controller Property Dialog</li>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
@@ -122,6 +123,12 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Changed url to 'load offline session' in *tune applications (added IFEXISTS=TRUE;DB_CLOSE_ON_EXIT=FALSE)</LI>
 		<LI>Changes in shutdown sequence. (wait for current entry to be saved before shutdown)</LI>
 		<LI>Write some extra H2 statistics on every "persist".</LI>
+		<LI>Graph page: the 'from - to'. Only show HH:mm if we are on current day, otherwise show YYYY--MM-DD HH:mm</LI>
+		<LI>Graph page: Dark mode on available with parameter cs=dark  (cs for Color Schema)</LI>
+		<LI>Index Page: A Checkbox on main page to open the graphs in Dark mode</LI>
+		<LI>Index Page: A Text box on main page where you can choose Number of Graph Columns (gcols=#)</LI>
+		<LI>AlarmWriterToMail: Changed HTML Template to include some extra information on CANCEL (ReRaiseCount and last reRaiseDescription, reRaiseExtendedDescription)</LI>
+		<LI>Added AlarmEventOsLoadAverage when the host where DbxCentral consumes to much CPU (especially in combination with H2)</LI>
  	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -249,6 +256,29 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ----- Performance Counter Specifics ----- -->
 		<LI>
+		<b>NEW: CmSqlDynamic - 'Dynamic SQL'</b><br>
+		<ul>
+			<li>can be used to check what client vendors are executing Prepared Statements</li>
+			<li>also try to figure out if the Prepared Statements are closed properly</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmSqlStatement - 'SQL Statement'</b><br>
+		<ul>
+			Added 6 new Graphs, to figgure out what SQL Statements Over Response times/spans... and how much resources they take. 
+			<li>Sum Exec Time Over SQL Response Time</li>
+			<li>Sum Logical Reads Over SQL Response Time</li>
+			<li>Sum Physical Reads Over SQL Response Time</li>
+			<li>Sum CPU Time Over SQL Response Time</li>
+			<li>Sum Wait Time Over SQL Response Time</li>
+			<li>Sum Rows Affected Over SQL Response Time</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
 		<b>Host Monitor -&gt; OS Load Average(uptime) - CmOsUptime</b><br>
 		<ul>
 			<li>Bugfix: Uptime less than 1 our was unable to parse</li>
@@ -360,7 +390,20 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>SqlServerTune - Microsoft SQL-Server</H3>
 	<!-- ---------------------------------------------------------------------- -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<LI>New Counter Collector: CmTempdbUsage - 'Tempdb Usage' - How much is used in the tempdb</LI>
+		<LI>All Collectors: Identify if we are connected to SQL-Server on Azure or a "normal" SQL-Server</LI>
+		<LI>All Collectors: DMV names that are different on Azure, so if we connects to Azure the SQL will automatically be <i>fixed</i></LI>
+		<LI>Implemented a Version Sensitive Information in the Counter Controller Property Dialog</LI>
+		<LI>Collector: 'CmWaitingTasks' complete rewrite using 'Paul S. Randal, SQLskills.com' WaitingTasks.sql</LI>
+		<LI>Collector: 'CmWaitStats' Now excludes more 'wait_type' thanks to 'Paul S. Randal'
+		  <ul>
+		    <li>Also another way of exclude 'wait_types' by just clicking a checkbox in the JTable</li>
+		    <li>Also a filter to discard a bunch of 'wait_types' in the SQL Statement directly (default to off)</li>
+		    <li>Tooltip on 'wait_types' now also has a HTML link to descriptions made by 'Paul S. Randal'</li>
+		  </ul>
+		</LI>
+		<LI>Tooltip: All Collectors that has 'session_id': Execute select * from sysprocesses and 'last know executed SQL Statement'.</LI>
+		<LI>Tooltip: All Collectors that has 'query_plan': Option to click in the tooltip to: Open XML Showplan in external Browser</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -418,6 +461,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>also right click on a ResultSet table, and choose 'Create Graph/Chart on Table Content...'</LI>
 		<LI>improved 'go | bcp' to transfer data/ResultSet between different servers and DBMS Vendors (NOTE: Still not production stable)</LI>
 		<LI>added 'go skiprs #' and 'go keeprs #' to discard and keep specific ResultSet (can for example be used with 'go | chart')</LI>
+		<LI>Cell tooltip is a bit more configurable now (max size, display all columns, or just current, etc...)</LI>
+		<LI>code completion: for command \rsql,\tabdiff,\dbdiff etc, if '-p' or '--profile' switch -- do: lookup any Connection Profile names</LI>
+		<LI>code completion: for 'go' -- do: Lookup any parameters and pipe commands that are available for 'go'</LI>
+		<LI>code completion: Code Completion like :db sv: :st :s :t :v now allows searching... If you type ':tadm' all tables starting with 'adm' will be displayed (it also accepts wild cards like ':t*admin' shows tables that has 'admin' somewhere in the table name)</LI>
+		<LI>Show more information in the status bar for Postgres: Backend PID, Session User, Current User, Current Catalog, Current Schema</LI>
+		<LI>Postgres: Show all available databases in the 'database combobox'.<br>When a database is selected: a New connection is made to this database (the old connection is not closed, but put in a pool, if/when you switch back to that database)</LI>
+		<LI>Changed \tabdiff to work better with Postgres. The Postgres JDBC Driver fetched ALL records into the client before continuing (implemented 'fetchSize')</LI>
 		<LI>new Commands to do data content diff over servers (and possibly DBMS vendors):
 		  <ul>
 		  	<li>go | diff ... -- Do difference on ResultSet</li>
@@ -425,10 +475,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		  	<li>\dbdiff  ...  -- Do difference on a database level</li>
 		  </ul>
 		  </LI>
-		<LI>new command: \rsql is new command to execute SQL at a remote DBMS (any vendor)</LI>
-		<LI>Cell tooltip is a bit more configurable now (max size, display all columns, or just current, etc...)</LI>
-		<LI>code completion: for command \rsql,\tabdiff,\dbdiff etc, if '-p' or '--profile' switch -- do: lookup any Connection Profile names</LI>
-		<LI>code completion: for 'go' -- do: Lookup any parameters and pipe commands that are available for 'go'</LI>
+		<LI>new \commands: 
+		  <ul>
+		    <li>\rsql: to execute SQL at a remote DBMS (at any vendor)</li>
+		    <li>\use:  to switch between databases using the 'database combobox', mainly for DBMS's like Postgres or databases that do not allow cross database references (works with code completion)</li>
+		    <li>\disconnect: Simply disconnect from current DBMS</li>
+		    <li>\connect 'profile name': Connect to any Connection Profile, without having to Open the Connection Dialog (works with code completion)<br>For the moment you need to execute this command as a separate <i>SQL batch</i> (so you can't have it in the middle of a SQL Batch, sorry...)</li>
+		  </ul>
+		</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

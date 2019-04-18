@@ -245,6 +245,8 @@ implements Runnable
 	/** */
 	private boolean _addDependantObjectsToDdlInQueue = DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 
+	private long _maxConsumeTime = 0;
+
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -1455,6 +1457,7 @@ implements Runnable
 
 				// Stop clock and print statistics.
 				long execTime = TimeUtils.msDiffNow(startTime);
+				_maxConsumeTime = Math.max(_maxConsumeTime, execTime);
 
 				firePcsConsumeInfo(pw.getName(), cont.getServerNameOrAlias(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics());
 
@@ -1467,6 +1470,11 @@ implements Runnable
 				pw.endOfSample(cont, true);
 			}
 		}
+	}
+	
+	public long getMaxConsumeTime()
+	{
+		return _maxConsumeTime;
 	}
 	
 	/** 

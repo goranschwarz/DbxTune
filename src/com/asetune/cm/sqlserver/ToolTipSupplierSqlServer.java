@@ -37,7 +37,9 @@ import org.fife.ui.autocomplete.Completion;
 import com.asetune.Version;
 import com.asetune.cm.CmToolTipSupplierDefault;
 import com.asetune.cm.CountersModel;
+import com.asetune.config.dict.SqlServerWaitTypeDictionary;
 import com.asetune.gui.MainFrame;
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.sql.showplan.ShowplanHtmlView.Type;
@@ -121,9 +123,29 @@ extends CmToolTipSupplierDefault
 						else                       return "Found table information, but I found MORE than 1 table, count="+list.size()+". I can only show info for 1 table. (database='"+dbName+"', table='"+tabOwnerName+"."+objectName+"')";
 					}
 				}
-		}
+			}
 		}
 		
+		if ("query_plan".equals(colName))
+		{
+			if (cellValue == null)
+				return null;
+
+			return createXmlPlanTooltip(cellValue.toString());
+
+//			String formatedXml = new XmlFormatter().format(cellValue.toString());
+//			return toHtmlString( formatedXml );
+		}
+
+		// Wait Type
+		if ("wait_type".equals(colName) || "last_wait_type".equals(colName))
+		{
+			if (cellValue == null)
+				return null;
+			
+			return SqlServerWaitTypeDictionary.getInstance().getDescriptionHtml((String)cellValue);
+		}
+
 		// Get tip on sql_handle
 		if ("sql_handle".equals(colName))
 		{
@@ -179,92 +201,43 @@ extends CmToolTipSupplierDefault
 						if (StringUtil.isNullOrBlank(queryPlanText) || queryPlanText.equalsIgnoreCase("null"))
 							return "Getting query plan using: sql='"+sql+"' returned NULL. (NO QUERY PLAN was available).";
 						
-						//-------------------------------------
-						// Write the content to a file!
-						//-------------------------------------
-						File tmpFile = null;
-						try
-						{
-							// put content in a TEMP file
-//							tmpFile = createTempFile("ssTune_qp_tooltip_", ".xml", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
-							tmpFile = ShowplanHtmlView.createHtmlFile(Type.SQLSERVER, queryPlanText);
-
-							// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-							String urlStr = ("file:///"+tmpFile);
-							try	
-							{
-								String propName_xmlInline    = Version.getAppName() + ".tooltip.xmlplan.show.inline";
-								String propName_autoExternal = Version.getAppName() + ".tooltip.xmlplan.show.auto.externalBrowser";
-
-								boolean showInline     = Configuration.getCombinedConfiguration().getBooleanProperty(propName_xmlInline,    false);
-								boolean showAutoExtern = Configuration.getCombinedConfiguration().getBooleanProperty(propName_autoExternal, false);
-								
-								URL url = new URL(urlStr);
-								
-								StringBuilder sb = new StringBuilder();
-								sb.append("<html>");
-								sb.append("<h2>Tooltip for 'SQL-Server Query Plan'</h2>");
-								sb.append("<br>");
-								sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
-								sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
-								sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
-								sb.append("<br>");
-								sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");
-								sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
-								if (showAutoExtern)
-									sb.append("<h3>Auto open external browser is enabled! (Check the browser for results)</h3>");
-								sb.append("<hr>");
-								
-								if (showInline)
-								{
-									String formatedQueryPlanText = StringUtil.xmlFormat(queryPlanText);
-									formatedQueryPlanText = formatedQueryPlanText.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); 
-
-									sb.append("<pre><code>");
-									sb.append(formatedQueryPlanText);
-									sb.append("</code></pre>");
-								}
-
-								sb.append("</html>");
-
-								if (showAutoExtern)
-								{
-									if (Desktop.isDesktopSupported())
-									{
-										Desktop desktop = Desktop.getDesktop();
-										if ( desktop.isSupported(Desktop.Action.BROWSE) )
-										{
-											try
-											{
-												desktop.browse(tmpFile.toURI());
-											}
-											catch (Exception ex)
-											{
-												SwingUtils.showErrorMessage(null, "Problems HTML Showplan", "Problems when open the URL '"+tmpFile+"'.", ex);
-											}
-										}
-									}
-								}
-
-								return sb.toString();
-							}
-							catch (Exception ex) 
-							{
-								_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
-								return 
-									"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
-									+ "Caught: <b>" + ex + "</b><br>"
-									+ "<hr>"
-									+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
-									+ "Or copy the above filename, and open it in any application or text editor<br>"
-									+ "<html/>";
-							}
-						}
-						catch (Exception ex)
-						{
-							return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
-						}
+						return createXmlPlanTooltip(queryPlanText);
 					}
+				}
+			}
+		}
+
+		if ( "session_id".equals(colName) || "SPID".equalsIgnoreCase(colName) || "blocking_session_id".equals(colName) )
+		{
+			int spid = StringUtil.parseInt(cellValue+"", -1);
+			if (spid > 0)
+			{
+				String localSql = 
+						"select p.*, LastKnownSqlText = est.text \n" +
+						"from sysprocesses p \n" +
+						"outer apply sys.dm_exec_sql_text (p.sql_handle) est \n" +
+						"where spid = " + spid;
+
+				Connection conn = _cm.getCounterController().getMonConnection();
+				try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(localSql) )
+				{
+					ResultSetTableModel rstm = new ResultSetTableModel(rs, "dm_exec_sessions");
+					if (rstm.getRowCount() == 1)
+					{
+						return rstm.toHtmlTablesVerticalString(null, true, true);
+					}
+					else if (rstm.getRowCount() > 1)
+					{
+						return rstm.toHtmlTableString(null, true, true);
+					}
+				}
+				catch(SQLException ex)
+				{
+					return "<html>" +  
+						       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
+						       "Problems when executing sql: "+localSql+"<br>" +
+						       ex.toString() +
+						       "</html>";
 				}
 			}
 		}
@@ -329,4 +302,96 @@ extends CmToolTipSupplierDefault
 		
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
+	
+	
+	public static String createXmlPlanTooltip(String queryPlanText)
+	{
+		//-------------------------------------
+		// Write the content to a file!
+		//-------------------------------------
+		File tmpFile = null;
+		try
+		{
+			// put content in a TEMP file
+//			tmpFile = createTempFile("ssTune_qp_tooltip_", ".xml", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
+			tmpFile = ShowplanHtmlView.createHtmlFile(Type.SQLSERVER, queryPlanText);
+
+			// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
+			String urlStr = ("file:///"+tmpFile);
+			try	
+			{
+				String propName_xmlInline    = Version.getAppName() + ".tooltip.xmlplan.show.inline";
+				String propName_autoExternal = Version.getAppName() + ".tooltip.xmlplan.show.auto.externalBrowser";
+
+				boolean showInline     = Configuration.getCombinedConfiguration().getBooleanProperty(propName_xmlInline,    false);
+				boolean showAutoExtern = Configuration.getCombinedConfiguration().getBooleanProperty(propName_autoExternal, false);
+				
+				URL url = new URL(urlStr);
+				
+				StringBuilder sb = new StringBuilder();
+				sb.append("<html>");
+				sb.append("<h2>Tooltip for 'SQL-Server Query Plan'</h2>");
+				sb.append("<br>");
+				sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
+				sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
+				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+				sb.append("<br>");
+				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");
+				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
+				if (showAutoExtern)
+					sb.append("<h3>Auto open external browser is enabled! (Check the browser for results)</h3>");
+				sb.append("<hr>");
+				
+				if (showInline)
+				{
+					String formatedQueryPlanText = StringUtil.xmlFormat(queryPlanText);
+					formatedQueryPlanText = formatedQueryPlanText.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); 
+
+					sb.append("<pre><code>");
+					sb.append(formatedQueryPlanText);
+					sb.append("</code></pre>");
+				}
+
+				sb.append("</html>");
+
+				if (showAutoExtern)
+				{
+					if (Desktop.isDesktopSupported())
+					{
+						Desktop desktop = Desktop.getDesktop();
+						if ( desktop.isSupported(Desktop.Action.BROWSE) )
+						{
+							try
+							{
+								desktop.browse(tmpFile.toURI());
+							}
+							catch (Exception ex)
+							{
+								SwingUtils.showErrorMessage(null, "Problems HTML Showplan", "Problems when open the URL '"+tmpFile+"'.", ex);
+							}
+						}
+					}
+				}
+
+				return sb.toString();
+			}
+			catch (Exception ex) 
+			{
+				_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+				return 
+					"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+					+ "Caught: <b>" + ex + "</b><br>"
+					+ "<hr>"
+					+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
+					+ "Or copy the above filename, and open it in any application or text editor<br>"
+					+ "<html/>";
+			}
+		}
+		catch (Exception ex)
+		{
+			return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+		}
+		
+	}
+	
 }

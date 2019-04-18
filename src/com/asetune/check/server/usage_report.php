@@ -1491,6 +1491,33 @@ DB Cleanup:
 				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'P' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
 				srvVersion                AS deleteSrvVersion
 			FROM asemon_mda_info o
+			WHERE clientAppName = 'AseTune'
+			GROUP BY srvVersion, isClusterEnabled
+			ORDER BY srvVersion, isClusterEnabled
+		";
+
+		// sending query
+		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));
+		if (!$result) {
+			die("Query to show fields from table failed");
+		}
+		htmlResultset($userIdCache, $result, $label);
+
+		//-----------------------------
+		$label = "SQL-Server Version DMV Info Summary";
+		$sql = "
+			SELECT srvVersion, isClusterEnabled as isAzure, serverAddTime, userName, verified,
+				srvVersion                AS verifySrvVersion,
+				count(*)                  AS totalRows,
+				'>>> TABLE >>>'           AS sep1,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_VIEW' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountTables,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_VIEW' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedTables,
+				'>>> FUNCTIONS >>>'       AS sep2,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_FUNC' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountCols,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_FUNC' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedCols,
+				srvVersion                AS deleteSrvVersion
+			FROM asemon_mda_info o
+			WHERE clientAppName = 'SqlServerTune'
 			GROUP BY srvVersion, isClusterEnabled
 			ORDER BY srvVersion, isClusterEnabled
 		";
@@ -1619,7 +1646,7 @@ DB Cleanup:
 				FROM asemon_mda_info h
 				WHERE $sqlTabName
 				$sqlColName
-				  AND h.type             = 'C'
+				  AND h.type             IN ('C', 'DM_VIEW_COL', 'DM_FUNC_COL')
 				  AND h.isClusterEnabled = 0
 				ORDER BY h.srvVersion, h.TableID, h.ColumnID
 			";
@@ -1658,10 +1685,10 @@ echo "SQL: $sql";
 				FROM asemon_mda_info h LEFT JOIN asemon_mda_info l ON (    h.TableName        = l.TableName
 				                                                       AND l.isClusterEnabled = $mda_isCluster
 				                                                       AND l.srvVersion       = $mda_lowVersion
-				                                                       AND l.type             = 'T')
+				                                                       AND l.type             IN ('T', 'DM_VIEW', 'DM_FUNC') )
 				WHERE h.srvVersion       = $mda_highVersion
 				  AND h.isClusterEnabled = $mda_isCluster
-				  AND h.type             = 'T'
+				  AND h.type             IN ('T', 'DM_VIEW', 'DM_FUNC')
 				HAVING l.srvVersion IS NULL
 				ORDER BY h.TableID
 			";
@@ -1692,10 +1719,10 @@ echo "SQL: $sql";
 				                                                       AND h.ColumnName       = l.ColumnName
 				                                                       AND l.isClusterEnabled = $mda_isCluster
 				                                                       AND l.srvVersion       = $mda_lowVersion
-				                                                       AND l.type             = 'C')
+				                                                       AND l.type             IN ('C', 'DM_VIEW_COL', 'DM_FUNC_COL') )
 				WHERE h.srvVersion       = $mda_highVersion
 				  AND h.isClusterEnabled = $mda_isCluster
-				  AND h.type             = 'C'
+				  AND h.type             IN ('C', 'DM_VIEW_COL', 'DM_FUNC_COL')
 				HAVING l.srvVersion IS NULL
 				ORDER BY h.TableID, h.ColumnID
 			";
@@ -1763,7 +1790,7 @@ echo "SQL: $sql";
 			$sql = "
 				SELECT srvVersion, isClusterEnabled, TableName, rowId, TableID, ColumnID as cols, Length as params, Description
 				FROM asemon_mda_info
-				WHERE type = 'T'
+				WHERE type IN ('T', 'DM_VIEW', 'DM_FUNC')
 				  AND srvVersion       = $srvVersion
 				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, TableName
@@ -1782,7 +1809,7 @@ echo "SQL: $sql";
 			$sql = "
 				SELECT *
 				FROM asemon_mda_info
-				WHERE type = 'T'
+				WHERE type IN ('T', 'DM_VIEW', 'DM_FUNC')
 				  AND srvVersion       = $srvVersion
 				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId
@@ -1800,7 +1827,7 @@ echo "SQL: $sql";
 			$sql = "
 				SELECT *
 				FROM asemon_mda_info
-				WHERE type = 'C'
+				WHERE type IN ('C', 'DM_VIEW_COL', 'DM_FUNC_COL')
 				  AND srvVersion       = $srvVersion
 				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId
@@ -1818,7 +1845,7 @@ echo "SQL: $sql";
 			$sql = "
 				SELECT *
 				FROM asemon_mda_info
-				WHERE type = 'P'
+				WHERE type IN ('P', 'DM_FUNC_PARAMS')
 				  AND srvVersion       = $srvVersion
 				  AND isClusterEnabled = $mda_isCluster
 				ORDER BY srvVersion, isClusterEnabled, rowId

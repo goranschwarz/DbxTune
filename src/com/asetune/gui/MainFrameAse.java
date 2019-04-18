@@ -1042,4 +1042,10 @@ extends MainFrame
 
 		return menu;
 	}
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelAse(showCmPropertiesDialog);
+	}
 }

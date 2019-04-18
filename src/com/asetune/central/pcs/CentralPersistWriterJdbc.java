@@ -364,8 +364,9 @@ extends CentralPersistWriterBase
 				// This setting can be appended to the database URL: jdbc:h2:test;RETENTION_TIME=0
 				if ( ! urlMap.containsKey("RETENTION_TIME") )
 				{
+//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", -1);
+					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 45_000); // This is the H2 DEFAULT value
 //					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 600_000); // default 10 minutes
-					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", -1);
 					if (h2RetentionTime > -1) // set to -1 to disable this option
 					{
 						change = true;
@@ -416,8 +417,8 @@ extends CentralPersistWriterBase
 				if ( ! urlMap.containsKey("WRITE_DELAY") )
 				{
 //					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", -1);
-//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
 					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 2_000);
+//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
 					if (h2WriteDelay > -1) // set to -1 to disable this option
 					{
 						change = true;
@@ -1465,7 +1466,24 @@ extends CentralPersistWriterBase
 					sbSql.append(", '").append("").append("'"); // UserName           '' = default
 					sbSql.append(", '").append("").append("'"); // ProfileName        '' = default
 					sbSql.append(", '").append("").append("'"); // ProfileDescription '' = default
-					sbSql.append(", '").append("[{\"graph\":\"CmSummary_aaCpuGraph\"},{\"graph\":\"CmSummary_aaReadWriteGraph\"},{\"graph\":\"CmEngines_cpuSum\"},{\"graph\":\"CmSummary_IoRwGraph\"},{\"graph\":\"CmSummary_OldestTranInSecGraph\"},{\"graph\":\"CmSummary_SumLockCountGraph\"},{\"graph\":\"CmSummary_BlockingLocksGraph\"},{\"graph\":\"CmProcessActivity_BatchCountGraph\"},{\"graph\":\"CmProcessActivity_ExecTimeGraph\"},{\"graph\":\"CmSpidWait_spidClassName\"},{\"graph\":\"CmSpidWait_spidWaitName\"},{\"graph\":\"CmExecutionTime_TimeGraph\"},{\"graph\":\"CmSysLoad_EngineRunQLengthGraph\"},{\"graph\":\"CmStatementCache_RequestPerSecGraph\"},{\"graph\":\"CmOsIostat_IoWait\"},{\"graph\":\"CmOsUptime_AdjLoadAverage\"}]").append("'");
+					sbSql.append(", '").append("[");
+					sbSql.append(                 "{\"graph\":\"CmSummary_aaCpuGraph\"},"                );
+					sbSql.append(                 "{\"graph\":\"CmSummary_aaReadWriteGraph\"},"          );
+					sbSql.append(                 "{\"graph\":\"CmEngines_cpuSum\"},"                    );
+					sbSql.append(                 "{\"graph\":\"CmSummary_IoRwGraph\"},"                 );
+					sbSql.append(                 "{\"graph\":\"CmExecutionTime_TimeGraph\"},"           );
+					sbSql.append(                 "{\"graph\":\"CmSummary_OldestTranInSecGraph\"},"      );
+					sbSql.append(                 "{\"graph\":\"CmSummary_SumLockCountGraph\"},"         );
+					sbSql.append(                 "{\"graph\":\"CmSummary_BlockingLocksGraph\"},"        );
+					sbSql.append(                 "{\"graph\":\"CmProcessActivity_BatchCountGraph\"},"   );
+					sbSql.append(                 "{\"graph\":\"CmProcessActivity_ExecTimeGraph\"},"     );
+					sbSql.append(                 "{\"graph\":\"CmSpidWait_spidClassName\"},"            );
+					sbSql.append(                 "{\"graph\":\"CmSpidWait_spidWaitName\"},"             );
+					sbSql.append(                 "{\"graph\":\"CmSysLoad_EngineRunQLengthGraph\"},"     );
+					sbSql.append(                 "{\"graph\":\"CmStatementCache_RequestPerSecGraph\"}," );
+					sbSql.append(                 "{\"graph\":\"CmOsIostat_IoWait\"},"                   );
+					sbSql.append(                 "{\"graph\":\"CmOsUptime_AdjLoadAverage\"}"            );
+					sbSql.append(              "]").append("'");
 					sbSql.append(", '").append("").append("'"); // ProfileUrlOptions  '' = default
 					sbSql.append(" )");
 					sql = sbSql.toString();

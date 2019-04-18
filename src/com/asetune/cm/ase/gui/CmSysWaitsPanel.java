@@ -445,7 +445,7 @@ extends TabularCntrPanel
 		mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 	}
 	@Override
-	protected void updateExtendedInfoPanel()
+	public void updateExtendedInfoPanel()
 	{
 		JPanel panel     = getExtendedInfoPanel();
 		GTable dataTable = getDataTable();

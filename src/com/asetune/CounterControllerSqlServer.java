@@ -56,6 +56,7 @@ import com.asetune.cm.sqlserver.CmSchedulers;
 import com.asetune.cm.sqlserver.CmSpinlocks;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.cm.sqlserver.CmTempdbSpidUsage;
+import com.asetune.cm.sqlserver.CmTempdbUsage;
 import com.asetune.cm.sqlserver.CmWaitStats;
 import com.asetune.cm.sqlserver.CmWaitingTasks;
 import com.asetune.cm.sqlserver.CmWho;
@@ -113,6 +114,7 @@ extends CounterControllerAbstract
 		CmWho               .create(counterController, guiController);
 		CmExecSessions      .create(counterController, guiController);
 		CmExecRequests      .create(counterController, guiController);
+		CmTempdbUsage       .create(counterController, guiController);
 		CmTempdbSpidUsage   .create(counterController, guiController);
 		CmSchedulers        .create(counterController, guiController);
 		CmWaitStats         .create(counterController, guiController);
@@ -168,7 +170,7 @@ extends CounterControllerAbstract
 	@Override
 //	public void initCounters(Connection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
 //	throws Exception
-	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isClusterEnabled, long monTablesVersion)
+	public void initCounters(DbxConnection conn, boolean hasGui, long srvVersion, boolean isAzure, long monTablesVersion)
 	throws Exception
 	{
 		if (isInitialized())
@@ -186,6 +188,11 @@ extends CounterControllerAbstract
 
 		_logger.info("Initializing all CM objects, using MS SQL-Server version number "+srvVersion+" ("+Ver.versionNumToStr(srvVersion)+").");
 
+		// get SQL-Server Specific properties and store them in setDbmsProperties() 
+		initializeDbmsProperties(conn);
+		
+		isAzure = isAzure();
+
 		// initialize all the CM's
 		for (CountersModel cm : getCmList())
 		{
@@ -193,7 +200,7 @@ extends CounterControllerAbstract
 
 			// set the version
 			cm.setServerVersion(monTablesVersion);
-			cm.setClusterEnabled(isClusterEnabled);
+			cm.setClusterEnabled(isAzure);
 
 			// set the active roles, so it can be used in initSql()
 			cm.setActiveServerRolesOrPermissions(activeServerPermissionList);
@@ -221,6 +228,31 @@ extends CounterControllerAbstract
 		}
 
 		setInitialized(true);
+	}
+
+	private void initializeDbmsProperties(DbxConnection conn)
+	{
+		String sql = "select ServerProperty('Edition')";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while(rs.next())
+			{
+				setDbmsProperty(PROPKEY_Edition, rs.getString(1));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems Initializing DBMS Properties, using sql='"+sql+"'. Caught: "+ex);
+		}
+	}
+	
+	public static final String PROPKEY_Edition = CounterControllerSqlServer.class.getSimpleName() + ".Edition";
+
+	public boolean isAzure()
+	{
+		String edition = getDbmsProperty(PROPKEY_Edition, "");
+		
+		return (edition != null && edition.toLowerCase().indexOf("azure") >= 0);
 	}
 
 	@Override

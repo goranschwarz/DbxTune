@@ -21,17 +21,15 @@
 package com.asetune.cm.sqlserver.gui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -39,6 +37,9 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.ToolTipManager;
 
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -63,9 +64,8 @@ import org.jfree.util.TableOrder;
 
 import com.asetune.cm.CountersModel;
 import com.asetune.cm.sqlserver.CmWaitStats;
-import com.asetune.gui.MainFrame;
-import com.asetune.gui.ParameterDialog;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.gui.swing.GButton;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -101,8 +101,8 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_includeHiddenEntries         = PROP_PREFIX + ".graph.include.hidden";
 	private static final boolean DEFAULT_includeHiddenEntries         = false;
 
-	private static final String  PROPKEY_hiddenEntriesList            = PROP_PREFIX + ".graph.hidden.entries";
-	private static final String  DEFAULT_hiddenEntriesList            = "OLEDB, SLEEP_TASK, LAZYWRITER_SLEEP, BROKER_TO_FLUSH, SQLTRACE_INCREMENTAL_FLUSH_SLEEP, REQUEST_FOR_DEADLOCK_SEARCH";
+//	private static final String  PROPKEY_hiddenEntriesList            = PROP_PREFIX + ".graph.hidden.entries";
+//	private static final String  DEFAULT_hiddenEntriesList            = "OLEDB, SLEEP_TASK, LAZYWRITER_SLEEP, BROKER_TO_FLUSH, SQLTRACE_INCREMENTAL_FLUSH_SLEEP, REQUEST_FOR_DEADLOCK_SEARCH";
 
 	private static final String  PROPKEY_generateEvent                = PROP_PREFIX + ".graph.generate.event";
 	private static final boolean DEFAULT_generateEvent                = true;
@@ -128,7 +128,7 @@ extends TabularCntrPanel
 //	private static final String  PROPKEY_generateClassWaitTimePerWait = PROP_PREFIX + ".graph.generate.class.waitTimePerWait";
 //	private static final boolean DEFAULT_generateClassWaitTimePerWait = true;
 
-	private List<String> _hiddenEntiesList = new ArrayList<String>();
+//	private List<String> _hiddenEntiesList = new ArrayList<String>();
 
 	static
 	{
@@ -158,9 +158,44 @@ extends TabularCntrPanel
 		init();
 	}
 	
+	private static final Color SKIP_IN_LOCAL_GRAPHS_COLOR = new Color(229, 194, 149); // DARK Beige
+	private static final Color SKIP_IN_TREND_GRAPHS_COLOR = new Color(255, 245, 216); // Beige
+	
 	private void init()
 	{
-		updateHiddenList();
+//		updateHiddenList();
+		
+		
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String colorStr = null;
+
+		// SKIP IN TREND GRAPHS
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Boolean SkipInTrendGraphs = (Boolean) adapter.getValue(adapter.getColumnIndex("SkipInTrendGraphs"));
+				if (SkipInTrendGraphs != null && SkipInTrendGraphs == true)
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, SKIP_IN_TREND_GRAPHS_COLOR), null));
+
+		// SKIP IN LOCAL GRAPHS
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.worker.parent");
+		addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				Boolean SkipInLocalGraphs = (Boolean) adapter.getValue(adapter.getColumnIndex("SkipInLocalGraphs"));
+				if (SkipInLocalGraphs != null && SkipInLocalGraphs == true)
+					return true;
+				return false;
+			}
+		}, SwingUtils.parseColor(colorStr, SKIP_IN_LOCAL_GRAPHS_COLOR), null));
 	}
 
 	private CategoryDataset createDataset(GTable dataTable)
@@ -180,6 +215,8 @@ extends TabularCntrPanel
 
 		DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
+		CmWaitStats cmWaitStats = (CmWaitStats) getCm();
+		
 		if (dataTable != null)
 		{
 //			int ClassName_pos       = dataTable.findViewColumn("WaitClassDesc");
@@ -212,7 +249,8 @@ extends TabularCntrPanel
 //						continue;
 
 					// SKIP entries that are in the "hide list"
-					if ( ! includeHiddenEntries && _hiddenEntiesList != null && _hiddenEntiesList.contains(EventName))
+//					if ( ! includeHiddenEntries && _hiddenEntiesList != null && _hiddenEntiesList.contains(EventName))
+					if ( ! includeHiddenEntries && cmWaitStats.isEventNameInLocalGraphSkipList(EventName))
 						continue;
 
 //					if (_logger.isDebugEnabled())
@@ -241,10 +279,10 @@ extends TabularCntrPanel
 //							dataset.addValue(WaitTimePerWait.doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTimePerWait");
 
 						if (generateEventWaitTime)
-							dataset.addValue(WaitTime       .doubleValue(), EventName, "WaitType - WaitTime");
+							dataset.addValue(WaitTime       .doubleValue(), EventName, "WaitType - wait_time_ms");
 
 						if (generateEventWaits)
-							dataset.addValue(Waits          .doubleValue(), EventName, "WaitType - Waits");
+							dataset.addValue(Waits          .doubleValue(), EventName, "WaitType - waiting_tasks_count");
 
 						if (generateEventWaitTimePerWait)
 							dataset.addValue(WaitTimePerWait.doubleValue(), EventName, "WaitType - WaitTimePerWait");
@@ -471,7 +509,7 @@ extends TabularCntrPanel
 		mainSplitPane.setDividerLocation(getDefaultMainSplitPaneDividerLocation());
 	}
 	@Override
-	protected void updateExtendedInfoPanel()
+	public void updateExtendedInfoPanel()
 	{
 		JPanel panel     = getExtendedInfoPanel();
 		GTable dataTable = getDataTable();
@@ -522,8 +560,8 @@ extends TabularCntrPanel
 //		final JCheckBox includeWaitId250_chk             = new JCheckBox("Include '[250] waiting for incoming network data' in graphs.");
 		final JCheckBox includeHiddenEntries_chk         = new JCheckBox("Include 'hidden' Entries in graphs.");
 		final JCheckBox generateEvent_chk                = new JCheckBox("Genereate Graphs for Events");
-		final JCheckBox generateEventWaitTime_chk        = new JCheckBox("WaitTime");
-		final JCheckBox generateEventWaits_chk           = new JCheckBox("Waits");
+		final JCheckBox generateEventWaitTime_chk        = new JCheckBox("wait_time_ms");
+		final JCheckBox generateEventWaits_chk           = new JCheckBox("waiting_tasks_count");
 		final JCheckBox generateEventWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
 //		final JCheckBox generateClass_chk                = new JCheckBox("Genereate Graphs for Classes");
 //		final JCheckBox generateClassWaitTime_chk        = new JCheckBox("WaitTime");
@@ -538,37 +576,102 @@ extends TabularCntrPanel
 		final JComboBox<String> graphType_cbx    = new JComboBox<String>(graphTypeArr);
 
 //		final JButton   trendGraph_settings_but = new JButton("Summary TrendGraph Settings");
-		final JButton   hiddenEntries_but = new JButton("Edit Hidden Entries")
+//		final JButton   hiddenEntries_but = new JButton("Edit Hidden Entries")
+//		{
+//			private static final long serialVersionUID = 1L;
+//
+//			@Override
+//			public String getToolTipText(MouseEvent event)
+//			{
+//				if (_hiddenEntiesList == null)
+//					return null;
+//
+//				StringBuilder sb = new StringBuilder();
+//				sb.append("<html>");
+//				if (_hiddenEntiesList.isEmpty())
+//				{
+//					sb.append("<b>NO</b> entries are currently hidden.");
+//				}
+//				else
+//				{
+//					sb.append(_hiddenEntiesList.size()).append(" entries are currently hidden.<br>");
+//					sb.append("Below is a list of the hidden entries.");
+//					sb.append("<ul>");
+//					for (String entry : _hiddenEntiesList)
+//						sb.append("<li>").append(entry).append("</li>");
+//					sb.append("</ul>");
+//				}
+//				sb.append("</html>");
+//				
+//				return sb.toString();
+//			};
+//		};
+//		ToolTipManager.sharedInstance().registerComponent(hiddenEntries_but);
+
+		final GButton resetLocalGraphSkipSet_but = new GButton("Reset Local Graph Skip List")
 		{
 			private static final long serialVersionUID = 1L;
-
 			@Override
 			public String getToolTipText(MouseEvent event)
 			{
-				if (_hiddenEntiesList == null)
+//				List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty( CmWaitStats.PROPKEY_LocalGraphsSkipSet, CmWaitStats.DEFAULT_LocalGraphsSkipSet));
+				List<String> list = StringUtil.commaStrToList(CmWaitStats.DEFAULT_LocalGraphsSkipSet);
+				if (list == null)
 					return null;
 
 				StringBuilder sb = new StringBuilder();
 				sb.append("<html>");
-				if (_hiddenEntiesList.isEmpty())
-				{
-					sb.append("<b>NO</b> entries are currently hidden.");
-				}
-				else
-				{
-					sb.append(_hiddenEntiesList.size()).append(" entries are currently hidden.<br>");
-					sb.append("Below is a list of the hidden entries.");
-					sb.append("<ul>");
-					for (String entry : _hiddenEntiesList)
-						sb.append("<li>").append(entry).append("</li>");
-					sb.append("</ul>");
-				}
+				sb.append(list.size()).append(" entries will be set when pressing this button.<br>");
+				sb.append("Below is a list of entries.");
+				sb.append("<ul>");
+				for (String entry : list)
+					sb.append("<li>").append(entry).append("</li>");
+				sb.append("</ul>");
 				sb.append("</html>");
 				
 				return sb.toString();
 			};
 		};
-		ToolTipManager.sharedInstance().registerComponent(hiddenEntries_but);
+		ToolTipManager.sharedInstance().registerComponent(resetLocalGraphSkipSet_but);
+		resetLocalGraphSkipSet_but.setFocusable(true);
+		
+		final GButton resetTrendGraphSkipSet_but = new GButton("Reset Trend Graph Skip List")
+		{
+			private static final long serialVersionUID = 1L;
+			@Override
+			public String getToolTipText(MouseEvent event)
+			{
+//				List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty( CmWaitStats.PROPKEY_TrendGraphsSkipSet, CmWaitStats.DEFAULT_TrendGraphsSkipSet));
+				List<String> list = StringUtil.commaStrToList(CmWaitStats.DEFAULT_TrendGraphsSkipSet);
+				if (list == null)
+					return null;
+
+				StringBuilder sb = new StringBuilder();
+				sb.append("<html>");
+				sb.append(list.size()).append(" entries will be set when pressing this button.<br>");
+				sb.append("Below is a list of entries.");
+				sb.append("<ul>");
+				for (String entry : list)
+					sb.append("<li>").append(entry).append("</li>");
+				sb.append("</ul>");
+				sb.append("</html>");
+				
+				return sb.toString();
+			};
+		};
+		ToolTipManager.sharedInstance().registerComponent(resetTrendGraphSkipSet_but);
+		resetTrendGraphSkipSet_but.setFocusable(true);
+
+		boolean enableSqlFilter_default = Configuration.getCombinedConfiguration().getBooleanProperty(CmWaitStats.PROPKEY_sqlSkipFilterEnabled, CmWaitStats.DEFAULT_sqlSkipFilterEnabled);
+		final JCheckBox enableSqlFilter_chk = new JCheckBox("SQL Filter", enableSqlFilter_default);
+		enableSqlFilter_chk.setToolTipText("<html>Filter out the most common (see tooltip for button <i>'Reset * Graph Skip List'</i>) wait_types.<br>"
+				+ "Do this <b>early</b>. The SQL Statement send to the DBMS will have <code>WHERE wait_type NOT IN ('xxx','yyy')</code><br>"
+				+ "The wait types filtered out wont even make it into the below table.<br>"
+				+ "And the 'percent' column might show you a better reading...<br>"
+				+ "<br>"
+				+ "NOTE: If you are recording a session, you probably want to have this <b>off</b> so you record all available <i>wait_typs</i> and possibly filter them out later.<br>"
+				+ "</html>");
+		
 
 		String tooltip;
 		tooltip = 
@@ -631,6 +734,17 @@ extends TabularCntrPanel
 //		});
 
 		// ACTION LISTENERS
+		enableSqlFilter_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(CmWaitStats.PROPKEY_sqlSkipFilterEnabled, ((JCheckBox)e.getSource()).isSelected());
+				getCm().setSql(null); // Will cause next refresh to create a new SQL Statement
+			}
+		});
+
+		
 		includeHiddenEntries_chk.addActionListener(new ActionListener()
 		{
 			@Override
@@ -763,12 +877,32 @@ extends TabularCntrPanel
 //			}
 //		});
 
-		hiddenEntries_but.addActionListener(new ActionListener()
+//		hiddenEntries_but.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+////				openHiddenEntriesDialog();
+//			}
+//		});
+		
+		resetLocalGraphSkipSet_but.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				openHiddenEntriesDialog();
+				CmWaitStats cm = (CmWaitStats) getCm();
+				cm.resetLocalGraphSkipSet();
+			}
+		});
+		
+		resetTrendGraphSkipSet_but.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				CmWaitStats cm = (CmWaitStats) getCm();
+				cm.resetTrendGraphSkipSet();
 			}
 		});
 		
@@ -776,8 +910,9 @@ extends TabularCntrPanel
 //		panel.add(includeWaitId250_chk,             "wrap");
 		panel.add(enableGraph_chk,                  "split");
 		panel.add(graphType_lbl,                    "");
-		panel.add(graphType_cbx,                    "wrap");
+		panel.add(graphType_cbx,                    "");
 //		panel.add(trendGraph_settings_but,          "wrap");
+		panel.add(enableSqlFilter_chk,              "wrap");
 
 		panel.add(generateEvent_chk,                "split");
 		panel.add(generateEventWaitTime_chk,        "");
@@ -791,8 +926,10 @@ extends TabularCntrPanel
 
 		panel.add(showLegend_chk,                   "split");
 //		panel.add(includeWaitId250_chk,             "wrap");
-		panel.add(includeHiddenEntries_chk,         "");
-		panel.add(hiddenEntries_but,                "wrap");
+		panel.add(includeHiddenEntries_chk,         "wrap");
+//		panel.add(hiddenEntries_but,                "wrap");
+		panel.add(resetLocalGraphSkipSet_but,       "split");
+		panel.add(resetTrendGraphSkipSet_but,       "wrap");
 
 		// enable disable all subcomponents in panel
 		SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
@@ -834,31 +971,31 @@ extends TabularCntrPanel
 //		}
 //	}
 	
-	public void openHiddenEntriesDialog()
-	{
-		final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-
-		String key1 = "wait_type(s) to skip (comma separated list)";
-
-		LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
-		in.put(key1, Configuration.getCombinedConfiguration().getProperty( PROPKEY_hiddenEntriesList,    DEFAULT_hiddenEntriesList));
-
-		Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "wait_type(s) to skip", in, false);
-
-		if (results != null)
-		{
-			tmpConf.setProperty(PROPKEY_hiddenEntriesList,    results.get(key1));
-			tmpConf.save();
-			
-			updateHiddenList();
-			updateExtendedInfoPanel();
-		}
-	}
-
-	private void updateHiddenList()
-	{
-		String hidden = Configuration.getCombinedConfiguration().getProperty( PROPKEY_hiddenEntriesList, DEFAULT_hiddenEntriesList);
-		
-		_hiddenEntiesList = StringUtil.commaStrToList(hidden);
-	}
+//	public void openHiddenEntriesDialog()
+//	{
+//		final Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
+//
+//		String key1 = "wait_type(s) to skip (comma separated list)";
+//
+//		LinkedHashMap<String, String> in = new LinkedHashMap<String, String>();
+//		in.put(key1, Configuration.getCombinedConfiguration().getProperty( PROPKEY_hiddenEntriesList,    DEFAULT_hiddenEntriesList));
+//
+//		Map<String,String> results = ParameterDialog.showParameterDialog(MainFrame.getInstance(), "wait_type(s) to skip", in, false);
+//
+//		if (results != null)
+//		{
+//			tmpConf.setProperty(PROPKEY_hiddenEntriesList,    results.get(key1));
+//			tmpConf.save();
+//			
+//			updateHiddenList();
+//			updateExtendedInfoPanel();
+//		}
+//	}
+//
+//	private void updateHiddenList()
+//	{
+//		String hidden = Configuration.getCombinedConfiguration().getProperty( PROPKEY_hiddenEntriesList, DEFAULT_hiddenEntriesList);
+//		
+//		_hiddenEntiesList = StringUtil.commaStrToList(hidden);
+//	}
 }

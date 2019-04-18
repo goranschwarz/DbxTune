@@ -109,15 +109,18 @@ implements DbxConnectionStateInfo
 	@Override
 	public String getStatusBarText()
 	{
+		boolean autocommitBool = getAutoCommit();
+
 		String catalog    = "cat="        + _catalog;
 		String isolation  = "Isolation="  + getIsolationLevelStr();
-		String autocommit = "AutoCommit=" + getAutoCommit();
+		String autocommit = "AutoCommit=" + autocommitBool;
 
 		if ( ! getAutoCommit() )
-			autocommit = "AutoCommit=<b><font color='red'>" + getAutoCommit() + "</font></b>";
+			autocommit = "AutoCommit=<b><font color='red'>" + autocommitBool + "</font></b>";
 
-		String text = "ac="+getAutoCommit();
-		if ( ! getAutoCommit() )
+		String text = "ac="+autocommitBool;
+		
+		if ( ! autocommitBool )
 		{
 			text = "<html>"
 				+ autocommit + ", "

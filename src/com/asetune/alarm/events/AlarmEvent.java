@@ -221,9 +221,12 @@ extends Throwable
 	public String getCancelTimeStr()             { return _cancelTimeStr; }
 	public String getCancelTimeIso8601()         { return _cancelTime == -1 ? null : TimeUtils.toStringIso8601(_cancelTime); }
 	public boolean isActive()                    { return _cancelTime == -1; }
-                                                 
+
+	/** Get Time To Live in Milliseconds */
 	public int  getTimeToLive()                  { return _timeToLive; }
+	/** Set Time To Live in Milliseconds */
 	public void setTimeToLive(int ttl)           { _timeToLive = ttl; }
+	/** Set Time To Live in Milliseconds */
 	public void setTimeToLive(long ttl)          { _timeToLive = (int)ttl; }
 
 	public void setTimeToLive(CountersModel cm)

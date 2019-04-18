@@ -38,6 +38,9 @@ import org.apache.log4j.PropertyConfigurator;
 
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.gui.DbmsVersionPanelAbstract;
+import com.asetune.gui.DbmsVersionPanelAse;
+import com.asetune.gui.ShowCmPropertiesDialog;
 import com.asetune.gui.TabularCntrPanel;
 import com.asetune.gui.swing.GTabbedPane;
 import com.asetune.sql.conn.DbxConnection;
@@ -196,6 +199,12 @@ implements IGuiController
 	public Component getGuiHandle()
 	{
 		return this;
+	}
+
+	@Override
+	public DbmsVersionPanelAbstract createDbmsVersionPanel(ShowCmPropertiesDialog showCmPropertiesDialog)
+	{
+		return new DbmsVersionPanelAse(showCmPropertiesDialog);
 	}
 	//-----------------------------------------------------------------------
 	// END: implement IGuiController

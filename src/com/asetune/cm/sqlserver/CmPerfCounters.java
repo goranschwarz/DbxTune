@@ -1864,13 +1864,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String[] getDependsOnConfigForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		return NEED_CONFIG;
 	}
 
 	@Override
-	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		List <String> pkCols = new LinkedList<String>();
 
@@ -1882,8 +1882,13 @@ extends CountersModel
 	}
 
 	@Override
-	public String getSqlForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public String getSqlForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
+		String dm_os_performance_counters = "dm_os_performance_counters";
+		
+		if (isAzure)
+			dm_os_performance_counters = "dm_pdw_nodes_os_performance_counters";
+
 		String sql = 
 			  "select object_name = substring(object_name, charindex(':', object_name),128), -- removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups\n"
 			+ "       counter_name, \n"
@@ -1906,7 +1911,7 @@ extends CountersModel
 			+ "          WHEN cntr_type = 1073939712 THEN convert(varchar(30), 'PERF_LARGE_RAW_BASE')         -- used in the translation of PERF_LARGE_RAW_FRACTION and PERF_AVERAGE_BULK values to readable output; should not be displayed alone.                                  \n" 
 			+ "          ELSE convert(varchar(30), cntr_type) \n"
 			+ "       END as cntr_type_name \n"
-			+ "from sys.dm_os_performance_counters";
+			+ "from sys." + dm_os_performance_counters;
 
 		return sql;
 	}
@@ -1916,7 +1921,7 @@ extends CountersModel
 
 
 	@Override
-	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)
+	public void addMonTableDictForVersion(Connection conn, long srvVersion, boolean isAzure)
 	{
 		try 
 		{

@@ -174,7 +174,7 @@ public class SqlCaptureStatementStatisticsSample
 	{
 		// if something seems to be from the statement cache, and the LineNumber is 0, then discard the entry
 		// it looks like there are always 2 rows in monSysStatement when there are (*ss or *sq) objects
-		// The row with lineNumber == 0, does not contain real values for: LogicalReads etc...
+		// The row with lineNumber == 0, does not contain real values for: LogicalReads etc... it's probably the creation of the LWP
 		if ( procName != null && lineNumber == 0 && (procName.startsWith("*ss") || procName.startsWith("*sq")) )
 		{
 			return;
