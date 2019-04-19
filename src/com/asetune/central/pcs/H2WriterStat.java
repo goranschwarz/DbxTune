@@ -36,7 +36,6 @@ import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
-import org.bouncycastle.math.ec.ECCurve.Config;
 
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
