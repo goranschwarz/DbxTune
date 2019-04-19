@@ -36,6 +36,7 @@ import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
+import org.bouncycastle.math.ec.ECCurve.Config;
 
 import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
@@ -422,9 +423,28 @@ public class H2WriterStat
 		double loadAverage_5m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage5m,  DEFAULT_AlarmOsLoadAverage5m);
 		double loadAverage_15m_threshold = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage15m, DEFAULT_AlarmOsLoadAverage15m);
 
+		// Set hostname to servername@OsHostName 
+		String srvName = System.getProperty("SERVERNAME");
+		if (StringUtil.isNullOrBlank(srvName))
+			srvName = Configuration.getCombinedConfiguration().getProperty("SERVERNAME");
+		if (StringUtil.isNullOrBlank(srvName))
+			srvName = Version.getAppName();
+		
 		String serviceInfoName = "H2WriterStat";
-		String hostname        = Version.getAppName() + "@" + StringUtil.getHostname();
+		String hostname        = srvName + "@" + StringUtil.getHostname();
 
+
+		// If any of 1,5,15 minute threshold are crossed... set scale to 2 (for nicer formatting)
+		if (    _osLoadAverage1min  > loadAverage_1m_threshold
+		     || _osLoadAverage5min  > loadAverage_5m_threshold
+		     || _osLoadAverage15min > loadAverage_15m_threshold  )
+		{
+			_osLoadAverage1min  = new BigDecimal(_osLoadAverage1min).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+			_osLoadAverage5min  = new BigDecimal(_osLoadAverage1min).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+			_osLoadAverage15min = new BigDecimal(_osLoadAverage1min).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		}
+
+		
 		double threshold;
 
 		// 1 minute
