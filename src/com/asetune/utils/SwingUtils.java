@@ -611,6 +611,7 @@ public class SwingUtils
 				errorPane.setErrorInfo(info);
 //				info.addHyperlinkListener(this); // the JXErrorPane/ErrorInfo doesn't support Hyperlinks
 				final JDialog dialog = JXErrorPane.createDialog(finalOwner, errorPane);
+		        dialog.setLocationRelativeTo(finalOwner);
 				dialog.pack();
 				dialog.setTitle(title);
 

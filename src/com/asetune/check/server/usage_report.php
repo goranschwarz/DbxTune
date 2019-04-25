@@ -1484,8 +1484,8 @@ DB Cleanup:
 				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'C' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountCols,
 				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'C' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedCols,
 				'>>> SYSTABS >>>'         AS sep3,
-				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'S' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountParams,
-				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'S' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'S' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountSys,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'S' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedSys,
 				'>>> PARAMS >>>'          AS sep4,
 				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'P' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountParams,
 				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'P' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
@@ -1510,17 +1510,51 @@ DB Cleanup:
 				srvVersion                AS verifySrvVersion,
 				count(*)                  AS totalRows,
 				'>>> TABLE >>>'           AS sep1,
-				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_VIEW' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountTables,
-				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_VIEW' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedTables,
-				'>>> FUNCTIONS >>>'       AS sep2,
-				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_FUNC' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountCols,
-				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_FUNC' AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedCols,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type in('DM_VIEW', 'DM_FUNC')         AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountTables,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type in('DM_VIEW', 'DM_FUNC')         AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedTables,
+				'>>> COLUMNS >>>'         AS sep2,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type in('DM_VIEW_COL', 'DM_FUNC_COL') AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountCols,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type in('DM_VIEW_COL', 'DM_FUNC_COL') AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedCols,
+				'>>> PARAMS >>>'          AS sep3,
+				(SELECT count(*)          FROM asemon_mda_info i WHERE type in('DM_FUNC_PARAMS')             AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountParams,
+				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type in('DM_FUNC_PARAMS')             AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
 				srvVersion                AS deleteSrvVersion
 			FROM asemon_mda_info o
 			WHERE clientAppName = 'SqlServerTune'
 			GROUP BY srvVersion, isClusterEnabled
 			ORDER BY srvVersion, isClusterEnabled
 		";
+//		$sql = "
+//			SELECT srvVersion, isClusterEnabled as isAzure, serverAddTime, userName, verified,
+//				srvVersion                AS verifySrvVersion,
+//				count(*)                  AS totalRows,
+//
+//				'>>> VIEWS >>>'           AS sep1,
+//				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_VIEW'         AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountViews,
+//				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_VIEW'         AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedViews,
+//
+//				'>>> FUNCTIONS >>>'       AS sep2,
+//				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_FUNC'         AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountFunc,
+//				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_FUNC'         AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedFunc,
+//
+//				'>>> VIEW-COLUMNS >>>'    AS sep3,
+//				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_VIEW_COL'     AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountViewCols,
+//				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_VIEW_COL'     AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedViewCols,
+//
+//				'>>> FUNC-COLUMNS >>>'    AS sep4,
+//				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_FUNC_COL'     AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountFuncCols,
+//				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_FUNC_COL'     AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedFuncCols,
+//
+//				'>>> PARAMS >>>'          AS sep5,
+//				(SELECT count(*)          FROM asemon_mda_info i WHERE type = 'DM_FUNC_PARAMS'  AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as RowCountParams,
+//				(SELECT max(expectedRows) FROM asemon_mda_info i WHERE type = 'DM_FUNC_PARAMS'  AND i.srvVersion = o.srvVersion AND i.isClusterEnabled= o.isClusterEnabled) as ExpectedParams,
+//
+//				srvVersion                AS deleteSrvVersion
+//			FROM asemon_mda_info o
+//			WHERE clientAppName = 'SqlServerTune'
+//			GROUP BY srvVersion, isClusterEnabled
+//			ORDER BY srvVersion, isClusterEnabled
+//		";
 
 		// sending query
 		$result = mysqli_query($dbconn, $sql) or die("ERROR: " . mysqli_error($dbconn));

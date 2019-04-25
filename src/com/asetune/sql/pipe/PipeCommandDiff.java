@@ -110,6 +110,7 @@ extends PipeCommandAbstract
 //		String     _driver    = null; // not yet used
 
 		List<String>  _keyCols     = null;
+		List<String> _diffColumns  = null;
 
 		String    _initStr         = null;
 		String    _query           = null;
@@ -143,6 +144,7 @@ extends PipeCommandAbstract
 			sb.append(", ").append("toStdout      ".trim()).append("=").append(StringUtil.quotify(_toStdout      ));
 			sb.append(", ").append("keyCols       ".trim()).append("=").append(StringUtil.quotify(_keyCols       ));
 			sb.append(", ").append("query         ".trim()).append("=").append(StringUtil.quotify(_query         ));
+			sb.append(", ").append("diffColumns   ".trim()).append("=").append(StringUtil.quotify(_diffColumns   ));
 			sb.append(", ").append("action        ".trim()).append("=").append(StringUtil.quotify(_action        ));
 			sb.append(", ").append("actionOutFile ".trim()).append("=").append(StringUtil.quotify(_actionOutFile ));
 			sb.append(", ").append("goString      ".trim()).append("=").append(StringUtil.quotify(_goString      ));
@@ -207,18 +209,19 @@ extends PipeCommandAbstract
 			{
 				CommandLine cmdLine = parseCmdLine(_args);
 				if (cmdLine.hasOption('q')) _params._query           = cmdLine.getOptionValue('q');
+				if (cmdLine.hasOption('c')) _params._diffColumns     = StringUtil.commaStrToList(cmdLine.getOptionValue('c'));;
 				if (cmdLine.hasOption('k')) _params._keyCols         = StringUtil.commaStrToList(cmdLine.getOptionValue('k'));
 				if (cmdLine.hasOption('x')) _params._debug           = true;
 				if (cmdLine.hasOption('X')) _params._trace           = true;
 				if (cmdLine.hasOption('Y')) _params._toStdout        = true;
-				if (cmdLine.hasOption('U')) _params._user          = cmdLine.getOptionValue('U');
-				if (cmdLine.hasOption('P')) _params._passwd        = cmdLine.getOptionValue('P');
-				if (cmdLine.hasOption('S')) _params._server        = cmdLine.getOptionValue('S');
-				if (cmdLine.hasOption('D')) _params._db            = cmdLine.getOptionValue('D');
-				if (cmdLine.hasOption('u')) _params._url           = cmdLine.getOptionValue('u');
-				if (cmdLine.hasOption('p')) _params._profile       = cmdLine.getOptionValue('p');
-				if (cmdLine.hasOption('A')) _params._action        = ActionType.fromString(cmdLine.getOptionValue('A'));
-				if (cmdLine.hasOption('o')) _params._actionOutFile = cmdLine.getOptionValue('o');
+				if (cmdLine.hasOption('U')) _params._user            = cmdLine.getOptionValue('U');
+				if (cmdLine.hasOption('P')) _params._passwd          = cmdLine.getOptionValue('P');
+				if (cmdLine.hasOption('S')) _params._server          = cmdLine.getOptionValue('S');
+				if (cmdLine.hasOption('D')) _params._db              = cmdLine.getOptionValue('D');
+				if (cmdLine.hasOption('u')) _params._url             = cmdLine.getOptionValue('u');
+				if (cmdLine.hasOption('p')) _params._profile         = cmdLine.getOptionValue('p');
+				if (cmdLine.hasOption('A')) _params._action          = ActionType.fromString(cmdLine.getOptionValue('A'));
+				if (cmdLine.hasOption('o')) _params._actionOutFile   = cmdLine.getOptionValue('o');
 				if (cmdLine.hasOption('g')) _params._goString        = cmdLine.getOptionValue('g');
 			}
 			else
@@ -301,6 +304,7 @@ extends PipeCommandAbstract
 		options.addOption( "D", "dbname",          true,    "Database name in server." );
 		options.addOption( "u", "url",             true,    "Destination DB URL (if not ASE and -S)" );
 		options.addOption( "q", "query",           true,    "SQL Query towards destination" );
+		options.addOption( "c", "diffCols",        true,    "" );
 		options.addOption( "k", "keyCols",         true,    "" );
 		options.addOption( "A", "action",          true,    "what action to do with difference" );
 		options.addOption( "o", "actionOutFile",   true,    "Write actions to file" );
@@ -410,6 +414,7 @@ extends PipeCommandAbstract
 		sb.append("  -p,--profile <name>       Take user/passwd/url from a connection profile.\n");
 		sb.append("\n");
 		sb.append("  -q,--query <sq-query>     SQL Statement to exexute towards destination. (default same as source) \n");
+		sb.append("  -c,--diffCols <c1,c2...>  Comma separated list of columns to do diff on (default all columns) \n");
 		sb.append("  -k,--keyCols <c1,c2...>   Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
 		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
 		sb.append("  -o,--actionOutFile <name> Write the action out put to a file. \n");
@@ -581,8 +586,8 @@ extends PipeCommandAbstract
 		if (_params._debug)   addDebugMessage(  "Executing SQL at target: " + destSql);
 
 		// Execute SQL at RIGHT Hand side
-		Statement targetStmt = rightConn.createStatement();
-		ResultSet rightRs = targetStmt.executeQuery(destSql);
+		Statement rightStmt = rightConn.createStatement();
+		ResultSet rightRs = rightStmt.executeQuery(destSql);
 
 		if (progress != null) progress.setState("Initializing and validating DIFF Engine...");
 		if (_params._debug)   addDebugMessage  ("Initializing and validating DIFF Engine...");
@@ -592,7 +597,9 @@ extends PipeCommandAbstract
 //System.out.println("LEFT:  connProps: " + leftConnProps);
 //System.out.println("RIGHT: connProps: " + rightConnProps);
 		
-		context.setPkColumns(_params._keyCols);
+		context.setPkColumns  (_params._keyCols);
+		context.setDiffColumns(_params._diffColumns);
+
 		context.setDiffTable(DiffSide.LEFT,  leftRs,  leftConnProps);
 		context.setDiffTable(DiffSide.RIGHT, rightRs, rightConnProps);
 
@@ -615,11 +622,17 @@ extends PipeCommandAbstract
 		// Check results
 //		String tabInfo = "[" + context.getLeftDt().getFullTableName() + ", " + context.getRightDt().getFullTableName() + "]";
 		String tabInfo = "[" + context.getLeftDt().getShortTableName() + "]";
+
+		String leftDbmsInfo  = "";
+		String rightDbmsInfo = "";
+		try { leftDbmsInfo  = leftConn .getDbmsServerName(); } catch(SQLException ex) {}
+		try { rightDbmsInfo = rightConn.getDbmsServerName(); } catch(SQLException ex) {}
+		
 		if (diffCount == 0)
 		{
 			addInfoMessage("OK - " + tabInfo + " Left and Right ResultSet has NO difference \n"
-					+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'.\n"
-					+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'."
+					+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'.\n"
+					+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'."
 					);
 		}
 		else
@@ -630,12 +643,12 @@ extends PipeCommandAbstract
 					                  + ", Left Missing Rows = "  + diffSink.getLeftMissingRows() .size()
 					                  + ", Right Missing Rows = " + diffSink.getRightMissingRows().size()
 					                  + ", Column Diff Rows = "   + diffSink.getDiffColumnValues().size() + ".\n"
-					+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'.\n"
-					+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'.\n"
+					+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'.\n"
+					+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'.\n"
 					+ "        NOTE: You can turn on debugging '-x' to see what SQL that is issued on left/right hand side."
 					;
 
-			addErrorMessage(tabInfo + "Left and Right ResultSet is DIFFERENT. \n" + msg);
+			addErrorMessage(tabInfo + " Left and Right ResultSet is DIFFERENT. \n" + msg);
 		}
 
 
@@ -863,6 +876,7 @@ extends PipeCommandAbstract
 			DatabaseMetaData dbmd = conn.getMetaData();
 			String msg;
 
+			try { msg = "Connected to DBMS Server Name '"          + conn.getDbmsServerName()         +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 			try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 			try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 			try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}

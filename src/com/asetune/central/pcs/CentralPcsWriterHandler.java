@@ -168,6 +168,9 @@ implements Runnable
 	/** Flag to state that we are waiting for input on the queue. Meaning it's OK to send "interrupt" to the thread */
 	private boolean _waitingOnQueueInput = false;
 
+	/** How many milliseconds have we maximum spent in <i>consume</i> */
+	private long _maxConsumeTime = 0;
+
 	/*---------------------------------------------------
 	** Constructors
 	**---------------------------------------------------
@@ -711,7 +714,8 @@ implements Runnable
 
 				// Stop clock and print statistics.
 				long execTime = System.currentTimeMillis() - startTime;
-
+				_maxConsumeTime = Math.max(_maxConsumeTime, execTime);
+				
 				firePcsConsumeInfo(pw.getName(), cont.getServerName(), cont.getSessionStartTime(), cont.getSessionSampleTime(), (int)execTime, pw.getStatistics());
 //				_logger.info("Persisting Counters using '"+pw.getName()+"' for sessionStartTime='"+cont.getSessionStartTime()+"', sessionSampleTime='"+cont.getSessionSampleTime()+"'. This persist took "+execTime+" ms. inserts="+pw.getInserts()+", updates="+pw.getUpdates()+", deletes="+pw.getDeletes()+", createTables="+pw.getCreateTables()+", alterTables="+pw.getAlterTables()+", dropTables="+pw.getDropTables()+".");
 
@@ -729,6 +733,15 @@ implements Runnable
 				pw.endOfSample(cont, true);
 			}
 		}
+	}
+	
+	/**
+	 * Get MAX time in milliseconds we have spent in consume for any writer
+	 * @return
+	 */
+	public long getMaxConsumeTime()
+	{
+		return _maxConsumeTime;
 	}
 	
 //	/** 

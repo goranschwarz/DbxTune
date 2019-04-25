@@ -62,6 +62,34 @@ public class DiffEngine
 
 		Object[] l_row = null;
 		Object[] r_row = null;
+		
+		boolean[] onlyOnColumnsArray = null;
+		List<String> diffColList = _context.getDiffColumns();
+		if (diffColList != null && !diffColList.isEmpty())
+		{
+			onlyOnColumnsArray = new boolean[l_dt.getColumnCount()];
+			int arrPos = 0;
+			for (String colName : l_dt.getColumnNames())
+			{
+				onlyOnColumnsArray[arrPos] = false;
+				if (diffColList.contains(colName))
+				{
+					onlyOnColumnsArray[arrPos] = true;
+					
+					if (_context.isDebugEnabled())
+						_context.addDebugMessage("Column name '" + colName + "' at possition " + arrPos + " will NOT be difference checked.");
+				}
+				arrPos++;
+			}
+
+			if (_context.isDebugEnabled())
+			{
+				_context.addDebugMessage("getDiffColumns() content: " + StringUtil.toCommaStr(diffColList));
+				_context.addDebugMessage("            colSkipArray: " + StringUtil.toCommaStr(onlyOnColumnsArray));
+				_context.addDebugMessage("            leftColumns : " + StringUtil.toCommaStr(l_dt.getColumnNames()));
+				_context.addDebugMessage("            rightColumns: " + StringUtil.toCommaStr(r_dt.getColumnNames()));
+			}
+		}
 
 		// Print progress after each X row, this will be changed to 100 after 100 rows 
 		long lastProgresUpdate = 0;
@@ -167,7 +195,7 @@ public class DiffEngine
 					if (_context.isTraceEnabled())
 						_context.addTraceMessage("  * DO DIFF ROW CONTENT ================");
 					
-					diffRow(l_row, r_row);
+					diffRow(l_row, r_row, onlyOnColumnsArray);
 
 					//sink.addDiffColumnValue(pk, colPos, left, right);
 					l_row = null;
@@ -205,7 +233,7 @@ public class DiffEngine
 			_context.addDebugMessage("Closing the ResultSets...");
 	}
 
-	private int diffRow(Object[] l_row, Object[] r_row)
+	private int diffRow(Object[] l_row, Object[] r_row, boolean[] onlyOnColumnsArray)
 	throws DiffException
 	{
 		if (l_row.length != r_row.length)
@@ -218,6 +246,14 @@ public class DiffEngine
 			Object l = l_row[c];
 			Object r = r_row[c];
 
+			if (onlyOnColumnsArray != null && onlyOnColumnsArray[c] == false)
+			{
+				if (_context.isTraceEnabled())
+					_context.addTraceMessage("      Skipping diff for: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|.");
+
+				continue;
+			}
+				
 			if (l != null && (l instanceof Comparable || l instanceof byte[]) )
 			{
 //System.out.println(" COL-DIFF[Comparable]: c="+c+", pk="+StringUtil.toCommaStr(pk)+", left=|"+l+"|, right=|"+r+"|. (l=|"+l.getClass().getCanonicalName()+"|, r=|"+r.getClass().getCanonicalName()+"|)");

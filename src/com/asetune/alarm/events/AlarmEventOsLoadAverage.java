@@ -30,7 +30,7 @@ extends AlarmEvent
 
 	public enum RangeType
 	{
-		RANGE_1_MINUTE, RANGE_5_MINUTE, RANGE_15_MINUTE
+		RANGE_1_MINUTE, RANGE_5_MINUTE, RANGE_15_MINUTE, RANGE_30_MINUTE, RANGE_60_MINUTE
 	};
 	
 	public AlarmEventOsLoadAverage(CountersModel cm, Number threshold, String hostname, RangeType rangeType, Number avg_1min, Number avg_5min, Number avg_15min)
@@ -56,7 +56,7 @@ extends AlarmEvent
 		else                                                  setData(-1);
 	}
 
-	public AlarmEventOsLoadAverage(String serviceInfoName, Number threshold, String hostname, RangeType rangeType, Number avg_1min, Number avg_5min, Number avg_15min)
+	public AlarmEventOsLoadAverage(String serviceInfoName, Number threshold, String hostname, RangeType rangeType, Number avg_1min, Number avg_5min, Number avg_15min, Number avg_30min, Number avg_60min)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -66,13 +66,15 @@ extends AlarmEvent
 				AlarmEvent.Category.CPU,
 				AlarmEvent.Severity.WARNING, 
 				AlarmEvent.ServiceState.UP, 
-				"Exhausting CPU Scheduling resources at OperatingSystem level on hostname '" + hostname + "'. adjLoadAverage: 1min=" + avg_1min + ", 5min=" + avg_5min + ", 15min=" + avg_15min + ". (threshold="+threshold+")",
+				"Exhausting CPU Scheduling resources at OperatingSystem level on hostname '" + hostname + "'. adjLoadAverage: 1min=" + avg_1min + ", 5min=" + avg_5min + ", 15min=" + avg_15min + ", 30min=" + avg_30min + ", 60min=" + avg_60min + ". (threshold="+threshold+")",
 				threshold);
 
 		// Set the raw data carier: run queue length average 1 minute
 		if      (RangeType.RANGE_1_MINUTE .equals(rangeType)) setData(avg_1min);
 		else if (RangeType.RANGE_5_MINUTE .equals(rangeType)) setData(avg_5min);
 		else if (RangeType.RANGE_15_MINUTE.equals(rangeType)) setData(avg_15min);
+		else if (RangeType.RANGE_30_MINUTE.equals(rangeType)) setData(avg_30min);
+		else if (RangeType.RANGE_60_MINUTE.equals(rangeType)) setData(avg_60min);
 		else                                                  setData(-1);
 	}
 }

@@ -225,6 +225,15 @@ var _subscribe    = false;   // If we should subscribe to Graph data from the se
 var _colorSchema  = "white"; // Color schema, can be: "white" or "dark"
 var _showSrvTimer = null;
 
+//window.chartColors = {
+//	red:    'rgb(255, 99, 132)',
+//	orange: 'rgb(255, 159, 64)',
+//	yellow: 'rgb(255, 205, 86)',
+//	green:  'rgb(75, 192, 192)',
+//	blue:   'rgb(54, 162, 235)',
+//	purple: 'rgb(153, 102, 255)',
+//	grey:   'rgb(201, 203, 207)'
+//};
 
 function dbxTuneCheckActiveAlarms()
 {
@@ -934,6 +943,8 @@ class DbxGraph
 		{
 			newDiv.style.background = "#343a40";  // same as color as bootstrap "dark"
 			document.body.style.background = "#343a40";  // same as color as bootstrap "dark"
+			
+			$("#api-feedback").css('color', '#ccc');
 		}
 		newDiv.style.border = "1px dotted gray";
 		newDiv.classList.add("dbx-graph-context-menu"); // add right click menu to the graph, using jQuery contextMenu plugin

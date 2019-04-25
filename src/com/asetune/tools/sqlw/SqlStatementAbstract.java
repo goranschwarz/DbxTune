@@ -53,6 +53,8 @@ implements SqlStatement
 		_progress       = progress;
 		_owner          = owner;
 		_queryWindow    = queryWindow;
+		
+		setGuiOwner(owner); // in MessageAwareAbstract
 	}
 
 	@Override

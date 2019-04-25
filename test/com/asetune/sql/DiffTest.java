@@ -25,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -38,24 +39,26 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.diff.DiffContext;
 import com.asetune.sql.diff.DiffContext.DiffSide;
 import com.asetune.sql.diff.actions.GenerateSqlText;
-import com.asetune.sql.diff.DiffTable;
-import com.asetune.tools.sqlw.msg.JPipeMessage;
-import com.asetune.tools.sqlw.msg.Message;
 
 public class DiffTest
 {
 //	private static final String DB_DRIVER     = "org.h2.Driver";
 //	private static final String DB_URL        = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1";
-	private static final String DB_URL        = "jdbc:h2:mem:test";
-	private static final String DB_USER       = "sa";
-	private static final String DB_PASSWORD   = "";
 
-	private DbxConnection _conn; 
+	private static final String L_DB_URL        = "jdbc:h2:mem:leftDB";
+	private static final String L_DB_USER       = "sa";
+	private static final String L_DB_PASSWORD   = "";
+
+	private static final String R_DB_URL        = "jdbc:h2:mem:rightDB";
+	private static final String R_DB_USER       = "sa";
+	private static final String R_DB_PASSWORD   = "";
+
+	private DbxConnection _lConn; 
+	private DbxConnection _rConn; 
 			
 
 	@BeforeClass
@@ -77,8 +80,11 @@ public class DiffTest
 	throws SQLException
 	{
 		//System.out.println("@Before - setup: ");
-		Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-		_conn = DbxConnection.createDbxConnection(conn);
+		Connection lConn = DriverManager.getConnection(L_DB_URL, L_DB_USER, L_DB_PASSWORD);
+		_lConn = DbxConnection.createDbxConnection(lConn);
+
+		Connection rConn = DriverManager.getConnection(R_DB_URL, R_DB_USER, R_DB_PASSWORD);
+		_rConn = DbxConnection.createDbxConnection(rConn);
 	}
 	
 	@After
@@ -86,8 +92,8 @@ public class DiffTest
 	throws SQLException
 	{
 		//System.out.println("@After - close():");
-		if (_conn != null)
-			_conn.close();
+		if (_lConn != null) _lConn.close();
+		if (_rConn != null) _rConn.close();
 	}
 	
 	@AfterClass
@@ -109,50 +115,104 @@ public class DiffTest
 	public void test_noDiff_int_varchar()
 	throws Exception
 	{
-		Statement stmnt = _conn.createStatement();
+		Statement lStmnt = _lConn.createStatement();
+		Statement rStmnt = _rConn.createStatement();
 		
-		stmnt.executeUpdate("drop table IF EXISTS t1_l");
-		stmnt.executeUpdate("drop table IF EXISTS t1_r");
+		lStmnt.executeUpdate("drop table IF EXISTS t1_l");
+		rStmnt.executeUpdate("drop table IF EXISTS t1_r");
 		
-		stmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
-		stmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		lStmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		rStmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
 
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
 		                                      
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
 
-		stmnt.close();
+		lStmnt.close();
+		rStmnt.close();
 
 		List<String> pkList = new ArrayList<>();
 		pkList.add("id");
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _conn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _conn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
 
 		assertEquals("Expected 0 in diffcount", 0, diffCount);
+	}
+	
+
+	/**
+	 * Simple diff (int, varchar, varchar, varchar) pk=id <br>
+	 * - SMALL Difference
+	 * - no debugging 
+	 * - no nothing...
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void test_diff_simple()
+	throws Exception
+	{
+		Statement lStmnt = _lConn.createStatement();
+		Statement rStmnt = _rConn.createStatement();
+		
+		lStmnt.executeUpdate("drop table IF EXISTS t1");
+		rStmnt.executeUpdate("drop table IF EXISTS t1");
+		
+		lStmnt.executeUpdate("create table t1 (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		rStmnt.executeUpdate("create table t1 (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+
+		lStmnt.executeUpdate("insert into t1 (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
+		lStmnt.executeUpdate("insert into t1 (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
+		lStmnt.executeUpdate("insert into t1 (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
+
+		rStmnt.executeUpdate("insert into t1 (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
+		rStmnt.executeUpdate("insert into t1 (id, c1, c2, c3, c4) values(10, '10--aaa', '10-bbb', '10-ccc', '10-ddd')");
+		rStmnt.executeUpdate("insert into t1 (id, c1, c2, c3, c4) values(20, '20--aaa', '20-bbb', '20-ccc', '20-ddd')");
+
+		lStmnt.close();
+		rStmnt.close();
+
+		String sql = "select * from t1";
+		
+		Statement leftStmt = _lConn.createStatement();
+		ResultSet leftRs = leftStmt.executeQuery(sql);
+
+		Statement rightStmt = _rConn.createStatement();
+		ResultSet rightRs = rightStmt.executeQuery(sql);
+
+		DiffContext context = new DiffContext();
+		context.setPkColumns(null);
+		context.setDiffTable(DiffSide.LEFT,  leftRs,  null);
+		context.setDiffTable(DiffSide.RIGHT, rightRs, null);
+		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
+		context.validate();
+		int diffCount = context.doDiff();
+
+		assertEquals("Expected 2 in diffcount", 2, diffCount);
 	}
 	
 
@@ -168,37 +228,39 @@ public class DiffTest
 	public void test_noDiff_int_varchar_pk2cols()
 	throws Exception
 	{
-		Statement stmnt = _conn.createStatement();
+		Statement lStmnt = _lConn.createStatement();
+		Statement rStmnt = _rConn.createStatement();
 		
-		stmnt.executeUpdate("drop table IF EXISTS t1_l");
-		stmnt.executeUpdate("drop table IF EXISTS t1_r");
+		lStmnt.executeUpdate("drop table IF EXISTS t1_l");
+		rStmnt.executeUpdate("drop table IF EXISTS t1_r");
 		
-		stmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id, c1))");
-		stmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id, c1))");
+		lStmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id, c1))");
+		rStmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id, c1))");
 
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
 		                                      
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(00, '00-aaa', '00-bbb', '00-ccc', '00-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, '10-aaa', '10-bbb', '10-ccc', '10-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', '20-bbb', '20-ccc', '20-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', '30-ccc', '30-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', '40-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, '50-aaa', '50-bbb', '50-ccc', '50-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(60, '60-aaa', '60-bbb', '60-ccc', '60-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(70, '70-aaa', '70-bbb', '70-ccc', '70-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(80, '80-aaa', '80-bbb', '80-ccc', '80-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(90, '90-aaa', '90-bbb', '90-ccc', '90-ddd')");
 
-		stmnt.close();
+		lStmnt.close();
+		rStmnt.close();
 
 		List<String> pkList = new ArrayList<>();
 		pkList.add("id");
@@ -206,8 +268,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _conn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _conn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -231,31 +293,33 @@ public class DiffTest
 	public void test_noDiff_int_varchar_withNullValues()
 	throws Exception
 	{
-		Statement stmnt = _conn.createStatement();
+		Statement lStmnt = _lConn.createStatement();
+		Statement rStmnt = _rConn.createStatement();
 		
-		stmnt.executeUpdate("drop table IF EXISTS t1_l");
-		stmnt.executeUpdate("drop table IF EXISTS t1_r");
+		lStmnt.executeUpdate("drop table IF EXISTS t1_l");
+		rStmnt.executeUpdate("drop table IF EXISTS t1_r");
 		
-		stmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
-		stmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		lStmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		rStmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
 
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, NULL,     NULL,     NULL,     '50-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, NULL,     NULL,     NULL,     NULL    )");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, NULL,     NULL,     NULL,     '50-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, NULL,     NULL,     NULL,     NULL    )");
 		                                      
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(60, NULL,     NULL,     NULL,     '50-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(70, NULL,     NULL,     NULL,     NULL    )");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(60, NULL,     NULL,     NULL,     '50-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(70, NULL,     NULL,     NULL,     NULL    )");
 
-		stmnt.close();
+		lStmnt.close();
+		rStmnt.close();
 
 		List<String> pkList = new ArrayList<>();
 		pkList.add("id");
@@ -263,8 +327,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _conn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _conn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -285,44 +349,46 @@ public class DiffTest
 	public void test_noDiff_manyDataTypes()
 	throws Exception
 	{
-		Statement stmnt = _conn.createStatement();
+		Statement lStmnt = _lConn.createStatement();
+		Statement rStmnt = _rConn.createStatement();
 		
-		stmnt.executeUpdate("drop table IF EXISTS t1_l");
-		stmnt.executeUpdate("drop table IF EXISTS t1_r");
+		lStmnt.executeUpdate("drop table IF EXISTS t1_l");
+		rStmnt.executeUpdate("drop table IF EXISTS t1_r");
 		
-		stmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 timestamp with time zone, c3 timestamp, c4 date, c5 time, c6 varbinary(10), c7 decimal(10,2), c8 clob, c9 blob, primary key(id))");
-		stmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 timestamp with time zone, c3 timestamp, c4 date, c5 time, c6 varbinary(10), c7 decimal(10,2), c8 clob, c9 blob, primary key(id))");
+		lStmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 timestamp with time zone, c3 timestamp, c4 date, c5 time, c6 varbinary(10), c7 decimal(10,2), c8 clob, c9 blob, primary key(id))");
+		rStmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 timestamp with time zone, c3 timestamp, c4 date, c5 time, c6 varbinary(10), c7 decimal(10,2), c8 clob, c9 blob, primary key(id))");
 
 		//                                                                                    id  c1        c2                        c3                     c4            c5          c6                c7    c8                                 c9
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(10, '10-aaa', '2019-01-01T11:11:11+01', '2019-01-01 11:11:11', '2019-01-01', '11:11:11', 0102030405060708, 1.11, '"+crClob("Clob-1-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-1-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(20, '20-aaa', '2019-01-02T12:12:12+02', '2019-01-02 12:12:12', '2019-01-02', '12:12:12', 0102030405060708, 2.22, '"+crClob("Clob-2-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-2-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(30, '30-aaa', '2019-01-03T13:13:13+03', '2019-01-03 13:13:13', '2019-01-03', '13:13:13', 0102030405060708, 3.33, '"+crClob("Clob-3-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-3-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(40, '40-aaa', '2019-01-04T14:14:14+04', '2019-01-04 14:14:14', '2019-01-04', '14:14:14', 0102030405060708, 4.44, '"+crClob("Clob-4-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-4-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(50, '50-aaa', '2019-01-05T15:15:15+05', '2019-01-05 15:15:15', '2019-01-05', '15:15:15', 0102030405060708, 5.55, '"+crClob("Clob-5-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-5-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(60, '60-aaa', '2019-01-06T16:16:16+06', '2019-01-06 16:16:16', '2019-01-06', '16:16:16', 0102030405060708, 6.66, '"+crClob("Clob-6-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-6-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(70, '70-aaa', '2019-01-07T17:17:17+07', '2019-01-07 17:17:17', '2019-01-07', '17:17:17', 0102030405060708, 7.77, '"+crClob("Clob-7-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-7-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(80, '80-aaa', '2019-01-08T18:18:18+08', '2019-01-08 18:18:18', '2019-01-08', '18:18:18', 0102030405060708, 8.88, '"+crClob("Clob-8-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-8-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(90, '90-aaa', '2019-01-09T19:19:19+09', '2019-01-09 19:19:19', '2019-01-09', '19:19:19', 0102030405060708, 9.99, '"+crClob("Clob-9-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-9-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(10, '10-aaa', '2019-01-01T11:11:11+01', '2019-01-01 11:11:11', '2019-01-01', '11:11:11', 0102030405060708, 1.11, '"+crClob("Clob-1-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-1-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(20, '20-aaa', '2019-01-02T12:12:12+02', '2019-01-02 12:12:12', '2019-01-02', '12:12:12', 0102030405060708, 2.22, '"+crClob("Clob-2-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-2-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(30, '30-aaa', '2019-01-03T13:13:13+03', '2019-01-03 13:13:13', '2019-01-03', '13:13:13', 0102030405060708, 3.33, '"+crClob("Clob-3-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-3-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(40, '40-aaa', '2019-01-04T14:14:14+04', '2019-01-04 14:14:14', '2019-01-04', '14:14:14', 0102030405060708, 4.44, '"+crClob("Clob-4-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-4-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(50, '50-aaa', '2019-01-05T15:15:15+05', '2019-01-05 15:15:15', '2019-01-05', '15:15:15', 0102030405060708, 5.55, '"+crClob("Clob-5-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-5-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(60, '60-aaa', '2019-01-06T16:16:16+06', '2019-01-06 16:16:16', '2019-01-06', '16:16:16', 0102030405060708, 6.66, '"+crClob("Clob-6-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-6-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(70, '70-aaa', '2019-01-07T17:17:17+07', '2019-01-07 17:17:17', '2019-01-07', '17:17:17', 0102030405060708, 7.77, '"+crClob("Clob-7-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-7-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(80, '80-aaa', '2019-01-08T18:18:18+08', '2019-01-08 18:18:18', '2019-01-08', '18:18:18', 0102030405060708, 8.88, '"+crClob("Clob-8-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-8-[${cnt}]: ")+"'))");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(90, '90-aaa', '2019-01-09T19:19:19+09', '2019-01-09 19:19:19', '2019-01-09', '19:19:19', 0102030405060708, 9.99, '"+crClob("Clob-9-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-9-[${cnt}]: ")+"'))");
 
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(10, '10-aaa', '2019-01-01T11:11:11+01', '2019-01-01 11:11:11', '2019-01-01', '11:11:11', 0102030405060708, 1.11, '"+crClob("Clob-1-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-1-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(20, '20-aaa', '2019-01-02T12:12:12+02', '2019-01-02 12:12:12', '2019-01-02', '12:12:12', 0102030405060708, 2.22, '"+crClob("Clob-2-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-2-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(30, '30-aaa', '2019-01-03T13:13:13+03', '2019-01-03 13:13:13', '2019-01-03', '13:13:13', 0102030405060708, 3.33, '"+crClob("Clob-3-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-3-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(40, '40-aaa', '2019-01-04T14:14:14+04', '2019-01-04 14:14:14', '2019-01-04', '14:14:14', 0102030405060708, 4.44, '"+crClob("Clob-4-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-4-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(50, '50-aaa', '2019-01-05T15:15:15+05', '2019-01-05 15:15:15', '2019-01-05', '15:15:15', 0102030405060708, 5.55, '"+crClob("Clob-5-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-5-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(60, '60-aaa', '2019-01-06T16:16:16+06', '2019-01-06 16:16:16', '2019-01-06', '16:16:16', 0102030405060708, 6.66, '"+crClob("Clob-6-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-6-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(70, '70-aaa', '2019-01-07T17:17:17+07', '2019-01-07 17:17:17', '2019-01-07', '17:17:17', 0102030405060708, 7.77, '"+crClob("Clob-7-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-7-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(80, '80-aaa', '2019-01-08T18:18:18+08', '2019-01-08 18:18:18', '2019-01-08', '18:18:18', 0102030405060708, 8.88, '"+crClob("Clob-8-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-8-[${cnt}]: ")+"'))");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(90, '90-aaa', '2019-01-09T19:19:19+09', '2019-01-09 19:19:19', '2019-01-09', '19:19:19', 0102030405060708, 9.99, '"+crClob("Clob-9-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-9-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(10, '10-aaa', '2019-01-01T11:11:11+01', '2019-01-01 11:11:11', '2019-01-01', '11:11:11', 0102030405060708, 1.11, '"+crClob("Clob-1-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-1-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(20, '20-aaa', '2019-01-02T12:12:12+02', '2019-01-02 12:12:12', '2019-01-02', '12:12:12', 0102030405060708, 2.22, '"+crClob("Clob-2-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-2-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(30, '30-aaa', '2019-01-03T13:13:13+03', '2019-01-03 13:13:13', '2019-01-03', '13:13:13', 0102030405060708, 3.33, '"+crClob("Clob-3-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-3-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(40, '40-aaa', '2019-01-04T14:14:14+04', '2019-01-04 14:14:14', '2019-01-04', '14:14:14', 0102030405060708, 4.44, '"+crClob("Clob-4-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-4-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(50, '50-aaa', '2019-01-05T15:15:15+05', '2019-01-05 15:15:15', '2019-01-05', '15:15:15', 0102030405060708, 5.55, '"+crClob("Clob-5-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-5-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(60, '60-aaa', '2019-01-06T16:16:16+06', '2019-01-06 16:16:16', '2019-01-06', '16:16:16', 0102030405060708, 6.66, '"+crClob("Clob-6-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-6-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(70, '70-aaa', '2019-01-07T17:17:17+07', '2019-01-07 17:17:17', '2019-01-07', '17:17:17', 0102030405060708, 7.77, '"+crClob("Clob-7-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-7-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(80, '80-aaa', '2019-01-08T18:18:18+08', '2019-01-08 18:18:18', '2019-01-08', '18:18:18', 0102030405060708, 8.88, '"+crClob("Clob-8-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-8-[${cnt}]: ")+"'))");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4, c5, c6, c7, c8, c9) values(90, '90-aaa', '2019-01-09T19:19:19+09', '2019-01-09 19:19:19', '2019-01-09', '19:19:19', 0102030405060708, 9.99, '"+crClob("Clob-9-[${cnt}]: ")+"', RAWTOHEX('"+crClob("Blob-9-[${cnt}]: ")+"'))");
 
-		stmnt.close();
+		lStmnt.close();
+		rStmnt.close();
 
 		List<String> pkList = new ArrayList<>();
 		pkList.add("id");
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _conn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _conn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -353,37 +419,39 @@ public class DiffTest
 	public void test_missingRhs_withNullValues()
 	throws Exception
 	{
-		Statement stmnt = _conn.createStatement();
+		Statement lStmnt = _lConn.createStatement();
+		Statement rStmnt = _rConn.createStatement();
 		
-		stmnt.executeUpdate("drop table IF EXISTS t1_l");
-		stmnt.executeUpdate("drop table IF EXISTS t1_r");
+		lStmnt.executeUpdate("drop table IF EXISTS t1_l");
+		rStmnt.executeUpdate("drop table IF EXISTS t1_r");
 		
-		stmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
-		stmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		lStmnt.executeUpdate("create table t1_l (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
+		rStmnt.executeUpdate("create table t1_r (id int, c1 varchar(60), c2 varchar(60), c3 varchar(60), c4 varchar(60), primary key(id))");
 
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, NULL,     NULL,     NULL,     '50-ddd')");
-		stmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, NULL,     NULL,     NULL,     NULL    )");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(60, NULL,     NULL,     NULL,     '50-ddd')");
+		lStmnt.executeUpdate("insert into t1_l (id, c1, c2, c3, c4) values(70, NULL,     NULL,     NULL,     NULL    )");
 		                                      
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
-		stmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(10, NULL,     '10-bbb', '10-ccc', '10-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(20, '20-aaa', NULL,     '20-ccc', '20-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(30, '30-aaa', '30-bbb', NULL,     '30-ddd')");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(40, '40-aaa', '40-bbb', '40-ccc', NULL    )");
+		rStmnt.executeUpdate("insert into t1_r (id, c1, c2, c3, c4) values(50, NULL,     NULL,     '50-ccc', '50-ddd')");
 
-		stmnt.close();
+		lStmnt.close();
+		rStmnt.close();
 
 		List<String> pkList = new ArrayList<>();
 		pkList.add("id");
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _conn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _conn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -391,9 +459,9 @@ public class DiffTest
 		assertEquals("Expected 2 in diffcount", 2, diffCount);
 		
 
-		GenerateSqlText lSqlGen = new GenerateSqlText(context, _conn);
-		GenerateSqlText rSqlGen = new GenerateSqlText(context, _conn);
-		
+		GenerateSqlText lSqlGen = new GenerateSqlText(context, _lConn);
+		GenerateSqlText rSqlGen = new GenerateSqlText(context, _rConn);
+
 		List<String> leftFix  = lSqlGen.getSql(DiffSide.LEFT, null);
 		List<String> rightFix = rSqlGen.getSql(DiffSide.RIGHT, null);
 		

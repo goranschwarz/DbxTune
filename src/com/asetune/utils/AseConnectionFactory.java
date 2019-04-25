@@ -33,6 +33,7 @@ import com.asetune.Version;
 import com.asetune.gui.ConnectionProgressCallback;
 import com.asetune.gui.ConnectionProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
+import com.asetune.ssh.SshTunnelInfo;
 import com.sybase.util.ds.interfaces.Service;
 import com.sybase.util.ds.interfaces.SyInterfacesDriver;
 import com.sybase.util.ds.interfaces.SyInterfacesEntry;
@@ -1215,7 +1216,7 @@ public class AseConnectionFactory
 		return getConnection(getHostPortStr(), dbname, _username, _password, _appname, _appVersion, _hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 
-	/** get a connection using the static settings priviously made, but override the input parameters for this method 
+	/** get a connection using the static settings previously made, but override the input parameters for this method 
 	 * @param _connProp 
 	 * @param connectionProgressDialog */
 	public static Connection getConnection(ConnectionProgressDialog connectionProgressDialog, ConnectionProp connProp) 
@@ -1226,6 +1227,8 @@ public class AseConnectionFactory
 		String appname    = _appname;
 		String appVersion = _appVersion;
 		String hostname   = _hostname;
+		String hostPortStr = getHostPortStr();
+
 		if (connProp != null)
 		{
 			username   = connProp.getUsername();
@@ -1233,8 +1236,42 @@ public class AseConnectionFactory
 			appname    = connProp.getAppName();
 			appVersion = connProp.getAppVersion();
 			hostname   = _hostname;
+			
+			// Another horrible workaround until we rewrite this thing from scratch.
+			if (StringUtil.hasValue(connProp.getUrl()))
+			{
+				try
+				{
+					AseUrlHelper urlHelper = AseUrlHelper.parseUrl(connProp.getUrl());
+					hostPortStr = urlHelper.getHostPortStr();
+
+System.out.println("AseConnectionFactory.getConnection(connectionProgressDialog, connProp): hostPortStr=|"+hostPortStr+"|, connProp="+connProp);
+					if (connProp.getSshTunnelInfo() != null)
+					{
+						SshTunnelInfo ti = connProp.getSshTunnelInfo();
+						hostPortStr = ti.getLocalHost() + ":" + ti.getLocalPort();
+
+System.out.println("NEW hostPortStr due to SshTunnelInfo. hostPortStr=|" + hostPortStr + "|.");
+						
+						// TODO: Check if we have got a Tunnel... (if not set one up)
+//						SshTunnelManager tm = SshTunnelManager.getInstance();
+//						if (tm != null)
+//						{
+//							tm.
+//						}
+					}
+					if (StringUtil.isNullOrBlank(hostPortStr))
+					{
+						throw new SQLException("Can't get a proper 'host:port' String when parsing ASE Url '"+connProp.getUrl()+"'.");
+					}
+				}
+				catch(ParseException ex)
+				{
+					throw new SQLException("Problems parsing ASE Url '"+connProp.getUrl()+"'.", ex);
+				}
+			}
 		}
-		return getConnection(getHostPortStr(), null, username, password, appname, appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
+		return getConnection(hostPortStr, null, username, password, appname, appVersion, hostname, (Properties)null, (ConnectionProgressCallback)null);
 	}
 	public static Connection getConnection(ConnectionProgressCallback cpd) 
 	throws ClassNotFoundException, SQLException

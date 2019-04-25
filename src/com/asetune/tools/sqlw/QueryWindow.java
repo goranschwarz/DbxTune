@@ -7353,11 +7353,14 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		}
 		catch (Throwable originEx)
 		{
+			// The below 2 *info* messages can be deleted (they are just there for debugging)
 			Throwable ex = originEx;
-ex.printStackTrace();
+			_logger.info("displayQueryResults(): doBgThread.get(): Original Exception thrown.", ex);
 			if (ex instanceof ExecutionException)
+			{
 				ex = ex.getCause();
-ex.printStackTrace();
+				_logger.info("displayQueryResults(): doBgThread.get(): Extracted Exception/Cause, since the thrown Exception was instance of 'ExecutionException'.", ex);
+			}
 
 			// lets write the exception to the output window...
 			_resPanelScroll    .setVisible(false);
@@ -7384,18 +7387,29 @@ ex.printStackTrace();
 //			// TODO: maybe add a "dont show this message again... only show it in the output window"
 //			}
 
-			String msg = ex.getMessage();
-			if (msg != null && (ex instanceof GoSyntaxException || msg.indexOf('\n') >= 0))
+			// Used to get a 'jstack' to see code path for a "normal" dialog... since the below SwingUtils.showErrorMessage() is frozen...
+			// The StackTrace using 'jstack' looks "the same" as for below SwingUtils.showErrorMessage()... so I dont know what's happening
+			// For now Simple DO NOT SHOW the message...
+			//JOptionPane.showMessageDialog(_window, "DUMMY Message", "DUMMY Message.", JOptionPane.PLAIN_MESSAGE);
+			
+			// It looks like we block our self (the dialog is not visible and the GUI is frozen if showMessage=true)
+//			boolean showMessage = true;
+			boolean showMessage = false;
+			if (showMessage)
 			{
-				msg = "<html>" + ex.getMessage().replace("\n", "<br>") + "</html>";
-			}
+				String msg = ex.getMessage();
+				if (msg != null && (ex instanceof GoSyntaxException || msg.indexOf('\n') >= 0))
+				{
+					msg = "<html>" + ex.getMessage().replace("\n", "<br>") + "</html>";
+				}
 
-			SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
-				"<html>" +
-				"<h2>Problems when executing Statement</h2>" +
-				msg +
-				"</html>", 
-				originEx);
+				SwingUtils.showErrorMessage(_window, "Problems when executing Statement", 
+					"<html>" +
+					"<h2>Problems when executing Statement</h2>" +
+					msg +
+					"</html>", 
+					originEx);
+			}
 		}
 
 		if (guiShowplanExec)

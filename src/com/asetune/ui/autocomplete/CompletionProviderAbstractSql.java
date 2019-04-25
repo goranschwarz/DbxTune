@@ -31,7 +31,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -88,6 +87,7 @@ import com.asetune.ui.autocomplete.completions.ProcedureParameterInfo;
 import com.asetune.ui.autocomplete.completions.SchemaInfo;
 import com.asetune.ui.autocomplete.completions.ShorthandCompletionX;
 import com.asetune.ui.autocomplete.completions.SqlColumnCompletion;
+import com.asetune.ui.autocomplete.completions.SqlCompletion;
 import com.asetune.ui.autocomplete.completions.SqlDbCompletion;
 import com.asetune.ui.autocomplete.completions.SqlFunctionCompletion;
 import com.asetune.ui.autocomplete.completions.SqlProcedureCompletion;
@@ -1047,25 +1047,12 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 
 		
 		//-----------------------------------------------------------
-		// 'go' completion
-		//
-		if (currentLineStr.length() >= 2)
-		{
-			int endPos = Math.min(3, currentLineStr.length());
-			String first3Chars = currentLineStr.substring(0, endPos).toLowerCase().trim();
-			if (first3Chars.equals("go"))
-			{
-				if (enteredText.toLowerCase().equals("go"))
-					return createGoCompletions();
-				else
-					return getCompletionsFrom(createGoCompletions(), enteredText);
-			}
-		}
-		
-		//-----------------------------------------------------------
 		// Complete Connection Profiles
 		//
-		if (currentLineStr != null && currentLineStr.startsWith("\\") && (currentLineStr.startsWith("\\connect") || prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile")))
+		if (    currentLineStr != null 
+		     && ( currentLineStr.startsWith("\\") || currentLineStr.toLowerCase().startsWith("go") )
+		     && ( currentLineStr.startsWith("\\connect") || prevWord1.equals("-p") || prevWord2.equals("-p") || prevWord3.equals("-p") || prevWord1.equals("--profile") || prevWord2.equals("--profile") || prevWord3.equals("--profile") )
+		   )
 		{
 			if (ConnectionProfileManager.hasInstance())
 			{
@@ -1083,12 +1070,30 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 						replaceWith = "'" + name + "'"; // Quote the string if it contains spaces etc...
 
 					ImageIcon icon = ConnectionProfileManager.getIcon16(cp.getSrvType());
-					BasicCompletion c = new BasicCompletion(this, replaceWith, null, cp.getToolTipText());
+//					BasicCompletion c = new BasicCompletion(this, replaceWith, null, cp.getToolTipText());
+					SqlCompletion c = new SqlCompletion(this, name, replaceWith);
+					c.setSummary(cp.getToolTipText());
 					c.setIcon(icon);
 
 					cList.add(c);
 				}
 				return getCompletionsFrom(cList, enteredText);
+			}
+		}
+		
+		//-----------------------------------------------------------
+		// 'go' completion
+		//
+		if (currentLineStr.length() >= 2)
+		{
+			int endPos = Math.min(3, currentLineStr.length());
+			String first3Chars = currentLineStr.substring(0, endPos).toLowerCase().trim();
+			if (first3Chars.equals("go"))
+			{
+				if (enteredText.toLowerCase().equals("go"))
+					return createGoCompletions();
+				else
+					return getCompletionsFrom(createGoCompletions(), enteredText);
 			}
 		}
 		
@@ -2329,6 +2334,15 @@ System.out.println("get-PROCEDURE-CompletionsFromSchema: cnt="+retComp.size()+",
 		
 		// get current catalog/dbName
 		try {_currentCatalog = conn.getCatalog(); }  catch(SQLException ignore) {}
+		
+		// Get DBMS Server name
+		if (conn instanceof DbxConnection)
+		{
+			try {
+				String dbmsSrvName = ((DbxConnection)conn).getDbmsServerName();
+				_logger.info("JDBC DbxConnection   .getDbmsServerName()          is '"+dbmsSrvName+"'.");
+			} catch (SQLException ignore) {} 
+		}
 
 		_logger.info("JDBC DatabaseMetaData.getDatabaseProductName()     is '"+_dbProductName+"'.");
 		_logger.info("JDBC DatabaseMetaData.getExtraNameCharacters()     is '"+_dbExtraNameCharacters+"'.");

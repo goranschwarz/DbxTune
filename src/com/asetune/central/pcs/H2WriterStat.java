@@ -41,7 +41,10 @@ import com.asetune.Version;
 import com.asetune.alarm.AlarmHandler;
 import com.asetune.alarm.events.AlarmEvent;
 import com.asetune.alarm.events.AlarmEventOsLoadAverage;
+import com.asetune.alarm.events.AlarmEventOsLoadAverageAdjusted;
+import com.asetune.central.DbxTuneCentral;
 import com.asetune.pcs.PersistReader;
+import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -58,8 +61,9 @@ import com.asetune.utils.TimeUtils;
  *   <li>and possibly more</li>
  * </ul>
  *  
- *  I could have used a CounterModel for this but I decided to do it this way instead...
- *
+ * I also incorporated OsLoadAverage in this... But it will most possible me moved to it's own class later...<br>
+ * Note: Right now there are both 'normal' and 'adjusted' load average (one of them will probably be removed)
+ * 
  * @author gorans
  *
  */
@@ -80,7 +84,29 @@ public class H2WriterStat
 	public static final Double      DEFAULT_AlarmOsLoadAverage5m  = 99.0; // more or less DISABLED
 
 	public static final String      PROPKEY_AlarmOsLoadAverage15m = "H2WriterStat.alarm.osLoadAverage.15m.gt";
-	public static final Double      DEFAULT_AlarmOsLoadAverage15m = 4.0;
+	public static final Double      DEFAULT_AlarmOsLoadAverage15m = 99.0; // more or less DISABLED
+
+	public static final String      PROPKEY_AlarmOsLoadAverage30m = "H2WriterStat.alarm.osLoadAverage.30m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverage30m = 99.0; // more or less DISABLED
+
+	public static final String      PROPKEY_AlarmOsLoadAverage60m = "H2WriterStat.alarm.osLoadAverage.60m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverage60m = 99.0; // more or less DISABLED
+
+	// The below is alarms for ADJUSTED values meaning: Adjusted = LoadAverage / numOfProcs
+	public static final String      PROPKEY_AlarmOsLoadAverageAdjusted1m  = "H2WriterStat.alarm.osLoadAverage.adjusted.1m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted1m  = 99.0; // more or less DISABLED
+
+	public static final String      PROPKEY_AlarmOsLoadAverageAdjusted5m  = "H2WriterStat.alarm.osLoadAverage.adjusted.5m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted5m  = 99.0; // more or less DISABLED
+
+	public static final String      PROPKEY_AlarmOsLoadAverageAdjusted15m = "H2WriterStat.alarm.osLoadAverage.adjusted.15m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted15m = 4.0;
+
+	public static final String      PROPKEY_AlarmOsLoadAverageAdjusted30m = "H2WriterStat.alarm.osLoadAverage.adjusted.30m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted30m = 3.0;
+
+	public static final String      PROPKEY_AlarmOsLoadAverageAdjusted60m = "H2WriterStat.alarm.osLoadAverage.adjusted.60m.gt";
+	public static final Double      DEFAULT_AlarmOsLoadAverageAdjusted60m = 2.0;
 
 	private static final String     DEFAULT_sampleTimeFormat = "%?DD[d ]%?HH[:]%MM:%SS.%ms";
 
@@ -99,6 +125,13 @@ public class H2WriterStat
 	private double  _osLoadAverage1min  = -1;
 	private double  _osLoadAverage5min  = -1;
 	private double  _osLoadAverage15min = -1;
+	private double  _osLoadAverage30min = -1;
+	private double  _osLoadAverage60min = -1;
+	private double  _osLoadAverageAdjusted1min  = -1;
+	private double  _osLoadAverageAdjusted5min  = -1;
+	private double  _osLoadAverageAdjusted15min = -1;
+	private double  _osLoadAverageAdjusted30min = -1;
+	private double  _osLoadAverageAdjusted60min = -1;
 	private LinkedList<OsLoadAvgEntry> _osLoadAverageList = null;
 
 	public static final String FILE_READ  = "info.FILE_READ";
@@ -323,33 +356,48 @@ public class H2WriterStat
 
 	private void calcLoadAverage()
 	{
+		// Get ONE minute Load Average From OS (if the OS isn't supporting this, -1 will be returned)
 		OperatingSystemMXBean os  = ManagementFactory.getOperatingSystemMXBean();
 		double osLoadAverage1min  = os.getSystemLoadAverage();
-		long now = System.currentTimeMillis();
-	
+		double numOfProcs         = os.getAvailableProcessors() * 1.0; // * 1.0 to convert it to a double
+		
 		// if NOT SUPPORTED, do nothing...
-//		if (osLoadAverage1min == -1)
-//			return;
+		if (osLoadAverage1min == -1)
+			return;
+
+		long now = System.currentTimeMillis();
 		
 		if (_osLoadAverageList == null)
 			_osLoadAverageList = new LinkedList<>();
 
-		// Calculate 5 and 15 minute
+		// Calculate 5, 15, 30 and 60 minutes into milliseconds
 		long   ms5m   = 300_000; // 5 * 60 * 1000;
 		int    cnt5m  = 0;
 		double sum5m  = 0;
 
-		long   ms15m  = 1500_000; // 15 * 60 * 1000;
+		long   ms15m  = 900_000; // 15 * 60 * 1000;
 		int    cnt15m = 0;
 		double sum15m = 0;
 
+		long   ms30m  = 1_800_000; // 30 * 60 * 1000;
+		int    cnt30m = 0;
+		double sum30m = 0;
+
+		long   ms60m  = 3_600_000; // 60 * 60 * 1000;
+		int    cnt60m = 0;
+		double sum60m = 0;
+
+		// discard entries from the LoadAverage LIST after this number of milliseconds 
+		long maxAge = ms60m;
+		
+		
 		// Add current entry to the list
 		_osLoadAverageList.add(new OsLoadAvgEntry(now, osLoadAverage1min));
 
 		//
-		// Get oldest entry so we can check if we have enough time/samples to calculate 5 and 15 minute values 
+		// Get oldest entry so we can check if we have enough time/samples to calculate 5, 15, 30 and 60 minute values 
 		//
-		// 15 minute and 5 minute would typically be HIGH at start time (since it's the same value as 1 minute)... 
+		// 60, 30, 15 and 5 minute would typically be HIGH at start time (since it's the same value as 1 minute)... 
 		// So we might want to "skip" those until we have enough data point to measure (or similar)
 		// Otherwise we will have *ALARMS* that are "faulty".
 		OsLoadAvgEntry oldestEntry = _osLoadAverageList.getFirst(); // note: new entries are added at "END", so oldest entry would be FIRST
@@ -358,46 +406,66 @@ public class H2WriterStat
 			oldestAgeInMs = now - oldestEntry._ts;
 
 		// Loop the list and remove old entries
-		// and calculate the Average for 5 and 15 minutes
+		// and calculate the Average for 5, 15, 30 and 60 minutes
 		for(Iterator<OsLoadAvgEntry> i = _osLoadAverageList.iterator(); i.hasNext();) 
 		{
 			OsLoadAvgEntry entry = i.next();
 			long   ts  = entry._ts;
 			double val = entry._val;
 
-			// Remove entries that are older than 15 minutes
-			if ( (now-ts) > ms15m )
+			long entryAgeMs = now - ts;
+			
+			// Remove entries that are older than 60 minutes (or the MAX interval to save)
+			// and get next entry (start at the top)
+			if ( entryAgeMs > maxAge )
 			{
 				i.remove();
 				continue;
 			}
 			
+			// 60 minute average  (but only add values if we have enough samples... in this case approx 30 minutes)
+			if ( (entryAgeMs <= ms60m) && (oldestAgeInMs > ms60m / 2) )
+			{
+				cnt60m++;
+				sum60m += val;
+			}
+
+			// 30 minute average  (but only add values if we have enough samples... in this case approx 15 minutes)
+			if ( (entryAgeMs <= ms30m) && (oldestAgeInMs > ms30m / 2) )
+			{
+				cnt30m++;
+				sum30m += val;
+			}
+
 			// 15 minute average  (but only add values if we have enough samples... in this case approx 7.5 minutes)
-			// Since we removed everything older than 15 minutes above... 
-			// we can do calculation without an if statement here 
-			if (oldestAgeInMs > ms15m / 2)
+			if ( (entryAgeMs <= ms15m) && (oldestAgeInMs > ms15m / 2) )
 			{
 				cnt15m++;
 				sum15m += val;
 			}
 
-			
-			// continue if older than 5 minutes
-			if ( (now-ts) > ms5m )
-				continue;
-
 			// 5 minute average (but only add values if we have enough samples... in this case approx 2.5 minutes)
-			if (oldestAgeInMs > ms5m / 2)
+			if ( (entryAgeMs <= ms5m) && (oldestAgeInMs > ms5m / 2) )
 			{
 				cnt5m++;
 				sum5m += val;
 			}
 		}
 		
+		// on: 5,15,30,60 minute: calculate and set scale to 2
 		_osLoadAverage1min  = osLoadAverage1min;
-		_osLoadAverage5min  = cnt5m  == 0 ? -1 : sum5m  / (cnt5m  * 1.0);
-		_osLoadAverage15min = cnt15m == 0 ? -1 : sum15m / (cnt15m * 1.0);
+		_osLoadAverage5min  = cnt5m  == 0 ? -1 : new BigDecimal( sum5m  / (cnt5m  * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		_osLoadAverage15min = cnt15m == 0 ? -1 : new BigDecimal( sum15m / (cnt15m * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		_osLoadAverage30min = cnt30m == 0 ? -1 : new BigDecimal( sum30m / (cnt30m * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		_osLoadAverage60min = cnt60m == 0 ? -1 : new BigDecimal( sum60m / (cnt60m * 1.0) ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+
+		_osLoadAverageAdjusted1min  =                    new BigDecimal( osLoadAverage1min / numOfProcs         ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();;
+		_osLoadAverageAdjusted5min  = cnt5m  == 0 ? -1 : new BigDecimal( (sum5m  / (cnt5m  * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		_osLoadAverageAdjusted15min = cnt15m == 0 ? -1 : new BigDecimal( (sum15m / (cnt15m * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		_osLoadAverageAdjusted30min = cnt30m == 0 ? -1 : new BigDecimal( (sum30m / (cnt30m * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+		_osLoadAverageAdjusted60min = cnt60m == 0 ? -1 : new BigDecimal( (sum60m / (cnt60m * 1.0)) / numOfProcs ).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
 	}
+
 	/** Small Class to keep OsLoadAverage history values... so we can calculate 5 and 15 minute values */
 	private static class OsLoadAvgEntry
 	{
@@ -418,10 +486,18 @@ public class H2WriterStat
 		Configuration conf = Configuration.getCombinedConfiguration();
 		AlarmHandler ah = AlarmHandler.getInstance();
 		
-		double loadAverage_1m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage1m,  DEFAULT_AlarmOsLoadAverage1m);
-		double loadAverage_5m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage5m,  DEFAULT_AlarmOsLoadAverage5m);
-		double loadAverage_15m_threshold = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage15m, DEFAULT_AlarmOsLoadAverage15m);
+		double loadAverage_1m_threshold          = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage1m,          DEFAULT_AlarmOsLoadAverage1m);
+		double loadAverage_5m_threshold          = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage5m,          DEFAULT_AlarmOsLoadAverage5m);
+		double loadAverage_15m_threshold         = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage15m,         DEFAULT_AlarmOsLoadAverage15m);
+		double loadAverage_30m_threshold         = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage30m,         DEFAULT_AlarmOsLoadAverage30m);
+		double loadAverage_60m_threshold         = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverage60m,         DEFAULT_AlarmOsLoadAverage60m);
 
+		double loadAverageAdjusted_1m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverageAdjusted1m,  DEFAULT_AlarmOsLoadAverageAdjusted1m);
+		double loadAverageAdjusted_5m_threshold  = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverageAdjusted5m,  DEFAULT_AlarmOsLoadAverageAdjusted5m);
+		double loadAverageAdjusted_15m_threshold = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverageAdjusted15m, DEFAULT_AlarmOsLoadAverageAdjusted15m);
+		double loadAverageAdjusted_30m_threshold = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverageAdjusted30m, DEFAULT_AlarmOsLoadAverageAdjusted30m);
+		double loadAverageAdjusted_60m_threshold = conf.getDoubleProperty(PROPKEY_AlarmOsLoadAverageAdjusted60m, DEFAULT_AlarmOsLoadAverageAdjusted60m);
+		
 		// Set hostname to servername@OsHostName 
 		String srvName = System.getProperty("SERVERNAME");
 		if (StringUtil.isNullOrBlank(srvName))
@@ -433,24 +509,34 @@ public class H2WriterStat
 		String hostname        = srvName + "@" + StringUtil.getHostname();
 
 
-		// If any of 1,5,15 minute threshold are crossed... set scale to 2 (for nicer formatting)
-		if (    _osLoadAverage1min  > loadAverage_1m_threshold
-		     || _osLoadAverage5min  > loadAverage_5m_threshold
-		     || _osLoadAverage15min > loadAverage_15m_threshold  )
+		double threshold;
+
+		// Should we set Alarm TimeToLive here... based on the PCS _lastConsumeTime * 1.5 or similar
+		long timeToLive = -1;
+		if (DbxTuneCentral.APP_NAME.equals(Version.getAppName()))
 		{
-			_osLoadAverage1min  = new BigDecimal(_osLoadAverage1min).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-			_osLoadAverage5min  = new BigDecimal(_osLoadAverage1min).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
-			_osLoadAverage15min = new BigDecimal(_osLoadAverage1min).setScale(2, BigDecimal.ROUND_HALF_EVEN).doubleValue();
+			// if we are DbxCentral
+			if (CentralPcsWriterHandler.hasInstance() && CentralPcsWriterHandler.getInstance().getMaxConsumeTime() > 0)
+				timeToLive = CentralPcsWriterHandler.getInstance().getMaxConsumeTime();
+		}
+		else
+		{
+			// if we are any collector (xxxTune)
+			if (PersistentCounterHandler.hasInstance() && PersistentCounterHandler.getInstance().getMaxConsumeTime() > 0)
+				timeToLive = PersistentCounterHandler.getInstance().getMaxConsumeTime();
 		}
 
-		
-		double threshold;
+
+		//---------------------------------------------
+		// Below is NORMAL Load Average, meaning: LoadAverage over ALL CPU's
+		//---------------------------------------------
 
 		// 1 minute
 		threshold = loadAverage_1m_threshold;
 		if (_osLoadAverage1min > threshold)
 		{
-			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_1_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_1_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
+			ae.setTimeToLive(timeToLive);
 			ah.addAlarm(ae);
 		}
 
@@ -458,7 +544,8 @@ public class H2WriterStat
 		threshold = loadAverage_5m_threshold;
 		if (_osLoadAverage5min > threshold)
 		{
-			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_5_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_5_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
+			ae.setTimeToLive(timeToLive);
 			ah.addAlarm(ae);
 		}
 
@@ -466,7 +553,77 @@ public class H2WriterStat
 		threshold = loadAverage_15m_threshold;
 		if (_osLoadAverage15min > threshold)
 		{
-			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_15_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_15_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+		// 30 minute
+		threshold = loadAverage_30m_threshold;
+		if (_osLoadAverage30min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_30_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+		// 60 minute
+		threshold = loadAverage_60m_threshold;
+		if (_osLoadAverage60min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverage(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverage.RangeType.RANGE_60_MINUTE, _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+	
+	
+		//---------------------------------------------
+		// Below is ADJUSTED Load Average, meaning: LoadAverage / numOfProcs
+		//---------------------------------------------
+		
+		// 1 minute
+		threshold = loadAverageAdjusted_1m_threshold;
+		if (_osLoadAverageAdjusted1min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_1_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+		// 5 minute
+		threshold = loadAverageAdjusted_5m_threshold;
+		if (_osLoadAverageAdjusted5min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_5_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+		// 15 minute
+		threshold = loadAverageAdjusted_15m_threshold;
+		if (_osLoadAverageAdjusted15min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_15_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+		// 30 minute
+		threshold = loadAverageAdjusted_30m_threshold;
+		if (_osLoadAverageAdjusted30min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_30_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
+			ae.setTimeToLive(timeToLive);
+			ah.addAlarm(ae);
+		}
+
+		// 60 minute
+		threshold = loadAverageAdjusted_60m_threshold;
+		if (_osLoadAverageAdjusted60min > threshold)
+		{
+			AlarmEvent ae = new AlarmEventOsLoadAverageAdjusted(serviceInfoName, threshold, hostname, AlarmEventOsLoadAverageAdjusted.RangeType.RANGE_60_MINUTE, _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
+			ae.setTimeToLive(timeToLive);
 			ah.addAlarm(ae);
 		}
 	}
@@ -540,7 +697,11 @@ public class H2WriterStat
 		
 		String osLoadAvg    = "";
 		if (_osLoadAverage1min != -1) // Note: NOT supported on some OS (Windows), so do not print it
-			osLoadAvg    = String.format("OsLoadAvg[1m=%.2f, 5m=%.2f, 15m=%.2f], ", _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min);
+			osLoadAvg    = String.format("OsLoadAvg[1m=%.2f, 5m=%.2f, 15m=%.2f, 30m=%.2f, 60m=%.2f], ", _osLoadAverage1min, _osLoadAverage5min, _osLoadAverage15min, _osLoadAverage30min, _osLoadAverage60min);
+		
+		String osLoadAvgAdj = "";
+		if (_osLoadAverage1min != -1) // Note: NOT supported on some OS (Windows), so do not print it
+			osLoadAvgAdj = String.format("OsLoadAvgAdj[1m=%.2f, 5m=%.2f, 15m=%.2f, 30m=%.2f, 60m=%.2f], ", _osLoadAverageAdjusted1min, _osLoadAverageAdjusted5min, _osLoadAverageAdjusted15min, _osLoadAverageAdjusted30min, _osLoadAverageAdjusted60min);
 		
 		String prefix       = "H2-PerfCounters{sampleTime=" + TimeUtils.msToTimeStr(getSampleTimeFormat(), _lastIntervallInMs) + ", ";
 //		String osLoadAvg    = "MxOsLoadAvg"     + "[1m="  + _osLoadAverage1min           + ", 5m="   + _osLoadAverage5min            + ", 15m="  + _osLoadAverage15min           + "], ";
@@ -554,6 +715,7 @@ public class H2WriterStat
 		// Remember max length for next print
 		_strMaxLen_prefix       = Math.max(_strMaxLen_prefix      , prefix      .length());
 		_strMaxLen_osLoadAvg    = Math.max(_strMaxLen_osLoadAvg   , osLoadAvg   .length());
+		_strMaxLen_osLoadAvgAdj = Math.max(_strMaxLen_osLoadAvgAdj, osLoadAvgAdj.length());
 		_strMaxLen_fileRead     = Math.max(_strMaxLen_fileRead    , fileRead    .length());
 		_strMaxLen_fileWrite    = Math.max(_strMaxLen_fileWrite   , fileWrite   .length());
 		_strMaxLen_pageCount    = Math.max(_strMaxLen_pageCount   , pageCount   .length());
@@ -564,18 +726,23 @@ public class H2WriterStat
 		// Add space at the end to of each section. (for readability)
 		prefix       = StringUtil.left(prefix      , _strMaxLen_prefix      );
 		osLoadAvg    = StringUtil.left(osLoadAvg   , _strMaxLen_osLoadAvg   );
+		osLoadAvgAdj = StringUtil.left(osLoadAvgAdj, _strMaxLen_osLoadAvgAdj);
 		fileRead     = StringUtil.left(fileRead    , _strMaxLen_fileRead    );
 		fileWrite    = StringUtil.left(fileWrite   , _strMaxLen_fileWrite   );
 		pageCount    = StringUtil.left(pageCount   , _strMaxLen_pageCount   );
 		h2FileSizeKb = StringUtil.left(h2FileSizeKb, _strMaxLen_h2FileSizeKb);
 		h2FileSizeMb = StringUtil.left(h2FileSizeMb, _strMaxLen_h2FileSizeMb);
 		postFix      = StringUtil.left(postFix     , _strMaxLen_postFix     );
+
+		//String osLoad = osLoadAvg;     // use 'osLoadAvg' if you want to see the whole machine, which can lie a bit
+		String osLoad = osLoadAvgAdj;    // use 'osLoadAvgAdj' if you want to see the load average per CPU/Core
 		
-		return prefix + osLoadAvg + fileRead + fileWrite + pageCount + h2FileSizeKb + h2FileSizeMb + postFix;
+		return prefix + osLoad + fileRead + fileWrite + pageCount + h2FileSizeKb + h2FileSizeMb + postFix;
 	}
 	// used to format the length of the string
 	private int _strMaxLen_prefix       = 0;
 	private int _strMaxLen_osLoadAvg    = 0;
+	private int _strMaxLen_osLoadAvgAdj = 0;
 	private int _strMaxLen_fileRead     = 0;
 	private int _strMaxLen_fileWrite    = 0;
 	private int _strMaxLen_pageCount    = 0;

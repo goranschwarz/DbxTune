@@ -1741,12 +1741,13 @@ public class DbxTuneCentral
 
 
 
+	public static final String APP_NAME = "DbxTuneCentral";
 	//---------------------------------------------------
 	// MAIN
 	//---------------------------------------------------
 	public static void main(String[] args)
 	{
-		Version.setAppName("DbxTuneCentral");
+		Version.setAppName(APP_NAME);
 		DbxTune.setStartTime();
 
 		Options options = buildCommandLineOptions();

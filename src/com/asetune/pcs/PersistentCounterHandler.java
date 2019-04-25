@@ -245,6 +245,7 @@ implements Runnable
 	/** */
 	private boolean _addDependantObjectsToDdlInQueue = DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 
+	/** How many milliseconds have we maximum spent in <i>consume</i> */
 	private long _maxConsumeTime = 0;
 
 	/*---------------------------------------------------
@@ -1472,6 +1473,10 @@ implements Runnable
 		}
 	}
 	
+	/**
+	 * Get MAX time in milliseconds we have spent in consume for any writer
+	 * @return
+	 */
 	public long getMaxConsumeTime()
 	{
 		return _maxConsumeTime;

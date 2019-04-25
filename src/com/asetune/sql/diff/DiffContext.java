@@ -49,6 +49,8 @@ public class DiffContext
 	private List<String> _pkColumns;
 	private List<String> _pkGeneratedColumns;
 	
+	private List<String> _diffColumns; // null if all columns are to be compared, a list of columns that should be difference checked
+
 	private DiffTable _leftDt;
 	private DiffTable _rightDt;
 
@@ -128,7 +130,24 @@ public class DiffContext
 		if (DiffSide.RIGHT.equals(side)) _rightDt  = dt;
 	}
 	
+	/**
+	 * Set what columns to do difference check on (null means ALL columns)
+	 * 
+	 * @param diffColumns
+	 */
+	public void setDiffColumns(List<String> diffColumns)
+	{
+		_diffColumns = diffColumns;		
+	}
 
+	/**
+	 * @return List of column names to do difference check on (null means ALL columns)
+	 */
+	public List<String> getDiffColumns()
+	{
+		return _diffColumns;
+	}
+	
 	public void setGuiOwner(Component guiOwner)
 	{
 		_guiOwner = guiOwner;

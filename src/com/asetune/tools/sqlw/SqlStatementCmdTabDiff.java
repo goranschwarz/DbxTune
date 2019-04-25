@@ -102,6 +102,7 @@ extends SqlStatementAbstract
 //		String    _rawTabDiffCmdSwitches = null;
 
 		boolean    _skipLobCols    = false;
+		List<String> _diffColumns  = null;
 		
 		ActionType _action         = null; 
 		String     _actionOutFile  = null; 
@@ -135,6 +136,7 @@ extends SqlStatementAbstract
 			sb.append(", ").append("leftTable     ".trim()).append("=").append(StringUtil.quotify(_leftTable     ));
 			sb.append(", ").append("rightTable    ".trim()).append("=").append(StringUtil.quotify(_rightTable    ));
 			sb.append(", ").append("whereClause   ".trim()).append("=").append(StringUtil.quotify(_whereClause   ));
+			sb.append(", ").append("diffColumns   ".trim()).append("=").append(StringUtil.quotify(_diffColumns   ));
 			sb.append(", ").append("skipLobCols   ".trim()).append("=").append(StringUtil.quotify(_skipLobCols   ));
 			sb.append(", ").append("action        ".trim()).append("=").append(StringUtil.quotify(_action        ));
 			sb.append(", ").append("actionOutFile ".trim()).append("=").append(StringUtil.quotify(_actionOutFile ));
@@ -212,6 +214,7 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('o')) _params._actionOutFile   = cmdLine.getOptionValue('o');
 			if (cmdLine.hasOption('g')) _params._goString        = cmdLine.getOptionValue('g');
 			if (cmdLine.hasOption('L')) _params._skipLobCols     = true;
+			if (cmdLine.hasOption('c')) _params._diffColumns     = StringUtil.commaStrToList(cmdLine.getOptionValue('c'));;
 
 			if (cmdLine.hasOption('?'))
 				printHelp(null, "You wanted help...");
@@ -297,6 +300,7 @@ extends SqlStatementAbstract
 		options.addOption( "l", "left",            true,    "Table name on the LEFT side" );
 		options.addOption( "r", "right",           true,    "Table name on the RIGHT side" );
 		options.addOption( "w", "where",           true,    "" );
+		options.addOption( "c", "diffCols",        true,    "" );
 		options.addOption( "k", "keyCols",         true,    "" );
 		options.addOption( "f", "leftFetchSize",   true,    "" );
 		options.addOption( "F", "rightFetchSize",  true,    "" );
@@ -374,6 +378,7 @@ extends SqlStatementAbstract
 		sb.append("  -l,--left <tableName>     Table name on the LEFT side. \n");
 		sb.append("  -r,--right <tableName>    Table name on the RIGHT side. (default same as '--left') \n");
 		sb.append("  -w,--where <str>          Append a 'where clause' to just compare some rows. \n");
+		sb.append("  -c,--diffCols <c1,c2...>  Comma separated list of columns to do diff on (default all columns) \n");
 		sb.append("  -k,--keyCols <c1,c2...>   Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
 		sb.append("  -f,--leftFetchSize <num>  Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=-1)\n");
 		sb.append("  -F,--rightFetchSize <num> Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=same as --leftFetchSize)\n");
@@ -469,6 +474,7 @@ extends SqlStatementAbstract
 		
 		DiffContext context = new DiffContext();
 
+		context.setDiffColumns(_params._diffColumns);
 		context.setGuiOwner(_guiOwner); // Handle to the SQL Window Component
 		context.setProgressDialog(_progress);
 
@@ -691,11 +697,17 @@ extends SqlStatementAbstract
 			// Check results
 //			String tabInfo = "[" + context.getLeftDt().getFullTableName() + ", " + context.getRightDt().getFullTableName() + "]";
 			String tabInfo = "[" + context.getLeftDt().getShortTableName() + "]";
+
+			String leftDbmsInfo  = "";
+			String rightDbmsInfo = "";
+			try { leftDbmsInfo  = leftConn .getDbmsServerName(); } catch(SQLException ex) {}
+			try { rightDbmsInfo = rightConn.getDbmsServerName(); } catch(SQLException ex) {}
+			
 			if (diffCount == 0)
 			{
 				addInfoMessage("OK - " + tabInfo + " Left and Right ResultSet has NO difference \n"
-						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'." + leftExtraInfoMsg + "\n"
-						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'." + rightExtraInfoMsg
+						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'." + leftExtraInfoMsg + "\n"
+						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'." + rightExtraInfoMsg
 						);
 			}
 			else
@@ -706,12 +718,12 @@ extends SqlStatementAbstract
 						                  + ", Left Missing Rows = "  + diffSink.getLeftMissingRows() .size()
 						                  + ", Right Missing Rows = " + diffSink.getRightMissingRows().size()
 						                  + ", Column Diff Rows = "   + diffSink.getDiffColumnValues().size() + ".\n"
-						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "'." + leftExtraInfoMsg  + "\n"
-						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "'." + rightExtraInfoMsg + "\n"
+						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'." + leftExtraInfoMsg  + "\n"
+						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'." + rightExtraInfoMsg + "\n"
 						+ "        NOTE: You can turn on debugging '-x' to see what SQL that is issued on left/right hand side."
 						;
 
-				addErrorMessage(tabInfo + "Left and Right ResultSet is DIFFERENT. \n" + msg);
+				addErrorMessage(tabInfo + " Left and Right ResultSet is DIFFERENT. \n" + msg);
 			}
 			
 
