@@ -107,6 +107,8 @@ extends SqlStatementAbstract
 		String     _execAfterSync  = null;
 		boolean    _execSyncInTran = true;
 
+		boolean   _doPreRowCount   = true;  // addDebugMessage()
+
 		boolean   _debug           = false;  // addDebugMessage()
 		boolean   _trace           = false;  // addTraceMessage()
 		boolean   _toStdout        = false;  // if debug/trace is enabled, also print the messages to STDOUT as soon as they happen (may be easier to debug in that way)
@@ -124,6 +126,7 @@ extends SqlStatementAbstract
 			sb.append(", ").append("server        ".trim()).append("=").append(StringUtil.quotify(_server        ));
 			sb.append(", ").append("db            ".trim()).append("=").append(StringUtil.quotify(_db            ));
 			sb.append(", ").append("url           ".trim()).append("=").append(StringUtil.quotify(_url           ));
+			sb.append(", ").append("doPreRowCount ".trim()).append("=").append(StringUtil.quotify(_doPreRowCount ));
 			sb.append(", ").append("debug         ".trim()).append("=").append(StringUtil.quotify(_debug         ));
 			sb.append(", ").append("trace         ".trim()).append("=").append(StringUtil.quotify(_trace         ));
 			sb.append(", ").append("toStdout      ".trim()).append("=").append(StringUtil.quotify(_toStdout      ));
@@ -195,6 +198,7 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('r')) _params._rightTable      = cmdLine.getOptionValue('r');
 			if (cmdLine.hasOption('w')) _params._whereClause     = cmdLine.getOptionValue('w');
 			if (cmdLine.hasOption('k')) _params._keyCols         = StringUtil.commaStrToList(cmdLine.getOptionValue('k'));
+			if (cmdLine.hasOption('n')) _params._doPreRowCount   = false;
 			if (cmdLine.hasOption('x')) _params._debug           = true;
 			if (cmdLine.hasOption('X')) _params._trace           = true;
 			if (cmdLine.hasOption('Y')) _params._toStdout        = true;
@@ -298,6 +302,7 @@ extends SqlStatementAbstract
 		options.addOption( "w", "where",           true,    "" );
 		options.addOption( "c", "diffCols",        true,    "" );
 		options.addOption( "k", "keyCols",         true,    "" );
+		options.addOption( "n", "noRowCount",      false,   "" );
 		options.addOption( "f", "leftFetchSize",   true,    "" );
 		options.addOption( "F", "rightFetchSize",  true,    "" );
 		options.addOption( "A", "action",          true,    "what action to do with difference" );
@@ -376,6 +381,7 @@ extends SqlStatementAbstract
 		sb.append("  -w,--where <str>          Append a 'where clause' to just compare some rows. \n");
 		sb.append("  -c,--diffCols <c1,c2...>  Comma separated list of columns to do diff on (default all columns) \n");
 		sb.append("  -k,--keyCols <c1,c2...>   Comma separated list of KEY columns to use: ColNames or ColPos (pos starts at 0) \n");
+		sb.append("  -n,--noRowCount           Disable 'get row count' SQL in PRE Execution. \n");
 		sb.append("  -f,--leftFetchSize <num>  Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=-1)\n");
 		sb.append("  -F,--rightFetchSize <num> Statement.setFetchSize(###), if above 0, the select will also be done in tran (default=same as --leftFetchSize)\n");
 		sb.append("  -A,--action <name>        Action when differance. "+StringUtil.toCommaStr(ActionType.values())+" (default: "+ActionType.TABLE+") \n");
@@ -515,18 +521,23 @@ extends SqlStatementAbstract
 			ConnectionProp leftConnProps  = leftConn  == null ? null : leftConn .getConnProp();
 			ConnectionProp rightConnProps = rightConn == null ? null : rightConn.getConnProp();
 
+			// Build a WHERE Clause, from the input parameter (if it was specified)
+			String whereClause = "";
+			if (StringUtil.hasValue(_params._whereClause))
+				whereClause = " where " + _params._whereClause;
+
 
 			// PRE Query on LEFT and RIGHT to see if table exists
 			// and also to collect PK info etc
-			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 = 2"; 
-			String rightPreQuery = "select * from " + _params._rightTable + " where 1 = 2";; 
+			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 = 2";
+			String rightPreQuery = "select * from " + _params._rightTable + " where 1 = 2";
 
 
-			// PRE LEFT
+			//----------------------------------------------------
+			// PRE LEFT - check if table exists
 			if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
 			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get MetaData, SQL: "+leftPreQuery);
 
-			
 			ResultSet leftPreRs = null;
 			try 
 			{
@@ -540,8 +551,8 @@ extends SqlStatementAbstract
 			}
 			
 
-			
-			// PRE RIGHT
+			//----------------------------------------------------
+			// PRE RIGHT - check if table exists
 			if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
 			if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get MetaData, SQL: "+rightPreQuery);
 
@@ -568,12 +579,11 @@ extends SqlStatementAbstract
 				addMessages(context.getMessages());
 				context.clearMessages();
 			}
-			
-			// NOW CONSTRUCT SQL TEXT for the REAL SQL Query on the LEFT and RIGHT
-			String whereClause = "";
-			if (StringUtil.hasValue(_params._whereClause))
-				whereClause = " where " + _params._whereClause;
 
+
+
+			//----------------------------------------------------------------------
+			// NOW CONSTRUCT SQL TEXT for the REAL SQL Query on the LEFT and RIGHT
 			boolean skipLobColumns = _params._skipLobCols;
 			String leftQuery  = "select " + leftPreDt .getColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote(), skipLobColumns) + " from " + _params._leftTable  + whereClause + " order by " + leftPreDt .getPkColumnNamesCsv(leftConn .getLeftQuote(), leftConn .getRightQuote());
 			String rightQuery = "select " + rightPreDt.getColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote(), skipLobColumns) + " from " + _params._rightTable + whereClause + " order by " + rightPreDt.getPkColumnNamesCsv(rightConn.getLeftQuote(), rightConn.getRightQuote());
@@ -595,6 +605,58 @@ extends SqlStatementAbstract
 			leftPreDt .close();
 			rightPreDt.close();
 
+
+			
+			
+			String leftPreCountQuery  = "select count(*) from " + _params._leftTable  + whereClause;
+			String rightPreCountQuery = "select count(*) from " + _params._rightTable + whereClause;
+			long   leftPreCount       = -1;
+			long   rightPreCount      = -1;
+
+			//----------------------------------------------------
+			// PRE LEFT - Row Count
+			if (_params._doPreRowCount)
+			{
+				if (_progress != null) _progress.setState("Executing PRE SQL at LEFT hand side DBMS to get Row Count, SQL: "+leftPreCountQuery);
+				if (_params._debug)     addDebugMessage(  "Executing PRE SQL at LEFT hand side DBMS to get Row Count, SQL: "+leftPreCountQuery);
+
+				try 
+				{
+					Statement tmpStmnt = leftConn.createStatement();
+					ResultSet tmpRs    = tmpStmnt.executeQuery(leftPreCountQuery);
+					while (tmpRs.next())
+						leftPreCount = tmpRs.getLong(1);
+					tmpRs.close();
+				}
+				catch (SQLException ex)
+				{
+					addErrorMessage("Problems executing PRE-SQL Row Count on LEFT hand side. SQL='"+leftPreCountQuery+"'. Caught: "+ex);
+					throw ex;
+				}
+			}
+			
+			//----------------------------------------------------
+			// PRE RIGHT - Row Count
+			if (_params._doPreRowCount)
+			{
+				if (_progress != null) _progress.setState("Executing PRE SQL at RIGHT hand side DBMS to get Row Count, SQL: "+rightPreCountQuery);
+				if (_params._debug)     addDebugMessage(  "Executing PRE SQL at RIGHT hand side DBMS to get Row Count, SQL: "+rightPreCountQuery);
+
+				try 
+				{
+					Statement tmpStmnt = leftConn.createStatement();
+					ResultSet tmpRs    = tmpStmnt.executeQuery(rightPreCountQuery);
+					while (tmpRs.next())
+						rightPreCount = tmpRs.getLong(1);
+					tmpRs.close();
+				}
+				catch (SQLException ex)
+				{
+					addErrorMessage("Problems executing PRE-SQL Row Count on RIGHT hand side. SQL='"+rightPreCountQuery+"'. Caught: "+ex);
+					throw ex;
+				}
+			}
+			
 
 			// NOTE: Postgres (and possibly other DBMS's) tries to read ALL records in the ResultSet into memory when executing a query
 			//       This is possibly a way to get around this...
@@ -671,6 +733,11 @@ extends SqlStatementAbstract
 			context.setDiffTable(DiffSide.LEFT,  leftRs,  leftConnProps);
 			context.setDiffTable(DiffSide.RIGHT, rightRs, rightConnProps);
 
+			// Set Expected Row Count
+			context.getDiffTable(DiffSide.LEFT) .setExpectedRowCount(leftPreCount);
+			context.getDiffTable(DiffSide.RIGHT).setExpectedRowCount(rightPreCount);
+			
+			// VALIDATE the DiffTables
 			context.validate();
 
 			if (_progress != null) _progress.setState("Do DIFF Logic...");

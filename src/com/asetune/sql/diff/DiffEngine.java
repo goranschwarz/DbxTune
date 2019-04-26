@@ -117,8 +117,8 @@ public class DiffEngine
 			// Print progress
 			if ( _context.getProgressDialog() != null )
 			{
-				int l_rowCount = l_dt.getRowCount();
-				int r_rowCount = r_dt.getRowCount();
+				long l_rowCount = l_dt.getRowCount();
+				long r_rowCount = r_dt.getRowCount();
 
 				if (_context.getProgressDialog().isCancelled())
 				{
@@ -134,8 +134,22 @@ public class DiffEngine
 
 				if ( l_rowCount < 100 || System.currentTimeMillis() - lastProgresUpdate > progresUpdatePeriodMs )
 				{
+					long l_expRowCount = l_dt.getExpectedRowCount();
+					long r_expRowCount = r_dt.getExpectedRowCount();
+
+					String l_expRowCountStr = "";
+					String r_expRowCountStr = "";
+					String pctDoneStr       = "";
+					
+					if (l_expRowCount >= 0) l_expRowCountStr = " [preCnt=" + nf.format(l_expRowCount) + "]";
+					if (r_expRowCount >= 0) r_expRowCountStr = " [preCnt=" + nf.format(r_expRowCount) + "]";
+
+					// Calculate Percent done
+					if (l_expRowCount >= 0)
+						pctDoneStr = String.format("%.1f%% -- ", ((l_rowCount*1.0) / (l_expRowCount*1.0))*100.0 );
+
 					lastProgresUpdate = System.currentTimeMillis();
-					_context.getProgressDialog().setState("Reading Left Row " + nf.format(l_rowCount) + " and Right Row " + nf.format(r_rowCount));
+					_context.getProgressDialog().setState(pctDoneStr + "Reading Left Row " + nf.format(l_rowCount) + l_expRowCountStr + " and Right Row " + nf.format(r_rowCount) + r_expRowCountStr);
 				}
 			}
 			

@@ -130,6 +130,14 @@ public class DiffContext
 		if (DiffSide.RIGHT.equals(side)) _rightDt  = dt;
 	}
 	
+	public DiffTable getDiffTable(DiffSide side)
+	{
+		if (DiffSide.LEFT .equals(side)) return _leftDt;
+		if (DiffSide.RIGHT.equals(side)) return _rightDt;
+
+		return null;
+	}
+
 	/**
 	 * Set what columns to do difference check on (null means ALL columns)
 	 * 

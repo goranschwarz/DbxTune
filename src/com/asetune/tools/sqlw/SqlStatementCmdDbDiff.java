@@ -81,6 +81,7 @@ extends SqlStatementAbstract
 		String        _rightTabFilter = "%";
 		List<String>  _rightSkipList  = new ArrayList<>();
 
+		boolean       _doPreRowCount  = true;
 		boolean       _autoSkip       = false;
 
 		ActionType    _action         = null; 
@@ -120,6 +121,7 @@ extends SqlStatementAbstract
 			sb.append(", ").append("rightTabFilter".trim()).append("=").append(StringUtil.quotify(_rightTabFilter));
 			sb.append(", ").append("rightSkipList ".trim()).append("=").append(StringUtil.quotify(_rightSkipList ));
 
+			sb.append(", ").append("doPreRowCount ".trim()).append("=").append(StringUtil.quotify(_doPreRowCount ));
 			sb.append(", ").append("autoSkip      ".trim()).append("=").append(StringUtil.quotify(_autoSkip      ));
 			
 			sb.append(", ").append("action        ".trim()).append("=").append(StringUtil.quotify(_action        ));
@@ -169,6 +171,7 @@ extends SqlStatementAbstract
 					throw new DiffException("ERROR: You have specified -a or --actionOutFile '"+_actionOutFile+"' but you have NOT specified either '${leftTabName}' or '${rightTabName}' in the String. This needs to be done.");
 				}
 			}
+			if (!_doPreRowCount        )   sb.append("-n ");
 			if (_debug                 )   sb.append("-x ");
 			if (_trace                 )   sb.append("-X ");
 			if (_toStdout              )   sb.append("-Y ");
@@ -232,6 +235,7 @@ extends SqlStatementAbstract
 			if (cmdLine.hasOption('T')) _params._rightTabFilter  = cmdLine.getOptionValue('T');
 			if (cmdLine.hasOption('F')) _params._rightSkipList   = StringUtil.parseCommaStrToList(cmdLine.getOptionValue('F'));
 
+			if (cmdLine.hasOption('n')) _params._doPreRowCount   = false;
 			if (cmdLine.hasOption('s')) _params._autoSkip        = true;
 			if (cmdLine.hasOption('d')) _params._dryRun          = true;
 
@@ -350,6 +354,7 @@ extends SqlStatementAbstract
 		options.addOption( "T", "rightTabFilter",  true,    "" );
 		options.addOption( "F", "rightSkipList",   true,    "" );
 
+		options.addOption( "n", "noRowCount",      false,   "" );
 		options.addOption( "s", "autoSkip",        false,   "Automatically Skip all tables that are NOT on both sides (shortcut for -f|-F)" );
 		options.addOption( "d", "dryRun",          false,   "Do not execute the \\tabdiff" );
 
@@ -431,6 +436,7 @@ extends SqlStatementAbstract
 		sb.append("  -T,--rightTabFilter <val> Filter for right jdbc: getMetaData().getTables(cat, sch, *tab*). (default=\"%\")\n");
 		sb.append("  -F,--rightSkipList <list> List of entries to SKIP from the LEFT side (can be a regex). \n");
 		sb.append("\n");
+		sb.append("  -n,--noRowCount           Disable 'get row count' SQL in PRE Execution. \n");
 		sb.append("  -s,--autoSkip             Automatically Skip all tables that are NOT on both sides (shortcut for -f|-F)\n");
 		sb.append("  -d,--dryRun               Do not execute the generated '\\tabdiff' commands, only print what to execute.\n");
 		sb.append("\n");

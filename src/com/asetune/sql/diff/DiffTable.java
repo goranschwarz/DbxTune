@@ -52,8 +52,9 @@ public class DiffTable
 	private String _dbmsVendor; 
 //	private ResultSetMetaDataCached _rsmd;
 	private ResultSetMetaData _rsmd;
-	private int       _rowCount;  // Current position in ResultSet, Total row count is known "at the end"  
+	private long      _rowCount;  // Current position in ResultSet, Total row count is known "at the end"  
 //	private int       _readReportMod = 1; // start at 1, max value at 100  (in the beginning print report often, then report after every 100 row)
+	private long      _expectedRowCount = -1;
 
 	private int       _colCount;
 	private List<String>  _pkList          = new ArrayList<>();
@@ -96,6 +97,7 @@ public class DiffTable
 		_rsmd       = _rs.getMetaData();
 		_colCount   = _rsmd.getColumnCount();
 		_rowCount   = 0;
+		_expectedRowCount = -1;
 
 		if (_dbmsVendor == null && _lookupConn != null)
 		{
@@ -1024,9 +1026,19 @@ public class DiffTable
 		return _colCount;
 	}
 
-	public int getRowCount()
+	public long getRowCount()
 	{
 		return _rowCount;
+	}
+	
+	public long getExpectedRowCount()
+	{
+		return _expectedRowCount;
+	}
+	
+	public void setExpectedRowCount(long expectedRowCount)
+	{
+		_expectedRowCount = expectedRowCount;
 	}
 	
 //	public ResultSetMetaDataCached getMetaData()
