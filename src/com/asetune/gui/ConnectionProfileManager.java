@@ -88,6 +88,7 @@ import com.asetune.utils.DbUtils;
 import com.asetune.utils.FileUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -2219,7 +2220,7 @@ public class ConnectionProfileManager
 						
 						long saveTime = System.currentTimeMillis() - startTime;
 						if (saveTime > 1000)
-							_logger.warn("ConnectionProfileManager.save() took "+saveTime+" ms... File name ='"+filename+"'. Do you have a slow IO subsystem?");
+							_logger.warn("ConnectionProfileManager.save() took "+saveTime+" ms... File name ='"+filename+"'. You might have a slow IO subsystem...");
 //System.out.println("Configuration.save() currentSaveCount="+currentSaveCount+". TIME = "+saveTime+ (saveTime < 1000 ? "" : " ------- WARNING ------ WARNING ----- WARNING ---- SAVE Took to long time..."));
 					}
 					catch (Exception e)
@@ -2246,6 +2247,10 @@ public class ConnectionProfileManager
 		String timestamp = new SimpleDateFormat("yyyyMMdd-HHmmss-SSS").format(new Date());
 		String tmpRecoveryFilename = filename + "." + timestamp + ".recover";
 
+		String backupFilename_1 = filename + ".1.bak";
+		String backupFilename_2 = filename + ".2.bak";
+		String backupFilename_3 = filename + ".3.bak";
+
 		try
 		{
 			File f = new File(filename);
@@ -2253,6 +2258,34 @@ public class ConnectionProfileManager
 			{
 				_logger.debug("ConnectionProfileManager.save(): saving a recovery file to '"+tmpRecoveryFilename+"', which will be deleted if no problems where found.");
 				FileUtils.copy(filename, tmpRecoveryFilename);
+
+				// Save to a Backup file... (but only if the backup file is older than 1 hour)
+				// also: have 3 backup files (rolling over last file every time, so 3 will only be kept)
+				long backupThreshold = 3_600_000;
+				File backupFile_1 = new File(backupFilename_1);
+				File backupFile_2 = new File(backupFilename_2);
+				File backupFile_3 = new File(backupFilename_3);
+				boolean doBackup = false;
+
+				if ( ! backupFile_1.exists() )
+				{
+					doBackup = true;
+				}
+				else if ( (System.currentTimeMillis() - backupFile_1.lastModified()) > backupThreshold )
+				{
+					doBackup = true;
+				}
+				
+				if ( doBackup )
+				{
+					// Remove oldest file (file 3), and move the rest of the files... (3=delete; 2->3; 1->2; overwrite 1)
+					if (backupFile_3.exists()) backupFile_3.delete();
+					if (backupFile_2.exists()) backupFile_2.renameTo(backupFile_3);
+					if (backupFile_1.exists()) backupFile_1.renameTo(backupFile_2);
+					
+					_logger.debug("ConnectionProfileManager.save(): saving a backup file to '"+backupFilename_1+"'.");
+					FileUtils.copy(filename, backupFilename_1);
+				}
 			}
 
 			RandomAccessFile raf = new RandomAccessFile(filename, "rw");
@@ -2275,6 +2308,9 @@ public class ConnectionProfileManager
 					sb.append("\n");
 					sb.append("<").append(ConnectionProfile.XML_CONN_PROF_ENTRIES).append(">\n");
 					sb.append("\n");
+
+					// Write a "save date"
+					sb.append("    ").append("<LastSaveDate>").append(TimeUtils.toString(System.currentTimeMillis())).append("</LastSaveDate>\n\n");
 
 					//-----------------------------------------
 					// Write header
