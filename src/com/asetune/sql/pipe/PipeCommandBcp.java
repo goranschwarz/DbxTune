@@ -488,6 +488,7 @@ extends PipeCommandAbstract
 				DatabaseMetaData dbmd = _conn.getMetaData();
 				String msg;
 //				try {_qic = dbmd.getIdentifierQuoteString(); } catch (SQLException ignore) {}
+				try { msg = "Connected to DBMS Server Name '"          + _conn.getDbmsServerName()        +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 				try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
 				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}

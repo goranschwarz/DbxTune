@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import javax.swing.JComponent;
 
 import org.apache.commons.cli.Options;
+import org.apache.log4j.Logger;
 
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.DbxConnection;
@@ -37,10 +38,10 @@ import com.asetune.utils.StringUtil;
 public class SqlStatementCmdConnect 
 extends SqlStatementAbstract
 {
-//	private static Logger _logger = Logger.getLogger(SqlStatementCmdTabDiff.class);
+	private static Logger _logger = Logger.getLogger(SqlStatementCmdTabDiff.class);
 
 	private String[] _args = null;
-//	private String _originCmd = null;
+	private String _originCmd = null;
 	
 	private String _profileName;
 
@@ -64,7 +65,7 @@ extends SqlStatementAbstract
 	public void parse(String input)
 	throws SQLException, PipeCommandException
 	{
-//		_originCmd = input;
+		_originCmd = input;
 		String params = input.replace("\\connect", "").trim();
 
 		_args = StringUtil.translateCommandline(params, false);
@@ -120,7 +121,39 @@ extends SqlStatementAbstract
 		if (_queryWindow == null)
 			throw new SQLException("NO _queryWindow instance.");
 
+		//----------------------
+		// Disconnect (check if we are connected, and print some messages that we are disconnecting)
+		//----------------------
+		DbxConnection conn = _queryWindow.getConnection();
+		if (conn != null)
+		{
+			String vendor  = conn.getDatabaseProductName();
+			String srvName = conn.getDbmsServerName();
+			String url     = conn.getMetaData().getURL();
+			
+			addInfoMessage("Disconnecting from DBMS Vendor '" + vendor + "', Server Name '" + srvName + "', using URL '" + url + "'.");
+
+			_queryWindow.doDisconnect();
+		}
+
+		//----------------------
+		// Connect
+		//----------------------
 		_queryWindow.doConnect(_profileName);
+		
+		conn = _queryWindow.getConnection();
+		if (conn != null)
+		{
+			String vendor  = conn.getDatabaseProductName();
+			String srvName = conn.getDbmsServerName();
+			String url     = conn.getMetaData().getURL();
+			
+			addInfoMessage("Connected to DBMS Vendor '" + vendor + "', Server Name '" + srvName + "', using URL '" + url + "'.");
+		}
+		else
+		{
+			_logger.error("SqlStatementCmdConnect: connection is still NULL after: _queryWindow.doConnect(_profileName);");
+		}
 		
 		return false; // true=We Have A ResultSet, false=No ResultSet
 	}

@@ -63,14 +63,14 @@ extends SqlStatementAbstract
 	throws SQLException, PipeCommandException
 	{
 //		_originCmd = input;
-		String params = input.replace("\\disconnect", "").replace("\\dc", "").trim();
+		String params = input.replace("\\disconnect", "").trim();
 
 		_args = StringUtil.translateCommandline(params, false);
 
 		if (_args.length >= 1)
 		{
 			//_dbname = _args[0];
-			printHelp(null, "Please specify some parameters.");
+			printHelp(null, "This command do not have any parameters.");
 		}
 		else
 		{
@@ -116,6 +116,20 @@ extends SqlStatementAbstract
 	{
 		if (_queryWindow == null)
 			throw new SQLException("NO _queryWindow instance.");
+
+		DbxConnection conn = _queryWindow.getConnection();
+		if (conn != null)
+		{
+			String vendor  = conn.getDatabaseProductName();
+			String srvName = conn.getDbmsServerName();
+			String url     = conn.getMetaData().getURL();
+			
+			addInfoMessage("Disconnecting from DBMS Vendor '" + vendor + "', Server Name '" + srvName + "', using URL '" + url + "'.");
+		}
+		else
+		{
+			addInfoMessage("Not currently connected to any server.");
+		}
 
 		_queryWindow.doDisconnect();
 		

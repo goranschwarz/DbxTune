@@ -57,7 +57,6 @@ public class SqlStatementFactory
 					"\\set", 
 					"\\connect", 
 					"\\disconnect", 
-					"\\dc", 
 					"\\use", 
 					"\\tabdiff", 
 					"\\dbdiff", 
@@ -144,7 +143,6 @@ public class SqlStatementFactory
 		if      (w1.equals("\\set"))        return new SqlStatementCmdSet       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		if      (w1.equals("\\connect"))    return new SqlStatementCmdConnect   (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		if      (w1.equals("\\disconnect")) return new SqlStatementCmdDisconnect(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
-		if      (w1.equals("\\dc"))         return new SqlStatementCmdDisconnect(conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		if      (w1.equals("\\use"))        return new SqlStatementCmdUse       (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		if      (w1.equals("\\tabdiff"))    return new SqlStatementCmdTabDiff   (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);
 		if      (w1.equals("\\dbdiff"))     return new SqlStatementCmdDbDiff    (conn, sqlOrigin, dbProductName, resultCompList, progress, owner, queryWindow);

@@ -1260,7 +1260,8 @@ finally
 					
 //					Connection conn;
 					DbxConnection conn;
-					if (_rawJdbcDriver != null && _rawJdbcUrl != null)
+//					if (_rawJdbcDriver != null && _rawJdbcUrl != null)
+					if (_rawJdbcUrl != null)
 					{
 						//-------------------------
 						// DO: RAW: ASE connection
@@ -1333,6 +1334,16 @@ finally
 					}
 					else
 					{
+						// Make some sanity checking here
+						if (_connProp == null)
+							throw new Exception("Connection props can't be null here.");
+
+						String tmpUrl = _connProp.getUrl();
+						if (tmpUrl != null && ! tmpUrl.startsWith("jdbc:sybase:Tds:"))
+						{
+							throw new Exception("SORRY ONLY Sybase/jConnect URL is allowed in here. URL '"+tmpUrl+"'.");
+						}
+
 						//-------------------------
 						// DO: ASE connection
 						//-------------------------

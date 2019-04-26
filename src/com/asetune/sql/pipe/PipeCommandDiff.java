@@ -22,7 +22,6 @@ package com.asetune.sql.pipe;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -39,9 +38,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfile;
-import com.asetune.gui.ConnectionProfile.ConnProfileEntry;
-import com.asetune.gui.ConnectionProfile.JdbcEntry;
-import com.asetune.gui.ConnectionProfile.TdsEntry;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
@@ -51,7 +47,7 @@ import com.asetune.sql.diff.DiffContext.DiffSide;
 import com.asetune.sql.diff.DiffSink;
 import com.asetune.sql.diff.actions.DiffTableModel;
 import com.asetune.sql.diff.actions.GenerateSqlText;
-import com.asetune.utils.AseConnectionFactory;
+import com.asetune.tools.sqlw.SqlStatementAbstract;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -266,21 +262,21 @@ extends PipeCommandAbstract
 			{
 				_rightConnectionProfile = cp;
 				
-				params._user   = cp.getDbUserName();
-				params._passwd = cp.getDbPassword();
-				String serverOrUrlStr = cp.getDbServerOrUrl();
-				if (serverOrUrlStr != null)
-				{
-					if (serverOrUrlStr.startsWith("jdbc:"))
-						params._url = serverOrUrlStr;
-					else
-						params._server = serverOrUrlStr;
-				}
+//				params._user   = cp.getDbUserName();
+//				params._passwd = cp.getDbPassword();
+//				String serverOrUrlStr = cp.getDbServerOrUrl();
+//				if (serverOrUrlStr != null)
+//				{
+//					if (serverOrUrlStr.startsWith("jdbc:"))
+//						params._url = serverOrUrlStr;
+//					else
+//						params._server = serverOrUrlStr;
+//				}
 			}
 		}
 
-		if (StringUtil.isNullOrBlank(_params._server) && StringUtil.isNullOrBlank(_params._url))
-			printHelp(null, "Missing mandatory parameter '--profile <profile>' or '--server <srvName>'.");
+		if (StringUtil.isNullOrBlank(_params._server) && _rightConnectionProfile == null)
+			printHelp(null, "Missing mandatory parameter '-p|--profile <profile>' or '-S|--server <srvName>'.");
 
 	}
 
@@ -575,7 +571,8 @@ extends PipeCommandAbstract
 		if (progress != null)
 			progress.setState("Connecting to RIGHT hand side DBMS");
 
-		DbxConnection rightConn = getRightConnection();
+		// Get a connection to the Right Hand Side DBMS
+		DbxConnection rightConn = SqlStatementAbstract.getRightConnection(this, _rightConnectionProfile, _params._user, _params._passwd, _params._server, _params._db, _params._url, _params._initStr, _params._debug);
 
 		// Get the Query, which will be sent to the RIGHT Hand Side
 		String destSql = _params._query;
@@ -721,492 +718,11 @@ extends PipeCommandAbstract
 		rightConn.close();
 	}
 
-	private DbxConnection getRightConnection()
-	throws Exception
-	{
-		DbxConnection conn = null;
-		ConnectionProp cp = new ConnectionProp();
-		cp.setAppName("sqlw-diff");
-		
-		if (_rightConnectionProfile == null)
-		{
-			cp.setDbname(_params._db);
-			cp.setPassword(_params._passwd);
-			cp.setServer(_params._server);
-//			cp.setSshTunnelInfo(_params.);
-			cp.setUrl(_params._url);
-//			cp.setUrlOptions(urlOptions);
-			cp.setUsername(_params._user);
-		}
-		else
-		{
-			ConnProfileEntry profileEntry = _rightConnectionProfile.getEntry();
-			
-			if (profileEntry instanceof TdsEntry)
-			{
-				TdsEntry entry = (TdsEntry) profileEntry;
-				
-				cp.setDbname       (entry._tdsDbname);
-				cp.setPassword     (entry._tdsPassword);
-				cp.setServer       (entry._tdsServer);
-				cp.setSshTunnelInfo(entry._tdsShhTunnelUse ? entry._tdsShhTunnelInfo : null);
-				cp.setUrl          (entry._tdsUseUrl ? entry._tdsUseUrlStr : null);
-				cp.setUrlOptions   (entry._tdsUrlOptions);
-				cp.setUsername     (entry._tdsUsername);
-			}
-			else if (profileEntry instanceof JdbcEntry)
-			{
-				JdbcEntry entry = (JdbcEntry) profileEntry;
-				
-//				cp.setDbname       (entry._jdbcDbname);
-				cp.setPassword     (entry._jdbcPassword);
-//				cp.setServer       (entry._jdbcServer);
-				cp.setSshTunnelInfo(entry._jdbcShhTunnelUse ? entry._jdbcShhTunnelInfo : null);
-				cp.setUrl          (entry._jdbcUrl);
-				cp.setUrlOptions   (entry._jdbcUrlOptions);
-				cp.setUsername     (entry._jdbcUsername);
-			}
-		}
-		
-		
-//		if (StringUtil.hasValue(_params._server))
-//		{
-//			Properties props = new Properties();
-//			
-//			String hostPortStr = null;
-//			if ( _params._server.contains(":") )
-//				hostPortStr = _params._server;
-//			else
-//				hostPortStr = AseConnectionFactory.getIHostPortStr(_params._server);
-//
-//			if (StringUtil.isNullOrBlank(hostPortStr))
-//				throw new Exception("Can't find server name information about '"+_params._server+"', hostPortStr=null. Please try with -S hostname:port");
-//
-//			if (_params._debug)
-//				addDebugMessage("Creating connection to ASE: hostPortStr='"+hostPortStr+"', dbname='"+_params._db+"', user='"+_params._user+"', applicationName='sqlw-diff'.");
-//
-//			conn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _params._db, _params._user, _params._passwd, "sqlw-diff", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
-//
-//			if ( ! StringUtil.isNullOrBlank(_params._db) )
-//				AseConnectionUtils.useDbname(conn, _params._db);
-//		}
-//		else
-//		{
-////			throw new Exception("-u|--url option has not yet been implemented.");
-//			
-//			if (StringUtil.hasValue(_params._driver))
-//			{
-//				try { Class.forName(_params._driver).newInstance(); }
-//				catch (Exception ignore) {}
-//			}
-//			Properties props = new Properties();
-//			props.put("user", _params._user);
-//			props.put("password", _params._passwd);
-//	
-//			String msg = "Try getConnection to driver='"+_params._driver+"', url='"+_params._url+"', user='"+_params._user+"'.";
-//			addDebugMessage(msg);
-//			_logger.debug(msg);
-//			conn = DbxConnection.createDbxConnection(DriverManager.getConnection(_params._url, props));
-//		}
-
-		if (StringUtil.hasValue(_params._server))
-		{
-//			Properties props = new Properties();
-			
-			String hostPortStr = null;
-			if ( _params._server.contains(":") )
-				hostPortStr = _params._server;
-			else
-				hostPortStr = AseConnectionFactory.getIHostPortStr(_params._server);
-
-			if (StringUtil.isNullOrBlank(hostPortStr))
-				throw new Exception("Can't find server name information about '"+_params._server+"', hostPortStr=null. Please try with -S hostname:port");
-
-			_params._url = "jdbc:sybase:Tds:" + hostPortStr;
-
-			if ( ! StringUtil.isNullOrBlank(_params._db) )
-				_params._url += "/" + _params._db;
-			cp.setUrl(_params._url);
-
-//			if (_params._debug)
-//				addDebugMessage("Creating connection to ASE: hostPortStr='"+hostPortStr+"', dbname='"+_params._db+"', user='"+_params._user+"', applicationName='sqlw-diff'.");
-//
-//			conn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _params._db, _params._user, _params._passwd, "sqlw-diff", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
-//
-//			if ( ! StringUtil.isNullOrBlank(_params._db) )
-//				AseConnectionUtils.useDbname(conn, _params._db);
-		}
-		else
-		{
-//			throw new Exception("-u|--url option has not yet been implemented.");
-			
-//			if (StringUtil.hasValue(_params._driver))
-//			{
-//				try { Class.forName(_params._driver).newInstance(); }
-//				catch (Exception ignore) {}
-//			}
-//			Properties props = new Properties();
-//			props.put("user", _params._user);
-//			props.put("password", _params._passwd);
-//	
-//			String msg = "Try getConnection to driver='"+_params._driver+"', url='"+_params._url+"', user='"+_params._user+"'.";
-//			addDebugMessage(msg);
-//			_logger.debug(msg);
-//			conn = DbxConnection.createDbxConnection(DriverManager.getConnection(_params._url, props));
-		}
-
-
-		// Try to connect
-		if (isDebugEnabled())
-			addDebugMessage("Try getConnection to: " + cp);
-		
-		// Make the connection
-		conn = DbxConnection.connect(getGuiOwnerAsWindow(), cp);
-		
-		// Change catalog... (but do not bail out on error)
-		if ( ! StringUtil.isNullOrBlank(_params._db) )
-		{
-			try { conn.setCatalog(_params._db); }
-			catch(SQLException ex) { addErrorMessage("Changing database/catalog to '" + _params._db + "' was not successful. Caught: " + ex); }
-		}
-		
-		// Print out some destination information
-		try
-		{
-			DatabaseMetaData dbmd = conn.getMetaData();
-			String msg;
-
-			try { msg = "Connected to DBMS Server Name '"          + conn.getDbmsServerName()         +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Current Catalog in the destination srv '" + conn.getCatalog()                +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-		}
-		catch (SQLException ignore) {}
-
-		// Execute the SQL InitString
-		if (StringUtil.hasValue(_params._initStr))
-		{
-			String msg = "executing initialization SQL Stement '"+_params._initStr+"'.";
-			addDebugMessage(msg);
-
-			Statement stmnt = conn.createStatement();
-			stmnt.executeUpdate(_params._initStr);
-			stmnt.close();
-		}
-
-		return conn;
-	}
-
-	/**
-	 * Get 'rowsSelected' from the select statement or 'rowsInserted' of the INSERT command. 
-	 * @return an integer of the desired type
-	 */
-	@Override
-	public Object getEndPointResult(String type)
-	{
-		if (type == null)
-			throw new IllegalArgumentException("Input argument/type cant be null.");
-		
-//		if (rowsSelected.equals(type))
-//		{
-//			return _rowsSelected;
-//		}
-//		else if (rowsInserted.equals(type))
-//		{
-//			return _rowsInserted;
-//		}
-//		else if (sqlWarnings.equals(type))
-//		{
-//			return _sqlWarnings;
-//		}
-//		else
-//		{
-//			throw new IllegalArgumentException("Input argument/type '"+type+"' is unknown. Known types '"+rowsSelected+"', '"+rowsInserted+"'.");
-//		}
-
-		return null;
-	}
-
 	@Override 
 	public String getConfig()
 	{
 		return _params == null ? null : _params.toString();
 	}
-
-	
-	
-//	//--------------------------------------------------------------------------------------------
-//	// WORKER CLASS
-//	//--------------------------------------------------------------------------------------------
-//	private class ResultSetDiff
-//	{
-//		private DbxConnection _conn      = null;
-//		private CmdParams     _cmdParams = null;
-//		private SqlProgressDialog _progressDialog = null;
-////		private String _qic = "\""; // Quoted Identifier Char 
-//
-////		int	_numcols;
-////
-////		private ArrayList<String>            _type        = new ArrayList<String>();
-////		private ArrayList<String>            _sqlTypeStr  = new ArrayList<String>();
-////		private ArrayList<Integer>           _sqlTypeInt  = new ArrayList<Integer>();
-////		private ArrayList<String>            _cols        = new ArrayList<String>();
-////		private ArrayList<Integer>           _displaySize = new ArrayList<Integer>();
-////		private ArrayList<ArrayList<Object>> _rows        = new ArrayList<ArrayList<Object>>();
-////		private String                       _name        = null;
-//
-//		public ResultSetDiff(CmdParams params, SqlProgressDialog progressDialog)
-//		{
-//			_cmdParams = params;
-//			_progressDialog = progressDialog;
-//		}
-//		
-//		public void open()
-//		throws Exception
-//		{
-//			if (StringUtil.hasValue(_cmdParams._server))
-//			{
-//				Properties props = new Properties();
-//				
-//				String hostPortStr = null;
-//				if ( _cmdParams._server.contains(":") )
-//					hostPortStr = _cmdParams._server;
-//				else
-//					hostPortStr = AseConnectionFactory.getIHostPortStr(_cmdParams._server);
-//
-//				if (StringUtil.isNullOrBlank(hostPortStr))
-//					throw new Exception("Can't find server name information about '"+_cmdParams._server+"', hostPortStr=null. Please try with -S hostname:port");
-//
-//				if (_cmdParams._debug)
-//					addDebugMessage("Creating connection to ASE: hostPortStr='"+hostPortStr+"', dbname='"+_cmdParams._db+"', user='"+_cmdParams._user+"', applicationName='sqlw-diff'.");
-//
-//				_conn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-diff", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
-//
-//				if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
-//					AseConnectionUtils.useDbname(_conn, _cmdParams._db);
-//			}
-//			else
-//			{
-////				throw new Exception("-u|--url option has not yet been implemented.");
-//				
-//				if (StringUtil.hasValue(_cmdParams._driver))
-//				{
-//					try { Class.forName(_cmdParams._driver).newInstance(); }
-//					catch (Exception ignore) {}
-//				}
-//				Properties props = new Properties();
-//				props.put("user", _cmdParams._user);
-//				props.put("password", _cmdParams._passwd);
-//		
-//				String msg = "Try getConnection to driver='"+_cmdParams._driver+"', url='"+_cmdParams._url+"', user='"+_cmdParams._user+"'.";
-//				addDebugMessage(msg);
-//				_logger.debug(msg);
-//				_conn = DbxConnection.createDbxConnection(DriverManager.getConnection(_cmdParams._url, props));
-//			}
-//
-//			// Print out some destination information
-//			try
-//			{
-//				DatabaseMetaData dbmd = _conn.getMetaData();
-//				String msg;
-//
-//				try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-//				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-//				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-//				try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-//				try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-//				try { msg = "Current Catalog in the destination srv '" + _conn.getCatalog()               +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-//			}
-//			catch (SQLException ignore) {}
-//
-//			// Execute the SQL InitString
-//			if (StringUtil.hasValue(_cmdParams._initStr))
-//			{
-//				String msg = "executing initialization SQL Stement '"+_cmdParams._initStr+"'.";
-//				addDebugMessage(msg);
-//				_logger.info(msg);
-//				Statement stmnt = _conn.createStatement();
-//				stmnt.executeUpdate(_cmdParams._initStr);
-//				stmnt.close();
-//			}
-//		}
-//
-//		public void close()
-//		throws Exception
-//		{
-//			if (_conn != null)
-//			{
-//				String msg = "Closing connection to '" + _conn.getMetaData().getURL() + "'.";
-//				if (_cmdParams._debug)
-//					addDebugMessage(msg);
-//				_logger.info(msg);
-//
-//				_conn.close();
-//			}
-//		}
-//
-//
-//		// Check the below to borrow some ideas from:
-//		// - C:\projects\DbxTune\src\com\asetune\cm\CounterSample.java
-//		// - https://github.com/paulfitz/coopy
-//		// - C:\projects\tmp\Metaqa.java
-//		
-//		public int doWork(ResultSetTableModel sourceRstm, PipeCommandDiff pipeCmd)
-//		throws Exception
-//		{
-//			int sourceNumCols = -1;
-//			int destNumCols   = -1;
-//			
-//			// Do dummy SQL to get RSMD from DEST
-//			String destSql    = _cmdParams._query;
-//			if (StringUtil.isNullOrBlank(destSql))
-//			{
-//				destSql = pipeCmd.getSqlString();
-//			}
-//
-//			if (_progressDialog != null)
-//				_progressDialog.setState("Getting data from DIFF-Target, SQL: "+destSql);
-//
-//			if (_cmdParams._debug)
-//				addDebugMessage("Executing SQL at target: " + destSql);
-//
-//			Statement targetStmt = _conn.createStatement();
-//			ResultSet targetRs = targetStmt.executeQuery(destSql);
-//
-////			ResultSetTableModel targetRstm = new ResultSetTableModel(targetRs, false, "sqlw-diff-target-rstm", -1, -1, false, this, _progressDialog);
-//			ResultSetTableModel targetRstm = new ResultSetTableModel(targetRs, false, "sqlw-diff-target-rstm", -1, -1, false, null, _progressDialog);
-//			
-//			if (_progressDialog != null)
-//				_progressDialog.setState("Do DIFF Logic...");
-//
-//
-//			_rowsSource = sourceRstm.getRowCount();
-//			_rowsTarget = targetRstm.getRowCount();
-//
-//			if (_params._debug)
-//			{
-//				addDebugMessage("sourceRowc="+sourceRstm.getRowCount()+", colCount="+sourceRstm.getColumnCount());
-//				addDebugMessage("targetRowc="+targetRstm.getRowCount()+", colCount="+targetRstm.getColumnCount());
-//			}
-//			
-//			try
-//			{
-//				boolean diffOk = diff(sourceRstm, targetRstm);
-//				if (diffOk)
-//				{
-//					addInfoMessage("OK - Source and Target ResultSet looks the same");
-//				}
-//				else
-//				{
-//					addErrorMessage("Source and Target ResultSet do NOT has the same content.");
-//				}
-//			}
-//			catch (Exception ex)
-//			{
-//				addErrorMessage("Exception: "+ex);
-//				_logger.error("Some problems when doing diff...", ex);
-//			}
-//			
-////			// Check if "transfer" will work
-////			if (sourceNumCols != destNumCols)
-////			{
-////				// TODO: should we close the sourceRs or not????
-////				throw new Exception("Source ResultSet and Destination Table does not have the same column count (source="+sourceNumCols+", dest="+destNumCols+").");
-////			}
-////			
-////			// Make warning if source/destination data types does NOT match
-////			for (int c=0; c<sourceNumCols; c++)
-////			{
-////				int sourceType = sourceSqlTypeInt.get(c);
-////				int destType   = destSqlTypeInt  .get(c);
-////				
-////				if (sourceType != destType)
-////				{
-////					String sourceJdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(sourceType);
-////					String destJdbcTypeStr   = ResultSetTableModel.getColumnJavaSqlTypeName(destType);
-////
-////					String sourceColName = sourceColNames.get(c);
-////					String destColName   = destColNames  .get(c);
-////
-////					String warning = "Possible column datatype missmatch for column "+(c+1)+". Source column name '"+sourceColName+"', jdbcType '"+sourceJdbcTypeStr+"'. Destination column name '"+destColName+"', jdbcType '"+destJdbcTypeStr+"'. I will still try to do the transfer, hopefully the destination server can/will convert the datatype, so it will work... lets try!"; 
-////					_logger.warn(warning);
-////					
-////					if (pipeCmd._sqlWarnings == null)
-////						pipeCmd._sqlWarnings = new SQLWarning("Some problems where found during the DIFF Operation.");
-////					pipeCmd._sqlWarnings.setNextWarning(new SQLWarning(warning));
-////				}
-////			}
-//			
-//			return 999;
-//		}
-//
-//		private boolean diff(ResultSetTableModel source, ResultSetTableModel target) 
-//		throws Exception
-//		{
-//			boolean diffIsOk = true;
-//			
-////			ResultSetTableModel diff = new ResultSetTableModel(rs, name)
-//			int sourceRowc = source.getRowCount();
-//			int sourceColc = source.getColumnCount();
-//
-//			int targetRowc = target.getRowCount();
-//			int targetColc = target.getColumnCount();
-//
-//			if (sourceColc != targetColc)
-//			{
-//				throw new Exception("Diff can't even start. COLUMN COUNT IS DIFFERENT. ColumnCount=[source="+sourceColc+",target="+targetColc+"], RowCount=[source="+sourceRowc+",target="+targetRowc+"].");
-//			}
-//			
-//			for (int r=0; r<sourceRowc; r++)
-//			{
-//				if ( r >= targetRowc)
-//					break;
-//				
-//				for (int c=0; c<sourceColc; c++)
-//				{
-//					Object sourceColVal = source.getValueAsObject(r, c);
-//					Object targetColVal = target.getValueAsObject(r, c);
-//					
-//					if (isColumnValueEqual(sourceColVal, targetColVal))
-//						continue;
-//					
-//					if (_cmdParams._debug)
-//						addDebugMessage("DIFFERENT: row="+r+",col="+c+": source['"+source.getColumnName(c)+"'].Val=["+sourceColVal+"], target['"+target.getColumnName(c)+"'].Val=["+targetColVal+"]");
-//					diffIsOk = false;
-//				}
-//			}
-//			
-//			if (sourceRowc < targetRowc)
-//			{
-//				if (_cmdParams._debug)
-//					addDebugMessage("EXTRA TARGET ROWS: ");
-//
-//				for (int r=sourceRowc-1; r<targetRowc; r++)
-//				{
-//					if (_cmdParams._debug)
-//						addDebugMessage("Target Row["+r+"]: is missing in source. Target row: " + target.toStringRow(r));
-//					diffIsOk = false;
-//				}
-//			}
-//			
-//			return diffIsOk;
-//		}
-//		
-//		private boolean isColumnValueEqual(Object source, Object target)
-//		{
-//			if (source == null && target == null)
-//				return true;
-//			
-//			if (source != null && source.equals(target))
-//				return true;
-//			
-//			return false;
-//		}
-//	}
-
 
 
 	private DiffTableModel _diffTableModel;

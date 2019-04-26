@@ -188,6 +188,7 @@ implements Connection
 		
 		SshTunnelInfo sshTunnelInfo = connProp.getSshTunnelInfo();
 
+//System.out.println("DbxConnection.connect(Window, ConnectionProp): connProp="+connProp);
 		try
 		{
 			// If no suitable driver can be found for the URL, to to load it "the old fashion way" (hopefully it's in the classpath)
@@ -196,6 +197,7 @@ implements Connection
 				Driver jdbcDriver = DriverManager.getDriver(url);
 				if (jdbcDriver == null)
 					Class.forName(driverClass).newInstance();
+//System.out.println("DbxConnection.connect(Window, ConnectionProp): DriverManager.getDriver(url) --->>> jdbcDriver="+jdbcDriver);
 			}
 			catch (Exception ex)
 			{
@@ -259,6 +261,8 @@ implements Connection
 			}
 
 			_logger.debug("getConnection to driver='"+driverClass+"', url='"+url+"', user='"+user+"'.");
+//System.out.println("getConnection to driver='"+driverClass+"', url='"+url+"', user='"+user+"'.");
+//new Exception("DUMMY EX to get CALLSTACK").printStackTrace();
 
 			// some applications might want to have additional OPTIONS (if not already set)
 			// Lets put those "default" options in (if not already set)
@@ -289,6 +293,7 @@ implements Connection
 			Connection conn;
 			if (guiOwner == null)
 			{
+//System.out.println("DbxConnection.connect(Window, ConnectionProp): guiOwner=FALSE. url="+url);
 				if (sshTunnelInfo != null)
 				{
 					String msg = "SSH Tunnel is NOT-YET-IMPLEMENTED when guiOwner is null, for now: Please pass GUI Owner for this to work.";
@@ -300,6 +305,8 @@ implements Connection
 			}
 			else
 			{
+//System.out.println("DbxConnection.connect(Window, ConnectionProp): guiOwner=TRUE. url="+url);
+				
 //				public static DbxConnection connectWithProgressDialog(Window owner, String rawJdbcDriver, String rawJdbcUrl, Properties rawJdbcProps, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 //				public static DbxConnection connectWithProgressDialog(Window owner, String urlStr, ConnectionProgressExtraActions extraTasks, SshConnection sshConn, SshTunnelInfo sshTunnelInfo, String desiredDbProductName, String sqlInit, ImageIcon srvIcon)
 				ImageIcon srvIcon = ConnectionProfileManager.getIcon32byUrl(url);
@@ -336,6 +343,7 @@ implements Connection
 				}
 			}
 
+//System.out.println("AFTER CONNECT: DbxConnection.connect(Window, ConnectionProp): conn="+conn);
 			
 //			// Execute any SQL Init 
 //			if (StringUtil.hasValue(sqlInit))

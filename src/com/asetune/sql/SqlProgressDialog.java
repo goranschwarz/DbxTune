@@ -43,9 +43,11 @@ import javax.swing.SwingWorker.StateValue;
 import javax.swing.Timer;
 
 import org.apache.log4j.Logger;
+import org.fife.ui.rsyntaxtextarea.DocumentRange;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.fife.ui.rtextarea.SearchContext;
 import org.fife.ui.rtextarea.SearchEngine;
+import org.fife.ui.rtextarea.SearchResult;
 
 import com.asetune.sql.conn.TdsConnection;
 import com.asetune.ui.rsyntaxtextarea.AsetuneSyntaxConstants;
@@ -184,6 +186,14 @@ implements PropertyChangeListener, ActionListener
 		});
 	}
 	
+	public void setAllSqlText(String sql)
+	{
+		_allSql_txt.setText(sql);
+		_allSql_txt.setCaretPosition(0);
+		_allSql_txt.setEditable(false);
+		
+	}
+	
 	public void setCurrentSqlText(String sql, int batchCount, int totalExecCount)
 	{
 		//System.out.println(">>>>>>: setCurrentSqlText(): sql="+sql);
@@ -209,7 +219,7 @@ implements PropertyChangeListener, ActionListener
 		_execSqlTimer.restart(); // dont kick off the times to early...
 
 		// Update of WHAT SQL that is currently executed, is done by the deferredSetCurrentSqlText()
-		// othetwise RSyntaxTextArea will have problems every now and then (if the scroll has moved and it needs to parse/update the visible rect)
+		// Otherwise RSyntaxTextArea will have problems every now and then (if the scroll has moved and it needs to parse/update the visible rect)
 	}
 
 	public void setCurrentBatchStartTime(int currentBatchNumber)
@@ -263,7 +273,15 @@ implements PropertyChangeListener, ActionListener
 					sc.setRegularExpression(false);
 	
 					// Position in text...
-					SearchEngine.find(_allSql_txt, sc);
+					SearchResult res = SearchEngine.find(_allSql_txt, sc);
+					
+					// set caret at START of line, otherwise if the window is small it fill "scroll to right" at every "find"
+					if (res != null)
+					{
+						DocumentRange range = res.getMatchRange();
+						if (range != null)
+							_allSql_txt.setCaretPosition(range.getStartOffset());
+					}
 	
 					// Mark it
 					//_allSql_txt.markAll(sql, sc.getMatchCase(), sc.getWholeWord(), sc.isRegularExpression());

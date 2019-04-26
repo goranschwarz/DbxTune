@@ -30,12 +30,15 @@ public interface IMessageAware
 	boolean hasMessages();
 	List<Message> getMessages();
 	void clearMessages();
+
+	void addMessages(List<Message> msgList);
+	void addMessage(Message msg);
+
 	void addTraceMessage  (String msg);
 	void addDebugMessage  (String msg);
 	void addInfoMessage   (String msg);
 	void addWarningMessage(String msg);
 	void addErrorMessage  (String msg);
-	void addMessages(List<Message> msgList);
 	void addPlainMessage  (String msg);
 
 	void      setGuiOwner(Component owner);

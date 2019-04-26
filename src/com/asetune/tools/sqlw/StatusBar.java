@@ -28,6 +28,8 @@ import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GMemoryIndicator;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
@@ -39,6 +41,7 @@ import net.miginfocom.swing.MigLayout;
 public class StatusBar extends JPanel
 {
 	private static final long	serialVersionUID	= 1L;
+	private static Logger _logger = Logger.getLogger(StatusBar.class);
 
 	private static String NOT_CONNECTED = "Not Connected";
 
@@ -387,10 +390,17 @@ public class StatusBar extends JPanel
 			return;
 		}
 
-		_srvConnStateInfo.setVisible(true);
-		_srvConnStateInfo.setText(csi.getStatusBarText());
+		try 
+		{
+			_srvConnStateInfo.setVisible(true);
+			_srvConnStateInfo.setText(csi.getStatusBarText());
 		
-		_srvConnStateInfo.setToolTipText(csi.getStatusBarToolTipText());
+			_srvConnStateInfo.setToolTipText(csi.getStatusBarToolTipText());
+		} 
+		catch (RuntimeException ex)
+		{
+			_logger.warn("Problems updating StatusBar, this problem was ignored. Caught: "+ex, ex);
+		}
 	}
 
 //	public void setAseConnectionStateInfo(ConnectionStateInfo csi)

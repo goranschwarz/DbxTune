@@ -23,7 +23,6 @@ package com.asetune.tools.sqlw;
 import java.awt.Component;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -40,9 +39,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.io.FileUtils;
 
 import com.asetune.gui.ConnectionProfile;
-import com.asetune.gui.ConnectionProfile.ConnProfileEntry;
-import com.asetune.gui.ConnectionProfile.JdbcEntry;
-import com.asetune.gui.ConnectionProfile.TdsEntry;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
@@ -59,10 +55,10 @@ import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.tools.sqlw.msg.JPipeMessage;
 import com.asetune.tools.sqlw.msg.JTableResultSet;
 import com.asetune.tools.sqlw.msg.Message;
-import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
+import com.asetune.utils.TimeUtils;
 
 public class SqlStatementCmdTabDiff 
 extends SqlStatementAbstract
@@ -256,21 +252,21 @@ extends SqlStatementAbstract
 			{
 				_rightConnectionProfile = cp;
 				
-				params._user   = cp.getDbUserName();
-				params._passwd = cp.getDbPassword();
-				String serverOrUrlStr = cp.getDbServerOrUrl();
-				if (serverOrUrlStr != null)
-				{
-					if (serverOrUrlStr.startsWith("jdbc:"))
-						params._url = serverOrUrlStr;
-					else
-						params._server = serverOrUrlStr;
-				}
+//				params._user   = cp.getDbUserName();
+//				params._passwd = cp.getDbPassword();
+//				String serverOrUrlStr = cp.getDbServerOrUrl();
+//				if (serverOrUrlStr != null)
+//				{
+//					if (serverOrUrlStr.startsWith("jdbc:"))
+//						params._url = serverOrUrlStr;
+//					else
+//						params._server = serverOrUrlStr;
+//				}
 			}
 		}
 		
-		if (StringUtil.isNullOrBlank(_params._server) && StringUtil.isNullOrBlank(_params._url))
-			printHelp(null, "Missing mandatory parameter '--profile <profile>' or '--server <srvName>'.");
+		if (StringUtil.isNullOrBlank(_params._server) && _rightConnectionProfile == null)
+			printHelp(null, "Missing mandatory parameter '-p|--profile <profile>' or '-S|--server <srvName>'.");
 
 		if (StringUtil.isNullOrBlank(_params._leftTable))
 			printHelp(null, "Missing mandatory parameter '--left tableName'.");
@@ -470,6 +466,8 @@ extends SqlStatementAbstract
 
 	private boolean localExecute() throws Exception
 	{
+		long execStartTime = System.currentTimeMillis();
+		
 		DbxConnection leftConn = _conn;
 		
 		DiffContext context = new DiffContext();
@@ -510,7 +508,8 @@ extends SqlStatementAbstract
 			if (_progress != null) _progress.setState("Connecting to RIGHT hand side DBMS");
 			if (_params._debug)     addDebugMessage(  "Connecting to RIGHT hand side DBMS");
 
-			rightConn = getRightConnection();
+			// Get a connection to the Right Hand Side DBMS
+			rightConn = getRightConnection(_rightConnectionProfile, _params._user, _params._passwd, _params._server, _params._db, _params._url, _params._initStr, _params._debug);
 			
 
 			ConnectionProp leftConnProps  = leftConn  == null ? null : leftConn .getConnProp();
@@ -702,12 +701,16 @@ extends SqlStatementAbstract
 			String rightDbmsInfo = "";
 			try { leftDbmsInfo  = leftConn .getDbmsServerName(); } catch(SQLException ex) {}
 			try { rightDbmsInfo = rightConn.getDbmsServerName(); } catch(SQLException ex) {}
-			
+
+			// How long did this take.
+			String execTimeStr = TimeUtils.msDiffNowToTimeStr(execStartTime);
+
 			if (diffCount == 0)
 			{
 				addInfoMessage("OK - " + tabInfo + " Left and Right ResultSet has NO difference \n"
-						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'." + leftExtraInfoMsg + "\n"
-						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'." + rightExtraInfoMsg
+						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'." + leftExtraInfoMsg  + "\n"
+						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'." + rightExtraInfoMsg + "\n"
+						+ "           ExecTime: " + execTimeStr
 						);
 			}
 			else
@@ -720,6 +723,7 @@ extends SqlStatementAbstract
 						                  + ", Column Diff Rows = "   + diffSink.getDiffColumnValues().size() + ".\n"
 						+ "           Left:  RowCount=" + context.getLeftDt() .getRowCount() + ", ColCount=" + context.getLeftDt() .getColumnCount() + ", PkCols=" + context.getLeftDt() .getPkColumnNames() + ", TabName='" + context.getLeftDt() .getFullTableName() + "', DbmsInfo='" + leftDbmsInfo  + "'." + leftExtraInfoMsg  + "\n"
 						+ "           Right: RowCount=" + context.getRightDt().getRowCount() + ", ColCount=" + context.getRightDt().getColumnCount() + ", pkCols=" + context.getRightDt().getPkColumnNames() + ", TabName='" + context.getRightDt().getFullTableName() + "', DbmsInfo='" + rightDbmsInfo + "'." + rightExtraInfoMsg + "\n"
+						+ "           ExecTime: " + execTimeStr + "\n"
 						+ "        NOTE: You can turn on debugging '-x' to see what SQL that is issued on left/right hand side."
 						;
 
@@ -815,118 +819,4 @@ extends SqlStatementAbstract
 
 		return false; // true=We Have A ResultSet, false=No ResultSet
 	}
-
-
-
-
-	private DbxConnection getRightConnection()
-	throws Exception
-	{
-		DbxConnection conn = null;
-		ConnectionProp cp = new ConnectionProp();
-		cp.setAppName("sqlw-tabdiff");
-		
-		if (_rightConnectionProfile == null)
-		{
-			cp.setDbname(_params._db);
-			cp.setPassword(_params._passwd);
-			cp.setServer(_params._server);
-//			cp.setSshTunnelInfo(_params.);
-			cp.setUrl(_params._url);
-//			cp.setUrlOptions(urlOptions);
-			cp.setUsername(_params._user);
-		}
-		else
-		{
-			ConnProfileEntry profileEntry = _rightConnectionProfile.getEntry();
-			
-			if (profileEntry instanceof TdsEntry)
-			{
-				TdsEntry entry = (TdsEntry) profileEntry;
-				
-				cp.setDbname       (entry._tdsDbname);
-				cp.setPassword     (entry._tdsPassword);
-				cp.setServer       (entry._tdsServer);
-				cp.setSshTunnelInfo(entry._tdsShhTunnelUse ? entry._tdsShhTunnelInfo : null);
-				cp.setUrl          (entry._tdsUseUrl ? entry._tdsUseUrlStr : null);
-				cp.setUrlOptions   (entry._tdsUrlOptions);
-				cp.setUsername     (entry._tdsUsername);
-			}
-			else if (profileEntry instanceof JdbcEntry)
-			{
-				JdbcEntry entry = (JdbcEntry) profileEntry;
-				
-//				cp.setDbname       (entry._jdbcDbname);
-				cp.setPassword     (entry._jdbcPassword);
-//				cp.setServer       (entry._jdbcServer);
-				cp.setSshTunnelInfo(entry._jdbcShhTunnelUse ? entry._jdbcShhTunnelInfo : null);
-				cp.setUrl          (entry._jdbcUrl);
-				cp.setUrlOptions   (entry._jdbcUrlOptions);
-				cp.setUsername     (entry._jdbcUsername);
-			}
-		}
-		
-		
-		if (StringUtil.hasValue(_params._server))
-		{
-			String hostPortStr = null;
-			if ( _params._server.contains(":") )
-				hostPortStr = _params._server;
-			else
-				hostPortStr = AseConnectionFactory.getIHostPortStr(_params._server);
-
-			if (StringUtil.isNullOrBlank(hostPortStr))
-				throw new Exception("Can't find server name information about '"+_params._server+"', hostPortStr=null. Please try with -S hostname:port");
-
-			_params._url = "jdbc:sybase:Tds:" + hostPortStr;
-
-			if ( ! StringUtil.isNullOrBlank(_params._db) )
-				_params._url += "/" + _params._db;
-			cp.setUrl(_params._url);
-		}
-
-
-		// Try to connect
-		if (isDebugEnabled())
-			addDebugMessage("Try getConnection to: " + cp);
-		
-		// Make the connection
-		conn = DbxConnection.connect(getGuiOwnerAsWindow(), cp);
-		
-		// Change catalog... (but do not bail out on error)
-		if ( ! StringUtil.isNullOrBlank(_params._db) )
-		{
-			try { conn.setCatalog(_params._db); }
-			catch(SQLException ex) { addErrorMessage("Changing database/catalog to '" + _params._db + "' was not successful. Caught: " + ex); }
-		}
-		
-		// Print out some destination information
-		try
-		{
-			DatabaseMetaData dbmd = conn.getMetaData();
-			String msg;
-
-			try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-			try { msg = "Current Catalog in the destination srv '" + conn.getCatalog()                +"'."; if (_params._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-		}
-		catch (SQLException ignore) {}
-
-		// Execute the SQL InitString
-		if (StringUtil.hasValue(_params._initStr))
-		{
-			String msg = "executing initialization SQL Stement '"+_params._initStr+"'.";
-			addDebugMessage(msg);
-
-			Statement stmnt = conn.createStatement();
-			stmnt.executeUpdate(_params._initStr);
-			stmnt.close();
-		}
-
-		return conn;
-	}
-
 }

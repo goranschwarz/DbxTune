@@ -593,7 +593,8 @@ public class QueryWindow
 	private String      _currentDbName                    = null; // probably only maintained for ASE
 	private boolean     _dbmsOutputIsEnabled              = false; // only maintained for Oracle & DB2
 
-	private String      _postExecGeneratedSql             = null; // This is set if any SqlStatementCmd (DbDiff) is just a "preprocessor" that generates Commands to be executed.
+//	private String      _postExecGeneratedSql             = null; // This is set if any SqlStatementCmd (DbDiff) is just a "preprocessor" that generates Commands to be executed.
+	                                                              // This is probably A bad idea, another solution might be to INJECT text into the ScriptReader (but then I need to rewrite the ScriptReader)
 
 	/** if DB returns a error message, stop executions */
 	private boolean     _abortOnDbMessages                = false;
@@ -2052,7 +2053,7 @@ public class QueryWindow
 					catch (SQLException ex) {/*ignore*/}
 				}
 				
-				// Check if it's cmd: '\connect' then allow it (and let the "execution" handle the connect request) 
+				// Check if it's cmd: '\connect' or '\disconnect' then allow it (and let the "execution" handle the connect request) 
 				String curCmd = _query_txt.getSelectedText();
 				if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\connect"))
 				{
@@ -2061,19 +2062,25 @@ public class QueryWindow
 					//   since it depends on a connection...
 					// So lets try to do the connect request here.
 					String params = curCmd.replace("\\connect", "").trim();
+					params = StringUtil.removeSemicolonAtEnd(params).trim();
+					params = params.replaceFirst("(?i)^go", "");
 
 					String[] args = StringUtil.translateCommandline(params, false);
 
 					if (args.length >= 1)
 					{
 						String profileName = args[0];
-System.out.println("ACTION_EXECUTE: CONNECTION... doConnect() --- profileName=|"+profileName+"|.");
+//System.out.println("ACTION_EXECUTE: CONNECTION... doConnect() --- profileName=|"+profileName+"|.");
 						doConnect(profileName);
 					}
 					else
 					{
 						SwingUtils.showErrorMessage(_window, "Connect", "The '\\connect' must have a 'profilename' as a parameter.", null);;
 					}
+				}
+				else if (StringUtil.hasValue(curCmd) && curCmd.startsWith("\\disconnect"))
+				{
+					doDisconnect();
 				}
 				else
 				{
@@ -3584,11 +3591,11 @@ System.out.println("ACTION_EXECUTE: CONNECTION... doConnect() --- profileName=|"
 					// Connection Profile
 					if ( ! isNull(ppe.getProperty(key, "connProfile")) )
 					{
-System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... connProfile");
+//System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... connProfile");
 						connDialog.setConnProfileName(ppe.getProperty(key, "connProfile"));
 					}
 
-System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... ConnectionDialog.ACTION_OK");
+//System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP ... ConnectionDialog.ACTION_OK");
 					connDialog.actionPerformed(new ActionEvent(this, 0, ConnectionDialog.ACTION_OK));
 				}
 				catch(Exception ex)
@@ -6416,7 +6423,7 @@ System.out.println("XXXXXXXXXXXXX: action_connect():  PROPKEY_CONNECT_ON_STARTUP
 		// And the send it...
 		final String ppeStr = ConnectionDialog.PROPKEY_CONNECT_ON_STARTUP + "={connProfile=" + profileName + "}";
 		
-		Runnable deferedAction = new Runnable()
+		Runnable doRun = new Runnable()
 		{
 			@Override
 			public void run()
@@ -6438,7 +6445,22 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				}
 			}
 		};
-		SwingUtilities.invokeLater(deferedAction);
+//		SwingUtilities.invokeLater(doRun);
+		if (SwingUtils.isEventQueueThread())
+		{
+			doRun.run();
+		}
+		else
+		{
+			try
+			{
+				SwingUtilities.invokeAndWait(doRun);
+			}
+			catch (Exception ex)
+			{
+				_logger.error("Problems with SwingUtilities.invokeAndWait(). ", ex);
+			}
+		}
 	}
 	
 	/**
@@ -7007,8 +7029,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		ddlGenMenu.add(ddlGenMenuDelete);
 		
 		JMenuItem toClipboard = new JMenuItem("To Clipboard");
-		JMenuItem toEditor = new JMenuItem("To Editors Current Location");
-		JMenuItem toWindow = new JMenuItem("To Separate Window");
+//		JMenuItem toEditor = new JMenuItem("To Editors Current Location");
+//		JMenuItem toWindow = new JMenuItem("To Separate Window");
 
 		toClipboard.addActionListener(new ActionListener()
 		{
@@ -7258,17 +7280,23 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 
 	public void displayQueryResults(final String sql, final int startRowInSelection, final boolean guiShowplanExec)
 	{
-		_postExecGeneratedSql = null;
+//		_postExecGeneratedSql = null;
 
 		displayQueryResults(sql, startRowInSelection, guiShowplanExec, false);
 		
 		// If the SqlStatement instructed us to do something extra (like SqlStatementCmdDbDiff), then lets execute it here...
 		// In this case the SqlStatementCmd is just a "preprocessor" that generated Commands that we should run 
-		if (_postExecGeneratedSql != null)
-		{
-			displayQueryResults(_postExecGeneratedSql, startRowInSelection, guiShowplanExec, /*append=*/true);
-			_postExecGeneratedSql = null;
-		}
+		//
+		// BUT: This was probably a bad idea (but lets keep the code for now)
+		//      It's bad because the "sql" is "out of sequence", and will be executed AFTER the full batch
+		//      If we for example switch database context or simular... then we are "fucked"
+		//      A better solution might be ti INJECT "sql text" into the ScriptReader, but then the ScriptReader has to be rewritten to be LinkedList or similar (so we can inject in the middle)
+		//                                           or have a "temp" List which we can append to and execute "before" next sr.getSqlBatchString()
+//		if (_postExecGeneratedSql != null)
+//		{
+//			displayQueryResults(_postExecGeneratedSql, startRowInSelection, guiShowplanExec, /*append=*/true);
+//			_postExecGeneratedSql = null;
+//		}
 	}
 	public void displayQueryResults(final String sql, final int startRowInSelection, final boolean guiShowplanExec, final boolean appendToCurrentResults)
 	{
@@ -7972,7 +8000,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				{
 					// The REGEXP_MLC_SLC seems to stacktrace on 'StackOverflow' when MLC and SLC are embedded, for example, which amny people are using for a procedure header.
 					/* --------------------------------------
-					** -- Some commeents -------------------- 
+					** -- Some comments -------------------- 
 					** -------------------------------------- */
     				String originSqlWithoutComments = sql.replaceAll(REGEXP_MLC_SLC, "").trim(); 
     				if ( StringUtil.isNullOrBlank(originSqlWithoutComments) && !_sendCommentsOnly_chk.isSelected() )
@@ -8426,7 +8454,9 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 
 						// if the statement wants us to execute any post commands.
 						// In this case the SqlStatementCmd is just a "preprocessor" that generated Commands that we should run 
-						_postExecGeneratedSql = sqlStmntInfo.getPostExecSqlCommands();
+						//_postExecGeneratedSql = sqlStmntInfo.getPostExecSqlCommands();
+						// maybe workaround to above: add it to the script reader
+						//sr.addSqlAfterThisExec(listOfExtraSqlStatements)
 						
 						// How long did it take
 						long execFinnishTime = System.currentTimeMillis();
@@ -8529,7 +8559,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						}
 
 						// Read some extra stuff, yes do this even if a SQLException was thrown
-						readVendorSpecificResults(conn, progress, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
+						readVendorSpecificResults(_conn, progress, _resultCompList, startRowInSelection, sr.getSqlBatchStartLine(), sql);
 					}
 
 				} // end: 'go 10'

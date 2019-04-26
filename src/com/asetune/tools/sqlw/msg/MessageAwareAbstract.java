@@ -56,6 +56,7 @@ implements IMessageAware
 	}
 	
 	@Override public void addMessages      (List<Message> msgList) { _msgList.addAll(msgList); }
+	@Override public void addMessage       (Message msg)           { _msgList.add(msg); }
 	
 //	@Override public void addDebugMessage  (String msg) { _msgList.add(new Message(Severity.DEBUG  , msg)); }
 //	@Override public void addInfoMessage   (String msg) { _msgList.add(new Message(Severity.INFO   , msg)); }

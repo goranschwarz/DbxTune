@@ -725,7 +725,7 @@ public class ConnectionProfileManager
 	 */
 	public void setProfileEntry(ConnectionProfile connProfile, ConnProfileEntry connProfileEntry)
 	{
-System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+connProfile.getName()+"', connProfileEntry='"+connProfileEntry.toXml("xxx", Type.TDS, SrvType.TDS_ASE)+"'.");
+//System.out.println("ConnectionProfileManager.setProfileEntry(): connProfile='"+connProfile.getName()+"', connProfileEntry='"+connProfileEntry.toXml("xxx", Type.TDS, SrvType.TDS_ASE)+"'.");
 		connProfile.setEntry(connProfileEntry);
 
 		_profileMap.put(connProfile.getName(), connProfile);

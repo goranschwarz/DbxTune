@@ -1245,13 +1245,13 @@ public class AseConnectionFactory
 					AseUrlHelper urlHelper = AseUrlHelper.parseUrl(connProp.getUrl());
 					hostPortStr = urlHelper.getHostPortStr();
 
-System.out.println("AseConnectionFactory.getConnection(connectionProgressDialog, connProp): hostPortStr=|"+hostPortStr+"|, connProp="+connProp);
+//System.out.println("AseConnectionFactory.getConnection(connectionProgressDialog, connProp): hostPortStr=|"+hostPortStr+"|, connProp="+connProp);
 					if (connProp.getSshTunnelInfo() != null)
 					{
 						SshTunnelInfo ti = connProp.getSshTunnelInfo();
 						hostPortStr = ti.getLocalHost() + ":" + ti.getLocalPort();
 
-System.out.println("NEW hostPortStr due to SshTunnelInfo. hostPortStr=|" + hostPortStr + "|.");
+//System.out.println("NEW hostPortStr due to SshTunnelInfo. hostPortStr=|" + hostPortStr + "|.");
 						
 						// TODO: Check if we have got a Tunnel... (if not set one up)
 //						SshTunnelManager tm = SshTunnelManager.getInstance();

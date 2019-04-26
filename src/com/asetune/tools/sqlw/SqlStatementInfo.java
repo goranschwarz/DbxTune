@@ -424,6 +424,11 @@ implements SqlStatement
 		}
 		else
 		{
+			if (conn == null)
+			{
+				throw new SQLException("Executing SQL '"+_sql+"' but the connection is NULL.");
+			}
+
 			// Get a "regular" Statement...
 			_stmnt = conn.createStatement();
 		}
