@@ -41,6 +41,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventOldTranLogBackup       -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
 				<LI>new: AlarmEventConfigChanges          -- Fires when a configuration changes is detected from the error log</LI>
 				<LI>new: AlarmEventProcessInfected        -- Fires if we find 'Process Infected' is found in the error log, this so we can easily see the stack trace.</LI>
+				<LI>new: AlarmEventLowOsDiskFreeSpace     -- For SQL-Server, when we starting to run out of disk in the volumes where we store data/log files.</LI>
 				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
 				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
 				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>
@@ -84,6 +85,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	 			<li>To version 1.14,          Component: simplemagic</li>
 				<li>To version 2.3.0,         Component: juniversalchardet</li>
 				<li>To version 5.2,           Component: Miglayout</li>
+				<li>To version 7.2.2,         Component: Microsoft JDBC Driver</li>
 			</ul>
 		</LI>
 	</UL>
@@ -267,13 +269,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 		<b>CmSqlStatement - 'SQL Statement'</b><br>
 		<ul>
-			Added 6 new Graphs, to figgure out what SQL Statements Over Response times/spans... and how much resources they take. 
+			Added 7 new Graphs, to figgure out what SQL Statements Over Response times/spans... and how much resources they take. 
 			<li>Sum Exec Time Over SQL Response Time</li>
 			<li>Sum Logical Reads Over SQL Response Time</li>
 			<li>Sum Physical Reads Over SQL Response Time</li>
 			<li>Sum CPU Time Over SQL Response Time</li>
 			<li>Sum Wait Time Over SQL Response Time</li>
 			<li>Sum Rows Affected Over SQL Response Time</li>
+			<li>Error Count</li>
 		</ul>
 		</LI>
 
@@ -404,6 +407,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>Tooltip: All Collectors that has 'session_id': Execute select * from sysprocesses and 'last know executed SQL Statement'.</LI>
 		<LI>Tooltip: All Collectors that has 'query_plan': Option to click in the tooltip to: Open XML Showplan in external Browser</LI>
+		<LI>New Collector: CmSpidWait          - What wait types are SPID's waiting on... also 3 graphs on this.</LI>
+		<LI>New Collector: CmDatabase          - Database Sizes and usage, on both OS and SQL-Server level</LI>
+		<LI>New Collector: CmOpenTransaction   - List open transactions and there last SQL Statements, and Execution Plan (if still executing)</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -483,6 +489,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    <li>\connect 'profile name': Connect to any Connection Profile, without having to Open the Connection Dialog (works with code completion)<br>For the moment you need to execute this command as a separate <i>SQL batch</i> (so you can't have it in the middle of a SQL Batch, sorry...)</li>
 		  </ul>
 		</LI>
+		<LI>SQL Server: On errors Print information about Line Number, serverName, ProcName etc.</LI>
+		<LI>SQL Server: Added 'Set' Button with 'statistics io', showplan, exec time</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

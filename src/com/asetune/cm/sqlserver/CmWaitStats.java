@@ -198,10 +198,10 @@ extends CountersModel
 			+ "    signal_wait_time_ms, \n"
 			+ "    resource_ms = wait_time_ms - signal_wait_time_ms, \n"
 			+ "    percentage = convert(numeric(8,1), 100.0 * wait_time_ms / SUM(wait_time_ms) OVER()), \n"
-			+ "    WaitTimePerWait = CASE WHEN waiting_tasks_count > 0 \n"
+			+ "    WaitTimePerCount = CASE WHEN waiting_tasks_count > 0 \n"
 			+ "                           THEN convert(numeric(18,3), (wait_time_ms + 0.0) / waiting_tasks_count) \n"
 			+ "                           ELSE convert(numeric(18,3), 0.0) \n"
-			+ "                      END, \n"
+			+ "                       END, \n"
 			+ "    SkipInLocalGraphs = convert(bit, 1), \n"
 			+ "    SkipInTrendGraphs = convert(bit, 1), \n"
 			+ "    Description = convert(varchar(1500), '') \n"
@@ -224,7 +224,7 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-			mtd.addColumn("dm_os_wait_stats", "WaitTimePerWait",     "<html>" +
+			mtd.addColumn("dm_os_wait_stats", "WaitTimePerCount",    "<html>" +
 			                                                           "Wait time in ms per wait. <br>" +
 			                                                           "<b>formula</b>: diff.wait_time_ms / diff.waiting_tasks_count<br>" +
 			                                                         "</html>");
@@ -439,14 +439,14 @@ extends CountersModel
 	}
 
 	/** 
-	 * Compute the WaitTimePerWait for DIFF values, and some others
+	 * Compute the WaitTimePerCount for DIFF values, and some others
 	 */
 	@Override
 	public void localCalculation(CounterSample prevSample, CounterSample newSample, CounterSample diffData)
 	{
 		int pos_wait_time_ms        = -1;
 		int pos_waiting_tasks_count = -1;
-		int pos_WaitTimePerWait     = -1;
+		int pos_WaitTimePerCount    = -1;
 		int pos_signal_wait_time_ms = -1;
 		int pos_resource_ms         = -1;
 		int pos_percentage          = -1;
@@ -460,7 +460,7 @@ extends CountersModel
 		{
 			String colName = colNames.get(colId);
 			
-			if      (colName.equals("WaitTimePerWait"))     pos_WaitTimePerWait     = colId;
+			if      (colName.equals("WaitTimePerCount"))    pos_WaitTimePerCount     = colId;
 			else if (colName.equals("wait_time_ms"))        pos_wait_time_ms        = colId;
 			else if (colName.equals("waiting_tasks_count")) pos_waiting_tasks_count = colId;
 			else if (colName.equals("signal_wait_time_ms")) pos_signal_wait_time_ms = colId;
@@ -479,19 +479,19 @@ extends CountersModel
 		for (int rowId = 0; rowId < diffData.getRowCount(); rowId++)
 		{
 			//-------------------------
-			// WaitTimePerWait
+			// WaitTimePerCount
 			long wait_time_ms        = ((Number)diffData.getValueAt(rowId, pos_wait_time_ms       )).longValue();
 			long waiting_tasks_count = ((Number)diffData.getValueAt(rowId, pos_waiting_tasks_count)).longValue();
 
 			if (waiting_tasks_count > 0)
 			{
-				double calcWaitTimePerWait = wait_time_ms / (waiting_tasks_count * 1.0);
+				double calcWaitTimePerCount = wait_time_ms / (waiting_tasks_count * 1.0);
 
-				BigDecimal newVal = new BigDecimal(calcWaitTimePerWait).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
-				diffData.setValueAt(newVal, rowId, pos_WaitTimePerWait);
+				BigDecimal newVal = new BigDecimal(calcWaitTimePerCount).setScale(3, BigDecimal.ROUND_HALF_EVEN);;
+				diffData.setValueAt(newVal, rowId, pos_WaitTimePerCount);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0), rowId, pos_WaitTimePerWait);
+				diffData.setValueAt(new BigDecimal(0), rowId, pos_WaitTimePerCount);
 
 			//-------------------------
 			// percentage

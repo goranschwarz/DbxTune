@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune;
 
+import java.io.File;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -37,6 +38,7 @@ import com.asetune.cm.os.CmOsNwInfo;
 import com.asetune.cm.os.CmOsUptime;
 import com.asetune.cm.os.CmOsVmstat;
 import com.asetune.cm.sqlserver.CmActiveStatements;
+import com.asetune.cm.sqlserver.CmDatabases;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
 import com.asetune.cm.sqlserver.CmExecCursors;
@@ -48,11 +50,13 @@ import com.asetune.cm.sqlserver.CmExecSessions;
 import com.asetune.cm.sqlserver.CmExecTriggerStats;
 import com.asetune.cm.sqlserver.CmIndexOpStat;
 import com.asetune.cm.sqlserver.CmIndexUsage;
+import com.asetune.cm.sqlserver.CmOpenTransactions;
 import com.asetune.cm.sqlserver.CmOptimizer;
 import com.asetune.cm.sqlserver.CmOsLatchStats;
 import com.asetune.cm.sqlserver.CmPerfCounters;
 import com.asetune.cm.sqlserver.CmProcedureStats;
 import com.asetune.cm.sqlserver.CmSchedulers;
+import com.asetune.cm.sqlserver.CmSpidWait;
 import com.asetune.cm.sqlserver.CmSpinlocks;
 import com.asetune.cm.sqlserver.CmSummary;
 import com.asetune.cm.sqlserver.CmTempdbSpidUsage;
@@ -112,8 +116,10 @@ extends CounterControllerAbstract
 		CmSummary           .create(counterController, guiController);
                             
 		CmWho               .create(counterController, guiController);
+		CmSpidWait          .create(counterController, guiController);
 		CmExecSessions      .create(counterController, guiController);
 		CmExecRequests      .create(counterController, guiController);
+		CmDatabases         .create(counterController, guiController);
 		CmTempdbUsage       .create(counterController, guiController);
 		CmTempdbSpidUsage   .create(counterController, guiController);
 		CmSchedulers        .create(counterController, guiController);
@@ -125,6 +131,7 @@ extends CounterControllerAbstract
 		CmSpinlocks         .create(counterController, guiController);
                             
 		CmActiveStatements  .create(counterController, guiController);
+		CmOpenTransactions  .create(counterController, guiController);
 		CmIndexUsage        .create(counterController, guiController);
 		CmIndexOpStat       .create(counterController, guiController);
 		CmExecQueryStats    .create(counterController, guiController);
@@ -174,7 +181,7 @@ extends CounterControllerAbstract
 	throws Exception
 	{
 		if (isInitialized())
-		return;
+			return;
 
 		if ( ! AseConnectionUtils.isConnectionOk(conn, hasGui, null))
 			throw new Exception("Trying to initialize the counters with a connection this seems to be broken.");
@@ -244,15 +251,36 @@ extends CounterControllerAbstract
 		{
 			_logger.warn("Problems Initializing DBMS Properties, using sql='"+sql+"'. Caught: "+ex);
 		}
+
+		sql = "select @@version";
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while(rs.next())
+			{
+				setDbmsProperty(PROPKEY_VersionStr, rs.getString(1));
+			}
+		}
+		catch (SQLException ex)
+		{
+			_logger.warn("Problems Initializing DBMS Properties, using sql='"+sql+"'. Caught: "+ex);
+		}
 	}
 	
-	public static final String PROPKEY_Edition = CounterControllerSqlServer.class.getSimpleName() + ".Edition";
+	public static final String PROPKEY_Edition    = CounterControllerSqlServer.class.getSimpleName() + ".Edition";
+	public static final String PROPKEY_VersionStr = CounterControllerSqlServer.class.getSimpleName() + ".VersionStr";
 
 	public boolean isAzure()
 	{
 		String edition = getDbmsProperty(PROPKEY_Edition, "");
 		
 		return (edition != null && edition.toLowerCase().indexOf("azure") >= 0);
+	}
+
+	public boolean isLinux()
+	{
+		String versionStr = getDbmsProperty(PROPKEY_VersionStr, "");
+		
+		return (versionStr != null && versionStr.indexOf("on Linux") >= 0);
 	}
 
 	@Override
@@ -330,5 +358,39 @@ extends CounterControllerAbstract
 	public ITableTooltip createCmToolTipSupplier(CountersModel cm)
 	{
 		return new ToolTipSupplierSqlServer(cm);
+	}
+
+
+	/**
+	 * From a data/log file... get the directory. (If it's a SQL-Server on Linux: Remove drive letter (if it exists) and change any bask slash '\' to forward slashes '/' 
+	 * @param osFileName
+	 * @return
+	 */
+	public static String resolvFileNameToDirectory(String osFileName)
+	{
+		if (CounterController.hasInstance())
+		{
+			CounterControllerSqlServer instance = (CounterControllerSqlServer) CounterController.getInstance();
+
+			File f = new File(osFileName);
+			String dir = f.getParent();
+
+			// If not windows: remove drive letter, and fix backslash '\' to forward slash '/'
+			if ( instance.isLinux() )
+			{
+				// if starts with 'c:', then remove the drive, since it's Linux 
+				if (dir.matches("(?is)[A-Z]:.*"))
+					dir = dir.substring(2);
+				
+				dir = dir.replace('\\', '/');
+			}
+			
+			return dir;
+		}
+		else
+		{
+			File f = new File(osFileName);
+			return f.getParent();
+		}
 	}
 }

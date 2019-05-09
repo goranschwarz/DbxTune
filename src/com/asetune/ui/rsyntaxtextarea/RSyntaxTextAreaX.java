@@ -291,18 +291,25 @@ extends RSyntaxTextArea
 			public void doubleClick(MouseEvent e)
 			{
 				String str = textArea.getSelectedText();
-				if (StringUtil.hasValue(str))
+				if (StringUtil.hasValue(str) && str.length() > 1)
 				{
 					SearchContext context = new SearchContext(str.trim());
 					context.setMarkAll(true);
 					context.setMatchCase(true);
 					context.setWholeWord(true);
 					SearchEngine.markAll(textArea, context);
+
+					textArea.putClientProperty("RSyntaxTextAreaX.isInWordHiglightMode", true);
 				}
 			}
 			@Override
 			public void singleClick(MouseEvent e)
 			{
+				// If we are NOT in highlight mode EXIT
+				Object isInWordHiglightMode = textArea.getClientProperty("RSyntaxTextAreaX.isInWordHiglightMode");
+				if (isInWordHiglightMode != null && isInWordHiglightMode instanceof Boolean && (Boolean)isInWordHiglightMode == false)
+					return;
+				
 				SearchContext context = new SearchContext();
 				context.setMarkAll(true);
 				context.setMatchCase(true);
@@ -317,6 +324,11 @@ extends RSyntaxTextArea
 			@Override
 			public void stopMoveWithSelection(CaretEvent e, String selectedText)
 			{
+				if (StringUtil.isNullOrBlank(selectedText))
+					return;
+				if (selectedText.length() <= 1)
+					return;
+
 				// If we have newline, the it's probably NOT a good idea to mark-the-selected-text
 				int nlPos = selectedText.lastIndexOf('\n');
 				if (nlPos == -1) // no newlines
@@ -327,6 +339,8 @@ extends RSyntaxTextArea
     				context.setWholeWord(true);
     				SearchResult sr = SearchEngine.markAll(textArea, context);
 //System.out.println("caretListener-searchResult: getCount()="+sr.getCount()+", getMarkedCount()="+sr.getMarkedCount());
+
+    				textArea.putClientProperty("RSyntaxTextAreaX.isInWordHiglightMode", true);
 				}
 			}
 		});

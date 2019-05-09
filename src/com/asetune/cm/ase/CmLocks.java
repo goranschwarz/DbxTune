@@ -262,4 +262,11 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
+	/** Normal updateGraphData() skips update if no rows in table... but we still want to update */
+	@Override
+	public void updateGraphData()
+	{
+		for (TrendGraphDataPoint tgdp : getTrendGraphData().values()) 
+			updateGraphData(tgdp);
+	}
 }

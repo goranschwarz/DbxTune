@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoRs;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class RsConnection
@@ -169,6 +170,14 @@ extends TdsConnection
 			throw new SQLException("The passed timeout value of '"+timeout+"' must be 0 or above.");
 
 		String sql =  "admin echo, 'DbxConnection-Rs-isValid("+timeout+")'";
+		
+		// If we KNOW that we are in gateway mode... issue a simple SQL Statement, so we don't get a error message:
+		//         Msg 2812, Level 16, State 5:
+		//         Server 'XXXXXXX', Line 1, Status 0, TranState 3:
+		//         Stored procedure 'admin' not found. Specify owner.objectname or use sp_help to check whether the object exists (sp_help may produce lots of output).
+		if (StringUtil.hasValue(_lastGatewayServer))
+			sql = "select 1";
+		
 		try
 		{
 			Statement stmnt = createStatement();

@@ -177,7 +177,11 @@ public abstract class ShowplanHtmlView
 	{
 		File tmpBaseDir = new File(getTmpShowplanPath());
 		File destDir    = new File(getTmpShowplanPath() + getTemplateJarDir());
+		File distDir    = new File(getTmpShowplanPath() + getTemplateJarDir() + "/dist");
+		File cssDir     = new File(getTmpShowplanPath() + getTemplateJarDir() + "/css");
 
+		boolean populate = false;
+		
 		// Create the BASE TEMP DIR
 		if (tmpBaseDir.exists() && tmpBaseDir.isDirectory())
 		{
@@ -203,9 +207,32 @@ public abstract class ShowplanHtmlView
 
 			_logger.info("Created temp directory for DBMS HTML Showplan Viewer at Location '"+destDir+"'.");
 
+			populate = true;
+		}
+
+		if ( ! distDir.exists() )
+		{
+			_logger.info("DBMS HTML Showplan Viewer '/dist' did NOT exist. Populating it again at Location '"+distDir+"'.");
+			populate = true;
+		}
+
+		if ( ! cssDir.exists() )
+		{
+			_logger.info("DBMS HTML Showplan Viewer '/css' did NOT exist. Populating it again at Location '"+cssDir+"'.");
+			populate = true;
+		}
+
+		
+		if (populate)
+		{
 			// Copy all desired files from the JAR file
 			populateTempDir(tmpBaseDir);
 		}
+
+		
+		// Delete the directories on exit
+//		tmpBaseDir.deleteOnExit();
+//		destDir.deleteOnExit();
 	}
 
 	/**

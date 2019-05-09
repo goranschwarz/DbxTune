@@ -78,6 +78,7 @@ public class SqlCaptureStatementStatisticsSample
 		{
 			this.name              = name;
 			this.count             = 0;
+			this.errorCount        = 0;
 			this.sqlBatchCount     = 0;
 			this.inProcCount       = 0;
 			this.inStmntCacheCount = 0;
@@ -110,6 +111,7 @@ public class SqlCaptureStatementStatisticsSample
 		public String name;
 		public long   count;
 		public long   sqlBatchCount;
+		public long   errorCount;
 		public long   inProcCount;
 		public long   inStmntCacheCount;
 		public long   dynamicStmntCount;
@@ -170,7 +172,7 @@ public class SqlCaptureStatementStatisticsSample
 		}
 	}
 	
-	private void addExecTimeInternal(String key, int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, String procName, int lineNumber)
+	private void addExecTimeInternal(String key, int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
 	{
 		// if something seems to be from the statement cache, and the LineNumber is 0, then discard the entry
 		// it looks like there are always 2 rows in monSysStatement when there are (*ss or *sq) objects
@@ -223,6 +225,11 @@ public class SqlCaptureStatementStatisticsSample
 			}
 		}
 
+		if (errorStatus > 0)
+		{
+			st.errorCount++;
+		}
+
 //		if (procedureId > 0)
 //		{
 //			if (ssqlId > 0)
@@ -232,26 +239,26 @@ public class SqlCaptureStatementStatisticsSample
 //		}
 	}
 	
-	public void addExecTime(int ms, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, String procName, int lineNumber)
+	public void addExecTime(int ms, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
 	{
-		if      (ms == 0 && logicalReads == 0) addExecTimeInternal(EXEC_SPAN_0ms_0lr_0pr   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 0     && ms <= 1)       addExecTimeInternal(EXEC_SPAN_0_to_1_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 1     && ms <= 2)       addExecTimeInternal(EXEC_SPAN_1_to_2_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 2     && ms <= 5)       addExecTimeInternal(EXEC_SPAN_2_to_5_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 5     && ms <= 10)      addExecTimeInternal(EXEC_SPAN_5_to_10_ms    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 10    && ms <= 20)      addExecTimeInternal(EXEC_SPAN_10_to_20_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 20    && ms <= 50)      addExecTimeInternal(EXEC_SPAN_20_to_50_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 50    && ms <= 100)     addExecTimeInternal(EXEC_SPAN_50_to_100_ms  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 100   && ms <= 200)     addExecTimeInternal(EXEC_SPAN_100_to_200_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 200   && ms <= 500)     addExecTimeInternal(EXEC_SPAN_200_to_500_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 500   && ms <= 1000)    addExecTimeInternal(EXEC_SPAN_500_to_1000_ms, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 1000  && ms <= 2000)    addExecTimeInternal(EXEC_SPAN_1_to_2_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 2000  && ms <= 5000)    addExecTimeInternal(EXEC_SPAN_2_to_5_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 5000  && ms <= 10000)   addExecTimeInternal(EXEC_SPAN_5_to_10_sec   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 10000 && ms <= 20000)   addExecTimeInternal(EXEC_SPAN_10_to_20_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 20000 && ms <= 50000)   addExecTimeInternal(EXEC_SPAN_20_to_50_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(EXEC_SPAN_50_to_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
-		else if (ms >= 100000)                 addExecTimeInternal(EXEC_SPAN_ABOVE_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber); 
+		if      (ms == 0 && logicalReads == 0) addExecTimeInternal(EXEC_SPAN_0ms_0lr_0pr   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 0     && ms <= 1)       addExecTimeInternal(EXEC_SPAN_0_to_1_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 1     && ms <= 2)       addExecTimeInternal(EXEC_SPAN_1_to_2_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 2     && ms <= 5)       addExecTimeInternal(EXEC_SPAN_2_to_5_ms     , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 5     && ms <= 10)      addExecTimeInternal(EXEC_SPAN_5_to_10_ms    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 10    && ms <= 20)      addExecTimeInternal(EXEC_SPAN_10_to_20_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 20    && ms <= 50)      addExecTimeInternal(EXEC_SPAN_20_to_50_ms   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 50    && ms <= 100)     addExecTimeInternal(EXEC_SPAN_50_to_100_ms  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 100   && ms <= 200)     addExecTimeInternal(EXEC_SPAN_100_to_200_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 200   && ms <= 500)     addExecTimeInternal(EXEC_SPAN_200_to_500_ms , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 500   && ms <= 1000)    addExecTimeInternal(EXEC_SPAN_500_to_1000_ms, ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 1000  && ms <= 2000)    addExecTimeInternal(EXEC_SPAN_1_to_2_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 2000  && ms <= 5000)    addExecTimeInternal(EXEC_SPAN_2_to_5_sec    , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 5000  && ms <= 10000)   addExecTimeInternal(EXEC_SPAN_5_to_10_sec   , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 10000 && ms <= 20000)   addExecTimeInternal(EXEC_SPAN_10_to_20_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 20000 && ms <= 50000)   addExecTimeInternal(EXEC_SPAN_20_to_50_sec  , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 50000 && ms <= 100000)  addExecTimeInternal(EXEC_SPAN_50_to_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
+		else if (ms >= 100000)                 addExecTimeInternal(EXEC_SPAN_ABOVE_100_sec , ms, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber); 
 		else
 			System.out.println("addExecTime(ms="+ms+", logicalReads="+logicalReads+", physicalReads="+physicalReads);
 
@@ -270,7 +277,7 @@ public class SqlCaptureStatementStatisticsSample
 
 	private static final int DISCARD_OUT_OF_BOUNDS__MAX_PHYSICAL_READS = Integer.MAX_VALUE - 10;
 	
-	public void addStatementStats(int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, String procName, int lineNumber)
+	public void addStatementStats(int execTimeMs, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
 	{
 		if (physicalReads >= DISCARD_OUT_OF_BOUNDS__MAX_PHYSICAL_READS)
 		{
@@ -278,7 +285,7 @@ public class SqlCaptureStatementStatisticsSample
 			physicalReads = 0;
 		}
 
-		addExecTime(execTimeMs, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber);
+		addExecTime(execTimeMs, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber);
 //		addLogicalReads(logicalReads);
 //		addPhysicalReads(physicalReads);
 	}
@@ -291,6 +298,7 @@ public class SqlCaptureStatementStatisticsSample
 		                                   
 		rs.addColumn("totalCount",           Types.BIGINT,   0, 0);
 		rs.addColumn("sqlBatchCount",        Types.BIGINT,   0, 0);
+		rs.addColumn("errorCount",           Types.BIGINT,   0, 0);
 		rs.addColumn("inStmntCacheCount",    Types.BIGINT,   0, 0);
 		rs.addColumn("dynamicStmntCount",    Types.BIGINT,   0, 0);
 		rs.addColumn("inProcedureCount",     Types.BIGINT,   0, 0);
@@ -339,6 +347,7 @@ public class SqlCaptureStatementStatisticsSample
 				sc.count,                                                                     // totalCount
 //				sc.count - (sc.inStmntCacheCount + sc.dynamicStmntCount + sc.inProcCount),    // inSqlBatchCount
 				sc.sqlBatchCount,                                                             // sqlBatchCount
+				sc.errorCount,                                                                // errorCount
 				sc.inStmntCacheCount,                                                         // inStmntCacheCount
 				sc.dynamicStmntCount,                                                         // dynamicStmntCount
 				sc.inProcCount,                                                               // inProcedureCount

@@ -95,57 +95,57 @@ extends TabularCntrPanel
 	private static final String  PROPKEY_showLegend    = PROP_PREFIX + ".graph.show.legend";
 	private static final boolean DEFAULT_showLegend    = false;
 
-//	private static final String  PROPKEY_includeWaitId250             = PROP_PREFIX + ".graph.include.id.250";
-//	private static final boolean DEFAULT_includeWaitId250             = false;
+//	private static final String  PROPKEY_includeWaitId250              = PROP_PREFIX + ".graph.include.id.250";
+//	private static final boolean DEFAULT_includeWaitId250              = false;
 
-	private static final String  PROPKEY_includeHiddenEntries         = PROP_PREFIX + ".graph.include.hidden";
-	private static final boolean DEFAULT_includeHiddenEntries         = false;
+	private static final String  PROPKEY_includeHiddenEntries          = PROP_PREFIX + ".graph.include.hidden";
+	private static final boolean DEFAULT_includeHiddenEntries          = false;
 
-//	private static final String  PROPKEY_hiddenEntriesList            = PROP_PREFIX + ".graph.hidden.entries";
-//	private static final String  DEFAULT_hiddenEntriesList            = "OLEDB, SLEEP_TASK, LAZYWRITER_SLEEP, BROKER_TO_FLUSH, SQLTRACE_INCREMENTAL_FLUSH_SLEEP, REQUEST_FOR_DEADLOCK_SEARCH";
+//	private static final String  PROPKEY_hiddenEntriesList             = PROP_PREFIX + ".graph.hidden.entries";
+//	private static final String  DEFAULT_hiddenEntriesList             = "OLEDB, SLEEP_TASK, LAZYWRITER_SLEEP, BROKER_TO_FLUSH, SQLTRACE_INCREMENTAL_FLUSH_SLEEP, REQUEST_FOR_DEADLOCK_SEARCH";
 
-	private static final String  PROPKEY_generateEvent                = PROP_PREFIX + ".graph.generate.event";
-	private static final boolean DEFAULT_generateEvent                = true;
+	private static final String  PROPKEY_generateEvent                 = PROP_PREFIX + ".graph.generate.event";
+	private static final boolean DEFAULT_generateEvent                 = true;
 
-	private static final String  PROPKEY_generateEventWaitTime        = PROP_PREFIX + ".graph.generate.event.waitTime";
-	private static final boolean DEFAULT_generateEventWaitTime        = true;
+	private static final String  PROPKEY_generateEventWaitTime         = PROP_PREFIX + ".graph.generate.event.waitTime";
+	private static final boolean DEFAULT_generateEventWaitTime         = true;
 
-	private static final String  PROPKEY_generateEventWaits           = PROP_PREFIX + ".graph.generate.event.waits";
-	private static final boolean DEFAULT_generateEventWaits           = true;
+	private static final String  PROPKEY_generateEventWaitCount        = PROP_PREFIX + ".graph.generate.event.waitCount";
+	private static final boolean DEFAULT_generateEventWaitCount        = true;
 
-	private static final String  PROPKEY_generateEventWaitTimePerWait = PROP_PREFIX + ".graph.generate.event.waitTimePerWait";
-	private static final boolean DEFAULT_generateEventWaitTimePerWait = true;
+	private static final String  PROPKEY_generateEventWaitTimePerCount = PROP_PREFIX + ".graph.generate.event.waitTimePerCount";
+	private static final boolean DEFAULT_generateEventWaitTimePerCount = true;
 
-//	private static final String  PROPKEY_generateClass                = PROP_PREFIX + ".graph.generate.class";
-//	private static final boolean DEFAULT_generateClass                = false;
+//	private static final String  PROPKEY_generateClass                 = PROP_PREFIX + ".graph.generate.class";
+//	private static final boolean DEFAULT_generateClass                 = false;
 //
-//	private static final String  PROPKEY_generateClassWaitTime        = PROP_PREFIX + ".graph.generate.class.waitTime";
-//	private static final boolean DEFAULT_generateClassWaitTime        = true;
+//	private static final String  PROPKEY_generateClassWaitTime         = PROP_PREFIX + ".graph.generate.class.waitTime";
+//	private static final boolean DEFAULT_generateClassWaitTime         = true;
 //
-//	private static final String  PROPKEY_generateClassWaits           = PROP_PREFIX + ".graph.generate.class.waits";
-//	private static final boolean DEFAULT_generateClassWaits           = true;
+//	private static final String  PROPKEY_generateClassWaitCount        = PROP_PREFIX + ".graph.generate.class.waits";
+//	private static final boolean DEFAULT_generateClassWaitCount        = true;
 //
-//	private static final String  PROPKEY_generateClassWaitTimePerWait = PROP_PREFIX + ".graph.generate.class.waitTimePerWait";
-//	private static final boolean DEFAULT_generateClassWaitTimePerWait = true;
+//	private static final String  PROPKEY_generateClassWaitTimePerCount = PROP_PREFIX + ".graph.generate.class.waitTimePerCount";
+//	private static final boolean DEFAULT_generateClassWaitTimePerCount = true;
 
 //	private List<String> _hiddenEntiesList = new ArrayList<String>();
 
 	static
 	{
-		Configuration.registerDefaultValue(PROPKEY_generateDummy,                DEFAULT_generateDummy);
-		Configuration.registerDefaultValue(PROPKEY_enableGraph,                  DEFAULT_enableGraph);
-		Configuration.registerDefaultValue(PROPKEY_graphType,                    DEFAULT_graphType);
-		Configuration.registerDefaultValue(PROPKEY_showLegend,                   DEFAULT_showLegend);
-//		Configuration.registerDefaultValue(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250);
-		Configuration.registerDefaultValue(PROPKEY_includeHiddenEntries,         DEFAULT_includeHiddenEntries);
-		Configuration.registerDefaultValue(PROPKEY_generateEvent,                DEFAULT_generateEvent);
-		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime);
-		Configuration.registerDefaultValue(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits);
-		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTime);
-//		Configuration.registerDefaultValue(PROPKEY_generateClass,                DEFAULT_generateClass);
-//		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime);
-//		Configuration.registerDefaultValue(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits);
-//		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateDummy,                 DEFAULT_generateDummy);
+		Configuration.registerDefaultValue(PROPKEY_enableGraph,                   DEFAULT_enableGraph);
+		Configuration.registerDefaultValue(PROPKEY_graphType,                     DEFAULT_graphType);
+		Configuration.registerDefaultValue(PROPKEY_showLegend,                    DEFAULT_showLegend);
+//		Configuration.registerDefaultValue(PROPKEY_includeWaitId250,              DEFAULT_includeWaitId250);
+		Configuration.registerDefaultValue(PROPKEY_includeHiddenEntries,          DEFAULT_includeHiddenEntries);
+		Configuration.registerDefaultValue(PROPKEY_generateEvent,                 DEFAULT_generateEvent);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTime,         DEFAULT_generateEventWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaitCount,        DEFAULT_generateEventWaitCount);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTimePerCount, DEFAULT_generateEventWaitTime);
+//		Configuration.registerDefaultValue(PROPKEY_generateClass,                 DEFAULT_generateClass);
+//		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTime,         DEFAULT_generateClassWaitTime);
+//		Configuration.registerDefaultValue(PROPKEY_generateClassWaitCount,        DEFAULT_generateClassWaitCount);
+//		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTimePerCount, DEFAULT_generateClassWaitTime);
 	}
 
 	public CmWaitStatsPanel(CountersModel cm)
@@ -201,17 +201,17 @@ extends TabularCntrPanel
 	private CategoryDataset createDataset(GTable dataTable)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
-		boolean generateDummy                = conf.getBooleanProperty(PROPKEY_generateDummy,                DEFAULT_generateDummy);
-//		boolean includeWaitId250             = conf.getBooleanProperty(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250);
-		boolean includeHiddenEntries         = conf.getBooleanProperty(PROPKEY_includeHiddenEntries,         DEFAULT_includeHiddenEntries);
-		boolean generateEvent                = conf.getBooleanProperty(PROPKEY_generateEvent,                DEFAULT_generateEvent);
-		boolean generateEventWaitTime        = conf.getBooleanProperty(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime);
-		boolean generateEventWaits           = conf.getBooleanProperty(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits);
-		boolean generateEventWaitTimePerWait = conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait);
-//		boolean generateClass                = conf.getBooleanProperty(PROPKEY_generateClass,                DEFAULT_generateClass);
-//		boolean generateClassWaitTime        = conf.getBooleanProperty(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime);
-//		boolean generateClassWaits           = conf.getBooleanProperty(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits);
-//		boolean generateClassWaitTimePerWait = conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait);
+		boolean generateDummy                 = conf.getBooleanProperty(PROPKEY_generateDummy,                 DEFAULT_generateDummy);
+//		boolean includeWaitId250              = conf.getBooleanProperty(PROPKEY_includeWaitId250,              DEFAULT_includeWaitId250);
+		boolean includeHiddenEntries          = conf.getBooleanProperty(PROPKEY_includeHiddenEntries,          DEFAULT_includeHiddenEntries);
+		boolean generateEvent                 = conf.getBooleanProperty(PROPKEY_generateEvent,                 DEFAULT_generateEvent);
+		boolean generateEventWaitTime         = conf.getBooleanProperty(PROPKEY_generateEventWaitTime,         DEFAULT_generateEventWaitTime);
+		boolean generateEventWaitCount        = conf.getBooleanProperty(PROPKEY_generateEventWaitCount,        DEFAULT_generateEventWaitCount);
+		boolean generateEventWaitTimePerCount = conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerCount, DEFAULT_generateEventWaitTimePerCount);
+//		boolean generateClass                 = conf.getBooleanProperty(PROPKEY_generateClass,                 DEFAULT_generateClass);
+//		boolean generateClassWaitTime         = conf.getBooleanProperty(PROPKEY_generateClassWaitTime,         DEFAULT_generateClassWaitTime);
+//		boolean generateClassWaitCount        = conf.getBooleanProperty(PROPKEY_generateClassWaitCount,        DEFAULT_generateClassWaitCount);
+//		boolean generateClassWaitTimePerCount = conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerCount, DEFAULT_generateClassWaitTimePerCount);
 
 		DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -219,12 +219,12 @@ extends TabularCntrPanel
 		
 		if (dataTable != null)
 		{
-//			int ClassName_pos       = dataTable.findViewColumn("WaitClassDesc");
-			int EventName_pos       = dataTable.findViewColumn("wait_type");
-//			int WaitEventID_pos     = dataTable.findViewColumn("WaitEventID");
-			int WaitTime_pos        = dataTable.findViewColumn("wait_time_ms"); 
-			int Waits_pos           = dataTable.findViewColumn("waiting_tasks_count");
-			int WaitTimePerWait_pos = dataTable.findViewColumn("WaitTimePerWait"); 
+//			int ClassName_pos        = dataTable.findViewColumn("WaitClassDesc");
+			int WaitType_pos         = dataTable.findViewColumn("wait_type");
+//			int WaitEventID_pos      = dataTable.findViewColumn("WaitEventID");
+			int WaitTime_pos         = dataTable.findViewColumn("wait_time_ms"); 
+			int WaitCount_pos        = dataTable.findViewColumn("waiting_tasks_count");
+			int WaitTimePerCount_pos = dataTable.findViewColumn("WaitTimePerCount"); 
 
 			CountersModel cm = getDisplayCm();
 			if (cm == null)
@@ -232,60 +232,60 @@ extends TabularCntrPanel
 
 			if (cm != null)
 			{
-//				Map<String, Double> classesWaitTime        = new LinkedHashMap<String, Double>();
-//				Map<String, Double> classesWaits           = new LinkedHashMap<String, Double>();
-//				Map<String, Double> classesWaitTimePerWait = new LinkedHashMap<String, Double>();
+//				Map<String, Double> classesWaitTime         = new LinkedHashMap<String, Double>();
+//				Map<String, Double> classesWaitCount        = new LinkedHashMap<String, Double>();
+//				Map<String, Double> classesWaitTimePerCount = new LinkedHashMap<String, Double>();
 				for(int r=0; r<dataTable.getRowCount(); r++)
 				{
-//					String ClassName       = (String)dataTable.getValueAt(r, ClassName_pos);
-					String EventName       = (String)dataTable.getValueAt(r, EventName_pos);
-//					Number WaitEventID     = (Number)dataTable.getValueAt(r, WaitEventID_pos);
-					Number WaitTime        = (Number)dataTable.getValueAt(r, WaitTime_pos);
-					Number Waits           = (Number)dataTable.getValueAt(r, Waits_pos);
-					Number WaitTimePerWait = (Number)dataTable.getValueAt(r, WaitTimePerWait_pos);
+//					String ClassName        = (String)dataTable.getValueAt(r, ClassName_pos);
+					String WaitType         = (String)dataTable.getValueAt(r, WaitType_pos);
+//					Number WaitEventID      = (Number)dataTable.getValueAt(r, WaitEventID_pos);
+					Number WaitTime         = (Number)dataTable.getValueAt(r, WaitTime_pos);
+					Number WaitCount        = (Number)dataTable.getValueAt(r, WaitCount_pos);
+					Number WaitTimePerCount = (Number)dataTable.getValueAt(r, WaitTimePerCount_pos);
 
 //					// SKIP Wait EventId 250
 //					if ( ! includeWaitId250 && WaitEventID.intValue() == 250)
 //						continue;
 
 					// SKIP entries that are in the "hide list"
-//					if ( ! includeHiddenEntries && _hiddenEntiesList != null && _hiddenEntiesList.contains(EventName))
-					if ( ! includeHiddenEntries && cmWaitStats.isEventNameInLocalGraphSkipList(EventName))
+//					if ( ! includeHiddenEntries && _hiddenEntiesList != null && _hiddenEntiesList.contains(WaitType))
+					if ( ! includeHiddenEntries && cmWaitStats.isEventNameInLocalGraphSkipList(WaitType))
 						continue;
 
 //					if (_logger.isDebugEnabled())
-//						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', EventName("+EventName_pos+")='"+EventName+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', Waits("+Waits_pos+")='"+Waits+"', WaitTimePerWait("+WaitTimePerWait_pos+")='"+WaitTimePerWait+"'.");
+//						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": ClassName("+ClassName_pos+")='"+ClassName+"', WaitType("+WaitType_pos+")='"+WaitType+"', WaitTime("+WaitTime_pos+")='"+WaitTime+"', WaitCount("+WaitCount_pos+")='"+WaitCount+"', WaitTimePerCount("+WaitTimePerCount_pos+")='"+WaitTimePerCount+"'.");
 
 //					if (generateClass)
 //					{
-//						Double sumWaitTime        = classesWaitTime       .get(ClassName);
-//						Double sumWaits           = classesWaits          .get(ClassName);
-//						Double sumWaitTimePerWait = classesWaitTimePerWait.get(ClassName);
+//						Double sumWaitTime         = classesWaitTime       .get(ClassName);
+//						Double sumWaitCount        = classesWaitCount      .get(ClassName);
+//						Double sumWaitTimePerCount = classesWaitTimePerCount.get(ClassName);
 //
-//						classesWaitTime       .put(ClassName, new Double(sumWaitTime       ==null ? WaitTime       .doubleValue() : sumWaitTime        + WaitTime       .doubleValue()) );
-//						classesWaits          .put(ClassName, new Double(sumWaits          ==null ? Waits          .doubleValue() : sumWaits           + Waits          .doubleValue()) );
-//						classesWaitTimePerWait.put(ClassName, new Double(sumWaitTimePerWait==null ? WaitTimePerWait.doubleValue() : sumWaitTimePerWait + WaitTimePerWait.doubleValue()) );
+//						classesWaitTime        .put(ClassName, new Double(sumWaitTime        ==null ? WaitTime        .doubleValue() : sumWaitTime         + WaitTime        .doubleValue()) );
+//						classesWaitCount       .put(ClassName, new Double(sumWaitCount       ==null ? WaitCount       .doubleValue() : sumWaitCount        + WaitCount       .doubleValue()) );
+//						classesWaitTimePerCount.put(ClassName, new Double(sumWaitTimePerCount==null ? WaitTimePerCount.doubleValue() : sumWaitTimePerCount + WaitTimePerCount.doubleValue()) );
 //					}
 					
 					if (generateEvent)
 					{
 //						if (generateEventWaitTime)
-//							dataset.addValue(WaitTime       .doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTime");
+//							dataset.addValue(WaitTime       .doubleValue(), "["+WaitEventID+"] " + WaitType, "EventID - WaitTime");
 //
-//						if (generateEventWaits)
-//							dataset.addValue(Waits          .doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - Waits");
+//						if (generateEventWaitCount)
+//							dataset.addValue(WaitCount      .doubleValue(), "["+WaitEventID+"] " + WaitType, "EventID - WaitCount");
 //
-//						if (generateEventWaitTimePerWait)
-//							dataset.addValue(WaitTimePerWait.doubleValue(), "["+WaitEventID+"] " + EventName, "EventID - WaitTimePerWait");
+//						if (generateEventWaitTimePerCount)
+//							dataset.addValue(WaitTimePerCount.doubleValue(), "["+WaitEventID+"] " + WaitType, "EventID - WaitTimePerCount");
 
 						if (generateEventWaitTime)
-							dataset.addValue(WaitTime       .doubleValue(), EventName, "WaitType - wait_time_ms");
+							dataset.addValue(WaitTime       .doubleValue(), WaitType, "WaitType - wait_time_ms");
 
-						if (generateEventWaits)
-							dataset.addValue(Waits          .doubleValue(), EventName, "WaitType - waiting_tasks_count");
+						if (generateEventWaitCount)
+							dataset.addValue(WaitCount      .doubleValue(), WaitType, "WaitType - waiting_tasks_count");
 
-						if (generateEventWaitTimePerWait)
-							dataset.addValue(WaitTimePerWait.doubleValue(), EventName, "WaitType - WaitTimePerWait");
+						if (generateEventWaitTimePerCount)
+							dataset.addValue(WaitTimePerCount.doubleValue(), WaitType, "WaitType - WaitTimePerCount");
 					}
 				}
 //				if (generateClass)
@@ -300,23 +300,23 @@ extends TabularCntrPanel
 //						}
 //					}
 //					
-//					if (generateClassWaits)
+//					if (generateClassWaitCount)
 //					{
-//						for (Map.Entry<String,Double> entry : classesWaits.entrySet()) 
+//						for (Map.Entry<String,Double> entry : classesWaitCount.entrySet()) 
 //						{
 //							String key = entry.getKey();
 //							Double val = entry.getValue();
-//							dataset.addValue(val, "(class) "+key, "Class - Waits");
+//							dataset.addValue(val, "(class) "+key, "Class - WaitCount");
 //						}
 //					}
 //
-//					if (generateClassWaitTimePerWait)
+//					if (generateClassWaitTimePerCount)
 //					{
-//						for (Map.Entry<String,Double> entry : classesWaitTimePerWait.entrySet()) 
+//						for (Map.Entry<String,Double> entry : classesWaitTimePerCount.entrySet()) 
 //						{
 //							String key = entry.getKey();
 //							Double val = entry.getValue();
-//							dataset.addValue(val, "(class) "+key, "Class - WaitTimePerWait");
+//							dataset.addValue(val, "(class) "+key, "Class - WaitTimePerCount");
 //						}
 //					}
 //				}
@@ -332,14 +332,14 @@ extends TabularCntrPanel
 				dataset.addValue(3, "Dummy Event C", "WaitTime - by Event");
 				dataset.addValue(4, "Dummy Event D", "WaitTime - by Event");
 
-				dataset.addValue(5, "Dummy Event E", "Waits - by Event");
-				dataset.addValue(6, "Dummy Event F", "Waits - by Event");
-				dataset.addValue(7, "Dummy Event G", "Waits - by Event");
+				dataset.addValue(5, "Dummy Event E", "WaitCount - by Event");
+				dataset.addValue(6, "Dummy Event F", "WaitCount - by Event");
+				dataset.addValue(7, "Dummy Event G", "WaitCount - by Event");
 
 				dataset.addValue(8, "Dummy Class A", "WaitTime - by Class");
 				dataset.addValue(9, "Dummy Class B", "WaitTime - by Class");
 
-				dataset.addValue(10,"Dummy Class C", "Waits - by Class");
+				dataset.addValue(10,"Dummy Class C", "WaitCount - by Class");
 			}
 		}
 
@@ -557,16 +557,16 @@ extends TabularCntrPanel
 		JPanel panel = SwingUtils.createPanel("Local Options", true);
 		panel.setLayout(new MigLayout("ins 0, gap 0", "", "0[0]0"));
 
-//		final JCheckBox includeWaitId250_chk             = new JCheckBox("Include '[250] waiting for incoming network data' in graphs.");
-		final JCheckBox includeHiddenEntries_chk         = new JCheckBox("Include 'hidden' Entries in graphs.");
-		final JCheckBox generateEvent_chk                = new JCheckBox("Genereate Graphs for Events");
-		final JCheckBox generateEventWaitTime_chk        = new JCheckBox("wait_time_ms");
-		final JCheckBox generateEventWaits_chk           = new JCheckBox("waiting_tasks_count");
-		final JCheckBox generateEventWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
-//		final JCheckBox generateClass_chk                = new JCheckBox("Genereate Graphs for Classes");
-//		final JCheckBox generateClassWaitTime_chk        = new JCheckBox("WaitTime");
-//		final JCheckBox generateClassWaits_chk           = new JCheckBox("Waits");
-//		final JCheckBox generateClassWaitTimePerWait_chk = new JCheckBox("WaitTimePerWait");
+//		final JCheckBox includeWaitId250_chk              = new JCheckBox("Include '[250] waiting for incoming network data' in graphs.");
+		final JCheckBox includeHiddenEntries_chk          = new JCheckBox("Include 'hidden' Entries in graphs.");
+		final JCheckBox generateEvent_chk                 = new JCheckBox("Genereate Graphs for Events");
+		final JCheckBox generateEventWaitTime_chk         = new JCheckBox("wait_time_ms");
+		final JCheckBox generateEventWaitCount_chk        = new JCheckBox("waiting_tasks_count");
+		final JCheckBox generateEventWaitTimePerCount_chk = new JCheckBox("WaitTimePerCount");
+//		final JCheckBox generateClass_chk                 = new JCheckBox("Genereate Graphs for Classes");
+//		final JCheckBox generateClassWaitTime_chk         = new JCheckBox("WaitTime");
+//		final JCheckBox generateClassWaitCount_chk        = new JCheckBox("WaitCount");
+//		final JCheckBox generateClassWaitTimePerCount_chk = new JCheckBox("WaitTimePerCount");
 
 		final JCheckBox enableGraph_chk = new JCheckBox("Show Graph");
 		final JCheckBox showLegend_chk  = new JCheckBox("Show Legend");
@@ -709,16 +709,16 @@ extends TabularCntrPanel
 		if (orientationStr.equals(VALUE_graphType_BAR)) orientation = graphTypeArr[1];
 		graphType_cbx.setSelectedItem(orientation);
 
-//		includeWaitId250_chk            .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,             DEFAULT_includeWaitId250));
-		includeHiddenEntries_chk        .setSelected(conf.getBooleanProperty(PROPKEY_includeHiddenEntries,         DEFAULT_includeHiddenEntries));
-		generateEvent_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,                DEFAULT_generateEvent));
-		generateEventWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime));
-		generateEventWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits));
-		generateEventWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait));
-//		generateClass_chk               .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,                DEFAULT_generateClass));
-//		generateClassWaitTime_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime));
-//		generateClassWaits_chk          .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits));
-//		generateClassWaitTimePerWait_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait));
+//		includeWaitId250_chk             .setSelected(conf.getBooleanProperty(PROPKEY_includeWaitId250,              DEFAULT_includeWaitId250));
+		includeHiddenEntries_chk         .setSelected(conf.getBooleanProperty(PROPKEY_includeHiddenEntries,          DEFAULT_includeHiddenEntries));
+		generateEvent_chk                .setSelected(conf.getBooleanProperty(PROPKEY_generateEvent,                 DEFAULT_generateEvent));
+		generateEventWaitTime_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTime,         DEFAULT_generateEventWaitTime));
+		generateEventWaitCount_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitCount,        DEFAULT_generateEventWaitCount));
+		generateEventWaitTimePerCount_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateEventWaitTimePerCount, DEFAULT_generateEventWaitTimePerCount));
+//		generateClass_chk                .setSelected(conf.getBooleanProperty(PROPKEY_generateClass,                 DEFAULT_generateClass));
+//		generateClassWaitTime_chk        .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTime,         DEFAULT_generateClassWaitTime));
+//		generateClassWaitCount_chk       .setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitCount,        DEFAULT_generateClassWaitCount));
+//		generateClassWaitTimePerCount_chk.setSelected(conf.getBooleanProperty(PROPKEY_generateClassWaitTimePerCount, DEFAULT_generateClassWaitTimePerCount));
 
 		enableGraph_chk.setSelected(conf.getBooleanProperty(PROPKEY_enableGraph, DEFAULT_enableGraph));
 		showLegend_chk .setSelected(conf.getBooleanProperty(PROPKEY_showLegend,  DEFAULT_showLegend));
@@ -799,9 +799,9 @@ extends TabularCntrPanel
 			{
 				boolean b = ((JCheckBox)e.getSource()).isSelected();
 				helperActionSave(PROPKEY_generateEvent, ((JCheckBox)e.getSource()).isSelected());
-				generateEventWaitTime_chk       .setEnabled(b);
-				generateEventWaits_chk          .setEnabled(b);
-				generateEventWaitTimePerWait_chk.setEnabled(b);
+				generateEventWaitTime_chk        .setEnabled(b);
+				generateEventWaitCount_chk       .setEnabled(b);
+				generateEventWaitTimePerCount_chk.setEnabled(b);
 			}
 		});
 		generateEventWaitTime_chk.addActionListener(new ActionListener()
@@ -812,20 +812,20 @@ extends TabularCntrPanel
 				helperActionSave(PROPKEY_generateEventWaitTime, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
-		generateEventWaits_chk.addActionListener(new ActionListener()
+		generateEventWaitCount_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				helperActionSave(PROPKEY_generateEventWaits, ((JCheckBox)e.getSource()).isSelected());
+				helperActionSave(PROPKEY_generateEventWaitCount, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
-		generateEventWaitTimePerWait_chk.addActionListener(new ActionListener()
+		generateEventWaitTimePerCount_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)
 			{
-				helperActionSave(PROPKEY_generateEventWaitTimePerWait, ((JCheckBox)e.getSource()).isSelected());
+				helperActionSave(PROPKEY_generateEventWaitTimePerCount, ((JCheckBox)e.getSource()).isSelected());
 			}
 		});
 
@@ -838,9 +838,9 @@ extends TabularCntrPanel
 //			{
 //				boolean b = ((JCheckBox)e.getSource()).isSelected();
 //				helperActionSave(PROPKEY_generateClass, b);
-//				generateClassWaitTime_chk       .setEnabled(b);
-//				generateClassWaits_chk          .setEnabled(b);
-//				generateClassWaitTimePerWait_chk.setEnabled(b);
+//				generateClassWaitTime_chk        .setEnabled(b);
+//				generateClassWaitCount_chk       .setEnabled(b);
+//				generateClassWaitTimePerCount_chk.setEnabled(b);
 //			}
 //		});
 //		generateClassWaitTime_chk.addActionListener(new ActionListener()
@@ -851,20 +851,20 @@ extends TabularCntrPanel
 //				helperActionSave(PROPKEY_generateClassWaitTime, ((JCheckBox)e.getSource()).isSelected());
 //			}
 //		});
-//		generateClassWaits_chk.addActionListener(new ActionListener()
+//		generateClassWaitCount_chk.addActionListener(new ActionListener()
 //		{
 //			@Override
 //			public void actionPerformed(ActionEvent e)
 //			{
-//				helperActionSave(PROPKEY_generateClassWaits, ((JCheckBox)e.getSource()).isSelected());
+//				helperActionSave(PROPKEY_generateClassWaitCount, ((JCheckBox)e.getSource()).isSelected());
 //			}
 //		});
-//		generateClassWaitTimePerWait_chk.addActionListener(new ActionListener()
+//		generateClassWaitTimePerCount_chk.addActionListener(new ActionListener()
 //		{
 //			@Override
 //			public void actionPerformed(ActionEvent e)
 //			{
-//				helperActionSave(PROPKEY_generateClassWaitTimePerWait, ((JCheckBox)e.getSource()).isSelected());
+//				helperActionSave(PROPKEY_generateClassWaitTimePerCount, ((JCheckBox)e.getSource()).isSelected());
 //			}
 //		});
 //
@@ -907,29 +907,29 @@ extends TabularCntrPanel
 		});
 		
 		// ADD to panel
-//		panel.add(includeWaitId250_chk,             "wrap");
-		panel.add(enableGraph_chk,                  "split");
-		panel.add(graphType_lbl,                    "");
-		panel.add(graphType_cbx,                    "");
-//		panel.add(trendGraph_settings_but,          "wrap");
-		panel.add(enableSqlFilter_chk,              "wrap");
+//		panel.add(includeWaitId250_chk,              "wrap");
+		panel.add(enableGraph_chk,                   "split");
+		panel.add(graphType_lbl,                     "");
+		panel.add(graphType_cbx,                     "");
+//		panel.add(trendGraph_settings_but,           "wrap");
+		panel.add(enableSqlFilter_chk,               "wrap");
 
-		panel.add(generateEvent_chk,                "split");
-		panel.add(generateEventWaitTime_chk,        "");
-		panel.add(generateEventWaits_chk,           "");
-		panel.add(generateEventWaitTimePerWait_chk, "wrap");
+		panel.add(generateEvent_chk,                 "split");
+		panel.add(generateEventWaitTime_chk,         "");
+		panel.add(generateEventWaitCount_chk,        "");
+		panel.add(generateEventWaitTimePerCount_chk, "wrap");
 
-//		panel.add(generateClass_chk,                "split");
-//		panel.add(generateClassWaitTime_chk,        "");
-//		panel.add(generateClassWaits_chk,           "");
-//		panel.add(generateClassWaitTimePerWait_chk, "wrap");
+//		panel.add(generateClass_chk,                 "split");
+//		panel.add(generateClassWaitTime_chk,         "");
+//		panel.add(generateClassWaitCount_chk,        "");
+//		panel.add(generateClassWaitTimePerCount_chk, "wrap");
 
-		panel.add(showLegend_chk,                   "split");
-//		panel.add(includeWaitId250_chk,             "wrap");
-		panel.add(includeHiddenEntries_chk,         "wrap");
-//		panel.add(hiddenEntries_but,                "wrap");
-		panel.add(resetLocalGraphSkipSet_but,       "split");
-		panel.add(resetTrendGraphSkipSet_but,       "wrap");
+		panel.add(showLegend_chk,                    "split");
+//		panel.add(includeWaitId250_chk,              "wrap");
+		panel.add(includeHiddenEntries_chk,          "wrap");
+//		panel.add(hiddenEntries_but,                 "wrap");
+		panel.add(resetLocalGraphSkipSet_but,        "split");
+		panel.add(resetTrendGraphSkipSet_but,        "wrap");
 
 		// enable disable all subcomponents in panel
 		SwingUtils.setEnabled(panel, enableGraph_chk.isSelected(), enableGraph_chk);
@@ -937,13 +937,13 @@ extends TabularCntrPanel
 		if (enableGraph_chk.isSelected())
 		{
 			// initial enabled or not
-			generateEventWaitTime_chk       .setEnabled(generateEvent_chk.isSelected());
-			generateEventWaits_chk          .setEnabled(generateEvent_chk.isSelected());
-			generateEventWaitTimePerWait_chk.setEnabled(generateEvent_chk.isSelected());
+			generateEventWaitTime_chk        .setEnabled(generateEvent_chk.isSelected());
+			generateEventWaitCount_chk       .setEnabled(generateEvent_chk.isSelected());
+			generateEventWaitTimePerCount_chk.setEnabled(generateEvent_chk.isSelected());
 
-//			generateClassWaitTime_chk       .setEnabled(generateClass_chk.isSelected());
-//			generateClassWaits_chk          .setEnabled(generateClass_chk.isSelected());
-//			generateClassWaitTimePerWait_chk.setEnabled(generateClass_chk.isSelected());
+//			generateClassWaitTime_chk        .setEnabled(generateClass_chk.isSelected());
+//			generateClassWaitCount_chk       .setEnabled(generateClass_chk.isSelected());
+//			generateClassWaitTimePerCount_chk.setEnabled(generateClass_chk.isSelected());
 		}
 
 		return panel;

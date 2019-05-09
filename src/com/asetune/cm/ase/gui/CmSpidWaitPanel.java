@@ -106,7 +106,7 @@ extends TabularCntrPanel
 		"<code>SPID in (select spid from master..sysprocesses where ipaddr = '192.168.0.123')                    </code><br>" +
 		"<br>" +
 		"<b>- Only with clients that has logged in to ASE in the last 60 seconds</b><br>" +
-		"<code>SPID in (select spid from master..sysprocesses where datediff(ss,loggedindatetime,getdate()) < 60)</code><br>" +
+		"<code>SPID in (select spid from master..sysprocesses where datediff(ss,loggedindatetime,getdate()) &lt; 60)</code><br>" +
 		"</html>";
 	
 	public static final String TOOLTIP_trendGraph_skipWaitIdList = 
@@ -179,11 +179,11 @@ extends TabularCntrPanel
 		Configuration.registerDefaultValue(PROPKEY_generateEvent,                DEFAULT_generateEvent);
 		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTime,        DEFAULT_generateEventWaitTime);
 		Configuration.registerDefaultValue(PROPKEY_generateEventWaits,           DEFAULT_generateEventWaits);
-		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateEventWaitTimePerWait, DEFAULT_generateEventWaitTimePerWait);
 		Configuration.registerDefaultValue(PROPKEY_generateClass,                DEFAULT_generateClass);
 		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTime,        DEFAULT_generateClassWaitTime);
 		Configuration.registerDefaultValue(PROPKEY_generateClassWaits,           DEFAULT_generateClassWaits);
-		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTime);
+		Configuration.registerDefaultValue(PROPKEY_generateClassWaitTimePerWait, DEFAULT_generateClassWaitTimePerWait);
 	}
 
 	public CmSpidWaitPanel(CountersModel cm)

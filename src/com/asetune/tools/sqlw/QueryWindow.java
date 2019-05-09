@@ -7,6 +7,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Desktop;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -211,6 +212,7 @@ import com.asetune.sql.pipe.PipeCommandException;
 import com.asetune.sql.pipe.PipeCommandGraph;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.sql.pipe.PipeCommandToFile;
+import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.tools.AseAppTraceDialog;
 import com.asetune.tools.NormalExitException;
 import com.asetune.tools.WindowType;
@@ -508,6 +510,7 @@ public class QueryWindow
 	private JButton           _commit_but                 = new ExecButton("Commit");   // Commit   will only be visible if AotoComplete mode
 	private JButton           _rollback_but               = new ExecButton("Rollback"); // RollBack will only be visible if AotoComplete mode
 	private JButton           _setAseOptions_but          = new JButton("Set");        // Do various set ... options
+	private JButton           _setSqlServerOptions_but    = new JButton("Set");        // Do various set ... options
 	private JButton           _setRsOptions_but           = new JButton("Set");        // Do various set ... options
 	private JButton           _setIqOptions_but           = new JButton("Set");        // Do various set ... options
 	private JButton           _copy_but                   = new JButton("Copy Res");    // Copy All resultsets to clipboard
@@ -1027,7 +1030,11 @@ public class QueryWindow
 			public void run()
 			{
 				_logger.debug("----Start Shutdown Hook");
-				sendExecStatistics(true);
+				try {
+					sendExecStatistics(true);
+				} catch (Exception ex) {
+					_logger.error("Problems calling 'sendExecStatistics(true)'. Continuing anyway. Caught: "+ex, ex);
+				}
 				_logger.debug("----End Shutdown Hook");
 			}
 		});
@@ -1712,6 +1719,9 @@ public class QueryWindow
 		try {_setAseOptions_but = createSetAseOptionButton(null, _srvVersion);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'ASE: set options' button.",ex);}
 
+		try {_setSqlServerOptions_but = createSetSqlServerOptionButton(null, _srvVersion);}
+		catch (Throwable ex) {_logger.error("Problems creating the 'SQL-Server: set options' button.",ex);}
+
 		try {_setRsOptions_but = createSetRsOptionButton(null, _srvVersion);}
 		catch (Throwable ex) {_logger.error("Problems creating the 'RS: set options' button.",ex);}
 
@@ -1956,22 +1966,23 @@ public class QueryWindow
 		_queryErrStrip.setVisible(true);
 
 		// Add components to Control Panel
-		_controlPane.add(_cntrlPrefix_sep,       "grow, gap 30, hidemode 3");
-		_controlPane.add(_dbnames_cbx,           "hidemode 3");
-		_controlPane.add(_exec_but,              "");
-		_controlPane.add(_execGuiShowplan_but,   "hidemode 3");
-		_controlPane.add(_appOptions_but,        "gap 30");
-		_controlPane.add(_setAseOptions_but,     "hidemode 3");
-		_controlPane.add(_setRsOptions_but,      "hidemode 3");
-		_controlPane.add(_setIqOptions_but,      "hidemode 3");
-		_controlPane.add(_codeCompletionOpt_but, "");
-		_controlPane.add(_jdbcAutoCommit_chk,    "gap 30");
-		_controlPane.add(_commit_but,            "hidemode 3");
-		_controlPane.add(_rollback_but,          "hidemode 3");
-		_controlPane.add(new JLabel(),           "growx, pushx"); // dummy label to "grow" the _copy to the right side
-		_controlPane.add(_copy_but,              "");
-		_controlPane.add(_nextErr_but,           "hidemode 2");
-		_controlPane.add(_prevErr_but,           "hidemode 2, wrap");
+		_controlPane.add(_cntrlPrefix_sep,         "grow, gap 30, hidemode 3");
+		_controlPane.add(_dbnames_cbx,             "hidemode 3");
+		_controlPane.add(_exec_but,                "");
+		_controlPane.add(_execGuiShowplan_but,     "hidemode 3");
+		_controlPane.add(_appOptions_but,          "gap 30");
+		_controlPane.add(_setAseOptions_but,       "hidemode 3");
+		_controlPane.add(_setSqlServerOptions_but, "hidemode 3");
+		_controlPane.add(_setRsOptions_but,        "hidemode 3");
+		_controlPane.add(_setIqOptions_but,        "hidemode 3");
+		_controlPane.add(_codeCompletionOpt_but,   "");
+		_controlPane.add(_jdbcAutoCommit_chk,      "gap 30");
+		_controlPane.add(_commit_but,              "hidemode 3");
+		_controlPane.add(_rollback_but,            "hidemode 3");
+		_controlPane.add(new JLabel(),             "growx, pushx"); // dummy label to "grow" the _copy to the right side
+		_controlPane.add(_copy_but,                "");
+		_controlPane.add(_nextErr_but,             "hidemode 2");
+		_controlPane.add(_prevErr_but,             "hidemode 2, wrap");
 
 		// Keyboard shortcut for next/prev error, hmmm it didn't work 
 //		_resPanel.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_UP,   Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()), ACTION_PREV_ERROR);
@@ -4148,6 +4159,7 @@ public class QueryWindow
 			_jdbcAutoCommit_chk        .setEnabled(false);
 			_sendCommentsOnly_chk      .setEnabled(false);
 			_setAseOptions_but         .setVisible(false);
+			_setSqlServerOptions_but   .setVisible(false);
 			_setRsOptions_but          .setVisible(false);
 			_setIqOptions_but          .setVisible(false);
 			_execGuiShowplan_but       .setVisible(false);
@@ -4204,6 +4216,7 @@ public class QueryWindow
 				_jdbcAutoCommit_chk        .setEnabled(true);
 				_sendCommentsOnly_chk      .setEnabled(true);
 				_setAseOptions_but         .setVisible(true);
+				_setSqlServerOptions_but   .setVisible(false);
 				_setRsOptions_but          .setVisible(false);
 				_setIqOptions_but          .setVisible(false);
 				_execGuiShowplan_but       .setVisible( (_srvVersion >= Ver.ver(15,0)) );
@@ -4239,6 +4252,7 @@ public class QueryWindow
 				_jdbcAutoCommit_chk        .setEnabled(true);
 				_sendCommentsOnly_chk      .setEnabled(true);
 				_setAseOptions_but         .setVisible(false);
+				_setSqlServerOptions_but   .setVisible(false);
 				_setRsOptions_but          .setVisible(true);
 				_setIqOptions_but          .setVisible(false);
 				_execGuiShowplan_but       .setVisible(false);
@@ -4271,6 +4285,7 @@ public class QueryWindow
 				_jdbcAutoCommit_chk        .setEnabled(true);
 				_sendCommentsOnly_chk      .setEnabled(true);
 				_setAseOptions_but         .setVisible(false);
+				_setSqlServerOptions_but   .setVisible(false);
 				_setRsOptions_but          .setVisible(false);
 				_setIqOptions_but          .setVisible(true);
 				_execGuiShowplan_but       .setVisible(false);
@@ -4303,6 +4318,7 @@ public class QueryWindow
 			_jdbcAutoCommit_chk        .setEnabled(true);
 			_sendCommentsOnly_chk      .setEnabled(true);
 			_setAseOptions_but         .setVisible(false);
+			_setSqlServerOptions_but   .setVisible(false);
 			_setRsOptions_but          .setVisible(false);
 			_setIqOptions_but          .setVisible(false);
 			_execGuiShowplan_but       .setVisible(false);
@@ -4335,9 +4351,15 @@ public class QueryWindow
 			_jdbcAutoCommit_chk        .setEnabled(true);
 			_sendCommentsOnly_chk      .setEnabled(true);
 			_setAseOptions_but         .setVisible(false);
+			_setSqlServerOptions_but   .setVisible(false);
 			_setRsOptions_but          .setVisible(false);
 			_setIqOptions_but          .setVisible(false);
 			_execGuiShowplan_but       .setVisible(false);
+
+			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_MSSQL))
+			{
+				_setSqlServerOptions_but   .setVisible(true);
+			}
 		}
 		
 		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_ORACLE, DbUtils.DB_PROD_NAME_DB2_LUW))
@@ -4454,6 +4476,7 @@ public class QueryWindow
 				_jdbcAutoCommit_chk        .setEnabled(false);
 				_sendCommentsOnly_chk      .setEnabled(false);
 				_setAseOptions_but         .setVisible(false);
+				_setSqlServerOptions_but   .setVisible(false);
 				_execGuiShowplan_but       .setVisible(false);
 
 				setSrvInTitle(null, null);
@@ -7723,10 +7746,10 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					scriptRow = startRowInSelection + batchStartRow + lineNumber + lineNumberAdjust;
 					String scriptRowStr = (batchStartRow >= 0 ? " ("+extraDesc+"script row "+scriptRow+")" : "");
 
-					sb.append( (firstOnLine ? "" : ", ") +
-							"Line " + ceedi.getLineNumber() + scriptRowStr +
-							", Status " + ceedi.getStatus() + 
-							", TranState " + ceedi.getTranState() + ":\n");
+					sb.append( (firstOnLine ? "" : ", ") + "Line " + ceedi.getLineNumber() + scriptRowStr);
+					if (ceedi.supportsEedParams()) sb.append(", Status "    + ceedi.getStatus());
+					if (ceedi.supportsTranState()) sb.append(", TranState " + ceedi.getTranState() + ":");
+					sb.append("\n");
 					
 					if (ceedi.hasEedParams())
 					{
@@ -7767,6 +7790,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				}
 				else
 				{
+					// new Exception("DUMMY Exception to se from where things are called").printStackTrace();
+					
 					if (sqe instanceof SQLWarning)
 					{
 						String msg = "SQL-Warning: " +
@@ -8717,6 +8742,22 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		if (asPlainText)
 			numOfTables = 0;
 
+		// MigLayout do not support more than 30.000 cells      --- IllegalArgumentException: Cell position out of bounds. Out of cells. row: 30001, col: 0
+		// So if that happens... 
+		//   - add Message that We are "merging" JAseMessages to ONE text... 
+		//   - add all messages to ONE RSynstaxTextArea
+		int numOfMessages = countMessages(compList);
+		if (numOfMessages >= 29_000)
+		{
+			String prePost = "#######################################################################";
+			String msg = "When adding Results to Output Window, we discovered more than 29.000 (29K) messages. Switching to 'plain output', bacause of 'to many messages'.";
+			compList.add(0, new JAseMessage(prePost + "\n" + "WARNING: " + msg + "\n" + prePost, ""));
+			_logger.warn(msg);
+
+			asPlainText = true;
+			numOfTables = 0;
+		}
+		
 		if (numOfTables == 1 && !asRsTabbedPane)
 		{
 			_resPanelScroll    .setVisible(true);
@@ -9198,7 +9239,7 @@ checkPanelSize(_resPanel, comp);
 						_result_txt.setCaretPosition( pos );
 
 						// Move to the position where we started to to inserts
-						// but do it defferred, so above position take place first
+						// but do it deferred, so above position take place first
 						Runnable doLater = new Runnable()
 						{
 							@Override
@@ -9777,16 +9818,19 @@ checkPanelSize(_resPanel, comp);
 		_logger.info("Special output optimization for "+(isJson?"JSON":"XML")+" data presentation. A Special output will be made for this type, and the content would also be pretty printed/formated.");// This can be disabled with the property '"+PROPKEY_FixMe+"=false'.");
 
 		Object val = jtable.getValueAt(0, col);
+		String strVal = null;
 		if (val != null && val instanceof String)
 		{
-			if ( JsonUtils.isJsonValid( (String)val) )
+			strVal = (String) val;
+			
+			if ( JsonUtils.isJsonValid(strVal))
 			{
 				isJson = true;
-				val = JsonUtils.format((String) val);
+				strVal = JsonUtils.format(strVal);
 			}
 			else
 			{
-				val = StringUtil.xmlFormat((String) val);
+				strVal = StringUtil.xmlFormat(strVal);
 			}
 		}
 
@@ -9795,10 +9839,11 @@ checkPanelSize(_resPanel, comp);
 		RSyntaxUtilitiesX.installRightClickMenuExtentions(out, _resPanelTextScroll, _window);
 		installResultTextExtraMenuEntries(out);
 
+		out.putClientProperty("ORIGIN_TEXT", val);
 		out.setCodeFoldingEnabled(true);
 		out.setSyntaxEditingStyle( isJson ? SyntaxConstants.SYNTAX_STYLE_JSON : SyntaxConstants.SYNTAX_STYLE_XML);
 
-		out.append("" + val);
+		out.append(strVal);
 		
 		return out;
 	}
@@ -9902,6 +9947,17 @@ checkPanelSize(_resPanel, comp);
 		}
 		return count;
 	}
+	private int countMessages(ArrayList<JComponent> list)
+	{
+		int count = 0;
+		for (JComponent jcomp: list)
+		{
+			if (jcomp instanceof JAseMessage)
+				count++;
+
+		}
+		return count;
+	}
 
 	private JComponent createStatisticsIoTablePanel(StatisticsIoTableModel tm, boolean asTabbedPane)
 	{
@@ -9977,7 +10033,45 @@ checkPanelSize(_resPanel, comp);
 		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 
 		if (doConvertToXmlOrJsonTextPane(tab))
-			p.add(createXmlOrJsonTextPane(tab), "wrap");
+		{
+			final RSyntaxTextArea rsta = createXmlOrJsonTextPane(tab);
+
+			// If SQL-Server showplan...
+			Object originTextObj = rsta.getClientProperty("ORIGIN_TEXT");
+			if (originTextObj != null && originTextObj instanceof String )
+			{
+				String originTextStr = (String) originTextObj;
+				
+				if (originTextStr.startsWith("<ShowPlanXML ") && Desktop.isDesktopSupported())
+				{
+					JButton showplanInExtrenalBrowser = new JButton("View SQL-Server Showplan in External HTML Browser");
+					showplanInExtrenalBrowser.addActionListener(new ActionListener()
+					{
+						@Override
+						public void actionPerformed(ActionEvent e)
+						{
+							try
+							{
+								File tmpFile = ShowplanHtmlView.createHtmlFile(ShowplanHtmlView.Type.SQLSERVER, originTextStr);
+								
+								Desktop desktop = Desktop.getDesktop();
+								if ( desktop.isSupported(Desktop.Action.BROWSE) )
+									desktop.browse(tmpFile.toURI());
+							}
+							catch (Exception ex)
+							{
+								SwingUtils.showErrorMessage(_window, "Problems when open the SQL-Server Showplan", "Problems when open the SQL-Server Showplan. Caught: "+ex, ex);
+							}
+						}
+					});
+					// Add the Button
+					p.add(showplanInExtrenalBrowser, "wrap");
+				}
+			}
+
+			// Add the RSyntaxTextArea
+			p.add(rsta, "wrap");
+		}
 		else
 		{
 			if (asTabbedPane)
@@ -11012,7 +11106,156 @@ checkPanelSize(_resPanel, comp);
 	** END: set OPTIONS button stuff
 	**----------------------------------------------------------------------*/ 
 
-	/**
+	/**----------------------------------------------------------------------------
+	 * -- Microsoft SQL-Server
+	 * ----------------------------------------------------------------------------
+	 */
+	private JButton createSetSqlServerOptionButton(JButton button, final long version)
+	{
+		if (button == null)
+			button = new JButton();
+
+		button.setIcon(SwingUtils.readImageIcon(Version.class, "images/sqlserver_16.png"));
+		button.setToolTipText("<html>Set various options, for example: set statistics io on|off.</html>");
+		button.setText("Set");
+
+		JPopupMenu popupMenu = createSetSqlServerOptionButtonPopupMenu(version);
+		button.setComponentPopupMenu(popupMenu);
+
+		// If we click on the button, display the popup menu
+		button.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Object source = e.getSource();
+				if (source instanceof JButton)
+				{
+					JButton but = (JButton)source;
+					JPopupMenu pm = but.getComponentPopupMenu();
+					pm.show(but, 14, 14);
+					pm.setLocation( MouseInfo.getPointerInfo().getLocation() );
+				}
+			}
+		});
+		
+		return button;
+	}
+	private JPopupMenu createSetSqlServerOptionButtonPopupMenu(final long version)
+	{
+		ArrayList<AseOptionOrSwitch> options = new ArrayList<AseOptionOrSwitch>();
+
+		//-------------------------------------------------
+		// Add available OPTIONS
+		//-------------------------------------------------
+		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics xml ON-OFF",           null, "statistics xml",           false, "Displays XML query plan, and Execute Statements"));
+		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics profile ON-OFF",       null, "statistics profile",       false, "Displays SIMPLE query plan, as Resultset, and Execute Statements"));
+		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.SEPARATOR));
+		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics io ON-OFF",            null, "statistics io",            false, "Number of logical and physical IO's per table"));
+		options.add(new AseOptionOrSwitch(AseOptionOrSwitch.TYPE_SET, "set statistics time ON-OFF",          null, "statistics time",          false, "Compile time and elapsed time"));
+
+		//-------------------------------------------------
+		// CREATE PopupMenu
+		//-------------------------------------------------
+		final JPopupMenu popupMenu = new JPopupMenu();
+//		button.setComponentPopupMenu(popupMenu);
+
+		// Add entry that will disable all selected options
+		final JMenuItem allOff = new JMenuItem();
+		allOff.setText("<html>Reset <b>all selected</b> options<html>");
+		allOff.setToolTipText("<html>Simply execute SQL Statements that are bound to each <b>selected</b> Menu Item</html>");
+		allOff.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				for (Component comp : popupMenu.getComponents())
+				{
+					if (comp instanceof JCheckBoxMenuItem)
+					{
+						JCheckBoxMenuItem mi = (JCheckBoxMenuItem) comp;
+						Object clientProp = mi.getClientProperty(AseOptionOrSwitch.class.getName());
+						if (clientProp != null && clientProp instanceof AseOptionOrSwitch && mi.isSelected())
+							mi.doClick();
+					}
+				}
+			}
+		});
+		popupMenu.add(allOff);
+		popupMenu.add(new JSeparator());
+		
+		// Add a Menu item for each option
+		for (AseOptionOrSwitch opt : options)
+		{
+			// Add Separator
+			if (opt.getType() == AseOptionOrSwitch.SEPARATOR)
+			{
+				popupMenu.add(new JSeparator());
+				continue;
+			}
+
+			// Add entry
+			JCheckBoxMenuItem mi;
+
+			String miText = "<html>set <b>"+opt.getText()+"</b> - <i><font color='green'>"+opt.getTooltip()+"</font></i></html>";
+			String toolTipText = "<html>"+opt.getTooltip()+"<br>" +
+					"<br>" +
+					"SQL used to set <b>on</b>: <code>"+opt.getSqlOn()+"</code><br>" +
+					"SQL used to set <b>off</b>: <code>"+opt.getSqlOff()+"</code><br>" +
+					"</html>";
+
+			mi = new JCheckBoxMenuItem();
+			mi.setSelected(opt.getDefVal());
+			mi.setText(miText);
+//			mi.setActionCommand(opt.getSql());
+			mi.setToolTipText(toolTipText);
+			mi.putClientProperty(AseOptionOrSwitch.class.getName(), opt);
+
+			mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					JCheckBoxMenuItem xmi = (JCheckBoxMenuItem) e.getSource();
+					AseOptionOrSwitch opt = (AseOptionOrSwitch) xmi.getClientProperty(AseOptionOrSwitch.class.getName());
+
+					boolean onOff = xmi.isSelected();
+					String sql = onOff ? opt.getSqlOn() : opt.getSqlOff();
+
+					_logger.info("Setting: "+sql);
+
+					try
+					{
+						if (_cmdHistoryDialog != null)
+							_cmdHistoryDialog.addEntry(_connectedToServerName, _connectedAsUser, _currentDbName, sql);
+
+						Statement stmnt = _conn.createStatement();
+						stmnt.executeUpdate(sql);
+						String wmsg = AseConnectionUtils.getSqlWarningMsgs(stmnt.getWarnings());
+						if ( ! StringUtil.isNullOrBlank(wmsg) )
+						{
+							_logger.info("Change Setting output: "+wmsg);
+							stmnt.clearWarnings();
+						}
+						stmnt.close();
+					}
+					catch (SQLException ex)
+					{
+						_logger.warn("Problems execute SQL '"+sql+"', Caught: " + ex.toString() );
+						SwingUtils.showErrorMessage("Problems set option", "Problems execute SQL '"+sql+"'\n\n"+ex.getMessage(), ex);
+					}
+				}
+			});
+			popupMenu.add(mi);
+		}
+
+		return popupMenu;
+	}
+
+
+	/**----------------------------------------------------------------------------
+	 * -- Replication Server
+	 * ----------------------------------------------------------------------------
 	 */
 	private JButton createSetRsOptionButton(JButton button, final long version)
 	{
@@ -11056,7 +11299,9 @@ checkPanelSize(_resPanel, comp);
 	}
 
 
-	/**
+	/**----------------------------------------------------------------------------
+	 * -- IQ
+	 * ----------------------------------------------------------------------------
 	 */
 	private JButton createSetIqOptionButton(JButton button, final long version)
 	{

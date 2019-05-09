@@ -1982,7 +1982,7 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "DataSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "DataSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
-				if (usedPct != null && usedPct != null && threshold != null)
+				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
@@ -2005,7 +2005,7 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "LogSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "LogSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInMb); // This uses dbname.matches(map:anyKey)
-				if (usedPct != null && usedPct != null && threshold != null)
+				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (freeMb.intValue() < threshold.intValue())
 					{
@@ -2028,7 +2028,7 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "DataSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "DataSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowDbFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
-				if (usedPct != null && usedPct != null && threshold != null)
+				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue())
 					{
@@ -2051,7 +2051,7 @@ extends CountersModel
 				Double freeMb     = cm.getAbsValueAsDouble(r, "LogSizeFreeInMb");
 				Double usedPct    = cm.getAbsValueAsDouble(r, "LogSizeUsedPct");
 				Number threshold = getDbFreeSpaceThreshold(dbname, _map_alarm_LowLogFreeSpaceInPct); // This uses dbname.matches(map:anyKey)
-				if (usedPct != null && usedPct != null && threshold != null)
+				if (freeMb != null && usedPct != null && threshold != null)
 				{
 					if (usedPct > threshold.doubleValue())
 					{

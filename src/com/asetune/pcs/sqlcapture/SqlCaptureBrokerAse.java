@@ -1137,6 +1137,7 @@ extends SqlCaptureBrokerAbstract
 					int execTime      = rs.getInt("Elapsed_ms");
 					int logicalReads  = rs.getInt("LogicalReads");
 					int physicalReads = rs.getInt("PhysicalReads");
+					int errorStatus   = rs.getInt("ErrorStatus");
 
 					int cpuTime       = rs.getInt("CpuTime");
 					int waitTime      = rs.getInt("WaitTime");
@@ -1170,14 +1171,16 @@ extends SqlCaptureBrokerAbstract
 					//     20-30 sec
 					//     above 30 sec
 					if (_statementStatistics != null)
-						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber);
+						updateStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber);
 
 					
 					//System.out.println("Statement CHECK if above THRESHOLD: SPID="+SPID+",KPID="+KPID+",BatchID="+BatchID+": execTime="+execTime+", logicalReads="+logicalReads+", physicalReads="+physicalReads+".   SAVE="+(execTime > saveStatement_gt_execTime && logicalReads > saveStatement_gt_logicalReads && physicalReads > saveStatement_gt_physicalReads));
 					// Add only rows that are above the limits
-					if (    execTime      > saveStatement_gt_execTime
-					     && logicalReads  > saveStatement_gt_logicalReads
-					     && physicalReads > saveStatement_gt_physicalReads
+					if ( (    execTime      > saveStatement_gt_execTime
+					       && logicalReads  > saveStatement_gt_logicalReads
+					       && physicalReads > saveStatement_gt_physicalReads
+					     )
+					     || errorStatus   > 0
 					   )
 					{
 						if (sendDdlForLookup)
@@ -1827,12 +1830,12 @@ extends SqlCaptureBrokerAbstract
 	 * @param lineNumber 
 	 * @param contextID 
 	 */
-	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, String procName, int lineNumber)
+	private void updateStatementStats(int execTime, int logicalReads, int physicalReads, int cpuTime, int waitTime, int rowsAffected, int errorStatus, String procName, int lineNumber)
 	{
 		if (_statementStatistics == null)
 			return;
 		
-		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, procName, lineNumber);
+		_statementStatistics.addStatementStats(execTime, logicalReads, physicalReads, cpuTime, waitTime, rowsAffected, errorStatus, procName, lineNumber);
 	}
 
 	public void closeStatementStats()

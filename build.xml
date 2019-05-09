@@ -17,6 +17,7 @@
 	<path id="project.class.path">
 		<fileset dir="lib" includes="*.jar"/>
 		<fileset dir="lib/jdbc_drivers" includes="jconn4.jar"/>
+		<fileset dir="lib/jdbc_drivers" includes="mssql-jdbc-7.2.2.jre8.jar"/>
 <!--
 		<pathelement location="lib/"/>
 		<pathelement path="${java.class.path}/"/>

@@ -2874,6 +2874,16 @@ implements Cloneable, ITableTooltip
 		return null;
 	}
 
+	/**
+	 * Create any PrimaryKey that is used when we need to do difference calculations.
+	 * <br>
+	 * If null or empty list is returned = No difference Calculations will/can be done.
+	 * 
+	 * @param conn
+	 * @param srvVersion
+	 * @param isClusterEnabled
+	 * @return A List of Column names
+	 */
 	// FIXME: maybe declare this method and class as abstract, instead of throwing the exception.
 //	public abstract List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled);
 	public List<String> getPkForVersion(Connection conn, long srvVersion, boolean isClusterEnabled)

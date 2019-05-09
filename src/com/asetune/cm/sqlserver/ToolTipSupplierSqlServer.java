@@ -126,7 +126,7 @@ extends CmToolTipSupplierDefault
 			}
 		}
 		
-		if ("query_plan".equals(colName))
+		if ("query_plan".equalsIgnoreCase(colName) || "QueryPlan".equalsIgnoreCase(colName) || "LastPlan".equalsIgnoreCase(colName) || "showplan".equalsIgnoreCase(colName))
 		{
 			if (cellValue == null)
 				return null;

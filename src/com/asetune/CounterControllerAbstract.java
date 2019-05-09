@@ -1804,6 +1804,11 @@ implements ICounterController
 
 			throw ex;
 		}
+		catch(RuntimeException ex)
+		{
+			_logger.error("Problem in method: isClosed(), returning true and continuing. Caught: "+ex+".", ex);
+			return true;
+		}
 //		finally
 //		{
 //			System.out.println("-------------------------------------------------------: "+Thread.currentThread().getName());

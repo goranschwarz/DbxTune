@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.tools.sqlcapture;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Window;
@@ -65,6 +67,9 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.jdesktop.swingx.decorator.ColorHighlighter;
+import org.jdesktop.swingx.decorator.ComponentAdapter;
+import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
@@ -443,6 +448,27 @@ implements ActionListener, ChangeListener//, MouseListener
 		_statements_tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
 		_statements_tab.createDataTablePopupMenu();
+		
+		// Highlight rows
+		// RED = ErrorStatus > 0
+		Configuration conf = Configuration.getCombinedConfiguration();
+		String colorStr = null;
+
+		if (conf != null) colorStr = conf.getProperty(getName()+".color.ErrorStatus");
+		_statements_tab.addHighlighter( new ColorHighlighter(new HighlightPredicate()
+		{
+			@Override
+			public boolean isHighlighted(Component renderer, ComponentAdapter adapter)
+			{
+				// check ErrorStatus
+				Number ErrorStatus = (Number) adapter.getValue(adapter.getColumnIndex("ErrorStatus"));
+				if ( ErrorStatus != null && ErrorStatus.intValue() > 0 )
+					return true;
+
+				return false;
+			}
+		}, null, SwingUtils.parseColor(colorStr, Color.RED))); // This sets the FOREGROUND Color to RED
+		
 		
 		panel.add(_statementsExec_but,      "split");
 		panel.add(_statementsFilter,        "growx, pushx, wrap");

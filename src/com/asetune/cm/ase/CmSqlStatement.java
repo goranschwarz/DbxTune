@@ -97,6 +97,7 @@ extends CountersModel
 	public static final String[] DIFF_COLUMNS     = new String[] {
 			 "totalCount"
 			,"sqlBatchCount"
+			,"errorCount"
 			,"inStmntCacheCount"
 			,"dynamicStmntCount"
 			,"inProcedureCount"
@@ -173,6 +174,8 @@ extends CountersModel
 	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME     = "SqlStmntSumWaitTime";
 	public static final String GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED = "SqlStmntSumRowsAfct";
 
+	public static final String GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT       = "SqlStmntSumErrorCnt";
+	
 //	public static final String GRAPH_NAME_XXX = "xxxGraph"; //String x=GetCounters.XXX;
 //
 //	private void addTrendGraphs()
@@ -364,6 +367,17 @@ extends CountersModel
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
 
+		//-----
+		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT,
+			"Sum SQL Statements Error Count Per Sec", // Menu CheckBox text
+			"Sum SQL Statements Error Count Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			new String[] { "errorCount" }, 
+			LabelType.Static,
+			TrendGraphDataPoint.Category.OPERATIONS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 	}
 
 	@Override
@@ -693,6 +707,17 @@ extends CountersModel
 		{
 			allResponseTimesForColumnName(tgdp, "sumRowsAffected");
 		}
+		
+		// -----------------------------------------------------------------------------------------
+		if (GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT.equals(tgdp.getName()))
+		{
+			Double[] arr = new Double[1];
+
+			arr[0] = this.getRateValueSum("errorCount");
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), arr);
+		}
 	}
 	
 	private void allResponseTimesForColumnName(TrendGraphDataPoint tgdp, String colName)
@@ -810,6 +835,9 @@ extends CountersModel
 
 			mtd.addColumn("CmSqlStatement", "sqlBatchCount",        "<html>Estimated SQL Batch requests. <br><b>Algorithm:</b> if columns 'ProcName' is NULL from monSysStatement <br><b>Note:</b> If the SqlBatch contains several statements, the counter will be incremented for every statement within the SQL Batch.</html>");
 			mtd.addColumn("CmSqlStatement", "sqlBatchCountAbs",     "<html>Estimated SQL Batch requests. <br><b>Algorithm:</b> if columns 'ProcName' is NULL from monSysStatement <br><b>Note:</b> If the SqlBatch contains several statements, the counter will be incremented for every statement within the SQL Batch.</html>");
+
+			mtd.addColumn("CmSqlStatement", "errorCount",           "<html>Summary value for number of records that had a 'ErrorStatus' greater than 0.</html>");
+			mtd.addColumn("CmSqlStatement", "errorCountAbs",        "<html>Summary value for number of records that had a 'ErrorStatus' greater than 0.</html>");
 
 			mtd.addColumn("CmSqlStatement", "inStmntCacheCount",    "<html>Estimated SQL Statements Batch requests executed as a Statement Cache (compiled). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*ss' from monSysStatement</html>");
 			mtd.addColumn("CmSqlStatement", "inStmntCacheCountAbs", "<html>Estimated SQL Statements Batch requests executed as a Statement Cache (compiled). <br><b>Algorithm:</b> if columns 'ProcName' starts with '*ss' from monSysStatement</html>");

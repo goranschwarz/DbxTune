@@ -266,7 +266,7 @@ extends CountersModel
 
 		String sql = 
 			"select " + cols +
-			"from master..monProcessWaits W \n" +
+			"from master.dbo.monProcessWaits W \n" +
 			"where 1 = 1 \n" +
 			sql_sample_extraWhereClause +
 			"order by " + (isClusterEnabled ? "W.SPID, W.WaitEventID, W.InstanceID" : "W.SPID, W.WaitEventID") + "\n" +
