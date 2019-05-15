@@ -48,6 +48,8 @@ public class ConnectionProp
 	protected String _appVersion = null; 
 
 	protected SshTunnelInfo _sshTunnelInfo = null;
+	
+	protected String _sqlInit = null;
 
 	public ConnectionProp()
 	{
@@ -95,6 +97,7 @@ public class ConnectionProp
 	public String        getAppName()       { return _appName; }
 	public String        getAppVersion()    { return _appVersion; }
 	public SshTunnelInfo getSshTunnelInfo() { return _sshTunnelInfo; }
+	public String        getSqlInit()       { return _sqlInit; } 
 
 	public void setUsername     (String        username)        { _username      = username; }
 	public void setPassword     (String        password)        { _password      = password; }
@@ -108,6 +111,7 @@ public class ConnectionProp
 	public void setAppName      (String        appName)         { _appName       = appName; }
 	public void setAppVersion   (String        appVersion)      { _appVersion    = appVersion; }
 	public void setSshTunnelInfo(SshTunnelInfo sshTunnelInfo)   { _sshTunnelInfo = sshTunnelInfo; }
+	public void setSqlInit      (String        sqlInit)         { _sqlInit       = sqlInit; } 
 
 	public void setUrlOption(String key, String value)
 	{
@@ -178,6 +182,7 @@ public class ConnectionProp
 		sb.append("_urlOptions")   .append("=").append(_urlOptions)   .append(", ");
 		sb.append("_appName")      .append("=").append(_appName)      .append(", ");
 		sb.append("_appVersion")   .append("=").append(_appVersion)   .append(", ");
+		sb.append("_sqlInit")      .append("=").append(_sqlInit)      .append(", ");
 		sb.append("_sshTunnelInfo").append("={").append(_sshTunnelInfo == null ? null : _sshTunnelInfo.getInfoString() ).append("}");
 
 		return super.toString() + ": " + sb.toString();

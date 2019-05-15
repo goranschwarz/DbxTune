@@ -781,6 +781,7 @@ extends CountersModel
 			}
 
 			// Add any blocking SPIDs to the MAP
+			// TODO: for offline recordings it's better to do it in the same way as for 'CmActiveStatements'
 			if (o_blockingSpid instanceof Number)
 			{
 				if (o_blockingSpid != null && ((Number)o_blockingSpid).intValue() != 0 )

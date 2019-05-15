@@ -25,6 +25,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import com.asetune.pcs.PersistentCounterHandler;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.Configuration;
@@ -491,6 +492,7 @@ public class ConnectionProfile
 		public String toHtml(String name, Type type, SrvType srvType);
 		public String getDifference(ConnProfileEntry entry);
 		public String getKey();
+		public ConnectionProp toConnectionProp();
 	}
 
 
@@ -910,6 +912,61 @@ public class ConnectionProfile
 		// If below parameters is valid and should be read written to the XML file
 		public boolean       _isDbxTuneParamsValid   = false; 
 		public DbxTuneParams _dbxtuneParams    = null; 
+
+
+		@Override
+		public ConnectionProp toConnectionProp()
+		{
+			ConnectionProp cp = new ConnectionProp();
+
+			cp.setUsername     (_tdsUsername);
+			cp.setPassword     (_tdsPassword);
+			cp.setServer       (_tdsServer);
+			cp.setDbname       (_tdsDbname);
+			cp.setSshTunnelInfo(_tdsShhTunnelUse ? _tdsShhTunnelInfo : null);
+			cp.setSqlInit      (_tdsSqlInit);
+			cp.setUrl          (_tdsUseUrl       ? _tdsUseUrlStr     : null);
+			cp.setUrlOptions   (_tdsUrlOptions);
+
+			// If no RAW URL was specified, then compose one
+			if (StringUtil.isNullOrBlank(cp.getUrl()))
+			{
+				String hostPortStr = null;
+
+				if (StringUtil.hasValue(_tdsHosts) && StringUtil.hasValue(_tdsPorts))
+				{
+					hostPortStr = AseConnectionFactory.toHostPortStr(_tdsHosts, _tdsPorts);
+
+				//	String[] hostsArr = StringUtil.commaStrToArray(_tdsHosts);
+				//	String[] portsArr = StringUtil.commaStrToArray(_tdsPorts);
+				//	if (hostsArr.length > 0 && portsArr.length > 0)
+				//	{
+				//		hostPortStr = hostsArr[0] + ":" + portsArr[0];
+				//	}
+				}
+				else if (StringUtil.hasValue(_tdsServer))
+				{
+					if ( _tdsServer.contains(":") )
+						hostPortStr = _tdsServer;
+					else
+						hostPortStr = AseConnectionFactory.getIHostPortStr(_tdsServer);
+
+					if (StringUtil.isNullOrBlank(hostPortStr))
+						throw new RuntimeException("Can't find server name information about '"+_tdsServer+"'.");
+				}
+
+				if (StringUtil.isNullOrBlank(hostPortStr))
+					throw new RuntimeException("hostPortStr is empty... TdsEntry='" + this + "'.");
+
+				String url = "jdbc:sybase:Tds:" + hostPortStr;
+
+				if ( ! StringUtil.isNullOrBlank(_tdsDbname) )
+					url += "/" + _tdsDbname;
+				cp.setUrl(url);
+			}
+
+			return cp;
+		}
 
 //		public boolean       _dbxtuneUseTemplate     = false;
 //		public String        _dbxtuneUseTemplateName = null;
@@ -1422,6 +1479,24 @@ public class ConnectionProfile
 
 
 		@Override
+		public ConnectionProp toConnectionProp()
+		{
+			ConnectionProp cp = new ConnectionProp();
+
+			cp.setDriverClass  (_jdbcDriver);
+			cp.setUrl          (_jdbcUrl);
+			cp.setUsername     (_jdbcUsername);
+			cp.setPassword     (_jdbcPassword);
+			cp.setSqlInit      (_jdbcSqlInit);
+//			cp.setDbname       (_jdbcDbname);
+//			cp.setServer       (_jdbcServer);
+			cp.setUrlOptions   (_jdbcUrlOptions);
+			cp.setSshTunnelInfo(_jdbcShhTunnelUse ? _jdbcShhTunnelInfo : null);
+
+			return cp;
+		}
+
+		@Override
 		public String getKey()
 		{
 			// TODO Auto-generated method stub
@@ -1619,6 +1694,19 @@ public class ConnectionProfile
 		public boolean       _checkForNewSessions    = false;
 		public boolean       _H2Option_startH2NwSrv  = true;
 
+
+		@Override
+		public ConnectionProp toConnectionProp()
+		{
+			ConnectionProp cp = new ConnectionProp();
+
+			cp.setDriverClass  (_jdbcDriver);
+			cp.setUrl          (_jdbcUrl);
+			cp.setUsername     (_jdbcUsername);
+			cp.setPassword     (_jdbcPassword);
+
+			return cp;
+		}
 
 		@Override
 		public String getKey()

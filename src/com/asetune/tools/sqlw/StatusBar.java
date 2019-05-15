@@ -20,6 +20,7 @@
  ******************************************************************************/
 package com.asetune.tools.sqlw;
 
+import java.awt.Window;
 import java.io.File;
 import java.util.Map;
 
@@ -32,9 +33,12 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.swing.GLabel;
 import com.asetune.gui.swing.GMemoryIndicator;
+import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.SwingUtils;
 
 import net.miginfocom.swing.MigLayout;
 
@@ -380,6 +384,35 @@ public class StatusBar extends JPanel
 	public String getServerName()
 	{
 		return _serverName.getText();
+	}
+
+	public void updateConnectionStateInfo(final DbxConnection conn, Window owner)
+	{
+		if (owner == null)
+			owner = SwingUtils.getParentWindow(this);
+		
+		// Create a Wait-for Dialog and Executor, then execute it.
+		WaitForExecDialog wait = new WaitForExecDialog(owner, "Updating Status Bar Information");
+
+		WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
+		{
+			@Override
+			public Object doWork()
+			{
+				DbxConnectionStateInfo csi = conn.refreshConnectionStateInfo();
+				
+				// emulate a slow connection
+				// try { Thread.sleep(10000); } catch(Exception ex) {}
+				
+				return csi;
+			}
+		}; // END: new WaitForExecDialog.BgExecutor()
+		
+		// Execute and WAIT
+		DbxConnectionStateInfo csi = (DbxConnectionStateInfo) wait.execAndWait(doWork, 500);
+
+		// set results in status bar
+		setConnectionStateInfo(csi);
 	}
 
 	public void setConnectionStateInfo(DbxConnectionStateInfo csi)

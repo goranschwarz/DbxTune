@@ -2382,20 +2382,31 @@ public class QueryWindow
 			@Override
 			public void windowActivated(WindowEvent e)
 			{
+				// getOppositeWindow() is NULL if switching from other JVM or other application
+				// so simply return if it was another window from SqlWindow
+				if (e.getOppositeWindow() != null)
+					return;
+
 				saveWinProps();
-				
+
 				// If we have a connection object, check that it's OK, or if we need to reconnect
 				checkForReconnect();
-				
+
 //				checkIfCurrentFileIsUpdated();
 
 				// If the window is ACTIVE check for file changes
 				if (_watchdogIsFileChanged != null)
 					_watchdogIsFileChanged.setPaused(false);
 			}
+
 			@Override
 			public void windowDeactivated(WindowEvent e)
 			{
+				// getOppositeWindow() is NULL if switching from other JVM or other application
+				// so simply return if it was another window from SqlWindow
+				if (e.getOppositeWindow() != null)
+					return;
+
 				saveWinProps();
 
 				// If the window is NOT active we don't need to check for file changes
@@ -2800,18 +2811,25 @@ public class QueryWindow
 	}
 
 	
+	private long _checkForReconnect_lastTs = 0;
+	private long _checkForReconnect_skipCheckTimeout = 1000;
+
 	/**
 	 * If we have a connection object, check that it works<br>
 	 * If NOT, ask if we should do a reconnect
 	 */
-	private long _checkForReconnect_lastTs = 0;
-	private long _checkForReconnect_skipCheckTimeout = 1000;
 	private void checkForReconnect()
 	{
 		if (_conn != null)
 		{
+			// Swing calls the "Windows-was-activted" after "WaitForDialog" in: _conn.isConnectionOk(false, _window)
+			// So lets just get out of here if we have been called "recently"
+			if ((System.currentTimeMillis() - _checkForReconnect_lastTs) < _checkForReconnect_skipCheckTimeout)
+				return;
+
 //System.out.println("called: checkForReconnect()");
-			if ( ! _conn.isConnectionOk() )
+//			if ( ! _conn.isConnectionOk() )
+			if ( ! _conn.isConnectionOk(false, _window) )
 			{
 				// Swing calls the "Windows-was-activted" after we have answered the JOptionPane.showOptionDialog
 				// And if we choosed to "NOT-reconnect" it will call this ina endless loop...
@@ -2860,21 +2878,23 @@ public class QueryWindow
 						// Update some internal variables and the Status bar
 						getDbmsProductInfoAfterConnect(_conn, null);
 						setVariousInfoAfterConnect(_connType, null, false);
-						_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+//						_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+						_statusBar.updateConnectionStateInfo(_conn, _window);
 					}
 					catch (Exception ex)
 					{
 						SwingUtils.showErrorMessage(guiOwner, "Problems when reconnecting", "Sorry reconnect was not sucessfull", ex);
+						_disconnect_but.doClick();
 					}
 				}
 				else
 				{
 					_disconnect_but.doClick();
 				}
-				
-				// set timestamp
-				_checkForReconnect_lastTs = System.currentTimeMillis();
 			}
+
+			// set timestamp
+			_checkForReconnect_lastTs = System.currentTimeMillis();
 		}
 	}
 
@@ -4082,7 +4102,8 @@ public class QueryWindow
 		}
 
 		// Refresh the status bar with Connection Status Information
-		_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+//		_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+		_statusBar.updateConnectionStateInfo(_conn, _window);
 
 		// What Components should be enabled/visible
 		setComponentVisibility();
@@ -7498,7 +7519,9 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				setDbNames();
 
 			// Refresh Connection state information
-			_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+//			_statusBar.setConnectionStateInfo(_conn.refreshConnectionStateInfo());
+			_statusBar.updateConnectionStateInfo(_conn, _window);
+
 			
 //			// if ASE, refresh the database list and currect working database
 ////			if (_connectedToProductName != null && _connectedToProductName.equals(DbUtils.DB_PROD_NAME_SYBASE_ASE))

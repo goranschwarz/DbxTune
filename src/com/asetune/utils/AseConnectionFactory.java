@@ -1337,10 +1337,10 @@ public class AseConnectionFactory
 			password = "";
 		
 		Properties props = new Properties(_props);
-		if (props.getProperty("user")            == null) props.put("user",            username);
-		if (props.getProperty("password")        == null) props.put("password",        password);
-		if (props.getProperty("APPLICATIONNAME") == null) props.put("APPLICATIONNAME", appname);
-		if (props.getProperty("HOSTNAME")        == null) props.put("HOSTNAME",        hostname);
+		if (props.getProperty("user")            == null && username != null) props.put("user",            username);
+		if (props.getProperty("password")        == null && password != null) props.put("password",        password);
+		if (props.getProperty("APPLICATIONNAME") == null && appname  != null) props.put("APPLICATIONNAME", appname);
+		if (props.getProperty("HOSTNAME")        == null && hostname != null) props.put("HOSTNAME",        hostname);
 
 		// I just invented this propery, so it's NOT supported by the jConnect, but we can use it to 'set clientapplname, set clientname, set clienthostname'
 		if (props.getProperty("CLIENT_APPLICATION_VERSION") == null && appVersion != null) props.put("CLIENT_APPLICATION_VERSION", appVersion);

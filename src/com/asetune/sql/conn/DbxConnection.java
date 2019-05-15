@@ -55,6 +55,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
+import com.asetune.gui.swing.WaitForExecDialog;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
@@ -917,39 +918,109 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 			return false;
 		}
 		
-		try
+//		try
+//		{
+////			if ( _conn.isClosed() )
+//			/*
+//			 * Note: isClosed() do not seems to have a query timeout... and in some cases it just hangs forever...
+//			 *       so lets try with isValid() instead
+//			 *       If this isn't good enough, lets try to fiddle around with: get/setNetworkTimeout()
+//			 *
+//			 * Note2: Do not do _conn.isValid(), instead do this.isValid().  
+//			 *        - _conn is the Vendors implementation (for example SybConnection)
+//			 *        - this is the DbxConnection where we can override isValid()
+//			 */
+//			if ( ! this.isValid(1) ) // timeout in seconds
+//			{
+//				msg = "The Connection object is NOT connected.";
+//				_logger.debug(msg);
+//
+//				if (guiOwner != null)
+//					SwingUtils.showWarnMessage(guiOwner, title, msg, new Exception(msg));
+//
+//				return false;
+//			}
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.debug("When checking the DB Connection, Caught exception.", e);
+//
+//			if (guiOwner != null)
+//				showSqlExceptionMessage(guiOwner, "Checking DB Connection", "When checking the DB Connection, we got an SQLException", e);
+//			
+//			return false;
+//		}
+		
+		/*
+		 * Note: isClosed() do not seems to have a query timeout... and in some cases it just hangs forever...
+		 *       so lets try with isValid() instead
+		 *       If this isn't good enough, lets try to fiddle around with: get/setNetworkTimeout()
+		 *
+		 * Note2: Do not do _conn.isValid(), instead do this.isValid().  
+		 *        - _conn is the Vendors implementation (for example SybConnection)
+		 *        - this is the DbxConnection where we can override isValid()
+		 */
+
+		
+		if (guiOwner == null)
 		{
-//			if ( _conn.isClosed() )
-			/*
-			 * Note: isClosed() do not seems to have a query timeout... and in some cases it just hangs forever...
-			 *       so lets try with isValid() instead
-			 *       If this isn't good enough, lets try to fiddle around with: get/setNetworkTimeout()
-			 *
-			 * Note2: Do not do _conn.isValid(), instead do this.isValid().  
-			 *        - _conn is the Vendors implementation (for example SybConnection)
-			 *        - this is the DbxConnection where we can override isValid()
-			 */
-			if ( ! this.isValid(1) ) // timeout in seconds
+			try
 			{
-				msg = "The Connection object is NOT connected.";
-				_logger.debug(msg);
+				if ( ! this.isValid(1) ) // timeout in seconds
+				{
+					msg = "The Connection object is NOT connected.";
+					_logger.debug(msg);
 
-				if (guiOwner != null)
-					SwingUtils.showWarnMessage(guiOwner, title, msg, new Exception(msg));
-
+					return false;
+				}
+				return true;
+			}
+			catch (SQLException e)
+			{
+				_logger.debug("When checking the DB Connection, Caught exception.", e);
 				return false;
 			}
 		}
-		catch (SQLException e)
+		else
 		{
-			_logger.debug("When checking the DB Connection, Caught exception.", e);
+			// Create a Waitfor Dialog and Executor, then execute it.
+			Window owner = (Window) guiOwner;
+			WaitForExecDialog wait = new WaitForExecDialog(owner, "Checking if DBMS Connection is Valid");
 
-			if (guiOwner != null)
-				showSqlExceptionMessage(guiOwner, "Checking DB Connection", "When checking the DB Connection, we got an SQLException", e);
+			WaitForExecDialog.BgExecutor doWork = new WaitForExecDialog.BgExecutor(wait)
+			{
+				@Override
+				public Object doWork()
+				{
+					try
+					{
+						if ( ! DbxConnection.this.isValid(1) ) // timeout in seconds
+						{
+							String msg = "The Connection object is NOT connected.";
+							_logger.debug(msg);
+
+							if (guiMsgOnError)
+								SwingUtils.showWarnMessage(guiOwner, title, msg, new Exception(msg));
+							
+							return false;
+						}
+						return true;
+					}
+					catch (SQLException e)
+					{
+						_logger.debug("When checking the DB Connection, Caught exception.", e);
+						if (guiMsgOnError)
+							showSqlExceptionMessage(guiOwner, "Checking DB Connection", "When checking the DB Connection, we got an SQLException", e);
+
+						return false;
+					}
+				}
+			}; // END: new WaitForExecDialog.BgExecutor()
 			
-			return false;
+			// Execute and WAIT
+			Boolean connIsValid = (Boolean) wait.execAndWait(doWork, 300);
+			return connIsValid;
 		}
-		return true;
 	}
 
 	/**

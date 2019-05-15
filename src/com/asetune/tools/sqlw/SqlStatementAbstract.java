@@ -178,33 +178,9 @@ implements SqlStatement
 		}
 		else
 		{
-			ConnProfileEntry profileEntry = connProfile.getEntry();
-			
-			if (profileEntry instanceof TdsEntry)
-			{
-				TdsEntry entry = (TdsEntry) profileEntry;
-				
-				cp.setDbname       (entry._tdsDbname);
-				cp.setPassword     (entry._tdsPassword);
-				cp.setServer       (entry._tdsServer);
-				cp.setSshTunnelInfo(entry._tdsShhTunnelUse ? entry._tdsShhTunnelInfo : null);
-				cp.setUrl          (entry._tdsUseUrl ? entry._tdsUseUrlStr : null);
-				cp.setUrlOptions   (entry._tdsUrlOptions);
-				cp.setUsername     (entry._tdsUsername);
-			}
-			else if (profileEntry instanceof JdbcEntry)
-			{
-				JdbcEntry entry = (JdbcEntry) profileEntry;
-				
-//				cp.setDbname       (entry._jdbcDbname);
-				cp.setPassword     (entry._jdbcPassword);
-//				cp.setServer       (entry._jdbcServer);
-				cp.setSshTunnelInfo(entry._jdbcShhTunnelUse ? entry._jdbcShhTunnelInfo : null);
-				cp.setUrl          (entry._jdbcUrl);
-				cp.setUrlOptions   (entry._jdbcUrlOptions);
-				cp.setUsername     (entry._jdbcUsername);
-			}
-			
+			// Grab ConnectionProp from the profile
+			cp = connProfile.getEntry().toConnectionProp();
+
 			// IF we have Command Line Parameters -->> Override the connection profile entry 
 			if (StringUtil.hasValue(username)) cp.setUsername(username);
 			if (StringUtil.hasValue(password)) cp.setPassword(password);

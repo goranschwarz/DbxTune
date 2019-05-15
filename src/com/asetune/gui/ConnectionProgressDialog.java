@@ -38,8 +38,10 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.Vector;
 
 import javax.swing.Icon;
@@ -276,6 +278,51 @@ implements ActionListener, ConnectionProgressCallback
 		// If the connection NEEDS to be of a specific product name
 		_sqlInit = sqlInit;
 
+		
+		// Merge ConnectionProps and sqlInit
+		if (_connProp != null && StringUtil.hasValue(_connProp.getSqlInit()))
+		{
+			if (StringUtil.isNullOrBlank(_sqlInit))
+			{
+				_sqlInit = _connProp.getSqlInit();
+			}
+			else // Merge the two together
+			{
+				Set<String> sqlSet = new LinkedHashSet<>();
+
+				// SQL-INIT PARAMETER
+				String tmp = _sqlInit;
+				if (tmp == null)
+					tmp = "";
+				
+				String[] sa =  tmp.split(";");
+				for (String sql : sa)
+				{
+					sql = sql.trim();
+					if ("".equals(sql))
+						continue;
+					sqlSet.add(sql);
+				}
+
+				// CONN-PROPS PARAMETER
+				tmp = _connProp.getSqlInit();
+				if (tmp == null)
+					tmp = "";
+				
+				sa =  tmp.split(";");
+				for (String sql : sa)
+				{
+					sql = sql.trim();
+					if ("".equals(sql))
+						continue;
+					sqlSet.add(sql);
+				}
+				
+				// Add all entries in the SET to a ';' separated String.
+				_sqlInit = StringUtil.toCommaStr(sqlSet, ";");
+			}
+		}
+		
 		//	AseConnectionUtils.checkForMonitorOptions(conn, _user_txt.getText(), true, this);
 		//	MonTablesDictionary.getInstance().initialize(conn);
 		//	GetCounters.initExtraMonTablesDictionary();
