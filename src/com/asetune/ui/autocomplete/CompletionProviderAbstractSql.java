@@ -229,6 +229,9 @@ extends CompletionProviderAbstract
 		if (StringUtil.isNullOrBlank(catName))
 			return;
 
+		if (_localCatalogName != null && _localCatalogName.equals(catName))
+			return;
+			
 		// Set this early, if the CompletionProvider isn't yet used; we will set it when first connection is made.
 		_localCatalogName = catName;
 
@@ -238,6 +241,7 @@ extends CompletionProviderAbstract
 		_logger.info("Setting local catalog to '"+_localCatalogName+"' in Completion Provider.");
 		try 
 		{
+			setNeedRefresh(true);
 			_localConn.setCatalog(catName);
 		}
 		catch(SQLException ex) 

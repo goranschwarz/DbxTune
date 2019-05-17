@@ -529,8 +529,8 @@ extends SqlStatementAbstract
 
 			// PRE Query on LEFT and RIGHT to see if table exists
 			// and also to collect PK info etc
-			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 = 2";
-			String rightPreQuery = "select * from " + _params._rightTable + " where 1 = 2";
+			String leftPreQuery  = "select * from " + _params._leftTable  + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wring database name for Sybase ASE)
+			String rightPreQuery = "select * from " + _params._rightTable + " where 1 > 100 -- always FALSE, just to get JDBC MetaData"; // NOTE: where 1 = 2 sometimes returned faulty MetaData (wring database name for Sybase ASE)
 
 
 			//----------------------------------------------------
@@ -570,8 +570,8 @@ extends SqlStatementAbstract
 
 
 			context.setPkColumns(_params._keyCols);
-			DiffTable leftPreDt  = new DiffTable(DiffSide.LEFT,  context, leftPreRs,  leftConn);//leftConnProps);
-			DiffTable rightPreDt = new DiffTable(DiffSide.RIGHT, context, rightPreRs, rightConn);//rightConnProps);
+			DiffTable leftPreDt  = new DiffTable(DiffSide.LEFT,  context, leftPreRs,  leftPreQuery,  leftConn);//leftConnProps);
+			DiffTable rightPreDt = new DiffTable(DiffSide.RIGHT, context, rightPreRs, rightPreQuery, rightConn);//rightConnProps);
 
 			// Transfer messages that was generated during PRE Stage
 			if (context.hasMessages())
@@ -730,8 +730,8 @@ extends SqlStatementAbstract
 
 
 			// Set the REAL RESULT SETS
-			context.setDiffTable(DiffSide.LEFT,  leftRs,  leftConnProps);
-			context.setDiffTable(DiffSide.RIGHT, rightRs, rightConnProps);
+			context.setDiffTable(DiffSide.LEFT,  leftRs,  leftQuery,  leftConnProps);
+			context.setDiffTable(DiffSide.RIGHT, rightRs, rightQuery, rightConnProps);
 
 			// Set Expected Row Count
 			context.getDiffTable(DiffSide.LEFT) .setExpectedRowCount(leftPreCount);

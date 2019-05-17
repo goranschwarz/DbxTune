@@ -154,8 +154,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), "select * from t1_l", null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), "select * from t1_r", null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -206,8 +206,8 @@ public class DiffTest
 
 		DiffContext context = new DiffContext();
 		context.setPkColumns(null);
-		context.setDiffTable(DiffSide.LEFT,  leftRs,  null);
-		context.setDiffTable(DiffSide.RIGHT, rightRs, null);
+		context.setDiffTable(DiffSide.LEFT,  leftRs,  sql, null);
+		context.setDiffTable(DiffSide.RIGHT, rightRs, sql, null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -268,8 +268,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), "select * from t1_l", null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), "select * from t1_r", null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -327,8 +327,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), "select * from t1_l", null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), "select * from t1_r", null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -387,8 +387,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), "select * from t1_l", null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), "select * from t1_r", null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();
@@ -450,8 +450,8 @@ public class DiffTest
 		
 		DiffContext context = new DiffContext();
 		context.setPkColumns(pkList);
-		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), null);
-		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), null);
+		context.setDiffTable(DiffSide.LEFT,  _lConn.createStatement().executeQuery("select * from t1_l"), "select * from t1_l", null);
+		context.setDiffTable(DiffSide.RIGHT, _rConn.createStatement().executeQuery("select * from t1_r"), "select * from t1_r", null);
 		context.setMessageDebugLevel(0); // 0=NO-DEBUG, 1=DEBUG, 2=TRACE
 		context.validate();
 		int diffCount = context.doDiff();

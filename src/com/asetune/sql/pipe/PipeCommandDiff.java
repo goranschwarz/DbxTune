@@ -597,8 +597,8 @@ extends PipeCommandAbstract
 		context.setPkColumns  (_params._keyCols);
 		context.setDiffColumns(_params._diffColumns);
 
-		context.setDiffTable(DiffSide.LEFT,  leftRs,  leftConnProps);
-		context.setDiffTable(DiffSide.RIGHT, rightRs, rightConnProps);
+		context.setDiffTable(DiffSide.LEFT,  leftRs,  getSqlString(), leftConnProps);
+		context.setDiffTable(DiffSide.RIGHT, rightRs, destSql       , rightConnProps);
 
 		context.validate();
 

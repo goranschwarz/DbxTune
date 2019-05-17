@@ -6514,8 +6514,17 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 	 */
 	private boolean setCurrentDb(String dbname)
 	{
+//System.out.println("setCurrentDb('"+dbname+"')");
 		if (dbname == null || (dbname!=null && dbname.trim().equals("")))
 			return false;
+
+		// Set catalog, but only if the CompleationProvider HAS a local connection. note: this is handled internally in: setCatalog(dbname)
+		if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
+		{
+//System.out.println("setCurrentDb('"+dbname+"'): compl provider set db");
+				CompletionProviderAbstractSql complProvider = (CompletionProviderAbstractSql)_compleationProviderAbstract;
+				complProvider.setCatalog(dbname);
+		}
 
 		String currentCatalog = "";
 		// If database has NOT been changed... exit early
@@ -6601,9 +6610,11 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			}
 			else // NORMAL CASE
 			{
+//System.out.println("XXXX: to dbname '"+dbname+"'.");
 				_conn.setCatalog(dbname);
 				if (_compleationProviderAbstract != null && _compleationProviderAbstract instanceof CompletionProviderAbstractSql)
 				{
+//System.out.println("XXXX: COMPL Provider - to dbname '"+dbname+"'.");
 					// Set catalog, but only if the CompleationProvider HAS a local connection. note: this is handled internally in: setCatalog(dbname)
 					CompletionProviderAbstractSql complProvider = (CompletionProviderAbstractSql)_compleationProviderAbstract;
 					complProvider.setCatalog(dbname);

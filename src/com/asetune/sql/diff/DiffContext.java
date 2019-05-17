@@ -121,10 +121,10 @@ public class DiffContext
 		if (DiffSide.RIGHT.equals(side)) _rightDt  = dt;
 	}
 
-	public void setDiffTable(DiffSide side, ResultSet rs, ConnectionProp connProps) 
+	public void setDiffTable(DiffSide side, ResultSet rs, String sqlText, ConnectionProp connProps) 
 	throws DiffException, SQLException
 	{
-		DiffTable dt = new DiffTable(side, this, rs, connProps);
+		DiffTable dt = new DiffTable(side, this, rs, sqlText, connProps);
 		
 		if (DiffSide.LEFT .equals(side)) _leftDt   = dt;
 		if (DiffSide.RIGHT.equals(side)) _rightDt  = dt;
@@ -290,6 +290,26 @@ public class DiffContext
 		for (int c=0; c<getRightDt().getColumnCount(); c++)
 			if (getRightDt().isJdbcDataTypeSupportedInDiffColumnThrow(c))
 				/* ABOVE THROWS Exception on problems */;
+		
+		//---------------------------------------------------
+		// Check for ORDER BY -- Only a WARNING Message
+		//---------------------------------------------------
+		boolean hasOrderBy = false;
+
+		if (getDiffTable(DiffSide.LEFT).getSqlText().toLowerCase().indexOf("order by") > 0)
+			hasOrderBy = true;
+
+		if (getDiffTable(DiffSide.RIGHT).getSqlText().toLowerCase().indexOf("order by") > 0)
+			hasOrderBy = true;
+		
+		if ( ! hasOrderBy )
+		{
+			addWarningMessage("SQL Statement does NOT have any 'ORDER BY' specification. \n"
+					+ "The Diff algorithm depends on; that the Data is pre-sorted in the correct order, Primary Key order is a good candidate. \n"
+					+ "Suggested Order by: " + getPkColumns() + "\n"
+					+ "Left  SQL: " + getDiffTable(DiffSide.LEFT) .getSqlText().trim() + "\n"
+					+ "Right SQL: " + getDiffTable(DiffSide.RIGHT).getSqlText().trim() );
+		}
 		
 		
 		//---------------------------------------------------

@@ -70,19 +70,20 @@ public class DiffTable
 	private Object[]  _lastRow;
 	private Object[]  _lastPk;
 
+	private String    _sqlText;
 
-	public DiffTable(DiffSide side, DiffContext context, ResultSet rs, DbxConnection lookupConn)
+	public DiffTable(DiffSide side, DiffContext context, ResultSet rs, String sqlText, DbxConnection lookupConn)
 	throws DiffException, SQLException
 	{
-		this(side, context, rs, lookupConn, null);
+		this(side, context, rs, sqlText, lookupConn, null);
 	}
-	public DiffTable(DiffSide side, DiffContext context, ResultSet rs, ConnectionProp connProps)
+	public DiffTable(DiffSide side, DiffContext context, ResultSet rs, String sqlText, ConnectionProp connProps)
 	throws DiffException, SQLException
 	{
-		this(side, context, rs, null, connProps);
+		this(side, context, rs, sqlText, null, connProps);
 	}
 
-	private DiffTable(DiffSide side, DiffContext context, ResultSet rs, DbxConnection lookupConn, ConnectionProp connProps)
+	private DiffTable(DiffSide side, DiffContext context, ResultSet rs, String sqlText, DbxConnection lookupConn, ConnectionProp connProps)
 	throws DiffException, SQLException
 	{
 		if (context == null)
@@ -91,6 +92,7 @@ public class DiffTable
 		_diffSide   = side;
 		_context    = context;
 		_rs         = rs;
+		_sqlText    = sqlText;
 		_lookupConn = lookupConn;
 		_connProps  = connProps;
 //		_rsmdc = new ResultSetMetaDataCached(_rs.getMetaData(), null, null, false);
@@ -222,6 +224,8 @@ public class DiffTable
 
 			String fullTabName = SqlObjectName.toString(cat, sch, obj);
 
+			_context.addTraceMessage("getFullTableName[" + getDiffSide() + "]: ColumnNames: col=" + c + ", cat='" + cat + "', sch='" + sch + "', obj='" + obj + "', fullTabName='" + fullTabName + "'.");
+
 			if (StringUtil.hasValue(fullTabName))
 			{
 				if ( ! tables.contains(fullTabName) )
@@ -347,7 +351,7 @@ public class DiffTable
 				// NOTE: Some JDBC Drivers will read out the origin ResultSet before we can call: dbmd.getPrimaryKeys or dbmd.getIndexInfo
 				//       That is if we reuse the connection from the ResultSet
 				Connection conn = _lookupConn;
-				boolean createdNewConnectoin = false;
+				boolean createdNewConnection = false;
 				if (_connProps != null && conn == null)
 				{
 					try 
@@ -361,7 +365,7 @@ public class DiffTable
 							catch(SQLException ignore) {}
 						}
 
-						createdNewConnectoin = true;
+						createdNewConnection = true;
 					} 
 					catch (Exception ex) 
 					{
@@ -390,7 +394,7 @@ public class DiffTable
 				else
 					_context.addDebugMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. The following columns "+pkCols+" will be used as a Primary Key Columns for DIFF.");
 
-				if (createdNewConnectoin)
+				if (createdNewConnection)
 				{
 					_context.addDebugMessage("Find PkCols["+_diffSide+"]: For table '"+_fullTableName+"'. Closing the temporary connection we just created to get PrimaryKey information. Please specify --keyCols if you do not want this.");
 					try { conn.close(); }
@@ -500,6 +504,18 @@ public class DiffTable
 		return StringUtil.toCommaStrQuoted(startQuoteChar, endQuoteChar, _pkList);
 	}
 
+	/** Set SQL Text */
+	public void setSqlText(String sqlText)
+	{
+		_sqlText = sqlText == null ? "" : sqlText;
+	}
+
+	/** @return Assigned SQL Text. Never null */
+	public String getSqlText()
+	{
+		return _sqlText == null ? "" : _sqlText;
+	}
+	
 	public static Object toTableValue(Object colVal)
 	{
 		if (colVal == null)
