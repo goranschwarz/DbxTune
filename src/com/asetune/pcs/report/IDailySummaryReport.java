@@ -56,6 +56,17 @@ public interface IDailySummaryReport
 	void send();
 
 	/**
+	 * Save a report for "archiving"... For example: To DbxCentral, so it can be viewed at a later stage.
+	 */
+	public void save();
+
+	/**
+	 * Remove old report from the "archive"
+	 */
+	void removeOldReports();
+
+
+	/**
 	 * Set the implementation for a ReportSender
 	 * @param reportSender
 	 */

@@ -562,7 +562,36 @@ public class DiffTable
 				}
 				else
 				{
-					sb.append( DbUtils.safeStr(o) ).append(suffix);
+					String val = DbUtils.safeStr(o);
+
+					// If the String is to long 16K - 2 quote chars
+					// APPEND a WARNING Message that the string is to long and will be truncated
+
+					// NOTE: This is for ASE, which has a 16K limit for string literals
+					//       Other DBMS's probably has another limit
+					int maxStringLiteral = 16384;
+					String warningMsg = "";
+					
+					// TODO: setting 'maxStringLiteral' for other DBMS Vendors
+					//       MOVE this to when we initialize the DiffTab, so we don't have to check the *every* time
+					//if (_dbmsVendor != null)
+					//{
+					//	if      (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_SYBASE_ASE)) maxStringLiteral = 16384;
+					//	else if (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_MSSQL     )) maxStringLiteral = 4000;
+					//	else if (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_ORACLE    )) maxStringLiteral = 4000;
+					//	else if (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_MYSQL     )) maxStringLiteral = 1200; // ????
+					//	else if (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_POSTGRES  )) maxStringLiteral = ####;
+					//	else if (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_DB2       )) maxStringLiteral = 32704;
+					//	else if (DbUtils.isProductName(_dbmsVendor, DbUtils.DB_PROD_NAME_XXXXXXXXXX)) maxStringLiteral = ####;
+					//}
+
+					if (val.length() >= (maxStringLiteral - 2) )
+					{
+						int valLength = val.length(); 
+						warningMsg = "\n/* WARNING SQL String literal length is above (" + maxStringLiteral + " bytes), length = " + valLength + " insert/update will FAIL and/or data will be TRUNCATED, please use option ActionType.SYNC_{LEFT|RIGHT}, which used PreparedStatement to apply the correction. */ \n";
+					}
+					
+					sb.append(warningMsg).append( val ).append(suffix);
 				}
 			}
 		}

@@ -79,25 +79,28 @@ public class CommonEedInfo
 			SQLServerException sqlServerEx = (SQLServerException) sqlex;
 			
 			SQLServerError e = sqlServerEx.getSQLServerError();
-			_state      = e.getErrorState();
-			_severity   = e.getErrorSeverity();
-			_serverName = e.getServerName();
-			_procName   = e.getProcedureName();
-//			_lineNum    = e.getLineNumber();  // line number is LONG in Microsoft
-			_params     = null; // e.getEedParams();   // MS do not have this
-			_tranState  = -1;   // e.getTranState();   // MS do not have this
-			_status     = 0;    // e.getStatus();      // MS do not have this
+			if (e != null)
+			{
+				_state      = e.getErrorState();
+				_severity   = e.getErrorSeverity();
+				_serverName = e.getServerName();
+				_procName   = e.getProcedureName();
+//				_lineNum    = e.getLineNumber();  // line number is LONG in Microsoft
+				_params     = null; // e.getEedParams();   // MS do not have this
+				_tranState  = -1;   // e.getTranState();   // MS do not have this
+				_status     = 0;    // e.getStatus();      // MS do not have this
 
-			long lineNumber = e.getLineNumber();
-			if (lineNumber < Integer.MAX_VALUE)
-				_lineNum = (int) lineNumber;
-			else
-				throw new RuntimeException("CommonEedInfo.SQLServerException.getLineNumber: has a value above Integer.MAX_VALUE: " + lineNumber);
+				long lineNumber = e.getLineNumber();
+				if (lineNumber < Integer.MAX_VALUE)
+					_lineNum = (int) lineNumber;
+				else
+					throw new RuntimeException("CommonEedInfo.SQLServerException.getLineNumber: has a value above Integer.MAX_VALUE: " + lineNumber);
+					
+				_supportsTranState = false;
+				_supportsEedParams = false;
 				
-			_supportsTranState = false;
-			_supportsEedParams = false;
-			
-			_hasEedInfoProperties = true;
+				_hasEedInfoProperties = true;
+			}
 		}
 //		else if (sqlex instanceof JtdsEedInfo) // Message from *modified* JTDS
 //		{

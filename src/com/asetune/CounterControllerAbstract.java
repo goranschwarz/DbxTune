@@ -1066,6 +1066,7 @@ implements ICounterController
 		String  udcGraphTypeStr     = conf.getProperty(startKey + "graph.type", "byCol");
 		String  udcGraphName        = conf.getProperty(startKey + "graph.name");
 		String  udcGraphLabel       = conf.getProperty(startKey + "graph.label");
+		String  udcGraphProps       = conf.getProperty(startKey + "graph.props");
 //		String  udcGraphCategory    = conf.getProperty(startKey + "graph.category");
 		String  udcGraphMenuLabel   = conf.getProperty(startKey + "graph.menuLabel");
 		String  udcGraphDataCols    = conf.getProperty(startKey + "graph.data.cols");
@@ -1159,6 +1160,7 @@ implements ICounterController
 				udcGraphName,           // Name of the graph
 				udcGraphMenuLabel,      // Menu Checkbox text
 				udcGraphLabel,          // udcGraphLabel
+				udcGraphProps,          // udcGraphProps
 				udcGraphDataLabelsArr,  // Labels for each plotline
 				udcGraphSeriesLabelType,// seriesLabelType             LabelType.Static or LabelType.Dynamic
 				TrendGraphDataPoint.Category.OTHER,

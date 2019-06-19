@@ -171,6 +171,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_XXX,
 			"Dummy Graph", 	                        // Menu CheckBox text
 			"Dummy Graph showing hour, minute, second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Hour", "Minute", "Second"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,
@@ -183,6 +184,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU,
 			"CPU Summary", 	                        // Menu CheckBox text
 			"CPU Summary, using property('ProcessCPUSystem') and property('ProcessCPUUser') ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			new String[] { "System+User CPU", "System CPU", "User CPU" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -195,6 +197,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_NW_PACKET,
 			"Network Packets received/sent", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "PacketsReceived", "PacketsSent" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -207,6 +210,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMMITS,
 			"Commits", 	                            // Menu CheckBox text
 			"Commits per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Commits" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -219,6 +223,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REQUESTS,
 			"RequestsReceived", 	            // Menu CheckBox text
 			"RequestsReceived per second ("+GROUP_NAME+"->"+SHORT_NAME+")", 		// Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "ConnectionsActive", "OperationsWaiting", "OperationsActive", "OperationsActiveLoadTableStatements" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,

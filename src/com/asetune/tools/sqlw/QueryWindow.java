@@ -398,7 +398,10 @@ public class QueryWindow
 	
 	public final static String  PROPKEY_sendCommentsOnly       = PROPKEY_APP_PREFIX + "send.onlyComments";
 	public final static boolean DEFAULT_sendCommentsOnly       = false;
-	
+
+	public final static String  PROPKEY_replaceFakeQuotedIdent = PROPKEY_APP_PREFIX + "replaceFakeQuotedIdentifiers";
+	public final static boolean DEFAULT_replaceFakeQuotedIdent = false;
+
 	public final static String  PROPKEY_lastFileNameSaveMax    = "LastFileList.saveSize";
 	public final static int     DEFAULT_lastFileNameSaveMax    = 20;
 
@@ -536,6 +539,7 @@ public class QueryWindow
 	private JCheckBox         _jdbcAutoCommit_chk         = new JCheckBox("Auto-commit", DEFAULT_jdbcAutoCommit);
 	private JMenuItem         _sqlBatchTermDialog_mi      = new JMenuItem        ("Change SQL Batch Terminator");
 	private JCheckBoxMenuItem _sendCommentsOnly_chk       = new JCheckBoxMenuItem("Send SQL if only comments", DEFAULT_sendCommentsOnly);
+	private JCheckBoxMenuItem _replaceFakeQuotedId_chk    = new JCheckBoxMenuItem("Replace Fake Quoted Identifiers", DEFAULT_replaceFakeQuotedIdent);
 	private JCheckBoxMenuItem _tableTooltipOnCells_chk    = new JCheckBoxMenuItem("Use Table Tooltip on Cells", ResultSetJXTable.DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS);
 
 	private JButton           _appOptions_but             = new JButton("Options");
@@ -1851,6 +1855,11 @@ public class QueryWindow
 				"If the SQL Statements just consists of Comments, should we still send the SQL statement or not.<br>" +
 				"Some vendors throws an SQLException if the send sql-batch is just comments.<br>" +
 				"</html>");
+		_replaceFakeQuotedId_chk.setToolTipText(
+				"<html>" +
+				"Before Execution: Replaces Fake Quoted Identifiers '[' and ']' into DBMS Vendor specific characters.<br>" +
+				"Note: Used 'Print Sent SQL Statement' to view the actual text sent to the DBMS.<br>" +
+				"</html>");
 		_sqlBatchTermDialog_mi.setToolTipText(
 				"<html>" +
 				"Open a dialog where you can change the string used to send a SQL Batch to the server." +
@@ -2586,6 +2595,7 @@ public class QueryWindow
 //		_jdbcAutoCommit_chk         .setVisible(  conf.getBooleanProperty(PROPKEY_jdbcAutoCommitShow,                              DEFAULT_jdbcAutoCommitShow) );
 		_sendCommentsOnly_chk       .setSelected( conf.getBooleanProperty(PROPKEY_sendCommentsOnly,                                DEFAULT_sendCommentsOnly) );
 		_rsInTabs_chk               .setSelected( conf.getBooleanProperty(PROPKEY_rsInTabs,                                        DEFAULT_rsInTabs) );
+		_replaceFakeQuotedId_chk    .setSelected( conf.getBooleanProperty(PROPKEY_replaceFakeQuotedIdent,                          DEFAULT_replaceFakeQuotedIdent) );
 		_tableTooltipOnCells_chk    .setSelected( conf.getBooleanProperty(ResultSetJXTable.PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS, ResultSetJXTable.DEFAULT_TABLE_TOOLTIP_SHOW_ALL_COLUMNS) );
 
 		_cmdHistoryFilename     = conf.getProperty(PROPKEY_historyFileName,        DEFAULT_historyFileName);
@@ -2635,6 +2645,7 @@ public class QueryWindow
 //		conf.setProperty(PROPKEY_jdbcAutoCommitShow,                              _jdbcAutoCommit_chk         .isVisible());
 		conf.setProperty(PROPKEY_sendCommentsOnly,                                _sendCommentsOnly_chk       .isSelected());
 		conf.setProperty(PROPKEY_rsInTabs,                                        _rsInTabs_chk               .isSelected());
+		conf.setProperty(PROPKEY_replaceFakeQuotedIdent,                          _replaceFakeQuotedId_chk    .isSelected());
 		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_TOOLTIP_SHOW_ALL_COLUMNS, _tableTooltipOnCells_chk.isSelected());
 		
 		conf.setProperty(PROPKEY_historyFileName,                                 _cmdHistoryFilename);
@@ -6514,7 +6525,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 	 */
 	private boolean setCurrentDb(String dbname)
 	{
-//System.out.println("setCurrentDb('"+dbname+"')");
+//System.out.println("setCurrentDb('"+dbname+"'), isCompletionProviderAbstractSql="+(_compleationProviderAbstract instanceof CompletionProviderAbstractSql)+", _compleationProviderAbstract="+_compleationProviderAbstract);
 		if (dbname == null || (dbname!=null && dbname.trim().equals("")))
 			return false;
 
@@ -6850,13 +6861,21 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		{
 			ArrayList<String> list = new ArrayList<String>();
 
-			ResultSet rs = conn.getMetaData().getCatalogs();
-			while (rs.next())
+//			ResultSet rs = conn.getMetaData().getCatalogs();
+//			while (rs.next())
+//			{
+//				String dbname = rs.getString(1);
+//				list.add(dbname);
+//			}
+//			rs.close();
+			try ( ResultSet rs = conn.getMetaData().getCatalogs() )
 			{
-				String dbname = rs.getString(1);
-				list.add(dbname);
+				while (rs.next())
+				{
+					String dbname = rs.getString(1);
+					list.add(dbname);
+				}
 			}
-			rs.close();
 			
 			return list;
 		}
@@ -8073,6 +8092,12 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					_logger.warn("Problem trying to figgure out if this is a 'comment only' batch. Just skipping this and continuing... Caught="+t);
 				}
 				
+				// Replace FAKE Quoted Identifiers '[' and ']' with DBMS Vendor specific chars 
+				if ( StringUtil.hasValue(sql) && (_replaceFakeQuotedId_chk.isSelected() || sr.getOption_replaceFakeQuotedIdent()) )
+				{
+					sql = _conn.quotifySqlString(sql);
+				}
+
 				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+batchCount+", starting at row "+(sr.getSqlBatchStartLine()+1) );
 
 				goTabbedPane = sr.hasOption_asTabbedPane();
@@ -8339,7 +8364,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 									
 									if (asPlainText)
 									{
-										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
+										rstm = new ResultSetTableModel(rs, true, sql, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 
 										execReadRsSum += rstm.getResultSetReadTime();
@@ -8362,7 +8387,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 									else
 									{
 										// Convert the ResultSet into a TableModel, which fits on a JTable
-										rstm = new ResultSetTableModel(rs, true, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
+										rstm = new ResultSetTableModel(rs, true, sql, sql, limitRsRowsCount, bottomRsRowsCount, noData, sr.getPipeCmd(), progress);
 										putSqlWarningMsgs(rstm.getSQLWarning(), _resultCompList, sr.getPipeCmd(), "-after-ResultSetTableModel()-tm.getSQLWarningList()-", sr.getSqlBatchStartLine(), startRowInSelection, sql);
 					
 										execReadRsSum += rstm.getResultSetReadTime();
@@ -11416,7 +11441,8 @@ checkPanelSize(_resPanel, comp);
 //		_jdbcAutoCommit_chk        .setText("<html><b>JDBC AutoCommit</b>                - <i><font color='green'>Enable/disable AutoCommit in JDBC</font></i></html>");
 		_sendCommentsOnly_chk      .setText("<html><b>Send <i>empty</i> SQL Batches</b>  - <i><font color='green'>If SQL is only comments, do send it to the server.</font></i></html>");
 		_sqlBatchTermDialog_mi     .setText("SET_LATER: _sqlBatchTermDialog_mi");
-		_tableTooltipOnCells_chk   .setText("<html><b>Use Table Tooltip on Cells</b>     - <i><font color='green'>Display all columns in a table tooltip when hovering over a cell.</font></i></html>");
+		_replaceFakeQuotedId_chk   .setText("<html><b>Replace Fake Quoted Identifiers</b> - <i><font color='green'>Replaces '[' and ']' chars into DBMS Specific.</font></i> 'go rfqi'</html>");
+		_tableTooltipOnCells_chk   .setText("<html><b>Use Table Tooltip on Cells</b>      - <i><font color='green'>Display all columns in a table tooltip when hovering over a cell.</font></i></html>");
 
 		// For dialogs set special icon
 		_limitRsRowsReadDialog_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/settings_dialog_12.png"));
@@ -11439,6 +11465,7 @@ checkPanelSize(_resPanel, comp);
 		popupMenu.add(_getObjectTextOnError_chk);
 //		popupMenu.add(_jdbcAutoCommit_chk);
 		popupMenu.add(_sendCommentsOnly_chk);
+		popupMenu.add(_replaceFakeQuotedId_chk);
 		popupMenu.add(_tableTooltipOnCells_chk);
 //		popupMenu.add(new JSeparator());
 		
@@ -11509,6 +11536,16 @@ checkPanelSize(_resPanel, comp);
 		
 		// Action CheckBox: _rsShowRowNumber_chk
 		_rsShowRowNumber_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				saveProps();
+			}
+		});
+		
+		// Action CheckBox: _replaceFakeQuotedId_chk
+		_replaceFakeQuotedId_chk.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e)

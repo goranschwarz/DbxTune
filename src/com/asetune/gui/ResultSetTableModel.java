@@ -85,7 +85,11 @@ public class ResultSetTableModel
 	public static final String  SQLSERVER_JSON_COLUMN_LABEL     = "JSON_F52E2B61-18A1-11d1-B105-00805F49916B";
 	public static final String  PROPKEY_SqlServerJconConcatRows = "ResultSetTableModel.sqlserver.json.concat.rows";
 	public static final boolean DEFAULT_SqlServerJconConcatRows = true;
-	
+
+	public static final String  PROPKEY_TimestampToStringFmt = "ResultSetTableModel.Timestamp.toString.format";
+	public static final String  DEFAULT_TimestampToStringFmt = null; // According to SimpleDateFormat... if null just use Timestamp default 
+	public static final String  DEFAULT_TimestampToStringFmt_YMD_HMS = "yyyy-MM-dd HH:mm:ss";
+
 	private int	_numcols;
 	
 	private ArrayList<String>            _rsmdRefTableName      = new ArrayList<String>();  // rsmd.getXXX(c); 
@@ -116,6 +120,9 @@ public class ResultSetTableModel
 	/** when using getValueAsXxx: if null values return a "empty" string or in numbers return a 0 */
 	private boolean                      _nullValuesAsEmptyInGetValueAsType = false;
 	
+	private String                       _toStringTimestampFormat = Configuration.getCombinedConfiguration().getProperty(PROPKEY_TimestampToStringFmt, DEFAULT_TimestampToStringFmt);
+	
+	private String                       _originSqlText;
 
 	/** Set the name of this table model, could be used for debugging or other tracking purposes */
 	public void setName(String name) { _name = name; }
@@ -128,6 +135,9 @@ public class ResultSetTableModel
 	public void    setNullValuesAsEmptyInGetValuesAsType(boolean val) { _nullValuesAsEmptyInGetValueAsType = val; } 
 	public boolean getNullValuesAsEmptyInGetValuesAsType()            { return _nullValuesAsEmptyInGetValueAsType; } 
 
+	public void    setSqlText(String sql) { _originSqlText = sql; }
+	public String  getSqlText()           { return _originSqlText; }
+	
 	/**
 	 * INTERNAL: used by: <code>public static String getResultSetInfo(ResultSetTableModel rstm)</code>
 	 * @param rsmd
@@ -136,7 +146,7 @@ public class ResultSetTableModel
 	private ResultSetTableModel(ResultSetMetaData rsmd) 
 	throws SQLException
 	{
-		this(null, rsmd, false, "getResultSetInfo", -1, -1, false, null, null);
+		this(null, rsmd, false, "getResultSetInfo", null, -1, -1, false, null, null);
 	}
 
 	private ResultSetTableModel(String name) 
@@ -154,19 +164,24 @@ public class ResultSetTableModel
 	public ResultSetTableModel(ResultSet rs, String name) 
 	throws SQLException
 	{
-		this(rs, true, name);
+		this(rs, true, name, null);
 	}
-	public ResultSetTableModel(ResultSet rs, boolean editable, String name) 
+	public ResultSetTableModel(ResultSet rs, String name, String sqlText) 
 	throws SQLException
 	{
-		this(rs, editable, name, -1, -1, false, null, null);
+		this(rs, true, name, sqlText);
 	}
-	public ResultSetTableModel(ResultSet rs, boolean editable, String name, int stopAfterXrows, int onlyLastXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name, String sqlText) 
 	throws SQLException
 	{
-		this(rs, rs.getMetaData(), editable, name, stopAfterXrows, onlyLastXrows, noData, pipeCommand, progress);
+		this(rs, editable, name, sqlText, -1, -1, false, null, null);
 	}
-	public ResultSetTableModel(ResultSet rs, ResultSetMetaData rsmd, boolean editable, String name, int stopAfterXrows, int onlyLastXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	public ResultSetTableModel(ResultSet rs, boolean editable, String name, String sqlText, int stopAfterXrows, int onlyLastXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
+	throws SQLException
+	{
+		this(rs, rs.getMetaData(), editable, name, sqlText, stopAfterXrows, onlyLastXrows, noData, pipeCommand, progress);
+	}
+	public ResultSetTableModel(ResultSet rs, ResultSetMetaData rsmd, boolean editable, String name, String sqlText, int stopAfterXrows, int onlyLastXrows, boolean noData, PipeCommand pipeCommand, SqlProgressDialog progress) 
 	throws SQLException
 	{
 		long startTime = System.currentTimeMillis();
@@ -476,6 +491,43 @@ public class ResultSetTableModel
 		_readResultSetTime = (int) (System.currentTimeMillis() - startTime);
 	}
 
+	/**
+	 * Set format (SimpleDateFormat) to format <code>yyyy-MM-dd HH:mm:ss</code> to use when calling toTableString() etc... 
+	 * @param format
+	 */
+	public void setToStringTimestampFormat_YMD_HMS()
+	{
+		_toStringTimestampFormat = DEFAULT_TimestampToStringFmt_YMD_HMS;
+	}
+	/**
+	 * Set format (SimpleDateFormat) to use when calling toTableString() etc... 
+	 * @param format
+	 */
+	public void setToStringTimestampFormat(String format)
+	{
+		_toStringTimestampFormat = format;
+	}
+	/**
+	 * Get format (SimpleDateFormat) to use when calling toTableString() etc... 
+	 */
+	public String getToStringTimestampFormat()
+	{
+		return _toStringTimestampFormat;
+	}
+	/** Get a instance of SimpleDateFormat, with the format string set by: setToStringTimestampFormat(fmtStr) */
+	public SimpleDateFormat getToStringTimestampSdf()
+	{
+		String timestampStrFormat = getToStringTimestampFormat();
+
+		SimpleDateFormat sdf = null;
+		if (StringUtil.hasValue(timestampStrFormat))
+			sdf = new SimpleDateFormat(timestampStrFormat);
+		
+		return sdf;
+	}
+	
+
+	
 	private Object getDataValue(ResultSet rs, int col, int jdbcSqlType) 
 	throws SQLException
 	{
@@ -678,6 +730,19 @@ public class ResultSetTableModel
 		if (grep.isOptV())
 			return !aMatch;
 		return aMatch;
+	}
+
+	/**
+	 * Add/Merge a ResultSetTableModel into the current<br>
+	 * NOTE: This will simply call setModelData(rstm, true);
+	 * @param rstm
+	 * 
+	 * @throws 
+	 */
+	public void add(ResultSetTableModel rstm)
+	throws ModelMissmatchException
+	{
+		setModelData(rstm, true);
 	}
 
 	public static String getColumnTypeName(ResultSetMetaData rsmd, int col)
@@ -1133,6 +1198,11 @@ public class ResultSetTableModel
 		return (String)_rsmdColumnLabel.get(column);
 	}
 
+	public List<String> getColumnNames()
+	{
+		return _rsmdColumnLabel;
+	}
+	
 	public String getRsmdReferencedTableName(int col)
 	{
 		return _rsmdRefTableName.get(col);	
@@ -1220,6 +1290,15 @@ public class ResultSetTableModel
 	@Override
 	public void setValueAt(Object value, int row, int column)
 	{
+	}
+
+	public void setValueAtWithOverride(Object value, int r, int c)
+	{
+		ArrayList<Object> row = _rows.get(r);
+		if (row != null)
+			row.set(c, value);
+		else
+			_logger.warn("setValueAtWithOverride::The row returned NULL. (row="+r+", col="+c+", val='"+value+"')");
 	}
 
 //	public void addTableModelListener(TableModelListener l)
@@ -1506,11 +1585,12 @@ public class ResultSetTableModel
 		ArrayList<Object> row = _rows.get(r);
 		Object o = row.get(c);
 
-		String str;
-		if (o == null)
-			str = "NULL";//return "(NULL)";
-		else
-			str = o.toString(); // Convert it to a string
+		String str = toString(o, "NULL");
+//		String str;
+//		if (o == null)
+//			str = "NULL";//return "(NULL)";
+//		else
+//			str = o.toString(); // Convert it to a string
 
 		int fullSize = getColumnDisplaySize(c);
 		
@@ -1520,11 +1600,11 @@ public class ResultSetTableModel
 			return StringUtil.left(str, fullSize);
 	}
 
-	public static Object tableToString(ResultSetTableModel tm)
-	{
-		// TODO Auto-generated method stub
-		return null;
-	}
+//	public static Object tableToString(ResultSetTableModel tm)
+//	{
+//		// TODO Auto-generated method stub
+//		return null;
+//	}
 
 	/**
 	 * Print all columns for a specific row
@@ -1545,6 +1625,7 @@ public class ResultSetTableModel
 		for (int c=0; c<rowObj.size(); c++)
 		{
 			Object  colObj  = rowObj.get(c);
+			String  strVal  = toString(colObj, NULL_REPLACE);
 			String  colName = _rsmdColumnLabel.get(c);
 			int     colType = _rsmdColumnType.get(c);
 			
@@ -1553,10 +1634,11 @@ public class ResultSetTableModel
 			if (colObj == null)
 			{
 				quote = "";
-				colObj = NULL_REPLACE;
+				//colObj = NULL_REPLACE;
 			}
-
-			sb.append(colName).append("=").append(quote).append(colObj).append(quote).append(", ");
+			
+//			sb.append(colName).append("=").append(quote).append(colObj).append(quote).append(", ");
+			sb.append(colName).append("=").append(quote).append(strVal).append(quote).append(", ");
 		}
 		if (sb.length() > 2)
 			sb.delete(sb.length()-2, sb.length());
@@ -1640,13 +1722,14 @@ public class ResultSetTableModel
 			{
 				String colName = getColumnName(c);
 				Object objVal  = getValueAt(r,c);
-				String strVal = "";
-				if (objVal != null)
-				{
-					strVal = objVal.toString();
-				}
-				else
-					strVal = "NULL";
+				String strVal  = toString(objVal, "NULL");
+//				String strVal = "";
+//				if (objVal != null)
+//				{
+//					strVal = objVal.toString();
+//				}
+//				else
+//					strVal = "NULL";
 
 				sb.append(StringUtil.left(colName, colNameSizeMax)).append(": ");
 				sb.append(strVal).append("\n");
@@ -1658,7 +1741,20 @@ public class ResultSetTableModel
 		return sb.toString();
 	}
 
+//test the DailyReport with a connection to MAXM_DW
 	public String toAsciiTablesVerticalString()
+	{
+		try
+		{
+			return toAsciiTablesVerticalString_fixmeCanCause_OutOfMemoryError();
+		}
+		catch (RuntimeException rte)
+		{
+			_logger.error("Problems in: toAsciiTablesVerticalString()", rte);
+			return "Problems in: toAsciiTablesVerticalString()";
+		}
+	}
+	private String toAsciiTablesVerticalString_fixmeCanCause_OutOfMemoryError()
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
@@ -1678,13 +1774,14 @@ public class ResultSetTableModel
 			{
 				String colName = getColumnName(c);
 				Object objVal  = getValueAt(r,c);
-				String strVal = "";
-				if (objVal != null)
-				{
-					strVal = objVal.toString();
-				}
-				else
-					strVal = "NULL";
+				String strVal = toString(objVal, "NULL");
+//				String strVal = "";
+//				if (objVal != null)
+//				{
+//					strVal = objVal.toString();
+//				}
+//				else
+//					strVal = "NULL";
 
 				String[] row = new String[2];
 				row[0] = colName;
@@ -1740,13 +1837,20 @@ public class ResultSetTableModel
 			for (int c=0; c<cols; c++)
 			{
 				Object objVal = getValueAt(r,c);
-				String strVal = "";
-				if (objVal != null)
-				{
-					strVal = objVal.toString();
-				}
-				if (StringUtil.isNullOrBlank(strVal))
-					strVal = "&nbsp;";
+				String strVal = toString(objVal, "&nbsp;", "&nbsp;");
+//				String strVal = "";
+//				if (objVal != null)
+//				{
+//					strVal = objVal.toString();
+//					
+//					if (objVal instanceof Timestamp && tsSdf != null)
+//					{
+//						Timestamp ts = (Timestamp) objVal;
+//						strVal = tsSdf.format(ts);
+//					}
+//				}
+//				if (StringUtil.isNullOrBlank(strVal))
+//					strVal = "&nbsp;";
 
 				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
 			}
@@ -1757,6 +1861,46 @@ public class ResultSetTableModel
 		sb.append("</table>\n");
 
 		return sb.toString();
+	}
+	
+	public String toString(Object objVal)
+	{
+		return toString(objVal, null, null);
+	}
+	public String toString(Object objVal, String nullReplace)
+	{
+		return toString(objVal, nullReplace, null);
+	}
+	public String toString(Object objVal, String nullReplace, String blankReplace)
+	{
+		String strVal = null;
+		if (objVal != null)
+		{
+			if (objVal instanceof Timestamp)
+			{
+				SimpleDateFormat sdf = getToStringTimestampSdf();
+				if (sdf != null)
+				{
+					strVal = sdf.format( (Timestamp) objVal );
+				}
+			}
+
+			// Nothing is assigned by above logic (timestamp + others)... make a simple "toString()"
+			if (strVal == null)
+			{
+				strVal = objVal.toString();
+			}
+		}
+
+		// Replacement of null values
+		if (strVal == null)
+			strVal = nullReplace;
+
+		// Replacement of null or "blank"
+		if (StringUtil.isNullOrBlank(strVal))
+			strVal = blankReplace;
+
+		return strVal;
 	}
 
 	/**
@@ -1802,7 +1946,8 @@ public class ResultSetTableModel
 			String strVal = "";
 			if (objVal != null)
 			{
-				strVal = objVal.toString();
+//				strVal = objVal.toString();
+				strVal = toString(objVal, NULL_REPLACE);
 				int strValLen = strVal.length(); 
 				if (strValLen > maxStrLen)
 				{
@@ -1871,13 +2016,15 @@ public class ResultSetTableModel
 			{
 				String colName = getColumnName(c);
 				Object objVal  = getValueAt(r,c);
-				String strVal = "";
-				if (objVal != null)
-				{
-					strVal = objVal.toString();
-				}
-				if (StringUtil.isNullOrBlank(strVal))
-					strVal = "&nbsp;";
+				String strVal = toString(objVal, "&nbsp;", "&nbsp;");
+				
+//				String strVal = "";
+//				if (objVal != null)
+//				{
+//					strVal = objVal.toString();
+//				}
+//				if (StringUtil.isNullOrBlank(strVal))
+//					strVal = "&nbsp;";
 
 				// Translate NL to <br> it it's not already a HTML string.
 				// or maybe: wrap it with <pre>"strVal"</pre> instead
@@ -1993,6 +2140,10 @@ public class ResultSetTableModel
 	//-- BEGIN: getValueAsXXXXX using column name
 	//          more methods will be added as they are needed
 	//------------------------------------------------------------
+
+	//-------------------------
+	//---- STRING
+	//-------------------------
 	public String getValueAsString(int mrow, String colName)
 	{
 		return getValueAsString(mrow, colName, true, null);
@@ -2010,7 +2161,23 @@ public class ResultSetTableModel
 
 		return o.toString();
 	}
+	public String getValueAsString(int mrow, int mcol)
+	{
+		return getValueAsString(mrow, mcol, null);
+	}
+	public String getValueAsString(int mrow, int mcol, String defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
 
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? "" : defaultNullValue;
+
+		return o.toString();
+	}
+
+	//-------------------------
+	//---- SHORT
+	//-------------------------
 	public Short getValueAsShort(int mrow, String colName)
 	{
 		return getValueAsShort(mrow, colName, true);
@@ -2039,7 +2206,34 @@ public class ResultSetTableModel
 			return null;
 		}
 	}
+	public Short getValueAsShort(int mrow, int mcol)
+	{
+		return getValueAsShort(mrow, mcol, null);
+	}
+	public Short getValueAsShort(int mrow, int mcol, Short defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
 
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? new Short((short)0) : defaultNullValue;
+
+		if (o instanceof Number)
+			return ((Number)o).shortValue();
+
+		try
+		{
+			return Short.parseShort(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Short value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	//-------------------------
+	//---- INTEGER
+	//-------------------------
 	public Integer getValueAsInteger(int mrow, String colName)
 	{
 		return getValueAsInteger(mrow, colName, true);
@@ -2068,7 +2262,34 @@ public class ResultSetTableModel
 			return null;
 		}
 	}
+	public Integer getValueAsInteger(int mrow, int mcol)
+	{
+		return getValueAsInteger(mrow, mcol, null);
+	}
+	public Integer getValueAsInteger(int mrow, int mcol, Integer defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
 
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? new Integer(0) : defaultNullValue;
+
+		if (o instanceof Number)
+			return ((Number)o).intValue();
+
+		try
+		{
+			return Integer.parseInt(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Integer value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	//-------------------------
+	//---- LONG
+	//-------------------------
 	public Long getValueAsLong(int mrow, String colName)
 	{
 		return getValueAsLong(mrow, colName, true);
@@ -2097,7 +2318,34 @@ public class ResultSetTableModel
 			return null;
 		}
 	}
+	public Long getValueAsLong(int mrow, int mcol)
+	{
+		return getValueAsLong(mrow, mcol, null);
+	}
+	public Long getValueAsLong(int mrow, int mcol, Long defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
 
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? new Long(0) : defaultNullValue;
+
+		if (o instanceof Number)
+			return ((Number)o).longValue();
+
+		try
+		{
+			return Long.parseLong(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading Long value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	//-------------------------
+	//---- TIMESTAMP
+	//-------------------------
 	public Timestamp getValueAsTimestamp(int mrow, String colName)
 	{
 		return getValueAsTimestamp(mrow, colName, true);
@@ -2152,6 +2400,9 @@ public class ResultSetTableModel
 		}
 	}
 
+	//-------------------------
+	//---- BIG DECIMAL
+	//-------------------------
 	public BigDecimal getValueAsBigDecimal(int mrow, String colName)
 	{
 		return getValueAsBigDecimal(mrow, colName, true);
@@ -2180,7 +2431,34 @@ public class ResultSetTableModel
 			return null;
 		}
 	}
+	public BigDecimal getValueAsBigDecimal(int mrow, int mcol)
+	{
+		return getValueAsBigDecimal(mrow, mcol, null);
+	}
+	public BigDecimal getValueAsBigDecimal(int mrow, int mcol, BigDecimal defaultNullValue)
+	{
+		Object o = getValueAsObject(mrow, mcol);
 
+		if (o == null)
+			return _nullValuesAsEmptyInGetValueAsType ? new BigDecimal(0) : defaultNullValue;
+
+		if (o instanceof BigDecimal)
+			return ((BigDecimal)o);
+
+		try
+		{
+			return new BigDecimal(o.toString());
+		}
+		catch(NumberFormatException e)
+		{
+			_logger.warn("Problem reading BigDecimal value for mrow="+mrow+", mcol='"+mcol+"', TableModelNamed='"+getName()+"', returning null. Caught: "+e);
+			return null;
+		}
+	}
+
+	//-------------------------
+	//---- OBJECT
+	//-------------------------
 	public Object getValueAsObject(int mrow, String colName)
 	{
 		return getValueAsObject(mrow, colName, true);

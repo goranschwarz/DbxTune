@@ -174,6 +174,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WaitTime,
 			"iostat: Wait Time(await) per Device",                                           // Menu CheckBox text
 			"iostat: Wait Time(await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -186,6 +187,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ReadWaitTime,
 			"iostat: Read Wait Time(r_await) per Device",                                           // Menu CheckBox text
 			"iostat: Read wait Time(r_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -198,6 +200,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WriteWaitTime,
 			"iostat: Write Wait Time(w_await) per Device",                                           // Menu CheckBox text
 			"iostat: Write wait Time(w_await) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -210,6 +213,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SericeTime,
 			"iostat: Service Time(svctm) per Device",                                           // Menu CheckBox text
 			"iostat: Service Time(svctm) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -222,6 +226,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_QueueLength,
 			"iostat: Avg Queue Length(avgqu-sz) per Device",                                     // Menu CheckBox text
 			"iostat: Avg Queue Length(avgqu-sz) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -234,6 +239,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_BusyPct,
 			"iostat: Busy Percent(utilPct) per Device",                                     // Menu CheckBox text
 			"iostat: Busy Percent(utilPct) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -248,6 +254,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ReadOp,
 			"iostat: Read Operations(readsPerSec) per Device & sec",                                     // Menu CheckBox text
 			"iostat: Read Operations(readsPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -260,6 +267,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WriteOp,
 			"iostat: Write Operations(writesPerSec) per Device & sec",                                     // Menu CheckBox text
 			"iostat: Write Operations(writesPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -272,6 +280,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ReadKb,
 			"iostat: Read KB(kbReadPerSec) per Device & sec",                                     // Menu CheckBox text
 			"iostat: Read KB(kbReadPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -284,6 +293,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_WriteKb,
 			"iostat: Write KB(kbWritePerSec) per Device & sec",                                     // Menu CheckBox text
 			"iostat: Write KB(kbWritePerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -296,6 +306,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_AvgReadKbPerIo,
 			"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device",                                     // Menu CheckBox text
 			"iostat: Avg Read KB/IO(avgReadKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -308,6 +319,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_AvgWriteKbPerIo,
 			"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device",                                     // Menu CheckBox text
 			"iostat: Avg Write KB/IO(avgWriteKbPerIo) per Device ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_KB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,

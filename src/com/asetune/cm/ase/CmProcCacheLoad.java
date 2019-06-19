@@ -123,6 +123,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_REQUEST_PER_SEC,
 			"Procedure Cache Requests", 	                                  // Menu CheckBox text
 			"Number of Procedure Requests per Second (procs,triggers,views) ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Requests", "Loads" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,

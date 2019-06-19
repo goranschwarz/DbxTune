@@ -88,6 +88,7 @@ import org.jdesktop.swingx.JXEditorPane;
 import org.jdesktop.swingx.JXErrorPane;
 import org.jdesktop.swingx.error.ErrorInfo;
 
+import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.swing.GPanel;
 
 import net.java.balloontip.BalloonTip;
@@ -1178,6 +1179,14 @@ public class SwingUtils
 	{
 		return tableToString(jtable, stripHtml, prefixColName, prefixColData, -1, -1, null, true);
 	}
+
+	/** used in tableToString() */
+	private static String REGEXP_NEW_LINE = "\\r?\\n|\\r";
+//	private static String REGEXP_NEW_LINE = "[\n\r]";
+//	private static String REGEXP_NEW_LINE = "\\r?\\n";
+//	private static String REGEXP_NEW_LINE = "\n";
+//	private static String REGEXP_NEW_LINE = "[\\r\\n]+";
+//	private static String REGEXP_NEW_LINE = "[\\n\\x0B\\f\\r]+";
 	/**
 	 * Turn a JTable's TableModel into a String table, can be used for putting into the copy/paste buffer.
 	 * 
@@ -1200,13 +1209,6 @@ public class SwingUtils
 	 * Rows 2
 	 * </pre>
 	 */
-	private static String REGEXP_NEW_LINE = "\\r?\\n|\\r";
-//	private static String REGEXP_NEW_LINE = "[\n\r]";
-//	private static String REGEXP_NEW_LINE = "\\r?\\n";
-//	private static String REGEXP_NEW_LINE = "\n";
-//	private static String REGEXP_NEW_LINE = "[\\r\\n]+";
-//	private static String REGEXP_NEW_LINE = "[\\n\\x0B\\f\\r]+";
-
 	public static String tableToString(JTable jtable, boolean stripHtml, String[] prefixColName, Object[] prefixColData, int firstRow, int lastRow, int[] justRowNumbers, boolean printNumOfRowsAtEnd)
 	{
 		String colSepOther = "+";
@@ -1219,8 +1221,21 @@ public class SwingUtils
 		ArrayList<String>       tableHead = new ArrayList<String>();
 		ArrayList<List<Object>> tableData = new ArrayList<List<Object>>();
 
+//		int expSize = 0; // Try to calculate an expected size for the whole table so we can exit early if it gets to big
 		StringBuilder sb = new StringBuilder();
 
+//		int maxCellStrLen = 1*1024*1024; // 1MB
+		int maxCellStrLen = 20*1024; // 20KB
+
+		System.gc();
+		try { Thread.sleep(15); } catch(InterruptedException ignore) {} // Sleep a while for Garbage Collector can work...
+		long maxStrBufLen  = Runtime.getRuntime().freeMemory() / 3;
+//		long maxStrBufLen  = Runtime.getRuntime().maxMemory() / 8;
+//		long maxStrBufLen  = 500*1024*1024; // 500MB   or grab free memory / 3
+		
+		int     truncateCellStrLenCount      = 0; // if cells has been truncated
+		boolean truncateOutputBufferHappened = false; // if StringBuilder has been truncated
+		
 		boolean doPrefix = false;
 		if (prefixColName != null && prefixColData != null)
 		{
@@ -1243,6 +1258,8 @@ public class SwingUtils
 
 		for (int c=0; c<cols; c++)
 			tableHead.add(jtable.getColumnName(c));
+
+		TableModel tm = jtable.getModel();
 
 		//------------------------------------
 		// Copy ROWS (from firstRow to lastRow)
@@ -1290,12 +1307,36 @@ public class SwingUtils
 					if (str.indexOf('\t') >= 0)
 						str = str.replace("\t", "        ");
 
+					// Truncate if it's to long
+					if (str.length() > maxCellStrLen)
+					{
+						str = str.substring(0, maxCellStrLen) + "... ---WARNING--- String truncated after " + maxCellStrLen + " chars ---WARNING---";
+						truncateCellStrLenCount++;
+					}
+					
 					// if we have a "multiple row/line cell"
 					if (str.indexOf('\r') >= 0 || str.indexOf('\n') >= 0)
-						obj = str.split(REGEXP_NEW_LINE); // object "type" would be String[]
+					{
+						// RTrim - Remove trailing blanks (if there is a lot of blanks at the end of each rows)
+						String[] sa = str.split(REGEXP_NEW_LINE); // object "type" would be String[]
+						for (int i=0; i<sa.length; i++)
+							sa[i] = StringUtil.rtrim2(sa[i]);
+
+						obj = sa;
+					}
 					else
 						obj = str;
 				}
+				else
+				{
+					// if the TableModel is of ResultSetTableModel... let's use that DataType "converter/format" (example for Timestamp values)  
+					if (tm instanceof ResultSetTableModel)
+					{
+						ResultSetTableModel rstm = (ResultSetTableModel) tm;
+						obj = rstm.toString(obj, null);
+					}
+				}
+				
 				row.add(obj);
 			}
 			
@@ -1333,7 +1374,7 @@ public class SwingUtils
 				rowColCellLineCount[r][c] = 0;
 				if (cellObj instanceof String[])
 				{
-					String[]sa = (String[]) cellObj;
+					String[] sa = (String[]) cellObj;
 					tableHasMultiLineCells = true;
 
 					rowColCellLineCount[r][c] = sa.length;
@@ -1346,7 +1387,6 @@ public class SwingUtils
 					maxLen = Math.max(maxLen, cellStr.length());
 				}
 			}
-			
 			colLength[c] = maxLen;
 		}
 
@@ -1403,7 +1443,7 @@ public class SwingUtils
 				}
 				sb.append(colSepOther).append(newLine);
 			}
-
+//System.out.println("r="+r+", sb.length="+sb.length()+", maxCellLineCountOnThisRow="+maxCellLineCountOnThisRow);
 			// NO multiple lines for any cells on this row
 			if (maxCellLineCountOnThisRow == 0)
 			{
@@ -1423,9 +1463,11 @@ public class SwingUtils
 			{
 				for (int l=0; l<maxCellLineCountOnThisRow; l++)
 				{
+//System.out.println("-------> r="+r+", l="+l+", sb.length="+sb.length()+", maxCellLineCountOnThisRow="+maxCellLineCountOnThisRow);
 					// |col1|col2   |col3|\n
 					for (int c=0; c<cols; c++)
 					{
+//System.out.println("r="+r+", c="+c+", l="+l+", sb.length="+sb.length()+", maxCellLineCountOnThisRow="+maxCellLineCountOnThisRow);
 						Object cellObj = tableData.get(r).get(c);
 						String cellStr = cellObj == null ? "" : cellObj.toString();
 
@@ -1462,7 +1504,20 @@ public class SwingUtils
 						}
 					}
 					sb.append(colSepData).append(newLine);
+
+					if (sb.length() > maxStrBufLen)
+						break;
 				}
+			}
+			
+			if (sb.length() > maxStrBufLen)
+			{
+				truncateOutputBufferHappened = true;
+
+				sb.append(newLine);
+				sb.append("At row: ").append(r).append(" WARNING: Output buffer is getting to large... stopping appending rows... String buffer size=").append(maxStrBufLen);
+				sb.append(newLine);
+				break;
 			}
 		}
 
@@ -1478,6 +1533,12 @@ public class SwingUtils
 		sb.append(colSepOther).append(newLine);
 		if (printNumOfRowsAtEnd)
 			sb.append("Rows ").append(copiedRows).append(newLine);
+		
+		if (truncateCellStrLenCount > 0)
+			sb.append("--- WARNING --- WARNING --- WARNING --- ").append(truncateCellStrLenCount).append(" Cells was truncated because they were to large --- WARNING --- WARNING --- WARNING ---").append(newLine);
+		
+		if (truncateOutputBufferHappened)
+			sb.append("--- WARNING --- WARNING --- WARNING --- ").append(" Output buffer was truncated --- WARNING --- WARNING --- WARNING ---").append(newLine);
 		
 		return sb.toString();
 	}

@@ -155,6 +155,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_XACT_SUCCEEDED,
 			"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Menu CheckBox text
 			"DSI: Number of Transactions Succeeded (col 'Xacts_succeeded', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -167,6 +168,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CMD_READ,
 			"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Menu CheckBox text
 			"DSI: Number of Commands Read (col 'Cmds_read', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -179,6 +181,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CMD_PARSED_BY_SQT,
 			"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Menu CheckBox text
 			"DSI: Number of Commands Parsed by SQT before being read by the DSI queue (col 'Cmds_parsed_by_sqt', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,

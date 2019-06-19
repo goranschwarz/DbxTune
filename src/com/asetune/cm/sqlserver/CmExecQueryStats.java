@@ -97,6 +97,15 @@ extends CountersModel
 //		"last_rows",
 //		"min_rows",
 //		"max_rows",
+		"total_dop",
+		"total_grant_kb",
+		"total_used_grant_kb",
+		"total_ideal_grant_kb",
+		"total_reserved_threads",
+		"total_used_threads",
+		"total_columnstore_segment_reads",
+		"total_columnstore_segment_skips",
+		"total_spills",
 		"_last_column_name_only_used_as_a_place_holder_here_"
 		};
 
@@ -350,7 +359,7 @@ extends CountersModel
 //fixme: maybe add an object for every column here, like new ObjectLookupSortPredicate("execution_count", GT, ABS|DIFF|RATE, 0);
 //This so we dont extract so many "extra objects"...
 
-		String[] sa = {"execution_count", "total_logical_reads", "total_elapsed_time"};
+		String[] sa = {"execution_count", "total_worker_time", "total_logical_reads", "total_elapsed_time"};
 		return sa;
 	}
 }

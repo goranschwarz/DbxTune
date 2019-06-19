@@ -227,6 +227,10 @@ extends CountersModel
 		// ASE cluster edition
 		String InstanceID = "";
 
+		// Split ObjectName *ssXXXXXXXXXX_YYYYYYYYYYss* into SSqlId=X and Hashkey=Y  only after 15.0, since bigint was introduced in 15.0
+		String SSQLID  = "";
+		String Hashkey = "";
+		
 		// ASE 15.5 or (15.0.3 in cluster edition) 
 		String RequestCnt         = "";
 		String TempdbRemapCnt     = "";
@@ -261,10 +265,28 @@ extends CountersModel
 		String AvgSnapJITTime       = ""; // xxx / SnapExecutionCount
 		String AvgSnapExecutionTime = ""; // xxx / SnapExecutionCount
 		String ase160_sp2_nl      = "";
+
+//---------------------------------------------------------------------------------------------------------------------------
+//FIXME: Add one of the following to break ObjectName into SSQLID and Hashkey to easier sort/look for hashkey duplicates...
+//---------------------------------------------------------------------------------------------------------------------------
+//		CASE WHEN ObjectName like '*%' THEN convert(bigint, substring(ObjectName, 4, 10)) ELSE null END as SSQLID, 
+//		CASE WHEN ObjectName like '*%' THEN convert(bigint, substring(ObjectName, 15, 10)) ELSE null END as Hashkey, 
+//
+// as String instead, if bigint isn't supported, or if "jxtable sorting" in combination with NULL values are cases problems...
+//		CASE WHEN ObjectName like '*%' THEN substring(ObjectName, 4, 10) ELSE null END as SSQLID_str, 
+//		CASE WHEN ObjectName like '*%' THEN substring(ObjectName, 15, 10) ELSE null END as Hashkey_str, 
+//---------------------------------------------------------------------------------------------------------------------------
 		
 		if (isClusterEnabled)
 		{
 			InstanceID = "InstanceID, ";
+		}
+
+		if (srvVersion > Ver.ver(15,0))
+		{
+			// Split ObjectName *s{s|q}XXXXXXXXXX_YYYYYYYYYYss* into SSqlId=X and Hashkey=Y  only after 15.0, since bigint was introduced in 15.0
+			SSQLID  = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName,  4, 10)) ELSE -1 END as SSQLID, \n";
+			Hashkey = "CASE WHEN ObjectName like '*s%' THEN convert(bigint, substring(ObjectName, 15, 10)) ELSE -1 END as Hashkey, \n";
 		}
 
 		if (srvVersion >= Ver.ver(15,5) || (srvVersion >= Ver.ver(15,0,3) && isClusterEnabled) )
@@ -318,7 +340,10 @@ extends CountersModel
 
 		cols = 
 			InstanceID + 
-			"PlanID, DBName, ObjectName, ObjectType, " + Active + "MemUsageKB, CompileDate, \n" + 
+			"PlanID, DBName, ObjectName, \n" +
+			SSQLID +
+			Hashkey +
+			"ObjectType, " + Active + "MemUsageKB, CompileDate, \n" + 
 //			"CompileAgeInSec=datediff(ss, CompileDate, getdate()), " +
 			"CompileAgeInSec = CASE WHEN datediff(day, CompileDate, getdate()) >= 24 THEN -1 ELSE  datediff(ss, CompileDate, getdate()) END, " +
 			ase1550_nl + RequestCnt + TempdbRemapCnt + AvgTempdbRemapTime +

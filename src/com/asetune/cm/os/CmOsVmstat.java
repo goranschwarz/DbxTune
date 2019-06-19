@@ -118,6 +118,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_PROCS_USAGE,
 			"vmstat: Processes Usage",                                // Menu CheckBox text
 			"vmstat: Processes Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -130,6 +131,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SWAP_USAGE,
 			"vmstat: Swap Usage",                                // Menu CheckBox text
 			"vmstat: Swap Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -142,6 +144,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_USAGE,
 			"vmstat: Memory Usage",                                // Menu CheckBox text
 			"vmstat: Memory Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -153,6 +156,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_SWAP_IN_OUT,
 			"vmstat: Swap In/Out per sec",                                // Menu CheckBox text
 			"vmstat: Swap In/Out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -164,6 +168,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_IO_READ_WRITE,
 			"vmstat: IO Read/Write or blk-in/out per sec",                                // Menu CheckBox text
 			"vmstat: IO Read/Write or blk-in/out per sec ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -176,6 +181,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_CPU_USAGE,
 			"vmstat: CPU Usage",                                // Menu CheckBox text
 			"vmstat: CPU Usage ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,

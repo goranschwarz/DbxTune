@@ -139,6 +139,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TRANS_PROCESSED,
 			"DIST: Number of Transactions (col 'TransProcessed', per second)", // Menu CheckBox text
 			"DIST: Number of Transactions (col 'TransProcessed', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -151,6 +152,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CMD_PROCESSED,
 			"DIST: Number of Commands (col 'CmdsProcessed', per second)", // Menu CheckBox text
 			"DIST: Number of Commands (col 'CmdsProcessed', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OPERATIONS,

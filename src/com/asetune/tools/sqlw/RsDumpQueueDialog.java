@@ -2183,7 +2183,7 @@ System.out.println("TO TABLE - begin");
 						_dumpQueueTxt.setText("");
 
 						// Convert the ResultSet into a TableModel, which fits on a JTable
-						final ResultSetTableModel tm = new ResultSetTableModel(rs, true, rcl);
+						final ResultSetTableModel tm = new ResultSetTableModel(rs, true, rcl, rcl);
 //System.out.println("ResultSetTableModel.toTableString():\n"+tm.toTableString());
 
 						// This is NOT safe to do in here, but I'm tired...

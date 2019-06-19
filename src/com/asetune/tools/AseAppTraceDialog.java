@@ -2620,7 +2620,7 @@ implements ActionListener, CaretListener, FocusListener, FileTail.TraceListener,
 				Statement stmt = conn.createStatement();
 				ResultSet rs = stmt.executeQuery(sql);
 
-				ResultSetTableModel rstm = new ResultSetTableModel(rs, false, sql);
+				ResultSetTableModel rstm = new ResultSetTableModel(rs, false, sql, sql);
 
 				rs.close();
 				stmt.close();

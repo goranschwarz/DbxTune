@@ -136,6 +136,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE2,
 			"Memory overview",                     // Menu CheckBox text
 			"Memory overview ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "MemoryAllocated", "MemoryMaxAllocated", "MainCacheCurrentSize", "TempCacheCurrentSize", "CurrentCacheSize", "MaxCacheSize", "MinCacheSize"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,

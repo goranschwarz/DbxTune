@@ -148,6 +148,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RW_DISK_IO,
 			"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
 			"Number of Disk Operations (Read+Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -159,6 +160,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_R_DISK_IO,
 			"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
 			"Number of Disk Operations (Read), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -170,6 +172,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_W_DISK_IO,
 			"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
 			"Number of Disk Operations (Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -183,6 +186,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
 			"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -194,6 +198,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_R_SERVICE_TIME,
 			"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Read) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -205,98 +210,13 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_W_SERVICE_TIME,
 			"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
 			"Device IO Service Time (Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
 			false, // visible at start
 			Ver.ver(15,7,0,2), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
-
-
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_RW_DISK_IO,
-//				"Number of Disk Operations (Read+Write), per Second and Device", // Menu CheckBox text
-//				"Number of Disk Operations (Read+Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_R_DISK_IO,
-//				"Number of Disk Operations (Read), per Second and Device", // Menu CheckBox text
-//				"Number of Disk Operations (Read), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_W_DISK_IO,
-//				"Number of Disk Operations (Write), per Second and Device", // Menu CheckBox text
-//				"Number of Disk Operations (Write), per Second and Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_RW_SERVICE_TIME,
-//				"Device IO Service Time (Read+Write), per Device",                 // Menu CheckBox text
-//				"Device IO Service Time (Read+Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				true,  // visible at start
-//				0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_R_SERVICE_TIME,
-//				"Device IO Service Time (Read), per Device",                 // Menu CheckBox text
-//				"Device IO Service Time (Read) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-////				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-////				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,2), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			//-----
-//			tg = new TrendGraph(GRAPH_NAME_W_SERVICE_TIME,
-//				"Device IO Service Time (Write), per Device",                 // Menu CheckBox text
-//				"Device IO Service Time (Write) in Milliseconds, per Device ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//				labels, 
-//				false, // is Percent Graph
-//				this, 
-//				false, // visible at start
-////				15702, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-////				1570020, // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				Ver.ver(15,7,0,2), // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//				-1);   // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
 	}
 
 	@Override

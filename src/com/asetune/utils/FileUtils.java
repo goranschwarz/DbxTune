@@ -729,4 +729,18 @@ public class FileUtils
 			IOUtils.closeQuietly(is);
 		}
 	}
+	
+	/**
+	 * Removed "unwanted" characters for a filename
+	 * 
+	 * @param srvName
+	 * @return
+	 */
+	public static String toSafeFileName(String filename)
+	{
+		if (filename == null)
+			return null;
+
+		 return filename.replaceAll("[\\\\/:*?\"<>|]", "");
+	}
 }

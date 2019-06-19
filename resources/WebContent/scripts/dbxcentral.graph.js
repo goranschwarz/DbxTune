@@ -597,7 +597,7 @@ function dbxTuneGraphSubscribe()
 //--------------------------------------------------------------------
 class DbxGraph
 {
-	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphCategory, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug, initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart)
+	constructor(outerChartDiv, serverName, cmName, graphName, graphLabel, graphProps, graphCategory, isPercentGraph, subscribeAgeInSec, gheight, gwidth, debug, initStartTime, initEndTime, initSampleType, initSampleValue, isMultiDayChart)
 	{
 		// Properties/fields
 		this._serverName        = serverName;
@@ -605,6 +605,7 @@ class DbxGraph
 		this._graphName         = graphName;
 		this._fullName          = cmName + "_" + graphName;
 		this._graphLabel        = graphLabel;
+		this._graphProps        = graphProps;
 		this._graphCategory     = graphCategory;
 		this._isPercentGraph    = isPercentGraph;
 		this._subscribeAgeInSec = subscribeAgeInSec;
@@ -621,6 +622,10 @@ class DbxGraph
 		this._graphHeight = gheight;
 		this._graphWidth  = gwidth;
 
+		// Set the DEFAULT yAxes Label units
+		this._yAxisScaleName   = "default";
+		this._yAxisScaleLabels = ["", " K", " M", " G", " T"];
+
 		this._series = [];
 		this._initialized = false;
 
@@ -631,6 +636,7 @@ class DbxGraph
 				+ ", _graphName        ='" + this._graphName         + "'\n"
 				+ ", _fullName         ='" + this._fullName          + "'\n"
 				+ ", _graphLabel       ='" + this._graphLabel        + "'\n"
+				+ ", _graphProps       ='" + this._graphProps        + "'\n"
 				+ ", _graphCategory    ='" + this._graphCategory     + "'\n"
 				+ ", _isPercentGraph   ='" + this._isPercentGraph    + "'\n"
 				+ ", _subscribeAgeInSec='" + this._subscribeAgeInSec + "'\n"
@@ -643,6 +649,29 @@ class DbxGraph
 				+ ", _isMultiDayChart  ='" + this._isMultiDayChart   + "'\n"
 		);
 				
+
+		// get _yAxisScaleLabels from 'graphProps', which is a JSON String looking like
+		// { "yAxisScaleLabels" : { "name":"normal", "div":"1000", "s0" : "", "s1" : " K",  "s2" : " M",  "s3" : " G", "s4" : " T"} }
+		try {
+			var tmp = JSON.parse(this._graphProps);
+
+			this._yAxisScaleName = tmp.yAxisScaleLabels.name;
+
+			this._yAxisScaleLabels = [];
+			this._yAxisScaleLabels.push(tmp.yAxisScaleLabels.s0);
+			this._yAxisScaleLabels.push(tmp.yAxisScaleLabels.s1);
+			this._yAxisScaleLabels.push(tmp.yAxisScaleLabels.s2);
+			this._yAxisScaleLabels.push(tmp.yAxisScaleLabels.s3);
+			this._yAxisScaleLabels.push(tmp.yAxisScaleLabels.s4);
+
+			if (_debug > 0)
+				console.log("DbxGraph: " + this._fullName + ", _yAxisScaleLabels="+this._yAxisScaleLabels, this._yAxisScaleLabels);
+			
+		} catch(e) {
+			console.log("Creating DbxGraph: problems parsing 'graphProps' = '" + this._graphProps + "'. Caught: " + e, e);
+		}
+		
+
 		
 		let chartLabel = this._graphLabel + " ::: [" + this._serverName + "]";
 		if ( this._isMultiDayChart )
@@ -788,17 +817,34 @@ class DbxGraph
 							beginAtZero: true,  // if true, scale will include 0 if it is not already included.
 							callback: function(value, index, values) 
 							{
-								// Alter numbers larger than 1k
-								if (value >= 1000) {
-									var units = [" K", " M", " G", " T"];
+								// If Percent Graph append a ' %' at the end.
+								if ( thisDbxChart._isPercentGraph ) 
+								{
+									return value + " %";
+								}
 
-									var order = Math.floor(Math.log(value) / Math.log(1000));
+								var divSize = 1000;
+								var units   = thisDbxChart._yAxisScaleLabels;
+								
+								if (thisDbxChart._yAxisScaleName === "bytes" || thisDbxChart._yAxisScaleName === "kb" || thisDbxChart._yAxisScaleName === "mb" || thisDbxChart._yAxisScaleName === "mbit")
+								{
+									divSize = 1024;
+								}
+								
+								// TODO: Possibly in the future: if 'seconds', 'millisec', 'microsec' calculate minute/hour/day (right now thet are Ksec/Msec/Gsec)
+
+								// Alter numbers larger than 1k
+								if (value >= divSize) 
+								{
+								//	var units = ["", " K", " M", " G", " T"];
+
+									var order = Math.floor(Math.log(value) / Math.log(divSize));
 
 									// TODO: check more than one label to decide if we should use decimals for all labels or just this one...  
 									
-									var unitname = units[(order - 1)];
+									var unitname = units[order];
 									//var num = Math.floor(value / 1000 ** order);
-									var num = (value / 1000 ** order).toFixed(1).replace(/\.0$/, '');
+									var num = (value / divSize ** order).toFixed(1).replace(/\.0$/, '');
 
 									// output number remainder + unitname
 									return num + unitname;
@@ -806,7 +852,9 @@ class DbxGraph
 
 								// return formatted original number
 								// Use ChartJS default method for this, otherwise 1.0 till be 1 etc...
-								return Chart.Ticks.formatters.linear(value, index, values);
+								var defaultFormatStr = Chart.Ticks.formatters.linear(value, index, values);
+
+								return defaultFormatStr + units[0];
 
 								//return value.toFixed(1);
 								//return value.toFixed(1).replace(/\.0$/, '');
@@ -1283,6 +1331,7 @@ class DbxGraph
 	getGraphName()       { return this._graphName; }
 	getFullName()        { return this._fullName; }
 	getGraphLabel()      { return this._graphLabel; }
+	getGraphProps()      { return this._graphProps; }
 	getGraphCategory()   { return this._graphCategory; }
 
 	getInitStartTime()   { return this._initStartTime;   }
@@ -2127,6 +2176,7 @@ function dbxTuneLoadCharts(destinationDivId)
 							entry.cmName,
 							entry.graphName,
 							entry.graphLabel,
+							entry.graphProps,
 							entry.graphCategory,
 							entry.percentGraph,
 							subscribeAgeInSec,
@@ -2171,6 +2221,7 @@ function dbxTuneLoadCharts(destinationDivId)
 							entry.cmName,
 							entry.graphName,
 							entry.graphLabel,
+							entry.graphProps,
 							entry.graphCategory,
 							entry.percentGraph,
 							subscribeAgeInSec,

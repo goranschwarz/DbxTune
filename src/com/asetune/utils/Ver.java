@@ -885,6 +885,14 @@ public class Ver
 		}
 	}
 
+	public static long aseVersionStringToNumber(String versionStr)
+	{
+		if (StringUtil.isNullOrBlank(versionStr))
+			return 0;
+
+		return sybVersionStringToNumber(versionStr);
+	}
+
 	public static long asaVersionStringToNumber(String versionStr)
 	{
 		if (StringUtil.isNullOrBlank(versionStr))

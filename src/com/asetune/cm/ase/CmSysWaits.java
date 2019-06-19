@@ -53,7 +53,6 @@ import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
-import com.asetune.gui.TrendGraph;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
@@ -381,26 +380,49 @@ extends CountersModel
 	//---------------------------------------------------------------------------------
 	//---------------------------------------------------------------------------------
 	
-	public static final String   GRAPH_NAME_EVENT_NAME = "sysWaitName"; 
-	public static final String   GRAPH_NAME_CLASS_NAME = "sysClassName"; 
+//	public static final String   GRAPH_NAME_EVENT_NAME = "sysWaitName"; 
+//	public static final String   GRAPH_NAME_CLASS_NAME = "sysClassName"; 
 	
-	// Keep labels in the same order
-//	private Map<Integer, Integer> _labelOrder_eventId         = new LinkedHashMap<Integer, Integer>();
-//	private Map<String,  Integer> _labelOrder_className       = new LinkedHashMap<String,  Integer>();
-//	private Map<Integer, String>  _labelOrder_aPosToEventName = new LinkedHashMap<Integer, String>();
-//	private Map<Integer, String>  _labelOrder_aPosToClassName = new LinkedHashMap<Integer, String>();
+	public static final String   GRAPH_NAME_EVENT_WAITS = "sysWaits"; 
+	public static final String   GRAPH_NAME_EVENT_WTIME = "sysWTime"; 
+	public static final String   GRAPH_NAME_EVENT_WTPW  = "sysWtpw";
+	
+	public static final String   GRAPH_NAME_CLASS_WAITS = "sysClassWaits"; 
+	public static final String   GRAPH_NAME_CLASS_WTIME = "sysClassWTime"; 
+	public static final String   GRAPH_NAME_CLASS_WTPW  = "sysClassWtpw"; 
 
 	private void addTrendGraphs()
 	{
-////		String[] labels = new String[] { "runtime-replaced" };
-//		String[] labels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
-//		
-//		addTrendGraphData(GRAPH_NAME_EVENT_NAME, new TrendGraphDataPoint(GRAPH_NAME_EVENT_NAME, labels, LabelType.Dynamic));
-//		addTrendGraphData(GRAPH_NAME_CLASS_NAME, new TrendGraphDataPoint(GRAPH_NAME_CLASS_NAME, labels, LabelType.Dynamic));
+//		addTrendGraph(GRAPH_NAME_EVENT_NAME,
+//			"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
+//			"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			null,
+//			LabelType.Dynamic,
+//			TrendGraphDataPoint.Category.WAITS,
+//			false, // is Percent Graph
+//			false, // visible at start
+//			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			160);  // minimum height
+//
+//		// GRAPH
+//		addTrendGraph(GRAPH_NAME_CLASS_NAME,
+//			"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
+//			"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			null,
+//			LabelType.Dynamic,
+//			TrendGraphDataPoint.Category.WAITS,
+//			false, // is Percent Graph
+//			false, // visible at start
+//			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);  // minimum height
 
-		addTrendGraph(GRAPH_NAME_EVENT_NAME,
-			"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
-			"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+		//----------------------------------
+		// GRAPH - EVENTID
+		//----------------------------------
+		addTrendGraph(GRAPH_NAME_EVENT_WAITS,
+			"Server Wait, group by EventID, Waits Average", 	                   // Menu CheckBox text
+			"Server Wait, group by EventID, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -409,10 +431,37 @@ extends CountersModel
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			160);  // minimum height
 
-		// GRAPH
-		addTrendGraph(GRAPH_NAME_CLASS_NAME,
-			"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
-			"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+		addTrendGraph(GRAPH_NAME_EVENT_WTIME,
+			"Server Wait, group by EventID, WaitTime Average", 	                   // Menu CheckBox text
+			"Server Wait, group by EventID, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			160);  // minimum height
+
+		addTrendGraph(GRAPH_NAME_EVENT_WTPW,
+			"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
+			"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			160);  // minimum height
+
+		//----------------------------------
+		// GRAPH - CLASS
+		//----------------------------------
+		addTrendGraph(GRAPH_NAME_CLASS_WAITS,
+			"Server Wait, group by ClassName, Waits Average", 	                     // Menu CheckBox text
+			"Server Wait, group by ClassName, Waits Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -421,34 +470,30 @@ extends CountersModel
 			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
 
-//		// if GUI
-//		if (getGuiController() != null && getGuiController().hasGUI())
-//		{
-//			// GRAPH
-//			TrendGraph tg = null;
-//			tg = new WaitTrendGraph(GRAPH_NAME_EVENT_NAME,
-//					"Server Wait, group by EventID, WaitTimePerWait Average", 	                   // Menu CheckBox text
-//					"Server Wait, group by EventID, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//					labels, 
-//					false, // is Percent Graph
-//					this, 
-//					false, // visible at start
-//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					160);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//
-//			// GRAPH
-//			tg = new WaitTrendGraph(GRAPH_NAME_CLASS_NAME,
-//					"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
-//					"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
-//					labels, 
-//					false, // is Percent Graph
-//					this, 
-//					false, // visible at start
-//					0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
-//					-1);  // minimum height
-//			addTrendGraph(tg.getName(), tg, true);
-//		}
+		addTrendGraph(GRAPH_NAME_CLASS_WTIME,
+			"Server Wait, group by ClassName, WaitTime Average", 	                     // Menu CheckBox text
+			"Server Wait, group by ClassName, WaitTime Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
+		addTrendGraph(GRAPH_NAME_CLASS_WTPW,
+			"Server Wait, group by ClassName, WaitTimePerWait Average", 	                     // Menu CheckBox text
+			"Server Wait, group by ClassName, WaitTimePerWait Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			null,
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);  // minimum height
+
 	}
 	
 	@Override
@@ -468,26 +513,26 @@ extends CountersModel
 			}
 		});
 		
-		//------------------------------------------------------------
-		mi = new JMenuItem("Change DataSource/Column...");
-		list.add(mi);
-		mi.addActionListener(new ActionListener()
-		{
-			@Override
-			public void actionPerformed(ActionEvent e)
-			{
-				String before = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
-
-				WaitCounterSummary.openDataSourceDialog(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
-
-				String after = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
-				if ( ! before.equals(after) )
-				{
-					for (TrendGraph tg : getTrendGraphs().values())
-						tg.resetGraph();
-				}
-			}
-		});
+//		//------------------------------------------------------------
+//		mi = new JMenuItem("Change DataSource/Column...");
+//		list.add(mi);
+//		mi.addActionListener(new ActionListener()
+//		{
+//			@Override
+//			public void actionPerformed(ActionEvent e)
+//			{
+//				String before = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+//
+//				WaitCounterSummary.openDataSourceDialog(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+//
+//				String after = Configuration.getCombinedConfiguration().getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
+//				if ( ! before.equals(after) )
+//				{
+//					for (TrendGraph tg : getTrendGraphs().values())
+//						tg.resetGraph();
+//				}
+//			}
+//		});
 		
 		return list;
 	}
@@ -580,20 +625,10 @@ extends CountersModel
 		if (trendGraphsData.size() == 0)
 			return;
 
-		// Calculate RAW data for BOTH GRAPHS
-//System.out.println("");
-//System.out.println("");
-//System.out.println("");
-//System.out.println("##################################################################################");
-//System.out.println("##################################################################################");
-//System.out.println("##################################################################################");
-
 		Configuration conf = Configuration.getCombinedConfiguration();
 
 		// GET CONFIG: skipEventIdList
 		List<Integer> skipEventIdList = new ArrayList<Integer>();
-//		skipEventIdList.add(250); // SKIP Wait EventId 250 -- waiting for incoming network data
-//		skipEventIdList.add(260); // SKIP Wait EventId 260 -- waiting for date or time in waitfor command
 		String skipEventIdListStr = conf.getProperty(PROPKEY_trendGraph_skipWaitIdList, DEFAULT_trendGraph_skipWaitIdList);
 		for (String str : StringUtil.commaStrToSet(skipEventIdListStr))
 		{
@@ -605,13 +640,6 @@ extends CountersModel
 		String skipEventClassListStr = conf.getProperty(PROPKEY_trendGraph_skipWaitClassList, DEFAULT_trendGraph_skipWaitClassList);
 		List<String> skipEventClassList = StringUtil.commaStrToList(skipEventClassListStr);
 
-//		// GET CONFIG: skipUserNameList
-//		String skipUserNameListStr = conf.getProperty(PROPKEY_trendGraph_skipUserNameList, DEFAULT_trendGraph_skipUserNameList);
-//		List<String> skipUserNameList = StringUtil.commaStrToList(skipUserNameListStr);
-
-//		// GET CONFIG: skipSystemThreads
-//		boolean skipSystemThreads = conf.getBooleanProperty(PROPKEY_trendGraph_skipSystemThreads, DEFAULT_trendGraph_skipSystemThreads);
-
 		// GET CONFIG: Graph Data Source
 		WaitCounterSummary.Type type = WaitCounterSummary.Type.WaitTimePerWait; 
 		String dataSourceStr = conf.getProperty(PROPKEY_trendGraph_dataSource, DEFAULT_trendGraph_dataSource);
@@ -620,176 +648,140 @@ extends CountersModel
 
 		// Create the Summary object
 		WaitCounterSummary wcs = WaitCounterSummary.create(this, skipEventIdList, skipEventClassList, null, false);
-//if (wcs != null)
-//	wcs.debugPrint();
 
 		// loop the graphs
 		for (TrendGraphDataPoint tgdp : trendGraphsData.values()) 
 		{
-//System.out.println("GRAPH_NAME='"+tgdp.getName()+"'.");
-			if (GRAPH_NAME_EVENT_NAME.equals(tgdp.getName()))
-			{
-				// Set/change the Label....
-				TrendGraph tg = getTrendGraph(tgdp.getName());
-				if (tg != null)
-					tg.setChartLabel("Server Wait, group by EventID, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")");
-
-				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
-				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
-				{
-					// Get the type of data we are going to present
-					double dataValue = 0.0;
-					if      (type == WaitCounterSummary.Type.WaitTime       ) dataValue = wce.getAvgWaitTime();
-					else if (type == WaitCounterSummary.Type.Waits          ) dataValue = wce.getAvgWaits();
-					else if (type == WaitCounterSummary.Type.WaitTimePerWait) dataValue = wce.getAvgWaitTimePerWait();
-
-					// set data & label in the array
-					dataMap.put(wce.getEventNameLabel(), dataValue);
-				}
-				if ( ! dataMap.isEmpty() )
-					tgdp.setData(this.getTimestamp(), dataMap);
-
-//				// data & label array size = WaitCounterSummary.size or PRIVIOUS max size
-//				Double[] dArr = new Double[Math.max(wcs.getEventIdSize(), _labelOrder_eventId.size())];
-//				String[] lArr = new String[dArr.length];
+//			if (GRAPH_NAME_EVENT_NAME.equals(tgdp.getName()))
+//			{
+//				// Set/change the Label....
+//				TrendGraph tg = getTrendGraph(tgdp.getName());
+//				if (tg != null)
+//					tg.setChartLabel("Server Wait, group by EventID, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")");
 //
-////System.out.println("dArr & lArr lenth = " + dArr.length + ", wcs.getEventIdSize()="+wcs.getEventIdSize()+", _labelOrder_eventId.size()="+_labelOrder_eventId.size());
+//				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 //				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
 //				{
-//					// aLoc = get arrayPosition for a specific _WaitEventID
-//					// We want to have them in same order...
-//					Integer aPos = _labelOrder_eventId.get(wce.getWaitEventID());
-//					if (aPos == null)
-//					{
-//						aPos = new Integer(_labelOrder_eventId.size());
-//						_labelOrder_eventId.put(wce.getWaitEventID(), aPos);
-//						_labelOrder_aPosToEventName.put(aPos, wce.getEventNameLabel());
-////System.out.println("NEW @_labelOrder_eventId: aPos="+aPos+", wce.getWaitEventID()="+wce.getWaitEventID()+", wce.getEventNameLabel()='"+wce.getEventNameLabel()+"'.");
-//						if (aPos >= dArr.length)
-//						{
-//							Double[] new_dArr = new Double[aPos + 1];
-//							String[] new_lArr = new String[new_dArr.length];
-//							System.arraycopy(dArr, 0, new_dArr, 0, dArr.length);
-//							System.arraycopy(lArr, 0, new_lArr, 0, lArr.length);
-//							dArr = new_dArr;
-//							lArr = new_lArr;
-////System.out.println("####################### NEW EXTEND(new size="+dArr.length+") @_labelOrder_eventId: aPos="+aPos+", wce.getWaitEventID()="+wce.getWaitEventID()+", wce.getEventNameLabel()='"+wce.getEventNameLabel()+"'.");
-//						}
-//					}
-//
 //					// Get the type of data we are going to present
 //					double dataValue = 0.0;
 //					if      (type == WaitCounterSummary.Type.WaitTime       ) dataValue = wce.getAvgWaitTime();
 //					else if (type == WaitCounterSummary.Type.Waits          ) dataValue = wce.getAvgWaits();
 //					else if (type == WaitCounterSummary.Type.WaitTimePerWait) dataValue = wce.getAvgWaitTimePerWait();
 //
-////if (aPos >= dArr.length)
-////System.out.println("XXXXXXXXXXXXXXXX: aPos = " + aPos + ", dArr.length="+dArr.length+", wce.getEventNameLabel()='"+wce.getEventNameLabel()+"'.");
 //					// set data & label in the array
-//					dArr[aPos] = dataValue;
-//					lArr[aPos] = wce.getEventNameLabel();
-//
-//					if (_logger.isDebugEnabled())
-//						_logger.debug("updateGraphData("+GRAPH_NAME_EVENT_NAME+"): aLoc="+aPos+", data="+dArr[aPos]+", label='"+lArr[aPos]+"'.");
-////System.out.println("updateGraphData("+getName()+"."+GRAPH_NAME_EVENT_NAME+"): aLoc="+aPos+", data="+dArr[aPos]+", label='"+lArr[aPos]+"'.");
+//					dataMap.put(wce.getEventNameLabel(), dataValue);
 //				}
+//				if ( ! dataMap.isEmpty() )
+//					tgdp.setData(this.getTimestamp(), dataMap);
 //
-//				// Fill in empty/blank array entries
-//				for (int i=0; i<lArr.length; i++)
+//			}
+//
+//			if (GRAPH_NAME_CLASS_NAME.equals(tgdp.getName()))
+//			{
+//				// Set/change the Label....
+//				TrendGraph tg = getTrendGraph(tgdp.getName());
+//				if (tg != null)
+//					tg.setChartLabel("Server Wait, group by ClassName, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")");
+//
+//				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+//				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
 //				{
-//					if (lArr[i] == null)
-//					{
-//						dArr[i] = 0.0;
-//						lArr[i] = _labelOrder_aPosToEventName.get(i);
-//						if (lArr[i] == null)
-//							lArr[i] = "-fixme-";
-//					}
-//				}
+//					// Get the type of data we are going to present
+//					double dataValue = 0.0;
+//					if      (type == WaitCounterSummary.Type.WaitTime       ) dataValue = wce.getAvgWaitTime();
+//					else if (type == WaitCounterSummary.Type.Waits          ) dataValue = wce.getAvgWaits();
+//					else if (type == WaitCounterSummary.Type.WaitTimePerWait) dataValue = wce.getAvgWaitTimePerWait();
 //
-//				// Set the values
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArr);
-//				tgdp.setData (dArr);
+//					// set data & label in the array
+//					dataMap.put(wce.getClassName(), dataValue);
+//				}
+//				if ( ! dataMap.isEmpty() )
+//					tgdp.setData(this.getTimestamp(), dataMap);
+//			}
+//			
+//			if (_logger.isDebugEnabled())
+//				_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', trendGraphsData="+tgdp);
+//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', trendGraphsData="+tgdp);
+
+		
+
+			//--------------------------------
+			// EventId
+			//--------------------------------
+			if (GRAPH_NAME_EVENT_WAITS.equals(tgdp.getName()))
+			{
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
+				{
+					// set data & label in the array
+					dataMap.put(wce.getEventNameLabel(), wce.getAvgWaits());
+				}
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
 			}
 
-			if (GRAPH_NAME_CLASS_NAME.equals(tgdp.getName()))
+			if (GRAPH_NAME_EVENT_WTIME.equals(tgdp.getName()))
 			{
-				// Set/change the Label....
-				TrendGraph tg = getTrendGraph(tgdp.getName());
-				if (tg != null)
-					tg.setChartLabel("Server Wait, group by ClassName, "+type+" Average ("+GROUP_NAME+"->"+SHORT_NAME+")");
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
+				{
+					// set data & label in the array
+					dataMap.put(wce.getEventNameLabel(), wce.getAvgWaitTime());
+				}
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
+			}
 
+			if (GRAPH_NAME_EVENT_WTPW.equals(tgdp.getName()))
+			{
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+				for (WaitCounterEntry wce : wcs.getEventIdMap().values())
+				{
+					// set data & label in the array
+					dataMap.put(wce.getEventNameLabel(), wce.getAvgWaitTimePerWait());
+				}
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
+			}
+
+			//--------------------------------
+			// CLASS
+			//--------------------------------
+			if (GRAPH_NAME_CLASS_WAITS.equals(tgdp.getName()))
+			{
 				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
 				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
 				{
-					// Get the type of data we are going to present
-					double dataValue = 0.0;
-					if      (type == WaitCounterSummary.Type.WaitTime       ) dataValue = wce.getAvgWaitTime();
-					else if (type == WaitCounterSummary.Type.Waits          ) dataValue = wce.getAvgWaits();
-					else if (type == WaitCounterSummary.Type.WaitTimePerWait) dataValue = wce.getAvgWaitTimePerWait();
-
 					// set data & label in the array
-					dataMap.put(wce.getClassName(), dataValue);
+					dataMap.put(wce.getClassName(), wce.getAvgWaits());
 				}
-				if ( ! dataMap.isEmpty() )
+				if (dataMap.size() > 0)
 					tgdp.setData(this.getTimestamp(), dataMap);
-
-				
-//				// data & label array size = WaitCounterSummary.size or PRIVIOUS max size
-//				Double[] dArr = new Double[Math.max(wcs.getClassNameSize(), _labelOrder_className.size())];
-//				String[] lArr = new String[dArr.length];
-//
-////System.out.println("dArr & lArr lenth = " + dArr.length);
-//				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
-//				{
-//					// aLoc = get arrayPosition for a specific _WaitEventID
-//					// We want to have them in same order...
-//					Integer aPos = _labelOrder_className.get(wce.getClassName());
-//					if (aPos == null)
-//					{
-//						aPos = new Integer(_labelOrder_className.size());
-//						_labelOrder_className.put(wce.getClassName(), aPos);
-//						_labelOrder_aPosToClassName.put(aPos, wce.getClassName());
-//						if (aPos >= dArr.length)
-//						{
-//							Double[] new_dArr = new Double[aPos + 1];
-//							String[] new_lArr = new String[new_dArr.length];
-//							System.arraycopy(dArr, 0, new_dArr, 0, dArr.length);
-//							System.arraycopy(lArr, 0, new_lArr, 0, lArr.length);
-//							dArr = new_dArr;
-//							lArr = new_lArr;
-//						}
-//					}
-//					
-//					dArr[aPos] = wce.getAvgWaitTimePerWait();
-//					lArr[aPos] = wce.getClassName();
-//
-//					if (_logger.isDebugEnabled())
-//						_logger.debug("updateGraphData("+GRAPH_NAME_CLASS_NAME+"): aLoc="+aPos+", data="+dArr[aPos]+", label='"+lArr[aPos]+"'.");
-////System.out.println("updateGraphData("+getName()+"."+GRAPH_NAME_CLASS_NAME+"): aLoc="+aPos+", data="+dArr[aPos]+", label='"+lArr[aPos]+"'.");
-//				}
-//
-//				// Fill in empty/blank array entries
-//				for (int i=0; i<lArr.length; i++)
-//				{
-//					if (lArr[i] == null)
-//					{
-//						dArr[i] = 0.0;
-//						lArr[i] = _labelOrder_aPosToClassName.get(i); 
-//						if (lArr[i] == null)
-//							lArr[i] = "-fixme-";
-//					}
-//				}
-//
-//				// Set the values
-//				tgdp.setDate(this.getTimestamp());
-//				tgdp.setLabel(lArr);
-//				tgdp.setData (dArr);
 			}
-			
-			if (_logger.isDebugEnabled())
-				_logger.debug("cm='"+StringUtil.left(this.getName(),25)+"', trendGraphsData="+tgdp);
-//System.out.println("cm='"+StringUtil.left(this.getName(),25)+"', trendGraphsData="+tgdp);
+
+			if (GRAPH_NAME_CLASS_WTIME.equals(tgdp.getName()))
+			{
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
+				{
+					// set data & label in the array
+					dataMap.put(wce.getClassName(), wce.getAvgWaitTime());
+				}
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
+			}
+
+			if (GRAPH_NAME_CLASS_WTPW.equals(tgdp.getName()))
+			{
+				LinkedHashMap<String, Double> dataMap = new LinkedHashMap<String, Double>();
+				for (WaitCounterEntry wce : wcs.getClassNameMap().values())
+				{
+					// set data & label in the array
+					dataMap.put(wce.getClassName(), wce.getAvgWaitTimePerWait());
+				}
+				if (dataMap.size() > 0)
+					tgdp.setData(this.getTimestamp(), dataMap);
+			}
 		}
 	}
 

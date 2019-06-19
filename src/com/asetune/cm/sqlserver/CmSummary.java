@@ -175,6 +175,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_CPU,
 			"CPU Summary, Global Variables", 	                        // Menu CheckBox text
 			"CPU Summary for all Engines (using @@cpu_busy, @@cpu_io)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			new String[] { "System+User CPU (@@cpu_busy + @@cpu_io)", "System CPU (@@cpu_io)", "User CPU (@@cpu_busy)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -186,6 +187,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLOCKING_LOCKS,
 			"Blocking Locks", 	                                     // Menu CheckBox text
 			"Number of Concurrently Blocking Locks (from XXXXXXXX)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Blocking Locks" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -197,6 +199,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION,
 			"Connections/Users in SQL-Server", 	          // Menu CheckBox text
 			"Connections/Users connected to the SQL-Server", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "UserConnections (abs)", "distinctLogins (abs)", "@@connections (diff)", "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -208,6 +211,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTION_RATE,
 			"Connection Rate in ASE", 	          // Menu CheckBox text
 			"Connection Attemtps per Second (source @@connections)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "@@connections (rate)" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -219,6 +223,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_DISK_READ_WRITE,
 			"Disk read/write, Global Variables", 	                         // Menu CheckBox text
 			"Disk read/write per second, using @@total_read, @@total_write", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "@@total_read", "@@total_write" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -230,6 +235,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AA_NW_PACKET,
 			"Network Packets received/sent, Global Variables", 	                            // Menu CheckBox text
 			"Network Packets received/sent per second, using @@pack_received, @@pack_sent", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "@@pack_received", "@@pack_sent", "@@packet_errors" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.NETWORK,
@@ -241,6 +247,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
 			"Oldest Open Transaction in any Databases, in Seconds", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
 			new String[] { "Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.LOCK,
@@ -252,6 +259,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_MAX_SQL_EXEC_TIME_IN_SEC,
 			"Max Active SQL Execution Time In Seconds",     // Menu CheckBox text
 			"Max Active SQL Execution Time In Seconds", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_SECONDS,
 			new String[] { "Max Active SQL Execution Time In Seconds" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,

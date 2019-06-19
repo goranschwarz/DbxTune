@@ -226,11 +226,20 @@ extends CompletionProviderAbstract
 
 	public void setCatalog(String catName)
 	{
+		setCatalog(catName, false);
+	}
+	public void setCatalog(String catName, boolean withOverride)
+	{
+		//System.out.println("CompletionProviderAbstractSql: setCatalog("+catName+", withOverride="+withOverride+"), _localCatalogName='"+_localCatalogName+"'.");
 		if (StringUtil.isNullOrBlank(catName))
 			return;
 
-		if (_localCatalogName != null && _localCatalogName.equals(catName))
-			return;
+		
+		if ( ! withOverride )
+		{
+    		if (_localCatalogName != null && _localCatalogName.equals(catName))
+    			return;
+		}
 			
 		// Set this early, if the CompletionProvider isn't yet used; we will set it when first connection is made.
 		_localCatalogName = catName;
@@ -276,7 +285,7 @@ extends CompletionProviderAbstract
 				try { _logger.info("Compleation Provider created a new connection to URL: "+_localConn.getMetaData().getURL()); }
 				catch(SQLException ignore) {}
 				
-				setCatalog(_localCatalogName);
+				setCatalog(_localCatalogName, true); // withOverride=true
 			}
 			
 			if (_localConn != null)

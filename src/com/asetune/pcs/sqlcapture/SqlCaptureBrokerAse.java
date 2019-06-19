@@ -1280,118 +1280,6 @@ extends SqlCaptureBrokerAbstract
 		// - is available in the table monSysSQLText when the SQL *starts* to execute (or after it has been optimized)
 		//   The statement-information/statistics will on the other hand be available *after* the statement has finnished to execute
 		//------------------------------------------------
-//		if (_sampleSqlText)
-//		{
-//			try
-//			{
-//				//----------------------------------------------------------------------------------------
-//				// This might look a bit odd / backwards, but look at the data example at the end of this file
-//				// SQLText can have several rows
-//				// * so when FIRST row (for every group) is discovered - Start a new "row" (which is a List: tableNameToStoreItIn, c1-data, c2-data, c3-data... SQLText-concatenated-data)
-//				// * on all "extra" rows that will just contain same c1-data, c2-data, c3-data but the SQLText will be read and appended to a StringBuilder
-//				// * when a "new" row is found, we will set the StringBuffer content to replace the "first row" SQLText
-//				// * At the END we will need to "post" the information from the last "group"
-//				//----------------------------------------------------------------------------------------
-//				Statement stmnt = conn.createStatement();
-//				ResultSet rs = stmnt.executeQuery(_sql_sqlText);
-//				ResultSetMetaData rsmd = rs.getMetaData();
-//				int           colCount = rsmd.getColumnCount();
-//				int           sequenceCol_pos = -1;
-//				int           sequenceCol_val = -1;
-//				int           seqTextCol_pos  = -1;
-//				StringBuilder seqTextCol_val  = new StringBuilder();
-//				for (int c=1; c<=colCount; c++)
-//				{
-//					if      ("SequenceInBatch".equals(rsmd.getColumnLabel(c))) sequenceCol_pos = c;
-//					else if ("SQLText"        .equals(rsmd.getColumnLabel(c))) seqTextCol_pos  = c;
-//				}
-//				List<Object> row = null;
-//				int rowCount = 0;
-//				while(rs.next())
-//				{
-//					rowCount++;
-//
-//					// The below implies that the data is sorted by: SPID|KPID, BatchID, SequenceInBatch
-//					sequenceCol_val = rs.getInt(sequenceCol_pos);
-//					if (sequenceCol_val == 1)
-//					{
-//						if (row != null)
-//						{
-//							row.set(row.size()-1, seqTextCol_val.toString());
-//							seqTextCol_val.setLength(0);
-//
-//							sqlTextRecords.add(row);
-//						}
-//
-//						row = new ArrayList<Object>();
-//						row.add(MON_SQL_TEXT); // NOTE: the first object in the list should be the TableName where to store the data
-//						
-//						// Add the ROW to the sqlTextPkMap so we can delete it at the end if not used...
-//						int SPID    = rs.getInt("SPID");
-//						int KPID    = rs.getInt("KPID");
-//						int BatchID = rs.getInt("BatchID");
-//
-//						sqlTextPkMap.put(new PK(SPID, KPID, BatchID), row);
-//						
-//						for (int c=1; c<=colCount; c++)
-//						{
-//							// the sequence column should NOT be part of the result
-//							if (c != sequenceCol_pos)
-//								row.add(rs.getObject(c));
-//						}
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//					else if (row != null)
-//					{
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//				}
-//				// Finally add content from LAST row, since we do addCountainer() only on NEW sequenceCol_val == 1
-//				if (row != null)
-//				{
-//					row.set(row.size()-1, seqTextCol_val.toString());
-//					seqTextCol_val.setLength(0);
-//
-//					sqlTextRecords.add(row);
-//				}
-//				
-//				rs.close();
-//				stmnt.close();
-//
-//				int    configVal  = _sqlTextPipeMaxMessages;
-//				String configName = CFGNAME_aseConfig_sql_text_pipe_max_messages;
-//				if (rowCount >= configVal)
-//				{
-//					_lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages++;
-//					_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages += rowCount;
-//
-//					// Warning on firt time or every X minute/hour
-//					if (_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
-//					{
-//						_logger.warn("The configuration '"+configName+"' might be to low. " 
-//								+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold)+"' (HH:MM), "
-//								+ "We have read "+_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages+" rows. "
-//								+ "On " + _lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages + " occations. "
-//								+ "Average read per occation was " + (_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages / _lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages) + " rows. "
-//								+ "And the configuration value for '"+configName+"' is "+configVal);
-//
-//						// Reset the values, so we can print new message in X minutes/hours
-//						_lastConfigOverflowMsgTime_sqlTextPipeMaxMessages = System.currentTimeMillis();
-//						_lastConfigOverflowMsgVCnt_sqlTextPipeMaxMessages = 0;
-//						_lastConfigOverflowMsgVSum_sqlTextPipeMaxMessages = 0;
-//					}
-//				}
-//			}
-//			catch(SQLException ex)
-//			{
-//				// Not configured
-//				if (ex.getErrorCode() == 12052)
-//					_sampleSqlText = false;
-//				
-//				_logger.error("SQL Capture problems when capturing 'SQL Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlText);
-//			}
-//		}
-
 		if (_sampleSqlText)
 		{
 			try ( Statement stmnt = conn.createStatement();
@@ -1519,122 +1407,6 @@ extends SqlCaptureBrokerAbstract
 		// - is available in the table monSysPlanText when the SQL *starts* to execute (or after it has been optimized)
 		//   The statement-information/statistics will on the other hand be available *after* the statement has finnished to execute
 		//------------------------------------------------
-//		if (_samplePlan)
-//		{
-//			try
-//			{
-//				//----------------------------------------------------------------------------------------
-//				// This might look a bit odd / backwards, but look at the data example at the end of this file
-//				// PlanText can have several rows
-//				// * so when FIRST row (for every group) is discovered - Start a new "row" (which is a List: tableNameToStoreItIn, c1-data, c2-data, c3-data... PlanText-concatenated-data)
-//				// * on all "extra" rows that will just contain same c1-data, c2-data, c3-data but the PlanText will be read and appended to a StringBuilder
-//				// * when a "new" row is found, we will set the StringBuffer content to replace the "first row" PlanText
-//				// * At the END we will need to "post" the information from the last "group"
-//				//----------------------------------------------------------------------------------------
-//				Statement stmnt = conn.createStatement();
-//				ResultSet rs = stmnt.executeQuery(_sql_sqlPlanText);
-//				ResultSetMetaData rsmd = rs.getMetaData();
-//				int           colCount = rsmd.getColumnCount();
-//				int           sequenceCol_pos = -1;
-//				int           sequenceCol     = -1;
-//				int           seqTextCol_pos  = -1;
-//				StringBuilder seqTextCol_val  = new StringBuilder();
-//				for (int c=1; c<=colCount; c++)
-//				{
-//					if      ("SequenceNumber".equals(rsmd.getColumnLabel(c))) sequenceCol_pos = c;
-//					else if ("PlanText"      .equals(rsmd.getColumnLabel(c))) seqTextCol_pos  = c;
-//				}
-//				List<Object> row = null;
-//				int rowCount = 0;
-//				while(rs.next())
-//				{
-//					rowCount++;
-//
-//					// The below implies that the data is sorted by: SPID|KPID, BatchID, SequenceNumber
-//					sequenceCol = rs.getInt(sequenceCol_pos);
-//					if (sequenceCol == 1)
-//					{
-//						if (row != null)
-//						{
-//							row.set(row.size()-1, seqTextCol_val.toString());
-//							seqTextCol_val.setLength(0);
-//
-//							planTextRecords.add(row);
-//						}
-//
-//						row = new ArrayList<Object>();
-//						row.add(MON_SQL_PLAN); // NOTE: the first object in the list should be the TableName where to store the data
-//
-//						// Add the ROW to the planTextPkMap so we can delete it at the end if not used...
-//						int SPID    = rs.getInt("SPID");
-//						int KPID    = rs.getInt("KPID");
-//						int BatchID = rs.getInt("BatchID");
-//
-//						planTextPkMap.put(new PK(SPID, KPID, BatchID), row);
-//						
-//						for (int c=1; c<=colCount; c++)
-//						{
-//							// the sequence column should NOT be part of the result
-//							if (c != sequenceCol_pos)
-//								row.add(rs.getObject(c));
-//						}
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//					else if (row != null)
-//					{
-//						seqTextCol_val.append( rs.getString(seqTextCol_pos) );
-//					}
-//				}
-//				// Finally add content from LAST row, since we do addCountainer() only on NEW sequenceCol_val == 1
-//				if (row != null)
-//				{
-//					row.set(row.size()-1, seqTextCol_val.toString());
-//					seqTextCol_val.setLength(0);
-//
-//					planTextRecords.add(row);
-//				}
-//
-//				rs.close();
-//				stmnt.close();
-//
-//				int    configVal  = _planTextPipeMaxMessages;
-//				String configName = CFGNAME_aseConfig_plan_text_pipe_max_messages;
-////				if (rowCount >= configVal)
-////					_logger.warn("The configuration '"+configName+"' might be to low. Just read "+rowCount+" rows. And the configuration is "+configVal);
-//				if (rowCount >= configVal)
-//				{
-//					_lastConfigOverflowMsgVCnt_planTextPipeMaxMessages++;
-//					_lastConfigOverflowMsgVSum_planTextPipeMaxMessages += rowCount;
-//
-//					// Warning on firt time or every X minute/hour
-//					if (_lastConfigOverflowMsgTime_planTextPipeMaxMessages == -1 || TimeUtils.msDiffNow(_lastConfigOverflowMsgTime_planTextPipeMaxMessages) > _lastConfigOverflowMsgTimeThreshold)
-//					{
-//						_logger.warn("The configuration '"+configName+"' might be to low. " 
-//								+ "For the last '"+TimeUtils.msToTimeStr("%HH:%MM", _lastConfigOverflowMsgTimeThreshold)+"' (HH:MM), "
-//								+ "We have read "+_lastConfigOverflowMsgVSum_planTextPipeMaxMessages+" rows. "
-//								+ "On " + _lastConfigOverflowMsgVCnt_planTextPipeMaxMessages + " occations. "
-//								+ "Average read per occation was " + (_lastConfigOverflowMsgVSum_planTextPipeMaxMessages / _lastConfigOverflowMsgVCnt_planTextPipeMaxMessages) + " rows. "
-//								+ "And the configuration value for '"+configName+"' is "+configVal);
-//
-//						// Reset the values, so we can print new message in X minutes/hours
-//						_lastConfigOverflowMsgTime_planTextPipeMaxMessages = System.currentTimeMillis();
-//						_lastConfigOverflowMsgVCnt_planTextPipeMaxMessages = 0;
-//						_lastConfigOverflowMsgVSum_planTextPipeMaxMessages = 0;
-//					}
-//				}
-//			}
-//			catch(SQLException ex)
-//			{
-//				// Msg 12052, Level 17, State 1:
-//				// Server 'GORAN_UB2_DS', Line 1 (script row 862), Status 0, TranState 1:
-//				// Collection of monitoring data for table 'monSysPlanText' requires that the 'plan text pipe max messages', 'plan text pipe active' configuration option(s) be enabled. To set the necessary configuration, contact a user who has the System Administrator (SA) role.
-//				if (ex.getErrorCode() == 12052)
-//					_samplePlan = false;
-//				
-//				_logger.error("SQL Capture problems when capturing 'SQL Plan Text' Caught "+AseConnectionUtils.sqlExceptionToString(ex) + " when executing SQL: "+_sql_sqlPlanText);
-//			}
-//		}
-
 		if (_samplePlan)
 		{
 			try ( Statement stmnt = conn.createStatement();
@@ -1797,6 +1569,16 @@ extends SqlCaptureBrokerAbstract
 		return count;
 	}
 
+	//-------------------------------------------------------------------------------------
+	// and alternative to the above (which *might* work better or possibly simpler)
+	// because the above might send "to many" SQL-Text objects for storage
+	//-------------------------------------------------------------------------------------
+	// * have a global SQL-Text cache (which can be cleared on OutOfMemory)
+	//   * entries are removed when monSysStatements exceeds the 100ms threshold.
+	//   * entries are removed when monSysStatements (which is added *after* monSysSqlText) entries have a higher SPID,KPID,*BatchID* than the saved one
+	//   * after X minutes of no-new-records: go and check if the SPID,KPID still exists in sysprocesses (or last CmProcessActivity) (maybe also check the current BatchID)
+	//   * (side note: should create proc DynamicSql ... still be kept and saved in the PCS, even if it do not exceed the 100ms threshold ???)
+	//-------------------------------------------------------------------------------------
 
 	//--------------------------------------------------------------------------
 	// BEGIN: Statement Statistics

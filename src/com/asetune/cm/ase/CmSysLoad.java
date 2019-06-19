@@ -152,6 +152,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_AVG_RUN_QUEUE_LENTH,
 			"Run Queue Length, Server Wide", 	                                    // Menu CheckBox text
 			"Run Queue Length, Average for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Now", "Avg last 1 minute", "Avg last 5 minute", "Max last 1 minute", "Max last 5 minute" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -163,6 +164,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ENGINE_RUN_QUEUE_LENTH,
 			"Run Queue Length, Per Engine", 	                                               // Menu CheckBox text
 			"Run Queue Length, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -174,6 +176,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SUM_OUTSTAND_IO,
 			"Outstanding IO's, Server Wide", 	                                    // Menu CheckBox text
 			"Outstanding IO's, Summary for all instances ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Sum Now", "Sum last 1 minute", "Sum last 5 minute", "Sum last 15 minute" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -185,6 +188,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ENGINE_NOW_OUTSTAND_IO,
 			"Outstanding IO's, Per Engine (at sample)", 	                                   // Menu CheckBox text
 			"Outstanding IO's, When the refresh happened, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -196,6 +200,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ENGINE_1M_OUTSTAND_IO,
 			"Outstanding IO's, Per Engine (avg 1 minute)", 	                                   // Menu CheckBox text
 			"Outstanding IO's, Average over last minute, Per Engine ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,

@@ -484,14 +484,14 @@ implements SqlStatement
 							// For the moment, don't support pipe/filters etc... just make this simple
 							if (asPlainText)
 							{
-								ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor");
+								ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor", null);
 								
 								resultCompList.add(new JPlainResultSet(rstm));
 							}
 							else
 							{
 								// Convert the ResultSet into a TableModel, which fits on a JTable
-								ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor");
+								ResultSetTableModel rstm = new ResultSetTableModel(rs, true, "Oracle ResultSet Cursor", null);
 			
 								// Create the JTable, using the just created TableModel/ResultSet
 								JXTable tab = new ResultSetJXTable(rstm);

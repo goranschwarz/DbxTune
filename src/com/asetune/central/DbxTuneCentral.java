@@ -675,7 +675,8 @@ public class DbxTuneCentral
 	/** Where is DbxTune Central collector Configuration directory located */
 	public static String getAppConfDir()
 	{
-		String dbx = System.getProperty("DBXTUNE_CONF_DIR", getAppHomeDir() + File.separator + "conf");
+//		String dbx = System.getProperty("DBXTUNE_CONF_DIR", getAppHomeDir() + File.separator + "conf");
+		String dbx = System.getProperty("DBXTUNE_CONF_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "conf");
 		String val = System.getProperty("DBXTUNE_CENTRAL_CONF_DIR", dbx);
 		
 		return val;
@@ -683,7 +684,8 @@ public class DbxTuneCentral
 	/** Where is DbxTune Central collector "data" or "save" directory located */
 	public static String getAppDataDir()
 	{
-		String dbx = System.getProperty("DBXTUNE_SAVE_DIR", getAppHomeDir() + File.separator + "data");
+//		String dbx = System.getProperty("DBXTUNE_SAVE_DIR", getAppHomeDir() + File.separator + "data");
+		String dbx = System.getProperty("DBXTUNE_SAVE_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "data");
 		String val = System.getProperty("DBXTUNE_CENTRAL_SAVE_DIR", dbx);
 		       val = System.getProperty("DBXTUNE_DATA_DIR", val);
 		       val = System.getProperty("DBXTUNE_CENTRAL_DATA_DIR", val);
@@ -693,7 +695,8 @@ public class DbxTuneCentral
 	/** Where is DbxTune Central collector "log" directory located */
 	public static String getAppLogDir()
 	{
-		String dbx = System.getProperty("DBXTUNE_LOG_DIR", getAppHomeDir() + File.separator + "log");
+//		String dbx = System.getProperty("DBXTUNE_LOG_DIR", getAppHomeDir() + File.separator + "log");
+		String dbx = System.getProperty("DBXTUNE_LOG_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "log");
 		String val = System.getProperty("DBXTUNE_CENTRAL_LOG_DIR", dbx);
 		
 		return val;
@@ -701,7 +704,7 @@ public class DbxTuneCentral
 	/** Where is DbxTune Central collector "info files" directory located */
 	public static String getAppInfoDir()
 	{
-		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "info");
+		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "info");
 		String val = System.getProperty("DBXTUNE_CENTRAL_INFO_DIR", dbx);
 		
 		return val;
@@ -710,6 +713,15 @@ public class DbxTuneCentral
 	public static String getAppWebDir()
 	{
 		String val = System.getProperty("DBXTUNE_CENTRAL_WEB_DIR", getAppHomeDir() + File.separator + "resources/WebContent");
+		
+		return val;
+	}
+	/** Where is DbxTune Central collector "reports" directory located */
+	public static String getAppReportsDir()
+	{
+//		String dbx = System.getProperty("DBXTUNE_REPORTS_DIR", getAppHomeDir() + File.separator + "reports");
+		String dbx = System.getProperty("DBXTUNE_REPORTS_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "reports");
+		String val = System.getProperty("DBXTUNE_CENTRAL_REPORTS_DIR", dbx);
 		
 		return val;
 	}

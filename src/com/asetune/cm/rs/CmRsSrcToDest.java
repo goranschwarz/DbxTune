@@ -171,6 +171,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PERF_INDICATOR,
 			"Source to Destination - Performance Indicator", // Menu CheckBox text
 			"Source to Destination - Performance Indicator (0: good, <0: DSI is Slow, >0: DSI is Fast)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.OTHER,

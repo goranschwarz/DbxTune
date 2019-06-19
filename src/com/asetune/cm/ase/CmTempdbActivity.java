@@ -141,10 +141,11 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"TempDB Transaction Log Semaphore Contention ", 	          // Menu CheckBox text
 			"TempDB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
-			false, // is Percent Graph
+			true, // is Percent Graph
 			false, // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);  // minimum height
@@ -153,6 +154,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LREADS,
 			"TempDB Logical Reads", 	          // Menu CheckBox text
 			"TempDB Logical Reads per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CACHE,
@@ -165,6 +167,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PWRITES,
 			"TempDB Physical Writes", 	          // Menu CheckBox text
 			"TempDB Physical Writes per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
@@ -177,6 +180,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CAT_LOCK_REQ,
 			"TempDB Catalog Lock Requests", 	          // Menu CheckBox text
 			"TempDB Catalog Lock Requests per seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null,
 			LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.LOCK,

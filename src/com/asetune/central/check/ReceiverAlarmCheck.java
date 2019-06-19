@@ -44,7 +44,7 @@ implements Runnable
 	public static final int     DEFAULT_checkSleepTimeInSec  = 30;
 
 	public static final String PROPKEY_ALARM_INTERVAL_MULTIPLIER = "ReceiverAlarmCheck.alarm.interval.multiplier";
-	public static final int    DEFAULT_ALARM_INTERVAL_MULTIPLIER = 20; // multiplier
+	public static final int    DEFAULT_ALARM_INTERVAL_MULTIPLIER = 40; // multiplier
 
 
 	//////////////////////////////////////////////

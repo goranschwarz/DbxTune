@@ -159,6 +159,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_SUM,
 			"Runnable Queue Length, Summary", 	                        // Menu CheckBox text
 			"Runnable Queue Length, Summary (using dm_os_schedulers.runnable_tasks_count)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Sum: runnable_tasks_count", "Avg: runnable_tasks_count" },
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -171,6 +172,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_RUN_QUEUE_LENGTH_ENG,
 			"Runnable Queue Length, per Scheduler", 	                        // Menu CheckBox text
 			"Runnable Queue Length, per Scheduler (using dm_os_schedulers.runnable_tasks_count)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -183,6 +185,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PENDING_IO_SUM,
 			"Outstanding IO Requests, Summary", 	                        // Menu CheckBox text
 			"Outstanding IO Requests, Summary (using dm_os_schedulers.pending_disk_io_count)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Sum: pending_disk_io_count", "Avg: pending_disk_io_count" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -195,6 +198,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PENDING_IO_ENG,
 			"Outstanding IO Requests, per Scheduler", 	                        // Menu CheckBox text
 			"Outstanding IO Requests, per Scheduler (using dm_os_schedulers.pending_disk_io_count)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,

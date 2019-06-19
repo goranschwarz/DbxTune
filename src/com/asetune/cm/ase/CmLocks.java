@@ -137,6 +137,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOCK_COUNT,
 				"Lock Count", 	                           // Menu CheckBox text
 				"Number of Current Locks Held in the Server ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+				TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 				new String[] { "Lock Count" }, 
 				LabelType.Static,
 				TrendGraphDataPoint.Category.LOCK,

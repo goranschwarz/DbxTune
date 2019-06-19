@@ -61,7 +61,7 @@ implements IObjectLookupInspector
 	public boolean checkConnection(DbxConnection conn)
 	throws Exception
 	{
-		boolean inTran =conn.isInTransaction();
+		boolean inTran = conn.isInTransaction();
 		
 		if (inTran)
 		{

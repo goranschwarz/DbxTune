@@ -1257,7 +1257,12 @@ public class PersistWriterJdbc
 				//  - Alarms that has happened
 				//  - A summary of Performance issues that has happened the day
 				//  - etc...
-				createDailySummaryReport(_mainConn, cont.getServerNameOrAlias());
+				// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
+				try { createDailySummaryReport(_mainConn, cont.getServerNameOrAlias()); }
+				catch (Exception ex)
+				{
+					_logger.error("Problems creating Daily Report, skipping this.", ex);
+				}
 
 				if ( _h2LastDateChange != null)
 					_logger.info("Closing the old database with ${DATE} marked as '"+_h2LastDateChange+"', a new database will be opened using ${DATE} marker '"+dateStr+"'.");
@@ -2367,28 +2372,32 @@ public class PersistWriterJdbc
 			//--------------------------------
 			// STORE the configuration file
 			Configuration conf;
+
+			// --------- SYSTEM_CONF
 			conf = Configuration.getInstance(Configuration.SYSTEM_CONF);
 			if (conf != null)
 			{
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
-	
+
 					insertSessionParam(conn, ts, "system.config", key, val);
 				}
 			}
 
+			// --------- USER_CONF
 			conf = Configuration.getInstance(Configuration.USER_CONF);
 			if (conf != null)
 			{
 				for (String key : conf.getKeys())
 				{
 					String val = conf.getPropertyRaw(key);
-	
+
 					insertSessionParam(conn, ts, "user.config", key, val);
 				}
 			}
 
+			// --------- USER_TEMP
 			conf = Configuration.getInstance(Configuration.USER_TEMP);
 			if (conf != null)
 			{
@@ -2404,6 +2413,35 @@ public class PersistWriterJdbc
 				}
 			}
 
+			// --------- PCS
+			conf = Configuration.getInstance(Configuration.PCS);
+			if (conf != null)
+			{
+				for (String key : conf.getKeys())
+				{
+					String val = conf.getPropertyRaw(key);
+
+					insertSessionParam(conn, ts, "pcs.config", key, val);
+				}
+			}
+
+			// --------- CombinedConfiguration
+			conf = Configuration.getCombinedConfiguration();
+			if (conf != null)
+			{
+				for (String key : conf.getKeys())
+				{
+					String val = conf.getPropertyRaw(key);
+
+					// Skip some key values... just because they are probably to long...
+					if (key.indexOf(".gui.column.header.props") >= 0)
+						continue;
+
+					insertSessionParam(conn, ts, "combined.config", key, val);
+				}
+			}
+
+			// --------- System Properties
 			Properties systemProps = System.getProperties();
 			for (Object key : systemProps.keySet())
 			{
@@ -2411,6 +2449,7 @@ public class PersistWriterJdbc
 
 				insertSessionParam(conn, ts, "system.properties", key.toString(), val);
 			}
+
 
 			// Storing the MonTablesDictionary(monTables & monTableColumns), 
 			// this so we can restore the proper Column ToolTip for this ASE version.
@@ -4225,6 +4264,12 @@ public class PersistWriterJdbc
 			// Create & and Send the report
 			report.create();
 			report.send();
+
+			// Save the report
+			report.save();
+
+			// remove/ old reports from the "archive"
+			report.removeOldReports();
 		}
 		catch(Exception ex)
 		{

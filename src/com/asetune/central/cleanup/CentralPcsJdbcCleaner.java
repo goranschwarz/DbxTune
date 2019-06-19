@@ -270,6 +270,10 @@ extends Task
 				int delCount = pstmnt.executeUpdate();
 				_logger.info(_prefix + ">>>> Deleted "+delCount+" records from schema '"+schema+"' in table '"+name+"'. ["+TimeUtils.msDiffNowToTimeStr(startTime)+"]" + dryRunComment);
 			}
+			catch(SQLException ex)
+			{
+				_logger.error(_prefix + "Problems deleting records from schema '"+schema+"' in table '"+name+"' using SQL=|"+sql+"|. Continuing anyway... Caught: "+ex);
+			}
 		}
 		
 		// Remove records from "system" metadata tables in SCHEMA

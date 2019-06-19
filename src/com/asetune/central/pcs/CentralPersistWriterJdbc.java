@@ -1684,7 +1684,7 @@ extends CentralPersistWriterBase
 				// IF the table TABLE EXISTS 'GraphCategory' do NOT exists, add it
 				if ( colNames.size() > 0 )
 				{
-					if ( ! colNames.contains("GraphCategory"))
+					if ( ! colNames.contains("graphcategory"))
 					{
 						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq+"GraphCategory"+rq + " varchar(30) null"; // NOTE: 'not null' is not supported at upgrades
 						internalDbUpgradeDdlExec(conn, step, sql);
@@ -1711,6 +1711,44 @@ extends CentralPersistWriterBase
 			{
 				internalDbUpgradeAlarmActiveHistory_step10(conn, step, schemaName, Table.ALARM_ACTIVE);
 				internalDbUpgradeAlarmActiveHistory_step10(conn, step, schemaName, Table.ALARM_HISTORY);
+			}
+		}
+
+		if (fromDbVersion <= 9)
+		{
+			//--------------------------------
+			step = 11;
+
+			// Get schemas
+			Set<String> schemaSet = new LinkedHashSet<>();
+			ResultSet schemaRs = conn.getMetaData().getSchemas();
+			while (schemaRs.next())
+				schemaSet.add(schemaRs.getString(1));
+			schemaRs.close();
+
+			// Loop schemas: if table exists in schema, make the alter
+			//               in some schemas, the table simply do not exists (H2 INFORMATION for example)
+			for (String schemaName : schemaSet)
+			{
+				// Add column 'GraphProps' to table 'DbxGraphProperties' in all "user" schemas
+				String onlyTabName = getTableName(conn, null, Table.GRAPH_PROPERTIES, null, false);
+
+				// get all columns, this to check if TABLE EXISTS
+				Set<String> colNames = new LinkedHashSet<>();
+				ResultSet colRs = conn.getMetaData().getColumns(null, schemaName, onlyTabName, "%");
+				while (colRs.next())
+					colNames.add(colRs.getString("COLUMN_NAME").toLowerCase()); // to lowercase in case the DBMS stores them in-another-way
+				colRs.close();
+
+				// IF the table TABLE EXISTS 'GraphProps' do NOT exists, add it
+				if ( colNames.size() > 0 )
+				{
+					if ( ! colNames.contains("graphprops"))
+					{
+						sql = "alter table " + lq+schemaName+rq + "." + lq + onlyTabName + rq + " add column " + lq+"GraphProps"+rq + " varchar(1024) null"; // NOTE: 'not null' is not supported at upgrades
+						internalDbUpgradeDdlExec(conn, step, sql);
+					}
+				}
 			}
 		}
 
@@ -3257,6 +3295,7 @@ return -1;
 						sb.append(", '").append(ge.getName()).append("'");
 						sb.append(", '").append(graphFullName).append("'"); // cmName_graphName
 						sb.append(", ") .append(safeStr(ge.getGraphLabel()));
+						sb.append(", ") .append(safeStr(ge.getGraphProps()));
 						sb.append(", ") .append(safeStr(ge.getGraphCategory()));
 						sb.append(", ") .append(ge.isPercentGraph());
 						sb.append(", ") .append(ge.isVisibleAtStart());

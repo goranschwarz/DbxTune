@@ -242,8 +242,14 @@ extends TabularCntrPanel
 			{
 				// Need TMP since we are going to save the configuration somewhere
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-				if (conf == null) return;
-				conf.setProperty(CmExecQueryStats.PROPKEY_sample_extraWhereClause, _sampleExtraWhereClause_txt.getText().trim());
+				if (conf == null) 
+					return;
+
+				String extraWhere = _sampleExtraWhereClause_txt.getText().trim();
+				if (extraWhere.startsWith("--"))
+					extraWhere = "";
+				
+				conf.setProperty(CmExecQueryStats.PROPKEY_sample_extraWhereClause, extraWhere);
 				conf.save();
 				
 				// ReInitialize the SQL

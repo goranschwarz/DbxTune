@@ -20,21 +20,21 @@
  ******************************************************************************/
 package com.asetune.xmenu;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.SQLException;
 
 import javax.swing.JOptionPane;
 
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.sql.showplan.ShowplanHtmlView.Type;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 
 public class SqlServerHtmlPlan
 extends XmenuActionBase 
 {
 //	private static Logger _logger = Logger.getLogger(SqlServerHtmlPlan.class);
-	private Connection _conn = null;
+	private DbxConnection _conn = null;
 //	private String     _planHandle = null;
 //	private boolean    _closeConnOnExit;
 
@@ -76,33 +76,46 @@ extends XmenuActionBase
 	}
 
 
-	public String getPlan(String planHandle)
+//	public String getPlan(String planHandle)
+//	{
+//		String sqlStatement = "select query_plan from sys.dm_exec_query_plan("+planHandle+")";
+//
+//		String query_plan = null;
+//		
+//		try
+//		{
+//			Statement statement = _conn.createStatement();
+//			ResultSet rs = statement.executeQuery(sqlStatement);
+//			while(rs.next())
+//			{
+////				String dbid       = rs.getString(1);
+////				String objectid   = rs.getString(2);
+////				String number     = rs.getString(3);
+////				String encrypted  = rs.getString(4);
+////				String query_plan = rs.getString(5);
+//
+//				query_plan = rs.getString("query_plan");
+//			}
+//			rs.close();
+//		}
+//		catch (Exception e)
+//		{
+//			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+//		}
+//
+//		return query_plan;
+//	}
+	public String getPlan(String planHandleHexStr)
 	{
-		String sqlStatement = "select query_plan from sys.dm_exec_query_plan("+planHandle+")";
-
 		String query_plan = null;
-		
 		try
 		{
-			Statement statement = _conn.createStatement();
-			ResultSet rs = statement.executeQuery(sqlStatement);
-			while(rs.next())
-			{
-//				String dbid       = rs.getString(1);
-//				String objectid   = rs.getString(2);
-//				String number     = rs.getString(3);
-//				String encrypted  = rs.getString(4);
-//				String query_plan = rs.getString(5);
-
-				query_plan = rs.getString("query_plan");
-			}
-			rs.close();
+			query_plan = SqlServerUtils.getXmlQueryPlan(_conn, planHandleHexStr);
 		}
-		catch (Exception e)
+		catch (SQLException e)
 		{
-			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
 		}
-
 		return query_plan;
 	}
 }

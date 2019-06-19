@@ -592,6 +592,50 @@ public class TimeUtils
 	}
 
 
+	/**
+	 * in format 'yyyy-MM-dd_HHmmss'
+	 * 
+	 * @param time  time in ms like System.currentTimeMillis()
+	 * @return string 'yyyy-MM-dd_HHmmss'
+	 */
+	public static String getCurrentTimeForFileNameHMS(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
+		return sdf.format( new Date(ts) );
+	}
+
+	/**
+	 * in format 'yyyy-MM-dd_HHmmss'
+	 * 
+	 * @return string 'yyyy-MM-dd_HHmmss'
+	 */
+	public static String getCurrentTimeForFileNameHMS()
+	{
+		return getCurrentTimeForFileNameHMS( System.currentTimeMillis() );
+	}
+	
+	/**
+	 * in format 'yyyy-MM-dd_HHmm'
+	 * 
+	 * @param time  time in ms like System.currentTimeMillis()
+	 * @return string 'yyyy-MM-dd_HHmm'
+	 */
+	public static String getCurrentTimeForFileNameHM(long ts)
+	{
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmm");
+		return sdf.format( new Date(ts) );
+	}
+
+	/**
+	 * in format 'yyyy-MM-dd_HHmm'
+	 * 
+	 * @return string 'yyyy-MM-dd_HHmm'
+	 */
+	public static String getCurrentTimeForFileNameHM()
+	{
+		return getCurrentTimeForFileNameHM( System.currentTimeMillis() );
+	}
+	
 	/*
 	 * *********************************************************************
 	 * ******* SUB CLASSES ******** SUB CLASSES ******** SUB CLASSES *******

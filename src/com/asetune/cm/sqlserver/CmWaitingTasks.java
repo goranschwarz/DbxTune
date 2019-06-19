@@ -258,6 +258,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_COUNT,
 			"Number of Current Wait Tasks", 	                   // Menu CheckBox text
 			"Number of Current Wait Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] {"WaitCount"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -269,6 +270,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_MAX_TIME,
 			"Max Wait Time in ms for Current Tasks", 	                   // Menu CheckBox text
 			"Max Wait Time in ms for Current Tasks ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			new String[] {"wait_duration_ms"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.WAITS,
@@ -283,11 +285,13 @@ extends CountersModel
 	{
 //		long   srvVersion = getServerVersion();
 		String graphName  = tgdp.getName();
+//System.out.println("graphName='"+graphName+"'");
 		
 		if (GRAPH_NAME_WAIT_COUNT.equals(graphName))
 		{
 			Double[] arr = new Double[1];
 
+//System.out.println("graphName='"+graphName+"'. rowCount="+this.getCounterDataAbs().getRowCount());
 			arr[0] = new Double( this.getCounterDataAbs().getRowCount() );
 			
 			// Set the values
@@ -298,6 +302,7 @@ extends CountersModel
 		{
 			Double[] arr = new Double[1];
 
+//System.out.println("graphName='"+graphName+"'. wait_duration_ms="+this.getAbsValueMax("wait_duration_ms"));
 			arr[0] = this.getAbsValueMax("wait_duration_ms");
 
 			// Set the values

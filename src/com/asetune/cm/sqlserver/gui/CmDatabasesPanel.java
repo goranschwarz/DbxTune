@@ -91,11 +91,11 @@ extends TabularCntrPanel
 	private static final String  VALUE_plotOrientation_HORIZONTAL = "HORIZONTAL";
 	private static final String  DEFAULT_plotOrientation          = VALUE_plotOrientation_AUTO;
 
-	private static final String  PROPKEY_enableLogGraph   = PROP_PREFIX + ".graph.log.enable";
-	private static final boolean DEFAULT_enableLogGraph   = true;
+	private static final String  PROPKEY_enableLogGraph      = PROP_PREFIX + ".graph.log.enable";
+	private static final boolean DEFAULT_enableLogGraph      = true;
 
-	private static final String  PROPKEY_enableDataGraph   = PROP_PREFIX + ".graph.data.enable";
-	private static final boolean DEFAULT_enableDataGraph   = true;
+	private static final String  PROPKEY_enableDataGraph     = PROP_PREFIX + ".graph.data.enable";
+	private static final boolean DEFAULT_enableDataGraph     = true;
 
 	private static final String  PROPKEY_enableOsDiskGraph   = PROP_PREFIX + ".graph.osDisk.enable";
 	private static final boolean DEFAULT_enableOsDiskGraph   = true;
@@ -233,6 +233,9 @@ extends TabularCntrPanel
 					if (_logger.isDebugEnabled())
 						_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', LogSizeFreeInMb("+LogSizeFreeInMb_pos+")='"+LogSizeFreeInMb+"', LogSizeUsedPct("+LogSizeUsedPct_pos+")='"+LogSizeUsedPct+"'.");
 
+					if (LogSizeFreeInMb == null || LogSizeUsedPct == null)
+						continue;
+					
 					if (dbList.keySet().contains(DBName))
 					{
 						String sizeStr = NumberFormat.getNumberInstance().format(LogSizeFreeInMb);
@@ -296,6 +299,9 @@ extends TabularCntrPanel
 					if (_logger.isDebugEnabled())
 					_logger.debug("createDataset():GRAPH-DATA: "+getName()+": DBName("+DBName_pos+")='"+DBName+"', DataSizeFreeInMb("+DataSizeFreeInMb_pos+")='"+DataSizeFreeInMb+"', DataSizeUsedPct("+DataSizeUsedPct_pos+")='"+DataSizeUsedPct+"'.");
 
+					if (DataSizeFreeInMb == null || DataSizeUsedPct == null)
+						continue;
+					
 					if (dbList.keySet().contains(DBName))
 					{
 						String sizeStr = NumberFormat.getNumberInstance().format(DataSizeFreeInMb);
@@ -645,7 +651,7 @@ extends TabularCntrPanel
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 		if (conf == null)
 			return;
-		
+
 		conf.setProperty(key, b);
 		conf.save();
 		

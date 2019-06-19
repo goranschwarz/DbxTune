@@ -36,3 +36,6 @@ IF "%DBXTUNE_LOG_DIR%"=="" set DBXTUNE_LOG_DIR=%DBXTUNE_USER_HOME%\dbxc\log
 rem ## Various CONFIG files will be saved here
 IF "%DBXTUNE_CONF_DIR%"=="" set DBXTUNE_CONF_DIR=%DBXTUNE_USER_HOME%\dbxc\conf
 
+rem ## REPORT files will be saved here
+IF "%DBXTUNE_REPORTS_DIR%"=="" set DBXTUNE_REPORTS_DIR=%DBXTUNE_USER_HOME%\dbxc\reports
+

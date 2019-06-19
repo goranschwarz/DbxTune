@@ -25,7 +25,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder(value = {"serverNameList", "dbxProduct", "cmName", "graphName", "tableName", "graphLabel", "graphCategory", "isPercentGraph", "visibleAtStartup", "initialOrder"}, alphabetic = true)
+@JsonPropertyOrder(value = {"serverNameList", "dbxProduct", "cmName", "graphName", "tableName", "graphLabel", "graphProps", "graphCategory", "isPercentGraph", "visibleAtStartup", "initialOrder"}, alphabetic = true)
 public class DbxGraphDescription
 {
 	private List<String> _serverNameList;
@@ -34,6 +34,7 @@ public class DbxGraphDescription
 	private String    _graphName       ;
 	private String    _tableName       ;
 	private String    _graphLabel      ;
+	private String    _graphProps      ;
 	private String    _graphCategory   ;
 	private boolean   _isPercentGraph  ;
 	private boolean   _visibleAtStartup;
@@ -48,6 +49,7 @@ public class DbxGraphDescription
 	public String       getGraphName       () { return _graphName       ;  }
 	public String       getTableName       () { return _tableName       ;  }
 	public String       getGraphLabel      () { return _graphLabel      ;  }
+	public String       getGraphProps      () { return _graphProps      ;  }
 	public String       getGraphCategory   () { return _graphCategory   ;  }
 	public boolean      isPercentGraph     () { return _isPercentGraph  ;  }
 	public boolean      isVisibleAtStartup () { return _visibleAtStartup;  }
@@ -61,6 +63,7 @@ public class DbxGraphDescription
 	public void setGraphName       (String     graphName       ) { _graphName         = graphName       ; }
 	public void setTableName       (String     tableName       ) { _tableName         = tableName       ; }
 	public void setGraphLabel      (String     graphLabel      ) { _graphLabel        = graphLabel      ; }
+	public void setGraphProps      (String     graphProps      ) { _graphProps        = graphProps      ; }
 	public void setGraphCategory   (String     graphCategory   ) { _graphCategory     = graphCategory   ; }
 	public void setIsPercentGraph  (boolean    isPercentGraph  ) { _isPercentGraph    = isPercentGraph  ; }
 	public void setVisibleAtStartup(boolean    visibleAtStartup) { _visibleAtStartup  = visibleAtStartup; }
@@ -77,7 +80,7 @@ public class DbxGraphDescription
 	}
 
 //	public DbxGraphDescription(Timestamp sessionStartTime, String serverName, String cmName, String graphName, String tableName, String graphLabel, String graphCategory, boolean isPercentGraph, boolean visibleAtStartup, int initialOrder)
-	public DbxGraphDescription(List<String> serverNameList, String dbxProduct, String cmName, String graphName, String tableName, String graphLabel, String graphCategory, boolean isPercentGraph, boolean visibleAtStartup, int initialOrder)
+	public DbxGraphDescription(List<String> serverNameList, String dbxProduct, String cmName, String graphName, String tableName, String graphLabel, String graphProps, String graphCategory, boolean isPercentGraph, boolean visibleAtStartup, int initialOrder)
 	{
 		super();
 
@@ -89,6 +92,7 @@ public class DbxGraphDescription
 		_graphName         = graphName       ;
 		_tableName         = tableName       ;
 		_graphLabel        = graphLabel      ;
+		_graphProps        = graphProps      ;
 		_graphCategory     = graphCategory   ;
 		_isPercentGraph    = isPercentGraph  ;
 		_visibleAtStartup  = visibleAtStartup;
@@ -104,6 +108,7 @@ public class DbxGraphDescription
 		this._graphName         = gd._graphName       ;
 		this._tableName         = gd._tableName       ;
 		this._graphLabel        = gd._graphLabel      ;
+		this._graphProps        = gd._graphProps      ;
 		this._graphCategory     = gd._graphCategory   ;
 		this._isPercentGraph    = gd._isPercentGraph  ;
 		this._visibleAtStartup  = gd._visibleAtStartup;
@@ -121,6 +126,7 @@ public class DbxGraphDescription
 				+ ", graphName"        + "='" + _graphName        + "'"
 				+ ", tableName"        + "='" + _tableName        + "'"
 				+ ", graphLabel"       + "='" + _graphLabel       + "'"
+				+ ", graphProps"       + "='" + _graphProps       + "'"
 				+ ", graphCategory"    + "='" + _graphCategory    + "'"
 				+ ", isPercentGraph"   + "="  + _isPercentGraph   + ""
 				+ ", visibleAtStartup" + "="  + _visibleAtStartup + ""

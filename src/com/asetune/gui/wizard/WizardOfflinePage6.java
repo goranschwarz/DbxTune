@@ -45,6 +45,8 @@ implements ActionListener
 
 	//---- PCS:DDL Lookup & Store
 	private JCheckBox            _pcsDdl_doDdlLookupAndStore_chk             = new JCheckBox("Do DDL lookup and Store", PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore);
+	private JCheckBox            _pcsDdl_enabledForDatabaseObjects_chk       = new JCheckBox("DB Objects",              PersistentCounterHandler.DEFAULT_ddl_enabledForDatabaseObjects);
+	private JCheckBox            _pcsDdl_enabledForStatementCache_chk        = new JCheckBox("Statement Cache",         PersistentCounterHandler.DEFAULT_ddl_enabledForStatementCache);
 	private JLabel               _pcsDdl_afterDdlLookupSleepTimeInMs_lbl     = new JLabel("Sleep Time");
 	private JTextField           _pcsDdl_afterDdlLookupSleepTimeInMs_txt     = new JTextField(""+PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 	private JCheckBox            _pcsDdl_addDependantObjectsToDdlInQueue_chk = new JCheckBox("Store Dependent Objects", PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue);
@@ -83,12 +85,16 @@ implements ActionListener
 		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 
 		_pcsDdl_doDdlLookupAndStore_chk            .setToolTipText("<html>If you want the most accessed objects, Stored procedures, views etc and active statements to be DDL information to be stored in the PCS.<br>You can view them with the tool 'DDL Viewer' when connected to a offline database.<html>");
+		_pcsDdl_enabledForDatabaseObjects_chk      .setToolTipText("<html>Store Database Objects (Stored procedures, views, tables, triggers, etc).<html>");
+		_pcsDdl_enabledForStatementCache_chk       .setToolTipText("<html>Store Statement Cache (XML Plans).<html>");
 		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setToolTipText("Also do DDL Lookup and Storage of dependant objects. Simply does 'exec sp_depends tabname' and add dependant objects for lookup...");
 		_pcsDdl_afterDdlLookupSleepTimeInMs_lbl    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the source DB Server.");
 		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setToolTipText("How many milliseconds should we wait between DDL Lookups, this so we do not saturate the source DB Server.");
 
 		// LAYOUT
 		panel.add(_pcsDdl_doDdlLookupAndStore_chk,             "");
+		panel.add(_pcsDdl_enabledForDatabaseObjects_chk,       "");
+		panel.add(_pcsDdl_enabledForStatementCache_chk,        "");
 		panel.add(_pcsDdl_addDependantObjectsToDdlInQueue_chk, "");
 
 		panel.add(_pcsDdl_afterDdlLookupSleepTimeInMs_lbl,     "gap 50");
@@ -96,6 +102,8 @@ implements ActionListener
 		
 		// ACTIONS
 		_pcsDdl_doDdlLookupAndStore_chk            .addActionListener(this);
+		_pcsDdl_enabledForDatabaseObjects_chk      .addActionListener(this);
+		_pcsDdl_enabledForStatementCache_chk       .addActionListener(this);
 		_pcsDdl_addDependantObjectsToDdlInQueue_chk.addActionListener(this);
 		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .addActionListener(this);
 
@@ -193,6 +201,8 @@ implements ActionListener
 		boolean enableDdlLookupFields  = _pcsDdl_doDdlLookupAndStore_chk    .isSelected();
 		boolean enableSqlCaptureFields = _pcsCapSql_doSqlCaptureAndStore_chk.isSelected();
 		
+		_pcsDdl_enabledForDatabaseObjects_chk      .setEnabled(enableDdlLookupFields);
+		_pcsDdl_enabledForStatementCache_chk       .setEnabled(enableDdlLookupFields);
 		_pcsDdl_addDependantObjectsToDdlInQueue_chk.setEnabled(enableDdlLookupFields);
 		_pcsDdl_afterDdlLookupSleepTimeInMs_lbl    .setEnabled(enableDdlLookupFields);
 		_pcsDdl_afterDdlLookupSleepTimeInMs_txt    .setEnabled(enableDdlLookupFields);
@@ -261,6 +271,8 @@ implements ActionListener
 		if ("AseTune".equals(Version.getAppName()) || "SqlServerTune".equals(Version.getAppName()))
 		{
 			putWizardData(PersistentCounterHandler.PROPKEY_ddl_doDdlLookupAndStore                 , _pcsDdl_doDdlLookupAndStore_chk             .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_ddl_enabledForDatabaseObjects           , _pcsDdl_enabledForDatabaseObjects_chk       .isSelected() +"");
+			putWizardData(PersistentCounterHandler.PROPKEY_ddl_enabledForStatementCache            , _pcsDdl_enabledForStatementCache_chk        .isSelected() +"");
 			putWizardData(PersistentCounterHandler.PROPKEY_ddl_afterDdlLookupSleepTimeInMs         , _pcsDdl_afterDdlLookupSleepTimeInMs_txt     .getText()    +"");
 			putWizardData(PersistentCounterHandler.PROPKEY_ddl_addDependantObjectsToDdlInQueue     , _pcsDdl_addDependantObjectsToDdlInQueue_chk .isSelected() +"");
 

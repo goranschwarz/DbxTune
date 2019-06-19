@@ -122,6 +122,7 @@ public class AppDir
 
 		File baseLogCreated = null;
 		File baseConfCreated = null;
+		File baseDataCreated = null;
 
 		// Create "${HOME}/.dbxtune"
 		mkdir(dir, null, ps, logList, "- to hold various files for "+Version.getAppName());
@@ -129,10 +130,11 @@ public class AppDir
 		// Create "${HOME}/.dbxtune/log", conf
 		baseLogCreated  = mkdir(dir, "log",  ps, logList, "- where log files are stored.");
 		baseConfCreated = mkdir(dir, "conf", ps, logList, "- where properties/configuration files are located...");
-		baseConfCreated = mkdir(dir, "data", ps, logList, "- where local recording files could be located...");
+		baseDataCreated = mkdir(dir, "data", ps, logList, "- where local recording files could be located...");
 		
 		// Create "${HOME}/.dbxtune/dbxc
 		File dbxcCreated = null;
+		File dbxcReports = null; 
 		if (isWindows)
 		{
 			// Nothing "yet" for Windows... dont even create the directories
@@ -141,22 +143,26 @@ public class AppDir
 		}
 		else
 		{
-			dbxcCreated = mkdir(dir, "dbxc", ps, logList, "- where user/localized DbxCentral files are located...");
+			dbxcCreated = mkdir(dir, "dbxc",                    ps, logList, "- where user/localized DbxCentral files are located...");
+			
+			// Do this up here (if it's version 2019-06-xx since the 'dbxc' dir already exists... and wont be created in below logic
+			dbxcReports = mkdir(dir, "dbxc" + sep + "reports",  ps, logList, "- DbxCentral reports created by 'Daily Report', etc.");
 		}
 
 		// If the 'dbxc' directory was created
 		if (dbxcCreated != null)
 		{
-			File dbxcBin  = null; 
-			File dbxcLog  = null; 
-			File dbxcConf = null; 
-			File dbxcData = null; 
+			File dbxcBin     = null; 
+			File dbxcLog     = null; 
+			File dbxcConf    = null; 
+			File dbxcData    = null; 
 
 			// Create "${HOME}/.dbxtune/dbxc/": bin, log, conf, data
-			dbxcBin  = mkdir(dir, "dbxc" + sep + "bin",  ps, logList, "- DbxCentral local start files.");
-			dbxcLog  = mkdir(dir, "dbxc" + sep + "log",  ps, logList, "- DbxCentral log files.");
-			dbxcConf = mkdir(dir, "dbxc" + sep + "conf", ps, logList, "- DbxCentral local configuration files.");
-			dbxcData = mkdir(dir, "dbxc" + sep + "data", ps, logList, "- DbxCentral database recording files. (NOTE: make a soft-link to location which has enough storage.)");
+			dbxcBin     = mkdir(dir, "dbxc" + sep + "bin",      ps, logList, "- DbxCentral local start files.");
+			dbxcLog     = mkdir(dir, "dbxc" + sep + "log",      ps, logList, "- DbxCentral log files.");
+			dbxcConf    = mkdir(dir, "dbxc" + sep + "conf",     ps, logList, "- DbxCentral local configuration files.");
+//			dbxcReports = mkdir(dir, "dbxc" + sep + "reports",  ps, logList, "- DbxCentral reports created by 'Daily Report', etc.");
+			dbxcData    = mkdir(dir, "dbxc" + sep + "data",     ps, logList, "- DbxCentral database recording files. (NOTE: make a soft-link to location which has enough storage.)");
 
 			if (isWindows)
 			{
@@ -513,6 +519,25 @@ public class AppDir
 		logList.add(msg);
 	}
 
+	/**
+	 * Check if directory exists
+	 * 
+	 * @param dir
+	 * @param ps
+	 */
+	private static boolean dirExists(String baseDir, String subDir)
+	{
+		if (StringUtil.isNullOrBlank(baseDir))
+			throw new RuntimeException("baseDir can't be null or blank.");
+		
+		String dir = baseDir;
+		if (StringUtil.hasValue(subDir)) 
+			dir = baseDir + sep + subDir;
+		
+		File f = new File(dir);
+		return f.exists();
+	}
+	
 	/**
 	 * Create directory
 	 * 

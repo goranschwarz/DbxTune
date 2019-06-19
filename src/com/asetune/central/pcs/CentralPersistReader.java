@@ -1434,6 +1434,7 @@ public class CentralPersistReader
 						+ " ," + lq + "GraphName"        + rq
 						+ " ," + lq + "TableName"        + rq
 						+ " ," + lq + "GraphLabel"       + rq
+						+ " ," + lq + "GraphProps"       + rq
 						+ " ," + lq + "GraphCategory"    + rq
 						+ " ," + lq + "isPercentGraph"   + rq
 						+ " ," + lq + "visibleAtStart"   + rq
@@ -1454,16 +1455,17 @@ public class CentralPersistReader
 				while (rs.next())
 				{
 					DbxGraphProperties e = new DbxGraphProperties(
-						rs.getTimestamp(1),
+						rs.getTimestamp(1),  //SessionStartTime
 						sessionName,
-						rs.getString   (2),
-						rs.getString   (3),
-						rs.getString   (4),
-						rs.getString   (5),
-						rs.getString   (6),
-						rs.getBoolean  (7),
-						rs.getBoolean  (8),
-						rs.getInt      (9));
+						rs.getString   (2),   // CmName
+						rs.getString   (3),   // GraphName
+						rs.getString   (4),   // TableName
+						rs.getString   (5),   // GraphLabel
+						rs.getString   (6),   // GraphProps
+						rs.getString   (7),   // GraphCategory
+						rs.getBoolean  (8),   // isPercent
+						rs.getBoolean  (9),   // visiableAtStart
+						rs.getInt      (10)); // initialOrder
 					list.add(e);
 				}
 			}
@@ -1754,6 +1756,7 @@ public class CentralPersistReader
 							+ " ," + lq + "GraphName"        + rq
 							+ " ," + lq + "TableName"        + rq
 							+ " ," + lq + "GraphLabel"       + rq
+							+ " ," + lq + "GraphProps"       + rq
 							+ " ," + lq + "GraphCategory"    + rq
 							+ " ," + lq + "isPercentGraph"   + rq
 							+ " ," + lq + "visibleAtStart"   + rq
@@ -1772,10 +1775,11 @@ public class CentralPersistReader
 						String       graphName        = rs.getString   (2);         
 						String       tableName        = rs.getString   (3);         
 						String       graphLabel       = rs.getString   (4);         
-						String       graphCategory    = rs.getString   (5);         
-						boolean      isPercentGraph   = rs.getBoolean  (6);         
-						boolean      visibleAtStartup = rs.getBoolean  (7);         
-						int          initialOrder     = rs.getInt      (8);        
+						String       graphProps       = rs.getString   (5);         
+						String       graphCategory    = rs.getString   (6);         
+						boolean      isPercentGraph   = rs.getBoolean  (7);         
+						boolean      visibleAtStartup = rs.getBoolean  (8);         
+						int          initialOrder     = rs.getInt      (9);        
 
 						List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
 						if (srvDescList == null)
@@ -1784,7 +1788,7 @@ public class CentralPersistReader
 							srvDescMap.put(srvName, srvDescList);
 						}
 
-						DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
+						DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphProps, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
 						srvDescList.add(e);
 						//System.out.println("getGraphDescriptions(): srvName='"+srvName+"': "+e);
 					}
@@ -2030,11 +2034,13 @@ public class CentralPersistReader
 			tabName = CentralPersistWriterBase.getTableName(conn, sessionName, Table.GRAPH_PROPERTIES, null, true);
 			
 			String  graphLabel     = "";
+			String  graphProps     = "";
 			String  graphCategory  = "";
 			boolean isPercentGraph = false;
 
 			sql = "select "
 				+ "  " + lq + "GraphLabel"       + rq
+				+ " ," + lq + "GraphProps"       + rq
 				+ " ," + lq + "GraphCategory"    + rq
 				+ " ," + lq + "isPercentGraph"   + rq
 				+" from " + tabName
@@ -2049,8 +2055,9 @@ public class CentralPersistReader
 				while (rs.next())
 				{
 					graphLabel     = rs.getString (1);
-					graphCategory  = rs.getString (2);
-					isPercentGraph = rs.getBoolean(3);
+					graphProps     = rs.getString (2);
+					graphCategory  = rs.getString (3);
+					isPercentGraph = rs.getBoolean(4);
 					
 					//System.out.println("sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"':::::::: graphLabel='"+graphLabel+"', isPercentGraph='"+isPercentGraph+"'.");
 				}
@@ -2246,7 +2253,7 @@ public class CentralPersistReader
 							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
 						}
 
-						DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphCategory, isPercentGraph, labelAndDataMap);
+						DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphProps, graphCategory, isPercentGraph, labelAndDataMap);
 						list.add(e);
 						
 						// Remove already added records (keep only last X number of rows)
@@ -2298,7 +2305,7 @@ public class CentralPersistReader
 							LinkedHashMap<String, Double> avgMap = calcAvgData(tmpList);
 							tmpList.clear();
 							
-							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, avgMap);
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, avgMap);
 							list.add(e);
 							
 							// Start a new spanTime
@@ -2311,7 +2318,7 @@ public class CentralPersistReader
 						LinkedHashMap<String, Double> avgMap = calcAvgData(tmpList);
 						tmpList.clear();
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, avgMap);
+						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, avgMap);
 						list.add(e);
 					}
 				}
@@ -2356,7 +2363,7 @@ public class CentralPersistReader
 							LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
 							tmpList.clear();
 							
-							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, maxMap);
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
 							list.add(e);
 							
 							// Start a new spanTime
@@ -2369,7 +2376,7 @@ public class CentralPersistReader
 						LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
 						tmpList.clear();
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, maxMap);
+						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
 						list.add(e);
 					}
 				}
@@ -2414,7 +2421,7 @@ public class CentralPersistReader
 							LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
 							tmpList.clear();
 							
-							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, sumMap);
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, sumMap);
 							list.add(e);
 							
 							// Start a new spanTime
@@ -2427,7 +2434,7 @@ public class CentralPersistReader
 						LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
 						tmpList.clear();
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, sumMap);
+						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, sumMap);
 						list.add(e);
 					}
 				}
@@ -2473,7 +2480,7 @@ public class CentralPersistReader
 							LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
 							tmpList.clear();
 							
-							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, maxMap);
+							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
 							list.add(e);
 							
 							// Start a new spanTime
@@ -2487,7 +2494,7 @@ public class CentralPersistReader
 						LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
 						tmpList.clear();
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphCategory, isPercentGraph, maxMap);
+						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
 						list.add(e);
 					}
 				}

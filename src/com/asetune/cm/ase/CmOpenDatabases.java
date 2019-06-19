@@ -209,6 +209,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSEMAPHORE_CONT,
 			"DB Transaction Log Semaphore Contention",            // Menu CheckBox text
 			"DB Transaction Log Semaphore Contention in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -220,6 +221,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
 			"DB Transaction Log Space left in MB",        // Menu CheckBox text
 			"DB Transaction Log Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -231,6 +233,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_MB,
 			"DB Transaction Log Space used in MB",        // Menu CheckBox text
 			"DB Transaction Log Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -242,6 +245,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_LOGSIZE_USED_PCT,
 			"DB Transaction Log Space used in PCT",     // Menu CheckBox text
 			"DB Transaction Log Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -253,6 +257,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_LEFT_MB,
 			"DB Data Space left in MB",        // Menu CheckBox text
 			"DB Data Space left to use in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -264,6 +269,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_MB,
 			"DB Data Space used in MB",     // Menu CheckBox text
 			"DB Data Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -275,6 +281,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DATASIZE_USED_PCT,
 			"DB Data Space used in PCT",     // Menu CheckBox text
 			"DB Data Space used in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -286,6 +293,7 @@ extends CountersModel
 //		addTrendGraph(GRAPH_NAME_OLDEST_TRAN_IN_SEC,
 //			"Oldest Open Transaction in any Databases",     // Menu CheckBox text
 //			"Oldest Open Transaction in any Databases, in Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 //			new String[] { "Seconds" },
 //			LabelType.Static,
 //			false, // is Percent Graph
@@ -296,6 +304,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMPDB_USED_MB,
 			"TempDB Space used in MB",     // Menu CheckBox text
 			"TempDB Space used in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -972,7 +981,9 @@ extends CountersModel
 			"                  where (db.status  & 32 != 32) and (db.status  & 256 != 256) \n" +   // 32=Database created with for load option, 256=Database suspect/not-recovered
 			"                    and (db.status2 & 16 != 16) and (db.status2 &  32 != 32)  ) \n" + // 16=Database is offline, 32=Database is offline until recovery completes
 			"  and od.DBID *= h.dbid \n" + 
-			"  and h.name != '$replication_truncation_point' \n" + 
+//			"  and h.name != '$replication_truncation_point' \n" + 
+//			"  and h.name not like 'DUMP %' \n" + // DUMP TRANSACTION or DUMP DATABASE
+			"  and h.xactid != 0x0 \n" + // instead of name != ...
 			"order by od.DBName \n" +
 			"";
 		// If we don't have permission on syslogshold, then make the SELECT statement simpler

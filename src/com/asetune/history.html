@@ -49,7 +49,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>possible to use Java <code>${System}</code> information for example <code>${System.getProperty("some.prop.name")}</code></LI>
 			</UL>
 		</LI>
-		<LI>Daily Report Message, some smaller changes to the Mail Message structure.</LI>
+		<LI>Daily Report section was rewritten to be a more "modular".</LI>
+		<LI>Daily Report can be saved in a directory, so we can view the reports from DbxCentral Web Interface. properties 'DailySummaryReport.save=true|false', 'DailySummaryReport.remove.after.days=##', DailySummaryReport.save.dir=path</LI>
 		<LI>in GUI Mode: when an Alarm is Raised, you will now get a popup (similar to when you have blocking locks, long transactions...)</LI>
 		<LI>AlarmView Dialog - now also works in offline mode</LI>
 		<LI>OS Host Monitoring - iostat: improved iostat number of columns parsing (in some cases the iostat version was unpredictable, for how many columns we would expect from iostat)<br>
@@ -70,11 +71,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>Saving new entries "close" to the "source entry" in the tree-states</LI>
 				<LI>Cloning/Duplicating connection profiles (using right click menu)</LI>
 				<LI>Copy a profile name. (ctrl-c and/or right click menu to copy a profile name)</LI>
+				<LI>DDL Lookup: 'Database Object', 'Statement Cache' can individually be enabled/disabled</LI>
 			</ul>
 		</LI>
 		<LI>Performance Counter Panels: added shortcut ctrl-1 = view ABS Counter, ctrl-2 = view DIFF Counters, ctrl-3 = view RATE Counters</LI>
 		<LI>Tooltip on Cells in CounterModel - You can choose to see 'PK' or 'ALL' columns, you can also set if it should be a Focusable ToolTip (change settings with right click, context menu)</LI>
 		<li>View DBMS Configuration for all vendors: Changed most fields to be "editable", to make it easier to copy information from the cells</li>
+		<li>PCS: Print statistics about H2 performance after a entry has been stored</li>
+		<li>PCS: DDL Lookup, options to enable/disable Lokkup/Storage of 'Database Objects' and 'Statement Cache Entries' DDL</li>
+		<li>Graph properties, for DbxCentral Web interface... so we can individually decide Graphs Label Sizes, yAxisScaleLabels (KB MB, GB, Seconds, etc...)<br>
+		    This is described as a JSON object, example: {"yAxisScaleLabels":{"name":"mb","s0":" MB", "s1":" GB", "s2":" TB", "s3":" PB", "s4":" EB"}}</li>
 		<li>All DbxTools does now have a Version Sensitive Information in the Counter Controller Property Dialog</li>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
@@ -131,6 +137,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Index Page: A Text box on main page where you can choose Number of Graph Columns (gcols=#)</LI>
 		<LI>AlarmWriterToMail: Changed HTML Template to include some extra information on CANCEL (ReRaiseCount and last reRaiseDescription, reRaiseExtendedDescription)</LI>
 		<LI>Added AlarmEventOsLoadAverage when the host where DbxCentral consumes to much CPU (especially in combination with H2)</LI>
+		<LI>New section under 'Servers': All file(s) in the REPORTS Directory</LI>
+		<LI>Print statistics about H2 performance after a entry has been stored</LI>
  	</UL>
 
 	<!-- ---------------------------------------------------------------------- -->
@@ -178,6 +186,30 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>CmDataCahces</b><br>
 		<ul>
 			<li>send AlarmEventConfigResourceIsLow if 'default data cache' is < 10mb (8mb is the typical default configuration)</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmCachedProcs</b><br>
+		<ul>
+			<li>Two new columns 'SSQLID' and 'Hashkey' extracted from the ObjectName if it starts with '*ss' or '*sq'</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmSpidWaits</b><br>
+		<ul>
+			<li>New graphs, One for each type: Waits, WaitTime, WaitTimePerWait on SPID and on CLASS</li>
+		</ul>
+		</LI>
+
+		<!-- ----- Performance Counter Specifics ----- -->
+		<LI>
+		<b>CmSysWaits</b><br>
+		<ul>
+			<li>New graphs, One for each type: Waits, WaitTime, WaitTimePerWait on SPID and on CLASS</li>
 		</ul>
 		</LI>
 
@@ -410,6 +442,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>New Collector: CmSpidWait          - What wait types are SPID's waiting on... also 3 graphs on this.</LI>
 		<LI>New Collector: CmDatabase          - Database Sizes and usage, on both OS and SQL-Server level</LI>
 		<LI>New Collector: CmOpenTransaction   - List open transactions and there last SQL Statements, and Execution Plan (if still executing)</LI>
+		<LI>Tooltip on a xml showplan, 'open in SqlSentry Plan Explorer'</LI>
+		<LI>Configuration, store: select * from sys.dm_server_registry</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 
@@ -491,6 +525,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>SQL Server: On errors Print information about Line Number, serverName, ProcName etc.</LI>
 		<LI>SQL Server: Added 'Set' Button with 'statistics io', showplan, exec time</LI>
+		<LI>replaceFakeQuotedIdentifiers: translate '[' and ']' into DBMS Specific Quoted Identifier Chars at runtime<br>
+		    write 'select [c1] from [t1] where [c4] = 1' --translated-to--> 'select "c1" from "t1" where "c4" = 1' or whatever the DBMS specific char is.
+		</LI>
 	</UL>
 	<!-- ---end-of-this-tool--- -->
 

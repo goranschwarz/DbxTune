@@ -420,17 +420,19 @@ public class ConnectionProfile
 	public static final String       XML_TDS_DBXTUNE_osMonPort                   = "osMonPort";
 	public static final String       XML_TDS_DBXTUNE_osMonKeyFile                = "osMonKeyFile";
 
-	public static final String       XML_TDS_DBXTUNE_pcsWriterClass                    = "pcsWriterClass";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterDriver                   = "pcsWriterDriver";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterUrl                      = "pcsWriterUrl";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterUsername                 = "pcsWriterUsername";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterPassword                 = "pcsWriterPassword";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterSavePassword             = "pcsWriterSavePassword";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer        = "pcsWriterStartH2asNwServer";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookup                = "pcsWriterDdlLookup";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects = "pcsWriterDdlStoreDependantObjects";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime       = "pcsWriterDdlLookupSleepTime";
-	public static final String       XML_TDS_DBXTUNE_pcsWriterCounterDetailes          = "pcsWriterCounterDetailes";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterClass                                    = "pcsWriterClass";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDriver                                   = "pcsWriterDriver";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterUrl                                      = "pcsWriterUrl";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterUsername                                 = "pcsWriterUsername";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterPassword                                 = "pcsWriterPassword";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterSavePassword                             = "pcsWriterSavePassword";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer                        = "pcsWriterStartH2asNwServer";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookup                                = "pcsWriterDdlLookup";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForDatabaseObjects       = "pcsWriterDdlLookupEnabledForDatabaseObjects";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForStatementCache        = "pcsWriterDdlLookupEnabledForStatementCache";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects                 = "pcsWriterDdlStoreDependantObjects";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime                       = "pcsWriterDdlLookupSleepTime";
+	public static final String       XML_TDS_DBXTUNE_pcsWriterCounterDetailes                          = "pcsWriterCounterDetailes";
 	
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore              = "pcsWriterCapSql_doSqlCaptureAndStore";
 	public static final String       XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                         = "pcsWriterCapSql_doSqlText";
@@ -531,6 +533,8 @@ public class ConnectionProfile
 		public boolean       _pcsWriterStartH2asNwServer = true;
 		// Recordings DDL Lookup
 		public boolean       _pcsWriterDdlLookup                                = PersistentCounterHandler.DEFAULT_ddl_doDdlLookupAndStore;
+		public boolean       _pcsWriterDdlLookupEnabledForDatabaseObjects       = PersistentCounterHandler.DEFAULT_ddl_enabledForDatabaseObjects;
+		public boolean       _pcsWriterDdlLookupEnabledForStatementCache        = PersistentCounterHandler.DEFAULT_ddl_enabledForStatementCache;
 		public boolean       _pcsWriterDdlStoreDependantObjects                 = PersistentCounterHandler.DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 		public int           _pcsWriterDdlLookupSleepTime                       = PersistentCounterHandler.DEFAULT_ddl_afterDdlLookupSleepTimeInMs;
 		// Recordings SQL Capture
@@ -585,16 +589,18 @@ public class ConnectionProfile
 			_osMonKeyFile                      = fromEntry._osMonKeyFile;
 
 			// Recordings
-			_pcsWriterClass                    = fromEntry._pcsWriterClass;
-			_pcsWriterDriver                   = fromEntry._pcsWriterDriver;
-			_pcsWriterUrl                      = fromEntry._pcsWriterUrl;
-			_pcsWriterUsername                 = fromEntry._pcsWriterUsername;
-			_pcsWriterPassword                 = fromEntry._pcsWriterPassword;
-			_pcsWriterSavePassword             = fromEntry._pcsWriterSavePassword;
-			_pcsWriterStartH2asNwServer        = fromEntry._pcsWriterStartH2asNwServer;
-			_pcsWriterDdlLookup                = fromEntry._pcsWriterDdlLookup;
-			_pcsWriterDdlStoreDependantObjects = fromEntry._pcsWriterDdlStoreDependantObjects;
-			_pcsWriterDdlLookupSleepTime       = fromEntry._pcsWriterDdlLookupSleepTime;
+			_pcsWriterClass                                    = fromEntry._pcsWriterClass;
+			_pcsWriterDriver                                   = fromEntry._pcsWriterDriver;
+			_pcsWriterUrl                                      = fromEntry._pcsWriterUrl;
+			_pcsWriterUsername                                 = fromEntry._pcsWriterUsername;
+			_pcsWriterPassword                                 = fromEntry._pcsWriterPassword;
+			_pcsWriterSavePassword                             = fromEntry._pcsWriterSavePassword;
+			_pcsWriterStartH2asNwServer                        = fromEntry._pcsWriterStartH2asNwServer;
+			_pcsWriterDdlLookup                                = fromEntry._pcsWriterDdlLookup;
+			_pcsWriterDdlLookupEnabledForDatabaseObjects       = fromEntry._pcsWriterDdlLookupEnabledForDatabaseObjects;
+			_pcsWriterDdlLookupEnabledForStatementCache        = fromEntry._pcsWriterDdlLookupEnabledForStatementCache;
+			_pcsWriterDdlStoreDependantObjects                 = fromEntry._pcsWriterDdlStoreDependantObjects;
+			_pcsWriterDdlLookupSleepTime                       = fromEntry._pcsWriterDdlLookupSleepTime;
 
 			_pcsWriterCapSql_doSqlCaptureAndStore              = fromEntry._pcsWriterCapSql_doSqlCaptureAndStore;
 			_pcsWriterCapSql_doSqlText                         = fromEntry._pcsWriterCapSql_doSqlText;
@@ -635,17 +641,19 @@ public class ConnectionProfile
 
 			if (_saveEverything || _dbxtuneOptRecordSession || entry._dbxtuneOptRecordSession)
 			{
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterClass                   , _pcsWriterClass   , entry._pcsWriterClass);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDriver                  , _pcsWriterDriver  , entry._pcsWriterDriver);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUrl                     , _pcsWriterUrl     , entry._pcsWriterUrl);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUsername                , _pcsWriterUsername, entry._pcsWriterUsername);
-				if (_pcsWriterSavePassword)
-					htmlTabRowIfChangedPwd(sb, XML_TDS_DBXTUNE_pcsWriterPassword         , _pcsWriterPassword                , entry._pcsWriterPassword);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword            , _pcsWriterSavePassword            , entry._pcsWriterSavePassword);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer       , entry._pcsWriterStartH2asNwServer);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup               , entry._pcsWriterDdlLookup);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
-				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime      , entry._pcsWriterDdlLookupSleepTime);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterClass                                   , _pcsWriterClass   , entry._pcsWriterClass);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDriver                                  , _pcsWriterDriver  , entry._pcsWriterDriver);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUrl                                     , _pcsWriterUrl     , entry._pcsWriterUrl);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterUsername                                , _pcsWriterUsername, entry._pcsWriterUsername);
+				if (_pcsWriterSavePassword)                                                              
+					htmlTabRowIfChangedPwd(sb, XML_TDS_DBXTUNE_pcsWriterPassword                         , _pcsWriterPassword                                , entry._pcsWriterPassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword                            , _pcsWriterSavePassword                            , entry._pcsWriterSavePassword);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer                       , _pcsWriterStartH2asNwServer                       , entry._pcsWriterStartH2asNwServer);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup                               , _pcsWriterDdlLookup                               , entry._pcsWriterDdlLookup);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForDatabaseObjects      , _pcsWriterDdlLookupEnabledForDatabaseObjects      , entry._pcsWriterDdlLookupEnabledForDatabaseObjects);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForStatementCache       , _pcsWriterDdlLookupEnabledForStatementCache       , entry._pcsWriterDdlLookupEnabledForStatementCache);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects                , _pcsWriterDdlStoreDependantObjects                , entry._pcsWriterDdlStoreDependantObjects);
+				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime                      , _pcsWriterDdlLookupSleepTime                      , entry._pcsWriterDdlLookupSleepTime);
 
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , _pcsWriterCapSql_doSqlCaptureAndStore             , entry._pcsWriterCapSql_doSqlCaptureAndStore             );
 				htmlTabRowIfChanged(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , _pcsWriterCapSql_doSqlText                        , entry._pcsWriterCapSql_doSqlText                        );
@@ -707,12 +715,14 @@ public class ConnectionProfile
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterUrl                     , _pcsWriterUrl);
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterUsername                , _pcsWriterUsername);
 				if (_pcsWriterSavePassword)
-					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterPassword            , !_logger.isDebugEnabled() ? "**secret**" : _pcsWriterPassword);
-				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword            , _pcsWriterSavePassword);
-				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer       , _pcsWriterStartH2asNwServer);
-				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup               , _pcsWriterDdlLookup);
-				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
-				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime      , _pcsWriterDdlLookupSleepTime);
+					htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterPassword                            , !_logger.isDebugEnabled() ? "**secret**" : _pcsWriterPassword);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterSavePassword                            , _pcsWriterSavePassword);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer                       , _pcsWriterStartH2asNwServer);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookup                               , _pcsWriterDdlLookup);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForDatabaseObjects      , _pcsWriterDdlLookupEnabledForDatabaseObjects);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForStatementCache       , _pcsWriterDdlLookupEnabledForStatementCache);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects                , _pcsWriterDdlStoreDependantObjects);
+				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime                      , _pcsWriterDdlLookupSleepTime);
 
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , _pcsWriterCapSql_doSqlCaptureAndStore             );
 				htmlTabRow(sb, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , _pcsWriterCapSql_doSqlText                        );
@@ -775,18 +785,20 @@ public class ConnectionProfile
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonPort,                   _osMonPort);
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_osMonKeyFile,                _osMonKeyFile);
 		
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterClass,                    _pcsWriterClass);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDriver,                   _pcsWriterDriver);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUrl,                      _pcsWriterUrl);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUsername,                 _pcsWriterUsername);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterClass                                   ,_pcsWriterClass);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDriver                                  ,_pcsWriterDriver);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUrl                                     ,_pcsWriterUrl);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterUsername                                ,_pcsWriterUsername);
 			if (_pcsWriterSavePassword)
-				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterPassword,              _pcsWriterPassword);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterSavePassword,             _pcsWriterSavePassword);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer,        _pcsWriterStartH2asNwServer);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookup,                _pcsWriterDdlLookup);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, _pcsWriterDdlStoreDependantObjects);
-			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       _pcsWriterDdlLookupSleepTime);
-//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          _pcsWriterCounterDetailes);
+				StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterPassword                            , _pcsWriterPassword);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterSavePassword                            , _pcsWriterSavePassword);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer                       , _pcsWriterStartH2asNwServer);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookup                               , _pcsWriterDdlLookup);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForDatabaseObjects      , _pcsWriterDdlLookupEnabledForDatabaseObjects);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForStatementCache       , _pcsWriterDdlLookupEnabledForStatementCache);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects                , _pcsWriterDdlStoreDependantObjects);
+			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime                      , _pcsWriterDdlLookupSleepTime);
+//			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCounterDetailes                         , _pcsWriterCounterDetailes);
 
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , _pcsWriterCapSql_doSqlCaptureAndStore             );
 			StringUtil.xmlTag(sb, 8, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , _pcsWriterCapSql_doSqlText                        );
@@ -845,31 +857,33 @@ public class ConnectionProfile
 			// Recordings
 			if (_saveEverything || entry._dbxtuneOptRecordSession)
 			{
-				entry._pcsWriterClass                    = getValue(element, XML_TDS_DBXTUNE_pcsWriterClass,                    entry._pcsWriterClass);
-				entry._pcsWriterDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterDriver,                   entry._pcsWriterDriver);
-				entry._pcsWriterUrl                      = getValue(element, XML_TDS_DBXTUNE_pcsWriterUrl,                      entry._pcsWriterUrl);
-				entry._pcsWriterUsername                 = getValue(element, XML_TDS_DBXTUNE_pcsWriterUsername,                 entry._pcsWriterUsername);
-				entry._pcsWriterSavePassword             = getValue(element, XML_TDS_DBXTUNE_pcsWriterSavePassword,             entry._pcsWriterSavePassword);
-				if (entry._pcsWriterSavePassword)
-					entry._pcsWriterPassword             = getValue(element, XML_TDS_DBXTUNE_pcsWriterPassword,                 entry._pcsWriterPassword);
-				entry._pcsWriterStartH2asNwServer        = getValue(element, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer,        entry._pcsWriterStartH2asNwServer);
-				entry._pcsWriterDdlLookup                = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookup,                entry._pcsWriterDdlLookup);
-				entry._pcsWriterDdlStoreDependantObjects = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects, entry._pcsWriterDdlStoreDependantObjects);
-				entry._pcsWriterDdlLookupSleepTime       = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime,       entry._pcsWriterDdlLookupSleepTime);
-//				entry._pcsWriterCounterDetailes          = getValue(element, XML_TDS_DBXTUNE_pcsWriterCounterDetailes,          entry._pcsWriterCounterDetailes);
+				entry._pcsWriterClass                                    = getValue(element, XML_TDS_DBXTUNE_pcsWriterClass                                   , entry._pcsWriterClass);
+				entry._pcsWriterDriver                                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterDriver                                  , entry._pcsWriterDriver);
+				entry._pcsWriterUrl                                      = getValue(element, XML_TDS_DBXTUNE_pcsWriterUrl                                     , entry._pcsWriterUrl);
+				entry._pcsWriterUsername                                 = getValue(element, XML_TDS_DBXTUNE_pcsWriterUsername                                , entry._pcsWriterUsername);
+				entry._pcsWriterSavePassword                             = getValue(element, XML_TDS_DBXTUNE_pcsWriterSavePassword                            , entry._pcsWriterSavePassword);
+				if (entry._pcsWriterSavePassword)                        
+					entry._pcsWriterPassword                             = getValue(element, XML_TDS_DBXTUNE_pcsWriterPassword                                , entry._pcsWriterPassword);
+				entry._pcsWriterStartH2asNwServer                        = getValue(element, XML_TDS_DBXTUNE_pcsWriterStartH2asNwServer                       , entry._pcsWriterStartH2asNwServer);
+				entry._pcsWriterDdlLookup                                = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookup                               , entry._pcsWriterDdlLookup);
+				entry._pcsWriterDdlLookupEnabledForDatabaseObjects       = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForDatabaseObjects      , entry._pcsWriterDdlLookupEnabledForDatabaseObjects);
+				entry._pcsWriterDdlLookupEnabledForStatementCache        = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupEnabledForStatementCache       , entry._pcsWriterDdlLookupEnabledForStatementCache);
+				entry._pcsWriterDdlStoreDependantObjects                 = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlStoreDependantObjects                , entry._pcsWriterDdlStoreDependantObjects);
+				entry._pcsWriterDdlLookupSleepTime                       = getValue(element, XML_TDS_DBXTUNE_pcsWriterDdlLookupSleepTime                      , entry._pcsWriterDdlLookupSleepTime);
+//				entry._pcsWriterCounterDetailes                          = getValue(element, XML_TDS_DBXTUNE_pcsWriterCounterDetailes                         , entry._pcsWriterCounterDetailes);
 
-				entry._pcsWriterCapSql_doSqlCaptureAndStore              = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             ,                entry._pcsWriterCapSql_doSqlCaptureAndStore             );
-				entry._pcsWriterCapSql_doSqlText                         = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        ,                entry._pcsWriterCapSql_doSqlText                        );
-				entry._pcsWriterCapSql_doStatementInfo                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  ,                entry._pcsWriterCapSql_doStatementInfo                  );
-				entry._pcsWriterCapSql_doPlanText                        = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       ,                entry._pcsWriterCapSql_doPlanText                       );
-				entry._pcsWriterCapSql_sleepTimeInMs                     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    ,                entry._pcsWriterCapSql_sleepTimeInMs                    );
-				entry._pcsWriterCapSql_saveStatement_gt_execTime         = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime        ,                entry._pcsWriterCapSql_saveStatement_gt_execTime        );
-				entry._pcsWriterCapSql_saveStatement_gt_logicalReads     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads    ,                entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
-				entry._pcsWriterCapSql_saveStatement_gt_physicalReads    = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads   ,                entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
-				entry._pcsWriterCapSql_sendDdlForLookup                  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 ,                entry._pcsWriterCapSql_sendDdlForLookup                 );
-				entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime      = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     ,                entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
-				entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads ,                entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
-				entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads,                entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
+				entry._pcsWriterCapSql_doSqlCaptureAndStore              = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlCaptureAndStore             , entry._pcsWriterCapSql_doSqlCaptureAndStore             );
+				entry._pcsWriterCapSql_doSqlText                         = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doSqlText                        , entry._pcsWriterCapSql_doSqlText                        );
+				entry._pcsWriterCapSql_doStatementInfo                   = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doStatementInfo                  , entry._pcsWriterCapSql_doStatementInfo                  );
+				entry._pcsWriterCapSql_doPlanText                        = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_doPlanText                       , entry._pcsWriterCapSql_doPlanText                       );
+				entry._pcsWriterCapSql_sleepTimeInMs                     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sleepTimeInMs                    , entry._pcsWriterCapSql_sleepTimeInMs                    );
+				entry._pcsWriterCapSql_saveStatement_gt_execTime         = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_execTime        , entry._pcsWriterCapSql_saveStatement_gt_execTime        );
+				entry._pcsWriterCapSql_saveStatement_gt_logicalReads     = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_logicalReads    , entry._pcsWriterCapSql_saveStatement_gt_logicalReads    );
+				entry._pcsWriterCapSql_saveStatement_gt_physicalReads    = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_saveStatement_gt_physicalReads   , entry._pcsWriterCapSql_saveStatement_gt_physicalReads   );
+				entry._pcsWriterCapSql_sendDdlForLookup                  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup                 , entry._pcsWriterCapSql_sendDdlForLookup                 );
+				entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime      = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_execTime     , entry._pcsWriterCapSql_sendDdlForLookup_gt_execTime     );
+				entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads  = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_logicalReads , entry._pcsWriterCapSql_sendDdlForLookup_gt_logicalReads );
+				entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads = getValue(element, XML_TDS_DBXTUNE_pcsWriterCapSql_sendDdlForLookup_gt_physicalReads, entry._pcsWriterCapSql_sendDdlForLookup_gt_physicalReads);
 			}
 			// Load Recordings
 //			entry._pcsReaderDriver                   = getValue(element, XML_TDS_DBXTUNE_pcsReaderDriver,             entry._pcsReaderDriver);

@@ -23,6 +23,7 @@ package com.asetune.pcs.report;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
+import com.asetune.central.DbxTuneCentral;
 import com.asetune.pcs.report.senders.IReportSender;
 import com.asetune.pcs.report.senders.ReportSenderToMail;
 import com.asetune.utils.Configuration;
@@ -47,6 +48,15 @@ public class DailySummaryReportFactory
 	public static final String  PROPKEY_senderClassname = "DailySummaryReport.sender.classname";
 	public static final String  DEFAULT_senderClassname = "com.asetune.pcs.report.senders.ReportSenderToMail";
 
+	
+	public static final String  PROPKEY_save = "DailySummaryReport.save";
+	public static final boolean DEFAULT_save = true;
+	
+	public static final String  PROPKEY_saveDir = "DailySummaryReport.save.dir";
+	public static final String  DEFAULT_saveDir = DbxTuneCentral.getAppReportsDir();
+	
+	public static final String  PROPKEY_removeReportsAfterDays = "DailySummaryReport.remove.after.days";
+	public static final int     DEFAULT_removeReportsAfterDays = 30;
 	
 	/**
 	 * Check if the daily summary report is enabled or disabled

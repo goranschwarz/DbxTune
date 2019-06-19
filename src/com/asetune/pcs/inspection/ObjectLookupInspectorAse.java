@@ -46,7 +46,7 @@ extends ObjectLookupInspectorAbstract
 {
 	private static Logger _logger = Logger.getLogger(ObjectLookupInspectorAse.class);
 
-	private long _dbmsVersion = 0;
+	private long    _dbmsVersion = 0;
 
 	private static final List<Integer> skipSpDependsMessages = null;
 //	private static final List<Integer> skipSpDependsMessages = Arrays.asList(0, 17462, 17463, 17464, 17465, 17466, 17467, 17468, 17469);
@@ -79,6 +79,7 @@ extends ObjectLookupInspectorAbstract
 		if (objectName.startsWith("#"))                 return false;
 		if (objectName.startsWith("ObjId:"))            return false;
 		if (objectName.startsWith("Obj="))              return false;
+
 		// Discard entries '*??', but allow '*ss' and '*sq'
 		if (objectName.startsWith("*"))
 		{
@@ -107,7 +108,7 @@ extends ObjectLookupInspectorAbstract
 				// 1-6    = SPID in decimal format
 				// 7-15   = Statement ID, just a incremental counter
 				// _      = separator
-				// ffffff = Hexadecimal value for something, which I did not figure out
+				// ffffff = Hexadecimal value for something, which I did not figure out (hashkey of the parsed SQL Text)
 				// ---------------------------------
 				// There is no way to say what SQL Statement that is behind the LW Procedure 
 				// so just get out of here (return)
@@ -125,6 +126,7 @@ extends ObjectLookupInspectorAbstract
  			}
 		}
 		
+		// allow inspection
 		return true;
 	}
 

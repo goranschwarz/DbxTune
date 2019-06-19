@@ -120,6 +120,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_USED_MB,
 			"df: Space Used in MB, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Used in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,
@@ -132,6 +133,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_USED_PCT,
 			"df: Space Used in Percent, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Used in Percent, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,
@@ -144,6 +146,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_AVAILABLE_MB,
 			"df: Space Available in MB, at MountPoint", 	                                    // Menu CheckBox text
 			"df: Space Available in MB, at MountPoint ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			Category.DISK,

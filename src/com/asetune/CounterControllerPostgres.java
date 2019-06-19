@@ -239,13 +239,14 @@ extends CounterControllerAbstract
 				}
 				catch(UnknownHostException ex)
 				{
+					_logger.info("Problems looking up the IP '" + ip + "' into a real name, using InetAddress.getByName(ip). So lets use the IP adress '" + hostname + "' as the name. Caught: " + ex);
 				}
 
 				mainSampleTime   = ts;
 				dbmsServerName   = DbxTune.stripSrvName(hostname + ":" + port);
 				dbmsHostname     = hostname;
 				
-//System.out.println("createPcsHeaderInfo(): dbmsServerName='"+dbmsServerName+"', dbmsHostname='"+dbmsHostname+"', mainSampleTime='"+mainSampleTime+"'.");
+				_logger.debug("createPcsHeaderInfo(): dbmsServerName='"+dbmsServerName+"', dbmsHostname='"+dbmsHostname+"', mainSampleTime='"+mainSampleTime+"'.");
 			}
 			rs.close();
 			stmt.close();

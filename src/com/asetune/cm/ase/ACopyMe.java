@@ -118,6 +118,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_XXX,
 			"MenuTextXXX", 	                                 // Menu CheckBox text
 			"GrapgLabelXXX", // Label 
+			null,            // graphProps
 			new String[] { "XXX", "YYY", "ZZZ" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OTHER,

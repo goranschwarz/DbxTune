@@ -435,8 +435,11 @@ implements Runnable
 			String currentConsumeTimeStr = "The consumer is currently not active. ";
 			if (_currentConsumeStartTime > 0)
 				currentConsumeTimeStr = "The current consumer has been active for " + TimeUtils.msToTimeStr(currentConsumeTimeMs) + ". ";
-			
-			String h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString();
+
+			// Grab some H2 statistics
+			String h2WriterStat = "";
+			try { h2WriterStat = H2WriterStat.getInstance().refreshCounters().getStatString(); } 
+			catch(Exception ex) { _logger.info("Problems getting H2WriterStat. Continuing anyway... Caught: "+ex, ex); }
 
 			_logger.warn("The persistent queue has "+qsize+" entries. The persistent writer might not keep in pace. " + currentConsumeTimeStr + h2WriterStat);
 

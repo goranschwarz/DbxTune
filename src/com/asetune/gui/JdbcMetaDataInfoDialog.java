@@ -1491,7 +1491,7 @@ extends JDialog
 		try
 		{
     		ResultSet rs = conn.getMetaData().getTables(catalog, schemaPattern, valueNamePattern, tableTypes);
-    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.TablesModel");
+    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.TablesModel", null);
     		return rstm;
 		}
 		catch(SQLException ex)
@@ -1531,7 +1531,7 @@ extends JDialog
 		try
 		{
     		ResultSet rs = conn.getMetaData().getFunctions(catalog, schemaPattern, valueNamePattern);
-    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.FunctionsModel");
+    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.FunctionsModel", null);
     		return rstm;
 		}
 		catch(SQLException ex)

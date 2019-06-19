@@ -119,6 +119,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_LOAD_AVERAGE,
 			"uptime: Load Average", 	                                    // Menu CheckBox text
 			"uptime: Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "loadAverage_1Min",    "loadAverage_5Min",    "loadAverage_15Min" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,
@@ -131,6 +132,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_ADJ_LOAD_AVERAGE,
 			"uptime: Adjusted Load Average", 	                                    // Menu CheckBox text
 			"uptime: Adjusted Load Average ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "adjLoadAverage_1Min", "adjLoadAverage_5Min", "adjLoadAverage_15Min" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,

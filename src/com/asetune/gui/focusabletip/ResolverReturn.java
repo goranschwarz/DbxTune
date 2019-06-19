@@ -156,6 +156,14 @@ public class ResolverReturn
 		return new ResolverReturn(event, Type.SET_PROPERTY_TEMP, null, str, true);		
 	}
 
+	/**
+	 * Simply return
+	 * @return
+	 */
+	public static ResolverReturn createDoNothing(HyperlinkEvent event)
+	{
+		return new ResolverReturn(event, Type.DO_NOT_OPEN, null, null, true);
+	}
 
 
 

@@ -35,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 //RS> 5    GraphLabel       java.sql.Types.VARCHAR   VARCHAR(255)      DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxGraphProperties
 //RS> 6    isPercentGraph   java.sql.Types.INTEGER   INTEGER           DBXTUNE_CENTRAL_DB.GORAN_UB3_DS.DbxGraphProperties
 
-@JsonPropertyOrder(value = {"sessionStartTime", "serverName", "cmName", "graphName", "tableName", "graphLabel", "graphCategory", "isPercentGraph", "visibleAtStartup", "initialOrder"}, alphabetic = true)
+@JsonPropertyOrder(value = {"sessionStartTime", "serverName", "cmName", "graphName", "tableName", "graphLabel", "graphProps", "graphCategory", "isPercentGraph", "visibleAtStartup", "initialOrder"}, alphabetic = true)
 public class DbxGraphProperties
 {
 	private Timestamp _sessionStartTime;
@@ -44,6 +44,7 @@ public class DbxGraphProperties
 	private String    _graphName       ;
 	private String    _tableName       ;
 	private String    _graphLabel      ;
+	private String    _graphProps      ;
 	private String    _graphCategory   ;
 	private boolean   _isPercentGraph  ;
 	private boolean   _visibleAtStartup;
@@ -56,6 +57,7 @@ public class DbxGraphProperties
 	public String    getGraphName       () { return _graphName       ;  }
 	public String    getTableName       () { return _tableName       ;  }
 	public String    getGraphLabel      () { return _graphLabel      ;  }
+	public String    getGraphProps      () { return _graphProps      ;  }
 	public String    getGraphCategory   () { return _graphCategory   ;  }
 	public boolean   isPercentGraph     () { return _isPercentGraph  ;  }
 	public boolean   isVisibleAtStartup () { return _visibleAtStartup;  }
@@ -67,12 +69,13 @@ public class DbxGraphProperties
 	public void setGraphName       (String     graphName       ) { _graphName         = graphName       ; }
 	public void setTableName       (String     tableName       ) { _tableName         = tableName       ; }
 	public void setGraphLabel      (String     graphLabel      ) { _graphLabel        = graphLabel      ; }
-	public void setGraphCategory   (String     graphCategory   ) { _graphCategory     = graphCategory       ; }
+	public void setGraphProps      (String     graphProps      ) { _graphProps        = graphProps      ; }
+	public void setGraphCategory   (String     graphCategory   ) { _graphCategory     = graphCategory   ; }
 	public void setIsPercentGraph  (boolean    isPercentGraph  ) { _isPercentGraph    = isPercentGraph  ; }
 	public void setVisibleAtStartup(boolean    visibleAtStartup) { _visibleAtStartup  = visibleAtStartup; }
 	public void setInitialOrder    (int        initialOrder    ) { _initialOrder      = initialOrder    ; }
 
-	public DbxGraphProperties(Timestamp sessionStartTime, String serverName, String cmName, String graphName, String tableName, String graphLabel, String graphCategory, boolean isPercentGraph, boolean visibleAtStartup, int initialOrder)
+	public DbxGraphProperties(Timestamp sessionStartTime, String serverName, String cmName, String graphName, String tableName, String graphLabel, String graphProps, String graphCategory, boolean isPercentGraph, boolean visibleAtStartup, int initialOrder)
 	{
 		super();
 
@@ -82,6 +85,7 @@ public class DbxGraphProperties
 		_graphName         = graphName       ;
 		_tableName         = tableName       ;
 		_graphLabel        = graphLabel      ;
+		_graphProps        = graphProps      ;
 		_graphCategory     = graphCategory   ;
 		_isPercentGraph    = isPercentGraph  ;
 		_visibleAtStartup  = visibleAtStartup;

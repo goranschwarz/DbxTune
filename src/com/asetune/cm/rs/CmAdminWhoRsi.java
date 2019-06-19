@@ -129,6 +129,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BYTES_SENT,
 			"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Menu CheckBox text
 			"RSI: Number of Bytes Sent, (col 'Bytes Sent', per Second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_BYTES,
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.NETWORK,

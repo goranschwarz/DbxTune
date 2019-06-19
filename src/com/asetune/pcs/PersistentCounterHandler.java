@@ -47,6 +47,12 @@ implements Runnable
 	public static final String  PROPKEY_ddl_doDdlLookupAndStore                  = "PersistentCounterHandler.ddl.doDdlLookupAndStore";
 	public static final boolean DEFAULT_ddl_doDdlLookupAndStore                  = true;
                                                                                  
+	public static final String  PROPKEY_ddl_enabledForDatabaseObjects            = "PersistentCounterHandler.ddl.enabledForDatabaseObjects";
+	public static final boolean DEFAULT_ddl_enabledForDatabaseObjects            = true;
+                                                                                 
+	public static final String  PROPKEY_ddl_enabledForStatementCache             = "PersistentCounterHandler.ddl.enabledForStatementCache";
+	public static final boolean DEFAULT_ddl_enabledForStatementCache             = true;
+                                                                                 
 	public static final String  PROPKEY_ddl_warnDdlInputQueueSizeThresh          = "PersistentCounterHandler.ddl.warnDdlInputQueueSizeThresh";
 	public static final int     DEFAULT_ddl_warnDdlInputQueueSizeThresh          = 100;
                                                                                  
@@ -132,6 +138,8 @@ implements Runnable
 	static
 	{
 		Configuration.registerDefaultValue(PROPKEY_ddl_doDdlLookupAndStore,                  DEFAULT_ddl_doDdlLookupAndStore);
+		Configuration.registerDefaultValue(PROPKEY_ddl_enabledForDatabaseObjects,            DEFAULT_ddl_enabledForDatabaseObjects);
+		Configuration.registerDefaultValue(PROPKEY_ddl_enabledForStatementCache,             DEFAULT_ddl_enabledForStatementCache);
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlInputQueueSizeThresh,          DEFAULT_ddl_warnDdlInputQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_warnDdlStoreQueueSizeThresh,          DEFAULT_ddl_warnDdlStoreQueueSizeThresh);
 		Configuration.registerDefaultValue(PROPKEY_ddl_afterDdlLookupSleepTimeInMs,          DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
@@ -173,7 +181,9 @@ implements Runnable
 	private Thread   _sqlCaptureThread = null;
 	private Thread   _sqlCaptureStorageThread  = null;
 
-	private boolean  _doDdlLookupAndStore = DEFAULT_ddl_doDdlLookupAndStore;
+	private boolean  _doDdlLookupAndStore                 = DEFAULT_ddl_doDdlLookupAndStore;
+	private boolean  _ddlLookup_enabledForDatabaseObjects = DEFAULT_ddl_enabledForDatabaseObjects;
+	private boolean  _ddlLookup_enabledForStatementCache  = DEFAULT_ddl_enabledForStatementCache;
 
 	/** The DDL consumer "thread" code */ 
 	private Runnable _ddlStorage = null;
@@ -316,22 +326,24 @@ implements Runnable
 		
 		_logger.info("Initializing the Persistent Counter Handler functionality.");
 
-		_warnQueueSizeThresh             = _props.getIntProperty    (PROPKEY_warnQueueSizeThresh,                 _warnQueueSizeThresh);
+		_warnQueueSizeThresh                 = _props.getIntProperty    (PROPKEY_warnQueueSizeThresh,                 _warnQueueSizeThresh);
 
 		// DDL Lookup & Store Props
-		_warnDdlInputQueueSizeThresh     = _props.getIntProperty    (PROPKEY_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
-		_warnDdlStoreQueueSizeThresh     = _props.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
+		_warnDdlInputQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlInputQueueSizeThresh,     _warnDdlInputQueueSizeThresh);
+		_warnDdlStoreQueueSizeThresh         = _props.getIntProperty    (PROPKEY_ddl_warnDdlStoreQueueSizeThresh,     _warnDdlStoreQueueSizeThresh);
 
-		_afterDdlLookupSleepTimeInMs     = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
-		_addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
+		_afterDdlLookupSleepTimeInMs         = _props.getIntProperty    (PROPKEY_ddl_afterDdlLookupSleepTimeInMs,     _afterDdlLookupSleepTimeInMs);
+		_addDependantObjectsToDdlInQueue     = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, _addDependantObjectsToDdlInQueue);
 		
-		_doDdlLookupAndStore             = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             DEFAULT_ddl_doDdlLookupAndStore);
-		_ddlLookup_checkConn_period      = _props.getLongProperty   (PROPKEY_ddl_connCheckPeriod,                 DEFAULT_ddl_connCheckPeriod);
-		_ddlLookup_checkConn_last        = System.currentTimeMillis();
+		_doDdlLookupAndStore                 = _props.getBooleanProperty(PROPKEY_ddl_doDdlLookupAndStore,             DEFAULT_ddl_doDdlLookupAndStore);
+		_ddlLookup_enabledForDatabaseObjects = _props.getBooleanProperty(PROPKEY_ddl_enabledForDatabaseObjects,       DEFAULT_ddl_enabledForDatabaseObjects);
+		_ddlLookup_enabledForStatementCache  = _props.getBooleanProperty(PROPKEY_ddl_enabledForStatementCache,        DEFAULT_ddl_enabledForStatementCache);
+		_ddlLookup_checkConn_period          = _props.getLongProperty   (PROPKEY_ddl_connCheckPeriod,                 DEFAULT_ddl_connCheckPeriod);
+		_ddlLookup_checkConn_last            = System.currentTimeMillis();
 		
-		_doSqlCaptureAndStore            = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore,         DEFAULT_sqlCap_doSqlCaptureAndStore);
-		_sqlCapture_checkConn_period     = _props.getLongProperty   (PROPKEY_sqlCap_connCheckPeriod,              DEFAULT_sqlCap_connCheckPeriod);
-		_sqlCapture_checkConn_last       = System.currentTimeMillis();
+		_doSqlCaptureAndStore                = _props.getBooleanProperty(PROPKEY_sqlCap_doSqlCaptureAndStore,         DEFAULT_sqlCap_doSqlCaptureAndStore);
+		_sqlCapture_checkConn_period         = _props.getLongProperty   (PROPKEY_sqlCap_connCheckPeriod,              DEFAULT_sqlCap_connCheckPeriod);
+		_sqlCapture_checkConn_last           = System.currentTimeMillis();
 
 		// property: alarm.handleAlarmEventClass
 		// NOTE: this could be a comma ',' separated list
@@ -347,6 +359,8 @@ implements Runnable
 		else
 		{
 		_logger.info("             ---- ObjectLookupInspector ClassName                      = "+( _objectLookupInspector == null ? "null" : _objectLookupInspector.getClass().getName()));
+		_logger.info("                  "+PROPKEY_ddl_enabledForDatabaseObjects+"            = "+_ddlLookup_enabledForDatabaseObjects);
+		_logger.info("                  "+PROPKEY_ddl_enabledForStatementCache+"             = "+_ddlLookup_enabledForStatementCache);
 		_logger.info("                  "+PROPKEY_ddl_addDependantObjectsToDdlInQueue+"      = "+_addDependantObjectsToDdlInQueue);
 		_logger.info("                  "+PROPKEY_ddl_afterDdlLookupSleepTimeInMs+"          = "+_afterDdlLookupSleepTimeInMs);
 		_logger.info("                  "+PROPKEY_ddl_warnDdlInputQueueSizeThresh+"          = "+_warnDdlInputQueueSizeThresh);
@@ -645,7 +659,25 @@ implements Runnable
 
 		if (_objectLookupInspector != null)
 		{
-			if ( ! _objectLookupInspector.allowInspection(entry) )
+			boolean allowLookup = _objectLookupInspector.allowInspection(entry);
+			
+			// Inspector said: DISCARD, so we can exit early
+			if ( ! allowLookup )
+				return;
+
+			// Configuration: Should we allow: StatementCache Entries
+			if ( PersistentCounterHandler.STATEMENT_CACHE_NAME.equals(entry._dbname) )
+			{
+				allowLookup = _ddlLookup_enabledForStatementCache;
+			}
+			// Configuration: Should we allow: Other Database Objects
+			else
+			{
+				allowLookup = _ddlLookup_enabledForDatabaseObjects;
+			}
+			
+			// exit if we do NOT allow lookup
+			if ( ! allowLookup )
 				return;
 		}
 		dbname     = entry._dbname;
@@ -1527,6 +1559,22 @@ implements Runnable
 				_doDdlLookupAndStore = doDdlLookupAndStore;
 			}
 
+			// ddlLookup_enabledForDatabaseObjects
+			boolean ddlLookup_enabledForDatabaseObjects = _props.getBooleanProperty(PROPKEY_ddl_enabledForDatabaseObjects, DEFAULT_ddl_enabledForDatabaseObjects);
+			if (ddlLookup_enabledForDatabaseObjects != _ddlLookup_enabledForDatabaseObjects)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _ddlLookup_enabledForDatabaseObjects from '"+_ddlLookup_enabledForDatabaseObjects+"', to '"+ddlLookup_enabledForDatabaseObjects+"'.");
+				_ddlLookup_enabledForDatabaseObjects = ddlLookup_enabledForDatabaseObjects;
+			}
+
+			// ddlLookup_enabledForDatabaseObjects
+			boolean ddlLookup_enabledForStatementCache = _props.getBooleanProperty(PROPKEY_ddl_enabledForStatementCache, DEFAULT_ddl_enabledForStatementCache);
+			if (ddlLookup_enabledForStatementCache != _ddlLookup_enabledForStatementCache)
+			{
+				_logger.info("DdlLookupQueueHandler: Discovered a config change in _ddlLookup_enabledForStatementCache from '"+_ddlLookup_enabledForStatementCache+"', to '"+ddlLookup_enabledForStatementCache+"'.");
+				_ddlLookup_enabledForStatementCache = ddlLookup_enabledForStatementCache;
+			}
+
 			// Check if Sleep time was changed
 			int afterDdlLookupSleepTimeInMs = _props.getIntProperty(PROPKEY_ddl_afterDdlLookupSleepTimeInMs, DEFAULT_ddl_afterDdlLookupSleepTimeInMs);
 			if (afterDdlLookupSleepTimeInMs != _afterDdlLookupSleepTimeInMs)
@@ -1535,7 +1583,7 @@ implements Runnable
 				_afterDdlLookupSleepTimeInMs = afterDdlLookupSleepTimeInMs;
 			}
 
-			// Add dependant Object
+			// Add defendant Object
 			boolean addDependantObjectsToDdlInQueue = _props.getBooleanProperty(PROPKEY_ddl_addDependantObjectsToDdlInQueue, DEFAULT_ddl_addDependantObjectsToDdlInQueue);
 			if (addDependantObjectsToDdlInQueue != _addDependantObjectsToDdlInQueue)
 			{

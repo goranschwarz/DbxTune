@@ -24,6 +24,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -62,6 +63,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableModel;
 
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -73,6 +75,7 @@ import org.jdesktop.swingx.decorator.HighlightPredicate;
 
 import com.asetune.Version;
 import com.asetune.cache.XmlPlanCache;
+import com.asetune.config.dict.AseErrorMessageDictionary;
 import com.asetune.gui.AsePlanViewer;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.ResultSetTableModel;
@@ -342,6 +345,37 @@ implements ActionListener, ChangeListener//, MouseListener
 
 			// Add a popup menu
 			setComponentPopupMenu( popup );
+		}
+
+		// 
+		// TOOL TIP for: CELLS
+		//
+		@Override
+		public String getToolTipText(MouseEvent e)
+		{
+			//String tip = null;
+			Point p = e.getPoint();
+			int vrow = rowAtPoint(p);
+			int vcol = columnAtPoint(p);
+			if ( vrow >= 0 && vcol >= 0 )
+			{
+				int mcol = super.convertColumnIndexToModel(vcol);
+				int mrow = super.convertRowIndexToModel(vrow);
+
+				TableModel model = getModel();
+				String colName = model.getColumnName(mcol);
+				Object cellValue = model.getValueAt(mrow, mcol);
+
+				// For ErrorStatus -->> Show the Error message Description (AseErrorMessageDictionary is a static dictionary)
+				if ("ErrorStatus".equals(colName) && cellValue instanceof Number)
+				{
+					int msgNum = ((Number)cellValue).intValue();
+					AseErrorMessageDictionary dict = AseErrorMessageDictionary.getInstance();
+
+					return dict.getDescription(msgNum);
+				}
+			}
+			return getToolTipText();
 		}
 	}
 
@@ -1066,7 +1100,7 @@ implements ActionListener, ChangeListener//, MouseListener
 					sql = getSqlFor_StatementsTab();
 
 					rs = stmnt.executeQuery(sql);
-					_statements_tab.setModel(enrichRstm(new ResultSetTableModel(rs, true, "_statements_tab")));
+					_statements_tab.setModel(enrichRstm(new ResultSetTableModel(rs, true, "_statements_tab", sql)));
 					_statements_tab.packAllGrowOnly();
 					_statementsFilter.updateRowCount();
 					_statementsFilter.refreshCompletion();
@@ -1145,7 +1179,7 @@ implements ActionListener, ChangeListener//, MouseListener
 					sql = getSqlFor_SqlTextTab();
 
 					rs = stmnt.executeQuery(sql);
-					_sql_tab.setModel(new ResultSetTableModel(rs, true, "_sql_tab"));
+					_sql_tab.setModel(new ResultSetTableModel(rs, true, "_sql_tab", sql));
 					_sql_tab.packAllGrowOnly();
 					_sqlFilter.updateRowCount();
 					_sqlFilter.refreshCompletion();
@@ -1188,7 +1222,7 @@ implements ActionListener, ChangeListener//, MouseListener
 
 					sql = getSqlFor_SumStatementsTab();
 					rs = stmnt.executeQuery(sql);
-					_statementsSum_tab.setModel(new ResultSetTableModel(rs, true, "_statementsSum_tab"));
+					_statementsSum_tab.setModel(new ResultSetTableModel(rs, true, "_statementsSum_tab", sql));
 					_statementsSum_tab.packAllGrowOnly();
 					_statementsSumFilter.updateRowCount();
 					_statementsSumFilter.refreshCompletion();
@@ -1230,7 +1264,7 @@ implements ActionListener, ChangeListener//, MouseListener
 
 					sql = getSqlFor_SumSqlTextTab();
 					rs = stmnt.executeQuery(sql);
-					_sqlSum_tab.setModel(new ResultSetTableModel(rs, true, "_sqlSum_tab"));
+					_sqlSum_tab.setModel(new ResultSetTableModel(rs, true, "_sqlSum_tab", sql));
 					_sqlSum_tab.packAllGrowOnly();
 					_sqlSumFilter.updateRowCount();
 					_sqlSumFilter.refreshCompletion();
@@ -1272,7 +1306,7 @@ implements ActionListener, ChangeListener//, MouseListener
 
 					sql = getSqlFor_UserDefinedQueryTab();
 					rs = stmnt.executeQuery(sql);
-					_udq_tab.setModel(new ResultSetTableModel(rs, true, "_udq_tab"));
+					_udq_tab.setModel(new ResultSetTableModel(rs, true, "_udq_tab", sql));
 					_udq_tab.packAllGrowOnly();
 					_udqFilter.updateRowCount();
 					_udqFilter.refreshCompletion();

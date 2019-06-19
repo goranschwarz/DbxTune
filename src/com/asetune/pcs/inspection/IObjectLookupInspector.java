@@ -36,8 +36,8 @@ public interface IObjectLookupInspector
 	 * Discard can be useful to do at an early state, for example if it's a "worker table" or 
 	 * some other objects that we do not want, or simply can't to lookup.
 	 * 
-	 * @param dbname
-	 * @param objectName
+	 * @param entry   entry describing the passed info
+	 * 
 	 * @return <b>true</b> to queue it on the list to inspect<br>
 	 *         <b>false</b> if we want to discard the object.
 	 */

@@ -71,6 +71,12 @@ public class DailyCentralSummaryReport
 			// Create & and Send the report
 			report.create();
 			report.send();
+
+			// Save the report
+			report.save();
+
+			// remove/ old reports from the "archive"
+			report.removeOldReports();
 		}
 		catch(Exception ex)
 		{

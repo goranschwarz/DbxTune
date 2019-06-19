@@ -32,6 +32,33 @@ implements Cloneable
 {
 	/** Use this when you want to assign Labels at a later stage */
 	public static final String[] RUNTIME_REPLACED_LABELS = new String[] {"RUNTIME_REPLACED_LABELS"};
+
+	// Note: below '|' characters will be replaced with '"' by fixJson(). This is simply to get better readability.
+	public static final String Y_AXIS_SCALE_LABELS_NORMAL   = fixJson("{|yAxisScaleLabels|:{|name|:|normal|,   |s0|:||,    |s1|:| K|,      |s2|:| M|,    |s3|:| G|,    |s4|:| T|   }}");
+	public static final String Y_AXIS_SCALE_LABELS_PERSEC   = fixJson("{|yAxisScaleLabels|:{|name|:|persec|,   |s0|:||,    |s1|:| K|,      |s2|:| M|,    |s3|:| G|,    |s4|:| T|   }}");
+	public static final String Y_AXIS_SCALE_LABELS_SECONDS  = fixJson("{|yAxisScaleLabels|:{|name|:|seconds|,  |s0|:||,    |s1|:| K|,      |s2|:| M|,    |s3|:| G|,    |s4|:| T|   }}");
+	public static final String Y_AXIS_SCALE_LABELS_MILLISEC = fixJson("{|yAxisScaleLabels|:{|name|:|millisec|, |s0|:| ms|, |s1|:| sec|,    |s2|:| Ksec|, |s3|:| Msec|, |s4|:| Gsek|}}");
+	public static final String Y_AXIS_SCALE_LABELS_MICROSEC = fixJson("{|yAxisScaleLabels|:{|name|:|microsec|, |s0|:| us|, |s1|:| ms|,     |s2|:| sec|,  |s3|:| Ksek|, |s4|:| Msek|}}");
+	public static final String Y_AXIS_SCALE_LABELS_PERCENT  = fixJson("{|yAxisScaleLabels|:{|name|:|percent|,  |s0|:| %|,  |s1|:| %|,      |s2|:| %|,    |s3|:| %|,    |s4|:| %|   }}");
+	public static final String Y_AXIS_SCALE_LABELS_BYTES    = fixJson("{|yAxisScaleLabels|:{|name|:|bytes|,    |s0|:||,    |s1|:| KB|,     |s2|:| MB|,   |s3|:| GB|,   |s4|:| TB|  }}");
+	public static final String Y_AXIS_SCALE_LABELS_KB       = fixJson("{|yAxisScaleLabels|:{|name|:|kb|,       |s0|:| KB|, |s1|:| MB|,     |s2|:| GB|,   |s3|:| TB|,   |s4|:| PB|  }}");
+	public static final String Y_AXIS_SCALE_LABELS_MB       = fixJson("{|yAxisScaleLabels|:{|name|:|mb|,       |s0|:| MB|, |s1|:| GB|,     |s2|:| TB|,   |s3|:| PB|,   |s4|:| EB|  }}");
+	public static final String Y_AXIS_SCALE_LABELS_MBit     = fixJson("{|yAxisScaleLabels|:{|name|:|mbit|,     |s0|:| Mb|, |s1|:| Gb|,     |s2|:| Tb|,   |s3|:| Pb|,   |s4|:| Eb|  }}");
+	/** Fix above JSON String into a valid JSON Format... The above is just for readability */
+	private static String fixJson(String str)
+	{
+		// Strip away any extra spaces after '|,' until '|'
+		str = str.replaceAll("[|][,][ ]*[|]", "|, |");
+
+		// Strip away "last spaces"... after '|' until '}}'
+		str = str.replaceAll("[|][ ]*[}][}]", "|}}");
+
+		// Change '|' into '"'
+		str = str.replace('|', '"');
+
+		//System.out.println("TrendGraphDataPoint.fixJson: returns <<< |" + str + "|");
+		return str;
+	}
 	
 	private boolean _initializedWithRuntimeReplacedLabels = false; 
 	private String    _name = null;
@@ -39,6 +66,7 @@ implements Cloneable
 	private Date      _date = null;
 
 	private String    _graphLabel     = null;
+	private String    _graphProps     = null; // a JSON String where we can describe x and y Axis properties etc
 	private Category  _category       = Category.OTHER;
 	private boolean   _isPercentGraph = false;
 	private boolean   _visibleAtStart = false;
@@ -102,7 +130,8 @@ implements Cloneable
 //	{
 //		this(name, "-This-Constructor-Will-Be-Removed-ASAP-", false, labelArray, labelType);
 //	}
-	public TrendGraphDataPoint(String name, String graphLabel, TrendGraphDataPoint.Category category, boolean isPercentGraph, boolean visibleAtStart, String[] labelArray, LabelType labelType)
+//	public TrendGraphDataPoint(String name, String graphLabel, TrendGraphDataPoint.Category category, boolean isPercentGraph, boolean visibleAtStart, String[] labelArray, LabelType labelType)
+	public TrendGraphDataPoint(String name, String graphLabel, String graphProps, TrendGraphDataPoint.Category category, boolean isPercentGraph, boolean visibleAtStart, String[] labelArray, LabelType labelType)
 	{
 		if ( LabelType.Dynamic.equals(labelType) && labelArray == null)
 			_labelArray = RUNTIME_REPLACED_LABELS;
@@ -112,6 +141,7 @@ implements Cloneable
 
 		_name           = name;
 		_graphLabel     = graphLabel;
+		_graphProps     = graphProps;
 		_category       = category;
 		_isPercentGraph = isPercentGraph;
 		_visibleAtStart = visibleAtStart;
@@ -336,18 +366,19 @@ implements Cloneable
 	// Also have a look at setData(Date date, Map<String, Double> map)
 	// Also have a look at setData(Date date, Map<String, Double> map, Map<String, String> displayLabelMap)
 	
-	public String   getName ()                { return _name; }
-	public String   getGraphLabel ()          { return _graphLabel; }
-	public Category getCategory ()            { return _category; }
+	public String   getName()                 { return _name; }
+	public String   getGraphLabel()           { return _graphLabel; }
+	public String   getGraphProps()           { return _graphProps; }
+	public Category getCategory()             { return _category; }
 	public boolean  isPercentGraph()          { return _isPercentGraph; }
 	public boolean  isVisibleAtStart()        { return _visibleAtStart; }
-	public Date     getDate ()                { return _date; }
+	public Date     getDate()                 { return _date; }
 //	public String[] getLabel()                { return _labelDisplayArray; }
 //	public String[] getLabelDisplay()         { return null; }
 	public String[] getLabel()                { return _labelArray; }
 	public String[] getLabelDisplay()         { return _labelDisplayArray; }
-	public Double[] getData ()                { return _dataArray; }
-	public boolean  hasData ()
+	public Double[] getData()                 { return _dataArray; }
+	public boolean  hasData()
 	{
 		if (_dataArray == null || _labelArray == null)
 			return false;

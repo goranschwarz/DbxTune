@@ -115,6 +115,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_USED,
 			"meminfo: Used Memory", 	                                // Menu CheckBox text
 			"meminfo: Used Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "MemUsed in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,
@@ -138,6 +139,7 @@ extends CounterModelHostMonitor
 		addTrendGraph(GRAPH_NAME_MEM_AVAILABLE,
 			"meminfo: Available Memory", 	                                // Menu CheckBox text
 			"meminfo: Available Memory ("+GROUP_NAME+"->"+SHORT_NAME+")",    // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "MemAvailable in MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.MEMORY,

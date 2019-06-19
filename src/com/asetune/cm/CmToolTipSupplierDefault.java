@@ -38,6 +38,7 @@ import com.asetune.gui.focusabletip.ToolTipHyperlinkResolver;
 import com.asetune.gui.swing.GTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.xmenu.SqlSentryPlanExplorer;
 
 public class CmToolTipSupplierDefault
 implements GTable.ITableTooltip, ToolTipHyperlinkResolver
@@ -184,10 +185,11 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 
 
 	/** used to specify that a HTML LINK should be opened in EXTERNAL Browser */
-	public static final String OPEN_IN_EXTERNAL_BROWSER = "OPEN-IN-EXTERNAL-BROWSER:";
-	public static final String SET_PROPERTY_TEMP        = "SET-PROPERTY-TEMP:";
+	public static final String OPEN_IN_EXTERNAL_BROWSER         = "OPEN-IN-EXTERNAL-BROWSER:";
+	public static final String OPEN_IN_SENTRY_ONE_PLAN_EXPLORER = "OPEN-IN-SENTRY-ONE-PLAN-EXPLORER:";
+	public static final String SET_PROPERTY_TEMP                = "SET-PROPERTY-TEMP:";
 
-	protected File createTempFile(String prefix, String suffix, byte[] bytes)
+	protected static File createTempFile(String prefix, String suffix, byte[] bytes)
 	throws IOException
 	{
 		// add "." if the suffix doesn't have that
@@ -230,6 +232,19 @@ implements GTable.ITableTooltip, ToolTipHyperlinkResolver
 			{
 				_logger.warn("Problems open URL='"+urlStr+"', in external Browser.", e);
 			}
+		}
+
+		if (desc.startsWith(OPEN_IN_SENTRY_ONE_PLAN_EXPLORER))
+		{
+			String urlStr = desc.substring(OPEN_IN_SENTRY_ONE_PLAN_EXPLORER.length());
+			if (urlStr.startsWith("file:///"))
+				urlStr = urlStr.substring("file:///".length());
+			
+			File tempFile = new File(urlStr);
+			SqlSentryPlanExplorer.openSqlPlanExplorer(tempFile);
+			
+			return ResolverReturn.createDoNothing(event);
+			//return null;
 		}
 
 		if (desc.startsWith(SET_PROPERTY_TEMP))

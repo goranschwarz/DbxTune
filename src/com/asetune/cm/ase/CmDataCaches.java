@@ -146,6 +146,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_ACTIVITY,
 			"Data Caches Activity", 	               // Menu CheckBox text
 			"Activity for All Data Caches per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Logical Reads", "Physical Reads", "Writes" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -158,6 +159,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_LOGICAL_READS,
 			"Data Caches LogicalReads", 	               // Menu CheckBox text
 			"Data Caches LogicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -170,6 +172,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_PHYSICAL_READS,
 			"Data Caches PhysicalReads", 	               // Menu CheckBox text
 			"Data Caches PhysicalReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -182,6 +185,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_APF_READS,
 			"Data Caches ApfReads", 	               // Menu CheckBox text
 			"Data Caches ApfReads per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,
@@ -194,6 +198,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_WRITES,
 			"Data Caches Writes", 	               // Menu CheckBox text
 			"Data Caches Writes per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CACHE,

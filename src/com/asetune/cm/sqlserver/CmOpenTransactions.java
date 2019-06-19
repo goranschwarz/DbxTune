@@ -139,7 +139,7 @@ extends CountersModel
 	{
 		List <String> pkCols = new LinkedList<String>();
 
-//		pkCols.add("session_id");
+		pkCols.add("session_id");
 
 		return pkCols;
 	}

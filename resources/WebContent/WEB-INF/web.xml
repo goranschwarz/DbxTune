@@ -46,6 +46,12 @@
 	</servlet>
 
 	<servlet>
+		<servlet-name>DbxTuneReportsServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.DbxTuneReportsServlet</servlet-class>
+	</servlet>
+
+
+	<servlet>
 		<servlet-name>DownloadServlet</servlet-name>
 		<servlet-class>com.asetune.central.controllers.DownloadServlet</servlet-class>
 	</servlet>
@@ -154,6 +160,11 @@
 	<servlet-mapping>
 		<servlet-name>DbxTuneConfServlet</servlet-name>
 		<url-pattern>/conf</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>DbxTuneReportsServlet</servlet-name>
+		<url-pattern>/report</url-pattern>
 	</servlet-mapping>
 
 	<servlet-mapping>

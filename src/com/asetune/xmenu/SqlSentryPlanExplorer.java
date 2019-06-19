@@ -27,9 +27,7 @@ import java.awt.event.FocusListener;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.SQLException;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -41,8 +39,10 @@ import javax.swing.JTextField;
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.MainFrame;
+import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.OSCommand;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -52,11 +52,12 @@ public class SqlSentryPlanExplorer
 extends XmenuActionBase 
 {
 	private static Logger _logger = Logger.getLogger(SqlSentryPlanExplorer.class);
-	private Connection _conn = null;
+	private DbxConnection _conn = null;
 //	private String     _planHandle = null;
 //	private boolean    _closeConnOnExit;
 
 	public final static String PROPKEY_SQL_PLAN_EXPLORER = "SqlSentryPlanExplorer";
+	public final static String DEFAULT_SQL_PLAN_EXPLORER = "C:\\Program Files\\SentryOne\\SentryOne Plan Explorer\\SentryOne Plan Explorer.exe";
 	/**
 	 * 
 	 */
@@ -114,119 +115,136 @@ extends XmenuActionBase
 						e);
 			}
 			
-			// Open the file via: SQL Sentry Plan Explorer
-			String baseCmd = Configuration.getCombinedConfiguration().getProperty(PROPKEY_SQL_PLAN_EXPLORER, "C:\\Program Files\\SQL Sentry\\SQL Sentry Plan Explorer\\SQL Sentry Plan Explorer.exexxx");
-			String cmd = baseCmd + " " + tempFile;
-			try
-			{
-				OSCommand.execute(cmd);
-//				OSCommand osCmd = OSCommand.execute(cmd);
-//				String retVal = osCmd.getOutput();
-			}
-			catch (Exception e)
-			{
-				final Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-
-				final JPanel     panel   = new JPanel(new MigLayout());
-				final JLabel     cmd_lbl = new JLabel("Command");
-				final JTextField cmd_txt = new JTextField(baseCmd);
-				final JButton    cmd_but = new JButton("...");
-				
-				panel.add(cmd_lbl, "");
-				panel.add(cmd_txt, "pushx, growx");
-				panel.add(cmd_but, "");
-				
-				cmd_but.addActionListener(new ActionListener()
-				{
-					@Override
-					public void actionPerformed(ActionEvent e)
-					{
-						final JFileChooser fc = new JFileChooser();
-						fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
-						fc.setApproveButtonText("Save To File");
-						fc.setDialogTitle("Choose a Command to view a SQL-Server Execution Plan");
-						
-						int returnValue = fc.showOpenDialog(MainFrame.getInstance());
-						if (returnValue == JFileChooser.APPROVE_OPTION) 
-						{
-							cmd_txt.setText( fc.getSelectedFile()+"" );
-							conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
-							conf.save();
-						}
-					}
-				});
-				cmd_txt.addActionListener(new ActionListener()
-				{
-					@Override
-					public void actionPerformed(ActionEvent e)
-					{
-						conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
-						conf.save();
-					}
-				});
-				cmd_txt.addFocusListener(new FocusListener()
-				{
-					@Override public void focusGained(FocusEvent e) {}
-					@Override public void focusLost(FocusEvent e)
-					{
-						if (conf != null)
-						{
-							conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
-							conf.save();
-						}
-					}
-				});
-
-				String htmlMsg = 
-						"<html>"
-						+ "<h3>Problems executing the Operating system command</h3>"
-						+ "Command: <code>" + baseCmd  + "</code><br>"
-						+ "Param 1: <code>" + tempFile + "</code><br>"
-						+ "<br>"
-						+ "Problem: <code>" + e.getMessage() + "</code><br>"
-						+ "<br>"
-						+ "If the command can't be found, you can specify what binary to run using the <br>"
-						+ "property <code>"+PROPKEY_SQL_PLAN_EXPLORER+"=...</code> In the file <code>"+conf.getFilename()+"</code>.<br>"
-						+ "<br>"
-						+ "Or specify the command in the text field below. <b>Note</b>: The button \"...\" opens a file chooser dialog.<br>"
-						+ "<br>"
-						+ "SQL Sentry Plan Explorer can be downloaded at: <A HREF=\"http://www.sqlsentry.com/products/plan-explorer\">http://www.sqlsentry.com/products/plan-explorer</A>";
-
-//				SwingUtils.showErrorMessageExt(MainFrame.getInstance(), "Problems Executing SQL Sentry Plan Explorer", htmlMsg, panel, e);
-				SwingUtils.showErrorMessageExt(MainFrame.getInstance(), "Problems Executing SQL Sentry Plan Explorer", htmlMsg, null, panel);
-			}
-			
+			openSqlPlanExplorer(tempFile);
 		}
 	}
 
 
-	public String getPlan(String planHandle)
+	public static void openSqlPlanExplorer(File tempFile)
 	{
-		String sqlStatement = "select query_plan from sys.dm_exec_query_plan("+planHandle+")";
-
-		String query_plan = null;
-		
+		// Open the file via: SQL Sentry Plan Explorer
+		String baseCmd = Configuration.getCombinedConfiguration().getProperty(PROPKEY_SQL_PLAN_EXPLORER, DEFAULT_SQL_PLAN_EXPLORER);
+		String cmd = baseCmd + " " + tempFile;
 		try
 		{
-			Statement statement = _conn.createStatement();
-			ResultSet rs = statement.executeQuery(sqlStatement);
-			while(rs.next())
-			{
-//				String dbid       = rs.getString(1);
-//				String objectid   = rs.getString(2);
-//				String number     = rs.getString(3);
-//				String encrypted  = rs.getString(4);
-//				String query_plan = rs.getString(5);
-
-				query_plan = rs.getString("query_plan");
-			}
-			rs.close();
+			OSCommand.execute(cmd);
+//			OSCommand osCmd = OSCommand.execute(cmd);
+//			String retVal = osCmd.getOutput();
 		}
 		catch (Exception e)
 		{
-			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
-		}
+			final Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 
+			final JPanel     panel   = new JPanel(new MigLayout());
+			final JLabel     cmd_lbl = new JLabel("Command");
+			final JTextField cmd_txt = new JTextField(baseCmd);
+			final JButton    cmd_but = new JButton("...");
+			
+			panel.add(cmd_lbl, "");
+			panel.add(cmd_txt, "pushx, growx");
+			panel.add(cmd_but, "");
+			
+			cmd_but.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					final JFileChooser fc = new JFileChooser();
+					fc.setFileSelectionMode(JFileChooser.FILES_ONLY);
+					fc.setApproveButtonText("Save To File");
+					fc.setDialogTitle("Choose a Command to view a SQL-Server Execution Plan");
+					
+					int returnValue = fc.showOpenDialog(MainFrame.getInstance());
+					if (returnValue == JFileChooser.APPROVE_OPTION) 
+					{
+						cmd_txt.setText( fc.getSelectedFile()+"" );
+						conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
+						conf.save();
+					}
+				}
+			});
+			cmd_txt.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
+					conf.save();
+				}
+			});
+			cmd_txt.addFocusListener(new FocusListener()
+			{
+				@Override public void focusGained(FocusEvent e) {}
+				@Override public void focusLost(FocusEvent e)
+				{
+					if (conf != null)
+					{
+						conf.setProperty(PROPKEY_SQL_PLAN_EXPLORER, cmd_txt.getText());
+						conf.save();
+					}
+				}
+			});
+
+			String htmlMsg = 
+					"<html>"
+					+ "<h3>Problems executing the Operating system command</h3>"
+					+ "Command: <code>" + baseCmd  + "</code><br>"
+					+ "Param 1: <code>" + tempFile + "</code><br>"
+					+ "<br>"
+					+ "Problem: <code>" + e.getMessage() + "</code><br>"
+					+ "<br>"
+					+ "If the command can't be found, you can specify what binary to run using the <br>"
+					+ "property <code>"+PROPKEY_SQL_PLAN_EXPLORER+"=...</code> In the file <code>"+conf.getFilename()+"</code>.<br>"
+					+ "<br>"
+					+ "Or specify the command in the text field below. <b>Note</b>: The button \"...\" opens a file chooser dialog.<br>"
+					+ "<br>"
+					+ "SQL Sentry Plan Explorer can be downloaded at: <A HREF='https://www.sentryone.com/plan-explorer'>https://www.sentryone.com/plan-explorer</A>";
+
+//			SwingUtils.showErrorMessageExt(MainFrame.getInstance(), "Problems Executing SQL Sentry Plan Explorer", htmlMsg, panel, e);
+			SwingUtils.showErrorMessageExt(MainFrame.getInstance(), "Problems Executing SQL Sentry Plan Explorer", htmlMsg, null, panel);
+		}
+	}
+
+//	public String getPlan(String planHandle)
+//	{
+//		String sqlStatement = "select query_plan from sys.dm_exec_query_plan("+planHandle+")";
+//
+//		String query_plan = null;
+//		
+//		try
+//		{
+//			Statement statement = _conn.createStatement();
+//			ResultSet rs = statement.executeQuery(sqlStatement);
+//			while(rs.next())
+//			{
+////				String dbid       = rs.getString(1);
+////				String objectid   = rs.getString(2);
+////				String number     = rs.getString(3);
+////				String encrypted  = rs.getString(4);
+////				String query_plan = rs.getString(5);
+//
+//				query_plan = rs.getString("query_plan");
+//			}
+//			rs.close();
+//		}
+//		catch (Exception e)
+//		{
+//			JOptionPane.showMessageDialog(null, "Executing SQL command '"+sqlStatement+"'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+//		}
+//
+//		return query_plan;
+//	}
+	public String getPlan(String planHandleHexStr)
+	{
+		String query_plan = null;
+		try
+		{
+			query_plan = SqlServerUtils.getXmlQueryPlan(_conn, planHandleHexStr);
+		}
+		catch (SQLException e)
+		{
+			JOptionPane.showMessageDialog(null, "Executing 'SqlServerUtils.getXmlQueryPlan()'. Found the following error:\n."+e, "Error", JOptionPane.ERROR_MESSAGE);
+		}
 		return query_plan;
 	}
 }

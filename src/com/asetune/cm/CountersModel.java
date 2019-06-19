@@ -2238,6 +2238,7 @@ implements Cloneable, ITableTooltip
 	 * @param name               Name of the trend graph (probably used in updateGraph() to check what trend graph is about to be updated)
 	 * @param chkboxText         Content of the JCheckbox text in the main menu
 	 * @param graphLabel         The Label of the graph
+	 * @param graphProps         A JSON String with Graph properties like x/y axis scaling labels
 	 * @param seriesLabels       An String[] of series labels (that will be deisplaied at the graph bottom). This can be NULL if seriesLabelType is Static
 	 * @param seriesLabelType    If the seriesLabels are static or dynamically added
 	 * @param isPercentGraph     true if the MAX scale of the graph should be 100
@@ -2245,13 +2246,16 @@ implements Cloneable, ITableTooltip
 	 * @param needsVersion       What DBMS version is this graph valid from. (use com.asetune.utils.Ver to generate a value). 0 = any version
 	 * @param minimumHeight      Minimum height of the graph content in pixels. (-1 = Let the layout manager decide this)
 	 */
-	public void addTrendGraph(String name, String chkboxText, String graphLabel, String[] seriesLabels, LabelType seriesLabelType, TrendGraphDataPoint.Category graphCategory, boolean isPercentGraph, boolean visibleAtStart, long needsVersion, int minimumHeight)
+//	public void addTrendGraph(String name, String chkboxText, String graphLabel, String[] seriesLabels, LabelType seriesLabelType, TrendGraphDataPoint.Category graphCategory, boolean isPercentGraph, boolean visibleAtStart, long needsVersion, int minimumHeight)
+	public void addTrendGraph(String name, String chkboxText, String graphLabel, String graphProps, String[] seriesLabels, LabelType seriesLabelType, TrendGraphDataPoint.Category graphCategory, boolean isPercentGraph, boolean visibleAtStart, long needsVersion, int minimumHeight)
 	{
 		if (LabelType.Dynamic.equals(seriesLabelType))
 			seriesLabels = TrendGraphDataPoint.RUNTIME_REPLACED_LABELS;
 		
 		if (seriesLabels == null)
 			seriesLabels = new String[] {""};
+		
+//		String graphProps = null; // FIXME this should be the method parameter graphProps
 
 		// Get UserDefined: graph 'category' properties
 		Configuration conf = Configuration.getCombinedConfiguration();
@@ -2268,7 +2272,7 @@ implements Cloneable, ITableTooltip
 			}
 		}
 
-		TrendGraphDataPoint tgdp = new TrendGraphDataPoint(name, graphLabel, graphCategory, isPercentGraph, visibleAtStart, seriesLabels, seriesLabelType); 
+		TrendGraphDataPoint tgdp = new TrendGraphDataPoint(name, graphLabel, graphProps, graphCategory, isPercentGraph, visibleAtStart, seriesLabels, seriesLabelType); 
 		addTrendGraphData(name, tgdp);
 		
 		
@@ -7984,6 +7988,7 @@ implements Cloneable, ITableTooltip
 
 				w.writeStringField ("graphName" ,     tgdp.getName());
 				w.writeStringField ("graphLabel",     tgdp.getGraphLabel());
+				w.writeStringField ("graphProps",     tgdp.getGraphProps());
 				w.writeStringField ("graphCategory",  tgdp.getCategory().toString());
 				w.writeBooleanField("percentGraph",   tgdp.isPercentGraph());
 				w.writeBooleanField("visibleAtStart", tgdp.isVisibleAtStart());

@@ -457,6 +457,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_PCT,
 			"Row Fetch Efficiency", 	                // Menu CheckBox text
 			"Row Fetch Efficiency (tup_fetched/tup_returned) in Percent ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			true, // is Percent Graph
@@ -467,6 +468,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_SLIDE_PCT,
 			"Row Fetch Efficiency SLIDE", 	                // Menu CheckBox text
 			"Row Fetch Efficiency SLIDE (tup_fetched/tup_returned) in Percent ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			true, // is Percent Graph
@@ -477,6 +479,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_ABS_PCT,
 			"Row Fetch Efficiency ABS", 	                // Menu CheckBox text
 			"Row Fetch Efficiency ABS (tup_fetched/tup_returned) in Percent ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			true, // is Percent Graph
@@ -487,6 +490,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_FETCH_EFFECIENT_SUM,
 			"Row Fetch Efficiency SUM", 	                // Menu CheckBox text
 			"Row Fetch Efficiency SUM [tup_returned, tup_fetched] ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] {"tup_returned (read)", "tup_fetched (to-client)"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.CPU,
@@ -498,6 +502,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTIONS,
 			"Connections", 	                // Menu CheckBox text
 			"Connections ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.SRV_CONFIG,
 			false, // is Percent Graph
@@ -508,6 +513,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CONNECTIONS_SUM,
 			"Connections Sum", 	                // Menu CheckBox text
 			"Connections Sum ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] {"numbackends"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -519,6 +525,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMMITS,
 			"Commits", 	                           // Menu CheckBox text
 			"Commits per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -529,6 +536,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROLLBACKS,
 			"Rollbacks", 	                         // Menu CheckBox text
 			"Rollbacks per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -539,6 +547,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READS,
 			"Reads", 	                         // Menu CheckBox text
 			"Reads per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -549,6 +558,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_HITS,
 			"Cache Hits", 	                         // Menu CheckBox text
 			"Cache Hits per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CACHE,
 			false, // is Percent Graph
@@ -559,6 +569,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS_RETURNED,
 			"Rows Returned", 	                         // Menu CheckBox text
 			"Rows Returned per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			false, // is Percent Graph
@@ -569,6 +580,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS_FETCHED,
 			"Rows Fetched", 	                         // Menu CheckBox text
 			"Rows Fetched per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.CPU,
 			false, // is Percent Graph
@@ -579,6 +591,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS_INSERTS,
 			"Rows Inserted", 	                         // Menu CheckBox text
 			"Rows Inserted per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -589,6 +602,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS_UPDATED,
 			"Rows Updated", 	                         // Menu CheckBox text
 			"Rows Updated per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -599,6 +613,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS_DELETED,
 			"Rows Deleted", 	                         // Menu CheckBox text
 			"Rows Deleted per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -609,6 +624,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ROWS_CONFLICTS,
 			"Conflicting Statements", 	                         // Menu CheckBox text
 			"Conflicting Statements per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -619,6 +635,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_FILES,
 			"Temp Files Created", 	                         // Menu CheckBox text
 			"Temp Files Created per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -629,6 +646,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_TEMP_BYTES,
 			"Temp Bytes", 	                         // Menu CheckBox text
 			"Temp Bytes per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -639,6 +657,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DEADLOCKS,
 			"Deadlocks", 	                         // Menu CheckBox text
 			"Deadlocks per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.OPERATIONS,
 			false, // is Percent Graph
@@ -649,6 +668,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READ_TIME,
 			"Read Time", 	                         // Menu CheckBox text
 			"Read Time per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -659,6 +679,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITE_TIME,
 			"Write Time", 	                         // Menu CheckBox text
 			"Write Time per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.DISK,
 			false, // is Percent Graph
@@ -669,6 +690,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DBSIZE_MB,
 			"DB Size in MB", 	                         // Menu CheckBox text
 			"DB Size in MB ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, LabelType.Dynamic, 
 			TrendGraphDataPoint.Category.SPACE,
 			false, // is Percent Graph

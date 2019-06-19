@@ -307,6 +307,7 @@ public class DbxTuneSample
 				w.writeStringField ("sessionSampleTime", TimeUtils.toStringIso8601(getSessionSampleTime()));
 				w.writeStringField ("graphName" ,        ge.getName());
 				w.writeStringField ("graphLabel",        ge.getGraphLabel());
+				w.writeStringField ("graphProps",        ge.getGraphProps());
 				w.writeStringField ("graphCategory",     ge.getGraphCategory());
 				w.writeBooleanField("percentGraph",      ge.isPercentGraph());
 				w.writeBooleanField("visibleAtStart",    ge.isVisibleAtStart());
@@ -379,6 +380,7 @@ public class DbxTuneSample
 	{
 		String       _name; 
 		String       _graphLabel; 
+		String       _graphProps; 
 		String       _graphCategory; 
 		boolean      _isPercentGraph; 
 		boolean      _visibleAtStart; 
@@ -387,6 +389,7 @@ public class DbxTuneSample
 
 		public String  getName()          { return _name; }
 		public String  getGraphLabel()    { return _graphLabel; }
+		public String  getGraphProps()    { return _graphProps; }
 		public String  getGraphCategory() { return _graphCategory; }
 		public boolean isPercentGraph()   { return _isPercentGraph; }
 		public boolean isVisibleAtStart() { return _visibleAtStart; }
@@ -394,10 +397,11 @@ public class DbxTuneSample
 		public String getOriginJsonStr()                     { return _originJsonStr; }
 		public void   setOriginJsonStr(String originJsonStr) { _originJsonStr = originJsonStr; }
 		
-		public GraphEntry(String name, String graphLabel, String graphCategory, boolean isPercentGraph, boolean visibleAtStart)
+		public GraphEntry(String name, String graphLabel, String graphProps, String graphCategory, boolean isPercentGraph, boolean visibleAtStart)
 		{
 			_name           = name;
 			_graphLabel     = graphLabel;
+			_graphProps     = graphProps;
 			_graphCategory  = graphCategory;
 			_isPercentGraph = isPercentGraph;
 			_visibleAtStart = visibleAtStart;
@@ -1064,11 +1068,12 @@ public class DbxTuneSample
 					{
 						String  graphName      = getString (graphs, "graphName");
 						String  graphLabel     = getString (graphs, "graphLabel", "unknown graph label");
+						String  graphProps     = getString (graphs, "graphProps");
 						String  graphCategory  = getString (graphs, "graphCategory", "unknown graph category");
 						boolean isPercentGraph = getBoolean(graphs, "percentGraph",   false);
 						boolean visibleAtStart = getBoolean(graphs, "visibleAtStart", false);
 
-						GraphEntry graphEntry = new GraphEntry(graphName, graphLabel, graphCategory, isPercentGraph, visibleAtStart);
+						GraphEntry graphEntry = new GraphEntry(graphName, graphLabel, graphProps, graphCategory, isPercentGraph, visibleAtStart);
 						cmEntry.addGraph(graphEntry);
 
 						// Add the full JSON just for debugging

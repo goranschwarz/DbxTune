@@ -212,6 +212,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PROC_CACHE_PCT_USAGE,
 			"Procedure Cache Usage in Percent", 	                                 // Menu CheckBox text
 			"Procedure Cache Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			new String[] { "Percent Usage" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -224,6 +225,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PROC_CACHE_MEM_USAGE,
 			"Procedure Cache Usage in MB", 	                                 // Menu CheckBox text
 			"Procedure Cache Usage in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			new String[] { "Total Memory MB", "Free MB", "Used MB", "Max Ever Used MB"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -236,6 +238,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_METADATA_PCT_USAGE,
 			"MetaData Cache Usage in Percent", 	                                 // Menu CheckBox text
 			"MetaData Cache Usage in Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			new String[] { "number of open objects", "number of open indexes", "number of open partitions", "number of locks", "number of sort buffers", "number of user connections", "number of worker processes"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SRV_CONFIG,
@@ -248,6 +251,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_METADATA_ACTIVE,
 			"MetaData Cache Active Count", 	                                 // Menu CheckBox text
 			"MetaData Cache Active Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "number of open objects", "number of open indexes", "number of open partitions", "number of locks", "number of sort buffers", "number of user connections", "number of worker processes"},
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SRV_CONFIG,

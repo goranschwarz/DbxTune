@@ -323,6 +323,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_TIME_MS,
 			"SPID Wait, group by wait_type - wait_time_ms, Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by wait_type - wait_time_ms, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -334,6 +335,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAITING_TASKS_COUNT,
 			"SPID Wait, group by wait_type - waiting_tasks_count, Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by wait_type - waiting_tasks_count, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,
@@ -345,6 +347,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WaitTimePerCount,
 			"SPID Wait, group by wait_type - WaitTimePerCount, Average", 	                   // Menu CheckBox text
 			"SPID Wait, group by wait_type - WaitTimePerCount, Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,

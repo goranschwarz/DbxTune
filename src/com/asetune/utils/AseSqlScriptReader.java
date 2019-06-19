@@ -97,6 +97,8 @@ public class AseSqlScriptReader
 	private int             _printClientTiming     = -1;   // option 'time' -- print client timing
 	private List<Integer>   _keepRs                = null; // option 'keeprs #[,#...]'
 	private List<Integer>   _skipRs                = null; // option 'skiprs #[,#...]'
+	private int             _replaceFakeQuotedId   = -1;   // option 'rfqi'
+
 	
 	/** keep track of where in the file we are */
 	private int             _lineInReader          = 0;
@@ -617,32 +619,35 @@ public class AseSqlScriptReader
 	}
 
 
-	public boolean hasOption_topRows()           { return _topRows           > 0; }
-	public boolean hasOption_bottomRows()        { return _bottomRows        > 0; }
-	public boolean hasOption_rowCount()          { return _rowCount          > 0; }
-	public boolean hasOption_asPlainText()       { return _asPlainText       > 0; }
-	public boolean hasOption_asTabbedPane()      { return _asTabbedPane      > 0; }
-	public boolean hasOption_noData()            { return _noData            > 0; }
-	public boolean hasOption_appendOutput()      { return _appendOutput      > 0; }
-	public boolean hasOption_printSql()          { return _printSql          > 0; }
-	public boolean hasOption_printRsi()          { return _printRsi          > 0; }
-	public boolean hasOption_printClientTiming() { return _printClientTiming > 0; }
-	public boolean hasOption_keepRs()            { return _keepRs != null && _keepRs.size() > 0; }
-	public boolean hasOption_skipRs()            { return _skipRs != null && _skipRs.size() > 0; }
+	public boolean hasOption_topRows()                { return _topRows           > 0; }
+	public boolean hasOption_bottomRows()             { return _bottomRows        > 0; }
+	public boolean hasOption_rowCount()               { return _rowCount          > 0; }
+	public boolean hasOption_asPlainText()            { return _asPlainText       > 0; }
+	public boolean hasOption_asTabbedPane()           { return _asTabbedPane      > 0; }
+	public boolean hasOption_noData()                 { return _noData            > 0; }
+	public boolean hasOption_appendOutput()           { return _appendOutput      > 0; }
+	public boolean hasOption_printSql()               { return _printSql          > 0; }
+	public boolean hasOption_printRsi()               { return _printRsi          > 0; }
+	public boolean hasOption_printClientTiming()      { return _printClientTiming > 0; }
+	public boolean hasOption_keepRs()                 { return _keepRs != null && _keepRs.size() > 0; }
+	public boolean hasOption_skipRs()                 { return _skipRs != null && _skipRs.size() > 0; }
+	public boolean hasOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
 
 	// Below boolean methods, yes we use "int opt = -1" as "not specified"
-	public int     getOption_topRows()           { return _topRows; }
-	public int     getOption_bottomRows()        { return _bottomRows; }
-	public boolean getOption_rowCount()          { return _rowCount          > 0; }
-	public boolean getOption_asPlainText()       { return _asPlainText       > 0; }
-	public boolean getOption_asTabbedPane()      { return _asTabbedPane      > 0; }
-	public boolean getOption_noData()            { return _noData            > 0; }
-	public boolean getOption_appendOutput()      { return _appendOutput      > 0; }
-	public boolean getOption_printSql()          { return _printSql          > 0; }
-	public boolean getOption_printRsi()          { return _printRsi          > 0; }
-	public boolean getOption_printClientTiming() { return _printClientTiming > 0; }
-	public List<Integer> getOption_keepRs()      { return _keepRs; }
-	public List<Integer> getOption_skipRs()      { return _skipRs; }
+	public int     getOption_topRows()                { return _topRows; }
+	public int     getOption_bottomRows()             { return _bottomRows; }
+	public boolean getOption_rowCount()               { return _rowCount          > 0; }
+	public boolean getOption_asPlainText()            { return _asPlainText       > 0; }
+	public boolean getOption_asTabbedPane()           { return _asTabbedPane      > 0; }
+	public boolean getOption_noData()                 { return _noData            > 0; }
+	public boolean getOption_appendOutput()           { return _appendOutput      > 0; }
+	public boolean getOption_printSql()               { return _printSql          > 0; }
+	public boolean getOption_printRsi()               { return _printRsi          > 0; }
+	public boolean getOption_printClientTiming()      { return _printClientTiming > 0; }
+	public List<Integer> getOption_keepRs()           { return _keepRs; }
+	public List<Integer> getOption_skipRs()           { return _skipRs; }
+	public boolean getOption_replaceFakeQuotedIdent() { return _replaceFakeQuotedId > 0; }
+
 
 	/**
 	 * When we have a 'go | someSubCommand', we needs to apply some filter.
@@ -671,18 +676,19 @@ public class AseSqlScriptReader
 		StringBuilder batchBuffer = new StringBuilder();
 
 		// Reset some stuff (like options)
-		_topRows           = -1;
-		_bottomRows        = -1;
-		_rowCount          = -1;
-		_asPlainText       = -1;
-		_asTabbedPane      = -1;
-		_noData            = -1;
-		_appendOutput      = -1;
-		_printSql          = -1;
-		_printRsi          = -1;
-		_printClientTiming = -1;
-		_keepRs            = null;
-		_skipRs            = null;
+		_topRows             = -1;
+		_bottomRows          = -1;
+		_rowCount            = -1;
+		_asPlainText         = -1;
+		_asTabbedPane        = -1;
+		_noData              = -1;
+		_appendOutput        = -1;
+		_printSql            = -1;
+		_printRsi            = -1;
+		_printClientTiming   = -1;
+		_keepRs              = null;
+		_skipRs              = null;
+		_replaceFakeQuotedId = -1;
 
 		// Get lines from the reader
 		String row;
@@ -944,6 +950,12 @@ public class AseSqlScriptReader
 												error = "Sub command 'skiprs #' The parameter '"+str+"' is not a number. Caught: "+nfe;
 											}
 										}
+									}
+									else if ("rfqi".equalsIgnoreCase(word1))
+									{
+										_replaceFakeQuotedId = 1;
+										if (StringUtil.hasValue(word2))
+											error = "Sub command '"+word1+"' does not accept any parameters.\nYou passed the parameter '"+word2+"'.";
 									}
 									else
 									{

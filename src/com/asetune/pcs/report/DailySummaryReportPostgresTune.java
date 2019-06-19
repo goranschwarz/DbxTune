@@ -20,7 +20,17 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.postgres.PostgresTopSql;
+
 public class DailySummaryReportPostgresTune 
 extends DailySummaryReportDefault
 {
+	@Override
+	public void addReportEntries()
+	{
+		// Add the Alarms Active/History
+		super.addReportEntries();
+
+		addReportEntry( new PostgresTopSql(this) );
+	}
 }

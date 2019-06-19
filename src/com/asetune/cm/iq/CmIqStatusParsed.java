@@ -145,6 +145,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_VERSION,
 			"Versioning", 	                        // Menu CheckBox text
 			"Versioning, using Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Active Txn Versions - Count", "Active Txn Versions - Created MB", "Active Txn Versions - Deleted MB", "Other Versions - Count", "Other Versions - MB" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -157,6 +158,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMPRESSION,
 			"Compression Ratio", 	                        // Menu CheckBox text
 			"Compression Ratio - in Percent, Absolute Values ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			new String[] { "Main IQ I/O - Compression Ratio", "Temporary IQ I/O - Compression Ratio" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -169,6 +171,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_READS,
 			"Cache Activity - Logical Reads", 	                        // Menu CheckBox text
 			"Cache Activity - Logical Reads, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Main - Logical Read", "Temporary - Logical Read" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -181,6 +184,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_MAIN,
 			"Cache IO Activity - Main", 	                        // Menu CheckBox text
 			"Cache IO Activity - Main, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,
@@ -193,6 +197,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CACHE_TEMP,
 			"Cache IO Activity - Temporary", 	                        // Menu CheckBox text
 			"Cache IO Activity - Temporary, per Second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Physical Read", "Pages Created", "Pages Dirtied", "Physically Written", "Pages Destroyed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CACHE,

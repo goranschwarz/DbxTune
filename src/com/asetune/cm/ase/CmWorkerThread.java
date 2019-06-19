@@ -122,6 +122,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_ACTIVE_THREADS,
 			"Worker Threads in Use ", 	                                  // Menu CheckBox text
 			"Worker Threads in Use & Parallel Queries per second ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "ThreadsActive", "ParallelQueries" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.CPU,

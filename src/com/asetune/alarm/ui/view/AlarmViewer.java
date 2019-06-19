@@ -824,7 +824,9 @@ implements ActionListener
 		{
 			super.tableChanged(e);
 
-			packAllGrowOnly();
+			// Ignore IndexOutOfBoundsException... probably happens when we remove rows (due to keep only last ### rows) 
+			try { packAllGrowOnly(); }
+			catch (IndexOutOfBoundsException ignore) {}
 
 			if (_historyMoveToLastAddedEntry_chk.isSelected())
 			{

@@ -45,6 +45,7 @@ import com.asetune.sql.showplan.ShowplanHtmlView;
 import com.asetune.sql.showplan.ShowplanHtmlView.Type;
 import com.asetune.ui.autocomplete.CompletionProviderJdbc;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -159,7 +160,20 @@ extends CmToolTipSupplierDefault
 					}
 					else
 					{
-						sql = "select text from sys.dm_exec_sql_text("+cellValue+")";
+						//sql = "select text from sys.dm_exec_sql_text("+cellValue+")";
+
+						DbxConnection conn = _cm.getCounterController().getMonConnection();
+
+						String sqlText = SqlServerUtils.getSqlTextNoThrow(conn, String.valueOf(cellValue));
+
+						StringBuilder sb = new StringBuilder(300);
+						sb.append("<html>\n");
+						sb.append("<pre>\n");
+						sb.append(sqlText);
+						sb.append("<pre>\n");
+						sb.append("</html>\n");
+						
+						return sb.toString();
 					}
 				}
 			}
@@ -178,28 +192,31 @@ extends CmToolTipSupplierDefault
 					}
 					else
 					{
-						sql = "select query_plan from sys.dm_exec_query_plan("+cellValue+")";
-						
-						StringBuilder qpsb = new StringBuilder(1024);
-						Connection conn = _cm.getCounterController().getMonConnection();
-						try ( Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql) )
-						{
-							while(rs.next())
-								qpsb.append(rs.getString(1));
-						}
-						catch(SQLException ex)
-						{
-							String problem = "Problems getting SQL-Server QueryPlan for '"+cellValue+"', skipping this request. using sql='"+sql+"'"; 
-							_logger.warn(problem);
-							return problem;
-						}
+//						sql = "select query_plan from sys.dm_exec_query_plan("+cellValue+")";
+//						
+//						StringBuilder qpsb = new StringBuilder(1024);
+//						Connection conn = _cm.getCounterController().getMonConnection();
+//						try ( Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql) )
+//						{
+//							while(rs.next())
+//								qpsb.append(rs.getString(1));
+//						}
+//						catch(SQLException ex)
+//						{
+//							String problem = "Problems getting SQL-Server QueryPlan for '"+cellValue+"', skipping this request. using sql='"+sql+"'"; 
+//							_logger.warn(problem);
+//							return problem;
+//						}
+//
+//						String queryPlanText = qpsb.toString();
+//						if (queryPlanText != null && queryPlanText.equalsIgnoreCase("null"))
+//							queryPlanText = null;
 
-						String queryPlanText = qpsb.toString();
-						if (queryPlanText != null && queryPlanText.equalsIgnoreCase("null"))
-							queryPlanText = null;
+						DbxConnection conn = _cm.getCounterController().getMonConnection();
+						String queryPlanText = SqlServerUtils.getXmlQueryPlanNoThrow(conn, String.valueOf(cellValue));
 
 						if (StringUtil.isNullOrBlank(queryPlanText) || queryPlanText.equalsIgnoreCase("null"))
-							return "Getting query plan using: sql='"+sql+"' returned NULL. (NO QUERY PLAN was available).";
+							return "Getting query plan for "+cellValue+" returned NULL. (NO QUERY PLAN was available).";
 						
 						return createXmlPlanTooltip(queryPlanText);
 					}
@@ -242,7 +259,7 @@ extends CmToolTipSupplierDefault
 			}
 		}
 
-		if (sql != null)
+		if (StringUtil.hasValue(sql))
 		{
 			try
 			{
@@ -309,15 +326,18 @@ extends CmToolTipSupplierDefault
 		//-------------------------------------
 		// Write the content to a file!
 		//-------------------------------------
-		File tmpFile = null;
+		File htmlTmpFile = null;
+		File xmlTmpFile  = null;
 		try
 		{
 			// put content in a TEMP file
 //			tmpFile = createTempFile("ssTune_qp_tooltip_", ".xml", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
-			tmpFile = ShowplanHtmlView.createHtmlFile(Type.SQLSERVER, queryPlanText);
+			htmlTmpFile = ShowplanHtmlView.createHtmlFile(Type.SQLSERVER, queryPlanText);
+			xmlTmpFile  = createTempFile("sqlSrvPlan_", ".xml", queryPlanText.getBytes()); // NOTE: A Browser is possibly better at reading the XML than any registered app???
 
 			// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
-			String urlStr = ("file:///"+tmpFile);
+			String htmlUrlStr = ("file:///"+htmlTmpFile);
+			String xmlUrlStr  = ("file:///"+xmlTmpFile);
 			try	
 			{
 				String propName_xmlInline    = Version.getAppName() + ".tooltip.xmlplan.show.inline";
@@ -326,15 +346,18 @@ extends CmToolTipSupplierDefault
 				boolean showInline     = Configuration.getCombinedConfiguration().getBooleanProperty(propName_xmlInline,    false);
 				boolean showAutoExtern = Configuration.getCombinedConfiguration().getBooleanProperty(propName_autoExternal, false);
 				
-				URL url = new URL(urlStr);
+				URL htmlUrl = new URL(htmlUrlStr);
+//				URL xmlUrl  = new URL(xmlUrlStr);
 				
 				StringBuilder sb = new StringBuilder();
 				sb.append("<html>");
 				sb.append("<h2>Tooltip for 'SQL-Server Query Plan'</h2>");
 				sb.append("<br>");
-				sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
-				sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
-				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+				sb.append("Using temp file: <code>").append(htmlTmpFile).append("</code><br>");
+				sb.append("Using temp file: <code>").append(xmlTmpFile ).append("</code><br>");
+				sb.append("File Size: <code>").append(StringUtil.bytesToHuman(htmlTmpFile.length(), "#.#")).append("</code><br>");
+				sb.append("<a href='").append(OPEN_IN_EXTERNAL_BROWSER + htmlUrl          ).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+				sb.append("<a href='").append(OPEN_IN_SENTRY_ONE_PLAN_EXPLORER + xmlUrlStr).append("'>Open in 'SentryOne Plan Explorer'</a> (Note: This may take a few seconds to start)<br>");
 				sb.append("<br>");
 				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_autoExternal + "=" + (!showAutoExtern) ).append("'>"+(showAutoExtern ? "Disable" : "Enable")+"</a> - Automatically open in Extrnal Browser. (set property <code>"+propName_autoExternal+"="+(!showAutoExtern)+"</code>)<br>");
 				sb.append("<a href='").append(SET_PROPERTY_TEMP + propName_xmlInline    + "=" + (!showInline)     ).append("'>"+(showInline     ? "Disable" : "Enable")+"</a> - Show the XML Plan in here. (set property <code>"+propName_xmlInline+"="+(!showInline)+"</code>)<br>");
@@ -363,11 +386,11 @@ extends CmToolTipSupplierDefault
 						{
 							try
 							{
-								desktop.browse(tmpFile.toURI());
+								desktop.browse(htmlTmpFile.toURI());
 							}
 							catch (Exception ex)
 							{
-								SwingUtils.showErrorMessage(null, "Problems HTML Showplan", "Problems when open the URL '"+tmpFile+"'.", ex);
+								SwingUtils.showErrorMessage(null, "Problems HTML Showplan", "Problems when open the URL '"+htmlTmpFile+"'.", ex);
 							}
 						}
 					}
@@ -377,19 +400,19 @@ extends CmToolTipSupplierDefault
 			}
 			catch (Exception ex) 
 			{
-				_logger.warn("Problems when open the URL '"+urlStr+"'. Caught: "+ex, ex); 
+				_logger.warn("Problems when open the URL '"+htmlUrlStr+"'. Caught: "+ex, ex); 
 				return 
-					"<html>Problems when open the URL '<code>"+urlStr+"</code>'.<br>"
+					"<html>Problems when open the URL '<code>"+htmlUrlStr+"</code>'.<br>"
 					+ "Caught: <b>" + ex + "</b><br>"
 					+ "<hr>"
-					+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + urlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
+					+ "<a href='" + OPEN_IN_EXTERNAL_BROWSER + htmlUrlStr + "'>Open tempfile in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>"
 					+ "Or copy the above filename, and open it in any application or text editor<br>"
 					+ "<html/>";
 			}
 		}
 		catch (Exception ex)
 		{
-			return "<html>Sorry problems when creating temporary file '"+tmpFile+"'<br>Caught: "+ex+"</html>";
+			return "<html>Sorry problems when creating temporary file '"+htmlTmpFile+"'<br>Caught: "+ex+"</html>";
 		}
 		
 	}

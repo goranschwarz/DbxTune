@@ -160,6 +160,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENTS,
 			"SQL Statement Calls", 	                           // Menu CheckBox text
 			"SQL Statement Calls per second ("+SHORT_NAME+")", // Graph Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] {"calls"}, 
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.OPERATIONS,

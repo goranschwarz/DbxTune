@@ -197,6 +197,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SEC,
 			"SQL Statements Executed per Sec", // Menu CheckBox text
 			"SQL Statements Executed per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Total Statements Executed/sec", "SQL Batches Executed/sec", "SQL in Statement Cache Executed/sec", "Dynamic SQL/sec", "Statements in Procedures Executed/sec" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -209,6 +210,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_ALL,
 			"SQL Statements (all) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Statements (all) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -221,6 +223,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_NOOP,
 			"SQL Statements (0 ms and 0 LogicalReads) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Statements (0 ms and 0 LogicalReads) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0 ms ExecTime AND 0 LogicalReads" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -233,6 +236,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_0,
 			"SQL Statements (0-10ms) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Statements (0-10ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "<1ms", "1-2ms", "2-5ms", "5-10ms" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -245,6 +249,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_1,
 			"SQL Statements (10ms-100ms) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Statements (10ms-100ms) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "10-20ms", "20-50ms", "50-100ms" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -257,6 +262,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_2,
 			"SQL Statements (100ms-1s) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Statements (100ms-1s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "100-200ms", "200-500ms", "500ms-1s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -269,6 +275,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_3,
 			"SQL Statements (1s-10s) In Time Span Received per Sec", // Menu CheckBox text
 			"SQL Statements (1s-10s) In Time Span Received per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "1-2s", "2-5s", "5-10s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -281,6 +288,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_TIME_SPAN_4,
 			"SQL Statements (>10s) In Time Span Received per SAMPLE", // Menu CheckBox text
 			"SQL Statements (>10s) In Time Span Received per SAMPLE ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -299,6 +307,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_EXEC_TIME,
 			"Sum Exec Time per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum Exec Time per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -311,6 +320,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_LOGICAL_READ,
 			"Sum Logical Reads per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum Logical Reads per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -323,6 +333,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_PHYSICAL_READ,
 			"Sum Physical Reads per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum Physical Reads per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -335,6 +346,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_CPU_TIME,
 			"Sum CPU Time per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum CPU Time per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -347,6 +359,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_WAIT_TIME,
 			"Sum Wait Time per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum Wait Time per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -359,6 +372,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_SUM_ROWS_AFFECTED,
 			"Sum Rows Affected per sec Over SQL Response Time", // Menu CheckBox text
 			"Sum Rows Affected per sec Over SQL Response Time ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "0ms & NoLReads", "<1ms", "1-2ms", "2-5ms", "5-10ms", "10-20ms", "20-50ms", "50-100ms", "100-200ms", "200-500ms", "500ms-1s", "1-2s", "2-5s", "5-10s", "10-20s", "20-50s", "50-100s", ">100s" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,
@@ -371,6 +385,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_SQL_STATEMENT_ERROR_COUNT,
 			"Sum SQL Statements Error Count Per Sec", // Menu CheckBox text
 			"Sum SQL Statements Error Count Per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "errorCount" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.OPERATIONS,

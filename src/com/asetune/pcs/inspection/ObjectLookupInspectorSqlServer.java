@@ -35,6 +35,7 @@ import com.asetune.pcs.ObjectLookupQueueEntry;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.AseSqlScript;
+import com.asetune.utils.SqlServerUtils;
 
 public class ObjectLookupInspectorSqlServer
 extends ObjectLookupInspectorAbstract
@@ -106,36 +107,10 @@ extends ObjectLookupInspectorAbstract
 			entry.setType("SS");
 			entry.setSampleTime( new Timestamp(System.currentTimeMillis()) );
 
-//			String sql = "select * from sys.dm_exec_query_plan("+objectName+") \n";
-			String sql = "select * from sys.dm_exec_query_plan( convert(varbinary(64), ?, 1) ) \n"; // convert(varbinary(64), '0x...', 1) in SQL-Server 2008, convert with style 1 (last param) is supported
-
-//			RS> Col# Label      JDBC Type Name              Guessed DBMS type Source Table
-//			RS> ---- ---------- --------------------------- ----------------- ------------
-//			RS> 1    dbid       java.sql.Types.SMALLINT     smallint          -none-      
-//			RS> 2    objectid   java.sql.Types.INTEGER      int               -none-      
-//			RS> 3    number     java.sql.Types.SMALLINT     smallint          -none-      
-//			RS> 4    encrypted  java.sql.Types.BIT          bit               -none-      
-//			RS> 5    query_plan java.sql.Types.LONGNVARCHAR xml               -none-      
-
 			try
 			{
-//				Statement stmnt = conn.createStatement();
-				PreparedStatement stmnt = conn.prepareStatement(sql);
-				stmnt.setQueryTimeout(10);
-				
-//				ResultSet rs = stmnt.executeQuery(sql);
-				stmnt.setString(1, objectName);
-				ResultSet rs = stmnt.executeQuery();
-
-				while (rs.next())
-				{
-					String str = rs.getString(5);
-
-//					entry.setExtraInfoText( str );
-					entry.setObjectText( str );
-				}
-				rs.close();
-				stmnt.close();
+				String xmlPlan = SqlServerUtils.getXmlQueryPlan(conn, objectName);
+				entry.setObjectText( xmlPlan );
 			}
 			catch(SQLException e)
 			{
@@ -145,6 +120,46 @@ extends ObjectLookupInspectorAbstract
 				entry.setObjectText( msg );
 			}
 			return entry;
+			
+////			String sql = "select * from sys.dm_exec_query_plan("+objectName+") \n";
+//			String sql = "select * from sys.dm_exec_query_plan( convert(varbinary(64), ?, 1) ) \n"; // convert(varbinary(64), '0x...', 1) in SQL-Server 2008, convert with style 1 (last param) is supported
+//
+////			RS> Col# Label      JDBC Type Name              Guessed DBMS type Source Table
+////			RS> ---- ---------- --------------------------- ----------------- ------------
+////			RS> 1    dbid       java.sql.Types.SMALLINT     smallint          -none-      
+////			RS> 2    objectid   java.sql.Types.INTEGER      int               -none-      
+////			RS> 3    number     java.sql.Types.SMALLINT     smallint          -none-      
+////			RS> 4    encrypted  java.sql.Types.BIT          bit               -none-      
+////			RS> 5    query_plan java.sql.Types.LONGNVARCHAR xml               -none-      
+//
+//			try
+//			{
+////				Statement stmnt = conn.createStatement();
+//				PreparedStatement stmnt = conn.prepareStatement(sql);
+//				stmnt.setQueryTimeout(10);
+//				
+////				ResultSet rs = stmnt.executeQuery(sql);
+//				stmnt.setString(1, objectName);
+//				ResultSet rs = stmnt.executeQuery();
+//
+//				while (rs.next())
+//				{
+//					String str = rs.getString(5);
+//
+////					entry.setExtraInfoText( str );
+//					entry.setObjectText( str );
+//				}
+//				rs.close();
+//				stmnt.close();
+//			}
+//			catch(SQLException e)
+//			{
+//				String msg = "Problems getting text from sys.dm_exec_query_plan, about '"+objectName+"'. Msg="+e.getErrorCode()+", Text='" + e.getMessage() + "'. Caught: "+e;
+//				_logger.warn(msg); 
+////				entry.setExtraInfoText( msg );
+//				entry.setObjectText( msg );
+//			}
+//			return entry;
 		}
 		else // all other tables
 		{

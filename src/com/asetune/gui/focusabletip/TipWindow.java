@@ -677,6 +677,11 @@ class TipWindow extends JWindow implements ActionListener, HyperlinkListener {
 					if (rr == null)
 						return;
 
+					if (rr.getType() == ResolverReturn.Type.DO_NOT_OPEN)
+					{
+						return;
+					}
+					
 					if (rr.getType() == ResolverReturn.Type.OPEN_URL_IN_EXTERNAL_BROWSER)
 					{
 						if (Desktop.isDesktopSupported())

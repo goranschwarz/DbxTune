@@ -50,18 +50,19 @@ implements ICentralPersistWriter
 	/** Increment this every time you add/change table structure/layout, you will also have to implement an upgrade/(downgrade) path
 	 * <br>
 	 * <ul>
-	 *   <li> 1 - First version</li>
-	 *   <li> 2 - Add    column 'CollectorSampleInterval'                      to table 'DbxCentralSessions' </li>
-	 *   <li> 3 - Add    column 'ProfileDescription'                           to table 'DbxCentralGraphProfiles' </li>
-	 *   <li> 4 - Add    column 'CollectorCurrentUrl', 'Status'                to table 'DbxCentralSessions' </li>
-	 *   <li> 5 - Add    column 'CollectorInfoFile'                            to table 'DbxCentralSessions' </li>
-	 *   <li> 6 - Add    column 'category'                                     to table 'ALARM_ACTIVE, ALARM_HISTORY' in all schemas</li>
-	 *   <li> 7 - Add    column 'ProfileUrlOptions'                            to table 'DbxCentralGraphProfiles' </li>
-	 *   <li> 8 - Add    column 'GraphCategory'                                to table 'DbxGraphProperties' </li>
-	 *   <li> 9 - Change column 'data', 'lastData' from varchar(80) -> 160     in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
+	 *   <li> 1  - First version</li>
+	 *   <li> 2  - Add    column 'CollectorSampleInterval'                      to table 'DbxCentralSessions' </li>
+	 *   <li> 3  - Add    column 'ProfileDescription'                           to table 'DbxCentralGraphProfiles' </li>
+	 *   <li> 4  - Add    column 'CollectorCurrentUrl', 'Status'                to table 'DbxCentralSessions' </li>
+	 *   <li> 5  - Add    column 'CollectorInfoFile'                            to table 'DbxCentralSessions' </li>
+	 *   <li> 6  - Add    column 'category'                                     to table 'ALARM_ACTIVE, ALARM_HISTORY' in all schemas</li>
+	 *   <li> 7  - Add    column 'ProfileUrlOptions'                            to table 'DbxCentralGraphProfiles' </li>
+	 *   <li> 8  - Add    column 'GraphCategory'                                to table 'DbxGraphProperties' </li>
+	 *   <li> 9  - Change column 'data', 'lastData' from varchar(80) -> 160     in tables *schema*.'DbxAlarmActive', *schema*.'DbxAlarmHistory' </li>
+	 *   <li> 10 - Add    column 'GraphProps'                                   to table 'DbxGraphProperties' </li>
 	 * </ul> 
 	 */
-	public static int DBX_CENTRAL_DB_VERSION = 9;
+	public static int DBX_CENTRAL_DB_VERSION = 10;
 	
 	
 	public enum Table
@@ -495,15 +496,16 @@ implements ICentralPersistWriter
 			{
 				sbSql.append("create table " + tabName + "\n");
 				sbSql.append("( \n");
-				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype("datetime",-1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"CmName"          +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"TableName"       +rq,40)+" "+fill(getDatatype("varchar",128,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"GraphLabel"      +rq,40)+" "+fill(getDatatype("varchar",255,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"GraphCategory"   +rq,40)+" "+fill(getDatatype("varchar", 30,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"isPercentGraph"  +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"visibleAtStart"  +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
-				sbSql.append("   ,"+fill(lq+"initialOrder"    +rq,40)+" "+fill(getDatatype("int",     -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("    "+fill(lq+"SessionStartTime"+rq,40)+" "+fill(getDatatype("datetime", -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"CmName"          +rq,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"GraphName"       +rq,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"TableName"       +rq,40)+" "+fill(getDatatype("varchar", 128,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"GraphLabel"      +rq,40)+" "+fill(getDatatype("varchar", 255,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"GraphProps"      +rq,40)+" "+fill(getDatatype("varchar",1024,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"GraphCategory"   +rq,40)+" "+fill(getDatatype("varchar",  30,-1,-1),20)+" "+getNullable(true )+"\n");
+				sbSql.append("   ,"+fill(lq+"isPercentGraph"  +rq,40)+" "+fill(getDatatype("int",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"visibleAtStart"  +rq,40)+" "+fill(getDatatype("int",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
+				sbSql.append("   ,"+fill(lq+"initialOrder"    +rq,40)+" "+fill(getDatatype("int",      -1,-1,-1),20)+" "+getNullable(false)+"\n");
 				sbSql.append("\n");
 //				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"CmName"+rq+", "+lq+"GraphName"+rq+")\n");
 				sbSql.append("   ,PRIMARY KEY ("+lq+"SessionStartTime"+rq+", "+lq+"GraphName"+rq+")\n");
@@ -841,13 +843,14 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("GraphName")       .append(rq).append(", ");
 			sbSql.append(lq).append("TableName")       .append(rq).append(", ");
 			sbSql.append(lq).append("GraphLabel")      .append(rq).append(", ");
+			sbSql.append(lq).append("GraphProps")      .append(rq).append(", ");
 			sbSql.append(lq).append("GraphCategory")   .append(rq).append(", ");
 			sbSql.append(lq).append("isPercentGraph")  .append(rq).append(", ");
 			sbSql.append(lq).append("visibleAtStart")  .append(rq).append(", ");
 			sbSql.append(lq).append("initialOrder")    .append(rq).append("");
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
-				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
+				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
 		}
 		else if (type.equals(Table.ALARM_ACTIVE))
 		{

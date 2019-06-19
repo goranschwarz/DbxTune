@@ -667,6 +667,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WAIT_TYPE_TIME,
 			"Server Wait, group by 'wait_type', 'wait_time_ms' Average", 	                   // Menu CheckBox text
 			"Server Wait, group by 'wait_type', 'wait_time_ms' Average ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			null,
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.WAITS,

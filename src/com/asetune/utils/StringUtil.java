@@ -520,11 +520,27 @@ public class StringUtil
 
 	/**
 	 * Parsers a comma separated list and returns a Set/LinkedHashSet which holds all values.<br>
-	 * The entries will be trimmed()...
+	 * The entries will be trimmed()...<br>
+	 * Empty entries will be removed<br>
+	 * 
 	 * @param str a comma separated list
 	 * @return a Set with Strings
 	 */
 	public static Set<String> parseCommaStrToSet(String str)
+	{
+		return parseCommaStrToSet(str, true);
+	}
+
+	/**
+	 * Parsers a comma separated list and returns a Set/LinkedHashSet which holds all values.<br>
+	 * The entries will be trimmed()...<br>
+	 * Empty entries will be removed<br>
+	 * 
+	 * @param str                a comma separated list
+	 * @param skipEmptyFields    Should empty fields be removed or added to the set
+	 * @return a Set with Strings
+	 */
+	public static Set<String> parseCommaStrToSet(String str, boolean skipEmptyFields)
 	{
 		LinkedHashSet<String> set = new LinkedHashSet<String>();
 
@@ -533,7 +549,11 @@ public class StringUtil
 
 		String[] sa = str.split(",");
 		for (String se : sa)
-			set.add(se.trim());
+		{
+			String trimmed = se.trim();
+			if (StringUtil.hasValue(trimmed))
+				set.add(trimmed);
+		}
 		
 		return set;
 	}
@@ -2701,7 +2721,7 @@ public class StringUtil
 	}
 
 	/**
-	 * Remove traling spaces (including newlines etc, it uses Character.isWhitespace()
+	 * Remove trailing spaces (including newlines etc, it uses Character.isWhitespace()
 	 * @param s
 	 * @return
 	 */
@@ -2718,7 +2738,7 @@ public class StringUtil
 	}
 
 	/**
-	 * Remove traling spaces, removes trailing characters (' ', '\t', '\f')
+	 * Remove trailing spaces, removes trailing characters (' ', '\t', '\f')
 	 * @param s
 	 * @return
 	 */

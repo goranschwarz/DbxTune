@@ -143,6 +143,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXECUTION_COUNT,
 			"ASE SubSystem Execution Count", 	                                 // Menu CheckBox text
 			"ASE SubSystem Operations - Execution Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -155,6 +156,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXECUTION_TIME,
 			"ASE SubSystem Execution MicroSeconds", 	                                 // Menu CheckBox text
 			"ASE SubSystem Operations - Execution Time, in Micro Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MICROSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -167,6 +169,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_EXECUTION_TIME_PER_COUNT,
 			"ASE SubSystem Execution MicroSeconds per Count", 	                                 // Menu CheckBox text
 			"ASE SubSystem Operations - Execution Time, in Micro Seconds per Count ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MICROSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,
@@ -179,6 +182,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_CPU_USAGE_PCT,
 			"ASE SubSystem Execution CPU Usage Percent", 	                                 // Menu CheckBox text
 			"ASE SubSystem Operations - CPU Usage Percent ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.CPU,

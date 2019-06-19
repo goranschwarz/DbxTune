@@ -850,7 +850,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 				String simpleSelect = "select * from " + fullTableName;
 				try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(simpleSelect) )
 				{
-					ResultSetTableModel rstm = new ResultSetTableModel(rs, null, false, "dummySelectForImport", _previewFirstRowCount, -1, false, null, null);
+					ResultSetTableModel rstm = new ResultSetTableModel(rs, null, false, "dummySelectForImport", null, _previewFirstRowCount, -1, false, null, null);
 					setTableModel(_ttRs_tab, rstm);
 					
 					MapTableModel mtm = new MapTableModel(_ttMap_tab, _sourcefilePreviewObj, rstm);
@@ -913,7 +913,7 @@ System.out.println("XXXX: guessedEncoding='"+guessedEncoding+"', encoding='"+enc
 		try
 		{
     		ResultSet rs = conn.getMetaData().getTables(catalog, schemaPattern, valueNamePattern, tableTypes);
-    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.TablesModel");
+    		ResultSetTableModel rstm = new ResultSetTableModel(rs, false, "JdbcMetaDataInfoDialog.TablesModel", null);
     		return rstm;
 		}
 		catch(SQLException ex)

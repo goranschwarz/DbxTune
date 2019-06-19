@@ -133,6 +133,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_PENDING_DISK_IO,
 			"Pending DiskIO's", 	                                 // Menu CheckBox text
 			"Pending DiskIO's, or number of outstanding ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
 			new String[] { "Pending" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
@@ -145,6 +146,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_COMPLETED_DISK_IO,
 			"Completed DiskIO's", 	                                 // Menu CheckBox text
 			"Completed DiskIO's per Seconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			new String[] { "Completed" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,

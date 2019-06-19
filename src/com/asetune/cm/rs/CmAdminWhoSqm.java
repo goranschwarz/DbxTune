@@ -143,6 +143,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_WRITES,
 			"SQM: Number of messages written into the queue (col 'Writes', per second)", // Menu CheckBox text
 			"SQM: Number of messages written into the queue (col 'Writes', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -155,6 +156,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_READ,
 			"SQM: Number of messages read from the queue (col 'Read', per second)", // Menu CheckBox text
 			"SQM: Number of messages read from the queue (col 'Read', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -167,6 +169,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLK_READS,
 			"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Menu CheckBox text
 			"SQM: Number of 16K blocks read (col 'B Reads', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,
@@ -179,6 +182,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_BLK_CACHE_READS,
 			"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Menu CheckBox text
 			"SQM: Number of 16K blocks read that are cached (col 'B Cache', per second)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.DISK,

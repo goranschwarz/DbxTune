@@ -130,6 +130,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUEUE_SIZE,
 			"Stable Device Usage in MB, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Menu CheckBox text
 			"Stable Device Usage in MB, from 'admin disk_space' (col 'Used Segs', Absolute Value)", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
 			null, 
 			LabelType.Dynamic,
 			TrendGraphDataPoint.Category.SPACE,
@@ -141,6 +142,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_QUEUE_USAGE_PCT,
 			"Stable Device Usage in PCT, for all Partitions", // Menu CheckBox text
 			"Stable Device Usage in PCT, for all Partitions", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERCENT,
 			new String[] {"Percent Used"}, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.SPACE,

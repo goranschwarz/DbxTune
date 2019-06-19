@@ -345,16 +345,26 @@ public class H2WriterStat
 		// Get "Load Average" from the OS (only 1 minute is available from the MxBean)
 		if (_get_osLoadAverage)
 		{
-			calcLoadAverage();
-			
-			checkForAlarms();
+			try
+			{
+				// sometimes we get NullPointerExceptions when we iterate the list in below method...
+				// if that's the case... simply create a new list and "hope for the best"
+				calcLoadAverage();
+
+				checkForAlarms();
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.error("Problems in H2WriterStat.calcLoadAverage(). Creating a new LinkedList for '_osLoadAverageList'.", ex);
+				_osLoadAverageList = new LinkedList<>();
+			}
 		}
 
 		_lastRefresh = System.currentTimeMillis();
 		return this;
 	}
 
-	private void calcLoadAverage()
+	private synchronized void calcLoadAverage()
 	{
 		// Get ONE minute Load Average From OS (if the OS isn't supporting this, -1 will be returned)
 		OperatingSystemMXBean os  = ManagementFactory.getOperatingSystemMXBean();

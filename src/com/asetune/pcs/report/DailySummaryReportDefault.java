@@ -20,240 +20,123 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.asetune.gui.ResultSetTableModel;
-import com.asetune.pcs.PersistWriterBase;
+import com.asetune.pcs.PersistWriterToHttpJson;
+import com.asetune.pcs.report.content.AlarmsActive;
+import com.asetune.pcs.report.content.AlarmsHistory;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
-import com.asetune.sql.conn.DbxConnection;
+import com.asetune.pcs.report.content.IReportEntry;
+import com.asetune.pcs.report.content.RecordingInfo;
+import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
-public class DailySummaryReportDefault 
+public class DailySummaryReportDefault
 extends DailySummaryReportAbstract
 {
 	private static Logger _logger = Logger.getLogger(DailySummaryReportDefault.class);
-
-	private ResultSetTableModel _alarmsActiveShortRstm;
-	private ResultSetTableModel _alarmsActiveFullRstm;
-	private Exception           _alarmsActiveProblem;
-	
-	private ResultSetTableModel _alarmsHistoryShortRstm;
-	private ResultSetTableModel _alarmsHistoryFullRstm;
-	private Exception           _alarmsHistoryProblem;
+	private List<IReportEntry> _reportEntries = new ArrayList<>();
 
 	@Override
 	public void create()
 	{
+		// Set output for TimeStamp format for Strings in ResultSetTableModel to: yyyy-MM-dd HH:mm:ss
+//		System.setProperty(ResultSetTableModel.PROPKEY_TimestampToStringFmt, ResultSetTableModel.DEFAULT_TimestampToStringFmt_YMD_HMS);
+		
 		DailySummaryReportContent content = new DailySummaryReportContent();
 		content.setServerName( getServerName() );
 
-		// Get Alarms (all in DB since it should be a "rolling" database)
-		getAlarmsActiveShort();
-		getAlarmsHistoryShort();
+		addReportEntries();
+		_logger.info("Initiated Daily Summary Report with " + _reportEntries.size() + " report entries.");
 
-		getAlarmsActiveFull();
-		getAlarmsHistoryFull();
+		// Get Configuration possibly from the DbxCentral
+		Configuration conf = getConfig(getServerName());
+		
+		// Iterate all entries and create the report
+		for (IReportEntry entry : _reportEntries)
+		{
+			entry.create(getConnection(), getServerName(), conf);
+		}
 
+		
 		// Create and set TEXT/HTML Content
-		content.setReportAsText(createText());
-		content.setReportAsHtml(createHtml());
+		String htmlText = createHtml();
+		
+		// When creating a Text Table, it may be large...
+		// So if the HTML Output is Large... lets not create a Text Table. We will probably get an OutOfMemory Error
+		int textSizeLimit = 5*1024*1024; // 5MB
 
-		content.setNothingToReport(isEmpty());
+		// Check if we should create a Text Table
+		String clearText = "Text Size will be to large. htmlSize=" + htmlText.length() + ", limit=" + textSizeLimit + ". The text size will be bigger. So skipping text generation.";
+		if (htmlText.length() < textSizeLimit)
+			clearText = createText();
+
+		content.setReportAsHtml(htmlText);
+		content.setReportAsText(clearText);
+
+		boolean hasIssueToReport = hasIssueToReport();
+		content.setNothingToReport( ! hasIssueToReport );
 
 		// set the content
 		setReportContent(content);
 	}
 
-	private boolean isEmpty()
+	public void addReportEntry(IReportEntry entry)
 	{
-		return    _alarmsActiveFullRstm.getRowCount() == 0
-		       && _alarmsHistoryFullRstm.getRowCount() == 0;
+		_reportEntries.add(entry);
 	}
 
-	private void getAlarmsActiveShort()
+	public void addReportEntries()
 	{
-		DbxConnection conn = getConnection();
-		String sql;
-
-		// Get Alarms
-		sql = "select [createTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "] \n" +
-		      "order by [createTime]";
-		sql = conn.quotifySqlString(sql);
-		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-		{
-			_alarmsActiveShortRstm = new ResultSetTableModel(rs, "Active Alarms Short");
-			
-			if (_logger.isDebugEnabled())
-				_logger.debug("_alarmsActiveShortRstm.getRowCount()="+ _alarmsActiveShortRstm.getRowCount());
-		}
-		catch(SQLException ex)
-		{
-			_alarmsActiveProblem = ex;
-
-			_alarmsActiveShortRstm = ResultSetTableModel.createEmpty("Active Alarms Short");
-			_logger.warn("Problems getting Alarms Short: " + ex);
-		}
+		addReportEntry( new RecordingInfo(this) );
+		addReportEntry( new AlarmsActive(this)  );
+		addReportEntry( new AlarmsHistory(this) );
 	}
 
-	private void getAlarmsActiveFull()
+	public Configuration getConfig(String serverName)
 	{
-		DbxConnection conn = getConnection();
-		String sql;
-
-		// Get Alarms
-		sql = "select \n" +
-		      "     [createTime],             \n" +
-		      "     [alarmClass],             \n" +
-		      "     [serviceType],            \n" +
-		      "     [serviceName],            \n" +
-		      "     [serviceInfo],            \n" +
-		      "     [extraInfo],              \n" +
-		      "     [category],               \n" +
-		      "     [severity],               \n" +
-		      "     [state],                  \n" +
-		      "     [repeatCnt],              \n" +
-		      "     [cancelTime],             \n" +
-		      "     [timeToLive],             \n" +
-		      "     [threshold],              \n" +
-		      "     [data],                   \n" +
-		      "     [lastData],               \n" +
-		      "     [description],            \n" +
-		      "     [lastDescription],        \n" +
-		      "     [extendedDescription],    \n" +
-		      "     [lastExtendedDescription] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_ACTIVE, null, false) + "]\n" +
-		      "order by [createTime]";
-		sql = conn.quotifySqlString(sql);
-		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+		// FIXME: get Configuration from DbxCentral...
+		String dbxCentralUrl = Configuration.getCombinedConfiguration().getProperty(PersistWriterToHttpJson.PROPKEY_url, null);
+		if (StringUtil.hasValue(dbxCentralUrl))
 		{
-			_alarmsActiveFullRstm = new ResultSetTableModel(rs, "Active Alarms Full");
-			
-			if (_logger.isDebugEnabled())
-				_logger.debug("_alarmsActiveFullRstm.getRowCount()="+ _alarmsActiveFullRstm.getRowCount());
+			// Fix 'http://localhost:8080/api/pcs/receiver' --> 'http://localhost:8080/api/getConfig/DailySummaryReport?srvName='+serverName
+			// Call the URL...
+			// Transform the results to a Configuration Object
 		}
-		catch(SQLException ex)
-		{
-			_alarmsActiveProblem = ex;
-
-			_alarmsActiveFullRstm = ResultSetTableModel.createEmpty("Active Alarms");
-			_logger.warn("Problems getting Alarms Full: " + ex);
-		}
+		
+		return Configuration.EMPTY_CONFIGURATION;
 	}
 
-	private void getAlarmsHistoryShort()
+	/**
+	 * Check all ReportEntries, if any of them has something to report or not
+	 * @return 
+	 */
+	public boolean hasIssueToReport()
 	{
-		DbxConnection conn = getConnection();
-		String sql;
-
-		// Get Alarms
-		sql = "select [action], [duration], [eventTime], [alarmClass], [serviceInfo], [extraInfo], [severity], [state], [description] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
-		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
-		      "order by [eventTime]";
-		sql = conn.quotifySqlString(sql);
-		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+		for (IReportEntry entry : _reportEntries)
 		{
-			_alarmsHistoryShortRstm = new ResultSetTableModel(rs, "Alarm History Short");
-			
-			if (_logger.isDebugEnabled())
-				_logger.debug("_alarmsHistoryRstm.getRowCount()="+ _alarmsHistoryShortRstm.getRowCount());
+			if ( entry.hasIssueToReport() )
+				return true;
 		}
-		catch(SQLException ex)
-		{
-			_alarmsHistoryProblem = ex;
-
-			_alarmsHistoryShortRstm = ResultSetTableModel.createEmpty("Active History");
-			_logger.warn("Problems getting Alarms Short: " + ex);
-		}
+		return false;
 	}
 
-	private void getAlarmsHistoryFull()
-	{
-		DbxConnection conn = getConnection();
-		String sql;
-
-		// Get Alarms
-		sql = "select \n" +
-		      "     [action],                 \n" +
-		      "     [duration],               \n" +
-		      "     [eventTime],              \n" +
-		      "     [alarmClass],             \n" +
-		      "     [serviceType],            \n" +
-		      "     [serviceName],            \n" +
-		      "     [serviceInfo],            \n" +
-		      "     [extraInfo],              \n" +
-		      "     [category],               \n" +
-		      "     [severity],               \n" +
-		      "     [state],                  \n" +
-		      "     [repeatCnt],              \n" +
-		      "     [createTime],             \n" +
-		      "     [cancelTime],             \n" +
-		      "     [timeToLive],             \n" +
-		      "     [threshold],              \n" +
-		      "     [data],                   \n" +
-		      "     [lastData],               \n" +
-		      "     [description],            \n" +
-		      "     [lastDescription],        \n" +
-		      "     [extendedDescription],    \n" +
-		      "     [lastExtendedDescription] \n" +
-		      "from ["+PersistWriterBase.getTableName(conn, PersistWriterBase.ALARM_HISTORY, null, false) + "]\n" +
-		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
-		      "order by [eventTime]";
-		sql = conn.quotifySqlString(sql);
-		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-		{
-			_alarmsHistoryFullRstm = new ResultSetTableModel(rs, "Alarm History Full");
-			
-			if (_logger.isDebugEnabled())
-				_logger.debug("_alarmsHistoryFullRstm.getRowCount()="+ _alarmsHistoryFullRstm.getRowCount());
-		}
-		catch(SQLException ex)
-		{
-			_alarmsHistoryProblem = ex;
-			
-			_alarmsHistoryFullRstm = ResultSetTableModel.createEmpty("Active History Full");
-			_logger.warn("Problems getting Alarms Full: " + ex);
-		}
-	}
-
-	private String createText()
+	public String createText()
 	{
 		StringBuilder sb = new StringBuilder();
 
 		sb.append("Daily Summary Report for Servername: ").append(getServerName()).append("\n");
-		
-		sb.append("=======================================================\n");
-		sb.append(" Active Alarms \n");
-		sb.append("-------------------------------------------------------\n");
-		if (_alarmsActiveFullRstm.getRowCount() == 0)
-			sb.append("No Active Alarms\n");
-		else
+
+		for (IReportEntry entry : _reportEntries)
 		{
-			sb.append("Active Alarm Count: ").append(_alarmsActiveFullRstm.getRowCount()).append("\n");
-			sb.append(_alarmsActiveShortRstm.toAsciiTableString());
-			sb.append(_alarmsActiveFullRstm.toAsciiTablesVerticalString());
+			sb.append("=======================================================\n");
+			sb.append(" ").append(entry.getSubject()).append(" \n");
+			sb.append("-------------------------------------------------------\n");
+			sb.append(entry.getMsgAsText());
 		}
-		if (_alarmsActiveProblem != null)
-			sb.append(_alarmsActiveProblem);
-		sb.append("\n");
-		
-		sb.append("=======================================================\n");
-		sb.append(" Alarm History \n");
-		sb.append("-------------------------------------------------------\n");
-		if (_alarmsHistoryFullRstm.getRowCount() == 0)
-			sb.append("No Alarms has been reported\n");
-		else
-		{
-			sb.append("Alarm Count in period: ").append(_alarmsHistoryFullRstm.getRowCount()).append("\n");
-			sb.append(_alarmsHistoryShortRstm.toAsciiTableString());
-			sb.append(_alarmsHistoryFullRstm.toAsciiTablesVerticalString());
-		}
-		if (_alarmsHistoryProblem != null)
-			sb.append(_alarmsHistoryProblem);
 		sb.append("\n");
 		
 		sb.append("\n");
@@ -262,18 +145,17 @@ extends DailySummaryReportAbstract
 
 		return sb.toString();
 	}
-	
-	private String createHtml()
+
+	public String createHtmlHead()
 	{
 		StringBuilder sb = new StringBuilder();
-		sb.append("<html>\n");
-
+		
 		sb.append("\n");
 		sb.append("<head> \n");
 		sb.append("    <meta name='x-apple-disable-message-reformatting' />\n");
 //		sb.append("    <meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimal-ui'>\n");
 
-		sb.append("    <style> \n");
+		sb.append("    <style type='text/css'> \n");
 		sb.append("        body { \n");
 		sb.append("            -webkit-text-size-adjust:100%; \n");
 		sb.append("            -ms-text-size-adjust:100%; \n");
@@ -299,8 +181,30 @@ extends DailySummaryReportAbstract
 //		sb.append("        h2 { border-bottom: 3px solid black; border-top: 3px solid black; } \n");
 		sb.append("        h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:3px; } \n");
 		sb.append("    </style> \n");
+		sb.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
+
+//		<STYLE type="text/css">
+//		  /* Sortable tables */
+//		  table.sortable thead {
+//		    background-color:#eee;
+//		    color:#666666;
+//		    font-weight: bold;
+//		    cursor: default;
+//		  }
+//		  body { font-size : 100%; font-family : Verdana,Helvetica,Arial,sans-serif; }
+//		  h1, h2, h3 { font-size : 150%; }
+//		  table { margin: 1em; border-collapse: collapse; font-size : 90%; }
+//		  td, th { padding: .1em; border: 1px #ccc solid; font-size : 90%; }
+//		  thead { background: #fc9; } </STYLE>
 		sb.append("</head> \n");
 		sb.append("\n");
+
+		return sb.toString();
+	}
+
+	public String createHtmlBody()
+	{
+		StringBuilder sb = new StringBuilder();
 
 		sb.append("<body>\n");
 //		sb.append("<body style'min-width: 100%'>\n");
@@ -310,30 +214,11 @@ extends DailySummaryReportAbstract
 
 		sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
 
-		sb.append("<h3>Active Alarms</h3> \n");
-		if (_alarmsActiveFullRstm.getRowCount() == 0)
-			sb.append("No Active Alarms \n");
-		else
+		for (IReportEntry entry : _reportEntries)
 		{
-			sb.append("Active Alarm Count: ").append(_alarmsActiveFullRstm.getRowCount()).append("<br>\n");
-			sb.append(_alarmsActiveShortRstm.toHtmlTableString("activeAlarmsOverview"));
-			sb.append(_alarmsActiveFullRstm.toHtmlTablesVerticalString("activeAlarmsDetails"));
+			sb.append("<h3>").append(entry.getSubject()).append("</h3> \n");
+			sb.append(entry.getMsgAsHtml());
 		}
-		if (_alarmsActiveProblem != null)
-			sb.append("<pre>").append(_alarmsActiveProblem).append("</pre>");
-		sb.append("\n<br>");
-
-		sb.append("<h3>Alarm History</h3> \n");
-		if (_alarmsHistoryFullRstm.getRowCount() == 0)
-			sb.append("No Alarms has been reported \n");
-		else
-		{
-			sb.append("Alarm Count in period: ").append(_alarmsHistoryFullRstm.getRowCount()).append("\n");
-			sb.append(_alarmsHistoryShortRstm.toHtmlTableString("historyAlarmsOverview"));
-			sb.append(_alarmsHistoryFullRstm.toHtmlTablesVerticalString("historyAlarmsDetails"));
-		}
-		if (_alarmsHistoryProblem != null)
-			sb.append("<pre>").append(_alarmsHistoryProblem).append("</pre>");
 		sb.append("\n<br>");
 
 		sb.append("\n<br>");
@@ -342,7 +227,20 @@ extends DailySummaryReportAbstract
 
 		sb.append("\n");
 		sb.append("</body>\n");
+
+		return sb.toString();
+	}
+
+	public String createHtml()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("<html>\n");
+
+		sb.append(createHtmlHead());
+		sb.append(createHtmlBody());
+
 		sb.append("</html>\n");
+
 		return sb.toString();
 	}
 }

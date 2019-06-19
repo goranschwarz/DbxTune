@@ -20,7 +20,26 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.ase.AseErrorInfo;
+import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
+import com.asetune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
+import com.asetune.pcs.report.content.ase.AseTopSql;
+import com.asetune.pcs.report.content.ase.AseTopSqlProcCalls;
+
 public class DailySummaryReportAseTune 
 extends DailySummaryReportDefault
 {
+	
+	@Override
+	public void addReportEntries()
+	{
+		// Add the Alarms Active/History
+		super.addReportEntries();
+
+		addReportEntry( new AseErrorInfo(this)              );
+		addReportEntry( new AseTopSql(this)                 );
+		addReportEntry( new AseTopSqlProcCalls(this)        );
+		addReportEntry( new AseTopCmCachedProcs(this)       );
+		addReportEntry( new AseTopCmStmntCacheDetails(this) );
+	}
 }

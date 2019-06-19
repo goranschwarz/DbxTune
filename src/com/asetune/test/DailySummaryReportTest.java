@@ -52,6 +52,7 @@ public class DailySummaryReportTest
 		PropertyConfigurator.configure(log4jProps);
 
 		String propFile = AppDir.getAppStoreDir(true) + "DailySummaryReportTest.props";
+		System.out.println("PROPFILE: '"+propFile+"'.");
 		Configuration conf = new Configuration(propFile);
 		Configuration.setInstance(Configuration.USER_TEMP, conf);
 
@@ -82,8 +83,8 @@ public class DailySummaryReportTest
 		DbxConnection conn = null;
 		try
 		{
-			String  urlJdbc         = conf.getProperty       ("url.jdbc",           "jdbc:h2:tcp://192.168.0.110/GORAN_UB3_DS_2018-10-08");
-			String  urlSshTunnel    = conf.getProperty       ("url.ssh.tunnel",     "jdbc:h2:tcp://localhost/GORAN_UB3_DS_2018-10-08");
+			String  urlJdbc         = conf.getProperty       ("url.jdbc",           "jdbc:h2:tcp://192.168.0.110/GORAN_UB3_DS_2019-05-21");
+			String  urlSshTunnel    = conf.getProperty       ("url.ssh.tunnel",     "jdbc:h2:tcp://localhost/GORAN_UB3_DS_2019-05-21");
 			boolean urlSshTunnelUse = conf.getBooleanProperty("url.ssh.tunnel.use", false);
 			
 			ConnectionProp cp = new ConnectionProp();
@@ -132,11 +133,16 @@ public class DailySummaryReportTest
 			// Create & and Send the report
 			report.create();
 			report.send();
+
+			// Save the report
+			report.save();
+
+			// remove/ old reports from the "archive"
+			report.removeOldReports();
 		}
 		catch(Exception ex)
 		{
 			_logger.error("Problems Sending Daily Summary Report. Caught: "+ex, ex);
 		}
-		
 	}
 }

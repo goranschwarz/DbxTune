@@ -309,7 +309,7 @@ implements SybMessageHandler
 						rs = stmnt.getResultSet();
 
 						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql);
+						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
 
 						// Write ResultSet Content as a "string table"
 						_logger.info(getMsgPrefix() + ": produced a ResultSet\n" + tm.toTableString());
@@ -541,7 +541,7 @@ implements SybMessageHandler
 						sb.append(getSqlWarningMsgs(stmnt, true));
 
 						// Convert the ResultSet into a TableModel, which fits on a JTable
-						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql);
+						ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
 
 						// Write ResultSet Content as a "string table"
 						if (_rsAsciiTable)

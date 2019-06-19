@@ -129,6 +129,7 @@ extends CountersModel
 		addTrendGraph(GRAPH_NAME_DEVICE_SERVICE_TIME,
 			"Device IO Service Time", 	              // Menu CheckBox text
 			"Device IO Service Time in Milliseconds ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
 			new String[] { "Max", "Average" }, 
 			LabelType.Static,
 			TrendGraphDataPoint.Category.DISK,
