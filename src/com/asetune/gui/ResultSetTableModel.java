@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
@@ -1976,11 +1977,11 @@ public class ResultSetTableModel
 	 * Return a html string with one table for each row. The Table will only have 2 columns. 1=Column Name, 2=Column Value
 	 * @return
 	 */
-	public String toHtmlTablesVerticalString(String className)
+	public String toHtmlTablesVerticalString(String className, Map<String, String> colNameValueTagMap)
 	{
-		return toHtmlTablesVerticalString(className, true, true);
+		return toHtmlTablesVerticalString(className, true, true, colNameValueTagMap);
 	}
-	public String toHtmlTablesVerticalString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap)
+	public String toHtmlTablesVerticalString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
@@ -2018,6 +2019,19 @@ public class ResultSetTableModel
 				Object objVal  = getValueAt(r,c);
 				String strVal = toString(objVal, "&nbsp;", "&nbsp;");
 				
+				String beginTag = "";
+				String endTag   = "";
+				
+				if (colNameValueTagMap != null && colNameValueTagMap.containsKey(colName))
+				{
+					String tagName = colNameValueTagMap.get(colName);
+					if (StringUtil.hasValue(tagName))
+					{
+						beginTag = "<"  + tagName + ">";
+						endTag   = "</" + tagName + ">";
+					}
+				}
+				
 //				String strVal = "";
 //				if (objVal != null)
 //				{
@@ -2033,7 +2047,7 @@ public class ResultSetTableModel
 				
 				sb.append("  <tr>\n");
 				sb.append("    <td").append(tBodyNoWrapStr).append("><b>").append(colName).append("</b></td>\n");
-				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>\n");
+				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
 				sb.append("  </tr>\n");
 			}
 			

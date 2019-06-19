@@ -21,6 +21,9 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
@@ -77,7 +80,14 @@ extends ReportEntryAbstract
 		{
 			sb.append("Active Alarm Count: ").append(_fullRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
-			sb.append(_fullRstm.toHtmlTablesVerticalString("sortable"));
+
+			// Make output more readable, in a 2 column table
+			// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+			Map<String, String> colNameValueTagMap = new HashMap<>();
+			colNameValueTagMap.put("extendedDescription",     "xmp");
+			colNameValueTagMap.put("lastExtendedDescription", "xmp");
+
+			sb.append(_fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap));
 		}
 
 		if (hasProblem())
