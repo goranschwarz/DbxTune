@@ -82,6 +82,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		}
 		else
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
@@ -111,6 +114,54 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		// Section description
+		rstm.setDescription(
+				"Both slow and fast SQL Statements (from the Statement Cache) are presented here (ordered by: TotalCpuTimeDiff_sum) <br>" +
+				"<br>" +
+				"This so you can see if there are problems with <i>Statement Cache Entries</i> that falls <i>just below</i> the threshold for 'Slow SQL Statements' <br>" +
+				"ASE Source table is 'master.dbo.monCachedStatement' where StatementCache and DynamicSql are displayed. <br>" +
+				"PCS Source table is 'CmStmntCacheDetails_diff'. (PCS = Persistent Counter Store) <br>" +
+				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>source_DIFF</i> table. <br>" +
+				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
+				"");
+
+		// Columns description
+		rstm.setColumnDescription("DBName"                   , "Database name");
+		rstm.setColumnDescription("ObjectName"               , "StatementCache Name... '*ss' for StatementCache entries and '*sq' for DynamicPreparedSql");
+		rstm.setColumnDescription("samples_count"            , "Number of entries for this 'ObjectName' in the report period");
+		rstm.setColumnDescription("SessionSampleTime_min"    , "First entry was sampled at this time");
+		rstm.setColumnDescription("SessionSampleTime_max"    , "Last entry was sampled at this time");
+		rstm.setColumnDescription("CmSampleMs_sum"           , "Number of milliseconds this object has been available for sampling");
+
+		rstm.setColumnDescription("UseCountDiff_sum"         , "How many times this object was Uased");
+
+		rstm.setColumnDescription("TotalElapsedTimeDiff_sum" , "How many milliseconds did we spend in execution during the report period");
+		rstm.setColumnDescription("TotalCpuTimeDiff_sum"     , "How much CPUTime did we use during the report period");
+		rstm.setColumnDescription("TotalLioDiff_sum"         , "How many Logical I/O did we do during the report period");
+		rstm.setColumnDescription("TotalPioDiff_sum"         , "How many Physical I/O did we do during the report period");
+		
+		rstm.setColumnDescription("AvgElapsedTime"           , "Average ElapsedTime per execution  (PostResolvedAs: TotalElapsedTimeDiff_sum / UseCountDiff_sum)");
+		rstm.setColumnDescription("AvgCpuTime"               , "Average CpuTime per execution      (PostResolvedAs: TotalCpuTimeDiff_sum     / UseCountDiff_sum)");
+		rstm.setColumnDescription("AvgLIO"                   , "Average Logical I/O per execution  (PostResolvedAs: TotalLioDiff_sum         / UseCountDiff_sum)");
+		rstm.setColumnDescription("AvgPIO"                   , "Average Physical I/O per execution (PostResolvedAs: TotalPioDiff_sum         / UseCountDiff_sum)");
+		                                                     
+		rstm.setColumnDescription("LockWaitsDiff_sum"        , "How many times did this object Wait for a LOCK during the reporting period.");
+		rstm.setColumnDescription("LockWaitTimeDiff_sum"     , "How many milliseconds did this object Wait for a LOCK during the reporting period.");
+		
+		rstm.setColumnDescription("MaxSortTime_max"          , "Max time we spend on <i>sorting</i> for this object during the reporting period.");
+		rstm.setColumnDescription("SortSpilledCount_sum"     , "How many timed did a <i>sort</i> operation spill to tempdb (not done <i>in memory</i>)");
+		rstm.setColumnDescription("SortCountDiff_sum"        , "How many times did this object perform sort operation during the reporting period.");
+		rstm.setColumnDescription("TotalSortTimeDiff_sum"    , "Total time used for Sorting for this object during the reporting period. (if much, do we have an index to support the sort).");
 	}
 
 	@Override
@@ -161,6 +212,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		}
 		else
 		{
+			// Describe the table
+			setSectionDescription(_shortRstm);
+
 			
 			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
 			int pos_UseCountDiff_sum         = _shortRstm.findColumn("UseCountDiff_sum");
@@ -230,100 +284,5 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				}
 			}
 		}
-		
-//		Set<String> stmntCacheObjects = null;
-//		
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_shortRstm = new ResultSetTableModel(rs, "TopStatementCacheCalls");
-//				_shortRstm = createResultSetTableModel(rs, "TopStatementCacheCalls");
-//
-//				// Do some calculations (which was hard to do in a PORTABLE SQL Way)
-//				int pos_UseCountDiff_sum         = _shortRstm.findColumn("UseCountDiff_sum");
-//				
-//				int pos_TotalElapsedTimeDiff_sum = _shortRstm.findColumn("TotalElapsedTimeDiff_sum");
-//				int pos_TotalCpuTimeDiff_sum     = _shortRstm.findColumn("TotalCpuTimeDiff_sum");
-//				int pos_TotalLioDiff_sum         = _shortRstm.findColumn("TotalLioDiff_sum");
-//				int pos_TotalPioDiff_sum         = _shortRstm.findColumn("TotalPioDiff_sum");
-//
-//				int pos_AvgElapsedTime           = _shortRstm.findColumn("AvgElapsedTime");
-//				int pos_AvgCpuTime               = _shortRstm.findColumn("AvgCpuTime");
-//				int pos_AvgLIO                   = _shortRstm.findColumn("AvgLIO");
-//				int pos_AvgPIO                   = _shortRstm.findColumn("AvgPIO");
-//
-//				if (    pos_UseCountDiff_sum >= 0 
-//				     && pos_TotalElapsedTimeDiff_sum >= 0 && pos_TotalCpuTimeDiff_sum >= 0 && pos_TotalLioDiff_sum >= 0 && pos_TotalPioDiff_sum >= 0
-//				     && pos_AvgElapsedTime           >= 0 && pos_AvgCpuTime           >= 0 && pos_AvgLIO           >= 0 && pos_AvgPIO           >= 0
-//				   )
-//				{
-//					for (int r=0; r<_shortRstm.getRowCount(); r++)
-//					{
-//						long UseCountDiff_sum = _shortRstm.getValueAsLong(r, pos_UseCountDiff_sum);
-//						
-//						long TotalElapsedTimeDiff_sum = _shortRstm.getValueAsLong(r, pos_TotalElapsedTimeDiff_sum);
-//						long TotalCpuTimeDiff_sum     = _shortRstm.getValueAsLong(r, pos_TotalCpuTimeDiff_sum);
-//						long TotalLioDiff_sum         = _shortRstm.getValueAsLong(r, pos_TotalLioDiff_sum);
-//						long TotalPioDiff_sum         = _shortRstm.getValueAsLong(r, pos_TotalPioDiff_sum);
-//
-//						BigDecimal calc1;
-//						BigDecimal calc2;
-//						BigDecimal calc3;
-//						BigDecimal calc4;
-//
-//						if (UseCountDiff_sum > 0)
-//						{
-//							calc1 = new BigDecimal( (TotalElapsedTimeDiff_sum*1.0) / (UseCountDiff_sum*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
-//							calc2 = new BigDecimal( (TotalCpuTimeDiff_sum    *1.0) / (UseCountDiff_sum*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
-//							calc3 = new BigDecimal( (TotalLioDiff_sum        *1.0) / (UseCountDiff_sum*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
-//							calc4 = new BigDecimal( (TotalPioDiff_sum        *1.0) / (UseCountDiff_sum*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
-//						}
-//						else
-//						{
-//							calc1 = new BigDecimal(-1);
-//							calc2 = new BigDecimal(-1);
-//							calc3 = new BigDecimal(-1);
-//							calc4 = new BigDecimal(-1);
-//						}
-//						
-//						_shortRstm.setValueAtWithOverride(calc1, r, pos_AvgElapsedTime);
-//						_shortRstm.setValueAtWithOverride(calc2, r, pos_AvgCpuTime);
-//						_shortRstm.setValueAtWithOverride(calc3, r, pos_AvgLIO);
-//						_shortRstm.setValueAtWithOverride(calc4, r, pos_AvgPIO);
-//					}
-//				}
-//
-//				
-//				stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
-//				
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_shortRstm.getRowCount()="+ _shortRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_shortRstm = ResultSetTableModel.createEmpty("TopStatementCacheCalls");
-//			_logger.warn("Problems getting TopStatementCacheCalls: " + ex);
-//		}
-//		
-//		
-//		if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
-//		{
-//			try 
-//			{
-//				_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
-//			}
-//			catch (SQLException ex)
-//			{
-//				_problem = ex;
-//			}
-//		}
 	}
-
 }

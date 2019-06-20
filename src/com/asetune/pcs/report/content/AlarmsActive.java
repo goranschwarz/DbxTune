@@ -78,6 +78,9 @@ extends ReportEntryAbstract
 		}
 		else
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+			
 			sb.append("Active Alarm Count: ").append(_fullRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
@@ -126,6 +129,22 @@ extends ReportEntryAbstract
 		return null;
 	}
 
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		rstm.setDescription("This is a description of all <b>ACTIVE</b> Alarms during the time the report was created.<br>" +
+				"First a <i>short</i> list will be displayed (in tabular format). <br>" +
+				"Second a <i>detailed</i> list will be displayed (one 2 column table for each row in the <i>short</i> list). <br>" +
+				"");
+		
+//		rstm.setColumnDescription(colName, desc);
+	}
+
 	private void getAlarmsActiveShort(DbxConnection conn)
 	{
 		String sql;
@@ -137,27 +156,8 @@ extends ReportEntryAbstract
 
 		_shortRstm = executeQuery(conn, sql, true, "Active Alarms Short");
 
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_shortRstm = new ResultSetTableModel(rs, "Active Alarms Short");
-//				_shortRstm = createResultSetTableModel(rs, "Active Alarms Short");
-//				
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_alarmsActiveShortRstm.getRowCount()="+ _shortRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_shortRstm = ResultSetTableModel.createEmpty("Active Alarms Short");
-//			_logger.warn("Problems getting Alarms Short: " + ex);
-//		}
+		// Describe the table
+		setSectionDescription(_shortRstm);
 	}
 
 	private void getAlarmsActiveFull(DbxConnection conn)
@@ -189,28 +189,6 @@ extends ReportEntryAbstract
 		      "order by [createTime]";
 		
 		_fullRstm = executeQuery(conn, sql, true, "Active Alarms Full");
-		
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_fullRstm = new ResultSetTableModel(rs, "Active Alarms Full");
-//				_fullRstm = createResultSetTableModel(rs, "Active Alarms Full");
-//				
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_alarmsActiveFullRstm.getRowCount()="+ _fullRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_fullRstm = ResultSetTableModel.createEmpty("Active Alarms");
-//			_logger.warn("Problems getting Alarms Full: " + ex);
-//		}
 	}
 
 }

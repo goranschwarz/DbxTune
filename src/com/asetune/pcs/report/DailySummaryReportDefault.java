@@ -152,9 +152,11 @@ extends DailySummaryReportAbstract
 		
 		sb.append("\n");
 		sb.append("<head> \n");
+		sb.append("    <title>DSR: ").append(getServerName()).append("</title>\n");
+		sb.append("\n");
 		sb.append("    <meta name='x-apple-disable-message-reformatting' />\n");
 //		sb.append("    <meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimal-ui'>\n");
-
+		sb.append("\n");
 		sb.append("    <style type='text/css'> \n");
 		sb.append("        body { \n");
 		sb.append("            -webkit-text-size-adjust:100%; \n");
@@ -182,6 +184,18 @@ extends DailySummaryReportAbstract
 		sb.append("        h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:3px; } \n");
 		sb.append("    </style> \n");
 		sb.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
+		
+		sb.append("    <script type='text/javascript'>  \n");
+		sb.append("        function toggle_visibility(id) \n");
+		sb.append("        { \n");
+		sb.append("           var e = document.getElementById(id); \n");
+		sb.append("           if(e.style.display == 'block') \n");
+		sb.append("              e.style.display = 'none'; \n");
+		sb.append("           else \n");
+		sb.append("              e.style.display = 'block'; \n");
+		sb.append("           return false; \n");
+		sb.append("        } \n");
+		sb.append("    </script> \n");
 
 //		<STYLE type="text/css">
 //		  /* Sortable tables */

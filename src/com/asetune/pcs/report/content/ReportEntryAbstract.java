@@ -24,12 +24,14 @@ package com.asetune.pcs.report.content;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.StringUtil;
 
 public abstract class ReportEntryAbstract
 implements IReportEntry
@@ -110,5 +112,72 @@ implements IReportEntry
 	public boolean hasProblem()
 	{
 		return _problem != null;
+	}
+
+
+	/**
+	 * Create a description of this report section<br>
+	 * Column names should be described in a list.
+	 * @return
+	 */
+	public String getSectionDescriptionHtml(ResultSetTableModel rstm, boolean addSqlText)
+	{
+		if (rstm == null)
+			return "";
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<p>\n");
+
+		String desc = rstm.getDescription();
+		if (desc != null)
+		{
+			// Strip off <html> start/end
+			if (desc.substring(0, 10).toLowerCase().startsWith("<html>"))
+			{
+				desc = desc.substring("<html>".length());
+				desc = StringUtil.removeLastStr(desc, "</html>");
+			}
+			sb.append(desc);
+		}
+		
+		if (rstm.hasColumnDescriptions() && rstm.getColumnNames() != null)
+		{
+			sb.append("<br>\n");
+			sb.append("Column(s) description:\n");
+			sb.append("<ul>\n");
+
+			List<String> colNames = rstm.getColumnNames();
+			for (String colName : colNames)
+			{
+				String colDesc = rstm.getColumnDescription(colName);
+				
+				sb.append("  <li><b>").append(colName).append("</b> - ").append(colDesc).append("</li>\n");
+			}
+
+			sb.append("</ul>\n");
+		}
+
+		if (addSqlText)
+		{
+			String sqlText = rstm.getSqlText();
+			if (StringUtil.hasValue(sqlText))
+			{
+				String divId = "sqlText_" + sqlText.hashCode();
+
+				sb.append("<br>\n");
+				sb.append("<a href='javascript:;' onclick=\"toggle_visibility('" + divId + "');\">Show/Hide SQL Text ...</a> <br>\n");
+				sb.append("<div id='" + divId + "' style='display: none'>\n");
+				sb.append("<hr>\n");
+				sb.append("<xmp>\n");
+				sb.append(sqlText);
+				sb.append("</xmp>\n");
+				sb.append("<hr>\n");
+				sb.append("</div>\n");
+			}
+		}
+
+		sb.append("</p>\n\n");
+		return sb.toString();
 	}
 }

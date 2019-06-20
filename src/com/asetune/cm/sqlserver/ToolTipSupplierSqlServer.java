@@ -29,7 +29,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.fife.ui.autocomplete.Completion;
@@ -241,7 +243,12 @@ extends CmToolTipSupplierDefault
 					ResultSetTableModel rstm = new ResultSetTableModel(rs, "dm_exec_sessions");
 					if (rstm.getRowCount() == 1)
 					{
-						return rstm.toHtmlTablesVerticalString(null, true, true);
+						// Make output more readable, in a 2 column table
+						// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+						Map<String, String> colNameValueTagMap = new HashMap<>();
+						colNameValueTagMap.put("LastKnownSqlText", "xmp");
+
+						return rstm.toHtmlTablesVerticalString(null, true, true, colNameValueTagMap);
 					}
 					else if (rstm.getRowCount() > 1)
 					{

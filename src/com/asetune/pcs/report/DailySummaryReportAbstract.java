@@ -230,12 +230,20 @@ implements IDailySummaryReport
 // OR: do "select * from CmXXXX_diff where 1=2" to get all column names... and then check if desired column names are available
 //--------------------------------------------------------------------
 	private String _versionString = "";
+	private String _appName       = "";
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors */
 	public String getSrvVersionStr()
 	{
 		getSrvVersionNum();
 		return _versionString;
+	}
+
+	/** Get the DbxTune application type that recorded this info */
+	public String getDbxAppName()
+	{
+		getSrvVersionNum();
+		return _appName;
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors, and then parse it into a number */
@@ -266,7 +274,10 @@ implements IDailySummaryReport
 			}
 		}
 		if (StringUtil.isNullOrBlank(appName))
+		{
 			appName = Version.getAppName();
+			_appName = appName;
+		}
 		
 
 		String colName = "srvVersion";

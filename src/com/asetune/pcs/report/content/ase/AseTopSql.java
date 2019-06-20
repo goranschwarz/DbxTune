@@ -83,6 +83,9 @@ public class AseTopSql extends AseAbstract
 		}
 		else
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
@@ -112,14 +115,63 @@ public class AseTopSql extends AseAbstract
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
 	}
 
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		// Section description
+		rstm.setDescription(
+				"Top Slow SQL Statements are presented here (ordered by: sumCpuTime) <br>" +
+				"<br>" +
+				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
+				"Thresholds: having sumCpuTime &gt;= 1000<br>" +
+				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +
+				"PCS Source table is 'MonSqlCapStatements'. (PCS = Persistent Counter Store) <br>" +
+				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>MonSqlCapStatements</i> table grouped by 'JavaSqlHashCode'. <br>" +
+				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
+				"SQL Text will be displayed in a separate table below the <i>summary</i> table.<br>" +
+				"");
+
+		// Columns description
+		rstm.setColumnDescription("JavaSqlHashCode"            , "A Java calculation SQLText.hashCode() for the SQL Text (Note: this might not bee 100% accurate, but it's something... Note: -1 = Means that The SQLText couldn't be retrived/saved to the PCS.)");
+		rstm.setColumnDescription("records"                    , "Number of entries for this 'JavaSqlHashCode' in the report period");
+                                                              
+		rstm.setColumnDescription("StartTime_min"              , "First entry was sampled for this JavaSqlHashCode");
+		rstm.setColumnDescription("EndTime_max"                , "Last entry was sampled for this JavaSqlHashCode");
+		rstm.setColumnDescription("Duration"                   , "Start/end time presented as HH:MM:SS, so we can see if this JavaSqlHashCode is just for a short time or if it spans over a long period of time.");
+                                                              
+		rstm.setColumnDescription("avgElapsed_ms"              , "Average Time it took to execute this Statement during the report period (sumElapsed_ms/records)   ");
+		rstm.setColumnDescription("avgCpuTime"                 , "Average CpuTime this Statement used            during the report period (sumCpuTime/records)      ");
+		rstm.setColumnDescription("avgWaitTime"                , "Average avgWaitTime this Statement waited      during the report period (sumWaitTime/records)     ");
+		rstm.setColumnDescription("avgMemUsageKB"              , "Average MemUsageKB this Statement used         during the report period (sumMemUsageKB/records)   ");
+		rstm.setColumnDescription("avgPhysicalReads"           , "Average PhysicalReads this Statement used      during the report period (sumPhysicalReads/records)");
+		rstm.setColumnDescription("avgLogicalReads"            , "Average LogicalReads this Statement used       during the report period (sumLogicalReads/records) ");
+		rstm.setColumnDescription("avgRowsAffected"            , "Average RowsAffected this Statement did        during the report period (sumRowsAffected/records) ");
+                                                              
+		rstm.setColumnDescription("sumElapsed_ms"              , "How many milliseconds did we spend in execution during the report period");
+		rstm.setColumnDescription("sumCpuTime"                 , "How much CPUTime did we use during the report period");
+		rstm.setColumnDescription("sumWaitTime"                , "How much WaitTime did we use during the report period");
+		rstm.setColumnDescription("sumMemUsageKB"              , "How much MemUsageKB did we use during the report period");
+		rstm.setColumnDescription("sumPhysicalReads"           , "How much PhysicalReads did we use during the report period");
+		rstm.setColumnDescription("sumLogicalReads"            , "How much LogicalReads did we use during the report period");
+		rstm.setColumnDescription("sumRowsAffected"            , "How many RowsAffected did did this Statement do during the report period");
+
+		rstm.setColumnDescription("LogicalReadsPerRowsAffected", "How Many LogicalReads per RowsAffected did this Statement do during the report period (Algorithm: sumLogicalReads/sumRowsAffected)");
+	}
+
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration conf)
 	{
 		// Set: _statement_gt_* variables
 		getSlowQueryThresholds(conn);
 		
-		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
-
+		int topRows          = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int havingSumCpuTime = 1000; // 1 second
+		
 		String sql = ""
 			    + "select top " + topRows + " \n"
 			    + "    [JavaSqlHashCode] \n"
@@ -159,6 +211,7 @@ public class AseTopSql extends AseAbstract
 			    + "from [MonSqlCapStatements] \n"
 			    + "where [ProcName] is NULL \n"
 			    + "group by [JavaSqlHashCode] \n"
+			    + "having [sumCpuTime] >= " + havingSumCpuTime + " \n"
 //			    + "order by [records] desc \n"
 //			    + "order by [sumLogicalReads] desc \n"
 			    + "order by [sumCpuTime] desc \n"
@@ -172,6 +225,10 @@ public class AseTopSql extends AseAbstract
 		}
 		else
 		{
+			// Describe the table
+			setSectionDescription(_shortRstm);
+
+			
 			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
 			int pos_sumLogicalReads             = _shortRstm.findColumn("sumLogicalReads");
 			int pos_sumRowsAffected             = _shortRstm.findColumn("sumRowsAffected");
@@ -224,7 +281,7 @@ public class AseTopSql extends AseAbstract
 						if (JavaSqlHashCode != -1)
 						{
 							sql = ""
-								    + "select distinct [JavaSqlHashCode], [ServerLogin], '<pre>'||[SQLText]||'</pre>' as [SQLText] \n"
+								    + "select distinct [JavaSqlHashCode], [ServerLogin], '<xmp>'||[SQLText]||'</xmp>' as [SQLText] \n"
 								    + "from [MonSqlCapSqlText] \n"
 								    + "where [JavaSqlHashCode] = " + JavaSqlHashCode + " \n"
 								    + "";
@@ -265,131 +322,5 @@ public class AseTopSql extends AseAbstract
 				}
 			}
 		}
-
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_shortRstm = new ResultSetTableModel(rs, "Top SQL");
-//				_shortRstm = createResultSetTableModel(rs, "Top SQL");
-//				
-//				// Do some calculations (which was hard to do in a PORTABLE SQL Way)
-//				int pos_sumLogicalReads             = _shortRstm.findColumn("sumLogicalReads");
-//				int pos_sumRowsAffected             = _shortRstm.findColumn("sumRowsAffected");
-//				int pos_LogicalReadsPerRowsAffected = _shortRstm.findColumn("LogicalReadsPerRowsAffected");
-//
-//				int pos_FirstEntry = _shortRstm.findColumn("StartTime_min");
-//				int pos_LastEntry  = _shortRstm.findColumn("EndTime_max");
-//				int pos_Duration   = _shortRstm.findColumn("Duration");
-//				
-//				if (pos_sumLogicalReads >= 0 && pos_sumRowsAffected >= 0 && pos_LogicalReadsPerRowsAffected >= 0)
-//				{
-//					for (int r=0; r<_shortRstm.getRowCount(); r++)
-//					{
-//						//------------------------------------------------
-//						// set "LogicalReadsPerRowsAffected"
-//						long sumLogicalReads = _shortRstm.getValueAsLong(r, pos_sumLogicalReads);
-//						long sumRowsAffected = _shortRstm.getValueAsLong(r, pos_sumRowsAffected);
-//
-//						BigDecimal calc = new BigDecimal(-1);
-//						if (sumRowsAffected > 0)
-//							calc = new BigDecimal( (sumLogicalReads*1.0) / (sumRowsAffected*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
-//						
-//						_shortRstm.setValueAtWithOverride(calc, r, pos_LogicalReadsPerRowsAffected);
-//
-//						//------------------------------------------------
-//						// set "Duration"
-//						Timestamp FirstEntry = _shortRstm.getValueAsTimestamp(r, pos_FirstEntry);
-//						Timestamp LastEntry  = _shortRstm.getValueAsTimestamp(r, pos_LastEntry);
-//
-//						if (FirstEntry != null && LastEntry != null)
-//						{
-//							long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
-//							String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
-//							_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
-//						}
-//					}
-//				}
-//			
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_shortRstm.getRowCount()="+ _shortRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_shortRstm = ResultSetTableModel.createEmpty("Top SQL");
-//			_logger.warn("Problems getting Top SQL: " + ex);
-//		}
-//
-//		// Get SQL Text
-//		if (_shortRstm != null && _shortRstm.getRowCount() > 0)
-//		{
-//			// For each record... try to get the SQL Text based on the JavaSqlHashCode
-//			int pos_JavaSqlHashCode = _shortRstm.findColumn("JavaSqlHashCode");
-//			if (pos_JavaSqlHashCode != -1)
-//			{
-//				for (int r=0; r<_shortRstm.getRowCount(); r++)
-//				{
-//					int JavaSqlHashCode = _shortRstm.getValueAsInteger(r, pos_JavaSqlHashCode);
-//					
-//					if (JavaSqlHashCode != -1)
-//					{
-////						sql = ""
-////							    + "select top " + topRows + " \n"
-////							    + "    count(*) as [records] \n"
-////							    + "   ,[SQLText] \n"
-////							    + "from [MonSqlCapSqlText] \n"
-////							    + "where 1 = 1 \n"
-////							    + "group by [SQLText] \n"
-////							    + "order by [records] desc \n"
-////							    + "";
-//
-//						sql = ""
-//							    + "select distinct [JavaSqlHashCode], [ServerLogin], '<pre>'||[SQLText]||'</pre>' as [SQLText] \n"
-//							    + "from [MonSqlCapSqlText] \n"
-//							    + "where [JavaSqlHashCode] = " + JavaSqlHashCode + " \n"
-//							    + "";
-//						
-//						sql = conn.quotifySqlString(sql);
-//						try ( Statement stmnt = conn.createStatement() )
-//						{
-//							// Unlimited execution time
-//							stmnt.setQueryTimeout(0);
-//							try ( ResultSet rs = stmnt.executeQuery(sql) )
-//							{
-////								ResultSetTableModel rstm = new ResultSetTableModel(rs, "SqlDetails");
-//								ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlDetails");
-//								
-//								if (_longRstm == null)
-//									_longRstm = rstm;
-//								else
-//									_longRstm.add(rstm);
-//
-//								if (_logger.isDebugEnabled())
-//									_logger.debug("SqlDetails.getRowCount()="+ rstm.getRowCount());
-//							}
-//						}
-//						catch(SQLException ex)
-//						{
-//							_problem = ex;
-//
-//							_logger.warn("Problems getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
-//						} 
-//						catch(ModelMissmatchException ex)
-//						{
-//							_problem = ex;
-//
-//							_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
-//						} 
-//					}
-//				}
-//			}
-//			
-//		}
 	}
 }

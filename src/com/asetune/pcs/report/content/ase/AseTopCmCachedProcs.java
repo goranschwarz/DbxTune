@@ -82,6 +82,9 @@ public class AseTopCmCachedProcs extends AseAbstract
 		}
 		else
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
@@ -120,6 +123,55 @@ public class AseTopCmCachedProcs extends AseAbstract
 		createTopCmCachedProcs(conn, srvName, conf);
 	}
 	
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		// Section description
+		rstm.setDescription(
+				"Both slow and fast SQL Statements are presented here (ordered by: CPUTime_sum) <br>" +
+				"<br>" +
+				"This so you can see if there are problems with <i>procedures</i> that falls <i>just below</i> the threshold for 'Slow SQL Statements' <br>" +
+				"ASE Source table is 'master.dbo.monCachedProcedures' where both StoredProcedures, StatementCache and DynamicSql are displayed. <br>" +
+				"PCS Source table is 'CmCachedProcs_diff'. (PCS = Persistent Counter Store) <br>" +
+				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>source_DIFF</i> table. <br>" +
+				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
+				"");
+
+		// Columns description
+		rstm.setColumnDescription("DBName"                , "Database name");
+		rstm.setColumnDescription("ObjectName"            , "Procedure Name or '*ss' for StatementCache entries and '*sq' for DynamicPreparedSql");
+		rstm.setColumnDescription("PlanID_count"          , "Number of entries this plan has in the period");
+		rstm.setColumnDescription("SessionSampleTime_min" , "First entry was sampled at this time");
+		rstm.setColumnDescription("SessionSampleTime_max" , "Last entry was sampled at this time");
+		rstm.setColumnDescription("CmSampleMs_sum"        , "Number of milliseconds this object has been available for sampling");
+		rstm.setColumnDescription("CompileDate_min"       , "First time this object was compiled");
+		rstm.setColumnDescription("CompileDate_max"       , "Last time this object was compiled");
+		
+		rstm.setColumnDescription("MemUsageKB_max"        , "Max Memory used by this object during the report period");
+		rstm.setColumnDescription("RequestCntDiff_sum"    , "How many times this object was Requested");
+		rstm.setColumnDescription("TempdbRemapCnt_sum"    , "How many times this object was was recompiled due to 'tempdb changes'.");
+		rstm.setColumnDescription("ExecutionCount_sum"    , "How many times this object was Executed");
+		                                                  
+		rstm.setColumnDescription("CPUTime_sum"           , "How much CPUTime did we use during the report period");
+		rstm.setColumnDescription("ExecutionTime_sum"     , "How many milliseconds did we spend in execution during the report period");
+		rstm.setColumnDescription("PhysicalReads_sum"     , "How many Physical Reads did we do during the report period");
+		rstm.setColumnDescription("LogicalReads_sum"      , "How many Logical Reads did we do during the report period");
+		rstm.setColumnDescription("PhysicalWrites_sum"    , "How many Physical Writes did we do during the report period");
+		rstm.setColumnDescription("PagesWritten_sum"      , "How many PagesWritten (8 pages = 1 physical IO if we did 'extent io' writes) did we do during the report period");
+		                                                  
+		rstm.setColumnDescription("AvgCPUTime_max"        , "Average CPUTime per execution");
+		rstm.setColumnDescription("AvgExecutionTime_max"  , "Average ExecutionTime for this object");
+		rstm.setColumnDescription("AvgPhysicalReads_max"  , "Average PhysicalReads per execution");
+		rstm.setColumnDescription("AvgLogicalReads_max"   , "Average gLogicalReads per execution");
+		rstm.setColumnDescription("AvgPhysicalWrites_max" , "Average PhysicalWrites per execution");
+		rstm.setColumnDescription("AvgPagesWritten_max"   , "Average PagesWritten per execution");
+	}
+
 	private void createTopCmCachedProcs(DbxConnection conn, String srvName, Configuration conf)
 	{
 		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
@@ -169,6 +221,10 @@ public class AseTopCmCachedProcs extends AseAbstract
 		}
 		else
 		{
+			// Describe the table
+			setSectionDescription(_shortRstm);
+
+
 			Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
 			if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
 			{
@@ -182,136 +238,5 @@ public class AseTopCmCachedProcs extends AseAbstract
 				}
 			}
 		}
-//		Set<String> stmntCacheObjects = null;
-//		
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_shortRstm = new ResultSetTableModel(rs, "TopCachedProcedureCalls");
-//				_shortRstm = createResultSetTableModel(rs, "TopCachedProcedureCalls");
-//
-//				stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
-//				
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_shortRstm.getRowCount()="+ _shortRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_shortRstm = ResultSetTableModel.createEmpty("TopCachedProcedureCalls");
-//			_logger.warn("Problems getting Top Cached Procedure Calls: " + ex);
-//		}
-//		
-//		
-//		if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
-//		{
-//			try 
-//			{
-//				_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
-//			}
-//			catch (SQLException ex)
-//			{
-//				_problem = ex;
-//			}
-//		}
 	}
-
-
-	
-
-//	private void createTopCmCachedProcs(DbxConnection conn)
-//	{
-//		String sql;
-//		String tabName = "CmCachedProcs_abs";
-//		// FIXME: also get the CmCachedProcs point of view
-//		//        possibly: get FIRST and LAST entry and DIFF them...
-//		
-//		/*
-//		select * from [CmCachedProcs_abs] where [CmSampleTime] = (select min([CmSampleTime]) from [CmCachedProcs_abs]) order by [LogicalReads] desc;
-//		select * from [CmCachedProcs_abs] where [CmSampleTime] = (select max([CmSampleTime]) from [CmCachedProcs_abs]) order by [LogicalReads] desc;
-//		 */
-//		
-//		CountersModel cm = CounterController.getInstance().getCmByName("CmCachedProcs");
-//		if (cm == null)
-//		{
-////			//ICounterController cc = new CounterControllerTmp();
-////			
-////			cm = new CmCachedProcs(null, null);
-////			CounterModelForLoad
-//		}
-//		List<String> diffColumns = Arrays.asList(CmCachedProcs.DIFF_COLUMNS);
-//		List<String> pkCols      = cm.getPkForVersion(conn, 0, false);
-//		
-//		String sqldummy = "select * from [" + tabName + "] where 1=2";
-//		sql = sqldummy;
-//		List<String> colNames = new ArrayList<>();
-//		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-//		{
-//			ResultSetTableModel rstm = new ResultSetTableModel(rs, "getColNames");
-//
-//			colNames = new ArrayList<>(rstm.getColumnNames());
-//			colNames.remove("SessionStartTime");
-//			colNames.remove("SessionSampleTime");
-//			colNames.remove("CmSampleTime");
-//			colNames.remove("CmSampleMs");
-//			colNames.remove("CmNewDiffRateRow");
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//		}
-//
-//		String sqlMin = "select " + StringUtil.toCommaStrQuoted("[", "]", colNames) + " from [" + tabName + "] where [SessionSampleTime] = (select min([SessionSampleTime]) from [" + tabName + "])"; 
-//		String sqlMax = "select " + StringUtil.toCommaStrQuoted("[", "]", colNames) + " from [" + tabName + "] where [SessionSampleTime] = (select max([SessionSampleTime]) from [" + tabName + "])"; 
-//		
-////		new CounterSample("name", true, diffColumns, null);
-//		
-//		// get MIN
-//		sql = conn.quotifySqlString(sqlMin);
-//		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-//		{
-//			_cmCachedProcsMin = new ResultSetTableModel(rs, "CmCachedProcs_abs_MIN");
-//
-//			if (_logger.isDebugEnabled())
-//				_logger.debug("_cmCachedProcsMin.getRowCount()="+ _cmCachedProcsMin.getRowCount());
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_cmCachedProcsMin = ResultSetTableModel.createEmpty("CmCachedProcs_abs_MIN");
-//			_logger.warn("Problems getting CmCachedProcs_abs_MIN: " + ex);
-//		}
-//
-//		// get MAX
-//		sql = conn.quotifySqlString(sqlMax);
-//		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
-//		{
-//			_cmCachedProcsMax = new ResultSetTableModel(rs, "CmCachedProcs_abs_MAX");
-//
-//			if (_logger.isDebugEnabled())
-//				_logger.debug("_cmCachedProcsMax.getRowCount()="+ _cmCachedProcsMax.getRowCount());
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_cmCachedProcsMax = ResultSetTableModel.createEmpty("CmCachedProcs_abs_MAX");
-//			_logger.warn("Problems getting CmCachedProcs_abs_MAX: " + ex);
-//		}
-//
-//		// Calculate the difference...
-//		if (_cmCachedProcsMin != null && _cmCachedProcsMax != null)
-//		{
-//			//FIXME
-//		}
-//	}
-
-
 }

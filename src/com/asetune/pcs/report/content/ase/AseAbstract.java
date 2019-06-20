@@ -197,7 +197,7 @@ extends ReportEntryAbstract
 								newSQLText = newSQLText.substring("SQL Text:".length()).trim();
 
 							// make it a bit more HTML like
-							newSQLText = "<pre>\n" + newSQLText + "\n</pre>";
+							newSQLText = "<xmp>" + newSQLText + "</xmp>";
 
 							// Finally SET the SQL Text
 							ssqlRstm.setValueAtWithOverride(newSQLText, r, pos_SQLText);

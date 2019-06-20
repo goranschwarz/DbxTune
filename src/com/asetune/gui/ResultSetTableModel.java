@@ -19,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -186,6 +187,8 @@ public class ResultSetTableModel
 	throws SQLException
 	{
 		long startTime = System.currentTimeMillis();
+
+		setSqlText(sqlText);
 
 		_allowEdit     = editable;
 		setName(name);
@@ -2533,6 +2536,56 @@ public class ResultSetTableModel
 	//-- END: getValueAsXXXXX using column name
 	//------------------------------------------------------------
 
+	
+	//------------------------------------------------------------
+	//-- BEGIN: description
+	//------------------------------------------------------------
+	private String _tableDescription = null;
+	private Map<String, String> _columnDescriptionMap = null;
+
+	/** Set a descriptive text for this table */
+	public void setDescription(String desc)
+	{
+		_tableDescription = desc;
+	}
+
+	/** Get a descriptive text for this table */
+	public String getDescription()
+	{
+		return _tableDescription;
+	}
+
+	/** If we have got any Column Descriptions */
+	public boolean hasColumnDescriptions()
+	{
+		if (_columnDescriptionMap == null)
+			return false;
+		
+		if (_columnDescriptionMap.isEmpty())
+			return false;
+		
+		return true;
+	}
+	/** Set a descriptive text for a specific column @returns The previous description. or null if no previous description */
+	public String setColumnDescription(String colName, String desc)
+	{
+		if (_columnDescriptionMap == null)
+			_columnDescriptionMap = new LinkedHashMap<>();
+		
+		return _columnDescriptionMap.put(colName, desc);
+	}
+
+	/** Get a descriptive text for a specific column, if the column can't be found NULL is returned */
+	public String getColumnDescription(String colName)
+	{
+		if (_columnDescriptionMap == null)
+			return null;
+		
+		return _columnDescriptionMap.get(colName);
+	}
+	//------------------------------------------------------------
+	//-- END: description
+	//------------------------------------------------------------
 	
 	public static void main(String[] args)
 	{

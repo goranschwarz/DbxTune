@@ -97,6 +97,9 @@ public class AseErrorInfo extends AseAbstract
 		}
 		else
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
 			sb.append("Error Information Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 		}
@@ -119,6 +122,31 @@ public class AseErrorInfo extends AseAbstract
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		// Section description
+		rstm.setDescription(
+				"Errors that ended up in the MDA Table 'monSysStatements' with 'ErrorStatus' != 0 <br>" +
+				"This can be used to drilldown or pinpoint troublesome SQL Statements. <br>" +
+				"<b>Note</b>: To view the SQL Statement that was responsible for the error(s), you need to connect to the Detailed Recording Database. (Using the Desktop Version of " + getReportingInstance().getDbxAppName() + "), use 'Tools-&gt;Captue SQL Offline View...' <br>" +
+				"");
+
+		// Columns description
+		rstm.setColumnDescription("ErrorStatus" , "ASE Error Number");
+		rstm.setColumnDescription("ErrorCount"  , "Number of records found");
+		rstm.setColumnDescription("SpidCount"   , "Number if different SPID's this message occurred for");
+		rstm.setColumnDescription("FirstEntry"  , "Time of first occurrence, this day");
+		rstm.setColumnDescription("LastEntry"   , "Time of last occurrence, this day");
+		rstm.setColumnDescription("Duration"    , "To pinpoint if the errors occurred during a specific time on the day");
+		rstm.setColumnDescription("ErrorMessage", "ASE Message description (from master.dbo.sysmessages)");
 	}
 
 	@Override
@@ -159,6 +187,10 @@ public class AseErrorInfo extends AseAbstract
 		}
 		else
 		{
+			// Describe the table
+			setSectionDescription(_shortRstm);
+
+			
 			// Fill in the "ErrorMessage" column from a Static Dictionary
 			int pos_ErrorStatus  = _shortRstm.findColumn("ErrorStatus");
 			int pos_ErrorMessage = _shortRstm.findColumn("ErrorMessage");

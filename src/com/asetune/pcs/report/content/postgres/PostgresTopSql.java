@@ -81,6 +81,9 @@ extends ReportEntryAbstract
 		}
 		else
 		{
+			// Get a description of this section, and column names
+			sb.append(getSectionDescriptionHtml(_shortRstm, true));
+
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
@@ -107,6 +110,61 @@ extends ReportEntryAbstract
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
+	}
+
+	/**
+	 * Set descriptions for the table, and the columns
+	 */
+	private void setSectionDescription(ResultSetTableModel rstm)
+	{
+		if (rstm == null)
+			return;
+		
+		// Section description
+		rstm.setDescription(
+				"Top Slow SQL Statements are presented here (ordered by: total_time_sum) <br>" +
+				"<br>" +
+				"Postgres Source table is 'pg_stat_statements'. <br>" +
+				"PCS Source table is 'CmPgStatements_diff'. (PCS = Persistent Counter Store) <br>" +
+				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>CmPgStatements_diff</i> table grouped by 'datname, usename, queryid'. <br>" +
+				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
+				"SQL Text will also be displayed in a separate table below the <i>summary</i> table.<br>" +
+				"");
+
+		// Columns description
+		rstm.setColumnDescription("datname"                    , "Database name this Statement was executed in.");
+		rstm.setColumnDescription("usename"                    , "Username that executed this Statement.");
+		rstm.setColumnDescription("queryid"                    , "Internal hash code, computed from the statement's parse tree");
+		rstm.setColumnDescription("samples_count"              , "Number of entries for this 'datname, usename, queryid' in the report period");
+		rstm.setColumnDescription("SessionSampleTime_min"      , "First entry was sampled for this entry");
+		rstm.setColumnDescription("SessionSampleTime_max"      , "Last entry was sampled for this entry");
+		rstm.setColumnDescription("Duration"                   , "Start/end time presented as HH:MM:SS, so we can see if this entry is just for a short time or if it spans over a long period of time.");
+		rstm.setColumnDescription("CmSampleMs_sum"             , "Number of milliseconds this object has been available for sampling");
+
+		rstm.setColumnDescription("calls_sum"                  , "Number of times executed");
+		rstm.setColumnDescription("avg_time_per_call_avg"      , "Average Execution Time per call              (Algorithm: total_time / calls)");
+		rstm.setColumnDescription("total_time_sum"             , "Total time spent in the statement, in milliseconds");
+		rstm.setColumnDescription("avg_rows_per_call_avg"      , "Average 'number of rows retrived' per call   (Algorithm: rows / calls)");
+		rstm.setColumnDescription("rows_sum"                   , "Total number of rows retrieved or affected by the statement");
+
+		rstm.setColumnDescription("shared_blks_hit_per_row_avg", "Average 'number of cache reads' per call     (Algorithm: shared_blks_hit / calls)");
+		rstm.setColumnDescription("shared_blks_hit_sum"        , "Total number of shared block cache hits by the statement");
+		rstm.setColumnDescription("shared_blks_read_sum"       , "Total number of shared blocks read by the statement");
+		rstm.setColumnDescription("shared_blks_dirtied_sum"    , "Total number of shared blocks dirtied by the statement");
+		rstm.setColumnDescription("shared_blks_written_sum"    , "Total number of shared blocks written by the statement");
+		
+		rstm.setColumnDescription("local_blks_hit_sum"         , "Total number of local block cache hits by the statement");
+		rstm.setColumnDescription("local_blks_read_sum"        , "Total number of local blocks read by the statement");
+		rstm.setColumnDescription("local_blks_dirtied_sum"     , "Total number of local blocks dirtied by the statement");
+		rstm.setColumnDescription("local_blks_written_sum"     , "Total number of local blocks written by the statement");
+
+		rstm.setColumnDescription("temp_blks_read_sum"         , "Total number of temp blocks read by the statement");
+		rstm.setColumnDescription("temp_blks_written_sum"      , "Total number of temp blocks written by the statement");
+
+		rstm.setColumnDescription("blks_read_time_sum"         , "Total time the statement spent reading blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
+		rstm.setColumnDescription("blks_write_time_sum"        , "Total time the statement spent writing blocks, in milliseconds (if track_io_timing is enabled, otherwise zero)");
+
+		rstm.setColumnDescription("query"                      , "Text of a representative statement");
 	}
 
 	@Override
@@ -167,6 +225,10 @@ extends ReportEntryAbstract
 		}
 		else
 		{
+			// Describe the table
+			setSectionDescription(_shortRstm);
+
+			
 			SimpleResultSet srs = new SimpleResultSet();
 
 			srs.addColumn("datname",      Types.VARCHAR,       60, 0);
@@ -199,10 +261,6 @@ extends ReportEntryAbstract
 						_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
 					}
 
-					// Get QueryID
-//					Integer queryid  = _shortRstm.getValueAsInteger(r, pos_queryid);
-//					if (queryid != null)
-//						queryIdList.add(queryid);
 					String  datname  = _shortRstm.getValueAsString (r, pos_datname);
 					String  usename  = _shortRstm.getValueAsString (r, pos_usename);
 					Long    queryid  = _shortRstm.getValueAsLong   (r, pos_queryid);
@@ -216,7 +274,6 @@ extends ReportEntryAbstract
 			try
 			{
 				// Note the 'srs' is populated when reading above ResultSet from query
-//				_sqTextRstm = new ResultSetTableModel(srs, "Top SQL TEXT");
 				_sqTextRstm = createResultSetTableModel(srs, "Top SQL TEXT", null);
 				srs.close();
 			}
@@ -228,113 +285,5 @@ extends ReportEntryAbstract
 				_logger.warn("Problems getting Top SQL TEXT: " + ex);
 			}
 		}
-		
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_shortRstm = new ResultSetTableModel(rs, "Top SQL");
-//				_shortRstm = createResultSetTableModel(rs, "Top SQL");
-//				
-//				// Calculate: Duration
-//				int pos_FirstEntry = _shortRstm.findColumn("SessionSampleTime_min");
-//				int pos_LastEntry  = _shortRstm.findColumn("SessionSampleTime_max");
-//				int pos_Duration   = _shortRstm.findColumn("Duration");
-//				
-//				int pos_datname    = _shortRstm.findColumn("datname");
-//				int pos_usename    = _shortRstm.findColumn("usename");
-//				int pos_queryid    = _shortRstm.findColumn("queryid");
-//				int pos_query      = _shortRstm.findColumn("query");
-//
-//				if (pos_FirstEntry >= 0 && pos_LastEntry >= 0 && pos_Duration >= 0)
-//				{
-//					for (int r=0; r<_shortRstm.getRowCount(); r++)
-//					{
-//						Timestamp FirstEntry = _shortRstm.getValueAsTimestamp(r, pos_FirstEntry);
-//						Timestamp LastEntry  = _shortRstm.getValueAsTimestamp(r, pos_LastEntry);
-//
-//						if (FirstEntry != null && LastEntry != null)
-//						{
-//							long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
-//							String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
-//							_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
-//						}
-//
-//						// Get QueryID
-////						Integer queryid  = _shortRstm.getValueAsInteger(r, pos_queryid);
-////						if (queryid != null)
-////							queryIdList.add(queryid);
-//						String  datname  = _shortRstm.getValueAsString (r, pos_datname);
-//						String  usename  = _shortRstm.getValueAsString (r, pos_usename);
-//						Integer queryid  = _shortRstm.getValueAsInteger(r, pos_queryid);
-//						String  query    = _shortRstm.getValueAsString (r, pos_query);
-//						
-//						srs.addRow(datname, usename, queryid, query);
-//					}
-//				}
-//
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_shortRstm.getRowCount()="+ _shortRstm.getRowCount());
-//			}
-//		}
-//		catch (SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_shortRstm = ResultSetTableModel.createEmpty("Top SQL");
-//			_logger.warn("Problems getting Top SQL: " + ex);
-//		}
-
-	
-//		// GET SQLTEXT (only)
-//		try
-//		{
-//			// Note the 'srs' is populated when reading above ResultSet from query
-////			_sqTextRstm = new ResultSetTableModel(srs, "Top SQL TEXT");
-//			_sqTextRstm = createResultSetTableModel(srs, "Top SQL TEXT");
-//			srs.close();
-//		}
-//		catch (SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_sqTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
-//			_logger.warn("Problems getting Top SQL TEXT: " + ex);
-//		}
-	
-//		// GET SQLTEXT (only)
-//		sql = ""
-//			    + "select distinct \n"
-//			    + "	 [datname] \n"
-//			    + "	,[usename] \n"
-//			    + "	,[queryid] \n"
-//			    + "	,[query] \n"
-//			    + "from [CmPgStatements_diff] x \n"
-//			    + "where [queryid] in (" +  StringUtil.toCommaStr(queryIdList) + ") \n"
-//			    + "";
-//
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-//				_sqTextRstm = new ResultSetTableModel(rs, "Top SQL TEXT");
-//				
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_sqTextRstm.getRowCount()="+ _sqTextRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_sqTextRstm = ResultSetTableModel.createEmpty("Top SQL TEXT");
-//			_logger.warn("Problems getting Top SQL TEXT: " + ex);
-//		}
 	}
 }
