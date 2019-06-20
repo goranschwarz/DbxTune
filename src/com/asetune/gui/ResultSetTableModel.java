@@ -1810,7 +1810,7 @@ public class ResultSetTableModel
 
 		String tHeadNoWrapStr = tHeadNoWrap ? " nowrap" : "";
 		String tBodyNoWrapStr = tBodyNoWrap ? " nowrap" : "";
-		
+
 		if (StringUtil.hasValue(className))
 		{
 			sb.append("<table border='1' class='").append(className).append("'>\n");
@@ -1828,7 +1828,17 @@ public class ResultSetTableModel
 		sb.append("<tr>");
 		for (int c=0; c<cols; c++)
 		{
-			sb.append("<th").append(tHeadNoWrapStr).append(">").append(getColumnName(c)).append("</th>");
+			String colName = getColumnName(c);
+			String tooltip = "";
+			if (hasColumnDescriptions())
+			{
+				String colDesc = getColumnDescription(colName);
+				if (colDesc != null)
+					colDesc = colDesc.replace("'", "&apos;");
+				tooltip = " title='" + colDesc + "'";
+			}
+
+			sb.append("<th").append(tHeadNoWrapStr).append(tooltip).append(">").append(colName).append("</th>");
 		}
 		sb.append("</tr>\n");
 		sb.append("</thead>\n");
