@@ -87,9 +87,12 @@ extends ReportEntryAbstract
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
-			sb.append("<br>\n");
-			sb.append("SQL Text by queryid, Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
-			sb.append(_sqTextRstm.toHtmlTableString("sortable"));
+			if (_sqTextRstm != null)
+			{
+				sb.append("<br>\n");
+				sb.append("SQL Text by queryid, Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
+				sb.append(_sqTextRstm.toHtmlTableString("sortable"));
+			}
 		}
 
 		if (hasProblem())
@@ -266,7 +269,7 @@ extends ReportEntryAbstract
 					Long    queryid  = _shortRstm.getValueAsLong   (r, pos_queryid);
 					String  query    = _shortRstm.getValueAsString (r, pos_query);
 					
-					srs.addRow(datname, usename, queryid, query);
+					srs.addRow(datname, usename, queryid, "<xmp>" + query + "</xmp>");
 				}
 			}
 

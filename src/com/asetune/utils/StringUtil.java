@@ -3369,6 +3369,20 @@ public class StringUtil
 	{
 		return quotify(obj, quoteStr, quoteStr);
 	}
+
+
+	/**
+	 * Remove all characters that are not within the span a..z using regexp '[^a-zA-Z0-9]'
+	 * @param str
+	 * @return
+	 */
+	public static String stripAllNonAlphaNum(String str)
+	{
+		if (str == null)
+			return null;
+		
+		return str.replaceAll("[^a-zA-Z0-9]", "");
+	}
 	
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////

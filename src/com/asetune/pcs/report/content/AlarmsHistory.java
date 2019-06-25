@@ -84,13 +84,23 @@ extends ReportEntryAbstract
 			sb.append("Alarm Count in period: ").append(_fullRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 			
-			// Make output more readable, in a 2 column table
-			// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-			Map<String, String> colNameValueTagMap = new HashMap<>();
-			colNameValueTagMap.put("extendedDescription",     "xmp");
-			colNameValueTagMap.put("lastExtendedDescription", "xmp");
+			if (_fullRstm != null)
+			{
+				// Make output more readable, in a 2 column table
+				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+				Map<String, String> colNameValueTagMap = new HashMap<>();
+				colNameValueTagMap.put("extendedDescription",     "xmp");
+				colNameValueTagMap.put("lastExtendedDescription", "xmp");
 
-			sb.append(_fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap));
+				String  divId       = "alarmHistoryDetails";
+				boolean showAtStart = false;
+				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
+
+				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Alarm History Details...", htmlContent);
+
+				sb.append( msOutlookAlternateText("Alarm History Details", showHideDiv) );
+//				sb.append( showHideDiv );
+			}
 		}
 
 		if (hasProblem())
@@ -195,6 +205,9 @@ extends ReportEntryAbstract
 		      "where [action] not in('END-OF-SCAN', 'RE-RAISE') \n" +
 		      "order by [eventTime]";
 		
-		_fullRstm = executeQuery(conn, sql, true, "Alarm History Full");
+		// Note: Truncate any cells above 128K
+		boolean truncateLongCells = true;
+
+		_fullRstm = executeQuery(conn, sql, true, "Alarm History Full", truncateLongCells);
 	}
 }

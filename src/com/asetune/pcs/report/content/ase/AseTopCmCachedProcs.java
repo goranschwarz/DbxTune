@@ -136,8 +136,10 @@ public class AseTopCmCachedProcs extends AseAbstract
 				"Both slow and fast SQL Statements are presented here (ordered by: CPUTime_sum) <br>" +
 				"<br>" +
 				"This so you can see if there are problems with <i>procedures</i> that falls <i>just below</i> the threshold for 'Slow SQL Statements' <br>" +
+				"<br>" +
 				"ASE Source table is 'master.dbo.monCachedProcedures' where both StoredProcedures, StatementCache and DynamicSql are displayed. <br>" +
 				"PCS Source table is 'CmCachedProcs_diff'. (PCS = Persistent Counter Store) <br>" +
+				"<br>" +
 				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>source_DIFF</i> table. <br>" +
 				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
 				"");

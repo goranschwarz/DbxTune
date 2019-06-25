@@ -23,25 +23,29 @@ package com.asetune.pcs.report.content.ase;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
-import java.util.Set;
 
+import org.apache.log4j.Logger;
+
+import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.TimeUtils;
 
-public class AseTopSqlProcCalls extends AseAbstract
+public class AseTopSlowSql extends AseAbstract
 {
-//	private static Logger _logger = Logger.getLogger(AseTopSqlProcCalls.class);
+	private static Logger _logger = Logger.getLogger(AseTopSlowSql.class);
 
 	private ResultSetTableModel _shortRstm;
-	private ResultSetTableModel _ssqlRstm;
+	private ResultSetTableModel _longRstm;
 //	private Exception           _problem = null;
 
-	public AseTopSqlProcCalls(DailySummaryReportAbstract reportingInstance)
+	public AseTopSlowSql(DailySummaryReportAbstract reportingInstance)
 	{
 		super(reportingInstance);
 	}
@@ -59,12 +63,8 @@ public class AseTopSqlProcCalls extends AseAbstract
 		{
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("\n");
 			sb.append(_shortRstm.toAsciiTableString());
-
-			if (_ssqlRstm != null)
-			{
-				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("\n");
-				sb.append(_ssqlRstm.toAsciiTablesVerticalString());
-			}
+			if (_longRstm != null)
+				sb.append(_longRstm.toAsciiTablesVerticalString());
 		}
 
 		if (hasProblem())
@@ -89,12 +89,13 @@ public class AseTopSqlProcCalls extends AseAbstract
 
 			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
-			
-			if (_ssqlRstm != null)
+
+			if (_longRstm != null)
 			{
-				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("<br>\n");
-//				sb.append(_ssqlRstm.toHtmlTablesVerticalString("sortable"));
-				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
+				sb.append("<br>\n");
+				sb.append("SQL Text by JavaSqlHashCode: ").append(_longRstm.getRowCount()).append("<br>\n");
+//				sb.append(_longRstm.toHtmlTablesVerticalString("sortable"));
+				sb.append(_longRstm.toHtmlTableString("sortable"));
 			}
 		}
 
@@ -109,23 +110,13 @@ public class AseTopSqlProcCalls extends AseAbstract
 	@Override
 	public String getSubject()
 	{
-		return "Top Slow SQL Procedure Calls (order by: sumCpuTime,  origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
+		return "Top SLOW SQL Statements (order by: sumCpuTime, origin: monSysStatement) [with gt: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"]";
 	}
 
 	@Override
 	public boolean hasIssueToReport()
 	{
 		return false; // even if we found entries, do NOT indicate this as a Problem or Issue
-	}
-
-
-	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
-	{
-		// Set: _statement_gt_* variables
-		getSlowQueryThresholds(conn);
-		
-		createTopSlowSqlProcedureCalls(conn, srvName, conf);
 	}
 
 	/**
@@ -138,20 +129,21 @@ public class AseTopSqlProcCalls extends AseAbstract
 		
 		// Section description
 		rstm.setDescription(
-				"Top Slow Procedure/LineNumber are presented here (this means at a 'LineNumber' level for Stored Procedures) (ordered by: sumCpuTime) <br>" +
+				"Top Slow SQL Statements are presented here (ordered by: sumCpuTime) <br>" +
 				"<br>" +
 				"Thresholds: with GreaterThan: execTime="+_statement_gt_execTime+", logicalReads="+_statement_gt_logicalReads+", physicalReads="+_statement_gt_physicalReads+"<br>" +
 				"Thresholds: having sumCpuTime &gt;= 1000<br>" +
+				"<br>" +
 				"ASE Source table is 'master.dbo.monSysStatement', which is a <i>ring buffer</i>, if the buffer is small, then we will be missing entries. <br>" +
 				"PCS Source table is 'MonSqlCapStatements'. (PCS = Persistent Counter Store) <br>" +
-				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>MonSqlCapStatements</i> table grouped by 'ProcName, LineNumber'. <br>" +
+				"<br>" +
+				"The report <i>summarizes</i> (min/max/count/sum/avg) all entries/samples from the <i>MonSqlCapStatements</i> table grouped by 'JavaSqlHashCode'. <br>" +
 				"Typically the column name <i>postfix</i> will tell you what aggregate function was used. <br>" +
 				"SQL Text will be displayed in a separate table below the <i>summary</i> table.<br>" +
 				"");
 
 		// Columns description
-		rstm.setColumnDescription("ProcName"                   , "Stored Procedure Name");
-		rstm.setColumnDescription("LineNumber"                 , "LineNumber within the Stored Procedure");
+		rstm.setColumnDescription("JavaSqlHashCode"            , "A Java calculation SQLText.hashCode() for the SQL Text (Note: this might not bee 100% accurate, but it's something... Note: -1 = Means that The SQLText couldn't be retrived/saved to the PCS.)");
 		rstm.setColumnDescription("records"                    , "Number of entries for this 'JavaSqlHashCode' in the report period");
                                                               
 		rstm.setColumnDescription("StartTime_min"              , "First entry was sampled for this JavaSqlHashCode");
@@ -177,15 +169,18 @@ public class AseTopSqlProcCalls extends AseAbstract
 		rstm.setColumnDescription("LogicalReadsPerRowsAffected", "How Many LogicalReads per RowsAffected did this Statement do during the report period (Algorithm: sumLogicalReads/sumRowsAffected)");
 	}
 
-	private void createTopSlowSqlProcedureCalls(DbxConnection conn, String srvName, Configuration conf)
+	@Override
+	public void create(DbxConnection conn, String srvName, Configuration conf)
 	{
+		// Set: _statement_gt_* variables
+		getSlowQueryThresholds(conn);
+		
 		int topRows          = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingSumCpuTime = 1000; // 1 second
 		
 		String sql = ""
 			    + "select top " + topRows + " \n"
-			    + "    [ProcName] \n"
-			    + "   ,[LineNumber] \n"
+			    + "    [JavaSqlHashCode] \n"
 			    + "   ,count(*)                     as [records] \n"
 			    + " \n"
 			    + "	  ,min([StartTime])             as [StartTime_min] \n"
@@ -220,18 +215,18 @@ public class AseTopSqlProcCalls extends AseAbstract
 				+ "   ,-9999999.0 as [LogicalReadsPerRowsAffected] \n"
 				
 			    + "from [MonSqlCapStatements] \n"
-			    + "where [ProcName] is NOT NULL \n"
-			    + "group by [ProcName], [LineNumber] \n"
+			    + "where [ProcName] is NULL \n"
+			    + "group by [JavaSqlHashCode] \n"
 			    + "having [sumCpuTime] >= " + havingSumCpuTime + " \n"
 //			    + "order by [records] desc \n"
 //			    + "order by [sumLogicalReads] desc \n"
 			    + "order by [sumCpuTime] desc \n"
 			    + "";
 
-		_shortRstm = executeQuery(conn, sql, false, "TopSqlProcedureCalls");
+		_shortRstm = executeQuery(conn, sql, false, "Top SQL");
 		if (_shortRstm == null)
 		{
-			_shortRstm = ResultSetTableModel.createEmpty("TopSqlProcedureCalls");
+			_shortRstm = ResultSetTableModel.createEmpty("Top SQL");
 			return;
 		}
 		else
@@ -277,23 +272,58 @@ public class AseTopSqlProcCalls extends AseAbstract
 					}
 				}
 			}
-			
-			//--------------------------------------------------------------------------------------
-			// For StatementCache entries... get the SQL Text (or actually the XML Plan and try to get SQL Text from that)
-			//--------------------------------------------------------------------------------------
+
+			// Get SQL Text
 			if (_shortRstm.getRowCount() > 0)
 			{
-				Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ProcName");
-
-				if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
+				// For each record... try to get the SQL Text based on the JavaSqlHashCode
+				int pos_JavaSqlHashCode = _shortRstm.findColumn("JavaSqlHashCode");
+				if (pos_JavaSqlHashCode != -1)
 				{
-					try 
+					for (int r=0; r<_shortRstm.getRowCount(); r++)
 					{
-						_ssqlRstm = getSqlStatementsFromMonDdlStorage(conn, stmntCacheObjects);
-					}
-					catch (SQLException ex)
-					{
-						setProblem(ex);
+						int JavaSqlHashCode = _shortRstm.getValueAsInteger(r, pos_JavaSqlHashCode);
+						
+						if (JavaSqlHashCode != -1)
+						{
+							sql = ""
+								    + "select distinct [JavaSqlHashCode], [ServerLogin], '<xmp>'||[SQLText]||'</xmp>' as [SQLText] \n"
+								    + "from [MonSqlCapSqlText] \n"
+								    + "where [JavaSqlHashCode] = " + JavaSqlHashCode + " \n"
+								    + "";
+							
+							sql = conn.quotifySqlString(sql);
+							try ( Statement stmnt = conn.createStatement() )
+							{
+								// Unlimited execution time
+								stmnt.setQueryTimeout(0);
+								try ( ResultSet rs = stmnt.executeQuery(sql) )
+								{
+//									ResultSetTableModel rstm = new ResultSetTableModel(rs, "SqlDetails");
+									ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlDetails", sql);
+									
+									if (_longRstm == null)
+										_longRstm = rstm;
+									else
+										_longRstm.add(rstm);
+	
+									if (_logger.isDebugEnabled())
+										_logger.debug("SqlDetails.getRowCount()="+ rstm.getRowCount());
+								}
+							}
+							catch(SQLException ex)
+							{
+								setProblem(ex);
+	
+								_logger.warn("Problems getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
+							} 
+							catch(ModelMissmatchException ex)
+							{
+								setProblem(ex);
+	
+								_logger.warn("Problems (merging into previous ResultSetTableModel) when getting SQL by JavaSqlHashCode = "+JavaSqlHashCode+": " + ex);
+							} 
+						}
 					}
 				}
 			}

@@ -75,12 +75,12 @@ public class OverviewServlet extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static final Logger _logger = Logger.getLogger(MethodHandles.lookup().lookupClass());
 
-	private final String HOME_DIR    = DbxTuneCentral.getAppHomeDir();
-	private final String INFO_DIR    = DbxTuneCentral.getAppInfoDir();
-	private final String LOG_DIR     = DbxTuneCentral.getAppLogDir();
-	private final String CONF_DIR    = DbxTuneCentral.getAppConfDir();
-	private final String REPORTS_DIR = DbxTuneCentral.getAppReportsDir();
-	private final String DATA_DIR    = DbxTuneCentral.getAppDataDir();
+	private static final String HOME_DIR    = DbxTuneCentral.getAppHomeDir();
+	private static final String INFO_DIR    = DbxTuneCentral.getAppInfoDir();
+	private static final String LOG_DIR     = DbxTuneCentral.getAppLogDir();
+	private static final String CONF_DIR    = DbxTuneCentral.getAppConfDir();
+	private static final String REPORTS_DIR = DbxTuneCentral.getAppReportsDir();
+	private static final String DATA_DIR    = DbxTuneCentral.getAppDataDir();
 
 	private List<String> getFilesDbxTune()
 	{
@@ -217,7 +217,7 @@ public class OverviewServlet extends HttpServlet
 		return fileNames;
 	}
 	
-	private List<String> getFilesInReportsDir()
+	public static List<String> getFilesInReportsDir()
 	{
 		String directory = REPORTS_DIR;
 

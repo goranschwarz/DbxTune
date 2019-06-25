@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +34,7 @@ import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.pcs.report.content.IReportEntry;
 import com.asetune.pcs.report.content.RecordingInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.StringUtil;
 
 public class DailySummaryReportDefault
@@ -59,6 +62,10 @@ extends DailySummaryReportAbstract
 		for (IReportEntry entry : _reportEntries)
 		{
 			entry.create(getConnection(), getServerName(), conf);
+			
+			// If this is done from the Collectors thread... 
+			// Then we might want to "ping" the collector supervisor, that we are still "alive"
+			HeartbeatMonitor.doHeartbeat();
 		}
 
 		
@@ -154,37 +161,67 @@ extends DailySummaryReportAbstract
 		sb.append("<head> \n");
 		sb.append("    <title>DSR: ").append(getServerName()).append("</title>\n");
 		sb.append("\n");
+		sb.append("    <meta charset='utf-8'/>\n");
 		sb.append("    <meta name='x-apple-disable-message-reformatting' />\n");
 //		sb.append("    <meta name='viewport' content='width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimal-ui'>\n");
 		sb.append("\n");
 		sb.append("    <style type='text/css'> \n");
-		sb.append("        body { \n");
-		sb.append("            -webkit-text-size-adjust:100%; \n");
-		sb.append("            -ms-text-size-adjust:100%; \n");
-		sb.append("            font-family: Arial, Helvetica, sans-serif; \n");
-		sb.append("        } \n");
-		sb.append("        pre { \n");
-		sb.append("            font-size: 9px; \n");
-		sb.append("            word-wrap: none; \n");
-		sb.append("            white-space: no-wrap; \n");
-		sb.append("            space: nowrap; \n");
-		sb.append("        } \n");
-		sb.append("        table { \n");
-		sb.append("            mso-table-layout-alt: fixed; \n"); // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
-		sb.append("            mso-table-overlap: never; \n");    // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
-		sb.append("            mso-table-wrap: none; \n");        // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
-		sb.append("            border-collapse: collapse; \n");
-		sb.append("            ; \n");
-		sb.append("        } \n");
-		sb.append("        th {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; background-color:gray; color:white;} \n");
-		sb.append("        td {border: 1px solid black; text-align: left; padding: 2px; white-space: nowrap; } \n");
-		sb.append("        tr:nth-child(even) {background-color: #f2f2f2;} \n");
-		
-//		sb.append("        h2 { border-bottom: 3px solid black; border-top: 3px solid black; } \n");
-		sb.append("        h3 { border-bottom: 1px solid black; border-top: 1px solid black; margin-bottom:3px; } \n");
+		sb.append("        body {\n");
+		sb.append("            -webkit-text-size-adjust: 100%;\n");
+		sb.append("            -ms-text-size-adjust: 100%;\n");
+		sb.append("            font-family: Arial, Helvetica, sans-serif;\n");
+		sb.append("        }\n");
+		sb.append("        pre {\n");
+		sb.append("            font-size: 9px;\n");
+		sb.append("            word-wrap: none;\n");
+		sb.append("            white-space: no-wrap;\n");
+//		sb.append("            space: nowrap;\n");
+		sb.append("        }\n");
+		sb.append("        table {\n");
+		sb.append("            mso-table-layout-alt: fixed;\n"); // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+		sb.append("            mso-table-overlap: never;\n");    // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+		sb.append("            mso-table-wrap: none;\n");        // not sure about this - https://gist.github.com/webtobesocial/ac9d052595b406d5a5c1
+		sb.append("            border-collapse: collapse;\n");
+		sb.append("        }\n");
+		sb.append("        th {\n");
+		sb.append("            border: 1px solid black;\n");
+		sb.append("            text-align: left;\n");
+		sb.append("            padding: 2px;\n");
+		sb.append("            white-space: nowrap;\n");
+		sb.append("            background-color: gray;\n");
+		sb.append("            color: white;\n");
+		sb.append("        }\n");
+		sb.append("        td {\n");
+		sb.append("            border: 1px solid black;\n");
+		sb.append("            text-align: left;\n");
+		sb.append("            padding: 2px;\n");
+		sb.append("            white-space: nowrap;\n");
+		sb.append("        }\n");
+		sb.append("        tr:nth-child(even) {\n");
+		sb.append("            background-color: #f2f2f2;\n");
+		sb.append("        }\n");
+//		sb.append("        h2 {\n");
+//		sb.append("            border-bottom: 3px solid black;\n");
+//		sb.append("            border-top: 3px solid black;\n");
+//		sb.append("        }\n");
+		sb.append("        h3 {\n");
+		sb.append("            border-bottom: 1px solid black;\n");
+		sb.append("            border-top: 1px solid black;\n");
+		sb.append("            margin-bottom: 3px;\n");
+		sb.append("        }\n");
+		sb.append("\n");
+//		sb.append("        /* the below is to HIDE/SHOW content (in mail, which can not execute javascript) */ \n");
+		sb.append("        .hide-show {\n");
+		sb.append("            display: none;\n");
+		sb.append("        }\n");
+		sb.append("        input[type='checkbox']:checked ~ .hide-show {\n");
+		sb.append("            display: block;\n");
+		sb.append("        }\n");
+		sb.append("\n");
 		sb.append("    </style> \n");
+		sb.append("\n");
 		sb.append("    <SCRIPT src='http://www.dbxtune.com/sorttable.js'></SCRIPT> \n");
-		
+		sb.append("\n");
 		sb.append("    <script type='text/javascript'>  \n");
 		sb.append("        function toggle_visibility(id) \n");
 		sb.append("        { \n");
@@ -227,6 +264,7 @@ extends DailySummaryReportAbstract
 		sb.append("\n");
 
 		sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
+		sb.append( createDbxCentralLink() );
 
 		for (IReportEntry entry : _reportEntries)
 		{
@@ -243,6 +281,51 @@ extends DailySummaryReportAbstract
 		sb.append("</body>\n");
 
 		return sb.toString();
+	}
+
+	public String createDbxCentralLink()
+	{
+		// initialize with default parameters, which may change below...
+		String dbxCentralProt = "http";
+		String dbxCentralHost = StringUtil.getHostname();
+		int    dbxCentralPort = 8080;
+
+		// get where DBX CENTRAL is located.
+		String sendToDbxCentralUrl = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.url", null);
+		if (StringUtil.hasValue(sendToDbxCentralUrl))
+		{
+			// Parse the URL and get protocol/host/port
+			try
+			{
+				URL url = new URL(sendToDbxCentralUrl);
+				
+				dbxCentralProt = url.getProtocol();
+				dbxCentralHost = url.getHost();
+				dbxCentralPort = url.getPort();
+			}
+			catch (MalformedURLException ex)
+			{
+				_logger.info("Daily Report: Problems parsing DbxCentral URL '" + sendToDbxCentralUrl + "', using defaults. Caught:" + ex);
+			}
+		}
+		
+		// Collector and DBX Central is located on the same host
+		// if 'localhost' or '127.0.0.1' then get REAL localhost name
+		if (dbxCentralHost.equalsIgnoreCase("localhost") || dbxCentralHost.equalsIgnoreCase("127.0.0.1"))
+		{
+			dbxCentralHost = StringUtil.getHostname();
+		}
+
+		// Compose URL's
+		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
+		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
+		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
+
+		// Return a Text with links
+		return
+			"If you have problems to read this as a mail; Here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest HTML Report stored in DbxCentral.<br>\n" +
+			"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
+			"";
 	}
 
 	public String createHtml()

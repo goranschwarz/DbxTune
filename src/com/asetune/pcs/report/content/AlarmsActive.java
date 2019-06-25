@@ -84,13 +84,23 @@ extends ReportEntryAbstract
 			sb.append("Active Alarm Count: ").append(_fullRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 
-			// Make output more readable, in a 2 column table
-			// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-			Map<String, String> colNameValueTagMap = new HashMap<>();
-			colNameValueTagMap.put("extendedDescription",     "xmp");
-			colNameValueTagMap.put("lastExtendedDescription", "xmp");
+			if (_fullRstm != null)
+			{
+				// Make output more readable, in a 2 column table
+				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+				Map<String, String> colNameValueTagMap = new HashMap<>();
+				colNameValueTagMap.put("extendedDescription",     "xmp");
+				colNameValueTagMap.put("lastExtendedDescription", "xmp");
 
-			sb.append(_fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap));
+				String  divId       = "alarmActiveDetails";
+				boolean showAtStart = false;
+				String  htmlContent = _fullRstm.toHtmlTablesVerticalString("sortable", colNameValueTagMap);
+
+				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
+
+				sb.append( msOutlookAlternateText("Active Alarm Details", showHideDiv) );
+//				sb.append( showHideDiv );
+			}
 		}
 
 		if (hasProblem())

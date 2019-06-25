@@ -22,46 +22,41 @@
 package com.asetune.test;
 
 import java.io.File;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.io.FileUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class Utf8Iso1Tester
 {
 
 	public static void main(String[] args)
 	{
-		String filename = "C:/projects/MaxM/tmp/gorans_B5564210911.20190616.xml";
+//		String filename = "C:/projects/MaxM/tmp/gorans_B5564210911.20190616.xml";
+		String filename = "C:/projects/MaxM/tmp/gorans_B5564210911.20190616.xml.formated";
 		
 		File f = new File(filename);
 
 		System.out.println("Filename: " + f);
 		try
 		{
-			String content = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
-			int strlen = content.length();
-
-			System.out.println("In-Content len: " + strlen + " bytes");
-			System.out.println("In-Content len: " + String.format("%.1f", strlen/1024.0) + " KB");
-			System.out.println("In-Content len: " + String.format("%.1f", strlen/1024.0/1024.0) + " MB");
-
-			String out = utf8TranslateOobIso1Chars(content);
-
-			int outlen = out.length();
-			System.out.println("Out-Content len: " + outlen + " bytes");
-			
-//			for (int c=0; c<strlen; c++)
-//			{
-//				char ch = content.charAt(c);
-//				int intVal = ch;
-////				if (ch >= 128)
-//				if (ch >= 256)
-//				{
-//					System.out.println("Pos=" + c + ", Character '" + ch + "' is above 256... int value: " + String.format("0x%x = %d", intVal, intVal));
-//				}
-//			}
-			
-			System.out.println("--- end ---");
+			plain(f);
+			parseXml(f);
 		}
 		catch (Exception ex)
 		{
@@ -69,6 +64,130 @@ public class Utf8Iso1Tester
 		}
 	}
 	
+	public static void plain(File f)
+	throws Exception
+	{
+		String content = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
+		int strlen = content.length();
+
+		System.out.println("In-Content len: " + strlen + " bytes");
+		System.out.println("In-Content len: " + String.format("%.1f", strlen/1024.0) + " KB");
+		System.out.println("In-Content len: " + String.format("%.1f", strlen/1024.0/1024.0) + " MB");
+
+		String out = utf8TranslateOobIso1Chars(content);
+
+		int outlen = out.length();
+		System.out.println("Out-Content len: " + outlen + " bytes");
+		
+//		for (int c=0; c<strlen; c++)
+//		{
+//			char ch = content.charAt(c);
+//			int intVal = ch;
+////			if (ch >= 128)
+//			if (ch >= 256)
+//			{
+//				System.out.println("Pos=" + c + ", Character '" + ch + "' is above 256... int value: " + String.format("0x%x = %d", intVal, intVal));
+//			}
+//		}
+		
+		System.out.println("--- end ---");
+	}
+
+	public static int indexFirstOobIso1Chars(String str)
+	{
+		// Length of the input string
+		int len = str.length();
+
+		// Loop the string, and check for OOB chars
+		for (int c=0; c<len; c++)
+		{
+			char inChar = str.charAt(c);
+			int intVal = inChar;
+
+			if (intVal >= 256)
+				return c;
+		}
+		return -1;
+	}
+
+
+	public static void parseXml(File f)
+	throws Exception
+	{
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder        dBuilder  = dbFactory.newDocumentBuilder();
+		Document               doc       = dBuilder.parse(f);
+
+		doc.getDocumentElement().normalize();
+
+		System.out.println("Root element :" + doc.getDocumentElement().getNodeName());
+		NodeList nList = doc.getElementsByTagName("insurance");
+		System.out.println("----------------------------");
+
+		int errorCount = 0;
+		int eCount = nList.getLength();
+		for (int i=0; i<eCount; i++)
+		{
+			Node nNode = nList.item(i);
+//			System.out.println("\nCurrent Element :" + nNode.getNodeName());
+
+			String nodeXmlStr = nodeToString(nNode);
+			
+			int firstOobPos = indexFirstOobIso1Chars(nodeXmlStr);
+			if (firstOobPos != -1)
+			{
+				errorCount++;
+				
+				List<String> errorLines = getOobRows(nodeXmlStr);
+				
+				
+				System.out.println();
+				System.out.println("################################################");
+				System.out.println("HAS OOB CHARS errorCount=" + errorCount + ", at possition="+firstOobPos+", xmlEntry=["+(i+1)+"/"+eCount+"]");
+				System.out.println("Error lines: ");
+				for (String str : errorLines)
+					System.out.println("   line: |" + str + "|");
+				System.out.println("################################################");
+				System.out.println(nodeXmlStr);
+				System.out.println("################################################");
+			}
+			
+//			if ( nNode.getNodeType() == Node.ELEMENT_NODE )
+//			{
+//				Element eElement = (Element) nNode;
+////				System.out.println("XXXXX["+(i+1)+"/"+eCount+"]: " + eElement.toString() + "\n");
+//				System.out.println("XXXXX["+(i+1)+"/"+eCount+"]: " + nodeToString(nNode) + "\n");
+//			}
+		}
+		System.out.println("FOUND " + errorCount + " Entries with OOB Chars.");
+	}
+
+	private static List<String> getOobRows(String str)
+	{
+		List<String> list = new ArrayList<>();
+		
+		Scanner scanner = new Scanner(str);
+		while (scanner.hasNextLine()) 
+		{
+			String line = scanner.nextLine();
+			if (indexFirstOobIso1Chars(line) != -1)
+			{
+				list.add(line);
+			}
+		}
+		scanner.close();
+		return list;
+	}
+
+	private static String nodeToString(Node node) throws TransformerException
+	{
+		StringWriter buf   = new StringWriter();
+		Transformer  xform = TransformerFactory.newInstance().newTransformer();
+		xform.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+		xform.transform(new DOMSource(node), new StreamResult(buf));
+		return buf.toString();
+	}
+
 	public static String utf8TranslateOobIso1Chars(String str)
 	{
 		if (str == null)

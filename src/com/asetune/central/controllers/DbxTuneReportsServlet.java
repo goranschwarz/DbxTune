@@ -24,6 +24,9 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -32,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.central.DbxTuneCentral;
@@ -81,6 +85,30 @@ public class DbxTuneReportsServlet extends HttpServlet
 				out.println("File '" + f + "' didn't exist.");
 			}
 		}
+		if ("viewLatest".equalsIgnoreCase(operation))
+		{
+			resp.setContentType("text/html");
+			resp.setCharacterEncoding("UTF-8");
+
+			File f = getLastReportFileForServer(inputName);
+
+			if (f == null)
+			{
+				out.println("No Report Files was found for server '" + inputName + "'.");
+			}
+			else
+			{
+				if (f.exists())
+				{
+					String content = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
+					out.println(content);
+				}
+				else
+				{
+					out.println("File '" + f + "' didn't exist.");
+				}
+			}
+		}
 		else if ("remove".equalsIgnoreCase(operation))
 		{
 			resp.setContentType("text/html");
@@ -115,5 +143,24 @@ public class DbxTuneReportsServlet extends HttpServlet
 
 		out.flush();
 		out.close();
+	}
+	
+	private File getLastReportFileForServer(String forSrvName)
+	{
+		File retFile = null;
+		
+		for (String file : OverviewServlet.getFilesInReportsDir())
+		{
+			File f = new File(file);
+			if (f.isDirectory())
+				continue;
+			
+			String filename   = f.getName();
+			if ( ! filename.startsWith(forSrvName + ".") )
+				continue;
+			
+			retFile = f;
+		}
+		return retFile;
 	}
 }

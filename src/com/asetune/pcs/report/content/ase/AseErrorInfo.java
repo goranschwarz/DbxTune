@@ -21,14 +21,20 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.config.dict.AseErrorMessageDictionary;
+import com.asetune.gui.ModelMissmatchException;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -41,6 +47,7 @@ public class AseErrorInfo extends AseAbstract
 	private static Logger _logger = Logger.getLogger(AseErrorInfo.class);
 	
 	private ResultSetTableModel _shortRstm;
+	private ResultSetTableModel _sqlTextRstm;
 //	private Exception           _problem = null;
 	private List<String>        _messages = new ArrayList<>();
 
@@ -102,6 +109,22 @@ public class AseErrorInfo extends AseAbstract
 
 			sb.append("Error Information Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
+
+			if (_sqlTextRstm != null)
+			{
+				// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+				Map<String, String> colNameValueTagMap = new HashMap<>();
+				colNameValueTagMap.put("SQLText", "xmp");
+
+				String  divId       = "errorSqlText";
+				boolean showAtStart = false;
+				String  htmlContent = _sqlTextRstm.toHtmlTableString("sortable", colNameValueTagMap);
+				
+				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Error SQL Text, for above errors (all text's may not be available)...", htmlContent);
+
+				// Compose special condition for Microsoft Outlook
+				sb.append(msOutlookAlternateText("Error Text", showHideDiv));
+			}
 		}
 
 		if (hasProblem())
@@ -136,7 +159,9 @@ public class AseErrorInfo extends AseAbstract
 		rstm.setDescription(
 				"Errors that ended up in the MDA Table 'monSysStatements' with 'ErrorStatus' != 0 <br>" +
 				"This can be used to drilldown or pinpoint troublesome SQL Statements. <br>" +
-				"<b>Note</b>: To view the SQL Statement that was responsible for the error(s), you need to connect to the Detailed Recording Database. (Using the Desktop Version of " + getReportingInstance().getDbxAppName() + "), use 'Tools-&gt;Captue SQL Offline View...' <br>" +
+				"<br>" +
+				"<b>Note</b>: To view the SQL Statement that was responsible for the error(s), There is a table <i>which is collapsed</i> where they can be viewed.<br>" +
+				"&emsp; You can also connect to the Detailed Recording Database. (Using the Desktop Version of " + getReportingInstance().getDbxAppName() + "), use 'Tools-&gt;Captue SQL Offline View...' <br>" +
 				"");
 
 		// Columns description
@@ -225,65 +250,59 @@ public class AseErrorInfo extends AseAbstract
 					}
 				}
 			}
-		}
 
-//		sql = conn.quotifySqlString(sql);
-//		try ( Statement stmnt = conn.createStatement() )
-//		{
-//			// Unlimited execution time
-//			stmnt.setQueryTimeout(0);
-//			try ( ResultSet rs = stmnt.executeQuery(sql) )
-//			{
-////				_shortRstm = new ResultSetTableModel(rs, "SQL With ErrorStatus");
-//				_shortRstm = createResultSetTableModel(rs, "SQL With ErrorStatus");
-//				
-//				// Fill in the "ErrorMessage" column from a Static Dictionary
-//				int pos_ErrorStatus  = _shortRstm.findColumn("ErrorStatus");
-//				int pos_ErrorMessage = _shortRstm.findColumn("ErrorMessage");
-////System.out.println("pos_ErrorStatus="+pos_ErrorStatus+", pos_ErrorMessage="+pos_ErrorMessage);
-//
-//				if (pos_ErrorStatus >= 0 && pos_ErrorMessage >= 0)
-//				{
-//					for (int r=0; r<_shortRstm.getRowCount(); r++)
-//					{
-//						int ErrorStatus = _shortRstm.getValueAsInteger(r, pos_ErrorStatus);
-//
-//						String msgStr = AseErrorMessageDictionary.getInstance().getDescription(ErrorStatus);
-////System.out.println("MSG-num2desc-RESOLV: r="+r+", ErrorStatus="+ErrorStatus+", msgStr="+msgStr);
-//						_shortRstm.setValueAtWithOverride(msgStr, r, pos_ErrorMessage);
-//					}
-//				}
-//
-//				int pos_FirstEntry = _shortRstm.findColumn("FirstEntry");
-//				int pos_LastEntry  = _shortRstm.findColumn("LastEntry");
-//				int pos_Duration   = _shortRstm.findColumn("Duration");
-//
-//				if (pos_FirstEntry >= 0 && pos_LastEntry >= 0 && pos_Duration >= 0)
-//				{
-//					for (int r=0; r<_shortRstm.getRowCount(); r++)
-//					{
-//						Timestamp FirstEntry = _shortRstm.getValueAsTimestamp(r, pos_FirstEntry);
-//						Timestamp LastEntry  = _shortRstm.getValueAsTimestamp(r, pos_LastEntry);
-//
-//						if (FirstEntry != null && LastEntry != null)
-//						{
-//							long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
-//							String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
-//							_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
-//						}
-//					}
-//				}
-//				
-//				if (_logger.isDebugEnabled())
-//					_logger.debug("_alarmsActiveShortRstm.getRowCount()="+ _shortRstm.getRowCount());
-//			}
-//		}
-//		catch(SQLException ex)
-//		{
-//			_problem = ex;
-//
-//			_shortRstm = ResultSetTableModel.createEmpty("Error Information Short");
-//			_logger.warn("Problems getting Alarms Short: " + ex);
-//		}
+			// Get SQL Details for a specififc error number
+			if (pos_ErrorStatus >= 0 && pos_ErrorMessage >= 0)
+			{
+				for (int r=0; r<_shortRstm.getRowCount(); r++)
+				{
+					int ErrorStatus = _shortRstm.getValueAsInteger(r, pos_ErrorStatus);
+
+					getErrorSqlText(conn, ErrorStatus);
+				}
+			}
+		}
+	}
+
+	private void getErrorSqlText(DbxConnection conn, int errorNumber)
+	{
+		String sql = ""
+			    + "select s.[ErrorStatus], count(t.*) as [ErrorCount], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode], min(t.[SQLText]) as [SQLText] \n"
+			    + "from [MonSqlCapStatements] s \n"
+			    + "INNER JOIN [MonSqlCapSqlText] t ON s.[SPID] = t.[SPID] and s.[KPID] = t.[KPID] and s.[BatchID] = t.[BatchID] \n"
+			    + "where s.[ErrorStatus] != 0 \n"
+//			    + "and s.[JavaSqlHashCode] != -1 \n"
+			    + "and s.[ErrorStatus] = " + errorNumber + " \n"
+			    + "group by s.[ErrorStatus], t.[ServerLogin], s.[ProcName], s.[LineNumber], t.[JavaSqlHashCode] \n"
+			    + "order by s.[ErrorStatus], [ErrorCount] desc \n"
+			    + "";
+
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				ResultSetTableModel rstm = createResultSetTableModel(rs, "SqlErrorText", sql);
+				
+				if (_sqlTextRstm == null)
+					_sqlTextRstm = rstm;
+				else
+					_sqlTextRstm.add(rstm);
+			}
+		}
+		catch(SQLException ex)
+		{
+			setProblem(ex);
+
+			_logger.warn("Problems getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
+		} 
+		catch(ModelMissmatchException ex)
+		{
+			setProblem(ex);
+
+			_logger.warn("Problems (merging into previous ResultSetTableModel) when getting ErrorSqlText for ErrorStatus = "+errorNumber+": " + ex);
+		} 
 	}
 }

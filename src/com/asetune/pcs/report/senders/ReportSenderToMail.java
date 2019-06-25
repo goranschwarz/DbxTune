@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.mail.EmailConstants;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.log4j.Logger;
 
@@ -74,7 +75,7 @@ extends ReportSenderAbstract
 			email.setHostName(_smtpHostname);
 
 			// Charset
-			//email.setCharset(StandardCharsets.UTF_8.name());
+			email.setCharset(EmailConstants.UTF_8);
 			
 			// Connection timeout
 			if (_smtpConnectTimeout >= 0)

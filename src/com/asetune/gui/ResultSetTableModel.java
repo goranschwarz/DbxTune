@@ -1802,9 +1802,17 @@ public class ResultSetTableModel
 
 	public String toHtmlTableString(String className)
 	{
-		return toHtmlTableString(className, true, true);
+		return toHtmlTableString(className, true, true, null);
+	}
+	public String toHtmlTableString(String className, Map<String, String> colNameValueTagMap)
+	{
+		return toHtmlTableString(className, true, true, colNameValueTagMap);
 	}
 	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap)
+	{
+		return toHtmlTableString(className, tHeadNoWrap, tBodyNoWrap, null);
+	}
+	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
@@ -1847,7 +1855,7 @@ public class ResultSetTableModel
 		sb.append("<tbody>\n");
 		for (int r=0; r<rows; r++)
 		{
-			sb.append("<tr>");
+			sb.append("  <tr>\n");
 			for (int c=0; c<cols; c++)
 			{
 				Object objVal = getValueAt(r,c);
@@ -1866,9 +1874,24 @@ public class ResultSetTableModel
 //				if (StringUtil.isNullOrBlank(strVal))
 //					strVal = "&nbsp;";
 
-				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
+				String colName = getColumnName(c);
+				String beginTag = "";
+				String endTag   = "";
+				
+				if (colNameValueTagMap != null && colNameValueTagMap.containsKey(colName))
+				{
+					String tagName = colNameValueTagMap.get(colName);
+					if (StringUtil.hasValue(tagName))
+					{
+						beginTag = "<"  + tagName + ">";
+						endTag   = "</" + tagName + ">";
+					}
+				}
+
+//				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");
+				sb.append("    <td").append(tBodyNoWrapStr).append(">").append(beginTag).append(strVal).append(endTag).append("</td>\n");
 			}
-			sb.append("</tr>\n");
+			sb.append("  </tr>\n");
 			//sb.append("\n");
 		}
 		sb.append("</tbody>\n");
@@ -2596,6 +2619,87 @@ public class ResultSetTableModel
 	//------------------------------------------------------------
 	//-- END: description
 	//------------------------------------------------------------
+
+
+	/**
+	 * Check all columns and rows, and truncate "cells" that are above #KB
+	 * @param overKb
+	 */
+	public int truncateColumnsWithSizeInKbOver(int overKb)
+	{
+		int truncCount = 0;
+		int colCount = getColumnCount();
+		int rowCount = getRowCount();
+
+		// Exit early if there is nothing to do
+		if (colCount <= 0 || rowCount <= 0)
+			return truncCount;
+
+		for (int r=0; r<rowCount; r++)
+		{
+			for (int c=0; c<colCount; c++)
+			{
+				Object cell = getValueAt(r, c);
+				if (cell != null && cell instanceof String)
+				{
+					String cellStr = (String) cell;
+					int cellLength = cellStr.length();
+					
+					if (cellLength > overKb*1024)
+					{
+						_logger.info("Truncating row=" + r + ", column=" + c + " (colName='" + getColumnName(c) + "'), after " + overKb + " KB, origin size was " + (cellLength/1024) + " KB, in rstm named '" + getName() + "' ");
+						String truncCellStr = cellStr.substring(0, overKb*1024) + "... NOTE: [truncated after " + overKb + " KB, originSize=" + (cellLength/1024) + " KB].";
+						
+						setValueAtWithOverride(truncCellStr, r, c);
+						truncCount++;
+					}
+				}
+			}
+		}
+		return truncCount;
+	}
+
+	/**
+	 * Get approximate size for a table.<br>
+	 * How object size are counted.
+	 * <ul>
+	 *    <li>String - get length of string.</li>
+	 *    <li>all others - assume 16 bytes</li>
+	 * </ul>
+	 * @return
+	 */
+	public long getApproxSize()
+	{
+		long size = 0;
+		int colCount = getColumnCount();
+		int rowCount = getRowCount();
+
+		// Exit early if there is nothing to do
+		if (colCount <= 0 || rowCount <= 0)
+			return size;
+
+		for (int r=0; r<rowCount; r++)
+		{
+			for (int c=0; r<colCount; c++)
+			{
+				Object cell = getValueAt(r, c);
+				if (cell != null)
+				{
+					if (cell instanceof String)
+					{
+						size += ((String) cell).length();
+					}
+					else
+					{
+						size += 16;
+					}
+				}
+			}
+		}
+		return size;
+	}
+
+
 	
 	public static void main(String[] args)
 	{

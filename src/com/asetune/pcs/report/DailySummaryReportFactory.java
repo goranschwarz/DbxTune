@@ -57,7 +57,12 @@ public class DailySummaryReportFactory
 	
 	public static final String  PROPKEY_removeReportsAfterDays = "DailySummaryReport.remove.after.days";
 	public static final int     DEFAULT_removeReportsAfterDays = 30;
-	
+
+
+	public static final String  PROPKEY_maxTableCellSizeKb = "DailySummaryReport.maxTableCellSizeKb";
+	public static final int     DEFAULT_maxTableCellSizeKb = 128;
+
+
 	/**
 	 * Check if the daily summary report is enabled or disabled
 	 * 
