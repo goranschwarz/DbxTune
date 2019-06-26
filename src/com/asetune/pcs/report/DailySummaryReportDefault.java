@@ -287,7 +287,7 @@ extends DailySummaryReportAbstract
 	{
 		// initialize with default parameters, which may change below...
 		String dbxCentralProt = "http";
-		String dbxCentralHost = StringUtil.getHostname();
+		String dbxCentralHost = StringUtil.getHostnameWithDomain();
 		int    dbxCentralPort = 8080;
 
 		// get where DBX CENTRAL is located.
@@ -313,7 +313,7 @@ extends DailySummaryReportAbstract
 		// if 'localhost' or '127.0.0.1' then get REAL localhost name
 		if (dbxCentralHost.equalsIgnoreCase("localhost") || dbxCentralHost.equalsIgnoreCase("127.0.0.1"))
 		{
-			dbxCentralHost = StringUtil.getHostname();
+			dbxCentralHost = StringUtil.getHostnameWithDomain();
 		}
 
 		// Compose URL's

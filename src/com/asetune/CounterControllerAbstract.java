@@ -2141,7 +2141,14 @@ implements ICounterController
 	public static final String PROPKEY_cmDemandRefreshSleepTime = "CounterCollector.cmDemandRefreshSleepTime";
 	public static final int    DEFAULT_cmDemandRefreshSleepTime = 3;
 
-	private int _cmDemandRefreshSleepTime = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmDemandRefreshSleepTime, DEFAULT_cmDemandRefreshSleepTime);
+	public static final String PROPKEY_cmDemandRefreshSleepTime_forMaxTimeInSec = "CounterCollector.cmDemandRefreshSleepTime.forMaxTimeInSec";
+	public static final int    DEFAULT_cmDemandRefreshSleepTime_forMaxTimeInSec = 300; // 5 Minutes
+
+	private int _cmDemandRefreshSleepTime                 = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmDemandRefreshSleepTime,                 DEFAULT_cmDemandRefreshSleepTime);
+	private int _cmDemandRefreshSleepTime_forMaxTimeInSec = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_cmDemandRefreshSleepTime_forMaxTimeInSec, DEFAULT_cmDemandRefreshSleepTime_forMaxTimeInSec);
+
+	// Set this when we start to do 'demand refresh' 
+	private long _cmDemandRefreshSleepTime_startTime = -1;
 
 	/**
 	 * Used in the check loop to check if we need to sleep for a shorter time that the suggested time.
@@ -2156,6 +2163,8 @@ implements ICounterController
 
 		int sleepTime        = suggestedSleepTime;
 		int shorterSleepTime = _cmDemandRefreshSleepTime;
+		
+		boolean isDemandRefresh = false;
 
 		// Loop all the CM's (in the demand list) and possibly decide for a shorted sleep time
 		for (String cmName : getCmDemandRefreshList())
@@ -2170,12 +2179,40 @@ implements ICounterController
 //System.out.println("getCmDemandRefreshSleepTime(): cmName='"+cmName+"', cmRefreshedInMs="+cmRefreshedInMs+" > expireValue="+expireValue+". if="+(cmRefreshedInMs > expireValue) );
 			if (cmRefreshedInMs > expireValue)
 			{
-				sleepTime = shorterSleepTime;
-				_logger.info("Setting override-sleep time to "+sleepTime+" (from "+suggestedSleepTime+").This since previous sample had 'demand-refresh'. Decision based on CM '"+cmName+"' with "+cmRefreshedInMs+" ms since last refresh. Requested Counters: "+getCmDemandRefreshList());
-				break;
+				isDemandRefresh = true;
+
+				long inDemandRefreshForXSec = 0;
+				if (_cmDemandRefreshSleepTime_startTime != -1)
+				{
+					inDemandRefreshForXSec = (System.currentTimeMillis() - _cmDemandRefreshSleepTime_startTime) / 1000;
+				}
+				
+				// Decide if we want to "oner" the override, or if we should dismiss it due to: "that we have been in override-sleep for to long"
+				if (inDemandRefreshForXSec > _cmDemandRefreshSleepTime_forMaxTimeInSec)
+				{
+					sleepTime = suggestedSleepTime;
+					_logger.info("Override-sleep time is dismissed. Sleep time will be " + sleepTime + ". This since we have requested 'override-sleep' for " + inDemandRefreshForXSec + " seconds, and the '" + PROPKEY_cmDemandRefreshSleepTime_forMaxTimeInSec + "' is set to '" + _cmDemandRefreshSleepTime_forMaxTimeInSec + "'.");
+					break;
+				}
+				else
+				{
+					sleepTime = shorterSleepTime;
+					_logger.info("Setting override-sleep time to "+sleepTime+" (from "+suggestedSleepTime+"). This since previous sample had 'demand-refresh'. Decision based on CM '"+cmName+"' with "+cmRefreshedInMs+" ms since last refresh. Requested Counters: "+getCmDemandRefreshList());
+					break;
+				}
 			}
 		}
 
+		if (isDemandRefresh)
+		{
+			if (_cmDemandRefreshSleepTime_startTime == -1)
+				_cmDemandRefreshSleepTime_startTime = System.currentTimeMillis();
+		}
+		else
+		{
+			_cmDemandRefreshSleepTime_startTime = -1;
+		}
+		
 		return sleepTime;
 	}
 	//==================================================================

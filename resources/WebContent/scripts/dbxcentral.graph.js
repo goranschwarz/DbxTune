@@ -235,6 +235,44 @@ var _showSrvTimer = null;
 //	grey:   'rgb(201, 203, 207)'
 //};
 
+//-----------------------------------------------------------
+// ACTIVE ALARMS
+//-----------------------------------------------------------
+function activeAlarmsRadioClick(radioBut) 
+{
+	var rVal = radioBut.value;
+	console.log('activeAlarmsRadioClick(): Active Alarm Window Size[RadioBut]: ' + rVal);
+	
+	if (rVal === "hide")
+	{
+		// Hide all Alarms
+		$("#active-alarms-win").css("display", "none");
+	}
+	else
+	{
+		// Set The OUTER max-size
+		$("#active-alarms").css("max-height", radioBut.value);
+
+		// SHOW all Alarms
+		$("#active-alarms-win").css("display", "block");
+	}
+}
+function activeAlarmsChkClick(checkbox) 
+{
+	console.log('activeAlarmsChkClick(): Checked: ' + checkbox.checked);
+	if (checkbox.checked)
+	{
+		$("#active-alarms").css("background-color", 'rgba(255, 195, 83, 1.0)');
+	}
+	else
+	{
+		$("#active-alarms").css("background-color", 'rgba(255, 195, 83, 0.5)');
+	}
+}
+// Always start with: unchecked "Solid Background"
+$("#active-alarms-solid-chk").removeAttr("checked");
+
+
 function dbxTuneCheckActiveAlarms()
 {
 	console.log("dbxTuneCheckActiveAlarms()");
@@ -251,7 +289,11 @@ function dbxTuneCheckActiveAlarms()
 			var jsonResp = JSON.parse(data);
 				
 			// update ACTIVE Alarm view (note: there can be several servers)
-			var activeAlarmsDiv = document.getElementById("active-alarms");
+			var activeAlarmsDiv    = document.getElementById("active-alarms");
+			var activeAlarmsWinDiv = document.getElementById("active-alarms-win");
+
+			var alarmSrvCount = 0;
+			var alarmSumCount = 0;
 
 			// reorder: stuff an outer "map", which is the server, and all it's alarms
 			var srvAlarmMap = {}; // new object (this will be the Map with <String>, Array<AlarmEntry>)
@@ -273,6 +315,8 @@ function dbxTuneCheckActiveAlarms()
 				// var graphServerName = entry.srvName;
 				var graphServerName = key;
 
+				alarmSrvCount++;
+
 				if (_serverList.indexOf(graphServerName) == -1)
 				{
 					if (_debug > 1)
@@ -291,12 +335,14 @@ function dbxTuneCheckActiveAlarms()
 						srvDiv = document.createElement("div");
 						srvDiv.id = "active-alarms-srv-"+graphServerName;
 
-						activeAlarmsDiv.appendChild(srvDiv);
+						activeAlarmsWinDiv.appendChild(srvDiv);
 					}
 					let tab = jsonToTable(entry);
 					srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 					srvDiv.appendChild(tab);
 					srvDiv.appendChild(document.createElement("br"));
+
+					alarmSumCount += entry.length;
 
 					if (_debug > 1)
 						console.log("TABLE for srv'"+graphServerName+"': ", tab);
@@ -305,14 +351,16 @@ function dbxTuneCheckActiveAlarms()
 				{
 					let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
 					if (srvDiv !== null)
-						activeAlarmsDiv.removeChild(srvDiv);
+						activeAlarmsWinDiv.removeChild(srvDiv);
 				}
 			}
 
 			// should we show the activeAlarmsDiv or not?
 			if (_debug > 0)
-				console.log("activeAlarmsDiv.getElementsByTagName('*').length: "+activeAlarmsDiv.getElementsByTagName('*').length);
-			if (activeAlarmsDiv.getElementsByTagName('*').length > 0)
+				console.log("activeAlarmsWinDiv.getElementsByTagName('*').length: "+activeAlarmsWinDiv.getElementsByTagName('*').length+", alarmSumCount="+alarmSumCount);
+			
+//			if (activeAlarmsWinDiv.getElementsByTagName('*').length > 0)
+			if (alarmSumCount > 0)
 			{
 				activeAlarmsDiv.style.visibility = 'visible';
 				pageTitleNotification.on("---ALARM---", 1000);
@@ -322,6 +370,9 @@ function dbxTuneCheckActiveAlarms()
 				activeAlarmsDiv.style.visibility = 'hidden';
 				pageTitleNotification.off();
 			}
+
+			// Set how many ACTIVE ALarms we have...
+			document.getElementById('active-alarms-count').innerHTML = alarmSumCount;
 		},
 		error: function(xhr, desc, err) 
 		{
@@ -527,7 +578,8 @@ function dbxTuneGraphSubscribe()
 		}
 
 		// update ACTIVE Alarm view (note: there can be several servers)
-		var activeAlarmsDiv = document.getElementById("active-alarms");
+		var activeAlarmsDiv    = document.getElementById("active-alarms");
+		var activeAlarmsWinDiv = document.getElementById("active-alarms-win");
 
 		// If any Active alarms create a new SRV-DIV and a table...
 		if (typeof graphJson.activeAlarms !== 'undefined')
@@ -538,7 +590,7 @@ function dbxTuneGraphSubscribe()
 				srvDiv = document.createElement("div");
 				srvDiv.id = "active-alarms-srv-"+graphServerName;
 
-				activeAlarmsDiv.appendChild(srvDiv);
+				activeAlarmsWinDiv.appendChild(srvDiv);
 			}
 			let tab = jsonToTable(graphJson.activeAlarms);
 			srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
@@ -552,12 +604,13 @@ function dbxTuneGraphSubscribe()
 		{
 			let srvDiv = document.getElementById("active-alarms-srv-"+graphServerName);
 			if (srvDiv !== null)
-				activeAlarmsDiv.removeChild(srvDiv);
+				activeAlarmsWinDiv.removeChild(srvDiv);
 		}
 		// should we show the activeAlarmsDiv or not?
 		if (_debug > 0)
-			console.log("activeAlarmsDiv.getElementsByTagName('*').length: "+activeAlarmsDiv.getElementsByTagName('*').length);
-		if (activeAlarmsDiv.getElementsByTagName('*').length > 0)
+			console.log("activeAlarmsWinDiv.getElementsByTagName('*').length: "+activeAlarmsWinDiv.getElementsByTagName('*').length);
+
+		if (activeAlarmsWinDiv.getElementsByTagName('*').length > 0)
 		{
 			activeAlarmsDiv.style.visibility = 'visible';
 			pageTitleNotification.on("---ALARM---", 1000);

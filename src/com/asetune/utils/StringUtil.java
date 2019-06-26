@@ -1370,6 +1370,7 @@ public class StringUtil
 		return sb.toString();
 	}
 
+	/** Get host name in the short form <code>host1</code> */
 	public static String getHostname()
 	{
 		try 
@@ -1390,6 +1391,26 @@ public class StringUtil
 		}
 	}
 
+	/** Get host name in the long form <code>host1.acme.com</code> */
+	public static String getHostnameWithDomain()
+	{
+		try 
+		{
+			InetAddress addr = InetAddress.getLocalHost();
+			
+			// Get IP Address
+			//byte[] ipAddr = addr.getAddress();
+
+			// Get hostname
+			String hostname = addr.getCanonicalHostName();
+
+			return hostname;
+		}
+		catch (UnknownHostException e) 
+		{
+			return null;
+		}
+	}
 
 	/**
 	 * Converts a Throwable to  String
