@@ -154,6 +154,9 @@ public class AseTopCmActiveStatements extends AseAbstract
 		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingAbove = 1000;
 
+		String skipDumpDbAndTran    = "  and [Command] not like 'DUMP %' \n";
+		String skipUpdateStatistics = "  and [Command] not like 'UPDATE STATISTICS%' \n";
+		
 		String sql = ""
 			    + "select top " + topRows + " \n"
 			    + "     min([CmSampleTime])                                               as [CmSampleTime_min] \n"
@@ -188,7 +191,8 @@ public class AseTopCmActiveStatements extends AseAbstract
 			    + "    ,max([ShowPlanText])                                               as [ShowPlanText_max] \n"
 			    + "from [CmActiveStatements_diff] x \n"
 			    + "where 1=1 \n"
-			    + "  and [Command] not like 'DUMP %' \n"
+			    + skipDumpDbAndTran
+			    + skipUpdateStatistics
 			    + "  and [monSource] = 'ACTIVE' \n"
 			    + "group by [dbname], CASE WHEN [procname] != '' THEN [procname] ELSE [MonSqlText] END, [linenum] \n"
 			    + "having [CpuTime_max] > " + havingAbove + "\n"
