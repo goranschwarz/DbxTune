@@ -72,6 +72,9 @@ public class CentralPersistReader
 	// Cache all session/server names
 	private Set<String> _sessionNames = null;
 	
+	// Unlimited query time
+	private int _defaultQueryTimeout = 0; 
+	
 	/** Different ways we can use to get data from the storage tables */
 	public enum SampleType
 	{
@@ -332,6 +335,9 @@ public class CentralPersistReader
 		       "jdbcUsername='" + _jdbcUsername   + "', " +
 		       "jdbcPassword='" + "*secret*"      + "'.";
 	}
+
+	public void setDefaultQueryTimeout(int val) { _defaultQueryTimeout = val;  }
+	public int  getDefaultQueryTimeout()        { return _defaultQueryTimeout; }
 	
 //	/** 
 //	 * Last loaded session(s) information <br>
@@ -476,34 +482,41 @@ public class CentralPersistReader
 		sql = conn.quotifySqlString(sql);
 		
 		// autoclose: stmnt, rs
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		try (Statement stmnt = conn.createStatement())
 		{
-			while (rs.next())
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
 			{
-				DbxAlarmActive a = new DbxAlarmActive(
-					rs.getString   (1),  // "srvName"             
-					rs.getString   (2),  // "alarmClass"             
-					rs.getString   (3),  // "serviceType"            
-					rs.getString   (4),  // "serviceName"            
-					rs.getString   (5),  // "serviceInfo"            
-					rs.getString   (6),  // "extraInfo"              
-					rs.getString   (7),  // "category"               
-					rs.getString   (8),  // "severity"               
-					rs.getString   (9),  // "state"                  
-					rs.getInt      (10),  // "repeatCnt"              
-					rs.getString   (11), // "duration"               
-					rs.getTimestamp(12), // "createTime"             
-					rs.getTimestamp(13), // "cancelTime"             
-					rs.getInt      (14), // "timeToLive"             
-					rs.getString   (15), // "threshold"              
-					rs.getString   (16), // "data"                   
-					rs.getString   (17), // "lastData"               
-					rs.getString   (18), // "description"            
-					rs.getString   (19), // "lastDescription"        
-					rs.getString   (20), // "extendedDescription"    
-					rs.getString   (21)  // "lastExtendedDescription"
-					);
-				list.add(a);
+				while (rs.next())
+				{
+					DbxAlarmActive a = new DbxAlarmActive(
+						rs.getString   (1),  // "srvName"             
+						rs.getString   (2),  // "alarmClass"             
+						rs.getString   (3),  // "serviceType"            
+						rs.getString   (4),  // "serviceName"            
+						rs.getString   (5),  // "serviceInfo"            
+						rs.getString   (6),  // "extraInfo"              
+						rs.getString   (7),  // "category"               
+						rs.getString   (8),  // "severity"               
+						rs.getString   (9),  // "state"                  
+						rs.getInt      (10),  // "repeatCnt"              
+						rs.getString   (11), // "duration"               
+						rs.getTimestamp(12), // "createTime"             
+						rs.getTimestamp(13), // "cancelTime"             
+						rs.getInt      (14), // "timeToLive"             
+						rs.getString   (15), // "threshold"              
+						rs.getString   (16), // "data"                   
+						rs.getString   (17), // "lastData"               
+						rs.getString   (18), // "description"            
+						rs.getString   (19), // "lastDescription"        
+						rs.getString   (20), // "extendedDescription"    
+						rs.getString   (21)  // "lastExtendedDescription"
+						);
+					list.add(a);
+				}
 			}
 		}
 	}
@@ -666,38 +679,46 @@ public class CentralPersistReader
 				+" order by " + lq+"SessionStartTime"+rq + ", " +lq+"SessionSampleTime"+rq + ", " +lq+"eventTime"+rq;
 
 		// autoclose: stmnt, rs
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement())
 		{
-			while (rs.next())
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
 			{
-				DbxAlarmHistory a = new DbxAlarmHistory(
-					rs.getString   (1),  // srvName                              
-					rs.getTimestamp(2),  // SessionStartTime                    
-					rs.getTimestamp(3),  // SessionSampleTime                   
-					rs.getTimestamp(4),  // eventTime                           
-					rs.getString   (5),  // action                              
-					rs.getString   (6),  // alarmClass                          
-					rs.getString   (7),  // serviceType                         
-					rs.getString   (8),  // serviceName                         
-					rs.getString   (9),  // serviceInfo                         
-					rs.getString   (10),  // extraInfo                           
-					rs.getString   (11), // category                            
-					rs.getString   (12), // severity                            
-					rs.getString   (13), // state                               
-					rs.getInt      (14), // repeatCnt                           
-					rs.getString   (15), // duration                            
-					rs.getTimestamp(16), // createTime                          
-					rs.getTimestamp(17), // cancelTime                          
-					rs.getInt      (18), // timeToLive                          
-					rs.getString   (19), // threshold                           
-					rs.getString   (20), // data                                
-					rs.getString   (21), // lastData                            
-					rs.getString   (22), // description                         
-					rs.getString   (23), // lastDescription                     
-					rs.getString   (24), // extendedDescription                 
-					rs.getString   (25)  // lastExtendedDescription             
-					);
-				list.add(a);
+				while (rs.next())
+				{
+					DbxAlarmHistory a = new DbxAlarmHistory(
+						rs.getString   (1),  // srvName                              
+						rs.getTimestamp(2),  // SessionStartTime                    
+						rs.getTimestamp(3),  // SessionSampleTime                   
+						rs.getTimestamp(4),  // eventTime                           
+						rs.getString   (5),  // action                              
+						rs.getString   (6),  // alarmClass                          
+						rs.getString   (7),  // serviceType                         
+						rs.getString   (8),  // serviceName                         
+						rs.getString   (9),  // serviceInfo                         
+						rs.getString   (10),  // extraInfo                           
+						rs.getString   (11), // category                            
+						rs.getString   (12), // severity                            
+						rs.getString   (13), // state                               
+						rs.getInt      (14), // repeatCnt                           
+						rs.getString   (15), // duration                            
+						rs.getTimestamp(16), // createTime                          
+						rs.getTimestamp(17), // cancelTime                          
+						rs.getInt      (18), // timeToLive                          
+						rs.getString   (19), // threshold                           
+						rs.getString   (20), // data                                
+						rs.getString   (21), // lastData                            
+						rs.getString   (22), // description                         
+						rs.getString   (23), // lastDescription                     
+						rs.getString   (24), // extendedDescription                 
+						rs.getString   (25)  // lastExtendedDescription             
+						);
+					list.add(a);
+				}
 			}
 		}
 
@@ -761,42 +782,49 @@ public class CentralPersistReader
 		}
 		
 		// autoclose: stmnt, rs
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		try (Statement stmnt = conn.createStatement())
 		{
-			DbxCentralSessions s = null;
-			while (rs.next())
-			{
-				// Get: serverDescrption & serverExtraInfo
-				String srvName          = rs.getString(3);
-				String serverDescrption = "";
-				String serverExtraInfo  = "";
-				DbxCentralServerDescription sd = sdMap.get(srvName);
-				if (sd != null)
-				{
-					serverDescrption = sd.getDescription();
-					serverExtraInfo  = sd.getExtraInfo();
-				}
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
 
-				int c = 1;
-				s = new DbxCentralSessions(
-					rs.getTimestamp(c++), // "SessionStartTime"       
-					rs.getInt      (c++), // "Status"
-					rs.getString   (c++), // "ServerName"             
-					rs.getString   (c++), // "OnHostname"             
-					rs.getString   (c++), // "ProductString"          
-					rs.getString   (c++), // "VersionString"          
-					rs.getString   (c++), // "BuildString"            
-					rs.getString   (c++), // "CollectorHostname"      
-					rs.getInt      (c++), // "CollectorSampleInterval"
-					rs.getString   (c++), // "CollectorCurrentUrl"
-					rs.getString   (c++), // "CollectorInfoFile"
-					rs.getInt      (c++), // "NumOfSamples"           
-					rs.getTimestamp(c++), // "LastSampleTime"         
-					serverDescrption,    // serverDescrption,
-					serverExtraInfo,     // serverExtraInfo,
-					null);               // graphProperties
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				DbxCentralSessions s = null;
+				while (rs.next())
+				{
+					// Get: serverDescrption & serverExtraInfo
+					String srvName          = rs.getString(3);
+					String serverDescrption = "";
+					String serverExtraInfo  = "";
+					DbxCentralServerDescription sd = sdMap.get(srvName);
+					if (sd != null)
+					{
+						serverDescrption = sd.getDescription();
+						serverExtraInfo  = sd.getExtraInfo();
+					}
+
+					int c = 1;
+					s = new DbxCentralSessions(
+						rs.getTimestamp(c++), // "SessionStartTime"       
+						rs.getInt      (c++), // "Status"
+						rs.getString   (c++), // "ServerName"             
+						rs.getString   (c++), // "OnHostname"             
+						rs.getString   (c++), // "ProductString"          
+						rs.getString   (c++), // "VersionString"          
+						rs.getString   (c++), // "BuildString"            
+						rs.getString   (c++), // "CollectorHostname"      
+						rs.getInt      (c++), // "CollectorSampleInterval"
+						rs.getString   (c++), // "CollectorCurrentUrl"
+						rs.getString   (c++), // "CollectorInfoFile"
+						rs.getInt      (c++), // "NumOfSamples"           
+						rs.getTimestamp(c++), // "LastSampleTime"         
+						serverDescrption,    // serverDescrption,
+						serverExtraInfo,     // serverExtraInfo,
+						null);               // graphProperties
+				}
+				return s;
 			}
-			return s;
 		}
 	}
 	
@@ -878,51 +906,58 @@ public class CentralPersistReader
 			}
 			
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					// Get: serverDescrption & serverExtraInfo
-					String serverName       = rs.getString(3);
-					String serverDescrption = "";
-					String serverExtraInfo  = "";
-					DbxCentralServerDescription sd = sdMap.get(serverName);
-					if (sd != null)
+					while (rs.next())
 					{
-						serverDescrption = sd.getDescription();
-						serverExtraInfo  = sd.getExtraInfo();
+						// Get: serverDescrption & serverExtraInfo
+						String serverName       = rs.getString(3);
+						String serverDescrption = "";
+						String serverExtraInfo  = "";
+						DbxCentralServerDescription sd = sdMap.get(serverName);
+						if (sd != null)
+						{
+							serverDescrption = sd.getDescription();
+							serverExtraInfo  = sd.getExtraInfo();
+						}
+						
+						int c = 1;
+						DbxCentralSessions s = new DbxCentralSessions(
+							rs.getTimestamp(c++), // "SessionStartTime"       
+							rs.getInt      (c++), // "Status"
+							rs.getString   (c++), // "ServerName"             
+							rs.getString   (c++), // "OnHostname"             
+							rs.getString   (c++), // "ProductString"          
+							rs.getString   (c++), // "VersionString"          
+							rs.getString   (c++), // "BuildString"            
+							rs.getString   (c++), // "CollectorHostname"      
+							rs.getInt      (c++), // "CollectorSampleInterval"
+							rs.getString   (c++), // "CollectorCurrentUrl"
+							rs.getString   (c++), // "CollectorInfoFile"
+							rs.getInt      (c++), // "NumOfSamples"           
+							rs.getTimestamp(c++), // "LastSampleTime"         
+							serverDescrption,     // serverDescrption
+							serverExtraInfo,      // serverExtraInfo
+							null);                // graphProperties
+						list.add(s);
 					}
-					
-					int c = 1;
-					DbxCentralSessions s = new DbxCentralSessions(
-						rs.getTimestamp(c++), // "SessionStartTime"       
-						rs.getInt      (c++), // "Status"
-						rs.getString   (c++), // "ServerName"             
-						rs.getString   (c++), // "OnHostname"             
-						rs.getString   (c++), // "ProductString"          
-						rs.getString   (c++), // "VersionString"          
-						rs.getString   (c++), // "BuildString"            
-						rs.getString   (c++), // "CollectorHostname"      
-						rs.getInt      (c++), // "CollectorSampleInterval"
-						rs.getString   (c++), // "CollectorCurrentUrl"
-						rs.getString   (c++), // "CollectorInfoFile"
-						rs.getInt      (c++), // "NumOfSamples"           
-						rs.getTimestamp(c++), // "LastSampleTime"         
-						serverDescrption,     // serverDescrption
-						serverExtraInfo,      // serverExtraInfo
-						null);                // graphProperties
-					list.add(s);
-				}
-				if (onlyLast)
-				{
-					// The list is ordered by: ServerName, SessionStartTime   (using the SQL)
-					// So just att stuff to the map and use the ones that are left at the end
-					LinkedHashMap<String, DbxCentralSessions> map = new LinkedHashMap<>();
-					for (DbxCentralSessions s : list)
-						map.put(s.getServerName(), s);
-					
-					list.clear();
-					list.addAll(map.values());
+					if (onlyLast)
+					{
+						// The list is ordered by: ServerName, SessionStartTime   (using the SQL)
+						// So just att stuff to the map and use the ones that are left at the end
+						LinkedHashMap<String, DbxCentralSessions> map = new LinkedHashMap<>();
+						for (DbxCentralSessions s : list)
+							map.put(s.getServerName(), s);
+						
+						list.clear();
+						list.addAll(map.values());
+					}
 				}
 			}
 			
@@ -951,10 +986,19 @@ public class CentralPersistReader
 
 			String sessionStartTime = null;
 			sql = "select max("+lq+"SessionStartTime"+rq+") from "+tabName+" where "+lq+"ServerName"+rq+" = '"+sessionName+"'";
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+
+			// autoclose: stmnt, rs
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
-					sessionStartTime = rs.getString(1);
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+						sessionStartTime = rs.getString(1);
+				}
 			}
 			
 			tabName = CentralPersistWriterBase.getTableName(conn, sessionName, Table.GRAPH_PROPERTIES, null, true);
@@ -962,10 +1006,17 @@ public class CentralPersistReader
 			List<String> list = new ArrayList<>();
 
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
-					list.add(rs.getString(1));
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+						list.add(rs.getString(1));
+				}
 			}
 			
 			return list;
@@ -1034,11 +1085,19 @@ public class CentralPersistReader
 				;
 
 			boolean rowExists = false;
+
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlExists))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
-					rowExists = true;
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sqlExists))
+				{
+					while (rs.next())
+						rowExists = true;
+				}
 			}
 
 			_logger.debug("setGraphProfile(): EXISTS="+rowExists+": "+sqlExists);
@@ -1155,20 +1214,28 @@ public class CentralPersistReader
 			List<DbxCentralProfile> list = new ArrayList<>();
 
 //System.out.println("getGraphProfiles: SQL=|"+sql+"|");
+
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					DbxCentralProfile s = new DbxCentralProfile(
-						rs.getString   (1),
-						rs.getString   (2),
-						"", // profileType is decided by the constructor ("SYSTEM_SELECTED" or "USER_SELECTED") 
-						rs.getString   (3),
-						rs.getString   (4),
-						rs.getString   (5),
-						rs.getString   (6) );
-					list.add(s);
+					while (rs.next())
+					{
+						DbxCentralProfile s = new DbxCentralProfile(
+							rs.getString   (1),
+							rs.getString   (2),
+							"", // profileType is decided by the constructor ("SYSTEM_SELECTED" or "USER_SELECTED") 
+							rs.getString   (3),
+							rs.getString   (4),
+							rs.getString   (5),
+							rs.getString   (6) );
+						list.add(s);
+					}
 				}
 			}
 //System.out.println("getGraphProfiles: returns.list=|"+list+"|");
@@ -1202,10 +1269,19 @@ public class CentralPersistReader
 		sql = "select distinct [ServerName], [ProductString] from " + tabName + " order by 2, 1";
 		sql = conn.quotifySqlString(sql);
 		Map<String, String> dbxSrvProductMap = new LinkedHashMap<>();
-		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+
+		// autoclose: stmnt, rs
+		try (Statement stmnt = conn.createStatement())
 		{
-			while (rs.next())
-				dbxSrvProductMap.put(rs.getString(1), rs.getString(2));
+			// set TIMEOUT
+			stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+			// Execute and read result
+			try (ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while (rs.next())
+					dbxSrvProductMap.put(rs.getString(1), rs.getString(2));
+			}
 		}
 
 		// Save a list of graph names for each DbxProduct (only the largest list for each DbxProduct is saved)
@@ -1221,11 +1297,21 @@ public class CentralPersistReader
 			sql = conn.quotifySqlString(sql);
 					
 			List<String> graphNameList = new ArrayList<>();
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+
+			// autoclose: stmnt, rs
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
-					graphNameList.add(rs.getString(1));
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
+				{
+					while (rs.next())
+						graphNameList.add(rs.getString(1));
+				}
 			}
+
 			List<String> existingList = dbxProductMapAll.get(dbxProduct);
 			if (existingList != null)
 			{
@@ -1351,9 +1437,13 @@ public class CentralPersistReader
 			String result = "";
 
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
 					result = rs.getString(1);
 				}
@@ -1388,9 +1478,13 @@ public class CentralPersistReader
 			String result = "";
 
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
 					result = rs.getString(1);
 				}
@@ -1450,23 +1544,27 @@ public class CentralPersistReader
 			List<DbxGraphProperties> list = new ArrayList<>();
 
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
 					DbxGraphProperties e = new DbxGraphProperties(
-						rs.getTimestamp(1),  //SessionStartTime
-						sessionName,
-						rs.getString   (2),   // CmName
-						rs.getString   (3),   // GraphName
-						rs.getString   (4),   // TableName
-						rs.getString   (5),   // GraphLabel
-						rs.getString   (6),   // GraphProps
-						rs.getString   (7),   // GraphCategory
-						rs.getBoolean  (8),   // isPercent
-						rs.getBoolean  (9),   // visiableAtStart
-						rs.getInt      (10)); // initialOrder
-					list.add(e);
+							rs.getTimestamp(1),  //SessionStartTime
+							sessionName,
+							rs.getString   (2),   // CmName
+							rs.getString   (3),   // GraphName
+							rs.getString   (4),   // TableName
+							rs.getString   (5),   // GraphLabel
+							rs.getString   (6),   // GraphProps
+							rs.getString   (7),   // GraphCategory
+							rs.getBoolean  (8),   // isPercent
+							rs.getBoolean  (9),   // visiableAtStart
+							rs.getInt      (10)); // initialOrder
+						list.add(e);
 				}
 			}
 			
@@ -1767,30 +1865,37 @@ public class CentralPersistReader
 						;
 
 				// autoclose: stmnt, rs
-				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				try (Statement stmnt = conn.createStatement())
 				{
-					while (rs.next())
+					// set TIMEOUT
+					stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+					// Execute and read result
+					try (ResultSet rs = stmnt.executeQuery(sql))
 					{
-						String       cmName           = rs.getString   (1);        
-						String       graphName        = rs.getString   (2);         
-						String       tableName        = rs.getString   (3);         
-						String       graphLabel       = rs.getString   (4);         
-						String       graphProps       = rs.getString   (5);         
-						String       graphCategory    = rs.getString   (6);         
-						boolean      isPercentGraph   = rs.getBoolean  (7);         
-						boolean      visibleAtStartup = rs.getBoolean  (8);         
-						int          initialOrder     = rs.getInt      (9);        
-
-						List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
-						if (srvDescList == null)
+						while (rs.next())
 						{
-							srvDescList = new ArrayList<>(); 
-							srvDescMap.put(srvName, srvDescList);
-						}
+							String       cmName           = rs.getString   (1);        
+							String       graphName        = rs.getString   (2);         
+							String       tableName        = rs.getString   (3);         
+							String       graphLabel       = rs.getString   (4);         
+							String       graphProps       = rs.getString   (5);         
+							String       graphCategory    = rs.getString   (6);         
+							boolean      isPercentGraph   = rs.getBoolean  (7);         
+							boolean      visibleAtStartup = rs.getBoolean  (8);         
+							int          initialOrder     = rs.getInt      (9);        
 
-						DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphProps, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
-						srvDescList.add(e);
-						//System.out.println("getGraphDescriptions(): srvName='"+srvName+"': "+e);
+							List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
+							if (srvDescList == null)
+							{
+								srvDescList = new ArrayList<>(); 
+								srvDescMap.put(srvName, srvDescList);
+							}
+
+							DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphProps, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
+							srvDescList.add(e);
+							//System.out.println("getGraphDescriptions(): srvName='"+srvName+"': "+e);
+						}
 					}
 				}
 			} // end: foreach session
@@ -1975,9 +2080,13 @@ public class CentralPersistReader
 			DbxCentralUser user = null;
 			
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
 					user = new DbxCentralUser(
 							rs.getString   (1), // UserName
@@ -2050,9 +2159,13 @@ public class CentralPersistReader
 				;
 
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
 					graphLabel     = rs.getString (1);
 					graphProps     = rs.getString (2);
@@ -2190,11 +2303,19 @@ public class CentralPersistReader
 						+" from " + tabName
 						+" where " + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
 						;
+
 				// autoclose: stmnt, rs
-				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				try (Statement stmnt = conn.createStatement())
 				{
-					while (rs.next())
-						dataRowCount = rs.getInt(1);
+					// set TIMEOUT
+					stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+					// Execute and read result
+					try (ResultSet rs = stmnt.executeQuery(sql))
+					{
+						while (rs.next())
+							dataRowCount = rs.getInt(1);
+					}
 				}
 
 				// Default is to get ALL records
@@ -2224,287 +2345,293 @@ public class CentralPersistReader
 			int readCount = 0;
 
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			try (Statement stmnt = conn.createStatement())
 			{
-				ResultSetMetaData md = rs.getMetaData();
-				int colCount = md.getColumnCount();
-				
-				int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
-				
-				List<String> labelNames = new LinkedList<>();
-				for (int c=colDataStart; c<colCount+1; c++)
-					labelNames.add( md.getColumnLabel(c) );
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
 
-				// Return ALL rows
-//				if (avgOverMinutes <= 0 && maxOverMinutes <= 0)
-				if (SampleType.ALL.equals(sampleType))
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					while (rs.next())
+					ResultSetMetaData md = rs.getMetaData();
+					int colCount = md.getColumnCount();
+					
+					int colDataStart = 4; // "SessionStartTime", "SessionSampleTime", "CmSampleTime", "System+User CPU (@@cpu_busy + @@cpu_io)"
+					
+					List<String> labelNames = new LinkedList<>();
+					for (int c=colDataStart; c<colCount+1; c++)
+						labelNames.add( md.getColumnLabel(c) );
+
+					// Return ALL rows
+//					if (avgOverMinutes <= 0 && maxOverMinutes <= 0)
+					if (SampleType.ALL.equals(sampleType))
 					{
-						readCount++;
-						LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
-					//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-						Timestamp sessionSampleTime = rs.getTimestamp(2);
-					//	Timestamp cmSampleTime      = rs.getTimestamp(3);
-						
-						for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+						while (rs.next())
 						{
-							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
-						}
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
 
-						DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphProps, graphCategory, isPercentGraph, labelAndDataMap);
-						list.add(e);
-						
-						// Remove already added records (keep only last X number of rows)
-						if (onlyLastXNumOfRecords > 0)
-						{
-							if (list.size() > onlyLastXNumOfRecords)
-								list.remove(0);
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+							}
+
+							DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphProps, graphCategory, isPercentGraph, labelAndDataMap);
+							list.add(e);
+							
+							// Remove already added records (keep only last X number of rows)
+							if (onlyLastXNumOfRecords > 0)
+							{
+								if (list.size() > onlyLastXNumOfRecords)
+									list.remove(0);
+							}
 						}
 					}
-				}
-				else if (SampleType.AVG_OVER_MINUTES.equals(sampleType)) // calculate average over X minutes
-				{
-					// This section calculates avaerage values over X number of minutes (goal is to return LESS records to client)
-					// Algorithm:
-					//   - Add records to a temporary list
-					//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
-					//     - calculate average over all "saved" records.
-					//     - add the average calculated record to the "return list"
-					
-					//
-					Timestamp spanStartTime = null;
-					List<Map<String, Double>> tmpList = new ArrayList<>();
-					
-					long avgOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
-
-					while (rs.next())
+					else if (SampleType.AVG_OVER_MINUTES.equals(sampleType)) // calculate average over X minutes
 					{
-						readCount++;
-						LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
-					//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-						Timestamp sessionSampleTime = rs.getTimestamp(2);
-					//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+						// This section calculates avaerage values over X number of minutes (goal is to return LESS records to client)
+						// Algorithm:
+						//   - Add records to a temporary list
+						//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
+						//     - calculate average over all "saved" records.
+						//     - add the average calculated record to the "return list"
 						
-						if (spanStartTime == null)
-							spanStartTime = sessionSampleTime;
+						//
+						Timestamp spanStartTime = null;
+						List<Map<String, Double>> tmpList = new ArrayList<>();
+						
+						long avgOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
 
-						for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+						while (rs.next())
 						{
-							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
-						}
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
 
-						tmpList.add(labelAndDataMap);
-						
-						// Is it time to do calculation yet? 
-						long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
-						if (spanDiffMs >= avgOverMs)
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							if (spanStartTime == null)
+								spanStartTime = sessionSampleTime;
+
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+							}
+
+							tmpList.add(labelAndDataMap);
+							
+							// Is it time to do calculation yet? 
+							long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
+							if (spanDiffMs >= avgOverMs)
+							{
+								LinkedHashMap<String, Double> avgMap = calcAvgData(tmpList);
+								tmpList.clear();
+								
+								DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, avgMap);
+								list.add(e);
+								
+								// Start a new spanTime
+								spanStartTime = sessionSampleTime;
+							}
+						}
+						// Calculate and Add results from "last" records 
+						if ( ! tmpList.isEmpty() )
 						{
 							LinkedHashMap<String, Double> avgMap = calcAvgData(tmpList);
 							tmpList.clear();
 							
 							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, avgMap);
 							list.add(e);
-							
-							// Start a new spanTime
-							spanStartTime = sessionSampleTime;
 						}
 					}
-					// Calculate and Add results from "last" records 
-					if ( ! tmpList.isEmpty() )
+					else if (SampleType.MAX_OVER_MINUTES.equals(sampleType)) // calculate MAX over X minutes
 					{
-						LinkedHashMap<String, Double> avgMap = calcAvgData(tmpList);
-						tmpList.clear();
+						// This section calculates MAX values over X number of minutes (goal is to return LESS records to client)
+						// Algorithm:
+						//   - Add records to a temporary list
+						//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
+						//     - calculate MAX over all "saved" records.
+						//     - add the MAX calculated record to the "return list"
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, avgMap);
-						list.add(e);
-					}
-				}
-				else if (SampleType.MAX_OVER_MINUTES.equals(sampleType)) // calculate MAX over X minutes
-				{
-					// This section calculates MAX values over X number of minutes (goal is to return LESS records to client)
-					// Algorithm:
-					//   - Add records to a temporary list
-					//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
-					//     - calculate MAX over all "saved" records.
-					//     - add the MAX calculated record to the "return list"
-					
-					//
-					Timestamp spanStartTime = null;
-					List<Map<String, Double>> tmpList = new ArrayList<>();
-					
-					long maxOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
-
-					while (rs.next())
-					{
-						readCount++;
-						LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
-					//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-						Timestamp sessionSampleTime = rs.getTimestamp(2);
-					//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+						//
+						Timestamp spanStartTime = null;
+						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
-						if (spanStartTime == null)
-							spanStartTime = sessionSampleTime;
+						long maxOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
 
-						for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+						while (rs.next())
 						{
-							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
-						}
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
 
-						tmpList.add(labelAndDataMap);
-						
-						// Is it time to do calculation yet? 
-						long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
-						if (spanDiffMs >= maxOverMs)
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							if (spanStartTime == null)
+								spanStartTime = sessionSampleTime;
+
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+							}
+
+							tmpList.add(labelAndDataMap);
+							
+							// Is it time to do calculation yet? 
+							long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
+							if (spanDiffMs >= maxOverMs)
+							{
+								LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
+								tmpList.clear();
+								
+								DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
+								list.add(e);
+								
+								// Start a new spanTime
+								spanStartTime = sessionSampleTime;
+							}
+						}
+						// Calculate and Add results from "last" records 
+						if ( ! tmpList.isEmpty() )
 						{
 							LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
 							tmpList.clear();
 							
 							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
 							list.add(e);
-							
-							// Start a new spanTime
-							spanStartTime = sessionSampleTime;
 						}
 					}
-					// Calculate and Add results from "last" records 
-					if ( ! tmpList.isEmpty() )
+					else if (SampleType.SUM_OVER_MINUTES.equals(sampleType)) // calculate SUM over X minutes
 					{
-						LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
-						tmpList.clear();
+						// This section calculates SUM values over X number of minutes (goal is to return LESS records to client)
+						// Algorithm:
+						//   - Add records to a temporary list
+						//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
+						//     - calculate SUM over all "saved" records.
+						//     - add the SUM calculated record to the "return list"
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
-						list.add(e);
-					}
-				}
-				else if (SampleType.SUM_OVER_MINUTES.equals(sampleType)) // calculate SUM over X minutes
-				{
-					// This section calculates SUM values over X number of minutes (goal is to return LESS records to client)
-					// Algorithm:
-					//   - Add records to a temporary list
-					//   - When 'sessionSampleTime' has reached a "time span" (or there are no-more-rows)
-					//     - calculate SUM over all "saved" records.
-					//     - add the SUM calculated record to the "return list"
-					
-					//
-					Timestamp spanStartTime = null;
-					List<Map<String, Double>> tmpList = new ArrayList<>();
-					
-					long sumOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
-
-					while (rs.next())
-					{
-						readCount++;
-						LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
-					//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-						Timestamp sessionSampleTime = rs.getTimestamp(2);
-					//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+						//
+						Timestamp spanStartTime = null;
+						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
-						if (spanStartTime == null)
-							spanStartTime = sessionSampleTime;
+						long sumOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
 
-						for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+						while (rs.next())
 						{
-							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
-						}
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
 
-						tmpList.add(labelAndDataMap);
-						
-						// Is it time to do calculation yet? 
-						long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
-						if (spanDiffMs >= sumOverMs)
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							if (spanStartTime == null)
+								spanStartTime = sessionSampleTime;
+
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+							}
+
+							tmpList.add(labelAndDataMap);
+							
+							// Is it time to do calculation yet? 
+							long spanDiffMs = sessionSampleTime.getTime() - spanStartTime.getTime();
+							if (spanDiffMs >= sumOverMs)
+							{
+								LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
+								tmpList.clear();
+								
+								DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, sumMap);
+								list.add(e);
+								
+								// Start a new spanTime
+								spanStartTime = sessionSampleTime;
+							}
+						}
+						// Calculate and Add results from "last" records 
+						if ( ! tmpList.isEmpty() )
 						{
 							LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
 							tmpList.clear();
 							
 							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, sumMap);
 							list.add(e);
-							
-							// Start a new spanTime
-							spanStartTime = sessionSampleTime;
 						}
 					}
-					// Calculate and Add results from "last" records 
-					if ( ! tmpList.isEmpty() )
+					else if (SampleType.MAX_OVER_SAMPLES.equals(sampleType)) // calculate MAX over X samples
 					{
-						LinkedHashMap<String, Double> sumMap = calcSumData(tmpList);
-						tmpList.clear();
+						// This section calculates MAX values over X number of samples (goal is to return LESS records to client)
+						// Algorithm:
+						//   - Add records to a temporary list
+						//   - When 'count' has reached a "span" (or there are no-more-rows)
+						//     - calculate MAX over all "saved" records.
+						//     - add the MAX calculated record to the "return list"
 						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, sumMap);
-						list.add(e);
-					}
-				}
-				else if (SampleType.MAX_OVER_SAMPLES.equals(sampleType)) // calculate MAX over X samples
-				{
-					// This section calculates MAX values over X number of samples (goal is to return LESS records to client)
-					// Algorithm:
-					//   - Add records to a temporary list
-					//   - When 'count' has reached a "span" (or there are no-more-rows)
-					//     - calculate MAX over all "saved" records.
-					//     - add the MAX calculated record to the "return list"
-					
-					//
-					int       spanStartRow  = 0;
-					Timestamp spanStartTime = null;
-					List<Map<String, Double>> tmpList = new ArrayList<>();
-					
-					long maxOverRows = sampleValue; // convert the input MINUTE into MS
-
-					while (rs.next())
-					{
-						spanStartRow++;
-						readCount++;
-						LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
-					//	Timestamp sessionStartTime  = rs.getTimestamp(1);
-						Timestamp sessionSampleTime = rs.getTimestamp(2);
-					//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+						//
+						int       spanStartRow  = 0;
+						Timestamp spanStartTime = null;
+						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
-						if (spanStartTime == null)
-							spanStartTime = sessionSampleTime;
+						long maxOverRows = sampleValue; // convert the input MINUTE into MS
 
-						for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+						while (rs.next())
 						{
-							labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
-						}
+							spanStartRow++;
+							readCount++;
+							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
 
-						tmpList.add(labelAndDataMap);
-						
-						// Is it time to do calculation yet? 
-						if (spanStartRow >= maxOverRows)
+						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
+							Timestamp sessionSampleTime = rs.getTimestamp(2);
+						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
+							
+							if (spanStartTime == null)
+								spanStartTime = sessionSampleTime;
+
+							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
+							{
+								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
+							}
+
+							tmpList.add(labelAndDataMap);
+							
+							// Is it time to do calculation yet? 
+							if (spanStartRow >= maxOverRows)
+							{
+								LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
+								tmpList.clear();
+								
+								DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
+								list.add(e);
+								
+								// Start a new spanTime
+								spanStartRow  = 0;
+								spanStartTime = sessionSampleTime;
+							}
+						}
+						// Calculate and Add results from "last" records 
+						if ( ! tmpList.isEmpty() )
 						{
 							LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
 							tmpList.clear();
 							
 							DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
 							list.add(e);
-							
-							// Start a new spanTime
-							spanStartRow  = 0;
-							spanStartTime = sessionSampleTime;
 						}
 					}
-					// Calculate and Add results from "last" records 
-					if ( ! tmpList.isEmpty() )
+					else
 					{
-						LinkedHashMap<String, Double> maxMap = calcMaxData(tmpList);
-						tmpList.clear();
-						
-						DbxGraphData e = new DbxGraphData(cmName, graphName, spanStartTime, graphLabel, graphProps, graphCategory, isPercentGraph, maxMap);
-						list.add(e);
+						throw new RuntimeException("Reached un-determened code... The sampleType="+sampleType+" has not yet been implemeted, sampleValue="+sampleValue);
 					}
 				}
-				else
-				{
-					throw new RuntimeException("Reached un-determened code... The sampleType="+sampleType+" has not yet been implemeted, sampleValue="+sampleValue);
-				}
-
 			}
-
+			
 			// For debugging purposes
 			if (readCount == 0)
 			{
@@ -3183,10 +3310,15 @@ public class CentralPersistReader
 
 			int rowc = 0;
 			int currentStatus = 0;
+
 			// autoclose: stmnt, rs
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sqlGet))
+			try (Statement stmnt = conn.createStatement())
 			{
-				while (rs.next())
+				// set TIMEOUT
+				stmnt.setQueryTimeout(_defaultQueryTimeout);
+
+				// Execute and read result
+				try (ResultSet rs = stmnt.executeQuery(sqlGet))
 				{
 					rowc++;
 					currentStatus = rs.getInt(1);
@@ -5857,7 +5989,7 @@ public class CentralPersistReader
 ////			pstmnt.setString(1, inSessionStartTime.toString());
 //
 //			// No timeout
-//			pstmnt.setQueryTimeout(0);
+//			pstmnt.setQueryTimeout(_defaultQueryTimeout);
 //			
 //			ResultSet rs = pstmnt.executeQuery();
 ////			ResultSetMetaData rsmd = rs.getMetaData();

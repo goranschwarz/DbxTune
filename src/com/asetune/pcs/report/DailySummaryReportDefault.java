@@ -172,7 +172,7 @@ extends DailySummaryReportAbstract
 		sb.append("            font-family: Arial, Helvetica, sans-serif;\n");
 		sb.append("        }\n");
 		sb.append("        pre {\n");
-		sb.append("            font-size: 9px;\n");
+		sb.append("            font-size: 10px;\n");
 		sb.append("            word-wrap: none;\n");
 		sb.append("            white-space: no-wrap;\n");
 //		sb.append("            space: nowrap;\n");
@@ -266,16 +266,40 @@ extends DailySummaryReportAbstract
 		sb.append("<h2>Daily Summary Report for Servername: ").append(getServerName()).append("</h2>\n");
 		sb.append( createDbxCentralLink() );
 
+		//--------------------------------------------------
+		// TOC
+		sb.append("<br> \n");
+		sb.append("Links to Report Sections. \n");
+		sb.append("<ul> \n");
 		for (IReportEntry entry : _reportEntries)
 		{
-			sb.append("<h3>").append(entry.getSubject()).append("</h3> \n");
+			String tocSubject = entry.getSubject();
+			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+			
+			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
+			
+			sb.append("<li>").append(liContent).append("</li> \n");
+		}
+		sb.append("</ul> \n");
+		sb.append("\n<br>");
+
+		//--------------------------------------------------
+		// ALL REPORTS
+		for (IReportEntry entry : _reportEntries)
+		{
+			String tocSubject = entry.getSubject();
+			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
+
+			sb.append("<h3 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h3> \n");
 			sb.append(entry.getMsgAsHtml());
 		}
 		sb.append("\n<br>");
 
+		//--------------------------------------------------
+		// END
 		sb.append("\n<br>");
 		sb.append("\n<br>");
-		sb.append("<code>--end-of-report--</code>\n");
+		sb.append("\n<code>--end-of-report--</code>\n");
 
 		sb.append("\n");
 		sb.append("</body>\n");

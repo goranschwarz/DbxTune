@@ -10028,6 +10028,13 @@ checkPanelSize(_resPanel, comp);
 //		tab.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		tab.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		
+
+		// Table popup menu -- Create COPY entries
+		JPopupMenu popup = new JPopupMenu();
+		TablePopupFactory.createCopyTable(popup);
+		tab.setComponentPopupMenu( popup );
+
+		
 		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 
 		if (asTabbedPane)

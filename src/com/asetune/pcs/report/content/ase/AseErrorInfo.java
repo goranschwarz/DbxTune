@@ -188,9 +188,13 @@ public class AseErrorInfo extends AseAbstract
 
 			_logger.info("Skipping error numbers " + skipErrorNumbers + " for server '" + srvName + "'.");
 		}
+
+		int skipErrorCountAbove = conf.getIntProperty("AseErrorInfo.skip.ErrorCountAbove", 2000);
+		_messages.add("Skipping SQL Errors: SQL Text, if 'ErrorCount' is above " + skipErrorCountAbove + ". This can be changed with property 'AseErrorInfo.skip.ErrorCountAbove = ####'");
 		
 		String sql = ""
-			    + "select [ErrorStatus] \n"
+			    + "select \n"
+			    + "  [ErrorStatus]            as [ErrorStatus] \n"
 			    + "	,count(*)                 as [ErrorCount] \n"
 			    + "	,count(distinct [SPID])   as [SpidCount] \n"
 			    + "	,min([StartTime])         as [FirstEntry] \n"
@@ -215,9 +219,12 @@ public class AseErrorInfo extends AseAbstract
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
+			// set duration
+			setDurationColumn(_shortRstm, "FirstEntry", "LastEntry", "Duration");
 			
 			// Fill in the "ErrorMessage" column from a Static Dictionary
 			int pos_ErrorStatus  = _shortRstm.findColumn("ErrorStatus");
+			int pos_ErrorCount   = _shortRstm.findColumn("ErrorCount");
 			int pos_ErrorMessage = _shortRstm.findColumn("ErrorMessage");
 
 			if (pos_ErrorStatus >= 0 && pos_ErrorMessage >= 0)
@@ -231,34 +238,16 @@ public class AseErrorInfo extends AseAbstract
 				}
 			}
 
-			int pos_FirstEntry = _shortRstm.findColumn("FirstEntry");
-			int pos_LastEntry  = _shortRstm.findColumn("LastEntry");
-			int pos_Duration   = _shortRstm.findColumn("Duration");
-
-			if (pos_FirstEntry >= 0 && pos_LastEntry >= 0 && pos_Duration >= 0)
-			{
-				for (int r=0; r<_shortRstm.getRowCount(); r++)
-				{
-					Timestamp FirstEntry = _shortRstm.getValueAsTimestamp(r, pos_FirstEntry);
-					Timestamp LastEntry  = _shortRstm.getValueAsTimestamp(r, pos_LastEntry);
-
-					if (FirstEntry != null && LastEntry != null)
-					{
-						long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
-						String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
-						_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
-					}
-				}
-			}
-
-			// Get SQL Details for a specififc error number
-			if (pos_ErrorStatus >= 0 && pos_ErrorMessage >= 0)
+			// Get SQL Details for a specific error number
+			if (pos_ErrorStatus >= 0 && pos_ErrorCount >= 0 && pos_ErrorMessage >= 0)
 			{
 				for (int r=0; r<_shortRstm.getRowCount(); r++)
 				{
 					int ErrorStatus = _shortRstm.getValueAsInteger(r, pos_ErrorStatus);
+					int ErrorCount  = _shortRstm.getValueAsInteger(r, pos_ErrorCount);
 
-					getErrorSqlText(conn, ErrorStatus);
+					if (ErrorCount < skipErrorCountAbove)
+						getErrorSqlText(conn, ErrorStatus);
 				}
 			}
 		}

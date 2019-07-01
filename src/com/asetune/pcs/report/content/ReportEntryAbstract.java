@@ -24,6 +24,7 @@ package com.asetune.pcs.report.content;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
@@ -33,6 +34,7 @@ import com.asetune.pcs.report.DailySummaryReportFactory;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 
 public abstract class ReportEntryAbstract
 implements IReportEntry
@@ -69,7 +71,10 @@ implements IReportEntry
 
 		// Set toString format for Timestamp to "yyyy-MM-dd HH:mm:ss"
 		rstm.setToStringTimestampFormat_YMD_HMS();
-		
+
+		// use localized numbers to easier see big numbers (for example: 12345 -> 12,345)
+		rstm.setToStringNumberFormat(true);
+
 		// Truncate *long* columns
 		if (doTruncate)
 		{
@@ -265,4 +270,33 @@ implements IReportEntry
 		return sb.toString();
 	}
 
+	/**
+	 * Calculate "Duration", and set that to a String column in the form "%HH:%MM:%SS"
+	 * @param rstm
+	 * @param startColName      Start col
+	 * @param stopColName       End col
+	 * @param durationColName   Name of the column we want to set
+	 */
+	public void setDurationColumn(ResultSetTableModel rstm, String startColName, String stopColName, String durationColName)
+	{
+		int pos_StartEntry = rstm.findColumn(startColName);
+		int pos_StopEntry  = rstm.findColumn(stopColName);
+		int pos_Duration   = rstm.findColumn(durationColName);
+
+		if (pos_StartEntry >= 0 && pos_StopEntry >= 0 && pos_Duration >= 0)
+		{
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				Timestamp FirstEntry = rstm.getValueAsTimestamp(r, pos_StartEntry);
+				Timestamp LastEntry  = rstm.getValueAsTimestamp(r, pos_StopEntry);
+
+				if (FirstEntry != null && LastEntry != null)
+				{
+					long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
+					String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
+					rstm.setValueAtWithOverride(durationStr, r, pos_Duration);
+				}
+			}
+		}
+	}
 }

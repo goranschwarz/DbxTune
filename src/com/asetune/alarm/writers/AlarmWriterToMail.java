@@ -80,6 +80,8 @@ extends AlarmWriterAbstract
 		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true, null, getDbxCentralUrl());
 		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true, null, getDbxCentralUrl());
 
+		int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
+
 		try
 		{
 			HtmlEmail email = new HtmlEmail();
@@ -133,11 +135,11 @@ extends AlarmWriterAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
 		}
 	}
 

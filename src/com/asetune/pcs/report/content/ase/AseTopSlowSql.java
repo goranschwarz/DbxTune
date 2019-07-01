@@ -234,16 +234,14 @@ public class AseTopSlowSql extends AseAbstract
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
-			
+			// set duration
+			setDurationColumn(_shortRstm, "StartTime_min", "EndTime_max", "Duration");
+						
 			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
 			int pos_sumLogicalReads             = _shortRstm.findColumn("sumLogicalReads");
 			int pos_sumRowsAffected             = _shortRstm.findColumn("sumRowsAffected");
 			int pos_LogicalReadsPerRowsAffected = _shortRstm.findColumn("LogicalReadsPerRowsAffected");
 
-			int pos_FirstEntry = _shortRstm.findColumn("StartTime_min");
-			int pos_LastEntry  = _shortRstm.findColumn("EndTime_max");
-			int pos_Duration   = _shortRstm.findColumn("Duration");
-			
 			if (pos_sumLogicalReads >= 0 && pos_sumRowsAffected >= 0 && pos_LogicalReadsPerRowsAffected >= 0)
 			{
 				for (int r=0; r<_shortRstm.getRowCount(); r++)
@@ -258,18 +256,6 @@ public class AseTopSlowSql extends AseAbstract
 						calc = new BigDecimal( (sumLogicalReads*1.0) / (sumRowsAffected*1.0) ).setScale(2, RoundingMode.HALF_EVEN);
 					
 					_shortRstm.setValueAtWithOverride(calc, r, pos_LogicalReadsPerRowsAffected);
-
-					//------------------------------------------------
-					// set "Duration"
-					Timestamp FirstEntry = _shortRstm.getValueAsTimestamp(r, pos_FirstEntry);
-					Timestamp LastEntry  = _shortRstm.getValueAsTimestamp(r, pos_LastEntry);
-
-					if (FirstEntry != null && LastEntry != null)
-					{
-						long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
-						String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
-						_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
-					}
 				}
 			}
 

@@ -231,7 +231,11 @@ extends ReportEntryAbstract
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
+			// set duration
+			setDurationColumn(_shortRstm, "SessionSampleTime_min", "SessionSampleTime_max", "Duration");
+						
 			
+			// Create a SQL-Details ResultSet based on values in _shortRstm
 			SimpleResultSet srs = new SimpleResultSet();
 
 			srs.addColumn("datname",      Types.VARCHAR,       60, 0);
@@ -240,30 +244,15 @@ extends ReportEntryAbstract
 			srs.addColumn("query",        Types.VARCHAR, 1024*128, 0); // this is 'text' in the origin table
 
 
-			// Calculate: Duration
-			int pos_FirstEntry = _shortRstm.findColumn("SessionSampleTime_min");
-			int pos_LastEntry  = _shortRstm.findColumn("SessionSampleTime_max");
-			int pos_Duration   = _shortRstm.findColumn("Duration");
-			
 			int pos_datname    = _shortRstm.findColumn("datname");
 			int pos_usename    = _shortRstm.findColumn("usename");
 			int pos_queryid    = _shortRstm.findColumn("queryid");
 			int pos_query      = _shortRstm.findColumn("query");
 
-			if (pos_FirstEntry >= 0 && pos_LastEntry >= 0 && pos_Duration >= 0)
+			if (pos_datname >= 0 && pos_usename >= 0 && pos_queryid >= 0 && pos_query >= 0)
 			{
 				for (int r=0; r<_shortRstm.getRowCount(); r++)
 				{
-					Timestamp FirstEntry = _shortRstm.getValueAsTimestamp(r, pos_FirstEntry);
-					Timestamp LastEntry  = _shortRstm.getValueAsTimestamp(r, pos_LastEntry);
-
-					if (FirstEntry != null && LastEntry != null)
-					{
-						long durationInMs = LastEntry.getTime() - FirstEntry.getTime();
-						String durationStr = TimeUtils.msToTimeStr("%HH:%MM:%SS", durationInMs);
-						_shortRstm.setValueAtWithOverride(durationStr, r, pos_Duration);
-					}
-
 					String  datname  = _shortRstm.getValueAsString (r, pos_datname);
 					String  usename  = _shortRstm.getValueAsString (r, pos_usename);
 					Long    queryid  = _shortRstm.getValueAsLong   (r, pos_queryid);

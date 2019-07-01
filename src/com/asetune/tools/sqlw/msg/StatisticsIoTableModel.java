@@ -101,6 +101,12 @@ extends AbstractTableModel
 	}
 
 	@Override
+	public boolean isCellEditable(int rowIndex, int columnIndex)
+	{
+		return true; // Just to make it easier to copy and paste from
+	}
+
+	@Override
 	public Object getValueAt(int row, int column)
 	{
 		if (_type == SYBASE_ASE)

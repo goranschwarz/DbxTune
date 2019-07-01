@@ -562,6 +562,8 @@ public class DbxTuneCentral
 			if (StringUtil.hasValue(ccCsv))
 				ccList = StringUtil.commaStrToList(ccCsv);
 			
+			int msgBodySizeKb = msgBody == null ? 0 : msgBody.length() / 1024;
+
 			try
 			{
 				HtmlEmail email = new HtmlEmail();
@@ -619,11 +621,11 @@ public class DbxTuneCentral
 				// SEND
 				email.send();
 
-				_logger.info("Sent mail message: host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"'.");
+				_logger.info("Sent mail message: msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"'.");
 			}
 			catch (Exception ex)
 			{
-				_logger.error("Problems sending mail (host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"').", ex);
+				_logger.error("Problems sending mail (msgBodySizeKb="+msgBodySizeKb+", host='"+smtpHostname+"', to='"+toCsv+"', cc='"+ccCsv+"', subject='"+msgSubject+"').", ex);
 			}
 		}
 		else // not enough params to send mail.

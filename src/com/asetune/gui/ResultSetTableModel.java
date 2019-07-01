@@ -92,6 +92,10 @@ public class ResultSetTableModel
 	public static final String  DEFAULT_TimestampToStringFmt = null; // According to SimpleDateFormat... if null just use Timestamp default 
 	public static final String  DEFAULT_TimestampToStringFmt_YMD_HMS = "yyyy-MM-dd HH:mm:ss";
 
+	public static final String  PROPKEY_NumberToStringFmt = "ResultSetTableModel.Number.toString.format";
+	public static final boolean DEFAULT_NumberToStringFmt = false; 
+//	public static final boolean DEFAULT_NumberToStringFmt_local = true;
+
 	private int	_numcols;
 	
 	private ArrayList<String>            _rsmdRefTableName      = new ArrayList<String>();  // rsmd.getXXX(c); 
@@ -123,6 +127,7 @@ public class ResultSetTableModel
 	private boolean                      _nullValuesAsEmptyInGetValueAsType = false;
 	
 	private String                       _toStringTimestampFormat = Configuration.getCombinedConfiguration().getProperty(PROPKEY_TimestampToStringFmt, DEFAULT_TimestampToStringFmt);
+	private boolean                      _toStringNumberFormat    = false;
 	
 	private String                       _originSqlText;
 
@@ -528,6 +533,30 @@ public class ResultSetTableModel
 			sdf = new SimpleDateFormat(timestampStrFormat);
 		
 		return sdf;
+	}
+	
+	/**
+	 * Set format (NumberFormat) to use when calling toTableString() etc... 
+	 * @param format
+	 */
+	public void setToStringNumberFormat(boolean useLocal)
+	{
+		_toStringNumberFormat = useLocal;
+	}
+	/**
+	 * Get format just true/false (NumberFormat) to use when calling toTableString() etc... 
+	 */
+	public boolean getToStringNumberFormat()
+	{
+		return _toStringNumberFormat;
+	}
+	/** Get a instance of NumberFormat (default localization), with the format string set by: setToStringNumberFormat(true|false) */
+	public NumberFormat getToStringNumberFormatter()
+	{
+		if (_toStringNumberFormat)
+			return NumberFormat.getInstance();
+		
+		return null;
 	}
 	
 
@@ -1921,6 +1950,14 @@ public class ResultSetTableModel
 					strVal = sdf.format( (Timestamp) objVal );
 				}
 			}
+			else if (objVal instanceof Number)
+			{
+				NumberFormat nf = getToStringNumberFormatter();
+				if (nf != null)
+				{
+					strVal = nf.format( (Number) objVal );
+				}
+			}
 
 			// Nothing is assigned by above logic (timestamp + others)... make a simple "toString()"
 			if (strVal == null)
@@ -2100,7 +2137,7 @@ public class ResultSetTableModel
 	//-- BEGIN: sort
 	//------------------------------------------------------------
 	/**
-	 * Fins the Position (starting at 0)
+	 * Find the Position (starting at 0)
 	 * @param colName Name to search for
 	 * @return -1 if not found
 	 */
@@ -2114,6 +2151,16 @@ public class ResultSetTableModel
 			}
 		}
 		return -1;
+	}
+	/** true if the column exists */
+	public boolean hasColumnNoCase(String colName)
+	{
+		return findColumnNoCase(colName) != -1;
+	}
+	/** true if the column exists */
+	public boolean hasColumn(String colName)
+	{
+		return findColumn(colName) != -1;
 	}
 
 	/**

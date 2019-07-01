@@ -57,6 +57,9 @@ extends ReportSenderAbstract
 		String msgSubject = _subjectTemplate.replace("${srvName}", reportContent.getServerName());
 		String msgBodyText    = reportContent.getReportAsText();
 		String msgBodyHtml    = reportContent.getReportAsHtml();
+		
+		int msgBodyTextSizeKb = msgBodyText == null ? 0 : msgBodyText.length() / 1024;
+		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
 
 		if (reportContent.hasNothingToReport())
 			msgSubject = _subjectNtrTemplate.replace("${srvName}", reportContent.getServerName());
@@ -109,11 +112,11 @@ extends ReportSenderAbstract
 			email.setSubject(msgSubject);
 
 			// CONTENT HTML or PLAIN
-			if (StringUtils.startsWithIgnoreCase(msgBody.trim(), "<html>"))
-				email.setHtmlMsg(msgBody);
-			else
-				email.setTextMsg(msgBody);
-//			email.setHtmlMsg(msgBodyHtml);
+//			if (StringUtils.startsWithIgnoreCase(msgBody.trim(), "<html>"))
+//				email.setHtmlMsg(msgBody);
+//			else
+//				email.setTextMsg(msgBody);
+			email.setHtmlMsg(msgBodyHtml);
 //			email.setTextMsg(msgBodyText);
 			
 //			System.out.println("About to send the following message: \n"+msgBody);
@@ -125,11 +128,11 @@ extends ReportSenderAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
 		}
 	}
 

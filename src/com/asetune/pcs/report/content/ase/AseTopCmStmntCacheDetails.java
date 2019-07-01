@@ -30,6 +30,7 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.Ver;
 
 public class AseTopCmStmntCacheDetails extends AseAbstract
 {
@@ -165,45 +166,108 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		rstm.setColumnDescription("SortCountDiff_sum"        , "How many times did this object perform sort operation during the reporting period.");
 		rstm.setColumnDescription("TotalSortTimeDiff_sum"    , "Total time used for Sorting for this object during the reporting period. (if much, do we have an index to support the sort).");
 	}
+//if (srvVersion >= Ver.ver(15,7,0, 130))
+//{
+//	TotalPIO		     = "TotalPIO,         ";
+//	TotalLIO             = "TotalLIO,         ";
+//	TotalCpuTime         = "TotalCpuTime,     ";
+//	TotalElapsedTime     = "TotalElapsedTime, ";
+//
+//	TotalPioDiff		 = "TotalPioDiff         = TotalPIO, ";         // DIFF COUNTER
+//	TotalLioDiff         = "TotalLioDiff         = TotalLIO, ";         // DIFF COUNTER
+//	TotalCpuTimeDiff     = "TotalCpuTimeDiff     = TotalCpuTime, ";     // DIFF COUNTER
+//	TotalElapsedTimeDiff = "TotalElapsedTimeDiff = TotalElapsedTime, "; // DIFF COUNTER
+//}
 
 	@Override
 	public void create(DbxConnection conn, String srvName, Configuration conf)
 	{
 		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
+		String dummySql = "select * from [CmStmntCacheDetails_diff] where 1 = 2"; // just to get Column names
+		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");
+		
+		// Create Column selects, but only if the column exists in the PCS Table
+		String col_UseCount_max             = !dummyRstm.hasColumnNoCase("UseCount"            ) ? "" : " ,max([UseCount])                 as [UseCount_max] \n"; 
+		String col_UseCountDiff_sum         = !dummyRstm.hasColumnNoCase("UseCountDiff"        ) ? "" : " ,sum([UseCountDiff])             as [UseCountDiff_sum] \n"; 
+
+		String col_TotalElapsedTimeDiff_sum = !dummyRstm.hasColumnNoCase("TotalElapsedTimeDiff"  ) ? "" : " ,sum([TotalElapsedTimeDiff])   as [TotalElapsedTimeDiff_sum] \n"; 
+		String col_TotalCpuTimeDiff_sum     = !dummyRstm.hasColumnNoCase("TotalCpuTimeDiff"      ) ? "" : " ,sum([TotalCpuTimeDiff])       as [TotalCpuTimeDiff_sum] \n"; 
+		String col_TotalLioDiff_sum         = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,sum([TotalLioDiff])           as [TotalLioDiff_sum] \n"; 
+		String col_TotalPioDiff_sum         = !dummyRstm.hasColumnNoCase("TotalPioDiff"          ) ? "" : " ,sum([TotalPioDiff])           as [TotalPioDiff_sum] \n"; 
+
+		String col_AvgCpuTime_est_max       = !dummyRstm.hasColumnNoCase("AvgCpuTime"            ) ? "" : " ,max([AvgCpuTime]*[UseCount])  as [AvgCpuTime_est_max] \n"; 
+		
+//		String col_AvgElapsedTime           = !dummyRstm.hasColumnNoCase("TotalElapsedTimeDiff"  ) ? "" : " ,-1.0                          as [AvgElapsedTime] \n";
+//		String col_AvgCpuTime               = !dummyRstm.hasColumnNoCase("TotalCpuTimeDiff"      ) ? "" : " ,-1.0                          as [AvgCpuTime] \n";
+//		String col_AvgLIO                   = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? "" : " ,-1.0                          as [AvgLIO] \n";
+//		String col_AvgPIO                   = !dummyRstm.hasColumnNoCase("TotalPioDiff"          ) ? "" : " ,-1.0                          as [AvgPIO] \n";
+		String col_AvgElapsedTime           = !dummyRstm.hasColumnNoCase("TotalElapsedTimeDiff"  ) ? " ,max([AvgElapsedTime]) as [AvgElapsedTime_max] \n" : " ,-1.0 as [AvgElapsedTime] \n";
+		String col_AvgCpuTime               = !dummyRstm.hasColumnNoCase("TotalCpuTimeDiff"      ) ? " ,max([AvgCpuTime])     as [AvgCpuTime_max]     \n" : " ,-1.0 as [AvgCpuTime] \n";
+		String col_AvgLIO                   = !dummyRstm.hasColumnNoCase("TotalLioDiff"          ) ? " ,max([AvgLIO])         as [AvgLIO_max]         \n" : " ,-1.0 as [AvgLIO] \n";
+		String col_AvgPIO                   = !dummyRstm.hasColumnNoCase("TotalPioDiff"          ) ? " ,max([AvgPIO])         as [AvgPIO_max]         \n" : " ,-1.0 as [AvgPIO] \n";
+		
+		String col_AvgScanRows              = !dummyRstm.hasColumnNoCase("AvgScanRows"           ) ? "" : " ,max([AvgScanRows])            as [AvgScanRows_max] \n";
+		String col_AvgQualifyingReadRows    = !dummyRstm.hasColumnNoCase("AvgQualifyingReadRows" ) ? "" : " ,max([AvgQualifyingReadRows])  as [AvgQualifyingReadRows_max] \n";
+		String col_AvgQualifyingWriteRows   = !dummyRstm.hasColumnNoCase("AvgQualifyingWriteRows") ? "" : " ,max([AvgQualifyingWriteRows]) as [AvgQualifyingWriteRows_max] \n";
+		
+		String col_LockWaitsDiff_sum        = !dummyRstm.hasColumnNoCase("LockWaitsDiff"         ) ? "" : " ,sum([LockWaitsDiff])          as [LockWaitsDiff_sum] \n"; 
+		String col_LockWaitTimeDiff_sum     = !dummyRstm.hasColumnNoCase("LockWaitTimeDiff"      ) ? "" : " ,sum([LockWaitTimeDiff])       as [LockWaitTimeDiff_sum] \n"; 
+		
+		String col_MaxSortTime_max          = !dummyRstm.hasColumnNoCase("MaxSortTime"           ) ? "" : " ,max([MaxSortTime])            as [MaxSortTime_max] \n"; 
+		String col_SortSpilledCount_sum     = !dummyRstm.hasColumnNoCase("SortSpilledCount"      ) ? "" : " ,max([SortSpilledCount])       as [SortSpilledCount_sum] \n"; 
+		String col_SortCountDiff_sum        = !dummyRstm.hasColumnNoCase("SortCountDiff"         ) ? "" : " ,max([SortCountDiff])          as [SortCountDiff_sum] \n"; 
+		String col_TotalSortTimeDiff_sum    = !dummyRstm.hasColumnNoCase("TotalSortTimeDiff"     ) ? "" : " ,max([TotalSortTimeDiff])      as [TotalSortTimeDiff_sum] \n"; 
+
+//		String whereClause = "where [UseCount] > 100 or [AvgLIO] > 100000\n"; // this is only used if we havn't got "TotalLioDiff" or "TotalCpuTimeDiff"
+		String whereClause = "";
+		String orderByCol = "[samples_count]";
+		if (dummyRstm.hasColumnNoCase("UseCountDiff"))     { orderByCol = "[UseCountDiff_sum]";     }
+		if (dummyRstm.hasColumnNoCase("AvgCpuTime"))       { orderByCol = "[AvgCpuTime_est_max]";   }
+		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     whereClause = ""; }
+		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; whereClause = ""; }
+
 		String sql = ""
 			    + "select top " + topRows + " \n"
-			    + "	 [DBName] \n"
-			    + "	,[ObjectName] \n"
-			    + "	,count(*)                    as [samples_count] \n"
-			    + "	,min([SessionSampleTime])    as [SessionSampleTime_min] \n"
-			    + "	,max([SessionSampleTime])    as [SessionSampleTime_max] \n"
-			    + "	,sum([CmSampleMs])           as [CmSampleMs_sum] \n"
+			    + "  [DBName] \n"
+			    + " ,[ObjectName] \n"
+			    + " ,count(*)                    as [samples_count] \n"
+			    + " ,min([SessionSampleTime])    as [SessionSampleTime_min] \n"
+			    + " ,max([SessionSampleTime])    as [SessionSampleTime_max] \n"
+			    + " ,cast('' as varchar(30))     as [Duration] \n"
+			    + " ,sum([CmSampleMs])           as [CmSampleMs_sum] \n"
 			    + " \n"
-			    + "	,sum([UseCountDiff])         as [UseCountDiff_sum] \n"
+			    + col_UseCount_max
+			    + col_UseCountDiff_sum
 			    + " \n"
-			    + "	,sum([TotalElapsedTimeDiff]) as [TotalElapsedTimeDiff_sum] \n"
-			    + "	,sum([TotalCpuTimeDiff])     as [TotalCpuTimeDiff_sum] \n"
-			    + "	,sum([TotalLioDiff])         as [TotalLioDiff_sum] \n"
-			    + "	,sum([TotalPioDiff])         as [TotalPioDiff_sum] \n"
+			    + col_TotalElapsedTimeDiff_sum
+			    + col_TotalCpuTimeDiff_sum
+			    + col_TotalLioDiff_sum
+			    + col_TotalPioDiff_sum
+			    + col_AvgCpuTime_est_max
 			    + " \n"
-			    + "	,-1.0                         as [AvgElapsedTime] \n"
-			    + "	,-1.0                         as [AvgCpuTime] \n"
-			    + "	,-1.0                         as [AvgLIO] \n"
-			    + "	,-1.0                         as [AvgPIO] \n"
+			    + col_AvgElapsedTime
+			    + col_AvgCpuTime
+			    + col_AvgLIO
+			    + col_AvgPIO
 			    + " \n"
-			    + "	,sum([LockWaitsDiff])        as [LockWaitsDiff_sum] \n"
-			    + "	,sum([LockWaitTimeDiff])     as [LockWaitTimeDiff_sum] \n"
+			    + col_LockWaitsDiff_sum
+			    + col_LockWaitTimeDiff_sum
 			    + " \n"
-			    + "	,max([MaxSortTime])          as [MaxSortTime_max] \n"
-			    + "	,sum([SortSpilledCount])     as [SortSpilledCount_sum] \n"
-			    + "	,sum([SortCountDiff])        as [SortCountDiff_sum] \n"
-			    + "	,sum([TotalSortTimeDiff])    as [TotalSortTimeDiff_sum] \n"
+			    + col_MaxSortTime_max
+			    + col_SortSpilledCount_sum
+			    + col_SortCountDiff_sum
+			    + col_TotalSortTimeDiff_sum
+			    + " \n"
+			    + col_AvgScanRows
+			    + col_AvgQualifyingReadRows
+			    + col_AvgQualifyingWriteRows
 			    + " \n"
 			    + "from [CmStmntCacheDetails_diff] \n"
+			    + whereClause
 			    + "group by [DBName], [ObjectName] \n"
 			    + " \n"
-			    + "order by [TotalCpuTimeDiff_sum] desc \n"
+			    + "order by " + orderByCol + " desc \n"
 			    + "";
 
 		_shortRstm = executeQuery(conn, sql, false, "TopStatementCacheCalls");
@@ -217,6 +281,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
+			setDurationColumn(_shortRstm, "SessionSampleTime_min", "SessionSampleTime_max", "Duration");
 			
 			// Do some calculations (which was hard to do in a PORTABLE SQL Way)
 			int pos_UseCountDiff_sum         = _shortRstm.findColumn("UseCountDiff_sum");

@@ -21,7 +21,9 @@
 package com.asetune.pcs.report;
 
 import com.asetune.pcs.report.content.ase.AseErrorInfo;
+import com.asetune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
+import com.asetune.pcs.report.content.ase.AseTopCmObjectActivity;
 import com.asetune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
 import com.asetune.pcs.report.content.ase.AseTopSlowSql;
 import com.asetune.pcs.report.content.ase.AseTopSlowProcCalls;
@@ -41,5 +43,7 @@ extends DailySummaryReportDefault
 		addReportEntry( new AseTopSlowProcCalls(this)       );
 		addReportEntry( new AseTopCmCachedProcs(this)       );
 		addReportEntry( new AseTopCmStmntCacheDetails(this) );
+		addReportEntry( new AseTopCmObjectActivity(this)    );
+		addReportEntry( new AseTopCmActiveStatements(this)  );
 	}
 }
