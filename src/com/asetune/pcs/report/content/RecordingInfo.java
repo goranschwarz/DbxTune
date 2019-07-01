@@ -28,6 +28,7 @@ import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.Version;
 import com.asetune.pcs.PersistWriterBase;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -47,6 +48,8 @@ extends ReportEntryAbstract
 
 	private String _dbmsVersionString;
 	
+	private String _reportVersion    = Version.getAppName() + ", Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
+	private String _recordingVersion = null;
 
 	public RecordingInfo(DailySummaryReportAbstract reportingInstance)
 	{
@@ -86,12 +89,16 @@ extends ReportEntryAbstract
 			sb.append("Can't get start/end time <br>\n");
 		}
 		else
-		{
+		{			
 			sb.append("<ul>\n");
-			sb.append("  <li><b>Start:               </b>" + _startTime          + "</li>\n");
-			sb.append("  <li><b>End:                 </b>" + _endTime            + "</li>\n");
-			sb.append("  <li><b>Duration:            </b>" + _duration           + "</li>\n");
-			sb.append("  <li><b>DBMS Version String: </b>" + _dbmsVersionString  + "</li>\n");
+			sb.append("  <li><b>Recording was Made Using:   </b>" + _recordingVersion   + "</li>\n");
+			sb.append("  <li><b>The Report is Produced by : </b>" + _reportVersion      + "</li>\n");
+			sb.append("<br>\n");
+			sb.append("  <li><b>Recording Start Date:       </b>" + _startTime          + "</li>\n");
+			sb.append("  <li><b>Recording End  Date:        </b>" + _endTime            + "</li>\n");
+			sb.append("  <li><b>Recording Duration:         </b>" + _duration           + "</li>\n");
+			sb.append("<br>\n");
+			sb.append("  <li><b>DBMS Version String:        </b>" + _dbmsVersionString  + "</li>\n");
 			sb.append("</ul>\n");
 		}
 
@@ -119,7 +126,11 @@ extends ReportEntryAbstract
 	public void create(DbxConnection conn, String srvName, Configuration conf)
 	{
 		if (hasReportingInstance())
-			_dbmsVersionString = getReportingInstance().getSrvVersionStr();
+		{
+			DailySummaryReportAbstract dsr = getReportingInstance();
+			_dbmsVersionString = dsr.getSrvVersionStr();
+			_recordingVersion = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
+		}
 		
 		String sql;
 

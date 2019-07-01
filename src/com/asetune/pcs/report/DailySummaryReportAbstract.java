@@ -229,33 +229,61 @@ implements IDailySummaryReport
 // THE BELOW is not used for the moment... uncomment and test it
 // OR: do "select * from CmXXXX_diff where 1=2" to get all column names... and then check if desired column names are available
 //--------------------------------------------------------------------
-	private String _versionString = "";
-	private String _appName       = "";
+	private boolean _initialized     = false;
+	private String _versionString    = "";
+	private String _recAppName       = "";
+	private String _recBuildString   = "";
+	private String _recVersionString = "";
+	private long   _srvVersionNum    = -1;
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors */
 	public String getSrvVersionStr()
 	{
-		getSrvVersionNum();
+		initialize();
 		return _versionString;
-	}
-
-	/** Get the DbxTune application type that recorded this info */
-	public String getDbxAppName()
-	{
-		getSrvVersionNum();
-		return _appName;
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors, and then parse it into a number */
 	public long getSrvVersionNum()
 	{
+		initialize();
+		return _srvVersionNum;
+	}
+
+
+	/** Get the DbxTune application type that recorded this info */
+	public String getRecDbxAppName()
+	{
+		initialize();
+		return _recAppName;
+	}
+
+	public String getRecDbxVersionStr()
+	{
+		initialize();
+		return _recVersionString;
+	}
+
+	/** Get the DbxTune application type that recorded this info */
+	public String getRecDbxBuildStr()
+	{
+		initialize();
+		return _recBuildString;
+	}
+
+	/** Initialize members  */
+	private void initialize()
+	{
+		if (_initialized)
+			return;
+		
 		DbxConnection conn = getConnection();
 		
 		// Get DbxTune application name from the recorded session database
 		String appName = "";
 		if (true) // get from database...
 		{
-			String sql = "select max([ProductString]) from [MonVersionInfo]";
+			String sql = "select max([ProductString]), max([VersionString]), max([BuildString]) from [MonVersionInfo]";
 
 			sql = conn.quotifySqlString(sql);
 			try ( Statement stmnt = conn.createStatement() )
@@ -265,7 +293,11 @@ implements IDailySummaryReport
 				try ( ResultSet rs = stmnt.executeQuery(sql) )
 				{
 					while(rs.next())
-						appName = rs.getString(1);
+					{
+						appName           = rs.getString(1);
+						_recVersionString = rs.getString(2);
+						_recBuildString   = rs.getString(3);
+					}
 				}
 			}
 			catch(SQLException ex)
@@ -276,7 +308,6 @@ implements IDailySummaryReport
 		if (StringUtil.isNullOrBlank(appName))
 		{
 			appName = Version.getAppName();
-			_appName = appName;
 		}
 		
 
@@ -332,8 +363,9 @@ implements IDailySummaryReport
 		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { ver = Ver.db2VersionStringToNumber      (versionString); }
 		else if ("HanaTune"     .equalsIgnoreCase(appName)) { ver = Ver.hanaVersionStringToNumber     (versionString); }
 
+		_recAppName    = appName;
 		_versionString = versionString;
-		return ver;
+		_srvVersionNum = ver;
 	}
 
 

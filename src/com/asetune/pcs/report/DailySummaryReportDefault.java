@@ -275,7 +275,12 @@ extends DailySummaryReportAbstract
 		{
 			String tocSubject = entry.getSubject();
 			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
-			
+
+			// Strip off parts that may be details
+			int firstLeftParentheses = tocSubject.indexOf("(");
+			if (firstLeftParentheses != -1)
+				tocSubject = tocSubject.substring(0, firstLeftParentheses - 1).trim();
+
 			String liContent = "<a href='#" + tocDiv + "'>" + tocSubject + "</a>";
 			
 			sb.append("<li>").append(liContent).append("</li> \n");

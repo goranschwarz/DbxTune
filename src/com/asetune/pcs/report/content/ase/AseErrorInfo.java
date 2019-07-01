@@ -161,7 +161,7 @@ public class AseErrorInfo extends AseAbstract
 				"This can be used to drilldown or pinpoint troublesome SQL Statements. <br>" +
 				"<br>" +
 				"<b>Note</b>: To view the SQL Statement that was responsible for the error(s), There is a table <i>which is collapsed</i> where they can be viewed.<br>" +
-				"&emsp; You can also connect to the Detailed Recording Database. (Using the Desktop Version of " + getReportingInstance().getDbxAppName() + "), use 'Tools-&gt;Captue SQL Offline View...' <br>" +
+				"&emsp; You can also connect to the Detailed Recording Database. (Using the Desktop Version of " + getReportingInstance().getRecDbxAppName() + "), use 'Tools-&gt;Captue SQL Offline View...' <br>" +
 				"");
 
 		// Columns description
