@@ -25,7 +25,9 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -38,6 +40,8 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
 
+import info.monitorenter.gui.chart.demos.AdvancedDynamicChart;
+
 public class AseTopCmActiveStatements extends AseAbstract
 {
 	private static Logger _logger = Logger.getLogger(AseTopCmActiveStatements.class);
@@ -45,6 +49,8 @@ public class AseTopCmActiveStatements extends AseAbstract
 	private ResultSetTableModel _shortRstm;
 	private ResultSetTableModel _sqTextRstm;
 	private ResultSetTableModel _showplanRstm;
+
+	private List<String>        _messages = new ArrayList<>();
 
 	public AseTopCmActiveStatements(DailySummaryReportAbstract reportingInstance)
 	{
@@ -76,6 +82,15 @@ public class AseTopCmActiveStatements extends AseAbstract
 	public String getMsgAsHtml()
 	{
 		StringBuilder sb = new StringBuilder();
+
+		if (_messages.size() > 0)
+		{
+			sb.append("<b>Messages:</b> \n");
+			sb.append("<ul> \n");
+			for (String msg : _messages)
+				sb.append("  <li>").append(msg).append("</li> \n");
+			sb.append("</ul> \n");
+		}
 
 		if (_shortRstm.getRowCount() == 0)
 		{
@@ -156,7 +171,10 @@ public class AseTopCmActiveStatements extends AseAbstract
 
 		String skipDumpDbAndTran    = "  and [Command] not like 'DUMP %' \n";
 		String skipUpdateStatistics = "  and [Command] not like 'UPDATE STATISTICS%' \n";
-		
+
+		_messages.add("Skipping Command's with 'DUMP %' ");
+		_messages.add("Skipping Command's with 'UPDATE STATISTICS%' ");
+
 		String sql = ""
 			    + "select top " + topRows + " \n"
 			    + "     min([CmSampleTime])                                               as [CmSampleTime_min] \n"
