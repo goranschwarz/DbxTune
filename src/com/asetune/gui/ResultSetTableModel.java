@@ -2659,9 +2659,13 @@ public class ResultSetTableModel
 	public String getColumnDescription(String colName)
 	{
 		if (_columnDescriptionMap == null)
-			return null;
+			return "";
+
+		String desc = _columnDescriptionMap.get(colName);
+		if (desc == null)
+			desc = "";
 		
-		return _columnDescriptionMap.get(colName);
+		return desc;
 	}
 	//------------------------------------------------------------
 	//-- END: description
