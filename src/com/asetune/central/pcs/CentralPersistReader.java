@@ -335,7 +335,7 @@ public class CentralPersistReader
 		       "jdbcUsername='" + _jdbcUsername   + "', " +
 		       "jdbcPassword='" + "*secret*"      + "'.";
 	}
-
+	
 	public void setDefaultQueryTimeout(int val) { _defaultQueryTimeout = val;  }
 	public int  getDefaultQueryTimeout()        { return _defaultQueryTimeout; }
 	
@@ -803,7 +803,7 @@ public class CentralPersistReader
 						serverDescrption = sd.getDescription();
 						serverExtraInfo  = sd.getExtraInfo();
 					}
-
+	
 					int c = 1;
 					s = new DbxCentralSessions(
 						rs.getTimestamp(c++), // "SessionStartTime"       
@@ -1085,7 +1085,6 @@ public class CentralPersistReader
 				;
 
 			boolean rowExists = false;
-
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())
 			{
@@ -1214,7 +1213,6 @@ public class CentralPersistReader
 			List<DbxCentralProfile> list = new ArrayList<>();
 
 //System.out.println("getGraphProfiles: SQL=|"+sql+"|");
-
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())
 			{
@@ -1445,7 +1443,10 @@ public class CentralPersistReader
 				// Execute and read result
 				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					result = rs.getString(1);
+					while (rs.next())
+					{
+						result = rs.getString(1);
+					}
 				}
 			}
 //			System.out.println("privateGetGraphProfile(dbxTypeName=|"+dbxTypeName+"|, name=|"+name+"|, user=|"+user+"|): sql=|"+sql+"|      <<<<<<<< result=|"+result+"|.");
@@ -1486,7 +1487,10 @@ public class CentralPersistReader
 				// Execute and read result
 				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					result = rs.getString(1);
+					while (rs.next())
+					{
+						result = rs.getString(1);
+					}
 				}
 			}
 			
@@ -1552,7 +1556,9 @@ public class CentralPersistReader
 				// Execute and read result
 				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					DbxGraphProperties e = new DbxGraphProperties(
+					while (rs.next())
+					{
+						DbxGraphProperties e = new DbxGraphProperties(
 							rs.getTimestamp(1),  //SessionStartTime
 							sessionName,
 							rs.getString   (2),   // CmName
@@ -1565,6 +1571,7 @@ public class CentralPersistReader
 							rs.getBoolean  (9),   // visiableAtStart
 							rs.getInt      (10)); // initialOrder
 						list.add(e);
+					}
 				}
 			}
 			
@@ -1884,14 +1891,14 @@ public class CentralPersistReader
 							boolean      isPercentGraph   = rs.getBoolean  (7);         
 							boolean      visibleAtStartup = rs.getBoolean  (8);         
 							int          initialOrder     = rs.getInt      (9);        
-
+	
 							List<DbxGraphDescription> srvDescList = srvDescMap.get(srvName);
 							if (srvDescList == null)
 							{
 								srvDescList = new ArrayList<>(); 
 								srvDescMap.put(srvName, srvDescList);
 							}
-
+	
 							DbxGraphDescription e = new DbxGraphDescription(null, dbxProduct, cmName, graphName, tableName, graphLabel, graphProps, graphCategory, isPercentGraph, visibleAtStartup, initialOrder);
 							srvDescList.add(e);
 							//System.out.println("getGraphDescriptions(): srvName='"+srvName+"': "+e);
@@ -2088,12 +2095,15 @@ public class CentralPersistReader
 				// Execute and read result
 				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					user = new DbxCentralUser(
-							rs.getString   (1), // UserName
-							rs.getString   (2), // Password
-							rs.getString   (3), // Email
-							rs.getString   (4)  // Roles
-							);
+					while (rs.next())
+					{
+						user = new DbxCentralUser(
+								rs.getString   (1), // UserName
+								rs.getString   (2), // Password
+								rs.getString   (3), // Email
+								rs.getString   (4)  // Roles
+								);
+					}
 				}
 			}
 			
@@ -2167,12 +2177,15 @@ public class CentralPersistReader
 				// Execute and read result
 				try (ResultSet rs = stmnt.executeQuery(sql))
 				{
-					graphLabel     = rs.getString (1);
-					graphProps     = rs.getString (2);
-					graphCategory  = rs.getString (3);
-					isPercentGraph = rs.getBoolean(4);
-					
-					//System.out.println("sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"':::::::: graphLabel='"+graphLabel+"', isPercentGraph='"+isPercentGraph+"'.");
+					while (rs.next())
+					{
+						graphLabel     = rs.getString (1);
+						graphProps     = rs.getString (2);
+						graphCategory  = rs.getString (3);
+						isPercentGraph = rs.getBoolean(4);
+						
+						//System.out.println("sessionName='"+sessionName+"', cmName='"+cmName+"', graphName='"+graphName+"', startTime='"+startTime+"':::::::: graphLabel='"+graphLabel+"', isPercentGraph='"+isPercentGraph+"'.");
+					}
 				}
 			}
 
@@ -2303,7 +2316,6 @@ public class CentralPersistReader
 						+" from " + tabName
 						+" where " + lq + "SessionSampleTime" + rq + " >= " + whereSessionSampleTime
 						;
-
 				// autoclose: stmnt, rs
 				try (Statement stmnt = conn.createStatement())
 				{
@@ -2361,16 +2373,16 @@ public class CentralPersistReader
 					List<String> labelNames = new LinkedList<>();
 					for (int c=colDataStart; c<colCount+1; c++)
 						labelNames.add( md.getColumnLabel(c) );
-
+	
 					// Return ALL rows
-//					if (avgOverMinutes <= 0 && maxOverMinutes <= 0)
+	//				if (avgOverMinutes <= 0 && maxOverMinutes <= 0)
 					if (SampleType.ALL.equals(sampleType))
 					{
 						while (rs.next())
 						{
 							readCount++;
 							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
+	
 						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 							Timestamp sessionSampleTime = rs.getTimestamp(2);
 						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
@@ -2379,7 +2391,7 @@ public class CentralPersistReader
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
 							}
-
+	
 							DbxGraphData e = new DbxGraphData(cmName, graphName, sessionSampleTime, graphLabel, graphProps, graphCategory, isPercentGraph, labelAndDataMap);
 							list.add(e);
 							
@@ -2405,24 +2417,24 @@ public class CentralPersistReader
 						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
 						long avgOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
-
+	
 						while (rs.next())
 						{
 							readCount++;
 							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
+	
 						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 							Timestamp sessionSampleTime = rs.getTimestamp(2);
 						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
 							
 							if (spanStartTime == null)
 								spanStartTime = sessionSampleTime;
-
+	
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
 							}
-
+	
 							tmpList.add(labelAndDataMap);
 							
 							// Is it time to do calculation yet? 
@@ -2463,24 +2475,24 @@ public class CentralPersistReader
 						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
 						long maxOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
-
+	
 						while (rs.next())
 						{
 							readCount++;
 							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
+	
 						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 							Timestamp sessionSampleTime = rs.getTimestamp(2);
 						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
 							
 							if (spanStartTime == null)
 								spanStartTime = sessionSampleTime;
-
+	
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
 							}
-
+	
 							tmpList.add(labelAndDataMap);
 							
 							// Is it time to do calculation yet? 
@@ -2521,24 +2533,24 @@ public class CentralPersistReader
 						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
 						long sumOverMs = sampleValue * 1000 * 60; // convert the input MINUTE into MS
-
+	
 						while (rs.next())
 						{
 							readCount++;
 							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
+	
 						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 							Timestamp sessionSampleTime = rs.getTimestamp(2);
 						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
 							
 							if (spanStartTime == null)
 								spanStartTime = sessionSampleTime;
-
+	
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
 							}
-
+	
 							tmpList.add(labelAndDataMap);
 							
 							// Is it time to do calculation yet? 
@@ -2580,25 +2592,25 @@ public class CentralPersistReader
 						List<Map<String, Double>> tmpList = new ArrayList<>();
 						
 						long maxOverRows = sampleValue; // convert the input MINUTE into MS
-
+	
 						while (rs.next())
 						{
 							spanStartRow++;
 							readCount++;
 							LinkedHashMap<String, Double> labelAndDataMap = new LinkedHashMap<>();
-
+	
 						//	Timestamp sessionStartTime  = rs.getTimestamp(1);
 							Timestamp sessionSampleTime = rs.getTimestamp(2);
 						//	Timestamp cmSampleTime      = rs.getTimestamp(3);
 							
 							if (spanStartTime == null)
 								spanStartTime = sessionSampleTime;
-
+	
 							for (int c=colDataStart, l=0; c<colCount+1; c++, l++)
 							{
 								labelAndDataMap.put( labelNames.get(l), rs.getDouble(c) );
 							}
-
+	
 							tmpList.add(labelAndDataMap);
 							
 							// Is it time to do calculation yet? 
@@ -2631,7 +2643,7 @@ public class CentralPersistReader
 					}
 				}
 			}
-			
+
 			// For debugging purposes
 			if (readCount == 0)
 			{
@@ -3310,7 +3322,6 @@ public class CentralPersistReader
 
 			int rowc = 0;
 			int currentStatus = 0;
-
 			// autoclose: stmnt, rs
 			try (Statement stmnt = conn.createStatement())
 			{
@@ -3320,8 +3331,11 @@ public class CentralPersistReader
 				// Execute and read result
 				try (ResultSet rs = stmnt.executeQuery(sqlGet))
 				{
-					rowc++;
-					currentStatus = rs.getInt(1);
+					while (rs.next())
+					{
+						rowc++;
+						currentStatus = rs.getInt(1);
+					}
 				}
 			}
 			if (rowc != 1)
@@ -5989,7 +6003,7 @@ public class CentralPersistReader
 ////			pstmnt.setString(1, inSessionStartTime.toString());
 //
 //			// No timeout
-//			pstmnt.setQueryTimeout(_defaultQueryTimeout);
+//			pstmnt.setQueryTimeout(0);
 //			
 //			ResultSet rs = pstmnt.executeQuery();
 ////			ResultSetMetaData rsmd = rs.getMetaData();
