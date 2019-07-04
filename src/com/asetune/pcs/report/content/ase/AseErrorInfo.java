@@ -24,7 +24,6 @@ package com.asetune.pcs.report.content.ase;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,7 +39,6 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.TimeUtils;
 
 public class AseErrorInfo extends AseAbstract
 {
@@ -192,7 +190,7 @@ public class AseErrorInfo extends AseAbstract
 		int skipErrorCountAbove = conf.getIntProperty("AseErrorInfo.skip.ErrorCountAbove", 2000);
 		_messages.add("Skipping SQL Errors: SQL Text, if 'ErrorCount' is above " + skipErrorCountAbove + ". This can be changed with property 'AseErrorInfo.skip.ErrorCountAbove = ####'");
 		
-		String sql = ""
+		String sql = "-- source table: MonSqlCapStatements \n"
 			    + "select \n"
 			    + "  [ErrorStatus]            as [ErrorStatus] \n"
 			    + "	,count(*)                 as [ErrorCount] \n"

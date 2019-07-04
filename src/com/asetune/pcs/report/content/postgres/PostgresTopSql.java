@@ -22,7 +22,6 @@
 package com.asetune.pcs.report.content.postgres;
 
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 
 import org.apache.log4j.Logger;
@@ -33,7 +32,6 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportEntryAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.TimeUtils;
 
 public class PostgresTopSql
 extends ReportEntryAbstract
@@ -178,8 +176,9 @@ extends ReportEntryAbstract
 		// used to lookup queryid->sqlText (as a second step)
 //		List<Integer> queryIdList = new ArrayList<>();
 		
+		
 		// GET ALL INFO
-		String sql = ""
+		String sql = getCmDiffColumnsAsSqlComment("CmPgStatements")
 			    + "select top " + topRows + " \n"
 			    + "	 [datname] \n"
 			    + "	,[usename] \n"

@@ -178,7 +178,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 	{
 		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
-		String sql = ""
+		String sql = getCmDiffColumnsAsSqlComment("CmCachedProcs")
 			    + "select top " + topRows + " \n"
 			    + "	 [DBName] \n"
 			    + "	,[ObjectName] \n"
@@ -186,6 +186,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + "	,count(*)                 as [samples_count] \n"
 			    + "	,min([SessionSampleTime]) as [SessionSampleTime_min] \n"
 			    + "	,max([SessionSampleTime]) as [SessionSampleTime_max] \n"
+			    + " ,cast('' as varchar(30))  as [Duration] \n"
 			    + "	,sum([CmSampleMs])        as [CmSampleMs_sum] \n"
 			    + "	,min([CompileDate])       as [CompileDate_min] \n"
 			    + "	,max([CompileDate])       as [CompileDate_max] \n"
@@ -226,7 +227,10 @@ public class AseTopCmCachedProcs extends AseAbstract
 			// Describe the table
 			setSectionDescription(_shortRstm);
 
+			// Calculate Duration
+			setDurationColumn(_shortRstm, "SessionSampleTime_min", "SessionSampleTime_max", "Duration");
 
+			
 			Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
 			if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
 			{

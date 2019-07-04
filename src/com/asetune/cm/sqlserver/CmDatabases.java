@@ -763,12 +763,18 @@ extends CountersModel
 			    + "        ,es.open_transaction_count \n"
 			    + "        ,es.last_request_start_time \n"
 			    + "        ,es.last_request_end_time \n"
+			    + "        ,er.statement_start_offset \n"
+			    + "        ,er.statement_end_offset \n"
 			    + "        ,er.wait_type \n"
 			    + "        ,er.estimated_completion_time \n"
 //			    + ",at.transaction_id \n"           // possibly to get active transaction, needs to be tested/investigated
 //			    + ",at.name AS tran_name \n"        // possibly to get active transaction, needs to be tested/investigated
 //			    + ",at.transaction_begin_time \n"   // possibly to get active transaction, needs to be tested/investigated
-			    + "        ,sql_text.text        as most_recent_sql_text \n"
+				+ "        ,SUBSTRING(sql_text.text, er.statement_start_offset / 2,  \n"
+				+ "             ( CASE WHEN er.statement_end_offset = -1  \n"
+				+ "                    THEN DATALENGTH(sql_text.text)  \n"
+				+ "                    ELSE er.statement_end_offset  \n"
+				+ "               END - er.statement_start_offset ) / 2) AS most_recent_sql_text \n"
 			    + "        ,plan_text.query_plan as plan_text \n"
 			    + "        ,ROW_NUMBER() OVER (PARTITION BY es.database_id ORDER BY es.last_request_start_time) AS row_num \n"
 			    + "    FROM " + dm_exec_sessions + " es \n"
@@ -1240,12 +1246,16 @@ extends CountersModel
 			{
 				Object cellVal = getValueAt(modelRow, pos);
 				if (cellVal instanceof String)
-					return (String) cellVal;
+				{
+					//return (String) cellVal;
+					return ToolTipSupplierSqlServer.createXmlPlanTooltip( (String) cellVal );
+				}
 			}
 		}
 		if ("OldestTranShowPlanText".equals(colName))
 		{
-			return cellValue == null ? null : cellValue.toString();
+//			return cellValue == null ? null : cellValue.toString();
+			return cellValue == null ? null : ToolTipSupplierSqlServer.createXmlPlanTooltip(cellValue.toString());
 		}
 		
 		

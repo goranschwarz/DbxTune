@@ -21,9 +21,6 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
-import java.sql.SQLException;
-import java.util.Set;
-
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
@@ -117,7 +114,7 @@ public class AseTopCmObjectActivity extends AseAbstract
 		String Scans_sum               = !dummyRstm.hasColumnNoCase("Scans"              ) ? "" : "    ,sum([Scans])                                          as [Scans_sum]   -- 16.0 \n"; 
 		
 
-		String sql = ""
+		String sql = getCmDiffColumnsAsSqlComment("CmObjectActivity")
 			    + "select top " + topRows + " \n"
 			    + "     min([CmSampleTime])                                   as [CmSampleTime_min] \n"
 			    + "    ,max([CmSampleTime])                                   as [CmSampleTime_max] \n"

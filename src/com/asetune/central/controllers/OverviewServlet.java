@@ -82,7 +82,7 @@ public class OverviewServlet extends HttpServlet
 	private static final String REPORTS_DIR = DbxTuneCentral.getAppReportsDir();
 	private static final String DATA_DIR    = DbxTuneCentral.getAppDataDir();
 
-	private List<String> getFilesDbxTune()
+	private List<String> getInfoFilesDbxTune()
 	{
 		String directory = INFO_DIR;
 
@@ -551,9 +551,9 @@ public class OverviewServlet extends HttpServlet
 
 
 		// -----------------------------------------------------------
-		// get Config files from local *running* DbxTune servers
+		// get Config files from local *running* DbxTune collectors/servers
 		HashMap<String, Configuration> srvInfoMap = new HashMap<>();
-		for (String file : getFilesDbxTune())
+		for (String file : getInfoFilesDbxTune())
 		{
 			File f = new File(file);
 			
@@ -1595,7 +1595,7 @@ public class OverviewServlet extends HttpServlet
 			out.println("<p>This section just lists the content of those files.</p>");
 //			out.println("<br><hr>");
 //			out.println("<h3>Active Recordings, full file content</h3>");
-			for (String file : getFilesDbxTune())
+			for (String file : getInfoFilesDbxTune())
 			{
 				File f = new File(file);
 				String srvName = f.getName().split("\\.")[0];

@@ -26,7 +26,6 @@ import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
@@ -35,7 +34,6 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.TimeUtils;
 
 public class AseTopSlowSql extends AseAbstract
 {
@@ -178,7 +176,7 @@ public class AseTopSlowSql extends AseAbstract
 		int topRows          = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingSumCpuTime = 1000; // 1 second
 		
-		String sql = ""
+		String sql = "-- source table: MonSqlCapStatements \n"
 			    + "select top " + topRows + " \n"
 			    + "    [JavaSqlHashCode] \n"
 			    + "   ,count(*)                     as [records] \n"

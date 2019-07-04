@@ -20,11 +20,15 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.pcs.PersistWriterToHttpJson;
@@ -155,6 +159,29 @@ extends DailySummaryReportAbstract
 
 	public String createHtmlHead()
 	{
+		// Have we got a "external file" for HTML Headers... where we can change CSS etc
+		String htmlHeadFile = Configuration.getCombinedConfiguration().getProperty(DailySummaryReportFactory.PROPKEY_reportHtml_headFile, DailySummaryReportFactory.DEFAULT_reportHtml_headFile);
+		if (StringUtil.hasValue(htmlHeadFile))
+		{
+			File f = new File(htmlHeadFile);
+
+			try
+			{
+				String htmlHeadContent = FileUtils.readFileToString(f, StandardCharsets.UTF_8);
+				// replace variable(s) in content
+				htmlHeadContent = htmlHeadContent.replace("${DBMS_SERVER_NAME}", getServerName());
+					
+				return htmlHeadContent;
+			}
+			catch(IOException ex)
+			{
+				_logger.error("Problems reading External HTML HEAD File '" + f.getAbsolutePath() + "', Skipping this and using System provided header. Caught: "+ex, ex);
+			}
+		}
+
+		//-------------------------------------------------------------------
+		// Normal logic: Default System provided HTML Header
+		//-------------------------------------------------------------------
 		StringBuilder sb = new StringBuilder();
 		
 		sb.append("\n");

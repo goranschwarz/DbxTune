@@ -22,8 +22,6 @@
 package com.asetune.pcs.report.content.ase;
 
 import java.sql.SQLException;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,9 +36,6 @@ import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
-import com.asetune.utils.TimeUtils;
-
-import info.monitorenter.gui.chart.demos.AdvancedDynamicChart;
 
 public class AseTopCmActiveStatements extends AseAbstract
 {
@@ -175,7 +170,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 		_messages.add("Skipping Command's with 'DUMP %' ");
 		_messages.add("Skipping Command's with 'UPDATE STATISTICS%' ");
 
-		String sql = ""
+		String sql = getCmDiffColumnsAsSqlComment("CmActiveStatements")
 			    + "select top " + topRows + " \n"
 			    + "     min([CmSampleTime])                                               as [CmSampleTime_min] \n"
 			    + "    ,max([CmSampleTime])                                               as [CmSampleTime_max] \n"

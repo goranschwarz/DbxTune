@@ -28,6 +28,8 @@ import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.CounterController;
+import com.asetune.cm.CountersModel;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.DailySummaryReportFactory;
@@ -173,7 +175,7 @@ implements IReportEntry
 				htmlContent += "  <li><b>" + colName + "</b> - " + rstm.getColumnDescription(colName) + "</li> \n";
 			htmlContent += "</ul> \n";
 
-			sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide Column(s) description:", htmlContent) );
+			sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide Column(s) description...", htmlContent) );
 		}
 
 		if (addSqlText)
@@ -192,7 +194,7 @@ implements IReportEntry
 						+ "<hr> \n"
 						+ "";
 				
-				sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide SQL Text ...", htmlContent) );
+				sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide SQL Text that produced this report section...", htmlContent) );
 			}
 		}
 
@@ -200,7 +202,36 @@ implements IReportEntry
 		sb.append("\n");
 		return sb.toString();
 	}
+
 	
+	/**
+	 * Get the CounterModel's DIFF Counters as a SQL Comment, which can be appended to the SQL Used to create report content
+	 * 
+	 * @param cmName   short cm name
+	 * @return a string in the form: <code>-- cm='cmName', possibleDiffColumns='c1,c2,c3' \n</code>
+	 */
+	public String getCmDiffColumnsAsSqlComment(String cmName)
+	{
+		if (cmName == null)
+			return "";
+
+		String sqlComment = "";
+		if (CounterController.hasInstance())
+		{
+			CountersModel cm = CounterController.getInstance().getCmByName(cmName);
+			if (cm != null)
+			{
+				String[] sa = cm.getDiffColumns();
+				if (sa != null)
+				{
+					sqlComment = "-- cm='" + cmName + "', possibleDiffColumns='" + StringUtil.toCommaStr(sa) + "' \n";
+				}
+			}
+		}
+		return sqlComment;
+	}
+	
+
 //	public String createShowHideDiv(String divId, boolean visibleAtStart, String label, String content)
 //	{
 //		StringBuilder sb = new StringBuilder();

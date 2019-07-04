@@ -63,6 +63,10 @@ public class DailySummaryReportFactory
 	public static final int     DEFAULT_maxTableCellSizeKb = 128;
 
 
+	public static final String  PROPKEY_reportHtml_headFile = "DailySummaryReport.report.html.headFile";
+	public static final String  DEFAULT_reportHtml_headFile = null;
+
+
 	/**
 	 * Check if the daily summary report is enabled or disabled
 	 * 

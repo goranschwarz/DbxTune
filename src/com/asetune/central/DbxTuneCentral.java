@@ -706,7 +706,11 @@ public class DbxTuneCentral
 	/** Where is DbxTune Central collector "info files" directory located */
 	public static String getAppInfoDir()
 	{
-		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "info");
+//		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "dbxc" + File.separator + "info");
+//		String val = System.getProperty("DBXTUNE_CENTRAL_INFO_DIR", dbx);
+
+		// NOTE: This is placed by The Collectors... and by default they do not place it in DbxCentral catalog structure
+		String dbx = System.getProperty("DBXTUNE_INFO_DIR", AppDir.getAppStoreDir() + File.separator + "info");
 		String val = System.getProperty("DBXTUNE_CENTRAL_INFO_DIR", dbx);
 		
 		return val;

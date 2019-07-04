@@ -23,7 +23,6 @@ package com.asetune.pcs.report.senders;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.mail.EmailConstants;
 import org.apache.commons.mail.HtmlEmail;
 import org.apache.log4j.Logger;

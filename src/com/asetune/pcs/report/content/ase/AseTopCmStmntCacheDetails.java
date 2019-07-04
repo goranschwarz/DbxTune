@@ -30,7 +30,6 @@ import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.Ver;
 
 public class AseTopCmStmntCacheDetails extends AseAbstract
 {
@@ -227,7 +226,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 		if (dummyRstm.hasColumnNoCase("TotalLioDiff"))     { orderByCol = "[TotalLioDiff_sum]";     whereClause = ""; }
 		if (dummyRstm.hasColumnNoCase("TotalCpuTimeDiff")) { orderByCol = "[TotalCpuTimeDiff_sum]"; whereClause = ""; }
 
-		String sql = ""
+		String sql = getCmDiffColumnsAsSqlComment("CmStmntCacheDetails")
 			    + "select top " + topRows + " \n"
 			    + "  [DBName] \n"
 			    + " ,[ObjectName] \n"

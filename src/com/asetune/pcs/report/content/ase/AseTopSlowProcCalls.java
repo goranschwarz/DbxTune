@@ -24,14 +24,12 @@ package com.asetune.pcs.report.content.ase;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.Set;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
-import com.asetune.utils.TimeUtils;
 
 public class AseTopSlowProcCalls extends AseAbstract
 {
@@ -184,7 +182,7 @@ public class AseTopSlowProcCalls extends AseAbstract
 		int topRows          = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingSumCpuTime = 1000; // 1 second
 		
-		String sql = ""
+			String sql = "-- source table: MonSqlCapStatements \n"
 			    + "select top " + topRows + " \n"
 			    + "    [ProcName] \n"
 			    + "   ,[LineNumber] \n"

@@ -8060,7 +8060,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			
 			boolean isConnectionOk = true;
 
-			boolean goTabbedPane = false;
+			boolean sr_goTabbedPane = false;
+			boolean sr_goPlaneText  = false;
 			
 			// Just for DEBUG Purposes: to see what the DBMS is doing if you are NOT closing the Statement
 			boolean debugStatementClose = Configuration.getCombinedConfiguration().getBooleanProperty("sqlw.Statement.close", true);
@@ -8100,7 +8101,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 
 				progress.setState("Sending SQL to server for statement " + (sr.getSqlBatchNumber()+1) + " of "+batchCount+", starting at row "+(sr.getSqlBatchStartLine()+1) );
 
-				goTabbedPane = sr.hasOption_asTabbedPane();
+				sr_goTabbedPane = sr.hasOption_asTabbedPane();
+				sr_goPlaneText  = sr.hasOption_asPlainText();
 
 				// Set "global" flag, sine it's used elsewhere
 				_appendResults_scriptReader = sr.hasOption_appendOutput();
@@ -8660,8 +8662,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			addToResultsetPanel(
 					_resultCompList, 
 					(_appendResults_chk.isSelected() || _appendResults_scriptReader), // append results
-					_asPlainText_chk.isSelected(),                                    // as Plain text
-					(_rsInTabs_chk.isSelected() || goTabbedPane)                      // as Tabbed Pane
+					(_asPlainText_chk.isSelected()   || sr_goPlaneText),              // as Plain text
+					(_rsInTabs_chk.isSelected()      || sr_goTabbedPane)              // as Tabbed Pane
 			);
 //			Runnable doRun = new Runnable()
 //			{
@@ -8816,6 +8818,11 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 			asPlainText = true;
 			numOfTables = 0;
 		}
+
+		// If it's only messages, switch to plain
+//		if (numOfMessages > 0 && numOfTables == 0)
+//			asPlainText = true;
+			
 		
 		if (numOfTables == 1 && !asRsTabbedPane)
 		{
