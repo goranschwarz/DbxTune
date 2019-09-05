@@ -22,8 +22,6 @@ package com.asetune.pcs.report;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,9 +63,16 @@ extends DailySummaryReportAbstract
 		// Iterate all entries and create the report
 		for (IReportEntry entry : _reportEntries)
 		{
-			entry.create(getConnection(), getServerName(), conf);
+			try 
+			{
+				entry.create(getConnection(), getServerName(), conf);
+			} 
+			catch (RuntimeException rte) 
+			{
+				_logger.warn("Problems creating ReportEntry for '" + entry.getClass().getSimpleName() + "'. Caught RuntimeException, continuing with next entry.", rte);
+			}
 			
-			// If this is done from the Collectors thread... 
+			// If this is done from the Collectors thread... and each of the reports are taking a long time... 
 			// Then we might want to "ping" the collector supervisor, that we are still "alive"
 			HeartbeatMonitor.doHeartbeat();
 		}
@@ -98,6 +103,16 @@ extends DailySummaryReportAbstract
 	public void addReportEntry(IReportEntry entry)
 	{
 		_reportEntries.add(entry);
+	}
+
+	public IReportEntry getReportEntry(Class<?> classToReturn)
+	{
+		for (IReportEntry entry : _reportEntries)
+		{
+			if (classToReturn.isInstance(entry))
+				return entry;
+		}
+		return null;
 	}
 
 	public void addReportEntries()
@@ -227,10 +242,11 @@ extends DailySummaryReportAbstract
 		sb.append("        tr:nth-child(even) {\n");
 		sb.append("            background-color: #f2f2f2;\n");
 		sb.append("        }\n");
-//		sb.append("        h2 {\n");
-//		sb.append("            border-bottom: 3px solid black;\n");
-//		sb.append("            border-top: 3px solid black;\n");
-//		sb.append("        }\n");
+		sb.append("        h2 {\n");
+		sb.append("            border-bottom: 2px solid black;\n");
+		sb.append("            border-top: 2px solid black;\n");
+		sb.append("            margin-bottom: 3px;\n");
+		sb.append("        }\n");
 		sb.append("        h3 {\n");
 		sb.append("            border-bottom: 1px solid black;\n");
 		sb.append("            border-top: 1px solid black;\n");
@@ -322,7 +338,7 @@ extends DailySummaryReportAbstract
 			String tocSubject = entry.getSubject();
 			String tocDiv     = StringUtil.stripAllNonAlphaNum(tocSubject);
 
-			sb.append("<h3 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h3> \n");
+			sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
 			sb.append(entry.getMsgAsHtml());
 		}
 		sb.append("\n<br>");
@@ -339,51 +355,59 @@ extends DailySummaryReportAbstract
 		return sb.toString();
 	}
 
-	public String createDbxCentralLink()
-	{
-		// initialize with default parameters, which may change below...
-		String dbxCentralProt = "http";
-		String dbxCentralHost = StringUtil.getHostnameWithDomain();
-		int    dbxCentralPort = 8080;
-
-		// get where DBX CENTRAL is located.
-		String sendToDbxCentralUrl = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.url", null);
-		if (StringUtil.hasValue(sendToDbxCentralUrl))
-		{
-			// Parse the URL and get protocol/host/port
-			try
-			{
-				URL url = new URL(sendToDbxCentralUrl);
-				
-				dbxCentralProt = url.getProtocol();
-				dbxCentralHost = url.getHost();
-				dbxCentralPort = url.getPort();
-			}
-			catch (MalformedURLException ex)
-			{
-				_logger.info("Daily Report: Problems parsing DbxCentral URL '" + sendToDbxCentralUrl + "', using defaults. Caught:" + ex);
-			}
-		}
-		
-		// Collector and DBX Central is located on the same host
-		// if 'localhost' or '127.0.0.1' then get REAL localhost name
-		if (dbxCentralHost.equalsIgnoreCase("localhost") || dbxCentralHost.equalsIgnoreCase("127.0.0.1"))
-		{
-			dbxCentralHost = StringUtil.getHostnameWithDomain();
-		}
-
-		// Compose URL's
-		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
-		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
-		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
-
-		// Return a Text with links
-		return
-			"If you have problems to read this as a mail; Here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest HTML Report stored in DbxCentral.<br>\n" +
-			"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
-			"";
-	}
-
+//	public String getDbxCentralBaseUrl()
+//	{
+//		// initialize with default parameters, which may change below...
+//		String dbxCentralProt = "http";
+//		String dbxCentralHost = StringUtil.getHostnameWithDomain();
+//		int    dbxCentralPort = 8080;
+//
+//		// get where DBX CENTRAL is located.
+//		String sendToDbxCentralUrl = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.url", null);
+//		if (StringUtil.hasValue(sendToDbxCentralUrl))
+//		{
+//			// Parse the URL and get protocol/host/port
+//			try
+//			{
+//				URL url = new URL(sendToDbxCentralUrl);
+//				
+//				dbxCentralProt = url.getProtocol();
+//				dbxCentralHost = url.getHost();
+//				dbxCentralPort = url.getPort();
+//			}
+//			catch (MalformedURLException ex)
+//			{
+//				_logger.info("Daily Report: Problems parsing DbxCentral URL '" + sendToDbxCentralUrl + "', using defaults. Caught:" + ex);
+//			}
+//		}
+//		
+//		// Collector and DBX Central is located on the same host
+//		// if 'localhost' or '127.0.0.1' then get REAL localhost name
+//		if (dbxCentralHost.equalsIgnoreCase("localhost") || dbxCentralHost.equalsIgnoreCase("127.0.0.1"))
+//		{
+//			dbxCentralHost = StringUtil.getHostnameWithDomain();
+//		}
+//
+//		// Compose URL's
+//		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
+//
+//		// Return a Text with links
+//		return dbxCentralBaseUrl;
+//	}
+//
+//	public String createDbxCentralLink()
+//	{
+//		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
+//		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
+//		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
+//
+//		// Return a Text with links
+//		return
+//			"If you have problems to read this as a mail; Here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest HTML Report stored in DbxCentral.<br>\n" +
+//			"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
+//			"";
+//	}
+//
 	public String createHtml()
 	{
 		StringBuilder sb = new StringBuilder();

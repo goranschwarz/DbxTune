@@ -103,9 +103,22 @@ public class DailySummaryReportFactory
 		// Below is more readable, from a variable context point-of-view, but HARDER to understand
 		boolean isEnabled = true; // note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first isEnabled==false)
 
-		// servername: Keep & Skip rules
+		// serverName: Keep & Skip rules
 		isEnabled = (isEnabled && (StringUtil.isNullOrBlank(keep_servername_regExp) ||   serverName.matches(keep_servername_regExp ))); //     matches the KEEP serverName regexp
 		isEnabled = (isEnabled && (StringUtil.isNullOrBlank(skip_servername_regExp) || ! serverName.matches(skip_servername_regExp ))); // NO match in the SKIP serverName regexp
+		
+		
+		// Check the Senders/Writers and see if they have rules that still allow this server
+		// Potentially in the future: we might have several "senders/writers", then we need to loop all senders/writers and check...
+		if (isEnabled)
+		{
+			IReportSender reportSender = loadReportSender();
+			if ( ! reportSender.isEnabledForServer(serverName) )
+			{
+				_logger.info("The DailyReportSender's writer/sender named '" + reportSender.getName() + "' is NOT enabled to send reports for serverName '" + serverName + "'. Report will NOT be created for this server...");
+				isEnabled = false;
+			}
+		}
 		
 		return isEnabled;
 	}
@@ -114,7 +127,7 @@ public class DailySummaryReportFactory
 	 * Creates a daily summary report using the class found in property 'DailySummaryReport.classname'
 	 * @return
 	 */
-	public static IDailySummaryReport createDailySummaryReport()
+	public static IDailySummaryReport createDailySummaryReport(String serverName)
 	{
 		Configuration conf = Configuration.getCombinedConfiguration();
 
@@ -147,6 +160,22 @@ public class DailySummaryReportFactory
 
 		
 		// Load the SENDER class name
+		IReportSender reportSender = loadReportSender();
+		
+		// Set sender in the report instance
+		reportClass.setReportSender(reportSender);
+		
+		return reportClass;
+	}
+
+
+	private static IReportSender loadReportSender()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+
+		String senderClassname = conf.getProperty(PROPKEY_senderClassname, DEFAULT_senderClassname);
+		
+		// Load the SENDER class name
 		IReportSender reportSender = null;
 		try
 		{
@@ -168,9 +197,6 @@ public class DailySummaryReportFactory
 			_logger.error("DailySummaryReport Sender will be using the Default implementation '"+reportSender.getClass().getName()+"'.");
 		}
 		
-		// Set sender in the report instance
-		reportClass.setReportSender(reportSender);
-		
-		return reportClass;
+		return reportSender;
 	}
 }

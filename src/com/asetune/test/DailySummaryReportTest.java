@@ -67,13 +67,16 @@ public class DailySummaryReportTest
 //		conf.setProperty(ReportSenderToMail.PROPKEY_password,     "somepasswd");
 //		conf.setProperty(ReportSenderToMail.PROPKEY_to,           "aaaa.bbbb@acme.com");
 
+		String srvName = conf.getProperty("report.srvName", "DUMMY_SERVER");
+
+		
 		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
 		{
 			System.out.println("Daily Summary Report is NOT Enabled, this can be enabled using property '"+DailySummaryReportFactory.PROPKEY_create+"=true'.");
 			return;
 		}
 		
-		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
+		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport(srvName);
 		if (report == null)
 		{
 			System.out.println("Daily Summary Report: create did not pass a valid report instance, skipping report creation.");
@@ -122,7 +125,6 @@ public class DailySummaryReportTest
 		}
 		
 
-		String srvName = conf.getProperty("report.srvName", "DUMMY_SERVER");
 		report.setConnection(conn);
 		report.setServerName(srvName);
 		try

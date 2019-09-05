@@ -502,7 +502,7 @@ public class StringUtil
 	 * Parsers a comma separated list and returns a ArrayList which holds all values.<br>
 	 * The entries will be trimmed()...
 	 * @param str a comma separated list
-	 * @return a ArrayList with Strings
+	 * @return a ArrayList with Strings  (if input string is null, return empty list)
 	 */
 	public static List<String> parseCommaStrToList(String str)
 	{

@@ -115,12 +115,14 @@ public class PersistWriterJdbc
 	public static final boolean DEFAULT_sqlCaptureStorage_usePrivateConnection  = true;
 
 
-	public static final String  PROPKEY_h2_shutdown_type                 = "PersistWriterJdbc.h2.shutdown.type";
-	public static final String  DEFAULT_h2_shutdown_type                 = H2ShutdownType.DEFRAG.toString();
+	public static final String  PROPKEY_h2_shutdown_dueToDatabaseRollover_type       = "PersistWriterJdbc.h2.shutdown.dueToDatabaseRollover.type";
+	public static final String  DEFAULT_h2_shutdown_dueToDatabaseRollover_type       = H2ShutdownType.DEFRAG.toString();
 
-	public static final String  PROPKEY_h2_shutdown_inBgThread           = "PersistWriterJdbc.h2.shutdown.inBgThread";
-	public static final boolean DEFAULT_h2_shutdown_inBgThread           = true;
+	public static final String  PROPKEY_h2_shutdown_dueToDatabaseRollover_inBgThread = "PersistWriterJdbc.h2.shutdown.dueToDatabaseRollover.inBgThread";
+	public static final boolean DEFAULT_h2_shutdown_dueToDatabaseRollover_inBgThread = true;
 	
+	public static final String  PROPKEY_h2_allowSpilloverDb              = "PersistWriterJdbc.h2.allow.spilloverDb";
+	public static final boolean DEFAULT_h2_allowSpilloverDb              = false;
 
 	public static final String  PROPKEY_isSevereProblem_simulateDiskFull = "DbxTune.pcs.isSevereProblem.simulateDiskFull.enabled";
 	public static final boolean DEFAULT_isSevereProblem_simulateDiskFull = false;
@@ -160,8 +162,10 @@ public class PersistWriterJdbc
 	private boolean _h2NewDbOnDateChange = false;
 	private String  _h2LastDateChange    = null;
 	private String  _h2DbDateParseFormat = "yyyy-MM-dd";
+
+	private boolean _h2AllowSpilloverDb               = DEFAULT_h2_allowSpilloverDb; // set to FALSE... later on we can REMOVE the SPILL functionality
 	private boolean _h2CreateNewSpilloverDbOnNextSave = false;
-	private long    _h2NewSpilloverDbCreateTime = 0;
+	private long    _h2NewSpilloverDbCreateTime       = 0;
 
 	//private boolean _h2NewDbOnDateChange = true;
 	//private String  _h2DbDateParseFormat = "yyyy-MM-dd_HH.mm";
@@ -641,6 +645,11 @@ public class PersistWriterJdbc
 	@Override
 	public void stopServices(int maxWaitTimeInMs)
 	{
+		stopServices_private(maxWaitTimeInMs, false);
+	}
+
+	private void stopServices_private(int maxWaitTimeInMs, boolean dueToDatabaseRollover)
+	{
 		if ( _servicesStoppedByThread != null )
 		{
 			_logger.info("Services has already been stopped by thread '"+_servicesStoppedByThread+"'... the stopServices() will do nothing.");
@@ -690,38 +699,49 @@ public class PersistWriterJdbc
 		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
 		{
 			// Get shutdown type from the Configuration.
-			H2ShutdownType h2ShutdownType   = H2ShutdownType.IMMEDIATELY; // DEFAULT is really H2ShutdownType.DEFRAG
-			String  pcsH2ShutdownType       = getConfig().getProperty       (PROPKEY_h2_shutdown_type,       DEFAULT_h2_shutdown_type);
-			boolean pcsH2ShutdownInBgThread = getConfig().getBooleanProperty(PROPKEY_h2_shutdown_inBgThread, DEFAULT_h2_shutdown_inBgThread);
-			try { 
-				h2ShutdownType = H2ShutdownType.valueOf( pcsH2ShutdownType ); 
-			} catch(RuntimeException ex) { 
-				_logger.info("Shutdown type '"+pcsH2ShutdownType+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ");
+			H2ShutdownType h2ShutdownType       = H2ShutdownType.IMMEDIATELY;
+			boolean        h2ShutdownInBgThread = false;  // a normal shutdown will wait for the H2 shutdown to take affect
+			
+			// Decide how we want to behave if it's a Database Rollover (then we might want to change it to a SHUTDOWN DEFRAG & do it in background)
+			if (dueToDatabaseRollover)
+			{
+				_logger.info("Intention to Shutdown current H2 database due to a Database Rollover.");
+
+				h2ShutdownInBgThread      = getConfig().getBooleanProperty(PROPKEY_h2_shutdown_dueToDatabaseRollover_inBgThread, DEFAULT_h2_shutdown_dueToDatabaseRollover_inBgThread);
+
+				// Get the configured shutdown type (into a local String, which is then parsed into a H2ShutdownType)
+				String H2ShutdownTypeConf = getConfig().getProperty       (PROPKEY_h2_shutdown_dueToDatabaseRollover_type,       DEFAULT_h2_shutdown_dueToDatabaseRollover_type);
+				try { 
+					h2ShutdownType = H2ShutdownType.valueOf( H2ShutdownTypeConf ); 
+				} catch(RuntimeException ex) { 
+					_logger.info("Shutdown type '"+H2ShutdownTypeConf+"' is unknown value, supported values: "+StringUtil.toCommaStr(H2ShutdownType.values())+". ");
+				}
 			}
 
 			// Create a Runnable to do the shutdown work, either with a thread (in background) or directly from this thread.
 			final H2ShutdownType final_h2ShutdownType = h2ShutdownType;
+			final DbxConnection  final_mainConn       = _mainConn;
 			Runnable h2Shutdown = new Runnable()
 			{
 				@Override
 				public void run()
 				{
-					h2Shutdown(_mainConn, final_h2ShutdownType);
+					h2Shutdown(final_mainConn, final_h2ShutdownType);
 				}
 			};
 			
-			// Now execute h2Shutdown "target"
-			if (pcsH2ShutdownInBgThread)
+			// Now execute h2Shutdown "target" (in foreground or background)
+			if (h2ShutdownInBgThread)
 			{
 				Thread h2ShutdownThread = new Thread(h2Shutdown);
 				h2ShutdownThread.setName("H2ShutdownThread");
 				h2ShutdownThread.setDaemon(false); // I don't think we should run it as a daemon...
-				_logger.info("Shutting down current H2 database using a background thread.");
+				_logger.info("Shutting down current H2 database using a BACKGROUND thread.");
 				h2ShutdownThread.start();
 
 				// 
 				int sleepTimeSec = 5;
-				_logger.info("Waiting for "+sleepTimeSec+" seconds, to let the H2 database shutdown thread to be started/initiated and do initial work before continuing.");
+				_logger.info("Waiting for "+sleepTimeSec+" seconds, to let the H2 database shutdown THREAD to be started/initiated and do initial work before continuing.");
 				try { Thread.sleep(sleepTimeSec * 1000); }
 				catch (InterruptedException ignore) {}
 			}
@@ -732,7 +752,7 @@ public class PersistWriterJdbc
 			
 			// Reset the current connection WITHOUT closing it
 			// _mainConn.close() seems to block until the shutdown is complete, and since the connection wont be usefull after 
-			// the shutdown we can just as easely "throw the handle", lets just hope that it do not give use any memory leaks
+			// the shutdown we can just as easily "throw the handle", lets just hope that it do not give use any memory leaks
 			_mainConn = null; 
 		}
 
@@ -950,6 +970,8 @@ public class PersistWriterJdbc
 		_h2NewDbOnDateChange  = props.getBooleanProperty(PROPKEY_h2NewDbOnDateChange,  _h2NewDbOnDateChange);
 		_h2DbDateParseFormat  = props.getPropertyRaw(    PROPKEY_h2DateParseFormat,    _h2DbDateParseFormat);
 		_startH2NetworkServer = props.getBooleanProperty(PROPKEY_startH2NetworkServer, _startH2NetworkServer);
+		
+		_h2AllowSpilloverDb   = props.getBooleanProperty(PROPKEY_h2_allowSpilloverDb,  DEFAULT_h2_allowSpilloverDb);
 
 		// Set _h2DbDateParseFormat, _h2NewDbOnDateChange if the URL has variable ${DATE:format=someFormat;roll=true|false}
 		urlSubstitution(null, _jdbcUrl);
@@ -997,10 +1019,13 @@ public class PersistWriterJdbc
 	{
 		super.finalize();
 		
-		close(true);
+		boolean force = true;
+		boolean dueToDatabaseRollover = false;
+
+		close(force, dueToDatabaseRollover);
 	}
 
-	public void close(boolean force)
+	private void close(boolean force, boolean dueToDatabaseRollover)
 	{
 		if (_mainConn == null)
 			return;
@@ -1025,14 +1050,17 @@ public class PersistWriterJdbc
 //			}
 
 			// Shutdown and stop any of the (H2) services
-			stopServices(5000);
+			stopServices_private(5000, dueToDatabaseRollover);
 		}
 	}
 
 	@Override
 	public void close()
 	{
-		close(false);
+		boolean force = false;
+		boolean dueToDatabaseRollover = false;
+
+		close(force, dueToDatabaseRollover);
 	}
 
 	@Override
@@ -1040,7 +1068,7 @@ public class PersistWriterJdbc
 	{
 		// Create a new database if the queue "backlog" is to large
 		// NOTE: This only works for H2 (or other databases that has a file storage which automatically creates new databases)
-		if ( DbUtils.isProductName(getDatabaseProductName(), DbUtils.DB_PROD_NAME_H2) )
+		if ( _h2AllowSpilloverDb && DbUtils.isProductName(getDatabaseProductName(), DbUtils.DB_PROD_NAME_H2) )
 		{
 			int createNewDbThreshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_h2_queueSizeWarning_createNewDbThreshold, DEFAULT_h2_queueSizeWarning_createNewDbThreshold);
 			if (queueSize > createNewDbThreshold)
@@ -1241,7 +1269,11 @@ public class PersistWriterJdbc
 		if (_h2CreateNewSpilloverDbOnNextSave && _mainConn != null)
 		{
 			_logger.info("SPILL-OVER-DB: Closing the old database, a new database will be created/opened, This due to a high Storage queue... and the current H2 database does not seem to keep up...");
-			close(true); // Force a close
+
+			boolean force = true;
+			boolean dueToDatabaseRollover = false;
+
+			close(force, dueToDatabaseRollover);
 		}
 
 		// for H2, we have a "new database option" if the "timestamp" has changed.
@@ -1264,9 +1296,16 @@ public class PersistWriterJdbc
 					_logger.error("Problems creating Daily Report, skipping this.", ex);
 				}
 
+				boolean force = true;
+				boolean dueToDatabaseRollover = false;
+
 				if ( _h2LastDateChange != null)
+				{
+					dueToDatabaseRollover = true;
 					_logger.info("Closing the old database with ${DATE} marked as '"+_h2LastDateChange+"', a new database will be opened using ${DATE} marker '"+dateStr+"'.");
-				close(true); // Force a close
+				}
+
+				close(force, dueToDatabaseRollover);
 			}
 		}
 
@@ -1490,12 +1529,12 @@ public class PersistWriterJdbc
 					}
 				}
 
-//				// DATABASE_EVENT_LISTENER mode
+				// DATABASE_EVENT_LISTENER mode
 //				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
 //				{
 //					change = true;
 //					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
-//					urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
+//					urlMap.put("DATABASE_EVENT_LISTENER",  "'" + H2DatabaseEventListener.class.getName() + "'");
 //				}
 
 				// DB_CLOSE_ON_EXIT = if we have our of SHUTDOWN hook thats closing H2
@@ -1556,8 +1595,11 @@ public class PersistWriterJdbc
 			connProp.setUrl(localJdbcUrl);
 			connProp.setAppName(Version.getAppName()+"-pcsWriter");
 			connProp.setAppVersion(Version.getVersionStr());
+
 			// Now Connect
+			long connectStartTime = System.currentTimeMillis();
 			_mainConn = DbxConnection.connect(null, connProp);
+			String connectTimeStr = TimeUtils.msDiffNowToTimeStr(connectStartTime);
 
 			// Remember the last used URL (in case of H2 spill over database), the _mainConn is null at that time, so we cant use _mainConn.getConnProp().getUrl()
 			_lastUsedUrl = localJdbcUrl;
@@ -1569,7 +1611,7 @@ public class PersistWriterJdbc
 				_h2CreateNewSpilloverDbOnNextSave = false;
 			}
 			
-			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened, using driver '"+_jdbcDriver+"'.");
+			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened. connectTime='"+connectTimeStr+"', using driver '"+_jdbcDriver+"'.");
 			_logger.debug("The connection has property auto-commit set to '"+_mainConn.getAutoCommit()+"'.");
 
 			// DDL Information Capture connection
@@ -1931,7 +1973,11 @@ public class PersistWriterJdbc
 		{
 			String msg = "The PCS storage is ASE Version '"+Ver.versionNumToStr(srvVersion)+"', which is NOT a good idea. This since it can't handle table names longer than 30 characters and the PCS uses longer name. There for I only support ASE 15.0 or higher for the PCS storage. I recommend to use H2 database as the PCS instead (http://www.h2database.com), which is included in the "+Version.getAppName()+" package.";
 			_logger.error(msg);
-			close(true); // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect() 
+
+			boolean force = true; // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect()
+			boolean dueToDatabaseRollover = false;
+
+			close(force, dueToDatabaseRollover);
 
 			Exception ex =  new Exception(msg);
 			{
@@ -1947,8 +1993,12 @@ public class PersistWriterJdbc
 		{
 			String msg = "Current ASE Database is '"+dbname+"'. "+Version.getAppName()+" does NOT support storage off Performance Counters in the '"+dbname+"' database.";
 			_logger.error(msg);
-			close(true); // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect() 
-			
+
+			boolean force = true; // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect()
+			boolean dueToDatabaseRollover = false;
+
+			close(force, dueToDatabaseRollover);
+
 			Exception ex =  new Exception(msg);
 			if (DbxTune.hasGui())
 			{
@@ -2820,26 +2870,26 @@ public class PersistWriterJdbc
 				{
 					sbSql.append(getTableInsertStr(conn, ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
-					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         )); // "alarmClass"              varchar(80)   null false   - 1
-					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  )); // "serviceType"             varchar(80)   null false   - 2
-					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  )); // "serviceName"             varchar(30)   null false   - 3
-					sbSql.append(", ").append(safeStr( ae.getServiceInfo()                                                  )); // "serviceInfo"             varchar(80)   null false   - 4
-					sbSql.append(", ").append(safeStr( ae.getExtraInfo()                                                    )); // "extraInfo"               varchar(80)   null true    - 5
-					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     )); // "category"                varchar(20)   null false   - 6
-					sbSql.append(", ").append(safeStr( ae.getSeverity()                                                     )); // "severity"                varchar(10)   null false   - 7
-					sbSql.append(", ").append(safeStr( ae.getState()                                                        )); // "state"                   varchar(10)   null false   - 8
-					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                 )); // "repeatCnt"               int           null false   - 9
-					sbSql.append(", ").append(safeStr( ae.getDuration()                                                     )); // "duration"                varchar(10)   null false   - 10
-					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())      )); // "createTime"              datetime      null false   - 11
-					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())  )); // "cancelTime"              datetime      null true    - 12
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                   )); // "timeToLive"              int           null true    - 13
-					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"")); // "threshold"               varchar(15)   null true    - 14
-					sbSql.append(", ").append(safeStr( ae.getData()                                                    ,160 )); // "data"                    varchar(80)   null true    - 15
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                             ,160 )); // "lastData"                varchar(80)   null true    - 16
-					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  )); // "description"             varchar(512)  null false   - 17
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           )); // "lastDescription"         varchar(512)  null false   - 18
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                          )); // "extendedDescription"     text          null true    - 19
-					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription()                                   )); // "lastExtendedDescription" text          null true    - 20
+					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated()                                         ,80  )); // "alarmClass"              varchar(80)   null false   - 1
+					sbSql.append(", ").append(safeStr( ae.getServiceType()                                                  ,80  )); // "serviceType"             varchar(80)   null false   - 2
+					sbSql.append(", ").append(safeStr( ae.getServiceName()                                                  ,30  )); // "serviceName"             varchar(30)   null false   - 3
+					sbSql.append(", ").append(safeStr( ae.getServiceInfo()                                                  ,80  )); // "serviceInfo"             varchar(80)   null false   - 4
+					sbSql.append(", ").append(safeStr( ae.getExtraInfo()                                                    ,80  )); // "extraInfo"               varchar(80)   null true    - 5
+					sbSql.append(", ").append(safeStr( ae.getCategory()                                                     ,20  )); // "category"                varchar(20)   null false   - 6
+					sbSql.append(", ").append(safeStr( ae.getSeverity()                                                     ,10  )); // "severity"                varchar(10)   null false   - 7
+					sbSql.append(", ").append(safeStr( ae.getState()                                                        ,10  )); // "state"                   varchar(10)   null false   - 8
+					sbSql.append(", ").append(safeStr( ae.getReRaiseCount()                                                      )); // "repeatCnt"               int           null false   - 9
+					sbSql.append(", ").append(safeStr( ae.getDuration()                                                     ,10  )); // "duration"                varchar(10)   null false   - 10
+					sbSql.append(", ").append(safeStr( ae.getCrTime()     == -1 ? null : new Timestamp(ae.getCrTime())           )); // "createTime"              datetime      null false   - 11
+					sbSql.append(", ").append(safeStr( ae.getCancelTime() == -1 ? null : new Timestamp(ae.getCancelTime())       )); // "cancelTime"              datetime      null true    - 12
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                                                        )); // "timeToLive"              int           null true    - 13
+					sbSql.append(", ").append(safeStr( ae.getCrossedThreshold() == null ? null : ae.getCrossedThreshold()+"",15  )); // "threshold"               varchar(15)   null true    - 14
+					sbSql.append(", ").append(safeStr( ae.getData()                                                         ,160 )); // "data"                    varchar(80)   null true    - 15
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()                                                  ,160 )); // "lastData"                varchar(80)   null true    - 16
+					sbSql.append(", ").append(safeStr( ae.getDescription()                                                  ,512 )); // "description"             varchar(512)  null false   - 17
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()                                           ,512 )); // "lastDescription"         varchar(512)  null false   - 18
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()                                               )); // "extendedDescription"     text          null true    - 19
+					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription()                                        )); // "lastExtendedDescription" text          null true    - 20
 					sbSql.append(")");
 
 					sql = sbSql.toString();
@@ -3466,6 +3516,8 @@ public class PersistWriterJdbc
 				// How long the sample was for, in Milliseconds
 				pstmt.setInt(col++, cm.isNewDeltaOrRateRow(r) ? 1 : 0);
 
+//if (r==0) System.out.println("PersistWriterJdbc: save(): tabName="+StringUtil.left(tabName, 30)+", getLastSampleInterval()="+cm.getLastSampleInterval()+", getSampleInterval()="+cm.getSampleInterval());
+				
 				// loop all columns
 				for (int c=0; c<colsCount; c++)
 				{
@@ -4247,7 +4299,7 @@ public class PersistWriterJdbc
 			return;
 		}
 
-		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
+		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport(serverName);
 		if (report == null)
 		{
 			_logger.info("Daily Summary Report: create did not pass a valid report instance, skipping report creation.");

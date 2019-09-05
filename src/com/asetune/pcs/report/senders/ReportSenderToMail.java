@@ -31,7 +31,12 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.Type;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.JsonUtils;
 import com.asetune.utils.StringUtil;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class ReportSenderToMail 
 extends ReportSenderAbstract
@@ -44,16 +49,18 @@ extends ReportSenderAbstract
 //		String msgSubject = WriterUtils.createMessageFromTemplate(action, alarmEvent, _subjectTemplate, true);
 //		String msgBody    = WriterUtils.createMessageFromTemplate(action, alarmEvent, _msgBodyTemplate, true);
 
+		String serverName = reportContent.getServerName();
+		
 		if (reportContent.hasNothingToReport())
 		{
 			if (_sendNtr == false)
 			{
-				_logger.info("Property '"+PROPKEY_sendNtr+"' is enabled. The report for server '"+reportContent.getServerName()+"' will NOT be sent.");
+				_logger.info("Property '"+PROPKEY_sendNtr+"' is enabled. The report for server '"+serverName+"' will NOT be sent.");
 				return;
 			}
 		}
 		
-		String msgSubject = _subjectTemplate.replace("${srvName}", reportContent.getServerName());
+		String msgSubject = _subjectTemplate.replace("${srvName}", serverName);
 		String msgBodyText    = reportContent.getReportAsText();
 		String msgBodyHtml    = reportContent.getReportAsHtml();
 		
@@ -61,7 +68,7 @@ extends ReportSenderAbstract
 		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
 
 		if (reportContent.hasNothingToReport())
-			msgSubject = _subjectNtrTemplate.replace("${srvName}", reportContent.getServerName());
+			msgSubject = _subjectNtrTemplate.replace("${srvName}", serverName);
 
 		String msgBody = msgBodyText;
 //		if (StringUtil.hasValue(msgBodyHtml))
@@ -69,7 +76,9 @@ extends ReportSenderAbstract
 
 		if (_msgBodyUseHtml)
 			msgBody = msgBodyHtml;
-			
+
+		List<String> toList = getToAddressForServerNameAsList(serverName);
+
 		try
 		{
 			HtmlEmail email = new HtmlEmail();
@@ -99,10 +108,14 @@ extends ReportSenderAbstract
 			if (StringUtil.hasValue(_username))
 				email.setAuthentication(_username, _password);
 			
-			// add TO and CC
-			for (String to : _toList)
+			// add TO
+//			for (String to : _toList)
+//				email.addTo(to);
+
+			for (String to : toList)
 				email.addTo(to);
 
+			// add CC
 			for (String cc : _ccList)
 				email.addCc(cc);
 
@@ -127,11 +140,13 @@ extends ReportSenderAbstract
 			// SEND
 			email.send();
 
-			_logger.info("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
+//			_logger.info("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
 		}
 		catch (Exception ex)
 		{
-			_logger.error("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+//			_logger.error("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
 		}
 	}
 
@@ -185,9 +200,105 @@ extends ReportSenderAbstract
 	private boolean _useSsl                 = DEFAULT_useSsl;
 	private int     _smtpConnectTimeout     = -1;
 
-	private List<String> _toList     = new ArrayList<>();
+//	private List<String> _toList     = new ArrayList<>();
 	private List<String> _ccList     = new ArrayList<>();
 	//-------------------------------------------------------
+
+
+	/**
+	 * This method is called <b>early</b> possibly in <code>DailySummaryReportFactory.isCreateReportEnabledForServer(serverName)</code><br>
+	 * This to check if a <i>potentially costly</i> report should be created or not!<br>
+	 * which means that the senders etc hasn't been fully created/initialized<br>
+	 * <p> 
+	 * ToMail can be configured to filter on <i>serverName</i>, in the property <code>ReportSenderToMail.to=[ {"serverName":"xxx", "to":"user1@acme.com, user2@acme.com"}, {"serverName":"yyy", "to":"user1@acme.com"}, {"serverName":"zzz", "to":"user3@acme.com"} ]</code>
+	 */
+	@Override
+	public boolean isEnabledForServer(String serverName)
+	{
+		return StringUtil.hasValue( getToAddressForServerName(serverName) );
+
+		// TODO: not yet implemented
+		//return true;
+	}
+	
+	private List<String> getToAddressForServerNameAsList(String serverName)
+	{
+		String toStr = getToAddressForServerName(serverName);
+		return StringUtil.parseCommaStrToList(toStr);
+	}
+	
+	private String getToAddressForServerName(String serverName)
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		
+		String retStr = "";
+
+		// If the "to" sender is of JSON Content, then we need to parse the JSON and see if any of the entries is enabled for this serverName  
+		String toStr = conf.getProperty(PROPKEY_to, DEFAULT_to);
+		
+		if (_logger.isDebugEnabled())
+			_logger.debug("getToAddressForServerName('"+serverName+"'): "+PROPKEY_to+"=|"+toStr+"|");
+
+		// Exit early if not properly configured.
+		if (StringUtil.isNullOrBlank(toStr))
+		{
+			_logger.warn("getToAddressForServerName('"+serverName+"'): "+PROPKEY_to+"=|"+toStr+"| is EMPTY... This is a Mandatory property value.");
+			return null;
+		}
+
+		
+		retStr = toStr;
+		if (JsonUtils.isPossibleJson(toStr))
+		{
+			try
+			{
+				JsonArray jsonArr = new JsonParser().parse(toStr).getAsJsonArray();
+				for (JsonElement jsonElement : jsonArr)
+				{
+					JsonObject jsonObj = jsonElement.getAsJsonObject();
+					
+					if (_logger.isDebugEnabled())
+						_logger.debug("Checking serverName='" + serverName + "' against the JSON entry: " + jsonObj );
+
+					if (jsonObj.has("serverName") && jsonObj.has("to"))
+					{
+						String entryServerName = jsonObj.get("serverName").getAsString();
+						String entryTo         = jsonObj.get("to"        ).getAsString();
+						
+						if (_logger.isDebugEnabled())
+							_logger.debug("Checking serverName='" + serverName + "' against the JSON entry with: serverNameRegExp='" + entryServerName + "', toStr='" + entryTo + "'.");
+
+						if (StringUtil.hasValue(entryServerName) && StringUtil.hasValue(entryTo))
+						{
+							// USE REGEXP to check if it matches
+							if (serverName.matches(entryServerName))
+							{
+								if (_logger.isDebugEnabled())
+									_logger.debug("MATCH: using mail address to='" + entryTo + "' for serverName='" + serverName + "'.");
+
+								return entryTo;
+							}
+						}
+					}
+					else
+					{
+						_logger.info("Skipping JSON entry '" + jsonObj + "', it dosn't contain members: 'serverName' and 'to'.");
+					}
+				}
+			}
+			catch(Exception ex)
+			{
+				_logger.error("getToAddressForServerName('"+serverName+"'): Trying to parse the JSON Array String '" + toStr + "', Caught: " + ex, ex);
+			}
+		}
+		else
+		{
+			_logger.debug("getToAddressForServerName('"+serverName+"'): NOT a JSON Array, using as 'plain-email-address': "+PROPKEY_to+"=|"+toStr+"|");
+		}
+		
+		return retStr;
+	}
+
 
 	@Override
 	public void init() throws Exception
@@ -226,7 +337,7 @@ extends ReportSenderAbstract
 //		if ( StringUtil.isNullOrBlank(_msgBodyTemplate   ) ) throw new Exception("The property '" + PROPKEY_msgBodyTemplate    + "' is mandatory for the ReportSender named '"+getName()+"'.");
 
 		// Parse the 'to string' into a list
-		_toList = StringUtil.parseCommaStrToList(_to);
+//		_toList = StringUtil.parseCommaStrToList(_to);
 		
 		if (StringUtil.hasValue(_cc))
 			_ccList = StringUtil.parseCommaStrToList(_cc);
@@ -243,6 +354,8 @@ extends ReportSenderAbstract
 		_logger.info("Configuration for Report Sender Module: "+getName());
 		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname          , spaces) + ": " + _smtpHostname);
 		_logger.info("    " + StringUtil.left(PROPKEY_to                    , spaces) + ": " + _to);
+		if (JsonUtils.isPossibleJson(_to))
+			_logger.info("    NOTE: the Above 'to' string look like JSON Content and will be evaluated at runtime, when the ServerName is known.");
 		_logger.info("    " + StringUtil.left(PROPKEY_from                  , spaces) + ": " + _from);
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate       , spaces) + ": " + _subjectTemplate);
 		_logger.info("    " + StringUtil.left(PROPKEY_subjectNtrTemplate    , spaces) + ": " + _subjectNtrTemplate);
@@ -284,6 +397,13 @@ extends ReportSenderAbstract
 
 	public static final String  PROPKEY_msgBodyUseHtml         = "ReportSenderToMail.msg.body.html";
 	public static final boolean DEFAULT_msgBodyUseHtml         = true;
+
+// NOT YET IMPLEMENTED
+//	public static final String  PROPKEY_attachHtmlContent      = "ReportSenderToMail.attachHtmlContent";
+//	public static final boolean DEFAULT_attachHtmlContent      = true;
+//
+//	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
+//	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 5;
 
 	
 	public static final String  PROPKEY_username               = "ReportSenderToMail.smtp.username";

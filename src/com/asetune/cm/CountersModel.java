@@ -616,7 +616,9 @@ implements Cloneable, ITableTooltip
 		c._counterClearTime           = this._counterClearTime;
 		c._isCountersCleared          = this._isCountersCleared;
 		c._sampleTime                 = this._sampleTime;
-		c._sampleInterval             = this._sampleInterval;
+		c._sampleInterval             = this._sampleInterval;       // Can we use this: or do we need to call method: cm.getLastSampleInterval(), which depends on '_newSample': return (_newSample == null) ? 0 : _newSample.getSampleInterval();
+
+//System.out.println("CM: copyForStorage(): cmName="+StringUtil.left(this._name, 30)+", fromClass="+StringUtil.left(this.getClass().getSimpleName(), 30)+", newClassName="+StringUtil.left(c.getClass().getSimpleName(), 30)+": _sampleTime="+this._sampleTime+", _sampleIntervall="+this._sampleInterval+", getLastSampleInterval()="+this.getLastSampleInterval()+", getSampleInterval()="+this.getSampleInterval()+", getTimestamp()="+this.getTimestamp());
 
 		c._sqlRefreshStartTime        = this._sqlRefreshStartTime;
 		c._sqlRefreshTime             = this._sqlRefreshTime;
@@ -6363,22 +6365,54 @@ implements Cloneable, ITableTooltip
 		_hasValidSampleData = valid;
 	}
 
+//	public Timestamp getTimestamp()
+//	{
+//		return (_newSample == null) ? null : _newSample.getSampleTime();
+//
+////		if (_diffData == null)
+////			return null;
+////		return _diffData.samplingTime;
+//	}
 	public Timestamp getTimestamp()
 	{
-		return (_newSample == null) ? null : _newSample.getSampleTime();
+		Timestamp ts = null;
 
-//		if (_diffData == null)
-//			return null;
-//		return _diffData.samplingTime;
+		if (_newSample != null) 
+			ts = _newSample.getSampleTime();
+
+		// use fallback here, since: _newSample is not maintained by CounterModelHostMonitor and possibly others.
+		if (ts == null)
+			ts = getSampleTime();
+
+		if (ts == null)
+		{
+			Exception dummyEx = new Exception("Dummy Exception, for for traceability/callstack... or from where the method was called.");
+			_logger.warn("getTimestamp(): returns null. This is probably not anticipated, appending a stacktrace...", dummyEx);
+		}
+
+		return ts;
 	}
 
+//	public int getLastSampleInterval()
+//	{
+//		return (_newSample == null) ? 0 : _newSample.getSampleInterval();
+//
+////		if (_diffData != null)
+////			return (int) _diffData.interval;
+////		return 0;
+//	}
 	public int getLastSampleInterval()
 	{
-		return (_newSample == null) ? 0 : _newSample.getSampleInterval();
+		int interval = 0;
 
-//		if (_diffData != null)
-//			return (int) _diffData.interval;
-//		return 0;
+		if (_newSample != null) 
+			interval = _newSample.getSampleInterval();
+
+		// use fallback here, since: _newSample is not maintained by CounterModelHostMonitor and possibly others.
+		if (interval == 0)
+			interval = (int) getSampleInterval();
+
+		return interval;
 	}
 	
 	// Return number of rows in the diff table

@@ -20,7 +20,32 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
+import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
+import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
+
 public class DailySummaryReportSqlServerTune 
 extends DailySummaryReportDefault
 {
+	@Override
+	public void addReportEntries()
+	{
+		// Add the Alarms Active/History
+		super.addReportEntries();
+
+		// CPU
+		addReportEntry( new SqlServerCpuUsageOverview(this)   );
+		addReportEntry( new OsCpuUsageOverview(this)          );
+
+		// SQL
+		//addReportEntry( new SqlServerTopSlowSql(this)           );
+		//addReportEntry( new SqlServerTopSlowProcCalls(this)     );
+
+		// Disk IO Activity
+		addReportEntry( new SqlServerSlowCmDeviceIo(this)     );
+		addReportEntry( new OsSpaceUsageOverview(this)        );
+		addReportEntry( new OsIoStatSlowIo(this)              );
+	}
 }

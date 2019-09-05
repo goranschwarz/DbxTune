@@ -54,7 +54,7 @@ public class DailyCentralSummaryReport
 			return;
 		}
 
-		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport();
+		IDailySummaryReport report = DailySummaryReportFactory.createDailySummaryReport(serverName);
 		if (report == null)
 		{
 			_logger.info("Daily Summary Report: create did not pass a valid report instance, skipping report creation.");

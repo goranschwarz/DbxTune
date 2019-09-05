@@ -20,7 +20,28 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
+import com.asetune.pcs.report.content.rs.RsRssdQueueSize;
+import com.asetune.pcs.report.content.rs.RsWsRepLatency;
+
 public class DailySummaryReportRsTune 
 extends DailySummaryReportDefault
 {
+	@Override
+	public void addReportEntries()
+	{
+		// Add the Alarms Active/History
+		super.addReportEntries();
+
+		// CPU
+		addReportEntry( new OsCpuUsageOverview(this)   );
+
+		// QUEUE SIZE & Latency
+		addReportEntry( new RsRssdQueueSize(this)      );
+		addReportEntry( new RsWsRepLatency(this)       );
+
+		// Disk IO Activity
+		addReportEntry( new OsIoStatSlowIo(this)       );
+	}
 }

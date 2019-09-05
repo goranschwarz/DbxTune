@@ -20,7 +20,27 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
+import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
+
 public class DailySummaryReportDb2Tune 
 extends DailySummaryReportDefault
 {
+	@Override
+	public void addReportEntries()
+	{
+		// Add the Alarms Active/History
+		super.addReportEntries();
+
+		// SQL
+		//FIXME: addReportEntry( new Db2TopSql(this)(this)   );
+
+		// CPU
+		addReportEntry( new OsCpuUsageOverview(this)   );
+
+		// Disk IO Activity
+		addReportEntry( new OsSpaceUsageOverview(this) );
+		addReportEntry( new OsIoStatSlowIo(this)       );
+	}
 }

@@ -330,4 +330,63 @@ implements IReportEntry
 			}
 		}
 	}
+
+
+	public String getDbxCentralLinkWithDescForGraphs(boolean addSpaceBefore, String description, String... graphList)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		if (addSpaceBefore)
+		{
+			sb.append("<br><br><br>\n");
+			sb.append("<hr>\n");
+		}
+		sb.append("<p>\n");
+		sb.append(description).append(" <br>\n");
+		sb.append("<a href='").append(getDbxCentralLinkForGraphs(graphList)).append("'>Link to DbxCentral Graphs</a> which is a bit more dynamic than static images.\n");
+		sb.append("</p>\n");
+		
+		return sb.toString();
+	}
+	public String getDbxCentralLinkForGraphs(String... graphList)
+	{
+		String dbxcLink = getReportingInstance().getDbxCentralBaseUrl();
+		RecordingInfo recordingInfo = getReportingInstance().getInstanceRecordingInfo();
+
+		String startTime = recordingInfo.getStartTime();
+		String endTime   = recordingInfo.getEndTime();
+		String srvName   = getReportingInstance().getServerName();
+//		String graphList = "CmSummary_aaCpuGraph,CmEngines_cpuSum,CmEngines_cpuEng,CmSysLoad_EngineRunQLengthGraph";
+
+		if (StringUtil.hasValue(startTime)) startTime = startTime.substring(0, "YYYY-MM-DD".length()) + " 00:00";
+		if (StringUtil.hasValue(endTime))   endTime   = endTime  .substring(0, "YYYY-MM-DD".length()) + " 23:59";
+		
+		String dbxCentralLink = dbxcLink + "/graph.html"
+				+ "?subscribe=false"
+				+ "&cs=dark"
+				+ "&gcols=1"
+				+ "&sessionName=" + srvName 
+				+ "&startTime="   + startTime 
+				+ "&endTime="     + endTime 
+				+ "&graphList="   + StringUtil.toCommaStr(graphList) 
+				+ "";
+		
+		return dbxCentralLink;
+	}
+	
+	/**
+	 * Simple wrapper method to create a ReportChartObject
+	 * @param conn
+	 * @param cmName
+	 * @param graphName
+	 * @param maxValue
+	 * @param skipNames
+	 * @param graphTitle
+	 * 
+	 * @return This will always returns a ReportChartObject object
+	 */
+	public ReportChartObject createChart(DbxConnection conn, String cmName, String graphName, int maxValue, String skipNames, String graphTitle)
+	{
+		return new ReportChartObject(this, conn, cmName, graphName, maxValue, skipNames, graphTitle);
+	}
 }

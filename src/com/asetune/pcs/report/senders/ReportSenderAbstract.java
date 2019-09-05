@@ -28,4 +28,11 @@ implements IReportSender
 	{
 		return this.getClass().getSimpleName();
 	}
+	
+	@Override
+	public boolean isEnabledForServer(String serverName)
+	{
+		// Normally ALL Server are enabled
+		return true;
+	}
 }

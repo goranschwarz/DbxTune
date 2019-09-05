@@ -41,7 +41,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	public void init(String url)
 	{
 //_logger.setLevel(Level.DEBUG);
-		_logger.debug("init(): url='"+url+"'.");
+		_logger.info ("H2DatabaseEventListener.init(): url='"+url+"'.");
+		_logger.debug("H2DatabaseEventListener.init(): url='"+url+"'.");
 	}
 
 	/**
@@ -51,7 +52,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	@Override
 	public void opened()
 	{
-		_logger.debug("opened()");
+		_logger.info ("H2DatabaseEventListener.opened()");
+		_logger.debug("H2DatabaseEventListener.opened()");
 	}
 
 //	/**
@@ -132,7 +134,8 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	@Override
 	public void exceptionThrown(SQLException ex, String sql)
 	{
-		_logger.debug("exceptionThrown(): SQLException="+ex+", arg1='"+sql+"'.", ex);
+		_logger.info ("H2DatabaseEventListener.exceptionThrown(): SQLException="+ex+", arg1='"+sql+"'.", ex);
+		_logger.debug("H2DatabaseEventListener.exceptionThrown(): SQLException="+ex+", arg1='"+sql+"'.", ex);
 	}
 
 	/**
@@ -147,7 +150,41 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	@Override
 	public void setProgress(int state, String name, int x, int max)
 	{
-		_logger.debug("setProgress(): state="+state+", name='"+name+"', x='"+x+"', max='"+max+"'.");
+//		int STATE_SCAN_FILE          = 0; // This state is used when scanning the database file.
+//		int STATE_CREATE_INDEX       = 1; // This state is used when re-creating an index.
+//		int STATE_RECOVER            = 2; // This state is used when re-applying the transaction log or rolling back uncommitted transactions.
+//		int STATE_BACKUP_FILE        = 3; // This state is used during the BACKUP command.
+//		int STATE_RECONNECTED        = 4; // This state is used after re-connecting to a database (if auto-reconnect is enabled).
+//		int STATE_STATEMENT_START    = 5; // This state is used when a query starts.
+//		int STATE_STATEMENT_END      = 6; // This state is used when a query ends.
+//		int STATE_STATEMENT_PROGRESS = 7; // This state is used for periodic notification during long-running queries.
+
+		switch (state)
+		{
+    		case DatabaseEventListener.STATE_STATEMENT_START:      return;
+    		case DatabaseEventListener.STATE_STATEMENT_PROGRESS:   return;
+    		case DatabaseEventListener.STATE_STATEMENT_END:        return;
+    		case DatabaseEventListener.STATE_CREATE_INDEX:         return;
+		}
+		
+		_logger.info ("H2DatabaseEventListener.setProgress(): state="+stateToString(state)+", at='"+x+"', max='"+max+"', name='"+name+"'.");
+		_logger.debug("H2DatabaseEventListener.setProgress(): state="+stateToString(state)+", at='"+x+"', max='"+max+"', name='"+name+"'.");
+	}
+	
+	private String stateToString(int state)
+	{
+		switch (state)
+		{
+            case DatabaseEventListener.STATE_SCAN_FILE          : return "SCAN_FILE";          // This state is used when scanning the database file.
+            case DatabaseEventListener.STATE_CREATE_INDEX       : return "CREATE_INDEX";       // This state is used when re-creating an index.
+            case DatabaseEventListener.STATE_RECOVER            : return "RECOVER";            // This state is used when re-applying the transaction log or rolling back uncommitted transactions.
+            case DatabaseEventListener.STATE_BACKUP_FILE        : return "BACKUP_FILE";        // This state is used during the BACKUP command.
+            case DatabaseEventListener.STATE_RECONNECTED        : return "RECONNECTED";        // This state is used after re-connecting to a database (if auto-reconnect is enabled).
+            case DatabaseEventListener.STATE_STATEMENT_START    : return "STATEMENT_START";    // This state is used when a query starts.
+            case DatabaseEventListener.STATE_STATEMENT_END      : return "STATEMENT_END";      // This state is used when a query ends.
+            case DatabaseEventListener.STATE_STATEMENT_PROGRESS : return "STATEMENT_PROGRESS"; // This state is used for periodic notification during long-running queries.
+		}
+		return "UnknownState[" + state + "]";
 	}
 
 	/**
@@ -158,6 +195,7 @@ public class H2DatabaseEventListener implements DatabaseEventListener
 	@Override
 	public void closingDatabase()
 	{
+		_logger.info ("H2DatabaseEventListener.closingDatabase()");
 		_logger.debug("H2DatabaseEventListener.closingDatabase()");
 	}
 

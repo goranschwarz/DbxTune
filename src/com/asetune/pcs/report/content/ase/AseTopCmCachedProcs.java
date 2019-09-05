@@ -147,6 +147,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 		// Columns description
 		rstm.setColumnDescription("DBName"                , "Database name");
 		rstm.setColumnDescription("ObjectName"            , "Procedure Name or '*ss' for StatementCache entries and '*sq' for DynamicPreparedSql");
+		rstm.setColumnDescription("Remark"                , "Used by the 'validate' method to check if values looks ok. (for example if 'CPUTime_sum' is above 24H, you will get a WARNING) ");
 		rstm.setColumnDescription("PlanID_count"          , "Number of entries this plan has in the period");
 		rstm.setColumnDescription("SessionSampleTime_min" , "First entry was sampled at this time");
 		rstm.setColumnDescription("SessionSampleTime_max" , "Last entry was sampled at this time");
@@ -182,11 +183,12 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + "select top " + topRows + " \n"
 			    + "	 [DBName] \n"
 			    + "	,[ObjectName] \n"
+			    + "	,cast('' as varchar(255)) as [Remark] \n"
 			    + "	,count(distinct [PlanID]) as [PlanID_count] \n"
 			    + "	,count(*)                 as [samples_count] \n"
 			    + "	,min([SessionSampleTime]) as [SessionSampleTime_min] \n"
 			    + "	,max([SessionSampleTime]) as [SessionSampleTime_max] \n"
-			    + " ,cast('' as varchar(30))  as [Duration] \n"
+			    + "	,cast('' as varchar(30))  as [Duration] \n"
 			    + "	,sum([CmSampleMs])        as [CmSampleMs_sum] \n"
 			    + "	,min([CompileDate])       as [CompileDate_min] \n"
 			    + "	,max([CompileDate])       as [CompileDate_max] \n"
@@ -211,6 +213,7 @@ public class AseTopCmCachedProcs extends AseAbstract
 			    + "	,max([AvgPagesWritten])   as [AvgPagesWritten_max] \n"
 			    + " \n"
 			    + "from [CmCachedProcs_diff] \n"
+			    + "where ([CPUTime] > 0.0 OR [ExecutionTime] > 0.0 OR [LogicalReads] > 0.0) \n"
 			    + "group by [DBName], [ObjectName] \n"
 			    + " \n"
 			    + "order by [CPUTime_sum] desc \n"
@@ -230,7 +233,11 @@ public class AseTopCmCachedProcs extends AseAbstract
 			// Calculate Duration
 			setDurationColumn(_shortRstm, "SessionSampleTime_min", "SessionSampleTime_max", "Duration");
 
+			// Check if rows looks strange (or validate) rows
+			// For example if "CPUTime_sum" is above 24 hours (or the sample period), should we mark this entry as "suspect"...
+			validateEntries();
 			
+			// Get SQL-Text for StatementCache entries
 			Set<String> stmntCacheObjects = getStatementCacheObjects(_shortRstm, "ObjectName");
 			if (stmntCacheObjects != null && ! stmntCacheObjects.isEmpty() )
 			{
@@ -241,6 +248,42 @@ public class AseTopCmCachedProcs extends AseAbstract
 				catch (SQLException ex)
 				{
 					setProblem(ex);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Validate entries... 
+	 * for example if some values looks TO BIG (for example "CPUTime_sum" is above 24 hours (or the sample period), then set a "Remark"
+	 *             NOTE: If we have *many* engines, then 24H could be OK... or it might be a ASE-MDA counter issue (or some other strange issue)
+	 */
+	private void validateEntries()
+	{
+		if (_shortRstm == null)
+			return;
+
+		ResultSetTableModel rstm = _shortRstm;
+
+		// Threshold value to be crossed: then make: WARNING
+		Long th_CPUTime_sum = 3_600 * 1000 * 24L;  // 24 hours in milliseconds
+		
+		int pos_CPUTime_sum = rstm.findColumn("CPUTime_sum");
+		int pos_remark      = rstm.findColumn("Remark");
+
+		if (pos_CPUTime_sum >= 0 && pos_remark >= 0)
+		{
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				Long CPUTime_sum = rstm.getValueAsLong(r, pos_CPUTime_sum);
+
+				if (CPUTime_sum != null)
+				{
+					if (CPUTime_sum > th_CPUTime_sum)
+					{
+//						rstm.setValueAtWithOverride("WARNING: CPUTime_sum > 24h", r, pos_remark);
+						rstm.setValueAtWithOverride("<font color='red'>WARNING: CPUTime_sum > 24h</font>", r, pos_remark);
+					}
 				}
 			}
 		}

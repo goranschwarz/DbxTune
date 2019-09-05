@@ -123,7 +123,7 @@
 	<classpathentry kind="lib" path="lib/javax.servlet-api-3.1.0.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-databind-2.9.2.jar" sourcepath="3pp/jackson-databind-2.9.2-sources.jar"/>
 	<classpathentry kind="lib" path="lib/jackson-annotations-2.9.2.jar"/>
-	<classpathentry kind="lib" path="lib/gson-2.8.0.jar"/>
+	<classpathentry kind="lib" path="lib/gson-2.8.0.jar" sourcepath="3pp/gson-gson-parent-2.8.0.zip"/>
 	<classpathentry kind="lib" path="lib/jsqlparser-1.1.jar" sourcepath="3pp/jsqlparser-1.1-sources.jar"/>
 	<classpathentry kind="lib" path="lib/cron4j-2.2.5.jar" sourcepath="3pp/cron4j-2.2.5-sources.jar"/>
 	<classpathentry kind="lib" path="lib/cron-utils-7.0.6.jar"/>

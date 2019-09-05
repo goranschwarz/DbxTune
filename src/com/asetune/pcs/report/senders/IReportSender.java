@@ -40,6 +40,15 @@ public interface IReportSender
 	 */
 	void printConfig();
 
+
+	/**
+	 * Check if this Sender is enabled for this specific server
+	 * 
+	 * @param serverName
+	 * @return
+	 */
+	public boolean isEnabledForServer(String serverName);
+
 	/**
 	 * Send the report to "whatever"
 	 * @param reportContent 

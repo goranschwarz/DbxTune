@@ -17,6 +17,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -29,6 +30,7 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -2161,6 +2163,76 @@ public class ResultSetTableModel
 	public boolean hasColumn(String colName)
 	{
 		return findColumn(colName) != -1;
+	}
+
+
+	/**
+	 * REMOVE This column from the TableModel 
+	 * @param colname    Name of the column (case Sensitive)
+	 * 
+	 * @return index of the column name we just removed. (starting at 0, -1 == column was NOT found)
+	 */
+	public int removeColumn(String colname)
+	{
+		return removeColumn(colname, false);
+	}
+
+	/**
+	 * REMOVE This column from the TableModel 
+	 * @param colname    Name of the column (case IN-Sensitive)
+	 * 
+	 * @return index of the column name we just removed. (starting at 0, -1 == column was NOT found)
+	 */
+	public int removeColumnNoCase(String colname)
+	{
+		return removeColumn(colname, true);
+	}
+
+	/**
+	 * REMOVE This column from the TableModel 
+	 * @param colname
+	 * @param noCase    The passed column name should be CASE-SENSITIVE or NO-CASE-SENSITIVE 
+	 * 
+	 * @return index of the column name we just removed. (starting at 0, -1 == column was NOT found)
+	 */
+	public int removeColumn(String colname, boolean noCase)
+	{
+		int colIndex = findColumn(colname);
+		if (colIndex == -1 && noCase)
+			colIndex = findColumnNoCase(colname);
+
+		if (colIndex == -1)
+			return -1;
+
+		// - Remove all the meta data fields for this column
+		// - Remove all column data for all rows
+		synchronized (this)
+		{
+			// Remove all MetaData
+			_rsmdRefTableName     .remove(colIndex);
+			_rsmdColumnName       .remove(colIndex);
+			_rsmdColumnLabel      .remove(colIndex);
+			_rsmdColumnType       .remove(colIndex);
+			_rsmdColumnTypeStr    .remove(colIndex);
+			_rsmdColumnTypeName   .remove(colIndex);
+			_rsmdColumnTypeNameStr.remove(colIndex);
+			_rsmdColumnClassName  .remove(colIndex);
+			_displaySize          .remove(colIndex);
+			
+			_classType = ArrayUtils.remove(_classType, colIndex);
+
+
+			// For every row remove the column
+			for (ArrayList<Object> row : _rows)
+			{
+				row.remove(colIndex);
+			}
+
+			// Increment number of cols
+			_numcols--;
+		}
+		
+		return colIndex;
 	}
 
 	/**

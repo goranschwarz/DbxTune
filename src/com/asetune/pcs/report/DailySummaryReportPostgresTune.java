@@ -20,6 +20,10 @@
  ******************************************************************************/
 package com.asetune.pcs.report;
 
+import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
+import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
+import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.asetune.pcs.report.content.postgres.PostgresDbSize;
 import com.asetune.pcs.report.content.postgres.PostgresTopSql;
 
 public class DailySummaryReportPostgresTune 
@@ -31,6 +35,15 @@ extends DailySummaryReportDefault
 		// Add the Alarms Active/History
 		super.addReportEntries();
 
+		// CPU
+		addReportEntry( new OsCpuUsageOverview(this)   );
+
+		// SQL
 		addReportEntry( new PostgresTopSql(this) );
+
+		// Disk IO Activity
+		addReportEntry( new OsSpaceUsageOverview(this) );
+		addReportEntry( new PostgresDbSize(this)       );  // DB SIZE and or growth
+		addReportEntry( new OsIoStatSlowIo(this)       );
 	}
 }

@@ -265,6 +265,23 @@ extends CountersModel
 				+ "from sys." + dm_db_index_operational_stats + "(DEFAULT, DEFAULT, DEFAULT, DEFAULT) \n"
 				+ "where object_id > 100";
 
+		// NOTE: object_name() function is not the best in SQL-Server it may block...
+		//       so the below might be helpfull
+//		SELECT DB_NAME() AS DB_NAME, 
+//			obj.name AS table_name,
+//			ind.name AS index_name, 
+//			ind.type_desc,
+//			leaf_allocation_count + nonleaf_allocation_count AS splits,
+//			range_scan_count, 
+//			singleton_lookup_count,
+//			leaf_insert_count + nonleaf_insert_count AS inserts,
+//			leaf_update_count + nonleaf_update_count AS updates,
+//			leaf_delete_count + nonleaf_delete_count AS deletes
+//		FROM sys.dm_db_index_operational_stats(DB_ID(),null,null,null) as os
+//		INNER JOIN sys.indexes as ind     ON ind.object_id = os.object_id AND ind.index_id = os.index_id
+//		INNER JOIN sys.objects as obj     ON obj.object_id = os.object_id
+//		WHERE obj.Type NOT LIKE 'S'
+		
 		return sql;
 	}
 

@@ -427,12 +427,12 @@ extends CentralPersistWriterBase
 					}
 				}
 
-//				// DATABASE_EVENT_LISTENER mode
+				// DATABASE_EVENT_LISTENER mode
 //				if ( ! urlMap.containsKey("DATABASE_EVENT_LISTENER") )
 //				{
 //					change = true;
 //					_logger.info("H2 URL add option: DATABASE_EVENT_LISTENER="+H2DatabaseEventListener.class.getName());
-//					urlMap.put("DATABASE_EVENT_LISTENER",  H2DatabaseEventListener.class.getName());
+//					urlMap.put("DATABASE_EVENT_LISTENER",  "'" + H2DatabaseEventListener.class.getName() + "'");
 //				}
 
 				// DB_CLOSE_ON_EXIT = if we have our of SHUTDOWN hook thats closing H2
@@ -467,13 +467,16 @@ extends CentralPersistWriterBase
 			connProp.setUrl(localJdbcUrl);
 			connProp.setAppName(Version.getAppName()+"-pcsWriter");
 			connProp.setAppVersion(Version.getVersionStr());
+
 			// Now Connect
+			long connectStartTime = System.currentTimeMillis();
 			_mainConn = DbxConnection.connect(null, connProp);
+			String connectTimeStr = TimeUtils.msDiffNowToTimeStr(connectStartTime);
 
 			// Remember the last used URL (in case of H2 spill over database), the _mainConn is null at that time, so we cant use _mainConn.getConnProp().getUrl()
 			_lastUsedUrl = localJdbcUrl;
 			
-			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened, using driver '"+_jdbcDriver+"'.");
+			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened. connectTime='"+connectTimeStr+"', using driver '"+_jdbcDriver+"'.");
 			_logger.debug("The connection has property auto-commit set to '"+_mainConn.getAutoCommit()+"'.");
 
 			// Write info about what JDBC driver we connects via.
@@ -2355,25 +2358,25 @@ extends CentralPersistWriterBase
 				{
 					sbSql.append(getTableInsertStr(conn, schemaName, Table.ALARM_ACTIVE, null, false));
 					sbSql.append(" values(");
-					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated() ));
-					sbSql.append(", ").append(safeStr( ae.getServiceType() ));
-					sbSql.append(", ").append(safeStr( ae.getServiceName() ));
-					sbSql.append(", ").append(safeStr( ae.getServiceInfo() ));
-					sbSql.append(", ").append(safeStr( ae.getExtraInfo() ));
-					sbSql.append(", ").append(safeStr( ae.getCategory() ));
-					sbSql.append(", ").append(safeStr( ae.getSeverity() ));
-					sbSql.append(", ").append(safeStr( ae.getState() ));
-					sbSql.append(", ").append(safeStr( ae.getRepeatCnt() ));
-					sbSql.append(", ").append(safeStr( ae.getDuration() ));
-					sbSql.append(", ").append(safeStr( ae.getCreationTime() ));
-					sbSql.append(", ").append(safeStr( ae.getCancelTime() ));
-					sbSql.append(", ").append(safeStr( ae.getTimeToLive() ));
-					sbSql.append(", ").append(safeStr( ae.getThreshold() ));
-					sbSql.append(", ").append(safeStr( ae.getData()        , 160 ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseData() , 160 ));
-					sbSql.append(", ").append(safeStr( ae.getDescription() ));
-					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription() ));
-					sbSql.append(", ").append(safeStr( ae.getExtendedDescription() ));
+					sbSql.append("  ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));
+					sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));
+					sbSql.append(", ").append(safeStr( ae.getServiceName()          , 30  ));
+					sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));
+					sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));
+					sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));
+					sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  ));
+					sbSql.append(", ").append(safeStr( ae.getState()                , 10  ));
+					sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));
+					sbSql.append(", ").append(safeStr( ae.getDuration()             , 10  ));
+					sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));
+					sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));
+					sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));
+					sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));
+					sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));
+					sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));
+					sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));
+					sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));
+					sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));
 					sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));
 					sbSql.append(")");
 
@@ -2472,25 +2475,25 @@ extends CentralPersistWriterBase
 						sbSql.append(", ").append(safeStr( aew.getEventTime() ));
 						sbSql.append(", ").append(safeStr( aew.getAction() ));
 
-						sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() ));
-						sbSql.append(", ").append(safeStr( ae.getServiceType() ));
-						sbSql.append(", ").append(safeStr( ae.getServiceName() ));
-						sbSql.append(", ").append(safeStr( ae.getServiceInfo() ));
-						sbSql.append(", ").append(safeStr( ae.getExtraInfo() ));
-						sbSql.append(", ").append(safeStr( ae.getCategory() ));
-						sbSql.append(", ").append(safeStr( ae.getSeverity() ));
-						sbSql.append(", ").append(safeStr( ae.getState() ));
-						sbSql.append(", ").append(safeStr( ae.getRepeatCnt() ));
-						sbSql.append(", ").append(safeStr( ae.getDuration() ));
-						sbSql.append(", ").append(safeStr( ae.getCreationTime() ));
-						sbSql.append(", ").append(safeStr( ae.getCancelTime() ));
-						sbSql.append(", ").append(safeStr( ae.getTimeToLive() ));
-						sbSql.append(", ").append(safeStr( ae.getThreshold() ));
-						sbSql.append(", ").append(safeStr( ae.getData()        , 160 ));
-						sbSql.append(", ").append(safeStr( ae.getReRaiseData() , 160 ));
-						sbSql.append(", ").append(safeStr( ae.getDescription() ));
-						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription() ));
-						sbSql.append(", ").append(safeStr( ae.getExtendedDescription() ));
+						sbSql.append(", ").append(safeStr( ae.getAlarmClassAbriviated() , 80  ));
+						sbSql.append(", ").append(safeStr( ae.getServiceType()          , 80  ));
+						sbSql.append(", ").append(safeStr( ae.getServiceName()          , 30  ));
+						sbSql.append(", ").append(safeStr( ae.getServiceInfo()          , 80  ));
+						sbSql.append(", ").append(safeStr( ae.getExtraInfo()            , 80  ));
+						sbSql.append(", ").append(safeStr( ae.getCategory()             , 20  ));
+						sbSql.append(", ").append(safeStr( ae.getSeverity()             , 10  ));
+						sbSql.append(", ").append(safeStr( ae.getState()                , 10  ));
+						sbSql.append(", ").append(safeStr( ae.getRepeatCnt()                  ));
+						sbSql.append(", ").append(safeStr( ae.getDuration()             , 10  ));
+						sbSql.append(", ").append(safeStr( ae.getCreationTime()               ));
+						sbSql.append(", ").append(safeStr( ae.getCancelTime()                 ));
+						sbSql.append(", ").append(safeStr( ae.getTimeToLive()                 ));
+						sbSql.append(", ").append(safeStr( ae.getThreshold()            , 15  ));
+						sbSql.append(", ").append(safeStr( ae.getData()                 , 160 ));
+						sbSql.append(", ").append(safeStr( ae.getReRaiseData()          , 160 ));
+						sbSql.append(", ").append(safeStr( ae.getDescription()          , 512 ));
+						sbSql.append(", ").append(safeStr( ae.getReRaiseDescription()   , 512 ));
+						sbSql.append(", ").append(safeStr( ae.getExtendedDescription()        ));
 						sbSql.append(", ").append(safeStr( ae.getReRaiseExtendedDescription() ));
 						sbSql.append(")");
 

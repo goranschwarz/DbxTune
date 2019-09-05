@@ -22,6 +22,8 @@ package com.asetune.pcs.report;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -39,6 +41,7 @@ import org.apache.log4j.Logger;
 import com.asetune.Version;
 import com.asetune.pcs.PersistentCounterHandler;
 import com.asetune.pcs.report.content.DailySummaryReportContent;
+import com.asetune.pcs.report.content.RecordingInfo;
 import com.asetune.pcs.report.senders.IReportSender;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
@@ -229,25 +232,33 @@ implements IDailySummaryReport
 // THE BELOW is not used for the moment... uncomment and test it
 // OR: do "select * from CmXXXX_diff where 1=2" to get all column names... and then check if desired column names are available
 //--------------------------------------------------------------------
-	private boolean _initialized     = false;
-	private String _versionString    = "";
-	private String _recAppName       = "";
-	private String _recBuildString   = "";
-	private String _recVersionString = "";
-	private long   _srvVersionNum    = -1;
+	private boolean _initialized      = false;
+	private String _recAppName        = "";
+	private String _recBuildString    = "";
+	private String _recVersionString  = "";
+	private String _dbmsVersionString = "";
+	private long   _dbmsVersionNum    = -1;
+	private String _dbmsServerName    = "";
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors */
-	public String getSrvVersionStr()
+	public String getDbmsVersionStr()
 	{
 		initialize();
-		return _versionString;
+		return _dbmsVersionString;
 	}
 
 	/** Get the DBMS Version string stored by any of the DbxTune collectors, and then parse it into a number */
-	public long getSrvVersionNum()
+	public long getDbmsVersionNum()
 	{
 		initialize();
-		return _srvVersionNum;
+		return _dbmsVersionNum;
+	}
+
+	/** Get the DBMS Server/instance name stored by any of the DbxTune collectors */
+	public String getDbmsServerName()
+	{
+		initialize();
+		return _dbmsServerName;
 	}
 
 
@@ -309,26 +320,27 @@ implements IDailySummaryReport
 		{
 			appName = Version.getAppName();
 		}
-		
 
-		String colName = "srvVersion";
+		String dbmsVersionColName = "srvVersion";
+		String dbmsSrvNameColName = "serverName";
 		String tabName = "CmSummary_abs";
 
 		// What table/column is the "server version" stored in
-		if      ("AseTune"      .equalsIgnoreCase(appName)) { colName = "srvVersion";  tabName = "CmSummary_abs"; }
-		else if ("IqTune"       .equalsIgnoreCase(appName)) { colName = "atAtVersion"; tabName = "CmSummary_abs"; }
-		else if ("RsTune"       .equalsIgnoreCase(appName)) { colName = "rsVersion";   tabName = "CmSummary_abs"; }
-		else if ("RaxTune"      .equalsIgnoreCase(appName)) { colName = "NOT_STORED";  tabName = "CmSummary_abs"; }
-		else if ("SqlServerTune".equalsIgnoreCase(appName)) { colName = "srvVersion";  tabName = "CmSummary_abs"; }
-		else if ("PostgresTune" .equalsIgnoreCase(appName)) { colName = "version";     tabName = "CmSummary_abs"; }
-		else if ("MySqlTune"    .equalsIgnoreCase(appName)) { colName = "version";     tabName = "CmSummary_abs"; }
-		else if ("OracleTune"   .equalsIgnoreCase(appName)) { colName = "VERSION";     tabName = "CmSummary_abs"; }
-		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { colName = "VERSION";     tabName = "CmSummary_abs"; }
-		else if ("HanaTune"     .equalsIgnoreCase(appName)) { colName = "VERSION";     tabName = "CmSummary_abs"; }
+		if      ("AseTune"      .equalsIgnoreCase(appName)) { dbmsVersionColName = "srvVersion";  dbmsSrvNameColName = "atAtServerName"; tabName = "CmSummary_abs"; }
+		else if ("IqTune"       .equalsIgnoreCase(appName)) { dbmsVersionColName = "atAtVersion"; dbmsSrvNameColName = "atAtServerName"; tabName = "CmSummary_abs"; }
+		else if ("RsTune"       .equalsIgnoreCase(appName)) { dbmsVersionColName = "rsVersion";   dbmsSrvNameColName = "serverName";     tabName = "CmSummary_abs"; }
+		else if ("RaxTune"      .equalsIgnoreCase(appName)) { dbmsVersionColName = "NOT_STORED";  dbmsSrvNameColName = "atAtServerName"; tabName = "CmSummary_abs"; }
+		else if ("SqlServerTune".equalsIgnoreCase(appName)) { dbmsVersionColName = "srvVersion";  dbmsSrvNameColName = "atAtServerName"; tabName = "CmSummary_abs"; }
+		else if ("PostgresTune" .equalsIgnoreCase(appName)) { dbmsVersionColName = "version";     dbmsSrvNameColName = "instance_name";  tabName = "CmSummary_abs"; }
+		else if ("MySqlTune"    .equalsIgnoreCase(appName)) { dbmsVersionColName = "version";     dbmsSrvNameColName = "host";           tabName = "CmSummary_abs"; }
+		else if ("OracleTune"   .equalsIgnoreCase(appName)) { dbmsVersionColName = "VERSION";     dbmsSrvNameColName = "INSTANCE_NAME";  tabName = "CmSummary_abs"; }
+		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { dbmsVersionColName = "VERSION";     dbmsSrvNameColName = "DATABASE_NAME";  tabName = "CmSummary_abs"; }
+		else if ("HanaTune"     .equalsIgnoreCase(appName)) { dbmsVersionColName = "VERSION";     dbmsSrvNameColName = "DATABASE_NAME";  tabName = "CmSummary_abs"; }
 		
 		// Construct SQL and get the version string
-		String sql = "select max([" + colName + "]) from [" + tabName + "]";
-		String versionString = "";
+		String sql = "select max([" + dbmsVersionColName + "]), max([" + dbmsSrvNameColName + "]) from [" + tabName + "]";
+		String dbmsVersionString = "";
+		String dbmsSrvName       = "";
 		
 		sql = conn.quotifySqlString(sql);
 		try ( Statement stmnt = conn.createStatement() )
@@ -339,7 +351,8 @@ implements IDailySummaryReport
 			{
 				while(rs.next())
 				{
-					versionString = rs.getString(1);
+					dbmsVersionString = rs.getString(1);
+					dbmsSrvName       = rs.getString(2);
 				}
 			}
 		}
@@ -352,22 +365,88 @@ implements IDailySummaryReport
 		// Parse the Version String into a number
 		long ver = 0; 
 
-		if      ("AseTune"      .equalsIgnoreCase(appName)) { ver = Ver.sybVersionStringToNumber      (versionString); }
-		else if ("IqTune"       .equalsIgnoreCase(appName)) { ver = Ver.iqVersionStringToNumber       (versionString); }
-		else if ("RsTune"       .equalsIgnoreCase(appName)) { ver = Ver.sybVersionStringToNumber      (versionString); }
-		else if ("RaxTune"      .equalsIgnoreCase(appName)) { ver = Ver.sybVersionStringToNumber      (versionString); }
-		else if ("SqlServerTune".equalsIgnoreCase(appName)) { ver = Ver.sqlServerVersionStringToNumber(versionString); }
-		else if ("PostgresTune" .equalsIgnoreCase(appName)) { ver = Ver.shortVersionStringToNumber(VersionShort.parse(versionString)); }
-		else if ("MySqlTune"    .equalsIgnoreCase(appName)) { ver = Ver.shortVersionStringToNumber(VersionShort.parse(versionString)); }
-		else if ("OracleTune"   .equalsIgnoreCase(appName)) { ver = Ver.oracleVersionStringToNumber   (versionString); }
-		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { ver = Ver.db2VersionStringToNumber      (versionString); }
-		else if ("HanaTune"     .equalsIgnoreCase(appName)) { ver = Ver.hanaVersionStringToNumber     (versionString); }
+		if      ("AseTune"      .equalsIgnoreCase(appName)) { ver = Ver.sybVersionStringToNumber      (dbmsVersionString); }
+		else if ("IqTune"       .equalsIgnoreCase(appName)) { ver = Ver.iqVersionStringToNumber       (dbmsVersionString); }
+		else if ("RsTune"       .equalsIgnoreCase(appName)) { ver = Ver.sybVersionStringToNumber      (dbmsVersionString); }
+		else if ("RaxTune"      .equalsIgnoreCase(appName)) { ver = Ver.sybVersionStringToNumber      (dbmsVersionString); }
+		else if ("SqlServerTune".equalsIgnoreCase(appName)) { ver = Ver.sqlServerVersionStringToNumber(dbmsVersionString); }
+		else if ("PostgresTune" .equalsIgnoreCase(appName)) { ver = Ver.shortVersionStringToNumber(VersionShort.parse(dbmsVersionString)); }
+		else if ("MySqlTune"    .equalsIgnoreCase(appName)) { ver = Ver.shortVersionStringToNumber(VersionShort.parse(dbmsVersionString)); }
+		else if ("OracleTune"   .equalsIgnoreCase(appName)) { ver = Ver.oracleVersionStringToNumber   (dbmsVersionString); }
+		else if ("Db2Tune"      .equalsIgnoreCase(appName)) { ver = Ver.db2VersionStringToNumber      (dbmsVersionString); }
+		else if ("HanaTune"     .equalsIgnoreCase(appName)) { ver = Ver.hanaVersionStringToNumber     (dbmsVersionString); }
 
-		_recAppName    = appName;
-		_versionString = versionString;
-		_srvVersionNum = ver;
+		_recAppName        = appName;
+		_dbmsVersionString = dbmsVersionString;
+		_dbmsServerName    = dbmsSrvName;
+		_dbmsVersionNum    = ver;
 	}
 
+
+	public String getDbxCentralBaseUrl()
+	{
+		// initialize with default parameters, which may change below...
+		String dbxCentralProt = "http";
+		String dbxCentralHost = StringUtil.getHostnameWithDomain();
+		int    dbxCentralPort = 8080;
+
+		// get where DBX CENTRAL is located.
+		String sendToDbxCentralUrl = Configuration.getCombinedConfiguration().getProperty("PersistWriterToHttpJson.url", null);
+		if (StringUtil.hasValue(sendToDbxCentralUrl))
+		{
+			// Parse the URL and get protocol/host/port
+			try
+			{
+				URL url = new URL(sendToDbxCentralUrl);
+				
+				dbxCentralProt = url.getProtocol();
+				dbxCentralHost = url.getHost();
+				dbxCentralPort = url.getPort();
+			}
+			catch (MalformedURLException ex)
+			{
+				_logger.info("Daily Report: Problems parsing DbxCentral URL '" + sendToDbxCentralUrl + "', using defaults. Caught:" + ex);
+			}
+		}
+		
+		// Collector and DBX Central is located on the same host
+		// if 'localhost' or '127.0.0.1' then get REAL localhost name
+		if (dbxCentralHost.equalsIgnoreCase("localhost") || dbxCentralHost.equalsIgnoreCase("127.0.0.1"))
+		{
+			dbxCentralHost = StringUtil.getHostnameWithDomain();
+		}
+
+		// Compose URL's
+		String dbxCentralBaseUrl = dbxCentralProt + "://" + dbxCentralHost + ( dbxCentralPort == -1 ? "" : ":"+dbxCentralPort);
+
+		// Return a Text with links
+		return dbxCentralBaseUrl;
+	}
+
+	public String createDbxCentralLink()
+	{
+		String dbxCentralBaseUrl = getDbxCentralBaseUrl();
+		String dbxCentralUrlLast = dbxCentralBaseUrl + "/report?op=viewLatest&name="+getServerName();
+		String dbxCentralUrlAll  = dbxCentralBaseUrl + "/overview#reportfiles";
+
+		// Return a Text with links
+		return
+			"If you have problems to read this as a mail; Here is a <a href='" + dbxCentralUrlLast + "'>Link</a> to latest HTML Report stored in DbxCentral.<br>\n" +
+			"Or a <a href='" + dbxCentralUrlAll  + "'>link</a> to <b>all</b> Daily Reports.<br>\n" +
+			"";
+	}
+
+	public RecordingInfo getInstanceRecordingInfo()
+	{
+		if (this instanceof DailySummaryReportDefault)
+		{
+			DailySummaryReportDefault defaultInstance = (DailySummaryReportDefault) this;
+
+			return (RecordingInfo) defaultInstance.getReportEntry(RecordingInfo.class);
+			
+		}
+		return null;
+	}
 
 	@Override
 	public abstract void create();

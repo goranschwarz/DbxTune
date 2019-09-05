@@ -47,6 +47,7 @@ extends ReportEntryAbstract
 	private Exception _problem   = null;
 
 	private String _dbmsVersionString;
+	private String _dbmsServerName;
 	
 	private String _reportVersion    = Version.getAppName() + ", Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
 	private String _recordingVersion = null;
@@ -56,6 +57,12 @@ extends ReportEntryAbstract
 		super(reportingInstance);
 	}
 
+	public String getStartTime()           { return _startTime; } 
+	public String getEndTime()             { return _endTime; } 
+	public String getDuration()            { return _duration; } 
+	public String getDbmsVersionString()   { return _dbmsVersionString; } 
+	public String getDbmsServerName()      { return _dbmsServerName; } 
+	
 	@Override
 	public String getMsgAsText()
 	{
@@ -70,6 +77,7 @@ extends ReportEntryAbstract
 			sb.append("  Start:               " + _startTime + "\n");
 			sb.append("  End:                 " + _endTime   + "\n");
 			sb.append("  Duration:            " + _duration  + "\n");
+			sb.append("  DBMS Server Name:    " + _dbmsServerName     + "\n");
 			sb.append("  DBMS Version String: " + _dbmsVersionString  + "\n");
 		}
 
@@ -98,6 +106,7 @@ extends ReportEntryAbstract
 			sb.append("  <li><b>Recording End  Date:        </b>" + _endTime            + "</li>\n");
 			sb.append("  <li><b>Recording Duration:         </b>" + _duration           + "</li>\n");
 			sb.append("<br>\n");
+			sb.append("  <li><b>DBMS Server Name:           </b>" + _dbmsServerName     + "</li>\n");
 			sb.append("  <li><b>DBMS Version String:        </b>" + _dbmsVersionString  + "</li>\n");
 			sb.append("</ul>\n");
 		}
@@ -128,7 +137,8 @@ extends ReportEntryAbstract
 		if (hasReportingInstance())
 		{
 			DailySummaryReportAbstract dsr = getReportingInstance();
-			_dbmsVersionString = dsr.getSrvVersionStr();
+			_dbmsVersionString = dsr.getDbmsVersionStr();
+			_dbmsServerName    = dsr.getDbmsServerName();
 			_recordingVersion = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
 		}
 		
