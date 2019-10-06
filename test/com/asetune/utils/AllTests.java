@@ -28,6 +28,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({ 
 	StringUtilTest.class, 
 	JsonUtilsTest.class, 
+	OpenSslAesUtilTest.class, 
 	VersionShortTest.class, 
 	VerTest.class 
 })

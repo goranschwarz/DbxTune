@@ -55,35 +55,7 @@ public class AseErrorInfo extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_messages.size() > 0)
-		{
-			sb.append("Messages: \n");
-			for (String msg : _messages)
-				sb.append("  * ").append(msg).append(" \n");
-		}
-
-		if (_shortRstm.getRowCount() == 0)
-		{
-			sb.append("No Error Information \n");
-		}
-		else
-		{
-			sb.append("Error Information Count: ").append(_shortRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -124,11 +96,6 @@ public class AseErrorInfo extends AseAbstract
 				sb.append(msOutlookAlternateText("Error Text", showHideDiv));
 			}
 		}
-
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
 
 		return sb.toString();
 	}
@@ -173,9 +140,9 @@ public class AseErrorInfo extends AseAbstract
 	}
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		Set<String> skipErrorNumbers = StringUtil.parseCommaStrToSet( conf.getProperty("AseErrorInfo.skip.errors", "") );
+		Set<String> skipErrorNumbers = StringUtil.parseCommaStrToSet( localConf.getProperty("AseErrorInfo.skip.errors", "") );
 		
 		String skipErrorsWhereClause = "";
 		if ( ! skipErrorNumbers.isEmpty() )
@@ -187,7 +154,7 @@ public class AseErrorInfo extends AseAbstract
 			_logger.info("Skipping error numbers " + skipErrorNumbers + " for server '" + srvName + "'.");
 		}
 
-		int skipErrorCountAbove = conf.getIntProperty("AseErrorInfo.skip.ErrorCountAbove", 2000);
+		int skipErrorCountAbove = localConf.getIntProperty("AseErrorInfo.skip.ErrorCountAbove", 2000);
 		_messages.add("Skipping SQL Errors: SQL Text, if 'ErrorCount' is above " + skipErrorCountAbove + ". This can be changed with property 'AseErrorInfo.skip.ErrorCountAbove = ####'");
 		
 		String sql = "-- source table: MonSqlCapStatements \n"

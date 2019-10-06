@@ -45,34 +45,7 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_shortRstm.getRowCount() == 0)
-		{
-			sb.append("No rows found \n");
-		}
-		else
-		{
-			sb.append(getSubject() + " Count: ").append(_shortRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-
-			if (_ssqlRstm != null)
-			{
-				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("\n");
-				sb.append(_ssqlRstm.toAsciiTablesVerticalString());
-			}
-		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -95,11 +68,6 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 				sb.append(_ssqlRstm.toHtmlTableString("sortable"));
 			}
 		}
-
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
 
 		return sb.toString();
 	}
@@ -179,9 +147,9 @@ public class AseTopCmStmntCacheDetails extends AseAbstract
 //}
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 
 		String dummySql = "select * from [CmStmntCacheDetails_diff] where 1 = 2"; // just to get Column names
 		ResultSetTableModel dummyRstm = executeQuery(conn, dummySql, true, "metadata");

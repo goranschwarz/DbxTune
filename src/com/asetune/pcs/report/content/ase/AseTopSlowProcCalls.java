@@ -45,34 +45,7 @@ public class AseTopSlowProcCalls extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_shortRstm.getRowCount() == 0)
-		{
-			sb.append("No rows found \n");
-		}
-		else
-		{
-			sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-
-			if (_ssqlRstm != null)
-			{
-				sb.append("Statement Cache Entries Count: ").append(_ssqlRstm.getRowCount()).append("\n");
-				sb.append(_ssqlRstm.toAsciiTablesVerticalString());
-			}
-		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -96,11 +69,6 @@ public class AseTopSlowProcCalls extends AseAbstract
 			}
 		}
 
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -118,12 +86,12 @@ public class AseTopSlowProcCalls extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		// Set: _statement_gt_* variables
 		getSlowQueryThresholds(conn);
 		
-		createTopSlowSqlProcedureCalls(conn, srvName, conf);
+		createTopSlowSqlProcedureCalls(conn, srvName, pcsSavedConf, localConf);
 	}
 
 	/**
@@ -177,9 +145,9 @@ public class AseTopSlowProcCalls extends AseAbstract
 		rstm.setColumnDescription("LogicalReadsPerRowsAffected", "How Many LogicalReads per RowsAffected did this Statement do during the report period (Algorithm: sumLogicalReads/sumRowsAffected)");
 	}
 
-	private void createTopSlowSqlProcedureCalls(DbxConnection conn, String srvName, Configuration conf)
+	private void createTopSlowSqlProcedureCalls(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows          = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows          = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingSumCpuTime = 1000; // 1 second
 		
 			String sql = "-- source table: MonSqlCapStatements \n"

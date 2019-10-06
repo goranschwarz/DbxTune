@@ -21,8 +21,6 @@
  ******************************************************************************/
 package com.asetune.pcs.report.content.ase;
 
-import org.jfree.chart.JFreeChart;
-
 import com.asetune.pcs.report.DailySummaryReportAbstract;
 import com.asetune.pcs.report.content.ReportChartObject;
 import com.asetune.sql.conn.DbxConnection;
@@ -38,13 +36,7 @@ public class AseCpuUsageOverview extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		return "Text Report is not implemented";
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -61,11 +53,6 @@ public class AseCpuUsageOverview extends AseAbstract
 		                                                              + "So here you can see if you have specififc Engines scheduling work."));
 		sb.append(_CmSysLoad_EngineRunQLengthGraph.getHtmlContent(null, "The above graph shows how many task(s) that are in the Schedulers Execution Queue for each ASE Engine.<br>\n"
 		                                                              + "Values above 1 shows that we have to many user tasks waiting to be served/executed and potentially that we are at 100% or a high CPU Usage."));
-
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
 
 		return sb.toString();
 	}
@@ -84,7 +71,7 @@ public class AseCpuUsageOverview extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph            = createChart(conn, "CmSummary", "aaCpuGraph",            maxValue, null, "CPU Summary for all Engines (using @@cpu_busy, @@cpu_io) (Summary)");

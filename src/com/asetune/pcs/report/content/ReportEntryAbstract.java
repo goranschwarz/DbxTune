@@ -125,6 +125,38 @@ implements IReportEntry
 		}
 	}
 	
+	@Override
+	public String getEndOfReportText()
+	{
+		return "\n<br>\n";
+		
+	}
+
+	@Override
+	public String getProblemText()
+	{
+		if ( ! hasProblem() )
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+		
+		Exception ex = getProblem();
+		sb.append("<pre>").append(ex).append("</pre> \n");
+		
+		if (isPrintStacktraceEnabled())
+		{
+			sb.append("<b>Stacktrace:</b><br> \n");
+			sb.append("<pre>").append( StringUtil.exceptionToString(ex)).append("</pre> \n");
+		}
+		
+		return sb.toString();
+	}
+	
+	public boolean isPrintStacktraceEnabled()
+	{
+		return true;
+	}
+
 	public void setProblem(Exception ex)
 	{
 		_problem = ex;
@@ -170,10 +202,22 @@ implements IReportEntry
 			String  divId       = "colDesc_" + StringUtil.stripAllNonAlphaNum(rstm.getName());
 			boolean showAtStart = false;
 
-			String htmlContent = "<ul> \n";
+			// as: UL - Unordered List
+//			String htmlContent = "<ul> \n";
+//			for (String colName : rstm.getColumnNames())
+//				htmlContent += "  <li><b>" + colName + "</b> - " + rstm.getColumnDescription(colName) + "</li> \n";
+//			htmlContent += "</ul> \n";
+
+			// as: HTML Table
+			String htmlContent = "<table> \n";
+			htmlContent += "<thead> \n";
+			htmlContent += "  <tr> <th nowrap>Column Name</th> <th nowrap>Description</th> </tr> \n";
+			htmlContent += "</thead> \n";
+			htmlContent += "<tbody> \n";
 			for (String colName : rstm.getColumnNames())
-				htmlContent += "  <li><b>" + colName + "</b> - " + rstm.getColumnDescription(colName) + "</li> \n";
-			htmlContent += "</ul> \n";
+				htmlContent += "  <tr> <td nowrap><b>" + colName + "</b></td>  <td nowrap>" + rstm.getColumnDescription(colName) + "</td> </tr> \n";
+			htmlContent += "</tbody> \n";
+			htmlContent += "</table> \n";
 
 			sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide Column(s) description...", htmlContent) );
 		}
@@ -331,6 +375,71 @@ implements IReportEntry
 		}
 	}
 
+	
+
+	/**
+	 * Get values from PCS table <code>MonSessionParams</code> where <code>ParamName</code> is equal to 'offline.sampleTime'
+	 * 
+	 * @param conn
+	 * @return
+	 */
+	public int getRecordingSampleTime(DbxConnection conn)
+	{
+		String val = getRecordingSessionParameter(conn, null, "offline.sampleTime");
+		
+		return StringUtil.parseInt(val, -1);
+	}
+	
+	/**
+	 * Get values from PCS table <code>MonSessionParams</code>
+	 * 
+	 * @param conn
+	 * @param type           can be null, then all "types" will be searched, but lat one found will be returned.
+	 * @param paramName      Name of the parameter (or content of column <code>ParamName</code>)
+	 * 
+	 * @return The value as a String, NULL if not found.
+	 */
+	public String getRecordingSessionParameter(DbxConnection conn, String type, String paramName)
+	{
+		String whereType = "";
+		if (StringUtil.hasValue(type))
+			whereType = "  and [Type] = '" + type + "' \n";
+		
+		String tabName = "MonSessionParams";
+		String sql = ""
+			    + "select [Type], [ParamName], [ParamValue] \n"
+			    + "from ["+tabName+"] \n"
+			    + "where [ParamName] = '" + paramName + "' \n"
+			    + whereType
+			    + "";
+
+		String paramValue = null;
+		
+		sql = conn.quotifySqlString(sql);
+		try ( Statement stmnt = conn.createStatement() )
+		{
+			// Unlimited execution time
+			stmnt.setQueryTimeout(0);
+			try ( ResultSet rs = stmnt.executeQuery(sql) )
+			{
+				while(rs.next())
+				{
+//					String type = rs.getString(1);
+//					String name = rs.getString(2);
+					String val  = rs.getString(3);
+
+					paramValue = val;
+				}
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.warn("Problems getting values from '"+tabName+"': " + ex);
+		}
+
+		return paramValue;
+	}
+	
 
 	public String getDbxCentralLinkWithDescForGraphs(boolean addSpaceBefore, String description, String... graphList)
 	{
@@ -368,7 +477,7 @@ implements IReportEntry
 				+ "&sessionName=" + srvName 
 				+ "&startTime="   + startTime 
 				+ "&endTime="     + endTime 
-				+ "&graphList="   + StringUtil.toCommaStr(graphList) 
+				+ "&graphList="   + StringUtil.toCommaStr(graphList, ",") // note: normal StringUtil.toCommaStr(graphList)... makes separator as ", " (with a space after the comma)
 				+ "";
 		
 		return dbxCentralLink;

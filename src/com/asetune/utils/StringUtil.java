@@ -526,7 +526,8 @@ public class StringUtil
 	 * @param str a comma separated list
 	 * @return a Set with Strings
 	 */
-	public static Set<String> parseCommaStrToSet(String str)
+//	public static Set<String> parseCommaStrToSet(String str)
+	public static LinkedHashSet<String> parseCommaStrToSet(String str)
 	{
 		return parseCommaStrToSet(str, true);
 	}
@@ -540,7 +541,8 @@ public class StringUtil
 	 * @param skipEmptyFields    Should empty fields be removed or added to the set
 	 * @return a Set with Strings
 	 */
-	public static Set<String> parseCommaStrToSet(String str, boolean skipEmptyFields)
+//	public static Set<String> parseCommaStrToSet(String str, boolean skipEmptyFields)
+	public static LinkedHashSet<String> parseCommaStrToSet(String str, boolean skipEmptyFields)
 	{
 		LinkedHashSet<String> set = new LinkedHashSet<String>();
 
@@ -2937,6 +2939,62 @@ public class StringUtil
 		return str;
 	}
 	
+	/**
+	 * Produce a 2 column HTML Table from a <code>Map</code> with NO column headers
+	 * 
+	 * @param map            Map with <b>COLUMN-NAME</b>  and COLUMN-VALUE
+	 * @return
+	 */
+	public static String toHtmlTable(Map<String, Object> map)
+	{
+		return toHtmlTable(map, (String[]) null);
+	}
+
+	/**
+	 * Produce a 2 column HTML Table from a <code>Map</code>
+	 * 
+	 * @param map            Map with <b>COLUMN-NAME</b>  and COLUMN-VALUE
+	 * @param colNames       If we want to have any column names
+	 * @return
+	 */
+	public static String toHtmlTable(Map<String, Object> map, String... colNames)
+	{
+		if (map == null)
+			return "";
+
+		StringBuilder sb = new StringBuilder();
+
+		// START tag
+		sb.append("<table> \n");
+
+		// THREAD
+		if (colNames != null && colNames.length > 0)
+		{
+			sb.append("<thead> \n");
+			sb.append("  <tr> \n");
+			for (String colName : colNames)
+				sb.append("    <th nowrap>").append( colName ).append("</th> \n");
+			sb.append("  </tr> \n");
+			sb.append("</thead> \n");
+		}
+
+		// TBODY
+		sb.append("<tbody> \n");
+		for (Entry<String, Object> entry : map.entrySet())
+		{
+			sb.append("  <tr> \n");
+			sb.append("    <td nowrap><b>").append( entry.getKey()   ).append("</b></td> \n");
+			sb.append("    <td nowrap>")   .append( entry.getValue() ).append("</td> \n");
+			sb.append("  </tr> \n");
+		}
+		sb.append("</tbody> \n");
+
+		// END tag
+		sb.append("</table> \n");
+		
+		return sb.toString();
+	}
+
 	
 	
 	

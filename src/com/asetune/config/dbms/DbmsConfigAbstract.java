@@ -22,11 +22,14 @@ package com.asetune.config.dbms;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.pcs.MonRecordingInfo;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 
 public abstract class DbmsConfigAbstract
@@ -39,6 +42,13 @@ implements IDbmsConfig
 	private static Logger _logger = Logger.getLogger(DbmsConfigAbstract.class);
 
 	private List<DbmsConfigIssue> _configIssueList = new ArrayList<>();
+
+	private String           _dbmsServerName = "";
+	private String           _dbmsVersionStr = "";
+	private MonRecordingInfo _offlineRecInfo;
+
+	private String           _lastUsedUrl    = "";
+	private ConnectionProp   _lastUsedConnProp;
 
 	//--------------------------------------------------------------------------------
 	// BEGIN: issues methods
@@ -112,6 +122,60 @@ implements IDbmsConfig
 	public String reverseEngineer(int[] modelRows)
 	{
 		return null;
+	}
+
+	@Override
+	public String reverseEngineer(Map<String, String> keyValMap, String comment)
+	{
+		return null;
+	}
+
+	@Override
+	public String getDbmsServerName()
+	{
+		return _dbmsServerName;
+	}
+	
+	@Override
+	public String getDbmsVersionStr()
+	{
+		return _dbmsVersionStr;
+	}
+	
+	@Override
+	public MonRecordingInfo getOfflineRecordingInfo()
+	{
+		return _offlineRecInfo;
+	}
+	
+	@Override 
+	public String getLastUsedUrl()
+	{
+		return _lastUsedUrl ; 
+	}
+
+	@Override 
+	public ConnectionProp getLastUsedConnProp()
+	{
+		return _lastUsedConnProp ; 
+	}
+
+	public void setDbmsServerName(String str) { _dbmsServerName = str; }
+	public void setDbmsVersionStr(String str) { _dbmsVersionStr = str; }
+	public void setOfflineRecordingInfo(MonRecordingInfo info) { _offlineRecInfo = info; }
+	
+	@Override public boolean isOfflineConfig()  { return _offlineRecInfo != null; }
+	@Override public boolean isOnlineConfig()   { return _offlineRecInfo == null; }
+
+	public void   setLastUsedUrl     (String url)        { _lastUsedUrl      = url; }
+	public void   setLastUsedConnProp(ConnectionProp cp) { _lastUsedConnProp = cp; }
+
+
+	@Override
+	public IDbmsConfigEntry getDbmsConfigEntry(String name)
+	{
+		Map<String, ? extends IDbmsConfigEntry> map = getDbmsConfigMap();
+		return map.get(name);
 	}
 
 	

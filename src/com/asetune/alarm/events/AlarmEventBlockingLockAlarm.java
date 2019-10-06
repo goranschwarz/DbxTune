@@ -28,6 +28,7 @@ extends AlarmEvent
 {
 	private static final long serialVersionUID = 1L;
 
+	/** used by CmSummary */
 	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, Number count)
 	{
 		super(
@@ -46,5 +47,26 @@ extends AlarmEvent
 
 		// Set the raw data carier: current cpu usage
 		setData(count);
+	}
+
+	/** used by CmActiveStatements */
+	public AlarmEventBlockingLockAlarm(CountersModel cm, Number threshold, Number blockingOthersMaxTimeInSec, String blockingOtherSpids, Number blockCount)
+	{
+		super(
+				Version.getAppName(), // serviceType
+				cm.getServerName(),   // serviceName
+				cm.getName(),         // serviceInfo
+				null,                 // extraInfo
+				AlarmEvent.Category.LOCK,
+				AlarmEvent.Severity.WARNING, 
+				AlarmEvent.ServiceState.AFFECTED, 
+				"Found Blocking locks in '" + cm.getServerName() + "'. BlockingOthersMaxTimeInSec=" + blockingOthersMaxTimeInSec + ", BlockingOtherSpids=" + blockingOtherSpids + ", BlockCount=" + blockCount + ". (thresholdInSec="+threshold+")",
+				threshold);
+
+		// Set: Time To Live if postpone is enabled
+		setTimeToLive(cm);
+
+		// Set the raw data carrier
+		setData(blockingOthersMaxTimeInSec);
 	}
 }

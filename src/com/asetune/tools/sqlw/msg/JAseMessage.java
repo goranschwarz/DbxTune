@@ -74,6 +74,35 @@ extends JTextArea
 
 	protected static Font _aseMsgFont = null;
 
+//	private static String fixNullTermination(String str)
+//	{
+//		if (str.length() == 0)
+//			return str;
+//		
+//		// Strange: String can be "ended" with the char=0 (which is end-of-string in C, which "fucks up" when putting the string into the clip board.)
+//		// So check if last char is 0, then get rid of it.
+//		char lastChar = str.charAt(str.length()-1);
+//		if (lastChar == 0)
+//			str = str.substring(0, str.length()-1);
+//		
+//		// maybe call this recursively (if we have many "null" terminators at the end.
+//		// But lets skip this for the moment.
+//		//str = fixNullTermination(str);
+//		
+//		return str;
+//	}
+	private static String fixNullTermination(String str)
+	{
+		if (str.length() == 0)
+			return str;
+		
+		// Strange: String can be "ended" with the char=0 (or have it anywhere in the string, which is end-of-string in C, which "fucks up" when putting the string into the clip board.)
+		// So get rid of any "null" terminators in the string.
+		str = str.replace("\0", "");
+		
+		return str;
+	}
+
 //	public JAseMessage()
 //	{
 //		_init();
@@ -81,7 +110,7 @@ extends JTextArea
 
 	public JAseMessage(final String aseMsg, String originSql)
 	{
-		super(aseMsg);
+		super(fixNullTermination(aseMsg));
 		_originSql   = originSql;
 		init();
 	}
@@ -100,7 +129,7 @@ extends JTextArea
 	{
 		this(aseMsg, msgNum, msgText, msgSeverity, scriptRow, scriptCol, originSql, null, sqlTextArea);
 	}
-
+	
 	/**
 	 * 
 	 * @param aseMsg       Text message to print in the GUI
@@ -115,9 +144,9 @@ extends JTextArea
 	 */
 	public JAseMessage(String aseMsg, int msgNum, String msgText, int msgSeverity, int scriptRow, int scriptCol, String originSql, String objectText, RTextArea sqlTextArea)
 	{
-		super(aseMsg);
+		super(fixNullTermination(aseMsg));
 		_msgNum      = msgNum;
-		_msgText     = msgText;
+		_msgText     = fixNullTermination(msgText);
 		_msgSeverity = msgSeverity;
 		_scriptRow   = scriptRow; // can be used to draw an red underline in the TextArea
 		_scriptCol   = scriptCol; // can be used to draw an red underline in the TextArea

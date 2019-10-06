@@ -23,8 +23,11 @@ package com.asetune.pcs.report;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
+import com.asetune.pcs.report.content.postgres.PostgresConfig;
 import com.asetune.pcs.report.content.postgres.PostgresDbSize;
 import com.asetune.pcs.report.content.postgres.PostgresTopSql;
+import com.asetune.pcs.report.content.postgres.PostgresTopTableAccess;
+import com.asetune.pcs.report.content.postgres.PostgresTopTableSize;
 
 public class DailySummaryReportPostgresTune 
 extends DailySummaryReportDefault
@@ -36,14 +39,17 @@ extends DailySummaryReportDefault
 		super.addReportEntries();
 
 		// CPU
-		addReportEntry( new OsCpuUsageOverview(this)   );
+		addReportEntry( new OsCpuUsageOverview    (this) );
 
 		// SQL
-		addReportEntry( new PostgresTopSql(this) );
+		addReportEntry( new PostgresTopSql        (this) );
+		addReportEntry( new PostgresTopTableAccess(this) );
 
 		// Disk IO Activity
-		addReportEntry( new OsSpaceUsageOverview(this) );
-		addReportEntry( new PostgresDbSize(this)       );  // DB SIZE and or growth
-		addReportEntry( new OsIoStatSlowIo(this)       );
+		addReportEntry( new OsSpaceUsageOverview  (this) );
+		addReportEntry( new PostgresConfig        (this) );
+		addReportEntry( new PostgresDbSize        (this) );  // DB SIZE and or growth
+		addReportEntry( new PostgresTopTableSize  (this) );
+		addReportEntry( new OsIoStatSlowIo        (this) );
 	}
 }

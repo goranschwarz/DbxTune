@@ -164,6 +164,9 @@ implements ActionListener
 
 		_object_txt.setText(_sqlText);
 
+		// Set caret at "top"
+		_object_txt.setCaretPosition(0);
+
 		panel.add(_object_scroll, "push, grow, wrap");
 
 		return panel;

@@ -14,6 +14,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.RsTune;
+import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.RepServerUtils;
@@ -98,6 +100,12 @@ extends DbmsConfigAbstract
 		" ) ";
 
 
+//	@Override
+//	public String getSqlForDiff(boolean isOffline)
+//	{
+//		return ""; // NOT YET SUPPORTED
+//	}
+		
 	/** hash table */
 	private HashMap<String,RsConfigEntry> _configMap  = null;
 	private ArrayList<RsConfigEntry>      _configList = null;
@@ -105,7 +113,14 @@ extends DbmsConfigAbstract
 	private ArrayList<String>              _configSectionList = null;
 
 	public class RsConfigEntry
+	implements IDbmsConfigEntry
 	{
+		@Override public String  getConfigKey()   { return configName; }
+		@Override public String  getConfigValue() { return configValue; }
+		@Override public String  getSectionName() { return sectionName; }
+		@Override public boolean isPending()      { return isPending; }
+		@Override public boolean isNonDefault()   { return isNonDefault; }
+		
 		/** configuration has been changed by any user */
 		public boolean isNonDefault;
 
@@ -163,6 +178,12 @@ extends DbmsConfigAbstract
 		super.reset();
 	}
 
+	@Override
+	public Map<String, ? extends IDbmsConfigEntry> getDbmsConfigMap()
+	{
+		return _configMap;
+	}
+
 	/** check if the Config is initialized or not */
 	@Override
 	public boolean isInitialized()
@@ -198,6 +219,13 @@ extends DbmsConfigAbstract
 		_configList        = new ArrayList<RsConfigEntry>();
 		_configSectionList = new ArrayList<String>();
 		
+		try { setDbmsServerName(conn.getDbmsServerName()); } catch (SQLException ex) { setDbmsServerName(ex.getMessage()); };
+		try { setDbmsVersionStr(conn.getDbmsVersionStr()); } catch (SQLException ex) { setDbmsVersionStr(ex.getMessage()); };
+
+		try { setLastUsedUrl( conn.getMetaData().getURL() ); } catch(SQLException ignore) { }
+		setLastUsedConnProp(conn.getConnPropOrDefault());
+
+
 		String sql = "";
 		try
 		{
@@ -403,6 +431,21 @@ extends DbmsConfigAbstract
 			}
 			else // OFFLINE GET CONFIG
 			{
+				// For OFFLINE mode: override some the values previously fetched the connection object, with values from the Recorded Database
+				MonRecordingInfo recordingInfo = new MonRecordingInfo(conn, null);
+				setOfflineRecordingInfo(recordingInfo);
+				setDbmsServerName(recordingInfo.getDbmsServerName());
+				setDbmsVersionStr(recordingInfo.getDbmsVersionStr());
+
+				// Check if this is correct TYPE
+				String expectedType = RsTune.APP_NAME;
+				String readType     = recordingInfo.getRecDbxAppName();
+				if ( ! expectedType.equals(readType) )
+				{
+					throw new WrongRecordingVendorContent(expectedType, readType);
+				}
+
+				
 				sql = GET_CONFIG_OFFLINE_SQL;
 
 				String tsStr = "";
@@ -446,7 +489,6 @@ extends DbmsConfigAbstract
 						_configSectionList.add(entry.sectionName);
 				}
 				rs.close();
-				
 			}
 		}
 		catch (SQLException ex)

@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.security.SecureRandom;
 
 // http://moi.vonos.net/java/symmetric-encryption-openssl-bc/
 
@@ -59,54 +61,97 @@ public class OpenSslAesUtil
 	public static class DecryptionException
 	extends Exception
 	{
+		private static final long serialVersionUID = 1L;
+
 		public DecryptionException(String message, Throwable cause)
 		{
 			super(message, cause);
 		}
 	}
-//	public static String encrypt(String key, String toEncrypt) throws Exception
-//	{
-//		Key skeySpec = generateKeySpec(key);
-//		Cipher cipher = Cipher.getInstance("AES");
-//		cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
-//		byte[] encrypted = cipher.doFinal(toEncrypt.getBytes());
-//		byte[] encryptedValue = Base64.encodeBase64(encrypted);
-//		return new String(encryptedValue);
-//	}
-	
-//	public static String encode(String passwd, String sourceString)
-//	{
-//		OpenSslAesUtil crypter = new OpenSslAesUtil(128);
-//
-//		byte[] ba = crypter.encipher(passwd.getBytes(), sourceString);
-//		return Base64.encodeBase64String(ba);
-//	}
-//
-//	private byte[] encipher(byte[] pwd, String sourceString)
-//	{
-//		// openssl non-standard extension: salt embedded at start of encrypted file
-////		byte[] salt = Arrays.copyOfRange(src, 8, 16); // 0..7 is "SALTED__", 8..15 is the salt
-//		byte[] salt = new byte[] {};
-//
-//		try
-//		{
-//			BlockCipherPadding padding = new PKCS7Padding();
-//			BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()), padding);
-//			
-//			CipherParameters params = getCipherParameters(pwd, salt);
-//			cipher.reset();
-//			cipher.init(false, params);
-//		}
-//		catch (Exception e) 
-//		{
-//			e.printStackTrace();
-//		}
-//		return null;
-//	}
+
+	/**
+	 * Encode a string<br>
+	 * using same method as os command:<br>
+	 * <code>echo "secretPasswordToEncrypt" | openssl enc -aes-128-cbc -a -salt -pass pass:sybase</code>
+	 * 
+	 * @param passwd
+	 * @param sourceStringToEncode
+	 * @return
+	 * @throws DecryptionException
+	 */
+	public static String encode(String passwd, String sourceStringToEncode)
+	throws DecryptionException
+	{
+		OpenSslAesUtil crypter = new OpenSslAesUtil(128);
+
+		byte[] ba = crypter.encipher(passwd.getBytes(), sourceStringToEncode);
+		return Base64.encodeBase64String(ba);
+	}
+
+	private byte[] encipher(byte[] pwd, String sourceString)
+	throws DecryptionException
+	{
+		// openssl non-standard extension: salt embedded at start of encrypted file
+		String saltedMagic = "Salted__";
+
+		final byte[] salt = (new SecureRandom()).generateSeed(8);
+
+
+		byte[] src = sourceString.getBytes();
+
+		try
+		{
+			BlockCipherPadding padding = new PKCS7Padding();
+			BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()), padding);
+			
+			CipherParameters params = getCipherParameters(pwd, salt);
+			cipher.reset();
+			cipher.init(true, params); // true == ENCRYPT
+
+			int buflen = cipher.getOutputSize(src.length);
+			byte[] workingBuffer = new byte[buflen];
+			int len = cipher.processBytes(src, 0, src.length, workingBuffer, 0);
+			len += cipher.doFinal(workingBuffer, len);
+
+			// Note that getOutputSize returns a number which includes space for "padding" bytes to be stored in.
+			// However we don't want these padding bytes; the "len" variable contains the length of the *real* data
+			// (which is always less than the return value of getOutputSize.
+			byte[] bytesEnc = new byte[len];
+			System.arraycopy(workingBuffer, 0, bytesEnc, 0, len);
+			
+			//return bytesDec;
+			
+			// compose the final output: Salted__########????????????????????????
+			//                           ^^^^^^^^                                  (length=8)
+			//                           Magic   ^^^^^^^^                          (length=8)
+			//                                   seed    ^^^^^^^^^^^^^^^^^^^^^^^^  (unknown-length)
+			//                                           encrypted data            
+			byte[] openSslOutArr = new byte[len + 16];
+			System.arraycopy(saltedMagic.getBytes(), 0, openSslOutArr, 0, 8);                // byte 0-8  are "Salted__"
+			System.arraycopy(salt,                   0, openSslOutArr, 8, 8);                // byte 8-16 are the generated seed number
+			System.arraycopy(bytesEnc,               0, openSslOutArr, 16, bytesEnc.length); // byte 16-? are the encrypted data
+
+			return openSslOutArr;
+		}
+		catch (Exception e) 
+		{
+			throw new DecryptionException("Decryption failed, Caught: " + e, e);
+		}
+	}
 
 
 	
-	
+
+	/**
+	 * Decode a String that has been encoded with os command openssl<br>
+	 * This is the same as doing the following os command:<br>
+	 * <code>echo 'U2FsdGVkX1+1dw6kuaMMFu4WkNLM1Cw09OYYWC5vRa4=' | openssl enc -aes-128-cbc -a -d -salt -pass pass:sybase</code>
+	 * 
+	 * @param passwd
+	 * @param base64Str
+	 * @return
+	 * @throws DecryptionException
+	 */
 	public static String decode(String passwd, String base64Str)
 	throws DecryptionException
 	{
@@ -131,7 +176,7 @@ public class OpenSslAesUtil
 
 			CipherParameters params = getCipherParameters(pwd, salt);
 			cipher.reset();
-			cipher.init(false, params);
+			cipher.init(false, params); // false == DECRYPT
 
 			int buflen = cipher.getOutputSize(src.length - 16);
 			byte[] workingBuffer = new byte[buflen];
@@ -197,9 +242,9 @@ public class OpenSslAesUtil
 	/**
 	 * Get encrypted password from file<br>
 	 * <br>
-	 * Do the folowing (on Linux) to genereate a password: <br>
+	 * Do the following (on Linux) to generate a password: <br>
 	 * <pre>
-	 * echo "abcdefg" | openssl enc -aes-128-cbc -a -salt -pass pass:12345
+	 * echo "secretPasswordToEncrypt" | openssl enc -aes-128-cbc -a -salt -pass pass:sybase
 	 * </pre>
 	 * File format
 	 * <pre>
@@ -324,6 +369,261 @@ public class OpenSslAesUtil
 		}
 	}
 
+	
+
+	//-------------------------------
+	// WRITE
+	//-------------------------------
+	public static void writePasswdToFile(String clearPassword, String user)
+	throws IOException, DecryptionException
+	{
+		writePasswdToFile(clearPassword, user, null, null, null);
+	}
+	
+	public static void writePasswdToFile(String clearPassword, String user, String serverName)
+	throws IOException, DecryptionException
+	{
+		writePasswdToFile(clearPassword, user, serverName, null, null);
+	}
+	
+	public static void writePasswdToFile(String clearPassword, String user, String serverName, String filename)
+	throws IOException, DecryptionException
+	{
+		writePasswdToFile(clearPassword, user, serverName, filename, null);
+	}
+
+	//-------------------------------
+	// REMOVE
+	//-------------------------------
+	public static boolean removePasswdFromFile(String user)
+	throws IOException, DecryptionException
+	{
+		return writePasswdToFile("not-used", user, null, null, null, true);
+	}
+	
+	public static boolean removePasswdFromFile(String user, String serverName)
+	throws IOException, DecryptionException
+	{
+		return writePasswdToFile("not-used", user, serverName, null, null, true);
+	}
+	
+	public static boolean removePasswdFromFile(String user, String serverName, String filename)
+	throws IOException, DecryptionException
+	{
+		return writePasswdToFile("not-used", user, serverName, filename, null, true);
+	}
+
+	/**
+	 * Write a password as an encrypted string to a file<br>
+	 * <br>
+	 * This will emulate openssl encryption (in java) <br>
+	 * <pre>
+	 * echo "secretPasswordToEncrypt" | openssl enc -aes-128-cbc -a -salt -pass pass:sybase
+	 * </pre>
+	 * File format
+	 * <pre>
+	 * username: encryptedPassword
+	 * username: [ASE_SRV_NAME:] encryptedPassword
+	 * </pre>
+	 * Example:
+	 * <pre>
+	 * sa: U2FsdGVkX1888FrszgUsxQLYHxO1jPxqxKQ2RXC0GyU=
+	 * sa: PROD_A_ASE: U2FsdGVkX1+99lkmyM9xujXxZYB3pp+QMHcrqeAigi8=
+	 * dbdump: U2FsdGVkX1/tdOQuoA2LGULOtTDrMbTXxeiW+nqjs88=
+	 * </pre>
+	 * 
+	 * @param clearPassword  the password you want to save in the file (it will be encrypted before writing it)
+	 * @param user           the username we want to write password for
+	 * @param serverName     the ASE Servername we want to write password for (can be null, then it will be a generic password for all files)
+	 * @param filename       The file holding the password (null = ~/.passwd.enc)
+	 * @param encPasswd      The passprase you used when generating the password (null = "sybase") 
+	 *
+	 * @throws IOException for example if the password file didn't exist or that we had problems writing to the file
+	 */
+	public static void writePasswdToFile(String clearPassword, String user, String serverName, String filename, String encPasswd)
+	throws IOException, DecryptionException
+	{
+		writePasswdToFile(clearPassword, user, serverName, filename, encPasswd, false);
+	}
+
+	/**
+	 * Write a password as an encrypted string to a file<br>
+	 * <br>
+	 * This will emulate openssl encryption (in java) <br>
+	 * <pre>
+	 * echo "secretPasswordToEncrypt" | openssl enc -aes-128-cbc -a -salt -pass pass:sybase
+	 * </pre>
+	 * File format
+	 * <pre>
+	 * username: encryptedPassword
+	 * username: [ASE_SRV_NAME:] encryptedPassword
+	 * </pre>
+	 * Example:
+	 * <pre>
+	 * sa: U2FsdGVkX1888FrszgUsxQLYHxO1jPxqxKQ2RXC0GyU=
+	 * sa: PROD_A_ASE: U2FsdGVkX1+99lkmyM9xujXxZYB3pp+QMHcrqeAigi8=
+	 * dbdump: U2FsdGVkX1/tdOQuoA2LGULOtTDrMbTXxeiW+nqjs88=
+	 * </pre>
+	 * 
+	 * @param clearPassword  the password you want to save in the file (it will be encrypted before writing it)
+	 * @param user           the username we want to write password for
+	 * @param serverName     the ASE Servername we want to write password for (can be null, then it will be a generic password for all files)
+	 * @param filename       The file holding the password (null = ~/.passwd.enc)
+	 * @param encPasswd      The passprase you used when generating the password (null = "sybase") 
+	 * @param remove         true if we want to delete the entry 
+	 *
+	 * @return (only used if remove is true) - true if the entry was found and removed, false if the entry wasn't found
+	 * @throws IOException for example if the password file didn't exist or that we had problems writing to the file
+	 */
+	private static boolean writePasswdToFile(String clearPassword, String user, String serverName, String filename, String encPasswd, boolean remove)
+	throws IOException, DecryptionException
+	{
+		// If no password was passed: use "sybase" or get from property
+		if (encPasswd == null)
+			encPasswd = Configuration.getCombinedConfiguration().getProperty("OpenSslAesUtil.readPasswdFromFile.encyption.password", "sybase");
+
+		// If no filename was passed: use "~/.passwd.enc" or get from property
+		if (filename == null)
+			filename = getPasswordFilename();
+
+//FIXME: This hasn't yet been tested
+		// Encrypt the clear password
+		String encrypedPassword = encode(encPasswd, clearPassword);
+		
+		// Read the file
+		File f = new File(filename);
+		if (f.exists())
+		{
+			String sep = ": ";
+
+			String fallbackEncPasswd = null;
+			String srvMatchEncPasswd = null;
+
+			int srvEntryFoundAtIndex      = -1;
+			int fallbackEntryFoundAtIndex = -1;
+
+			List<String> lines = Files.readAllLines(Paths.get(filename), Charset.forName("UTF-8"));
+			int lineNum = -1;
+			for (String line : lines)
+			{
+				lineNum++;
+
+				String[] sa = line.split(":");
+				if (sa.length >= 2)
+				{
+					boolean srvEntry = false;
+					String fUser      = null;
+					String fServer    = null;
+					String fEncPasswd = null;
+					
+					if (sa.length == 2)
+					{
+						srvEntry   = false;
+						fUser      = sa[0].trim();
+						fServer    = null;
+						fEncPasswd = sa[1].trim();
+					}
+					else
+					{
+						srvEntry   = true;
+						fUser      = sa[0].trim();
+						fServer    = sa[1].trim();
+						fEncPasswd = sa[2].trim();
+					}
+					
+					if (user.equals(fUser))
+					{
+						if (srvEntry)
+						{
+							if (serverName != null && serverName.equals(fServer))
+							{
+								srvMatchEncPasswd    = fEncPasswd;
+								srvEntryFoundAtIndex = lineNum;
+							}
+						}
+						else
+						{
+							fallbackEncPasswd         = fEncPasswd;
+							fallbackEntryFoundAtIndex = lineNum;
+						}
+					}
+				}
+			}
+			
+			// Used if we are removing/deleting an entry
+			boolean removedEntry = false;
+			int entryFoundAtIndex = -1;
+
+			// If we have specified a serverName
+			if (serverName != null)
+			{
+				if (srvEntryFoundAtIndex != -1) 
+					entryFoundAtIndex = srvEntryFoundAtIndex;
+			}
+			else // this is a "fallback entry"... NO serverName has been passed
+			{
+				if (fallbackEntryFoundAtIndex != -1)
+					entryFoundAtIndex = fallbackEntryFoundAtIndex;
+			}
+
+			// Update current entry
+			if (entryFoundAtIndex != -1)
+			{
+				// password WITH server specification
+				// entry looking like |sa:PROD_A_ASE:encryptedPasswd|
+				// UPDATE/CHANGE the password
+				if (serverName != null)
+				{
+					if (remove)
+					{
+						lines.remove(entryFoundAtIndex);
+						removedEntry = true;
+					}
+					else
+					{
+						String newEntry = user + sep + serverName + sep + encrypedPassword;
+						lines.set(entryFoundAtIndex, newEntry);
+					}
+				}
+
+				// Generic password *without* server specification (use this as a FALLBACK)
+				// entry looking like |sa:encryptedPasswd|
+				// UPDATE/CHANGE the password
+				else
+				{
+					if (remove)
+					{
+						lines.remove(entryFoundAtIndex);
+						removedEntry = true;
+					}
+					else
+					{
+						String newEntry = user + sep + encrypedPassword;
+						lines.set(entryFoundAtIndex, newEntry);
+					}
+				}
+			}
+			else // The user/server was NOT FOUND at all in the file: simply add it.
+			{
+				// Short or Long entry...
+				String newEntry = user + sep + encrypedPassword;
+				if (serverName != null)
+					newEntry = user + sep + serverName + sep + encrypedPassword;
+				
+				lines.add(newEntry);
+			}
+
+			// Now write the file back again
+			Files.write(Paths.get(filename), lines, Charset.forName("UTF-8"), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+			return removedEntry;
+		}
+		else
+		{
+			throw new FileNotFoundException("The password file '"+f+"' didn't exist.");
+		}
+	}
+
 	public static String getPasswordFilename()
 	{
 		String homeDir = System.getProperty("user.home");
@@ -346,6 +646,27 @@ public class OpenSslAesUtil
 		log4jProps.setProperty("log4j.appender.A1.layout.ConversionPattern", "%d - %-5p - %-30c{1} - %m%n");
 		PropertyConfigurator.configure(log4jProps);
 
+		
+		try
+		{
+			String txt_abc123 = "abc123";
+			System.out.println("Origin String to be encoded=|" + txt_abc123 +"|.");
+
+			String enc_abc123 = encode("sybase", txt_abc123);
+			System.out.println("Encoded=|" + enc_abc123 +"|.");
+
+			String dec_abc123 = decode("sybase", enc_abc123);
+			System.out.println("Decoded=|" + dec_abc123 +"|.");
+			
+			if (txt_abc123.equals(dec_abc123))
+				System.out.println("decode = SUCCESS");
+			else
+				System.out.println("decode = ------ FAILED ------");
+		}
+		catch(Exception ex) { ex.printStackTrace(); }
+		System.out.println();
+		
+		
 //		OpenSslAesUtil d = new OpenSslAesUtil(128);
 //		String r = new String(d.decipher("mypassword".getBytes(), Base64.decodeBase64("U2FsdGVkX187CGv6DbEpqh/L6XRKON7uBGluIU0nT3w=")));
 //		System.out.println(r);

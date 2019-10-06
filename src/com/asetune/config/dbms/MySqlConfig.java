@@ -14,6 +14,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.MySqlTune;
+import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.SwingUtils;
@@ -87,6 +89,29 @@ extends DbmsConfigAbstract
 		"  from ["+PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" + 
 		" ) ";
 
+//	@Override
+//	public String getSqlForDiff(boolean isOffline)
+//	{
+//		if (isOffline)
+//		{
+//			String tabName = PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false);
+//
+//			return 
+//					"select \n" +
+//					"     [Variable_name] \n" +
+//					"    ,[Value] \n" +
+//					"from [" + tabName + "] \n" +
+//					"where [SessionStartTime] = (select max([SessionStartTime]) from [" + tabName + "]) \n" +
+//					"order by 1 \n" +
+//					"";
+//		}
+//		else
+//		{
+//			return
+//					"show global variables \n" + // it's ordered by Variable_name
+//					"";
+//		}
+//	}
 
 	/** hash table */
 	private HashMap<String,MySqlConfigEntry> _configMap  = null;
@@ -95,7 +120,14 @@ extends DbmsConfigAbstract
 	private ArrayList<String>              _configSectionList = null;
 
 	public class MySqlConfigEntry
+	implements IDbmsConfigEntry
 	{
+		@Override public String  getConfigKey()   { return configName; }
+		@Override public String  getConfigValue() { return runValue; }
+		@Override public String  getSectionName() { return sectionName; }
+		@Override public boolean isPending()      { return isPending; }
+		@Override public boolean isNonDefault()   { return isNonDefault; }
+		
 		/** configuration has been changed by any user */
 		public boolean isNonDefault;
 
@@ -158,6 +190,12 @@ extends DbmsConfigAbstract
 //		return _configMap;
 //	}
 
+	@Override
+	public Map<String, ? extends IDbmsConfigEntry> getDbmsConfigMap()
+	{
+		return _configMap;
+	}
+
 	/** check if the MySqlConfig is initialized or not */
 	@Override
 	public boolean isInitialized()
@@ -193,6 +231,13 @@ extends DbmsConfigAbstract
 		_configList        = new ArrayList<MySqlConfigEntry>();
 		_configSectionList = new ArrayList<String>();
 		
+		try { setDbmsServerName(conn.getDbmsServerName()); } catch (SQLException ex) { setDbmsServerName(ex.getMessage()); };
+		try { setDbmsVersionStr(conn.getDbmsVersionStr()); } catch (SQLException ex) { setDbmsVersionStr(ex.getMessage()); };
+
+		try { setLastUsedUrl( conn.getMetaData().getURL() ); } catch(SQLException ignore) { }
+		setLastUsedConnProp(conn.getConnPropOrDefault());
+
+
 		String sql = "";
 		try
 		{
@@ -246,6 +291,20 @@ extends DbmsConfigAbstract
 			}
 			else // OFFLINE GET CONFIG
 			{
+				// For OFFLINE mode: override some the values previously fetched the connection object, with values from the Recorded Database
+				MonRecordingInfo recordingInfo = new MonRecordingInfo(conn, null);
+				setOfflineRecordingInfo(recordingInfo);
+				setDbmsServerName(recordingInfo.getDbmsServerName());
+				setDbmsVersionStr(recordingInfo.getDbmsVersionStr());
+
+				// Check if this is correct TYPE
+				String expectedType = MySqlTune.APP_NAME;
+				String readType     = recordingInfo.getRecDbxAppName();
+				if ( ! expectedType.equals(readType) )
+				{
+					throw new WrongRecordingVendorContent(expectedType, readType);
+				}
+
 				sql = GET_CONFIG_OFFLINE_SQL;
 
 				String tsStr = "";
@@ -290,7 +349,6 @@ extends DbmsConfigAbstract
 						_configSectionList.add(entry.sectionName);
 				}
 				rs.close();
-				
 			}
 		}
 		catch (SQLException ex)
@@ -301,6 +359,7 @@ extends DbmsConfigAbstract
 			_configMap = null;
 			_configList = null;
 			_configSectionList = null;
+			
 			return;
 		}
 

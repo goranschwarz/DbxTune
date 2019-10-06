@@ -476,7 +476,7 @@ extends CentralPersistWriterBase
 			// Remember the last used URL (in case of H2 spill over database), the _mainConn is null at that time, so we cant use _mainConn.getConnProp().getUrl()
 			_lastUsedUrl = localJdbcUrl;
 			
-			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened. connectTime='"+connectTimeStr+"', using driver '"+_jdbcDriver+"'.");
+			_logger.info("A Database connection has been opened. connectTime='"+connectTimeStr+"', to URL '"+localJdbcUrl+"', using driver '"+_jdbcDriver+"'.");
 			_logger.debug("The connection has property auto-commit set to '"+_mainConn.getAutoCommit()+"'.");
 
 			// Write info about what JDBC driver we connects via.
@@ -622,7 +622,8 @@ extends CentralPersistWriterBase
 					
 					// Lets try to RESTART DbxCentral... and hope that it clears the error...
 					Configuration shutdownConfig = new Configuration();
-					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());  // IMMEDIATELY, COMPACT, DEFRAG
+//					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
+					shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());  // NORMAL, IMMEDIATELY, COMPACT, DEFRAG
 
 					String reason = "Restart Requested from CentralPersistWriterJdbc.open(): DATABASE_ALREADY_OPEN_1(90020), url='"+localJdbcUrl+"', errors='"+errorMessages+"'.";
 					boolean doRestart = true;
@@ -807,6 +808,18 @@ extends CentralPersistWriterBase
 
 		// 
 		//dbExec(conn, "", logExtraInfo);
+
+		// MAX_MEMORY_ROWS
+		// The maximum number of rows in a result set that are kept in-memory. 
+		// If more rows are read, then the rows are buffered to disk. 
+		// The default is 40000 per GB of available RAM.
+		// 
+		// Admin rights are required to execute this command, as it affects all connections. 
+		// This command commits an open transaction in this connection. This setting is persistent. It has no effect for in-memory databases.
+		//
+		// Example: SET MAX_MEMORY_ROWS 1000
+		// 
+		//dbExecSetting(conn, "SET MAX_MEMORY_ROWS 2500", logExtraInfo);
 	}
 
 	private Map<String, String> getH2Settings(DbxConnection conn)
@@ -1363,7 +1376,12 @@ extends CentralPersistWriterBase
 			// Obtain a DatabaseMetaData object from our current connection        
 			DatabaseMetaData dbmd = conn.getMetaData();
 	
-			ResultSet rs = dbmd.getColumns(null, schemaName, onlyTabName, "%");
+			// dbmd.getColumns() Doesn't work with '\' in the schema name... but if we change '\' to '\\' it seems to work (at least in H2)
+			String tmpSchemaName = schemaName;
+			if (tmpSchemaName != null && tmpSchemaName.indexOf("\\") != -1)
+				tmpSchemaName = tmpSchemaName.replace("\\", "\\\\");
+				
+			ResultSet rs = dbmd.getColumns(null, tmpSchemaName, onlyTabName, "%");
 			boolean tabExists = rs.next();
 			rs.close();
 	
@@ -3525,8 +3543,10 @@ return -1;
 			Configuration shutdownConfig = ShutdownHandler.getShutdownConfiguration();
 			
 //			H2ShutdownType h2ShutdownType  = H2ShutdownType.valueOf( shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString()) );
-			H2ShutdownType h2ShutdownType = H2ShutdownType.IMMEDIATELY;
-			String h2ShutdownTypeStr = shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());
+//			H2ShutdownType h2ShutdownType = H2ShutdownType.IMMEDIATELY;
+			H2ShutdownType h2ShutdownType = H2ShutdownType.DEFAULT;
+//			String h2ShutdownTypeStr = shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.IMMEDIATELY.toString());
+			String h2ShutdownTypeStr = shutdownConfig.getProperty("h2.shutdown.type", H2ShutdownType.DEFAULT.toString());
 			_logger.info("Received a H2 database shutdown request with 'h2.shutdown.type' of '"+h2ShutdownTypeStr+"'.");
 			try { 
 				h2ShutdownType = H2ShutdownType.valueOf( h2ShutdownTypeStr ); 
@@ -3557,6 +3577,9 @@ return -1;
 
 	public enum H2ShutdownType
 	{
+		/** normal SHUTDOWN without any option. just does 'SHUTDOWN' */
+		DEFAULT, 
+		
 		/** closes the database files without any cleanup and without compacting. */
 		IMMEDIATELY, 
 		
@@ -3595,6 +3618,7 @@ return -1;
 		// If no option is used, then the database is closed normally. All connections are 
 		// closed, open transactions are rolled back.
 		// 
+		// SHUTDOWN             Normal shutdown without any options 
 		// SHUTDOWN COMPACT     fully compacts the database (re-creating the database may 
 		//                      further reduce the database size). If the database is closed 
 		//                      normally (using SHUTDOWN or by closing all connections), then 
@@ -3608,6 +3632,8 @@ return -1;
 		long startTime = System.currentTimeMillis();
 		
 		String shutdownCmd = "SHUTDOWN " + shutdownType;
+		if (H2ShutdownType.DEFAULT.equals(shutdownType))
+			shutdownCmd = "SHUTDOWN";
 
 		// Issue a dummy command to see if the connection is still alive
 		try (Statement stmnt = _mainConn.createStatement();) {
@@ -3618,9 +3644,9 @@ return -1;
 
 		try (Statement stmnt = _mainConn.createStatement();) 
 		{
-			_logger.info("Sending "+shutdownCmd+" to H2 database.");
+			_logger.info("Sending Command '"+shutdownCmd+"' to H2 database.");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{

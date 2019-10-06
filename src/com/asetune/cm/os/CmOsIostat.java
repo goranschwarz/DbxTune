@@ -140,10 +140,11 @@ extends CounterModelHostMonitor
 	public static final String GRAPH_NAME_WaitTime        = "IoWait";
 	public static final String GRAPH_NAME_ReadWaitTime    = "IoReadWait";
 	public static final String GRAPH_NAME_WriteWaitTime   = "IoWriteWait";
-	public static final String GRAPH_NAME_SericeTime      = "IoServiceTime";
+	public static final String GRAPH_NAME_ServiceTime     = "IoServiceTime";
 	public static final String GRAPH_NAME_QueueLength     = "IoQueueLength";
 	public static final String GRAPH_NAME_BusyPct         = "IoBusyPct";
 	
+	public static final String GRAPH_NAME_ReadWriteOp     = "IoRWOp";
 	public static final String GRAPH_NAME_ReadOp          = "IoReadOp";
 	public static final String GRAPH_NAME_WriteOp         = "IoWriteOp";
 	public static final String GRAPH_NAME_ReadKb          = "IoReadKb";
@@ -210,7 +211,7 @@ extends CounterModelHostMonitor
 			-1);   // minimum height
 
 		// GRAPH
-		addTrendGraph(GRAPH_NAME_SericeTime,
+		addTrendGraph(GRAPH_NAME_ServiceTime,
 			"iostat: Service Time(svctm) per Device",                                           // Menu CheckBox text
 			"iostat: Service Time(svctm) per Device in ms ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
@@ -250,6 +251,19 @@ extends CounterModelHostMonitor
 
 		
 		
+		// GRAPH
+		addTrendGraph(GRAPH_NAME_ReadWriteOp,
+			"iostat: Read & Write Operations(readsPerSec+writesPerSec) per Device & sec",                                     // Menu CheckBox text
+			"iostat: Read & Write Operations(readsPerSec+writesPerSec) per Device & sec ("+GROUP_NAME+"->"+SHORT_NAME+")",   // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_PERSEC,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.DISK,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
+
 		// GRAPH
 		addTrendGraph(GRAPH_NAME_ReadOp,
 			"iostat: Read Operations(readsPerSec) per Device & sec",                                     // Menu CheckBox text
@@ -650,7 +664,7 @@ extends CounterModelHostMonitor
 		} // end: graph
 
 		// GRAPH: SERVICE TIME
-		if (GRAPH_NAME_SericeTime.equals(tgdp.getName()))
+		if (GRAPH_NAME_ServiceTime.equals(tgdp.getName()))
 		{
 			int dataPoint_pos                    = this.findColumn("svctm"); // Linix
 			if (dataPoint_pos < 0) dataPoint_pos = this.findColumn("svc_t");  // Solaris
@@ -826,6 +840,70 @@ extends CounterModelHostMonitor
 
 	
 	
+		// GRAPH: READ OP
+		if (GRAPH_NAME_ReadWriteOp.equals(tgdp.getName()))
+		{
+			int readDataPoint_pos                        = this.findColumn("readsPerSec"); // Linix/Solaris
+			if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("R_rps");  // AIX
+//			if (readDataPoint_pos < 0) readDataPoint_pos = this.findColumn("msps");  // HP
+
+			int writeDataPoint_pos                         = this.findColumn("writesPerSec"); // Linix/Solaris
+			if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("W_rps");  // AIX
+//			if (writeDataPoint_pos < 0) writeDataPoint_pos = this.findColumn("msps");  // HP
+
+			int device_pos                 = this.findColumn("device"); // HPUX, Linux, Solaris
+			if (device_pos < 0) device_pos = this.findColumn("Disks");  // AIX
+			if (device_pos < 0) device_pos = this.findColumn("name");   // Veritas
+			
+			int deviceDesc_pos = this.findColumn("deviceDescription");
+
+			if (readDataPoint_pos < 0 || writeDataPoint_pos < 0 || device_pos < 0 || deviceDesc_pos < 0)
+			{
+				String msg = "";
+				if (readDataPoint_pos  < 0) msg += "'readsPerSec|R_rps', ";
+				if (writeDataPoint_pos < 0) msg += "'writesPerSec|W_rps', ";
+				if (device_pos         < 0) msg += "'device|Disk|name', ";
+				if (deviceDesc_pos     < 0) msg += "'deviceDescription', ";
+
+				if (tg != null)
+					tg.setWarningLabel("Column(s) "+StringUtil.removeLastComma(msg)+" can't be found. This graph is only supported on Linux/Solaris/AIX systems");
+			}
+			else
+			{
+				// Write 1 "line" for each device
+				Double[] dArray  = new Double[this.getRowCount()];
+				String[] lArray  = new String[dArray.length];
+				String[] ldArray = new String[dArray.length];
+				
+				for (int i = 0; i < dArray.length; i++)
+				{
+					String deviceDesc = this.getAbsString(i, deviceDesc_pos);
+					String deviceName = this.getAbsString(i, device_pos);
+
+					String  label = deviceName;
+					if (StringUtil.hasValue(deviceDesc))
+						label += " ("+deviceDesc+")";
+
+					Double readDataPoint  = this.getAbsValueAsDouble(i, readDataPoint_pos);
+					Double writedataPoint = this.getAbsValueAsDouble(i, writeDataPoint_pos);
+					Double rwDataPoint    = readDataPoint + writedataPoint;
+
+					ldArray[i] = label;
+					lArray[i]  = deviceName;
+					dArray[i]  = rwDataPoint;
+				}
+
+				// Set the values
+				tgdp.setDataPoint(this.getTimestamp(), lArray, ldArray, dArray);
+//				tgdp.setDate(this.getTimestamp());
+//				tgdp.setLabel(lArray);
+//				tgdp.setData(dArray);
+
+				if (tg != null)
+					tg.setWarningLabel(null);
+			}
+		} // end: graph
+
 		// GRAPH: READ OP
 		if (GRAPH_NAME_ReadOp.equals(tgdp.getName()))
 		{

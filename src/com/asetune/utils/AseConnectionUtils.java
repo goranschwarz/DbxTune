@@ -4429,58 +4429,58 @@ public class AseConnectionUtils
 		}
 	}
 
-	/**
-	 * Check if the ASE is is grace period
-	 * @param conn 
-	 * @return null if OK, otherwise a String with the warning message
-	 */
-	public static String getAseGracePeriodWarning(DbxConnection conn)
-	{
-		if (conn == null)
-			return null;
-
-		// master.dbo.monLicense does only exists if ASE is above 15.0
-		if (conn.getDbmsVersionNumber() < Ver.ver(15,0))
-			return null;
-
-
-		String sql = "select Status, GraceExpiry, Name, Edition, Type, srvName=@@servername from master.dbo.monLicense";
-
-		try 
-		{
-			String warningStr = null;
-			
-			// do dummy select, which will return 0 rows
-			Statement stmt = conn.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
-			while (rs.next()) 
-			{
-				String    licStatus      = rs.getString   (1);
-				Timestamp licGraceExpiry = rs.getTimestamp(2);
-				String    licName        = rs.getString   (3);
-				String    licEdition     = rs.getString   (4);
-				String    licType        = rs.getString   (5);
-				String    aseSrvName     = rs.getString   (6);
-
-				if ("graced".equalsIgnoreCase(licStatus))
-				{
-					// add newline if we have several rows
-					warningStr = warningStr == null ? "" : warningStr + "\n";
-
-					warningStr += "Server '"+aseSrvName+"' is in grace period and will stop working at '"+licGraceExpiry+"'. (licName='"+licName+"', licEdition='"+licEdition+"', licType='"+licType+"').";
-				}
-			}
-			rs.close();
-			stmt.close();
-			
-			return warningStr;
-		}
-		catch (SQLException ex)
-		{
-			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
-			return "Problems when checking grace period. ("+StringUtil.stripNewLine(ex.getMessage()+").");
-		}
-	}
+//	/**
+//	 * Check if the ASE is is grace period
+//	 * @param conn 
+//	 * @return null if OK, otherwise a String with the warning message
+//	 */
+//	public static String getAseGracePeriodWarning(DbxConnection conn)
+//	{
+//		if (conn == null)
+//			return null;
+//
+//		// master.dbo.monLicense does only exists if ASE is above 15.0
+//		if (conn.getDbmsVersionNumber() < Ver.ver(15,0))
+//			return null;
+//
+//
+//		String sql = "select Status, GraceExpiry, Name, Edition, Type, srvName=@@servername from master.dbo.monLicense";
+//
+//		try 
+//		{
+//			String warningStr = null;
+//			
+//			// do dummy select, which will return 0 rows
+//			Statement stmt = conn.createStatement();
+//			ResultSet rs = stmt.executeQuery(sql);
+//			while (rs.next()) 
+//			{
+//				String    licStatus      = rs.getString   (1);
+//				Timestamp licGraceExpiry = rs.getTimestamp(2);
+//				String    licName        = rs.getString   (3);
+//				String    licEdition     = rs.getString   (4);
+//				String    licType        = rs.getString   (5);
+//				String    aseSrvName     = rs.getString   (6);
+//
+//				if ("graced".equalsIgnoreCase(licStatus))
+//				{
+//					// add newline if we have several rows
+//					warningStr = warningStr == null ? "" : warningStr + "\n";
+//
+//					warningStr += "Server '"+aseSrvName+"' is in grace period and will stop working at '"+licGraceExpiry+"'. (licName='"+licName+"', licEdition='"+licEdition+"', licType='"+licType+"').";
+//				}
+//			}
+//			rs.close();
+//			stmt.close();
+//			
+//			return warningStr;
+//		}
+//		catch (SQLException ex)
+//		{
+//			_logger.warn("Problems when checking grace period. SQL issued '"+sql+"' SQLException Error="+ex.getErrorCode()+", Msg='"+StringUtil.stripNewLine(ex.getMessage())+"'.");
+//			return "Problems when checking grace period. ("+StringUtil.stripNewLine(ex.getMessage()+").");
+//		}
+//	}
 
 	/**
 	 * Check if the RS Replication Server is is grace period

@@ -41,28 +41,7 @@ public class SqlServerSlowCmDeviceIo extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_shortRstm.getRowCount() == 0)
-		{
-			sb.append("No rows found \n");
-		}
-		else
-		{
-			sb.append(getSubject() + " Count: ").append(_shortRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -79,7 +58,8 @@ public class SqlServerSlowCmDeviceIo extends AseAbstract
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 //		}
 
-			
+		if (_CmDeviceIo_IoRW != null)
+		{
 			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
 					"CmDeviceIo_IoRW",
 					"CmDeviceIo_SvcTimeRW",
@@ -92,11 +72,7 @@ public class SqlServerSlowCmDeviceIo extends AseAbstract
 			sb.append(_CmDeviceIo_SvcTimeRW        .getHtmlContent(null, null));
 			sb.append(_CmDeviceIo_SvcTimeR         .getHtmlContent(null, null));
 			sb.append(_CmDeviceIo_SvcTimeW         .getHtmlContent(null, null));
-
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
+		}
 
 		return sb.toString();
 	}
@@ -124,10 +100,10 @@ public class SqlServerSlowCmDeviceIo extends AseAbstract
 	int _aboveServiceTime = DEFAULT_ABOVE_SERVICE_TIME;
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		_aboveTotalIos    = conf.getIntProperty(PROPKEY_ABOVE_TOTAL_IOS,    DEFAULT_ABOVE_TOTAL_IOS);
-		_aboveServiceTime = conf.getIntProperty(PROPKEY_ABOVE_SERVICE_TIME, DEFAULT_ABOVE_SERVICE_TIME);
+		_aboveTotalIos    = localConf.getIntProperty(PROPKEY_ABOVE_TOTAL_IOS,    DEFAULT_ABOVE_TOTAL_IOS);
+		_aboveServiceTime = localConf.getIntProperty(PROPKEY_ABOVE_SERVICE_TIME, DEFAULT_ABOVE_SERVICE_TIME);
 
 		 // just to get Column names
 		String dummySql = "select * from [CmDeviceIo_rate] where 1 = 2";

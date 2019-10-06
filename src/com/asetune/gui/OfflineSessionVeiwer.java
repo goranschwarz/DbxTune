@@ -807,7 +807,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "offlineSessionViewer.";
+		String base = this.getClass().getSimpleName() + ".";
+//		String base = "offlineSessionViewer.";
 
 		if (tmpConf != null)
 		{
@@ -840,7 +841,8 @@ implements ActionListener, PersistReader.INotificationListener//, TableModelList
 
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "offlineSessionViewer.";
+		String base = this.getClass().getSimpleName() + ".";
+//		String base = "offlineSessionViewer.";
 
 		setSize(width, height);
 

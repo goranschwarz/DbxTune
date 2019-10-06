@@ -40,9 +40,13 @@ import org.apache.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.LegendItem;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYItemRenderer;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -94,6 +98,9 @@ public class ReportChartObject
 		}
 		catch (RuntimeException rte)
 		{
+			_problem = "Problems creating ReportChartObject, Caught: " + rte;
+			_exception = rte;
+
 			_logger.warn("Problems creating ReportChartObject, caught RuntimeException.", rte);
 		}
 	}
@@ -148,19 +155,28 @@ public class ReportChartObject
 
 	public String toHtmlInlineImage()
 	{
+		if (_chart == null)
+		{
+			return "<b>Chart object is NULL... in ReportChartObject.toHtmlInlineImage()</b> <br> \n";
+		}
+		
 		try
 		{
 //			OutputStream out = new FileOutputStream("c:/tmp/xxx.png");
 			ByteArrayOutputStream bo = new ByteArrayOutputStream();
 			Base64OutputStream b64o = new Base64OutputStream(bo, true);
 
-			int width  = 1900;
-			int height = 300;
+			// writeChartAsPNG produces the same size with compression="default" (just using with, height), compression=0 and compression=9
+			// So no difference here... 
+			int     width       = 1900;
+			int     height      = 300;
+			boolean encodeAlpha = false;
+			int     compression = 0;
 //			ChartUtilities.writeChartAsPNG(b64o, _chart, 2048, 300);
-			ChartUtilities.writeChartAsPNG(b64o, _chart, width, height );
+			ChartUtilities.writeChartAsPNG(b64o, _chart, width, height, encodeAlpha, compression);
 
 			String base64Str = new String(bo.toByteArray());
-			
+
 			String htmlStr = "<img width='" + width + "' height='" + height + "' src='data:image/png;base64," + base64Str + "'>";
 			return htmlStr;
 		}
@@ -269,13 +285,32 @@ public class ReportChartObject
 				plot.getRenderer().setSeriesStroke(i, new BasicStroke(2));
 		}
 
-//		XYItemRenderer r = plot.getRenderer();
-//		if (r instanceof XYLineAndShapeRenderer) 
-//		{
-//			XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) r;
-//			renderer.setBaseShapesVisible(true);
-//			renderer.setBaseShapesFilled(true);
-//		}
+		// Special Renderer that creates a LegenItem that is square and FILLED
+		XYItemRenderer renderer = new XYLineAndShapeRenderer(true, false) 
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public LegendItem getLegendItem(int datasetIndex, int series) 
+			{
+				if (getPlot() == null) 
+					return null;
+
+				XYDataset dataset = getPlot().getDataset(datasetIndex);
+				if (dataset == null) 
+					return null;
+
+				String label = dataset.getSeriesKey(series).toString();
+				LegendItem legendItem = new LegendItem(label, lookupSeriesPaint(series));
+//				legendItem.setLine(new Rectangle2D.Double( 0.0 , 0.0 , 5.0, 5.0) );  //setLine takes a Shape, not just Lines so you can pass any Shape to it...
+				legendItem.setLine(Plot.DEFAULT_LEGEND_ITEM_BOX);
+				
+				return legendItem;
+			}
+		};
+		plot.setRenderer(renderer);
+
+		// Set format of the time labels
 		DateAxis axis = (DateAxis) plot.getDomainAxis();
 //		axis.setDateFormatOverride(new SimpleDateFormat("dd-MMM-yyyy HH:mm"));
 		axis.setDateFormatOverride(new SimpleDateFormat("HH:mm"));
@@ -325,6 +360,8 @@ public class ReportChartObject
 		boolean tabExists = DbUtils.checkIfTableExistsNoThrow(conn, null, null, tabName);
 		if ( ! tabExists )
 		{
+			_problem = "<br><font color='red'>ERROR: Creating ReportChartObject, the underlying table '" + tabName + "' did not exist, skipping this Chart.</font><br>\n";
+
 			_logger.info("createDataset(): The table '" + tabName + "' did not exist.");
 			return null;
 		}
@@ -429,7 +466,7 @@ public class ReportChartObject
 		}
 	}
 
-	public XYDataset createDataset_NEW_NOT_USED(DbxConnection conn, String cmName, String graphName)
+	public XYDataset createDataset_NOT_USED_colNameIsLabelName(DbxConnection conn, String cmName, String graphName)
 	{
 		if (StringUtil.isNullOrBlank(cmName))     throw new IllegalArgumentException("cmName can't be null or blank");
 		if (StringUtil.isNullOrBlank(graphName))  throw new IllegalArgumentException("graphName can't be null or blank");

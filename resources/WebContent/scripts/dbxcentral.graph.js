@@ -483,6 +483,12 @@ function dbxTuneGraphSubscribe()
 			addSubscribeFeedback('ws', 'conn closed');
 			setTimeout(subscribeConnectWs, 10*1000);
 		};
+
+		// Log some extra info on errors
+		webSocket.onerror = function (e)
+		{
+			console.log("WebSocket.onError: code="+e.code+", e="+e, e);
+		}
 		// webSocket.onerror = function (e) 
 		// {
 		// 	dbxLastSubscribeTime = moment();

@@ -33,6 +33,9 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -153,6 +156,7 @@ extends CountersModel
 		setLocalToolTipTextOnTableColumnHeader("multiSampled",              "<html>The session_id is still executing the <b>same</b> SQL Statement as it did in the previous sample.</html>");
 		setLocalToolTipTextOnTableColumnHeader("ImBlockedBySessionId",      "<html>This session_id is blocked by some other session_id</html>");
 		setLocalToolTipTextOnTableColumnHeader("ImBlockingOtherSessionIds", "<html>This session_id is <b>blocking</b> other session_id's, This is a list of This session_id is blocked by some other session_id's which this This session_id is blocked by some other session_id is blocking.</html>");
+		setLocalToolTipTextOnTableColumnHeader("ImBlockingOthersMaxTimeInSec", "Max Time in Seconds this session_id has been Blocking other session_id's from executing, because this session_id hold lock(s), that some other session_id wants to grab.");
 		setLocalToolTipTextOnTableColumnHeader("HasSqlText",                "<html>Checkbox to indicate that 'lastKnownSql' column has a value<br><b>Note:</b> Hower over this cell to see the SQL Statement.</html>");
 		setLocalToolTipTextOnTableColumnHeader("HasQueryplan",              "<html>Checkbox to indicate that 'query_plan' column has a value<br><b>Note:</b> Hower over this cell to see the Query plan.</html>");
 		setLocalToolTipTextOnTableColumnHeader("ExecTimeInMs",              "<html>How many milliseconds has this session_id been executing the current SQL Statement</html>");
@@ -216,6 +220,7 @@ extends CountersModel
 			"    des.session_id, \n" +
 			"    ImBlockedBySessionId = der.blocking_session_id, \n" +
 			"    ImBlockingOtherSessionIds = convert(varchar(512), ''), \n" +
+			"    ImBlockingOthersMaxTimeInSec = convert(int, 0), " +
 			"    des.status, \n" +
 			"    der.command, \n" +
 			"    des.[HOST_NAME], \n" +
@@ -266,6 +271,7 @@ extends CountersModel
 			"    p1.spid, --des.session_id, \n" +
 			"    ImBlockedBySessionId = p1.blocked, --der.blocking_session_id, \n" +
 			"    ImBlockingOtherSessionIds = convert(varchar(512), ''),  \n" +
+			"    ImBlockingOthersMaxTimeInSec = convert(int, 0), " +
 			"    p1.status, --des.status, \n" +
 			"    p1.cmd, --der.command, \n" +
 			"    p1.hostname, --des.[HOST_NAME] \n" +
@@ -433,6 +439,8 @@ extends CountersModel
 //		int pos_HasProcCallStack   = -1, pos_ProcCallStack  = -1;
 //		int pos_HasStacktrace      = -1, pos_DbccStacktrace = -1;
 		int pos_BlockingOtherSpids = -1, pos_BlockingSPID   = -1;
+		int pos_ImBlockingOthersMaxTimeInSec= -1;
+		int pos_wait_time          = -1;
 		int pos_multiSampled       = -1;
 		int pos_StartTime          = -1;
 //		int waitEventID = 0;
@@ -457,26 +465,28 @@ extends CountersModel
 		{
 			String colName = colNames.get(colId);
 			if      (false) ; // Dummy on first if, to make "move" easier 
-//			else if (colName.equals("WaitEventID"))                pos_WaitEventID        = colId;
-//			else if (colName.equals("WaitEventDesc"))              pos_WaitEventDesc      = colId;
-//			else if (colName.equals("WaitClassDesc"))              pos_WaitClassDesc      = colId;
-//			else if (colName.equals("SPID"))                       pos_SPID               = colId;
-			else if (colName.equals("session_id"))                 pos_SPID               = colId;
-			else if (colName.equals("HasQueryplan"))               pos_HasShowPlan        = colId;
-			else if (colName.equals("query_plan"))                 pos_ShowPlanText       = colId;
-			else if (colName.equals("HasSqlText"))                 pos_HasMonSqlText      = colId;
-			else if (colName.equals("lastKnownSql"))               pos_MonSqlText         = colId;
-//			else if (colName.equals("HasDbccSqlText"))             pos_HasDbccSqlText     = colId;
-//			else if (colName.equals("DbccSqlText"))                pos_DbccSqlText        = colId;
-//			else if (colName.equals("HasProcCallStack"))           pos_HasProcCallStack   = colId;
-//			else if (colName.equals("ProcCallStack"))              pos_ProcCallStack      = colId;
-//			else if (colName.equals("HasStacktrace"))              pos_HasStacktrace      = colId;
-//			else if (colName.equals("DbccStacktrace"))             pos_DbccStacktrace     = colId;
-			else if (colName.equals("ImBlockingOtherSessionIds"))  pos_BlockingOtherSpids = colId;
-			else if (colName.equals("ImBlockedBySessionId"))       pos_BlockingSPID       = colId;
-			else if (colName.equals("multiSampled"))               pos_multiSampled       = colId;
-//			else if (colName.equals("StartTime"))                  pos_StartTime          = colId;
-			else if (colName.equals("start_time"))                 pos_StartTime          = colId;
+//			else if (colName.equals("WaitEventID"))                  pos_WaitEventID                = colId;
+//			else if (colName.equals("WaitEventDesc"))                pos_WaitEventDesc              = colId;
+//			else if (colName.equals("WaitClassDesc"))                pos_WaitClassDesc              = colId;
+//			else if (colName.equals("SPID"))                         pos_SPID                       = colId;
+			else if (colName.equals("session_id"))                   pos_SPID                       = colId;
+			else if (colName.equals("HasQueryplan"))                 pos_HasShowPlan                = colId;
+			else if (colName.equals("query_plan"))                   pos_ShowPlanText               = colId;
+			else if (colName.equals("HasSqlText"))                   pos_HasMonSqlText              = colId;
+			else if (colName.equals("lastKnownSql"))                 pos_MonSqlText                 = colId;
+//			else if (colName.equals("HasDbccSqlText"))               pos_HasDbccSqlText             = colId;
+//			else if (colName.equals("DbccSqlText"))                  pos_DbccSqlText                = colId;
+//			else if (colName.equals("HasProcCallStack"))             pos_HasProcCallStack           = colId;
+//			else if (colName.equals("ProcCallStack"))                pos_ProcCallStack              = colId;
+//			else if (colName.equals("HasStacktrace"))                pos_HasStacktrace              = colId;
+//			else if (colName.equals("DbccStacktrace"))               pos_DbccStacktrace             = colId;
+			else if (colName.equals("ImBlockingOtherSessionIds"))    pos_BlockingOtherSpids         = colId;
+			else if (colName.equals("ImBlockedBySessionId"))         pos_BlockingSPID               = colId;
+			else if (colName.equals("ImBlockingOthersMaxTimeInSec")) pos_ImBlockingOthersMaxTimeInSec = colId;
+			else if (colName.equals("wait_time"))                    pos_wait_time                  = colId;
+			else if (colName.equals("multiSampled"))                 pos_multiSampled               = colId;
+//			else if (colName.equals("StartTime"))                    pos_StartTime                  = colId;
+			else if (colName.equals("start_time"))                   pos_StartTime                  = colId;
 
 //			// Noo need to continue, we got all our columns
 //			if (    pos_WaitEventID        >= 0 && pos_WaitEventDesc  >= 0 
@@ -538,6 +548,13 @@ System.out.println("Can't find the position for columns ('BlockingOtherSpids'="+
 			return;
 		}
 		
+		if (pos_wait_time < 0|| pos_ImBlockingOthersMaxTimeInSec < 0)
+		{
+System.out.println("Can't find the position for columns ('wait_time'="+pos_wait_time+", 'ImBlockingOthersMaxTimeInSec'="+pos_ImBlockingOthersMaxTimeInSec+")");
+			_logger.debug("Can't find the position for columns ('wait_time'="+pos_wait_time+", 'ImBlockingOthersMaxTimeInSec'="+pos_ImBlockingOthersMaxTimeInSec+")");
+			return;
+		}
+		
 		if (pos_multiSampled < 0)
 		{
 System.out.println("Can't find the position for columns ('multiSampled'="+pos_multiSampled+")");
@@ -561,7 +578,7 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 
 //			Object o_waitEventId = counters.getValueAt(rowId, pos_WaitEventID);
 			Object o_SPID        = counters.getValueAt(rowId, pos_SPID);
-System.out.println("xxx: rowId="+rowId+", thisRowPk='"+thisRowPk+"', prevPkRowId="+prevPkRowId+", prevPkExists="+prevPkExists+", o_SPID="+o_SPID);
+//System.out.println("xxx: rowId="+rowId+", thisRowPk='"+thisRowPk+"', prevPkRowId="+prevPkRowId+", prevPkExists="+prevPkExists+", o_SPID="+o_SPID);
 
 			if (prevPkExists)
 			{
@@ -683,10 +700,14 @@ System.out.println("xxx: rowId="+rowId+", thisRowPk='"+thisRowPk+"', prevPkRowId
 				// Get LIST of SPID's that I'm blocking
 				String blockingList = getBlockingListStr(counters, spid, pos_BlockingSPID, pos_SPID);
 
+				// Get MaxBlockingTime of SPID's that I'm blocking
+				int ImBlockingOthersMaxTimeInSec = getMaxBlockingTimeInSecForSpid(counters, spid, pos_BlockingSPID, pos_wait_time);
+
 				// This could be used to test that PCS.store() will truncate string size to the tables storage size
 				//blockingList += "'1:aaa:0', '1:bbb:0', '1:ccc:0', '1:ddd:0', '1:eee:0', '1:fff:0', '1:ggg:0', '1:hhh:0', '1:iii:0', '1:jjj:0', '1:kkk:0', '1:lll:0', '1:mmm:0', '1:nnn:0', '1:ooo:0', '1:ppp:0', '1:qqq:0', '1:rrr:0', '1:sss:0', '1:ttt:0', '1:uuu:0', '1:vvv:0', '1:wwww:0', '1:xxx:0', '1:yyy:0', '1:zzz:0' -end-";
 
-				counters.setValueAt(blockingList, rowId, pos_BlockingOtherSpids);
+				counters.setValueAt(blockingList,                 rowId, pos_BlockingOtherSpids);
+				counters.setValueAt(ImBlockingOthersMaxTimeInSec, rowId, pos_ImBlockingOthersMaxTimeInSec);
 			}
 		}
 	}
@@ -750,6 +771,36 @@ System.out.println("xxx: rowId="+rowId+", thisRowPk='"+thisRowPk+"', prevPkRowId
 		return StringUtil.toCommaStr(spidSet);
 	}
 
+	private int getMaxBlockingTimeInSecForSpid(CounterSample counters, int spid, int pos_BlockingSPID, int pos_wait_time)
+	{
+		int maxBlockingTimeInSec = 0;
+
+		// Loop on all diffData rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId < rows; rowId++)
+		{
+			Object o_BlockingSPID = counters.getValueAt(rowId, pos_BlockingSPID);
+			if (o_BlockingSPID instanceof Number)
+			{
+				Number BlockingSPID = (Number)o_BlockingSPID;
+				if (BlockingSPID.intValue() == spid)
+				{
+//					Object o_SPID      = counters.getValueAt(rowId, pos_SPID);
+					Object o_wait_time = counters.getValueAt(rowId, pos_wait_time);
+					if (o_wait_time instanceof Number)
+					{
+						Number wait_time = (Number)o_wait_time;
+						int SecondsWaiting = wait_time.intValue() / 1000;
+						
+						maxBlockingTimeInSec = Math.max(SecondsWaiting, maxBlockingTimeInSec);
+					}
+				}
+			}
+		}
+		
+		return maxBlockingTimeInSec;
+	}
+
 //	/** 
 //	 * Get number of rows to save/request ddl information for 
 //	 */
@@ -769,4 +820,71 @@ System.out.println("xxx: rowId="+rowId+", thisRowPk='"+thisRowPk+"', prevPkRowId
 //		return sa;
 //	}
 	
+	
+
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		for (int r=0; r<cm.getRateRowCount(); r++)
+		{
+			//-------------------------------------------------------
+			// ImBlockingOthersMaxTimeInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("ImBlockingOthersMaxTimeInSec"))
+			{
+				Object o_ImBlockingOthersMaxTimeInSec = cm.getRateValue(r, "ImBlockingOthersMaxTimeInSec");
+				if (o_ImBlockingOthersMaxTimeInSec != null && o_ImBlockingOthersMaxTimeInSec instanceof Number)
+				{
+					int ImBlockingOthersMaxTimeInSec = ((Number)o_ImBlockingOthersMaxTimeInSec).intValue();
+					
+					List<String> ImBlockingOtherSessionIdsList = StringUtil.commaStrToList(cm.getRateValue(r, "ImBlockingOtherSessionIds") + "");
+					String BlockingOtherSpidsStr = ImBlockingOtherSessionIdsList + "";
+					int    blockCount            = ImBlockingOtherSessionIdsList.size();
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): ImBlockingOthersMaxTimeInSec='"+ImBlockingOthersMaxTimeInSec+"', ImBlockingOtherSessionIdsList="+ImBlockingOtherSessionIdsList);
+
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec);
+					if (ImBlockingOthersMaxTimeInSec > threshold)
+					{
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, ImBlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+		} // end: loop rows
+	}
+
+	public static final String  PROPKEY_alarm_ImBlockingOthersMaxTimeInSec = CM_NAME + ".alarm.system.if.ImBlockingOthersMaxTimeInSec.gt";
+	public static final int     DEFAULT_alarm_ImBlockingOthersMaxTimeInSec = 60;
+	
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec", PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec, "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+
+		return list;
+	}
+
 }

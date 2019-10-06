@@ -51,10 +51,13 @@ extends XmenuActionBase
 		HashMap<String,String> paramValues = getParamValues();
 
 		
+		// if we have aliases (1 parameter with multiple "names") for a parameter, then the FIRST name in the alias list will be used as a parameter name
 		for (String pv : paramValues.keySet())
 		{
 //			sql = sql.replaceAll("\\$\\{"+pv+"\\}", getParamValue(pv));
 			sql = sql.replace("${"+pv+"}", getParamValue(pv));
+			
+			// System.out.println("xxxxxxxxxxxxxxxx: key='"+pv+"', value='"+getParamValue(pv)+"'.");
 		}
 
 		// NOTE:

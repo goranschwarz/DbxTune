@@ -221,7 +221,8 @@ extends CountersModel
 				"    ,TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), CURRENT_TIMESTAMP()) as utc_minute_diff \n" +
 				"    ,@@hostname                         as host \n" +
 				"    ,'FIXME'                            as database_name \n" +
-				"    ,DATE_SUB(CURRENT_TIMESTAMP, INTERVAL (select VARIABLE_VALUE from performance_schema.global_status where VARIABLE_NAME = 'Uptime') SECOND) as start_time";
+				"    ,DATE_SUB(CURRENT_TIMESTAMP, INTERVAL (select VARIABLE_VALUE from performance_schema.global_status where VARIABLE_NAME = 'Uptime') SECOND) as start_time \n" + // note: this is a SQL-TIMESTAMP data type
+				"";
 		
 		//select now() - interval global_status.variable_value second from information_schema.global_status where variable_name='Uptime';
 	}

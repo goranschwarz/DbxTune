@@ -660,6 +660,9 @@ extends CountersModel
 //	public static final String   GRAPH_NAME_WAIT_CLASS_TIME  = "WaitClassTime"; 
 //	public static final String   GRAPH_NAME_WAIT_CLASS_COUNT = "WaitClassCount"; 
 //	public static final String   GRAPH_NAME_WAIT_CLASS_TPW   = "WaitClassTpw"; 
+
+	public static final String   GRAPH_NAME_KNOWN_TOP_10_TIME  = "KnownTop10Time";
+	public static final String   GRAPH_NAME_KNOWN_TOP_10_COUNT = "KnownTop10Count";
 	
 
 	private void addTrendGraphs()
@@ -686,6 +689,30 @@ extends CountersModel
 //			false, // visible at start
 //			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
 //			160);  // minimum height
+
+		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_TIME,
+			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms'", 	                   // Menu CheckBox text
+			"Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MILLISEC,
+			new String[] {"LCK_M_X", "LCK_M_U", "WRITELOG", "LCK_M_IX", "LATCH_EX", "ASYNC_NETWORK_IO", "SOS_SCHEDULER_YIELD", "PAGEIOLATCH_SH", "LCK_M_S", "CXPACKET"},
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);  // minimum height
+
+		addTrendGraph(GRAPH_NAME_KNOWN_TOP_10_COUNT,
+			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count'", 	                   // Menu CheckBox text
+			"Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count' ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+			new String[] {"LCK_M_X", "LCK_M_U", "WRITELOG", "LCK_M_IX", "LATCH_EX", "ASYNC_NETWORK_IO", "SOS_SCHEDULER_YIELD", "PAGEIOLATCH_SH", "LCK_M_S", "CXPACKET"},
+			LabelType.Static,
+			TrendGraphDataPoint.Category.WAITS,
+			false, // is Percent Graph
+			false, // visible at start
+			0,    // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above
+			0);  // minimum height
 	}
 	
 	@Override
@@ -694,7 +721,7 @@ extends CountersModel
 //		long   srvVersion = getServerVersion();
 		String graphName  = tgdp.getName();
 		
-		// ---- DISK IO's PER SECOND GRAPHS
+		// ---- WAIT_TYPE_TIME
 		if (GRAPH_NAME_WAIT_TYPE_TIME.equals(graphName))
 		{
 			// Start With: 1 "line" for every wait_type
@@ -737,6 +764,44 @@ extends CountersModel
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
+		// ---- KNOWN_TOP_10_TIME
+		if (GRAPH_NAME_KNOWN_TOP_10_TIME.equals(graphName))
+		{
+			Double[] dArray = new Double[10];
+			
+			dArray[0] = this.getDiffValueAsDouble("LCK_M_X"            , "wait_time_ms");
+			dArray[1] = this.getDiffValueAsDouble("LCK_M_U"            , "wait_time_ms");
+			dArray[2] = this.getDiffValueAsDouble("WRITELOG"           , "wait_time_ms");
+			dArray[3] = this.getDiffValueAsDouble("LCK_M_IX"           , "wait_time_ms");
+			dArray[4] = this.getDiffValueAsDouble("LATCH_EX"           , "wait_time_ms");
+			dArray[5] = this.getDiffValueAsDouble("ASYNC_NETWORK_IO"   , "wait_time_ms");
+			dArray[6] = this.getDiffValueAsDouble("SOS_SCHEDULER_YIELD", "wait_time_ms");
+			dArray[7] = this.getDiffValueAsDouble("PAGEIOLATCH_SH"     , "wait_time_ms");
+			dArray[8] = this.getDiffValueAsDouble("LCK_M_S"            , "wait_time_ms");
+			dArray[9] = this.getDiffValueAsDouble("CXPACKET"           , "wait_time_ms");
+
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
+		}
+
+		// ---- KNOWN_TOP_10_COUNT
+		if (GRAPH_NAME_KNOWN_TOP_10_COUNT.equals(graphName))
+		{
+			Double[] dArray = new Double[10];
+			
+			dArray[0] = this.getDiffValueAsDouble("LCK_M_X"            , "waiting_tasks_count");
+			dArray[1] = this.getDiffValueAsDouble("LCK_M_U"            , "waiting_tasks_count");
+			dArray[2] = this.getDiffValueAsDouble("WRITELOG"           , "waiting_tasks_count");
+			dArray[3] = this.getDiffValueAsDouble("LCK_M_IX"           , "waiting_tasks_count");
+			dArray[4] = this.getDiffValueAsDouble("LATCH_EX"           , "waiting_tasks_count");
+			dArray[5] = this.getDiffValueAsDouble("ASYNC_NETWORK_IO"   , "waiting_tasks_count");
+			dArray[6] = this.getDiffValueAsDouble("SOS_SCHEDULER_YIELD", "waiting_tasks_count");
+			dArray[7] = this.getDiffValueAsDouble("PAGEIOLATCH_SH"     , "waiting_tasks_count");
+			dArray[8] = this.getDiffValueAsDouble("LCK_M_S"            , "waiting_tasks_count");
+			dArray[9] = this.getDiffValueAsDouble("CXPACKET"           , "waiting_tasks_count");
+
+			tgdp.setDataPoint(this.getTimestamp(), dArray);
 		}
 	}
 }

@@ -155,6 +155,7 @@ import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
 import com.asetune.config.dbms.IDbmsConfigText;
+import com.asetune.config.dbms.MySqlConfig;
 import com.asetune.config.dbms.OracleConfig;
 import com.asetune.config.dbms.PostgresConfig;
 import com.asetune.config.dbms.RaxConfig;
@@ -271,6 +272,7 @@ import com.asetune.ui.tooltip.suppliers.ToolTipSupplierTester;
 import com.asetune.ui.tooltip.suppliers.TtpEntryCompletionProvider;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.AseLicensInfo;
 import com.asetune.utils.AseSqlScriptReader;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.ConnectionProvider;
@@ -3731,7 +3733,8 @@ public class QueryWindow
 					}
 
 					// Check ASE Grace Period
-					String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(_conn);
+//					String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(_conn);
+					String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(_conn);
 					if (StringUtil.hasValue(gracePeriodWarning))
 						setServerWarningStatus(true, Color.RED, gracePeriodWarning);
 
@@ -4045,6 +4048,9 @@ public class QueryWindow
 				// Tooltip supplier
 				_tooltipProviderAbstract = new ToolTipSupplierMySql(_window, _compleationProviderAbstract, this);
 				_query_txt.setToolTipSupplier(_tooltipProviderAbstract);
+
+				// DBMS Configuration
+				DbmsConfigManager.setInstance( new MySqlConfig() );
 			}
 			// Postgres SQL
 			else if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_POSTGRES))

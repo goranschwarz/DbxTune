@@ -61,21 +61,22 @@ extends ReportSenderAbstract
 		}
 		
 		String msgSubject = _subjectTemplate.replace("${srvName}", serverName);
-		String msgBodyText    = reportContent.getReportAsText();
+//		String msgBodyText    = reportContent.getReportAsText();
 		String msgBodyHtml    = reportContent.getReportAsHtml();
-		
-		int msgBodyTextSizeKb = msgBodyText == null ? 0 : msgBodyText.length() / 1024;
+
+//		int msgBodyTextSizeKb = msgBodyText == null ? 0 : msgBodyText.length() / 1024;
 		int msgBodyHtmlSizeKb = msgBodyHtml == null ? 0 : msgBodyHtml.length() / 1024;
 
 		if (reportContent.hasNothingToReport())
 			msgSubject = _subjectNtrTemplate.replace("${srvName}", serverName);
 
-		String msgBody = msgBodyText;
+		String msgBody = msgBodyHtml;
+//		String msgBody = msgBodyText;
 //		if (StringUtil.hasValue(msgBodyHtml))
 //			msgBody = msgBodyHtml;
-
-		if (_msgBodyUseHtml)
-			msgBody = msgBodyHtml;
+//
+//		if (_msgBodyUseHtml)
+//			msgBody = msgBodyHtml;
 
 		List<String> toList = getToAddressForServerNameAsList(serverName);
 
@@ -130,6 +131,21 @@ extends ReportSenderAbstract
 //				email.setTextMsg(msgBody);
 			email.setHtmlMsg(msgBodyHtml);
 //			email.setTextMsg(msgBodyText);
+
+			// If the mail client is not so good at rendering HTML...
+			// Should we attach the content as a File, so it can be opened in a browser...  
+			if (_attachHtmlContent)
+			{
+				if (msgBodyHtml.length() < (_attachHtmlContentMaxSizeMb * 1024 * 1024))
+				{
+					_logger.info("Mail-Attach: -NOT-YET-IMPLEMENTED-");
+//					email.attach(...);
+				}
+				else
+				{
+					_logger.info("No-Mail-Attach: Mail message is to large to attach. '" + PROPKEY_attachHtmlContentMaxSizeMb + "' is " + _attachHtmlContentMaxSizeMb + ", content size = " + msgBodyHtml.length() + " (bytes).");
+				}
+			}
 			
 //			System.out.println("About to send the following message: \n"+msgBody);
 			if (_logger.isDebugEnabled())
@@ -140,13 +156,13 @@ extends ReportSenderAbstract
 			// SEND
 			email.send();
 
-//			_logger.info("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
-			_logger.info("Sent mail message: plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
+//			_logger.info("Sent mail message: htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"'.");
+			_logger.info("Sent mail message: htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"'.");
 		}
 		catch (Exception ex)
 		{
-//			_logger.error("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
-			_logger.error("Problems sending mail (plainSizeKb="+msgBodyTextSizeKb+", htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+//			_logger.error("Problems sending mail (htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', to='"+_to+"', cc='"+_cc+"', subject='"+msgSubject+"').", ex);
+			_logger.error("Problems sending mail (htmlSizeKb="+msgBodyHtmlSizeKb+", host='"+_smtpHostname+"', toList="+toList+", cc='"+_cc+"', subject='"+msgSubject+"').", ex);
 		}
 	}
 
@@ -158,23 +174,25 @@ extends ReportSenderAbstract
 		
 		Configuration conf = Configuration.getCombinedConfiguration();
 
-		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                   String .class, conf.getProperty       (PROPKEY_from                  , DEFAULT_from                  ), DEFAULT_from                  , "What should be the senders email address"));
-		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,           String .class, conf.getProperty       (PROPKEY_smtpHostname          , DEFAULT_smtpHostname          ), DEFAULT_smtpHostname          , "Name of the host that holds the smtp server"));
-		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                     String .class, conf.getProperty       (PROPKEY_to                    , DEFAULT_to                    ), DEFAULT_to                    , "To what mail adresses should we send the mail (if several ones, just comma separate them)"));
-		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                     String .class, conf.getProperty       (PROPKEY_cc                    , DEFAULT_cc                    ), DEFAULT_cc                    , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
-		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,        String .class, conf.getProperty       (PROPKEY_subjectTemplate       , DEFAULT_subjectTemplate       ), DEFAULT_subjectTemplate       , "What should be the subject (Note: this is a template)"));
-		list.add( new CmSettingsHelper("Subject-NTR-Template",             PROPKEY_subjectNtrTemplate,     String .class, conf.getProperty       (PROPKEY_subjectNtrTemplate    , DEFAULT_subjectNtrTemplate    ), DEFAULT_subjectNtrTemplate    , "What should be the subject, when NTR=Nothing To Report (Note: this is a template)"));
-		list.add( new CmSettingsHelper("Send-NothingToReport",             PROPKEY_sendNtr,                Boolean.class, conf.getBooleanProperty(PROPKEY_sendNtr               , DEFAULT_sendNtr               ), DEFAULT_sendNtr               , "Send email even when there is Nothing To Report (NTR)."));
-//		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,        String .class, conf.getProperty       (PROPKEY_msgBodyTemplate       , DEFAULT_msgBodyTemplate       ), DEFAULT_msgBodyTemplate       , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
-//		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml, Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml), DEFAULT_msgBodyTemplateUseHtml, "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
-		list.add( new CmSettingsHelper("Msg-Use-HTML",                     PROPKEY_msgBodyUseHtml,         Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyUseHtml        , DEFAULT_msgBodyUseHtml        ), DEFAULT_msgBodyUseHtml        , "Send HTML message."));
+		list.add( new CmSettingsHelper("from",             Type.MANDATORY, PROPKEY_from,                       String .class, conf.getProperty       (PROPKEY_from                      , DEFAULT_from                      ), DEFAULT_from                      , "What should be the senders email address"));
+		list.add( new CmSettingsHelper("hostname",         Type.MANDATORY, PROPKEY_smtpHostname,               String .class, conf.getProperty       (PROPKEY_smtpHostname              , DEFAULT_smtpHostname              ), DEFAULT_smtpHostname              , "Name of the host that holds the smtp server"));
+		list.add( new CmSettingsHelper("to",               Type.MANDATORY, PROPKEY_to,                         String .class, conf.getProperty       (PROPKEY_to                        , DEFAULT_to                        ), DEFAULT_to                        , "To what mail adresses should we send the mail (if several ones, just comma separate them). Note: this can be configured to filter on <i>serverName</i>, in the property <code>ReportSenderToMail.to=[ {#serverName#:#xxx#, #to#:#user1@acme.com, user2@acme.com#}, {#serverName#:#yyy#, #to#:#user1@acme.com#}, {#serverName#:#zzz#, #to#:#user3@acme.com#} ]</code>".replace('#', '"') ));
+		list.add( new CmSettingsHelper("cc",                               PROPKEY_cc,                         String .class, conf.getProperty       (PROPKEY_cc                        , DEFAULT_cc                        ), DEFAULT_cc                        , "To what CC mail adresses should we send the mail (if several ones, just comma separate them)"));
+		list.add( new CmSettingsHelper("Subject-Template",                 PROPKEY_subjectTemplate,            String .class, conf.getProperty       (PROPKEY_subjectTemplate           , DEFAULT_subjectTemplate           ), DEFAULT_subjectTemplate           , "What should be the subject (Note: this is a template)"));
+		list.add( new CmSettingsHelper("Subject-NTR-Template",             PROPKEY_subjectNtrTemplate,         String .class, conf.getProperty       (PROPKEY_subjectNtrTemplate        , DEFAULT_subjectNtrTemplate        ), DEFAULT_subjectNtrTemplate        , "What should be the subject, when NTR=Nothing To Report (Note: this is a template)"));
+		list.add( new CmSettingsHelper("Send-NothingToReport",             PROPKEY_sendNtr,                    Boolean.class, conf.getBooleanProperty(PROPKEY_sendNtr                   , DEFAULT_sendNtr                   ), DEFAULT_sendNtr                   , "Send email even when there is Nothing To Report (NTR)."));
+//		list.add( new CmSettingsHelper("Msg-Template",                     PROPKEY_msgBodyTemplate,            String .class, conf.getProperty       (PROPKEY_msgBodyTemplate           , DEFAULT_msgBodyTemplate           ), DEFAULT_msgBodyTemplate           , "What content should we send (Note: this is a template, if the content starts with <html> then it will try to send the mail as a HTML mail.)"));
+//		list.add( new CmSettingsHelper("Msg-Template-Use-HTML",            PROPKEY_msgBodyTemplateUseHtml,     Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml    , DEFAULT_msgBodyTemplateUseHtml    ), DEFAULT_msgBodyTemplateUseHtml    , "If '"+PROPKEY_msgBodyTemplate+"' is not specified, then use a HTML Template as the default."));
+//		list.add( new CmSettingsHelper("Msg-Use-HTML",                     PROPKEY_msgBodyUseHtml,             Boolean.class, conf.getBooleanProperty(PROPKEY_msgBodyUseHtml            , DEFAULT_msgBodyUseHtml            ), DEFAULT_msgBodyUseHtml            , "Send HTML message."));
+		list.add( new CmSettingsHelper("Attach-HTML-content",              PROPKEY_attachHtmlContent,          Boolean.class, conf.getBooleanProperty(PROPKEY_attachHtmlContent         , DEFAULT_attachHtmlContent         ), DEFAULT_attachHtmlContent         , "Attach the content as a HTML file (might be easier to open/read)"));
+		list.add( new CmSettingsHelper("Attach-HTML-content-maxSizeKb",    PROPKEY_attachHtmlContentMaxSizeMb, Integer.class, conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb), DEFAULT_attachHtmlContentMaxSizeMb, "Only attach if the message size is below this value in MB (some receivers do not allow large messages)"));
 
-		list.add( new CmSettingsHelper("username",                         PROPKEY_username,               String .class, conf.getProperty       (PROPKEY_username              , DEFAULT_username              ), DEFAULT_username              , "If the SMTP server reuires you to login (default: is not to logon)"));
-		list.add( new CmSettingsHelper("password",                         PROPKEY_password,               String .class, conf.getProperty       (PROPKEY_password              , DEFAULT_password              ), DEFAULT_password              , "If the SMTP server reuires you to login (default: is not to logon)"));
-		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,               Integer.class, conf.getIntProperty    (PROPKEY_smtpPort              , DEFAULT_smtpPort              ), DEFAULT_smtpPort              , "What port number is the SMTP server on (-1 = use the default)"));
-		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                Integer.class, conf.getIntProperty    (PROPKEY_sslPort               , DEFAULT_sslPort               ), DEFAULT_sslPort               , "What port number is the SSL-SMTP server on (-1 = use the default)"));
-		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                 Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                , DEFAULT_useSsl                ), DEFAULT_useSsl                , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
-		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,      Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout     , DEFAULT_connectionTimeout     ), DEFAULT_connectionTimeout     , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
+		list.add( new CmSettingsHelper("username",                         PROPKEY_username,                   String .class, conf.getProperty       (PROPKEY_username                  , DEFAULT_username                  ), DEFAULT_username                  , "If the SMTP server reuires you to login (default: is not to logon)"));
+		list.add( new CmSettingsHelper("password",                         PROPKEY_password,                   String .class, conf.getProperty       (PROPKEY_password                  , DEFAULT_password                  ), DEFAULT_password                  , "If the SMTP server reuires you to login (default: is not to logon)"));
+		list.add( new CmSettingsHelper("smtp-port",                        PROPKEY_smtpPort,                   Integer.class, conf.getIntProperty    (PROPKEY_smtpPort                  , DEFAULT_smtpPort                  ), DEFAULT_smtpPort                  , "What port number is the SMTP server on (-1 = use the default)"));
+		list.add( new CmSettingsHelper("ssl-port",                         PROPKEY_sslPort,                    Integer.class, conf.getIntProperty    (PROPKEY_sslPort                   , DEFAULT_sslPort                   ), DEFAULT_sslPort                   , "What port number is the SSL-SMTP server on (-1 = use the default)"));
+		list.add( new CmSettingsHelper("use-ssl",                          PROPKEY_useSsl,                     Boolean.class, conf.getBooleanProperty(PROPKEY_useSsl                    , DEFAULT_useSsl                    ), DEFAULT_useSsl                    , "Sets whether SSL/TLS encryption should be enabled for the SMTP transport upon connection (SMTPS/POPS)"));
+		list.add( new CmSettingsHelper("connection-timeout",               PROPKEY_connectionTimeout,          Integer.class, conf.getIntProperty    (PROPKEY_connectionTimeout         , DEFAULT_connectionTimeout         ), DEFAULT_connectionTimeout         , "Set the socket connection timeout value in milliseconds. (-1 = use the default)"));
 
 		return list;
 	}
@@ -182,23 +200,25 @@ extends ReportSenderAbstract
 	//-------------------------------------------------------
 	// class members
 	//-------------------------------------------------------
-	private String  _smtpHostname           = "";
-	private String  _to                     = "";
-	private String  _from                   = "";
-	private String  _subjectTemplate        = "";
-	private String  _subjectNtrTemplate     = ""; // NothingToReport
-	private boolean _sendNtr                = DEFAULT_sendNtr;
-//	private String  _msgBodyTemplate        = "";
-//	private boolean _msgBodyTemplateUseHtml = DEFAULT_msgBodyTemplateUseHtml;
-	private boolean _msgBodyUseHtml         = DEFAULT_msgBodyUseHtml;
+	private String  _smtpHostname               = "";
+	private String  _to                         = "";
+	private String  _from                       = "";
+	private String  _subjectTemplate            = "";
+	private String  _subjectNtrTemplate         = ""; // NothingToReport
+	private boolean _sendNtr                    = DEFAULT_sendNtr;
+//	private String  _msgBodyTemplate            = "";
+//	private boolean _msgBodyTemplateUseHtml     = DEFAULT_msgBodyTemplateUseHtml;
+//	private boolean _msgBodyUseHtml             = DEFAULT_msgBodyUseHtml;
+	private boolean _attachHtmlContent          = DEFAULT_attachHtmlContent;
+	private int     _attachHtmlContentMaxSizeMb = DEFAULT_attachHtmlContentMaxSizeMb;
                                          
-	private String  _username               = "";
-	private String  _password               = "";
-	private String  _cc                     = "";
-	private int     _smtpPort               = -1;
-	private int     _sslPort                = -1;
-	private boolean _useSsl                 = DEFAULT_useSsl;
-	private int     _smtpConnectTimeout     = -1;
+	private String  _username                   = "";
+	private String  _password                   = "";
+	private String  _cc                         = "";
+	private int     _smtpPort                   = -1;
+	private int     _sslPort                    = -1;
+	private boolean _useSsl                     = DEFAULT_useSsl;
+	private int     _smtpConnectTimeout         = -1;
 
 //	private List<String> _toList     = new ArrayList<>();
 	private List<String> _ccList     = new ArrayList<>();
@@ -299,7 +319,6 @@ extends ReportSenderAbstract
 		return retStr;
 	}
 
-
 	@Override
 	public void init() throws Exception
 	{
@@ -308,23 +327,25 @@ extends ReportSenderAbstract
 
 		_logger.info("Initializing the ReportSender component named '"+getName()+"'.");
 
-		_smtpHostname           = conf.getProperty       (PROPKEY_smtpHostname,           DEFAULT_smtpHostname);
-		_to                     = conf.getProperty       (PROPKEY_to,                     DEFAULT_to);
-		_cc                     = conf.getProperty       (PROPKEY_cc,                     DEFAULT_cc);
-		_from                   = conf.getProperty       (PROPKEY_from,                   DEFAULT_from);
-		_subjectTemplate        = conf.getProperty       (PROPKEY_subjectTemplate,        DEFAULT_subjectTemplate);
-		_subjectNtrTemplate     = conf.getProperty       (PROPKEY_subjectNtrTemplate,     DEFAULT_subjectNtrTemplate);
-		_sendNtr                = conf.getBooleanProperty(PROPKEY_sendNtr,                DEFAULT_sendNtr);
-//		_msgBodyTemplate        = conf.getProperty       (PROPKEY_msgBodyTemplate,        DEFAULT_msgBodyTemplate);
-//		_msgBodyTemplateUseHtml = conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml, DEFAULT_msgBodyTemplateUseHtml);
-		_msgBodyUseHtml         = conf.getBooleanProperty(PROPKEY_msgBodyUseHtml,         DEFAULT_msgBodyUseHtml);
-                            
-		_username               = conf.getProperty       (PROPKEY_username,               DEFAULT_username);
-		_password               = conf.getProperty       (PROPKEY_password,               DEFAULT_password);
-		_smtpPort               = conf.getIntProperty    (PROPKEY_smtpPort,               DEFAULT_smtpPort);
-		_sslPort                = conf.getIntProperty    (PROPKEY_sslPort,                DEFAULT_sslPort);
-		_useSsl                 = conf.getBooleanProperty(PROPKEY_useSsl,                 DEFAULT_useSsl);
-		_smtpConnectTimeout     = conf.getIntProperty    (PROPKEY_connectionTimeout,      DEFAULT_connectionTimeout);
+		_smtpHostname               = conf.getProperty       (PROPKEY_smtpHostname,               DEFAULT_smtpHostname);
+		_to                         = conf.getProperty       (PROPKEY_to,                         DEFAULT_to);
+		_cc                         = conf.getProperty       (PROPKEY_cc,                         DEFAULT_cc);
+		_from                       = conf.getProperty       (PROPKEY_from,                       DEFAULT_from);
+		_subjectTemplate            = conf.getProperty       (PROPKEY_subjectTemplate,            DEFAULT_subjectTemplate);
+		_subjectNtrTemplate         = conf.getProperty       (PROPKEY_subjectNtrTemplate,         DEFAULT_subjectNtrTemplate);
+		_sendNtr                    = conf.getBooleanProperty(PROPKEY_sendNtr,                    DEFAULT_sendNtr);
+//		_msgBodyTemplate            = conf.getProperty       (PROPKEY_msgBodyTemplate,            DEFAULT_msgBodyTemplate);
+//		_msgBodyTemplateUseHtml     = conf.getBooleanProperty(PROPKEY_msgBodyTemplateUseHtml,     DEFAULT_msgBodyTemplateUseHtml);
+//		_msgBodyUseHtml             = conf.getBooleanProperty(PROPKEY_msgBodyUseHtml,             DEFAULT_msgBodyUseHtml);
+		_attachHtmlContent          = conf.getBooleanProperty(PROPKEY_attachHtmlContent,          DEFAULT_attachHtmlContent);
+		_attachHtmlContentMaxSizeMb = conf.getIntProperty    (PROPKEY_attachHtmlContentMaxSizeMb, DEFAULT_attachHtmlContentMaxSizeMb);
+                                                                                                  
+		_username                   = conf.getProperty       (PROPKEY_username,                   DEFAULT_username);
+		_password                   = conf.getProperty       (PROPKEY_password,                   DEFAULT_password);
+		_smtpPort                   = conf.getIntProperty    (PROPKEY_smtpPort,                   DEFAULT_smtpPort);
+		_sslPort                    = conf.getIntProperty    (PROPKEY_sslPort,                    DEFAULT_sslPort);
+		_useSsl                     = conf.getBooleanProperty(PROPKEY_useSsl,                     DEFAULT_useSsl);
+		_smtpConnectTimeout         = conf.getIntProperty    (PROPKEY_connectionTimeout,          DEFAULT_connectionTimeout);
 
 		//------------------------------------------
 		// Check for mandatory parameters
@@ -350,80 +371,81 @@ extends ReportSenderAbstract
 	@Override
 	public void printConfig()
 	{
-		int spaces = 45;
+		int spaces = 50;
 		_logger.info("Configuration for Report Sender Module: "+getName());
-		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname          , spaces) + ": " + _smtpHostname);
-		_logger.info("    " + StringUtil.left(PROPKEY_to                    , spaces) + ": " + _to);
+		_logger.info("    " + StringUtil.left(PROPKEY_smtpHostname              , spaces) + ": " + _smtpHostname);
+		_logger.info("    " + StringUtil.left(PROPKEY_to                        , spaces) + ": " + _to);
 		if (JsonUtils.isPossibleJson(_to))
 			_logger.info("    NOTE: the Above 'to' string look like JSON Content and will be evaluated at runtime, when the ServerName is known.");
-		_logger.info("    " + StringUtil.left(PROPKEY_from                  , spaces) + ": " + _from);
-		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate       , spaces) + ": " + _subjectTemplate);
-		_logger.info("    " + StringUtil.left(PROPKEY_subjectNtrTemplate    , spaces) + ": " + _subjectNtrTemplate);
-		_logger.info("    " + StringUtil.left(PROPKEY_sendNtr               , spaces) + ": " + _sendNtr);
-//		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate       , spaces) + ": " + _msgBodyTemplate);
-//		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplateUseHtml, spaces) + ": " + _msgBodyTemplateUseHtml);
-		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyUseHtml        , spaces) + ": " + _msgBodyUseHtml);
+		_logger.info("    " + StringUtil.left(PROPKEY_from                      , spaces) + ": " + _from);
+		_logger.info("    " + StringUtil.left(PROPKEY_subjectTemplate           , spaces) + ": " + _subjectTemplate);
+		_logger.info("    " + StringUtil.left(PROPKEY_subjectNtrTemplate        , spaces) + ": " + _subjectNtrTemplate);
+		_logger.info("    " + StringUtil.left(PROPKEY_sendNtr                   , spaces) + ": " + _sendNtr);
+//		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplate           , spaces) + ": " + _msgBodyTemplate);
+//		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyTemplateUseHtml    , spaces) + ": " + _msgBodyTemplateUseHtml);
+//		_logger.info("    " + StringUtil.left(PROPKEY_msgBodyUseHtml            , spaces) + ": " + _msgBodyUseHtml);
+		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContent         , spaces) + ": " + _attachHtmlContent);
+		_logger.info("    " + StringUtil.left(PROPKEY_attachHtmlContentMaxSizeMb, spaces) + ": " + _attachHtmlContentMaxSizeMb);
 
-		_logger.info("    " + StringUtil.left(PROPKEY_username              , spaces) + ": " + _username);
-		_logger.info("    " + StringUtil.left(PROPKEY_password              , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
-		_logger.info("    " + StringUtil.left(PROPKEY_cc                    , spaces) + ": " + _cc);
-		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort              , spaces) + ": " + _smtpPort);
-		_logger.info("    " + StringUtil.left(PROPKEY_sslPort               , spaces) + ": " + _sslPort);
-		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                , spaces) + ": " + _useSsl);
-		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout     , spaces) + ": " + _smtpConnectTimeout);
+		_logger.info("    " + StringUtil.left(PROPKEY_username                  , spaces) + ": " + _username);
+		_logger.info("    " + StringUtil.left(PROPKEY_password                  , spaces) + ": " + (_logger.isDebugEnabled() ? _password : "*secret*") );
+		_logger.info("    " + StringUtil.left(PROPKEY_cc                        , spaces) + ": " + _cc);
+		_logger.info("    " + StringUtil.left(PROPKEY_smtpPort                  , spaces) + ": " + _smtpPort);
+		_logger.info("    " + StringUtil.left(PROPKEY_sslPort                   , spaces) + ": " + _sslPort);
+		_logger.info("    " + StringUtil.left(PROPKEY_useSsl                    , spaces) + ": " + _useSsl);
+		_logger.info("    " + StringUtil.left(PROPKEY_connectionTimeout         , spaces) + ": " + _smtpConnectTimeout);
 	}
 
 
-	public static final String  PROPKEY_smtpHostname           = "ReportSenderToMail.smtp.hostname";
-	public static final String  DEFAULT_smtpHostname           = "";
-                                                               
-	public static final String  PROPKEY_to                     = "ReportSenderToMail.to";
-	public static final String  DEFAULT_to                     = "";
-	                                                           
-	public static final String  PROPKEY_from                   = "ReportSenderToMail.from";
-	public static final String  DEFAULT_from                   = "";
-	                                                           
-	public static final String  PROPKEY_subjectTemplate        = "ReportSenderToMail.msg.subject.template";
-	public static final String  DEFAULT_subjectTemplate        = "Daily Report for: ${srvName}";
-	                                                           
-	public static final String  PROPKEY_subjectNtrTemplate     = "ReportSenderToMail.msg.subject.nothingToReport.template";
-	public static final String  DEFAULT_subjectNtrTemplate     = "Daily Report -NTR- for: ${srvName}";
-	                                                           
-	public static final String  PROPKEY_sendNtr                = "ReportSenderToMail.send.nothingToReport";
-	public static final boolean DEFAULT_sendNtr                = true;
+	public static final String  PROPKEY_smtpHostname               = "ReportSenderToMail.smtp.hostname";
+	public static final String  DEFAULT_smtpHostname               = "";
+                                                                   
+	public static final String  PROPKEY_to                         = "ReportSenderToMail.to";
+	public static final String  DEFAULT_to                         = "";
+	                                                               
+	public static final String  PROPKEY_from                       = "ReportSenderToMail.from";
+	public static final String  DEFAULT_from                       = "";
+	                                                               
+	public static final String  PROPKEY_subjectTemplate            = "ReportSenderToMail.msg.subject.template";
+	public static final String  DEFAULT_subjectTemplate            = "Daily Report for: ${srvName}";
+	                                                               
+	public static final String  PROPKEY_subjectNtrTemplate         = "ReportSenderToMail.msg.subject.nothingToReport.template";
+	public static final String  DEFAULT_subjectNtrTemplate         = "Daily Report -NTR- for: ${srvName}";
+	                                                               
+	public static final String  PROPKEY_sendNtr                    = "ReportSenderToMail.send.nothingToReport";
+	public static final boolean DEFAULT_sendNtr                    = true;
+                                                                   
+//	public static final String  PROPKEY_msgBodyTemplate            = "ReportSenderToMail.msg.body.template";
+//	public static final String  DEFAULT_msgBodyTemplate            = createMsgBodyTemplate();
+                                                                   
+//	public static final String  PROPKEY_msgBodyUseHtml             = "ReportSenderToMail.msg.body.html";
+//	public static final boolean DEFAULT_msgBodyUseHtml             = true;
+                                                                   
+	public static final String  PROPKEY_attachHtmlContent          = "ReportSenderToMail.attachHtmlContent";
+	public static final boolean DEFAULT_attachHtmlContent          = true;
 
-//	public static final String  PROPKEY_msgBodyTemplate        = "ReportSenderToMail.msg.body.template";
-//	public static final String  DEFAULT_msgBodyTemplate        = createMsgBodyTemplate();
-
-	public static final String  PROPKEY_msgBodyUseHtml         = "ReportSenderToMail.msg.body.html";
-	public static final boolean DEFAULT_msgBodyUseHtml         = true;
-
-// NOT YET IMPLEMENTED
-//	public static final String  PROPKEY_attachHtmlContent      = "ReportSenderToMail.attachHtmlContent";
-//	public static final boolean DEFAULT_attachHtmlContent      = true;
-//
-//	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
-//	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 5;
+	public static final String  PROPKEY_attachHtmlContentMaxSizeMb = "ReportSenderToMail.attachHtmlContent.maxSizeMb";
+	public static final int     DEFAULT_attachHtmlContentMaxSizeMb = 5;
 
 	
-	public static final String  PROPKEY_username               = "ReportSenderToMail.smtp.username";
-	public static final String  DEFAULT_username               = "";
-                                                               
-	public static final String  PROPKEY_password               = "ReportSenderToMail.smpt.password";
-	public static final String  DEFAULT_password               = "";
-                                                               
-	public static final String  PROPKEY_cc                     = "ReportSenderToMail.cc";
-	public static final String  DEFAULT_cc                     = "";
-                                                               
-	public static final String  PROPKEY_smtpPort               = "ReportSenderToMail.smpt.port";
-	public static final int     DEFAULT_smtpPort               = -1;
-                                                               
-	public static final String  PROPKEY_sslPort                = "ReportSenderToMail.ssl.port";
-	public static final int     DEFAULT_sslPort                = -1;
-                                                               
-	public static final String  PROPKEY_useSsl                 = "ReportSenderToMail.ssl.use";
-	public static final boolean DEFAULT_useSsl                 = false;
-                                                               
-	public static final String  PROPKEY_connectionTimeout      = "ReportSenderToMail.smtp.connect.timeout";
-	public static final int     DEFAULT_connectionTimeout      = -1;
+	public static final String  PROPKEY_username                   = "ReportSenderToMail.smtp.username";
+	public static final String  DEFAULT_username                   = "";
+                                                                   
+	public static final String  PROPKEY_password                   = "ReportSenderToMail.smpt.password";
+	public static final String  DEFAULT_password                   = "";
+                                                                   
+	public static final String  PROPKEY_cc                         = "ReportSenderToMail.cc";
+	public static final String  DEFAULT_cc                         = "";
+                                                                   
+	public static final String  PROPKEY_smtpPort                   = "ReportSenderToMail.smpt.port";
+	public static final int     DEFAULT_smtpPort                   = -1;
+                                                                   
+	public static final String  PROPKEY_sslPort                    = "ReportSenderToMail.ssl.port";
+	public static final int     DEFAULT_sslPort                    = -1;
+                                                                   
+	public static final String  PROPKEY_useSsl                     = "ReportSenderToMail.ssl.use";
+	public static final boolean DEFAULT_useSsl                     = false;
+                                                                   
+	public static final String  PROPKEY_connectionTimeout          = "ReportSenderToMail.smtp.connect.timeout";
+	public static final int     DEFAULT_connectionTimeout          = -1;
 }

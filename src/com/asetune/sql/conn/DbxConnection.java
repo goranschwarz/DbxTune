@@ -127,6 +127,13 @@ implements Connection
 	public static ConnectionProp getDefaultConnProp() { return _defaultConnProp; }
 	public static void           setDefaultConnProp(ConnectionProp defaultConnProp) { _defaultConnProp = defaultConnProp; }
 
+	public ConnectionProp getConnPropOrDefault() 
+	{
+		if (_connProp != null)
+			return _connProp;
+		return _defaultConnProp;
+	}
+	
 //	public void setUsername(String username) { _username = username; }
 //	public void setPassword(String password) { _password = password; }
 //	public void setServer  (String server)   { _server   = server; }
@@ -655,9 +662,18 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	}
 
 	/**
-	 * Helper method to Replace "fake" begin/end Quoted Identifier Chars into DBMS Vendor Specific Quoted Identifier
+	 * Helper method to Replace "fake" begin/end Quoted Identifier Chars into DBMS Vendor Specific Quoted Identifier<br>
+	 * If a SQL String constant is discovered, no translation will be done inside that part of the full string<br>
+	 * <br>
+	 * Expected behavior, with a DBMS Quoted Identifier Character of <code>"</code>
+	 * <table border=1>
+	 *    <tr> <th>input</th> <th>output</th> </tr>
+	 *    <tr> <td><code> select [c1] from [t1] where [c2] like 'abc%'       </code></td> <td><code> select "c1" from "t1" where "c2" like 'val%'       </code></td> </tr>
+	 *    <tr> <td><code> select [c1] from [t1] where [c2] like '[abc]%'     </code></td> <td><code> select "c1" from "t1" where "c2" like '[abc]%'     </code></td> </tr>
+	 *    <tr> <td><code> select [c1] from [t1] where [c2] like 'It''s [a]%' </code></td> <td><code> select "c1" from "t1" where "c2" like 'It''s [a]%' </code></td> </tr>
+	 * </table>
 	 * 
-	 * @param sql   SQL Statement text where '[' and ']' will be replaced with DBMS Vendor Specific Quoted Identifier
+	 * @param sql       SQL Statement text where '[' and ']' will be replaced with DBMS Vendor Specific Quoted Identifier
 	 * 
 	 * @return The quotified string
 	 */
@@ -667,28 +683,53 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	}
 
 	/**
-	 * Helper method to Replace "fake" begin/end Quoted Identifier Chars into DBMS Vendor Specific Quoted Identifier
+	 * Helper method to Replace "fake" begin/end Quoted Identifier Chars into DBMS Vendor Specific Quoted Identifier<br>
+	 * If a SQL String constant is discovered, no translation will be done inside that part of the full string<br>
+	 * <br>
+	 * Expected behavior, with a DBMS Quoted Identifier Character of <code>"</code>
+	 * <table border=1>
+	 *    <tr> <th>input</th> <th>output</th> </tr>
+	 *    <tr> <td><code> select [c1] from [t1] where [c2] like 'abc%'       </code></td> <td><code> select "c1" from "t1" where "c2" like 'val%'       </code></td> </tr>
+	 *    <tr> <td><code> select [c1] from [t1] where [c2] like '[abc]%'     </code></td> <td><code> select "c1" from "t1" where "c2" like '[abc]%'     </code></td> </tr>
+	 *    <tr> <td><code> select [c1] from [t1] where [c2] like 'It''s [a]%' </code></td> <td><code> select "c1" from "t1" where "c2" like 'It''s [a]%' </code></td> </tr>
+	 * </table>
 	 * 
 	 * @param sql       SQL Statement text where '[' and ']' will be replaced with DBMS Vendor Specific Quoted Identifier
-	 * @param leftChar  character representing a "left" side of a Quoted Identifier that should be replaced
-	 * @param rightChar character representing a "right" side of a Quoted Identifier that should be replaced
+	 * @param leftChar  character representing a "left" side of a Quoted Identifier that should be replaced (in the example above [)
+	 * @param rightChar character representing a "right" side of a Quoted Identifier that should be replaced (in the example above ])
 	 * 
 	 * @return The quotified string
 	 */
 	public String quotifySqlString(String sql, char leftChar, char rightChar)
 	{
+		if (sql == null)
+			return null;
+
 		String lq = getLeftQuote();
 		String rq = getRightQuote();
 		
 		StringBuilder sb = new StringBuilder(sql.length());
+
+		boolean inSingleQuotes = false;
 		
 		for (int i=0; i<sql.length(); i++)
 		{
 			char c = sql.charAt(i);
 
-			if      ( c == leftChar  ) sb.append(lq);
-			else if ( c == rightChar ) sb.append(rq);
-			else                       sb.append(c);
+			// "flip" the boolean every time we see a single quote char
+			if (c == '\'')
+				inSingleQuotes = ! inSingleQuotes;
+
+			if (inSingleQuotes)
+			{
+				sb.append(c);
+			}
+			else
+			{
+				if      ( c == leftChar  ) sb.append(lq);
+				else if ( c == rightChar ) sb.append(rq);
+				else                       sb.append(c);
+			}
 		}
 		
 		return sb.toString();
@@ -1289,6 +1330,23 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 * @return null if not connected else: Retrieves the name of this database server/instance name.
 	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
 	 */
+	public String getDbmsServerNameNoThrow() 
+	{
+		try
+		{
+			return getDbmsServerName();
+		}
+		catch (SQLException ex)
+		{
+			_logger.error("getDbmsServerNameNoThrow(): returning blank-string, Caught: " + ex);
+			return "";
+		}
+	}
+	/**
+	 * Get the connected database server/instance name.
+	 * @return null if not connected else: Retrieves the name of this database server/instance name.
+	 * @see java.sql.DatabaseMetaData.getDatabaseProductName
+	 */
 	public String getDbmsServerName() 
 	throws SQLException
 	{
@@ -1332,7 +1390,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		else if (DbUtils.DB_PROD_NAME_H2.equals(currentDbProductName))
 		{
 			H2UrlHelper urlHelper = new H2UrlHelper(_conn.getMetaData().getURL());
-			if ( "file".equals(urlHelper.getUrlType()) ) serverName = "LOCAL-FILE";
+			if ( "file".equals(urlHelper.getUrlType()) ) serverName = "LOCAL-FILE:" + urlHelper.getFile().getName();
 			if ( "tcp" .equals(urlHelper.getUrlType()) ) serverName = urlHelper.getUrlTcpHostPort();
 			if ( "ssl" .equals(urlHelper.getUrlType()) ) serverName = urlHelper.getUrlTcpHostPort();
 		}

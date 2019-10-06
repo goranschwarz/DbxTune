@@ -20,6 +20,23 @@
  ******************************************************************************/
 package com.asetune.config.dbms;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import com.asetune.config.dict.AseTraceFlagsDictionary;
+import com.asetune.config.dict.SqlServerTraceFlagsDictionary;
+import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public abstract class SqlServerConfigText
@@ -29,6 +46,7 @@ public abstract class SqlServerConfigText
 	{
 		 SqlServerHelpDb
 		,SqlServerSysDatabases
+		,SqlServerTraceflags
 		,SqlServerHelpSort
 		,SqlServerHostInfo
 		,SqlServerSysInfo
@@ -43,6 +61,7 @@ public abstract class SqlServerConfigText
 	{
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpDb());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysDatabases());
+		DbmsConfigTextManager.addInstance(new SqlServerConfigText.Traceflags());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HelpSort());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.HostInfo());
 		DbmsConfigTextManager.addInstance(new SqlServerConfigText.SysInfo());
@@ -72,6 +91,105 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                            { return ConfigType.SqlServerSysDatabases.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
 		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select has_dbaccess(name) AS has_dbaccess, * from sys.databases"; }
+	}
+
+	public static class Traceflags extends DbmsConfigTextAbstract
+	{
+		@Override public    String     getTabLabel()                        { return "traceflags"; }
+		@Override public    String     getName()                            { return ConfigType.SqlServerTraceflags.toString(); }
+		@Override public    String     getConfigType()                      { return getName(); }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "DBCC TRACESTATUS WITH NO_INFOMSGS"; }
+
+		@Override
+		public void refresh(DbxConnection conn, Timestamp ts)
+		throws SQLException
+		{
+			if ( isOffline() )
+			{
+				super.refresh(conn, ts);
+				return;
+			}
+			
+			// ONLINE: 
+			// - Refresh to get config using normal method
+			// - if we get result: enrich every TraceFlag Number with a description 
+
+			StringBuilder sb = new StringBuilder();
+
+			super.refresh(conn, ts);
+			
+			String superConfigStr = getConfig(); 
+
+			// If we HAVE GOT anything... then get details...
+			if (StringUtil.hasValue(superConfigStr))
+			{
+				// Reuse the config from "super"... and then get the TraceFlags again, and add a desription message
+				sb.append(superConfigStr);
+				
+				//  1> DBCC TRACESTATUS WITH NO_INFOMSGS
+	            //  RS> Col# Label     JDBC Type Name          Guessed DBMS type Source Table
+	            //  RS> ---- --------- ----------------------- ----------------- ------------
+	            //  RS> 1    TraceFlag java.sql.Types.SMALLINT smallint          -none-      
+	            //  RS> 2    Status    java.sql.Types.SMALLINT smallint          -none-      
+	            //  RS> 3    Global    java.sql.Types.SMALLINT smallint          -none-      
+	            //  RS> 4    Session   java.sql.Types.SMALLINT smallint          -none-      
+	            //  +---------+------+------+-------+
+	            //  |TraceFlag|Status|Global|Session|
+	            //  +---------+------+------+-------+
+	            //  |3604     |1     |0     |1      |
+	            //  +---------+------+------+-------+
+	            //  (1 rows affected)
+
+				// Get the SQL to execute.
+				//long         srvVersion = conn.getDbmsVersionNumber();
+				String sql = "DBCC TRACESTATUS WITH NO_INFOMSGS"; //getSqlCurrentConfig(srvVersion);
+
+				ResultSetTableModel rstm = null;
+				
+				sql = conn.quotifySqlString(sql);
+				try ( Statement stmnt = conn.createStatement() )
+				{
+					// 10 seconds timeout
+					stmnt.setQueryTimeout(10);
+					try ( ResultSet rs = stmnt.executeQuery(sql) )
+					{
+						rstm = new ResultSetTableModel(rs, "traceflags");
+
+						// build the descriptive table 
+						sb.append("\n\n");
+						sb.append("===========================================================================\n");
+						sb.append("Explanation of the active trace flags:\n");
+						sb.append("---------------------------------------------------------------------------\n");
+						for (int r=0; r<rstm.getRowCount(); r++)
+						{
+							int traceflag  = rstm.getValueAsInteger(r, 0); // 0 = first col
+							String desc    = SqlServerTraceFlagsDictionary.getInstance().getDescription(traceflag);
+
+							sb.append("###########################################################################\n");
+							sb.append(desc);
+						}
+					}
+				}
+				catch(SQLException ex)
+				{
+					sb.append(StringUtil.exceptionToString(ex));
+				}
+			}
+			else
+			{
+				sb.append("INFO: NO Trace Flags has been set.\n");
+			}
+
+			
+			sb.append("\n\n");
+			sb.append("===========================================================================\n");
+			sb.append("Explanation of the trace flags was found here:\n");
+			sb.append("---------------------------------------------------------------------------\n");
+			sb.append("https://docs.microsoft.com/en-us/sql/t-sql/database-console-commands/dbcc-traceon-trace-flags-transact-sql \n");
+			
+			// Now set the config
+			setConfig(sb.toString());
+		}
 	}
 
 	public static class HelpSort extends DbmsConfigTextAbstract

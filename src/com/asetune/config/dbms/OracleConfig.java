@@ -11,12 +11,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.OracleTune;
+import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.NumberUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -146,17 +150,49 @@ extends DbmsConfigAbstract
 		"  from ["+PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false) + "]" +
 		" ) ";
 
+//	@Override
+//	public String getSqlForDiff(boolean isOffline)
+//	{
+//		if (isOffline)
+//		{
+//			String tabName = PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false);
+//
+//			return 
+//					"select \n" +
+//					"     [NAME] \n" +
+//					"    ,[VALUE] \n" +
+//					"from [" + tabName + "] \n" +
+//					"where [SessionStartTime] = (select max([SessionStartTime]) from [" + tabName + "]) \n" +
+//					"order by 1 \n" +
+//					"";
+//		}
+//		else
+//		{
+//			return
+//					"select \n"
+//					+ "      NAME             as NAME \n"
+//					+ "     ,CASE WHEN regexp_like(VALUE,'^[0-9]+$') THEN TO_NUMBER(VALUE) ELSE -1 END as VALUE \n"
+//					+ "from v$parameter \n" +
+//					"order by 1 \n" +
+//					"";
+//		}
+//	}
+		
 	/** hashtable with MonTableEntry */
 	private HashMap<String,OracleConfigEntry> _configMap  = null;
 	private ArrayList<OracleConfigEntry>      _configList = null;
 
 	private ArrayList<String>              _configSectionList = null;
 
-	private String _dbmsName = "";
-	private String _dbmsVersion = "";
-	
 	public class OracleConfigEntry
+	implements IDbmsConfigEntry
 	{
+		@Override public String getConfigKey()    { return configName; }
+		@Override public String getConfigValue()  { return configValueString; }
+		@Override public String  getSectionName() { return sectionName; }
+		@Override public boolean isPending()      { return isPending; }
+		@Override public boolean isNonDefault()   { return isNonDefault; }
+		
 		/** configuration has been changed by any user (same as sp_configure 'nondefault')*/
 		public boolean isNonDefault;
 
@@ -239,7 +275,8 @@ extends DbmsConfigAbstract
 	}
 
 	/** get the Map */
-	public Map<String,OracleConfigEntry> getDbmsConfigMap()
+	@Override
+	public Map<String, ? extends IDbmsConfigEntry> getDbmsConfigMap()
 	{
 		return _configMap;
 	}
@@ -281,8 +318,12 @@ extends DbmsConfigAbstract
 		_configList        = new ArrayList<OracleConfigEntry>();
 		_configSectionList = new ArrayList<String>();
 		
-		_dbmsName    = conn.getDbmsServerName();
-		_dbmsVersion = conn.getDbmsVersionStr();
+		try { setDbmsServerName(conn.getDbmsServerName()); } catch (SQLException ex) { setDbmsServerName(ex.getMessage()); };
+		try { setDbmsVersionStr(conn.getDbmsVersionStr()); } catch (SQLException ex) { setDbmsVersionStr(ex.getMessage()); };
+
+		try { setLastUsedUrl( conn.getMetaData().getURL() ); } catch(SQLException ignore) { }
+		setLastUsedConnProp(conn.getConnPropOrDefault());
+
 
 		String sql = GET_CONFIG_ONLINE_SQL;
 		if (_offline)
@@ -299,6 +340,20 @@ extends DbmsConfigAbstract
 				tsStr = "'" + ts + "'";
 			}
 			sql = sql.replace("SESSION_START_TIME", tsStr);
+			
+			// For OFFLINE mode: override some the values previously fetched the connection object, with values from the Recorded Database
+			MonRecordingInfo recordingInfo = new MonRecordingInfo(conn, null);
+			setOfflineRecordingInfo(recordingInfo);
+			setDbmsServerName(recordingInfo.getDbmsServerName());
+			setDbmsVersionStr(recordingInfo.getDbmsVersionStr());
+
+			// Check if this is correct TYPE
+			String expectedType = OracleTune.APP_NAME;
+			String readType     = recordingInfo.getRecDbxAppName();
+			if ( ! expectedType.equals(readType) )
+			{
+				throw new WrongRecordingVendorContent(expectedType, readType);
+			}
 		}
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars
@@ -624,8 +679,8 @@ extends DbmsConfigAbstract
 		sb.append("/* \n");
 		sb.append("** Reverse engineering ").append(modelRows.length).append(" entries. \n");
 		sb.append("** At Date:            ").append(new Timestamp(System.currentTimeMillis())).append("\n");
-		sb.append("** Oracle Server name: ").append(_dbmsName).append("\n");
-		sb.append("** Oracle Version:     ").append(_dbmsVersion).append("\n");
+		sb.append("** Oracle Server name: ").append(getDbmsServerName()).append("\n");
+		sb.append("** Oracle Version:     ").append(getDbmsVersionStr()).append("\n");
 		sb.append("*/ \n");
 		sb.append("\n");
 		for (int r=0; r<modelRows.length; r++)
@@ -649,18 +704,80 @@ extends DbmsConfigAbstract
 				sb.append("-- Min Value:     ").append(getValueAt(mrow, findColumn(OracleConfig.MIN_VALUE))).append("\n");
 				sb.append("-- Max Value:     ").append(getValueAt(mrow, findColumn(OracleConfig.MAX_VALUE))).append("\n");
 				
-    			sb.append("FIXME: ALTER SYSTEM '").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))).append("', ");
+    			sb.append("ALTER SYSTEM SET ").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))).append(" = ");
     			sb.append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_VALUE))).append("");
     			sb.append("\n");
     			sb.append("go\n");
 			}
 			else
 			{
-    			sb.append("FIXME: ALTER SYSTEM '").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))).append("', 0, '").append(cfgValStr).append("'");
+    			sb.append("ALTER SYSTEM SET ").append(getValueAt(mrow, findColumn(OracleConfig.CONFIG_NAME))).append(" = '").append(cfgValStr).append("'");
     			sb.append("\n");
     			sb.append("go\n");
 			}
 			sb.append("\n");
+		}
+		
+		return sb.toString();
+	}
+
+	@Override
+	public String reverseEngineer(Map<String, String> keyValMap, String comment)
+	{
+		if (keyValMap == null)     return null;
+		if (keyValMap.size() == 0) return null;
+
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("/* \n");
+		sb.append("** Reverse engineering ").append(keyValMap.size()).append(" entries. \n");
+		sb.append("** At Date:            ").append(new Timestamp(System.currentTimeMillis())).append("\n");
+		sb.append("** Oracle Server name: ").append(getDbmsServerName()).append("\n");
+		sb.append("** Oracle Version:     ").append(getDbmsVersionStr()).append("\n");
+		if (StringUtil.hasValue(comment))
+			sb.append("** Comment:            ").append(comment).append("\n");
+		sb.append("*/ \n");
+		sb.append("\n");
+
+		for (Entry<String, String> e : keyValMap.entrySet())
+		{
+			String key = e.getKey();
+			String val = e.getValue();
+
+			OracleConfigEntry cfgEntry = _configMap.get(e.getKey());
+
+			sb.append("---------------------------------------------------------------------------\n");
+			sb.append("-- Config Name:   ").append(key)                  .append("\n");
+			sb.append("-- Description:   ").append(cfgEntry.description) .append("\n");
+			sb.append("-- Section Name:  ").append(cfgEntry.sectionName) .append("\n");
+			sb.append("-- Type:          ").append(cfgEntry.configType)  .append("\n");
+			sb.append("-- Default Value: ").append(cfgEntry.defaultValue).append("\n");
+
+			sb.append("-- Prev Value:    ").append(cfgEntry.getConfigValue()).append("\n");
+			sb.append("-- New Value:     ").append(val)                      .append("\n");
+
+			if (cfgEntry.isReadOnly)
+			{
+				sb.append("-- NOTE -- This is a 'read-only' configuration... so nothing will be done here.\n");
+				sb.append("\n");
+				sb.append("go\n");
+				continue;
+			}
+			if (NumberUtils.isNumber(val))
+			{
+				sb.append("-- Min Value:     ").append(cfgEntry.minValue).append("\n");
+				sb.append("-- Max Value:     ").append(cfgEntry.maxValue).append("\n");
+
+				sb.append("ALTER SYSTEM SET ").append(key).append(" = ").append(e.getValue()).append("");
+    			sb.append("\n");
+    			sb.append("go\n");
+			}
+			else
+			{
+    			sb.append("ALTER SYSTEM SET ").append(key).append(" = '").append(val).append("'");
+    			sb.append("\n");
+    			sb.append("go\n");
+			}
 		}
 		
 		return sb.toString();

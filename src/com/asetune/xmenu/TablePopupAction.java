@@ -7,6 +7,7 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -31,7 +32,7 @@ implements ActionListener
 	private String              _connName;
 	private String              _classname;
 	private String              _config;
-	private List<Set<String>>   _params;
+	private List<LinkedHashSet<String>>   _params;
 	private Properties          _menuProps;
 	private Properties          _allProps;
 	private XmenuAction         _xmenuObject;
@@ -40,7 +41,7 @@ implements ActionListener
 	private boolean             _closeConnOnExit;
 	private Window              _owner;
 
-	public TablePopupAction(String menuName, String connName, String classname, List<Set<String>> params, 
+	public TablePopupAction(String menuName, String connName, String classname, List<LinkedHashSet<String>> params, 
 			String config, Properties menuProps, Properties allProps, 
 			JTable table, ConnectionProvider connProvider, boolean closeConnOnExit, Window owner)
 	{
@@ -147,7 +148,7 @@ implements ActionListener
 		// Loop parameters and try to get the position of the
 		for (int p=0; p<_params.size(); p++)
 		{
-			Set<String> paramSet = _params.get(p);
+			LinkedHashSet<String> paramSet = _params.get(p);
 			String paramUsed = null;
 			boolean isOptional = false;
 			int colPos = -1;
@@ -192,7 +193,27 @@ implements ActionListener
 					return null;
 				}
 
-				paramValues.put(paramUsed, val);
+				boolean addAllAliasNames = false; 
+				if (addAllAliasNames)
+				{
+					// Note adding more entries (as aliases) will break code where we access by position. 
+					for (String param : paramSet)
+						paramValues.put(param, val);
+				}
+				else
+				{
+					boolean setAliasToFirstName = true;
+					if (setAliasToFirstName)
+					{
+						// This will set the variable name to use as the FIRST entry in the alias map
+						for (String param : paramSet)
+						{
+							paramUsed = param;
+							break;
+						}
+					}
+					paramValues.put(paramUsed, val);
+				}
 
 				_logger.debug("PopupMenuAction: column name '"+paramUsed+"' has value '"+val+"'.");
 			}

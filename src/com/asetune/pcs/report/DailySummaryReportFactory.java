@@ -56,7 +56,7 @@ public class DailySummaryReportFactory
 	public static final String  DEFAULT_saveDir = DbxTuneCentral.getAppReportsDir();
 	
 	public static final String  PROPKEY_removeReportsAfterDays = "DailySummaryReport.remove.after.days";
-	public static final int     DEFAULT_removeReportsAfterDays = 30;
+	public static final int     DEFAULT_removeReportsAfterDays = 60;
 
 
 	public static final String  PROPKEY_maxTableCellSizeKb = "DailySummaryReport.maxTableCellSizeKb";

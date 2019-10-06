@@ -1866,8 +1866,17 @@ implements Cloneable, ITableTooltip
 				}
 				else
 				{
-					// make '\n' into '<br>'
-					strVal = strVal.replace("\n", "<br>");
+					// check for XML content "somewhere" in the string
+					if (strVal.indexOf("<?xml") >= 0)
+					{
+						// if there are any XML tag in the field... Then surround the value with a '<xmp>' tag
+						strVal = "<xmp>" + strVal + "</xmp>";
+					}
+					else
+					{
+						// make '\n' into '<br>'
+						strVal = strVal.replace("\n", "<br>");
+					}
 				}
 				
 				// If it's a LONG String, only display first 'maxStrLen' characters...

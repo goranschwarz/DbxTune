@@ -45,6 +45,9 @@ import org.apache.log4j.Logger;
 
 import com.asetune.CounterController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.ase.AlarmEventAseLicensExpiration;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.cache.XmlPlanCacheAse;
 import com.asetune.cm.CountersModel;
@@ -72,6 +75,7 @@ import com.asetune.tools.sqlcapture.ProcessDetailFrame;
 import com.asetune.tools.sqlcapture.SqlCaptureOfflineView;
 import com.asetune.tools.sqlw.QueryWindow;
 import com.asetune.utils.AseConnectionUtils;
+import com.asetune.utils.AseLicensInfo;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
@@ -235,9 +239,18 @@ extends MainFrame
 		boolean hasEnableMonitoring = AseConnectionUtils.getAseConfigRunValueBooleanNoEx(conn, "enable monitoring");
 		long    srvVersion          = AseConnectionUtils.getAseVersionNumber(conn); 
 
-		String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(conn);
+//		String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(conn);
+		String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(conn);
 		if (StringUtil.hasValue(gracePeriodWarning))
+		{
 			setServerWarningStatus(true, Color.RED, gracePeriodWarning);
+			
+			if (AlarmHandler.hasInstance())
+			{
+				AlarmEvent alarmEvent = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
+				AlarmHandler.getInstance().addAlarm(alarmEvent);
+			}
+		}
 
 		// MON_ROLE
 		if ( ! hasMonRole )

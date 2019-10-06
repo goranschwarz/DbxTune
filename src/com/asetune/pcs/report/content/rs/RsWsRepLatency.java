@@ -37,13 +37,7 @@ public class RsWsRepLatency extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		return "Text Report is not implemented";
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -53,11 +47,6 @@ public class RsWsRepLatency extends AseAbstract
 
 		sb.append(_CmWsRepLatency_DataAgeInSec.getHtmlContent(null, null));
 		
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -75,7 +64,7 @@ public class RsWsRepLatency extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		_CmWsRepLatency_DataAgeInSec = createChart(conn, "CmWsRepLatency", "DataAgeInSec", -1, null, "Data Age In Seconds, from Active->Standby");
 	}

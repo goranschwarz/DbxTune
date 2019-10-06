@@ -33,6 +33,9 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventBlockingLockAlarm;
 import com.asetune.cache.XmlPlanCache;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
@@ -175,34 +178,35 @@ extends CountersModel
 		try 
 		{
 			MonTablesDictionary mtd = MonTablesDictionaryManager.getInstance();
-			mtd.addColumn("monProcess",  "monSource",          "<html>" +
-			                                                       "This is the <i>source</i> of what part of the monitoring query the row resides from." +
-			                                                       "<ul>" +
-			                                                       "   <li>ACTIVE        - Statements that are currently executing SQL Statements at the server. <br>Basically rows in <code>monProcessStatement</code></li>" +
-			                                                       "   <li>BLOCKER       - Statements that are holding <b>blocking</b> locks (stops other SPID's form working). <br><code>select ... from monProcess where WaitEventID = 250 and SPID in (select blocked from sysprocesses where blocked > 0)</code></li>" +
-			                                                       "   <li>HOLDING-LOCKS - Statements that are holding <b>any</b> locks (may cause <i>blocking</i> locks soon and are <b>not</b> active in the server, WaitEventID=250). <br><code>select ... from monProcess where WaitEventID = 250 and SPID in (select spid from syslocks)</code></li>" +
-			                                                       "</ul>" +
-			                                                   "</html>");
-			mtd.addColumn("monProcess",  "BlockingOtherSpids", "This SPID is Blocking other SPID's from executing, because this SPID hold lock(s), that some other SPID wants to grab.");
-			mtd.addColumn("monProcess",  "multiSampled",       "<html>" +
-			                                                       "This indicates that the PrimaryKey (SPID, monSource[, InstanceID]) has been in this table for more than one sample.<br>" +
-			                                                       "Also 'StartTime' has to be the <b>same</b> as in the previous sample.<br>" +
-			                                                       "The StartTime is the columns, which tells the start time for current SQL statement, or the individual statement inside a Stored Procedure." +
-			                                                   "</html>");
+			mtd.addColumn("monProcess",  "monSource",                  "<html>" +
+			                                                               "This is the <i>source</i> of what part of the monitoring query the row resides from." +
+			                                                               "<ul>" +
+			                                                               "   <li>ACTIVE        - Statements that are currently executing SQL Statements at the server. <br>Basically rows in <code>monProcessStatement</code></li>" +
+			                                                               "   <li>BLOCKER       - Statements that are holding <b>blocking</b> locks (stops other SPID's form working). <br><code>select ... from monProcess where WaitEventID = 250 and SPID in (select blocked from sysprocesses where blocked > 0)</code></li>" +
+			                                                               "   <li>HOLDING-LOCKS - Statements that are holding <b>any</b> locks (may cause <i>blocking</i> locks soon and are <b>not</b> active in the server, WaitEventID=250). <br><code>select ... from monProcess where WaitEventID = 250 and SPID in (select spid from syslocks)</code></li>" +
+			                                                               "</ul>" +
+			                                                           "</html>");
+			mtd.addColumn("monProcess",  "BlockingOtherSpids",         "This SPID is Blocking other SPID's from executing, because this SPID hold lock(s), that some other SPID wants to grab.");
+			mtd.addColumn("monProcess",  "BlockingOthersMaxTimeInSec", "Max Time in Seconds this SPID has been Blocking other SPID's from executing, because this SPID hold lock(s), that some other SPID wants to grab.");
+			mtd.addColumn("monProcess",  "multiSampled",               "<html>" +
+			                                                               "This indicates that the PrimaryKey (SPID, monSource[, InstanceID]) has been in this table for more than one sample.<br>" +
+			                                                               "Also 'StartTime' has to be the <b>same</b> as in the previous sample.<br>" +
+			                                                               "The StartTime is the columns, which tells the start time for current SQL statement, or the individual statement inside a Stored Procedure." +
+			                                                           "</html>");
 
-			mtd.addColumn("monProcess",  "RowsAffectedDiff",   "Same as 'RowsAffected' but diff calculated");
-			mtd.addColumn("monProcess",  "HasMonSqlText",      "Has values for: select SQLText from master.dbo.monProcessSQLText where SPID = <SPID>");
-			mtd.addColumn("monProcess",  "MonSqlText",                         "select SQLText from master.dbo.monProcessSQLText where SPID = <SPID>");
-			mtd.addColumn("monProcess",  "HasDbccSqlText",     "Has values for: DBCC sqltext(<SPID>)");
-			mtd.addColumn("monProcess",  "DbccSqlText",                        "DBCC sqltext(<SPID>)");
-			mtd.addColumn("monProcess",  "HasShowPlan",        "Has values for: sp_showplan <SPID>, null, null, null");
-			mtd.addColumn("monProcess",  "ShowPlanText",                       "sp_showplan <SPID>, null, null, null");
-			mtd.addColumn("monProcess",  "HasStacktrace",      "Has values for: DBCC stacktrace(<SPID>)");
-			mtd.addColumn("monProcess",  "DbccStacktrace",                     "DBCC stacktrace(<SPID>)");
-			mtd.addColumn("monProcess",  "HasCachedPlanInXml", "Has values for: show_cached_plan_in_xml(<planid>, 0, 0)");
-			mtd.addColumn("monProcess",  "CachedPlanInXml",    "show_cached_plan_in_xml(<planid>, 0, 0)");
-			mtd.addColumn("monProcess",  "HasProcCallStack",   "Has values for: select * from monProcessProcedures where SPID = <SPID>");
-			mtd.addColumn("monProcess",  "ProcCallStack",                      "select * from monProcessProcedures where SPID = <SPID>");
+			mtd.addColumn("monProcess",  "RowsAffectedDiff",           "Same as 'RowsAffected' but diff calculated");
+			mtd.addColumn("monProcess",  "HasMonSqlText",              "Has values for: select SQLText from master.dbo.monProcessSQLText where SPID = <SPID>");
+			mtd.addColumn("monProcess",  "MonSqlText",                                 "select SQLText from master.dbo.monProcessSQLText where SPID = <SPID>");
+			mtd.addColumn("monProcess",  "HasDbccSqlText",             "Has values for: DBCC sqltext(<SPID>)");
+			mtd.addColumn("monProcess",  "DbccSqlText",                                "DBCC sqltext(<SPID>)");
+			mtd.addColumn("monProcess",  "HasShowPlan",                "Has values for: sp_showplan <SPID>, null, null, null");
+			mtd.addColumn("monProcess",  "ShowPlanText",                               "sp_showplan <SPID>, null, null, null");
+			mtd.addColumn("monProcess",  "HasStacktrace",              "Has values for: DBCC stacktrace(<SPID>)");
+			mtd.addColumn("monProcess",  "DbccStacktrace",                             "DBCC stacktrace(<SPID>)");
+			mtd.addColumn("monProcess",  "HasCachedPlanInXml",         "Has values for: show_cached_plan_in_xml(<planid>, 0, 0)");
+			mtd.addColumn("monProcess",  "CachedPlanInXml",            "show_cached_plan_in_xml(<planid>, 0, 0)");
+			mtd.addColumn("monProcess",  "HasProcCallStack",           "Has values for: select * from monProcessProcedures where SPID = <SPID>");
+			mtd.addColumn("monProcess",  "ProcCallStack",                              "select * from monProcessProcedures where SPID = <SPID>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -313,7 +317,7 @@ extends CountersModel
 		         "ExecTimeInMs    = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE  datediff(ms, S.StartTime, getdate()) END, \n" +               // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 		         "UsefullExecTime = CASE WHEN datediff(day, S.StartTime, getdate()) >= 24 THEN -1 ELSE (datediff(ms, S.StartTime, getdate()) - S.WaitTime) END, \n" + // protect from: Msg 535: Difference of two datetime fields caused overflow at runtime. above 24 days or so, the MS difference is overflowned
 		         QueryOptimizationTime + ase160_sp3_nl +
-		         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
+		         "BlockingOtherSpids=convert(varchar(255),''), BlockingOthersMaxTimeInSec=convert(int, 0), P.BlockingSPID, \n" +
 		         "P.SecondsWaiting, P.WaitEventID, \n" +
 		         "WaitClassDesc=convert(varchar(120),''), \n" +
 		         "WaitEventDesc=convert(varchar(120),''), \n" +
@@ -398,7 +402,7 @@ extends CountersModel
 		         "ExecTimeInMs    = -1, \n" +
 		         "UsefullExecTime = -1, \n" +
 		         QueryOptimizationTime_union + ase160_sp3_nl +
-		         "BlockingOtherSpids=convert(varchar(255),''), P.BlockingSPID, \n" +
+		         "BlockingOtherSpids=convert(varchar(255),''), BlockingOthersMaxTimeInSec=convert(int, 0), P.BlockingSPID, \n" +
 		         "P.SecondsWaiting, P.WaitEventID, \n" +
 		         "WaitClassDesc=convert(varchar(120),''), \n" +
 		         "WaitEventDesc=convert(varchar(120),''), \n" +
@@ -667,17 +671,19 @@ extends CountersModel
 		boolean getCachedPlanInXml = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml);
 
 		// Where are various columns located in the Vector 
-		int pos_WaitEventID        = -1, pos_WaitEventDesc   = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
-		int pos_HasShowPlan        = -1, pos_ShowPlanText    = -1;
-		int pos_HasMonSqlText      = -1, pos_MonSqlText      = -1;
-		int pos_HasDbccSqlText     = -1, pos_DbccSqlText     = -1;
-		int pos_HasProcCallStack   = -1, pos_ProcCallStack   = -1;
-		int pos_HasStacktrace      = -1, pos_DbccStacktrace  = -1;
-		int pos_HasCachedPlanInXml = -1, pos_CachedPlanInXml = -1, pos_procname = -1;
-		int pos_BlockingOtherSpids = -1, pos_BlockingSPID    = -1;
-		int pos_multiSampled       = -1;
-		int pos_StartTime          = -1;
-		int pos_BatchID            = -1;
+		int pos_WaitEventID                = -1, pos_WaitEventDesc   = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
+		int pos_HasShowPlan                = -1, pos_ShowPlanText    = -1;
+		int pos_HasMonSqlText              = -1, pos_MonSqlText      = -1;
+		int pos_HasDbccSqlText             = -1, pos_DbccSqlText     = -1;
+		int pos_HasProcCallStack           = -1, pos_ProcCallStack   = -1;
+		int pos_HasStacktrace              = -1, pos_DbccStacktrace  = -1;
+		int pos_HasCachedPlanInXml         = -1, pos_CachedPlanInXml = -1, pos_procname = -1;
+		int pos_BlockingOtherSpids         = -1, pos_BlockingSPID    = -1;
+		int pos_SecondsWaiting             = -1;
+		int pos_BlockingOthersMaxTimeInSec = -1;
+		int pos_multiSampled               = -1;
+		int pos_StartTime                  = -1;
+		int pos_BatchID                    = -1;
 		int waitEventID = 0;
 		String waitEventDesc = "";
 		String waitClassDesc = "";
@@ -698,42 +704,46 @@ extends CountersModel
 		for (int colId=0; colId < colNames.size(); colId++) 
 		{
 			String colName = colNames.get(colId);
-			if      (colName.equals("WaitEventID"))        pos_WaitEventID        = colId;
-			else if (colName.equals("WaitEventDesc"))      pos_WaitEventDesc      = colId;
-			else if (colName.equals("WaitClassDesc"))      pos_WaitClassDesc      = colId;
-			else if (colName.equals("SPID"))               pos_SPID               = colId;
-			else if (colName.equals("HasShowPlan"))        pos_HasShowPlan        = colId;
-			else if (colName.equals("ShowPlanText"))       pos_ShowPlanText       = colId;
-			else if (colName.equals("HasMonSqlText"))      pos_HasMonSqlText      = colId;
-			else if (colName.equals("MonSqlText"))         pos_MonSqlText         = colId;
-			else if (colName.equals("HasDbccSqlText"))     pos_HasDbccSqlText     = colId;
-			else if (colName.equals("DbccSqlText"))        pos_DbccSqlText        = colId;
-			else if (colName.equals("HasProcCallStack"))   pos_HasProcCallStack   = colId;
-			else if (colName.equals("ProcCallStack"))      pos_ProcCallStack      = colId;
-			else if (colName.equals("HasStacktrace"))      pos_HasStacktrace      = colId;
-			else if (colName.equals("DbccStacktrace"))     pos_DbccStacktrace     = colId;
-			else if (colName.equals("HasCachedPlanInXml")) pos_HasCachedPlanInXml = colId;
-			else if (colName.equals("CachedPlanInXml"))    pos_CachedPlanInXml    = colId;
-			else if (colName.equals("procname"))           pos_procname           = colId;
-			else if (colName.equals("BlockingOtherSpids")) pos_BlockingOtherSpids = colId;
-			else if (colName.equals("BlockingSPID"))       pos_BlockingSPID       = colId;
-			else if (colName.equals("multiSampled"))       pos_multiSampled       = colId;
-			else if (colName.equals("StartTime"))          pos_StartTime          = colId;
-			else if (colName.equals("BatchID"))            pos_BatchID          = colId;
+			if      (colName.equals("WaitEventID"))                pos_WaitEventID                = colId;
+			else if (colName.equals("WaitEventDesc"))              pos_WaitEventDesc              = colId;
+			else if (colName.equals("WaitClassDesc"))              pos_WaitClassDesc              = colId;
+			else if (colName.equals("SPID"))                       pos_SPID                       = colId;
+			else if (colName.equals("HasShowPlan"))                pos_HasShowPlan                = colId;
+			else if (colName.equals("ShowPlanText"))               pos_ShowPlanText               = colId;
+			else if (colName.equals("HasMonSqlText"))              pos_HasMonSqlText              = colId;
+			else if (colName.equals("MonSqlText"))                 pos_MonSqlText                 = colId;
+			else if (colName.equals("HasDbccSqlText"))             pos_HasDbccSqlText             = colId;
+			else if (colName.equals("DbccSqlText"))                pos_DbccSqlText                = colId;
+			else if (colName.equals("HasProcCallStack"))           pos_HasProcCallStack           = colId;
+			else if (colName.equals("ProcCallStack"))              pos_ProcCallStack              = colId;
+			else if (colName.equals("HasStacktrace"))              pos_HasStacktrace              = colId;
+			else if (colName.equals("DbccStacktrace"))             pos_DbccStacktrace             = colId;
+			else if (colName.equals("HasCachedPlanInXml"))         pos_HasCachedPlanInXml         = colId;
+			else if (colName.equals("CachedPlanInXml"))            pos_CachedPlanInXml            = colId;
+			else if (colName.equals("procname"))                   pos_procname                   = colId;
+			else if (colName.equals("BlockingOtherSpids"))         pos_BlockingOtherSpids         = colId;
+			else if (colName.equals("BlockingSPID"))               pos_BlockingSPID               = colId;
+			else if (colName.equals("SecondsWaiting"))             pos_SecondsWaiting             = colId;
+			else if (colName.equals("BlockingOthersMaxTimeInSec")) pos_BlockingOthersMaxTimeInSec = colId;
+			else if (colName.equals("multiSampled"))               pos_multiSampled               = colId;
+			else if (colName.equals("StartTime"))                  pos_StartTime                  = colId;
+			else if (colName.equals("BatchID"))                    pos_BatchID                    = colId;
 
 			// No need to continue, we got all our columns
-			if (    pos_WaitEventID        >= 0 && pos_WaitEventDesc   >= 0 
-			     && pos_WaitClassDesc      >= 0 && pos_SPID            >= 0 
-			     && pos_HasShowPlan        >= 0 && pos_ShowPlanText    >= 0 
-			     && pos_HasMonSqlText      >= 0 && pos_MonSqlText      >= 0 
-			     && pos_HasDbccSqlText     >= 0 && pos_DbccSqlText     >= 0 
-			     && pos_HasProcCallStack   >= 0 && pos_ProcCallStack   >= 0 
-			     && pos_HasStacktrace      >= 0 && pos_DbccStacktrace  >= 0 
-			     && pos_HasCachedPlanInXml >= 0 && pos_CachedPlanInXml >= 0 && pos_procname >= 0
-			     && pos_BlockingOtherSpids >= 0 && pos_BlockingSPID    >= 0
-			     && pos_multiSampled       >= 0
-			     && pos_StartTime          >= 0
-			     && pos_BatchID            >= 0
+			if (    pos_WaitEventID                >= 0 && pos_WaitEventDesc   >= 0 
+			     && pos_WaitClassDesc              >= 0 && pos_SPID            >= 0 
+			     && pos_HasShowPlan                >= 0 && pos_ShowPlanText    >= 0 
+			     && pos_HasMonSqlText              >= 0 && pos_MonSqlText      >= 0 
+			     && pos_HasDbccSqlText             >= 0 && pos_DbccSqlText     >= 0 
+			     && pos_HasProcCallStack           >= 0 && pos_ProcCallStack   >= 0 
+			     && pos_HasStacktrace              >= 0 && pos_DbccStacktrace  >= 0 
+			     && pos_HasCachedPlanInXml         >= 0 && pos_CachedPlanInXml >= 0 && pos_procname >= 0
+			     && pos_BlockingOtherSpids         >= 0 && pos_BlockingSPID    >= 0
+			     && pos_SecondsWaiting             >= 0
+			     && pos_BlockingOthersMaxTimeInSec >= 0
+			     && pos_multiSampled               >= 0
+			     && pos_StartTime                  >= 0
+			     && pos_BatchID                    >= 0
 			   )
 				break;
 		}
@@ -789,6 +799,18 @@ extends CountersModel
 		if (pos_BlockingOtherSpids < 0 || pos_BlockingSPID < 0)
 		{
 			_logger.debug("Can't find the position for columns ('BlockingOtherSpids'="+pos_BlockingOtherSpids+", 'BlockingSPID'="+pos_BlockingSPID+")");
+			return;
+		}
+		
+		if (pos_SecondsWaiting < 0)
+		{
+			_logger.debug("Can't find the position for columns ('SecondsWaiting'="+pos_SecondsWaiting+")");
+			return;
+		}
+		
+		if (pos_BlockingOthersMaxTimeInSec < 0)
+		{
+			_logger.debug("Can't find the position for columns ('BlockingOthersMaxTimeInSec'="+pos_BlockingOthersMaxTimeInSec+")");
 			return;
 		}
 		
@@ -978,12 +1000,16 @@ extends CountersModel
 				counters.setValueAt(stacktrace,     rowId, pos_DbccStacktrace);
 
 				// Get LIST of SPID's that I'm blocking
-				String blockingList = getBlockingListStr(counters, spid, pos_BlockingSPID, pos_SPID);
+				String blockingList = getBlockingListStrForSpid(counters, spid, pos_BlockingSPID, pos_SPID);
+
+				// Get MaxBlockingTime of SPID's that I'm blocking
+				int BlockingOthersMaxTimeInSec = getMaxBlockingTimeInSecForSpid(counters, spid, pos_BlockingSPID, pos_SecondsWaiting);
 
 				// This could be used to test that PCS.store() will truncate string size to the tables storage size
 				//blockingList += "'1:aaa:0', '1:bbb:0', '1:ccc:0', '1:ddd:0', '1:eee:0', '1:fff:0', '1:ggg:0', '1:hhh:0', '1:iii:0', '1:jjj:0', '1:kkk:0', '1:lll:0', '1:mmm:0', '1:nnn:0', '1:ooo:0', '1:ppp:0', '1:qqq:0', '1:rrr:0', '1:sss:0', '1:ttt:0', '1:uuu:0', '1:vvv:0', '1:wwww:0', '1:xxx:0', '1:yyy:0', '1:zzz:0' -end-";
 
-				counters.setValueAt(blockingList,      rowId, pos_BlockingOtherSpids);
+				counters.setValueAt(blockingList,               rowId, pos_BlockingOtherSpids);
+				counters.setValueAt(BlockingOthersMaxTimeInSec, rowId, pos_BlockingOthersMaxTimeInSec);
 			}
 		}
 	}
@@ -1256,7 +1282,7 @@ extends CountersModel
 //		return super.clone();
 //	}
 
-	private String getBlockingListStr(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SPID)
+	private String getBlockingListStrForSpid(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SPID)
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -1267,8 +1293,8 @@ extends CountersModel
 			Object o_BlockingSPID = counters.getValueAt(rowId, pos_BlockingSPID);
 			if (o_BlockingSPID instanceof Number)
 			{
-				Number thisRow = (Number)o_BlockingSPID;
-				if (thisRow.intValue() == spid)
+				Number BlockingSPID = (Number)o_BlockingSPID;
+				if (BlockingSPID.intValue() == spid)
 				{
 					Object o_SPID = counters.getValueAt(rowId, pos_SPID);
 					if (sb.length() == 0)
@@ -1279,6 +1305,34 @@ extends CountersModel
 			}
 		}
 		return sb.toString();
+	}
+
+	private int getMaxBlockingTimeInSecForSpid(CounterSample counters, int spid, int pos_BlockingSPID, int pos_SecondsWaiting)
+	{
+		int maxBlockingTimeInSec = 0;
+
+		// Loop on all diffData rows
+		int rows = counters.getRowCount();
+		for (int rowId=0; rowId < rows; rowId++)
+		{
+			Object o_BlockingSPID = counters.getValueAt(rowId, pos_BlockingSPID);
+			if (o_BlockingSPID instanceof Number)
+			{
+				Number BlockingSPID = (Number)o_BlockingSPID;
+				if (BlockingSPID.intValue() == spid)
+				{
+//					Object o_SPID           = counters.getValueAt(rowId, pos_SPID);
+					Object o_SecondsWaiting = counters.getValueAt(rowId, pos_SecondsWaiting);
+					if (o_SecondsWaiting instanceof Number)
+					{
+						Number SecondsWaiting = (Number)o_SecondsWaiting;
+						maxBlockingTimeInSec = Math.max(SecondsWaiting.intValue(), maxBlockingTimeInSec);
+					}
+				}
+			}
+		}
+		
+		return maxBlockingTimeInSec;
 	}
 
 	/** 
@@ -1299,4 +1353,70 @@ extends CountersModel
 		String[] sa = {"dbname", "procname"};
 		return sa;
 	}
+
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+		
+		CountersModel cm = this;
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		for (int r=0; r<cm.getRateRowCount(); r++)
+		{
+			//-------------------------------------------------------
+			// BlockingOthersMaxTimeInSec 
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("BlockingOthersMaxTimeInSec"))
+			{
+				Object o_BlockingOthersMaxTimeInSec = cm.getRateValue(r, "BlockingOthersMaxTimeInSec");
+				if (o_BlockingOthersMaxTimeInSec != null && o_BlockingOthersMaxTimeInSec instanceof Number)
+				{
+					int BlockingOthersMaxTimeInSec = ((Number)o_BlockingOthersMaxTimeInSec).intValue();
+					
+					List<String> BlockingOtherSpidsList = StringUtil.commaStrToList(cm.getRateValue(r, "BlockingOtherSpids") + "");
+					String BlockingOtherSpidsStr = BlockingOtherSpidsList + "";
+					int    blockCount            = BlockingOtherSpidsList.size();
+
+					if (debugPrint || _logger.isDebugEnabled())
+						System.out.println("##### sendAlarmRequest("+cm.getName()+"): BlockingOthersMaxTimeInSec='"+BlockingOthersMaxTimeInSec+"', BlockingOtherSpidsList="+BlockingOtherSpidsList);
+
+					int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec);
+					if (BlockingOthersMaxTimeInSec > threshold)
+					{
+						String extendedDescText = cm.toTextTableString(DATA_RATE, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_RATE, r, true, false, false);
+						AlarmEvent ae = new AlarmEventBlockingLockAlarm(cm, threshold, BlockingOthersMaxTimeInSec, BlockingOtherSpidsStr, blockCount);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+						
+						alarmHandler.addAlarm( ae );
+					}
+				}
+			}
+		} // end: loop rows
+	}
+
+	public static final String  PROPKEY_alarm_BlockingOthersMaxTimeInSec = CM_NAME + ".alarm.system.if.BlockingOthersMaxTimeInSec.gt";
+	public static final int     DEFAULT_alarm_BlockingOthersMaxTimeInSec = 60;
+	
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec", PROPKEY_alarm_BlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec), DEFAULT_alarm_BlockingOthersMaxTimeInSec, "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+
+		return list;
+	}
+
 }

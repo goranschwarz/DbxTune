@@ -38,6 +38,8 @@ import javax.script.ScriptException;
 import org.apache.log4j.Logger;
 
 import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.ase.AlarmEventAseLicensExpiration;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc;
 import com.asetune.alarm.writers.AlarmWriterToPcsJdbc.AlarmEventWrapper;
 import com.asetune.cache.XmlPlanCache;
@@ -61,7 +63,9 @@ import com.asetune.pcs.sqlcapture.ISqlCaptureBroker;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.AseConnectionFactory;
+import com.asetune.utils.AseLicensInfo;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.HeartbeatMonitor;
 import com.asetune.utils.MandatoryPropertyException;
 import com.asetune.utils.Memory;
@@ -1210,7 +1214,27 @@ implements Memory.MemoryListener
 				{
 					_logger.info("Initialization of the DBMS Configuration did not succeed. Caught: "+ex); 
 				}
-			}
+
+				// for ASE only
+				// Check if we have License issues... send alarm...
+				DbxConnection conn = getCounterController().getMonConnection();
+				if (conn != null && conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+				{
+//					String gracePeriodWarning   = AseConnectionUtils.getAseGracePeriodWarning(conn);
+					String gracePeriodWarning   = AseLicensInfo.getAseGracePeriodWarning(conn);
+					if (StringUtil.hasValue(gracePeriodWarning))
+					{
+						_logger.warn(gracePeriodWarning);
+						
+						if (AlarmHandler.hasInstance())
+						{
+							AlarmEvent alarmEvent = new AlarmEventAseLicensExpiration(conn.getDbmsServerNameNoThrow(), gracePeriodWarning);
+							AlarmHandler.getInstance().addAlarm(alarmEvent);
+						}
+					}
+				}
+				
+			} // end: not connected
 
 			// HOST Monitoring connection
 			if ( ! getCounterController().isHostMonConnected() )

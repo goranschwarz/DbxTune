@@ -56,7 +56,7 @@ extends AlarmEvent
 	}
 
 	/**
-	 * Alarm from sp_monitorconfig 'all'
+	 * Alarm from sp_monitorconfig 'all' (or some other place)
 	 * 
 	 * @param cm
 	 * @param cfgName
@@ -65,7 +65,8 @@ extends AlarmEvent
 	 * @param pctAct
 	 * @param thresholdInPct
 	 */
-	public AlarmEventConfigResourceIsLow(CountersModel cm, String cfgName, double numFree, double numActive, double pctAct, double thresholdInPct)
+//	public AlarmEventConfigResourceIsLow(CountersModel cm, String cfgName, double numFree, double numActive, double pctAct, double thresholdInPct)
+	public AlarmEventConfigResourceIsLow(CountersModel cm, String cfgName, double numFree, double numActive, double pctAct, Number threshold)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -75,7 +76,7 @@ extends AlarmEvent
 				AlarmEvent.Category.SRV_CONFIG,
 				AlarmEvent.Severity.WARNING,
 				AlarmEvent.ServiceState.UP, 
-				"Configuration resource '"+cfgName+"' is getting low in server '" + cm.getServerName() + "'. NumFree="+numFree+", NumActive="+numActive+", PercentActive="+pctAct+". (thresholdInPct="+thresholdInPct+")",
+				"Configuration resource '"+cfgName+"' is getting low in server '" + cm.getServerName() + "'. NumFree="+numFree+", NumActive="+numActive+", PercentActive="+pctAct+". (threshold="+threshold+")",
 				null);
 
 		setData("NumFree="+numFree+", NumActive="+numActive+", PercentActive="+pctAct);

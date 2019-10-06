@@ -2461,9 +2461,31 @@ implements Runnable, ConnectionProvider
 
 		return map;
 	}
-	
-	public MonVersionInfo getMonVersionInfo(Timestamp sessionStartTime)
+
+	/**
+	 * Get various information about a Recording
+	 * <p>
+	 * Note this is just a wrapper to the real object MonRecordingInfo.
+	 * <p>
+	 * Some parts are DbxTune vendor type specifics, like in what table/column "DBMS Product Name", "DBMS Version" etc are stored in.
+	 * 
+	 * @param conn
+	 * @param sessionStartTime
+	 * @return
+	 */
+	public static MonRecordingInfo getMonRecordingInfo(DbxConnection conn, Timestamp sessionStartTime)
 	{
+		if (conn == null)
+			return null;
+
+		return new MonRecordingInfo(conn, sessionStartTime);
+	}
+
+	public static MonVersionInfo getMonVersionInfo(DbxConnection conn, Timestamp sessionStartTime)
+	{
+		if (conn == null)
+			return null;
+
 		// CREATE TABLE "MonVersionInfo"
 		// (
 		//    "SessionStartTime" DATETIME    NOT NULL,
@@ -2475,17 +2497,42 @@ implements Runnable, ConnectionProvider
 //		//    "DbProductName"    VARCHAR(30) NOT NULL
 		// )
 
+		String tabName = PersistWriterBase.getTableName(conn, PersistWriterBase.VERSION_INFO, null, false);
+		
+		if (sessionStartTime == null)
+		{
+			String sql = "select max([SessionStartTime]) from [" + tabName + "]";
+			
+			sql = conn.quotifySqlString(sql);
+
+			try
+			{
+    			Statement stmnt = conn.createStatement();
+    			ResultSet rs = stmnt.executeQuery(sql);
+    			while (rs.next())
+    			{
+    				sessionStartTime = rs.getTimestamp(1);
+    			}
+    			rs.close();
+    			stmnt.close();
+			}
+			catch(SQLException ex)
+			{
+				_logger.error("Problems getting MAX(SessionStartTime) from 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql, ex);
+			}
+		}
+		
 		String sql = 
-			"select * " +
-			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.VERSION_INFO, null, true) + " " +
+			"select * \n" +
+			"from [" + tabName + "] \n" +
 			"where [SessionStartTime] = ? ";
 
 		// replace all '[' and ']' into DBMS Vendor Specific Chars
-		sql = _conn.quotifySqlString(sql);
+		sql = conn.quotifySqlString(sql);
 
 		try
 		{
-			PreparedStatement pstmnt = _conn.prepareStatement(sql);
+			PreparedStatement pstmnt = conn.prepareStatement(sql);
 //			pstmnt.setTimestamp(1, sessionStartTime);
 			pstmnt.setString(1, sessionStartTime.toString());
 
@@ -2522,12 +2569,77 @@ implements Runnable, ConnectionProvider
 			return null;
 		}
 	}
+	public MonVersionInfo getMonVersionInfo(Timestamp sessionStartTime)
+	{
+		return getMonVersionInfo(_conn, sessionStartTime);
+	}
+//	public MonVersionInfo getMonVersionInfo(Timestamp sessionStartTime)
+//	{
+//		// CREATE TABLE "MonVersionInfo"
+//		// (
+//		//    "SessionStartTime" DATETIME    NOT NULL,
+//		//    "ProductString"    VARCHAR(30) NOT NULL,
+//		//    "VersionString"    VARCHAR(30) NOT NULL,
+//		//    "BuildString"      VARCHAR(30) NOT NULL,
+//		//    "SourceDate"       VARCHAR(30) NOT NULL,
+//		//    "SourceRev"        INT         NOT NULL,
+////		//    "DbProductName"    VARCHAR(30) NOT NULL
+//		// )
+//
+//		String sql = 
+//			"select * " +
+//			"from " + PersistWriterBase.getTableName(_conn, PersistWriterBase.VERSION_INFO, null, true) + " " +
+//			"where [SessionStartTime] = ? ";
+//
+//		// replace all '[' and ']' into DBMS Vendor Specific Chars
+//		sql = _conn.quotifySqlString(sql);
+//
+//		try
+//		{
+//			PreparedStatement pstmnt = _conn.prepareStatement(sql);
+////			pstmnt.setTimestamp(1, sessionStartTime);
+//			pstmnt.setString(1, sessionStartTime.toString());
+//
+//			MonVersionInfo monVersionInfo = new MonVersionInfo();
+//			ResultSet rs = pstmnt.executeQuery();
+////			int colCount = rs.getMetaData().getColumnCount();
+//			boolean foundRows = false;
+//			while (rs.next())
+//			{
+//				foundRows = true;
+//				monVersionInfo._sessionStartTime  = rs.getTimestamp(1);
+//				monVersionInfo._productString     = rs.getString   (2);
+//				monVersionInfo._versionString     = rs.getString   (3);
+//				monVersionInfo._buildString       = rs.getString   (4);
+//				monVersionInfo._sourceDate        = rs.getString   (5);
+//				monVersionInfo._sourceRev         = rs.getInt      (6);
+////				if (colCount >= 7)
+////					monVersionInfo._dbProductName = rs.getString   (7);
+//			}
+//			rs.close();
+//			pstmnt.close();
+//
+//			if ( ! foundRows )
+//			{
+//				_logger.warn("No row was found when loading 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql);
+//				return null;
+//			}
+//				
+//			return monVersionInfo;
+//		}
+//		catch (SQLException e)
+//		{
+//			_logger.error("Problems loading 'MonVersionInfo' for ts '"+sessionStartTime+"'. sql="+sql, e);
+//			return null;
+//		}
+//	}
 
 
 	/*---------------------------------------------------
 	** END: 
 	**---------------------------------------------------
 	*/
+
 	/** a reflection of one row in: MonVersionInfo */
 	public static class MonVersionInfo
 	{

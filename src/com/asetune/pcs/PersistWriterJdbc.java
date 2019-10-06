@@ -699,7 +699,8 @@ public class PersistWriterJdbc
 		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
 		{
 			// Get shutdown type from the Configuration.
-			H2ShutdownType h2ShutdownType       = H2ShutdownType.IMMEDIATELY;
+//			H2ShutdownType h2ShutdownType       = H2ShutdownType.IMMEDIATELY;
+			H2ShutdownType h2ShutdownType       = H2ShutdownType.DEFAULT;
 			boolean        h2ShutdownInBgThread = false;  // a normal shutdown will wait for the H2 shutdown to take affect
 			
 			// Decide how we want to behave if it's a Database Rollover (then we might want to change it to a SHUTDOWN DEFRAG & do it in background)
@@ -796,6 +797,9 @@ public class PersistWriterJdbc
 
 	public enum H2ShutdownType
 	{
+		/** normal SHUTDOWN without any option. just does 'SHUTDOWN' */
+		DEFAULT, 
+		
 		/** closes the database files without any cleanup and without compacting. */
 		IMMEDIATELY, 
 		
@@ -841,6 +845,7 @@ public class PersistWriterJdbc
 		// If no option is used, then the database is closed normally. All connections are 
 		// closed, open transactions are rolled back.
 		// 
+		// SHUTDOWN             Normal shutdown without any options 
 		// SHUTDOWN COMPACT     fully compacts the database (re-creating the database may 
 		//                      further reduce the database size). If the database is closed 
 		//                      normally (using SHUTDOWN or by closing all connections), then 
@@ -854,6 +859,8 @@ public class PersistWriterJdbc
 		long startTime = System.currentTimeMillis();
 		
 		String shutdownCmd = "SHUTDOWN " + shutdownType;
+		if (H2ShutdownType.DEFAULT.equals(shutdownType))
+			shutdownCmd = "SHUTDOWN";
 
 		// Issue a dummy command to see if the connection is still alive
 		try (Statement stmnt = h2Conn.createStatement();) {
@@ -864,9 +871,9 @@ public class PersistWriterJdbc
 
 		try (Statement stmnt = h2Conn.createStatement();) 
 		{
-			_logger.info("Sending "+shutdownCmd+" to H2 database.");
+			_logger.info("Sending Command '"+shutdownCmd+"' to H2 database.");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{
@@ -1611,7 +1618,7 @@ public class PersistWriterJdbc
 				_h2CreateNewSpilloverDbOnNextSave = false;
 			}
 			
-			_logger.info("A Database connection to URL '"+localJdbcUrl+"' has been opened. connectTime='"+connectTimeStr+"', using driver '"+_jdbcDriver+"'.");
+			_logger.info("A Database connection has been opened. connectTime='"+connectTimeStr+"', to URL '"+localJdbcUrl+"', using driver '"+_jdbcDriver+"'.");
 			_logger.debug("The connection has property auto-commit set to '"+_mainConn.getAutoCommit()+"'.");
 
 			// DDL Information Capture connection
@@ -1895,6 +1902,18 @@ public class PersistWriterJdbc
 
 		// 
 		//dbExec(conn, "", logExtraInfo);
+
+		// MAX_MEMORY_ROWS
+		// The maximum number of rows in a result set that are kept in-memory. 
+		// If more rows are read, then the rows are buffered to disk. 
+		// The default is 40000 per GB of available RAM.
+		// 
+		// Admin rights are required to execute this command, as it affects all connections. 
+		// This command commits an open transaction in this connection. This setting is persistent. It has no effect for in-memory databases.
+		//
+		// Example: SET MAX_MEMORY_ROWS 1000
+		// 
+		dbExecSetting(conn, "SET MAX_MEMORY_ROWS 2500", logExtraInfo);
 	}
 
 	private void setAseSpecificSettings(DbxConnection conn)

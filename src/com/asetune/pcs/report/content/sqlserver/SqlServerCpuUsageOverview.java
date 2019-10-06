@@ -37,13 +37,7 @@ public class SqlServerCpuUsageOverview extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		return "Text Report is not implemented";
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -56,11 +50,6 @@ public class SqlServerCpuUsageOverview extends AseAbstract
 		sb.append(_CmSummary_aaCpuGraph      .getHtmlContent(null, null));
 		sb.append(_CmSchedulers_RunQLengthSum.getHtmlContent(null, null));
 		sb.append(_CmSchedulers_RunQLengthEng.getHtmlContent(null, null));
-
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
 
 		return sb.toString();
 	}
@@ -79,7 +68,7 @@ public class SqlServerCpuUsageOverview extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
 		_CmSummary_aaCpuGraph       = createChart(conn, "CmSummary",    "aaCpuGraph",    maxValue, null, "CPU Summary for all Schedulers (using @@cpu_busy, @@cpu_io) (Summary)");

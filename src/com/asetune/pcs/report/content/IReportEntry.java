@@ -30,13 +30,25 @@ public interface IReportEntry
 	/**
 	 * Get Report Message as a text String
 	 */
-	String getMsgAsText();
+//	String getMsgAsText();
 
 	/**
-	 * Get Report Message as a HTML String (do NOT suround with html start/end tags)
+	 * Get Report Message as a HTML String (do NOT surround with HTML start/end tags)
 	 */
-	String getMsgAsHtml();
+	String getMessageText();
 
+	/**
+	 * If the ReportEntry has a problem... then print that problem.  
+	 * @return
+	 */
+	String getProblemText();
+	
+	/**
+	 * Text that should be appended "at the end" of each Report Entry
+	 * @return
+	 */
+	String getEndOfReportText();
+	
 	/**
 	 * 
 	 */
@@ -65,12 +77,14 @@ public interface IReportEntry
 
 	/**
 	 * Create Report entry with data from the database...
-	 * @param conn    Connection to the DBMS which stores data
-	 * @param srvName Name of the DBMS Server Instance
-	 * @param conf    any configuration
+	 * @param conn            Connection to the DBMS which stores data
+	 * @param srvName         Name of the DBMS Server Instance
+	 * @param pcsSavedConf    any configuration saved in the pcs
+	 * @param localConf       local configuration (same as <code>Configuration conf = Configuration.getCombinedConfiguration()</code>)
+
 	 * @return
 	 */
-	void create(DbxConnection conn, String srvName, Configuration conf);
+	void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf);
 
 	/**
 	 * Get any of the ResultSetTableModel created in the "create(...)" method

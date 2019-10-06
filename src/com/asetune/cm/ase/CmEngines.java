@@ -474,9 +474,9 @@ extends CountersModel
 //			dataArray[0] = this.getDiffValueAvg("CPUTime");
 //			dataArray[1] = this.getDiffValueAvg("SystemCPUTime");
 //			dataArray[2] = this.getDiffValueAvg("UserCPUTime");
-			dataArray[0] = this.getDiffValueAvg("NonIdleCPUTimePct");
-			dataArray[1] = this.getDiffValueAvg("SystemCPUTimePct");
-			dataArray[2] = this.getDiffValueAvg("UserCPUTimePct");
+			dataArray[0] = Math.min(100.0, this.getDiffValueAvg("NonIdleCPUTimePct"));
+			dataArray[1] = Math.min(100.0, this.getDiffValueAvg("SystemCPUTimePct"));
+			dataArray[2] = Math.min(100.0, this.getDiffValueAvg("UserCPUTimePct"));
 
 			if (srvVersion >= Ver.ver(15,5))
 			{
@@ -491,7 +491,7 @@ extends CountersModel
     				labelArray[0] = "System+User+IO CPU";
     
 //    				dataArray[3]  = this.getDiffValueAvg("IOCPUTime");
-    				dataArray[3]  = this.getDiffValueAvg("IOCPUTimePct");
+    				dataArray[3]  = Math.min(100.0, this.getDiffValueAvg("IOCPUTimePct"));
     				labelArray[3] = "IO CPU";
     
     				if (_logger.isDebugEnabled())
@@ -537,7 +537,7 @@ extends CountersModel
 				String engineNumber = this.getAbsString(i, "EngineNumber");
 
 //				engCpuArray[i] = this.getDiffValueAsDouble(i, "CPUTime");
-				engCpuArray[i] = this.getDiffValueAsDouble(i, "NonIdleCPUTimePct");
+				engCpuArray[i] = Math.min(100.0, this.getDiffValueAsDouble(i, "NonIdleCPUTimePct"));
 				if (instanceId == null)
 					engNumArray[i] = "eng-" + engineNumber;
 				else

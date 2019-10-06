@@ -1125,6 +1125,18 @@ public class OverviewServlet extends HttpServlet
 			out.println("Note: The file is created after midnight and reflects the <b>previous</b> day...<br>");
 			out.println("Note: The <code>-NTR-</code> mark is just that it has 'Nothing To Report' and is only appended if so.<br>");
 			out.println("</p>");
+
+			// Create a Link to "latest" report for each SERVER
+			out.println("<p>");
+			out.println("<b>Direct link to the latest report for server:</b>");
+			out.println("<ul>");
+			for (DbxCentralSessions session : centralSessionList)
+			{
+				out.println("  <li> <a href='/report?op=viewLatest&name=" + session.getServerName() + "'>" + session.getServerName() + "</a> </li>");
+			}
+			out.println("</ul>");
+			out.println("</p>");
+
 			
 			String tableHead 
 				= "  <tr>"

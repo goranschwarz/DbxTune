@@ -44,28 +44,7 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-//		if (_shortRstm.getRowCount() == 0)
-//		{
-//			sb.append("No rows found \n");
-//		}
-//		else
-//		{
-			sb.append(getSubject() + " Count: ").append(_shortRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-//		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -82,10 +61,15 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 			sb.append(_shortRstm.toHtmlTableString("sortable"));
 //		}
 
+		// If table "CmOsIostat_abs" do not exists
+		// the below _CmOsIostat_xxxx objects will be null... early exit in create()
+		if (_CmOsIostat_IoWait_noLimit != null)
+		{
 			sb.append(getDbxCentralLinkWithDescForGraphs(true, "Below are Graphs/Charts with various information that can help you decide how the IO Subsystem is handling the load.",
 					"CmOsIostat_IoWait",
 					"CmOsIostat_IoReadWait",
 					"CmOsIostat_IoWriteWait",
+					"CmOsIostat_IoServiceTime",
 					"CmOsIostat_IoReadOp",
 					"CmOsIostat_IoWriteOp"
 					));
@@ -94,14 +78,11 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 			sb.append(_CmOsIostat_IoWait        .getHtmlContent(null, null));
 			sb.append(_CmOsIostat_IoReadWait    .getHtmlContent(null, null));
 			sb.append(_CmOsIostat_IoWriteWait   .getHtmlContent(null, null));
+			sb.append(_CmOsIostat_IoServiceTime .getHtmlContent(null, null));
 			sb.append(_CmOsIostat_IoReadOp      .getHtmlContent(null, null));
 			sb.append(_CmOsIostat_IoWriteOp     .getHtmlContent(null, null));
+		}
 			
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -133,11 +114,11 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	private String _skipDeviceNames  = DEFAULT_SKIP_DEVICE_NAMES;
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		_aboveTotalIos    = conf.getIntProperty(PROPKEY_ABOVE_TOTAL_IOS,    DEFAULT_ABOVE_TOTAL_IOS);
-		_aboveServiceTime = conf.getIntProperty(PROPKEY_ABOVE_SERVICE_TIME, DEFAULT_ABOVE_SERVICE_TIME);
-		_skipDeviceNames  = conf.getProperty   (PROPKEY_SKIP_DEVICE_NAMES,  DEFAULT_SKIP_DEVICE_NAMES);
+		_aboveTotalIos    = localConf.getIntProperty(PROPKEY_ABOVE_TOTAL_IOS,    DEFAULT_ABOVE_TOTAL_IOS);
+		_aboveServiceTime = localConf.getIntProperty(PROPKEY_ABOVE_SERVICE_TIME, DEFAULT_ABOVE_SERVICE_TIME);
+		_skipDeviceNames  = localConf.getProperty   (PROPKEY_SKIP_DEVICE_NAMES,  DEFAULT_SKIP_DEVICE_NAMES);
 
 //		if ( ! DbUtils.checkIfTableExistsNoThrow(conn, cat, schema, tableName) )
 //		{
@@ -258,6 +239,9 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 
 			_CmOsIostat_IoReadOp       = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ReadOp,       -1,        _skipDeviceNames, "iostat: Read Operations(readsPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
 			_CmOsIostat_IoWriteOp      = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_WriteOp,      -1,        _skipDeviceNames, "iostat: Write Operations(writesPerSec) per Device & sec (Host Monitor->OS Disk Stat(iostat))");
+
+			_CmOsIostat_IoServiceTime  = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   -1,       _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with NO max value]");
+			_CmOsIostat_IoServiceTime  = createChart(conn, CmOsIostat.CM_NAME, CmOsIostat.GRAPH_NAME_ServiceTime,   maxValue, _skipDeviceNames, "iostat: Service Time(svctm) per Device in ms (Host Monitor->OS Disk Stat(iostat)) [with max value=" + maxValue + "]");
 		}
 	}
 
@@ -265,6 +249,7 @@ public class OsIoStatSlowIo extends ReportEntryAbstract
 	private ReportChartObject _CmOsIostat_IoWait;
 	private ReportChartObject _CmOsIostat_IoReadWait;
 	private ReportChartObject _CmOsIostat_IoWriteWait;
+	private ReportChartObject _CmOsIostat_IoServiceTime;
 	
 	private ReportChartObject _CmOsIostat_IoReadOp;
 	private ReportChartObject _CmOsIostat_IoWriteOp;

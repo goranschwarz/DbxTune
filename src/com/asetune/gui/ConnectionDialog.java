@@ -12,6 +12,7 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -238,7 +239,8 @@ public class ConnectionDialog
 	
 
 	@SuppressWarnings("unused")
-	private Frame                _owner           = null;
+//	private Frame                _owner           = null;
+	private Window               _owner           = null;
 
 	private int                  _lastKnownConnSplitPaneDividerLocation = DEFAULT_CONN_SPLITPANE_DIVIDER_LOCATION;
 	private JSplitPane           _connSplitPane;
@@ -561,6 +563,7 @@ public class ConnectionDialog
 	 */
 	public static class Options
 	{
+		public String               _dialogTitlePostfix = null;
 		public ConnectionProgressExtraActions _srvExtraChecks = null;
 		public boolean              _showAseTab         = true;
 		public boolean              _showHostmonTab     = true;
@@ -591,7 +594,7 @@ public class ConnectionDialog
 	{
 //		ConnectionDialog connDialog = new ConnectionDialog(null, false, true, false, false, false, false, false);
 //		ConnectionDialog connDialog = new ConnectionDialog(null, null, true, false, false, false, false, false, false);
-		ConnectionDialog connDialog = new ConnectionDialog(null, new Options(null, true, false, false, false, false, false, false));
+		ConnectionDialog connDialog = new ConnectionDialog(owner, new Options(null, true, false, false, false, false, false, false));
 		connDialog.setVisible(true);
 		connDialog.dispose();
 
@@ -606,17 +609,20 @@ public class ConnectionDialog
 		return null;
 	}
 
-	public ConnectionDialog(Frame owner)
+	private static String createDialogTitle(Options options)
 	{
-//		this(owner, true, true, true, true, true, true, false);
-//		this(owner, null, true, true, true, true, true, false, false);
+		if (options != null && StringUtil.hasValue(options._dialogTitlePostfix))
+			return "Connect - " + options._dialogTitlePostfix;
+
+		return "Connect";
+	}
+	public ConnectionDialog(Window owner)
+	{
 		this(owner, null);
 	}
-//	public ConnectionDialog(Frame owner, boolean checkAseCfg, boolean showAseTab, boolean showAseOptions, boolean showHostmonTab, boolean showPcsTab, boolean showOfflineTab, boolean showJdbcTab)
-//	public ConnectionDialog(Frame owner, ConnectionProgressExtraActions srvExtraChecks, boolean showAseTab, boolean showAseOptions, boolean showHostmonTab, boolean showPcsTab, boolean showOfflineTab, boolean showJdbcTab, boolean showJdbcOptions)
-	public ConnectionDialog(Frame owner, Options options)
+	public ConnectionDialog(Window owner, Options options)
 	{
-		super(owner, "Connect", ModalityType.DOCUMENT_MODAL);
+		super(owner, createDialogTitle(options), ModalityType.DOCUMENT_MODAL);
 //		super(owner, "Connect", true);
 //		_instance = this;
 		_owner = owner;

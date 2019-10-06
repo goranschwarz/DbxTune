@@ -373,7 +373,7 @@ implements ActionListener //, ConnectionProvider
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "DbmsConfigIssuesDialog.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (tmpConf != null)
 		{
@@ -395,7 +395,7 @@ implements ActionListener //, ConnectionProvider
 
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "DbmsConfigIssuesDialog.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		setSize(width, height);
 

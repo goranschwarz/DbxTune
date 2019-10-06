@@ -67,7 +67,8 @@ public class ShutdownServlet extends HttpServlet
 		boolean doRestart = req.getParameter("restart") != null;
 		boolean doDefrag  = req.getParameter("defrag")  != null;
 
-		H2ShutdownType h2ShutdownType = H2ShutdownType.IMMEDIATELY;
+//		H2ShutdownType h2ShutdownType = H2ShutdownType.IMMEDIATELY;
+		H2ShutdownType h2ShutdownType = H2ShutdownType.DEFAULT;
 		try { 
 			h2ShutdownType = H2ShutdownType.valueOf( req.getParameter("h2ShutdownType") ); 
 		} catch(RuntimeException ex) { 
@@ -97,7 +98,7 @@ public class ShutdownServlet extends HttpServlet
 //		}
 
 		Configuration shutdownConfig = new Configuration();
-		shutdownConfig.setProperty("h2.shutdown.type", h2ShutdownType.toString());  // IMMEDIATELY, COMPACT, DEFRAG
+		shutdownConfig.setProperty("h2.shutdown.type", h2ShutdownType.toString());  // DEFAULT, IMMEDIATELY, COMPACT, DEFRAG
 
 		String reason = (doRestart ? "Restart" : "Shutdown") + " Requested from WebServlet";
 		ShutdownHandler.shutdown(reason, doRestart, shutdownConfig);

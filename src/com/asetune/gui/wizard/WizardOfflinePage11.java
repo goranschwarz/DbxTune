@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -27,6 +28,7 @@ import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CmSettingsHelper.ValidationException;
 import com.asetune.gui.swing.MultiLineLabel;
 import com.asetune.pcs.report.DailySummaryReportFactory;
+import com.asetune.pcs.report.senders.ReportSenderNoOp;
 import com.asetune.pcs.report.senders.ReportSenderToMail;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
@@ -55,8 +57,12 @@ implements ActionListener
 	private JLabel     _reportGeneratorClassname_lbl = new JLabel("Report Generator Classname");
 	private JTextField _reportGeneratorClassname_txt = new JTextField();
 
-	private JLabel     _reportSenderClassname_lbl = new JLabel("Report Sender Classname");
-	private JTextField _reportSenderClassname_txt = new JTextField();
+	private JLabel            _reportSenderClassname_lbl = new JLabel("Report Sender Classname");
+//	private JTextField        _reportSenderClassname_txt = new JTextField();
+	private JComboBox<String> _reportSenderClassname_cbx = new JComboBox<String>();
+
+	private JCheckBox  _reportSenderSave_chk      = new JCheckBox("Save the Report in Dir");
+	private JTextField _reportSenderSaveDir_txt   = new JTextField();
 
 //	private AlarmWritersPanel _alarmWritersPanel;
 	private JPanel _reportPanel;
@@ -104,21 +110,33 @@ implements ActionListener
 		_reportGeneratorClassname_txt.setToolTipText(_reportGeneratorClassname_lbl.getText());
 		
 		_reportSenderClassname_lbl.setToolTipText("<html>Classname of the Sender that sends the report somewhere.</html>");
-		_reportSenderClassname_txt.setToolTipText(_reportSenderClassname_lbl.getText());
+//		_reportSenderClassname_txt.setToolTipText(_reportSenderClassname_lbl.getText());
+		_reportSenderClassname_cbx.setToolTipText(_reportSenderClassname_lbl.getText());
 		
 		_enableDailyReport_chk        .setName(DailySummaryReportFactory.PROPKEY_create);
 		_keepServerNameRegExp_txt     .setName(DailySummaryReportFactory.PROPKEY_filter_keep_servername);
 		_skipServerNameRegExp_txt     .setName(DailySummaryReportFactory.PROPKEY_filter_skip_servername);
 		_reportGeneratorClassname_txt .setName(DailySummaryReportFactory.PROPKEY_reportClassname);
-		_reportSenderClassname_txt    .setName(DailySummaryReportFactory.PROPKEY_senderClassname);
+//		_reportSenderClassname_txt    .setName(DailySummaryReportFactory.PROPKEY_senderClassname);
+		_reportSenderClassname_cbx    .setName(DailySummaryReportFactory.PROPKEY_senderClassname);
+		_reportSenderSave_chk         .setName(DailySummaryReportFactory.PROPKEY_save);
+		_reportSenderSaveDir_txt      .setName(DailySummaryReportFactory.PROPKEY_saveDir);
 		
 		Configuration conf = Configuration.getCombinedConfiguration();
 		_enableDailyReport_chk       .setSelected( conf.getBooleanProperty(DailySummaryReportFactory.PROPKEY_create                , DailySummaryReportFactory.DEFAULT_create));
 		_keepServerNameRegExp_txt    .setText(     conf.getProperty       (DailySummaryReportFactory.PROPKEY_filter_keep_servername, DailySummaryReportFactory.DEFAULT_filter_keep_servername));
 		_skipServerNameRegExp_txt    .setText(     conf.getProperty       (DailySummaryReportFactory.PROPKEY_filter_skip_servername, DailySummaryReportFactory.DEFAULT_filter_skip_servername));
 		_reportGeneratorClassname_txt.setText(     conf.getProperty       (DailySummaryReportFactory.PROPKEY_reportClassname       , DailySummaryReportFactory.DEFAULT_reportClassname));
-		_reportSenderClassname_txt   .setText(     conf.getProperty       (DailySummaryReportFactory.PROPKEY_senderClassname       , DailySummaryReportFactory.DEFAULT_senderClassname));
+//		_reportSenderClassname_txt   .setText(     conf.getProperty       (DailySummaryReportFactory.PROPKEY_senderClassname       , DailySummaryReportFactory.DEFAULT_senderClassname));
+		_reportSenderSave_chk        .setSelected( conf.getBooleanProperty(DailySummaryReportFactory.PROPKEY_save                  , DailySummaryReportFactory.DEFAULT_save));
+		_reportSenderSaveDir_txt     .setText(     conf.getProperty       (DailySummaryReportFactory.PROPKEY_saveDir               , DailySummaryReportFactory.DEFAULT_saveDir));
 
+		// Add items and set the default entry in: "SenderClassname"
+		_reportSenderClassname_cbx.addItem(conf.getProperty(DailySummaryReportFactory.PROPKEY_senderClassname, DailySummaryReportFactory.DEFAULT_senderClassname));
+		_reportSenderClassname_cbx.addItem(ReportSenderNoOp.class.getName());
+		_reportSenderClassname_cbx.setSelectedItem(conf.getProperty(DailySummaryReportFactory.PROPKEY_senderClassname, DailySummaryReportFactory.DEFAULT_senderClassname));
+		_reportSenderClassname_cbx.setEditable(true);
+		
 		panel.add(_keepServerNameRegExp_lbl, "");
 		panel.add(_keepServerNameRegExp_txt, "pushx, growx, wrap");
 		
@@ -129,7 +147,11 @@ implements ActionListener
 		panel.add(_reportGeneratorClassname_txt, "pushx, growx, wrap");
 		
 		panel.add(_reportSenderClassname_lbl, "");
-		panel.add(_reportSenderClassname_txt, "pushx, growx, wrap 20");
+//		panel.add(_reportSenderClassname_txt, "pushx, growx, wrap 20");
+		panel.add(_reportSenderClassname_cbx, "pushx, growx, wrap 20");
+
+		panel.add(_reportSenderSave_chk,    "");
+		panel.add(_reportSenderSaveDir_txt, "pushx, growx, wrap 20");
 
 		return panel;
 	}
@@ -236,32 +258,57 @@ implements ActionListener
 			Class.forName(classname);
 			txt.setBackground(_skipServerNameRegExp_txt.getBackground());
 			txt.setToolTipText(lbl.getToolTipText());
+			lbl.setForeground(_skipServerNameRegExp_lbl.getForeground());
 		}
 		catch (ClassNotFoundException ex)
 		{
 			txt.setBackground(Color.YELLOW);
 			txt.setToolTipText(ex.toString());
+			lbl.setForeground(Color.RED);
 		}
 		
+//		lbl = _reportSenderClassname_lbl;
+//		txt = _reportSenderClassname_txt;
+//		classname = txt.getText();
+//		try 
+//		{ 
+//			Class.forName(classname);
+//			txt.setBackground(_skipServerNameRegExp_txt.getBackground());
+//			txt.setToolTipText(lbl.getToolTipText());
+//			lbl.setForeground(_skipServerNameRegExp_lbl.getForeground());
+//		}
+//		catch (ClassNotFoundException ex)
+//		{
+//			txt.setBackground(Color.YELLOW);
+//			txt.setToolTipText(ex.toString());
+//			lbl.setForeground(Color.RED);
+//		}
+
 		lbl = _reportSenderClassname_lbl;
-		txt = _reportSenderClassname_txt;
-		classname = txt.getText();
+		JComboBox<String> cbx = _reportSenderClassname_cbx;
+		txt = (JTextField) _reportSenderClassname_cbx.getEditor().getEditorComponent();
+		classname = cbx.getSelectedItem().toString();
 		try 
 		{ 
 			Class.forName(classname);
-			txt.setBackground(_skipServerNameRegExp_txt.getBackground());
-			txt.setToolTipText(lbl.getToolTipText());
+			txt.setBackground(_skipServerNameRegExp_txt.getBackground()); // NOT WORKING
+			cbx.setBackground(_skipServerNameRegExp_txt.getBackground()); // NOT WORKING
+			cbx.setToolTipText(lbl.getToolTipText());
+			lbl.setForeground(_skipServerNameRegExp_lbl.getForeground());
 		}
 		catch (ClassNotFoundException ex)
 		{
-			txt.setBackground(Color.YELLOW);
-			txt.setToolTipText(ex.toString());
+			txt.setBackground(Color.YELLOW); // NOT WORKING
+			cbx.setBackground(Color.YELLOW); // NOT WORKING
+			cbx.setToolTipText(ex.toString());
+			lbl.setForeground(Color.RED);
 		}
 			
 
 		// Disable _sendToMailPanel if not "ReportSenderToMail".
 		boolean isReportSenderToMail = false;
-		String[] sa = _reportSenderClassname_txt.getText().split("\\.");
+//		String[] sa = _reportSenderClassname_txt.getText().split("\\.");
+		String[] sa = _reportSenderClassname_cbx.getSelectedItem().toString().split("\\.");
 		if (sa.length > 0)
 			isReportSenderToMail = "ReportSenderToMail".equals(sa[sa.length - 1]);
 		SwingUtils.setEnabled(_sendToMailPanel, isReportSenderToMail);

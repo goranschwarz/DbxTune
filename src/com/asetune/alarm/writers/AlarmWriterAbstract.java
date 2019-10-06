@@ -187,6 +187,9 @@ implements IAlarmWriter
 	public static final String  PROPKEY_filter_skip_state      = "<AlarmWriterName>.filter.skip.state";
 	public static final String  DEFAULT_filter_skip_state      = "";
 
+	public static final String  PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime = "<AlarmWriterName>.filter.alwaysSendAlarmOnErrorsThatAffectsUpTime";
+	public static final boolean DEFAULT_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime = true;
+
 	@Override
 	public void printFilterConfig()
 	{
@@ -203,6 +206,8 @@ implements IAlarmWriter
 		String keep_state_regExp      = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_state     ), DEFAULT_filter_keep_state);
 		String skip_state_regExp      = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_state     ), DEFAULT_filter_skip_state);
 		
+		boolean alwaysSendAlarmOnErrorsThatAffectsUpTime = conf.getBooleanProperty(replaceAlarmWriterName(PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), DEFAULT_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime);
+
 		if (StringUtil.isNullOrBlank(
 				keep_alarmClass_regExp +
 				skip_alarmClass_regExp +
@@ -233,6 +238,7 @@ implements IAlarmWriter
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_severity  ), spaces) + ": " + skip_severity_regExp  );
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_keep_state     ), spaces) + ": " + keep_state_regExp     );
 			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_skip_state     ), spaces) + ": " + skip_state_regExp     );
+			_logger.info("    " + StringUtil.left(replaceAlarmWriterName(PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), spaces) + ": " + alwaysSendAlarmOnErrorsThatAffectsUpTime);
 			_logger.info("DbxCentral URL for Alarm Writer Module: "+getName());
 			_logger.info("    " + PROPKEY_dbxCentralUrl + ": " + getDbxCentralUrl());
 		}
@@ -256,7 +262,7 @@ implements IAlarmWriter
 		// if we ALWAYS should send alarm for this AlarmEvent, exit early...
 		if (ae.alwaysSend())
 			return true;
-			
+
 		String alarmClass = ae.getAlarmClassAbriviated()  + "";
 		String serverName = ae.getServiceName()           + "";
 		String category   = ae.getCategory()              + "";
@@ -274,6 +280,8 @@ implements IAlarmWriter
 		String skip_severity_regExp   = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_severity  ), DEFAULT_filter_skip_severity);
 		String keep_state_regExp      = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_state     ), DEFAULT_filter_keep_state);
 		String skip_state_regExp      = conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_state     ), DEFAULT_filter_skip_state);
+
+		boolean alwaysSendAlarmOnErrorsThatAffectsUpTime = conf.getBooleanProperty(replaceAlarmWriterName(PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), DEFAULT_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime);
 		
 		// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
 		// Below is more readable, from a variable context point-of-view, but HARDER to understand
@@ -299,6 +307,15 @@ implements IAlarmWriter
 		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keep_state_regExp)      ||   state     .matches(keep_state_regExp      ))); //     matches the KEEP state      regexp
 		doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skip_state_regExp)      || ! state     .matches(skip_state_regExp      ))); // NO match in the SKIP state      regexp
 
+		// if we have passed all the filters... 
+		// if the alarm is an ERROR and service state is AFFECTED
+		// Then always send an Alarm
+		if ( doAlarm && AlarmEvent.Severity.ERROR.equals(ae.getSeverity()) && AlarmEvent.ServiceState.AFFECTED.equals(ae.getState()) )
+		{
+			if (alwaysSendAlarmOnErrorsThatAffectsUpTime)
+				doAlarm = true;
+		}
+		
 		return doAlarm;
 	}
 
@@ -326,6 +343,8 @@ implements IAlarmWriter
 
 		list.add(new CmSettingsHelper("State Keep",      replaceAlarmWriterName(PROPKEY_filter_keep_state     ), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_keep_state     ), DEFAULT_filter_keep_state     ), DEFAULT_filter_keep_state     , "Only for the 'State' listed (regexp is used, blank=not-used). After this rule the 'skip' rule is evaluated."     +regexpTestPage, new RegExpInputValidator()));
 		list.add(new CmSettingsHelper("State Skip",      replaceAlarmWriterName(PROPKEY_filter_skip_state     ), String .class, conf.getProperty(replaceAlarmWriterName(PROPKEY_filter_skip_state     ), DEFAULT_filter_skip_state     ), DEFAULT_filter_skip_state     , "Discard 'State' listed (regexp is used). Before this rule the 'keep' rules are evaluated."                       +regexpTestPage, new RegExpInputValidator()));
+
+		list.add(new CmSettingsHelper("Affects UpTime",  replaceAlarmWriterName(PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), Boolean.class, conf.getBooleanProperty(replaceAlarmWriterName(PROPKEY_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), DEFAULT_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime), DEFAULT_filter_alwaysSendAlarmOnErrorsThatAffectsUpTime, "Always Send Alarm On Errors That Affects UpTime. which is if the AlarmEvent has: Severity=ERROR and ServiceState=AFFECTED"));
 
 		return list;
 	}

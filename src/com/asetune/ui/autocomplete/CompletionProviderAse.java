@@ -878,9 +878,10 @@ extends CompletionProviderAbstractSql
 					mdaTableInfoList.add(ti);
 		}
 
-		// Get column description for MDA Tables (even if the Column check is disabled), it's not "that" many rows...
-		if (mdaTableInfoList != null && mdaTableInfoList.size() > 0)
-			refreshCompletionForTableColumns(conn, waitDialog, mdaTableInfoList, false);
+// I don't think the below is needed anymore... the column lookup will be done "later on"... so lets NOT waste time to do it here
+//		// Get column description for MDA Tables (even if the Column check is disabled), it's not "that" many rows...
+//		if (mdaTableInfoList != null && mdaTableInfoList.size() > 0)
+//			refreshCompletionForTableColumns(conn, waitDialog, mdaTableInfoList, false);
 	}
 
 	//##############################################################################

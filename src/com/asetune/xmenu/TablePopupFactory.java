@@ -11,6 +11,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import javax.swing.JMenu;
@@ -217,7 +218,7 @@ public class TablePopupFactory
 			String config = conf.getPropertyRaw(prefixStr+".config");
 
 			// Read parameters
-			ArrayList<Set<String>> params = new ArrayList<Set<String>>();
+			ArrayList<LinkedHashSet<String>> params = new ArrayList<LinkedHashSet<String>>();
 			for (int p=1; true; p++)
 			{
 				String param = conf.getPropertyRaw(prefixStr+".param."+p);
@@ -225,7 +226,7 @@ public class TablePopupFactory
 					break;
 				else
 				{
-					Set<String> paramSet = StringUtil.parseCommaStrToSet(param);
+					LinkedHashSet<String> paramSet = StringUtil.parseCommaStrToSet(param);
 					params.add(paramSet);
 				}
 			}

@@ -183,6 +183,7 @@ extends CountersModel
 //	public static final boolean DEFAULT_disable_spaceusage_onTimeout = true;
 	
 //	public static final String GRAPH_NAME_LOGSEMAPHORE_CONT  = "DbLogSemapContGraph";   //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSEMAPHORE_CONT;
+	public static final String GRAPH_NAME_DB_SIZE_MB         = "DbSizeMb";
 	public static final String GRAPH_NAME_LOGSIZE_LEFT_MB    = "DbLogSizeLeftMbGraph";  //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_LEFT;
 	public static final String GRAPH_NAME_LOGSIZE_USED_MB    = "DbLogSizeUsedMbGraph";
 	public static final String GRAPH_NAME_LOGSIZE_USED_PCT   = "DbLogSizeUsedPctGraph"; //String x=GetCounters.CM_GRAPH_NAME__OPEN_DATABASES__LOGSIZE_USED_PCT;
@@ -208,6 +209,18 @@ extends CountersModel
 //			false, // visible at start
 //			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 //			-1);   // minimum height
+
+		addTrendGraph(GRAPH_NAME_DB_SIZE_MB,
+			"Database Size in MB",        // Menu CheckBox text
+			"Database Size in MB ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_MB,
+			null, 
+			LabelType.Dynamic,
+			TrendGraphDataPoint.Category.SPACE,
+			false, // is Percent Graph
+			false, // visible at start
+			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+			-1);   // minimum height
 
 		addTrendGraph(GRAPH_NAME_LOGSIZE_LEFT_MB,
 			"DB Transaction Log Space left in MB",        // Menu CheckBox text
@@ -720,16 +733,17 @@ extends CountersModel
 			    + "--------------------------- \n"
 			    + "-- DATA SIZE MB \n"
 			    + "--------------------------- \n"
-			    + "DECLARE @dataSizeMb table (database_id int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
+			    + "DECLARE @dataSizeMb table (database_id int, fileGroupCount int, totalDataSizeMb numeric(12,1), usedDataMb numeric(12,1), freeDataMb numeric(12,1), usedDataPct numeric(5,1), freeDataPct numeric(5,1)) \n"
 			    + "INSERT INTO @dataSizeMb \n"
 			    + "EXEC sp_MSforeachdb ' \n"
 			    + "SELECT \n"
 			    + "     database_id \n"
-			    + "    ,totalMb       = sum(total_page_count) / 128.0 \n"
-			    + "    ,allocatedMb   = sum(allocated_extent_page_count) / 128.0 \n"
-			    + "    ,unallocatedMb = sum(unallocated_extent_page_count) / 128.0 \n"
-			    + "    ,usedPct       = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
-			    + "    ,freePct       = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+			    + "    ,fileGroupCount = count(*) \n"
+			    + "    ,totalMb        = sum(total_page_count) / 128.0 \n"
+			    + "    ,allocatedMb    = sum(allocated_extent_page_count) / 128.0 \n"
+			    + "    ,unallocatedMb  = sum(unallocated_extent_page_count) / 128.0 \n"
+			    + "    ,usedPct        = (sum(allocated_extent_page_count)  *1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
+			    + "    ,freePct        = (sum(unallocated_extent_page_count)*1.0) / (sum(total_page_count)*1.0) * 100.0 \n"
 			    + "FROM ?." + dm_db_file_space_usage + " GROUP BY database_id' \n"
 			    + " \n"
 			    + "--------------------------- \n"
@@ -745,10 +759,33 @@ extends CountersModel
 			    + "    ,used_log_space_in_percent \n"
 			    + "    ,log_space_in_bytes_since_last_backup/1024/1024 \n"
 			    + "FROM ?." + dm_db_log_space_usage + "' \n"
+			    + " \n"
+			    + "--------------------------- \n"
+			    + "-- Backup Info \n"
+			    + "--------------------------- \n"
+			    + "DECLARE @backupInfo table (database_name nvarchar(128), type char(2), last_backup_finish_date datetime) \n"
+			    + "INSERT INTO @backupInfo \n"
+			    + "    SELECT \n"
+			    + "         bus.database_name \n"
+			    + "        ,bus.type \n"
+			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+			    + "    FROM msdb.dbo.backupset bus \n"
+			    + "    GROUP BY bus.database_name, bus.type \n"
 			    + "; --- we need a ';' here for SQL-Server to use the Table Variables in the below Statement \n"
 			    + " \n"
 			    + " \n"
 			    + "WITH \n"
+//			    + "--------------------------- \n"
+//			    + "-- Backup Info \n"
+//			    + "--------------------------- \n"
+//			    + "bi AS ( \n"
+//			    + "    SELECT \n"
+//			    + "         bus.database_name \n"
+//			    + "        ,bus.type \n"
+//			    + "        ,last_backup_finish_date = MAX(bus.backup_finish_date) \n"
+//			    + "    FROM " + backupset + " bus \n"
+//			    + "    GROUP BY bus.database_name, bus.type \n"
+//			    + "), \n"
 			    + "--------------------------- \n"
 			    + "-- Open Transaction Info \n"
 			    + "--------------------------- \n"
@@ -864,6 +901,7 @@ extends CountersModel
 			    + "    ,compatibility_level      = convert(int, d.compatibility_level) \n"
 			    + "    ,d.state_desc \n"
 			    + "    ,d.recovery_model_desc \n"
+			    + "    ,DataFileGroupCount       = data.fileGroupCount \n"
 			    + "    ,DBOwner                  = suser_name(d.owner_sid) \n"
 			    + "    ,d.log_reuse_wait \n"
 			    + "    ,d.log_reuse_wait_desc \n"
@@ -920,10 +958,14 @@ extends CountersModel
 			    + "    ,OldestTranHasSqlText     = CASE WHEN oti.most_recent_sql_text is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + "    ,OldestTranHasShowPlan    = CASE WHEN oti.plan_text            is not null THEN convert(bit,1) ELSE convert(bit,0) END \n"
 			    + " \n"
-			    + "    ,LastDbBackupTime         = (SELECT MAX(backup_finish_date)                                       FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'D') \n"
-			    + "    ,LastDbBackupAgeInHours   = (SELECT isnull(datediff(hour, MAX(backup_finish_date), getdate()),-1) FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'D') \n"
-			    + "    ,LastLogBackupTime        = (SELECT MAX(backup_finish_date)                                       FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'L') \n"
-			    + "    ,LastLogBackupAgeInHours  = (SELECT isnull(datediff(hour, MAX(backup_finish_date), getdate()),-1) FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'L') \n"
+//			    + "    ,LastDbBackupTime         = (SELECT MAX(backup_finish_date)                                       FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'D') \n"
+//			    + "    ,LastDbBackupAgeInHours   = (SELECT isnull(datediff(hour, MAX(backup_finish_date), getdate()),-1) FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'D') \n"
+//			    + "    ,LastLogBackupTime        = (SELECT MAX(backup_finish_date)                                       FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'L') \n"
+//			    + "    ,LastLogBackupAgeInHours  = (SELECT isnull(datediff(hour, MAX(backup_finish_date), getdate()),-1) FROM " + backupset + " bus WHERE d.name = bus.database_name AND bus.type = 'L') \n"
+				+ "    ,LastDbBackupTime         =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D') \n"
+				+ "    ,LastDbBackupAgeInHours   = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'D'), -1) \n"
+				+ "    ,LastLogBackupTime        =         (SELECT bi.last_backup_finish_date                            FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L') \n"
+				+ "    ,LastLogBackupAgeInHours  = isnull( (SELECT datediff(hour, bi.last_backup_finish_date, getdate()) FROM @backupInfo bi WHERE d.name = bi.database_name AND bi.type = 'L'), -1) \n"
 			    + " \n"
 			    + "    ,OldestTranSqlText        = oti.most_recent_sql_text \n"
 			    + "    ,OldestTranShowPlanText   = oti.plan_text \n"
@@ -952,6 +994,26 @@ extends CountersModel
 			return;
 		}
 		
+		if (GRAPH_NAME_DB_SIZE_MB.equals(tgdp.getName()))
+		{
+			// Write 1 "line" for every database
+			Double[] dArray = new Double[dbMap.size()];
+			String[] lArray = new String[dbMap.size()];
+			int d = 0;
+			for (int row : dbMap.values())
+			{
+				String dbname = this.getAbsString       (row, "DBName");
+				Double dvalue = this.getAbsValueAsDouble(row, "DbSizeInMb");
+
+				lArray[d] = dbname;
+				dArray[d] = dvalue;
+				d++;
+			}
+
+			// Set the values
+			tgdp.setDataPoint(this.getTimestamp(), lArray, dArray);
+		}
+
 		if (GRAPH_NAME_LOGSIZE_LEFT_MB.equals(tgdp.getName()))
 		{
 			// Write 1 "line" for every database

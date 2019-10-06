@@ -46,29 +46,7 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_shortRstm.getRowCount() == 0)
-		{
-			sb.append("No Alarms has been reported \n");
-		}
-		else
-		{
-			sb.append("Alarm Count in period: ").append(_fullRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-			sb.append(_fullRstm.toAsciiTablesVerticalString());
-		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -103,11 +81,6 @@ extends ReportEntryAbstract
 			}
 		}
 
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -125,7 +98,7 @@ extends ReportEntryAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		getAlarmsHistoryShort(conn);
 		getAlarmsHistoryFull(conn);

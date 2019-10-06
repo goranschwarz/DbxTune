@@ -12,15 +12,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
+import com.asetune.AseTune;
 import com.asetune.config.dbms.AseConfigText.Cache;
 import com.asetune.config.dbms.AseConfigText.ConfigType;
+import com.asetune.config.dict.AseSpConfigureDictionary;
+import com.asetune.pcs.MonRecordingInfo;
 import com.asetune.pcs.PersistWriterJdbc;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.NumberUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
 
@@ -159,6 +164,43 @@ extends DbmsConfigAbstract
 		" (select max([SessionStartTime]) " +
 		"from [MonSessionAseConfig] \n" +
 		" ) ";
+	
+//	@Override
+//	public String getSqlForDiff(boolean isOffline)
+//	{
+//		if (isOffline)
+//		{
+//			String tabName = PersistWriterJdbc.getTableName(null, PersistWriterJdbc.SESSION_DBMS_CONFIG, null, false);
+//
+//			return 
+//					"select \n" +
+//					"     [" + CONFIG_NAME + "] \n" +
+////					"    ,[" + CONFIG_VALUE + "] \n" +
+//					"    ,[" + CFG_VAL_STR + "] \n" +
+//					"from [" + tabName + "] \n" +
+//					"where [SessionStartTime] = (select max([SessionStartTime]) from [" + tabName + "]) \n" +
+////					"order by [NAME] \n" +
+//					"order by 1 \n" +
+//					"";
+//		}
+//		else
+//		{
+//			return
+//					"select \n" +
+//					"     " + CONFIG_NAME  + " = convert(char(35),a.name)  \n" +
+////					"    ," + CONFIG_VALUE + " = b.value  \n" + 
+//					"    ," + CFG_VAL_STR  + " = b.value2  \n" + 
+//					"from master.dbo.sysconfigures a,  \n" + 
+//					"     master.dbo.syscurconfigs b  \n" + 
+//					"where a.config         = b.config  \n" + 
+//					"  and b.display_level <> NULL  \n" + 
+//					"  and a.parent        <> 19  \n" + 
+//					"  and a.parent         > 1  \n" + 
+////					"order by a.name \n" +
+//					"order by 1 \n" +
+//					"";
+//		}
+//	}
 		
 	/** hashtable with MonTableEntry */
 	private HashMap<String,AseConfigEntry> _configMap  = null;
@@ -166,11 +208,15 @@ extends DbmsConfigAbstract
 
 	private ArrayList<String>              _configSectionList = null;
 
-	private String _aseName = "";
-	private String _srvVersion = "";
-	
 	public class AseConfigEntry
+	implements IDbmsConfigEntry
 	{
+		@Override public String  getConfigKey()   { return configName; }
+		@Override public String  getConfigValue() { return configValueString; }
+		@Override public String  getSectionName() { return sectionName; }
+		@Override public boolean isPending()      { return isPending; }
+		@Override public boolean isNonDefault()   { return isNonDefault; }
+		
 		/** configuration has been changed by any user (same as sp_configure 'nondefault')*/
 		public boolean isNonDefault;
 
@@ -257,11 +303,12 @@ extends DbmsConfigAbstract
 	{
 		return _configMap;
 	}
-//	@Override
-//	public Map<String,AseConfigEntry> getDbmsConfigMap()
-//	{
-//		return getAseConfigMap();
-//	}
+
+	@Override
+	public Map<String, ? extends IDbmsConfigEntry> getDbmsConfigMap()
+	{
+		return _configMap;
+	}
 
 	/** check if the AseConfig is initialized or not */
 	@Override
@@ -300,27 +347,11 @@ extends DbmsConfigAbstract
 		_configList        = new ArrayList<AseConfigEntry>();
 		_configSectionList = new ArrayList<String>();
 		
-		_aseName    = conn.getDbmsServerName();
-		_srvVersion = conn.getDbmsVersionStr();
+		try { setDbmsServerName(conn.getDbmsServerName()); } catch (SQLException ex) { setDbmsServerName(ex.getMessage()); };
+		try { setDbmsVersionStr(conn.getDbmsVersionStr()); } catch (SQLException ex) { setDbmsVersionStr(ex.getMessage()); };
 
-// version
-//		try
-//		{
-//			String srvVersionStr = null;
-//
-//			Statement stmt = conn.createStatement();
-//			ResultSet rs = stmt.executeQuery("select @@version");
-//			while ( rs.next() )
-//			{
-//				srvVersionStr = rs.getString(1);
-//			}
-//			rs.close();
-//		}
-//		catch (SQLException ex)
-//		{
-//			_logger.error("AseConfig:initialize, @@version", ex);
-//			return;
-//		}
+		try { setLastUsedUrl( conn.getMetaData().getURL() ); } catch(SQLException ignore) { }
+		setLastUsedConnProp(conn.getConnPropOrDefault());
 
 
 		String sql = GET_CONFIG_ONLINE_SQL;
@@ -340,6 +371,20 @@ extends DbmsConfigAbstract
 				tsStr = "'" + ts + "'";
 			}
 			sql = sql.replace("SESSION_START_TIME", tsStr);
+
+			// For OFFLINE mode: override some the values previously fetched the connection object, with values from the Recorded Database
+			MonRecordingInfo recordingInfo = new MonRecordingInfo(conn, null);
+			setOfflineRecordingInfo(recordingInfo);
+			setDbmsServerName(recordingInfo.getDbmsServerName());
+			setDbmsVersionStr(recordingInfo.getDbmsVersionStr());
+
+			// Check if this is correct TYPE
+			String expectedType = AseTune.APP_NAME;
+			String readType     = recordingInfo.getRecDbxAppName();
+			if ( ! expectedType.equals(readType) )
+			{
+				throw new WrongRecordingVendorContent(expectedType, readType);
+			}
 		}
 
 		// replace all [] into DBMS Vendor Specific Chars
@@ -382,6 +427,13 @@ extends DbmsConfigAbstract
 				entry.displayLevel       = rs.getInt    (pos++);
 				entry.dataType           = rs.getInt    (pos++);
 
+				// fix description
+				if (StringUtil.isNullOrBlank(entry.description))
+				{
+					String desc = AseSpConfigureDictionary.getInstance().getDescription(entry.configName);
+					entry.description = "*** " + desc;
+				}
+				
 				// fix 'used memory' column
 				if ( ! _offline )
 				{
@@ -448,6 +500,7 @@ extends DbmsConfigAbstract
 				}
 			}
 
+//			throw ex;
 			return;
 		}
 
@@ -714,8 +767,8 @@ extends DbmsConfigAbstract
 		sb.append("/* \n");
 		sb.append("** Reverse engineering ").append(modelRows.length).append(" entries. \n");
 		sb.append("** At Date:         ").append(new Timestamp(System.currentTimeMillis())).append("\n");
-		sb.append("** ASE Server name: ").append(_aseName).append("\n");
-		sb.append("** ASE Version:     ").append(_srvVersion).append("\n");
+		sb.append("** ASE Server name: ").append(getDbmsServerName()).append("\n");
+		sb.append("** ASE Version:     ").append(getDbmsVersionStr()).append("\n");
 		sb.append("*/ \n");
 		sb.append("\n");
 		for (int r=0; r<modelRows.length; r++)
@@ -726,7 +779,8 @@ extends DbmsConfigAbstract
 			if ("read-only".equals(getValueAt(mrow, findColumn(AseConfig.TYPE))))
 				continue;
 
-			sb.append("---------------------------------------------------------------------------\n");
+//			sb.append("---------------------------------------------------------------------------\n");
+			sb.append("--#########################################################################\n");
 			sb.append("-- Config Name:   ").append(getValueAt(mrow, findColumn(AseConfig.CONFIG_NAME))) .append("\n");
 			sb.append("-- Description:   ").append(getValueAt(mrow, findColumn(AseConfig.DESCRIPTION))) .append("\n");
 			sb.append("-- Section Name:  ").append(getValueAt(mrow, findColumn(AseConfig.SECTION_NAME))).append("\n");
@@ -755,4 +809,102 @@ extends DbmsConfigAbstract
 		
 		return sb.toString();
 	}
+
+	protected Map<String, String> getDiffFixSkip()
+	{
+		HashMap<String, String> skipConfigNames = new HashMap<>();
+		
+		skipConfigNames.put("upgrade version"           , "This should NOT normally be changed via sp_configure, use normal upgrade path instead");
+		skipConfigNames.put("configuration file"        , "This is per instance specfic and should probably NOT be changed");
+		skipConfigNames.put("config file version"       , "This is maintained by the Server and should normally NOT be changed manually");
+		skipConfigNames.put("default sortorder id"      , "Best to change this via ASE binary 'sqlloc' or 'sqllocres'");
+		skipConfigNames.put("default character set id"  , "Best to change this via ASE binary 'sqlloc' or 'sqllocres'");
+		skipConfigNames.put("max memory"                , "Probably different on most of the machines");
+		
+		return skipConfigNames;
+	}
+	
+	@Override
+	public String reverseEngineer(Map<String, String> keyValMap, String comment)
+	{
+		if (keyValMap == null)     return null;
+		if (keyValMap.size() == 0) return null;
+
+		// Get a "list" of config names that would be *bad* to change when in Config Sync
+		Map<String, String> skipConfigNames = getDiffFixSkip();
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("/* \n");
+		sb.append("** Reverse engineering ").append(keyValMap.size()).append(" entries. \n");
+		sb.append("** At Date:         ").append(new Timestamp(System.currentTimeMillis())).append("\n");
+		sb.append("** ASE Server name: ").append(getDbmsServerName()).append("\n");
+		sb.append("** ASE Version:     ").append(getDbmsVersionStr()).append("\n");
+		if (StringUtil.hasValue(comment))
+			sb.append("** Comment:         ").append(comment).append("\n");
+		sb.append("*/ \n");
+
+		for (Entry<String, String> e : keyValMap.entrySet())
+		{
+			String key = e.getKey();
+			String val = e.getValue();
+
+			AseConfigEntry cfgEntry = _configMap.get(e.getKey());
+
+			sb.append("\n");
+//			sb.append("---------------------------------------------------------------------------\n");
+			sb.append("--#########################################################################\n");
+			sb.append("-- Config Name:   ").append(key)                  .append("\n");
+			sb.append("-- Description:   ").append(cfgEntry.description) .append("\n");
+			sb.append("-- Section Name:  ").append(cfgEntry.sectionName) .append("\n");
+			sb.append("-- Type:          ").append(cfgEntry.configType)  .append("\n");
+			sb.append("-- Default Value: ").append(cfgEntry.defaultValue).append("\n");
+			sb.append("---------------------------------------------------------------------------\n");
+			sb.append("-- Prev Value:    ").append(cfgEntry.getConfigValue()).append("\n");
+			sb.append("--  New Value:    ").append(val)                      .append("\n");
+			sb.append("---------------------------------------------------------------------------\n");
+
+			if (cfgEntry.isReadOnly)
+			{
+				sb.append("-- NOTE -- This is a 'read-only' configuration... so nothing will be done here.\n");
+				sb.append("---------------------------------------------------------------------------\n");
+				sb.append("-- exec sp_configure '").append(key).append("', ").append(e.getValue()).append("");
+				sb.append("\n");
+				sb.append("go\n");
+				continue;
+			}
+
+			if (skipConfigNames.containsKey(key))
+			{
+				sb.append("-- SKIP -- This is part of the 'skip-list' configuration... so nothing will be done here.\n");
+				sb.append("--      -- It would NOT be wise to change this parameter.\n");
+				sb.append("---------------------------------------------------------------------------\n");
+				sb.append("-- WHY: ").append(skipConfigNames.get(key)).append("\n"); // print the DESCRIPTION why we are skipping this value
+				sb.append("---------------------------------------------------------------------------\n");
+				sb.append("-- exec sp_configure '").append(key).append("', ").append(e.getValue()).append("");
+				sb.append("\n");
+				sb.append("go\n");
+				continue;
+			}
+
+			if (NumberUtils.isNumber(val))
+			{
+				sb.append("-- Min Value:     ").append(cfgEntry.minValue).append("\n");
+				sb.append("-- Max Value:     ").append(cfgEntry.maxValue).append("\n");
+
+				sb.append("exec sp_configure '").append(key).append("', ").append(e.getValue()).append("");
+    			sb.append("\n");
+    			sb.append("go\n");
+			}
+			else
+			{
+    			sb.append("exec sp_configure '").append(key).append("', 0, '").append(val).append("'");
+    			sb.append("\n");
+    			sb.append("go\n");
+			}
+		}
+		
+		return sb.toString();
+	}
+
 }

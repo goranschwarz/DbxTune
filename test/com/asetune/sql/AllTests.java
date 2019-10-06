@@ -26,6 +26,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({ 
+	com.asetune.sql.conn.AllTests.class,
 	DiffTest.class,
 	JdbcUrlParserTest.class,
 	SqlObjectNameTest.class 

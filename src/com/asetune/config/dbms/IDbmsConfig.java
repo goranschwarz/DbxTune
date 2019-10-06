@@ -23,9 +23,12 @@ package com.asetune.config.dbms;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.table.TableModel;
 
+import com.asetune.pcs.MonRecordingInfo;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 
 public interface IDbmsConfig
@@ -148,4 +151,70 @@ extends TableModel
 	 * @return A String with the SQL Statements that should be executed...
 	 */
 	public String reverseEngineer(int[] modelRows);
+
+	/**
+	 * Return a String with the reverse engineer DDL statements, this one is probably used by resolv/fix: DBMS Configuration difference
+	 * @param keyValMap    A Map with what 'config-names' and the 'value-to-set' to set.
+	 * @param comment      Comment to use in the generated header (or similar)
+	 * @return A String with the SQL Statements that should be executed...
+	 */
+	public String reverseEngineer(Map<String, String> keyValMap, String comment);
+
+//	/**
+//	 * Get SQL Statement that can be used when checking for Configuration DIFFerences
+//	 * <p>
+//	 * Note: the SQL should be able to run in "any" DBMS (use '[' and ']' as start/end characters to represent quoted identifiers, they will automatically be translated into the correct Quoted Identifier Characters for that specific DBMS) 
+//	 * <p>
+//	 * Note: Do not forget to use an order by of the "config name" column 
+//	 * 
+//	 * 
+//	 * @param isOffline      true --> return SQL for a OfflineDatabase,   false --> return SQL for the specific vendor 
+//	 * @return a SQL Statement
+//	 */
+//	public String getSqlForDiff(boolean isOffline);
+	/** get the Map */
+
+	/**
+	 * Get the DBMS Configuration map
+	 * @return
+	 */
+	public Map<String, ? extends IDbmsConfigEntry> getDbmsConfigMap();
+
+	/**
+	 * Get Config Entry for a specifik config name/key
+	 * @param name
+	 * @return
+	 */
+	IDbmsConfigEntry getDbmsConfigEntry(String name);
+
+	/**
+	 * Get the DBMS Server Name (which is vendor specific, for example it's @@servername for Sybase ASE)
+	 * @return
+	 */
+	String getDbmsServerName();
+
+	/**
+	 * Get the DBMS Version String (which is vendor specific, for example it's @@version for Sybase ASE)
+	 * @return
+	 */
+	String getDbmsVersionStr();
+
+	/**
+	 * Get various info about the recording
+	 * @return null if it's a "online" configuration, otherwise it's various info about the recording 
+	 */
+	MonRecordingInfo getOfflineRecordingInfo();
+
+	/** indicated if this DBMS Configuration is offline or online. <p> offline = Fetched from a Database Recording <br> online = Fetched <b>directly</b> from a DBMS instance */
+	boolean isOfflineConfig();
+
+	/** indicated if this DBMS Configuration is online or offline. <p> offline = Fetched from a Database Recording <br> online = Fetched <b>directly</b> from a DBMS instance */
+	boolean isOnlineConfig();
+
+	/** what URL did we connect to when we fetched the DBMS Configuration */
+	String getLastUsedUrl();
+
+	/** what ConnectionProperties did we use when we fetched the DBMS Configuration */
+	ConnectionProp getLastUsedConnProp();
+
 }

@@ -185,7 +185,7 @@ extends Task
 //				FileUtils.write(new File(CentralPersistWriterJdbc.H2_SHUTDOWN_WITH_DEFRAG_FILENAME), "from: CentralH2Defrag", StandardCharsets.UTF_8);
 
 				Configuration shutdownConfig = new Configuration();
-				shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFRAG.toString());  // IMMEDIATELY, COMPACT, DEFRAG
+				shutdownConfig.setProperty("h2.shutdown.type", H2ShutdownType.DEFRAG.toString());  // DEFAULT, IMMEDIATELY, COMPACT, DEFRAG
 
 				boolean doRestart = true;
 				String reason = "Restart (with DEFRAG) Requested from "+CentralH2Defrag.class.getSimpleName()+".";

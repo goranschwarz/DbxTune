@@ -37,13 +37,7 @@ public class RsRssdQueueSize extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		return "Text Report is not implemented";
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -53,11 +47,6 @@ public class RsRssdQueueSize extends AseAbstract
 
 		sb.append(_CmDbQueueSizeInRssd_RssdQueueSize.getHtmlContent(null, null));
 		
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -75,7 +64,7 @@ public class RsRssdQueueSize extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		_CmDbQueueSizeInRssd_RssdQueueSize = createChart(conn, "CmDbQueueSizeInRssd", "RssdQueueSize", -1, null, "Queue Size from the RSSD (col 'size', Absolute Value)");
 	}

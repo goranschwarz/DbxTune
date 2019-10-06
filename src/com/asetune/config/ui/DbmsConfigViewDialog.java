@@ -40,6 +40,8 @@ import javax.swing.JTabbedPane;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
+import com.asetune.config.dbms.DbmsConfigDiffEngine;
+import com.asetune.config.dbms.DbmsConfigDiffEngine.Context;
 import com.asetune.config.dbms.DbmsConfigManager;
 import com.asetune.config.dbms.DbmsConfigTextManager;
 import com.asetune.config.dbms.IDbmsConfig;
@@ -63,49 +65,30 @@ implements ActionListener, ConnectionProvider
 	private static Logger _logger = Logger.getLogger(DbmsConfigViewDialog.class);
 
 	// PANEL: OK-CANCEL
-	private JButton                _ok              = new JButton("OK");
-	private JButton                _cancel          = new JButton("Cancel");
+	private JButton                _ok                   = new JButton("OK");
+	private JButton                _cancel               = new JButton("Cancel");
 
 	@SuppressWarnings("unused")
-	private Window                 _owner           = null;
+	private Window                 _owner                = null;
 
-	private JButton                _refresh         = new JButton("Refresh");
-	private JButton                _diffSavedConfig = new JButton("Diff Saved Config...");
-	private JButton                _showIssues      = new JButton("Show Issues");
-	private JLabel                 _freeMb          = new JLabel();
+	private JButton                _refresh              = new JButton("Refresh");
+	private JButton                _showIssues           = new JButton("Show Issues");
+	private JButton                _doExternalConfigDiff = new JButton("Do External Config Diff...");
+	private JLabel                 _freeMb               = new JLabel();
 	
-	private ConnectionProvider     _connProvider    = null;
-	
+	private ConnectionProvider     _connProvider         = null;
+
+	// This will hold all DBMS Config & Text panels
 	private JTabbedPane            _tabPane                          = new JTabbedPane();
-//	private DbmsConfigPanel         _aseConfigPanel                   = new DbmsConfigPanel(this);
-//	private DbmsConfigTextPanel     _aseConfigCachePanel              = new DbmsConfigTextPanel(this, ConfigType.AseCacheConfig);
-//	private DbmsConfigTextPanel     _aseConfigThreadPoolPanel         = new DbmsConfigTextPanel(this, ConfigType.AseThreadPool);
-//	private DbmsConfigTextPanel     _aseConfigHelpDbPanel             = new DbmsConfigTextPanel(this, ConfigType.AseHelpDb);
-//	private DbmsConfigTextPanel     _aseConfigTempdbPanel             = new DbmsConfigTextPanel(this, ConfigType.AseTempdb);
-//	private DbmsConfigTextPanel     _aseConfigHelpDevicePanel         = new DbmsConfigTextPanel(this, ConfigType.AseHelpDevice);
-//	private DbmsConfigTextPanel     _aseConfigDeviceFsSpaceUsagePanel = new DbmsConfigTextPanel(this, ConfigType.AseDeviceFsSpaceUsage);
-//	private DbmsConfigTextPanel     _aseConfigHelpServerPanel         = new DbmsConfigTextPanel(this, ConfigType.AseHelpServer);
-//	private DbmsConfigTextPanel     _aseConfigTraceflagsPanel         = new DbmsConfigTextPanel(this, ConfigType.AseTraceflags);
-//	private DbmsConfigTextPanel     _aseConfigSpVersionPanel          = new DbmsConfigTextPanel(this, ConfigType.AseSpVersion);
-//	private DbmsConfigTextPanel     _aseConfigShmDumpCfgPanel         = new DbmsConfigTextPanel(this, ConfigType.AseShmDumpConfig);
-//	private DbmsConfigTextPanel     _aseConfigMonitorCfgPanel         = new DbmsConfigTextPanel(this, ConfigType.AseMonitorConfig);
-//	private DbmsConfigTextPanel     _aseConfigHelpSortPanel           = new DbmsConfigTextPanel(this, ConfigType.AseHelpSort);
-//	private DbmsConfigTextPanel     _aseConfigLicenseInfoPanel        = new DbmsConfigTextPanel(this, ConfigType.AseLicenseInfo);
-//	private DbmsConfigTextPanel     _aseConfigClusterInfoPanel        = new DbmsConfigTextPanel(this, ConfigType.AseClusterInfo);
-//	private DbmsConfigTextPanel     _aseConfigFileContentPanel        = new DbmsConfigTextPanel(this, ConfigType.AseConfigFile);
 	
 	private DbmsConfigViewDialog(Frame owner, ConnectionProvider connProvider)
 	{
-//		super(owner, "ASE Configuration", true);
 		super("DBMS Configuration");
-//		setModalityType(ModalityType.MODELESS);
 		init(owner, connProvider);
 	}
 	private DbmsConfigViewDialog(Dialog owner, ConnectionProvider connProvider)
 	{
-//		super(owner, "ASE Configuration", true);
 		super("DBMS Configuration");
-//		setModalityType(ModalityType.MODELESS);
 		init(owner, connProvider);
 	}
 
@@ -113,13 +96,11 @@ implements ActionListener, ConnectionProvider
 	{
 		DbmsConfigViewDialog dialog = new DbmsConfigViewDialog(owner, connProvider);
 		dialog.setVisible(true);
-//		dialog.dispose();
 	}
 	public static void showDialog(Dialog owner, ConnectionProvider connProvider)
 	{
 		DbmsConfigViewDialog dialog = new DbmsConfigViewDialog(owner, connProvider);
 		dialog.setVisible(true);
-//		dialog.dispose();
 	}
 	public static void showDialog(Component owner, ConnectionProvider connProvider)
 	{
@@ -132,7 +113,6 @@ implements ActionListener, ConnectionProvider
 			dialog = new DbmsConfigViewDialog((Dialog)null, connProvider);
 
 		dialog.setVisible(true);
-//		dialog.dispose();
 	}
 
 	@Override
@@ -148,10 +128,10 @@ implements ActionListener, ConnectionProvider
 				if (PersistReader.getInstance().isConnected())
 					b = false;
 
-			_refresh        .setEnabled(b);
-			_showIssues     .setEnabled(b);
+			_refresh             .setEnabled(b);
+			_showIssues          .setEnabled(b);
 
-			_diffSavedConfig.setVisible(false);
+			_doExternalConfigDiff.setVisible(b);
 		}
 	}
 	
@@ -196,35 +176,14 @@ implements ActionListener, ConnectionProvider
 				setIconImages(iconList);
 		}
 
-//		super(_owner);
-//		if (_owner != null)
-//			setIconImage(_owner.getIconImage());
-
-//		setTitle("ASE Configuration");
-
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("insets 0, wrap 1","",""));   // insets Top Left Bottom Right
 
 		//JTabbedPane tabPane = new JTabbedPane();
 		_tabPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 
-//		_tabPane.add("ASE Config",       _aseConfigPanel);
-//		_tabPane.add("Cache Config",     _aseConfigCachePanel);
-//		_tabPane.add("Thread Pools",     _aseConfigThreadPoolPanel);
-//		_tabPane.add("sp_helpdb",        _aseConfigHelpDbPanel);
-//		_tabPane.add("tempdb",           _aseConfigTempdbPanel);
-//		_tabPane.add("sp_helpdevice",    _aseConfigHelpDevicePanel);
-//		_tabPane.add("Device FS Usage",  _aseConfigDeviceFsSpaceUsagePanel);
-//		_tabPane.add("sp_helpserver",    _aseConfigHelpServerPanel);
-//		_tabPane.add("traceflags",       _aseConfigTraceflagsPanel);
-//		_tabPane.add("sp_version",       _aseConfigSpVersionPanel);
-//		_tabPane.add("sp_shmdumpconfig", _aseConfigShmDumpCfgPanel);
-//		_tabPane.add("sp_monitorconfig", _aseConfigMonitorCfgPanel);
-//		_tabPane.add("sp_helpsort",      _aseConfigHelpSortPanel);
-//		_tabPane.add("ASE License Info", _aseConfigLicenseInfoPanel);
-//		_tabPane.add("Cluster Info",     _aseConfigClusterInfoPanel);
-//		_tabPane.add("Config File",      _aseConfigFileContentPanel);
-
+		
+		// ADD: DBMS Config & Text tabs
 		if (DbmsConfigManager.hasInstance())
 		{
 			DbmsConfigPanel dcp = new DbmsConfigPanel(this, DbmsConfigManager.getInstance());
@@ -262,10 +221,10 @@ implements ActionListener, ConnectionProvider
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("","",""));   // insets Top Left Bottom Right
 
-		panel.add(_refresh,         "left");
-		panel.add(_diffSavedConfig, "hidemode 3, left");
-		panel.add(_showIssues,      "left");
-		panel.add(_freeMb,          "left");
+		panel.add(_refresh,              "left");
+		panel.add(_showIssues,           "left");
+		panel.add(_doExternalConfigDiff, "hidemode 3, left");
+		panel.add(_freeMb,               "left");
 
 		// ADD the OK, Cancel, Apply buttons
 		panel.add(_ok,     "push, tag ok");
@@ -280,16 +239,35 @@ implements ActionListener, ConnectionProvider
 //		_freeMb.setText(((Cache) AseConfigText.getInstance(ConfigType.AseCacheConfig)).getFreeMemoryStr());
 		_freeMb.setText(DbmsConfigTextManager.hasInstances() ? DbmsConfigManager.getInstance().getFreeMemoryStr() : "");
 
-		_refresh   .setToolTipText("Re-read the configuration.");
-		_showIssues.setToolTipText("When connecting to the DBMS, we check for various configuration isues... This opens the window with any config issues...");
+		_refresh        .setToolTipText("Re-read the configuration.");
+		_showIssues     .setToolTipText("When connecting to the DBMS, we check for various configuration isues... This opens the window with any config issues...");
+		_doExternalConfigDiff.setToolTipText(
+				"<html>"
+				+ "<h3>Do difference check on DBMS Configuration</h3>"
+				+ "This will do the following steps:"
+				+ "<ul>"
+//				+ "  <li>Open a Connection Dialog, which lets you connect to another <b>running DBMS Instance</b><br>"
+//				+ "      Or open a Connection to a previously <b>recorded session</b>"
+//				+ "      </li>"
+				+ "  <li>Open a Connection Dialog, which lets you connect to"
+				+ "     <ul>"
+				+ "        <li>Another <b>running DBMS Instance</b></li>"
+				+ "        <li>A previously <b>recorded session</b></li>"
+				+ "     </ul>"
+				+ "  </li>"
+				+ "  <li>Get a simple Configuration, like: ConfigName, ConfigValue </li>"
+				+ "  <li>Do difference check.</li>"
+				+ "  <li>Present any differences in a Simple Table...</li>"
+				+ "</ul>"
+				+ "</html>");
 
 		// ADD ACTIONS TO COMPONENTS
-		_ok             .addActionListener(this);
-		_cancel         .addActionListener(this);
-//		_apply          .addActionListener(this);
-		_refresh        .addActionListener(this);
-		_diffSavedConfig.addActionListener(this);
-		_showIssues     .addActionListener(this);
+		_ok                  .addActionListener(this);
+		_cancel              .addActionListener(this);
+//		_apply               .addActionListener(this);
+		_refresh             .addActionListener(this);
+		_doExternalConfigDiff.addActionListener(this);
+		_showIssues          .addActionListener(this);
 
 		return panel;
 	}
@@ -306,9 +284,9 @@ implements ActionListener, ConnectionProvider
 		}
 
 		// --- BUTTON: REFRESH ---
-		if (_diffSavedConfig.equals(source))
+		if (_doExternalConfigDiff.equals(source))
 		{
-			doDiffSavedConfig();
+			doExternalConfigurationDiff();
 		}
 
 		// --- BUTTON: SHOW ISSUES ---
@@ -380,19 +358,29 @@ implements ActionListener, ConnectionProvider
 	{
 	}
 
-	private void doDiffSavedConfig()
+	/**
+	 * External DBMS Configuration Check
+	 */
+	private void doExternalConfigurationDiff()
 	{
-		// - open dialog to connect to a PCS database
-		// - (check if it's of the same DBMS type or DbxTune application)
-		// - fetch the various configurations
-		// - do DIFF
-		// - Present in "some form"
+//		DbmsConfigDiffEngine diffEngine = new DbmsConfigDiffEngine(this, getConnection(), null);
+		DbmsConfigDiffEngine diffEngine = new DbmsConfigDiffEngine(this, null);
+		if (diffEngine.initialize())
+		{
+			Context diffContext = diffEngine.checkForDiffrens();
+			
+//			if ( ! diffContext.hasDifferences() )
+//			{
+//				SwingUtils.showInfoMessage(this, "No Difference", "SUCCESS - No DBMS Configuration Difference was found.");
+//			}
+//			else
+//			{
+//			}
 
-		// IDbmsConfig     has to be enhanced mith at least one method: allowConfigDiff or canDoConfigDiff
-		// IDbmsConfigText has to be enhanced mith at least one method: allowConfigDiff or canDoConfigDiff  
-		//                 (some Text config can be done, while others wont work, for example: sp_monitorconfig will diff ALL THE TIME, while sp_helpcache/sp_helpdevice/sp_helpdb etc will be GOOD)
-
-		System.out.println("-NOT-YET-IMPLEMENTED-");
+			// Always show the Dialog, even if there are NO differences
+			DbmsConfigDiffViewDialog diffDialog = new DbmsConfigDiffViewDialog(this, diffContext);
+			diffDialog.setVisible(true);
+		}
 	}
 	
 	/*---------------------------------------------------
@@ -402,7 +390,7 @@ implements ActionListener, ConnectionProvider
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "DbmsConfigViewDialog.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (tmpConf != null)
 		{
@@ -424,7 +412,7 @@ implements ActionListener, ConnectionProvider
 
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "DbmsConfigViewDialog.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		setSize(width, height);
 
@@ -456,13 +444,11 @@ implements ActionListener, ConnectionProvider
 	*/
 
   	@Override
-//	public Connection getConnection()
 	public DbxConnection getConnection()
 	{
 		return _connProvider.getConnection();
 	}
 	@Override
-//	public Connection getNewConnection(String appname)
 	public DbxConnection getNewConnection(String appname)
 	{
 		return _connProvider.getNewConnection(appname);

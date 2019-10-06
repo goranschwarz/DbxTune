@@ -538,7 +538,8 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "AlarmConfigDialog.";  // this.getClass().getSimpleName()+"."
+//		String base = "AlarmConfigDialog.";  // this.getClass().getSimpleName()+"."
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (tmpConf != null)
 		{
@@ -563,7 +564,8 @@ implements ActionListener, TableModelListener, PropertyChangeListener
 		int     splitDivLoc;
 
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "AlarmConfigDialog.";  // this.getClass().getSimpleName()+"."
+//		String base = "AlarmConfigDialog.";  // this.getClass().getSimpleName()+"."
+		String base = this.getClass().getSimpleName() + ".";
 
 		setSize(width, height);
 

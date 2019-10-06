@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Stack;
 import java.util.regex.Pattern;
 
+import javax.swing.AbstractButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -201,7 +202,10 @@ extends JPanel
 			{
 				// event: AbstactTableModel.fireTableStructureChanged
 				if ( SwingUtils.isStructureChanged(e) )
+				{
 					refreshCompletion();
+					applyFilter();
+				}
 
 				updateRowCount();
 			}
@@ -254,6 +258,22 @@ extends JPanel
 	public RowFilter<? super TableModel, ? super Integer> getExternalFilter()
 	{ 
 		return _externalFilter; 
+	}
+
+	/**
+	 * Add a component that if its "changes", it will call <code>applyFilter()</code>
+	 * @param comp
+	 */
+	public void addFilterTriggerComponent(AbstractButton comp)
+	{
+		comp.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				applyFilter();
+			}
+		});
 	}
 
 	/*---------------------------------------------------

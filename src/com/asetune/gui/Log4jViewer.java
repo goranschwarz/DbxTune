@@ -597,7 +597,8 @@ implements ActionListener, TableModelListener
 	private void saveProps()
   	{
 		Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "logWindow.";
+//		String base = "logWindow.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (conf != null)
 		{
@@ -621,7 +622,8 @@ implements ActionListener, TableModelListener
 
 //		Configuration conf = Configuration.getInstance(Configuration.TEMP);
 		Configuration conf = Configuration.getCombinedConfiguration();
-		String base = "logWindow.";
+//		String base = "logWindow.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (conf == null)
 			return;

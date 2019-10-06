@@ -335,7 +335,8 @@ implements ActionListener, TableModelListener
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "jdbcOptionsDialog.";
+//		String base = "jdbcOptionsDialog.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		if (tmpConf != null)
 		{
@@ -357,7 +358,8 @@ implements ActionListener, TableModelListener
 
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "jdbcOptionsDialog.";
+//		String base = "jdbcOptionsDialog.";
+		String base = this.getClass().getSimpleName() + ".";
 
 		setSize(width, height);
 

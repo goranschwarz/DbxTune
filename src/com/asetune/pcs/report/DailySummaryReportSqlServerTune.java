@@ -24,6 +24,7 @@ import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
 import com.asetune.pcs.report.content.os.OsIoStatSlowIo;
 import com.asetune.pcs.report.content.os.OsSpaceUsageOverview;
 import com.asetune.pcs.report.content.sqlserver.SqlServerCpuUsageOverview;
+import com.asetune.pcs.report.content.sqlserver.SqlServerDbSize;
 import com.asetune.pcs.report.content.sqlserver.SqlServerSlowCmDeviceIo;
 
 public class DailySummaryReportSqlServerTune 
@@ -47,5 +48,8 @@ extends DailySummaryReportDefault
 		addReportEntry( new SqlServerSlowCmDeviceIo(this)     );
 		addReportEntry( new OsSpaceUsageOverview(this)        );
 		addReportEntry( new OsIoStatSlowIo(this)              );
+
+		// Database Size
+		addReportEntry( new SqlServerDbSize(this)             );
 	}
 }

@@ -53,28 +53,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_shortRstm.getRowCount() == 0)
-		{
-			sb.append("No rows found \n");
-		}
-		else
-		{
-			sb.append(getSubject() + " Count: ").append(_shortRstm.getRowCount()).append("\n");
-			sb.append(_shortRstm.toAsciiTableString());
-		}
-
-		if (hasProblem())
-			sb.append(getProblem());
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -137,11 +116,6 @@ public class AseTopCmActiveStatements extends AseAbstract
 			}
 		}
 
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -159,9 +133,9 @@ public class AseTopCmActiveStatements extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
-		int topRows = conf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
+		int topRows = localConf.getIntProperty(this.getClass().getSimpleName()+".top", 20);
 		int havingAbove = 1000;
 
 		String skipDumpDbAndTran    = "  and [Command] not like 'DUMP %' \n";

@@ -584,7 +584,8 @@ implements ActionListener, TableModelListener
 	private void saveProps()
   	{
 		Configuration tmpConf = Configuration.getInstance(Configuration.USER_TEMP);
-		String base = "tcpConfigDialog.";
+		String base = this.getClass().getSimpleName() + ".";
+//		String base = "tcpConfigDialog.";
 
 		if (tmpConf != null)
 		{
@@ -606,7 +607,8 @@ implements ActionListener, TableModelListener
 
 //		Configuration tmpConf = Configuration.getInstance(Configuration.TEMP);
 		Configuration tmpConf = Configuration.getCombinedConfiguration();
-		String base = "tcpConfigDialog.";
+		String base = this.getClass().getSimpleName() + ".";
+//		String base = "tcpConfigDialog.";
 
 		setSize(width, height);
 

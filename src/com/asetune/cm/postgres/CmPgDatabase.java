@@ -32,6 +32,8 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -228,6 +230,7 @@ extends CountersModel
 			+ "    , cast( 0     as bigint)        as tup_fetched_in_slide \n"
 			+ "    , cast( 0     as bigint)        as tup_returned_in_slide \n"
 			+ "    , cast( 'n/a' as varchar(30))   as slide_time \n"
+			+ "    , (select setting::int from pg_settings where name='max_connections') as srv_cfg_max_connections \n"
 			+ "from pg_catalog.pg_stat_database \n"
 			+ "where datname not like 'template%' \n"
 			+ "";
@@ -293,6 +296,10 @@ extends CountersModel
 			mtd.addColumn("pg_stat_database",  "tup_returned_in_slide", "<html>" +
 			                                                                 "Summary of all <i>diff</i> values for the column <code>tup_returned</code> within the <i>slide window</i>.<br> " +
 			                                                                 "<b>Formula</b>: summary of all the <code>tup_returned</code> within the <i>slide window</i><br>" +
+			                                                            "</html>");
+			mtd.addColumn("pg_stat_database",  "srv_cfg_max_connections", "<html>" +
+			                                                                 "How many connections can we make to this Postgres server.<br> " +
+			                                                                 "<b>Formula</b>: select setting::int from pg_settings where name='max_connections'<br>" +
 			                                                            "</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
@@ -514,7 +521,7 @@ extends CountersModel
 			"Connections Sum", 	                // Menu CheckBox text
 			"Connections Sum ("+SHORT_NAME+")", // Graph Label 
 			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
-			new String[] {"numbackends"}, 
+			new String[] {"srv_config: max_connections", "numbackends"},
 			LabelType.Static, 
 			TrendGraphDataPoint.Category.SRV_CONFIG,
 			false, // is Percent Graph
@@ -763,9 +770,10 @@ extends CountersModel
 
 		if (GRAPH_NAME_CONNECTIONS_SUM.equals(tgdp.getName()))
 		{
-			Double[] arr = new Double[1];
+			Double[] arr = new Double[2];
 
-			arr[0] = this.getAbsValueSum("numbackends");
+			arr[0] = this.getAbsValueMax("srv_cfg_max_connections");
+			arr[1] = this.getAbsValueSum("numbackends");
 
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
@@ -781,5 +789,53 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasAbsData() )
+			return;
+		
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		CountersModel cm = this;
+
+		//-------------------------------------------------------
+		// free_connections
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("free_connections"))
+		{
+			Double srvCfgMaxConnections = cm.getAbsValueMax("srv_cfg_max_connections");
+			Double sumNumbackends       = cm.getAbsValueSum("numbackends");
+			
+			if (srvCfgMaxConnections != null && sumNumbackends != null)
+			{
+				double numFree = srvCfgMaxConnections - sumNumbackends;
+				double pctUsed = 100.0 - ((sumNumbackends / srvCfgMaxConnections) * 100.0);
+				
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections);
+				if (numFree < threshold)
+				{
+					AlarmHandler.getInstance().addAlarm( 
+						new AlarmEventConfigResourceIsLow(cm, "max_connections", numFree, sumNumbackends, pctUsed, threshold) );
+				}
+			}
+		}
+	} // end: method
+
+	public static final String  PROPKEY_alarm_FreeConnections = CM_NAME + ".alarm.system.if.free_connections.lt";
+	public static final int     DEFAULT_alarm_FreeConnections = 25;
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.add(new CmSettingsHelper("free_connections", PROPKEY_alarm_FreeConnections, Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections), DEFAULT_alarm_FreeConnections, "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
+
+		return list;
 	}
 }

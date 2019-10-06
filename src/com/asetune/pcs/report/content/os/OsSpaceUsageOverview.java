@@ -37,31 +37,20 @@ public class OsSpaceUsageOverview extends AseAbstract
 	}
 
 	@Override
-	public String getMsgAsText()
-	{
-		return "Text Report is not implemented";
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
 		sb.append(getDbxCentralLinkWithDescForGraphs(false, "Below are Disk Space Usage on the Operating System Level.",
+				"CmOsDiskSpace_FsUsedPct",
 				"CmOsDiskSpace_FsAvailableMb",
-				"CmOsDiskSpace_FsUsedMb",
-				"CmOsDiskSpace_FsUsedPct"
+				"CmOsDiskSpace_FsUsedMb"
 				));
 
+		sb.append(_CmOsDiskSpace_FsUsedPct    .getHtmlContent(null, null));
 		sb.append(_CmOsDiskSpace_FsAvailableMb.getHtmlContent(null, null));
 		sb.append(_CmOsDiskSpace_FsUsedMb     .getHtmlContent(null, null));
-		sb.append(_CmOsDiskSpace_FsUsedPct    .getHtmlContent(null, null));
 		
-		if (hasProblem())
-			sb.append("<pre>").append(getProblem()).append("</pre> \n");
-
-		sb.append("\n<br>");
-
 		return sb.toString();
 	}
 
@@ -79,15 +68,15 @@ public class OsSpaceUsageOverview extends AseAbstract
 
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		int maxValue = 100;
+		_CmOsDiskSpace_FsUsedPct     = createChart(conn, "CmOsDiskSpace", "FsUsedPct",     maxValue, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
 		_CmOsDiskSpace_FsAvailableMb = createChart(conn, "CmOsDiskSpace", "FsAvailableMb", -1,       null, "df: Space Available in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
 		_CmOsDiskSpace_FsUsedMb      = createChart(conn, "CmOsDiskSpace", "FsUsedMb",      -1,       null, "df: Space Used in MB, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
-		_CmOsDiskSpace_FsUsedPct     = createChart(conn, "CmOsDiskSpace", "FsUsedPct",     maxValue, null, "df: Space Used in Percent, at MountPoint (Host Monitor->OS Disk Space Usage(df))");
 	}
 
+	private ReportChartObject _CmOsDiskSpace_FsUsedPct;
 	private ReportChartObject _CmOsDiskSpace_FsAvailableMb;
 	private ReportChartObject _CmOsDiskSpace_FsUsedMb;
-	private ReportChartObject _CmOsDiskSpace_FsUsedPct;
 }

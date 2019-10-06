@@ -48,9 +48,13 @@ extends ReportEntryAbstract
 
 	private String _dbmsVersionString;
 	private String _dbmsServerName;
+	private String _dbmsStartTimeStr;
+	private String _dbmsStartTimeInDaysStr;
 	
 	private String _reportVersion    = Version.getAppName() + ", Version: " + Version.getVersionStr() + ", Build: " + Version.getBuildStr();
 	private String _recordingVersion = null;
+	
+	private int    _recordingSampleTime = -1;
 
 	public RecordingInfo(DailySummaryReportAbstract reportingInstance)
 	{
@@ -64,31 +68,7 @@ extends ReportEntryAbstract
 	public String getDbmsServerName()      { return _dbmsServerName; } 
 	
 	@Override
-	public String getMsgAsText()
-	{
-		StringBuilder sb = new StringBuilder();
-
-		if (_startTime == null)
-		{
-			sb.append("Can't get start/end time \n");
-		}
-		else
-		{
-			sb.append("  Start:               " + _startTime + "\n");
-			sb.append("  End:                 " + _endTime   + "\n");
-			sb.append("  Duration:            " + _duration  + "\n");
-			sb.append("  DBMS Server Name:    " + _dbmsServerName     + "\n");
-			sb.append("  DBMS Version String: " + _dbmsVersionString  + "\n");
-		}
-
-		if (_problem != null)
-			sb.append(_problem);
-		
-		return sb.toString();
-	}
-
-	@Override
-	public String getMsgAsHtml()
+	public String getMessageText()
 	{
 		StringBuilder sb = new StringBuilder();
 
@@ -99,22 +79,21 @@ extends ReportEntryAbstract
 		else
 		{			
 			sb.append("<ul>\n");
-			sb.append("  <li><b>Recording was Made Using:   </b>" + _recordingVersion   + "</li>\n");
-			sb.append("  <li><b>The Report is Produced by : </b>" + _reportVersion      + "</li>\n");
+			sb.append("  <li><b>Recording was Made Using:   </b>" + _recordingVersion      + "</li>\n");
+			sb.append("  <li><b>The Report is Produced by : </b>" + _reportVersion         + "</li>\n");
 			sb.append("<br>\n");
-			sb.append("  <li><b>Recording Start Date:       </b>" + _startTime          + "</li>\n");
-			sb.append("  <li><b>Recording End  Date:        </b>" + _endTime            + "</li>\n");
-			sb.append("  <li><b>Recording Duration:         </b>" + _duration           + "</li>\n");
+			sb.append("  <li><b>Recording Start Date:       </b>" + _startTime              + "</li>\n");
+			sb.append("  <li><b>Recording End  Date:        </b>" + _endTime                + "</li>\n");
+			sb.append("  <li><b>Recording Duration:         </b>" + _duration               + "</li>\n");
+			sb.append("  <li><b>Recording Sample Time:      </b>" + _recordingSampleTime    + "</li>\n");
 			sb.append("<br>\n");
-			sb.append("  <li><b>DBMS Server Name:           </b>" + _dbmsServerName     + "</li>\n");
-			sb.append("  <li><b>DBMS Version String:        </b>" + _dbmsVersionString  + "</li>\n");
+			sb.append("  <li><b>DBMS Server Name:           </b>" + _dbmsServerName         + "</li>\n");
+			sb.append("  <li><b>DBMS Version String:        </b>" + _dbmsVersionString      + "</li>\n");
+   			sb.append("<br>\n");
+   			sb.append("  <li><b>DBMS Last Restart at Time:  </b>" + _dbmsStartTimeStr       + "</li>\n");
+			sb.append("  <li><b>DBMS Last Restart in Days:  </b>" + _dbmsStartTimeInDaysStr + "</li>\n");
 			sb.append("</ul>\n");
 		}
-
-		if (_problem != null)
-			sb.append("<pre>").append(_problem).append("</pre> \n");
-
-		sb.append("\n<br>");
 
 		return sb.toString();
 	}
@@ -132,15 +111,20 @@ extends ReportEntryAbstract
 	}
 
 	@Override
-	public void create(DbxConnection conn, String srvName, Configuration conf)
+	public void create(DbxConnection conn, String srvName, Configuration pcsSavedConf, Configuration localConf)
 	{
 		if (hasReportingInstance())
 		{
 			DailySummaryReportAbstract dsr = getReportingInstance();
-			_dbmsVersionString = dsr.getDbmsVersionStr();
-			_dbmsServerName    = dsr.getDbmsServerName();
-			_recordingVersion = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
+			_dbmsVersionString      = dsr.getDbmsVersionStr();
+			_dbmsServerName         = dsr.getDbmsServerName();
+			_dbmsStartTimeStr       = dsr.getDbmsStartTime()       == null ? "-unknown-" : dsr.getDbmsStartTime().toString();
+			_dbmsStartTimeInDaysStr = dsr.getDbmsStartTimeInDays()     < 0 ? "-unknown-" : dsr.getDbmsStartTimeInDays()+"";
+			_recordingVersion       = dsr.getRecDbxAppName() + ", Version: " + dsr.getRecDbxVersionStr() + ", Build: " + dsr.getRecDbxBuildStr();
 		}
+
+		_recordingSampleTime = getRecordingSampleTime(conn);
+
 		
 		String sql;
 
