@@ -88,6 +88,9 @@ extends CountersModel
 	@Override public boolean getDefaultIsNegativeDiffCountersToZero() { return NEGATIVE_DIFF_COUNTERS_TO_ZERO; }
 	@Override public Type    getTemplateLevel()                       { return Type.LARGE; }
 
+	private int     _refreshAseConfigThresholdInSec  = 3600;  // refresh ASE Configuration every X second
+	private long    _lastAseConfigRefresh = 0;     // When was the ASE config last refreshed
+
 	/**
 	 * FACTORY  method to create the object
 	 */
@@ -281,42 +284,7 @@ extends CountersModel
 	{
 		boolean superRc = super.doSqlInit(conn);
 
-		String sql     = "";
-		String cfgName = "";
-
-		//------------------------------------------------
-		// Get 'statement cache size' RUN Size on init.
-		cfgName = "statement cache size";
-		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '"+cfgName+"')";
-		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
-		{
-			while(rs.next())
-				_statementCacheConfigSizeMb = rs.getInt(1);
-
-			_logger.info("When initializing '"+getName()+"', Succeed get run value for ASE configuration '"+cfgName+"' = "+_statementCacheConfigSizeMb + " MB");
-		}
-		catch (SQLException ex)
-		{
-			_statementCacheConfigSizeMb = -1;
-			_logger.warn("When initializing '"+getName()+"', failed to get ASE configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
-		}
-		
-		//------------------------------------------------
-		// Get 'procedure cache size' RUN Size on init.
-		cfgName = "procedure cache size";
-		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '"+cfgName+"')";
-		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
-		{
-			while(rs.next())
-				_procedureCacheConfigSizeMb = rs.getInt(1);
-
-			_logger.info("When initializing '"+getName()+"', Succeed get run value for ASE configuration '"+cfgName+"' = "+_procedureCacheConfigSizeMb + " MB");
-		}
-		catch (SQLException ex)
-		{
-			_procedureCacheConfigSizeMb = -1;
-			_logger.warn("When initializing '"+getName()+"', failed to get ASE configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
-		}
+		getAseConfig(conn, "initializing");
 		
 		return superRc;
 	}
@@ -330,6 +298,48 @@ extends CountersModel
 		super.doSqlClose(conn);
 	}
 	
+	public void getAseConfig(DbxConnection conn, String calledFrom)
+	{
+		String sql     = "";
+		String cfgName = "";
+
+		//------------------------------------------------
+		// Get 'statement cache size' RUN Size on init.
+		cfgName = "statement cache size";
+		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '"+cfgName+"')";
+		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while(rs.next())
+				_statementCacheConfigSizeMb = rs.getInt(1);
+
+			_logger.info("When "+calledFrom+" '"+getName()+"', Succeed get run value for ASE configuration '"+cfgName+"' = "+_statementCacheConfigSizeMb + " MB");
+		}
+		catch (SQLException ex)
+		{
+			_statementCacheConfigSizeMb = -1;
+			_logger.warn("When "+calledFrom+" '"+getName()+"', failed to get ASE configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
+		}
+		
+		//------------------------------------------------
+		// Get 'procedure cache size' RUN Size on init.
+		cfgName = "procedure cache size";
+		sql = "select runValueInMb = isnull(value/512, -1) from master.dbo.sysconfigures where config = (select config from master.dbo.sysconfigures where comment = '"+cfgName+"')";
+		try( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql) )
+		{
+			while(rs.next())
+				_procedureCacheConfigSizeMb = rs.getInt(1);
+
+			_logger.info("When "+calledFrom+" '"+getName()+"', Succeed get run value for ASE configuration '"+cfgName+"' = "+_procedureCacheConfigSizeMb + " MB");
+		}
+		catch (SQLException ex)
+		{
+			_procedureCacheConfigSizeMb = -1;
+			_logger.warn("When "+calledFrom+" '"+getName()+"', failed to get ASE configuration '"+cfgName+"', continuing anyway. sql=|"+sql+"|, Caught: "+ex);
+		}
+
+		_lastAseConfigRefresh = System.currentTimeMillis();
+	}
+
 	@Override
 	public void sendAlarmRequest()
 	{
@@ -339,6 +349,18 @@ extends CountersModel
 		if ( ! AlarmHandler.hasInstance() )
 			return;
 
+		// Should we refresh ASE Configuration ???
+		long lastRefreshAgeInSec = (System.currentTimeMillis() - _lastAseConfigRefresh) / 1000;
+		if ( lastRefreshAgeInSec > _refreshAseConfigThresholdInSec)
+		{
+			_logger.info("Time to refresh ASE Configuration. refreshAgeInSec="+lastRefreshAgeInSec+", thresholdInSec="+_refreshAseConfigThresholdInSec);
+
+			// refresh configuration
+			DbxConnection conn = getCounterController().getMonConnection();
+			getAseConfig(conn, "send-alarm-refresh-config");
+		}
+
+		// IF StatementCache isn't enabled... then there is nothing to do here...
 		if (_statementCacheConfigSizeMb <= 0)
 			return;
 			

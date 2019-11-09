@@ -29,10 +29,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.codec.binary.Base64OutputStream;
 import org.apache.commons.io.output.ByteArrayOutputStream;
@@ -60,6 +62,9 @@ public class ReportChartObject
 {
 	private static Logger _logger = Logger.getLogger(ReportChartObject.class);
 
+//	public final static String SQL_WHERE_PREFIX = "SQL-WHERE:";
+	public final static String SKIP_COLNAME_WITH_VALUE_ABOVE = "SKIP_COLNAME_WITH_VALUE_ABOVE:";
+	
 	private JFreeChart _chart;
 	private XYDataset  _dataset;
 
@@ -346,11 +351,39 @@ public class ReportChartObject
 
 		List<String> skipNameList = StringUtil.parseCommaStrToList(skipNames);
 		
+//		// If the skipNames starts with 'SQL-WHERE:' then use that as a where clause 
+//		String extraWhereCluase = "";
+//		if (StringUtil.hasValue(skipNames) && skipNames.startsWith(SQL_WHERE_PREFIX))
+//		{
+//			extraWhereCluase = skipNames.substring(SQL_WHERE_PREFIX.length()) + " \n";
+//		}
+
+		// if any of the skip entries starts with "SKIP_COLNAME_WITH_VALUE_ABOVE", then parse the entry and add it to the map
+		Map<String, Double> skipNameAboveValue = new HashMap<>();
+		for (String skipNameVal : skipNameList)
+		{
+			if (skipNameVal.startsWith(SKIP_COLNAME_WITH_VALUE_ABOVE))
+			{
+				String tmpStr = skipNames.substring(SKIP_COLNAME_WITH_VALUE_ABOVE.length()) + " \n";
+				Map<String, String> tmpMap = StringUtil.parseCommaStrToMap(tmpStr);
+				for (Entry<String, String> e : tmpMap.entrySet())
+				{
+					try {
+						skipNameAboveValue.put(e.getKey(), new Double(e.getValue()));
+					} catch (NumberFormatException nfe) {
+						_logger.warn("Skipping 'SKIP_COLNAME_WITH_VALUE_ABOVE' key='"+e.getKey()+"', value='"+e.getValue()+"', caught: " + nfe);
+					}
+				}
+			}
+		}
+		
 		String tabName   = cmName + "_" + graphName;
 		String sql = 
 				 "select * "
 				+" from [" + tabName + "] \n"
 //				+" where [SessionSampleTime] >= " + whereSessionSampleTime
+//				+" where 1 = 1 \n"
+//				+extraWhereCluase
 				+" order by [SessionSampleTime] \n"
 				;
 		
@@ -424,6 +457,18 @@ public class ReportChartObject
 						{
 							if (label.startsWith(skipName))
 								addEntry = false;
+						}
+						
+						for (Entry<String, Double> entry : skipNameAboveValue.entrySet())
+						{
+							if (label.equals(entry.getKey()))
+							{
+								if (dataValue > entry.getValue())
+								{
+									_logger.info("Skipping value in graphName='"+tabName+"', label='"+label+"' with dataValue="+dataValue+", is above threshold=" + entry.getValue());
+									addEntry = false;
+								}
+							}
 						}
 
 						if (addEntry)

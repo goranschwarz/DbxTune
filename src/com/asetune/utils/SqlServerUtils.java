@@ -24,6 +24,7 @@ package com.asetune.utils;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 import org.apache.log4j.Logger;
 
@@ -152,5 +153,25 @@ public class SqlServerUtils
 			}
 		}
 		return str;
+	}
+
+	public static Timestamp getStartDate(DbxConnection conn)
+	throws SQLException
+	{
+		String sql = "SELECT sqlserver_start_time FROM sys.dm_os_sys_info";
+
+		Timestamp ts = null;
+		try ( PreparedStatement stmnt = conn.prepareStatement(sql) )
+		{
+			stmnt.setQueryTimeout(10);
+			try ( ResultSet rs = stmnt.executeQuery() )
+			{
+				while (rs.next())
+				{
+					ts = rs.getTimestamp(1);
+				}
+			}
+		}
+		return ts;
 	}
 }

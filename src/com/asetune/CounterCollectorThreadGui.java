@@ -303,7 +303,7 @@ extends CounterCollectorThreadAbstract
 								MainFrame.getInstance().setStatus(MainFrame.ST_STATUS_FIELD, "Re-connect FAILED, I will soon try again.");
 
 								// Send ALARM
-								sendAlarmServerIsDown(null);
+								sendAlarmServerIsDown(null, e, "Problem when re-connecting to monitored server. Caught: "+e);
 								
 								// On connect failure sleep for a little longer
 								int sleepTime = 5000;

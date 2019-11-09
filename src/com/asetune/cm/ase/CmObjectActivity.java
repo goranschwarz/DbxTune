@@ -243,6 +243,11 @@ extends CountersModel
 			mtd.addColumn("monOpenObjectActivity", "AvgTransferSendWaitTime"        ,"<html>The average amount of service time an instance’s Cluster Cache Manager spends for page transfer.</html>");
 			mtd.addColumn("monOpenObjectActivity", "AvgIOServiceTime"               ,"<html>The average amount of service time used by an instance’s Cluster Cache Manager for page transfer.</html>");
 			mtd.addColumn("monOpenObjectActivity", "AvgDowngradeServiceTime"        ,"<html>The average amount of service time the Cluster Cache Manager uses to downgrade physical locks.</html>");
+			mtd.addColumn("monOpenObjectActivity", "LrPerScan"                      ,"<html>Logical Reads per Scans. " +
+			                                                                           "<br>This will tell you how many Logical Reads each <i>Operation/SQL-Statement</i> is using." +
+			                                                                           "<br>A higher value than 3-5 for an index; probably means that it <i>scans</i> the index..." +
+			                                                                           "<br>Hence: the where clauses do <b>not</i> match the starting columns of the index, or the index isn't unique enough." +
+			                                                                           "<br><b>Formula</b>: if (diff.Scans > 0) diff.LogicalReads / diff.Scans else -1</html>");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -439,6 +444,7 @@ extends CountersModel
 		String Deletes            = ""; // The number of deletes on this object
 		String LastDeleteDate     = ""; // The date of the last delete on this object
 		String LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+		String LrPerScan          = ""; // LogicalReads/Scans
 		String nl_16000           = ""; // NL for this section
 
 		if (srvVersion >= Ver.ver(16,0))
@@ -465,6 +471,7 @@ extends CountersModel
 //			LastDeleteDateDiff = "LastDeleteDateDiff = datediff(ms, LastDeleteDate, getdate()), ";
 			LastDeleteDateDiff = "LastDeleteDateDiff = CASE WHEN datediff(day, LastDeleteDate, getdate()) >= 24 THEN -1 ELSE  datediff(ms, LastDeleteDate, getdate()) END, ";
 
+			LrPerScan          = "LrPerScan = CASE WHEN Scans > 0 THEN convert(numeric(12,1), (LogicalReads*1.0) / (Scans*1.0)) ELSE -1 END, ";
 			nl_16000           = "\n";
 		}
 
@@ -516,7 +523,7 @@ extends CountersModel
 		         "              END, \n" +
 		         SharedLockWaitTime + ExclusiveLockWaitTime + UpdateLockWaitTime + ase15700_nl +
 		         NumLevel0Waiters + AvgLevel0WaitTime + ase1570_SP100_nl +
-		         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
+		         LrPerScan + "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
 		         IOSize1Page + IOSize2Pages + IOSize4Pages + IOSize8Pages + nl_15702 +
 		         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
 		         TabRowCount +
@@ -746,6 +753,7 @@ extends CountersModel
 			String wt_Deletes            = ""; // The number of deletes on this object
 			String wt_LastDeleteDate     = ""; // The date of the last delete on this object
 			String wt_LastDeleteDateDiff = ""; // ###: datediff(ms, LastDeleteDate, getdate())
+			String wt_LrPerScan          = "";
 
 			if (srvVersion >= Ver.ver(16,0))
 			{
@@ -766,6 +774,8 @@ extends CountersModel
 				wt_Deletes            = "Deletes = -1, ";            // DO DIFF CALC
 				wt_LastDeleteDate     = "LastDeleteDate = convert(datetime, NULL), ";
 				wt_LastDeleteDateDiff = "LastDeleteDateDiff = -1, ";
+
+				wt_LrPerScan          = "LrPerScan = convert(numeric(12,1), -1), ";
 			}
 
 			// ASE 16.0 SP3 PL4
@@ -804,7 +814,7 @@ extends CountersModel
 			         wt_SharedLockWaitTime + wt_ExclusiveLockWaitTime + wt_UpdateLockWaitTime + ase15700_nl +
 			         wt_NumLevel0Waiters + wt_AvgLevel0WaitTime + ase1570_SP100_nl +
 //			         "LogicalReads, PhysicalReads, APFReads, PagesRead, \n" +
-			         "LogicalReads, PhysicalReads, APFReads = PhysicalAPFReads, PagesRead = -1, \n" + // Changes from the monOpenObjectActivity
+			         wt_LrPerScan + "LogicalReads, PhysicalReads, APFReads = PhysicalAPFReads, PagesRead = -1, \n" + // Changes from the monOpenObjectActivity
 			         wt_IOSize1Page + wt_IOSize2Pages + wt_IOSize4Pages + wt_IOSize8Pages + nl_15702 +
 //			         "PhysicalWrites, PagesWritten, UsedCount, Operations, \n" +
 			         "PhysicalWrites = -1, PagesWritten = -1, UsedCount = -1, Operations = -1, \n" + // Changes from the monOpenObjectActivity
@@ -975,6 +985,8 @@ extends CountersModel
 		int RowsInserted_pos = -1;
 		int PagesRead_pos    = -1;
 		int APFReads_pos     = -1;
+		int Scans_pos        = -1;
+		int LrPerScan_pos    = -1;
 		
 		// Find column Id's
 		List<String> colNames = diffData.getColNames();
@@ -997,6 +1009,8 @@ extends CountersModel
 			else if (colName.equals("RowsInserted")) RowsInserted_pos = colId;
 			else if (colName.equals("PagesRead"))    PagesRead_pos    = colId;
 			else if (colName.equals("APFReads"))     APFReads_pos     = colId;
+			else if (colName.equals("Scans"))        Scans_pos        = colId;
+			else if (colName.equals("LrPerScan"))    LrPerScan_pos    = colId;
 
 			// Noo need to continue, we got all our columns
 			if (    LockRequests_pos  >= 0 
@@ -1024,17 +1038,17 @@ extends CountersModel
 
 			//------------------------------
 			// CALC: LockContPct
-			int colPos = LockContPct_pos;
+			int destColPos = LockContPct_pos;
 			if (LockRequests > 0)
 			{
 				// LockWaits / LockRequests * 100;
 				double calc = ((LockWaits+0.0) / (LockRequests+0.0)) * 100.0;
 
 				BigDecimal newVal = new BigDecimal(calc).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-				diffData.setValueAt(newVal, rowId, colPos);
+				diffData.setValueAt(newVal, rowId, destColPos);
 			}
 			else
-				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+				diffData.setValueAt(new BigDecimal(0).setScale(2, BigDecimal.ROUND_HALF_EVEN), rowId, destColPos);
 
 			//------------------------------
 			// CALC: RowsPerPage
@@ -1044,17 +1058,17 @@ extends CountersModel
 				TabRowCount  = ((Number)diffData.getValueAt(rowId, TabRowCount_pos )).longValue();
 				NumUsedPages = ((Number)diffData.getValueAt(rowId, NumUsedPages_pos)).longValue();
 
-				colPos = RowsPerPage_pos;
+				destColPos = RowsPerPage_pos;
 				if (NumUsedPages > 0)
 				{
 					// RowsPerPage = TabRowCount / NumUsedPages;
 					double calc = ((TabRowCount+0.0) / (NumUsedPages+0.0));
 
 					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
-					diffData.setValueAt(newVal, rowId, colPos);
+					diffData.setValueAt(newVal, rowId, destColPos);
 				}
 				else
-					diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, colPos);
+					diffData.setValueAt(new BigDecimal(0).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, destColPos);
 			}
 
 			//------------------------------
@@ -1089,8 +1103,31 @@ extends CountersModel
 				// If we got any remarks, set it...
 				if ( ! StringUtil.isNullOrBlank(remark) )
 				{
-					colPos = Remark_pos;
-					diffData.setValueAt(remark, rowId, colPos);
+					destColPos = Remark_pos;
+					diffData.setValueAt(remark, rowId, destColPos);
+				}
+			}
+			
+			//------------------------------
+			// CALC: LrPerScan
+			if (LogicalReads_pos != -1 && Scans_pos != -1 && LrPerScan_pos != -1)
+			{
+				destColPos = LrPerScan_pos;
+				
+				int Scans        = ((Number)diffData.getValueAt(rowId, Scans_pos        )).intValue();
+				int LogicalReads = ((Number)diffData.getValueAt(rowId, LogicalReads_pos )).intValue();
+
+				if (Scans > 0)
+				{
+					double calc = (LogicalReads+0.0) / (Scans+0.0);
+
+					BigDecimal newVal = new BigDecimal(calc).setScale(1, BigDecimal.ROUND_HALF_EVEN);
+					diffData.setValueAt(newVal, rowId, destColPos);
+				}
+				else
+				{
+					diffData.setValueAt(new BigDecimal(-1).setScale(1, BigDecimal.ROUND_HALF_EVEN), rowId, destColPos);
+				//	diffData.setValueAt(null, rowId, destColPos);
 				}
 			}
 		}

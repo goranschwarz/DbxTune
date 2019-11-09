@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
 import com.asetune.Version;
+import com.asetune.alarm.AlarmHelper;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -1332,4 +1333,195 @@ extends CountersModel
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
 	}
+
+
+
+
+
+
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		AlarmHelper.sendAlarmRequestForColumn(this, "Application");
+		AlarmHelper.sendAlarmRequestForColumn(this, "Login");
+	}
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Application") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "Login") );
+		
+		return list;
+	}
+
+//	@Override
+//	public void sendAlarmRequest()
+//	{
+//		if ( ! hasDiffData() )
+//			return;
+//		
+//		if ( ! AlarmHandler.hasInstance() )
+//			return;
+//
+//		// EXIT EARLY if no alarm properties has been specified (since there can be *many* logins)
+//		boolean isAnyAlarmEnabled = false;
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Application")) isAnyAlarmEnabled = true;
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Login"      )) isAnyAlarmEnabled = true;
+//
+//		if (isAnyAlarmEnabled == false)
+//			return;
+//
+//		
+//		AlarmHandler alarmHandler = AlarmHandler.getInstance();
+//		
+//		CountersModel cm = this;
+//
+//		// If some databases (in Db/Log dump) is not available... we may still want to alarm, due to "any" reason
+//		// So add those databases to the below list, and make decitions after looping all databases
+//		Map<String, Integer> appNameCountMap   = new HashMap<>();
+//		Map<String, Integer> loginNameCountMap = new HashMap<>();
+//		
+//		int pos_Application = cm.findColumn("Application");
+//		int pos_Login       = cm.findColumn("Login");
+//		
+//		if (pos_Application == -1 || pos_Login == -1)
+//		{
+//			_logger.info("Unable to get desired clumn names. Application=" + pos_Application + ", Login=" + pos_Login);
+//			return;
+//		}
+//			
+//		// Count 'Application' and 'Login' instances
+//		for (int r=0; r<cm.getDiffRowCount(); r++)
+//		{
+//			String appName   = StringUtil.fixNull(cm.getAbsString(r, pos_Application), "");
+//			String loginName = StringUtil.fixNull(cm.getAbsString(r, pos_Login)      , "");
+//			
+//			appNameCountMap  .put( appName  , appNameCountMap  .getOrDefault(appName  , 0) + 1 );
+//			loginNameCountMap.put( loginName, loginNameCountMap.getOrDefault(loginName, 0) + 1 );
+//		}
+//
+//		//-------------------------------------------------------
+//		// Application name count
+//		//-------------------------------------------------------
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Application"))
+//		{
+//			List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_ApplicationMandatory, DEFAULT_alarm_ApplicationMandatory));
+//
+//			for (String name : list)
+//			{
+//				if (StringUtil.isNullOrBlank(name))
+//					continue;
+//
+//				int count = appNameCountMap.getOrDefault(name, 0);
+//				
+//				if (count == 0)
+//				{
+//					AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, "Application", name);
+//					alarmHandler.addAlarm( ae );
+//				}
+//			}
+//		}
+//
+//		//-------------------------------------------------------
+//		// Login name count
+//		//-------------------------------------------------------
+//		if (isSystemAlarmsForColumnEnabledAndInTimeRange("Login"))
+//		{
+//			List<String> list = StringUtil.commaStrToList(Configuration.getCombinedConfiguration().getProperty(PROPKEY_alarm_LoginMandatory, DEFAULT_alarm_LoginMandatory));
+//
+//			for (String name : list)
+//			{
+//				if (StringUtil.isNullOrBlank(name))
+//					continue;
+//
+//				int count = appNameCountMap.getOrDefault(name, 0);
+//				
+//				if (count == 0)
+//				{
+//					AlarmEvent ae = new AlarmEventMissingMandatoryContent(cm, "Login", name);
+//					alarmHandler.addAlarm( ae );
+//				}
+//			}
+//		}
+//	}
+//
+//	public static final String  PROPKEY_alarm_ApplicationMandatory            = CM_NAME + ".alarm.system.mandatory.Application";
+//	public static final String  DEFAULT_alarm_ApplicationMandatory            = "";
+////	public static final String  DEFAULT_alarm_ApplicationMandatory            = "XxxYyy.*, BlockingLocks-check, StatementCacheUsage-check";
+//
+//	public static final String  PROPKEY_alarm_LoginMandatory                  = CM_NAME + ".alarm.system.mandatory.Login";
+//	public static final String  DEFAULT_alarm_LoginMandatory                  = "";
+////	public static final String  DEFAULT_alarm_LoginMandatory                  = "XxxYyy.*, BlockingLocks-check, StatementCacheUsage-check";
+//
+//	public static final String  PROPKEY_alarm_LoginInfo                       = CM_NAME + ".alarm.system.LoginInfo";
+//	public static final String  DEFAULT_alarm_LoginInfo                       = "";
+//
+//	@Override
+//	public List<CmSettingsHelper> getLocalAlarmSettings()
+//	{
+//		Configuration conf = Configuration.getCombinedConfiguration();
+//		List<CmSettingsHelper> list = new ArrayList<>();
+//		
+//		list.add(new CmSettingsHelper("Mandatory-Application-List",   PROPKEY_alarm_ApplicationMandatory, String.class, conf.getProperty(PROPKEY_alarm_ApplicationMandatory, DEFAULT_alarm_ApplicationMandatory), DEFAULT_alarm_ApplicationMandatory, "If any of the 'application' names in the list is missing from the column 'Application' then send alarm 'AlarmEventMissingMandatoryContent'." ));
+//		list.add(new CmSettingsHelper("Mandatory-Login-List",         PROPKEY_alarm_LoginMandatory      , String.class, conf.getProperty(PROPKEY_alarm_LoginMandatory      , DEFAULT_alarm_LoginMandatory      ), DEFAULT_alarm_LoginMandatory      , "If any of the 'login' names in the list is missing from the column 'Login' then send alarm 'AlarmEventMissingMandatoryContent'." ));
+//		
+//		return list;
+//	}
 }
+
+//------------------------------------------------------------------------
+// The below might be possible to use if we want to have a more generic approach
+// Meaning: Count "any" column content
+// I want for a more simple solution for now... but when we want a more generic solution this might be a start
+//------------------------------------------------------------------------
+//    private static class LoginInfoCheckEntry
+//    {
+//    	String _jsonStr; // original JSON description... possibly null if not parsed
+//    	String _colName;
+//    	String _colContent;
+//    	int    _operator; 
+//    	int    _operatorValue; 
+//    
+//    	int    _occurrences;
+//    }
+//    
+//    private List<LoginInfoCheckEntry> _list_alarm_loginInfoGeneric;  // Note: do NOT initialize this here... since the initAlarms() is done in super, if initialized it will be overwritten here...
+//    
+//    /**
+//     * Initialize stuff that has to do with alarms
+//     */
+//    @Override
+//    public void initAlarms()
+//    {
+//    	Configuration conf = Configuration.getCombinedConfiguration();
+//    	String cfgVal;
+//    
+//    	_list_alarm_loginInfoGeneric = new ArrayList();
+//    
+//    	//--------------------------------------
+//    	// Login Info Generic
+//    	cfgVal = conf.getProperty(PROPKEY_alarm_LoginInfo, DEFAULT_alarm_LoginInfo);
+//    	if (StringUtil.hasValue(cfgVal))
+//    	{
+//    		_list_alarm_loginInfoGeneric = parseLoginInfoGeneric(cfgVal);
+//    	}
+//    }
+//    /** 
+//     * Parse the JSON string:
+//     * <pre>
+//     * [ 
+//     *     {"colName":"program_name", "colValue":"BlockingLocks-check",       "operation":"lt", "value":1},
+//     *     {"colName":"program_name", "colValue":"StatementCacheUsage-check", "operation":"lt", "value":1}
+//     * ]
+//     * </pre>
+//     */
+//    private List<LoginInfoCheckEntry> parseLoginInfoGeneric(String cfgVal)
+//    {
+//    	List<LoginInfoCheckEntry> list = new ArrayList();
+//    	return list;
+//    }
+//------------------------------------------------------------------------

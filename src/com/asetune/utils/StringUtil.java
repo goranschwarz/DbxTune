@@ -758,6 +758,44 @@ public class StringUtil
 
 		return sa;
 	}
+	/**
+	 * splits every part of a comma separated string into a array element
+	 * @param str                "db1,db2" returns ["db1"]["db2"].length=2, "db1" returns ["db1"].length=1
+	 * @param skipEmtyStrings    do not add empty strings to the output list
+	 * @return a String[]
+	 */
+	public static String[] commaStrToArray(String str, boolean skipEmtyStrings)
+	{
+		if (str == null)
+			return new String[] {};
+
+		int emptyCount = 0;
+		
+		String[] sa = str.split(",");
+		for (int i=0; i<sa.length; i++)
+		{
+			sa[i] = sa[i].trim();
+			if (sa[i].equals("") && skipEmtyStrings)
+				emptyCount++;
+		}
+
+		// Remove empty strings: Create new Array... copy only records with non-blank content
+		if (emptyCount > 0)
+		{
+			String[] tmp = new String[ sa.length - emptyCount ];
+			
+			for (int i=0,t=0; i<sa.length; i++)
+			{
+				if (sa[i].equals("") && skipEmtyStrings)
+					continue;
+				
+				tmp[t++] = sa[i];
+			}
+			sa = tmp;
+		}
+		
+		return sa;
+	}
 
 	/**
 	 * splits every part of a comma separated string into a LinkedHashSet<String>, since it's a Set duplicates will be removed
@@ -772,6 +810,24 @@ public class StringUtil
 			retSet.add(s);
 		return retSet;
 	}
+	/**
+	 * splits every part of a comma separated string into a LinkedHashSet<String>, since it's a Set duplicates will be removed
+	 * @param str                "db1,db2,db2" returns LinkedHashSet ["db1"]["db2"]
+	 * @param skipEmtyStrings    do not add empty strings to the output list
+	 * @return a Set<String>
+	 */
+	public static Set<String> commaStrToSet(String str, boolean skipEmtyStrings)
+	{
+		String[] sa = commaStrToArray(str);
+		LinkedHashSet<String> retSet = new LinkedHashSet<String>();
+		for (String s : sa)
+		{
+			if (s.equals("") && skipEmtyStrings)
+				continue;
+			retSet.add(s);
+		}
+		return retSet;
+	}
 
 	/**
 	 * splits every part of a comma separated string into a ArrayList<String>
@@ -784,6 +840,24 @@ public class StringUtil
 		ArrayList<String> retList = new ArrayList<String>();
 		for (String s : sa)
 			retList.add(s);
+		return retList;
+	}
+	/**
+	 * splits every part of a comma separated string into a ArrayList<String>
+	 * @param str                "db1,db2,db2" returns ArrayList ["db1"]["db2"]["db2"]
+	 * @param skipEmtyStrings    do not add empty strings to the output list
+	 * @return List<String>
+	 */
+	public static List<String> commaStrToList(String str, boolean skipEmtyStrings)
+	{
+		String[] sa = commaStrToArray(str);
+		ArrayList<String> retList = new ArrayList<String>();
+		for (String s : sa)
+		{
+			if (s.equals("") && skipEmtyStrings)
+				continue;
+			retList.add(s);
+		}
 		return retList;
 	}
 
@@ -3463,6 +3537,20 @@ public class StringUtil
 		return str.replaceAll("[^a-zA-Z0-9]", "");
 	}
 	
+	/**
+	 * Replace any null string with a valid string
+	 * @param input         Input string to check for null
+	 * @param replacement   Replacement string if the input string is null
+	 * @return
+	 */
+	public static String fixNull(String input, String replacement)
+	{
+		if (input == null)
+			return replacement;
+
+		return input;
+	}
+
 	/////////////////////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////////
 	//// TEST CODE

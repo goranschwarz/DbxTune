@@ -219,7 +219,9 @@ implements IReportEntry
 			htmlContent += "</tbody> \n";
 			htmlContent += "</table> \n";
 
-			sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide Column(s) description...", htmlContent) );
+			String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Column(s) description...", htmlContent);
+			
+			sb.append( msOutlookAlternateText(showHideDiv, "Column Desciption", "") );
 		}
 
 		if (addSqlText)
@@ -238,7 +240,9 @@ implements IReportEntry
 						+ "<hr> \n"
 						+ "";
 				
-				sb.append( createShowHideDiv(divId, showAtStart, "Show/Hide SQL Text that produced this report section...", htmlContent) );
+				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide SQL Text that produced this report section...", htmlContent);
+				
+				sb.append( msOutlookAlternateText(showHideDiv, "Show/Hide SQL Text", "") );
 			}
 		}
 
@@ -318,19 +322,30 @@ implements IReportEntry
 	/**
 	 * This adds conditional text NOT available if you are using Microsoft Outlook Mail client as a reader.
 	 * 
-	 * @param name                     Typical "name" of the section which will be suppressed for MS Outlook
 	 * @param contentForOtherReaders   Content for other readers than Microsoft Outlook
+	 * @param name                     Typical "name" of the section which will be suppressed for MS Outlook
+	 * @param alternateMsoText         Alternate text for Microsoft Outlook... if NULL; A default text will be used
 	 * @return
 	 */
-	public String msOutlookAlternateText(String name, String contentForOtherReaders)
+	public String msOutlookAlternateText(String contentForOtherReaders, String name, String alternateMsoText)
 	{
 		StringBuilder sb = new StringBuilder();
 		
-		sb.append("\n");
-		sb.append("<!--[if mso]>\n");
-		sb.append("You are using Microsoft Outlook to read this...<br>\n");
-		sb.append(name).append(" is NOT presented for Microsoft Outlook, <b>open the link at the top to see the ").append(name).append("...</b><br>\n");
-		sb.append("<![endif]-->\n");
+		if (alternateMsoText == null)
+		{
+			sb.append("\n");
+			sb.append("<!--[if mso]>\n");
+			sb.append("You are using Microsoft Outlook to read this...<br>\n");
+			sb.append("'<i>").append(name).append("</i>' is NOT presented for Microsoft Outlook, <b>open the link at the top to see the '<i>").append(name).append("</i>'...</b><br>\n");
+			sb.append("<![endif]-->\n");
+		}
+		else
+		{
+			sb.append("\n");
+			sb.append("<!--[if mso]>\n");
+			sb.append(alternateMsoText).append("<br>\n");
+			sb.append("<![endif]-->\n");
+		}
 		
 		sb.append("<!--[if !mso]><!-- -->\n");
 		if (contentForOtherReaders != null)

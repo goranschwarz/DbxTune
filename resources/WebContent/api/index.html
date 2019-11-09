@@ -246,7 +246,16 @@
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 
-		
+
+		<!-- ############################################################################# -->
+		<div id='/api/pcs/queueInfo' class='card border-dark mb-5'>
+		<h5 class='card-header'>/api/pcs/queueInfo</h5>
+		<div class='card-body'>
+		Inbound PCS Queue Size. How many entries are in the Queue waiting to be stored by the Persistence Storage.<br>
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
 		
 		
 		<h2>Other URL, descriptions</h2>
@@ -277,7 +286,7 @@
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 
-		
+
 		<!-- ############################################################################# -->
 		<div id='/log' class='card border-dark mb-5'>
 		<h5 class='card-header'>/log</h5>
@@ -299,12 +308,39 @@
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 
+
+		<!-- ############################################################################# -->
+		<div id='/logtail' class='card border-dark mb-5'>
+		<h5 class='card-header'>/logtail</h5>
+		<div class='card-body'>
+		(internal): WebSocket feeder if we have <b>tail -f</b> enabled on a file.
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
 		
 		<!-- ############################################################################# -->
 		<div id='/conf' class='card border-dark mb-5'>
 		<h5 class='card-header'>/conf</h5>
 		<div class='card-body'>
 		Get configuration file
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/report' class='card border-dark mb-5'>
+		<h5 class='card-header'>/report</h5>
+		<div class='card-body'>
+		Access <i>Daily Report</i> files.
+		<br>
+		Parameters:
+		<table>
+			<!--     ==========        =================          =========== -->
+			<tr> <th>Name    </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========        =================          =========== -->
+			<tr> <td>name    </td> <td><b>mandatory</b> </td> <td>Server name to view report for.<br>OR: Full name of the report file (format: srvName.YYYY-MM-DD_hhmm.html, example: <code>DEV_ASE.2019-09-05_0003.html</code>)</td> </tr>
+			<tr> <td>op      </td> <td><b>mandatory</b> </td> <td>can be: 'viewLatest', 'view' or 'remove'</td> </tr>
+		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 
@@ -324,6 +360,44 @@
 		<h5 class='card-header'>/overview</h5>
 		<div class='card-body'>
 		Get an overview page with all managed server and there statuses
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/logout' class='card border-dark mb-5'>
+		<h5 class='card-header'>/logout</h5>
+		<div class='card-body'>
+		Logout
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/login-check' class='card border-dark mb-5'>
+		<h5 class='card-header'>/login-check</h5>
+		<div class='card-body'>
+		Check if we a signed-in or not
+		</div> <!-- end: card-body -->
+		</div> <!-- end: card -->
+
+
+		<!-- ############################################################################# -->
+		<div id='/h2ws' class='card border-dark mb-5'>
+		<h5 class='card-header'>/h2ws</h5>
+		<div class='card-body'>
+		H2 Central Writer Statistics (chart info)
+		<br>
+		Parameters:
+		<table>
+			<!--     ==========           =================          =========== -->
+			<tr> <th>Name       </th> <th>Mandatory/Default</th> <th>Description</th> </tr>
+			<!--     ==========           =================          =========== -->
+			<tr> <td>filename   </td> <td><b>mandatory</b> </td> <td>Name of the file (only the filename, not full path), probably=DBX_CENTRAL_H2WriterStatCronTask.log</td> </tr>
+			<tr> <td>startDate  </td> <td><b>mandatory</b> </td> <td>YYYY-MM-DDThh:mm  <i>date in format: RFC 3339</i></td> </tr>
+			<tr> <td>endDate    </td> <td><b>mandatory</b> </td> <td>YYYY-MM-DDThh:mm  <i>date in format: RFC 3339</i></td> </tr>
+<!--			<tr> <td>minDuration</td> <td>                 </td> <td>not used for the moment</td> </tr>-->
+		</table>
 		</div> <!-- end: card-body -->
 		</div> <!-- end: card -->
 

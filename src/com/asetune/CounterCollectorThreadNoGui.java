@@ -1121,6 +1121,8 @@ implements Memory.MemoryListener
 //				}
 
 				// get a connection
+				SQLException connectException = null;
+				String       connectInfoMsg   = null;
 				try
 				{
 					// Should we try to do a "re-connect"...
@@ -1153,6 +1155,8 @@ implements Memory.MemoryListener
 				{
 					// connection failed, and we should retry
 					// Do nothing here, later on in the code will will (send alarms), and start at the top again
+					connectException = ex;
+					connectInfoMsg   = "Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex;
 					
 					// But at least, log the exception...
 					_logger.info ("Problems connecting to DBMS, retry  will be done later. Username='"+_dbmsUsername+"', Password='"+ "*secret*"    +"', Server='"+_dbmsServer+"', HostPortStr='"+_dbmsHostPortStr+"', UrlOptions='"+_jdbcUrlOptions+"'. Caught: "+ex);
@@ -1180,7 +1184,7 @@ implements Memory.MemoryListener
 					if (StringUtil.hasValue(_dbmsServer))      fallbackSrvName = _dbmsServer;
 					if (StringUtil.hasValue(_dbmsServerAlias)) fallbackSrvName = _dbmsServerAlias;
 					
-					sendAlarmServerIsDown(fallbackSrvName);
+					sendAlarmServerIsDown(fallbackSrvName, connectException, connectInfoMsg);
 
 					// Sleep a short while
 					getCounterController().sleep(_sleepOnFailedConnectTime * 1000);

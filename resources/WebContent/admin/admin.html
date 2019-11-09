@@ -527,7 +527,7 @@
    */
   function restartServer(restartType) 
   {
-    var urlParams="&h2ShutdownType=IMMEDIATELY";
+    var urlParams="&h2ShutdownType=DEFAULT";
     if (restartType === "compact")
     {
       urlParams="&h2ShutdownType=COMPACT";

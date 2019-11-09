@@ -37,7 +37,8 @@ extends Task
 	public static final boolean DEFAULT_start = true;
 
 	public static final String PROPKEY_cron = "H2WriterStatCronTask.cron";
-	public static final String DEFAULT_cron = "59 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *"; // every hour at 59 minutes
+//	public static final String DEFAULT_cron = "59 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *"; // every hour at 59 minutes
+	public static final String DEFAULT_cron = "9,19,29,39,49,59 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *"; // every hour at 9,19,29,39,49,59 minutes
 
 	public static final String  PROPKEY_LOG_FILE_PATTERN = "H2WriterStatCronTask.log.file.pattern";
 	public static final String  DEFAULT_LOG_FILE_PATTERN    = "%d - %-5p - %-30c{1} - %m%n";

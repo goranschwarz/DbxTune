@@ -76,7 +76,7 @@ extends ReportEntryAbstract
 
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Active Alarm Details...", htmlContent);
 
-				sb.append( msOutlookAlternateText("Active Alarm Details", showHideDiv) );
+				sb.append( msOutlookAlternateText(showHideDiv, "Active Alarm Details", null) );
 //				sb.append( showHideDiv );
 			}
 		}

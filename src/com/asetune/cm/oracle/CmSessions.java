@@ -21,10 +21,13 @@
 package com.asetune.cm.oracle;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHelper;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -141,6 +144,27 @@ extends CountersModel
 		String sql = "select * from V$SESSION";
 
 		return sql;
+	}
+
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		AlarmHelper.sendAlarmRequestForColumn(this, "PROGRAM");
+		AlarmHelper.sendAlarmRequestForColumn(this, "USERNAME");
+		AlarmHelper.sendAlarmRequestForColumn(this, "OSUSER");
+	}
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "PROGRAM") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "USERNAME") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "OSUSER") );
+		
+		return list;
 	}
 }
 

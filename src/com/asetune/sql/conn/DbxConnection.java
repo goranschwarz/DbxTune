@@ -2766,6 +2766,22 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	// END: PROPERTIES methods
 	//-------------------------------------------------
 
+	
+//	/**
+//	 * Return a DBMS data type for this DBMS (default is to use the same logic as in ResultSetTableModel.getColumnTypeName
+//	 * <p>
+//	 * But override this to be more DBMS agnostic
+//	 * 
+//	 * @param rsmd
+//	 * @param col
+//	 * 
+//	 * @return a String with DBMS data type. For example: <code>int</code>, <code>varchar(30)</code> or <code>numeric(10,2)</code>
+//	 */
+//	public String getColumnTypeName(ResultSetMetaData rsmd, int col)
+//	{
+//		return ResultSetTableModel.getColumnTypeName(rsmd, col);
+//	}
+
 //	/**
 //	 * Checks if the currect database connection is of the product name<br>
 //	 * This uses: <code>DbUtils.isProductName(this.getDatabaseProductName(), dbProdNameOracle);</code>

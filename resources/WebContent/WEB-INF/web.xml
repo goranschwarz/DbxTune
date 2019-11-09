@@ -137,6 +137,23 @@
 	</servlet-mapping>
 
 
+	<servlet>
+		<servlet-name>H2WriterStatServlet</servlet-name>
+		<servlet-class>com.asetune.central.controllers.H2WriterStatServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>H2WriterStatServlet</servlet-name>
+		<url-pattern>/h2ws</url-pattern>
+	</servlet-mapping>
+
+
+
+
+
+
+
+
+
 	<servlet-mapping>
 		<servlet-name>AdminServlet</servlet-name>
 		<url-pattern>/admin</url-pattern>

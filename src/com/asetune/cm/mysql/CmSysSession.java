@@ -21,6 +21,7 @@
 package com.asetune.cm.mysql;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -28,6 +29,8 @@ import javax.naming.NameNotFoundException;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHelper;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -203,5 +206,24 @@ extends CountersModel
 		String sql = "select * from sys.`x$session`";
 
 		return sql;
+	}
+
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		AlarmHelper.sendAlarmRequestForColumn(this, "program_name");
+		AlarmHelper.sendAlarmRequestForColumn(this, "user");
+	}
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "user") );
+		
+		return list;
 	}
 }

@@ -44,7 +44,9 @@ public class AseCpuUsageOverview extends AseAbstract
 				"CmSummary_aaCpuGraph",
 				"CmEngines_cpuSum",
 				"CmEngines_cpuEng",
-				"CmSysLoad_EngineRunQLengthGraph"
+				"CmSysLoad_EngineRunQLengthGraph",
+				"CmExecutionTime_CpuUsagePct",
+				"CmExecutionTime_TimeGraph"
 				));
 
 		sb.append(_CmSummary_aaCpuGraph           .getHtmlContent(null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks."));
@@ -52,7 +54,14 @@ public class AseCpuUsageOverview extends AseAbstract
 		sb.append(_CmEngines_cpuEng               .getHtmlContent(null, "The above graph Will only contain CPU Cyckles used to execute User Work, but for each ASE Engine.<br>\n"
 		                                                              + "So here you can see if you have specififc Engines scheduling work."));
 		sb.append(_CmSysLoad_EngineRunQLengthGraph.getHtmlContent(null, "The above graph shows how many task(s) that are in the Schedulers Execution Queue for each ASE Engine.<br>\n"
-		                                                              + "Values above 1 shows that we have to many user tasks waiting to be served/executed and potentially that we are at 100% or a high CPU Usage."));
+		                                                              + "Values above 1 shows that we have to many user tasks waiting to be served/executed and potentially that we are at 100 or a high CPU Usage."));
+		sb.append(_CmExecutionTime_CpuUsagePct    .getHtmlContent(null, null));
+		sb.append(_CmExecutionTime_TimeGraph      .getHtmlContent(null, "The above graph shows what <i>sub system</i> in ASE where we spend most time (Note: Entries for 'Unknown' with values above 100,000,000 (100 sec) are discarded)<br>\n"
+		                                                              + "<ul> \n"
+		                                                              + "  <li><b>Compilation</b> - Maybe it's time to consider Statement Cache (if not already done), or increase the size of the statement cache.</li>"
+		                                                              + "  <li><b>Sorting    </b> - Find SQL Statement that does a lot of sorting and try to do that on the client side if possible, or add index to support that order.</li>"
+		                                                              + "  <li><b>Execution  </b> - Hopefully this is where most CPU Cycles is spent.</li>"
+		                                                              + "</ul> \n"));
 
 		return sb.toString();
 	}
@@ -78,10 +87,20 @@ public class AseCpuUsageOverview extends AseAbstract
 		_CmEngines_cpuSum                = createChart(conn, "CmEngines", "cpuSum",                maxValue, null, "CPU Summary for all Engines (Server->Engines)");
 		_CmEngines_cpuEng                = createChart(conn, "CmEngines", "cpuEng",                maxValue, null, "CPU Usage per Engine (System + User) (Server->Engines)");
 		_CmSysLoad_EngineRunQLengthGraph = createChart(conn, "CmSysLoad", "EngineRunQLengthGraph", -1,       null, "Run Queue Length, Average over last minute, Per Engine (Server->System Load)");
+
+		// For CmExecutionTime_TimeGraph do not sample values for "Unknown" which is "out-of-bounds"
+		String skip = null;
+		if (true)
+			skip = ReportChartObject.SKIP_COLNAME_WITH_VALUE_ABOVE + "Unknown=" + 100_000_000; // 100 seconds means 100 engines at 100% of "Unknown" usage
+		
+		_CmExecutionTime_CpuUsagePct     = createChart(conn, "CmExecutionTime", "CpuUsagePct",     maxValue, null, "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
+		_CmExecutionTime_TimeGraph       = createChart(conn, "CmExecutionTime", "TimeGraph",       -1,       skip, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
 	}
 
 	private ReportChartObject _CmSummary_aaCpuGraph;
 	private ReportChartObject _CmEngines_cpuSum;
 	private ReportChartObject _CmEngines_cpuEng;
 	private ReportChartObject _CmSysLoad_EngineRunQLengthGraph;
+	private ReportChartObject _CmExecutionTime_CpuUsagePct;
+	private ReportChartObject _CmExecutionTime_TimeGraph;
 }

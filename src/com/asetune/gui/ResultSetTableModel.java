@@ -17,7 +17,6 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -39,6 +38,7 @@ import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandConvert;
 import com.asetune.sql.pipe.PipeCommandGrep;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -213,6 +213,28 @@ public class ResultSetTableModel
 		if (rsmd == null)
 			rsmd = rs.getMetaData();
 
+		// Check if this is a DbxConnection that was responsible for the call... then we can resolve the data types using that
+		// Note: The below did not work since rs.getStatement().getConnection() returns the initial DBMS Vendor JDBC driver... com.sybase.jdbc4.jdbc.SybConnection or org.postgresql.jdbc.PgConnection
+//		DbxConnection dbxConn = null;
+//		if (rs.getStatement() != null)
+//		{
+//			Connection conn = rs.getStatement().getConnection();
+////System.out.println("ResultSetTableModel: rs.getStatement().getConnection() == " + conn);
+//			if (conn != null && conn instanceof DbxConnection)
+//				dbxConn = (DbxConnection) conn;
+//		}
+		String dbmsProductName = "-unknown-";
+		if (rs.getStatement() != null)
+		{
+			try
+			{
+				Connection conn = rs.getStatement().getConnection();
+				dbmsProductName = conn.getMetaData().getDatabaseProductName();
+			}
+			catch (SQLException ignore) {}
+		}
+		
+		
 		_numcols = rsmd.getColumnCount() + 1;
 		_classType = new Class[_numcols + (_showRowNumber ? 1 : 0)];
 
@@ -251,7 +273,8 @@ public class ResultSetTableModel
 			String columnLabel       = rsmd.getColumnLabel(c);
 			String columnName        = rsmd.getColumnName(c);
 			String columnClassName   = rsmd.getColumnClassName(c);
-			String columnTypeNameGen = getColumnTypeName(rsmd, c);
+//			String columnTypeNameGen = dbxConn == null ? getColumnTypeName(rsmd, c) : dbxConn.getColumnTypeName(rsmd, c);
+			String columnTypeNameGen = getColumnTypeName(dbmsProductName, rsmd, c);
 			
 			String columnTypeNameRaw = "-unknown-";
 			try {  columnTypeNameRaw = rsmd.getColumnTypeName(c); } catch(SQLException ignore) {}; // sometimes this caused SQLException, especially for 'compute by' 
@@ -782,6 +805,10 @@ public class ResultSetTableModel
 
 	public static String getColumnTypeName(ResultSetMetaData rsmd, int col)
 	{
+		return getColumnTypeName(null, rsmd, col);
+	}
+	public static String getColumnTypeName(String dbmsProductName, ResultSetMetaData rsmd, int col)
+	{
 		String columnTypeName;
 		// in RepServer, the getColumnTypeName() throws exception: JZ0SJ ... wants metadata 
 		try
@@ -791,28 +818,89 @@ public class ResultSetTableModel
 			try
 			{
 				int columnType = rsmd.getColumnType(col);
-				if (    columnType == java.sql.Types.NUMERIC 
-				     || columnType == java.sql.Types.DECIMAL )
-				{
-					int precision = rsmd.getPrecision(col);
-					int scale     = rsmd.getScale(col);
-					
-					columnTypeName += "("+precision+","+scale+")";
-				}
-				if (    columnType == java.sql.Types.CHAR 
-				     || columnType == java.sql.Types.VARCHAR 
-				     || columnType == java.sql.Types.NCHAR
-				     || columnType == java.sql.Types.NVARCHAR
-				     || columnType == java.sql.Types.BINARY
-				     || columnType == java.sql.Types.VARBINARY
-				   )
-				{
-					int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
-					
-//					if (columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
-//						columnDisplaySize += 2; // just in case we need the extra length when storing a binary with the prefix '0x'
 
-					columnTypeName += "("+columnDisplaySize+")";
+				//---------------------------------
+				// SQL-Server
+				//---------------------------------
+				if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
+				{
+					if (columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL)
+					{
+						int precision = rsmd.getPrecision(col);
+						int scale     = rsmd.getScale(col);
+
+						columnTypeName += "("+precision+","+scale+")";
+					}
+					if (    columnType == java.sql.Types.CHAR 
+					     || columnType == java.sql.Types.VARCHAR 
+					     || columnType == java.sql.Types.NCHAR	
+					     || columnType == java.sql.Types.NVARCHAR
+					     || columnType == java.sql.Types.BINARY
+					     || columnType == java.sql.Types.VARBINARY
+					   )
+					{
+						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+						columnTypeName += (columnDisplaySize == 2147483647) ? "(max)" : "("+columnDisplaySize+")";
+					}
+				}
+				//---------------------------------
+				// POSTGRES
+				//---------------------------------
+				else if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_POSTGRES))
+				{
+					if (columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL)
+					{
+						int precision = rsmd.getPrecision(col);
+						int scale     = rsmd.getScale(col);
+						
+						columnTypeName += "("+precision+","+scale+")";
+					}
+		
+					// Binary goes as datatype 'bytea' and does NOT have a length specification
+					//if ( columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
+					//{
+					//	int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+					//		
+					//	columnTypeName += (columnDisplaySize == 2147483647) ? "(max)" : "("+columnDisplaySize+")";
+					//}
+		
+					if (    columnType == java.sql.Types.CHAR 
+					     || columnType == java.sql.Types.VARCHAR 
+					     || columnType == java.sql.Types.NCHAR
+					     || columnType == java.sql.Types.NVARCHAR
+					   )
+					{
+						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+							
+						columnTypeName += "("+columnDisplaySize+")";
+		
+						if (columnDisplaySize == 2147483647)
+							columnTypeName = "text";
+					}
+				}
+				//---------------------------------
+				// EVERYTHING ELSE
+				//---------------------------------
+				else
+				{
+					if (columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL)
+					{
+						int precision = rsmd.getPrecision(col);
+						int scale     = rsmd.getScale(col);
+							
+						columnTypeName += "("+precision+","+scale+")";
+					}
+					if (    columnType == java.sql.Types.CHAR 
+					     || columnType == java.sql.Types.VARCHAR 
+					     || columnType == java.sql.Types.NCHAR
+					     || columnType == java.sql.Types.NVARCHAR
+					     || columnType == java.sql.Types.BINARY
+					     || columnType == java.sql.Types.VARBINARY
+					   )
+					{
+						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+						columnTypeName += "("+columnDisplaySize+")";
+					}
 				}
 			}
 			catch (SQLException ignore) {}
@@ -1830,20 +1918,27 @@ public class ResultSetTableModel
 		return sb.toString();
 	}
 
-
+	/** renderer used in toHtmlTableString() */
+	public interface TableStringRenderer
+	{
+		/** returns a string that should be used as a value, this could be decorated with HTML tags to highlight various parts of the table cells 
+		 * @param objVal2 */
+		String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal);
+	}
+	
 	public String toHtmlTableString(String className)
 	{
-		return toHtmlTableString(className, true, true, null);
+		return toHtmlTableString(className, true, true, null, null);
 	}
 	public String toHtmlTableString(String className, Map<String, String> colNameValueTagMap)
 	{
-		return toHtmlTableString(className, true, true, colNameValueTagMap);
+		return toHtmlTableString(className, true, true, colNameValueTagMap, null);
 	}
 	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap)
 	{
-		return toHtmlTableString(className, tHeadNoWrap, tBodyNoWrap, null);
+		return toHtmlTableString(className, tHeadNoWrap, tBodyNoWrap, null, null);
 	}
-	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap)
+	public String toHtmlTableString(String className, boolean tHeadNoWrap, boolean tBodyNoWrap, Map<String, String> colNameValueTagMap, TableStringRenderer tsRenderer)
 	{
 		StringBuilder sb = new StringBuilder(1024);
 
@@ -1917,6 +2012,11 @@ public class ResultSetTableModel
 						beginTag = "<"  + tagName + ">";
 						endTag   = "</" + tagName + ">";
 					}
+				}
+				
+				if (tsRenderer != null)
+				{
+					strVal = tsRenderer.cellValue(this, r, c, colName, objVal, strVal);
 				}
 
 //				sb.append("<td").append(tBodyNoWrapStr).append(">").append(strVal).append("</td>");

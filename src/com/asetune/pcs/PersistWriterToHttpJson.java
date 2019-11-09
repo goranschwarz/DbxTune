@@ -199,6 +199,10 @@ extends PersistWriterBase
 			long timeToLive = 120*1000; // 2 minutes by default
 			if (PersistentCounterHandler.hasInstance())
 				timeToLive = Math.max(PersistentCounterHandler.getInstance().getMaxConsumeTime(), timeToLive);
+
+			// lets use 10 minutes as the MAX MAX time to live
+			timeToLive = Math.min(timeToLive, 600*1000);
+
 			alarmEvent.setTimeToLive(timeToLive);
 			// NOTE: This will probably just decrease number of "FALSE" Alarms, so wee probably need to think of a better solution here...
 

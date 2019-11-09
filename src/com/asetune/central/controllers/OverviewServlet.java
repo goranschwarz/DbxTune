@@ -1333,6 +1333,13 @@ public class OverviewServlet extends HttpServlet
 			out.println("</ul>");
 			out.println("</p>");
 
+			fn = "DBX_CENTRAL_H2WriterStatCronTask.log";
+			long numOfDays = 30;
+//			String startDate = (new Timestamp(System.currentTimeMillis() - (1000*3600*24*numOfDays) )).toString().substring(0, "2019-01-01 HH:mm:ss".length());
+//			String endDate   = (new Timestamp(System.currentTimeMillis())).toString().substring(0, "2019-01-01 HH:mm:ss".length());
+			String startDate = TimeUtils.toStringIso8601( new Timestamp( System.currentTimeMillis() - (1000*3600*24*numOfDays) ) ).substring(0, "2019-01-01T".length()) + "00:00"; // Copy first part "YYYY-MM-DDT" then add "00:00" start of day
+			String endDate   = TimeUtils.toStringIso8601( new Timestamp( System.currentTimeMillis()                            ) ).substring(0, "2019-01-01T".length()) + "23:59"; // Copy first part "YYYY-MM-DDT" then add "23:59" end of day
+			out.println("<a href='/h2ws?filename=" + fn + "&startDate=" + startDate + "&endDate=" + endDate + "'>Show a Chart of H2 Read/Write Statistics for last " + numOfDays + " day</a><br>");
 //			out.println("<p><br></p>");
 
 			
@@ -1346,23 +1353,41 @@ public class OverviewServlet extends HttpServlet
 				{
 					conn = reader.getConnection();
 
-					String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
-					String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
-
+//					String lq = conn.getLeftQuote();  // Note no replacement is needed, since we get it from the connection
+//					String rq = conn.getRightQuote(); // Note no replacement is needed, since we get it from the connection
+//
+//					sql = ""
+//					    + "select \n"
+//					    + "	   " + lq + "ServerName"    + rq + ", \n"
+//					    + "	   " + lq + "OnHostname"    + rq + ", \n"
+//					    + "	   " + lq + "ProductString" + rq + ", \n"
+//					    + "	   min(" + lq + "SessionStartTime" + rq + ") as " + lq + "FirstSample" + rq + ", \n"
+//					    + "	   max(" + lq + "LastSampleTime"   + rq + ") as " + lq + "LastSample"  + rq + ", \n"
+////					    + "	   sum(" + lq + "NumOfSamples"     + rq + ") as " + lq + "NumOfSamples" + rq + ", \n" // Note this might be off/faulty after a: Data Retention Cleanup
+//					    + "	   datediff(day, max(" + lq + "LastSampleTime"   + rq + "), CURRENT_TIMESTAMP)   as " + lq + "LastSampleAgeInDays" + rq + ", \n"
+//					    + "	   datediff(day, min(" + lq + "SessionStartTime" + rq + "), max(" + lq + "LastSampleTime" + rq + ")) as " + lq + "NumOfDaysSampled" + rq + " \n"
+//					    + "from " + lq + "DbxCentralSessions" + rq + " \n"
+//					    + "group by " + lq + "ServerName" + rq + ", " + lq + "OnHostname" + rq + ", " + lq + "ProductString" + rq + " \n"
+//					    + "order by 1 \n"
+//					    + "";
+					
 					sql = ""
 					    + "select \n"
-					    + "	   " + lq + "ServerName"    + rq + ", \n"
-					    + "	   " + lq + "OnHostname"    + rq + ", \n"
-					    + "	   " + lq + "ProductString" + rq + ", \n"
-					    + "	   min(" + lq + "SessionStartTime" + rq + ") as " + lq + "FirstSample" + rq + ", \n"
-					    + "	   max(" + lq + "LastSampleTime"   + rq + ") as " + lq + "LastSample"  + rq + ", \n"
-//					    + "	   sum(" + lq + "NumOfSamples"     + rq + ") as " + lq + "NumOfSamples" + rq + ", \n" // Note this might be off/faulty after a: Data Retention Cleanup
-					    + "	   datediff(day, max(" + lq + "LastSampleTime"   + rq + "), CURRENT_TIMESTAMP)   as " + lq + "LastSampleAgeInDays" + rq + ", \n"
-					    + "	   datediff(day, min(" + lq + "SessionStartTime" + rq + "), max(" + lq + "LastSampleTime" + rq + ")) as " + lq + "NumOfDaysSampled" + rq + " \n"
-					    + "from " + lq + "DbxCentralSessions" + rq + " \n"
-					    + "group by " + lq + "ServerName" + rq + ", " + lq + "OnHostname" + rq + ", " + lq + "ProductString" + rq + " \n"
+					    + "	   [ServerName], \n"
+					    + "	   [OnHostname], \n"
+					    + "	   [ProductString], \n"
+					    + "	   min([SessionStartTime]) as [FirstSample], \n"
+					    + "	   max([LastSampleTime])   as [LastSample], \n"
+//					    + "	   sum([NumOfSamples])     as [NumOfSamples], \n" // Note this might be off/faulty after a: Data Retention Cleanup
+					    + "	   datediff(day, max([LastSampleTime]),   CURRENT_TIMESTAMP    ) as [LastSampleAgeInDays], \n"
+					    + "	   datediff(day, min([SessionStartTime]), max([LastSampleTime])) as [NumOfDaysSampled] \n"
+					    + "from [DbxCentralSessions] \n"
+					    + "group by [ServerName], [OnHostname], [ProductString] \n"
 					    + "order by 1 \n"
 					    + "";
+
+					// change '[' and ']' into DBMS specific Quoted Identifier Chars
+					sql = conn.quotifySqlString(sql);
 					
 					try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 					{

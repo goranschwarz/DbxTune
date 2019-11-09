@@ -1677,18 +1677,19 @@ finally
 			}
 
 			// set Application name
-			String jdbcAppNameProp = null;
-			if      (url.startsWith("jdbc:sqlserver:"  )) { jdbcAppNameProp = "applicationName"; }
-			else if (url.startsWith("jdbc:postgresql:" )) { jdbcAppNameProp = "ApplicationName"; }
-			else if (url.startsWith("jdbc:mysql:"      )) { jdbcAppNameProp = ""; }
-			else if (url.startsWith("jdbc:db2:"        )) { jdbcAppNameProp = ""; }
-			else if (url.startsWith("jdbc:oracle:thin:")) { jdbcAppNameProp = ""; }
-			else if (url.startsWith("jdbc:sap:"        )) { jdbcAppNameProp = ""; }
+			String jdbcAppNamePropName = null;
+			String jdbcAppNamePropVal  = Version.getAppName();
+			if      (url.startsWith("jdbc:sqlserver:"  )) { jdbcAppNamePropName = "applicationName"; }
+			else if (url.startsWith("jdbc:postgresql:" )) { jdbcAppNamePropName = "ApplicationName"; }
+			else if (url.startsWith("jdbc:mysql:"      )) { jdbcAppNamePropName = "connectionAttributes"; jdbcAppNamePropVal = "program_name:"+Version.getAppName(); }
+			else if (url.startsWith("jdbc:db2:"        )) { jdbcAppNamePropName = ""; }
+			else if (url.startsWith("jdbc:oracle:thin:")) { jdbcAppNamePropName = "v$session.program"; }  // v$session.machine=, v$session.osuser=, v$session.program=JDBC Thin Client, v$session.process=1234
+			else if (url.startsWith("jdbc:sap:"        )) { jdbcAppNamePropName = ""; }
 			
-			if (StringUtil.hasValue(jdbcAppNameProp))
+			if (StringUtil.hasValue(jdbcAppNamePropName))
 			{
-				props .put(jdbcAppNameProp, Version.getAppName());
-				props2.put(jdbcAppNameProp, Version.getAppName());
+				props .put(jdbcAppNamePropName, jdbcAppNamePropVal);
+				props2.put(jdbcAppNamePropName, jdbcAppNamePropVal);
 			}
 
 

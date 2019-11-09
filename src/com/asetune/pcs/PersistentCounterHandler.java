@@ -256,7 +256,9 @@ implements Runnable
 	private boolean _addDependantObjectsToDdlInQueue = DEFAULT_ddl_addDependantObjectsToDdlInQueue;
 
 	/** How many milliseconds have we maximum spent in <i>consume</i> */
-	private long _maxConsumeTime = 0;
+	private long _maxConsumeTime      = 0;
+	/** Last time the _maxConsumeTime was bumped */
+	private long _maxConsumeTimeStamp = System.currentTimeMillis();
 
 	/*---------------------------------------------------
 	** Constructors
@@ -1490,7 +1492,7 @@ implements Runnable
 
 				// Stop clock and print statistics.
 				long execTime = TimeUtils.msDiffNow(startTime);
-				_maxConsumeTime = Math.max(_maxConsumeTime, execTime);
+				setConsumeTime(execTime);
 
 				firePcsConsumeInfo(pw.getName(), cont.getServerNameOrAlias(), cont.getSessionStartTime(), cont.getMainSampleTime(), (int)execTime, pw.getStatistics());
 
@@ -1504,7 +1506,27 @@ implements Runnable
 			}
 		}
 	}
-	
+
+	private void setConsumeTime(long lastExecTime)
+	{
+//		_maxConsumeTime = Math.max(_maxConsumeTime, lastExecTime);
+		
+		if (lastExecTime > _maxConsumeTime)
+		{
+			_maxConsumeTime      = lastExecTime;
+			_maxConsumeTimeStamp = System.currentTimeMillis();
+		}
+		else
+		{
+			// if we have a "bump in the road", meaning: one persist took an awfull long time, but normally this does not happen
+			// then: lets slowly decrease the '_maxConsumeTime'
+			
+			// FIXME: how should this algorithm look like?   half the _maxConsumeTime every time, or only after ### ms from _maxConsumeTimeStamp...
+			//        for now the PersistWriterToHttpJson.checkSendAlarm() uses a max value of 10 minutes...
+			//_maxConsumeTime = _maxConsumeTime / 2;
+		}
+	}
+
 	/**
 	 * Get MAX time in milliseconds we have spent in consume for any writer
 	 * @return

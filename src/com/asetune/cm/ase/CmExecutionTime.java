@@ -58,9 +58,9 @@ extends CountersModel
 		"Execution times for individual ASE Modules<br>" +
 		"Where do we spend the CPU Cycles?<br>" +
 		"<ul>" +
-		"   <li>Compilation - Maybe it's time to consider Statement Cache (if not already done)</li>" +
-		"   <li>Sorting - Find SQL Statement that does a lot of sorting and try to do that on the client side, if possible</li>" +
-		"   <li>Execution - Hopefully this is where most CPU Cycles is spent.</li>" +
+		"   <li><b>Compilation</b> - Maybe it's time to consider Statement Cache (if not already done), or increase the size of the statement cache</li>" +
+		"   <li><b>Sorting    </b> - Find SQL Statement that does a lot of sorting and try to do that on the client side, if possible, or add index to support that order.</li>" +
+		"   <li><b>Execution  </b> - Hopefully this is where most CPU Cycles is spent.</li>" +
 		"</ul>" +
 		"</html>";
 

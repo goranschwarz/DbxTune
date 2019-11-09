@@ -271,6 +271,20 @@ export JVM_PARAMS=${DBXTUNE_JVM_PARAMS:-"-noverify -XX:-UseGCOverheadLimit"}
 ##     - The GC throws this exception when too much time is spent in garbage collection for too little return, eg. 98% of CPU time is spent on GC and less than 2% of heap is recovered.
 ##     - This feature is designed to prevent applications from running for an extended period of time while making little or no progress because the heap is too small.
 
+## Preparations for JAVA Flight Recorder and Mission Control
+## Note: JFR is NOT part of OpenJDK-8, only in Oracle's JDK-8 and OpenJDK-11 (and in JDK-11 I don't think UnlockCommercialFeatures is needed)
+## for more info see: https://medium.com/@chrishantha/java-flight-recorder-cheat-sheet-98f5143f5f88 or https://www.baeldung.com/java-flight-recorder-monitoring
+## to start a recording, use: jcmd <pid> JFR.start name=DbxTuneRecording settings=profile duration=2h 
+## to dump recording to file: jcmd <pid> JFR.dump name=DbxTuneRecording filename=/tmp/filename.dump.jfr
+## to stop a recording, use:  jcmd <pid> JFR.stop name=DbxTuneRecording
+## to check for recordings:   jcmd <pid> JFR.check
+## BTW: I'm thinking about a interface in the DbxCentral Web UI so this can be done from there... but lets see if I'm implementing that ;)
+if [ ${DBXTUNE_ENABLE_JFR:-0} -gt 0 ]
+then
+	JVM_PARAMS="${JVM_PARAMS} -XX:+UnlockCommercialFeatures -XX:+FlightRecorder"
+fi
+
+
 export EXTRA=
 #export DEBUG_OPTIONS=-agentlib:hprof=cpu=samples,interval=20,depth=50
 #export DEBUG_OPTIONS=-agentlib:hprof=cpu=times
@@ -283,7 +297,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/asetune.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/dsparser.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/log4j-1.2.17.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-SNAPSHOT.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.199.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/h2-1.4.200.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/wizard.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-swing-5.2.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/miglayout-core-5.2.jar

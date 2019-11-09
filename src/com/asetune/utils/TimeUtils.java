@@ -468,7 +468,7 @@ public class TimeUtils
 
 	/**
 	 * Parse the string into a Tiemstamp<br>
-	 * The format is <code>yyyy-MM-dd hh:mm:ss.SSS</code><br>
+	 * The format is <code>yyyy-MM-dd HH:mm:ss.SSS</code><br>
 	 * If we get a ParseException, we will return the paremeter 'defaultVal'
 	 * 
 	 * @param str          The time String
@@ -477,13 +477,13 @@ public class TimeUtils
 	 */
 	public static Timestamp parseToTimestampNoThrow(String str, Timestamp defaultVal) 
 	{
-		try{ return parseToTimestamp(str, "yyyy-MM-dd hh:mm:ss.SSS"); }
+		try{ return parseToTimestamp(str, "yyyy-MM-dd HH:mm:ss.SSS"); }
 		catch(ParseException ex) { return defaultVal; }
 	}
 
 	/**
 	 * Parse the string into a Tiemstamp<br>
-	 * The format is <code>yyyy-MM-dd hh:mm:ss.SSS</code>
+	 * The format is <code>yyyy-MM-dd HH:mm:ss.SSS</code>
 	 * 
 	 * @param str      The time String
 	 * @return         A Timestamp
@@ -492,7 +492,7 @@ public class TimeUtils
 	public static Timestamp parseToTimestamp(String str) 
 	throws ParseException
 	{
-		return parseToTimestamp(str, "yyyy-MM-dd hh:mm:ss.SSS");
+		return parseToTimestamp(str, "yyyy-MM-dd HH:mm:ss.SSS");
 	}
 
 	/**
@@ -514,7 +514,7 @@ public class TimeUtils
 
 	/**
 	 * Parse the string into a Tiemstamp<br>
-	 * The format is <code>yyyy-MM-dd hh:mm:ss.SSS</code>
+	 * The format is <code>yyyy-MM-dd HH:mm:ss.SSS</code>
 	 * 
 	 * @param str      The time String
 	 * @return         A Timestamp

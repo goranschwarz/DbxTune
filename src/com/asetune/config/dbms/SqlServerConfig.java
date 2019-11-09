@@ -66,7 +66,7 @@ extends DbmsConfigAbstract
 		{RESTART_IS_REQ,       false,    Boolean.class, "bit",           "Server needs to be rebooted for the configuration to take effect."},
 		{IS_ADVANCED,          false,    Boolean.class, "bit",           "SQL-Server consider this as an \"advanced\" option."},
 		{LEGAL_VALUES,         true,     String .class, "varchar(60)",   "What legal values can this configuration hold"},
-		{DESCRIPTION,          true,     String .class, "varchar(255)",  "Description of the configuration."},
+		{DESCRIPTION,          true,     String .class, "varchar(1024)", "Description of the configuration."},
 		{COMMENT,              true,     String .class, "varchar(1024)", "Some comment(s) about this configuration."}
 	};
 

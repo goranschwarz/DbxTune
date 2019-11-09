@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHelper;
 import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
@@ -303,4 +304,22 @@ extends CountersModel
 		}
 	}
 
+	
+	@Override
+	public void sendAlarmRequest()
+	{
+		AlarmHelper.sendAlarmRequestForColumn(this, "program_name");
+		AlarmHelper.sendAlarmRequestForColumn(this, "loginame");
+	}
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "program_name") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "loginame") );
+		
+		return list;
+	}
 }

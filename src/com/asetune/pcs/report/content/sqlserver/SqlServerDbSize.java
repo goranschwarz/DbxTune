@@ -27,6 +27,7 @@ import com.asetune.pcs.report.content.ReportChartObject;
 import com.asetune.pcs.report.content.ase.AseAbstract;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.StringUtil;
 
 public class SqlServerDbSize extends AseAbstract
 {
@@ -49,7 +50,37 @@ public class SqlServerDbSize extends AseAbstract
 
 		// Last sample Database Size info
 		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
-		sb.append(_shortRstm.toHtmlTableString("sortable"));
+		sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new ResultSetTableModel.TableStringRenderer()
+		{
+			/**
+			 * If compatibility_level is below "tempdb", then mark the cell as RED
+			 */
+			@Override
+			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
+			{
+				if ("compatibility_level".equals(colName))
+				{
+					int compatLevel_tempdb = -1;
+					for (int r=0; r<rstm.getRowCount(); r++)
+					{
+						String dbname = rstm.getValueAsString(r, "DBName");
+						if ("tempdb".equals(dbname))
+						{
+							compatLevel_tempdb = rstm.getValueAsInteger(r, "compatibility_level", true, -1);
+							break;
+						}
+					}
+					int compatLevel_curDb = StringUtil.parseInt(strVal, -1);
+					if (compatLevel_curDb < compatLevel_tempdb)
+					{
+						String tooltip = "Column 'compatibility_level' is less than the 'server level'.\nYou may not take advantage of new functionality, which is available at this SQL-Server version... Server compatibility_level is: "+compatLevel_tempdb;
+						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
+//						strVal = "<font color='red'>" + strVal + "</font>";
+					}
+				}
+				return strVal;
+			}
+		}));
 		
 
 		// link to DbxCentral graphs
@@ -122,7 +153,7 @@ public class SqlServerDbSize extends AseAbstract
 			    + "     [DBName] \n"
 			    + "    ,[compatibility_level] \n"
 			    + "    ,[recovery_model_desc] \n"
-			    + "    ,[DataFileGroupCount] \n"
+//			    + "    ,[DataFileGroupCount] \n"
 			    + "\n"
 			    + "    ,[DbSizeInMb] \n"
 			    + "    ,[DataSizeInMb] \n"

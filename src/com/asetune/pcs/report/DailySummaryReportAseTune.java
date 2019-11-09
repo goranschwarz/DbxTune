@@ -24,6 +24,7 @@ import com.asetune.pcs.report.content.ase.AseCpuUsageOverview;
 import com.asetune.pcs.report.content.ase.AseDbSize;
 import com.asetune.pcs.report.content.ase.AseErrorInfo;
 import com.asetune.pcs.report.content.ase.AseSlowCmDeviceIo;
+import com.asetune.pcs.report.content.ase.AseStatementCacheUsageOverview;
 import com.asetune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivity;
@@ -53,10 +54,13 @@ extends DailySummaryReportDefault
 		// SQL: from mon SysStatements...
 		addReportEntry( new AseTopSlowSql(this)             );
 		addReportEntry( new AseTopSlowProcCalls(this)       );
+
 		// SQL: from Cm's
 		addReportEntry( new AseTopCmCachedProcs(this)       );
+		addReportEntry( new AseStatementCacheUsageOverview(this) ); // This isn't really SQL, but statistics/charts on the Statement Cache
 		addReportEntry( new AseTopCmStmntCacheDetails(this) );
 		addReportEntry( new AseTopCmActiveStatements(this)  );
+
 		// SQL: Accessed Tables
 		addReportEntry( new AseTopCmObjectActivity(this)    );
 

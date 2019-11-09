@@ -182,7 +182,7 @@ extends DbmsConfigAbstract
 		{BOOT_VAL,             true,     String .class, "varchar(128)",  "Parameter value assumed at server startup if the parameter is not otherwise set"},
 		{RESET_VAL,            true,     String .class, "varchar(128)",  "Value that RESET would reset the parameter to in the current session"},
 
-		{DESCRIPTION,          true,     String .class, "varchar(255)",  "Description of the configuration."},
+		{DESCRIPTION,          true,     String .class, "varchar(1024)", "Description of the configuration."},
 		{EXTRA_DESCRIPTION,    true,     String .class, "varchar(1024)", "Extra Description of the configuration."},
 
 		{SOURCE_FILE,          true,     String .class, "varchar(255)",  "Configuration file the current value was set in (null for values set from sources other than configuration files, or when examined by a non-superuser); helpful when using include directives in configuration files"},

@@ -874,7 +874,7 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("description"            ).append(rq).append(", ");
 			sbSql.append(lq).append("lastDescription"        ).append(rq).append(", ");
 			sbSql.append(lq).append("extendedDescription"    ).append(rq).append(", ");
-			sbSql.append(lq).append("lastExtendedDescription").append(rq).append(", ");
+			sbSql.append(lq).append("lastExtendedDescription").append(rq).append("");
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");
@@ -905,7 +905,7 @@ implements ICentralPersistWriter
 			sbSql.append(lq).append("description"            ).append(rq).append(", ");
 			sbSql.append(lq).append("lastDescription"        ).append(rq).append(", ");
 			sbSql.append(lq).append("extendedDescription"    ).append(rq).append(", ");
-			sbSql.append(lq).append("lastExtendedDescription").append(rq).append(", ");
+			sbSql.append(lq).append("lastExtendedDescription").append(rq).append("");
 			sbSql.append(") ");
 			if (addPrepStatementQuestionMarks)
 				sbSql.append("values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \n");

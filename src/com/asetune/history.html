@@ -34,15 +34,16 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI><b>Now java 1.8 is needed</b></LI>
 		<LI>Alarms
 			<UL>
-				<LI>New: AlarmWriterToSlack               -- Send messages to Slack</LI>
-				<LI>new: AlarmEventConfigResourceIsLow    -- When DBMS is low on configured resources</LI>
-				<LI>new: AlarmEventConfigResourceIsUsedUp -- When DBMS is out off configured resources</LI>
-				<LI>new: AlarmEventErrorLogEntry          -- When some defined error messages is written to the DBMS Error log</LI>
-				<LI>new: AlarmEventOldTranLogBackup       -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
-				<LI>new: AlarmEventConfigChanges          -- Fires when a configuration changes is detected from the error log</LI>
-				<LI>new: AlarmEventProcessInfected        -- Fires if we find 'Process Infected' is found in the error log, this so we can easily see the stack trace.</LI>
-				<LI>new: AlarmEventLowOsDiskFreeSpace     -- For SQL-Server, when we starting to run out of disk in the volumes where we store data/log files.</LI>
-				<LI>new: AlarmEventAseLicensExpiration    -- For Sybase ASE; If the server is in Grace Period, send alarm.</LI>
+				<LI>New: AlarmWriterToSlack                -- Send messages to Slack</LI>
+				<LI>new: AlarmEventConfigResourceIsLow     -- When DBMS is low on configured resources</LI>
+				<LI>new: AlarmEventConfigResourceIsUsedUp  -- When DBMS is out off configured resources</LI>
+				<LI>new: AlarmEventErrorLogEntry           -- When some defined error messages is written to the DBMS Error log</LI>
+				<LI>new: AlarmEventOldTranLogBackup        -- OldBackup previously hold both DB and LOG. Now they are separated.</LI>
+				<LI>new: AlarmEventConfigChanges           -- Fires when a configuration changes is detected from the error log</LI>
+				<LI>new: AlarmEventProcessInfected         -- Fires if we find 'Process Infected' is found in the error log, this so we can easily see the stack trace.</LI>
+				<LI>new: AlarmEventLowOsDiskFreeSpace      -- For SQL-Server, when we starting to run out of disk in the volumes where we store data/log files.</LI>
+				<LI>new: AlarmEventAseLicensExpiration     -- For Sybase ASE; If the server is in Grace Period, send alarm.</LI>
+				<LI>new: AlarmEventMissingMandatoryContent -- which is used to check that some users or applications are logged in to the DBMS </LI>
 				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
 				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
 				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>
@@ -92,6 +93,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>View DBMS Configuration for all vendors: Changed most fields to be "editable", to make it easier to copy information from the cells</li>
 		<li>PCS: Print statistics about H2 performance after a entry has been stored</li>
 		<li>PCS: DDL Lookup, options to enable/disable Lokkup/Storage of 'Database Objects' and 'Statement Cache Entries' DDL</li>
+		<li>PCS: H2 extra property "dbxtune.h2.url.extra" to add/override various H2 URL Properties</li>
 		<li>Graph properties, for DbxCentral Web interface... so we can individually decide Graphs Label Sizes, yAxisScaleLabels (KB MB, GB, Seconds, etc...)<br>
 		    This is described as a JSON object, example: {"yAxisScaleLabels":{"name":"mb","s0":" MB", "s1":" GB", "s2":" TB", "s3":" PB", "s4":" EB"}}</li>
 		<LI>CmIoStat: added chart 'iostat: Read & Write Operations(readsPerSec+writesPerSec) per Device & sec', which has 'readsPerSec' and 'writesPerSec' combined.</LI>
@@ -99,7 +101,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
-				<li>To version 1.4.199 (SNAP) Component: H2 database (note: This is a SNAPSHOT, meaning build from source at github)</li>
+				<li>To version 1.4.200        Component: H2 database</li>
 				<li>To version ASE 16 SP3,PL7 Component: jConnect, jTSD3, DDLGen, planviewer, dsparser</li>
 	 			<li>To version 3.0.0          Component: RSyntaxTextArea(3.0.2), RSTAUI, Autocomplete</li>
 	 			<li>To version 1.14           Component: simplemagic</li>
@@ -154,6 +156,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>New section under 'Servers': All file(s) in the REPORTS Directory</LI>
 		<LI>Print statistics about H2 performance after a entry has been stored</LI>
 		<LI>Servers Overview; Daily Report Section: Added links to view "latest" daily report for each on the servers</LI>
+		<li>PCS central: Changed "CentralH2Defrag" to check once a day at 04:00 instead of every 4 hour</li>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -184,6 +187,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>CmProcessActivity - tab:Processes</b><br>
 		<ul>
 			<li>Added column 'LocksHeld', for all ASE Versions, It was simply left out by misstake.)</li>
+			<li>Check for mandatory 'Application' and 'Login' - and send alarm 'MissingMandatoryContent' if so.</li>
 		</ul>
 		</LI>
 
@@ -195,6 +199,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			<li>Added column 'UsageInKb'<br>
 			      &emsp; for 'temp worktable' (monProcessObject) it's column 'PartitionSize' from monProcessObject<br>
 			      &emsp; for all other (monOpenObjectActivity) it's: convert(int, data_pages(A.DBID, A.ObjectID, A.IndexID) * (@@maxpagesize/1024))</li>
+			<li>added column 'LrPerScan' to see how many LogicalReads that is used per Scan or per Operation/SQL-Statement</li>
 		</ul>
 		</LI>
 
@@ -311,6 +316,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>Send alarm <code>AlarmEventConfigResourceIsLow   </code> if "Pct_act"  is lower than 90% for config 'number of open objects', 'number of open partitions', 'number of open indexes', 'number of open databases', 'number of locks', 'number of user connections'</li>
 			<li>Send alarm <code>AlarmEventConfigResourceIsUsedUp</code> if "Num_free" is lower than 2   for config 'number of open objects', 'number of open partitions', 'number of open indexes', 'number of open databases', 'number of locks', 'number of user connections'</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmPCacheModuleUsage</b><br>
+		<ul>
+			<li>Refresh cached ASE Configuration every hour (if statement cache has changed in size)</li>
 		</ul>
 		</LI>
 
@@ -450,7 +463,13 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<H3>OracleTune - Oracle Database</H3>
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
-		<LI>No changes, please request some if you want this tool to envolve</LI>
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
+		<b>CmSessions</b><br>
+		<ul>
+			<li>Check for mandatory 'PROGRAM', 'USERNAME' and 'OSUSER' - and send alarm 'MissingMandatoryContent' if so.</li>
+		</ul>
+		</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -485,7 +504,9 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>CmDatabases: Also changed the SQL Statement to make it a bit more efficient (use less logical reads), it's still a bit to recourse consuming...</LI>
 		<LI>CmWaitStats: Added chart "Server Wait, Known Top 10 that could cause issues, by 'wait_time_ms'" (LCK_M_X, LCK_M_U, WRITELOG, LCK_M_IX, LATCH_EX, ASYNC_NETWORK_IO, SOS_SCHEDULER_YIELD, PAGEIOLATCH_SH, LCK_M_S, CXPACKET)</LI>
 		<LI>CmWaitStats: Added chart "Server Wait, Known Top 10 that could cause issues, by 'waiting_tasks_count'" (same as above list of wait types)</LI>
+		<LI>CmWho - Check for mandatory 'program_name' and 'loginame' - and send alarm 'MissingMandatoryContent' if so.</LI>
 		<LI>Dbms Config: Get active trace flags (and a description dictionary for some common SQL-Server trace flags)</LI>
+		<LI>Dbms Config: Add DbmsConfigIssue Warning for databases that has a lower compatibility_level than the servers default value</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -505,6 +526,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Cell tooltip on 'plan_handle' on all collectors - now able to show a GUI ShowPlan in an external HTML Browser (by clicking on a link in the tooltip window)</LI>
 		<LI>Added one "line" srv_cfg_max_connections, to the chart 'ConnectionsSum', so we can see how "close" we are to running out of connections</LI>
 		<LI>Added alarm 'ConfigResourceIsLow' if we only have less than 25 connections free. (canged with property: CmPgDatabase.alarm.system.if.free_connections.lt=##)</LI>
+		<LI>CmPgActivity - Check for mandatory 'application_name' and 'usename' - and send alarm 'MissingMandatoryContent' if so.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -514,6 +536,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 	<UL>
 		<LI>View DBMS Configuration, simple for now...</LI>
+		<LI>CmSysSession - Check for mandatory 'program_name' and 'user' - and send alarm 'MissingMandatoryContent' if so.</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -574,6 +597,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		</LI>
 		<LI>MySQL: Added DBMS Configuration</LI>
 		<LI>Remove "C null termination chars" from any strings (which causes problems when copy text into the Copy/Paste buffer)</LI>
+		<LI>A bit better guessing at DBMS data types (for Postgres=text, and SqlServer varchar(max))</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

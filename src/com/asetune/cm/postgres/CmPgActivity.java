@@ -22,11 +22,14 @@ package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHelper;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
 import com.asetune.cm.CountersModel;
@@ -166,5 +169,24 @@ extends CountersModel
 		if (in.indexOf("<html>")>=0 || in.indexOf("<HTML>")>=0)
 			return str;
 		return "<html><pre>" + str + "</pre></html>";
+	}
+	
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		AlarmHelper.sendAlarmRequestForColumn(this, "application_name");
+		AlarmHelper.sendAlarmRequestForColumn(this, "usename");
+	}
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "application_name") );
+		list.addAll( AlarmHelper.getLocalAlarmSettingsForColumn(this, "usename") );
+		
+		return list;
 	}
 }

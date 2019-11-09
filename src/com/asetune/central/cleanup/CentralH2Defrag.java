@@ -53,7 +53,8 @@ extends Task
 //	public static final String DEFAULT_cron = "* * * * *"; // at 02:00, 06:00, 10:00, 14:00, 18:00, 22:00 every day
 //	public static final String DEFAULT_cron = "0 * * * *"; // at every hour, every day
 //	public static final String DEFAULT_cron = "0 0,2,4,6,8,10,12,14,16,18,20,22 * * *"; // at every second hour, every day
-	public static final String DEFAULT_cron = "0 2,6,10,14,18,22 * * *"; // at 02:00, 06:00, 10:00, 14:00, 18:00, 22:00 every day
+//	public static final String DEFAULT_cron = "0 2,6,10,14,18,22 * * *"; // at 02:00, 06:00, 10:00, 14:00, 18:00, 22:00 every day
+	public static final String DEFAULT_cron = "0 4 * * *"; // at 04:00 every day (since 1.4.200 takes so long time to complete DEFRAG only do it once a day to minimize down time during the day)
 //	public static final String DEFAULT_cron = "30 02 1 * *"; // 02:30 first day of the month
 //	public static final String DEFAULT_cron = "59 * * * *"; // testing set this to nearest minute
 

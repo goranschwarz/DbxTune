@@ -70,21 +70,21 @@ extends DbmsConfigAbstract
 	private static final int COL_TOOLTIP     = 4;
 	private static Object[][] COLUMN_HEADERS = 
 	{
-	//   ColumnName,           Editable, JTable type,   SQL Datatype,   Tooltip
-	//   --------------------- --------- -------------- --------------- --------------------------------------------
-		{NON_DEFAULT,          false,    Boolean.class, "bit",          "True if the value is not configured to the default value."},
-		{SECTION_NAME,         true,     String .class, "varchar(60)",  "Configuration Group"},
-		{INSTANCE_NAME,        true,     String .class, "varchar(60)",  "Instance name, for example a Connection name"},
-		{CONFIG_NAME,          true,     String .class, "varchar(60)",  "Name of the configuration, same as the name in ra_config."},
-		{CONFIG_VALUE,         true,     String .class, "varchar(255)", "Value of the configuration."},
-		{RUN_VALUE,            true,     String .class, "varchar(255)", "RUN Value of the configuration."},
-		{DEFAULT_VALUE,        true,     String .class, "varchar(255)", "The default configuration value."},
-		{PENDING,              false,    Boolean.class, "bit",          "The Configuration has not yet taken effect, probably needs restart to take effect."},
-		{RESTART_IS_REQ,       false,    Boolean.class, "bit",          "Needs to be \"rebooted\" for the configuration to take effect."},
-		{RESTART_STRING,       false,    String .class, "varchar(255)", "Needs to be \"rebooted\" for the configuration to take effect."},
-		{LEGAL_VALUES,         true,     String .class, "varchar(255)", "What legal values can this configuration hold"},
-		{DATATYPE,             true,     String .class, "varchar(255)", "What type of parameter is this."},
-		{DESCRIPTION,          true,     String .class, "varchar(255)", "Description of the configuration."}
+	//   ColumnName,           Editable, JTable type,   SQL Datatype,    Tooltip
+	//   --------------------- --------- -------------- ---------------- --------------------------------------------
+		{NON_DEFAULT,          false,    Boolean.class, "bit",           "True if the value is not configured to the default value."},
+		{SECTION_NAME,         true,     String .class, "varchar(60)",   "Configuration Group"},
+		{INSTANCE_NAME,        true,     String .class, "varchar(60)",   "Instance name, for example a Connection name"},
+		{CONFIG_NAME,          true,     String .class, "varchar(60)",   "Name of the configuration, same as the name in ra_config."},
+		{CONFIG_VALUE,         true,     String .class, "varchar(255)",  "Value of the configuration."},
+		{RUN_VALUE,            true,     String .class, "varchar(255)",  "RUN Value of the configuration."},
+		{DEFAULT_VALUE,        true,     String .class, "varchar(255)",  "The default configuration value."},
+		{PENDING,              false,    Boolean.class, "bit",           "The Configuration has not yet taken effect, probably needs restart to take effect."},
+		{RESTART_IS_REQ,       false,    Boolean.class, "bit",           "Needs to be \"rebooted\" for the configuration to take effect."},
+		{RESTART_STRING,       false,    String .class, "varchar(255)",  "Needs to be \"rebooted\" for the configuration to take effect."},
+		{LEGAL_VALUES,         true,     String .class, "varchar(255)",  "What legal values can this configuration hold"},
+		{DATATYPE,             true,     String .class, "varchar(255)",  "What type of parameter is this."},
+		{DESCRIPTION,          true,     String .class, "varchar(1024)", "Description of the configuration."}
 	};
 
 //	private static String GET_CONFIG_ONLINE_SQL = "admin config..."; // This is done directly in refresh

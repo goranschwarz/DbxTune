@@ -84,9 +84,9 @@ import com.asetune.utils.TimeUtils;
  * @author gorans
  *
  */
-public class H2CentralDbCopy
+public class H2CentralDbCopy2
 {
-	private static final Logger _logger = Logger.getLogger(H2CentralDbCopy.class);
+	private static final Logger _logger = Logger.getLogger(H2CentralDbCopy2.class);
 //	private final Logger _logger = Logger.getLogger(this.getClass().getName());
 
 	private static char q = '"';
@@ -626,7 +626,7 @@ public class H2CentralDbCopy
 		cp.setUsername(user);
 		cp.setPassword(passwd);
 		cp.setUrl(url);
-		cp.setAppName(H2CentralDbCopy.class.getSimpleName() + ": "+type);
+		cp.setAppName(H2CentralDbCopy2.class.getSimpleName() + ": "+type);
 		
 		_logger.info("Connecting to '"+type+"', with user '"+user+"', using url '"+url+"'.");
 //		return DbxConnection.createDbxConnection( DriverManager.getConnection(url, user, passwd) );
@@ -723,7 +723,7 @@ public class H2CentralDbCopy
 	throws SQLException
 	{
 		// can not close the statement because we return a result set from it
-		Statement stat = conn.createStatement();
+		Statement stmnt = conn.createStatement();
 		ResultSet rs = null;
 		ScriptReader r = new ScriptReader(reader);
 		while (true)
@@ -742,7 +742,7 @@ public class H2CentralDbCopy
 				if (printExecution)
 					_logger.info("ExecuteH2Script: " + sql);
 
-    			boolean resultSet = stat.execute(sql);
+    			boolean resultSet = stmnt.execute(sql);
     			if ( resultSet )
     			{
     				if ( rs != null )
@@ -750,7 +750,7 @@ public class H2CentralDbCopy
     					rs.close();
     					rs = null;
     				}
-    				rs = stat.getResultSet();
+    				rs = stmnt.getResultSet();
     			}
 			}
 			catch (SQLException ex)
@@ -1768,6 +1768,45 @@ public class H2CentralDbCopy
 			
 			List<DbTable> list = new ArrayList<>();
 			
+			DatabaseMetaData dbmd = conn.getMetaData();
+			String   catalog          = null;  // a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
+			String   schemaPattern    = null;  // a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
+			String   tableNamePattern = "%";   // a table name pattern; must match the table name as it is stored in the database
+			String[] types = new String[] {"TABLE"};
+
+			try (ResultSet rs = dbmd.getTables(catalog, schemaPattern, tableNamePattern, types))
+			{
+				// ResultSet output accrding to: https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html
+				// 1:  TABLE_CAT String => table catalog (may be null)
+				// 2:  TABLE_SCHEM String => table schema (may be null)
+				// 3:  TABLE_NAME String => table name
+				// 4:  TABLE_TYPE String => table type. Typical types are "TABLE", "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+				// 5:  REMARKS String => explanatory comment on the table
+				// 6:  TYPE_CAT String => the types catalog (may be null)
+				// 7:  TYPE_SCHEM String => the types schema (may be null)
+				// 8:  TYPE_NAME String => type name (may be null)
+				// 9:  SELF_REFERENCING_COL_NAME String => name of the designated "identifier" column of a typed table (may be null)
+				// 10: REF_GENERATION String => specifies how values in SELF_REFERENCING_COL_NAME are created. Values are "SYSTEM", "USER", "DERIVED". (may be null)
+				
+				while (rs.next())
+				{
+					DbTable dbt = new DbTable();
+					dbt.catalog                = rs.getString(1);
+					dbt.schema                 = rs.getString(2);
+					dbt.name                   = rs.getString(3);
+					dbt.type                   = rs.getString(4);
+					dbt.ddl                    = "";
+					dbt.sourceRowCountEstimate = -1;
+
+					list.add(dbt);
+				}
+			}
+			
+			// Get column spec for all tables (and possibly the row count)
+			for (DbTable dbt : list)
+			{
+			}
+			
 			return list;
 		}
 	}
@@ -1926,7 +1965,7 @@ public class H2CentralDbCopy
 			//-------------------------------
 			else
 			{
-				H2CentralDbCopy dbCopy = new H2CentralDbCopy();
+				H2CentralDbCopy2 dbCopy = new H2CentralDbCopy2();
 
 				// Initialize some things
 				dbCopy.init(cmd);
@@ -2035,6 +2074,14 @@ public class H2CentralDbCopy
 
 			return false;
 		}
+	}
+	private static class DbTableColumn
+	{
+		DbTable dbTable;
+	}
+	private static class DbTableIndex
+	{
+		DbTable dbTable;
 	}
 
 	

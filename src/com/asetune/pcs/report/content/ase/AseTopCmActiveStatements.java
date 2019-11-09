@@ -92,7 +92,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: " + _sqTextRstm.getRowCount() + " (This is the same SQL Text as the in the above table, but without all counter details)", htmlContent);
 
 				// Compose special condition for Microsoft Outlook
-				sb.append(msOutlookAlternateText("ActiveSqlText", showHideDiv));
+				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlText", null));
 
 //				sb.append("<br>\n");
 //				sb.append("SQL Text by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_sqTextRstm.getRowCount()).append(" (This is the same SQL Text as the in the above table, but without all counter details).<br>\n");
@@ -108,7 +108,7 @@ public class AseTopCmActiveStatements extends AseAbstract
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: " + _showplanRstm.getRowCount() + " (This is the same SHOWPLAN as the in the above table, but without all counter details)", htmlContent);
 
 				// Compose special condition for Microsoft Outlook
-				sb.append(msOutlookAlternateText("ActiveSqlShowplan", showHideDiv));
+				sb.append(msOutlookAlternateText(showHideDiv, "ActiveSqlShowplan", null));
 
 //				sb.append("<br>\n");
 //				sb.append("Showplan (sp_showplan) by 'dbname, ProcNameOrSqlText, linenum', Row Count: ").append(_showplanRstm.getRowCount()).append(" (This is the same SHOWPLAN as the in the above table, but without all counter details).<br>\n");

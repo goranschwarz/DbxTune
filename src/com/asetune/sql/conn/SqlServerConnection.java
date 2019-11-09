@@ -41,7 +41,6 @@ import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
-import com.asetune.utils.VersionSqlServer;
 
 public class SqlServerConnection 
 extends DbxConnection
@@ -429,4 +428,42 @@ extends DbxConnection
 
 		return list;
 	}
+
+//	@Override
+//	public String getColumnTypeName(ResultSetMetaData rsmd, int col)
+//	{
+//		String columnTypeName = "-unknown-";
+//
+//		try
+//		{
+//			columnTypeName = rsmd.getColumnTypeName(col);
+//			int columnType = rsmd.getColumnType(col);
+//
+//			if (    columnType == java.sql.Types.NUMERIC 
+//			     || columnType == java.sql.Types.DECIMAL )
+//			{
+//				int precision = rsmd.getPrecision(col);
+//				int scale     = rsmd.getScale(col);
+//				
+//				columnTypeName += "("+precision+","+scale+")";
+//			}
+//			if (    columnType == java.sql.Types.CHAR 
+//			     || columnType == java.sql.Types.VARCHAR 
+//			     || columnType == java.sql.Types.NCHAR
+//			     || columnType == java.sql.Types.NVARCHAR
+//			     || columnType == java.sql.Types.BINARY
+//			     || columnType == java.sql.Types.VARBINARY
+//			   )
+//			{
+//				int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+//					
+//				columnTypeName += (columnDisplaySize == 2147483647) ? "(max)" : "("+columnDisplaySize+")";
+//			}
+//		}
+//		catch (SQLException ignore) 
+//		{
+//		}
+//
+//		return columnTypeName;
+//	}
 }

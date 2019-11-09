@@ -20,22 +20,18 @@
  ******************************************************************************/
 package com.asetune.config.dbms;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 
-import com.asetune.config.dict.AseTraceFlagsDictionary;
+import org.apache.log4j.Logger;
+
+import com.asetune.config.dbms.DbmsConfigIssue.Severity;
 import com.asetune.config.dict.SqlServerTraceFlagsDictionary;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.utils.SqlServerUtils;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
@@ -55,7 +51,7 @@ public abstract class SqlServerConfigText
 		};
 
 	/** Log4j logging. */
-//	private static Logger _logger          = Logger.getLogger(SqlServerConfigText.class);
+	private static Logger _logger = Logger.getLogger(SqlServerConfigText.class);
 
 	public static void createAndRegisterAllInstances()
 	{
@@ -83,6 +79,56 @@ public abstract class SqlServerConfigText
 		@Override public    String     getName()                            { return ConfigType.SqlServerHelpDb.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
 		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "exec sp_helpdb"; }
+		
+		
+		/** Check 'compatibility_level' for all databases */
+		@Override
+		public void checkConfig(DbxConnection conn)
+		{
+			// no nothing, if we havnt got an instance
+			if ( ! DbmsConfigManager.hasInstance() )
+				return;
+
+			String    srvName    = "-UNKNOWN-";
+			Timestamp srvRestart = null;
+			try { srvName    = conn.getDbmsServerName();          } catch (SQLException ex) { _logger.info("Problems getting SQL-Server instance name. ex="+ex);}
+			try { srvRestart = SqlServerUtils.getStartDate(conn); } catch (SQLException ex) { _logger.info("Problems getting SQL-Server start date. ex="+ex);}
+
+			// Get databaseName and compatibility_level for databases that are below the current SQL-Server's compatibility_level
+			String sql = ""
+					  // get server level compatibility_level
+					+ "declare @compatLevelTmp smallint \n"
+					+ "select @compatLevelTmp = compatibility_level from sys.databases where name = 'tempdb' \n"
+					
+					  // get what databases that are below the servers default, exclude some system databases 
+					+ "select name, compatibility_level, @compatLevelTmp as srvCompatLevel \n"
+					+ "from sys.databases \n"
+					+ "where compatibility_level < @compatLevelTmp \n"
+					+ "  and name not in('msdb') \n"
+					+ "";
+
+			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+				{
+					String dbname         = rs.getString(1);
+					int    dbCompatlevel  = rs.getInt   (2);
+					int    srvCompatLevel = rs.getInt   (3);
+					
+					String key = "DbmsConfigIssue." + srvName + "." + dbname + ".compatibility_level";
+					
+					DbmsConfigIssue issue = new DbmsConfigIssue(srvRestart, key, "compatibility_level", Severity.WARNING, 
+							"The 'compatibility_level=" + dbCompatlevel + "' for database '" + dbname + "' is lower than the SQL-Servers default level (" + srvCompatLevel + "). New performance improvements will NOT be used.", 
+							"Fix this using: ALTER DATABASE " + dbname + " SET COMPATIBILITY_LEVEL = " + srvCompatLevel);
+
+					DbmsConfigManager.getInstance().addConfigIssue(issue);
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("Problems getting SQL-Server 'compatibility_level', using sql '"+sql+"'. Caught: "+ex, ex);
+			}
+		}
 	}
 
 	public static class SysDatabases extends DbmsConfigTextAbstract

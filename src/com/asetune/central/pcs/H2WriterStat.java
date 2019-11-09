@@ -21,7 +21,11 @@
  ******************************************************************************/
 package com.asetune.central.pcs;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.math.BigDecimal;
@@ -29,12 +33,17 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.asetune.Version;
@@ -692,6 +701,151 @@ public class H2WriterStat
 			val = new Long(0);
 
 		return val;
+	}
+
+	//
+	// Format of the log entry
+	// H2-PerfCounters{sampleTime=00:22:53.143, OsLoadAvgAdj[1m=0.04, 5m=0.04, 15m=0.04, 30m=0.19, 60m=-1.00], FILE_READ[abs=222746, diff=100672, rate=73.3], FILE_WRITE[abs=758, diff=757, rate=0.6], PAGE_COUNT[abs=8452226, diff=151371, rate=110.2], H2_FILE_SIZE_KB[abs=33808904, diff=605484, rate=440.9], H2_FILE_SIZE_MB[abs=33016, diff=591, rate=0.4], H2_FILE_NAME='DBXTUNE_CENTRAL_DB.mv.db'}
+	// 
+	// A bit more friendy to read
+	// H2-PerfCounters{
+	//		sampleTime=00:22:53.143, 
+	//		OsLoadAvgAdj[1m=0.04, 5m=0.04, 15m=0.04, 30m=0.19, 60m=-1.00], 
+	//		FILE_READ[abs=222746, diff=100672, rate=73.3], 
+	//		FILE_WRITE[abs=758, diff=757, rate=0.6], 
+	//		PAGE_COUNT[abs=8452226, diff=151371, rate=110.2], 
+	//		H2_FILE_SIZE_KB[abs=33808904, diff=605484, rate=440.9], 
+	//		H2_FILE_SIZE_MB[abs=33016, diff=591, rate=0.4], 
+	//		H2_FILE_NAME='DBXTUNE_CENTRAL_DB.mv.db'
+	// }
+	public static class StatEntry
+	{
+		public Timestamp logTs;           // the log file timestamp 
+//		public Timestamp sampleTime;      // the log file timestamp 
+		public long      sampleDurationInMs;  // in above example it's the "sampleTime"
+
+		public double    OsLoadAvgAdj_1m;
+		public double    OsLoadAvgAdj_5m;
+		public double    OsLoadAvgAdj_15m;
+		public double    OsLoadAvgAdj_30m;
+		public double    OsLoadAvgAdj_60m;
+
+		public int       FILE_READ_abs;
+		public int       FILE_READ_diff;
+		public double    FILE_READ_rate;
+
+		public int       FILE_WRITE_abs;
+		public int       FILE_WRITE_diff;
+		public double    FILE_WRITE_rate;
+
+		public int       PAGE_COUNT_abs;
+		public int       PAGE_COUNT_diff;
+		public double    PAGE_COUNT_rate;
+
+		public int       H2_FILE_SIZE_KB_abs;
+		public int       H2_FILE_SIZE_KB_diff;
+		public double    H2_FILE_SIZE_KB_rate;
+
+		public int       H2_FILE_SIZE_MB_abs;
+		public int       H2_FILE_SIZE_MB_diff;
+		public double    H2_FILE_SIZE_MB_rate;
+
+		public String    H2_FILE_NAME;
+	}
+	public static List<StatEntry> parseStatFromLogFile(String filename, Timestamp startDate, Timestamp endDate, long minDuration)
+	throws FileNotFoundException, IOException, ParseException
+	{
+		List<StatEntry> list = new ArrayList<>();
+		
+		// Files in the LOGDIR 
+		File f = new File(DbxTuneCentral.getAppLogDir() + "/" + filename);
+		
+		try (BufferedReader br = new BufferedReader(new FileReader(f))) 
+		{
+			String line;
+			while ((line = br.readLine()) != null) 
+			{
+				if (line.indexOf("H2-PerfCounters{") != -1)
+				{
+					StatEntry se = new StatEntry();
+					
+					String logTsStr = "";
+					if (line.indexOf(" - ") != -1)
+					{
+						logTsStr = StringUtils.substringBefore(line, " - ");
+						se.logTs = TimeUtils.parseToTimestamp(logTsStr, "yyyy-MM-dd HH:mm:ss,SSS");
+					}
+					
+					if (startDate != null)
+					{
+						// skip to-early dates
+						if (se.logTs.getTime() < startDate.getTime())
+							continue;
+					}
+					
+					if (endDate != null)
+					{
+						// skip to-late dates
+						if (se.logTs.getTime() > endDate.getTime())
+							continue;
+					}
+					
+					String h2PerfCntEntry = StringUtils.substringBetween(line, "{", "}");
+					
+					String sampleTime   = StringUtils.substringBetween(h2PerfCntEntry, "sampleTime=",    ",");
+					String H2_FILE_NAME = StringUtils.substringBetween(h2PerfCntEntry, "H2_FILE_NAME='", "'");
+
+					Timestamp ts = TimeUtils.parseToTimestamp(sampleTime, "HH:mm:ss.SSS");
+					se.sampleDurationInMs = ts.getTime();
+
+					
+					String[] entries = StringUtils.substringsBetween(h2PerfCntEntry, "[", "]");
+					if (entries.length == 6)
+					{
+						Map<String,String> OsLoadAvgAdj    = StringUtil.parseCommaStrToMap(entries[0]);
+						Map<String,String> FILE_READ       = StringUtil.parseCommaStrToMap(entries[1]);
+						Map<String,String> FILE_WRITE      = StringUtil.parseCommaStrToMap(entries[2]);
+						Map<String,String> PAGE_COUNT      = StringUtil.parseCommaStrToMap(entries[3]);
+						Map<String,String> H2_FILE_SIZE_KB = StringUtil.parseCommaStrToMap(entries[4]);
+						Map<String,String> H2_FILE_SIZE_MB = StringUtil.parseCommaStrToMap(entries[5]);
+
+						String defVal = "-1";
+						
+						se.OsLoadAvgAdj_1m      = new Double(OsLoadAvgAdj.getOrDefault("1m", defVal));
+						se.OsLoadAvgAdj_5m      = new Double(OsLoadAvgAdj.getOrDefault("5m", defVal));
+						se.OsLoadAvgAdj_15m     = new Double(OsLoadAvgAdj.getOrDefault("15m", defVal));
+						se.OsLoadAvgAdj_30m     = new Double(OsLoadAvgAdj.getOrDefault("30m", defVal));
+						se.OsLoadAvgAdj_60m     = new Double(OsLoadAvgAdj.getOrDefault("60m", defVal));
+
+						se.FILE_READ_abs        = new Integer(FILE_READ.getOrDefault("abs", defVal));
+						se.FILE_READ_diff       = new Integer(FILE_READ.getOrDefault("diff", defVal));
+						se.FILE_READ_rate       = new Double (FILE_READ.getOrDefault("rate", defVal));
+
+						se.FILE_WRITE_abs       = new Integer(FILE_WRITE.getOrDefault("abs", defVal));
+						se.FILE_WRITE_diff      = new Integer(FILE_WRITE.getOrDefault("diff", defVal));
+						se.FILE_WRITE_rate      = new Double (FILE_WRITE.getOrDefault("rate", defVal));
+
+						se.PAGE_COUNT_abs       = new Integer(PAGE_COUNT.getOrDefault("abs", defVal));
+						se.PAGE_COUNT_diff      = new Integer(PAGE_COUNT.getOrDefault("diff", defVal));
+						se.PAGE_COUNT_rate      = new Double (PAGE_COUNT.getOrDefault("rate", defVal));
+
+						se.H2_FILE_SIZE_KB_abs  = new Integer(H2_FILE_SIZE_KB.getOrDefault("abs", defVal));
+						se.H2_FILE_SIZE_KB_diff = new Integer(H2_FILE_SIZE_KB.getOrDefault("diff", defVal));
+						se.H2_FILE_SIZE_KB_rate = new Double (H2_FILE_SIZE_KB.getOrDefault("rate", defVal));
+
+						se.H2_FILE_SIZE_MB_abs  = new Integer(H2_FILE_SIZE_MB.getOrDefault("abs", defVal));
+						se.H2_FILE_SIZE_MB_diff = new Integer(H2_FILE_SIZE_MB.getOrDefault("diff", defVal));
+						se.H2_FILE_SIZE_MB_rate = new Double (H2_FILE_SIZE_MB.getOrDefault("rate", defVal));
+
+						se.H2_FILE_NAME = H2_FILE_NAME;
+						
+						list.add(se);
+					}
+				}
+			}
+		}
+		
+		return list;
 	}
 
 	public String getStatString()

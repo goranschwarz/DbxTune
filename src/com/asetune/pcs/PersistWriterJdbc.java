@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -873,13 +874,13 @@ public class PersistWriterJdbc
 		{
 			_logger.info("Sending Command '"+shutdownCmd+"' to H2 database.");
 			stmnt.execute(shutdownCmd);
-			_logger.info("Shutdown H2 database using Command '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+			_logger.info("Shutdown H2 database using Command '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 		} 
 		catch(SQLException ex) 
 		{
 			// during shutdown we would expect: ErrorCode=90121, SQLState=90121, toString=org.h2.jdbc.JdbcSQLException: Database is already closed (to disable automatic closing at VM shutdown, add ";DB_CLOSE_ON_EXIT=FALSE" to the db URL)
 			if ( ex.getErrorCode() == 90121 )
-				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
+				_logger.info("Shutdown H2 database using '"+shutdownCmd+"', took "+TimeUtils.msDiffNowToTimeStr("%?HH[:]%MM:%SS.%ms", startTime)+ " (MM:SS.ms)");
 			else
 			{
 				Throwable rootCauseEx  = ExceptionUtils.getRootCause(ex);
@@ -1533,6 +1534,21 @@ public class PersistWriterJdbc
 						change = true;
 						_logger.info("H2 URL add option: WRITE_DELAY="+h2WriteDelay);
 						urlMap.put("WRITE_DELAY",  h2WriteDelay+"");
+					}
+				}
+
+				// Check 'dbxtune.h2.url.extra'... and get values in the format: KEY1=val; KEY2=val
+				Map<String, String> h2UrlExtraMap = StringUtil.parseCommaStrToMap(getConfig().getProperty("dbxtune.h2.url.extra", null), "=", ";");
+				if ( ! h2UrlExtraMap.isEmpty() )
+				{
+					for (Entry<String, String> entry : h2UrlExtraMap.entrySet())
+					{
+						change = true;
+						String key = entry.getKey();
+						String val = entry.getValue();
+						String oldVal = urlMap.get(key);
+						_logger.info("H2 URL add option: " + key + "=" + val + (oldVal == null ? "" : "  (overriding previous value: "+oldVal+")") );
+						urlMap.put(key, val);
 					}
 				}
 

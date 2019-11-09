@@ -93,7 +93,7 @@ public class AseErrorInfo extends AseAbstract
 				String showHideDiv = createShowHideDiv(divId, showAtStart, "Show/Hide Error SQL Text, for above errors (all text's may not be available)...", htmlContent);
 
 				// Compose special condition for Microsoft Outlook
-				sb.append(msOutlookAlternateText("Error Text", showHideDiv));
+				sb.append(msOutlookAlternateText(showHideDiv, "Error Text", null));
 			}
 		}
 

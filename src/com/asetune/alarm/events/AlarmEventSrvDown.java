@@ -58,7 +58,7 @@ extends AlarmEvent
 		setTimeToLive(cm);
 	}
 
-	public AlarmEventSrvDown(String serverName, String url)
+	public AlarmEventSrvDown(String serverName, String url, Exception connectException, String connectInfoMsg)
 	{
 		super(
 				Version.getAppName(), // serviceType
@@ -68,9 +68,10 @@ extends AlarmEvent
 				AlarmEvent.Category.DOWN, 
 				AlarmEvent.Severity.ERROR, 
 				AlarmEvent.ServiceState.DOWN, 
-				"Server is DOWN. Name='" + serverName + "', url='"+url+"'.",
+				"Server is DOWN. Name='" + serverName + "', url='" + url + "'.",
 				null);
 		
+		setExtendedDescription("Connect Info Message: "+connectInfoMsg, null);
 		setData( StringUtil.isNullOrBlank(serverName) ? url : serverName );
 	}
 }

@@ -117,7 +117,7 @@ extends Thread
 	}
 
 
-	protected AlarmEventSrvDown sendAlarmServerIsDown(String fallbackSrvName)
+	protected AlarmEventSrvDown sendAlarmServerIsDown(String fallbackSrvName, Exception connectException, String connectInfoMsg)
 	{
 		if (StringUtil.isNullOrBlank(fallbackSrvName))
 			fallbackSrvName = "-UNKNOWN-";
@@ -160,7 +160,7 @@ extends Thread
 				
 				_logger.info("Sending AlarmEventSrvDown(serverName='"+serverName+"', jdbcUrl='"+jdbcUrl+"') to the AlarmHandler.");
 
-				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl);
+				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
 //				AlarmHandler.getInstance().addAlarmToQueue(alarmEventSrvDown);
 				AlarmHandler.getInstance().addAlarm(alarmEventSrvDown);
 
@@ -177,7 +177,7 @@ extends Thread
 				serverName = fallbackSrvName;							
 				jdbcUrl    = "unknown-url";
 
-				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl);
+				alarmEventSrvDown = new AlarmEventSrvDown(serverName, jdbcUrl, connectException, connectInfoMsg);
 //				AlarmHandler.getInstance().addAlarmToQueue(alarmEventSrvDown);
 				AlarmHandler.getInstance().addAlarm(alarmEventSrvDown);
 

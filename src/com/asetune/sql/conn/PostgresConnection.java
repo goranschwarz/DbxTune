@@ -32,7 +32,6 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
-import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoPostgres;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
 import com.asetune.utils.StringUtil;
@@ -190,4 +189,52 @@ public class PostgresConnection extends DbxConnection
 		_databaseServerName = serverName;
 		return serverName;
 	}
+
+	
+//	@Override
+//	public String getColumnTypeName(ResultSetMetaData rsmd, int col)
+//	{
+//		String columnTypeName = "-unknown-";
+//
+//		try
+//		{
+//			columnTypeName = rsmd.getColumnTypeName(col);
+//			int columnType = rsmd.getColumnType(col);
+//
+//			if ( columnType == java.sql.Types.NUMERIC || columnType == java.sql.Types.DECIMAL )
+//			{
+//				int precision = rsmd.getPrecision(col);
+//				int scale     = rsmd.getScale(col);
+//				
+//				columnTypeName += "("+precision+","+scale+")";
+//			}
+//
+//			// Binary goes as datatype 'bytea' and does NOT have a length specification
+//			//if ( columnType == java.sql.Types.BINARY || columnType == java.sql.Types.VARBINARY)
+//			//{
+//			//	int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+//			//		
+//			//	columnTypeName += (columnDisplaySize == 2147483647) ? "(max)" : "("+columnDisplaySize+")";
+//			//}
+//
+//			if (    columnType == java.sql.Types.CHAR 
+//			     || columnType == java.sql.Types.VARCHAR 
+//			     || columnType == java.sql.Types.NCHAR
+//			     || columnType == java.sql.Types.NVARCHAR
+//			   )
+//			{
+//				int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+//					
+//				columnTypeName += "("+columnDisplaySize+")";
+//
+//				if (columnDisplaySize == 2147483647)
+//					columnTypeName = "text";
+//			}
+//		}
+//		catch (SQLException ignore) 
+//		{
+//		}
+//
+//		return columnTypeName;
+//	}
 }
