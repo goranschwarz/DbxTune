@@ -790,15 +790,20 @@ public class H2WriterStat
 							continue;
 					}
 					
-					String h2PerfCntEntry = StringUtils.substringBetween(line, "{", "}");
+					String h2PerfCntEntry = StringUtils.substringBetween(line, "H2-PerfCounters{", "}. ");
 					
 					String sampleTime   = StringUtils.substringBetween(h2PerfCntEntry, "sampleTime=",    ",");
 					String H2_FILE_NAME = StringUtils.substringBetween(h2PerfCntEntry, "H2_FILE_NAME='", "'");
 
-					Timestamp ts = TimeUtils.parseToTimestamp(sampleTime, "HH:mm:ss.SSS");
+					int colonCount = StringUtils.countMatches(sampleTime, ':');
+					String dateFmt = "HH:mm:ss.SSS";
+					if (colonCount == 1)
+						dateFmt = "mm:ss.SSS";
+
+					Timestamp ts = TimeUtils.parseToTimestamp(sampleTime, dateFmt);
 					se.sampleDurationInMs = ts.getTime();
 
-					
+
 					String[] entries = StringUtils.substringsBetween(h2PerfCntEntry, "[", "]");
 					if (entries.length == 6)
 					{
