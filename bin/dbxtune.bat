@@ -90,6 +90,11 @@ IF "%APP_NAME%" == "ase" (
 	set JAVA_START_PARAMS=
 	set SPLASH=
 
+) ELSE IF "%APP_NAME%" == "dbxcdbcopy" (
+	set JAVA_START_CLASS=com.asetune.central.pcs.H2CentralDbCopy2
+	set JAVA_START_PARAMS=
+	set SPLASH=
+
 ) ELSE IF "%APP_NAME%" == "h2srv" (
 	set JAVA_START_CLASS=org.h2.tools.Server
 	set JAVA_START_PARAMS=-tcp -tcpAllowOthers -ifExists
@@ -118,6 +123,7 @@ IF "%APP_NAME%" == "ase" (
 	echo " sqlw       - SQL Window a JDBC Query Tool"
 	echo " central    - A Component for multiple instances"
 	echo "              If you want some central Web based view"
+	echo " dbxcdbcopy - Copy a DBX Cental db to a new destination (used to migrate to a new DBMS)"
 	echo ""
 
 	pause
@@ -317,7 +323,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-csv-1.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-cli-1.4.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\commons-codec-1.10.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\proxy-vole_20131209.jar
-set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\ganymed-ssh2-build251beta1.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\ganymed-ssh2-262.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rsyntaxtextarea.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\autocomplete.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\rstaui.jar
@@ -356,6 +362,7 @@ set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\jetty-all-9.2.22.v20170606.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\javax.servlet-api-3.1.0.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron4j-2.2.5.jar
 set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\cron-utils-7.0.6.jar
+set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\schemacrawler-16.2.4.jar
 
 rem set CLASSPATH=%CLASSPATH%;%DBXTUNE_HOME%\lib\tomcat\*
 

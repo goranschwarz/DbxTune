@@ -43,6 +43,7 @@ function printUsage
 	echo " sqlw       - SQL Window a JDBC Query Tool"
 	echo " central    - A Component for multiple instances"
 	echo "              If you want some central Web based view"
+	echo " dbxcdbcopy - Copy a DBX Cental DB to a new destination (used to migrate to a new DBMS)"
 	echo ""
 
 	exit 1
@@ -161,6 +162,14 @@ case "${toolset}" in
 		shortAppName="h2fix"
 		longAppName="H2CentralDbCopy"
 		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy"
+		javaMainParams=""
+		javaSplashScreen=""
+		;;
+
+	dbxcdbcopy)
+		shortAppName="dbxcdbcopy"
+		longAppName="DbxCentralDbCopy"
+		javaMainClass="com.asetune.central.pcs.H2CentralDbCopy2"
 		javaMainParams=""
 		javaSplashScreen=""
 		;;
@@ -310,7 +319,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-csv-1.5.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-cli-1.4.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/commons-codec-1.10.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/proxy-vole_20131209.jar
-export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-build251beta1.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/ganymed-ssh2-262.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rsyntaxtextarea.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/autocomplete.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/rstaui.jar
@@ -346,6 +355,7 @@ export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/jetty-all-9.2.22.v20170606.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/javax.servlet-api-3.1.0.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron4j-2.2.5.jar
 export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/cron-utils-7.0.6.jar
+export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/schemacrawler-16.2.4.jar
 
 #export CLASSPATH=${CLASSPATH}:${APPL_HOME}/lib/tomcat/*
 

@@ -36,6 +36,7 @@ implements SybMessageHandler
 	private static Logger _logger = Logger.getLogger(AseSqlScript.class);
 
 	private Connection         _conn;
+	private String             _dbmsProductName;
 
 	@SuppressWarnings("unused")
 	private String             _sqlMessage                 = null;
@@ -84,6 +85,12 @@ implements SybMessageHandler
 		_queryTimeout = queryTimeout;
 		_rememberStates = rememberStates;
 		_discardDbmsErrorList = discardDbmsErrorList;
+		
+		// Get DBMS Product Name
+		try { _dbmsProductName = _conn.getMetaData().getDatabaseProductName(); }
+		catch (SQLException ex) {}
+		if (_dbmsProductName == null)
+			_dbmsProductName = "";
 
 		if (conn instanceof SybConnection)
 		{
@@ -656,13 +663,25 @@ implements SybMessageHandler
 			}
 			else
 			{
-				// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
-				if ( ! "010P4".equals(sqe.getSQLState()) )
+				if (sqe instanceof SQLWarning && DbUtils.isProductName(_dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL))
 				{
-					sb.append("Unexpected exception : " +
-							"SqlState: " + sqe.getSQLState()  +
-							" " + sqe.toString() +
-							", ErrorCode: " + sqe.getErrorCode() + "\n");
+					String msg = sqe.getMessage();
+					if (_logger.isDebugEnabled())
+						msg = sqe.getMessage() + "  [ErrorCode=" + sqe.getErrorCode() + ", SQLState=" + sqe.getSQLState() + "]";
+
+					sb.append(msg);
+					sb.append("\n");
+				}
+				else
+				{
+					// SqlState: 010P4 java.sql.SQLWarning: 010P4: An output parameter was received and ignored.
+					if ( ! "010P4".equals(sqe.getSQLState()) )
+					{
+						sb.append("Unexpected exception : " +
+								"SqlState: " + sqe.getSQLState()  +
+								" " + sqe.toString() +
+								", ErrorCode: " + sqe.getErrorCode() + "\n");
+					}
 				}
 			}
 			sqe = sqe.getNextException();

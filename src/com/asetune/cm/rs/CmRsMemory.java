@@ -474,10 +474,12 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("MemoryUsedPct", PROPKEY_alarm_MemoryUsedPct1, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct1, DEFAULT_alarm_MemoryUsedPct1), DEFAULT_alarm_MemoryUsedPct1, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
-		list.add(new CmSettingsHelper("MemoryUsedPct", PROPKEY_alarm_MemoryUsedPct2, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct2, DEFAULT_alarm_MemoryUsedPct2), DEFAULT_alarm_MemoryUsedPct2, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
-		list.add(new CmSettingsHelper("MemoryUsedPct", PROPKEY_alarm_MemoryUsedPct3, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct3, DEFAULT_alarm_MemoryUsedPct3), DEFAULT_alarm_MemoryUsedPct3, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
-		list.add(new CmSettingsHelper("MemoryUsedPct", PROPKEY_alarm_MemoryUsedPct4, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct4, DEFAULT_alarm_MemoryUsedPct4), DEFAULT_alarm_MemoryUsedPct4, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct1, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct1, DEFAULT_alarm_MemoryUsedPct1), DEFAULT_alarm_MemoryUsedPct1, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct2, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct2, DEFAULT_alarm_MemoryUsedPct2), DEFAULT_alarm_MemoryUsedPct2, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct3, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct3, DEFAULT_alarm_MemoryUsedPct3), DEFAULT_alarm_MemoryUsedPct3, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
+		list.add(new CmSettingsHelper("MemoryUsedPct", isAlarmSwitch, PROPKEY_alarm_MemoryUsedPct4, Integer.class,  conf.getIntProperty(PROPKEY_alarm_MemoryUsedPct4, DEFAULT_alarm_MemoryUsedPct4), DEFAULT_alarm_MemoryUsedPct4, "If 'MemoryUsedPct' is GREATER than ## pct, send 'AlarmEventRsMemoryUsage'."));
 
 		return list;
 	}

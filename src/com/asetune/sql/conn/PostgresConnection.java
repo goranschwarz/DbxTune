@@ -94,9 +94,11 @@ public class PostgresConnection extends DbxConnection
 	public Map<String, TableExtraInfo> getTableExtraInfo(String cat, String schema, String table)
 	{
 		LinkedHashMap<String, TableExtraInfo> extraInfo = new LinkedHashMap<>();
+		
+		String qic = "\"";
 
 //		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".";
-		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
+		schema = StringUtil.isNullOrBlank(schema) ? "" : qic + schema + qic + ".";
 
 		
 //		String sql = "SELECT reltuples::BIGINT AS estimate FROM pg_class WHERE relname='" + schema + table + "'";
@@ -108,7 +110,7 @@ public class PostgresConnection extends DbxConnection
 			"       pg_size_pretty(pg_indexes_size(oid))                  AS indexSize,  \n" +
 			"       pg_size_pretty(pg_total_relation_size(reltoastrelid)) AS toastSize  \n" +
 			"FROM pg_class \n" + 
-			"WHERE oid = '" + schema + table + "'::regclass";
+			"WHERE oid = '" + schema + qic + table + qic + "'::regclass"; // with Quoted Identifier
 
 		try
 		{
@@ -126,12 +128,79 @@ public class PostgresConnection extends DbxConnection
 		}
 		catch (SQLException ex)
 		{
-			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
-			if (_logger.isDebugEnabled())
-				_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+			// ERROR: relation "GORANS_UB1_DS.DbxSessionSampleDetaxxiles" does not exist
+			// Then try without Quoted Identifier
+			if ("42P01".equals(ex.getSQLState()))
+			{
+				// Remove any " chars
+				sql = sql.replace(qic, "");
+				
+				try
+				{
+					Statement stmnt = _conn.createStatement();
+					ResultSet rs = stmnt.executeQuery(sql);
+					while(rs.next())
+					{
+						extraInfo.put(TableExtraInfo.TableRowCount,       new TableExtraInfo(TableExtraInfo.TableRowCount,       "Row Count",       rs.getLong(1),   "Number of rows in the table. Note: fetched from statistics using 'WHERE oid = 'schema.table'::regclass'", null));
+						extraInfo.put(TableExtraInfo.TableTotalSizeInKb,  new TableExtraInfo(TableExtraInfo.TableTotalSizeInKb,  "Total Size",      rs.getString(2), "Table size (data + indexes). Note: pg_size_pretty(pg_total_relation_size(oid))", null));
+						extraInfo.put(TableExtraInfo.TableDataSizeInKb,   new TableExtraInfo(TableExtraInfo.TableDataSizeInKb,   "Data Size",       rs.getString(3), "Data Size. Note: pg_size_pretty(total_bytes - index_bytes - toast_bytes)", null));
+						extraInfo.put(TableExtraInfo.TableIndexSizeInKb,  new TableExtraInfo(TableExtraInfo.TableIndexSizeInKb,  "Index Size",      rs.getString(4), "Index size (all indexes). Note: pg_size_pretty(pg_indexes_size(oid))", null));
+						extraInfo.put(TableExtraInfo.TableLobSizeInKb,    new TableExtraInfo(TableExtraInfo.TableLobSizeInKb,    "Toast Size",      rs.getString(5), "Toast Size. Note: pg_size_pretty(pg_total_relation_size(reltoastrelid))", null));
+					}
+					rs.close();
+				}
+				catch (SQLException ex2)
+				{
+					_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex2);
+					if (_logger.isDebugEnabled())
+						_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex2, ex2);
+				}
+			}
+			else
+			{
+				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				if (_logger.isDebugEnabled())
+					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+			}
 		}
 		
 		return extraInfo;
+	}
+
+	@Override
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		String qic = "\"";
+		
+//		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".";
+		schema = StringUtil.isNullOrBlank(schema) ? "" : qic + schema + qic + ".";
+
+		
+		// check with Quoted Identifiers
+//		String sql = "SELECT reltuples::BIGINT AS estimate FROM pg_class WHERE relname='" + schema + qic + table + qic + "'";
+		String sql = "SELECT reltuples::BIGINT AS estimate FROM pg_class WHERE oid = '" + schema + qic + table + qic + "'::regclass";
+
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+		
+		// Check one again, but WITHOUT Quoted Identifiers
+		if (rowCount == -1)
+		{
+			sql = sql.replace(qic, "");
+
+			try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+			{
+				while(rs.next())
+					rowCount = rs.getLong(1);
+			}
+		}
+		
+		return rowCount;
 	}
 
 	/**

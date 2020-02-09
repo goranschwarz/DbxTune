@@ -51,6 +51,9 @@ extends TdsConnection
 	public static final String  PROPKEY_getTableExtraInfo_useSpSpaceused = "AseConnection.getTableExtraInfo.useSpSpaceused";
 	public static final boolean DEFAULT_getTableExtraInfo_useSpSpaceused = true;
 
+	public static final String  PROPKEY_getTableExtraInfo_getIndexTypeInfo = "AseConnection.getTableExtraInfo.getIndexTypeInfo";
+	public static final boolean DEFAULT_getTableExtraInfo_getIndexTypeInfo = true;
+
 	public AseConnection(Connection conn)
 	{
 		super(conn);
@@ -143,6 +146,43 @@ extends TdsConnection
 		{
 			_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
 		}
+
+		boolean getIndexTypeInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_getIndexTypeInfo, DEFAULT_getTableExtraInfo_getIndexTypeInfo);
+		if (getIndexTypeInfo)
+		{
+			sql = "exec "+cat+"..sp_helpindex '" + schema + "." + table + "'";
+			try
+			{
+				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+				
+				if (rstmList.size() >= 1)
+				{
+					ResultSetTableModel indexInfo = rstmList.get(0);
+					
+					Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, description>
+					for (int r=0; r<indexInfo.getRowCount(); r++)
+					{
+						String indexName        = indexInfo.getValueAsString(r, "index_name",        false, "");
+					//	String indexKeys        = indexInfo.getValueAsString(r, "index_keys",        false, "");
+						String indexDescription = indexInfo.getValueAsString(r, "index_description", false, "");
+						
+						// SYBASE also has: index_max_rows_per_page, index_fillfactor, index_reservepagegap, index_created, index_local
+						// But we do not read that... for the moment!
+
+						extIndexInfo.put(indexName, "Desc=["+indexDescription+"]");
+					}
+
+					// ADD INFO
+					extraInfo.put(TableExtraInfo.IndexExtraInfoDescription, new TableExtraInfo(TableExtraInfo.IndexExtraInfoDescription, "IndexInfoDescription", extIndexInfo, "extended Index Description Information", null));
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				if (_logger.isDebugEnabled())
+					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+			}
+		}
 		
 		boolean useSpSpaceused = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_useSpSpaceused, DEFAULT_getTableExtraInfo_useSpSpaceused);
 		if (useSpSpaceused)
@@ -204,7 +244,7 @@ extends TdsConnection
 						}
 
 						// ADD INFO
-						extraInfo.put(TableExtraInfo.IndexExtraInfo,     new TableExtraInfo(TableExtraInfo.IndexExtraInfo,     "IndexInfo",        extIndexInfo,         "extended Index Information", null));
+						extraInfo.put(TableExtraInfo.IndexExtraInfo, new TableExtraInfo(TableExtraInfo.IndexExtraInfo, "IndexInfo", extIndexInfo, "extended Index Information", null));
 					}
 					
 					// Get Table Info
@@ -238,7 +278,7 @@ extends TdsConnection
 					+ "    partCnt = (select count(*) from " + (cat==null ? "" : cat+".") + "dbo.syspartitions where id = object_id('" + cat + "." + schema + "." + table + "') and indid in(0,1)) \n"
 					+ "";
 			
-			long dbmsVersion = getDbmsVersionNumber();
+			long dbmsVersion = getCachedDbmsVersionNumber();
 			if (dbmsVersion < Ver.ver(15,0))
 			{
 				_logger.warn("getTableExtraInfo() isn't yet implemented for version '"+dbmsVersion+"', It needs to be at least 15.0"); 
@@ -269,6 +309,51 @@ extends TdsConnection
 		}
 		
 		return extraInfo;
+	}
+
+	@Override
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		
+		String tmpCatalog = StringUtil.isNullOrBlank(catalog) ? "" : catalog + ".";
+		String tmpSchema  = StringUtil.isNullOrBlank(schema)  ? "" : schema  + ".";
+		
+		String tmpDbId = StringUtil.isNullOrBlank(catalog) ? "db_id()" : "db_id('" + catalog + "')";
+
+		String sql = "select rowCnt = row_count(" + tmpDbId + ", object_id('" + tmpCatalog + tmpSchema + table + "'))";
+
+		long dbmsVersion = getCachedDbmsVersionNumber();
+		if (dbmsVersion < Ver.ver(15,0))
+		{
+			_logger.warn("getTableExtraInfo() isn't yet implemented for version '"+dbmsVersion+"', It needs to be at least 15.0"); 
+			return -1;
+		}
+
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+//System.out.println("ASE:getRowCountEstimate(catalog='"+catalog+"', schema='"+schema+"', table='"+table+"'): rowCoun=" + rowCount + ", SQL=" + sql);		
+		return rowCount;
+	}
+	
+	long _cachedDbmsVersion = -1;
+	private long getCachedDbmsVersionNumber()
+	{
+		if (_cachedDbmsVersion == -1)
+			_cachedDbmsVersion = getDbmsVersionNumber();
+
+		return _cachedDbmsVersion;
+	}
+
+	@Override
+	public void close() throws SQLException
+	{
+		_cachedDbmsVersion = -1;
+		super.close();
 	}
 
 	@Override

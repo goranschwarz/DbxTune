@@ -507,7 +507,7 @@ public class RefreshProcess extends Thread
 				{
 					sql += "  and S.SPID != @@spid \n";
 					if (_discardAseTuneAppName)
-						sql += "  and P.Application != '"+ProcessDetailFrame.DISCARD_APP_NAME+"' \n";
+						sql += "  and P.Application not like '" + ProcessDetailFrame.DISCARD_APP_NAME + "%' \n";
 					
 					if (hide_activeSqlWaitEventId250)
 						sql += "  and not (P.WaitEventID = 250 and S.WaitTime > 60000) -- get rid of incorrect rows with 'AWAITING COMMAND'... CR###### \n";
@@ -922,7 +922,7 @@ public class RefreshProcess extends Thread
 				{
 					sql += "  and SPID != @@spid \n";
 					if (_discardAseTuneAppName)
-						sql += "  and SPID not in (select spid from master.dbo.sysprocesses where program_name = '"+ProcessDetailFrame.DISCARD_APP_NAME+"') \n";
+						sql += "  and SPID not in (select spid from master.dbo.sysprocesses where program_name like '" + ProcessDetailFrame.DISCARD_APP_NAME + "%') \n";
 				}
 
 				if ( _historyRestrictions )

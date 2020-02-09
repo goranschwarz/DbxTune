@@ -822,6 +822,12 @@ public class DbxTuneSample
 //		{
 			JsonNode root = mapper.readTree(json);
 			
+			if (root == null)
+			{
+				_logger.error("Problems reading JSON, possibly a bad JSON string. JSON=" + json);
+				throw new IOException("Problems reading JSON, possibly a bad JSON string. JSON-first-part=" + json.substring(0, 150));
+			}
+			
 			JsonNode headNode = getNode(root, "head");
 			int    messageVersion          = getInt   (headNode, "messageVersion");
 			String appName                 = getString(headNode, "appName");

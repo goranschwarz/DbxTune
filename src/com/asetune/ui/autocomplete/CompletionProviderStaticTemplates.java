@@ -101,6 +101,7 @@ public class CompletionProviderStaticTemplates
 		list.add( new CompletionTemplate(":v",  ":v",  "Show all user views") );
 		list.add( new CompletionTemplate(":st", ":st", "Show all system tables") );
 		list.add( new CompletionTemplate(":sv", ":sv", "Show all system views") );
+		list.add( new CompletionTemplate(":r",  ":r",  "Refresh the Code Completion") );
 
 		return list;
 	}

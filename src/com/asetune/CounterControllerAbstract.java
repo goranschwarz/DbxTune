@@ -60,7 +60,6 @@ import com.asetune.gui.TrendGraph;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.hostmon.HostMonitor;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
-import com.asetune.sql.DbmsDataTypeResolver;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
@@ -184,7 +183,7 @@ implements ICounterController
 		_hasGui = hasGui;
 		_counterCollectorThread = createCounterCollectorThread(hasGui);
 		
-		setDbmsDataTypeResolver( createDbmsDataTypeResolver() );
+//		setDbmsDataTypeResolver( createDbmsDataTypeResolver() );
 	}
 
 	/**
@@ -2220,32 +2219,32 @@ implements ICounterController
 	//==================================================================
 
 	
-	//==================================================================
-	// BEGIN: DBMS Datatype Resolver
-	//==================================================================
-	private DbmsDataTypeResolver _dbmsDataTypeResolver = null; 
-
-	@Override
-	public DbmsDataTypeResolver getDbmsDataTypeResolver()
-	{
-		return _dbmsDataTypeResolver;
-	}
-
-	@Override
-	public void setDbmsDataTypeResolver(DbmsDataTypeResolver resolver)
-	{
-		_dbmsDataTypeResolver = resolver;
-	}
-
-	@Override
-	public DbmsDataTypeResolver createDbmsDataTypeResolver()
-	{
-		return null;
-	}
-
-	//==================================================================
-	// END: DBMS Datatype Resolver
-	//==================================================================
+//	//==================================================================
+//	// BEGIN: DBMS Datatype Resolver
+//	//==================================================================
+//	private DbmsDataTypeResolver _dbmsDataTypeResolver = null; 
+//
+//	@Override
+//	public DbmsDataTypeResolver getDbmsDataTypeResolver()
+//	{
+//		return _dbmsDataTypeResolver;
+//	}
+//
+//	@Override
+//	public void setDbmsDataTypeResolver(DbmsDataTypeResolver resolver)
+//	{
+//		_dbmsDataTypeResolver = resolver;
+//	}
+//
+//	@Override
+//	public DbmsDataTypeResolver createDbmsDataTypeResolver()
+//	{
+//		return null;
+//	}
+//
+//	//==================================================================
+//	// END: DBMS Datatype Resolver
+//	//==================================================================
 
 	
 	//==================================================================

@@ -41,6 +41,7 @@ import com.asetune.cm.sqlserver.CmActiveStatements;
 import com.asetune.cm.sqlserver.CmDatabases;
 import com.asetune.cm.sqlserver.CmDbIo;
 import com.asetune.cm.sqlserver.CmDeviceIo;
+import com.asetune.cm.sqlserver.CmErrorLog;
 import com.asetune.cm.sqlserver.CmExecCursors;
 import com.asetune.cm.sqlserver.CmExecFunctionStats;
 import com.asetune.cm.sqlserver.CmExecProcedureStats;
@@ -125,6 +126,7 @@ extends CounterControllerAbstract
 		CmSchedulers        .create(counterController, guiController);
 		CmWaitStats         .create(counterController, guiController);
 		CmWaitingTasks      .create(counterController, guiController);
+		CmErrorLog          .create(counterController, guiController);
 		CmOsLatchStats      .create(counterController, guiController);
 		CmPerfCounters      .create(counterController, guiController);
 		CmOptimizer         .create(counterController, guiController);
@@ -374,9 +376,11 @@ extends CounterControllerAbstract
 
 			File f = new File(osFileName);
 			String dir = f.getParent();
+			if (dir == null)
+				dir = osFileName;
 
 			// If not windows: remove drive letter, and fix backslash '\' to forward slash '/'
-			if ( instance.isLinux() )
+			if ( dir != null && instance.isLinux() )
 			{
 				// if starts with 'c:', then remove the drive, since it's Linux 
 				if (dir.matches("(?is)[A-Z]:.*"))
@@ -384,13 +388,16 @@ extends CounterControllerAbstract
 				
 				dir = dir.replace('\\', '/');
 			}
-			
+
 			return dir;
 		}
 		else
 		{
 			File f = new File(osFileName);
-			return f.getParent();
+			String dir = f.getParent();
+			if (dir == null)
+				dir = osFileName;
+			return dir;
 		}
 	}
 }

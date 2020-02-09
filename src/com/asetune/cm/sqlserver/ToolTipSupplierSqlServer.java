@@ -231,96 +231,113 @@ extends CmToolTipSupplierDefault
 			int spid = StringUtil.parseInt(cellValue+"", -1);
 			if (spid > 0)
 			{
-				String localSql = 
-						"select p.*, LastKnownSqlText = est.text \n" +
-						"from sysprocesses p \n" +
-						"outer apply sys.dm_exec_sql_text (p.sql_handle) est \n" +
-						"where spid = " + spid;
-
-				Connection conn = _cm.getCounterController().getMonConnection();
-				try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(localSql) )
+				if (MainFrame.isOfflineConnected())
 				{
-					ResultSetTableModel rstm = new ResultSetTableModel(rs, "dm_exec_sessions");
-					if (rstm.getRowCount() == 1)
-					{
-						// Make output more readable, in a 2 column table
-						// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
-						Map<String, String> colNameValueTagMap = new HashMap<>();
-						colNameValueTagMap.put("LastKnownSqlText", "xmp");
-
-						return rstm.toHtmlTablesVerticalString(null, true, true, colNameValueTagMap);
-					}
-					else if (rstm.getRowCount() > 1)
-					{
-						return rstm.toHtmlTableString(null, true, true);
-					}
+					// FIXME: get records from -- CmWho or similar (see AseTune for example)
+					return "Tooltip for columns 'session_id/SPID/blocking_session_id' is not suppoted in OFFLINE mode.";
 				}
-				catch(SQLException ex)
+				else
 				{
-					return "<html>" +  
-						       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
-						       "Problems when executing sql: "+localSql+"<br>" +
-						       ex.toString() +
-						       "</html>";
+					String localSql = 
+							"select p.*, LastKnownSqlText = est.text \n" +
+							"from sysprocesses p \n" +
+							"outer apply sys.dm_exec_sql_text (p.sql_handle) est \n" +
+							"where spid = " + spid;
+
+					Connection conn = _cm.getCounterController().getMonConnection();
+
+					try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(localSql) )
+					{
+						ResultSetTableModel rstm = new ResultSetTableModel(rs, "dm_exec_sessions");
+						if (rstm.getRowCount() == 1)
+						{
+							// Make output more readable, in a 2 column table
+							// put "xmp" tags around the data: <xmp>cellContent</xmp>, for some columns
+							Map<String, String> colNameValueTagMap = new HashMap<>();
+							colNameValueTagMap.put("LastKnownSqlText", "xmp");
+
+							return rstm.toHtmlTablesVerticalString(null, true, true, colNameValueTagMap);
+						}
+						else if (rstm.getRowCount() > 1)
+						{
+							return rstm.toHtmlTableString(null, true, true);
+						}
+					}
+					catch(SQLException ex)
+					{
+						return "<html>" +  
+							       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
+							       "Problems when executing sql: "+localSql+"<br>" +
+							       ex.toString() +
+							       "</html>";
+					}
 				}
 			}
 		}
 
 		if (StringUtil.hasValue(sql))
 		{
-			try
+			if (MainFrame.isOfflineConnected())
 			{
-				Connection conn = _cm.getCounterController().getMonConnection();
-
-				StringBuilder sb = new StringBuilder(300);
-				sb.append("<html>\n");
-
-				Statement stmt = conn.createStatement();
-				ResultSet rs = stmt.executeQuery(sql);
-//				ResultSetMetaData rsmd = rs.getMetaData();
-//				int cols = rsmd.getColumnCount();
-
-				sb.append("<pre>\n");
-				while (rs.next())
-				{
-					String c1 = rs.getString(1);
-					
-					// If it's a XML Showplan
-					if (c1 != null && c1.startsWith("<ShowPlanXML"))
-					{
-//						System.out.println("XML-SHOWPLAN: "+c1);
-//						c1 = c1.replace("<", "&lt;").replace(">", "&gt;");
-						c1 = StringUtil.xmlFormat(c1);
-						c1 = c1.replace("<", "&lt;").replace(">", "&gt;");
-					}
-					
-					// FIXME: translate to a "safe" HTML string 
-					sb.append(c1);
-				}
-				sb.append("<pre>\n");
-				sb.append("</html>\n");
-
-				for (SQLWarning sqlw = stmt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
-				{
-					// IGNORE: DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role.
-					if (sqlw.getMessage().startsWith("DBCC execution completed. If DBCC"))
-						continue;
-
-					sb = sb.append(sqlw.getMessage()).append("<br>");
-				}
-				rs.close();
-				stmt.close();
-				
-				return sb.toString();
+				// FIXME: can we do something better here
+				return "This Tooltip is not suppoted in OFFLINE mode.";
 			}
-			catch (SQLException ex)
+			else
 			{
-				_logger.warn("Problems when executing sql for cm='"+_cm.getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
-				return "<html>" +  
-				       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
-				       "Problems when executing sql: "+sql+"<br>" +
-				       ex.toString() +
-				       "</html>";
+				try
+				{
+					Connection conn = _cm.getCounterController().getMonConnection();
+
+					StringBuilder sb = new StringBuilder(300);
+					sb.append("<html>\n");
+
+					Statement stmt = conn.createStatement();
+					ResultSet rs = stmt.executeQuery(sql);
+//					ResultSetMetaData rsmd = rs.getMetaData();
+//					int cols = rsmd.getColumnCount();
+
+					sb.append("<pre>\n");
+					while (rs.next())
+					{
+						String c1 = rs.getString(1);
+						
+						// If it's a XML Showplan
+						if (c1 != null && c1.startsWith("<ShowPlanXML"))
+						{
+//							System.out.println("XML-SHOWPLAN: "+c1);
+//							c1 = c1.replace("<", "&lt;").replace(">", "&gt;");
+							c1 = StringUtil.xmlFormat(c1);
+							c1 = c1.replace("<", "&lt;").replace(">", "&gt;");
+						}
+						
+						// FIXME: translate to a "safe" HTML string 
+						sb.append(c1);
+					}
+					sb.append("<pre>\n");
+					sb.append("</html>\n");
+
+					for (SQLWarning sqlw = stmt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+					{
+						// IGNORE: DBCC execution completed. If DBCC printed error messages, contact a user with System Administrator (SA) role.
+						if (sqlw.getMessage().startsWith("DBCC execution completed. If DBCC"))
+							continue;
+
+						sb = sb.append(sqlw.getMessage()).append("<br>");
+					}
+					rs.close();
+					stmt.close();
+					
+					return sb.toString();
+				}
+				catch (SQLException ex)
+				{
+					_logger.warn("Problems when executing sql for cm='"+_cm.getName()+"', getToolTipTextOnTableCell(colName='"+colName+"', cellValue='"+cellValue+"'): "+sql, ex);
+					return "<html>" +  
+					       "Trying to get tooltip details for colName='"+colName+"', value='"+cellValue+"'.<br>" +
+					       "Problems when executing sql: "+sql+"<br>" +
+					       ex.toString() +
+					       "</html>";
+				}
 			}
 		}
 		

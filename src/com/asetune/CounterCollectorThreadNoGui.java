@@ -23,13 +23,21 @@ package com.asetune;
 import java.io.Console;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -935,6 +943,26 @@ implements Memory.MemoryListener
 		// This could for instance be used when you connect to a new DBMS Server
 		boolean startNewPcsSession = false;
 
+		// Get the JVM parameters, find out: -XX:HeapDumpPath=C:\Users\gorans\.dbxtune\data
+		// which is later used to remove older "*.hprof" dump files
+		RuntimeMXBean runtimeMxBean = ManagementFactory.getRuntimeMXBean();
+		List<String> jvmStartArguments = runtimeMxBean.getInputArguments();
+		File heapDumpPath = null;        // The path where: -XX:HeapDumpPath
+		long heapDumpPathLastCheck = 0;  // used later: not to check this on every loop, but instead every X hour
+		for (String arg : jvmStartArguments)
+		{
+			if (arg.startsWith("-XX:HeapDumpPath="))
+			{
+				String[] sa = arg.split("=");
+				if (sa.length >= 2)
+				{
+					heapDumpPath = new File(sa[1]);
+					if ( ! heapDumpPath.exists() )
+						heapDumpPath = null;
+				}
+			}
+		}
+
 		// loop
 		@SuppressWarnings("unused")
 		int loopCounter = 0;
@@ -977,7 +1005,7 @@ implements Memory.MemoryListener
 		HeartbeatMonitor.setRestartTime(30*60); // After 30 minutes of "no heartbeat" -->> restart the system by doing: System.exit(8)
 		
 		HeartbeatMonitor.setAlarmTime(_sleepTime * 4); // Dump threads if no Heartbeat has been issued for a while (4 times the sleep time)
-		HeartbeatMonitor.setSleepTime(_sleepTime / 2); // check every now and then... (half the sleep time seems resonable)
+		HeartbeatMonitor.setSleepTime(_sleepTime / 2); // check every now and then... (half the sleep time seems reasonable)
 		HeartbeatMonitor.start();
 
 
@@ -1546,6 +1574,42 @@ implements Memory.MemoryListener
 				System.gc();
 			}
 
+			//-----------------------------
+			// Remove old debug files: for -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/home/sybase/.dbxtune
+			//   - java_pid${dpif}.hprof
+			//-----------------------------
+			if (heapDumpPath != null)
+			{
+				long timeSinceLastCheck = System.currentTimeMillis() - heapDumpPathLastCheck;
+				if (timeSinceLastCheck > TimeUnit.HOURS.toMillis(1)) // Only check this once an hour
+				{
+					if (heapDumpPath.exists())
+					{
+						try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(heapDumpPath.toPath(), "*.hprof"))
+						{
+							for (Path path : directoryStream)
+							{
+								if (path.getFileName().endsWith(".hprof")) // Just to be "safe" since we are about to delete files
+								{
+									long ageInMs = System.currentTimeMillis() - path.toFile().lastModified();
+									if (ageInMs > TimeUnit.DAYS.toMillis(7))
+									{
+										_logger.info("Deleting old HPROF file, wich is older than 7 days (lastMod='" + (new Timestamp(path.toFile().lastModified())) + "'). filename: " + path);
+										path.toFile().delete();
+									}
+								}
+							}
+						}
+						catch (IOException ex)
+						{
+							_logger.error("Problems reading HeapDumpPath '" + heapDumpPath + "' when checking/cleaning-up older '*.hprof' files.", ex);
+						}
+					}
+					
+					timeSinceLastCheck = System.currentTimeMillis();
+				}
+			}
+			
 
 			// If previous CHECK has DEMAND checks, lets sleep for a shorter while
 			// This so we can catch data if the CM's are not yet initialized and has 2 samples (has diff data)

@@ -22,6 +22,7 @@ package com.asetune.sql.pipe;
 
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.tools.sqlw.msg.IMessageAware;
+import com.asetune.utils.ConnectionProvider;
 
 public interface IPipeCommand
 extends IMessageAware
@@ -37,4 +38,5 @@ extends IMessageAware
 
 	public String getCmdStr();
 	public String getSqlString();
+	public ConnectionProvider getConnectionProvider();
 }

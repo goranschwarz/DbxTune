@@ -183,6 +183,33 @@ public class H2Connection extends DbxConnection
 		return extraInfo;
 	}
 
+	@Override
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		
+		String whereCat = StringUtil.isNullOrBlank(catalog) ? "" : "  and upper(TABLE_CATALOG) = upper('" + catalog + "') \n";
+		String whereSch = StringUtil.isNullOrBlank(schema)  ? "" : "  and upper(TABLE_SCHEMA)  = upper('" + schema  + "') \n";
+		String whereTab = StringUtil.isNullOrBlank(table)   ? "" : "  and upper(TABLE_NAME)    = upper('" + table   + "') \n";
+		
+		String sql = "select ROW_COUNT_ESTIMATE \n"
+				+ "from INFORMATION_SCHEMA.TABLES \n"
+				+ "where TABLE_TYPE    = 'TABLE' \n"
+				+ whereCat
+				+ whereSch
+				+ whereTab
+				+ "";
+		
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+		
+		return rowCount;
+	}
+
 //	/**
 //	 * Create a schema if not already exists
 //	 * @param schemaName

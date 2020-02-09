@@ -420,8 +420,8 @@ extends CompletionProviderAbstractSql
 				"select @dbname = db_name() \n" +
 				"if ((select object_id('<PROCNAME>')) is not null) \n" +
 				"begin \n" +
-				"	print 'drop   procedure ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', '<TABNAME>' \n" +
-				"	drop procedure <TABNAME> \n" +
+				"	print 'drop   procedure ''%1!.%2!.%3!''. SUCCEEDED', @dbname, 'dbo', '<PROCNAME>' \n" +
+				"	drop procedure <PROCNAME> \n" +
 				"end \n" +
 				"go \n" +
 				"declare @dbname varchar(255) \n" +

@@ -46,7 +46,9 @@ public class AseCpuUsageOverview extends AseAbstract
 				"CmEngines_cpuEng",
 				"CmSysLoad_EngineRunQLengthGraph",
 				"CmExecutionTime_CpuUsagePct",
-				"CmExecutionTime_TimeGraph"
+				"CmExecutionTime_TimeGraph",
+				"CmSqlStatement_SqlStmntSumLRead",
+				"CmSqlStatement_SqlStmntSumCpuTime"
 				));
 
 		sb.append(_CmSummary_aaCpuGraph           .getHtmlContent(null, "The above graph may contain <i>extra</i> CPU Usages, which will be CPU Used during I/O completaion checks."));
@@ -62,6 +64,10 @@ public class AseCpuUsageOverview extends AseAbstract
 		                                                              + "  <li><b>Sorting    </b> - Find SQL Statement that does a lot of sorting and try to do that on the client side if possible, or add index to support that order.</li>"
 		                                                              + "  <li><b>Execution  </b> - Hopefully this is where most CPU Cycles is spent.</li>"
 		                                                              + "</ul> \n"));
+		sb.append(_CmSqlStatement_SqlStmntSumLRead  .getHtmlContent(null, null));
+		sb.append(_CmSqlStatement_SqlStmntSumCpuTime.getHtmlContent(null, "The above two graphs, shows what SQL Statements (<b>long or short in responce time</b>) we are spending LogicalReads & CPU Time on.<br>"
+		                                                                + "This can be used to figure out if it's <i>short</i> or <i>long</i> running Statements that uses most of the machine power...<br>"
+		                                                                + "(where should we start to look)... many 'Logical Reads'; then we might have <i>in memory table scans</i>. Lot of 'CPU Time';  it might be <i>sorting</i> or..."));
 
 		return sb.toString();
 	}
@@ -93,8 +99,11 @@ public class AseCpuUsageOverview extends AseAbstract
 		if (true)
 			skip = ReportChartObject.SKIP_COLNAME_WITH_VALUE_ABOVE + "Unknown=" + 100_000_000; // 100 seconds means 100 engines at 100% of "Unknown" usage
 		
-		_CmExecutionTime_CpuUsagePct     = createChart(conn, "CmExecutionTime", "CpuUsagePct",     maxValue, null, "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
-		_CmExecutionTime_TimeGraph       = createChart(conn, "CmExecutionTime", "TimeGraph",       -1,       skip, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
+		_CmExecutionTime_CpuUsagePct       = createChart(conn, "CmExecutionTime", "CpuUsagePct",        maxValue, null, "ASE SubSystem Operations - CPU Usage Percent (Server->Execution Time)");
+		_CmExecutionTime_TimeGraph         = createChart(conn, "CmExecutionTime", "TimeGraph",          -1,       skip, "ASE SubSystem Operations - Execution Time, in Micro Seconds (Server->Execution Time)");
+
+		_CmSqlStatement_SqlStmntSumLRead   = createChart(conn, "CmSqlStatement",  "SqlStmntSumLRead",   maxValue, null, "Sum Logical Reads per sec Over SQL Response Time (Object/Access->SQL Statements)");
+		_CmSqlStatement_SqlStmntSumCpuTime = createChart(conn, "CmSqlStatement",  "SqlStmntSumCpuTime", -1,       skip, "Sum CPU Time per sec Over SQL Response Time (Object/Access->SQL Statements)");
 	}
 
 	private ReportChartObject _CmSummary_aaCpuGraph;
@@ -103,4 +112,6 @@ public class AseCpuUsageOverview extends AseAbstract
 	private ReportChartObject _CmSysLoad_EngineRunQLengthGraph;
 	private ReportChartObject _CmExecutionTime_CpuUsagePct;
 	private ReportChartObject _CmExecutionTime_TimeGraph;
+	private ReportChartObject _CmSqlStatement_SqlStmntSumLRead;
+	private ReportChartObject _CmSqlStatement_SqlStmntSumCpuTime;
 }

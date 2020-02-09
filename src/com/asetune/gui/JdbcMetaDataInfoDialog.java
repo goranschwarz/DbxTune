@@ -32,6 +32,7 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
@@ -2001,6 +2002,31 @@ extends JDialog
 	}
 
 
+	private static void addJdbcDataTypeStr(ResultSetTableModel rstm)
+	{
+		// Add column 'JdbcDataTypeStr' if we find 'DATA_TYPE'
+		int jdbcDataType_pos = rstm.findColumnNoCase("DATA_TYPE");
+		if (jdbcDataType_pos != -1)
+		{
+			int addPos = jdbcDataType_pos + 1;
+			rstm.addColumn("JdbcDataTypeStr", addPos, Types.VARCHAR, "varchar", "varchar(60)", 60, -1, "", String.class);
+			
+			// initialize value for: JdbcDataTypeStr
+			for (int r=0; r<rstm.getRowCount(); r++)
+			{
+				int jdbcType = rstm.getValueAsInteger(r, jdbcDataType_pos);
+				String jdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(jdbcType);
+				
+//				if (jdbcTypeStr.startsWith("java.sql."))
+//					jdbcTypeStr = jdbcTypeStr.substring("java.sql.".length());
+
+				rstm.setValueAtWithOverride(jdbcTypeStr, r, addPos);
+			}
+		}
+		
+	}
+	
+
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Private classes for CREATE TABLE MODELS
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -2159,6 +2185,10 @@ extends JDialog
 		{
 			ResultSet dataTypes = conn.getMetaData().getTypeInfo();
 			ResultSetTableModel rstm = new ResultSetTableModel(dataTypes, "JdbcMetaDataInfoDialog.DataTypeModel");
+
+			// Add column 'JdbcDataTypeStr' after 'DATA_TYPE' (if it exists)
+			addJdbcDataTypeStr(rstm);
+			
 			return rstm;
 		}
 		catch (Throwable e)
@@ -2368,6 +2398,10 @@ extends JDialog
 		{
 			ResultSet rs = conn.getMetaData().getColumns(catalog, schemaPattern, valueNamePattern, columnNamePattern);
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.ColumnsModel");
+
+			// Add column 'JdbcDataTypeStr' after 'DATA_TYPE' (if it exists)
+			addJdbcDataTypeStr(rstm);
+			
 			return rstm;
 		}
 		catch (Throwable e)
@@ -2450,6 +2484,10 @@ extends JDialog
 		{
 			ResultSet rs = conn.getMetaData().getBestRowIdentifier(catalog, schemaPattern, valueNamePattern, scope, nullable);
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.BestRowModel");
+
+			// Add column 'JdbcDataTypeStr' after 'DATA_TYPE' (if it exists)
+			addJdbcDataTypeStr(rstm);
+			
 			return rstm;
 		}
 		catch (Throwable e)
@@ -2694,6 +2732,10 @@ extends JDialog
 		{
 			ResultSet rs = conn.getMetaData().getFunctionColumns(catalog, schemaPattern, valueNamePattern, colNamePattern);
 			ResultSetTableModel rstm = new ResultSetTableModel(rs, "JdbcMetaDataInfoDialog.FunctionColumnsModel");
+
+			// Add column 'JdbcDataTypeStr' after 'DATA_TYPE' (if it exists)
+			addJdbcDataTypeStr(rstm);
+			
 			return rstm;
 		}
 		catch (Throwable e)

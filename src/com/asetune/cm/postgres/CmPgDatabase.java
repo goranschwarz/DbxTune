@@ -834,7 +834,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("free_connections", PROPKEY_alarm_FreeConnections, Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections), DEFAULT_alarm_FreeConnections, "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("free_connections", isAlarmSwitch, PROPKEY_alarm_FreeConnections, Integer.class, conf.getIntProperty(PROPKEY_alarm_FreeConnections, DEFAULT_alarm_FreeConnections), DEFAULT_alarm_FreeConnections, "If 'free_connections' is less than this value, send 'AlarmEventConfigResourceIsLow'." ));
 
 		return list;
 	}

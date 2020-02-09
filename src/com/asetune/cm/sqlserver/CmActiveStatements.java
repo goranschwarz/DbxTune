@@ -882,7 +882,9 @@ System.out.println("Can't find the position for columns ('StartTime'="+pos_Start
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec", PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec, "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("ImBlockingOthersMaxTimeInSec", isAlarmSwitch, PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_ImBlockingOthersMaxTimeInSec, DEFAULT_alarm_ImBlockingOthersMaxTimeInSec), DEFAULT_alarm_ImBlockingOthersMaxTimeInSec, "If 'ImBlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 
 		return list;
 	}

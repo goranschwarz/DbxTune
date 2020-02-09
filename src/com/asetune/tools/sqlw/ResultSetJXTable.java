@@ -24,22 +24,31 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.sql.Types;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
 import javax.swing.ImageIcon;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
@@ -54,10 +63,12 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.StringValue;
+import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.TableColumnExt;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import com.asetune.cm.CmToolTipSupplierDefault;
+import com.asetune.gui.ResultSetMetaDataViewDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.focusabletip.FocusableTip;
 import com.asetune.gui.focusabletip.ResolverReturn;
@@ -89,7 +100,25 @@ implements ToolTipHyperlinkResolver
 
 	public static final String  PROPKEY_TOOLTIP_CELL_DISPLAY_MAX_SIZE_KB = "ResultSetJXTable.tooltip.cell.display.max.sizeKb";
 	public static final int     DEFAULT_TOOLTIP_CELL_DISPLAY_MAX_SIZE_KB = 10 * 1024; // 10MB
-	
+
+
+	public static final String  PROPKEY_TABLE_CELL_RENDERER_TIMESTAMP       = "ResultSetJXTable.cellRenderer.format.Timestamp";
+	public static final String  DEFAULT_TABLE_CELL_RENDERER_TIMESTAMP       = "yyyy-MM-dd HH:mm:ss.SSS";
+
+	public static final String  PROPKEY_TABLE_CELL_RENDERER_DATE            = "ResultSetJXTable.cellRenderer.format.Date";
+	public static final String  DEFAULT_TABLE_CELL_RENDERER_DATE            = "yyyy-MM-dd";
+
+	public static final String  PROPKEY_TABLE_CELL_RENDERER_TIME            = "ResultSetJXTable.cellRenderer.format.Time";
+	public static final String  DEFAULT_TABLE_CELL_RENDERER_TIME            = "HH:mm:ss";
+
+//	public static final String  PROPKEY_TABLE_CELL_RENDERER_BIGDECIMAL      = "ResultSetJXTable.cellRenderer.format.BigDecimal";
+//	public static final String  DEFAULT_TABLE_CELL_RENDERER_BIGDECIMAL      = "";
+
+	public static final String  PROPKEY_TABLE_CELL_RENDERER_NUMBER_DECIMALS = "ResultSetJXTable.cellRenderer.format.Number.decimals";
+	public static final int     DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS = 3;
+//	public static final int     DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS = 9;
+
+
 	private Point _lastMouseClick = null;
 
 	private boolean      _tabHeader_useFocusableTips   = true;
@@ -108,7 +137,7 @@ implements ToolTipHyperlinkResolver
 		// if it's java9 there seems to be some problems with repainting... (if the table is not added to a ScrollPane, which takes upp the whole scroll)
 		if (JavaVersion.isJava9orLater())
 		{
-			_logger.info("For Java-9, add a 'repaint' when the mouse moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA 9 RELEASE.");
+			_logger.info("For Java-9 and above, add a 'repaint' when the mouse moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
 
 			// Add a repaint every 50ms (when the mouse stops moving = no more repaint until we start to move it again)
 			// with the second parameter to true: it will only do repaint 50ms after you have stopped moving the mouse.
@@ -141,7 +170,8 @@ implements ToolTipHyperlinkResolver
 		StringValue svTimestamp = new StringValue() 
 		{
 //			DateFormat df = DateFormat.getDateInstance(DateFormat.LONG);
-			String format = Configuration.getCombinedConfiguration().getProperty("ResultSetJXTable.cellRenderer.format.Timestamp", "yyyy-MM-dd HH:mm:ss.SSS");
+//			String format = Configuration.getCombinedConfiguration().getProperty("ResultSetJXTable.cellRenderer.format.Timestamp", "yyyy-MM-dd HH:mm:ss.SSS");
+			String format = Configuration.getCombinedConfiguration().getProperty(PROPKEY_TABLE_CELL_RENDERER_TIMESTAMP, DEFAULT_TABLE_CELL_RENDERER_TIMESTAMP);
 			DateFormat df = new SimpleDateFormat(format);
 			@Override
 			public String getString(Object value) 
@@ -170,7 +200,8 @@ implements ToolTipHyperlinkResolver
 		@SuppressWarnings("serial")
 		StringValue svDate = new StringValue() 
 		{
-			String format = Configuration.getCombinedConfiguration().getProperty("ResultSetJXTable.cellRenderer.format.Date", "yyyy-MM-dd");
+//			String format = Configuration.getCombinedConfiguration().getProperty("ResultSetJXTable.cellRenderer.format.Date", "yyyy-MM-dd");
+			String format = Configuration.getCombinedConfiguration().getProperty(PROPKEY_TABLE_CELL_RENDERER_DATE, DEFAULT_TABLE_CELL_RENDERER_DATE);
 			DateFormat df = new SimpleDateFormat(format);
 			@Override
 			public String getString(Object value) 
@@ -199,7 +230,8 @@ implements ToolTipHyperlinkResolver
 		@SuppressWarnings("serial")
 		StringValue svTime = new StringValue() 
 		{
-			String format = Configuration.getCombinedConfiguration().getProperty("ResultSetJXTable.cellRenderer.format.Time", "HH:mm:ss");
+//			String format = Configuration.getCombinedConfiguration().getProperty("ResultSetJXTable.cellRenderer.format.Time", "HH:mm:ss");
+			String format = Configuration.getCombinedConfiguration().getProperty(PROPKEY_TABLE_CELL_RENDERER_TIME, DEFAULT_TABLE_CELL_RENDERER_TIME);
 			DateFormat df = new SimpleDateFormat(format);
 			@Override
 			public String getString(Object value) 
@@ -224,6 +256,37 @@ implements ToolTipHyperlinkResolver
 		};
 		setDefaultRenderer(java.sql.Time.class, new DefaultTableRenderer(svTime));
 
+		// BigDecimal, Double, Float format
+		@SuppressWarnings("serial")
+		StringValue svInExactNumber = new StringValue() 
+		{
+//			int decimals = Configuration.getCombinedConfiguration().getIntProperty("ResultSetJXTable.cellRenderer.format.BigDecimal.decimals", 3);
+			int decimals = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TABLE_CELL_RENDERER_NUMBER_DECIMALS, DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS);
+
+			NumberFormat nf = null;
+			{ // init/constructor section
+				try
+				{
+					nf = new DecimalFormat();
+					nf.setMinimumFractionDigits(decimals);
+				}
+				catch (Throwable t)
+				{
+					nf = NumberFormat.getInstance();
+				}
+			}
+			@Override
+			public String getString(Object value) 
+			{
+				if ( ! (value instanceof BigDecimal) ) 
+					return StringValues.TO_STRING.getString(value);
+				return nf.format(value);
+			}
+		};
+		setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(svInExactNumber));
+		setDefaultRenderer(Double    .class, new DefaultTableRenderer(svInExactNumber));
+		setDefaultRenderer(Float     .class, new DefaultTableRenderer(svInExactNumber));
+
 		// NULL Values: SET BACKGROUND COLOR
 		addHighlighter( new ColorHighlighter(new HighlightPredicate()
 		{
@@ -247,14 +310,87 @@ implements ToolTipHyperlinkResolver
 				return false;
 			}
 		}, NULL_VALUE_COLOR, null));
+
+		// Set columnHeader popup menu
+		getTableHeader().setComponentPopupMenu(createTableHeaderPopupMenu());
 	}
 
-	@Override
-	public void packAll()
+	/**
+	 * Creates the JMenu on the Component, this can be overrided by a subclass.
+	 */
+	public JPopupMenu createTableHeaderPopupMenu()
 	{
-//		super.packAll();
-		packAllGrowOnly();
+		JPopupMenu popup = new JPopupMenu();
+		JMenuItem mi;
+
+		// SHOW RESULTSET METADATA INFORMATION...
+		mi = new JMenuItem("Show ResultSet MetaData Information...");
+		popup.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				TableModel tm = getModel();
+				if (tm instanceof ResultSetTableModel)
+				{
+					ResultSetMetaDataViewDialog dialog = new ResultSetMetaDataViewDialog( ResultSetJXTable.this, (ResultSetTableModel) getModel() );
+					dialog.setVisible(true);
+				}
+				else
+				{
+					SwingUtils.showErrorMessage(ResultSetJXTable.this, "Show ResultSet MetaData - NOT POSSIBLE", "Table Model must be 'ResultSetTableModel', this model is '" + tm.getClass().getName() + "'.", null);
+				}
+			}
+		});
+		
+//		popup.addPopupMenuListener(new PopupMenuListener()
+//		{
+//			@Override
+//			public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+//			{
+//			}
+//			
+//			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
+//			@Override public void popupMenuCanceled(PopupMenuEvent e) {}
+//		});
+
+		// Separator
+		popup.add(new JSeparator());
+
+		// ADJUST COLUMN WIDTH
+		mi = new JMenuItem("Adjust Column Width, both shrink and grow."); // Resizes all columns to fit their content
+		popup.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				ResultSetJXTable.this.packAll();
+			}
+		});
+
+		// ADJUST COLUMN WIDTH
+		mi = new JMenuItem("Adjust Column Width, grow only."); // Resizes all columns to fit their content
+		popup.add(mi);
+		mi.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				ResultSetJXTable.this.packAllGrowOnly();
+			}
+		});
+
+		return popup;
 	}
+
+//	@Override
+//	public void packAll()
+//	{
+////		super.packAll();
+//		packAllGrowOnly();
+//	}
 	
 	private int _packMaxColWidth = SwingUtils.hiDpiScale(1000);
 	public int getPackMaxColWidth() { return _packMaxColWidth; }
@@ -1287,8 +1423,11 @@ implements ToolTipHyperlinkResolver
 			if (uniqueTables.size() == 1)
 				tabname = uniqueTables.get(0);
 			else
-				for (String tab : uniqueTables)
-					tabname = tabname + "/" + tab;
+			{
+//				for (String tab : uniqueTables)
+//					tabname = tabname + "/" + tab;
+				tabname = "QUERY_REFERENCED_" + uniqueTables.size() + "_TABLES";
+			}
 		}
 		if (tabname.startsWith("/"))
 			tabname = tabname.substring(1); // Remove first "/"
@@ -1296,13 +1435,32 @@ implements ToolTipHyperlinkResolver
 		StringBuilder sb = new StringBuilder();
 		sb.append("insert into ").append(tabname).append("(");
 		for (int c=0; c<getColumnCount(); c++)
-			sb.append(getColumnName(c)).append(", ");
+		{
+			String colName = getColumnName(c);
+			// Should we "[Quotify]" the column names
+			colName = "[" + colName.replace("]", "]]") + "]";  // add '[' and ']' AROUND the column, if colName contains ']' escape that with a "]]"
+			sb.append(colName).append(", ");
+		}
 		sb.replace(sb.length()-2, sb.length(), ""); // remove last comma
 		sb.append(") values(");
 		
 		String insIntoStr = sb.toString();
 		sb.setLength(0);
-			
+
+		// Figure out the MAX length for each columns values (so we can format it in a nice way)
+		int[] colMaxLen = new int[getColumnCount()];
+		for (int r : selRows)
+		{
+			for (int c=0; c<getColumnCount(); c++)
+			{
+				Object val = getValueAt(r, c);
+				if (ResultSetTableModel.DEFAULT_NULL_REPLACE.equals(val))
+					val = null;
+
+				colMaxLen[c] = Math.max(colMaxLen[c], String.valueOf(val).length() ); 
+			}
+		}
+		
 		for (int r : selRows)
 		{
 			sb.append(insIntoStr);
@@ -1317,12 +1475,17 @@ implements ToolTipHyperlinkResolver
 					{
 						val = val.toString().replace("'", "''");
 					}
-					sb.append("'").append(val).append("'").append(", ");
+					int spaceCnt = colMaxLen[c] - String.valueOf(val).length();
+					sb.append("'").append(val).append("'").append(", ").append(StringUtil.fillSpace(spaceCnt));
 				}
 				else
-					sb.append( val == null ? "NULL" : val).append(", ");
+				{
+					int spaceCnt = colMaxLen[c] - String.valueOf(val).length();
+					sb.append( val == null ? "NULL" : val).append(", ").append(StringUtil.fillSpace(spaceCnt));
+				}
 			}
-			sb.replace(sb.length()-2, sb.length(), ""); // remove last comma
+			int lastCommaPos = sb.lastIndexOf(", ");
+			sb.replace(lastCommaPos, sb.length(), ""); // remove last comma
 			sb.append(")\n");
 		}
 		return sb.toString();
@@ -1387,6 +1550,17 @@ implements ToolTipHyperlinkResolver
 		if (val instanceof String)
 			return true;
 		return false;
+	}
+
+	
+	/**
+	 * Open a Dialog where you can change Settings... 
+	 * @param jframe
+	 * @return
+	 */
+	public static int showSettingsDialog(Frame owner)
+	{
+		return ResultSetJXTableSettingsDialog.showDialog(owner);
 	}
 
 }

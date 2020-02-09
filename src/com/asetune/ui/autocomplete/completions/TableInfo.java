@@ -247,6 +247,7 @@ implements Serializable
 	throws SQLException
 	{
 		DatabaseMetaData dbmd = conn.getMetaData();
+//System.out.println("getPkOrFirstUniqueIndex(): cat='"+cat+"', schema='"+schema+"', name='"+name+"'");
 
 		// Get Primary key
 		ResultSet rs = dbmd.getPrimaryKeys(cat, schema, name);
@@ -412,7 +413,7 @@ implements Serializable
 		sb.append("<table BORDER=0 CELLSPACING=0 CELLPADDING=1>");
 		for (TableExtraInfo ei : _extraInfo.values())
 		{
-			if ( ! TableExtraInfo.IndexExtraInfo.equals(ei.getName()) )
+			if ( ! (TableExtraInfo.IndexExtraInfo.equals(ei.getName()) || TableExtraInfo.IndexExtraInfoDescription.equals(ei.getName())) )
 			{
 				sb.append("  <TR><TD nowrap>&nbsp;&nbsp;&nbsp;&nbsp;&bull;&nbsp;</TD><TD nowrap>").append("<B>").append(ei.getDescriptiveName()).append("</B> </TD> <TD nowrap>&nbsp;").append(ei.getStringValue()).append("&nbsp;</TD> <TD nowrap><FONT color='green'>").append(ei.getHtmlDescription()).append("</FONT></TD></TR>");
 			}
@@ -499,34 +500,90 @@ implements Serializable
 		}
 		public String getDdl()
 		{
-			StringBuilder sb = new StringBuilder("create ");
-			if (_isUnique)
-				sb.append("<FONT color='blue'>unique</FONT> ");
-			if (_type == DatabaseMetaData.tableIndexClustered)
-				sb.append("<FONT color='blue'>clustered</FONT> ");
-			sb.append("index ").append(_name).append(" on ").append(_qualifier);
-			sb.append("(<FONT color='blue'>");
-			sb.append(StringUtil.toCommaStr(_columns));
-			sb.append("</FONT>)");
-			if (_type == DatabaseMetaData.tableIndexHashed)
-				sb.append(" -- hashed");
-
+			boolean indexExtraInfoDescriptionHasClustered    = false;
+//			boolean indexExtraInfoDescriptionHasNonClustered = false;
+			
 			// If we have some extra information on the index name, print that as well
+			StringBuilder comment = new StringBuilder();
 			if (_extraInfo != null)
 			{
 				for (TableExtraInfo ei : _extraInfo.values())
 				{
+					String indexExtraInfo1 = "";
+					String indexExtraInfo2 = "";
+					
+					if ( TableExtraInfo.IndexExtraInfoDescription.equals(ei.getName()) )
+					{
+						@SuppressWarnings("unchecked")
+						Map<String, String> indexInfo = (Map<String, String>) ei.getValue();
+						String indexExtraInfo = indexInfo.get(_name);
+						if (indexExtraInfo != null)
+						{
+//							sb.append(" <FONT color='green'>").append(" -- ").append(indexExtraInfo).append("</FONT>");
+							indexExtraInfo1 += indexExtraInfo;
+							
+							if (indexExtraInfo.toLowerCase().indexOf("clustered") != -1)
+							{
+								indexExtraInfoDescriptionHasClustered = true;
+							}
+
+							if (indexExtraInfo.toLowerCase().indexOf("nonclustered") != -1)
+							{
+								indexExtraInfoDescriptionHasClustered    = false;
+//								indexExtraInfoDescriptionHasNonClustered = true;
+							}
+						}
+					}
+
 					if ( TableExtraInfo.IndexExtraInfo.equals(ei.getName()) )
 					{
 						@SuppressWarnings("unchecked")
 						Map<String, String> indexInfo = (Map<String, String>) ei.getValue();
 						String indexExtraInfo = indexInfo.get(_name);
 						if (indexExtraInfo != null)
-							sb.append(" <FONT color='green'>").append(" -- ").append(indexExtraInfo).append("</FONT>");
+						{
+//							sb.append(" <FONT color='green'>").append(" -- ").append(indexExtraInfo).append("</FONT>");
+							indexExtraInfo2 += indexExtraInfo;
+						}
+					}
+
+					if (StringUtil.hasValue(indexExtraInfo1) || StringUtil.hasValue(indexExtraInfo2))
+					{
+						comment.append(" <FONT color='green'>").append(" -- ");
+
+						// write Index "type" description
+						comment.append(indexExtraInfo1);
+						if (StringUtil.hasValue(indexExtraInfo1))
+							comment.append(", ");
+
+						// write Index "size" info
+						comment.append(indexExtraInfo2);
+
+						comment.append("</FONT>");
 					}
 				}
 			}
 
+			// Now build the DDL text
+			StringBuilder sb = new StringBuilder("create ");
+
+			if (_isUnique)
+				sb.append("<FONT color='blue'>unique</FONT> ");
+
+			if (_type == DatabaseMetaData.tableIndexClustered || indexExtraInfoDescriptionHasClustered)
+				sb.append("<FONT color='blue'>clustered</FONT> ");
+			
+			sb.append("index ").append(_name).append(" on ").append(_qualifier);
+			sb.append("(<FONT color='blue'>");
+			sb.append(StringUtil.toCommaStr(_columns));
+			sb.append("</FONT>)");
+
+			if (_type == DatabaseMetaData.tableIndexHashed)
+				sb.append(" -- hashed");
+
+			// Add any comments from 'IndexExtraInfoDescription' and 'IndexExtraInfo'
+			sb.append(comment.toString());
+			
 			return sb.toString();
 		}
 	}

@@ -37,6 +37,7 @@ import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.AseSqlScript;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 import com.asetune.utils.Ver;
 
@@ -154,6 +155,18 @@ implements IDbmsConfigText
 	protected void setConfig(String str)
 	{
 		_configStr = str;
+		
+		String comment = getComment();
+		if (StringUtil.hasValue(comment))
+		{
+			_configStr += comment;
+		}
+	}
+	
+	@Override
+	public String getComment()
+	{
+		return null;
 	}
 
 	/** check if the AseConfig is initialized or not */

@@ -667,7 +667,7 @@ implements ActionListener, TableModelListener, FocusListener, KeyListener
 		JFrame frame = null;
 		try
 		{
-			PipeCommandGraph pipeCommandGraph = new PipeCommandGraph(buildFeedback(), "");//_rstm.getSqlText());
+			PipeCommandGraph pipeCommandGraph = new PipeCommandGraph(buildFeedback(), "", null);//_rstm.getSqlText());
 			JGraphResultSet grs = new JGraphResultSet(_rstm, pipeCommandGraph);
 			
 			frame = grs.createWindow();

@@ -30,6 +30,7 @@ public class Message
 	{
 		TRACE, 
 		DEBUG, 
+		DRYRUN, 
 		INFO, 
 		WARNING, 
 		ERROR, 

@@ -20,17 +20,14 @@
  ******************************************************************************/
 package com.asetune.ssh;
 
-import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Vector;
+import java.util.List;
 
 import javax.swing.Icon;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileSystemView;
-
-import org.apache.log4j.Logger;
 
 import com.asetune.utils.StringUtil;
 
@@ -47,13 +44,13 @@ import ch.ethz.ssh2.SFTPv3DirectoryEntry;
  */
 public class SshFileSystemView extends FileSystemView
 {
-	private static Logger _logger = Logger.getLogger(SshFileSystemView.class);
+//	private static Logger _logger = Logger.getLogger(SshFileSystemView.class);
 
 	public static final String FILE_SYSTEM_ROOT_NAME = "/";
 	public static final String FILE_SEPERATOR = "/";
 	
 	private SshConnection _sshConn = null;
-	private Component _parentComponent = null;
+//	private Component _parentComponent = null;
 	private SFTPv3Client _sftpClient = null;
 	
 	private String _startDirectory;
@@ -92,7 +89,7 @@ private SshFile[] _homeAllFilesArray = null;
 				_homeDirectorySshFile = new SshFile(_homeDirectory, _sftpClient.stat(_homeDirectory));
 				_rootDirectorySshFile = new SshFile("/", _sftpClient.stat("/"));
 
-				Vector<SFTPv3DirectoryEntry> v = _sftpClient.ls(_homeDirectory);
+				List<SFTPv3DirectoryEntry> v = _sftpClient.ls(_homeDirectory);
 				_homeAllFilesArray = new SshFile[v.size()];
 				for (int i=0; i<v.size(); i++)
 				{
@@ -315,7 +312,6 @@ private SshFile[] _homeAllFilesArray = null;
 	/**
 	 * @see javax.swing.filechooser.FileSystemView#getFiles(java.io.File, boolean)
 	 */
-	@SuppressWarnings("unchecked")
 	@Override
 	public File[] getFiles(File dir, boolean useFileHiding)
 	{
@@ -338,7 +334,7 @@ private SshFile[] _homeAllFilesArray = null;
 			_homeDirectory = _sshConn.execCommandOutputAsStr("pwd");
 			
 //System.out.println("    SshFileSystemView.getFiles(): dir.getAbsolutePath()='"+dirname+"'.");
-			Vector<SFTPv3DirectoryEntry> v = _sftpClient.ls(dirname);
+			List<SFTPv3DirectoryEntry> v = _sftpClient.ls(dirname);
 //			SshFile[] sshFileArray = new SshFile[v.size()];
 			ArrayList<SshFile> sshFileList = new ArrayList<SshFile>();
 			for (int i=0; i<v.size(); i++)

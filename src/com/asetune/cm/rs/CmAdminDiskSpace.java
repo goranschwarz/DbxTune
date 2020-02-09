@@ -403,9 +403,11 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("SpaceUsedSegs", PROPKEY_alarm_SpaceUsedSegs, Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceUsedSegs, DEFAULT_alarm_SpaceUsedSegs), DEFAULT_alarm_SpaceUsedSegs, "If 'SpaceUsedSegs' is GREATER than ####, send 'AlarmEventRsSdUsage'."));
-		list.add(new CmSettingsHelper("SpaceFreeSegs", PROPKEY_alarm_SpaceFreeSegs, Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs), DEFAULT_alarm_SpaceFreeSegs, "If 'SpaceFreeSegs' is LESS than #### ,send  send 'AlarmEventRsSdUsage'."));
-		list.add(new CmSettingsHelper("SpaceUsedPct",  PROPKEY_alarm_SpaceUsedPct , Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceUsedPct , DEFAULT_alarm_SpaceUsedPct ), DEFAULT_alarm_SpaceUsedPct , "If 'SpaceUsedPct' is LESS than ##, send  send 'AlarmEventRsSdUsage'."));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("SpaceUsedSegs", isAlarmSwitch, PROPKEY_alarm_SpaceUsedSegs, Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceUsedSegs, DEFAULT_alarm_SpaceUsedSegs), DEFAULT_alarm_SpaceUsedSegs, "If 'SpaceUsedSegs' is GREATER than ####, send 'AlarmEventRsSdUsage'."));
+		list.add(new CmSettingsHelper("SpaceFreeSegs", isAlarmSwitch, PROPKEY_alarm_SpaceFreeSegs, Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceFreeSegs, DEFAULT_alarm_SpaceFreeSegs), DEFAULT_alarm_SpaceFreeSegs, "If 'SpaceFreeSegs' is LESS than #### ,send  send 'AlarmEventRsSdUsage'."));
+		list.add(new CmSettingsHelper("SpaceUsedPct",  isAlarmSwitch, PROPKEY_alarm_SpaceUsedPct , Integer.class,  conf.getIntProperty(PROPKEY_alarm_SpaceUsedPct , DEFAULT_alarm_SpaceUsedPct ), DEFAULT_alarm_SpaceUsedPct , "If 'SpaceUsedPct' is LESS than ##, send  send 'AlarmEventRsSdUsage'."));
 
 		return list;
 	}

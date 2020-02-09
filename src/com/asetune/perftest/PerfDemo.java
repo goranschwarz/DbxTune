@@ -56,6 +56,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.text.BadLocationException;
@@ -600,7 +601,8 @@ implements ActionListener
 			
 			QueueConsumer qc = new QueueConsumer(this, conn, consumerId, qConsExecParams);
 			_qConsThreadList.add(qc);
-			qc.execute();
+//			qc.execute(); // execute via SwingWorkers own ThreadPool (which has the limit of 10 concurrent threads)
+			PerfDemoSwingWorkerExecutor.getInstance().execute(qc); // execute via our own ThreadPool
 
 			//_qConsExecCount.setText(""+_qConsThreadList.size());
 		}
@@ -1173,7 +1175,8 @@ implements ActionListener
 	 * 
 	 */
 	private class QueueConsumer
-	extends PerfDemoSwingWorker<String, String>
+//	extends PerfDemoSwingWorker<String, String>
+	extends SwingWorker<String, String>
 	{
 		private PerfDemo   _perfDemo    = null;
 		private Connection _conn        = null;
@@ -1192,6 +1195,7 @@ implements ActionListener
 		@Override
 		protected String doInBackground() throws Exception
 		{
+//System.out.println(Thread.currentThread().getName()+ ": enter-method: doInBackground()");
 			Thread.currentThread().setName("QueueConsumer-"+_consumerId);
 			System.out.println(Thread.currentThread().getName()+ ": Start.");
 
@@ -1199,8 +1203,9 @@ implements ActionListener
 				((SybConnection)_conn).setSybMessageHandler(new PerfDemoSybMessageHandler(Thread.currentThread().getName(), _perfDemo, this));
 
 			if (_conn instanceof TdsConnection)
-				((SybConnection)_conn).setSybMessageHandler(new PerfDemoSybMessageHandler(Thread.currentThread().getName(), _perfDemo, this));
-			
+				((TdsConnection)_conn).setSybMessageHandler(new PerfDemoSybMessageHandler(Thread.currentThread().getName(), _perfDemo, this));
+
+//System.out.println(Thread.currentThread().getName()+ ": --- BEFORE while(running) ----");
 			boolean running = true;
 			while(running)
 			{
@@ -1233,6 +1238,7 @@ implements ActionListener
 					ResultSetMetaData rsmd;
 					ResultSet         rs;
 
+//System.out.println(Thread.currentThread().getName()+ ":EXECUTING: "+sql);
 					boolean hasResults = stmnt.execute(sql);
 					int rsnum = 0;
 					int rowsAffected = 0;

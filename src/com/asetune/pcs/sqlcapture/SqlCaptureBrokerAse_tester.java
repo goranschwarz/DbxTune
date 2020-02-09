@@ -226,7 +226,7 @@ extends SqlCaptureBrokerAse
 	    conn.dbExec(""
 			    + "create table [sysprocesses] ( \n"
 			    + "	[spid]                          int                              not null, \n"
-			    + "	[program_name]                  varchar(30)                          null, \n"
+			    + "	[program_name]                  varchar(30)                          null  \n"
 			    + ") \n"
 			    + "");
 	}

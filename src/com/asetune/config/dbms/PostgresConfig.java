@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -144,49 +145,35 @@ extends DbmsConfigAbstract
 	private static final int COL_NAME        = 0;
 	private static final int COL_EDITABLE    = 1;
 	private static final int COL_CLASS       = 2;
-	private static final int COL_SQLTYPE     = 3;
-	private static final int COL_TOOLTIP     = 4;
+//	private static final int COL_SQLTYPE     = 3;
+	private static final int COL_JDBC_TYPE   = 3;
+	private static final int COL_JDBC_LENGTH = 4;
+	private static final int COL_JDBC_SCALE  = 5;
+	private static final int COL_TOOLTIP     = 6;
 	private static Object[][] COLUMN_HEADERS = 
 	{
-	//   ColumnName,           Editable, JTable type,   SQL Datatype,   Tooltip
-	//   --------------------- --------- -------------- --------------- --------------------------------------------
-//		{NON_DEFAULT,          false,    Boolean.class, "bit",          "True if the value is not configured to the default value."},
-//		{SECTION_NAME,         true,     String .class, "varchar(60)",  "Configuration Group"},
-//		{CONFIG_NAME,          true,     String .class, "varchar(60)",  "Name of the configuration, same as the name in ra_config."},
-//		{CONFIG_TYPE,          true,     String .class, "varchar(30)",  "What type of parameter is this."},
-//		{CURENT_VALUE,         false,    String .class, "varchar(255)", "Value of the configuration."},
-//		{PENDING,              false,    Boolean.class, "bit",          "The Configuration has not yet taken effect, probably needs restart to take effect."},
-//		{PENDING_VALUE,        false,    String .class, "varchar(255)", "The value which will be configured on next restart, if PENDING is true."},
-//		{DEFAULT_VALUE,        false,    String .class, "varchar(100)", "The default configuration value."},
-//		{RESTART_IS_REQ,       false,    Boolean.class, "bit",          "ASE needs to be rebooted for the configuration to take effect."},
-//		{LEGAL_VALUES,         true,     String .class, "varchar(60)",  "What legal values can this configuration hold"},
-//		{DESCRIPTION,          true,     String .class, "varchar(255)", "Description of the configuration."}
-
-		{NON_DEFAULT,          false,    Boolean.class, "bit",           "True if the value is not configured to the default value."},
-		{SECTION_NAME,         true,     String .class, "varchar(128)",  "Configuration Group"},
-		{CONFIG_NAME,          true,     String .class, "varchar(128)",  "Run-time configuration parameter name."},
-		{CONFIG_TYPE,          true,     String .class, "varchar(128)",  "What type of parameter is this."},
-		{CURENT_VALUE,         true,     String .class, "varchar(255)",  "Value of the configuration."},
-//		{PENDING,              false,    Boolean.class, "bit",           "The Configuration has not yet taken effect, probably needs restart to take effect."},
-//		{PENDING_VALUE,        false,    String .class, "varchar(255)",  "The value which will be configured on next restart, if PENDING is true."},
-//		{DEFAULT_VALUE,        false,    String .class, "varchar(100)",  "The default configuration value."},
-//		{RESTART_IS_REQ,       false,    Boolean.class, "bit",           "ASE needs to be rebooted for the configuration to take effect."},
-//		{LEGAL_VALUES,         true,     String .class, "varchar(60)",   "What legal values can this configuration hold"},
-
-		{CONTEXT,              true,     String .class, "varchar(128)",  CONTEXT_TOOLTIP},
-		{VARTYPE,              true,     String .class, "varchar(128)",  "Parameter type (bool, enum, integer, real, or string)"},
-		{SOURCE,               true,     String .class, "varchar(128)",  "Source of the current parameter value"},
-		{MIN_VALUE,            true,     String .class, "varchar(128)",  "Minimum value of the configuration"},
-		{MAX_VALUE,            true,     String .class, "varchar(128)",  "Maximum value of the configuration"},
-		{ENUMVALS,             true,     String .class, "varchar(128)",  "Allowed values of an enum parameter"},
-		{BOOT_VAL,             true,     String .class, "varchar(128)",  "Parameter value assumed at server startup if the parameter is not otherwise set"},
-		{RESET_VAL,            true,     String .class, "varchar(128)",  "Value that RESET would reset the parameter to in the current session"},
-
-		{DESCRIPTION,          true,     String .class, "varchar(1024)", "Description of the configuration."},
-		{EXTRA_DESCRIPTION,    true,     String .class, "varchar(1024)", "Extra Description of the configuration."},
-
-		{SOURCE_FILE,          true,     String .class, "varchar(255)",  "Configuration file the current value was set in (null for values set from sources other than configuration files, or when examined by a non-superuser); helpful when using include directives in configuration files"},
-		{SOURCE_LINE,          true,     Integer.class, "int",           "Line number within the configuration file the current value was set at (null for values set from sources other than configuration files, or when examined by a non-superuser)"}
+	//   ColumnName,           Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale /* SQL Datatype,    */ Tooltip
+	//   --------------------- --------- -------------- -------------- ----------- ---------- /* ---------------  */ --------------------------------------------
+		{NON_DEFAULT,          false,    Boolean.class, Types.BOOLEAN, -1,         -1,        /* "bit",           */ "True if the value is not configured to the default value."},
+		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Configuration Group"},
+		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Run-time configuration parameter name."},
+		{CONFIG_TYPE,          true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "What type of parameter is this."},
+		{CURENT_VALUE,         true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Value of the configuration."},
+                                                                                                                  
+		{CONTEXT,              true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ CONTEXT_TOOLTIP},
+		{VARTYPE,              true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Parameter type (bool, enum, integer, real, or string)"},
+		{SOURCE,               true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Source of the current parameter value"},
+		{MIN_VALUE,            true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Minimum value of the configuration"},
+		{MAX_VALUE,            true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Maximum value of the configuration"},
+		{ENUMVALS,             true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Allowed values of an enum parameter"},
+		{BOOT_VAL,             true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Parameter value assumed at server startup if the parameter is not otherwise set"},
+		{RESET_VAL,            true,     String .class, Types.VARCHAR, 128,        -1,        /* "varchar(128)",  */ "Value that RESET would reset the parameter to in the current session"},
+                                                                                                                  
+		{DESCRIPTION,          true,     String .class, Types.VARCHAR, 1024,       -1,        /* "varchar(1024)", */ "Description of the configuration."},
+		{EXTRA_DESCRIPTION,    true,     String .class, Types.VARCHAR, 1024,       -1,        /* "varchar(1024)", */ "Extra Description of the configuration."},
+                                                                                                                  
+		{SOURCE_FILE,          true,     String .class, Types.VARCHAR, 255,        -1,        /* "varchar(255)",  */ "Configuration file the current value was set in (null for values set from sources other than configuration files, or when examined by a non-superuser); helpful when using include directives in configuration files"},
+		{SOURCE_LINE,          true,     Integer.class, Types.INTEGER, -1,         -1,        /* "int",           */ "Line number within the configuration file the current value was set at (null for values set from sources other than configuration files, or when examined by a non-superuser)"}
 	};
 
 	private static String GET_CONFIG_ONLINE_SQL = 
@@ -833,20 +820,29 @@ extends DbmsConfigAbstract
 		return "";
 	}
 
+//	@Override
+//	public String getSqlDataType(String colName)
+//	{
+//		for (int i=0; i<COLUMN_HEADERS.length; i++)
+//		{
+//			if (COLUMN_HEADERS[i][COL_NAME].equals(colName))
+//				return (String)COLUMN_HEADERS[i][COL_SQLTYPE];
+//		}
+//		return "";
+//	}
+//	@Override
+//	public String getSqlDataType(int colIndex)
+//	{
+//		return (String)COLUMN_HEADERS[colIndex][COL_SQLTYPE];
+//	}
 	@Override
-	public String getSqlDataType(String colName)
+	public String getSqlDataType(DbxConnection conn, int colIndex)
 	{
-		for (int i=0; i<COLUMN_HEADERS.length; i++)
-		{
-			if (COLUMN_HEADERS[i][COL_NAME].equals(colName))
-				return (String)COLUMN_HEADERS[i][COL_SQLTYPE];
-		}
-		return "";
-	}
-	@Override
-	public String getSqlDataType(int colIndex)
-	{
-		return (String)COLUMN_HEADERS[colIndex][COL_SQLTYPE];
+		int jdbcType = (int)COLUMN_HEADERS[colIndex][COL_JDBC_TYPE];
+		int length   = (int)COLUMN_HEADERS[colIndex][COL_JDBC_LENGTH];
+		int scale    = (int)COLUMN_HEADERS[colIndex][COL_JDBC_SCALE];
+		
+		return conn.getDbmsDataTypeResolver().dataTypeResolverToTarget(jdbcType, length, scale);
 	}
 
 	@Override

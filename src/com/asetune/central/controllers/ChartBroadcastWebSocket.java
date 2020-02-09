@@ -209,7 +209,8 @@ public class ChartBroadcastWebSocket
 				// sent for this remote connection
 				subsSentList.add(cs._remoteHost);
 			}
-			catch (IOException e)
+//			catch (IOException e)
+			catch (Exception e) // This will also catch: IllegalStateException and other RuntimeException... otherwise caller might have: HTTP error code : 500 (Internal Server Error) 
 			{
 				_logger.error("Problems sending data to subscriber '"+session+"'.", e);
 				_subsMap.remove(session);

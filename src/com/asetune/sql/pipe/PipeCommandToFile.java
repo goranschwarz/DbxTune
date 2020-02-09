@@ -44,6 +44,7 @@ import org.apache.log4j.Logger;
 
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 
 public class PipeCommandToFile
@@ -91,10 +92,10 @@ extends PipeCommandAbstract
 	private int        _rowsWritten  = 0;
 	private String     _message      = "";
 	
-	public PipeCommandToFile(String input, String sqlString)
+	public PipeCommandToFile(String input, String sqlString, ConnectionProvider connProvider)
 	throws PipeCommandException
 	{
-		super(input, sqlString);
+		super(input, sqlString, connProvider);
 		parse(input);
 	}
 

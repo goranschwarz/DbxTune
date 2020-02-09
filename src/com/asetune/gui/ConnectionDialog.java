@@ -264,10 +264,10 @@ public class ConnectionDialog
 	private ImageIcon            _aseLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
 	private JLabel               _aseLoginIcon       = new JLabel(_aseLoginImageIcon);
 	private MultiLineLabel       _aseLoginHelp       = new MultiLineLabel("Identify yourself to the server with user name and password");
-	private JLabel               _aseUser_lbl        = new JLabel("User name");
-	private JTextField           _aseUser_txt        = new JTextField();
-	private JLabel               _asePasswd_lbl      = new JLabel("Password");
-	private JTextField           _asePasswd_txt      = null; // set to JPasswordField or JTextField depending on debug level
+	private JLabel               _aseUsername_lbl    = new JLabel("User name");
+	private JTextField           _aseUsername_txt    = new JTextField();
+	private JLabel               _asePassword_lbl    = new JLabel("Password");
+	private JTextField           _asePassword_txt    = null; // set to JPasswordField or JTextField depending on debug level
 
 	private ImageIcon            _aseServerImageIcon = SwingUtils.readImageIcon(Version.class, "images/ase32.gif");
 	private JLabel               _aseServerIcon      = new JLabel(_aseServerImageIcon);
@@ -345,10 +345,10 @@ public class ConnectionDialog
 	private ImageIcon            _hostmonLoginImageIcon  = SwingUtils.readImageIcon(Version.class, "images/login_key.gif");
 	private JLabel               _hostmonLoginIcon       = new JLabel(_hostmonLoginImageIcon);
 	private MultiLineLabel       _hostmonLoginHelp       = new MultiLineLabel("Identify yourself to the host Operating System with user name and password. A SSH (Secure Shell) connection will be used, so password and traffic will be encrypted over the network.");
-	private JLabel               _hostmonUser_lbl        = new JLabel("User name");
-	private JTextField           _hostmonUser_txt        = new JTextField();
-	private JLabel               _hostmonPasswd_lbl      = new JLabel("Password");
-	private JTextField           _hostmonPasswd_txt      = null; // set to JPasswordField or JTextField depending on debug level
+	private JLabel               _hostmonUsername_lbl    = new JLabel("User name");
+	private JTextField           _hostmonUsername_txt    = new JTextField();
+	private JLabel               _hostmonPassword_lbl    = new JLabel("Password");
+	private JTextField           _hostmonPassword_txt    = null; // set to JPasswordField or JTextField depending on debug level
 	private JLabel               _hostmonKeyFile_lbl     = new JLabel("Private Key File");
 	private JTextField           _hostmonKeyFile_txt     = new JTextField();
 	private JButton              _hostmonKeyFile_but     = new JButton("...");
@@ -384,7 +384,7 @@ public class ConnectionDialog
 	private JLabel               _pcsJdbcUsername_lbl        = new JLabel("Username");
 	private JTextField           _pcsJdbcUsername_txt        = new JTextField("sa");
 	private JLabel               _pcsJdbcPassword_lbl        = new JLabel("Password");
-	private JTextField           _pcsJdbcPassword_txt        = new JPasswordField();
+	private JTextField           _pcsJdbcPassword_txt        = null; // set to JPasswordField or JTextField depending on debug level
 	private JCheckBox            _pcsJdbcSavePassword_chk    = new JCheckBox("Save password", true);
 	private JLabel               _pcsTestConn_lbl            = new JLabel();
 	private JButton              _pcsTestConn_but            = new JButton("Test Connection");
@@ -449,7 +449,7 @@ public class ConnectionDialog
 	private JLabel               _offlineJdbcUsername_lbl          = new JLabel("Username");
 	private JTextField           _offlineJdbcUsername_txt          = new JTextField("sa");
 	private JLabel               _offlineJdbcPassword_lbl          = new JLabel("Password");
-	private JTextField           _offlineJdbcPassword_txt          = new JPasswordField();
+	private JTextField           _offlineJdbcPassword_txt          = null; // set to JPasswordField or JTextField depending on debug level
 	private JCheckBox            _offlineJdbcSavePassword_chk      = new JCheckBox("Save password", true);
 //	private JLabel               _offlineTestConn_lbl              = new JLabel();
 	private JButton              _offlineTestConn_but              = new JButton("Test Connection");
@@ -492,7 +492,7 @@ public class ConnectionDialog
 	private JLabel               _jdbcUsername_lbl     = new JLabel("Username");
 	private JTextField           _jdbcUsername_txt     = new JTextField("sa");
 	private JLabel               _jdbcPassword_lbl     = new JLabel("Password");
-	private JTextField           _jdbcPassword_txt     = new JPasswordField();
+	private JTextField           _jdbcPassword_txt     = null; // set to JPasswordField or JTextField depending on debug level
 	private JCheckBox            _jdbcSavePassword_chk = new JCheckBox("Save password", true);
 //	private JLabel               _jdbcTestConn_lbl     = new JLabel();
 	private JButton              _jdbcDriverInfo_but   = new JButton("JDBC Driver Info...");
@@ -544,6 +544,8 @@ public class ConnectionDialog
 
 	// When we actually did a connection, this will hold the Connection Profile Type NAME, if none was used, then it will hold null
 	private String _usedConnectionProfileTypeName = null;
+	// When we actually did a connection, this will hold the Connection Profile      NAME, if none was used, then it will hold null
+	private String _usedConnectionProfileName = null;
 
 	// Only do this ONCE
 	// If we have saved 'DBXTUNE_SAVE_DIR' in this dialog, then set it to the System Property
@@ -1192,8 +1194,8 @@ public class ConnectionDialog
 		return _disConnectTime;
 	}
 
-	public void setAseUsername(String username) { _aseUser_txt.setText(username); }
-	public void setAsePassword(String passwd)   { _asePasswd_txt.setText(passwd); }
+	public void setAseUsername(String username) { _aseUsername_txt.setText(username); }
+	public void setAsePassword(String passwd)   { _asePassword_txt.setText(passwd); }
 	public void setAseServer  (String server)
 	throws Exception
 	{
@@ -1222,8 +1224,8 @@ public class ConnectionDialog
 		}
 	}
 	
-	public String getAseUsername() { return _aseUser_txt.getText(); }
-	public String getAsePassword() { return _asePasswd_txt.getText(); }
+	public String getAseUsername() { return _aseUsername_txt.getText(); }
+	public String getAsePassword() { return _asePassword_txt.getText(); }
 	public String getAseServer  () { return StringUtil.getSelectedItemString(_aseServer_cbx); }
 
 	/** depending on what we have connected to give the user name we connected as 
@@ -1231,7 +1233,7 @@ public class ConnectionDialog
 	public String getUsername() 
 	{ 
 		if (getConnectionType() == TDS_CONN)
-			return _aseUser_txt.getText(); 
+			return _aseUsername_txt.getText(); 
 
 		if (getConnectionType() == OFFLINE_CONN)
 			return _offlineJdbcUsername_txt.getText(); 
@@ -1258,17 +1260,17 @@ public class ConnectionDialog
 		return null;
 	}
 
-	public void setSshUsername(String username) { _hostmonUser_txt   .setText(username); }
-	public void setSshPassword(String password) { _hostmonPasswd_txt .setText(password); }
-	public void setSshHostname(String hostname) { _hostmonHost_txt   .setText(hostname); }
-	public void setSshPort(String portStr)      { _hostmonPort_txt   .setText(portStr); }
-	public void setSshKeyFile(String keyFile)   { _hostmonKeyFile_txt.setText(keyFile); }
+	public void setSshUsername(String username) { _hostmonUsername_txt.setText(username); }
+	public void setSshPassword(String password) { _hostmonPassword_txt.setText(password); }
+	public void setSshHostname(String hostname) { _hostmonHost_txt    .setText(hostname); }
+	public void setSshPort(String portStr)      { _hostmonPort_txt    .setText(portStr); }
+	public void setSshKeyFile(String keyFile)   { _hostmonKeyFile_txt .setText(keyFile); }
 
-	public String getSshUsername() { return _hostmonUser_txt   .getText(); }
-	public String getSshPassword() { return _hostmonPasswd_txt .getText(); }
-	public String getSshHostname() { return _hostmonHost_txt   .getText(); }
-	public String getSshPortStr()  { return _hostmonPort_txt   .getText(); }
-	public String getSshKeyFile()  { return _hostmonKeyFile_txt.getText(); }
+	public String getSshUsername() { return _hostmonUsername_txt.getText(); }
+	public String getSshPassword() { return _hostmonPassword_txt.getText(); }
+	public String getSshHostname() { return _hostmonHost_txt    .getText(); }
+	public String getSshPortStr()  { return _hostmonPort_txt    .getText(); }
+	public String getSshKeyFile()  { return _hostmonKeyFile_txt .getText(); }
 
 	public String getOfflineJdbcDriver() { return _offlineJdbcDriver_cbx  .getEditor().getItem().toString(); }
 	public String getOfflineJdbcUrl()    { return _offlineJdbcUrl_cbx     .getEditor().getItem().toString(); }
@@ -1899,6 +1901,7 @@ public class ConnectionDialog
 		
 //		JScrollPane treeScroll = new JScrollPane(_connProfileTree, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		JScrollPane treeScroll = new JScrollPane(_connProfileTree);
+		treeScroll.setViewportView(_connProfileTree);
 
 		// Ctrl-C == Copy Profile Name
 		ActionMap actionMap = _connProfileTree.getActionMap();
@@ -2165,38 +2168,38 @@ public class ConnectionDialog
 
 		// Hide password or not...
 		if (_logger.isDebugEnabled())
-			_asePasswd_txt = new JTextField();
+			_asePassword_txt = new JTextField();
 		else
-			_asePasswd_txt = new JPasswordField();
+			_asePassword_txt = new JPasswordField();
 
-		_aseUser_lbl  .setToolTipText("User name to use when logging in to the below DB Server.");
-		_aseUser_txt  .setToolTipText("User name to use when logging in to the below DB Server.");
-		_asePasswd_lbl.setToolTipText("Password to use when logging in to the below DB Server");
-		_asePasswd_txt.setToolTipText("Password to use when logging in to the below DB Server");
+		_aseUsername_lbl.setToolTipText("User name to use when logging in to the below DB Server.");
+		_aseUsername_txt.setToolTipText("User name to use when logging in to the below DB Server.");
+		_asePassword_lbl.setToolTipText("Password to use when logging in to the below DB Server");
+		_asePassword_txt.setToolTipText("Password to use when logging in to the below DB Server");
 		_aseOptionSavePwd_chk      .setToolTipText("Save the password in the configuration file, and yes it's encrypted");
 		_aseOptionPwdEncryption_chk.setToolTipText("<html>Encrypt the password when sending it over the network<br>This will set jConnect option ENCRYPT_PASSWORD=true</html>");
 
 
 		
-		panel.add(_aseLoginIcon,  "");
-		panel.add(_aseLoginHelp,  "wmin 100, push, grow");
+		panel.add(_aseLoginIcon,    "");
+		panel.add(_aseLoginHelp,    "wmin 100, push, grow");
 
-		panel.add(_aseUser_lbl,   "");
-		panel.add(_aseUser_txt,   "push, grow");
+		panel.add(_aseUsername_lbl, "");
+		panel.add(_aseUsername_txt, "push, grow");
 
-		panel.add(_asePasswd_lbl, "");
-		panel.add(_asePasswd_txt, "push, grow");
+		panel.add(_asePassword_lbl, "");
+		panel.add(_asePassword_txt, "push, grow");
 
 		panel.add(_aseOptionSavePwd_chk, "skip, split");
 		panel.add(_aseOptionPwdEncryption_chk, "");
 
 		// ADD ACTION LISTENERS
-		_asePasswd_txt             .addActionListener(this);
+		_asePassword_txt             .addActionListener(this);
 		_aseOptionPwdEncryption_chk.addActionListener(this);
 
 		// ADD FOCUS LISTENERS
-		_aseUser_txt  .addFocusListener(this);
-		_asePasswd_txt.addFocusListener(this);
+		_aseUsername_txt.addFocusListener(this);
+		_asePassword_txt.addFocusListener(this);
 		
 		return panel;
 	}
@@ -2500,14 +2503,14 @@ public class ConnectionDialog
 
 		// Hide password or not...
 		if (_logger.isDebugEnabled())
-			_hostmonPasswd_txt = new JTextField();
+			_hostmonPassword_txt = new JTextField();
 		else
-			_hostmonPasswd_txt = new JPasswordField();
+			_hostmonPassword_txt = new JPasswordField();
 
-		_hostmonUser_lbl  .setToolTipText("User name to use when logging in to the below Operating System Host.");
-		_hostmonUser_txt  .setToolTipText("User name to use when logging in to the below Operating System Host.");
-		_hostmonPasswd_lbl.setToolTipText("Password to use when logging in to the below Operating System Host");
-		_hostmonPasswd_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
+		_hostmonUsername_lbl.setToolTipText("User name to use when logging in to the below Operating System Host.");
+		_hostmonUsername_txt.setToolTipText("User name to use when logging in to the below Operating System Host.");
+		_hostmonPassword_lbl.setToolTipText("Password to use when logging in to the below Operating System Host");
+		_hostmonPassword_txt.setToolTipText("Password to use when logging in to the below Operating System Host");
 		_hostmonOptionSavePwd_chk.setToolTipText("Save the password in the configuration file, and yes it's encrypted");
 		_hostmonKeyFile_lbl.setToolTipText("SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.");
 		_hostmonKeyFile_txt.setToolTipText("SSH Private Key File, if you want to use 'Open SSH private key' to authenticate.");
@@ -2515,11 +2518,11 @@ public class ConnectionDialog
 		panel.add(_hostmonLoginIcon,  "");
 		panel.add(_hostmonLoginHelp,  "wmin 100, push, grow");
 
-		panel.add(_hostmonUser_lbl,   "");
-		panel.add(_hostmonUser_txt,   "push, grow");
+		panel.add(_hostmonUsername_lbl, "");
+		panel.add(_hostmonUsername_txt, "push, grow");
 
-		panel.add(_hostmonPasswd_lbl, "");
-		panel.add(_hostmonPasswd_txt, "push, grow");
+		panel.add(_hostmonPassword_lbl, "");
+		panel.add(_hostmonPassword_txt, "push, grow");
 
 		panel.add(_hostmonOptionSavePwd_chk,      "skip");
 
@@ -2530,16 +2533,16 @@ public class ConnectionDialog
 		// ADD ACTION LISTENERS
 		_hostmonKeyFile_but.addActionListener(this);
 
-//		_hostmonUser_txt  .addActionListener(this);
-//		_hostmonPasswd_txt.addActionListener(this);
-		_hostmonUser_txt  .addKeyListener(this);
-		_hostmonPasswd_txt.addKeyListener(this);
+//		_hostmonUsername_txt.addActionListener(this);
+//		_hostmonPassword_txt.addActionListener(this);
+		_hostmonUsername_txt.addKeyListener(this);
+		_hostmonPassword_txt.addKeyListener(this);
 		_hostmonOptionSavePwd_chk.addActionListener(this);
 		_hostmonKeyFile_txt.addKeyListener(this);
 
 		// ADD FOCUS LISTENERS
-//		_hostmonUser_txt  .addFocusListener(this);
-//		_hostmonPasswd_txt.addFocusListener(this);
+//		_hostmonUsername_txt.addFocusListener(this);
+//		_hostmonPassword_txt.addFocusListener(this);
 		
 		return panel;
 	}
@@ -2762,6 +2765,12 @@ public class ConnectionDialog
 		String dbxTuneSaveDir = StringUtil.getEnvVariableValue("DBXTUNE_SAVE_DIR");
 		if (dbxTuneSaveDir == null)
 			dbxTuneSaveDir = "Not yet specified";
+
+		// Hide password or not...
+		if (_logger.isDebugEnabled())
+			_pcsJdbcPassword_txt = new JTextField();
+		else
+			_pcsJdbcPassword_txt = new JPasswordField();
 		
 		_pcsWriter_lbl      .setToolTipText("Persistent Counter Storage Implementation(s) that is responsible for Storing the Counter Data.");
 		_pcsWriter_cbx      .setToolTipText("Persistent Counter Storage Implementation(s) that is responsible for Storing the Counter Data.");
@@ -2872,6 +2881,7 @@ public class ConnectionDialog
 
 		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterJdbc");
 		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterToHttpJson");
+		_pcsWriter_cbx    .addItem("com.asetune.pcs.PersistWriterToInfluxDb");
 
 //		_pcsJdbcDriver_cbx.addItem("org.h2.Driver");
 //		_pcsJdbcDriver_cbx.addItem(AseConnectionFactory.getDriver());
@@ -3133,6 +3143,12 @@ public class ConnectionDialog
 		JPanel panel = SwingUtils.createPanel("Counter Storage Read", true);
 		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_offlinePanel = panel;
+
+		// Hide password or not...
+		if (_logger.isDebugEnabled())
+			_offlineJdbcPassword_txt = new JTextField();
+		else
+			_offlineJdbcPassword_txt = new JPasswordField();
 		
 		_offlineHelp.setText("Read Stored Counter Data from an offline storage\n" +
 			"The Saved Counter Data can be stored in a database eather by the GUI or NO-GUI mode.\n" +
@@ -3317,8 +3333,14 @@ public class ConnectionDialog
 		JPanel panel = SwingUtils.createPanel("JDBC Connection Information", true);
 		panel.setLayout(new MigLayout("", "", ""));   // insets Top Left Bottom Right
 		_jdbcPanel = panel;
-		
+
 		_jdbcHelp.setText("Connect to any JDBC datasource\n\nNote: The JDBC Driver needs to be in the classpath\n");
+
+		// Hide password or not...
+		if (_logger.isDebugEnabled())
+			_jdbcPassword_txt = new JTextField();
+		else
+			_jdbcPassword_txt = new JPasswordField();
 
 		_jdbcProfile_lbl    .setToolTipText("Choose an earlier sessions that was saved");
 		_jdbcProfile_cbx    .setToolTipText("Choose an earlier sessions that was saved");
@@ -3996,7 +4018,7 @@ public class ConnectionDialog
 			checkMoreStuff = true;
 			checkHostPort  = true;
 
-			if (_aseUser_txt.getText().trim().equals("")) 
+			if (_aseUsername_txt.getText().trim().equals("")) 
 				aseProblem = "ASE User name must be specified";
 			
 			if (_aseSshTunnel_chk.isSelected() && _aseSshTunnelInfo != null && ! _aseSshTunnelInfo.isValid() )
@@ -4068,11 +4090,11 @@ public class ConnectionDialog
 	
 				if (_aseHostMonitor_chk.isSelected())
 				{
-					String username = _hostmonUser_txt   .getText();
-					String password = _hostmonPasswd_txt .getText();
-					String hostname = _hostmonHost_txt   .getText();
-					String portStr  = _hostmonPort_txt   .getText();
-					String keyFile  = _hostmonKeyFile_txt.getText();
+					String username = _hostmonUsername_txt.getText();
+					String password = _hostmonPassword_txt.getText();
+					String hostname = _hostmonHost_txt    .getText();
+					String portStr  = _hostmonPort_txt    .getText();
+					String keyFile  = _hostmonKeyFile_txt .getText();
 		
 					try { Integer.parseInt(portStr); } 
 					catch (NumberFormatException e) 
@@ -4279,17 +4301,17 @@ public class ConnectionDialog
 			{
 				if (TAB_TITLE_ASE.equals(_tab.getSelectedTitle(false)))
 				{
-					if (_aseUser_txt  .getText().trim().equals("")) {_aseUser_txt  .requestFocus(); return; }
-					if (_asePasswd_txt.getText().trim().equals("")) {_asePasswd_txt.requestFocus(); return; }
-					if (_aseHost_txt  .getText().trim().equals("")) {_aseHost_txt  .requestFocus(); return; }
-					if (_asePort_txt  .getText().trim().equals("")) {_asePort_txt  .requestFocus(); return; }
+					if (_aseUsername_txt.getText().trim().equals("")) {_aseUsername_txt.requestFocus(); return; }
+					if (_asePassword_txt.getText().trim().equals("")) {_asePassword_txt.requestFocus(); return; }
+					if (_aseHost_txt    .getText().trim().equals("")) {_aseHost_txt    .requestFocus(); return; }
+					if (_asePort_txt    .getText().trim().equals("")) {_asePort_txt    .requestFocus(); return; }
 				}
 				else if (TAB_TITLE_HOSTMON.equals(_tab.getSelectedTitle(false)))
 				{
-					if (_hostmonUser_txt  .getText().trim().equals("")) {_hostmonUser_txt  .requestFocus(); return; }
-					if (_hostmonPasswd_txt.getText().trim().equals("")) {_hostmonPasswd_txt.requestFocus(); return; }
-					if (_hostmonHost_txt  .getText().trim().equals("")) {_hostmonHost_txt  .requestFocus(); return; }
-					if (_hostmonPort_txt  .getText().trim().equals("")) {_hostmonPort_txt  .requestFocus(); return; }
+					if (_hostmonUsername_txt.getText().trim().equals("")) {_hostmonUsername_txt.requestFocus(); return; }
+					if (_hostmonPassword_txt.getText().trim().equals("")) {_hostmonPassword_txt.requestFocus(); return; }
+					if (_hostmonHost_txt    .getText().trim().equals("")) {_hostmonHost_txt    .requestFocus(); return; }
+					if (_hostmonPort_txt    .getText().trim().equals("")) {_hostmonPort_txt    .requestFocus(); return; }
 				}
 				else if (TAB_TITLE_OFFLINE.equals(_tab.getSelectedTitle(false)))
 				{
@@ -4363,8 +4385,8 @@ public class ConnectionDialog
 		String  tdsUseUrlStr          = _aseConnUrl_txt.getText();
 		String  tdsUrlOptions         = _aseOptions_txt.getText();
 
-		String username               = _aseUser_txt.getText();
-		String password               = _asePasswd_txt.getText();
+		String username               = _aseUsername_txt.getText();
+		String password               = _asePassword_txt.getText();
 		String hosts                  = _aseHost_txt.getText();
 		String ports                  = _asePort_txt.getText();
 
@@ -4580,10 +4602,10 @@ public class ConnectionDialog
 	 */
 	private SshConnection hostmonCreateConnectionObject(ConnectionProfile connProfile)
 	{
-		String username = _hostmonUser_txt  .getText();
-		String password = _hostmonPasswd_txt.getText();
-		String hostname = _hostmonHost_txt  .getText();
-		String portStr  = _hostmonPort_txt  .getText();
+		String username = _hostmonUsername_txt.getText();
+		String password = _hostmonPassword_txt.getText();
+		String hostname = _hostmonHost_txt    .getText();
+		String portStr  = _hostmonPort_txt    .getText();
 		int port = 22;
 		String keyFile  = _hostmonKeyFile_txt.getText();
 
@@ -5864,13 +5886,13 @@ if ( ! jdbcSshTunnelUse )
 		}
 
 		// --- ASE: TEXTFIELD: PASSWORD ---
-		if (_asePasswd_txt.equals(source))
+		if (_asePassword_txt.equals(source))
 		{
 			//saveProps();
 			//setVisible(false);
-			if (    _aseUser_txt  .getText().trim().equals("")
-			     || _aseHost_txt  .getText().trim().equals("")
-			     || _asePort_txt  .getText().trim().equals("")
+			if (    _aseUsername_txt.getText().trim().equals("")
+			     || _aseHost_txt    .getText().trim().equals("")
+			     || _asePort_txt    .getText().trim().equals("")
 			   )
 			{
 				setFocus();
@@ -6532,10 +6554,10 @@ if ( ! jdbcSshTunnelUse )
 		{
 			_aseProfile_cbx.setSelectedItem(NO_PROFILE_IS_SELECTED);
 			_aseServer_cbx.setSelectedItem(LocalSrvComboBox.SERVER_FIRST_ENTRY);
-			_aseUser_txt  .setText("");
-			_asePasswd_txt.setText("");
-			_aseHost_txt  .setText("");
-			_asePort_txt  .setText("");
+			_aseUsername_txt.setText("");
+			_asePassword_txt.setText("");
+			_aseHost_txt    .setText("");
+			_asePort_txt    .setText("");
 		}
 		
 		// --- JDBC: Profile ---
@@ -7335,6 +7357,10 @@ if ( ! jdbcSshTunnelUse )
 			}
 
 
+			// If we call the actionPerformed() from outside, we do not want to save stuff
+			if (isVisible())
+				saveProps();
+
 			// SET CONNECTION TYP and "CLOSE" the dialog
 			_connectionType = connType;
 			setVisible(false);
@@ -7346,6 +7372,12 @@ if ( ! jdbcSshTunnelUse )
 	{
 		// Check if it's "<choose a profile>" and if so; return null
 		selectedProfileName = ProfileComboBoxModel.notSelectedValueToNull(selectedProfileName);
+		
+		// Save the last ConnectionProfile... so we can "select it" in the tree view next time we open
+		if (StringUtil.hasValue(selectedProfileName))
+		{
+			_usedConnectionProfileName = (connProfile == null) ? selectedProfileName : connProfile.getName();
+		}
 		
 		// Get what database product we connected to
 		String dbProduct = null;
@@ -7383,8 +7415,8 @@ if ( ! jdbcSshTunnelUse )
 			ConnectionProfile.TdsEntry tds = new ConnectionProfile.TdsEntry(key);
 			tds._profileTypeName        = getSelectedConnectionProfileTypeName(connType);
 			tds._tdsIfile               = _aseIfile_txt .getText();
-			tds._tdsUsername            = _aseUser_txt  .getText();
-			tds._tdsPassword            = _asePasswd_txt.getText();
+			tds._tdsUsername            = _aseUsername_txt.getText();
+			tds._tdsPassword            = _asePassword_txt.getText();
 			tds._tdsNwEncryptPasswd     = _aseOptionPwdEncryption_chk.isSelected();
 			tds._tdsServer              = StringUtil.getSelectedItemString(_aseServer_cbx);
 			tds._tdsHosts               = _aseHost_txt  .getText();
@@ -7532,8 +7564,8 @@ if ( ! jdbcSshTunnelUse )
 
 		if (entry._dbxtuneOptOsMonitoring)
 		{
-			entry._osMonUsername      = _hostmonUser_txt         .getText();
-			entry._osMonPassword      = _hostmonPasswd_txt       .getText();
+			entry._osMonUsername      = _hostmonUsername_txt     .getText();
+			entry._osMonPassword      = _hostmonPassword_txt     .getText();
 			entry._osMonSavePassword  = _hostmonOptionSavePwd_chk.isSelected();
 			entry._osMonHost          = _hostmonHost_txt         .getText();
 			entry._osMonPort          = StringUtil.parseInt(_hostmonPort_txt.getText(), 22);
@@ -7597,8 +7629,8 @@ if ( ! jdbcSshTunnelUse )
 
 		if (entry._dbxtuneOptOsMonitoring)
 		{
-			_hostmonUser_txt         .setText(    entry._osMonUsername);
-			_hostmonPasswd_txt       .setText(    entry._osMonPassword);
+			_hostmonUsername_txt     .setText(    entry._osMonUsername);
+			_hostmonPassword_txt     .setText(    entry._osMonPassword);
 			_hostmonOptionSavePwd_chk.setSelected(entry._osMonSavePassword);
 			_hostmonHost_txt         .setText(    entry._osMonHost);
 			_hostmonPort_txt         .setText(    entry._osMonPort+"");
@@ -7654,8 +7686,8 @@ if ( ! jdbcSshTunnelUse )
 				setConnectionProfileTypeName(connProfile, entry._profileTypeName);
 //				_aseIfile_txt              .setText(        entry._tdsIfile);
 				loadNewInterfaces(entry._tdsIfile);
-				_aseUser_txt               .setText(        entry._tdsUsername);
-				_asePasswd_txt             .setText(        entry._tdsPassword);
+				_aseUsername_txt           .setText(        entry._tdsUsername);
+				_asePassword_txt           .setText(        entry._tdsPassword);
 				_aseOptionPwdEncryption_chk.setSelected(    entry._tdsNwEncryptPasswd);
 				_aseServer_cbx             .setSelectedItem(entry._tdsServer);
 				_aseHost_txt               .setText(        entry._tdsHosts);
@@ -8243,6 +8275,7 @@ if ( ! jdbcSshTunnelUse )
 		}
 		conf.setProperty(PROPKEY_CONN_PROFILE_PANEL_VISIBLE,    _connProfileVisible_chk.isSelected());
 		conf.setProperty(PROPKEY_CONN_TABED_PANEL_VISIBLE,      _connTabbedVisible_chk .isSelected());
+		conf.setProperty("conn.profile.last.used",              _usedConnectionProfileName == null ? "" : _usedConnectionProfileName);
 
 
 		String hostPort = AseConnectionFactory.toHostPortStr(_aseHost_txt.getText(), _asePort_txt.getText());
@@ -8253,12 +8286,12 @@ if ( ! jdbcSshTunnelUse )
 		conf.setProperty("conn.hostname",                       _aseHost_txt.getText());
 		conf.setProperty("conn.port",                           _asePort_txt.getText());
 
-		conf.setProperty("conn.username",                       _aseUser_txt.getText());
-		conf.setProperty("conn.username."+hostPort,             _aseUser_txt.getText());
+		conf.setProperty("conn.username",                       _aseUsername_txt.getText());
+		conf.setProperty("conn.username."+hostPort,             _aseUsername_txt.getText());
 		if (_aseOptionSavePwd_chk.isSelected())
 		{
-			conf.setProperty("conn.password",           _asePasswd_txt.getText(), true);
-			conf.setProperty("conn.password."+hostPort, _asePasswd_txt.getText(), true);
+			conf.setProperty("conn.password",           _asePassword_txt.getText(), true);
+			conf.setProperty("conn.password."+hostPort, _asePassword_txt.getText(), true);
 		}
 		else
 		{
@@ -8312,12 +8345,12 @@ if ( ! jdbcSshTunnelUse )
 		//----------------------------------
 		if ( _aseHostMonitor_chk.isSelected() )
 		{
-			conf.setProperty("ssh.conn.hostname."+hostPort,   _hostmonHost_txt.getText() );
-			conf.setProperty("ssh.conn.port."+hostPort,       _hostmonPort_txt.getText() );
-			conf.setProperty("ssh.conn.username."+hostPort,   _hostmonUser_txt.getText() );
+			conf.setProperty("ssh.conn.hostname."+hostPort,   _hostmonHost_txt    .getText() );
+			conf.setProperty("ssh.conn.port."+hostPort,       _hostmonPort_txt    .getText() );
+			conf.setProperty("ssh.conn.username."+hostPort,   _hostmonUsername_txt.getText() );
 
 			if (_hostmonOptionSavePwd_chk.isSelected())
-				conf.setProperty("ssh.conn.password."+hostPort, _hostmonPasswd_txt.getText(), true);
+				conf.setProperty("ssh.conn.password."+hostPort, _hostmonPassword_txt.getText(), true);
 			else
 				conf.remove("ssh.conn.password."+hostPort);
 
@@ -8444,6 +8477,11 @@ if ( ! jdbcSshTunnelUse )
 		if ( ! conf.getBooleanProperty(PROPKEY_CONN_TABED_PANEL_VISIBLE, DEFAULT_CONN_TABED_PANEL_VISIBLE) )
 			_connTabbedVisible_chk.doClick();
 
+		_usedConnectionProfileName = conf.getProperty("conn.profile.last.used", "");
+		if (StringUtil.hasValue(_usedConnectionProfileName))
+			setConnectionProfileSelectedName(_usedConnectionProfileName);
+			
+		
 		String str = null;
 		boolean bol = false;
 
@@ -8838,19 +8876,19 @@ if ( ! jdbcSshTunnelUse )
 		str = conf.getProperty("conn.username."+hostPortStr);
 		if (str != null)
 		{
-			_aseUser_txt.setText(str);
+			_aseUsername_txt.setText(str);
 		}
 		else
 		{
 			str = conf.getProperty("conn.username");
 			if (str != null)
-				_aseUser_txt.setText(str);
+				_aseUsername_txt.setText(str);
 		}
 
 		// First do "conn.password.hostName.portNum", if not found, go to "conn.password"
 		str = getPasswordForServer(hostPortStr);
 		if (str != null)
-			_asePasswd_txt.setText(str);
+			_asePassword_txt.setText(str);
 
 
 		// SavePassword and NetworkEncryptionOfPassword
@@ -8921,11 +8959,11 @@ if ( ! jdbcSshTunnelUse )
 
 		// USERNAME
 		str = conf.getProperty("ssh.conn.username."+hostPortStr, "");
-		_hostmonUser_txt.setText(str);
+		_hostmonUsername_txt.setText(str);
 
 		// PASSWORD
 		str = conf.getProperty("ssh.conn.password."+hostPortStr, "");
-		_hostmonPasswd_txt.setText(str);
+		_hostmonPassword_txt.setText(str);
 
 		// HOSTNAME
 		str = conf.getProperty("ssh.conn.hostname."+hostPortStr, "");
@@ -10184,7 +10222,18 @@ if ( ! jdbcSshTunnelUse )
 		setBorderForConnectionProfileTypeName(profileTypeName);
 	}
 
+	/** Set selected item in the Tree View */
+	private void setConnectionProfileSelectedName(String name)
+	{
+		TreePath treePath = SwingUtils.findNameInTree(_connProfileTree, name);
+		if (treePath != null)
+		{
+			_connProfileTree.setSelectionPath(treePath);
 
+			// Scroll the selected tree path to "center" of the view
+			SwingUtils.scrollToCenter(_connProfileTree, treePath, true);
+		}
+	}
 
 	private ProfileType getSelectedConnectionProfileType(int connType)
 	{

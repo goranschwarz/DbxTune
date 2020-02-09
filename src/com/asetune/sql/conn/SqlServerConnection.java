@@ -26,10 +26,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -49,6 +52,9 @@ extends DbxConnection
 
 	public static final String  PROPKEY_getTableExtraInfo_useSpSpaceused = "SqlServerConnection.getTableExtraInfo.useSpSpaceused";
 	public static final boolean DEFAULT_getTableExtraInfo_useSpSpaceused = true;
+
+	public static final String  PROPKEY_getTableExtraInfo_getIndexTypeInfo = "SqlServerConnection.getTableExtraInfo.getIndexTypeInfo";
+	public static final boolean DEFAULT_getTableExtraInfo_getIndexTypeInfo = true;
 
 	public SqlServerConnection(Connection conn)
 	{
@@ -335,6 +341,43 @@ extends DbxConnection
 		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".";
 		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
 
+		boolean getIndexTypeInfo = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_getIndexTypeInfo, DEFAULT_getTableExtraInfo_getIndexTypeInfo);
+		if (getIndexTypeInfo)
+		{
+			String sql = "exec "+cat+".sp_helpindex '" + schema + table + "'";
+			try
+			{
+				List<ResultSetTableModel> rstmList = DbUtils.exec(_conn, sql, 2);
+				
+				if (rstmList.size() >= 1)
+				{
+					ResultSetTableModel indexInfo = rstmList.get(0);
+					
+					Map<String, String> extIndexInfo = new HashMap<>(); // <indexName, description>
+					for (int r=0; r<indexInfo.getRowCount(); r++)
+					{
+						String indexName        = indexInfo.getValueAsString(r, "index_name",        false, "");
+					//	String indexKeys        = indexInfo.getValueAsString(r, "index_keys",        false, "");
+						String indexDescription = indexInfo.getValueAsString(r, "index_description", false, "");
+						
+						// SYBASE also has: index_max_rows_per_page, index_fillfactor, index_reservepagegap, index_created, index_local
+						// But we do not read that... for the moment!
+
+						extIndexInfo.put(indexName, "Desc=["+indexDescription+"]");
+					}
+
+					// ADD INFO
+					extraInfo.put(TableExtraInfo.IndexExtraInfoDescription, new TableExtraInfo(TableExtraInfo.IndexExtraInfoDescription, "IndexInfoDescription", extIndexInfo, "extended Index Description Information", null));
+				}
+			}
+			catch (SQLException ex)
+			{
+				_logger.error("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex);
+				if (_logger.isDebugEnabled())
+					_logger.debug("getTableExtraInfo(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
+			}
+		}
+		
 		boolean useSpSpaceused = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_getTableExtraInfo_useSpSpaceused, DEFAULT_getTableExtraInfo_useSpSpaceused);
 		if (useSpSpaceused)
 		{
@@ -397,9 +440,32 @@ extends DbxConnection
 	}
 
 	@Override
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		
+		catalog = StringUtil.isNullOrBlank(catalog) ? "" : catalog + ".";
+		schema  = StringUtil.isNullOrBlank(schema)  ? "" : schema  + ".";
+
+		String sql = "SELECT SUM(row_count) as RowCnt, count(*) as partitionCnt \n"
+				+ "FROM " + catalog + "sys.dm_db_partition_stats \n"
+				+ "WHERE object_id=OBJECT_ID('" + catalog + schema + table + "') \n"
+				+ "AND (index_id=0 or index_id=1)";
+		
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+		
+		return rowCount;
+	}
+
+	@Override
 	public List<String> getViewReferences(String cat, String schema, String viewName)
 	{
-		List<String> list = new ArrayList<>();
+		Set<String> set = new LinkedHashSet<>();
 
 		cat    = StringUtil.isNullOrBlank(cat)    ? "" : cat    + ".dbo.";
 		schema = StringUtil.isNullOrBlank(schema) ? "" : schema + ".";
@@ -414,7 +480,7 @@ extends DbxConnection
 				String object = rs.getString(1);
 				String type   = rs.getString(2);
 				
-				list.add(type + " - " + object);
+				set.add(type + " - " + object);
 			}
 			rs.close();
 			stmnt.close();
@@ -426,7 +492,7 @@ extends DbxConnection
 				_logger.debug("getViewReferences(): Problems executing sql '"+sql+"'. Caught="+ex, ex);
 		}
 
-		return list;
+		return new ArrayList<>(set);
 	}
 
 //	@Override

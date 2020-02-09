@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,8 +20,25 @@ import java.util.concurrent.TimeUnit;
 public class TimeUtils
 {
 	/** synchronize on this object before it's used... SimpleDateFormat is <b>NOT</b> thread safe */
-	public static final SimpleDateFormat ISO8601_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-	public static final SimpleDateFormat         DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+	public static final SimpleDateFormat ISO8601_DATE_FORMAT;
+	public static final SimpleDateFormat         DATE_FORMAT;
+
+	public static final SimpleDateFormat ISO8601_UTC_DATE_FORMAT;
+	public static final SimpleDateFormat         UTC_DATE_FORMAT;
+
+	static
+	{
+		// Initialize the LOCAL TIMEZONE 
+		ISO8601_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+		        DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		
+		// Initialize the UTC TIMEZONE 
+		ISO8601_UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+		        UTC_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+		ISO8601_UTC_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+		        UTC_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+	}
 
 	/*---------------------------------------------------
 	** class members
@@ -577,7 +595,7 @@ public class TimeUtils
 	}
 
 	/**
-	 * Format a Timestamp to a String<br>
+	 * Format a Timestamp to a Local TimeZone String<br>
 	 * format is: "yyyy-MM-dd HH:mm:ss.SSS"<br>
 	 * Example output: "2018-01-08 09:56:53.716"
 	 * @param ts
@@ -588,6 +606,22 @@ public class TimeUtils
 		synchronized (DATE_FORMAT)
 		{
 			return DATE_FORMAT.format( new Date(ts) );
+		}
+	}
+
+
+	/**
+	 * Format a Timestamp to a UTC String<br>
+	 * format is: "yyyy-MM-dd HH:mm:ss.SSS"<br>
+	 * Example output: "2018-01-08 09:56:53.716"
+	 * @param ts
+	 * @return String in above format
+	 */
+	public static String toStringUtc(long ts)
+	{
+		synchronized (DATE_FORMAT)
+		{
+			return UTC_DATE_FORMAT.format( new Date(ts));
 		}
 	}
 

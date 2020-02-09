@@ -31,7 +31,7 @@
     <cp>.\lib\planviewer.jar</cp>
     <cp>.\lib\commons-cli-1.2.jar</cp>
     <cp>.\lib\proxy-vole_20121203.jar</cp>
-    <cp>.\lib\ganymed-ssh2-build251beta1.jar</cp>
+    <cp>.\lib\ganymed-ssh2-262.jar</cp>
   </classPath>
   <jre>
     <path></path>

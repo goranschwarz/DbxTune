@@ -1014,6 +1014,9 @@ public class StringUtil
 	 */
 	public static String left(String str, int expandToSize, boolean allowGrow, String quoteStrLeft, String quoteStrRight)
 	{
+		if (str == null)
+			str = "";
+
 		// max size 128K for a sting to justify, it's big, but it's a limit...
 		int maxSize = 128 * 1024;
 
@@ -1276,6 +1279,75 @@ public class StringUtil
 	}
 
 	/**
+	 * Count how long (how many bytes) this String will take in-case it's translated to UTF-8
+	 * @param sequence
+	 * @return
+	 */
+	// Below was grabbed from: https://stackoverflow.com/questions/8511490/calculating-length-in-utf-8-of-java-string-without-actually-encoding-it
+	public static int utf8Length(CharSequence str) 
+	{
+		if (str == null)
+			return 0;
+
+		int count = 0;
+		for (int i = 0, len = str.length(); i < len; i++) 
+		{
+			char ch = str.charAt(i);
+
+			if (ch <= 0x7F) {
+				count++;
+			} else if (ch <= 0x7FF) {
+				count += 2;
+			} else if (Character.isHighSurrogate(ch)) {
+				count += 4;
+				++i;
+			} else {
+				count += 3;
+			}
+		}
+		return count;
+	}
+
+	/**
+	 * Truncate end of string, if the string would contain MORE than the allowed number of BYTES for UTF-8 storage.
+	 * 
+	 * @param sequence
+	 * @param maxBytes
+	 * @return
+	 */
+	public static String utf8Truncate(CharSequence str, int maxBytes) 
+	{
+		if (str == null)
+			return null;
+
+		StringBuilder sb = new StringBuilder();
+		
+		int count = 0;
+		for (int i = 0, len = str.length(); i < len; i++) 
+		{
+			char ch = str.charAt(i);
+			
+			if (ch <= 0x7F) {
+				count++;
+			} else if (ch <= 0x7FF) {
+				count += 2;
+			} else if (Character.isHighSurrogate(ch)) {
+				count += 4;
+				++i;
+			} else {
+				count += 3;
+			}
+			
+			// Exit early when we reaches maxBytes
+			if (count > maxBytes)
+				return sb.toString();
+			
+			sb.append(ch);
+		}
+		return sb.toString();
+	}
+	
+	/**
 	 * Duplicate the input string X number of times
 	 * @param str
 	 * @param size
@@ -1309,6 +1381,15 @@ public class StringUtil
 			sb.append("                                                           ");
 
 		return sb.substring(0, fill);
+	}
+
+	public static String fillSpace(int spaceCnt)
+	{
+		StringBuilder sb = new StringBuilder(spaceCnt);
+		for (int i=0; i<spaceCnt; i++)
+			sb.append(' ');
+
+		return sb.toString();
 	}
 
 	/**

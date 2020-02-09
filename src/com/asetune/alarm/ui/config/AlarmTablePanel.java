@@ -165,7 +165,8 @@ implements TableModelListener
 				{
 					// <CMNAME>.alarm.system.enabled.<COLNAME>
 					// Only for names that do not contin ' ' spaces... FIXME: This is UGGLY, create a type/property which describes if we should write the '*.enable.*' property or not...
-					if ( ase.getName().indexOf(' ') == -1)
+//					if ( ase.getName().indexOf(' ') == -1)
+					if (ase.isAlarmSwitch())
 						conf.setProperty(CountersModel.replaceCmAndColName(ae._cmName, CountersModel.PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, ase.getName()), ase.isSelected());
 
 					// Various properties defined by the CounterModel

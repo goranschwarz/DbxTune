@@ -114,9 +114,9 @@ extends TableModel
 	public String getColumnToolTip(String colName);
 	public String getCellToolTip(int mrow, int mcol);
 
-	public String getSqlDataType(String colName);
-
-	public String getSqlDataType(int colIndex);
+//	public String getSqlDataType(String colName);
+//	public String getSqlDataType(int colIndex);
+	public String getSqlDataType(DbxConnection conn, int colIndex);
 
 	/**
 	 * Get name for the Label of the TabbedPane

@@ -30,6 +30,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -54,10 +55,10 @@ extends PipeCommandAbstract
 	private String  _fromCharset = DEFAULT_fromCharset;
 	private String  _toCharset   = DEFAULT_toCharset;
 
-	public PipeCommandConvert(String input, String sqlString)
+	public PipeCommandConvert(String input, String sqlString, ConnectionProvider connProvider)
 	throws PipeCommandException
 	{
-		super(input, sqlString);
+		super(input, sqlString, connProvider);
 		parse(input);
 	}
 

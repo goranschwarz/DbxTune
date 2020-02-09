@@ -352,6 +352,16 @@ extends CentralPersistWriterBase
 						}
 					}
 				}
+				if ( ! urlMap.containsKey("REUSE_SPACE") )
+				{
+					change = true;
+					_logger.info("H2 URL add option: REUSE_SPACE=FALSE");
+					_logger.info("#########################################################");
+					_logger.info("H2, option 'REUSE_SPACE=FALSE' means that A LOT MORE disk space will be used for database storage (default is REUSE_SPACE=TRUE). But less CPU/IO will be done (due to 'DB garbage cleanup' is disabled). Note: this is a temporary workaround until H2 becomes better at this. The DB Size will be 'shrinked' (by shutdown defrag) by the 'CentralH2Defrag', which is noramlly scheduled at 04:00 every day.");
+					_logger.info("#########################################################");
+					
+					urlMap.put("REUSE_SPACE",  "FALSE");
+				}
 
 				// This property is only used when using the MVStore storage engine. How long to retain old, persisted data, in milliseconds. 
 				// The default is 45000 (45 seconds), 0 means overwrite data as early as possible. 
@@ -569,6 +579,7 @@ extends CentralPersistWriterBase
 				_logger.info("Do H2 Specific settings for the database.");
 				setH2SpecificSettings(_mainConn);
 
+				// Get H2 Configuration/Settings
 				Map<String, String> configMap = getH2Settings(_mainConn);
 				_logger.info("H2 Configuration/Settings: " + configMap);
 				
@@ -842,7 +853,8 @@ extends CentralPersistWriterBase
 	{
 		Map<String, String> map = new LinkedHashMap<>();
 
-		String sql = "select NAME, VALUE from INFORMATION_SCHEMA.SETTINGS order by NAME";
+		String sql = "select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [NAME]";
+		sql = conn.quotifySqlString(sql);
 		
 		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
 		{
@@ -2300,7 +2312,7 @@ extends CentralPersistWriterBase
 				String tabName = getTableName(conn, schemaName, Table.CENTRAL_SESSIONS, null, true);
 				sbSql = new StringBuffer();
 				sbSql.append(" update ").append(tabName).append("\n");
-				sbSql.append("    set  ").append(lq).append("NumOfSamples")       .append(rq).append(" = ").append(lq).append("NumOfSamples").append(lq).append(" + 1").append("\n");
+				sbSql.append("    set  ").append(lq).append("NumOfSamples")       .append(rq).append(" = ").append(lq).append("NumOfSamples").append(rq).append(" + 1").append("\n");
 				sbSql.append("        ,").append(lq).append("LastSampleTime")     .append(rq).append(" = '").append(sessionSampleTime).append("'").append("\n");
 
 				if (StringUtil.hasValue(collectorCurrentUrl))
@@ -2308,7 +2320,12 @@ extends CentralPersistWriterBase
 
 				sbSql.append("  where ").append(lq).append("SessionStartTime")   .append(rq).append(" = '").append(sessionStartTime).append("'").append("\n");
 
-				conn.dbExec(sbSql.toString());
+				String sql = sbSql.toString();
+				int rowCount = conn.dbExec(sql);
+				if (rowCount != 1)
+				{
+					_logger.warn("Problems updating '" + tabName + "', rowcount is NOT 1, rowcount = " + rowCount + ", sessionStartTime='" + sessionStartTime + "'. Executed following SQL: " + sql);
+				}
 				getStatistics().incUpdates();
 
 				//--------------------------------------

@@ -6,7 +6,8 @@ userName="sa"
 srvName=""
 password=""
 keyPassPhrase="sybase"
-passwdFile="${HOME}/.passwd.enc"
+#passwdFile="${HOME}/.passwd.enc"
+passwdFile="$(echo ~sybase/.passwd.enc)" ## Do echo so bash will resolve it to a real/full path 
 debugMode=0
 listPasswdFile=1
 
@@ -77,7 +78,7 @@ function readCmdLine
 			-S)    srvName=$2;                               shift 2;;
 			-P)    password=$2;                              shift 2;;
 			-k)    keyPassPhrase=$2;                         shift 2;;
-			-r)    passwdFile=$2;                            shift 2;;
+			-f)    passwdFile=$2;                            shift 2;;
 			-x)    debugMode=1;                              shift;;
 			-l)    (( listPasswdFile ^= 1 ));                shift;;
 

@@ -38,6 +38,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
@@ -65,6 +66,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTree;
+import javax.swing.JViewport;
 import javax.swing.JWindow;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
@@ -82,6 +85,8 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 
 import org.apache.log4j.Logger;
 import org.jdesktop.swingx.JXEditorPane;
@@ -2425,6 +2430,88 @@ public class SwingUtils
 
 		return getParentWindow(KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner());
 	}
+
+	
+
+	/**
+	 * Get a TreePath with the first DefaultMutableTreeNode that matches the "display name"
+	 * 
+	 * @param tree
+	 * @param name
+	 * @return
+	 */
+	public static TreePath findNameInTree(JTree tree, String name) 
+	{
+		DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+		return findNameInTree(root, name);
+	}
+
+	/**
+	 * Get a TreePath with the first DefaultMutableTreeNode that matches the "display name"
+	 * 
+	 * @param tree
+	 * @param name
+	 * @return
+	 */
+	private static TreePath findNameInTree(DefaultMutableTreeNode root, String s) 
+	{
+		@SuppressWarnings("unchecked")
+		Enumeration<DefaultMutableTreeNode> e = root.depthFirstEnumeration();
+		while (e.hasMoreElements()) 
+		{
+			DefaultMutableTreeNode node = e.nextElement();
+			if (node.toString().equalsIgnoreCase(s)) 
+			{
+				return new TreePath(node.getPath());
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Scroll a TreePath to the center of the view<br>
+	 * NOTE: This will be deferred executed using SwingUtilities.invokeLater()
+	 * @param tree
+	 * @param treePath
+	 * @param leftJustify
+	 */
+	public static void scrollToCenter(JTree tree, TreePath treePath, boolean leftJustify)
+	{
+		SwingUtilities.invokeLater(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				if ( !(tree.getParent() instanceof JViewport) )
+				{
+					tree.scrollPathToVisible(treePath);
+					return;
+				}
+
+				JViewport viewport = (JViewport) tree.getParent();
+				Rectangle rect     = tree.getPathBounds(treePath);
+
+				Rectangle viewRect = viewport.getViewRect();
+				rect.setLocation(rect.x - viewRect.x, rect.y - viewRect.y);
+
+				int centerX = (viewRect.width - rect.width) / 2;
+				int centerY = (viewRect.height - rect.height) / 2;
+
+				if ( rect.x < centerX )
+					centerX = -centerX;
+
+				if ( rect.y < centerY )
+					centerY = -centerY;
+
+				if (leftJustify)
+					centerX = -1000;
+				
+				rect.translate(centerX, centerY);
+				viewport.scrollRectToVisible(rect);
+			}
+		});
+		
+	}	
 	
 	
 	/////////////////////////////////////////////////////////////////////////////

@@ -32,7 +32,9 @@ import javax.swing.table.TableModel;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.jdesktop.swingx.decorator.Highlighter;
 
+import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.pipe.PipeCommand;
 import com.asetune.sql.pipe.PipeCommandConvert;
@@ -99,6 +101,8 @@ public class ResultSetTableModel
 //	public static final boolean DEFAULT_NumberToStringFmt_local = true;
 
 	private int	_numcols;
+
+//	FIXME: cleanup the below members and INSTEAD use: ResultSetMetaDataCached _rsmdCached
 	
 	private ArrayList<String>            _rsmdRefTableName      = new ArrayList<String>();  // rsmd.getXXX(c); 
 	private ArrayList<String>            _rsmdColumnName        = new ArrayList<String>();  // rsmd.getColumnName(c); 
@@ -133,6 +137,10 @@ public class ResultSetTableModel
 	
 	private String                       _originSqlText;
 
+	private String                       _dbmsProductName = "-unknown-";
+	private ResultSetMetaDataCached      _rsmdCached;
+//	private IDbmsDdlResolver             _dbmsDdlResolver;
+
 	/** Set the name of this table model, could be used for debugging or other tracking purposes */
 	public void setName(String name) { _name = name; }
 
@@ -147,6 +155,10 @@ public class ResultSetTableModel
 	public void    setSqlText(String sql) { _originSqlText = sql; }
 	public String  getSqlText()           { return _originSqlText; }
 	
+
+	public ResultSetMetaDataCached getResultSetMetaDataCached() { return _rsmdCached; }
+	public String                  getOriginDbmsProductName()   { return _dbmsProductName; }
+
 	/**
 	 * INTERNAL: used by: <code>public static String getResultSetInfo(ResultSetTableModel rstm)</code>
 	 * @param rsmd
@@ -212,6 +224,8 @@ public class ResultSetTableModel
 
 		if (rsmd == null)
 			rsmd = rs.getMetaData();
+		
+		_rsmdCached = new ResultSetMetaDataCached(rs, rsmd);
 
 		// Check if this is a DbxConnection that was responsible for the call... then we can resolve the data types using that
 		// Note: The below did not work since rs.getStatement().getConnection() returns the initial DBMS Vendor JDBC driver... com.sybase.jdbc4.jdbc.SybConnection or org.postgresql.jdbc.PgConnection
@@ -223,13 +237,12 @@ public class ResultSetTableModel
 //			if (conn != null && conn instanceof DbxConnection)
 //				dbxConn = (DbxConnection) conn;
 //		}
-		String dbmsProductName = "-unknown-";
 		if (rs.getStatement() != null)
 		{
 			try
 			{
 				Connection conn = rs.getStatement().getConnection();
-				dbmsProductName = conn.getMetaData().getDatabaseProductName();
+				_dbmsProductName = conn.getMetaData().getDatabaseProductName();
 			}
 			catch (SQLException ignore) {}
 		}
@@ -274,7 +287,7 @@ public class ResultSetTableModel
 			String columnName        = rsmd.getColumnName(c);
 			String columnClassName   = rsmd.getColumnClassName(c);
 //			String columnTypeNameGen = dbxConn == null ? getColumnTypeName(rsmd, c) : dbxConn.getColumnTypeName(rsmd, c);
-			String columnTypeNameGen = getColumnTypeName(dbmsProductName, rsmd, c);
+			String columnTypeNameGen = getColumnTypeName(_dbmsProductName, rsmd, c);
 			
 			String columnTypeNameRaw = "-unknown-";
 			try {  columnTypeNameRaw = rsmd.getColumnTypeName(c); } catch(SQLException ignore) {}; // sometimes this caused SQLException, especially for 'compute by' 
@@ -631,6 +644,17 @@ public class ResultSetTableModel
 		case java.sql.Types.NCLOB:         return rs.getString(col);
 		case java.sql.Types.SQLXML:        return rs.getString(col);
 
+		case -156: // case microsoft.sql.Types.SQL_VARIANT:
+		{
+			// variant can be many things (possibly all object types), so try to get it in different ways
+			// most would works as getString()... but handle special in case of:
+			//   - null    <<-- Return as null
+			//   - byte[]  <<-- Return as a Hexadecimal string... toString on byte[] wont work, as it returns '[B@405217f8' or similar
+			Object rowObj = rs.getObject(col);
+			if      (rowObj == null)           return null;
+			else if (rowObj instanceof byte[]) return StringUtil.bytesToHex(BINARY_PREFIX, rs.getBytes(col), BINARY_TOUPPER);
+			else                               return rs.getString(col);
+		}
 		//------------------------- UNHANDLED TYPES  ---------------------------
 		default:
 			//return rs.getObject(col);
@@ -831,16 +855,20 @@ public class ResultSetTableModel
 
 						columnTypeName += "("+precision+","+scale+")";
 					}
-					if (    columnType == java.sql.Types.CHAR 
+					else if (
+					        columnType == java.sql.Types.CHAR 
 					     || columnType == java.sql.Types.VARCHAR 
-					     || columnType == java.sql.Types.NCHAR	
-					     || columnType == java.sql.Types.NVARCHAR
 					     || columnType == java.sql.Types.BINARY
 					     || columnType == java.sql.Types.VARBINARY
 					   )
 					{
 						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
-						columnTypeName += (columnDisplaySize == 2147483647) ? "(max)" : "("+columnDisplaySize+")";
+						columnTypeName += (columnDisplaySize >= 2_147_483_647) ? "(max)" : "("+columnDisplaySize+")";
+					}
+					else if ( columnType == java.sql.Types.NCHAR || columnType == java.sql.Types.NVARCHAR )
+					{
+						int columnDisplaySize = Math.max(rsmd.getColumnDisplaySize(col), rsmd.getPrecision(col));
+						columnTypeName += (columnDisplaySize >= 1_073_741_823) ? "(max)" : "("+columnDisplaySize+")";
 					}
 				}
 				//---------------------------------
@@ -874,7 +902,7 @@ public class ResultSetTableModel
 							
 						columnTypeName += "("+columnDisplaySize+")";
 		
-						if (columnDisplaySize == 2147483647)
+						if (columnDisplaySize >= 2_147_483_647)
 							columnTypeName = "text";
 					}
 				}
@@ -1064,23 +1092,34 @@ public class ResultSetTableModel
 		
 
 		//------------------------- VENDOR SPECIFIC TYPES --------------------------- (grabbed from ojdbc7.jar)
-		case -100:                         return "oracle.jdbc.OracleTypes.TIMESTAMPNS";
-		case -101:                         return "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
-		case -102:                         return "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
-		case -103:                         return "oracle.jdbc.OracleTypes.INTERVALYM";
-		case -104:                         return "oracle.jdbc.OracleTypes.INTERVALDS";
-		case  -10:                         return "oracle.jdbc.OracleTypes.CURSOR";
-		case  -13:                         return "oracle.jdbc.OracleTypes.BFILE";
-		case 2007:                         return "oracle.jdbc.OracleTypes.OPAQUE";
-		case 2008:                         return "oracle.jdbc.OracleTypes.JAVA_STRUCT";
-		case  -14:                         return "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
-		case  100:                         return "oracle.jdbc.OracleTypes.BINARY_FLOAT";
-		case  101:                         return "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
-//		case    2:                         return "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
-//		case   -2:                         return "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
-		case  999:                         return "oracle.jdbc.OracleTypes.FIXED_CHAR";
+		case -100:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPNS";
+		case -101:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPTZ";
+		case -102:                                   return "oracle.jdbc.OracleTypes.TIMESTAMPLTZ";
+		case -103:                                   return "oracle.jdbc.OracleTypes.INTERVALYM";
+		case -104:                                   return "oracle.jdbc.OracleTypes.INTERVALDS";
+		case  -10:                                   return "oracle.jdbc.OracleTypes.CURSOR";
+		case  -13:                                   return "oracle.jdbc.OracleTypes.BFILE";
+		case 2007:                                   return "oracle.jdbc.OracleTypes.OPAQUE";
+		case 2008:                                   return "oracle.jdbc.OracleTypes.JAVA_STRUCT";
+		case  -14:                                   return "oracle.jdbc.OracleTypes.PLSQL_INDEX_TABLE";
+		case  100:                                   return "oracle.jdbc.OracleTypes.BINARY_FLOAT";
+		case  101:                                   return "oracle.jdbc.OracleTypes.BINARY_DOUBLE";
+//		case    2:                                   return "oracle.jdbc.OracleTypes.NUMBER";             // same as: java.sql.Types.NUMERIC
+//		case   -2:                                   return "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
+		case  999:                                   return "oracle.jdbc.OracleTypes.FIXED_CHAR";
 
-		//------------------------- UNHANDLED TYPES  ---------------------------
+	    case -155:                                   return "microsoft.sql.DATETIMEOFFSET";
+	    case -153:                                   return "microsoft.sql.STRUCTURED";
+	    case -151:                                   return "microsoft.sql.DATETIME";
+	    case -150:                                   return "microsoft.sql.SMALLDATETIME";
+	    case -148:                                   return "microsoft.sql.MONEY";
+	    case -146:                                   return "microsoft.sql.SMALLMONEY";
+	    case -145:                                   return "microsoft.sql.GUID";
+	    case -156:                                   return "microsoft.sql.SQL_VARIANT";
+	    case -157:                                   return "microsoft.sql.GEOMETRY";
+	    case -158:                                   return "microsoft.sql.GEOGRAPHY";
+
+	    //------------------------- UNHANDLED TYPES  ---------------------------
 		default:
 			return "unknown-jdbc-datatype("+columnType+")";
 		}
@@ -1156,6 +1195,17 @@ public class ResultSetTableModel
 		if ("oracle.jdbc.OracleTypes.NUMBER"            .equals(name)) return  java.sql.Types.NUMERIC;
 		if ("oracle.jdbc.OracleTypes.RAW"               .equals(name)) return  java.sql.Types.BINARY;
 		if ("oracle.jdbc.OracleTypes.FIXED_CHAR"        .equals(name)) return  999;
+
+		if ("microsoft.sql.DATETIMEOFFSET"              .equals(name)) return -155;
+		if ("microsoft.sql.STRUCTURED"                  .equals(name)) return -153;
+		if ("microsoft.sql.DATETIME"                    .equals(name)) return -151;
+		if ("microsoft.sql.SMALLDATETIME"               .equals(name)) return -150;
+		if ("microsoft.sql.MONEY"                       .equals(name)) return -148;
+		if ("microsoft.sql.SMALLMONEY"                  .equals(name)) return -146;
+		if ("microsoft.sql.GUID"                        .equals(name)) return -145;
+		if ("microsoft.sql.SQL_VARIANT"                 .equals(name)) return -156;
+		if ("microsoft.sql.GEOMETRY"                    .equals(name)) return -157;
+		if ("microsoft.sql.GEOGRAPHY"                   .equals(name)) return -158;
 
 		//------------------------- UNHANDLED TYPES  ---------------------------
 		_logger.warn("The string JDBC Datatype '"+name+"' is unknown, returning Integer.MIN_VALUE = "+ Integer.MIN_VALUE);
@@ -1287,7 +1337,18 @@ public class ResultSetTableModel
 //		case   -2:                         return false; // "oracle.jdbc.OracleTypes.RAW";                // same as: java.sql.Types.BINARY
 		case  999:                         return true;  // "oracle.jdbc.OracleTypes.FIXED_CHAR";
 
-		//------------------------- UNHANDLED TYPES  ---------------------------
+	    case -155:                         return true ; //  "microsoft.sql.DATETIMEOFFSET";
+	    case -153:                         return false; //  "microsoft.sql.STRUCTURED";
+	    case -151:                         return true ; //  "microsoft.sql.DATETIME";
+	    case -150:                         return true ; //  "microsoft.sql.SMALLDATETIME";
+	    case -148:                         return false; //  "microsoft.sql.MONEY";
+	    case -146:                         return false; //  "microsoft.sql.SMALLMONEY";
+	    case -145:                         return true ; //  "microsoft.sql.GUID";
+	    case -156:                         return false; //  "microsoft.sql.SQL_VARIANT";
+	    case -157:                         return false; //  "microsoft.sql.GEOMETRY";
+	    case -158:                         return false; //  "microsoft.sql.GEOGRAPHY";
+
+	    //------------------------- UNHANDLED TYPES  ---------------------------
 		default:
 			return false;
 		}
@@ -1434,6 +1495,50 @@ public class ResultSetTableModel
 
 	
 
+//	public String getDbmsDdlDataTypeTargetResolved(int index)
+//	{
+//		int col = index + 1;
+//		if (_dbmsDdlResolver == null)
+//		{
+//			_dbmsDdlResolver = DbxConnection.createDbmsDdlResolver(_dbmsProductName);
+//		}
+//		
+////		try 
+////		{
+//			int javaSqlType = _rsmdColumnType.get(index);
+////			int length      = Math.max(_rsmdCached.getColumnDisplaySize(col), _rsmdCached.getPrecision(col));
+//			int length      = _rsmdCached.getPrecision(col);
+//			int scale       = _rsmdCached.getScale(col);
+//
+//			if (length <= 0)
+//			{
+////				length = _rsmdCached.getColumnDisplaySize(col);
+//				switch (javaSqlType)
+//				{
+//				case Types.CHAR:
+//				case Types.LONGNVARCHAR:
+//				case Types.LONGVARBINARY:
+//				case Types.LONGVARCHAR:
+//				case Types.NCHAR:
+//				case Types.NVARCHAR:
+//				case Types.VARBINARY:
+//				case Types.VARCHAR:
+//					length = _rsmdCached.getColumnDisplaySize(col);
+//					break;
+//
+//				default:
+//					break;
+//				}
+//			}
+//			
+//			return _dbmsDdlResolver.dataTypeResolverTarget(javaSqlType, length, scale);
+////		}
+////		catch (SQLException ex)
+////		{
+////			return ex.toString();
+////		}
+//	}
+
 	/**
 	 * Produce a HTML String with information about the current ResultSet
 	 * @param index The column ID you want to disaply information about 
@@ -1463,16 +1568,17 @@ public class ResultSetTableModel
 
 		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TH>Description               </TH> <TH>From Java Method                     </TH> <TH>Value</TH> </TR>");
 
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Label                     </TD> <TD>rsmd.getColumnLabel()                </TD> <TD>").append(_rsmdColumnLabel.get(index))      .append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Name                      </TD> <TD>rsmd.getColumnName()                 </TD> <TD>").append(_rsmdColumnName.get(index))       .append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>JDBC Type Name            </TD> <TD>rsmd.getColumnType()<b>->String</b>  </TD> <TD>").append(_rsmdColumnTypeStr.get(index))    .append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>JDBC Type Number          </TD> <TD>rsmd.getColumnType()                 </TD> <TD>").append(_rsmdColumnType.get(index))       .append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Java Class Name           </TD> <TD>rsmd.getColumnClassName()            </TD> <TD>").append(_rsmdColumnClassName.get(index))  .append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Raw DBMS Datatype         </TD> <TD>rsmd.getColumnTypeName()             </TD> <TD>").append(_rsmdColumnTypeName.get(index))   .append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Label                     </TD> <TD>rsmd.getColumnLabel()                </TD> <TD>").append(_rsmdColumnLabel.get(index)      ).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Name                      </TD> <TD>rsmd.getColumnName()                 </TD> <TD>").append(_rsmdColumnName.get(index)       ).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>JDBC Type Name            </TD> <TD>rsmd.getColumnType()<b>->String</b>  </TD> <TD>").append(_rsmdColumnTypeStr.get(index)    ).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>JDBC Type Number          </TD> <TD>rsmd.getColumnType()                 </TD> <TD>").append(_rsmdColumnType.get(index)       ).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Java Class Name           </TD> <TD>rsmd.getColumnClassName()            </TD> <TD>").append(_rsmdColumnClassName.get(index)  ).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Raw DBMS Datatype         </TD> <TD>rsmd.getColumnTypeName()             </TD> <TD>").append(_rsmdColumnTypeName.get(index)   ).append("</TD> </TR>");
 		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Guessed DBMS Type         </TD> <TD>rsmd.getColumnTypeName()<b>+size</b> </TD> <TD>").append(_rsmdColumnTypeNameStr.get(index)).append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>TableModel Class Name     </TD> <TD>TableModel.getColumnClass()          </TD> <TD>").append(getColumnClass(index))            .append("</TD> </TR>");
-//		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Display size max(disp/len)</TD> <TD>_displaySize                         </TD> <TD>").append(_displaySize.get(index))          .append("</TD> </TR>");
-		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Table Name                </TD> <TD>rsmd.getTableName()                  </TD> <TD>").append(_rsmdRefTableName.get(index))     .append("</TD> </TR>");
+//		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>DDL Resolver DBMS Type    </TD> <TD>DbmsDdlResolver.dataTypeResolver()   </TD> <TD>").append(getDbmsDdlDataTypeTargetResolved(index)).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>TableModel Class Name     </TD> <TD>TableModel.getColumnClass()          </TD> <TD>").append(getColumnClass(index)            ).append("</TD> </TR>");
+//		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Display size max(disp/len)</TD> <TD>_displaySize                         </TD> <TD>").append(_displaySize.get(index)          ).append("</TD> </TR>");
+		sb.append("<TR ALIGN=\"left\" VALIGN=\"middle\"> <TD>Table Name                </TD> <TD>rsmd.getTableName()                  </TD> <TD>").append(_rsmdRefTableName.get(index)     ).append("</TD> </TR>");
 		
 		sb.append("</TABLE>");
 
@@ -1564,6 +1670,7 @@ public class ResultSetTableModel
 		if (ld) { header1.add("JDBC Class Name");             header2.add("rsmd.getColumnClassName()"); }
 		if (ld) { header1.add("Raw DBMS Datatype");           header2.add("rsmd.getColumnTypeName()"); }
 		          header1.add("Guessed DBMS type");           header2.add("rsmd.getColumnTypeName()+size");
+//		          header1.add("DDL Resolver DBMS Type");      header2.add("DbmsDdlResolver.dataTypeResolver()");
 		          header1.add("Source Table");                header2.add("rsmd.getTableName()");
 		if (ld) { header1.add("TableModel Class Name");       header2.add("TableModel.getColumnClass()"); }
 
@@ -1592,6 +1699,7 @@ public class ResultSetTableModel
 			if (ld) row.add( "" + _rsmdColumnClassName  .get(c) );
 			if (ld) row.add( "" + _rsmdColumnTypeName   .get(c) );
 			        row.add( "" + _rsmdColumnTypeNameStr.get(c) );
+//			        row.add( "" + getDbmsDdlDataTypeTargetResolved(c) );
 			        row.add( "" + _rsmdRefTableName     .get(c) );
 			if (ld) row.add( "" + getColumnClass(c) );
 		}
@@ -2234,6 +2342,44 @@ public class ResultSetTableModel
 		return sb.toString();
 	}
 
+	
+	//------------------------------------------------------------
+	//-- BEGIN: Highlighters
+	//-- This shouldn't really be in here, it's not part of the model, it's part of the view...
+	//------------------------------------------------------------
+	private List<Highlighter> _jxTableHighlighters = null;
+
+	public void addHighlighter(Highlighter highlighter)
+	{
+		if (_jxTableHighlighters == null)
+			_jxTableHighlighters = new ArrayList<>();
+		
+		_jxTableHighlighters.add(highlighter);
+	}
+
+	public void removeHighlighter(Highlighter highlighter)
+	{
+		if (_jxTableHighlighters == null)
+			return;
+
+		_jxTableHighlighters.remove(highlighter);
+	}
+
+	public List<Highlighter> getHighlighters()
+	{
+		return _jxTableHighlighters;
+	}
+
+	public boolean hasHighlighters()
+	{
+		if (_jxTableHighlighters == null)
+			return false;
+
+		return ! _jxTableHighlighters.isEmpty();
+	}
+	//------------------------------------------------------------
+	//-- END: Highlighters
+	//------------------------------------------------------------
 
 	//------------------------------------------------------------
 	//-- BEGIN: sort
@@ -2333,6 +2479,54 @@ public class ResultSetTableModel
 		}
 		
 		return colIndex;
+	}
+
+	public void addColumn(String colname, int pos, int jdbcType, String sqlTypeShort, String sqlTypeLong, int length, int scale, Object defaultValue, Class<?> clazz)
+	{
+		if (pos < 0)
+			throw new RuntimeException("Column position can't be negative. pos="+pos);
+		if (pos > getColumnCount())
+			throw new RuntimeException("Column position can't be larger than current column count. colCount=" + getColumnCount() + ", pos=" + pos);
+
+		if (_classType == null)
+			_classType = new Class[ getColumnCount() + 1 ];
+
+		// - Remove all the meta data fields for this column
+		// - Remove all column data for all rows
+		synchronized (this)
+		{
+			// Remove all MetaData
+			_rsmdRefTableName     .add(pos, "-unknown-");
+			_rsmdColumnName       .add(pos, colname);
+			_rsmdColumnLabel      .add(pos, colname);
+			_rsmdColumnType       .add(pos, jdbcType);
+			_rsmdColumnTypeStr    .add(pos, getColumnJavaSqlTypeName(jdbcType));
+			_rsmdColumnTypeName   .add(pos, sqlTypeShort);
+			_rsmdColumnTypeNameStr.add(pos, sqlTypeLong);
+			_rsmdColumnClassName  .add(pos, clazz.getName());
+			_displaySize          .add(pos, (length > 0) ? length : 12);
+			
+			_classType = ArrayUtils.insert(pos+1, _classType, clazz);
+//System.out.println("_classType="+StringUtil.toCommaStr(_classType));
+
+
+			// For every row remove the column
+			for (ArrayList<Object> row : _rows)
+			{
+				row.add(pos, defaultValue);
+			}
+
+			// Increment number of cols
+			_numcols++;
+		}
+		
+	}
+	public void addRow(ArrayList<Object> row)
+	{
+		if (getColumnCount() != row.size())
+			throw new IllegalArgumentException("addRow(): Table and Row column count do not match. Table column is " + getColumnCount() + ". Columns in added row is " + row.size() + ".");
+
+		_rows.add(row);
 	}
 
 	/**

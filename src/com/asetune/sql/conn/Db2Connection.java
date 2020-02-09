@@ -27,6 +27,7 @@ import java.sql.Statement;
 
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class Db2Connection
@@ -70,4 +71,37 @@ extends DbxConnection
 		setConnectionStateInfo(csi);
 		return csi;
 	}
+	
+	
+	@Override
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		
+//		String whereCat = StringUtil.isNullOrBlank(catalog) ? "" : "  and upper(TABLE_CATALOG) = upper('" + catalog + "') \n";
+//		String whereSch = StringUtil.isNullOrBlank(schema)  ? "" : "  and upper(TABLE_SCHEMA)  = upper('" + schema  + "') \n";
+//		String whereTab = StringUtil.isNullOrBlank(table)   ? "" : "  and upper(TABLE_NAME)    = upper('" + table   + "') \n";
+		String whereCat = StringUtil.isNullOrBlank(catalog) ? "" : "  and TABSCHEMA  = '" + catalog + "' \n";
+		String whereSch = StringUtil.isNullOrBlank(schema)  ? "" : "  and TABSCHEMA  = '" + schema  + "' \n";
+		String whereTab = StringUtil.isNullOrBlank(table)   ? "" : "  and TABNAME    = '" + table   + "' \n";
+		
+		String sql = "SELECT CARD \n"
+				+ "from syscat.tables \n"
+				+ "where 1 = 1 \n"
+//				+ "  and TYPE in('T', 'U') \n"
+				+ whereCat
+				+ whereSch
+				+ whereTab
+				+ "";
+		
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+		
+		return rowCount;
+	}
+
 }

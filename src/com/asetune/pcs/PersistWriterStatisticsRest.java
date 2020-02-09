@@ -20,6 +20,10 @@
  ******************************************************************************/
 package com.asetune.pcs;
 
+import java.util.TimeZone;
+
+import com.asetune.utils.TimeUtils;
+
 public class PersistWriterStatisticsRest
 extends PersistWriterStatistics
 {
@@ -33,6 +37,8 @@ extends PersistWriterStatistics
 	private long _maxCrJsonTimeInMs  = 0;
 	private long _crJsonCount        = 0;
 
+	private long _lastSentTimestamp  = 0;
+
 	@Override
 	public String getStatisticsString()
 	{
@@ -44,7 +50,9 @@ extends PersistWriterStatistics
 			+ ", lastSendTimeInMs="+ _lastSendTimeInMs
 			+ ", avgSendTimeInMs=" + ( _sendCount == 0 ? "na" : _sumSendTimeInMs/_sendCount ) 
 			+ ", maxSendTimeInMs=" + _maxSendTimeInMs 
-			+ ", sendCount=" + _sendCount;
+			+ ", sendCount=" + _sendCount
+			+ getLastSentTimestampStr()
+			;
 	}
 
 	public void setLastSendTimeInMs(long sendTime)
@@ -63,6 +71,27 @@ extends PersistWriterStatistics
 		_crJsonCount++;
 		_sumCrJsonTimeInMs += createTime;
 		_maxCrJsonTimeInMs = Math.max(createTime, _maxCrJsonTimeInMs);
+	}
+
+	public void setLastSentTimestamp(long ts)
+	{
+		_lastSentTimestamp = ts;
+	}
+
+	public long getLastSentTimestamp()
+	{
+		return _lastSentTimestamp;
+	}
+
+	public String getLastSentTimestampStr()
+	{
+		if (_lastSentTimestamp <= 0)
+			return "";
+
+		String tz = TimeZone.getDefault().getID();
+		String ltzStr = TimeUtils.toString   (_lastSentTimestamp);
+		String utcStr = TimeUtils.toStringUtc(_lastSentTimestamp);
+		return ", lastSentTs=[" + tz + "='" + ltzStr + "', UTC='" + utcStr + "', UTC_ts=" + _lastSentTimestamp + "]";
 	}
 
 	@Override

@@ -36,6 +36,7 @@ import org.apache.log4j.Logger;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
 import com.asetune.sql.conn.info.DbxConnectionStateInfoGenericJdbc;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class MySqlConnection extends DbxConnection
@@ -142,6 +143,36 @@ public class MySqlConnection extends DbxConnection
 		}
 		
 		return extraInfo;
+	}
+
+	@Override
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		
+//		String whereCat = StringUtil.isNullOrBlank(catalog) ? "" : "  and upper(TABLE_CATALOG) = upper('" + catalog + "') \n";
+//		String whereSch = StringUtil.isNullOrBlank(schema)  ? "" : "  and upper(TABLE_SCHEMA)  = upper('" + schema  + "') \n";
+//		String whereTab = StringUtil.isNullOrBlank(table)   ? "" : "  and upper(TABLE_NAME)    = upper('" + table   + "') \n";
+		String whereCat = StringUtil.isNullOrBlank(catalog) ? "" : "  and TABLE_SCHEMA  = '" + catalog + "' \n";
+		String whereSch = StringUtil.isNullOrBlank(schema)  ? "" : "  and TABLE_SCHEMA  = '" + schema  + "' \n";
+		String whereTab = StringUtil.isNullOrBlank(table)   ? "" : "  and TABLE_NAME    = '" + table   + "' \n";
+		
+		String sql = "select TABLE_ROWS \n"
+				+ "from information_schema.TABLES \n"
+				+ "where 1 = 1 \n"
+				+ whereCat
+				+ whereSch
+				+ whereTab
+				+ "";
+		
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+		
+		return rowCount;
 	}
 
 	@Override

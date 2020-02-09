@@ -261,7 +261,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("state[Detached]", PROPKEY_alarm_StateDetached_ageInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_StateDetached_ageInSec, DEFAULT_alarm_StateDetached_ageInSec), DEFAULT_alarm_StateDetached_ageInSec, "If 'state' is in 'Detached' and '' is greater than X seconds, send 'AlarmEvent'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("state[Detached]", isAlarmSwitch, PROPKEY_alarm_StateDetached_ageInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_StateDetached_ageInSec, DEFAULT_alarm_StateDetached_ageInSec), DEFAULT_alarm_StateDetached_ageInSec, "If 'state' is in 'Detached' and '' is greater than X seconds, send 'AlarmEvent'." ));
 
 		return list;
 	}

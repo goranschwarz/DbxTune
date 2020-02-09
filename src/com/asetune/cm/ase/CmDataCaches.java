@@ -694,7 +694,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("DefaultDataCacheSizeInMb", PROPKEY_alarm_DefaultDataCacheSizeInMb, Integer.class, conf.getIntProperty(PROPKEY_alarm_DefaultDataCacheSizeInMb, DEFAULT_alarm_DefaultDataCacheSizeInMb), DEFAULT_alarm_DefaultDataCacheSizeInMb, "If Size 'default data cache' is less than ### MB then send 'AlarmEventXxx'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("DefaultDataCacheSizeInMb", isAlarmSwitch, PROPKEY_alarm_DefaultDataCacheSizeInMb, Integer.class, conf.getIntProperty(PROPKEY_alarm_DefaultDataCacheSizeInMb, DEFAULT_alarm_DefaultDataCacheSizeInMb), DEFAULT_alarm_DefaultDataCacheSizeInMb, "If Size 'default data cache' is less than ### MB then send 'AlarmEventXxx'." ));
 
 		return list;
 	}

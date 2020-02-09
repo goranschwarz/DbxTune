@@ -30,7 +30,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.text.Collator;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 import java.util.regex.Pattern;
 
@@ -138,7 +140,8 @@ extends JPanel
 	public static final int ROW_COUNT_LAYOUT_RIGHT = 1;
 	public static final int ROW_COUNT_LAYOUT_LEFT  = 2;
 
-	private JXTable    _table      = null;
+	private JXTable      _table        = null;
+	private Set<JXTable> _linkedTables = new LinkedHashSet<>();
 
 	private GLabel     _filter_lbl = new GLabel("Filter: ");
 //	private JTextField _filter_txt = new JTextField();
@@ -194,6 +197,34 @@ extends JPanel
 		_rowCntLayout = rowCountLayout;
 		_filter_chk_visible = showCheckbox;
 
+		setTable(table);
+
+		initComponents();
+	}
+	
+	public GTableFilter()
+	{
+		this(null);
+	}
+	
+	public void setTable(JXTable table)
+	{
+		if (_table != null)
+		{
+			_logger.warn("Table is already assigned. Some listeners will also be triggered from the old tables. (I havn't YET-IMPLEMENTED a proper cleanup strategy here.");
+			return;
+		}
+		
+		_table = table;
+		if (_table != null)
+		{
+			// FIXME: unregister below listeners in the current table.
+		}
+		else
+		{
+			return;
+		}
+		
 		// Create and Add table model listener, so when the table content is changed we can update the rowcount field
 		final TableModelListener tml = new TableModelListener()
 		{
@@ -230,8 +261,6 @@ extends JPanel
 					((AbstractTableModel)newTm).addTableModelListener(tml);
 			}
 		});
-
-		initComponents();
 	}
 
 	public int getDeferredFilterSleepTime() { return _deferredFilterSleepTime; }
@@ -287,7 +316,8 @@ extends JPanel
 		_filter_lbl.setUseFocusableTips(true);
 
 		// Add Code Completion to the text field
-		_filter_txt.addCompletion(_table);
+		if (_table != null)
+			_filter_txt.addCompletion(_table);
 		_filter_txt.setUseFocusableTips(false);
 
 		_filter_chk.setVisible(_filter_chk_visible);
@@ -326,7 +356,7 @@ extends JPanel
 			@Override public void changedUpdate(DocumentEvent paramDocumentEvent) { textWasUpdated(); }
 			public void textWasUpdated()
 			{
-				if (_table.getModel().getRowCount() < _deferredFilterThreshold)
+				if (_table != null && _table.getModel().getRowCount() < _deferredFilterThreshold)
 				{
 					applyFilter();
 				}
@@ -373,20 +403,35 @@ extends JPanel
 		_filter_cnt.setText(rowc);
 	}
 
+	/** 
+	 * Add Any additional tables to the same filter
+	 * @param source_tab
+	 */
+	public void addTable(JXTable table)
+	{
+		_linkedTables.add(table);
+	}
+
 	private void setTableRowFilter(RowFilter<? super TableModel, ? super Integer> filter)
 //	private void setTableRowFilter(RowFilter<TableModel, Integer> filter)
 	{
 		if (filter == null && _externalFilter == null)
 		{
 			_table.setRowFilter(null);
+			for (JXTable linkedTable : _linkedTables)
+				linkedTable.setRowFilter(null);
 		}
 		else if (filter != null && _externalFilter == null)
 		{
 			_table.setRowFilter(filter);
+			for (JXTable linkedTable : _linkedTables)
+				linkedTable.setRowFilter(filter);
 		}
 		else if (filter == null && _externalFilter != null)
 		{
 			_table.setRowFilter(_externalFilter);
+			for (JXTable linkedTable : _linkedTables)
+				linkedTable.setRowFilter(_externalFilter);
 		}
 		else
 		{
@@ -395,6 +440,8 @@ extends JPanel
 			andFilter.addFilter(_externalFilter);
 
 			_table.setRowFilter(andFilter);
+			for (JXTable linkedTable : _linkedTables)
+				linkedTable.setRowFilter(_externalFilter);
 
 //			List<RowFilter<? super TableModel, ? super Integer>> andList = new ArrayList<>();
 //			andList.add(filter);
@@ -406,6 +453,9 @@ extends JPanel
 	
 	public void applyFilter()
 	{
+		if (_table == null)
+			return;
+
 		// The text field should be enabled/disabled based on the Checkbox
 		_filter_txt.setEnabled(_filter_chk.isSelected());
 
@@ -474,10 +524,12 @@ extends JPanel
 	public void resetFilter()
 	{
 		_filter_txt.setText("");
-//		_table.setRowFilter(null);
-		setTableRowFilter(null);
+		if (_table != null)
+		{
+			setTableRowFilter(null);
 
-		updateRowCount();
+			updateRowCount();
+		}
 	}
 
 	/**

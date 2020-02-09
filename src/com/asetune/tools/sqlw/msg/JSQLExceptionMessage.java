@@ -26,6 +26,7 @@ import java.sql.SQLWarning;
 import org.fife.ui.rtextarea.RTextArea;
 
 import com.asetune.utils.ColorUtils;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 
@@ -33,6 +34,10 @@ public class JSQLExceptionMessage
 extends JAseMessage
 {
 	private static final long serialVersionUID = 1L;
+
+	public static final String  PROPKEY_showToolTip_stacktrace = "JSQLExceptionMessage.tooltip.show.stacktrace";
+	public static final boolean DEFAULT_showToolTip_stacktrace = true;
+
 
 	private static String createMsg(SQLException ex, String productName)
 	{
@@ -89,5 +94,10 @@ extends JAseMessage
 		super(createMsg(ex, productName), ex.getErrorCode(), ex.getMessage(), -1, line, col, originSql, sqlTextArea);
 		setObjectText(objectText);
 		setForeground(ColorUtils.RED);
+
+		if (Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showToolTip_stacktrace, DEFAULT_showToolTip_stacktrace))
+		{
+			setToolTipText(StringUtil.stackTraceToString(ex));
+		}
 	}
 }

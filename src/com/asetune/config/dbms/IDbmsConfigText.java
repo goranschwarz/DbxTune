@@ -54,6 +54,9 @@ public interface IDbmsConfigText
 //	/** set the Config String */
 //	public void setConfig(String str);
 
+	/** If we have a <i>static</i> comment, that we want to append at the end when displaying the configuration */
+	public String getComment();
+
 	/** check if the AseConfig is initialized or not */
 	public boolean isInitialized();
 

@@ -491,15 +491,16 @@ extends PersistWriterBase
 			// For the moment do not send Append Models
 			if (cm instanceof CountersModelAppend) 
 				continue;
-			
+
+//System.out.println("HttpJson.toJsonMessage[srvName='"+cont.getServerNameAlias()+"', CmName="+StringUtil.left(cm.getName(),30)+"]: hasValidSampleData()="+cm.hasValidSampleData()+", hasData()="+cm.hasData()+", hasTrendGraphData()="+cm.hasTrendGraphData()+", writeGraphs="+writeGraphs+", getTrendGraphCountWithData()="+cm.getTrendGraphCountWithData());
 			if ( ! cm.hasValidSampleData() )
 				continue;
 
-			if ( ! cm.hasData() )
+			if ( ! cm.hasData() && ! cm.hasTrendGraphData() )
 				continue;
 
 			// if we ONLY write graph data, but there is no graphs with data
-			if ( writeCounters == false  &&  writeGraphs  &&  cm.getTrendGraphCountWithData() == 0)
+			if ( writeCounters == false && (writeGraphs && cm.getTrendGraphCountWithData() == 0))
 				continue;
 			
 			cm.toJson(w, writeCounters, writeGraphs);
@@ -897,7 +898,8 @@ extends PersistWriterBase
 	public static final boolean DEFAULT_errorSendAlarm                    = true;
                                                           
 	public static final String  PROPKEY_errorSendAlarmThresholdInSec      = "PersistWriterToHttpJson.{KEY}.error.sendAlarm.thresholdInSec";
-	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 30; // 30 minutes
+//	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 30; // 30 minutes
+	public static final int     DEFAULT_errorSendAlarmThresholdInSec      = 60 * 60; // 1 Hour
 
 	
 	public static final String  PROPKEY_errorSaveToDisk                   = "PersistWriterToHttpJson.{KEY}.error.saveToDisk";
@@ -1003,7 +1005,8 @@ extends PersistWriterBase
 		String  _header_9 = "";
 
 		/** All files should START with this */
-		public static final String RECOVER_FILE_PREFIX = "DbxTune.PersistWriterToHttpJson.retry.";
+		public static final String RECOVERY_FILE_PREFIX = "DbxTune.PersistWriterToHttpJson.retry.";
+		public static final String RECOVERY_FILE_SUFFIX = "json";
 		
 		public ConfigSlot()
 		{
@@ -1017,41 +1020,48 @@ extends PersistWriterBase
 			if (StringUtil.isNullOrBlank(jsonStr))
 				return;
 
-			// SAVE the JSON to a file and retry later
-			if (_errorSaveToDisk)
+			try
 			{
-				checkOrCreateRecoveryDir(this);
-				
-				// Remove older error files
-				removeOldErrorFiles(cont);
-				
-				// Maybe check if we have enough SPACE on: _errorSaveToDiskPath
-
-				// init some helper variables
-				String ts  = new SimpleDateFormat("yyyy-MM-dd.HH_mm_ss_SSS").format( new Date(System.currentTimeMillis()) );
-				String srv = cont.getServerNameOrAlias(); 
-				File   f   = new File(_errorSaveToDiskPath + File.separatorChar + RECOVER_FILE_PREFIX + srv + "." + _cfgName + "." + ts + ".json");
-
-				_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Saving to file: "+f);
-				try
+				// SAVE the JSON to a file and retry later
+				if (_errorSaveToDisk)
 				{
-					FileUtils.write(f, jsonStr, StandardCharsets.UTF_8);
+					checkOrCreateRecoveryDir(this);
+					
+					// Remove older error files
+					removeOldErrorFiles(cont);
+					
+					// Maybe check if we have enough SPACE on: _errorSaveToDiskPath
+
+					// init some helper variables
+					String ts  = new SimpleDateFormat("yyyy-MM-dd.HH_mm_ss_SSS").format( new Date(System.currentTimeMillis()) );
+					String srv = cont.getServerNameOrAlias(); 
+					File   f   = new File(_errorSaveToDiskPath + File.separatorChar + RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "." + ts + "." + RECOVERY_FILE_SUFFIX);
+
+					_logger.info("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Saving to file: "+f);
+					try
+					{
+						FileUtils.write(f, jsonStr, StandardCharsets.UTF_8);
+					}
+					catch (IOException ex)
+					{
+						_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Error when saving to file '"+f+"'. Caught: "+ex, ex);
+					}
 				}
-				catch (IOException ex)
+				// IN-MEMORY error queue
+				else
 				{
-					_logger.error("addToErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"'. Error when saving to file '"+f+"'. Caught: "+ex, ex);
+					_errorQueue.addLast(jsonStr);
+					
+					while (_errorQueue.size() > _errorMemQueueSize)
+					{
+						_errorQueue.removeFirst();
+						_logger.info("addToErrorQueue(IN-MEMORY): Removing 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+", maxEntries="+_errorMemQueueSize);
+					}
 				}
 			}
-			// IN-MEMORY error queue
-			else
+			catch (RuntimeException ex)
 			{
-				_errorQueue.addLast(jsonStr);
-				
-				while (_errorQueue.size() > _errorMemQueueSize)
-				{
-					_errorQueue.removeFirst();
-					_logger.info("addToErrorQueue(IN-MEMORY): Removing 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+", maxEntries="+_errorMemQueueSize);
-				}
+				_logger.error("Runtime Problems in: addToErrorQueue(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
 			}
 		}
 
@@ -1061,115 +1071,131 @@ extends PersistWriterBase
 		 */
 		public int sendErrorQueue(PersistContainer cont)
 		{
-			// recover saved FILES
-			if (_errorSaveToDisk)
+			try
 			{
-				int sendCount = 0;
-				
-				// Remove older error files
-				//removeOldErrorFiles();
-
-				String srv = cont.getServerNameOrAlias(); 
-
-				// grab error files, and send them
-				//Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new WildcardFileFilter(RECOVER_FILE_PREFIX + srv + "." + _cfgName + ".*"), TrueFileFilter.TRUE); // maybe... but not tested.
-				Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {"json"}, false);
-				if ( ! filesColl.isEmpty() )
+				// recover saved FILES
+				if (_errorSaveToDisk)
 				{
-					// Make an array, and sort it...
-					File[] filesArr = FileUtils.convertFileCollectionToFileArray(filesColl);
-					Arrays.sort(filesArr, NameFileComparator.NAME_COMPARATOR);
+					int sendCount = 0;
 					
-					// loop all files (skip files that "someone else" is responsible for)
-					for (File file : filesArr )
+					// Remove older error files
+					//removeOldErrorFiles();
+
+					String srv = cont.getServerNameOrAlias(); 
+
+					// grab error files, and send them
+					//Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new WildcardFileFilter(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + ".*"), TrueFileFilter.TRUE); // maybe... but not tested.
+					Collection<File> filesColl = FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {RECOVERY_FILE_SUFFIX}, false);
+					if ( ! filesColl.isEmpty() )
 					{
-						String filename = file.getName();
-						if (filename.startsWith(RECOVER_FILE_PREFIX + srv + "." + _cfgName + "."))
+						// Make an array, and sort it...
+						File[] filesArr = FileUtils.convertFileCollectionToFileArray(filesColl);
+						Arrays.sort(filesArr, NameFileComparator.NAME_COMPARATOR);
+						
+						// loop all files (skip files that "someone else" is responsible for)
+						for (File file : filesArr )
 						{
-							_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. trying to recover and send file: "+file);
-							try
+							String filename = file.getName();
+							if (filename.startsWith(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "."))
 							{
-								String jsonStr = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
-
-								// send message (if we have problems an exception will be thrown)
-								int serverSideQueueSize = sendMessage(jsonStr, this);
-								
-								// on success: remove the file
-								file.delete();
-								
-								sendCount++;
-								
-								// Sleep for a while (do not overload the central server)
-								// NOTE: if we do NOT want the sleep time to be static, then the server needs to send feedback (in sendMessage()) about how long we should sleep
-								//       meaning if the server has a short list to save, then short sleep time, or if the persist list is long a longer sleep time.
-								int sleepThreshold = 5;
-								if (serverSideQueueSize > sleepThreshold)
+								_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. trying to recover and send file: "+file);
+								try
 								{
-									_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize="+serverSideQueueSize+", Sleeping "+_errorSaveToDiskSuccessSleepTimeMs+" ms for config name '"+_cfgName+"', srv='"+srv+"', sendCount="+sendCount+", after sending file '"+file+"'. This not to overload the Central Server.");
-									Thread.sleep(_errorSaveToDiskSuccessSleepTimeMs);
-								}
-							}
-							catch (InterruptedException ex)
-							{
-								_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'.");
-								break;
-							}
-							catch (ConnectException ex) 
-							{
-								// log WITHOUT stacktrace
-								_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex);
-								break;
-							}
-							catch (Exception ex) 
-							{
-								// log with STACKTRACE
-								_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex, ex);
-								break;
-							}
-						} // end: correct file
-					} // end: loop
-				} // end: ! files.isEmpty()
-				
-				return sendCount;
-			}
-			// IN-MEMORY recovery
-			else
-			{
-				int sendCount = 0;
-				
-				if (_errorQueue.isEmpty())
-					return sendCount;
-				
-				while ( ! _errorQueue.isEmpty() )
-				{
-					try
-					{
-						// Get message
-						String jsonStr = _errorQueue.getFirst();
+									String jsonStr = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
 
-						_logger.info("sendErrorQueue(IN-MEMORY): Resending 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size());
-						
-						// send message (if we have problems an exception will be thrown)
-						sendMessage(jsonStr, this);
-						
-						// on success: remove the queue entry
-						_errorQueue.removeFirst();
-						sendCount++;
-					}
-					catch (ConnectException ex) 
-					{
-						// log WITHOUT stacktrace
-						_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_url+"'. It will be kept in the queue... Caught: "+ex);
-						break;
-					}
-					catch (Exception ex) 
-					{
-						// log with STACKTRACE
-						_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_url+"'. It will be kept in the queue... Caught: "+ex, ex);
-						break;
-					}
+									// If the file is empty... delete the file and go to next
+									if (StringUtil.isNullOrBlank(jsonStr))
+									{
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): cfgName='"+_cfgName+"', srv='"+srv+"'. Found empty file, just deleting it and continuing with next... deleted file: "+file);
+										file.delete();
+										continue;
+									}
+									
+									// send message (if we have problems an exception will be thrown)
+									int serverSideQueueSize = sendMessage(jsonStr, this);
+									
+									// on success: remove the file
+									file.delete();
+									
+									sendCount++;
+									
+									// Sleep for a while (do not overload the central server)
+									// NOTE: if we do NOT want the sleep time to be static, then the server needs to send feedback (in sendMessage()) about how long we should sleep
+									//       meaning if the server has a short list to save, then short sleep time, or if the persist list is long a longer sleep time.
+									int sleepThreshold = 5;
+									if (serverSideQueueSize > sleepThreshold)
+									{
+										_logger.info("sendErrorQueue(SAVE-TO-DISK): serverSideQueueSize="+serverSideQueueSize+", Sleeping "+_errorSaveToDiskSuccessSleepTimeMs+" ms for config name '"+_cfgName+"', srv='"+srv+"', sendCount="+sendCount+", after sending file '"+file+"'. This not to overload the Central Server.");
+										Thread.sleep(_errorSaveToDiskSuccessSleepTimeMs);
+									}
+								}
+								catch (InterruptedException ex)
+								{
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Interupted when doing disk entry recovery at file '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'.");
+									break;
+								}
+								catch (ConnectException ex) 
+								{
+									// log WITHOUT stacktrace
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex);
+									break;
+								}
+								catch (Exception ex) 
+								{
+									// log with STACKTRACE
+									_logger.info("sendErrorQueue(SAVE-TO-DISK): Resending PROBLEMS for disk entry '"+file+"' in the ErrorQueue for config name '"+_cfgName+"'. to '"+_url+"'. It will be kept on disk... Caught: "+ex, ex);
+									break;
+								}
+							} // end: correct file
+						} // end: loop
+					} // end: ! files.isEmpty()
+					
+					return sendCount;
 				}
-				return sendCount;
+				// IN-MEMORY recovery
+				else
+				{
+					int sendCount = 0;
+					
+					if (_errorQueue.isEmpty())
+						return sendCount;
+					
+					while ( ! _errorQueue.isEmpty() )
+					{
+						try
+						{
+							// Get message
+							String jsonStr = _errorQueue.getFirst();
+
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size());
+							
+							// send message (if we have problems an exception will be thrown)
+							sendMessage(jsonStr, this);
+							
+							// on success: remove the queue entry
+							_errorQueue.removeFirst();
+							sendCount++;
+						}
+						catch (ConnectException ex) 
+						{
+							// log WITHOUT stacktrace
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_url+"'. It will be kept in the queue... Caught: "+ex);
+							break;
+						}
+						catch (Exception ex) 
+						{
+							// log with STACKTRACE
+							_logger.info("sendErrorQueue(IN-MEMORY): Resending PROBLEMS for 'oldest' entry in the ErrorQueue for config name '"+_cfgName+"'. _errorQueue.size()="+_errorQueue.size()+". to '"+_url+"'. It will be kept in the queue... Caught: "+ex, ex);
+							break;
+						}
+					}
+					return sendCount;
+				}
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.error("Runtime Problems in: sendErrorQueue(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
+				return 0;
 			}
 		}
 		
@@ -1178,25 +1204,32 @@ extends PersistWriterBase
 		 */
 		private void removeOldErrorFiles(PersistContainer cont)
 		{
-			String srv = cont.getServerNameOrAlias(); 
-
-			// Threshold for what to delete
-			long timeMillis = System.currentTimeMillis() - (_errorSaveToDiskDiscardAfterXDays * 3600 * 24 * 1000); 
-			
-			// grab error files, and send them
-			for (File file : FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {"json"}, false) )
+			try
 			{
-				String filename = file.getName();
-				if (filename.startsWith(RECOVER_FILE_PREFIX + srv + "." + _cfgName + "."))
+				String srv = cont.getServerNameOrAlias(); 
+
+				// Threshold for what to delete
+				long timeMillis = System.currentTimeMillis() - (_errorSaveToDiskDiscardAfterXDays * 3600 * 24 * 1000); 
+				
+				// grab error files, and send them
+				for (File file : FileUtils.listFiles(new File(_errorSaveToDiskPath), new String[] {RECOVERY_FILE_SUFFIX}, false) )
 				{
-					if (FileUtils.isFileOlder(file, timeMillis))
+					String filename = file.getName();
+					if (filename.startsWith(RECOVERY_FILE_PREFIX + srv + "." + _cfgName + "."))
 					{
-						if (file.delete())
-							_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. SUCCESS: removing file: "+file);
-						else
-							_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. FAILED: removing file: "+file);
+						if (FileUtils.isFileOlder(file, timeMillis))
+						{
+							if (file.delete())
+								_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. SUCCESS: removing file: "+file);
+							else
+								_logger.info("removeOldErrorFiles(): cfgName='"+_cfgName+"', srv='"+srv+"'. FAILED: removing file: "+file);
+						}
 					}
 				}
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.error("Runtime Problems in: removeOldErrorFiles(), cfgName='"+_cfgName+"', continuing anyway... Caught: " + ex, ex);
 			}
 		}
 	}

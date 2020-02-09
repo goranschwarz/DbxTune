@@ -675,9 +675,11 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("RunQueueLengthAvg1min" , PROPKEY_alarm_RunQueueLengthAvg1min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min , DEFAULT_alarm_RunQueueLengthAvg1min) , DEFAULT_alarm_RunQueueLengthAvg1min , "If 'RunQueueLength: Avg_1min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
-		list.add(new CmSettingsHelper("RunQueueLengthAvg5min" , PROPKEY_alarm_RunQueueLengthAvg5min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min , DEFAULT_alarm_RunQueueLengthAvg5min) , DEFAULT_alarm_RunQueueLengthAvg5min , "If 'RunQueueLength: Avg_5min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
-		list.add(new CmSettingsHelper("RunQueueLengthAvg15min", PROPKEY_alarm_RunQueueLengthAvg15min, Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min), DEFAULT_alarm_RunQueueLengthAvg15min, "If 'RunQueueLength: Avg_15min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("RunQueueLengthAvg1min" , isAlarmSwitch, PROPKEY_alarm_RunQueueLengthAvg1min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg1min , DEFAULT_alarm_RunQueueLengthAvg1min) , DEFAULT_alarm_RunQueueLengthAvg1min , "If 'RunQueueLength: Avg_1min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
+		list.add(new CmSettingsHelper("RunQueueLengthAvg5min" , isAlarmSwitch, PROPKEY_alarm_RunQueueLengthAvg5min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg5min , DEFAULT_alarm_RunQueueLengthAvg5min) , DEFAULT_alarm_RunQueueLengthAvg5min , "If 'RunQueueLength: Avg_5min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
+		list.add(new CmSettingsHelper("RunQueueLengthAvg15min", isAlarmSwitch, PROPKEY_alarm_RunQueueLengthAvg15min, Double.class, conf.getDoubleProperty(PROPKEY_alarm_RunQueueLengthAvg15min, DEFAULT_alarm_RunQueueLengthAvg15min), DEFAULT_alarm_RunQueueLengthAvg15min, "If 'RunQueueLength: Avg_15min' is greater than ## then send 'AlarmEventRunQueueLength'." ));
 
 		return list;
 	}

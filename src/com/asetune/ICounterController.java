@@ -30,7 +30,6 @@ import com.asetune.cm.CountersModel;
 import com.asetune.gui.ISummaryPanel;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistContainer.HeaderInfo;
-import com.asetune.sql.DbmsDataTypeResolver;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.ssh.SshConnection;
 import com.asetune.utils.Configuration;
@@ -205,11 +204,6 @@ public interface ICounterController
 	/** Descide if the Connection wachdog should be started or not for GUI mode monitoring */
 	public boolean shouldWeStart_connectionWatchDog();
 
-	/** Resolver to remap datatypes */
-	public DbmsDataTypeResolver getDbmsDataTypeResolver();
-	public void setDbmsDataTypeResolver(DbmsDataTypeResolver resolver);
-	public DbmsDataTypeResolver createDbmsDataTypeResolver();
-	
 	/**
 	 * no-gui: get a new connection and check "stuff"<br>
 	 * This will be called from the CounterCollectorThreadNoGui when a new connection to the DBMS is needed (on startup, or if the connection is lost)

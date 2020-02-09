@@ -495,8 +495,8 @@ public class OverviewServlet extends HttpServlet
 		out.println("  <li><a href='#logfiles'          >All file(s) in the LOG Directory              </a> </li>");
 		out.println("  <li><a href='#conffiles'         >All file(s) in the CONF Directory             </a> </li>");
 		out.println("  <li><a href='#reportfiles'       >All file(s) in the REPORTS Directory          </a> </li>");
-		out.println("  <li><a href='#central'           >DbxCentral databases                          </a> </li>");
-		out.println("  <li><a href='#offline'           >Available offline databases                   </a> </li>");
+		out.println("  <li><a href='#central'           >Dbx CENTRAL databases                         </a> </li>");
+		out.println("  <li><a href='#offline'           >Available OFFLINE databases                   </a> </li>");
 		out.println("  <li><a href='#active_filecontent'>Active Recordings, full meta-data file content</a> </li>");
 		out.println("</ul>");
 		out.println("</p>");

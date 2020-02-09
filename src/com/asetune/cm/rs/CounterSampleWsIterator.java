@@ -829,8 +829,35 @@ extends CounterSample
 				}
 			} // end: loop dbnames
 
+			// --------------
+			// ---- NOTE ----
+			// --------------
+			// -- If we throw any (SQL)Exception here, POST handling like "Alarm Handling" will NOT be kicked off
+			// -- SO: If we think we have a "object" that can be "interrogate", then DO NOT THROW here (possibly just set set the exception)
+			// --------------
 			if (sqlExList.size() > 0)
-				throw new SQLException("In the Active/Standby check we had "+sqlExList.size()+" SQLException(only first Exception): "+sqlExList.get(0));
+			{
+				// Only throw if we have NOT added any rows
+				boolean doThrow = _rows.isEmpty();
+
+				SQLException crEx = new SQLException("In the Active/Standby check we had "+sqlExList.size()+" SQLException(only first Exception): "+sqlExList.get(0));
+				if (doThrow)
+				{
+					// NOTE: if we THROW here: POST handling like "Alarm Handling" will NOT be kicked off
+					throw crEx;
+				}
+				else
+				{
+					// Set the exception so that the GUI well SEE that there is "some" problems
+					// HOPEFULLY the NO-GUI will not examen the "setSampleException()" and bail out... (at least from what I can see in the code)
+					// ... otherwise we can do: if (cm.getGuiController() != null && cm.getGuiController().hasGUI()) cm.setSampleException(crEx); 
+					cm.setSampleException(crEx);
+					
+					_logger.warn("In the Active/Standby check we had "+sqlExList.size()+" Below are this list: ");
+					for (int ec= 0; ec<sqlExList.size(); ec++)
+						_logger.warn("  -- Active/Standby check Exception["+ec+"]: " + sqlExList.get(ec));
+				}
+			}
 
 			return true;
 		}

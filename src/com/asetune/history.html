@@ -44,6 +44,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<LI>new: AlarmEventLowOsDiskFreeSpace      -- For SQL-Server, when we starting to run out of disk in the volumes where we store data/log files.</LI>
 				<LI>new: AlarmEventAseLicensExpiration     -- For Sybase ASE; If the server is in Grace Period, send alarm.</LI>
 				<LI>new: AlarmEventMissingMandatoryContent -- which is used to check that some users or applications are logged in to the DBMS </LI>
+				<LI>new: AlarmEventOsDiskUtilPct           -- if OS Disk has been busy for for a long time (something strange is happening, like write cache has been disabled due to low voltage on battery)</LI>
 				<LI>Possible to send dummy alarm <b>from</b> the Template editor while editing the templates, to test any writer with the message template</LI>
 				<LI>possible to use <code>${activeAlarmCount}</code> in writer templates</LI>
 				<LI>possible to use <code>${dbxCentralUrl}</code> in writer templates</LI>
@@ -94,10 +95,21 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<li>PCS: Print statistics about H2 performance after a entry has been stored</li>
 		<li>PCS: DDL Lookup, options to enable/disable Lokkup/Storage of 'Database Objects' and 'Statement Cache Entries' DDL</li>
 		<li>PCS: H2 extra property "dbxtune.h2.url.extra" to add/override various H2 URL Properties</li>
+		<li>PCS: New Persistent Counter Store -- InfluxDB (https://www.influxdata.com/) is a Time Series database that stores Trend Graphs for any DbxTune collector</li>
+		<li>PCS: some work to make the PCS modules and DBMS Configuration more DBMS Vendor independent (create table data type, and Quoted Identifiers enhancements)</li>
+		<li>PCS: Daily Reports are now done in background, with the previous period (prev day) database. When it's done, the shutdown defrag will be done.</li>
+		<li>PCS: setting H2 option 'REUSE_SPACE=FALSE', which means that A LOT MORE disk space will be used for database storage (default is REUSE_SPACE=TRUE).<br> 
+			&emsp;&emsp;&emsp; But less CPU/IO will be done (due to 'DB garbage cleanup' is disabled).<br> 
+			&emsp;&emsp;&emsp; Note: this is a temporary workaround until H2 becomes better at this.<br> 
+			&emsp;&emsp;&emsp; The DB Size will be 'shrinked' (by shutdown defrag) by the 'CentralH2Defrag at 04:00', or when the collector does a database 'rollover' at midnight.<br>
+		</li>
 		<li>Graph properties, for DbxCentral Web interface... so we can individually decide Graphs Label Sizes, yAxisScaleLabels (KB MB, GB, Seconds, etc...)<br>
 		    This is described as a JSON object, example: {"yAxisScaleLabels":{"name":"mb","s0":" MB", "s1":" GB", "s2":" TB", "s3":" PB", "s4":" EB"}}</li>
 		<LI>CmIoStat: added chart 'iostat: Read & Write Operations(readsPerSec+writesPerSec) per Device & sec', which has 'readsPerSec' and 'writesPerSec' combined.</LI>
 		<li>All DbxTools does now have a Version Sensitive Information in the Counter Controller Property Dialog</li>
+		<li>remove file produced by '-XX:HeapDumpPath=path' after 7 days, not to fill up disk space.</li>
+		<li>NoGui: Changing configuration files will be automatically picked up (objects must read from the Configuration object to see the new values)</li>
+		<li>collector 'CmOsIostat' which is part of all DbxTune collectors: send alarm 'AlarmEventOsDiskUtilPct' -- if OS Disk has been busy for for a long time (something strange is happening, like write cache has been disabled due to low voltage on battery)</li>
 		<LI>
 			<b>Upgraded some of the third party libraries/jars</b><br>
 			<ul>
@@ -108,6 +120,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 				<li>To version 2.3.0          Component: juniversalchardet</li>
 				<li>To version 5.2            Component: Miglayout</li>
 				<li>To version 7.2.2          Component: Microsoft JDBC Driver</li>
+				<li>To version 262            Component: ganymed ssh2</li>
 			</ul>
 		</LI>
 	</UL>
@@ -170,6 +183,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<b>View Configuration</b><br>
 		<ul>
 			<li>Added tab: Resource Governor, which does: sp_help_resource_limit</li>
+			<li>Changed tab: ShmDumpConfig, at the end: include Instructions for setting up shared memory dumps</li>
 		</ul>
 		</LI>
 
@@ -307,6 +321,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			   Then send alarm (AlarmEventOldBackup) when ASE has not yet made any backups<br>
 			   This so we can easier trap if any backup jobs has *stopped* working *after* a ASE reboot
 			</li>
+			<li>changed alarm 'AlarmEventOldBackup': This alarm was fired after a ASE Restart, due to dependencies of columns 'LastDbBackupAgeInHours' and 'LastLogBackupAgeInHours' in memory values is NULL after restart.<br>
+			&emsp;&emsp; Now we try to discard those faulty alarms by using the ASE Start time as the "LastBackupTime"...</li>
 		</ul>
 		</LI>
 
@@ -337,6 +353,14 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
+		<b>CmStatementCache</b><br>
+		<ul>
+			<li>Send alarm <code>AlarmEventConfigResourceIsLow</code> if "CacheHitPct" is lower than 25%, config option: CmStatementCache.alarm.system.if.CacheHitPct.lt=25</li>
+		</ul>
+		</LI>
+
+		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
+		<LI>
 		<b>NEW: CmSqlDynamic - 'Dynamic SQL'</b><br>
 		<ul>
 			<li>can be used to check what client vendors are executing Prepared Statements</li>
@@ -347,8 +371,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<!-- ~~~~~ Performance Counter Specifics ~~~~~ -->
 		<LI>
 		<b>CmSqlStatement - 'SQL Statement'</b><br>
+		Added 7 new Graphs, to figure out what SQL Statements Over Response times/spans... and how much resources they take. 
 		<ul>
-			Added 7 new Graphs, to figgure out what SQL Statements Over Response times/spans... and how much resources they take. 
 			<li>Sum Exec Time Over SQL Response Time</li>
 			<li>Sum Logical Reads Over SQL Response Time</li>
 			<li>Sum Physical Reads Over SQL Response Time</li>
@@ -483,6 +507,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>All Collectors: DMV names that are different on Azure, so if we connects to Azure the SQL will automatically be <i>fixed</i></LI>
 		<LI>Implemented a Version Sensitive Information in the Counter Controller Property Dialog</LI>
 		<LI>Collector: 'CmWaitingTasks' complete rewrite using 'Paul S. Randal, SQLskills.com' WaitingTasks.sql</LI>
+		<LI>Collector: 'CmWaitingTasks' Do not fetch ALL SQL Text, only the test that is executing NOW (especially good if it's a Stored Proc that is running)</LI>
 		<LI>Collector: 'CmWaitStats' Now excludes more 'wait_type' thanks to 'Paul S. Randal'
 		  <ul>
 		    <li>Also another way of exclude 'wait_types' by just clicking a checkbox in the JTable</li>
@@ -495,6 +520,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>New Collector: CmSpidWait          - What wait types are SPID's waiting on... also 3 graphs on this.</LI>
 		<LI>New Collector: CmDatabase          - Database Sizes and usage, on both OS and SQL-Server level</LI>
 		<LI>New Collector: CmOpenTransaction   - List open transactions and there last SQL Statements, and Execution Plan (if still executing)</LI>
+		<LI>New Collector: CmErrorLog          - Sniff the SQL Server error log</LI>
 		<LI>Tooltip on a xml showplan, 'open in SqlSentry Plan Explorer'</LI>
 		<LI>Configuration, store: select * from sys.dm_server_registry</LI>
 		<LI>CmActiveStatements: added columns 'ImBlockingOthersMaxTimeInSec' -- Max Time in Seconds this session_id has been Blocking other session_id's from executing, because this session_id hold lock(s), that some other session_id wants to grab.</LI>
@@ -507,6 +533,8 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>CmWho - Check for mandatory 'program_name' and 'loginame' - and send alarm 'MissingMandatoryContent' if so.</LI>
 		<LI>Dbms Config: Get active trace flags (and a description dictionary for some common SQL-Server trace flags)</LI>
 		<LI>Dbms Config: Add DbmsConfigIssue Warning for databases that has a lower compatibility_level than the servers default value</LI>
+		<LI>Dbms Config: SysDatabases - also print Database Scoped Configurations</LI>
+		<LI>Daily Report: if 'LogSizeInMb' is larger than 'DataSizeInMb' and 'recovery_model_desc' is FULL, then mark the cell in RED</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -588,16 +616,24 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		    <li>\use:  to switch between databases using the 'database combobox', mainly for DBMS's like Postgres or databases that do not allow cross database references (works with code completion)</li>
 		    <li>\disconnect: Simply disconnect from current DBMS</li>
 		    <li>\connect 'profile name': Connect to any Connection Profile, without having to Open the Connection Dialog (works with code completion)<br>For the moment you need to execute this command as a separate <i>SQL batch</i> (so you can't have it in the middle of a SQL Batch, sorry...)</li>
+		    <li>\ccr: Code Completion Refresh</li>
+		    <li>\utf8len: Check UTF-8 Actual Length, check the actual UTF-8 length and compare it with the max length (ASE & SQL-Server has a max length of BYTES instead of chars)</li>
 		  </ul>
 		</LI>
 		<LI>SQL Server: On errors Print information about Line Number, serverName, ProcName etc.</LI>
 		<LI>SQL Server: Added 'Set' Button with 'statistics io', showplan, exec time</LI>
 		<LI>replaceFakeQuotedIdentifiers: translate '[' and ']' into DBMS Specific Quoted Identifier Chars at runtime<br>
-		    write 'select [c1] from [t1] where [c4] = 1' --translated-to--> 'select "c1" from "t1" where "c4" = 1' or whatever the DBMS specific char is.
+		    write 'select [c1] from [t1] where [c4] = 1' --translated-to--&gt; 'select "c1" from "t1" where "c4" = 1' or whatever the DBMS specific char is.
 		</LI>
 		<LI>MySQL: Added DBMS Configuration</LI>
 		<LI>Remove "C null termination chars" from any strings (which causes problems when copy text into the Copy/Paste buffer)</LI>
 		<LI>A bit better guessing at DBMS data types (for Postgres=text, and SqlServer varchar(max))</LI>
+		<LI>ResultSet Meta Data view. Right click menu option on ResultSetTable or the table header.</LI>
+		<LI>Better handling of Extended Information in table tool tip (estimated row count, clustered index (ASE and MS SQL-Server))</LI>
+		<LI>improved 'go' pipe command: go | bcp, new: switches --table, --dropTable, --crTable, --crIndex, --utf8Dest, --exec   (dryrun is the default now)</LI>
+		<LI>in AutoCommit=false, a field 'FetchSize' is added so you can specify the Statement.setFetchSize()</LI>
+		<LI>new menu: File -&gt; View -&gt; Preferences -&gt; ResultSet Table Properties...  to set various Preferences for how the ResultSet Table will display data</LI>
+		<LI>new Code Completion ':r' -- Code Completion Refresh</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 
@@ -1925,7 +1961,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 
 	<LI>
 	<b>Bug fix: Procedure Call Stack - CmProcCallStack</b><br>
-	Class cast exception in rare cases for ASE 12.5.x (Short -> Integer): use Number.intValue() instead<br>
+	Class cast exception in rare cases for ASE 12.5.x (Short -&gt; Integer): use Number.intValue() instead<br>
 	</LI>
 
 	<LI>

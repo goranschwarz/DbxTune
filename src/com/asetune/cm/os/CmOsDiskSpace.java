@@ -447,8 +447,10 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("LowFreeSpaceInMb",  PROPKEY_alarm_LowFreeSpaceInMb , String.class, conf.getProperty(PROPKEY_alarm_LowFreeSpaceInMb , DEFAULT_alarm_LowFreeSpaceInMb ), DEFAULT_alarm_LowFreeSpaceInMb , "If 'Available-MB' is less than ## then send 'AlarmEventLowOsDiskFreeSpace'. format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)",      new MapNumberValidator()));
-		list.add(new CmSettingsHelper("LowFreeSpaceInPct", PROPKEY_alarm_LowFreeSpaceInPct, String.class, conf.getProperty(PROPKEY_alarm_LowFreeSpaceInPct, DEFAULT_alarm_LowFreeSpaceInPct), DEFAULT_alarm_LowFreeSpaceInPct, "If 'UsedPct' is greater than ##.# Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)", new MapNumberValidator()));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("LowFreeSpaceInMb",  isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInMb , String.class, conf.getProperty(PROPKEY_alarm_LowFreeSpaceInMb , DEFAULT_alarm_LowFreeSpaceInMb ), DEFAULT_alarm_LowFreeSpaceInMb , "If 'Available-MB' is less than ## then send 'AlarmEventLowOsDiskFreeSpace'. format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)",      new MapNumberValidator()));
+		list.add(new CmSettingsHelper("LowFreeSpaceInPct", isAlarmSwitch, PROPKEY_alarm_LowFreeSpaceInPct, String.class, conf.getProperty(PROPKEY_alarm_LowFreeSpaceInPct, DEFAULT_alarm_LowFreeSpaceInPct), DEFAULT_alarm_LowFreeSpaceInPct, "If 'UsedPct' is greater than ##.# Percent then send 'AlarmEventLowOsDiskFreeSpace'.format: mountPoint1=#, mountPoint2=#, mountPoint3=#  (Note: the 'mountPoint' can use regexp)", new MapNumberValidator()));
 
 		return list;
 	}

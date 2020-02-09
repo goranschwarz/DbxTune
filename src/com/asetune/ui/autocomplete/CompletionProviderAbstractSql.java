@@ -1052,6 +1052,17 @@ System.out.println("loadSavedCacheFromFilePostAction: END");
 //		System.out.println("getAlreadyEnteredText()='"+enteredText+"'.");
 
 
+		// Code Completion Refresh
+		if ( enteredText.equals(":r") )
+		{
+			setNeedRefresh(true);
+			setNeedRefreshSystemInfo(true);
+			clearSavedCache();
+			
+			refresh();
+			return null;
+		}
+		
 		if (needRefresh())
 			refresh();
 

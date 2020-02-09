@@ -121,7 +121,10 @@ public class PersistWriterJdbc
 
 	public static final String  PROPKEY_h2_shutdown_dueToDatabaseRollover_inBgThread = "PersistWriterJdbc.h2.shutdown.dueToDatabaseRollover.inBgThread";
 	public static final boolean DEFAULT_h2_shutdown_dueToDatabaseRollover_inBgThread = true;
-	
+
+	public static final String  PROPKEY_dailyReport_dueToDatabaseRollover_inBgThread = "PersistWriterJdbc.dailyReport.dueToDatabaseRollover.inBgThread";
+	public static final boolean DEFAULT_dailyReport_dueToDatabaseRollover_inBgThread = true;
+
 	public static final String  PROPKEY_h2_allowSpilloverDb              = "PersistWriterJdbc.h2.allow.spilloverDb";
 	public static final boolean DEFAULT_h2_allowSpilloverDb              = false;
 
@@ -646,10 +649,10 @@ public class PersistWriterJdbc
 	@Override
 	public void stopServices(int maxWaitTimeInMs)
 	{
-		stopServices_private(maxWaitTimeInMs, false);
+		stopServices_private(maxWaitTimeInMs, false, null);
 	}
 
-	private void stopServices_private(int maxWaitTimeInMs, boolean dueToDatabaseRollover)
+	private void stopServices_private(int maxWaitTimeInMs, boolean dueToDatabaseRollover, final String dailyReportServerName)
 	{
 		if ( _servicesStoppedByThread != null )
 		{
@@ -696,8 +699,8 @@ public class PersistWriterJdbc
 			}
 		}
 
-		// IF H2, make special shutdown
-		if ( _jdbcDriver.equals("org.h2.Driver") && _mainConn != null)
+		// IF H2, make special shutdown (and DailyReport)
+		if ( _jdbcUrl.startsWith("jdbc:h2:") && _mainConn != null)
 		{
 			// Get shutdown type from the Configuration.
 //			H2ShutdownType h2ShutdownType       = H2ShutdownType.IMMEDIATELY;
@@ -709,10 +712,10 @@ public class PersistWriterJdbc
 			{
 				_logger.info("Intention to Shutdown current H2 database due to a Database Rollover.");
 
-				h2ShutdownInBgThread      = getConfig().getBooleanProperty(PROPKEY_h2_shutdown_dueToDatabaseRollover_inBgThread, DEFAULT_h2_shutdown_dueToDatabaseRollover_inBgThread);
+				h2ShutdownInBgThread = getConfig().getBooleanProperty(PROPKEY_h2_shutdown_dueToDatabaseRollover_inBgThread, DEFAULT_h2_shutdown_dueToDatabaseRollover_inBgThread);
 
 				// Get the configured shutdown type (into a local String, which is then parsed into a H2ShutdownType)
-				String H2ShutdownTypeConf = getConfig().getProperty       (PROPKEY_h2_shutdown_dueToDatabaseRollover_type,       DEFAULT_h2_shutdown_dueToDatabaseRollover_type);
+				String H2ShutdownTypeConf = getConfig().getProperty(PROPKEY_h2_shutdown_dueToDatabaseRollover_type, DEFAULT_h2_shutdown_dueToDatabaseRollover_type);
 				try { 
 					h2ShutdownType = H2ShutdownType.valueOf( H2ShutdownTypeConf ); 
 				} catch(RuntimeException ex) { 
@@ -723,11 +726,30 @@ public class PersistWriterJdbc
 			// Create a Runnable to do the shutdown work, either with a thread (in background) or directly from this thread.
 			final H2ShutdownType final_h2ShutdownType = h2ShutdownType;
 			final DbxConnection  final_mainConn       = _mainConn;
-			Runnable h2Shutdown = new Runnable()
+			final String         h2ShutdownInBgStr    = h2ShutdownInBgThread ? "BACKGROUND" : "Foreground";
+			Runnable h2ShutdownRunnable = new Runnable()
 			{
 				@Override
 				public void run()
 				{
+					// Execute the Daily Report NOW
+					if (dueToDatabaseRollover && StringUtil.hasValue(dailyReportServerName))
+					{
+						_logger.info("Producing Daily Report using a " + h2ShutdownInBgStr + " thread.");
+						
+						// Create a "daily" report, with:
+						//  - Alarms that has happened
+						//  - A summary of Performance issues that has happened the day
+						//  - etc...
+						// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
+						try { createDailySummaryReport(final_mainConn, dailyReportServerName); }
+						catch (Exception ex)
+						{
+							_logger.error("Problems creating Daily Report, skipping this.", ex);
+						}
+					}
+
+					_logger.info("Shutting down current H2 database using a " + h2ShutdownInBgStr + " thread.");
 					h2Shutdown(final_mainConn, final_h2ShutdownType);
 				}
 			};
@@ -735,10 +757,9 @@ public class PersistWriterJdbc
 			// Now execute h2Shutdown "target" (in foreground or background)
 			if (h2ShutdownInBgThread)
 			{
-				Thread h2ShutdownThread = new Thread(h2Shutdown);
-				h2ShutdownThread.setName("H2ShutdownThread");
+				Thread h2ShutdownThread = new Thread(h2ShutdownRunnable);
+				h2ShutdownThread.setName("H2DailyReportAndShutdownThread");
 				h2ShutdownThread.setDaemon(false); // I don't think we should run it as a daemon...
-				_logger.info("Shutting down current H2 database using a BACKGROUND thread.");
 				h2ShutdownThread.start();
 
 				// 
@@ -749,13 +770,72 @@ public class PersistWriterJdbc
 			}
 			else
 			{
-				h2Shutdown.run();
+				h2ShutdownRunnable.run();
 			}
 			
 			// Reset the current connection WITHOUT closing it
 			// _mainConn.close() seems to block until the shutdown is complete, and since the connection wont be usefull after 
 			// the shutdown we can just as easily "throw the handle", lets just hope that it do not give use any memory leaks
 			_mainConn = null; 
+		}
+		// PCS - is NOT H2 -- create report, but do NOT Shutdown
+		else
+		{
+			// Execute the Daily Report if it's a "Database Roll-over"
+			if (dueToDatabaseRollover && StringUtil.hasValue(dailyReportServerName))
+			{
+				boolean doDailyReportInBgThread = getConfig().getBooleanProperty(PROPKEY_dailyReport_dueToDatabaseRollover_inBgThread, DEFAULT_dailyReport_dueToDatabaseRollover_inBgThread);
+
+				// Create a Runnable to Execute the Daily Report in: Background or Foreground
+				final DbxConnection  final_mainConn     = _mainConn;
+				final String         dailyReportInBgStr = doDailyReportInBgThread ? "BACKGROUND" : "Foreground";
+				Runnable dailyReportRunnable = new Runnable()
+				{
+					@Override
+					public void run()
+					{
+						_logger.info("Producing Daily Report using a " + dailyReportInBgStr + " thread.");
+
+						// Create a "daily" report, with:
+						//  - Alarms that has happened
+						//  - A summary of Performance issues that has happened the day
+						//  - etc...
+						// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
+						try { createDailySummaryReport(final_mainConn, dailyReportServerName); }
+						catch (Exception ex)
+						{
+							_logger.error("Problems creating Daily Report, skipping this.", ex);
+						}
+						
+						// Close the connection AFTER the report is DONE (otherwise it will be "hanging")
+						final_mainConn.closeNoThrow();
+					}
+				};
+				
+				// Now execute h2Shutdown "target" (in foreground or background)
+				if (doDailyReportInBgThread)
+				{
+					Thread dailyReportThread = new Thread(dailyReportRunnable);
+					dailyReportThread.setName("DailyReportBgThread");
+					dailyReportThread.setDaemon(false); // I don't think we should run it as a daemon...
+					dailyReportThread.start();
+
+					// 
+					int sleepTimeSec = 5;
+					_logger.info("Waiting for "+sleepTimeSec+" seconds, to let the Daily Report THREAD to be started/initiated and do initial work before continuing.");
+					try { Thread.sleep(sleepTimeSec * 1000); }
+					catch (InterruptedException ignore) {}
+
+					// Reset the current connection WITHOUT closing it
+					// The DailyReport uses another reference (final_mainConn), and we do NOT want to close the connection in this method (stopServices_private)
+					_mainConn = null; 
+				}
+				else
+				{
+					// execute DailyReport in foreground
+					dailyReportRunnable.run();
+				}
+			}
 		}
 
 		// Close the connection
@@ -1029,11 +1109,12 @@ public class PersistWriterJdbc
 		
 		boolean force = true;
 		boolean dueToDatabaseRollover = false;
+		String  dailyReportServerName = null;
 
-		close(force, dueToDatabaseRollover);
+		close(force, dueToDatabaseRollover, dailyReportServerName);
 	}
 
-	private void close(boolean force, boolean dueToDatabaseRollover)
+	private void close(boolean force, boolean dueToDatabaseRollover, String dailyReportServerName)
 	{
 		if (_mainConn == null)
 			return;
@@ -1058,7 +1139,7 @@ public class PersistWriterJdbc
 //			}
 
 			// Shutdown and stop any of the (H2) services
-			stopServices_private(5000, dueToDatabaseRollover);
+			stopServices_private(5000, dueToDatabaseRollover, dailyReportServerName);
 		}
 	}
 
@@ -1067,8 +1148,9 @@ public class PersistWriterJdbc
 	{
 		boolean force = false;
 		boolean dueToDatabaseRollover = false;
+		String  dailyReportServerName = null;
 
-		close(force, dueToDatabaseRollover);
+		close(force, dueToDatabaseRollover, dailyReportServerName);
 	}
 
 	@Override
@@ -1280,8 +1362,9 @@ public class PersistWriterJdbc
 
 			boolean force = true;
 			boolean dueToDatabaseRollover = false;
+			String  dailyReportServerName = null;
 
-			close(force, dueToDatabaseRollover);
+			close(force, dueToDatabaseRollover, dailyReportServerName);
 		}
 
 		// for H2, we have a "new database option" if the "timestamp" has changed.
@@ -1293,27 +1376,29 @@ public class PersistWriterJdbc
 			{
 				_lastUsedUrl = null;
 
-				// Create a "daily" report, with:
-				//  - Alarms that has happened
-				//  - A summary of Performance issues that has happened the day
-				//  - etc...
-				// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
-				try { createDailySummaryReport(_mainConn, cont.getServerNameOrAlias()); }
-				catch (Exception ex)
-				{
-					_logger.error("Problems creating Daily Report, skipping this.", ex);
-				}
+//				// Create a "daily" report, with:
+//				//  - Alarms that has happened
+//				//  - A summary of Performance issues that has happened the day
+//				//  - etc...
+//				// Do this in a try/catch so if we have issues: We would still continue with the "db-file-roll-over"
+//				try { createDailySummaryReport(_mainConn, cont.getServerNameOrAlias()); }
+//				catch (Exception ex)
+//				{
+//					_logger.error("Problems creating Daily Report, skipping this.", ex);
+//				}
 
 				boolean force = true;
 				boolean dueToDatabaseRollover = false;
+				String  dailyReportServerName = null;
 
 				if ( _h2LastDateChange != null)
 				{
 					dueToDatabaseRollover = true;
+					dailyReportServerName = cont.getServerNameOrAlias();
 					_logger.info("Closing the old database with ${DATE} marked as '"+_h2LastDateChange+"', a new database will be opened using ${DATE} marker '"+dateStr+"'.");
 				}
 
-				close(force, dueToDatabaseRollover);
+				close(force, dueToDatabaseRollover, dailyReportServerName);
 			}
 		}
 
@@ -1429,8 +1514,8 @@ public class PersistWriterJdbc
 					urlMap.put("DATABASE_TO_UPPER", "false");
 				}
 
-				// This sis a test to see if H2 behaves better with AseTune
-				// SInce AseTune only *writes* to the database... we do not need to ReUseSpace (nothing gets deleted)
+				// This is a test to see if H2 behaves better with AseTune
+				// Since AseTune only *writes* to the database... we do not need to ReUseSpace (nothing gets deleted)
 				// and the hope is that the function MVStore.java - freeUnusedChunks() wont get called
 				// It seems to be the cleanup that causes us problem...
 // This made the files *much* bigger... So I had to turn REUSE_SPACE=true (which is the default) back on again 
@@ -1458,6 +1543,16 @@ public class PersistWriterJdbc
 						}
 					}
 				}
+				if ( ! urlMap.containsKey("REUSE_SPACE") )
+				{
+					change = true;
+					_logger.info("H2 URL add option: REUSE_SPACE=FALSE");
+					_logger.info("#########################################################");
+					_logger.info("H2, option 'REUSE_SPACE=FALSE' means that A LOT MORE disk space will be used for database storage (default is REUSE_SPACE=TRUE). But less CPU/IO will be done (due to 'DB garbage cleanup' is disabled). Note: this is a temporary workaround until H2 becomes better at this. The DB Size will be 'shrinked' (by shutdown defrag) when a database 'rollover' happens at midnight, when a new database will be created.");
+					_logger.info("#########################################################");
+					
+					urlMap.put("REUSE_SPACE",  "FALSE");
+				}
 
 				// This property is only used when using the MVStore storage engine. How long to retain old, persisted data, in milliseconds. 
 				// The default is 45000 (45 seconds), 0 means overwrite data as early as possible. 
@@ -1472,9 +1567,9 @@ public class PersistWriterJdbc
 				if ( ! urlMap.containsKey("RETENTION_TIME") )
 				{
 //					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", -1); // default 10 minutes
-//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 45_000); // This is the H2 DEFAULT value
+					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 45_000); // This is the H2 DEFAULT value
 //TODO: set this to 45_000 but right now we seems to have a problem so REVERT back to what we know "worked"
-					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 600_000); // default 10 minutes
+//					int h2RetentionTime = getConfig().getIntProperty("dbxtune.h2.RETENTION_TIME", 600_000); // default 10 minutes
 					if (h2RetentionTime > -1) // set to -1 to disable this option
 					{
 						change = true;
@@ -1493,7 +1588,7 @@ public class PersistWriterJdbc
     					int h2CacheInKb = h2CacheInMb * 1024;
     					change = true;
     					_logger.info("H2 URL add option: CACHE_SIZE="+h2CacheInKb);
-    					urlMap.put("REUSE_SPACE",  h2CacheInKb+"");
+    					urlMap.put("CACHE_SIZE",  h2CacheInKb+"");
 					}
 				}
 
@@ -1526,8 +1621,8 @@ public class PersistWriterJdbc
 				if ( ! urlMap.containsKey("WRITE_DELAY") )
 				{
 //					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", -1);
-//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 2_000);
-					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
+					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 2_000);
+//					int h2WriteDelay = getConfig().getIntProperty("dbxtune.h2.WRITE_DELAY", 30_000);
 //TODO: set this to 2_000 but right now we seems to have a problem so REVERT back to what we know "worked"
 					if (h2WriteDelay > -1) // set to -1 to disable this option
 					{
@@ -1735,6 +1830,23 @@ public class PersistWriterJdbc
 				setH2SpecificSettings(_ddlStorageConn);
 				setH2SpecificSettings(_sqlCaptureStorageConn);
 				
+				// Get H2 Configuration/Settings
+				Map<String, String> configMap = getH2Settings(_mainConn);
+				_logger.info("H2 Configuration/Settings: " + configMap);
+				
+				// Write H2 Configuration to "Service File"
+				boolean writeDbxTuneServiceFile = true;
+				if (writeDbxTuneServiceFile)
+				{
+					Configuration conf = Configuration.getInstance(DbxTune.DBXTUNE_NOGUI_INFO_CONFIG);
+					if (conf.hasFileAndExists())
+					{
+						conf.setProperty("pcs.last.h2.config", configMap + "");
+						
+						conf.save(true);
+					}
+				}
+
 				// instantiate a small H2 Performance Counter Collector
 //				H2WriterStat h2stat = new H2WriterStat(new H2WriterStat.DbxTuneH2PerfCounterConnectionProvider());
 				H2WriterStat h2stat = new H2WriterStat(new ConnectionProvider()
@@ -1751,7 +1863,6 @@ public class PersistWriterJdbc
 					{
 						throw new RuntimeException("getNewConnection(appname): -NOT-IMPLEMENTED-");
 					}
-					
 				});
 				H2WriterStat.setInstance(h2stat);
 			}
@@ -1932,6 +2043,36 @@ public class PersistWriterJdbc
 		dbExecSetting(conn, "SET MAX_MEMORY_ROWS 2500", logExtraInfo);
 	}
 
+	private Map<String, String> getH2Settings(DbxConnection conn)
+	{
+		Map<String, String> map = new LinkedHashMap<>();
+
+		String sql = "select [NAME], [VALUE] from [INFORMATION_SCHEMA].[SETTINGS] order by [NAME]";
+		sql = conn.quotifySqlString(sql);
+		
+		try ( Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				String key = rs.getString(1);
+				String val = rs.getString(2);
+
+				if (val == null)
+					val = "NULL";
+				val = val.trim();
+				
+				map.put(key, val);
+			}
+		}
+		catch(SQLException ex)
+		{
+			_logger.info("Problems getting H2 Settings/Config. Caught: "+ex);
+		}
+		
+		return map;
+	}
+
+
 	private void setAseSpecificSettings(DbxConnection conn)
 	throws Exception
 	{
@@ -2011,8 +2152,9 @@ public class PersistWriterJdbc
 
 			boolean force = true; // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect()
 			boolean dueToDatabaseRollover = false;
+			String  dailyReportServerName = null;
 
-			close(force, dueToDatabaseRollover);
+			close(force, dueToDatabaseRollover, dailyReportServerName);
 
 			Exception ex =  new Exception(msg);
 			{
@@ -2031,8 +2173,9 @@ public class PersistWriterJdbc
 
 			boolean force = true; // Force close, will set various connections to NULL which is required by: MainFrame.getInstance().action_disconnect()
 			boolean dueToDatabaseRollover = false;
+			String  dailyReportServerName = null;
 
-			close(force, dueToDatabaseRollover);
+			close(force, dueToDatabaseRollover, dailyReportServerName);
 
 			Exception ex =  new Exception(msg);
 			if (DbxTune.hasGui())
@@ -3294,7 +3437,8 @@ public class PersistWriterJdbc
 		}
 
 		int graphCount = 0;
-		if (cm.hasValidSampleData())
+//		if (cm.hasValidSampleData())
+		if (cm.hasTrendGraphData()) // do not use hasValidSampleData()... if we do not have any DATA records for a Sample, we might have TrendGraph records 
 		{
 			Map<String,TrendGraphDataPoint> tgdMap = cm.getTrendGraphData();
 			if (tgdMap != null)
@@ -3307,7 +3451,6 @@ public class PersistWriterJdbc
 					saveGraphData(conn, cm, tgdp, sessionStartTime, sessionSampleTime);
 					graphCount++;
 				}
-
 			}
 		}
 
@@ -3820,6 +3963,7 @@ public class PersistWriterJdbc
 				if ( ! sqlAlterList.isEmpty() )
 				{
 					_logger.info("Persistent Counter DB: Altering table '"+tabName+"' for CounterModel graph '" + tgdp.getName() + "'.");
+//System.out.println("XXXXXXXXXXXXXX: " + sqlAlterList);
 
 					for (String sqlAlterTable : sqlAlterList)
 						dbDdlExec(conn, sqlAlterTable);
@@ -4322,6 +4466,12 @@ public class PersistWriterJdbc
 	//---------------------------------------------
 	private void createDailySummaryReport(DbxConnection conn, String serverName)
 	{
+		if (conn == null)
+		{
+			_logger.info("Daily Summary Report was skipped, the passed Connection was null.");
+			return;
+		}
+
 		if ( ! DailySummaryReportFactory.isCreateReportEnabled() )
 		{
 			_logger.info("Daily Summary Report is NOT Enabled, this can be enabled using property '"+DailySummaryReportFactory.PROPKEY_create+"=true'.");

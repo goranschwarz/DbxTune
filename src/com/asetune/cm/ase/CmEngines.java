@@ -763,7 +763,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("CPUTime", PROPKEY_alarm_CPUTime, Integer.class, conf.getIntProperty(PROPKEY_alarm_CPUTime             , DEFAULT_alarm_CPUTime             ), DEFAULT_alarm_CPUTime            , "If 'CPUTime' is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("CPUTime", isAlarmSwitch, PROPKEY_alarm_CPUTime, Integer.class, conf.getIntProperty(PROPKEY_alarm_CPUTime             , DEFAULT_alarm_CPUTime             ), DEFAULT_alarm_CPUTime            , "If 'CPUTime' is greater than ## then send 'AlarmEventHighCpuUtilization'." ));
 
 		return list;
 	}

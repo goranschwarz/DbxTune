@@ -105,6 +105,7 @@ public class AseSqlScriptReader
 	private Reader          _reader                = null;
 	private BufferedReader  _bReader               = null;
 
+	private ConnectionProvider _connProvider       = null;
 
 	public AseSqlScriptReader()
 	{
@@ -123,14 +124,20 @@ public class AseSqlScriptReader
 
 	public AseSqlScriptReader(String goSql, boolean execWithoutGoAtTheEnd)
 	{
-		this(goSql, execWithoutGoAtTheEnd, null);
+		this(goSql, execWithoutGoAtTheEnd, null, null);
 	}
 
 	public AseSqlScriptReader(String goSql, boolean execWithoutGoAtTheEnd, String sqlBatchTerminator)
 	{
+		this(goSql, execWithoutGoAtTheEnd, sqlBatchTerminator, null);
+	}
+	
+	public AseSqlScriptReader(String goSql, boolean execWithoutGoAtTheEnd, String sqlBatchTerminator, ConnectionProvider connProvider)
+	{
 		setGoTerminator(sqlBatchTerminator);
 		setSqlCommand(goSql);
 		setExecWithoutGoAtTheEnd(execWithoutGoAtTheEnd);
+		setConnectionProvider(connProvider);
 	}
 
 	public AseSqlScriptReader(File file, boolean execWithoutGoAtTheEnd) 
@@ -152,6 +159,19 @@ public class AseSqlScriptReader
 //	}
 
 	
+	/**
+	 * Set a connection provider
+	 * @param ConnProvider
+	 */
+	public void setConnectionProvider(ConnectionProvider connProvider)
+	{
+		_connProvider = connProvider;
+	}
+	public ConnectionProvider getConnectionProvider()
+	{
+		return _connProvider;
+	}
+
 	/**
 	 * A 'go' terminated string.
 	 * @param sql
@@ -1011,7 +1031,7 @@ public class AseSqlScriptReader
 					// Get go | pipeCmd
 					if ( ! StringUtil.isNullOrBlank(goPipeStr) )
 					{
-						_pipeCommand = new PipeCommand(goPipeStr, batchBuffer.toString());
+						_pipeCommand = new PipeCommand(goPipeStr, batchBuffer.toString(), _connProvider);
 					}
 
 //					// get how many 

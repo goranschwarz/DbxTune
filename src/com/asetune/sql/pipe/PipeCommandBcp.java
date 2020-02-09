@@ -28,7 +28,13 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.sql.Types;
+import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
@@ -43,12 +49,20 @@ import com.asetune.gui.ConnectionProfile;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressCallback;
 import com.asetune.gui.ResultSetTableModel;
+import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.SqlObjectName;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.ddl.DataTypeNotResolvedException;
+import com.asetune.sql.ddl.IDbmsDdlResolver;
+import com.asetune.sql.ddl.model.ForeignKey;
+import com.asetune.sql.ddl.model.Index;
+import com.asetune.sql.ddl.model.Table;
 import com.asetune.utils.AseConnectionFactory;
 import com.asetune.utils.AseConnectionUtils;
 import com.asetune.utils.Configuration;
+import com.asetune.utils.ConnectionProvider;
+import com.asetune.utils.DbUtils;
 import com.asetune.utils.StringUtil;
 
 public class PipeCommandBcp
@@ -58,6 +72,18 @@ extends PipeCommandAbstract
 
 	private String[] _args = null;
 
+	// If we are transferring data to a Sybase ASE or a Microsoft SQL-Server that has charset UTF8 
+	// Then some chars will use more than 1 byte for storage.
+	// And some vendors (Sybase ASE[with UTF8] & SQL-Server[with UTF8]) the char/varchar is in BYTES and NOT number of chars
+	// While some other vendors still has Number of chars even for chars that are OUTSIDE the 127 bit limit.
+	public enum UTF8_destMode
+	{
+		NONE,  // Do not care to check for UTF-8 chars towards destination 
+		CHECK, // Check and warn about UTF-8 String that are longer than the destination allows (if the destination stores bytes in the UTF8 char/varchar columns
+		TRUNC  // Truncate UTF-8 String towards the destination, using the same/max length as the destination storage would accept. 
+	};
+	
+	
 	private static class CmdParams
 	{
 		//-----------------------
@@ -69,9 +95,9 @@ extends PipeCommandAbstract
 		//-----------------------
 		// PARAMS for TO SERVER
 		//-----------------------
-		String  _profile            = null; // extracted from _destTable
-		String  _db                 = null; // extracted from _destTable
-		String  _table              = null; // [[dbname.]owner.]tablename
+		String  _profile            = null; 
+		String  _db                 = null; 
+		String  _table              = null; // [owner.]tablename
 		String  _user               = null;
 		String  _passwd             = null;
 		String  _server             = null;
@@ -79,10 +105,15 @@ extends PipeCommandAbstract
 		String  _driver             = null; // not yet used
 		int     _batchSize          = 0;
 		boolean _slowBcp            = false;
+		boolean _dropTab            = false;
 		boolean _createTab          = false;
+		boolean _createIndex        = false;
 		String  _initStr            = null;
 		boolean _truncate           = false;
 		boolean _useQuotesOnDestTab = false;
+		UTF8_destMode _utf8DestCheckTrunc = UTF8_destMode.NONE;
+//		boolean _dryRun             = false;
+		boolean _dryRun             = true;
 		boolean _debug              = false;
 
 		@Override
@@ -102,10 +133,14 @@ extends PipeCommandAbstract
 			sb.append(", ").append("driver            ".trim()).append("=").append(StringUtil.quotify(_driver            ));
 			sb.append(", ").append("batchSize         ".trim()).append("=").append(StringUtil.quotify(_batchSize         ));
 			sb.append(", ").append("slowBcp           ".trim()).append("=").append(StringUtil.quotify(_slowBcp           ));
+			sb.append(", ").append("dropTab           ".trim()).append("=").append(StringUtil.quotify(_dropTab           ));
 			sb.append(", ").append("createTab         ".trim()).append("=").append(StringUtil.quotify(_createTab         ));
+			sb.append(", ").append("createIndex       ".trim()).append("=").append(StringUtil.quotify(_createIndex       ));
 			sb.append(", ").append("initStr           ".trim()).append("=").append(StringUtil.quotify(_initStr           ));
 			sb.append(", ").append("truncate          ".trim()).append("=").append(StringUtil.quotify(_truncate          ));
 			sb.append(", ").append("useQuotesOnDestTab".trim()).append("=").append(StringUtil.quotify(_useQuotesOnDestTab));
+			sb.append(", ").append("utf8DestCheckTrunc".trim()).append("=").append(StringUtil.quotify(_utf8DestCheckTrunc.toString()));
+			sb.append(", ").append("dryRun            ".trim()).append("=").append(StringUtil.quotify(_dryRun            ));
 			sb.append(", ").append("debug             ".trim()).append("=").append(StringUtil.quotify(_debug             ));
 			sb.append(".");
 
@@ -127,10 +162,10 @@ extends PipeCommandAbstract
 	private int        _rowsInserted  = 0;
 	private SQLWarning _sqlWarnings   = null;
 	
-	public PipeCommandBcp(String input, String sqlString)
+	public PipeCommandBcp(String input, String sqlString, ConnectionProvider connProvider)
 	throws PipeCommandException
 	{
-		super(input, sqlString);
+		super(input, sqlString, connProvider);
 		parse(input);
 	}
 
@@ -172,6 +207,7 @@ extends PipeCommandAbstract
 				else // TO OTHER SERVER
 				{
 					CommandLine cmdLine = parseCmdLine(_args);
+					if (cmdLine.hasOption('T')) _params._table         = cmdLine.getOptionValue('T');
 					if (cmdLine.hasOption('p')) _params._profile       = cmdLine.getOptionValue('p');
 					if (cmdLine.hasOption('U')) _params._user          = cmdLine.getOptionValue('U');
 					if (cmdLine.hasOption('P')) _params._passwd        = cmdLine.getOptionValue('P');
@@ -180,16 +216,35 @@ extends PipeCommandAbstract
 					if (cmdLine.hasOption('D')) _params._db            = cmdLine.getOptionValue('D');
 					if (cmdLine.hasOption('b')) try{_params._batchSize = Integer.parseInt(cmdLine.getOptionValue('b'));} catch (NumberFormatException e) {}
 					if (cmdLine.hasOption('s')) _params._slowBcp       = true;
+					if (cmdLine.hasOption('d')) _params._dropTab       = true;
 					if (cmdLine.hasOption('c')) _params._createTab     = true;
+					if (cmdLine.hasOption('I')) _params._createIndex   = true;
 					if (cmdLine.hasOption('i')) _params._initStr       = cmdLine.getOptionValue('i');
 					if (cmdLine.hasOption('t')) _params._truncate      = true;
 					if (cmdLine.hasOption('q')) _params._useQuotesOnDestTab = true;
+//					if (cmdLine.hasOption('8')) _params._utf8DestCheckTrunc = UTF8_destMode.valueOf(cmdLine.getOptionValue('8'));
+//					if (cmdLine.hasOption('X')) _params._dryRun        = true;
+					if (cmdLine.hasOption('e')) _params._dryRun        = false;
 					if (cmdLine.hasOption('x')) _params._debug         = true;
-
-					if ( cmdLine.getArgs() != null && cmdLine.getArgs().length == 1 )
+					if (cmdLine.hasOption('8')) 
 					{
-						String table = cmdLine.getArgList().get(0).toString();
-						_params._table = table;
+						String val = cmdLine.getOptionValue('8').toUpperCase();
+						try 
+						{
+							_params._utf8DestCheckTrunc = UTF8_destMode.valueOf(val);
+						} 
+						catch (IllegalArgumentException e) 
+						{
+							String msg = "Problems parsing 'utf8Dest' parameter '"+val+"'. known values: "+StringUtil.toCommaStr(UTF8_destMode.values())+".";
+							printHelp(null, msg);
+						}
+					}
+
+//					// get other params
+//					if ( cmdLine.getArgs() != null && cmdLine.getArgs().length == 1 )
+//					{
+//						String table = cmdLine.getArgList().get(0).toString();
+//						_params._table = table;
 						
 //						SqlObjectName sqlObj = new SqlObjectName(table, DbUtils.DB_PROD_NAME_SYBASE_ASE, null);
 
@@ -203,11 +258,14 @@ extends PipeCommandAbstract
 //							if (_params._table.startsWith("."))
 //								_params._table = "dbo" + _params._table;
 //						}
-					}
+//					}
 				}
 				
 				checkParsedParameters(_params);
 
+				if (StringUtil.isNullOrBlank(_params._table))
+					printHelp(null, "Missing mandatory parameter -T destinationTableName");
+				
 				if (_params._debug)
 					addDebugMessage("CmdLineSwitches: "+_params);
 			}
@@ -260,17 +318,33 @@ extends PipeCommandAbstract
 		}
 	}
 
+//	private DbxConnection  _leftConn;
+//	private ConnectionProp _leftConnProps;
+//	public void setConnection(DbxConnection conn)
+//	{
+//		_leftConn      = conn;
+//		_leftConnProps = conn.getConnProp();
+//	}
+
 	@Override
 	public void doEndPoint(Object input, SqlProgressDialog progress) 
 	throws Exception 
 	{
-		if ( ! (input instanceof ResultSet) )
-			throw new Exception("Expected ResultSet as input parameter");
-		TransferTable tt = new TransferTable(_params, progress);
+		try
+		{
+			if ( ! (input instanceof ResultSet) )
+				throw new Exception("Expected ResultSet as input parameter");
+			TransferTable tt = new TransferTable(_params, progress);
 
-		tt.open();
-		tt.doTransfer( (ResultSet) input, this );
-		tt.close();
+			tt.open();
+			tt.doTransfer( (ResultSet) input, this );
+			tt.close();
+		}
+		catch(RuntimeException ex)
+		{
+			_logger.error("Caught RuntimeException, which wasn't expected in PipeCommandBcp.doEndPoint(), just printing the exception for easier debugging.", ex);
+			throw ex;
+		}
 	}
 
 	/**
@@ -313,6 +387,7 @@ extends PipeCommandAbstract
 		Options options = new Options();
 
 		// create the Options
+		options.addOption( "T", "table",         true,  "Destination table name." );
 		options.addOption( "p", "profile",       true,  "Profile to get '-U -P -S|-u' from." );
 		options.addOption( "U", "user",          true,  "Username when connecting to server." );
 		options.addOption( "P", "passwd",        true,  "Password when connecting to server. (null=noPasswd)" );
@@ -321,10 +396,15 @@ extends PipeCommandAbstract
 		options.addOption( "D", "dbname",        true,  "Database name in server." );
 		options.addOption( "b", "batchSize",     true,  "Batch size" );
 		options.addOption( "s", "slowBcp",       false, "Do not set ENABLE_BULK_LOAD when connecting to ASE" );
+		options.addOption( "d", "dropTable",     false, "Drop table before we start." );
 		options.addOption( "c", "crTable",       false, "Create table if one doesn't exist." );
+		options.addOption( "I", "crIndex",       false, "Create indexes." );
 		options.addOption( "i", "initStr",       true,  "used to do various settings in destination server." );
 		options.addOption( "t", "truncateTable", false, "Truncate table before insert." );
 		options.addOption( "q", "quoteDestTable",false, "Use Quoted Identifier on the Destination Table." );
+		options.addOption( "8", "utf8Dest",      true,  "Do UTF-8 Check/trunc on destination Table column data" );
+//		options.addOption( "X", "dryRun",        false, "dryRun." );
+		options.addOption( "e", "exec",          false, "dryRun = false." );
 		options.addOption( "x", "debug",         false, "Debug mode." );
 
 		try
@@ -340,11 +420,11 @@ extends PipeCommandAbstract
 //				String error = "Unknown options: " + StringUtil.toCommaStr(cmd.getArgs());
 //				printHelp(options, error);
 //			}
-			if ( cmd.getArgs() != null && cmd.getArgs().length == 0 )
-			{
-				String error = "Missing tablename";
-				printHelp(options, error);
-			}
+//			if ( cmd.getArgs() != null && cmd.getArgs().length == 0 )
+//			{
+//				String error = "Missing tablename";
+//				printHelp(options, error);
+//			}
 			if ( cmd.getArgs() != null && cmd.getArgs().length > 1 )
 			{
 				String error = "To many options: " + StringUtil.toCommaStr(cmd.getArgs());
@@ -371,22 +451,28 @@ extends PipeCommandAbstract
 			sb.append("\n");
 		}
 
-		sb.append("usage: bcp [[dbname.]owner.]tablename [-U user] [-P passwd] [-S servername|host:port] [-D dbname] [-u url] [-b batchSize] [-s] [-i initStr]\n");
+		sb.append("usage: bcp -T [owner.]tablename [-D dbname] [-p profileName] [-U user] [-P passwd] [-S servername|host:port] [-u url] [-b batchSize] [-s] [-d] [-c] [-i initStr] [I] [-t] [-q] [-e] [-x]\n");
 		sb.append("   \n");
 		sb.append("options: \n");
-		sb.append("  -p,--profile <name>       Profile to get '-U -P -S|-u' from. \n");
-		sb.append("  -U,--user <user>          Username when connecting to server. \n");
-		sb.append("  -P,--passwd <passwd>      Password when connecting to server. null=noPasswd \n");
-		sb.append("  -S,--server <server>      Server to connect to (SERVERNAME|host:port). \n");
-		sb.append("  -D,--dbname <dbname>      Database name in server. \n");
-		sb.append("  -u,--url <dest_db_url>    Destination DB URL, if it's not an ASE as destination.\n");
-		sb.append("  -b,--batchSize <num>      Batch size. \n");
-		sb.append("  -s,--slowBcp              Do not set ENABLE_BULK_LOAD when connecting to ASE.\n");
-		sb.append("  -c,--crTable              If table doesn't exist, create a new (based on the ResultSet). -NOT-YET-IMPLEMENTED-\n");
-		sb.append("  -i,--initStr <sql stmnt>  Used to do various settings in destination server.\n");
-		sb.append("  -t,--truncateTable        truncate table before inserting values.\n");
-		sb.append("  -q,--quoteDestTable       Use Quoted Identifier on the Destination Table.\n");
-		sb.append("  -x,--debug                Debug mode.\n");
+		sb.append("  -T,--table <tabname>        Destination Table name to BCP into, in the form [owner.]tablename. \n");
+		sb.append("  -p,--profile <name>         Destination Profile to get '-U -P -S|-u' from. \n");
+		sb.append("  -U,--user <user>            Destination Username when connecting to server. \n");
+		sb.append("  -P,--passwd <passwd>        Destination Password when connecting to server. null=noPasswd \n");
+		sb.append("  -S,--server <server>        Destination Server to connect to (SERVERNAME|host:port). \n");
+		sb.append("  -D,--dbname <dbname>        Destination Database name in server. \n");
+		sb.append("  -u,--url <dest_db_url>      Destination DB URL, if it's not an ASE as destination.\n");
+		sb.append("  -b,--batchSize <num>        Batch size. \n");
+		sb.append("  -s,--slowBcp                Do not set ENABLE_BULK_LOAD when connecting to ASE.\n");
+		sb.append("  -d,--dropTable              Drop table before... if --crTable is also enabled, it will be re-created\n");
+		sb.append("  -c,--crTable                If table doesn't exist, create a new (based on the ResultSet).\n");
+		sb.append("  -I,--crIndex                If --crTable and there is only 1 source table, try to grab indexes from source table and create them at destination table.\n");
+		sb.append("  -i,--initStr <sql stmnt>    Used to do various settings in destination server.\n");
+		sb.append("  -t,--truncateTable          truncate table before inserting values.\n");
+		sb.append("  -q,--quoteDestTable         Use Quoted Identifier on the Destination Table.\n");
+		sb.append("  -8,--utf8Dest <check|trunc> Do UTF-8 Length Check/Truncate when applying data on destination Table data (for char, varchar columns.\n");
+//		sb.append("  -X,--dryRun                 Dry Run -- Do not make any changes, just print what you are about to do.\n");
+		sb.append("  -e,--exec                   Turn Dry Run mode off and execute...\n");
+		sb.append("  -x,--debug                  Debug mode.\n");
 		sb.append("  \n");
 		sb.append("  Note 1: -D,--dbname and -s,--slowBcp is only used if you connects to ASE via the -S,--server switch\n");
 		sb.append("  Note 2: if you connect via -u,--url then ordinary JDBC Batch execution will be used.\n");
@@ -397,10 +483,13 @@ extends PipeCommandAbstract
 	
 	private class TransferTable
 	{
-		private DbxConnection _conn      = null;
+		private DbxConnection _destConn  = null;
 		private CmdParams     _cmdParams = null;
 		private SqlProgressDialog _progressDialog = null;
 //		private String _qic = "\""; // Quoted Identifier Char 
+		
+		// Hold: 'SRVNAME/dbname' used in various info messages.
+		private String _destConnInfo = "";
 
 //		int	_numcols;
 //
@@ -421,6 +510,18 @@ extends PipeCommandAbstract
 		public void open()
 		throws Exception
 		{
+			if (_cmdParams._dryRun)
+			{
+				addWarningMessage("###############################################################################");
+				addWarningMessage("## You are in DRYRUN MODE, NO changes will be made, I'll just print what I'm about to do/execute. ");
+				addWarningMessage("## Turn execution mode ON with: --exec ");
+				addWarningMessage("###############################################################################");
+			}
+			else
+			{
+				addInfoMessage("In EXECUTION mode... Changes in the destination database will be made.");
+			}
+
 			if (StringUtil.hasValue(_cmdParams._server))
 			{
     			Properties props = new Properties();
@@ -438,7 +539,9 @@ extends PipeCommandAbstract
     			}
     			else
     			{
-					addInfoMessage("Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.");
+					String msg = "Enable jConnection connection property 'ENABLE_BULK_LOAD' when connecting.";
+					_logger.info(msg);
+					addInfoMessage(msg);
     				props.setProperty("ENABLE_BULK_LOAD", "true");
     			}
 
@@ -454,10 +557,10 @@ extends PipeCommandAbstract
 				if (_cmdParams._debug)
 					addDebugMessage("Creating connection to ASE: hostPortStr='"+hostPortStr+"', dbname='"+_cmdParams._db+"', user='"+_cmdParams._user+"', applicationName='sqlw-bcp'.");
 
-				_conn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
+				_destConn = DbxConnection.createDbxConnection(AseConnectionFactory.getConnection(hostPortStr, _cmdParams._db, _cmdParams._user, _cmdParams._passwd, "sqlw-bcp", Version.getVersionStr(), null, props, (ConnectionProgressCallback)null));
 
     			if ( ! StringUtil.isNullOrBlank(_cmdParams._db) )
-    				AseConnectionUtils.useDbname(_conn, _cmdParams._db);
+    				AseConnectionUtils.useDbname(_destConn, _cmdParams._db);
 			}
 			else
 			{
@@ -477,75 +580,141 @@ extends PipeCommandAbstract
 					addDebugMessage(msg);
 				_logger.debug(msg);
 
-				_conn = DbxConnection.createDbxConnection(DriverManager.getConnection(_cmdParams._url, props));
+				_destConn = DbxConnection.createDbxConnection(DriverManager.getConnection(_cmdParams._url, props));
 			}
-
-			// Get current catalog
 
 			// Print out some destination information
 			try
 			{
-				DatabaseMetaData dbmd = _conn.getMetaData();
+				DatabaseMetaData dbmd = _destConn.getMetaData();
 				String msg;
 //				try {_qic = dbmd.getIdentifierQuoteString(); } catch (SQLException ignore) {}
-				try { msg = "Connected to DBMS Server Name '"          + _conn.getDbmsServerName()        +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
-				try { msg = "Current Catalog in the destination srv '" + _conn.getCatalog()               +"'."; _logger.info(msg); if (_cmdParams._debug) addDebugMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to DBMS Server Name '"          + _destConn.getDbmsServerName()    +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to URL '"                       + dbmd.getURL()                    +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected using driver name '"            + dbmd.getDriverName()             +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected using driver version '"         + dbmd.getDriverVersion()          +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to destination DBMS Vendor '"   + dbmd.getDatabaseProductName()    +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Connected to destination DBMS Version '"  + dbmd.getDatabaseProductVersion() +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				try { msg = "Current Catalog in the destination srv '" + _destConn.getCatalog()           +"'."; _logger.info(msg); addInfoMessage(msg);} catch (SQLException ignore) {}
+				
+				_destConnInfo = _destConn.getDbmsServerNameNoThrow() + "/" + _destConn.getCatalog();
 			}
 			catch (SQLException ignore) {}
 
 			// Execute the SQL InitString
 			if (StringUtil.hasValue(_cmdParams._initStr))
 			{
-				String msg = "executing initialization SQL Stement '"+_cmdParams._initStr+"'.";
+				// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+				String sql = _destConn.quotifySqlString(_cmdParams._initStr);
+
+				String msg = "executing initialization SQL Stement '"+sql+"'.";
 				addInfoMessage(msg);
 				_logger.info(msg);
 
-				Statement stmnt = _conn.createStatement();
-				stmnt.executeUpdate(_cmdParams._initStr);
-				stmnt.close();
+				_destConn.dbExec(_cmdParams._initStr);
 			}
 
-			// Execute truncate table
-			if (_cmdParams._truncate)
-			{
-				SqlObjectName sqlObj = new SqlObjectName(_conn, _cmdParams._table);
+			
+			// Get info about DESTINATION Table
+			SqlObjectName sqlObj = new SqlObjectName(_destConn, _cmdParams._table);
 
+			DatabaseMetaData md = _destConn.getMetaData();
+			ResultSet rs = md.getTables(sqlObj.getCatalogNameOriginNull(), sqlObj.getSchemaNameOriginNull(), sqlObj.getObjectNameOriginNull(), null);
+			int destinationTabCount = 0;
+			while (rs.next())
+				destinationTabCount++;
+			rs.close();
+
+			if (_logger.isDebugEnabled())
+				_logger.debug("open(): Result from: RSMD.getTables(); count="+destinationTabCount);
+
+			// Execute truncate table
+			if (_cmdParams._truncate && destinationTabCount >= 1)
+			{
 				String tabName = sqlObj.getFullNameUnModified();
 				if (_cmdParams._useQuotesOnDestTab)
 					tabName = sqlObj.getFullNameOriginQuoted();
 				
-				String sql = "";
-				// - First try to do:  truncate table ... 
-				// - if that fails do: delete from table
-				try ( Statement stmnt = _conn.createStatement() )
+				if (_cmdParams._dryRun)
 				{
-					sql = "truncate table " + tabName;
-					
-					stmnt.executeUpdate(sql);
-					
-					String msg = "Truncating destination table, using SQL Stement '"+sql+"'.";
-					addInfoMessage(msg);
-					_logger.info(msg);
+					addDryRunMessage("exec SQL at destination[" + _destConnInfo + "]: truncate table " + tabName);
 				}
-				catch(SQLException e)
+				else
 				{
-					String msg = "Problems with '"+sql+"', trying a normal 'DELETE FROM ...'. Caught: Err="+e.getErrorCode()+", State='"+e.getSQLState()+"', msg='"+e.getMessage()+"'.";
-					addInfoMessage(msg);
-					_logger.info(msg);
-					sql = "DELETE FROM " + tabName;
-
-					try ( Statement stmnt = _conn.createStatement() )
+					String sql = "";
+					// - First try to do:  truncate table ... 
+					// - if that fails do: delete from table
+					try ( Statement stmnt = _destConn.createStatement() )
 					{
+						sql = "truncate table " + tabName;
+						
+						// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+						sql = _destConn.quotifySqlString(sql);
+						
 						stmnt.executeUpdate(sql);
 						
-						msg = "Truncated destination table, using SQL Stement '"+sql+"'.";
+						String msg = "Truncating destination[" + _destConnInfo + "] table, using SQL Stement '"+sql+"'.";
 						addInfoMessage(msg);
 						_logger.info(msg);
+					}
+					catch(SQLException e)
+					{
+						String msg = "Problems with '"+sql+"', at destination[" + _destConnInfo + "], trying a normal 'DELETE FROM ...'. Caught: Err="+e.getErrorCode()+", State='"+e.getSQLState()+"', msg='"+e.getMessage().trim()+"'.";
+						addInfoMessage(msg);
+						_logger.info(msg);
+						sql = "DELETE FROM " + tabName;
+
+						// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+						sql = _destConn.quotifySqlString(sql);
+
+						try ( Statement stmnt = _destConn.createStatement() )
+						{
+							stmnt.executeUpdate(sql);
+							
+							msg = "Truncated destination[" + _destConnInfo + "] table, using SQL Stement '"+sql+"'.";
+							addInfoMessage(msg);
+							_logger.info(msg);
+						}
+					}
+				}
+			}
+
+			// Execute DROP TABLE
+			if (_cmdParams._dropTab && destinationTabCount >= 1)
+			{
+				String tabName = sqlObj.getFullNameUnModified();
+				if (_cmdParams._useQuotesOnDestTab)
+					tabName = sqlObj.getFullNameOriginQuoted();
+				
+				if (_cmdParams._dryRun)
+				{
+					addDryRunMessage("exec SQL at destination[" + _destConnInfo + "]: drop table " + tabName);
+				}
+				else
+				{
+					String sql = "";
+					// - First try to do:  truncate table ... 
+					// - if that fails do: delete from table
+					try ( Statement stmnt = _destConn.createStatement() )
+					{
+						sql = "drop table " + tabName;
+
+						// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+						sql = _destConn.quotifySqlString(sql);
+						
+						stmnt.executeUpdate(sql);
+						
+						String msg = "Dropping destination[" + _destConnInfo + "] table, using SQL Stement '"+sql+"'.";
+						addInfoMessage(msg);
+						_logger.info(msg);
+					}
+					catch(SQLException ex)
+					{
+						String msg = "Problems with DROP TABLE using SQL '"+sql+"' at destination[" + _destConnInfo + "]. Caught: Err=" + ex.getErrorCode() + ", State='" + ex.getSQLState() + "', msg='" + ex.getMessage().trim() + "'.";
+						addErrorMessage(msg);
+						_logger.error(msg);
+						
+						// SHOULD WE THROW the exception here ???
 					}
 				}
 			}
@@ -554,117 +723,361 @@ extends PipeCommandAbstract
 		public void close()
 		throws Exception
 		{
-			if (_conn != null)
+			if (_destConn != null)
 			{
-				String msg = "Closing connection to '" + _conn.getMetaData().getURL() + "'.";
-				if (_cmdParams._debug)
-					addDebugMessage(msg);
+				String msg = "Closing connection to destination[" + _destConnInfo + "], URL='" + _destConn.getMetaData().getURL() + "'.";
+				addInfoMessage(msg);
 				_logger.info(msg);
 
-				_conn.close();
+				_destConn.close();
+			}
+
+			if (_cmdParams._dryRun)
+			{
+				addWarningMessage("###############################################################################");
+				addWarningMessage("## NO CHANGES was done... The 'bcp' command was executed in DRYRUN mode, to execute, please add switch: --exec ");
+				addWarningMessage("## Turn execution mode ON with: --exec ");
+				addWarningMessage("###############################################################################");
 			}
 		}
 
 		public int doTransfer(ResultSet sourceRs, PipeCommandBcp pipeCmd)
 		throws Exception
 		{
-			int sourceNumCols = -1;
-			int destNumCols   = -1;
-			
-			// get RSMD from SOURCE
-			ArrayList<String>  sourceColNames   = new ArrayList<String>();
-			ArrayList<Integer> sourceSqlTypeInt = new ArrayList<Integer>();
-			ResultSetMetaData  sourceRsmd       = sourceRs.getMetaData();
+			// UTF-8 check/truncate, remember MAX length for each affected column in case of UTF-8 length check
+			Map<String, Integer> utf8ColumnIssueMap = new LinkedHashMap<>(); 
+			int utf8ColumnIssueCount = 0; // Every time we finds/truncates a UTF-8 issue
+			int utf8RowIssueCount    = 0; // Every time we finds/truncates a UTF-8 issue, but on a ROW Level instead on per issue
 
-			sourceNumCols = sourceRsmd.getColumnCount();
-			for(int c=1; c<sourceNumCols+1; c++)
-			{
-				sourceColNames  .add(sourceRsmd.getColumnLabel(c));
-				sourceSqlTypeInt.add(sourceRsmd.getColumnType(c));
-			}
+			if (_progressDialog != null)
+				_progressDialog.setState("Reading Source ResultSet MetaData, on large ResulSet this may take time...");
 
-			SqlObjectName sqlObj = new SqlObjectName(_conn, _cmdParams._table);
+			// Get the origin/source ResultSet MetaData
+//			String sourceDbmsVendor = getConnectionProvider().getConnection().getDatabaseProductName();
+//			ResultSetMetaDataCached sourceRsmdC = new ResultSetMetaDataCached(sourceRs.getMetaData(), sourceDbmsVendor);
+			ResultSetMetaDataCached sourceRsmdC = ResultSetMetaDataCached.createNormalizedRsmd(sourceRs);
+
+			// create a "helper" object for the DESTINATION Table
+			SqlObjectName destTableObj = new SqlObjectName(_destConn, _cmdParams._table);
 			
-			// Check if the table exists in the destination database
+			// List of indexes to create "near the end"
+			List<String> indexListPossible  = new ArrayList<>();
+			List<String> indexListDiscarded = new ArrayList<>();
+			List<String> foreignKeyOutList  = new ArrayList<>();
+			List<String> foreignKeyInList   = new ArrayList<>();
+
+			// List of foreign key(s) to create or print as information "near the end"
+			//List<String> forignKeyList = new ArrayList<>();
+
+			// used by DryRun in the destination table DO not exists (and --crTable is specified)
+			String dryRunGuessedInsertSql = "";
+
+			//--------------------------------------------------
 			// If it doesn't exist, try to create it
+			//--------------------------------------------------
 			if (_cmdParams._createTab)
 			{
-				DatabaseMetaData md = _conn.getMetaData();
-				ResultSet rs = md.getTables(sqlObj.getCatalogNameOriginNull(), sqlObj.getSchemaNameOriginNull(), sqlObj.getObjectNameOriginNull(), null);
-				int count = 0;
-				while (rs.next())
-					count++;
-				rs.close();
-
-				System.out.println("Result from: RSMD.getTables(); count="+count);
-				if (count == 0)
+				// Check if the DESTINATION table exists in the destination database
+				int destTableCount = 0;
+				// Note: the begin/end for variable scope
 				{
-					// Create a SQL statement like: create table XXX (yyy datatype null/not_null)
-					// FIXME
-					System.out.println("-NOT-YET-IMPLEMENTED-: Create the destination table.");
+					if (_progressDialog != null)
+						_progressDialog.setState("Checking if destination[" + _destConnInfo + "] table '" + destTableObj.getFullName() + "' exists.");
+
+					DatabaseMetaData md = _destConn.getMetaData();
+	    			ResultSet rs = md.getTables(destTableObj.getCatalogNameOriginNull(), destTableObj.getSchemaNameOriginNull(), destTableObj.getObjectNameOriginNull(), null);
+	    			while (rs.next())
+	    				destTableCount++;
+	    			rs.close();
 				}
-			}
-			
-			// Do dummy SQL to get RSMD from DEST
-			String tabName = sqlObj.getFullNameUnModified();
+
+				if (_logger.isDebugEnabled())
+					_logger.debug("doTransfer(): Result from: RSMD.getTables(); destTableCount="+destTableCount);
+				
+				if (destTableCount >= 1)
+				{
+					addInfoMessage("Destination[" + _destConnInfo + "] table '" + destTableObj.getFullName() + "' already exists. Skipping creating table...");
+				}
+				else
+				{
+					String crTabSql = null;
+
+					// Transform Source MetaData to TARGET
+//					IDbmsDdlResolver dbmsDdlResolver = _destConn.getDbmsDdlResolver();
+//					
+//					ResultSetMetaDataCached normalizedSourceRsmdC = dbmsDdlResolver.createNormalizedRsmd(sourceRs); 
+//					ResultSetMetaDataCached targetRsmdc           = dbmsDdlResolver.transformToTargetDbms(normalizedSourceRsmdC);
+					
+					// Transform Source MetaData to TARGET
+					IDbmsDdlResolver dbmsDdlResolver = _destConn.getDbmsDdlResolver();
+					ResultSetMetaDataCached targetRsmdc = dbmsDdlResolver.transformToTargetDbms(sourceRsmdC); // note the 'sourceRsmdC' is already normalized (done at the "top")
+					
+
+
+					// If the ResultSet has ONE source table... get more info about that table
+					if (_logger.isDebugEnabled())
+						_logger.debug("DEBUG: targetRsmdc.getSchemaTableNames().size()="+targetRsmdc.getSchemaTableNames(true).size()+", targetRsmdc.getSchemaTableNames()="+targetRsmdc.getSchemaTableNames(true));
+
+					if (targetRsmdc.getSchemaTableNames(true).size() == 1)
+					{
+						DbxConnection tmpSourceConn = null;
+						try
+						{
+							// Create a new connection to the SOURCE DBMS (if we re-use the one from 'sourceRs.getStatement().getConnection()' things will buffer up at the source...
+							// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)... hence a big delay will happen...
+							String msg = "Open a new TEMPORARY Connection to the Source DBMS to get MetaData about the Source table... Reusing the current will/might block the system.";
+							_logger.info(msg);
+							addInfoMessage(msg);
+
+							tmpSourceConn = getConnectionProvider().getNewConnection("sqlw-bcp-srcMetaData");
+							
+							String sourceCatName = targetRsmdc.getCatalogNames().isEmpty() ? null : targetRsmdc.getCatalogNames().iterator().next(); 
+							String sourceSchName = targetRsmdc.getSchemaNames() .isEmpty() ? null : targetRsmdc.getSchemaNames() .iterator().next(); 
+							String sourceTabName = targetRsmdc.getTableNames()  .isEmpty() ? null : targetRsmdc.getTableNames()  .iterator().next(); 
+
+							Table sourceTable = Table.create(tmpSourceConn, sourceCatName, sourceSchName, sourceTabName);
+
+							if (_logger.isDebugEnabled())
+								_logger.debug("DEBUG: ONE table in source RS. sourceCatName='"+sourceCatName+"', sourceSchName='"+sourceSchName+"', sourceTabName='"+sourceTabName+"', sourceTable.ColNames="+sourceTable.getColumnNames());
+
+							// If ALL Columns in the input ResultSet and we have found the table in the Source DBMS and that it's all of the columns
+							// then: get the "create table..." from the source table.
+							if (targetRsmdc.getColumnNames().equals(sourceTable.getColumnNames()))
+							{
+								try
+								{
+									crTabSql = dbmsDdlResolver.ddlText(sourceTable);
+								}
+								catch(DataTypeNotResolvedException ex)
+								{
+									msg = "Problems when Reverse Engineer 'Create Table' DDL from the Source table (some data type could not be resolved). Skipping this and continuing with DDL Reverse enginering from the Source ResultSet. Caught: " + ex;
+									_logger.warn(msg, ex);
+									addWarningMessage(msg);
+								}
+							}
+							
+							// Loop available indexes in the SOURCE Table
+							for (Index index : sourceTable.getIndexes())
+							{
+								// Set the DESTINATIONS table in the Index entry before we create the DDL
+								String indexDdl = dbmsDdlResolver.ddlText(index, true, destTableObj.getSchemaNameNull(), destTableObj.getObjectNameNull()).trim();
+								
+								if (_logger.isDebugEnabled())
+									_logger.debug("DEBUG: Checking index='"+index.getIndexName()+"': with ColNames: "+index.getColumnNames()+", with sourceRsmdC.getColumnNames(): "+sourceRsmdC.getColumnNames());
+								
+								// if ALL index-columns is part of the input-ResultSetMetaData... then we can add the index to the "create list"
+								// else add it to the "discard list" 
+								if ( sourceRsmdC.getColumnNames().containsAll( index.getColumnNames() ) )
+								{
+									indexListPossible.add( indexDdl );
+
+									if (_logger.isDebugEnabled())
+										_logger.debug("DEBUG:      +++++++ ADDED index ddl: "+indexDdl);
+								}
+								else
+								{
+									indexListDiscarded.add( indexDdl );
+
+									if (_logger.isDebugEnabled())
+										_logger.debug("DEBUG:      ------- DISCARDED index ddl: "+indexDdl);
+								}
+							}
+							
+							// Loop ForeignKey(s)
+							for (ForeignKey fk : sourceTable.getForeignKeysOut())
+							{
+								String fkDdl = dbmsDdlResolver.ddlTextAlterTable(fk);
+
+								foreignKeyOutList.add(fkDdl);
+							}
+							for (ForeignKey fk : sourceTable.getForeignKeysIn())
+							{
+								String fkDdl = dbmsDdlResolver.ddlTextAlterTable(fk);
+
+								foreignKeyInList.add(fkDdl);
+							}
+						}
+						catch (SQLException ex)
+						{
+							String msg = "Problems when looking up source table. Skipping this and continuing with DDL Reverse enginering from the Source ResultSet. Also no indexes etc will be reversed engineered. Caught: Err=" + ex.getErrorCode() + ", State='" + ex.getSQLState() + "', msg='" + ex.getMessage().trim() + "'.";
+							_logger.warn(msg);
+							addWarningMessage(msg);
+
+							if (tmpSourceConn != null)
+							{
+								// Now the connection can be closed again...
+								msg = "Closing the TEMPORARY Connection to the Source DBMS.";
+								_logger.info(msg);
+								addInfoMessage(msg);
+
+								// Close the connection
+								tmpSourceConn.closeNoThrow();
+							}
+						}
+					}
+
+					// in no DDL for create table, create it using the ResultSet MetaData DDL Resolver for that DBMS Target
+					if (crTabSql == null)
+					{
+						crTabSql = dbmsDdlResolver.ddlTextTable(targetRsmdc, destTableObj.getSchemaNameOriginNull(), destTableObj.getObjectNameOriginNull());
+						crTabSql = crTabSql.trim();
+					}
+
+					// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+					crTabSql = _destConn.quotifySqlString(crTabSql);
+
+					if (_cmdParams._dryRun)
+					{
+						addDryRunMessage("Destination[" + _destConnInfo + "] table '" + destTableObj.getFullName() + "' will be created, using the following SQL: \n" + crTabSql);
+
+						String questionMarks = StringUtil.removeLastComma(StringUtil.replicate("?, ", targetRsmdc.getColumnNames().size()));
+						dryRunGuessedInsertSql = "INSERT INTO " + destTableObj.getFullName() + " (" + StringUtil.toCommaStr(targetRsmdc.getColumnNames()) + ") values(" + questionMarks + ")";
+					}
+					else
+					{
+						addInfoMessage("Destination[" + _destConnInfo + "] table '" + destTableObj.getFullName() + "' will be created, using the following SQL: \n" + crTabSql);
+
+						try (Statement stmnt = _destConn.createStatement())
+						{
+							stmnt.executeUpdate(crTabSql);
+							
+							addInfoMessage("CREATED Destination[" + _destConnInfo + "] table '" + destTableObj.getFullName() + "'.");
+						}
+					}
+				} // end: 
+			} // end: _createTab
+
+
+			// Execute DUMMY SQL in Destination to get table/column definition (ResultSet MetaData)
+			String tabName = destTableObj.getFullNameUnModified();
 			if (_cmdParams._useQuotesOnDestTab)
-				tabName = sqlObj.getFullNameOriginQuoted();
-//			String destSql    = "select * from " + _qic + _cmdParams._table + _qic + " where 1=2";
+				tabName = destTableObj.getFullNameOriginQuoted();
+
+			// SQL statement to execute at destination
 			String destSql    = "select * from " + tabName + " where 1=2";
 
-			String msg = "Investigating destination table, executing SQL Statement: "+destSql;
-			if (_cmdParams._debug)
-				addDebugMessage(msg);
-			_logger.info(msg);
-			if (_progressDialog != null)
-				_progressDialog.setState("Checking dest table, SQL: "+destSql);
+			// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+			destSql = _destConn.quotifySqlString(destSql);
 
-			Statement destStmt = _conn.createStatement();
-			ResultSet destRs = destStmt.executeQuery(destSql);
-
-			// get RSMD from DEST
-			ArrayList<String>  destColNames   = new ArrayList<String>();
-//			ArrayList<String>  destColType    = new ArrayList<String>();
-//			ArrayList<String>  destSqlTypeStr = new ArrayList<String>();
-			ArrayList<Integer> destSqlTypeInt = new ArrayList<Integer>();
-			ResultSetMetaData  destRsmd       = destRs.getMetaData();
-
-			destNumCols = destRsmd.getColumnCount();
-			for(int c=1; c<destNumCols+1; c++)
+			ResultSetMetaDataCached destRsmdC = null;
+			try
 			{
-				destColNames  .add(destRsmd.getColumnLabel(c));
-//				destColType   .add(destRsmd.getColumnType(c));
-//				destSqlTypeStr.add(destRsmd.getColumnLabel(c));
-				destSqlTypeInt.add(destRsmd.getColumnType(c));
+				String msg = "Investigating destination[" + _destConnInfo + "] table, executing SQL Statement: "+destSql;
+				addInfoMessage(msg);
+				_logger.info(msg);
+				if (_progressDialog != null)
+					_progressDialog.setState("Checking dest table, SQL: "+destSql);
+
+				Statement destStmt = _destConn.createStatement();
+				ResultSet destRs = destStmt.executeQuery(destSql);
+
+				// get RSMD from DEST
+				destRsmdC = new ResultSetMetaDataCached(destRs).createNormalizedRsmd();
+
+				while (destRs.next()) {}
+				destRs.close();
+				destStmt.close();
 			}
-			while (destRs.next())
+			// if the table didn't exist, we will probably end up here in the catch block
+			catch(SQLException ex) 
 			{
-			}
-			destRs.close();
-			destStmt.close();
+				String msg = "Problems Investigating destination[" + _destConnInfo + "] using SQL='" + destSql + "'. Caught: Err=" + ex.getErrorCode() + ", State='" + ex.getSQLState() + "', msg='" + ex.getMessage().trim() + "'.";
+				addErrorMessage(msg);
+				_logger.error(msg);
+
+				// Print some extra information when in DRY-RUN
+				if (_cmdParams._dryRun)
+				{
+					addDryRunMessage("(guessing a bit here, since table don't exists) INSERT SQL PreparedStatement at Destination[" + _destConnInfo + "]: " + dryRunGuessedInsertSql);
+
+					// info about: Create any index found in the Source table
+					if ( ! indexListPossible.isEmpty() )
+					{
+						for (String ddl : indexListPossible)
+						{
+							if (_cmdParams._createIndex)
+							{
+								addDryRunMessage("exec SQL at destination[" + _destConnInfo + "]: " + ddl);
+							}
+							else
+							{
+								addDryRunMessage("SUGGESTION_TODO_AT_DESTINATION[" + _destConnInfo + "]: Create INDEX: " + ddl);
+							}
+						}
+					}
+					
+					if ( ! indexListDiscarded.isEmpty() )
+					{
+						for (String ddl : indexListDiscarded)
+							addDryRunMessage("DISCARDED INDEX: Source Table HAS this index, while destination[" + _destConnInfo + "] are missing some columns: DISCARDED INDEX: " + ddl);
+					}
+
+					// Foreign Keys
+					if ( ! foreignKeyOutList.isEmpty() )
+					{
+						for (String ddl : foreignKeyOutList)
+							addDryRunMessage("SUGGESTION_TODO_AT_DESTINATION[" + _destConnInfo + "]: Create ForeignKey: " + ddl);
+					}
+					if ( ! foreignKeyInList.isEmpty() )
+					{
+						for (String ddl : foreignKeyInList)
+							addDryRunMessage("INFO at Source: (-->> incoming fk) Other tables points to this table using: " + ddl);
+					}
+					
+					msg = "NOTE: you may do 'remote SQL execution' with command: \\rsql --profile 'profileName' --dbname dbname --sql 'sql-command-to-execute'";
+					addInfoMessage(msg);
+
+					// exec sp_spaceused 'tabname'
+					if (_destConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+					{
+						String destTableName = destTableObj.getFullNameUnModified();
+						addDryRunMessage("checking destination[" + _destConnInfo + "]: table size with: sp_spaceused '" + destTableName + "'");
+					}
+				}
+				
+				//------------------------------------------------
+				// GET OUT OF HERE
+				//------------------------------------------------
+				return 0;
+			} // end: catch
 			
+
+			int sourceNumCols = sourceRsmdC.getColumnCount();
+			int destNumCols   = destRsmdC  .getColumnCount();
+
 			// Check if "transfer" will work
 			if (sourceNumCols != destNumCols)
 			{
+				String msg = "Source ResultSet and Destination Table does not have the same column count (source="+sourceNumCols+", dest="+destNumCols+").";
+				addErrorMessage(msg);
+				_logger.error(msg);
+
+				return 0;
 				// TODO: should we close the sourceRs or not????
-				throw new Exception("Source ResultSet and Destination Table does not have the same column count (source="+sourceNumCols+", dest="+destNumCols+").");
+				//throw new Exception("Source ResultSet and Destination Table does not have the same column count (source="+sourceNumCols+", dest="+destNumCols+").");
 			}
 			
-			// Make warning if source/destination data types does NOT match
+			// Check DataTypes -- Make warning if source/destination data types does NOT match
 			for (int c=0; c<sourceNumCols; c++)
 			{
-				int sourceType = sourceSqlTypeInt.get(c);
-				int destType   = destSqlTypeInt  .get(c);
+				int sqlPos = c + 1;
+				
+				int sourceType = sourceRsmdC.getColumnType(sqlPos);
+				int destType   = destRsmdC  .getColumnType(sqlPos);
 				
 				if (sourceType != destType)
 				{
 					String sourceJdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(sourceType);
 					String destJdbcTypeStr   = ResultSetTableModel.getColumnJavaSqlTypeName(destType);
 
-					String sourceColName = sourceColNames.get(c);
-					String destColName   = destColNames  .get(c);
+					String sourceColName = sourceRsmdC.getColumnLabel(sqlPos);
+					String destColName   = destRsmdC  .getColumnLabel(sqlPos);
 
-					String warning = "Possible column datatype missmatch for column "+(c+1)+". Source column name '"+sourceColName+"', jdbcType '"+sourceJdbcTypeStr+"'. Destination column name '"+destColName+"', jdbcType '"+destJdbcTypeStr+"'. I will still try to do the transfer, hopefully the destination server can/will convert the datatype, so it will work... lets try!"; 
+					String warning = "Possible column datatype missmatch for column " + sqlPos + ". "
+							+ "Source column name '" + sourceColName + "', jdbcType '" + sourceJdbcTypeStr + "'. "
+							+ "Destination column name '"+destColName+"', jdbcType '"+destJdbcTypeStr+"'. "
+							+ "I will still try to do the transfer, hopefully the destination server can/will convert the datatype, so it will work... lets try!"; 
+					addWarningMessage(warning);
 					_logger.warn(warning);
 					
 					if (pipeCmd._sqlWarnings == null)
@@ -674,112 +1087,293 @@ extends PipeCommandAbstract
 			}
 			
 			// Build colStr: (col1, col2, col3...)
-			String columnStr = " (";
-//			for (String colName : sourceColNames)
-			for (String colName : destColNames)
-				columnStr += colName + ", ";
-			columnStr = columnStr.substring(0, columnStr.length()-2);
-			columnStr += ")";
+//			String columnStr = " (" + StringUtil.toCommaStr(destRsmdC.getColumnNames()) + ")";
+			String columnStr = " (" + StringUtil.toCommaStrQuoted('[', ']', destRsmdC.getColumnNames()) + ")";
 	
 			// Build: values(?, ?, ?, ?...)
-			String valuesStr = " values(";
-			for (int i=0; i<destNumCols; i++)
-				valuesStr += "?, ";
-			valuesStr = valuesStr.substring(0, valuesStr.length()-2);
-			valuesStr += ")";
+			String valuesStr = " values(" + StringUtil.removeLastComma(StringUtil.replicate("?, ", destNumCols)) + ")";
 			
 			// Build insert SQL
-			String intoTabName = sqlObj.getFullNameUnModified();
+			String intoTabName = destTableObj.getFullNameUnModified();
 			if (_cmdParams._useQuotesOnDestTab)
-				intoTabName = sqlObj.getFullNameOriginQuoted();
-			
-			String insertSql = "insert into " + intoTabName + columnStr + valuesStr;
-System.out.println("INSERT SQL: "+insertSql);
-			msg = "BCP INSERT SQL Statement: "+insertSql;
-			if (_cmdParams._debug)
-				addDebugMessage(msg);
-			_logger.info(msg);
-
-			// Create the Prepared Statement
-			PreparedStatement pstmt = _conn.prepareStatement(insertSql);
+				intoTabName = destTableObj.getFullNameOriginQuoted();
 			
 			int totalCount = 0;
 			int batchCount = 0;
 
-//			Object[] oa = new Object[sourceNumCols];
-			while (sourceRs.next())
+			String insertSql = "insert into " + intoTabName + columnStr + valuesStr;
+
+			// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+			insertSql = _destConn.quotifySqlString(insertSql);
+
+			if (_cmdParams._dryRun)
 			{
-				batchCount++;
-				totalCount++;
+				addDryRunMessage("exec SQL at destination[" + _destConnInfo + "] (Prepared Statement for all rows in source): "+insertSql);
+			}
+			else
+			{
+				if (_logger.isDebugEnabled())
+					_logger.debug("INSERT SQL: "+insertSql);
 
-				pipeCmd._rowsSelected++;
+				String msg = "INSERT at destination[" + _destConnInfo + "] SQL Statement: "+insertSql;
+				addInfoMessage(msg);
+				_logger.info(msg);
+				
+				// Create the Prepared Statement
+				PreparedStatement pstmt = _destConn.prepareStatement(insertSql);
 
-				// for each column in source set it to the output
-				for (int c=1; c<sourceNumCols+1; c++)
+				// Loop the SOURCE ResultSet and: setObject(), addBatch(), executeBatch()
+				while (sourceRs.next())
 				{
-					try
-					{
-						Object obj = sourceRs.getObject(c);
-//						if (obj == null) System.out.println("DATA for column c="+c+", sourceName='"+sourceColNames.get(c-1)+"'. is NULL: sourceRs.getObject(c)");
-						if (obj != null)
-							pstmt.setObject(c, obj, destSqlTypeInt.get(c-1));
-						else
-							pstmt.setNull(c, destSqlTypeInt.get(c-1));
-					}
-					catch (SQLException sqle)
-					{
-						msg = "ROW: "+totalCount+" - Problems setting column c="+c+", sourceName='"+sourceColNames.get(c-1)+"', destName='"+destColNames.get(c-1)+"'. Caught: "+sqle;
-						addErrorMessage(msg);
+					batchCount++;
+					totalCount++;
 
-System.out.println("ROW: "+totalCount+" - Problems setting column c="+c+", sourceName='"+sourceColNames.get(c-1)+"', destName='"+destColNames.get(c-1)+"'. Caught: "+sqle);
-						throw sqle;
+					pipeCmd._rowsSelected++;
+
+					// for each column in source set it to the output
+					for (int sqlPos=1; sqlPos<sourceNumCols+1; sqlPos++)
+					{
+						int colJdbcDataType = destRsmdC.getColumnType(sqlPos);//destSqlTypeInt.get(c-1);
+						try
+						{
+							Object obj = sourceRs.getObject(sqlPos);
+//							if (obj == null) System.out.println("DATA for column c="+c+", sourceName='"+sourceColNames.get(c-1)+"'. is NULL: sourceRs.getObject(c)");
+							
+							// Check for "source DATA String" is TO LONG IN DESTINATION, due to UTF-8 storage in Sybase ASE and MS SQL-Server
+							if ( ! UTF8_destMode.NONE.equals(_cmdParams._utf8DestCheckTrunc) )
+							{
+								// NOTE: NCHAR, NVARCHAR == Should handle UTF-8, LONGVARCHAR etc should be mapped to CLOB or similar
+								//       so that leaves us with: CHAR and VARCHAR
+								if (obj instanceof String && (colJdbcDataType == Types.CHAR || colJdbcDataType == Types.VARCHAR))
+								{
+									String colValue = (String) obj;
+
+									int destColumnMaxLength = destRsmdC.getPrecision(sqlPos); // destSqlLength.get(sqlPos-1);
+									int utf8Len             = StringUtil.utf8Length(colValue);
+
+									if (utf8Len > destColumnMaxLength)
+									{
+										utf8ColumnIssueCount++;
+										
+										String colName = destRsmdC.getColumnLabel(sqlPos); // destColNames.get(sqlPos-1);
+										int    strLen  = colValue.length();
+
+										// Remember MAX length for each column
+										Integer colMaxVal = utf8ColumnIssueMap.get(colName);
+										utf8ColumnIssueMap.put(colName, (colMaxVal == null) ? utf8Len : Math.max(colMaxVal.intValue(), utf8Len));
+											
+										
+										msg = "The columnName='" + colName + "' at row=" + totalCount + ", has a value to long to be inserted at destination. "
+												+ "The destColumnMaxLength=" + destColumnMaxLength + ", Str-Length=" + strLen + ", UTF-8-Length=" + utf8Len
+												+". THE UTF-8 LENGTH is above destColumnMaxLength. The String (which containes larger UTF8 chars) value is |" + colValue + "|.";
+
+										if ( ! UTF8_destMode.CHECK.equals(_cmdParams._utf8DestCheckTrunc) )
+										{
+											addErrorMessage(msg);
+											_logger.error(msg);
+										}
+										else
+										{
+											String newColValue = StringUtil.utf8Truncate(colValue, destColumnMaxLength);
+											int    newStrLen   = newColValue.length();
+											
+											// Set the new value
+											obj = newColValue;
+
+											msg += " The value will be truncated to length=" + newStrLen + ", new value=|" + newColValue + "|.";
+											addErrorMessage(msg);
+											_logger.warn(msg);
+										}
+									}
+								}
+							} // end: UTF-8 check/trunc
+
+							//---------------------------------------
+							// SET the data or NULL value
+							//---------------------------------------
+							if (obj != null)
+								pstmt.setObject(sqlPos, obj, colJdbcDataType);
+							else
+								pstmt.setNull(sqlPos, colJdbcDataType);
+						}
+						catch (SQLException ex)
+						{
+							String sourceColName = sourceRsmdC.getColumnLabel(sqlPos);
+							String destColName   = destRsmdC  .getColumnLabel(sqlPos);
+
+							msg = "ROW: "+totalCount+" - Problems setting column c="+sqlPos+", sourceName='" + sourceColName + "', destName='" + destColName + "'. Caught: Err=" + ex.getErrorCode() + ", State='" + ex.getSQLState() + "', msg='" + ex.getMessage().trim() + "'.";
+							addErrorMessage(msg);
+							_logger.error(msg);
+
+							// NOTE: Here we THROW (out of method), should we do something "better"
+							throw ex;
+						}
+					}
+
+					pstmt.addBatch();
+					pipeCmd._rowsInserted++;
+
+					if (_cmdParams._batchSize > 0 && batchCount >= _cmdParams._batchSize )
+					{
+						msg = "BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount;
+						if (_cmdParams._debug)
+							addDebugMessage(msg);
+
+						if (_progressDialog != null)
+							_progressDialog.setState("Executing batch insert, at row count " + NumberFormat.getInstance().format(totalCount));
+
+						batchCount = 0;
+						
+						pstmt.executeBatch();
+					}
+					else
+					{
+						if (_progressDialog != null && ((totalCount % 100) == 0) )
+							_progressDialog.setState("Adding row " + NumberFormat.getInstance().format(totalCount) + " to the transfer.");
+					}
+				}
+				msg = "END OF TRANSFER to destination[" + _destConnInfo + "]: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount;
+				addInfoMessage(msg);
+
+				if (_progressDialog != null)
+					_progressDialog.setState("Executing final batch insert (which might take a bit longer), at row count " + NumberFormat.getInstance().format(totalCount));
+
+				pstmt.executeBatch();
+				pstmt.close();
+
+//				sourceRs.close();
+				
+//				if (pipeCmd._sqlWarnings != null)
+//					throw pipeCmd._sqlWarnings;
+
+				msg = "BCP Transferred "+totalCount+" rows to the destination[" + _destConnInfo + "] table '"+tabName+"'.";
+				addInfoMessage(msg);
+				_logger.info(msg);
+				
+				
+				// CHeck for UTF-8 overflows
+				if ( ! utf8ColumnIssueMap.isEmpty() )
+				{
+					msg = "Summary of UTF-8 length transfer issues to destination[" + _destConnInfo + "], found " + utf8ColumnIssueMap.size() + " columns with issues, on " + utf8RowIssueCount + " rows, total found values are " + utf8ColumnIssueCount + ".";
+					addWarningMessage(msg);
+					_logger.warn(msg);
+
+					for (Entry<String, Integer> entry : utf8ColumnIssueMap.entrySet())
+					{
+						String colName    = entry.getKey();
+						int    colMaxSize = entry.getValue();
+						
+						msg = "   - Column '" + colName + "' max UTF-8 length was: " + colMaxSize + " for destination table '" + destTableObj.getFullName() + "'.";
+						addWarningMessage(msg);
+						_logger.warn(msg);
+					}
+				}
+			} // end: insert/transfer records
+			
+			
+			// Create any index found in the Source table
+			if ( ! indexListPossible.isEmpty() )
+			{
+				for (String ddl : indexListPossible)
+				{
+					// Translate '[' and ']' chars into DBMS Vendor specific Quoted Chars
+					ddl = _destConn.quotifySqlString(ddl);
+
+					if (_cmdParams._createIndex)
+					{
+						if (_cmdParams._dryRun)
+						{
+							addDryRunMessage("exec SQL at destination[" + _destConnInfo + "]: " + ddl);
+						}
+						else
+						{
+							try (Statement stmnt = _destConn.createStatement())
+							{
+								String msg = "Create INDEX at destination[" + _destConnInfo + "], executing: " + ddl;
+
+								if (_progressDialog != null)
+									_progressDialog.setState(msg);
+
+								addInfoMessage(msg);
+								
+								stmnt.executeUpdate(ddl);
+							}
+							catch(SQLException ex)
+							{
+								String msg = "FAILED: Create INDEX at destination[" + _destConnInfo + "], executing: " + ddl + ", Caught: Err=" + ex.getErrorCode() + ", State='" + ex.getSQLState() + "', msg='" + ex.getMessage().trim() + "'.";
+								addErrorMessage(msg);
+							}
+						}
+					}
+					else
+					{
+						String msg = "SUGGESTION_TODO_AT_DESTINATION[" + _destConnInfo + "]: Create INDEX: " + ddl;
+
+						addInfoMessage(msg);
 					}
 				}
 
-				pstmt.addBatch();
-				pipeCmd._rowsInserted++;
-
-				if (_cmdParams._batchSize > 0 && batchCount >= _cmdParams._batchSize )
+				if ( ! indexListDiscarded.isEmpty() )
 				{
-System.out.println("BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
-                    msg = "BATCH SIZE: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount;
-                    if (_cmdParams._debug)
-                    	addDebugMessage(msg);
-                    
-					if (_progressDialog != null)
-						_progressDialog.setState("Executing batch insert, at row count "+totalCount);
+					for (String ddl : indexListDiscarded)
+						addInfoMessage("DISCARDED INDEX: Source Table HAS this index, while destination[" + _destConnInfo + "] are missing some columns: DISCARDED INDEX: " + ddl);
+				}
+				
+				String msg = "NOTE: you may do 'remote SQL execution' with command: \\rsql --profile 'profileName' --dbname dbname --sql 'sql-command-to-execute'";
+				addInfoMessage(msg);
+			} // end: indexes
+			
+			// Foreign Keys
+			if ( ! foreignKeyOutList.isEmpty() )
+			{
+				for (String ddl : foreignKeyOutList)
+					addDryRunMessage("SUGGESTION_TODO_AT_DESTINATION[" + _destConnInfo + "]: Create ForeignKey: " + ddl);
+			}
+			if ( ! foreignKeyInList.isEmpty() )
+			{
+				for (String ddl : foreignKeyInList)
+					addDryRunMessage("INFO at Source: (-->> incoming fk) Other tables points to this table using: " + ddl);
+			}
+			
+			
+			{ // Begin/end just to scope the variable
+				String msg = "NOTE: you can CHECK for Table or ResultSet DIFFERENCE between two DBMS Servers with command: 'go | diff' or '\\tabdiff ...'";
+				addInfoMessage(msg);
+			}
+			
+			// Do some checks on the table
+			// -- ASE do: sp_spaceused
+			if (_destConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_SYBASE_ASE))
+			{
+				String destTableName = destTableObj.getFullNameUnModified();
+				String sql = "sp_spaceused '" + destTableName + "'";
 
-					batchCount = 0;
-					
-					pstmt.executeBatch();
+				if (_cmdParams._dryRun)
+				{
+					addDryRunMessage("exec SQL at destination[" + _destConnInfo + "]: " + sql);
 				}
 				else
 				{
-					if (_progressDialog != null && ((totalCount % 100) == 0) )
-						_progressDialog.setState("Adding row "+totalCount+" to the transfer.");
+					try (Statement stmnt = _destConn.createStatement(); ResultSet rs = stmnt.executeQuery(sql); )
+					{
+						ResultSetMetaData rsmd = rs.getMetaData();
+						while(rs.next())
+						{
+							Map<String, String> colValRow = new LinkedHashMap<>();
+							for (int c=1; c<=rsmd.getColumnCount(); c++)
+							{
+								// add |LABEL:Value| to the map.
+								colValRow.put(rsmd.getColumnLabel(c), rs.getString(c));
+							}
+							String msg = "Results from sp_spaceused: " + StringUtil.toCommaStr(colValRow);
+							addInfoMessage(msg);
+						}
+					}
 				}
 			}
-            msg = "END OF TRANSFER: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount;
-            if (_cmdParams._debug)
-            	addDebugMessage(msg);
-
-System.out.println("END OF TRANSFER: Executing batch: _batchSize="+_cmdParams._batchSize+", batchCount="+batchCount+", totalCount="+totalCount);
-            if (_progressDialog != null)
-            	_progressDialog.setState("Executing final batch insert, at row count "+totalCount);
-
-            pstmt.executeBatch();
-			pstmt.close();
-
-//			sourceRs.close();
-			
-//			if (pipeCmd._sqlWarnings != null)
-//				throw pipeCmd._sqlWarnings;
-
-            msg = "BCP Transferred "+totalCount+" rows to the destination table '"+tabName+"'.";
-           	addInfoMessage(msg);
-			_logger.info(msg);
 
 			return totalCount;
-		}
-	}
+		} // end: method: doTransfer
+		
+	} // end: class TransferTable
 }

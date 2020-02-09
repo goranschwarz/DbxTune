@@ -22,6 +22,7 @@ package com.asetune.cm.ase;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,6 +32,9 @@ import org.apache.log4j.Logger;
 
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEventConfigResourceIsLow;
+import com.asetune.cm.CmSettingsHelper;
 import com.asetune.cm.CounterSample;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -40,6 +44,7 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.graph.TrendGraphDataPoint;
 import com.asetune.graph.TrendGraphDataPoint.LabelType;
 import com.asetune.gui.MainFrame;
+import com.asetune.utils.Configuration;
 import com.asetune.utils.Ver;
 
 /**
@@ -395,6 +400,78 @@ extends CountersModel
 			// Set the values
 			tgdp.setDataPoint(this.getTimestamp(), arr);
 		}
+	}
+	
+	
+	//--------------------------------------------------------------------
+	// Alarm Handling
+	//--------------------------------------------------------------------
+	@Override
+	public void sendAlarmRequest()
+	{
+		if ( ! hasDiffData() )
+			return;
+
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		CountersModel cm = this;
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+
+		//-------------------------------------------------------
+		// CacheHitPct
+		//-------------------------------------------------------
+		if (isSystemAlarmsForColumnEnabledAndInTimeRange("CacheHitPct"))
+		{
+			Double CacheHitPct = cm.getAbsValueAsDouble (0, "CacheHitPct");
+			if (CacheHitPct != null)
+			{
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): CacheHitPct='"+CacheHitPct+"'.");
+
+				int threshold = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_alarm_CacheHitPct, DEFAULT_alarm_CacheHitPct);
+				if (CacheHitPct.intValue() < threshold)
+				{
+					Double TotalSizeKB  = cm.getAbsValueAsDouble (0, "TotalSizeKB");
+					Double UnusedSizeKB = cm.getAbsValueAsDouble (0, "UnusedSizeKB");
+					
+					Double TotalSizeMB  = TotalSizeKB / 1024.0;
+
+					// Note: AlarmEventCacheHitRate do not yet exist (not sure if I want to create a specific AlarmEvent for this... for now: reuse AlarmEventConfigResourceIsLow)
+//					String warnMsg = "Statement Cache Hit Rate is below ## Percent (alarmValue="+CacheHitPct+"). The Statement Cache might be configured to low";
+//					String fixMsg  = "sp_configure 'statement cache size', 0, '###M'... or free unused memory with 'dbcc traceon(3604) dbcc proc_cache(free_unused)'.";
+//					String msg     = warnMsg + fixMsg;
+//
+//					AlarmHandler.getInstance().addAlarm(
+//							new AlarmEventCacheHitRate(cm, "Statement Cache", msg, threshold, CacheHitPct) );
+
+					String warnMsg = "The 'statement cache size' might be configured to low, Statement Cache Hit Rate is below " + threshold + " Percent (CacheHitPct alarmValue=" + CacheHitPct + ", TotalSizeMB=" + TotalSizeMB + ", UnusedSizeKB=" + UnusedSizeKB + "). ";
+					String fixMsg  = "Fix this using: sp_configure 'statement cache size', 0, '###M'... or free unused memory with 'dbcc traceon(3604) dbcc proc_cache(free_unused)'.";
+					String msg     = warnMsg + fixMsg;
+
+					AlarmHandler.getInstance().addAlarm(
+						new AlarmEventConfigResourceIsLow(cm, "statement cache size", TotalSizeMB, msg, threshold) );
+				}
+			}
+		}
+	}
+
+	public static final String  PROPKEY_alarm_CacheHitPct = CM_NAME + ".alarm.system.if.CacheHitPct.lt";
+	public static final int     DEFAULT_alarm_CacheHitPct = 25;
+	
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+		
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+//		list.add(new CmSettingsHelper("CacheHitPct", isAlarmSwitch, PROPKEY_alarm_CacheHitPct, Integer.class, conf.getIntProperty(PROPKEY_alarm_CacheHitPct, DEFAULT_alarm_CacheHitPct), DEFAULT_alarm_CacheHitPct, "If 'CacheHitPct' is less than ## then send 'AlarmEventCacheHitRate'." ));
+		list.add(new CmSettingsHelper("CacheHitPct", isAlarmSwitch, PROPKEY_alarm_CacheHitPct, Integer.class, conf.getIntProperty(PROPKEY_alarm_CacheHitPct, DEFAULT_alarm_CacheHitPct), DEFAULT_alarm_CacheHitPct, "If 'CacheHitPct' is less than ## then send 'AlarmEventConfigResourceIsLow'." ));
+
+		return list;
 	}
 }
 

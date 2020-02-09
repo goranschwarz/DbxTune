@@ -48,6 +48,7 @@ import com.asetune.sql.diff.DiffSink;
 import com.asetune.sql.diff.actions.DiffTableModel;
 import com.asetune.sql.diff.actions.GenerateSqlText;
 import com.asetune.tools.sqlw.SqlStatementAbstract;
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.SwingUtils;
 
@@ -187,10 +188,10 @@ extends PipeCommandAbstract
 
 
 
-	public PipeCommandDiff(String input, String sqlString)
+	public PipeCommandDiff(String input, String sqlString, ConnectionProvider connProvider)
 	throws PipeCommandException
 	{
-		super(input, sqlString);
+		super(input, sqlString, connProvider);
 		parse(input);
 	}
 
@@ -555,7 +556,8 @@ extends PipeCommandAbstract
 
 		ResultSet leftRs = (ResultSet) input;
 
-		DbxConnection leftConn = _leftConn;
+//		DbxConnection leftConn = _leftConn;
+		DbxConnection leftConn = getConnectionProvider().getConnection(); // NOTE: NOT a "getNewConnection()", we just need to grab the "ConnectionProps" for the current connection.
 		
 		
 		DiffContext context = new DiffContext();
@@ -735,11 +737,11 @@ extends PipeCommandAbstract
 		return _diffTableModel;
 	}
 
-	private DbxConnection  _leftConn;
-	private ConnectionProp _leftConnProps;
-	public void setConnection(DbxConnection conn)
-	{
-		_leftConn      = conn;
-		_leftConnProps = conn.getConnProp();
-	}
+//	private DbxConnection  _leftConn;
+//	private ConnectionProp _leftConnProps;
+//	public void setConnection(DbxConnection conn)
+//	{
+//		_leftConn      = conn;
+//		_leftConnProps = conn.getConnProp();
+//	}
 }

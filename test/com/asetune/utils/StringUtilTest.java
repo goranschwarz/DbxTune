@@ -22,6 +22,8 @@ package com.asetune.utils;
 
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.Charset;
+
 import org.junit.Test;
 
 public class StringUtilTest
@@ -81,6 +83,65 @@ public class StringUtilTest
 		assertEquals(false,       StringUtil.hasValueForAll("", "") );
 		assertEquals(false,       StringUtil.hasValueForAll("", "aValue") );
 		assertEquals(true,        StringUtil.hasValueForAll("aValue", "aValue") );
+	}
+
+
+
+
+	@Test
+	public void testUtf8Len()
+	{
+		Charset               utf8     = Charset.forName("UTF-8");
+		AllCodepointsIterator iterator = new AllCodepointsIterator();
+		while (iterator.hasNext())
+		{
+			int codepoint = iterator.next();
+			String testStr = new String(Character.toChars(codepoint));
+			int strLen   = testStr.length();
+			int bytesLen = testStr.getBytes(utf8).length;
+			int utf8Len  = StringUtil.utf8Length(testStr);
+
+			//System.out.println("test[codepoint=" + codepoint + ", strLen=" + strLen + ", bytesLen=" + bytesLen + ", utf8Len=" + utf8Len + "]='" + testStr + "', name=" +  Character.getName(codepoint) + ", UniCode=" + String.format("U+%04X", codepoint));
+
+			assertEquals(bytesLen, utf8Len);
+		}
+	}
+
+	private static class AllCodepointsIterator
+	{
+		private static final int MAX             = 0x10FFFF; // see http://unicode.org/glossary/
+		private static final int SURROGATE_FIRST = 0xD800;
+		private static final int SURROGATE_LAST  = 0xDFFF;
+		private int              codepoint       = 0;
+
+		public boolean hasNext()
+		{
+			return codepoint < MAX;
+		}
+
+		public int next()
+		{
+			int ret = codepoint;
+			codepoint = next(codepoint);
+			return ret;
+		}
+
+		private int next(int codepoint)
+		{
+			while (codepoint++ < MAX)
+			{
+				if ( codepoint == SURROGATE_FIRST )
+				{
+					codepoint = SURROGATE_LAST + 1;
+				}
+				if ( !Character.isDefined(codepoint) )
+				{
+					continue;
+				}
+				return codepoint;
+			}
+			return MAX;
+		}
 	}
 
 }

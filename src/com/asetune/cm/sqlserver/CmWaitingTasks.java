@@ -219,17 +219,19 @@ extends CountersModel
 			    + "        ELSE NULL \n"
 			    + "    END AS [Node ID], \n"
 			    + "    [es].[program_name], \n"
-			    + "    [est].text, \n"
+				+ "    SUBSTRING([est].text, [er].statement_start_offset / 2,  \n"
+				+ "        ( CASE WHEN [er].statement_end_offset = -1  \n"
+				+ "               THEN DATALENGTH([est].text)  \n"
+				+ "               ELSE [er].statement_end_offset  \n"
+				+ "          END - [er].statement_start_offset ) / 2) AS [currentSqlText], \n"
+			    + "    [est].text as [fullSqlBatchText], \n"
 			    + "    [er].[database_id], \n"
 			    + "    [eqp].[query_plan], \n"
 			    + "    [er].[cpu_time] \n"
 			    + "FROM sys." + dm_os_waiting_tasks + " [owt] \n"
-			    + "INNER JOIN sys." + dm_os_tasks + " [ot] ON \n"
-			    + "    [owt].[waiting_task_address] = [ot].[task_address] \n"
-			    + "INNER JOIN sys." + dm_exec_sessions + " [es] ON \n"
-			    + "    [owt].[session_id] = [es].[session_id] \n"
-			    + "INNER JOIN sys." + dm_exec_requests + " [er] ON \n"
-			    + "    [es].[session_id] = [er].[session_id] \n"
+			    + "INNER JOIN sys." + dm_os_tasks + " [ot]      ON [owt].[waiting_task_address] = [ot].[task_address] \n"
+			    + "INNER JOIN sys." + dm_exec_sessions + " [es] ON [owt].[session_id] = [es].[session_id] \n"
+			    + "INNER JOIN sys." + dm_exec_requests + " [er] ON [es].[session_id] = [er].[session_id] \n"
 			    + "OUTER APPLY sys." + dm_exec_sql_text + " ([er].[sql_handle]) [est] \n"
 			    + "OUTER APPLY sys." + dm_exec_query_plan + " ([er].[plan_handle]) [eqp] \n"
 			    + "WHERE \n"
@@ -241,6 +243,14 @@ extends CountersModel
 
 		return sql;
 	}
+//	String dm_exec_requests    = "dm_exec_requests"; == der
+//	String dm_exec_sql_text    = "dm_exec_sql_text"; == dest
+	
+//	"    SUBSTRING(dest.text, der.statement_start_offset / 2,  \n" +
+//	"        ( CASE WHEN der.statement_end_offset = -1  \n" +
+//	"               THEN DATALENGTH(dest.text)  \n" +
+//	"               ELSE der.statement_end_offset  \n" +
+//	"          END - der.statement_start_offset ) / 2) AS [lastKnownSql], \n" +
 
 
 	//---------------------------------------------------------------------------------

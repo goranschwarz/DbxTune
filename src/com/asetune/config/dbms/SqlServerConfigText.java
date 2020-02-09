@@ -136,7 +136,24 @@ public abstract class SqlServerConfigText
 		@Override public    String     getTabLabel()                        { return "sys.databases"; }
 		@Override public    String     getName()                            { return ConfigType.SqlServerSysDatabases.toString(); }
 		@Override public    String     getConfigType()                      { return getName(); }
-		@Override protected String     getSqlCurrentConfig(long srvVersion) { return "select has_dbaccess(name) AS has_dbaccess, * from sys.databases"; }
+		@Override protected String     getSqlCurrentConfig(long srvVersion) 
+		{
+			String sql = 
+					"select has_dbaccess(name) AS has_dbaccess, * from sys.databases \n" +
+					"go \n" + 
+					"print '' \n" + 
+					"print '' \n" + 
+					"print '' \n" + 
+					"print '===============================================================================' \n" + 
+					"print ' Below are: Database Scoped Configurations for each database in the SQL-Server' \n" + 
+					"print '-------------------------------------------------------------------------------' \n" + 
+					"print '' \n" + 
+					"go \n" + 
+					"exec sys.sp_MSforeachdb 'select convert(varchar(60),''?'') as dbname, * from sys.database_scoped_configurations' \n" +
+					"go \n" +
+					"";
+			return sql; 
+		}
 	}
 
 	public static class Traceflags extends DbmsConfigTextAbstract

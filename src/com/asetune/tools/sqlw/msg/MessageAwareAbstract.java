@@ -73,12 +73,14 @@ implements IMessageAware
 	public boolean isStdoutOutEnabled() { return _isToStdoutEnabled; }
 	public boolean isTraceEnabled()   { return _debugLevel >= 2; }
 	public boolean isDebugEnabled()   { return _debugLevel >= 1; }
+	public boolean isDryRunEnabled()  { return true; }
 	public boolean isInfoEnabled()    { return true; }
 	public boolean isWarningEnabled() { return true; }
 	public boolean isErrorEnabled()   { return true; }
 
 	@Override public void addTraceMessage  (String msg) { if (isTraceEnabled  ()) _msgList.add(new Message(Severity.TRACE  , msg)); if (isStdoutOutEnabled()) System.out.println("TRACE: "   + msg); }
 	@Override public void addDebugMessage  (String msg) { if (isDebugEnabled  ()) _msgList.add(new Message(Severity.DEBUG  , msg)); if (isStdoutOutEnabled()) System.out.println("DEBUG: "   + msg); }
+	@Override public void addDryRunMessage (String msg) { if (isDryRunEnabled ()) _msgList.add(new Message(Severity.DRYRUN , msg)); if (isStdoutOutEnabled()) System.out.println("DRYRUN: "  + msg); }
 	@Override public void addInfoMessage   (String msg) { if (isInfoEnabled   ()) _msgList.add(new Message(Severity.INFO   , msg)); if (isStdoutOutEnabled()) System.out.println("INFO: "    + msg); }
 	@Override public void addWarningMessage(String msg) { if (isWarningEnabled()) _msgList.add(new Message(Severity.WARNING, msg)); if (isStdoutOutEnabled()) System.out.println("WARNING: " + msg); }
 	@Override public void addErrorMessage  (String msg) { if (isErrorEnabled  ()) _msgList.add(new Message(Severity.ERROR  , msg)); if (isStdoutOutEnabled()) System.out.println("ERROR: "   + msg); }

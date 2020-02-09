@@ -76,6 +76,7 @@ implements PropertyChangeListener, ActionListener
 	private Connection       _conn                  = null;
 	private Statement        _stmnt                 = null;
 	private JLabel           _state_lbl             = new JLabel();
+	private JLabel           _state2_lbl            = new JLabel();
 	private boolean          _markSql               = false; // mark/move to current SQL in _allSql_txt 
 	private RSyntaxTextAreaX _allSql_txt            = new RSyntaxTextAreaX();
 	private RTextScrollPane  _allSql_sroll          = new RTextScrollPane(_allSql_txt);
@@ -156,6 +157,7 @@ implements PropertyChangeListener, ActionListener
 		
 		add(_allSql_lbl,            "pushx, growx, wrap");
 		add(_state_lbl,             "wrap");
+		add(_state2_lbl,            "hidemode 3, wrap");
 		add(_totalExecTimeDesc_lbl, "split, width 85");
 		add(_totalExecTimeVal_lbl,  "wrap");
 		add(_batchExecTimeDesc_lbl, "split, width 85, hidemode 3");
@@ -164,6 +166,8 @@ implements PropertyChangeListener, ActionListener
 		add(_msg_lbl,               "pushx, growx, wrap, hidemode 3");
 		add(_msg_sroll,             "hmin 150, push, grow, wrap, hidemode 3");
 		add(_cancel,                "center");
+
+		_state2_lbl.setVisible(false);
 
 		_msg_lbl.setVisible(false);
 		_msg_sroll.setVisible(false);
@@ -191,7 +195,11 @@ implements PropertyChangeListener, ActionListener
 		_allSql_txt.setText(sql);
 		_allSql_txt.setCaretPosition(0);
 		_allSql_txt.setEditable(false);
-		
+	}
+	
+	public String getAllSqlText()
+	{
+		return _allSql_txt.getText();
 	}
 	
 	public void setCurrentSqlText(String sql, int batchCount, int totalExecCount)
@@ -343,6 +351,17 @@ implements PropertyChangeListener, ActionListener
 		}
 	}
 
+	public void setWidth(int widthInChars)
+	{
+		//int newWidth = widthInChars * 5; // is 5 pixels a good approximation for one char.
+		int newWidth = _state_lbl.getGraphics().getFontMetrics().stringWidth( StringUtil.replicate("x", widthInChars));
+		
+		int width  = Math.max(getSize().width, newWidth); 
+		int height = getSize().height;
+		
+		setSize(width, height);
+	}
+
 	public void setState(String string)
 	{
 		_state_lbl.setText(string);
@@ -351,6 +370,17 @@ implements PropertyChangeListener, ActionListener
 	public String getState()
 	{
 		return _state_lbl.getText();
+	}
+	
+	public void setState2(String string)
+	{
+		_state2_lbl.setText(string);
+		_state2_lbl.setVisible(StringUtil.hasValue(string));
+	}
+
+	public String getState2()
+	{
+		return _state2_lbl.getText();
 	}
 	
 	public void addMessage(SQLException sqle)

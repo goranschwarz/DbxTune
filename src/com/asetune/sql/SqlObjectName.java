@@ -551,12 +551,20 @@ public class SqlObjectName
 			if (StringUtil.isNullOrBlank(_schNameUnModified))
 				_schNameUnModified = "dbo";
 		}
-		
-//		_fullName       = stripQuote( _rawOriginFullName, _dbIdentifierQuoteString );
-//		_originFullName = stripQuote( _rawOriginFullName, _dbIdentifierQuoteString );
-		setCatalogName(_catNameUnModified);
-		setSchemaName (_schNameUnModified);
-		setObjectName (_objNameUnModified);
+
+		// Special case for MySQL -- set schema as catalog name
+		if (DbUtils.isProductName(_dbProductName, DbUtils.DB_PROD_NAME_MYSQL))
+		{
+			setCatalogName(_schNameUnModified);
+			setSchemaName (null); // null or "" ???
+			setObjectName (_objNameUnModified);
+		}
+		else
+		{
+			setCatalogName(_catNameUnModified);
+			setSchemaName (_schNameUnModified);
+			setObjectName (_objNameUnModified);
+		}
 	}
 
 	/**
@@ -577,6 +585,9 @@ public class SqlObjectName
 
 		if (_catName != null && _dbStoresUpperCaseIdentifiers)
 			_catName = _catName.toUpperCase();
+
+		if (_catName != null && _catName.equalsIgnoreCase("null"))
+			_catName = null;
 	}
 
 	/**
@@ -597,6 +608,9 @@ public class SqlObjectName
 
 		if (_schName != null && _dbStoresUpperCaseIdentifiers)
 			_schName = _schName.toUpperCase();
+
+		if (_schName != null && _schName.equalsIgnoreCase("null"))
+			_schName = null;
 	}
 
 	/**
@@ -617,6 +631,9 @@ public class SqlObjectName
 
 		if (_objName != null && _dbStoresUpperCaseIdentifiers)
 			_objName = _objName.toUpperCase();
+
+		if (_objName != null && _objName.equalsIgnoreCase("null"))
+			_objName = null;
 	}
 
 //	/** make: schemaName -> catalaogName and objectName -> schemaName and blank-out objectName */
@@ -747,5 +764,49 @@ public class SqlObjectName
 		if (StringUtil.hasValue(obj)) sb.append(leftQuote).append(obj).append(rightQuote);
 
 		return sb.toString();
+	}
+	@Override
+	public int hashCode()
+	{
+		final int prime  = 31;
+		int       result = 1;
+		result = prime * result + ((_catName == null) ? 0 : _catName.hashCode());
+		result = prime * result + ((_objName == null) ? 0 : _objName.hashCode());
+		result = prime * result + ((_schName == null) ? 0 : _schName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj)
+	{
+		if ( this == obj )
+			return true;
+		if ( obj == null )
+			return false;
+		if ( getClass() != obj.getClass() )
+			return false;
+		SqlObjectName other = (SqlObjectName) obj;
+		if ( _catName == null )
+		{
+			if ( other._catName != null )
+				return false;
+		}
+		else if ( !_catName.equals(other._catName) )
+			return false;
+		if ( _objName == null )
+		{
+			if ( other._objName != null )
+				return false;
+		}
+		else if ( !_objName.equals(other._objName) )
+			return false;
+		if ( _schName == null )
+		{
+			if ( other._schName != null )
+				return false;
+		}
+		else if ( !_schName.equals(other._schName) )
+			return false;
+		return true;
 	}
 }

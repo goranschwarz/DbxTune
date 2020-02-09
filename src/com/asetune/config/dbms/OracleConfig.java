@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,33 +63,36 @@ extends DbmsConfigAbstract
 	private static final int COL_NAME        = 0;
 	private static final int COL_EDITABLE    = 1;
 	private static final int COL_CLASS       = 2;
-	private static final int COL_SQLTYPE     = 3;
-	private static final int COL_TOOLTIP     = 4;
+//	private static final int COL_SQLTYPE     = 3;
+	private static final int COL_JDBC_TYPE   = 3;
+	private static final int COL_JDBC_LENGTH = 4;
+	private static final int COL_JDBC_SCALE  = 5;
+	private static final int COL_TOOLTIP     = 6;
 	private static Object[][] COLUMN_HEADERS = 
 	{
-	//   ColumnName,           Editable, JTable type,   SQL Datatype,    Tooltip
-	//   --------------------- --------- -------------- ---------------- --------------------------------------------
-		{NON_DEFAULT,          false,    Boolean.class, "bit",           "True if the value is not configured to the default value. (same as for sp_configure 'nondefault')"},
-		{SECTION_NAME,         true,     String .class, "varchar(60)",   "Configuration Group"},
-		{CONFIG_NAME,          true,     String .class, "varchar(60)",   "Name of the configuration, same as the name in sp_configure."},
-		{CONFIG_VALUE,         true,     Integer.class, "bigint",        "Value of the configuration."},
-		{PENDING,              false,    Boolean.class, "bit",           "The Configuration has not yet taken effect, probably needs restart to take effect."},
-		{PENDING_VALUE,        true,     Integer.class, "bigint",        "The value which will be configured on next restart, if PENDING is true."},
-		{DEFAULT_VALUE,        true,     Integer.class, "varchar(100)",  "The default configuration value."},            // it's a String but, RIGHT align it with Integer
-		{MEMORY_USED,          true,     Integer.class, "varchar(30)",   "Memory Used by this configuration parameter"}, // it's a String but, RIGHT align it with Integer
-		{CONFIG_UNIT,          true,     String .class, "varchar(30)",   "In what unit is this configuration"},
-		{RESTART_IS_REQ,       false,    Boolean.class, "bit",           "ASE needs to be rebooted for the configuration to take effect."},
-		{CFG_VAL_STR,          true,     String .class, "varchar(100)",  "The char value of the configuration."},
-		{CFG_VAL_STR_PENDNING, true,     String .class, "varchar(100)",  "The pending char configuration."},
-		{READ_ONLY,            false,    Boolean.class, "bit",           "This config is a read only value"},
-		{TYPE,                 true,     String .class, "varchar(30)",   "dynamic or static"},
-		{MIN_VALUE,            true,     Integer.class, "bigint",        "integer minimum value of the configuration"},
-		{MAX_VALUE,            true,     Integer.class, "bigint",        "integer maximum value of the configuration"},
-		{DESCRIPTION,          true,     String .class, "varchar(1024)", "Description of the configuration."},
-		{CONFIG_ID,            true,     Integer.class, "bigint",        "Internal ID number for this configuration."},
-		{SECTION_ID,           true,     Integer.class, "bigint",        "Configuration Group ID"},
-		{DISPLAY_LEVEL,        true,     Integer.class, "bigint",        ""},
-		{DATA_TYPE,            true,     Integer.class, "bigint",        ""}
+	//   ColumnName,           Editable, JTable type,   JDBC Type      JDBC Length JDBC Scale /* SQL Datatype,    */ Tooltip
+	//   --------------------- --------- -------------- -------------- ----------- ---------- /* ---------------- */ --------------------------------------------
+		{NON_DEFAULT,          false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "True if the value is not configured to the default value. (same as for sp_configure 'nondefault')"},
+		{SECTION_NAME,         true,     String .class, Types.VARCHAR, 60,          -1,       /* "varchar(60)",   */ "Configuration Group"},
+		{CONFIG_NAME,          true,     String .class, Types.VARCHAR, 60,          -1,       /* "varchar(60)",   */ "Name of the configuration, same as the name in sp_configure."},
+		{CONFIG_VALUE,         true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "Value of the configuration."},
+		{PENDING,              false,    Boolean.class, Types.BOOLEAN  -1,          -1,       /* "bit",           */ "The Configuration has not yet taken effect, probably needs restart to take effect."},
+		{PENDING_VALUE,        true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "The value which will be configured on next restart, if PENDING is true."},
+		{DEFAULT_VALUE,        true,     Integer.class, Types.VARCHAR, 300,         -1,       /* "varchar(100)",  */ "The default configuration value."},            // it's a String but, RIGHT align it with Integer
+		{MEMORY_USED,          true,     Integer.class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "Memory Used by this configuration parameter"}, // it's a String but, RIGHT align it with Integer
+		{CONFIG_UNIT,          true,     String .class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "In what unit is this configuration"},
+		{RESTART_IS_REQ,       false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "ASE needs to be rebooted for the configuration to take effect."},
+		{CFG_VAL_STR,          true,     String .class, Types.VARCHAR, 100,         -1,       /* "varchar(100)",  */ "The char value of the configuration."},
+		{CFG_VAL_STR_PENDNING, true,     String .class, Types.VARCHAR, 100,         -1,       /* "varchar(100)",  */ "The pending char configuration."},
+		{READ_ONLY,            false,    Boolean.class, Types.BOOLEAN, -1,          -1,       /* "bit",           */ "This config is a read only value"},
+		{TYPE,                 true,     String .class, Types.VARCHAR, 30,          -1,       /* "varchar(30)",   */ "dynamic or static"},
+		{MIN_VALUE,            true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "integer minimum value of the configuration"},
+		{MAX_VALUE,            true,     Integer.class, Types.BIGINT,  -1,          -1,       /* "bigint",        */ "integer maximum value of the configuration"},
+		{DESCRIPTION,          true,     String .class, Types.VARCHAR, 1024,        -1,       /* "varchar(1024)", */ "Description of the configuration."},
+		{CONFIG_ID,            true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ "Internal ID number for this configuration."},
+		{SECTION_ID,           true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ "Configuration Group ID"},
+		{DISPLAY_LEVEL,        true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ ""},
+		{DATA_TYPE,            true,     Integer.class, Types.INTEGER, -1,          -1,       /* "bigint",        */ ""}
 	};
 
 //
@@ -595,20 +599,29 @@ extends DbmsConfigAbstract
 		return "";
 	}
 
+//	@Override
+//	public String getSqlDataType(String colName)
+//	{
+//		for (int i=0; i<COLUMN_HEADERS.length; i++)
+//		{
+//			if (COLUMN_HEADERS[i][COL_NAME].equals(colName))
+//				return (String)COLUMN_HEADERS[i][COL_SQLTYPE];
+//		}
+//		return "";
+//	}
+//	@Override
+//	public String getSqlDataType(int colIndex)
+//	{
+//		return (String)COLUMN_HEADERS[colIndex][COL_SQLTYPE];
+//	}
 	@Override
-	public String getSqlDataType(String colName)
+	public String getSqlDataType(DbxConnection conn, int colIndex)
 	{
-		for (int i=0; i<COLUMN_HEADERS.length; i++)
-		{
-			if (COLUMN_HEADERS[i][COL_NAME].equals(colName))
-				return (String)COLUMN_HEADERS[i][COL_SQLTYPE];
-		}
-		return "";
-	}
-	@Override
-	public String getSqlDataType(int colIndex)
-	{
-		return (String)COLUMN_HEADERS[colIndex][COL_SQLTYPE];
+		int jdbcType = (int)COLUMN_HEADERS[colIndex][COL_JDBC_TYPE];
+		int length   = (int)COLUMN_HEADERS[colIndex][COL_JDBC_LENGTH];
+		int scale    = (int)COLUMN_HEADERS[colIndex][COL_JDBC_SCALE];
+		
+		return conn.getDbmsDataTypeResolver().dataTypeResolverToTarget(jdbcType, length, scale);
 	}
 
 	@Override

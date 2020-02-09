@@ -65,6 +65,7 @@ public class DbUtils
 	public static final String DB_PROD_NAME_POSTGRES     = "PostgreSQL";
 	public static final String DB_PROD_NAME_APACHE_HIVE  = "Apache Hive";
 
+	public static final String DB_PROD_NAME_COCKROACHDB  = "CockroachDB";
 
 	/**
 	 * Check if the specified product name is in any of the passed ones
@@ -93,6 +94,13 @@ public class DbUtils
 				if (checkProductName.toLowerCase().startsWith(name.toLowerCase()))
 					return true;
 			}
+			
+			if (DB_PROD_NAME_COCKROACHDB.equals(name))
+			{
+				if (checkProductName.startsWith(name))
+					return true;
+			}
+			
 		}
 		return false;
 	}

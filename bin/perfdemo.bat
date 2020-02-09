@@ -1,10 +1,17 @@
-@echo off
+rem @echo off
 title PerfDemo-console
 setlocal
+
+set STARTDIR=%~dp0
 
 rem ------------------------------------------------------------------------
 rem --- set PERF_DEMO_HOME to current directory if NOT already set
 rem ------------------------------------------------------------------------
+IF "%PERF_DEMO_HOME%"=="" (
+	set PERF_DEMO_HOME=%STARTDIR%
+	if /i [%STARTDIR:~-5%]==[\bin\] set PERF_DEMO_HOME=%STARTDIR:~0,-4%
+)
+
 IF "%PERF_DEMO_HOME%"=="" set PERF_DEMO_HOME=%~dp0
 
 rem --- IF "%SYBASE%"=="" set SYBASE=c:\sybase
@@ -82,10 +89,12 @@ set classpath=%classpath%;%PERF_DEMO_HOME%\lib\commons-io-2.6.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\commons-csv-1.5.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\commons-cli-1.4.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\proxy-vole_20131209.jar
-set classpath=%classpath%;%PERF_DEMO_HOME%\lib\ganymed-ssh2-build251beta1.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\ganymed-ssh2-262.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\antlr-4.0-complete.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\juniversalchardet-2.3.0.jar
 set classpath=%classpath%;%PERF_DEMO_HOME%\lib\DDLGen.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\balloontip-1.2.4.1.jar
+set classpath=%classpath%;%PERF_DEMO_HOME%\lib\cron4j-2.2.5.jar
 
 rem --- echo %CLASSPATH%
 

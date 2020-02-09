@@ -280,7 +280,8 @@ public class H2WriterStat
 	
 	public H2WriterStat refreshCounters(Connection conn)
 	{
-		String sql = "select NAME, cast(VALUE as bigint) as VALUE from INFORMATION_SCHEMA.SETTINGS where NAME in ('"+FILE_READ+"', '"+FILE_WRITE+"', '"+PAGE_COUNT+"')";
+		String sql = "select #NAME#, cast(#VALUE# as bigint) as #VALUE# from #INFORMATION_SCHEMA#.#SETTINGS# where #NAME# in ('"+FILE_READ+"', '"+FILE_WRITE+"', '"+PAGE_COUNT+"')";
+		sql = sql.replace('#',  '"'); // Replace all # into H2 QuotedIdentifier
 
 		try (Statement stmnt = conn.createStatement())
 		{

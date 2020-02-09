@@ -26,9 +26,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.asetune.ICounterController;
 import com.asetune.IGuiController;
+import com.asetune.alarm.AlarmHandler;
+import com.asetune.alarm.events.AlarmEvent;
+import com.asetune.alarm.events.AlarmEventOsDiskUtilPct;
 import com.asetune.cm.CmSettingsHelper;
+import com.asetune.cm.CmSettingsHelper.RegExpInputValidator;
 import com.asetune.cm.CounterModelHostMonitor;
 import com.asetune.cm.CounterSetTemplates;
 import com.asetune.cm.CounterSetTemplates.Type;
@@ -45,13 +51,14 @@ import com.asetune.hostmon.OsTable;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.StringUtil;
 
+
 /**
  * @author Goran Schwarz (goran_schwarz@hotmail.com)
  */
 public class CmOsIostat
 extends CounterModelHostMonitor
 {
-//	private static Logger        _logger          = Logger.getLogger(CmOsIostat.class);
+	private static Logger        _logger          = Logger.getLogger(CmOsIostat.class);
 	private static final long    serialVersionUID = 1L;
 
 	public static final int      CM_TYPE          = CounterModelHostMonitor.HOSTMON_IOSTAT;
@@ -1374,5 +1381,108 @@ extends CounterModelHostMonitor
 				newSample.removeRowByPk(deviceName);
 			}
 		}
+	}
+
+
+	@Override
+	public void sendAlarmRequest()
+	{
+		CountersModel cm = this;
+
+		if ( ! cm.hasAbsData() )
+			return;
+		if ( ! cm.getCounterController().isHostMonConnected() )
+			return;
+		if ( ! AlarmHandler.hasInstance() )
+			return;
+
+		String hostname = cm.getCounterController().getHostMonConnection().getHost();
+
+		boolean debugPrint = System.getProperty("sendAlarmRequest.debug", "false").equalsIgnoreCase("true");
+		
+		//-------------------------------------------------------
+		// Loop all devices and check for 'utilPct' 
+		//-------------------------------------------------------
+		for (int r=0; r<cm.getAbsRowCount(); r++)
+		{
+			String device = this.getAbsString(0, "device");
+
+			// Skip records where the device name is blank (this should NOT happen)
+			if (StringUtil.isNullOrBlank(device))
+				continue;
+
+			//-------------------------------------------------------
+			// utilPct -- is the device over-used
+			//-------------------------------------------------------
+			if (isSystemAlarmsForColumnEnabledAndInTimeRange("utilPct"))
+			{
+				Double utilPct  = this.getAbsValueAsDouble(0, "utilPct");
+				if (utilPct == null)
+					utilPct = -1.0;
+				
+				if (debugPrint || _logger.isDebugEnabled())
+					System.out.println("##### sendAlarmRequest("+cm.getName()+"): device='" + device + "', utilPct=" + utilPct + ".");
+
+				double threshold = Configuration.getCombinedConfiguration().getDoubleProperty(PROPKEY_alarm_utilPct, DEFAULT_alarm_utilPct);
+				if (utilPct > threshold)
+				{
+					// Get configuration 'skip some device'
+					Configuration conf = Configuration.getCombinedConfiguration();
+					String keepRegExp  = conf.getProperty(PROPKEY_alarm_utilPctKeepDevice, DEFAULT_alarm_utilPctKeepDevice);
+					String skipRegExp  = conf.getProperty(PROPKEY_alarm_utilPctSkipDevice, DEFAULT_alarm_utilPctSkipDevice);
+
+					// note: this must be set to true at start, otherwise all below rules will be disabled (it "stops" processing at first doAlarm==false)
+					boolean doAlarm = true;
+
+					// The below could have been done with neasted if(keep-db), if(keep-srv), if(!skipDb), if(!skipSrv) doAlarm=true; 
+					// Below is more readable, from a variable context point-of-view, but HARDER to understand
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(keepRegExp) ||   device.matches(keepRegExp ))); //     matches the KEEP regexp
+					doAlarm = (doAlarm && (StringUtil.isNullOrBlank(skipRegExp) || ! device.matches(skipRegExp ))); // NO match in the SKIP regexp
+
+					if (doAlarm)
+					{
+						// Note: the "raiseDelay" is handled by the AlarmHandler
+						int raiseDelay = conf.getIntProperty(PROPKEY_alarm_utilPctRaiseDelay, DEFAULT_alarm_utilPctRaiseDelay);
+
+						String extendedDescText = cm.toTextTableString(DATA_ABS, r);
+						String extendedDescHtml = cm.toHtmlTableString(DATA_ABS, r, true, false, false);
+
+						AlarmEvent ae = new AlarmEventOsDiskUtilPct(cm, threshold, hostname, device, utilPct, raiseDelay);
+						ae.setExtendedDescription(extendedDescText, extendedDescHtml);
+
+						AlarmHandler.getInstance().addAlarm( ae );
+					}
+				}
+			} // end: utilPct
+
+		} // end: loop all devices
+	}
+
+	public static final String  PROPKEY_alarm_utilPct           = CM_NAME + ".alarm.system.if.utilPct.gt";
+	public static final double  DEFAULT_alarm_utilPct           = 95.0;
+
+	public static final String  PROPKEY_alarm_utilPctRaiseDelay = CM_NAME + ".alarm.system.if.utilPct.raiseDelayInMinutes";
+	public static final int     DEFAULT_alarm_utilPctRaiseDelay = 15;
+
+	public static final String  PROPKEY_alarm_utilPctKeepDevice = CM_NAME + ".alarm.system.if.utilPct.keep.device";
+	public static final String  DEFAULT_alarm_utilPctKeepDevice = "";
+
+	public static final String  PROPKEY_alarm_utilPctSkipDevice = CM_NAME + ".alarm.system.if.utilPct.skip.device";
+	public static final String  DEFAULT_alarm_utilPctSkipDevice = "";
+
+	@Override
+	public List<CmSettingsHelper> getLocalAlarmSettings()
+	{
+		Configuration conf = Configuration.getCombinedConfiguration();
+		List<CmSettingsHelper> list = new ArrayList<>();
+
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("utilPct",            isAlarmSwitch, PROPKEY_alarm_utilPct          , Double .class, conf.getDoubleProperty(PROPKEY_alarm_utilPct          , DEFAULT_alarm_utilPct          ), DEFAULT_alarm_utilPct          , "If 'utilPct' is greater than ## then send 'AlarmEventOsDiskUtilPct'." ));
+		list.add(new CmSettingsHelper("utilPct RaiseDelay",                PROPKEY_alarm_utilPctRaiseDelay, Integer.class, conf.getIntProperty   (PROPKEY_alarm_utilPctRaiseDelay, DEFAULT_alarm_utilPctRaiseDelay), DEFAULT_alarm_utilPctRaiseDelay, "If 'utilPct' is true; Number of minutes the 'utilPct' has to be over before we Raise the Alarm"));
+		list.add(new CmSettingsHelper("utilPct KeepDevice",                PROPKEY_alarm_utilPctKeepDevice, String .class, conf.getProperty      (PROPKEY_alarm_utilPctKeepDevice, DEFAULT_alarm_utilPctKeepDevice), DEFAULT_alarm_utilPctKeepDevice, "If 'utilPct' is true; Only for the devices listed (regexp is used, blank=for-all-devices). After this rule the 'skip' rule is evaluated.", new RegExpInputValidator()));
+		list.add(new CmSettingsHelper("utilPct SkipDevice",                PROPKEY_alarm_utilPctSkipDevice, String .class, conf.getProperty      (PROPKEY_alarm_utilPctSkipDevice, DEFAULT_alarm_utilPctSkipDevice), DEFAULT_alarm_utilPctSkipDevice, "If 'utilPct' is true; Discard devices listed (regexp is used). Before this rule the 'keep' rule is evaluated",                             new RegExpInputValidator()));
+
+		return list;
 	}
 }

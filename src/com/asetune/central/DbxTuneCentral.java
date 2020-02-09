@@ -20,6 +20,8 @@
  ******************************************************************************/
 package com.asetune.central;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -446,7 +448,21 @@ public class DbxTuneCentral
 			sendDbxTuneUpdateMail();
 		}
 
-		// Start the Persistant Counter Service
+		// Start watching configuration files for CHANGES (ONLY IN NO-GUI mode)
+        Configuration.startCombinedConfigurationFileWatcher();
+		Configuration.addCombinedConfigPropertyChangeListener(new PropertyChangeListener()
+		{
+			@Override
+			public void propertyChange(PropertyChangeEvent evt)
+			{
+				String instName = "";
+				if (evt.getSource() instanceof Configuration)
+					instName = ((Configuration)evt.getSource()).getConfName();
+				_logger.info("COMBINED CONFIG CHANGE["+instName+"]: propName='"+evt.getPropertyName()+"', type="+evt.getPropagationId()+", newValue='"+evt.getNewValue()+"', oldValue='"+evt.getOldValue()+"'.");
+			}
+		});
+
+        // Start the Persistent Counter Service
 		startCentralPcs();
 
 		// Start the Alarm Handler

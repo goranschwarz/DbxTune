@@ -4,6 +4,8 @@
 package com.asetune.utils;
 
 import java.awt.Window;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,6 +15,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,6 +28,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -28,6 +37,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -157,6 +168,264 @@ extends Properties
 		_instMap.put(confName, configuration);
 	}
 
+	
+	
+	//////////////////////////////////////////////
+	//// PropertyChangeListener
+	//////////////////////////////////////////////
+	public static final int COMBINED_CONFIG_KEY_ADDED = 1;
+	public static final int COMBINED_CONFIG_KEY_CHANGED = 2;
+	public static final int COMBINED_CONFIG_KEY_REMOVED = 3;
+	
+	private static ArrayList<PropertyChangeListener> _combinedConfigPropertyChangeListeners = new ArrayList<>(); 
+	
+	public static void addCombinedConfigPropertyChangeListener(PropertyChangeListener listener)
+	{
+		_combinedConfigPropertyChangeListeners.add(listener);
+	}
+	public static void removeCombinedConfigPropertyChangeListener(PropertyChangeListener listener)
+	{
+		_combinedConfigPropertyChangeListeners.remove(listener);
+	}
+	private static void fireCombinedConfigPropertyChangeListener(Configuration source, int type, String propertyName, String oldValue, String newValue)
+	{
+		// Exit early if no listeners
+		if (_combinedConfigPropertyChangeListeners.isEmpty())
+			return;
+		
+		// Create the event 
+		PropertyChangeEvent evt = new PropertyChangeEvent(source, propertyName, oldValue, newValue);
+		evt.setPropagationId(type);
+		
+		// notify all listeners
+		for (PropertyChangeListener l : _combinedConfigPropertyChangeListeners)
+		{
+			try 
+			{
+				l.propertyChange(evt);
+			}
+			catch (RuntimeException ex)
+			{
+				_logger.error("Problems when calling PropertyChangeListener '" + l + "'. Caught: "+ex, ex);
+			}
+		}
+	}
+	
+	private static FileWatcher _combinedConfigurationFileWatcher;
+	public static void startCombinedConfigurationFileWatcher()
+	{
+		if (_combinedConfigurationFileWatcher == null)
+		{
+			_combinedConfigurationFileWatcher = new FileWatcher();
+			_combinedConfigurationFileWatcher.setName("CombinedConfigurationFileWatcher");
+			_combinedConfigurationFileWatcher.setDaemon(true);
+			_combinedConfigurationFileWatcher.start();
+		}
+		else
+		{
+			_logger.warn("Combined Config File change listener has already bee started.");
+		}
+	}
+	public static void stopCombinedConfigurationFileWatcher()
+	{
+		if (_combinedConfigurationFileWatcher != null)
+		{
+			_combinedConfigurationFileWatcher.setRunning(false);
+		}
+	}
+	
+	public static class FileWatcher extends Thread 
+	{
+		private AtomicBoolean _running = new AtomicBoolean(true);
+
+		/** Check if the thread is running */
+		public boolean isRunning() 
+		{ 
+			return _running.get(); 
+		}
+		
+		/** set to false if you want to stop the thread */
+		public void setRunning(boolean to) 
+		{ 
+			_running.set(to); 
+		}
+
+		@Override
+		public void run() 
+		{
+			List<String> fileNames = _combinedConfig.getFilenames();
+
+			_logger.info("Starting to listen for changes in Combined Config files: " + fileNames);
+
+			try (WatchService watchService = FileSystems.getDefault().newWatchService()) 
+			{
+				// Grab unique directories, and register those directories with the "watch service"
+				Set<Path> dirs = new HashSet<>();
+				for (String name : fileNames)
+				{
+					File f = new File(name);
+					Path path = f.toPath().getParent();
+					
+					dirs.add(path);
+				}
+				if (dirs.isEmpty())
+				{
+					_logger.info("No Configuration files to listen for, filenames='" + fileNames + "'.");
+					return;
+				}
+				for (Path path : dirs)
+				{
+					_logger.info("Starts to listen for Configuration file modifications in directory '" + path + "'. All Filenames: " + fileNames);
+					path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+				}
+
+
+				while (isRunning()) 
+				{
+					// Wait for 10 seconds on changes, on timeout, check that we still are in running mode or stop
+					WatchKey watchKey = null;;
+					try { watchKey = watchService.poll(10, TimeUnit.SECONDS); }
+					catch (InterruptedException ignore) {}
+
+					if (watchKey == null) 
+						continue; 
+
+					// Prevent receiving TWO separate ENTRY_MODIFIED events. (file-modified, timestamp-update)
+					// Instead receive ONE ENTRY_MODIFIED event with count() is 2.
+					Thread.sleep(100);
+
+					// Loop received events
+					for (WatchEvent<?> event : watchKey.pollEvents()) 
+					{
+						WatchEvent.Kind<?> kind = event.kind();
+
+						@SuppressWarnings("unchecked")
+						WatchEvent<Path> ev = (WatchEvent<Path>) event;
+
+						Path dir = (Path)watchKey.watchable();
+						Path filename = ev.context();
+						Path fullPath = dir.resolve(filename);
+
+						if (kind == StandardWatchEventKinds.OVERFLOW) 
+						{
+							Thread.yield();
+							continue;
+						} 
+						else if (kind == java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY)
+						{
+							String longFilename = fullPath.toString();
+							
+							// If the file is any of the files we want to "reload"
+							if (fileNames.contains(longFilename))
+							{
+								onChange(fullPath);
+							}
+						}
+
+						boolean valid = watchKey.reset();
+						if ( ! valid ) 
+						{ 
+							break; 
+						}
+					}
+				} // end: isRunning
+			} 
+			catch (Throwable ex) 
+			{
+				_logger.error("Thread Combined Config files listener has problems. Caught: " + ex, ex);
+			}
+			_logger.info("Thread Combined Config files listener was stopped.");
+		} // end: run()
+
+		public void onChange(Path filename) 
+		{
+			// Get Configuration instance for this file
+			Configuration curConfig = _combinedConfig.getInstanceForFilename(filename.toString());
+			if (curConfig != null)
+			{
+				String curConfInstanceName = curConfig.getConfName();
+				
+				// skip instance: USER_TEMP
+				if (StringUtil.hasValue(curConfInstanceName) && curConfInstanceName.equals(USER_TEMP))
+					return;
+
+				// file NOT Exists
+				if ( ! filename.toFile().exists() )
+				{
+					_logger.warn("Configuration file '" + filename + "' do not exists... will not continue checking for changes.");
+					return;
+				}
+				
+				// Figure out what property keys has been changed/added/deleted
+				// Then call the firePropertyChangeListener(Configuration source, String propertyName, String oldValue, String newValue)
+				Configuration newConfig = new Configuration(filename.toString());
+
+				// No changes has been made... (the file was saved with same values or touched) no need to continue
+				if (curConfig.equals(newConfig))
+				{
+					return;
+				}
+				
+				_logger.info("Found Configuration changes in file '" + filename + "'.");
+
+				// Loop all keys and see if they: are NEW or CHANGED 
+				for (Object keyObj : newConfig.keySet())
+				{
+					String newKey = keyObj.toString();
+					String newVal = newConfig.getProperty(newKey);
+
+					if (curConfig.hasProperty(newKey))
+					{
+						String oldVal = curConfig.getProperty(newKey);
+
+						if ( ! newVal.equals(oldVal) )
+						{
+							// CHANGED CONFIG VALUE
+							curConfig.setProperty(newKey, newVal);
+							
+							if (_logger.isDebugEnabled())
+								_logger.debug("Combened Config, CHANGED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', oldVal='" + oldVal + "', newVal='" + newVal + "'.");
+
+							fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_CHANGED, newKey, oldVal, newVal);
+						}
+					}
+					else
+					{
+						// NEW CONFIG VALUE
+						curConfig.setProperty(newKey, newVal);
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("Combened Config,     NEW-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + newKey + "', newVal='" + newVal + "'.");
+
+						fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_ADDED, newKey, null, newVal);
+					}
+				}
+
+				// Check if we have DELETED any entries in the NEW file.
+				Set<Object> removedKeySet = new HashSet<>(curConfig.keySet());
+				removedKeySet.removeAll(newConfig.keySet());
+				if ( ! removedKeySet.isEmpty() )
+				{
+					for (Object object : removedKeySet)
+					{
+						String delKey = (String) object;
+						String delVal = curConfig.getProperty(delKey);
+
+						// REMOVED CONFIG KEY
+						curConfig.remove(delKey);
+
+						if (_logger.isDebugEnabled())
+							_logger.debug("Combened Config, REMOVED-VALUE. name='" + curConfInstanceName + "', file='" + filename + "', key='" + delKey + "', oldVal='" + delVal + "'.");
+
+						fireCombinedConfigPropertyChangeListener(curConfig, COMBINED_CONFIG_KEY_REMOVED, delKey, delVal, null);
+					}
+				}
+			}
+		} // end: onChange()
+	}
+	
+	
+	
 //	public void addWriter(IAseTunePropsWriter writer)
 //	{
 //		_writers.add(writer);
@@ -197,6 +466,18 @@ extends Properties
 		_propFileName = filename;
 	}
 
+	/** Check that we have a file that is attached to this configuration, and that the file exists */
+	public boolean hasFileAndExists()
+	{
+		String filename = getFilename();
+		if (StringUtil.hasValue(filename))
+		{
+			File f = new File(filename);
+			return f.exists();
+		}
+		return false;
+	}
+	
 	public String getEmbeddedMessage() {
 		return _embeddedMessage;
 	}
@@ -1689,6 +1970,32 @@ extends Properties
 			throw new RuntimeException("removeAll() operation is not supported on the Combined Configuration, this has to be done on the individual Configurations.");
 		}
 
+		public List<String> getFilenames()
+		{
+			List<String> list = new ArrayList<>();
+
+			for (String instName : _searchOrder)
+			{
+				Configuration conf = Configuration.getInstance(instName);
+				if (conf.hasFileAndExists())
+				{
+					list.add(conf.getFilename());
+				}
+			}
+			return list;
+		}
+
+		public Configuration getInstanceForFilename(String filename)
+		{
+			for (String instName : _searchOrder)
+			{
+				Configuration conf = Configuration.getInstance(instName);
+				if (filename.equals(conf.getFilename()))
+					return conf;
+			}
+			return null;
+		}
+
 		@Override
 		public String getFilename()
 		{
@@ -2013,7 +2320,9 @@ extends Properties
 	}
 
 	/** Holds the Combined Configuration Object */
-	private static Configuration _combinedConfig = new CombinedConfiguration();
+//	private static Configuration _combinedConfig = new CombinedConfiguration();
+	private static CombinedConfiguration _combinedConfig = new CombinedConfiguration();
+
 
 	/**
 	 * Get a Configuration that searches all Configurations that has been set with the setSearchOrder()

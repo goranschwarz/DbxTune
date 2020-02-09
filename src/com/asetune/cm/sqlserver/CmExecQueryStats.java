@@ -203,7 +203,7 @@ extends CountersModel
 	private static final String  PROP_PREFIX                      = CM_NAME;
 
 	public static final String  PROPKEY_sample_extraWhereClause   = PROP_PREFIX + ".sample.extraWhereClause";
-	public static final String  DEFAULT_sample_extraWhereClause   = "last_logical_reads > 100";
+	public static final String  DEFAULT_sample_extraWhereClause   = "qs.last_logical_reads > 100";
 
 	public static final String  PROPKEY_sample_afterPrevSample    = PROP_PREFIX + ".sample.afterPrevSample";
 	public static final boolean DEFAULT_sample_afterPrevSample    = false;
@@ -297,7 +297,13 @@ extends CountersModel
 		if (sample_lastXminutes)
 			sql_sample_lastXminutes = "  AND last_execution_time > dateadd(mi, -"+sample_lastXminutesTime+", getdate())\n";
 
-		String sql = "select * from sys." + dm_exec_query_stats + "\n" +
+		String sql = 
+				"SELECT qs.* \n" +
+//				"    ,db_name(txt.dbid) as DBName \n" +
+//				"    ,object_name(txt.objectid, txt.dbid) as ObjectName \n" +
+				"    ,SUBSTRING(txt.text, (qs.statement_start_offset/2)+1, ((CASE WHEN qs.statement_end_offset = -1 THEN DATALENGTH(txt.text) ELSE qs.statement_end_offset END - qs.statement_start_offset)/2) + 1) AS [SqlText] \n" +
+				"FROM sys." + dm_exec_query_stats + " qs \n" +
+				"CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) txt \n" +
 				"WHERE 1 = 1 -- to make extra where clauses easier \n" +
 				sql_sample_extraWhereClause +
 				sql_sample_lastXminutes;

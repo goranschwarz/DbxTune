@@ -231,7 +231,7 @@ extends JTextArea
 		if (StringUtil.isNullOrBlank(_originSql))
 			return null;
 
-		boolean showToolTip = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showToolTip, DEFAULT_showToolTip);
+		boolean showToolTip           = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_showToolTip, DEFAULT_showToolTip);
 		if (StringUtil.isNullOrBlank(_objectText) && showToolTip == false)
 			return null;
 		
@@ -247,6 +247,17 @@ extends JTextArea
 			sb.append(getObjectText());
 			sb.append("</pre>");
 		}
+		
+		String originToolTipText = super.getToolTipText();
+		if (StringUtil.hasValue(originToolTipText))
+		{
+			sb.append("<hr>"); // Horizontal Ruler
+//			sb.append("<b>Origin ToolTip Text.<br>");
+			sb.append("<pre>");
+			sb.append(originToolTipText);
+			sb.append("</pre>");
+		}
+		
 		sb.append("<html>");
 		return sb.toString();
 	}

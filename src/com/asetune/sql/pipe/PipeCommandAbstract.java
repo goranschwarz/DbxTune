@@ -21,7 +21,9 @@
 package com.asetune.sql.pipe;
 
 import com.asetune.sql.SqlProgressDialog;
+import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.tools.sqlw.msg.MessageAwareAbstract;
+import com.asetune.utils.ConnectionProvider;
 
 public abstract class PipeCommandAbstract
 extends MessageAwareAbstract
@@ -31,11 +33,13 @@ implements IPipeCommand
 
 	protected String _cmdStr = null;
 	protected String _sqlStr = null;
+	protected ConnectionProvider _connProvider = null;
 	
-	public PipeCommandAbstract(String input, String sqlString)
+	public PipeCommandAbstract(String input, String sqlString, ConnectionProvider connProvider)
 	{
-		_cmdStr = input;
-		_sqlStr = sqlString;
+		_cmdStr   = input;
+		_sqlStr   = sqlString;
+		_connProvider = connProvider;
 	}
 
 	@Override 
@@ -48,6 +52,12 @@ implements IPipeCommand
 	public String getSqlString()
 	{
 		return _sqlStr;
+	}
+
+	@Override 
+	public ConnectionProvider getConnectionProvider()
+	{
+		return _connProvider;
 	}
 
 	@Override abstract public String getConfig();

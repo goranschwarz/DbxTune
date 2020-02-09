@@ -24,17 +24,18 @@ import java.text.NumberFormat;
 
 public class TableExtraInfo
 {
-	public static final String TableRowCount       = "TableRowCount";
-	public static final String TableTotalSizeInKb  = "TableTotalSizeInKb";
-	public static final String TableDataSizeInKb   = "TableDataSizeInKb";
-	public static final String TableIndexSizeInKb  = "TableIndexSizeInKb";
-	public static final String TableLobSizeInKb    = "TableLobSizeInKb";
+	public static final String TableRowCount             = "TableRowCount";
+	public static final String TableTotalSizeInKb        = "TableTotalSizeInKb";
+	public static final String TableDataSizeInKb         = "TableDataSizeInKb";
+	public static final String TableIndexSizeInKb        = "TableIndexSizeInKb";
+	public static final String TableLobSizeInKb          = "TableLobSizeInKb";
 
-	public static final String TableLockScheme     = "TableLockScheme";
+	public static final String TableLockScheme           = "TableLockScheme";
 
-	public static final String TablePartitionCount = "TablePartitionCount";
+	public static final String TablePartitionCount       = "TablePartitionCount";
 
-	public static final String IndexExtraInfo      = "IndexExtraInfo";
+	public static final String IndexExtraInfo            = "IndexExtraInfo";
+	public static final String IndexExtraInfoDescription = "IndexExtraInfoDescription";
 
 	private String _name     = "";
 	private String _descName = "";

@@ -54,6 +54,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -82,6 +83,7 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFileChooser;
+import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -97,6 +99,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.SortOrder;
@@ -119,6 +122,7 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
+import javax.swing.text.NumberFormatter;
 import javax.swing.text.html.HTMLEditorKit;
 
 import org.apache.commons.cli.CommandLine;
@@ -137,6 +141,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TextEditorPane;
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.jdesktop.swingx.decorator.Highlighter;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 
@@ -183,6 +188,7 @@ import com.asetune.gui.JvmMemorySettingsDialog;
 import com.asetune.gui.Log4jViewer;
 import com.asetune.gui.MainFrameAse;
 import com.asetune.gui.ParameterDialog;
+import com.asetune.gui.ResultSetMetaDataViewDialog;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.gui.SqlTextDialog;
 import com.asetune.gui.swing.AbstractComponentDecorator;
@@ -395,6 +401,9 @@ public class QueryWindow
 	public final static String  PROPKEY_jdbcAutoCommit         = PROPKEY_APP_PREFIX + "jdbc.autoCommit";
 	public final static boolean DEFAULT_jdbcAutoCommit         = true;
 	
+	public final static String  PROPKEY_jdbcFetchSize          = PROPKEY_APP_PREFIX + "jdbc.fetchSize";
+	public final static int     DEFAULT_jdbcFetchSize          = 0;
+	
 //	public final static String  PROPKEY_jdbcAutoCommitShow     = PROPKEY_APP_PREFIX + "jdbc.autoCommit.show";
 //	public final static boolean DEFAULT_jdbcAutoCommitShow     = false;
 	
@@ -539,6 +548,8 @@ public class QueryWindow
 	private JCheckBoxMenuItem _getObjectTextOnError_chk   = new JCheckBoxMenuItem("Get Object Text on Error", DEFAULT_getObjectTextOnError);
 //	private JCheckBoxMenuItem _jdbcAutoCommit_chk         = new JCheckBoxMenuItem("Auto-commit", DEFAULT_jdbcAutoCommit);
 	private JCheckBox         _jdbcAutoCommit_chk         = new JCheckBox("Auto-commit", DEFAULT_jdbcAutoCommit);
+	private JLabel            _fetchSize_lbl              = new JLabel("FetchSize");
+	private JTextField        _fetchSize_txt              = new JTextField();
 	private JMenuItem         _sqlBatchTermDialog_mi      = new JMenuItem        ("Change SQL Batch Terminator");
 	private JCheckBoxMenuItem _sendCommentsOnly_chk       = new JCheckBoxMenuItem("Send SQL if only comments", DEFAULT_sendCommentsOnly);
 	private JCheckBoxMenuItem _replaceFakeQuotedId_chk    = new JCheckBoxMenuItem("Replace Fake Quoted Identifiers", DEFAULT_replaceFakeQuotedIdent);
@@ -695,6 +706,7 @@ public class QueryWindow
 	private JCheckBoxMenuItem    _prefSplitHorizontal_mi     = new JCheckBoxMenuItem("Editor and Output Windows side-by-side", DEFAULT_horizontalOrientation);
 	private JCheckBoxMenuItem    _prefPlaceCntrlInToolbar_mi = new JCheckBoxMenuItem("Place 'Execute' and other control buttons in the Toolbar", DEFAULT_commandPanelInToolbar);
 	private JCheckBoxMenuItem    _prefShowAseMsgToolip_mi    = new JCheckBoxMenuItem("Enable tooltip on Messages in the Result Output", JAseMessage.DEFAULT_showToolTip);
+	private JMenuItem            _prefRsTableProps_mi        = new JMenuItem("ResultSet Table Properties...");
 	private JMenuItem            _prefJvmMemoryConfig_mi     = new JMenuItem("Java/JVM Memory Parameters...");
 
 	//---------------------------------------
@@ -1204,6 +1216,7 @@ public class QueryWindow
 			_preferences_m.add(_prefSplitHorizontal_mi);
 			_preferences_m.add(_prefPlaceCntrlInToolbar_mi);
 			_preferences_m.add(_prefShowAseMsgToolip_mi);
+			_preferences_m.add(_prefRsTableProps_mi);
 			_preferences_m.add(_prefJvmMemoryConfig_mi);
 
 			// HELP
@@ -1247,6 +1260,18 @@ public class QueryWindow
 				public void actionPerformed(ActionEvent e)
 				{
 					saveProps();
+				}
+			});
+			_prefRsTableProps_mi.addActionListener(new ActionListener()
+			{
+				@Override
+				public void actionPerformed(ActionEvent e)
+				{
+					// get the file, if not found... give it a default...
+					int ret = ResultSetJXTable.showSettingsDialog(_jframe);
+					if (ret == JOptionPane.OK_OPTION)
+					{
+					}
 				}
 			});
 			_prefJvmMemoryConfig_mi.addActionListener(new ActionListener()
@@ -1429,6 +1454,8 @@ public class QueryWindow
 //			_conn_viewProps_mi     .setIcon(SwingUtils.readImageIcon(Version.class, "images/jdbc_conn_info.png"));
 			_about_mi              .setIcon(SwingUtils.readImageIcon(Version.class, "images/about.png"));
 
+			_preferences_m         .setIcon(SwingUtils.readImageIcon(Version.class, "images/preferences.png"));
+			_prefRsTableProps_mi   .setIcon(SwingUtils.readImageIcon(Version.class, "images/resultset_tab_pref.png"));
 			_prefJvmMemoryConfig_mi.setIcon(SwingUtils.readImageIcon(Version.class, "images/jvm_memory_config.png"));
 
 			//--------------------------
@@ -1610,6 +1637,29 @@ public class QueryWindow
 		_rollback_but.setToolTipText("<html>Rollback current transaction in the database<br>Note: only visible if connection is in <i>autocommit=false</i> mode.</html>");
 		_commit_but  .setVisible(false);
 		_rollback_but.setVisible(false);
+
+	    NumberFormat format = NumberFormat.getInstance();
+	    NumberFormatter formatter = new NumberFormatter(format);
+	    formatter.setValueClass(Integer.class);
+	    formatter.setMinimum(0);
+	    formatter.setMaximum(Integer.MAX_VALUE);
+	    formatter.setAllowsInvalid(false);
+	    // If you want the value to be committed on each keystroke instead of focus lost
+	    formatter.setCommitsOnValidEdit(true);
+	    _fetchSize_txt = new JFormattedTextField(formatter);
+	    _fetchSize_txt.setText("0");
+
+	    _fetchSize_txt.setToolTipText(
+				"<html>" +
+				"JDBC fetchSize settings. for some databases <b>Postgres</b> and <b>Oracle</b> all records will be fetched to the client before we can start to read them.<br>" +
+				"But if Auto-Commit is set to <b>false</b> and fetchSize is larger than zero, we will be able to get records <i>faster</i> or in small <i>chunks</i>.<br>" +
+				"</html>");
+		_fetchSize_lbl.setToolTipText(_fetchSize_txt.getToolTipText());
+	    
+
+		_fetchSize_lbl.setVisible(false);
+		_fetchSize_txt.setVisible(false);
+
 
 		_prevErr_but.setIcon(SwingUtils.readImageIcon(Version.class, "images/prev_error.png"));
 		_prevErr_but.setText(null);
@@ -1990,6 +2040,8 @@ public class QueryWindow
 		_controlPane.add(_jdbcAutoCommit_chk,      "gap 30");
 		_controlPane.add(_commit_but,              "hidemode 3");
 		_controlPane.add(_rollback_but,            "hidemode 3");
+		_controlPane.add(_fetchSize_lbl,           "hidemode 3");
+		_controlPane.add(_fetchSize_txt,           "width 60, hidemode 3");
 		_controlPane.add(new JLabel(),             "growx, pushx"); // dummy label to "grow" the _copy to the right side
 		_controlPane.add(_copy_but,                "");
 		_controlPane.add(_nextErr_but,             "hidemode 2");
@@ -2034,7 +2086,7 @@ public class QueryWindow
 		
 		if (JavaVersion.isJava9orLater())
 		{
-			_logger.info("For Java-9, add a 'repaint' when the scrollbar moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA 9 RELEASE.");
+			_logger.info("For Java-9 and above, add a 'repaint' when the scrollbar moves. THIS SHOULD BE REMOVED WHEN THE BUG IS FIXED IN SOME JAVA RELEASE.");
 
 			_resPanelScroll.getViewport().addChangeListener(new DeferredChangeListener(50, false)
 			{
@@ -2153,12 +2205,14 @@ public class QueryWindow
 		_jdbcAutoCommit_chk .addActionListener(this);
 		_commit_but         .addActionListener(this);
 		_rollback_but       .addActionListener(this);
+		_fetchSize_txt      .addActionListener(this);
 
 		_exec_but           .setActionCommand(ACTION_EXECUTE);
 		_execGuiShowplan_but.setActionCommand(ACTION_EXECUTE_GUI_SHOWPLAN);
 		_jdbcAutoCommit_chk .setActionCommand(ACTION_AUTOCOMMIT);
 		_commit_but         .setActionCommand(ACTION_COMMIT);
 		_rollback_but       .setActionCommand(ACTION_ROLLBACK);
+//		_fetchSize_txt      .addActionListener(ACTION_FETCHSIZE);
 		
 		// Set how many items the DBList can have before a JScrollBar is visible
 		_dbnames_cbx.setMaximumRowCount(50);
@@ -2563,6 +2617,7 @@ public class QueryWindow
 		Configuration.registerDefaultValue(PROPKEY_appendResults,                     DEFAULT_appendResults);
 		Configuration.registerDefaultValue(PROPKEY_getObjectTextOnError,              DEFAULT_getObjectTextOnError);
 		Configuration.registerDefaultValue(PROPKEY_sendCommentsOnly,                  DEFAULT_sendCommentsOnly);
+		Configuration.registerDefaultValue(PROPKEY_jdbcFetchSize,                     DEFAULT_jdbcFetchSize);
 	}
 
 	private void loadProps()
@@ -2595,6 +2650,7 @@ public class QueryWindow
 		_getObjectTextOnError_chk   .setSelected( conf.getBooleanProperty(PROPKEY_getObjectTextOnError,                            DEFAULT_getObjectTextOnError) );
 //		_jdbcAutoCommit_chk         .setSelected( conf.getBooleanProperty(PROPKEY_jdbcAutoCommit,                                  DEFAULT_jdbcAutoCommit) );
 //		_jdbcAutoCommit_chk         .setVisible(  conf.getBooleanProperty(PROPKEY_jdbcAutoCommitShow,                              DEFAULT_jdbcAutoCommitShow) );
+		_fetchSize_txt              .setText    ( conf.getProperty       (PROPKEY_jdbcFetchSize,                                   DEFAULT_jdbcFetchSize+"") );
 		_sendCommentsOnly_chk       .setSelected( conf.getBooleanProperty(PROPKEY_sendCommentsOnly,                                DEFAULT_sendCommentsOnly) );
 		_rsInTabs_chk               .setSelected( conf.getBooleanProperty(PROPKEY_rsInTabs,                                        DEFAULT_rsInTabs) );
 		_replaceFakeQuotedId_chk    .setSelected( conf.getBooleanProperty(PROPKEY_replaceFakeQuotedIdent,                          DEFAULT_replaceFakeQuotedIdent) );
@@ -2645,6 +2701,7 @@ public class QueryWindow
 		conf.setProperty(PROPKEY_getObjectTextOnError,                            _getObjectTextOnError_chk   .isSelected());
 //		conf.setProperty(PROPKEY_jdbcAutoCommit,                                  _jdbcAutoCommit_chk         .isSelected());
 //		conf.setProperty(PROPKEY_jdbcAutoCommitShow,                              _jdbcAutoCommit_chk         .isVisible());
+		conf.setProperty(PROPKEY_jdbcFetchSize,                                   _fetchSize_txt              .getText());
 		conf.setProperty(PROPKEY_sendCommentsOnly,                                _sendCommentsOnly_chk       .isSelected());
 		conf.setProperty(PROPKEY_rsInTabs,                                        _rsInTabs_chk               .isSelected());
 		conf.setProperty(PROPKEY_replaceFakeQuotedIdent,                          _replaceFakeQuotedId_chk    .isSelected());
@@ -3040,6 +3097,10 @@ public class QueryWindow
 		// ACTION AutoCommit
 		if (ACTION_AUTOCOMMIT.equals(actionCmd))
 			action_autocommit(_jdbcAutoCommit_chk.isSelected(), "The request to change AutoCommit was made by <b>User Input</b>.");
+
+//		// ACTION FetchSize
+//		if (ACTION_FETCHSIZE.equals(actionCmd))
+//			xxx;
 
 		// ACTION for "database context"
 		if (_dbnames_cbx.equals(source))
@@ -4180,6 +4241,8 @@ public class QueryWindow
 			_exec_but                  .setEnabled(false);
 			_commit_but                .setEnabled(false);
 			_rollback_but              .setEnabled(false);
+			_fetchSize_lbl             .setEnabled(false);
+			_fetchSize_txt             .setEnabled(false);
 			_rsInTabs_chk              .setEnabled(false);
 			_asPlainText_chk           .setEnabled(false);
 			_showRowCount_chk          .setEnabled(false);
@@ -4237,6 +4300,8 @@ public class QueryWindow
 				_exec_but                  .setEnabled(true);
 				_commit_but                .setEnabled(true);
 				_rollback_but              .setEnabled(true);
+				_fetchSize_lbl             .setEnabled(true);
+				_fetchSize_txt             .setEnabled(true);
 				_rsInTabs_chk              .setEnabled(true);
 				_asPlainText_chk           .setEnabled(true);
 				_showRowCount_chk          .setEnabled(true);
@@ -4273,6 +4338,8 @@ public class QueryWindow
 				_exec_but                  .setEnabled(true);
 				_commit_but                .setEnabled(true);
 				_rollback_but              .setEnabled(true);
+				_fetchSize_lbl             .setEnabled(true);
+				_fetchSize_txt             .setEnabled(true);
 				_rsInTabs_chk              .setEnabled(true);
 				_asPlainText_chk           .setEnabled(true);
 				_showRowCount_chk          .setEnabled(true);
@@ -4306,6 +4373,8 @@ public class QueryWindow
 				_exec_but                  .setEnabled(true);
 				_commit_but                .setEnabled(true);
 				_rollback_but              .setEnabled(true);
+				_fetchSize_lbl             .setEnabled(true);
+				_fetchSize_txt             .setEnabled(true);
 				_rsInTabs_chk              .setEnabled(true);
 				_asPlainText_chk           .setEnabled(true);
 				_showRowCount_chk          .setEnabled(true);
@@ -4339,6 +4408,8 @@ public class QueryWindow
 			_exec_but                  .setEnabled(true);
 			_commit_but                .setEnabled(true);
 			_rollback_but              .setEnabled(true);
+			_fetchSize_lbl             .setEnabled(true);
+			_fetchSize_txt             .setEnabled(true);
 			_rsInTabs_chk              .setEnabled(true);
 			_asPlainText_chk           .setEnabled(true);
 			_showRowCount_chk          .setEnabled(true);
@@ -4372,6 +4443,8 @@ public class QueryWindow
 			_exec_but                  .setEnabled(true);
 			_commit_but                .setEnabled(true);
 			_rollback_but              .setEnabled(true);
+			_fetchSize_lbl             .setEnabled(true);
+			_fetchSize_txt             .setEnabled(true);
 			_rsInTabs_chk              .setEnabled(true);
 			_asPlainText_chk           .setEnabled(true);
 			_showRowCount_chk          .setEnabled(true);
@@ -4424,8 +4497,10 @@ public class QueryWindow
 
 		// Get auto commit, and decide if commit/rollback buttons should be visible or not
 		boolean autoCommit = DbUtils.getAutoCommitNoThrow(getConnection(), _connectedToProductName);
-		_commit_but  .setVisible( ! autoCommit );
-		_rollback_but.setVisible( ! autoCommit );
+		_commit_but   .setVisible( ! autoCommit );
+		_rollback_but .setVisible( ! autoCommit );
+		_fetchSize_lbl.setVisible( ! autoCommit );
+		_fetchSize_txt.setVisible( ! autoCommit );
 
 		// view and tools menu might be empty...
 		// if so hide the main menu entry as well
@@ -4497,6 +4572,8 @@ public class QueryWindow
 				_exec_but                  .setEnabled(false);
 				_commit_but                .setVisible(false); // hide button
 				_rollback_but              .setVisible(false); // hide button
+				_fetchSize_lbl             .setEnabled(false); // hide
+				_fetchSize_txt             .setEnabled(false); // hide
 				_rsInTabs_chk              .setEnabled(false);
 				_asPlainText_chk           .setEnabled(false);
 				_showRowCount_chk          .setEnabled(false);
@@ -5616,14 +5693,22 @@ public class QueryWindow
 				+ "<b>Example 1 (to Sybase/SAP ASE):<b><br>\n"
 				+ "<pre>\n"
 				+ "SELECT * FROM tablename WHERE ...\n"
-				+ "go | bcp --user sa --passwd secret --server aseHost:port \n"
+				+ "go | bcp -T destTable --user sa --passwd secret --server aseHost:port \n"
 				+ "</pre>\n"
 				+ "<br>\n"
 				
 				+ "<b>Example 2 (to any JDBC URL):<b><br>\n"
 				+ "<pre>\n"
 				+ "SELECT name, ssn, address FROM person WHERE country = 'sweden'\n"
-				+ "go | bcp --user xxx --passwd secret --url 'jdbc:postgresql://hostname:5432/dbname' \n"
+				+ "go | bcp -T destTable --user xxx --passwd secret --url 'jdbc:postgresql://hostname:5432/dbname' \n"
+				+ "</pre>\n"
+				+ "<br>\n"
+
+				+ "<b>Example 3 (using connection profile):<b><br>\n"
+				+ "<b>Note:</b> You can use <i>code completion</i> (-p <ctrl+space>) to get available profiles.<br>\n"
+				+ "<pre>\n"
+				+ "SELECT * FROM tablename WHERE ...\n"
+				+ "go | bcp --table destTable --profile 'connection profile name' --dropTable --crTable --crIndex\n"
 				+ "</pre>\n"
 				+ "<br>\n"
 
@@ -6450,6 +6535,17 @@ public class QueryWindow
 		}
 	}
 
+	public void doCodeCompletionRefresh()
+	{
+		// mark code completion for refresh
+		if (_compleationProviderAbstract != null)
+		{
+			_compleationProviderAbstract.setNeedRefresh(true);
+			_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
+			_compleationProviderAbstract.clearSavedCache();
+		}
+	}
+
 	public void doDisconnect()
 	{
 		_disconnect_but.doClick();
@@ -7212,6 +7308,35 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 		});
 
 
+		//------------------------------------------------------------------------------------
+		// Cell Content Tooltip max length ...
+		//------------------------------------------------------------------------------------
+		JMenuItem showResultSetMetaData = new JMenuItem("Show ResultSet MetaData Information...");
+		showResultSetMetaData.setActionCommand(TablePopupFactory.ENABLE_MENU_ALWAYS);
+		popup.add(showResultSetMetaData);
+		
+		showResultSetMetaData.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				Component invoker = TablePopupFactory.getPopupMenuInvoker((JMenuItem)e.getSource());
+				if (invoker instanceof JTable)
+				{
+					JTable tab = (JTable) invoker;
+					TableModel tm = tab.getModel();
+					if (tm instanceof ResultSetTableModel)
+					{
+						ResultSetTableModel rstm = (ResultSetTableModel) tm;
+
+						ResultSetMetaDataViewDialog dialog = new ResultSetMetaDataViewDialog(_window, rstm);
+						dialog.setVisible(true);
+					}
+				}
+			}
+		});
+
+
 		// create pupup depending on what we are connected to
 		String propPostfix = "";
 		if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE))
@@ -7853,10 +7978,22 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 					
 					if (sqe instanceof SQLWarning)
 					{
-						String msg = "SQL-Warning: " +
-								_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", WarningClass: " + sqe.getClass().getName() + "\n"
-								+ sqe.getMessage();
-						sb.append(msg);
+						if (DbUtils.isProductName(_connectedToProductName, DbUtils.DB_PROD_NAME_MSSQL))
+						{
+							// Simplified message fro SQLServer
+							String msg = sqe.getMessage();
+							if (_logger.isDebugEnabled())
+								msg = sqe.getMessage() + "  [ErrorCode=" + sqe.getErrorCode() + ", SQLState=" + sqe.getSQLState() + "]";
+
+							sb.append(msg);
+						}
+						else
+						{
+							String msg = "SQL-Warning: " +
+									_connectedToProductName + ": ErrorCode "+sqe.getErrorCode()+", SQLState "+sqe.getSQLState()+", WarningClass: " + sqe.getClass().getName() + "\n"
+									+ sqe.getMessage();
+							sb.append(msg);
+						}
 					}
 					else
 					{
@@ -8043,7 +8180,7 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 				
 			// treat each 'go' rows as a individual execution
 			// readCommand(), does the job
-			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true, sqlBatchTerminator);
+			AseSqlScriptReader sr = new AseSqlScriptReader(goSql, true, sqlBatchTerminator, this);
 			if (_useSemicolonHack_chk.isSelected())
 				sr.setSemiColonHack(true);
 
@@ -8157,6 +8294,17 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 						stmnt = sqlStmntInfo.getStatement();
 						progress.setSqlStatement(stmnt); // Used to cancel() on the statement level
 
+						if (_jdbcAutoCommit_chk.isSelected())
+						{
+							int fetchSize = StringUtil.parseInt(_fetchSize_txt.getText(), -1);
+							if (fetchSize > 0)
+							{
+								stmnt.setFetchSize(fetchSize);
+								_logger.info("Setting fetchSize to " + fetchSize + " for the current execution.");
+							}
+						}
+
+						
 						// Execute the SQL
 						boolean hasRs = sqlStmntInfo.execute();
 	
@@ -8248,6 +8396,13 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 								//---------------------------------
 								if (pipeCmd != null && (pipeCmd.getCmd() instanceof PipeCommandBcp))
 								{
+									//PipeCommandBcp pipeCmdBcp = (PipeCommandBcp)pipeCmd.getCmd();
+									
+									// BCP command needs the initial Connection, to get Connection Properties, in case the --crTable/crIndex (access source DBMS)
+									// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
+									//pipeCmdBcp.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
+									// This is actually using the ConnectionProvider now
+
 									try
 									{
 										pipeCmd.getCmd().doEndPoint(rs, progress);
@@ -8310,7 +8465,8 @@ System.out.println("FIXME: THIS IS REALLY UGGLY... but I'm tired right now");
 									
 									// Diff command needs the initial Connection, to get Connection Properties, in case the --keyCols are empty
 									// if this isn't done the (Sybase) JDBC driver seems to READ FULLY the LEFT/RIGHT side (and cache the rows)...
-									pipeCmdDiff.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
+									//pipeCmdDiff.setConnection(getConnection()); // Maybe change this to use the ConnectionProvider class instead...
+									// This is actually using the ConnectionProvider now
 
 									try
 									{
@@ -10108,6 +10264,19 @@ checkPanelSize(_resPanel, comp);
 		
 		// Add a popup menu
 		tab.setComponentPopupMenu( createDataTablePopupMenu(tab) );
+		
+		// Add any highlighters which has been added to the model.
+		if (tab.getModel() instanceof ResultSetTableModel)
+		{
+			ResultSetTableModel rstm = (ResultSetTableModel) tab.getModel();
+			if (rstm.hasHighlighters())
+			{
+				for (Highlighter highlighter : rstm.getHighlighters())
+				{
+					tab.addHighlighter(highlighter);
+				}
+			}
+		}
 
 		JPanel p = new JPanel(new MigLayout("insets 0 0 0 0, gap 0 0, wrap"));
 
@@ -11852,13 +12021,7 @@ checkPanelSize(_resPanel, comp);
 					@Override
 					public void actionPerformed(ActionEvent e)
 					{
-						// mark code completion for refresh
-						if (_compleationProviderAbstract != null)
-						{
-							_compleationProviderAbstract.setNeedRefresh(true);
-							_compleationProviderAbstract.setNeedRefreshSystemInfo(true);
-							_compleationProviderAbstract.clearSavedCache();
-						}
+						doCodeCompletionRefresh();
 					}
 				});
 

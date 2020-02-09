@@ -45,6 +45,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1735,6 +1736,78 @@ extends JXTable
 		return list;
 	}
 
+	public void setVisibleColumns(String[] columns)
+	{
+		if (columns == null)
+			return;
+		
+		setVisibleColumns(Arrays.asList(columns));
+	}
+
+	/**
+	 * What columns should be visible when showing data 
+	 * @param columns
+	 */
+	public void setVisibleColumns(List<String> columns)
+	{
+		if (columns == null)
+			return;
+		
+		if (getModel() == null)
+			return;
+
+		TableColumnModelExt tcmx = (TableColumnModelExt)getColumnModel();
+		for (TableColumn tc : tcmx.getColumns(true))
+		{
+			if (tc instanceof TableColumnExt)
+			{
+				TableColumnExt tcx = (TableColumnExt) tc;
+				String colName = tcx.getTitle();
+				
+				boolean visible = columns.contains(colName);
+//				System.out.println("setVisibleColumns: colName='"+colName+"', setVisible("+visible+")");
+				tcx.setVisible(visible);
+			}
+			else
+			{
+				int mpos = tc.getModelIndex();
+				String mColName = getModel().getColumnName(mpos);
+
+				System.out.println("setVisibleColumns(List<String> columns): not instance of 'TableColumnExt'. mpos="+mpos+", mColName='"+mColName+"'.");
+			}
+		}
+	}
+	
+	/**
+	 * Get a list of columns that are visible
+	 * @return
+	 */
+	public List<String> getVisibleColumns()
+	{
+		List<String> columns = new ArrayList<>();
+
+		TableColumnModelExt tcmx = (TableColumnModelExt)getColumnModel();
+		for (TableColumn tc : tcmx.getColumns(true))
+		{
+			if (tc instanceof TableColumnExt)
+			{
+				TableColumnExt tcx = (TableColumnExt) tc;
+				String colName = tcx.getTitle();
+				
+				if (tcx.isVisible())
+					columns.add(colName);
+			}
+			else
+			{
+				int mpos = tc.getModelIndex();
+				String mColName = getModel().getColumnName(mpos);
+
+				System.out.println("getVisibleColumns(): not instance of 'TableColumnExt'. mpos="+mpos+", mColName='"+mColName+"'.");
+			}
+		}
+
+		return columns;
+	}
 
 	//------------------------------------------------------------
 	//-- BEGIN: getValueAsXXXXX using column name

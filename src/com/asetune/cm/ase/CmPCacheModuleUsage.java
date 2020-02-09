@@ -410,7 +410,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("StatementCacheUsagePct", PROPKEY_alarm_StatementCacheUsagePct, Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementCacheUsagePct, DEFAULT_alarm_StatementCacheUsagePct), DEFAULT_alarm_StatementCacheUsagePct, "If 'StatementCacheUsagePct' is greater than ### Percent (example above 120% == something is wrong) then send 'AlarmEventStatementCacheAboveConfig'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("StatementCacheUsagePct", isAlarmSwitch, PROPKEY_alarm_StatementCacheUsagePct, Integer.class, conf.getIntProperty(PROPKEY_alarm_StatementCacheUsagePct, DEFAULT_alarm_StatementCacheUsagePct), DEFAULT_alarm_StatementCacheUsagePct, "If 'StatementCacheUsagePct' is greater than ### Percent (example above 120% == something is wrong) then send 'AlarmEventStatementCacheAboveConfig'." ));
 
 		return list;
 	}

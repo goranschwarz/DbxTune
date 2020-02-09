@@ -528,7 +528,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("size", PROPKEY_alarm_size, Integer.class,  conf.getIntProperty(PROPKEY_alarm_size, DEFAULT_alarm_size), DEFAULT_alarm_size, "If 'size' is GREATER than ####, send 'AlarmEventRsDbQueueSize'."));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("size", isAlarmSwitch, PROPKEY_alarm_size, Integer.class,  conf.getIntProperty(PROPKEY_alarm_size, DEFAULT_alarm_size), DEFAULT_alarm_size, "If 'size' is GREATER than ####, send 'AlarmEventRsDbQueueSize'."));
 
 		return list;
 	}

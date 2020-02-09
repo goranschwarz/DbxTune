@@ -157,10 +157,11 @@ public class CmSettingsHelper
 	public void setSelected(boolean selected)      { _isSelected  = selected; }
 	public void setModified(boolean modified)      { _isModified  = modified; }
 
-	public boolean isMandatory() { return Type.MANDATORY.equals(_type);	}
-	public boolean isProbable()  { return Type.PROBABLY .equals(_type);	}
-//	public boolean isOptional()  { return Type.OPTIONAL .equals(_type);	}
-//	public boolean isTemplate()  { return Type.TEMPLATE .equals(_type);	}
+	public boolean isMandatory()   { return Type.MANDATORY      .equals(_type);	}
+	public boolean isProbable()    { return Type.PROBABLY       .equals(_type);	}
+//	public boolean isOptional()    { return Type.OPTIONAL       .equals(_type);	}
+//	public boolean isTemplate()    { return Type.TEMPLATE       .equals(_type);	}
+	public boolean isAlarmSwitch() { return Type.IS_ALARM_SWITCH.equals(_type);	}
 	
 	public boolean hasValue() 
 	{
@@ -271,6 +272,7 @@ public class CmSettingsHelper
 	public enum Type
 	{
 		NOT_USED(""), 
+		IS_ALARM_SWITCH("isAlarmSwitch"), // used when column name is/can be enabled or disabled... '<CMNAME>.alarm.system.enabled.<COLNAME> = true|false' 
 		MANDATORY("<mandatory>"), 
 		PROBABLY("<probably>"); 
 //		OPTIONAL("<optional>"), 

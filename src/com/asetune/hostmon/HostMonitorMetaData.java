@@ -320,7 +320,7 @@ implements ResultSetMetaData
 		entry._isNumber      = false;
 
 		entry._displayLength = length;
-		entry._precision     = -1;
+		entry._precision     = length;
 		entry._scale         = -1;
 
 		entry._description   = description;
@@ -358,7 +358,7 @@ implements ResultSetMetaData
 		entry._isNumber      = true;
 
 		entry._displayLength = Math.max(colName.length(), Integer.toString(Integer.MAX_VALUE).length());
-		entry._precision     = -1;
+		entry._precision     = 4; // 4 bytes...
 		entry._scale         = -1;
 
 		entry._description   = description;
@@ -396,7 +396,7 @@ implements ResultSetMetaData
 		entry._isNumber      = true;
 
 		entry._displayLength = Math.max(colName.length(), Long.toString(Long.MAX_VALUE).length());
-		entry._precision     = -1;
+		entry._precision     = 8; // 8 bytes
 		entry._scale         = -1;
 
 		entry._description   = description;
@@ -475,7 +475,7 @@ implements ResultSetMetaData
 		entry._isNumber      = false;
 
 		entry._displayLength = Math.max(colName.length(), "2011-01-01 22:22:22.333".length());
-		entry._precision     = -1;
+		entry._precision     = "yyyy-MM-dd HH:mm:ss.SSS".length();
 		entry._scale         = -1;
 
 		entry._description   = description;

@@ -367,9 +367,11 @@ extends CounterModelHostMonitor
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 		
-		list.add(new CmSettingsHelper("adjLoadAverage_1Min",  PROPKEY_alarm_adjLoadAverage_1Min  , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min  , DEFAULT_alarm_adjLoadAverage_1Min),  DEFAULT_alarm_adjLoadAverage_1Min,  "If 'adjLoadAverage_1Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
-		list.add(new CmSettingsHelper("adjLoadAverage_5Min",  PROPKEY_alarm_adjLoadAverage_5Min  , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_5Min  , DEFAULT_alarm_adjLoadAverage_5Min),  DEFAULT_alarm_adjLoadAverage_5Min,  "If 'adjLoadAverage_5Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
-		list.add(new CmSettingsHelper("adjLoadAverage_15Min", PROPKEY_alarm_adjLoadAverage_15Min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_15Min , DEFAULT_alarm_adjLoadAverage_15Min), DEFAULT_alarm_adjLoadAverage_15Min, "If 'adjLoadAverage_15Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("adjLoadAverage_1Min",  isAlarmSwitch, PROPKEY_alarm_adjLoadAverage_1Min  , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_1Min  , DEFAULT_alarm_adjLoadAverage_1Min),  DEFAULT_alarm_adjLoadAverage_1Min,  "If 'adjLoadAverage_1Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
+		list.add(new CmSettingsHelper("adjLoadAverage_5Min",  isAlarmSwitch, PROPKEY_alarm_adjLoadAverage_5Min  , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_5Min  , DEFAULT_alarm_adjLoadAverage_5Min),  DEFAULT_alarm_adjLoadAverage_5Min,  "If 'adjLoadAverage_5Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
+		list.add(new CmSettingsHelper("adjLoadAverage_15Min", isAlarmSwitch, PROPKEY_alarm_adjLoadAverage_15Min , Double.class, conf.getDoubleProperty(PROPKEY_alarm_adjLoadAverage_15Min , DEFAULT_alarm_adjLoadAverage_15Min), DEFAULT_alarm_adjLoadAverage_15Min, "If 'adjLoadAverage_15Min' is greater than ## then send 'AlarmEventOsLoadAverage'." ));
 
 		return list;
 	}

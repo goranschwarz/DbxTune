@@ -71,7 +71,6 @@ import com.asetune.gui.swing.GTable;
 import com.asetune.gui.swing.GTable.ITableTooltip;
 import com.asetune.pcs.PersistReader.PcsSavedException;
 import com.asetune.pcs.PersistentCounterHandler;
-import com.asetune.sql.DbmsDataTypeResolver;
 import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
@@ -190,7 +189,8 @@ implements Cloneable, ITableTooltip
 	/** When was the previous data sample captured... System.currentTimeMillis() */
 	private long               _prevLocalRefreshTime = 0;
 
-	private ResultSetMetaData  _rsmd;
+//	private ResultSetMetaData  _rsmd;
+	private ResultSetMetaDataCached  _rsmdCached;
 
 	// Structure for storing list of columns to compute difference between two samples
 	private String[]           _diffColumns = null;
@@ -360,7 +360,7 @@ implements Cloneable, ITableTooltip
 		//_diffDissColumns = null; // set by the constructor
 		_isDiffDissCol   = null;   // this will be refreshed
 
-		_rsmd = null;
+		_rsmdCached = null;
 		
 		// incremented every time a refresh() happens, done by incRefreshCounter()
 		//_refreshCounter  = 0;  // probably NOT reset, then send counter info will show 0, reset is done by resetStatCounters()
@@ -658,7 +658,7 @@ implements Cloneable, ITableTooltip
 
 		// Do we need to clone this, I think it's safe not to...
 		// in SampleCnt we do: cm.setResultSetMetaData(rs.getMetaData());  so a new one will be created
-		c._rsmd                       = this._rsmd;
+		c._rsmdCached                 = this._rsmdCached;
 
 		c._diffColumns                = this._diffColumns;     // no need to full copy, static usage, i think
 		c._isDiffCol                  = this._isDiffCol;       // no need to full copy, static usage, i think
@@ -4344,7 +4344,7 @@ implements Cloneable, ITableTooltip
 			// if we fetched any rows, this means that we would have a Valid Sample
 			// a rowcount with -1 = FAILURE
 			//   rowcount with 0  = SUCCESS, but now rows where fetched. 
-			setValidSampleData( rowsFetched > 0 );
+			setValidSampleData( rowsFetched > 0 || hasTrendGraphData() );
 
 			// FIXME: whatabout clearing the JTable entries????
 			//        or should we leave the "old" entries in there, they are not valid anymore????
@@ -5935,8 +5935,9 @@ implements Cloneable, ITableTooltip
 			String colname = sh.getName();
 			
 			// <CMNAME>.alarm.system.enabled.<COLNAME>
-			// Only for names that do not contin ' ' spaces... FIXME: This is UGGLY, create a type/property which describes if we should write the '*.enable.*' property or not...
-			if ( sh.getName().indexOf(' ') == -1)
+			// Only for names that do not contain ' ' spaces... FIXME: This is UGGLY, create a type/property which describes if we should write the '*.enable.*' property or not...
+//			if ( sh.getName().indexOf(' ') == -1)
+			if ( sh.isAlarmSwitch() )
 			{
 				String propName = replaceCmAndColName(getName(), PROPKEY_ALARM_isSystemAlarmsForColumnEnabled, colname);
 				String propVal  = conf.getProperty(propName, DEFAULT_ALARM_isSystemAlarmsForColumnEnabled+"");
@@ -7327,42 +7328,34 @@ implements Cloneable, ITableTooltip
 
 	public boolean hasResultSetMetaData()
 	{
-		return (_rsmd != null);
+		return (_rsmdCached != null);
 	}
-//	public void setResultSetMetaData(ResultSetMetaData rsmd)
-//	throws SQLException
-//	{
-//		// Copy/Clone the ResultSetMetaData some JDBC implementations needs this (otherwise we might get a 'The result set is closed', this was first seen for MS SQL-Server JDBC Driver)
-//		if (rsmd == null)
-//		{
-//			_rsmd = null;
-//		}
-//		else
-//		{
-////			ResultSetMetaDataChangable xe = new ResultSetMetaDataChangable(rsmd);
-////			_rsmd = rsmd;
-//			String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
-//			DbmsDataTypeResolver dataTypeResolver = getCounterController().getDbmsDataTypeResolver();
-//			_rsmd = new ResultSetMetaDataCached(rsmd, dataTypeResolver, productName);
-//		}
-//	}
+
 	public void setResultSetMetaData(ResultSetMetaData rsmd)
 	{
-		if ( ! (rsmd instanceof ResultSetMetaDataCached) )
+		if (rsmd instanceof ResultSetMetaDataCached)
 		{
-			try { rsmd = createResultSetMetaData(rsmd); }
+			_rsmdCached = (ResultSetMetaDataCached) rsmd;
+		}
+		else
+		{
+			try 
+			{
+				_rsmdCached = createResultSetMetaData(rsmd);
+			}
 			catch(SQLException ex)
 			{
 				_logger.warn("Problems creating a Cached ResultSetMetaData, continuing with the passed value.", ex);
 			}
 		}
-		_rsmd = rsmd;
 	}
-	public ResultSetMetaData getResultSetMetaData()
+
+	public ResultSetMetaDataCached getResultSetMetaData()
 	{
-		return _rsmd;
+		return _rsmdCached;
 	}
-	public ResultSetMetaData createResultSetMetaData(ResultSetMetaData rsmd)
+
+	public ResultSetMetaDataCached createResultSetMetaData(ResultSetMetaData rsmd)
 	throws SQLException
 	{
 		// Copy/Clone the ResultSetMetaData some JDBC implementations needs this (otherwise we might get a 'The result set is closed', this was first seen for MS SQL-Server JDBC Driver)
@@ -7372,13 +7365,17 @@ implements Cloneable, ITableTooltip
 		// Get DBMS Product which we are connected to
 		String productName = getCounterController().getMonConnection().getDatabaseProductName(); // This should be cached... if not then we hit severe performance bottleneck
 
-		// Get DBMS DataType "resolver", null if none is installed
-		DbmsDataTypeResolver dataTypeResolver = getCounterController().getDbmsDataTypeResolver();
-
 		// Create the new object
-		ResultSetMetaDataCached ret = new ResultSetMetaDataCached(rsmd, dataTypeResolver, productName);
-
-		return ret;
+		ResultSetMetaDataCached originRsmd = new ResultSetMetaDataCached(rsmd, productName);
+		
+		// re-map any data types from the SOURCE DBMS to a more "normalized form", for example:
+		//   - Sybase ASE: unsigned int          -->> bigint (and a bunch of other stuff)
+		//   - Oracle:     number(...)           -->> int, bigint or similar
+		//   - Postgres:   oid, int2, int4, int8 -->> better data types
+		ResultSetMetaDataCached normalizedSourceRsmd = originRsmd.createNormalizedRsmd(productName);
+		
+		// return the Normalized Metadata Object
+		return normalizedSourceRsmd;
 	}
 
 
@@ -7916,6 +7913,7 @@ implements Cloneable, ITableTooltip
 //		Writer writer = new StringWriter();
 //		JsonGenerator w = jfactory.createGenerator(writer);
 		
+//System.out.println(" >>> toJson >>> graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+"]: writeGraphs="+writeGraphs+", hasTrendGraphData()="+hasTrendGraphData());
 		// Check MANDATORY parameters
 		boolean throwOnMissingMandatoryParams = false;
 		if (throwOnMissingMandatoryParams)
@@ -7995,7 +7993,8 @@ implements Cloneable, ITableTooltip
 					}
 					w.writeEndArray(); 
 				}
-				catch (SQLException ex)
+//				catch (SQLException ex)
+				catch (Exception ex)
 				{
 					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
 				}
@@ -8013,6 +8012,7 @@ implements Cloneable, ITableTooltip
 			w.writeEndObject(); // END: Counters
 		}
 
+//System.out.println("                graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+"]: writeGraphs="+writeGraphs+", hasTrendGraphData()="+hasTrendGraphData());
 		if (writeGraphs && hasTrendGraphData()) // note use 'hasTrendGraphData()' and NOT 'hasTrendGraph()' which is only true in GUI mode
 		{
 			w.writeFieldName("graphs");
@@ -8021,6 +8021,7 @@ implements Cloneable, ITableTooltip
 			{
 				TrendGraphDataPoint tgdp = getTrendGraphData(graphName);
 				
+//System.out.println("                graph [srvName='"+getServerName()+"', CmName="+StringUtil.left(getName(),30)+", graphName="+StringUtil.left(tgdp.getName(),30)+"]: tgdp.hasData()="+tgdp.hasData()+", data="+StringUtil.toCommaStr(tgdp.getData())+", labels="+StringUtil.toCommaStr(tgdp.getLabel()));
 				// Do not write empty graphs
 				if ( ! tgdp.hasData() )
 					continue;
@@ -8144,7 +8145,8 @@ implements Cloneable, ITableTooltip
 					}
 					w.endArray();
 				}
-				catch (SQLException ex)
+//				catch (SQLException ex)
+				catch (Exception ex)
 				{
 					_logger.error("Write JSON JDBC MetaData data, for CM='"+getName()+"'. Caught: "+ex, ex);
 				}

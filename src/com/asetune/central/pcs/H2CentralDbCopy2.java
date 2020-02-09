@@ -21,24 +21,25 @@
 package com.asetune.central.pcs;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.PrintWriter;
 import java.io.Reader;
-import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,9 +50,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
-import org.h2.tools.Script;
 import org.h2.util.ScriptReader;
 
 import com.asetune.AppDir;
@@ -60,6 +59,8 @@ import com.asetune.Version;
 import com.asetune.gui.ResultSetTableModel;
 import com.asetune.sql.conn.ConnectionProp;
 import com.asetune.sql.conn.DbxConnection;
+import com.asetune.sql.ddl.SchemaCrawlerUtils;
+import com.asetune.sql.ddl.SchemaCrawlerUtils.DdlType;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.DbUtils;
 import com.asetune.utils.Debug;
@@ -68,6 +69,13 @@ import com.asetune.utils.Logging;
 import com.asetune.utils.Memory;
 import com.asetune.utils.StringUtil;
 import com.asetune.utils.TimeUtils;
+
+import schemacrawler.schema.Catalog;
+import schemacrawler.schema.Schema;
+import schemacrawler.schema.Table;
+import schemacrawler.schemacrawler.SchemaCrawlerException;
+import schemacrawler.schemacrawler.SchemaCrawlerOptionsBuilder;
+import schemacrawler.schemacrawler.SchemaInfoLevelBuilder;
 
 /**
  * Uggly hack to copy one H2 database to another.
@@ -206,6 +214,7 @@ public class H2CentralDbCopy2
 	public static final boolean DEFAULT_DML_USE_MERGE  = false;
 	
 	boolean _ddlPrintExec  = false;
+//	boolean _ddlPrintExec  = true;
 	boolean _ddlSkipErrors = true;
 
 	int     _dmlBatchSize  = DEFAULT_DML_BATCH_SIZE;
@@ -219,6 +228,7 @@ public class H2CentralDbCopy2
 	String _sourceUrl;
 	File   _sourceH2File;
 	DbxConnection _sourceConn;
+	Catalog       _sourceCatalog;
 
 	int    _sourceDbxCentralDbVersion = -1; 
 
@@ -228,6 +238,7 @@ public class H2CentralDbCopy2
 	String _targetUrl;
 	File   _targetH2File;
 	DbxConnection _targetConn;
+	Catalog       _targetCatalog;
 //	List<DbTable> _targetPreTableList = new ArrayList<>(); // not really used... The MAIN is sourceTableList
 	
 	int    _targetDbxCentralDbVersion = -1; 
@@ -466,12 +477,18 @@ public class H2CentralDbCopy2
 		_tableList    = getTables(_sourceConn);
 		List<DbTable> targetPreTableList = getTables(_targetConn);
 		
-		// Count records in the target table
+		// Count records in the target table... 
+		// and SET that in the SOURCE.targetPreRowCount
+		// which will be used at a later stage
 		if (targetPreTableList.size() > 0)
 		{
+//			for (DbTable dbt : targetPreTableList)
+//			{
+//				dbt.targetPreRowCount = getTargetTableRowCount(dbt);
+//			}
 			for (DbTable dbt : targetPreTableList)
 			{
-				dbt.targetPreRowCount = getTargetTableRowCount(dbt);
+				dbt.targetPreRowCount = _targetConn.getRowCountEstimate(dbt.catalog, dbt.schema, dbt.name);
 			}
 
 			// try to find the entry in the SOURCE LIST and update 'targetPreRowCount'
@@ -675,39 +692,176 @@ public class H2CentralDbCopy2
 		
 	}
 
+//	private void transferDdl()
+//	throws Exception
+//	{
+//		if ( ! _sourceConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2) )
+//			throw new Exception("Sorry for the moment the SOURCE database must be '"+DbUtils.DB_PROD_NAME_H2+"'. you are connected to '"+_sourceConn.getDatabaseProductName()+"'.");
+//		
+//		_logger.info("Extracting DDL information from SOURCE: "+_sourceConn.getDbmsServerName());
+//		File tmpFile = File.createTempFile("h2.sourcedb.ddl.", ".sql");
+//		Script.process(_sourceConn, tmpFile.toString(), "nodata nopasswords nosettings", "");
+//		
+//		String ddlContent = FileUtils.readFileToString(tmpFile, Charset.defaultCharset());
+//		
+//		// change: 
+//		ddlContent = ddlContent.replace("CREATE CACHED TABLE", "CREATE TABLE IF NOT EXISTS ");
+////		ddlContent = ddlContent.replaceAll("(SELECTIVITY \\d+)", ""); // remove SELECTIVITY
+//		
+//		// change: 
+//		ddlContent = ddlContent.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS ");
+//		
+////		System.out.println("------------------------------------");
+////		System.out.println("------------- DDL BEGIN ------------");
+////		System.out.println("------------------------------------");
+////		System.out.println(ddlContent);
+////		System.out.println("------------------------------------");
+////		System.out.println("------------- DDL END --------------");
+////		System.out.println("------------------------------------");
+//		FileUtils.write(tmpFile, ddlContent, Charset.defaultCharset());
+//
+//		
+//		_logger.info("Applying DDL information to TARGET: "+_targetConn.getDbmsServerName());
+//		FileReader reader = new FileReader(tmpFile);
+//		
+//		executeH2Script(_targetConn, reader, _ddlSkipErrors, _ddlPrintExec);
+//	}
 	private void transferDdl()
 	throws Exception
 	{
-		if ( ! _sourceConn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2) )
-			throw new Exception("Sorry for the moment the SOURCE database must be '"+DbUtils.DB_PROD_NAME_H2+"'. you are connected to '"+_sourceConn.getDatabaseProductName()+"'.");
-		
-		_logger.info("Extracting DDL information from SOURCE: "+_sourceConn.getDbmsServerName());
-		File tmpFile = File.createTempFile("h2.sourcedb.ddl.", ".sql");
-		Script.process(_sourceConn, tmpFile.toString(), "nodata nopasswords nosettings", "");
-		
-		String ddlContent = FileUtils.readFileToString(tmpFile, Charset.defaultCharset());
-		
-		// change: 
-		ddlContent = ddlContent.replace("CREATE CACHED TABLE", "CREATE TABLE IF NOT EXISTS ");
-//		ddlContent = ddlContent.replaceAll("(SELECTIVITY \\d+)", ""); // remove SELECTIVITY
-		
-		// change: 
-		ddlContent = ddlContent.replace("CREATE INDEX", "CREATE INDEX IF NOT EXISTS ");
-		
-//		System.out.println("------------------------------------");
-//		System.out.println("------------- DDL BEGIN ------------");
-//		System.out.println("------------------------------------");
-//		System.out.println(ddlContent);
-//		System.out.println("------------------------------------");
-//		System.out.println("------------- DDL END --------------");
-//		System.out.println("------------------------------------");
-		FileUtils.write(tmpFile, ddlContent, Charset.defaultCharset());
+		_logger.info("Extracting DDL information from SOURCE '"+_sourceConn.getDatabaseProductNameNoThhrow(null)+"' : "+_sourceConn.getDbmsServerName());
+		_logger.info("Transforming DDL information to TARGET '"+_targetConn.getDatabaseProductNameNoThhrow(null)+"' : "+_targetConn.getDbmsServerName());
 
+
+		Map<DdlType, List<String>> ddlMap = SchemaCrawlerUtils.getDdlFor(_sourceCatalog, _targetConn);
 		
-		_logger.info("Applying DDL information to TARGET: "+_targetConn.getDbmsServerName());
-		FileReader reader = new FileReader(tmpFile);
+		List<String> ddlSchemas = ddlMap.get(DdlType.SCHEMA);
+		List<String> ddlTables  = ddlMap.get(DdlType.TABLE);
+		List<String> ddlIndexes = ddlMap.get(DdlType.INDEX);
+
+		List<String> ddlList    = new ArrayList<>();
+		ddlList.addAll(ddlSchemas);
+		ddlList.addAll(ddlTables);
+		ddlList.addAll(ddlIndexes);
 		
-		executeH2Script(_targetConn, reader, _ddlSkipErrors, _ddlPrintExec);
+		_logger.info("Applying DDL " + ddlList.size() + " information to TARGET: "+_targetConn.getDbmsServerName());
+
+		for (String ddl : ddlList)
+		{
+			ddl = _targetConn.quotifySqlString(ddl);
+			
+			executeDdl(_targetConn, ddl, _ddlSkipErrors, _ddlPrintExec);
+		}
+		
+//		AseSqlScriptReader sr = new AseSqlScriptReader(ddlContent, false, "go");
+//		script = new AseSqlScript(conn, getSqlTimeout(), getKeepDbmsState(), getDiscardDbmsErrorList()); 
+//		executeH2Script(_targetConn, reader, _ddlSkipErrors, _ddlPrintExec);
+
+	}
+
+	public boolean executeDdl(DbxConnection conn, String sql, boolean skipErrors, boolean printExecution) 
+	throws SQLException
+	{
+		if (StringUtil.isNullOrBlank(sql))
+			return true;
+
+		try
+		{
+			SQLWarning sqlw  = null;
+			Statement stmnt  = conn.createStatement();
+			ResultSet  rs    = null;
+			int rowsAffected = 0;
+
+//			if (_queryTimeout > 0)
+//				stmnt.setQueryTimeout(_queryTimeout);
+
+			if (_logger.isDebugEnabled()) 
+				_logger.debug("EXECUTING: "+sql);
+			
+			if (printExecution)
+				_logger.info("---- EXECUTING: -------------------------------------------------------------\n"+sql);
+
+//			stmnt.executeUpdate(sql);
+			boolean hasRs = stmnt.execute(sql);
+
+			// iterate through each result set
+			do
+			{
+				if(hasRs)
+				{
+					// Get next resultset to work with
+					rs = stmnt.getResultSet();
+
+					// Convert the ResultSet into a TableModel, which fits on a JTable
+					ResultSetTableModel tm = new ResultSetTableModel(rs, true, sql, sql);
+
+					// Write ResultSet Content as a "string table"
+					_logger.info("executeDdl: produced a ResultSet\n" + tm.toTableString());
+//					_resultCompList.add(tm);
+
+					// Check for warnings
+					// If warnings found, add them to the LIST
+					for (sqlw = rs.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+					{
+						_logger.trace("--In loop, sqlw: "+sqlw);
+						//compList.add(new JAseMessage(sqlw.getMessage()));
+					}
+
+					// Close it
+					rs.close();
+				}
+				else
+				{
+					// Treat update/row count(s)
+					rowsAffected = stmnt.getUpdateCount();
+					if (rowsAffected >= 0)
+					{
+//						rso.add(rowsAffected);
+					}
+				}
+
+				// Check if we have more resultsets
+				hasRs = stmnt.getMoreResults();
+
+				_logger.trace( "--hasRs="+hasRs+", rowsAffected="+rowsAffected );
+			}
+			while (hasRs || rowsAffected != -1);
+
+			// Check for warnings
+			for (sqlw = stmnt.getWarnings(); sqlw != null; sqlw = sqlw.getNextWarning())
+			{
+				_logger.trace("====After read RS loop, sqlw: "+sqlw);
+				//compList.add(new JAseMessage(sqlw.getMessage()));
+			}
+
+			// Close the statement
+			stmnt.close();
+		}
+		catch(SQLWarning w)
+		{
+			_logger.warn("Problems when executing sql: "+sql, w);
+//			PluginSupport.LogInfoMessage(sqlwarning.getMessage(), MessageText.formatSQLExceptionDetails(sqlwarning));
+		}
+		catch (SQLException ex)
+		{
+			if (skipErrors)
+			{
+				String msg = ex.getMessage();
+//				System.out.println("MSG=|"+msg+"|.");
+
+				Pattern pattern = Pattern.compile("Constraint .* already exists");
+				Matcher matcher = pattern.matcher(msg);
+
+				if ( ! matcher.find() )
+					_logger.info("SKIPPING ERROR '"+ex+"': when executing sql: "+sql);
+			}
+			else
+			{
+				throw ex;
+			}
+			return false;
+		}
+		return true;
 	}
 
 	private void executeDdl(DbxConnection conn, String sql)
@@ -1091,6 +1245,10 @@ public class H2CentralDbCopy2
 					
 					if (sourceType != targetType)
 					{
+						// and of course some exceptions from this rule. (NUMERIC & DECIMAL is "same" in most DBMS's)
+						if ( (sourceType == Types.NUMERIC && targetType == Types.DECIMAL) || (targetType == Types.NUMERIC && sourceType == Types.DECIMAL) )
+							continue;
+						
 						String sourceJdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(sourceType);
 						String targetJdbcTypeStr = ResultSetTableModel.getColumnJavaSqlTypeName(targetType);
 
@@ -1734,81 +1892,152 @@ public class H2CentralDbCopy2
 	public List<DbTable> getTables(DbxConnection conn)
 	throws SQLException
 	{
-		if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
+		try
 		{
-			String sql = "select TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, SQL, ROW_COUNT_ESTIMATE \n"
-					+ "from INFORMATION_SCHEMA.TABLES \n"
-					+ "where TABLE_TYPE = 'TABLE' \n"
-					+ "order by 1,2,3 \n";
-
 			List<DbTable> list = new ArrayList<>();
 			
-			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
-			{
-				while (rs.next())
-				{
-					DbTable dbt = new DbTable();
-					dbt.catalog                = rs.getString(1);
-					dbt.schema                 = rs.getString(2);
-					dbt.name                   = rs.getString(3);
-					dbt.type                   = rs.getString(4);
-					dbt.ddl                    = rs.getString(5);
-					dbt.sourceRowCountEstimate = rs.getLong  (6);
-					
-					list.add(dbt);
-				}
-			}
-			return list;
-		}
-		else
-		{
-			// GET LIST FROM JDBC Meta Data
-			
-			_logger.info("getTables(): will return empty list for DBMS Vendor '" + conn.getDatabaseProductName() + "'.");
-			
-			List<DbTable> list = new ArrayList<>();
-			
-			DatabaseMetaData dbmd = conn.getMetaData();
-			String   catalog          = null;  // a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
-			String   schemaPattern    = null;  // a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
-			String   tableNamePattern = "%";   // a table name pattern; must match the table name as it is stored in the database
-			String[] types = new String[] {"TABLE"};
+			_logger.info("Extracting Catalog information from: "+_sourceConn.getDbmsServerName());
 
-			try (ResultSet rs = dbmd.getTables(catalog, schemaPattern, tableNamePattern, types))
+			// FIXME: if H2 ... then map away all objects in "pg_catalog" schema
+			// Create the options
+			SchemaCrawlerOptionsBuilder optionsBuilder = SchemaCrawlerOptionsBuilder.builder();
+
+			// Set what details are required in the schema - this affects the time taken to crawl the schema
+			optionsBuilder.withSchemaInfoLevel(SchemaInfoLevelBuilder.standard());
+
+			if (conn == _sourceConn && DbUtils.isProductName(_sourceConn.getDatabaseProductNameNoThhrow("xxx"), DbUtils.DB_PROD_NAME_H2))
 			{
-				// ResultSet output accrding to: https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html
-				// 1:  TABLE_CAT String => table catalog (may be null)
-				// 2:  TABLE_SCHEM String => table schema (may be null)
-				// 3:  TABLE_NAME String => table name
-				// 4:  TABLE_TYPE String => table type. Typical types are "TABLE", "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
-				// 5:  REMARKS String => explanatory comment on the table
-				// 6:  TYPE_CAT String => the types catalog (may be null)
-				// 7:  TYPE_SCHEM String => the types schema (may be null)
-				// 8:  TYPE_NAME String => type name (may be null)
-				// 9:  SELF_REFERENCING_COL_NAME String => name of the designated "identifier" column of a typed table (may be null)
-				// 10: REF_GENERATION String => specifies how values in SELF_REFERENCING_COL_NAME are created. Values are "SYSTEM", "USER", "DERIVED". (may be null)
+				_logger.info("Source Connections seems to be a H2 database... excluding schema: 'pg_catalog'");
 				
-				while (rs.next())
+//				optionsBuilder.includeSchemas(schemaFullName -> !schemaFullName.endsWith("pg_catalog"));
+				optionsBuilder.includeSchemas(schemaName -> !schemaName.endsWith(".pg_catalog"));
+			}
+
+			boolean isSourceConn = true;
+			Catalog catalog = SchemaCrawlerUtils.getCatalogObjects(conn, optionsBuilder.toOptions());
+			if (conn == _sourceConn)
+			{
+				_sourceCatalog = catalog;
+				isSourceConn = true;
+			}
+			else if (conn == _targetConn)
+			{
+				_targetCatalog = catalog;
+				isSourceConn = false;
+			}
+			else
+			{
+				throw new RuntimeException("The passed Connection is not the '_sourceConn' or the '_targetConn'... not sure how to proceed...");
+			}
+
+			catalog.getDatabaseInfo();
+			for (final Schema schema : catalog.getSchemas())
+			{
+//				System.out.println("---------------------- SCHEMA: " + schema);
+				for (final Table table : catalog.getTables(schema))
 				{
+					if ( ! (table instanceof Table) )
+						continue;
+
 					DbTable dbt = new DbTable();
-					dbt.catalog                = rs.getString(1);
-					dbt.schema                 = rs.getString(2);
-					dbt.name                   = rs.getString(3);
-					dbt.type                   = rs.getString(4);
-					dbt.ddl                    = "";
+//					dbt.catalog                = catalog.getName();
+					dbt.catalog                = schema.getCatalogName();
+					dbt.schema                 = table.getSchema().getName();
+					dbt.name                   = table.getName();
+					dbt.type                   = "TABLE";
+					dbt.ddl                    = null;
 					dbt.sourceRowCountEstimate = -1;
+					
+//					dbt.sourceRowCountEstimate = conn.getRowCountEstimate(dbt.catalog, dbt.schema, dbt.name);
+					dbt.sourceRowCountEstimate = conn.getRowCountEstimate(null, dbt.schema, dbt.name);
+System.out.println((isSourceConn ? "SOURCE" : "DEST") + ": cat='"+dbt.catalog+"', schema='"+dbt.schema+"', tab='"+dbt.name+"', rowCountEstimate="+dbt.sourceRowCountEstimate);
 
 					list.add(dbt);
 				}
 			}
-			
-			// Get column spec for all tables (and possibly the row count)
-			for (DbTable dbt : list)
-			{
-			}
-			
+
 			return list;
 		}
+		catch(SchemaCrawlerException ex)
+		{
+			throw new SQLException("Exception when getting Database Objects from DBMS.", ex);
+		}
+
+//		if (conn.isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
+//		{
+//			String sql = "select TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, SQL, ROW_COUNT_ESTIMATE \n"
+//					+ "from INFORMATION_SCHEMA.TABLES \n"
+//					+ "where TABLE_TYPE = 'TABLE' \n"
+//					+ "order by 1,2,3 \n";
+//
+//			List<DbTable> list = new ArrayList<>();
+//			
+//			try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+//			{
+//				while (rs.next())
+//				{
+//					DbTable dbt = new DbTable();
+//					dbt.catalog                = rs.getString(1);
+//					dbt.schema                 = rs.getString(2);
+//					dbt.name                   = rs.getString(3);
+//					dbt.type                   = rs.getString(4);
+//					dbt.ddl                    = rs.getString(5);
+//					dbt.sourceRowCountEstimate = rs.getLong  (6);
+//					
+//					list.add(dbt);
+//				}
+//			}
+//			return list;
+//		}
+//		else
+//		{
+//			// GET LIST FROM JDBC Meta Data
+//			
+//			_logger.info("getTables(): will return empty list for DBMS Vendor '" + conn.getDatabaseProductName() + "'.");
+//			
+//			List<DbTable> list = new ArrayList<>();
+//			
+//			DatabaseMetaData dbmd = conn.getMetaData();
+//			String   catalog          = null;  // a catalog name; must match the catalog name as it is stored in the database; "" retrieves those without a catalog; null means that the catalog name should not be used to narrow the search
+//			String   schemaPattern    = null;  // a schema name pattern; must match the schema name as it is stored in the database; "" retrieves those without a schema; null means that the schema name should not be used to narrow the search
+//			String   tableNamePattern = "%";   // a table name pattern; must match the table name as it is stored in the database
+//			String[] types = new String[] {"TABLE"};
+//
+//			try (ResultSet rs = dbmd.getTables(catalog, schemaPattern, tableNamePattern, types))
+//			{
+//				// ResultSet output accrding to: https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html
+//				// 1:  TABLE_CAT String => table catalog (may be null)
+//				// 2:  TABLE_SCHEM String => table schema (may be null)
+//				// 3:  TABLE_NAME String => table name
+//				// 4:  TABLE_TYPE String => table type. Typical types are "TABLE", "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+//				// 5:  REMARKS String => explanatory comment on the table
+//				// 6:  TYPE_CAT String => the types catalog (may be null)
+//				// 7:  TYPE_SCHEM String => the types schema (may be null)
+//				// 8:  TYPE_NAME String => type name (may be null)
+//				// 9:  SELF_REFERENCING_COL_NAME String => name of the designated "identifier" column of a typed table (may be null)
+//				// 10: REF_GENERATION String => specifies how values in SELF_REFERENCING_COL_NAME are created. Values are "SYSTEM", "USER", "DERIVED". (may be null)
+//				
+//				while (rs.next())
+//				{
+//					DbTable dbt = new DbTable();
+//					dbt.catalog                = rs.getString(1);
+//					dbt.schema                 = rs.getString(2);
+//					dbt.name                   = rs.getString(3);
+//					dbt.type                   = rs.getString(4);
+//					dbt.ddl                    = "";
+//					dbt.sourceRowCountEstimate = -1;
+//
+//					list.add(dbt);
+//				}
+//			}
+//			
+//			// Get column spec for all tables (and possibly the row count)
+//			for (DbTable dbt : list)
+//			{
+//			}
+//			
+//			return list;
+//		}
 	}
 	
 	/**
@@ -1928,7 +2157,7 @@ public class H2CentralDbCopy2
 	//---------------------------------------------------
 	public static void main(String[] args)
 	{
-		Version.setAppName("H2CentralDbCopy");
+		Version.setAppName("DbxCentralDbCopy");
 		
 		Options options = buildCommandLineOptions();
 		try
@@ -2075,14 +2304,14 @@ public class H2CentralDbCopy2
 			return false;
 		}
 	}
-	private static class DbTableColumn
-	{
-		DbTable dbTable;
-	}
-	private static class DbTableIndex
-	{
-		DbTable dbTable;
-	}
+//	private static class DbTableColumn
+//	{
+//		DbTable dbTable;
+//	}
+//	private static class DbTableIndex
+//	{
+//		DbTable dbTable;
+//	}
 
 	
 	private static class SourceException extends Exception

@@ -1414,7 +1414,9 @@ extends CountersModel
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec", PROPKEY_alarm_BlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec), DEFAULT_alarm_BlockingOthersMaxTimeInSec, "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("BlockingOthersMaxTimeInSec", isAlarmSwitch, PROPKEY_alarm_BlockingOthersMaxTimeInSec, Integer.class, conf.getIntProperty(PROPKEY_alarm_BlockingOthersMaxTimeInSec, DEFAULT_alarm_BlockingOthersMaxTimeInSec), DEFAULT_alarm_BlockingOthersMaxTimeInSec, "If 'BlockingOthersMaxTimeInSec' is greater than ## then send 'AlarmEventBlockingLockAlarm'." ));
 
 		return list;
 	}

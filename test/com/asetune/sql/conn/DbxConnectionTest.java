@@ -108,12 +108,49 @@ public class DbxConnectionTest
 		
 		String result = _dbxConn.quotifySqlString(source);
 
-		System.out.println("");
-		System.out.println("source=|"+source+"|");
-		System.out.println("expect=|"+expect+"|");
-		System.out.println("result=|"+result+"|");
+//		System.out.println("");
+//		System.out.println("source=|"+source+"|");
+//		System.out.println("expect=|"+expect+"|");
+//		System.out.println("result=|"+result+"|");
 		
 		assertEquals("Escaped Single Quotes in SQL-String-constant not correct", result, expect);
 
+	}
+
+	@Test
+	public void testQuotifyStringWithSquareBracketInIdentifier()
+	throws Exception
+	{
+		String source = "create table [t1] ([id] int, [[150]] waiting for a lock] varchar(10), [c2] varbinary(10), primary key([id]))";
+		String expect = "create table #t1# (#id# int, #[150] waiting for a lock# varchar(10), #c2# varbinary(10), primary key(#id#))".replace('#', '"');
+
+		String result = _dbxConn.quotifySqlString(source);
+		
+//		System.out.println("");
+//		System.out.println("source=|"+source+"|");
+//		System.out.println("expect=|"+expect+"|");
+//		System.out.println("result=|"+result+"|");
+		
+		assertEquals("Square Brackets In SQL-String-constant not correct", result, expect);
+	}
+
+	@Test
+	public void testQuotifyStringWithAdvanced()
+	throws Exception
+	{
+		String source = "create table [t'1] ([id] int, []]] int, [[] int, [[150]] 12\" lock, and two \"\" quotes] varchar(10), [c2] varbinary(10), primary key([id]))";
+		String expect = "create table #t'1# (#id# int, #]# int, #[# int, #[150] 12\" lock, and two \"\" quotes# varchar(10), #c2# varbinary(10), primary key(#id#))".replace('#', '"');
+
+		// Note: This would cause an Syntax error in H2 due to "...12"..." (the not escaped " in the middle)  
+		//       but I just wanted to test...  
+		
+		String result = _dbxConn.quotifySqlString(source);
+		
+//		System.out.println("");
+//		System.out.println("source=|"+source+"|");
+//		System.out.println("expect=|"+expect+"|");
+//		System.out.println("result=|"+result+"|");
+		
+		assertEquals("Square Brackets In SQL-String-constant not correct", result, expect);
 	}
 }

@@ -56,7 +56,27 @@ import org.apache.log4j.Logger;
 import com.asetune.gui.ConnectionProfileManager;
 import com.asetune.gui.ConnectionProgressDialog;
 import com.asetune.gui.swing.WaitForExecDialog;
+import com.asetune.sql.ResultSetMetaDataCached;
 import com.asetune.sql.conn.info.DbxConnectionStateInfo;
+import com.asetune.sql.ddl.DbmsDdlResolverAnsiSql;
+import com.asetune.sql.ddl.DbmsDdlResolverAsa;
+import com.asetune.sql.ddl.DbmsDdlResolverAse;
+import com.asetune.sql.ddl.DbmsDdlResolverDb2;
+import com.asetune.sql.ddl.DbmsDdlResolverDerby;
+import com.asetune.sql.ddl.DbmsDdlResolverH2;
+import com.asetune.sql.ddl.DbmsDdlResolverHana;
+import com.asetune.sql.ddl.DbmsDdlResolverIq;
+import com.asetune.sql.ddl.DbmsDdlResolverMaxDb;
+import com.asetune.sql.ddl.DbmsDdlResolverMySql;
+import com.asetune.sql.ddl.DbmsDdlResolverOracle;
+import com.asetune.sql.ddl.DbmsDdlResolverPostgres;
+import com.asetune.sql.ddl.DbmsDdlResolverRax;
+import com.asetune.sql.ddl.DbmsDdlResolverRs;
+import com.asetune.sql.ddl.DbmsDdlResolverRsDa;
+import com.asetune.sql.ddl.DbmsDdlResolverRsDra;
+import com.asetune.sql.ddl.DbmsDdlResolverSqlServer;
+import com.asetune.sql.ddl.IDbmsDataTypeResolver;
+import com.asetune.sql.ddl.IDbmsDdlResolver;
 import com.asetune.ssh.SshTunnelInfo;
 import com.asetune.ui.autocomplete.completions.TableExtraInfo;
 import com.asetune.utils.AseConnectionUtils;
@@ -460,6 +480,23 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		{
 			productName = conn.getMetaData().getDatabaseProductName();
 			_logger.debug("createDbxConnection(conn).getDatabaseProductName() returns: '"+productName+"'.");
+
+			// The Postgres Wire Protocoll is used by some uther DBMS's as well: CockroachDB, H2... 
+			if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))
+			{
+				String sql = "select version()";
+				try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+				{
+					// H2:          'PostgreSQL 8.2.23 server protocol using H2 1.4.200 (2019-10-14)'
+					// CockroachDB: 'CockroachDB CCL v19.2.2 (x86_64-unknown-linux-gnu, built 2019/12/11 01:33:43, go1.12.12)'
+					while(rs.next())
+						productName = rs.getString(1);
+				}
+				catch(SQLException ex)
+				{
+					_logger.error("Problems when connecting to '" + productName + "', executing '" + sql + "'.");
+				}
+			}
 		}
 		catch (SQLException e)
 		{
@@ -598,6 +635,7 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_ORACLE))       return new OracleConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_POSTGRES))     return new PostgresConnection(conn);
 		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_APACHE_HIVE))  return new ApacheHiveConnection(conn);
+//		else if (DbUtils.isProductName(productName, DbUtils.DB_PROD_NAME_COCKROACHDB))  return new CockroachDbConnection(conn);
 		else return new UnknownConnection(conn);
 	}
 
@@ -702,21 +740,173 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	 */
 	public String quotifySqlString(String sql, char leftChar, char rightChar)
 	{
+		// NOTE TO MYSELF: This is to complicated... can we make it simpler... maybe with regular expression ???
+		
+		if (sql == null)
+			return null;
+
+		String lQic = getLeftQuote();
+		String rQic = getRightQuote();
+
+		int strLen = sql.length();
+		StringBuilder sb = new StringBuilder(strLen);
+
+		boolean inSingleQuotes = false;
+		boolean inDbmsQuotes   = false;   // In DBMS Quoted Identifier Character Count
+		int     leftDbmsQuoteCount  = 0;  // increment every time we see START "[" character
+		
+		for (int i=0; i<strLen; i++)
+		{
+			char c  = sql.charAt(i);
+
+			// "flip" the boolean every time we see a "single quote char" (and we are NOT in quoted identifier)
+			if (c == '\'' && !inDbmsQuotes)
+				inSingleQuotes = ! inSingleQuotes;
+
+			// increment count every time we see a "[" char (or whatever the left char replacement is) and we are NOT inside a SQL Single Quote
+			if (c == leftChar && !inSingleQuotes)
+			{
+				inDbmsQuotes = true;
+				leftDbmsQuoteCount++;
+			}
+
+			if (inSingleQuotes)
+			{
+				sb.append(c);
+			}
+			else if (inDbmsQuotes)
+			{
+				// nc means next char... so look ahead 1 char
+				char nc = (i+1 < strLen) ? sql.charAt(i+1) : ' ';
+
+				// If NEXT char is also a "end" character... then it's an "escaped" character
+				// meaning we are seeing "]]" which is NOT the "end-char" 
+				// So add CURRENT and NEXT to the output buffer, and start at the top... to continue grabbing chars... 
+				if (c == rightChar && nc == rightChar)
+				{
+					sb.append(rightChar);
+				
+					// Only append the NEXT char if the method's endChar is a "]" and the destination DBMS Quoted Identifier Char is also a "]"... keep the escape char "]" 
+					// OR: if the DBMS Quoted Identifier Char is NOT "]" then we should NOT append the escape char "]" and only append ONE "]"... discard the escape char "]"
+					if (rightChar == ']' && rQic.equals("]"))
+						sb.append(rightChar);
+
+					i++;
+					continue;
+				}
+
+				// If we have "] " ... we have a end character (which is NOT escaped)
+				// This means that we are done with the Quoted Identifier
+				if (c == rightChar && nc != rightChar )
+				{
+					inDbmsQuotes = false;
+					leftDbmsQuoteCount = 0;
+				}
+
+				// if this is NOT the FIRST "[" or LAST "]" char, then simply add characters 
+				if (inDbmsQuotes && leftDbmsQuoteCount > 1)
+				{
+					sb.append(c);
+				}
+				else
+				{
+					// So we must be at FIRST "[" or LAST "]" ... so change those chars to what the DBMS wants to have.
+					if      ( c == leftChar  ) { sb.append(lQic); } // change "[" to the DBMS quoted identifier char
+					else if ( c == rightChar ) { sb.append(rQic); } // change "]" to the DBMS quoted identifier char
+					else                       { sb.append(c);    } // well this should never happen... but just in case... add to the buffer
+				}
+			}
+			else
+			{
+				// we are NOT between singleQuotes nor between FIRST "[" or LAST "]" char, the simply add chars
+				sb.append(c);
+			}
+		}
+		
+		return sb.toString();
+	}
+	public String quotifySqlStringXXXX(String sql, char leftChar, char rightChar)
+	{
+		// NOTE TO MYSELF: This is to complicated... can we make it simpler... maybe with regular expression ???
+		
 		if (sql == null)
 			return null;
 
 		String lq = getLeftQuote();
 		String rq = getRightQuote();
-		
+
 		StringBuilder sb = new StringBuilder(sql.length());
 
 		boolean inSingleQuotes = false;
+		int     inDbmsQicCount = 0;  // In DBMS Quoted Identifier Character Count
+		
+		for (int i=0; i<sql.length(); i++)
+		{
+			char c  = sql.charAt(i);
+			char cc = i+1<sql.length() ? sql.charAt(i+1) : ' '; // cc means next char... so look ahead 1 char
+
+			// "flip" the boolean every time we see a "single quote char" (and we are NOT in quoted identifier)
+			if (c == '\'' && inDbmsQicCount == 0)
+				inSingleQuotes = ! inSingleQuotes;
+
+			// increment count every time we see a "[" char (or whatever the left char replacement is) and we are NOT inside a SQL Single Quote
+			if (c == leftChar && !inSingleQuotes)
+				inDbmsQicCount++;
+
+System.out.println("i="+i+", c='"+c+"', cc='"+cc+"', inSingleQuotes="+inSingleQuotes+", inDbmsQicCount="+inDbmsQicCount);
+			if (inSingleQuotes)
+			{
+				sb.append(c);
+			}
+			else if (inDbmsQicCount > 0)
+			{
+				// decrement count every time we see a "]" char (or whatever the right char replacement is)
+				//            but if next char is also "[" do not decrement 
+				// meaning we will NOT decrement on "]]" only on "]?" (where ? is any character) 
+				if (c == rightChar && cc != rightChar)
+					inDbmsQicCount--;
+
+System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDbmsQicCount);
+				// If it's the FIRST or LAST character of the Quoted String then REPLACE with DBMS Quotes
+				if (inDbmsQicCount == 1 || inDbmsQicCount == 0)
+				{
+					if      ( c == leftChar  ) { sb.append(lq); }
+					else if ( c == rightChar ) { sb.append(rq); }
+					else                       { sb.append(c);  }
+				}
+				else
+				{
+					sb.append(c);
+				}
+			}
+			else
+			{
+//				if      ( c == leftChar  ) { sb.append(lq); }
+//				else if ( c == rightChar ) { sb.append(rq); }
+//				else                       { sb.append(c);  }
+				sb.append(c);
+			}
+		}
+		
+		return sb.toString();
+	}
+	public String quotifySqlString_____OriginThatOnlyHandlesSqlSingleQuotes(String sql, char leftChar, char rightChar)
+	{
+		if (sql == null)
+			return null;
+
+		String lq = getLeftQuote();
+		String rq = getRightQuote();
+
+		StringBuilder sb = new StringBuilder(sql.length());
+
+		boolean inSingleQuotes         = false;
 		
 		for (int i=0; i<sql.length(); i++)
 		{
 			char c = sql.charAt(i);
 
-			// "flip" the boolean every time we see a single quote char
+			// "flip" the boolean every time we see a "single quote char"
 			if (c == '\'')
 				inSingleQuotes = ! inSingleQuotes;
 
@@ -1924,8 +2114,6 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	}
 	
 	
-	
-	
 	//#################################################################################
 	//#################################################################################
 	//### BEGIN: Some generic helper methods for executing SQL Statemenets
@@ -2766,6 +2954,332 @@ new Exception("createDbxConnection(conn='"+conn+"'): is ALREADY A DbxConnection.
 	// END: PROPERTIES methods
 	//-------------------------------------------------
 
+
+	//-------------------------------------------------
+	// BEGIN: DBMS DATA-TYPE & DDL RESOLVER methods
+	//-------------------------------------------------
+	private IDbmsDataTypeResolver _dbmsDataTypeResolver;
+	private IDbmsDdlResolver      _dbmsDdlResolver;
+
+	/**
+	 * Get a DDL Resolver that will help you to figure out various database specific stuff when you want to create a DDL statement that is specific for for this DBMS Vendor.
+	 * @return never NULL, and the desired resolver for that DBMS Vendor
+	 */
+	public IDbmsDataTypeResolver getDbmsDataTypeResolver()
+	{
+		if (_dbmsDataTypeResolver == null)
+			_dbmsDataTypeResolver = createDbmsDataTypeResolver();
+		
+		return _dbmsDataTypeResolver;
+	}
+	public IDbmsDdlResolver getDbmsDdlResolver()
+	{
+		if (_dbmsDdlResolver == null)
+			_dbmsDdlResolver = createDbmsDdlResolver();
+		
+		return _dbmsDdlResolver;
+	}
+
+	public IDbmsDataTypeResolver createDbmsDataTypeResolver()
+	{
+		return (IDbmsDataTypeResolver) createDbmsDdlResolver(); // note: for the moment DbmsDdlResolver*** implements both: IDbmsDdlResolver and IDbmsDataTypeResolver
+	}
+	/**
+	 * This will create a instance of DbmsDdlResolver based on what DbxConnection you are currently using
+	 * 
+	 * @return
+	 */
+	public IDbmsDdlResolver createDbmsDdlResolver()
+	{
+		if (this instanceof AsaConnection      ) return new DbmsDdlResolverAsa      (this);
+		if (this instanceof AseConnection      ) return new DbmsDdlResolverAse      (this);
+		if (this instanceof Db2Connection      ) return new DbmsDdlResolverDb2      (this);
+		if (this instanceof DerbyConnection    ) return new DbmsDdlResolverDerby    (this);
+		if (this instanceof H2Connection       ) return new DbmsDdlResolverH2       (this);
+		if (this instanceof HanaConnection     ) return new DbmsDdlResolverHana     (this);
+		if (this instanceof IqConnection       ) return new DbmsDdlResolverIq       (this);
+		if (this instanceof MaxDbConnection    ) return new DbmsDdlResolverMaxDb    (this);
+		if (this instanceof MySqlConnection    ) return new DbmsDdlResolverMySql    (this);
+		if (this instanceof OracleConnection   ) return new DbmsDdlResolverOracle   (this);
+		if (this instanceof PostgresConnection ) return new DbmsDdlResolverPostgres (this);
+		if (this instanceof RaxConnection      ) return new DbmsDdlResolverRax      (this);
+		if (this instanceof RsConnection       ) return new DbmsDdlResolverRs       (this);
+		if (this instanceof RsDaConnection     ) return new DbmsDdlResolverRsDa     (this);
+		if (this instanceof RsDraConnection    ) return new DbmsDdlResolverRsDra    (this);
+		if (this instanceof SqlServerConnection) return new DbmsDdlResolverSqlServer(this);
+
+		// For unknown/unmapped Connections lets use the "ANSI"
+		_logger.warn("No DBMS DDL Resolver for DbxConnetion implementation '" + this.getClass().getName() + "', DBMS Vendor '" + this.getDatabaseProductNameNoThhrow(this.getClass().getSimpleName()) + "' was found. Using 'ANSI SQL' instead.");
+		return new DbmsDdlResolverAnsiSql(this);
+	}
+
+	public static IDbmsDataTypeResolver createDbmsDataTypeResolver(String dbmsProductName)
+	{
+		return (IDbmsDataTypeResolver) createDbmsDdlResolver(dbmsProductName); // note: for the moment DbmsDdlResolver*** implements both: IDbmsDdlResolver and IDbmsDataTypeResolver
+	}
+	/**
+	 * NOT SURE IF WE SHOULD CREATE THIS OR NOT, it will/may create problems due to: null is passed as a DbxConnection so we can't really do much (lookups: get QuotedIdentifierChar() etc...)
+	 * This will create a instance of DbmsDdlResolver based on what dbmsProductName (get from Connection.getMetaData().getDatabaseProductName()) you are currently using
+	 * <p>
+	 * Or DbUtils.DB_PROD_NAME_xxxxx
+	 * 
+	 * @return
+	 */
+	public static IDbmsDdlResolver createDbmsDdlResolver(String dbmsProductName)
+	{
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASA  )) return new DbmsDdlResolverAsa      (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_ASE  )) return new DbmsDdlResolverAse      (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_DB2_LUW     )) return new DbmsDdlResolverDb2      (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_DB2_ZOS     )) return new DbmsDdlResolverDb2      (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_DERBY       )) return new DbmsDdlResolverDerby    (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_H2          )) return new DbmsDdlResolverH2       (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_HANA        )) return new DbmsDdlResolverHana     (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_IQ   )) return new DbmsDdlResolverIq       (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MAXDB       )) return new DbmsDdlResolverMaxDb    (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MYSQL       )) return new DbmsDdlResolverMySql    (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_ORACLE      )) return new DbmsDdlResolverOracle   (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_POSTGRES    )) return new DbmsDdlResolverPostgres (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_RS   )) return new DbmsDdlResolverRs       (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDA )) return new DbmsDdlResolverRsDa     (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_SYBASE_RSDRA)) return new DbmsDdlResolverRsDra    (null);
+		if (DbUtils.isProductName(dbmsProductName, DbUtils.DB_PROD_NAME_MSSQL       )) return new DbmsDdlResolverSqlServer(null);
+
+		// For unknown/unmapped Connections lets use the "ASNI"
+		_logger.warn("No DBMS DDL Resolver for DBMS Vendor '" + dbmsProductName + "' was found. Using 'ANSI SQL' instead.");
+		return new DbmsDdlResolverAnsiSql(null);
+	}
+	
+	public static List<String> getDbmsDdlSupportedVendors()
+	{
+		List<String> list = new ArrayList<>();
+		
+		list.add(DbUtils.DB_PROD_NAME_SYBASE_ASA  );
+		list.add(DbUtils.DB_PROD_NAME_SYBASE_ASE  );
+		list.add(DbUtils.DB_PROD_NAME_DB2_LUW     );
+		list.add(DbUtils.DB_PROD_NAME_DB2_ZOS     );
+		list.add(DbUtils.DB_PROD_NAME_DERBY       );
+		list.add(DbUtils.DB_PROD_NAME_H2          );
+		list.add(DbUtils.DB_PROD_NAME_HANA        );
+		list.add(DbUtils.DB_PROD_NAME_SYBASE_IQ   );
+		list.add(DbUtils.DB_PROD_NAME_MAXDB       );
+		list.add(DbUtils.DB_PROD_NAME_MYSQL       );
+		list.add(DbUtils.DB_PROD_NAME_ORACLE      );
+		list.add(DbUtils.DB_PROD_NAME_POSTGRES    );
+		list.add(DbUtils.DB_PROD_NAME_SYBASE_RS   );
+		list.add(DbUtils.DB_PROD_NAME_SYBASE_RSDA );
+		list.add(DbUtils.DB_PROD_NAME_SYBASE_RSDRA);
+		list.add(DbUtils.DB_PROD_NAME_MSSQL       );
+		
+		return list;
+	}
+
+	/**
+	 * Simply calls <code>ResultSetMetaDataCached.createNormalizedRsmd(originRsmd, getDatabaseProductNameNoThhrow("DbxConnection")</code>
+	 * @param originRsmd
+	 * @return
+	 */
+	public ResultSetMetaDataCached createNormalizedRsmd(ResultSetMetaDataCached originRsmd)
+	{
+		return ResultSetMetaDataCached.createNormalizedRsmd(originRsmd, getDatabaseProductNameNoThhrow("DbxConnection"));
+	}
+
+	/**
+	 * Simply calls <code>ResultSetMetaDataCached.createNormalizedRsmd(originRs)</code>
+	 * @param originRs
+	 * @return
+	 */
+	public ResultSetMetaDataCached createNormalizedRsmd(ResultSet originRs)
+	throws SQLException
+	{
+		return ResultSetMetaDataCached.createNormalizedRsmd(originRs);
+	}
+
+	/**
+	 * Simply calls <code>ResultSetMetaDataCached.createTargetRsmd(sourceRsmd, getDatabaseProductNameNoThhrow("DbxConnection")</code>
+	 * @param sourceRsmd
+	 * @return
+	 */
+	public ResultSetMetaDataCached createTargetRsmd(ResultSetMetaDataCached sourceRsmd)
+	{
+		return ResultSetMetaDataCached.transformToTargetDbms(sourceRsmd, getDatabaseProductNameNoThhrow("DbxConnection"));
+	}
+
+	//-------------------------------------------------
+	// END: DBMS DDL RESOLVER methods
+	//-------------------------------------------------
+
+	/**
+	 * Get Row Count Estimate for a specific table.
+	 * <p>
+	 * This returns -1 if it's not supported be the implementation, OR it can't find the information in the DBMS dictionary
+	 * <p>
+	 * Known Implementations
+	 * <ul>
+	 *    <li>H2</li>
+	 *    <li>Postgres</li>
+	 *    <li>Sybase ASE</li>
+	 *    <li>Microsoft SQL-Server</li>
+	 *    <li>MySQL</li>
+	 *    <li>DB2</li>
+	 * </ul>
+	 * @param catalog   name of the catalog
+	 * @param schema    name of the schema
+	 * @param table     name of the table
+	 * @return
+	 */
+	public long getRowCountEstimate(String catalog, String schema, String table)
+	throws SQLException
+	{
+		return -1;
+	}
+
+	/**
+	 * Get Row Count Actual for a specific table. 
+	 * <p>
+	 * WARNING: This does select count(*) from table
+	 * <p>
+	 * This returns -1 if it's not supported be the implementation
+	 * 
+	 * @param catalog   name of the catalog
+	 * @param schema    name of the schema
+	 * @param table     name of the table
+	 * @return
+	 */
+	public long getRowCountActual(String catalog, String schema, String table)
+	throws SQLException
+	{
+		long rowCount = -1;
+		
+		String cat = StringUtil.isNullOrBlank(catalog) ? "" : "[" + catalog + "]";
+		String sch = StringUtil.isNullOrBlank(schema)  ? "" : "[" + schema  + "]";
+		String tab = StringUtil.isNullOrBlank(table)   ? "" : "[" + table   + "]";
+		
+		String sql = "select count(*) from " + cat + sch + tab;
+		sql = this.quotifySqlString(sql);
+		
+		try (Statement stmnt = this.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+				rowCount = rs.getLong(1);
+		}
+		
+		return rowCount;
+	}
+
+	
+	//----------------------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------
+	// BEGIN: Object name "resolvers"
+	//----------------------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------
+	
+	/**
+	 * Build a DBMS dependent table name WITH DBMS Quoted Identifiers, for example:
+	 * <ul>
+	 *     <li>Sybase ASE:    <code>[catalog].[schema].[table]</code></li>
+	 *     <li>MS SQL_Server: <code>[catalog].[schema].[table]</code></li>
+	 *     <li>Postgres       <code>"schema"."table"</code>    -- CAT is stripped out</li>
+	 *     <li>MySQL:         <code>`catalog`.`table`</code>   -- SCHEMA is stripped out</li>
+	 * </ul>
+	 * 
+	 * @param catalogName
+	 * @param schemaName
+	 * @param tableName
+	 * @return
+	 */
+	public String getFullTableName(String catalogName, String schemaName, String tableName)
+	{
+		return getFullTableName(catalogName, schemaName, tableName, true);
+	}
+	/**
+	 * Build a DBMS dependent table name, for example:
+	 * <ul>
+	 *     <li>Sybase ASE:    <code>[catalog].[schema].[table]</code></li>
+	 *     <li>MS SQL_Server: <code>[catalog].[schema].[table]</code></li>
+	 *     <li>Postgres       <code>"schema"."table"</code>    -- CAT is stripped out</li>
+	 *     <li>MySQL:         <code>`catalog`.`table`</code>   -- SCHEMA is stripped out</li>
+	 * </ul>
+	 * 
+	 * @param catalogName
+	 * @param schemaName
+	 * @param tableName
+	 * @param addQuotes  Should we use Quoted Identifiers
+	 * @return
+	 */
+	public String getFullTableName(String catalogName, String schemaName, String tableName, boolean addQuotes)
+	{
+		StringBuilder sb = new StringBuilder();
+
+		// Simplify null handling
+		if (catalogName == null) catalogName = "";
+		if (schemaName  == null) schemaName  = "";
+		if (tableName   == null) tableName   = "";
+
+		catalogName = catalogName.trim();
+		schemaName  = schemaName .trim();
+		tableName   = tableName  .trim();
+
+		// If 'null' was passed in, simply "strip" that off
+		if (catalogName.equalsIgnoreCase("null")) catalogName = "";
+		if (schemaName .equalsIgnoreCase("null")) schemaName  = "";
+		if (tableName  .equalsIgnoreCase("null")) tableName   = "";
+		
+		// Should we use Quoted Identifiers
+		String lq = "";
+		String rq = "";
+		
+		if (addQuotes)
+		{
+			lq = getLeftQuote();
+			rq = getRightQuote();
+		}
+		
+		// Do not use Catalog name for H2
+		if (isDatabaseProduct(DbUtils.DB_PROD_NAME_H2))
+		{
+			catalogName = "";
+		}
+
+		// Do not use Catalog name for Postgres
+		if (isDatabaseProduct(DbUtils.DB_PROD_NAME_POSTGRES))
+		{
+			catalogName = "";
+		}
+		
+		// MySQL: only use Catalog OR Schema name (MySQL; has Database, but NOT schema)
+		if (isDatabaseProduct(DbUtils.DB_PROD_NAME_MYSQL))
+		{
+			// If catalogName is BLANK but schemaName HAS VALUE ... move it to catalogName
+			if (StringUtil.isNullOrBlank(catalogName) && StringUtil.hasValue(schemaName))
+			{
+				catalogName = schemaName;
+				schemaName = "";
+			}
+
+			// if both(catalog & schema) has values, TRUST catalogName
+			if (StringUtil.hasValue(catalogName) && StringUtil.hasValue(schemaName))
+				schemaName = "";
+		}
+		
+		
+		// CATALOG
+		if (StringUtil.hasValue(catalogName))
+		{
+			sb.append(lq).append(catalogName).append(rq).append(".");
+		}
+		
+		// SCHEMA
+		if (StringUtil.hasValue(schemaName))
+		{
+			sb.append(lq).append(schemaName).append(rq).append(".");
+		}
+		
+		// TABLENAME
+		sb.append(lq).append(tableName).append(rq);
+		
+		return sb.toString();
+	}
+	
 	
 //	/**
 //	 * Return a DBMS data type for this DBMS (default is to use the same logic as in ResultSetTableModel.getColumnTypeName

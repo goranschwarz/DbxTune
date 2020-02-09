@@ -184,6 +184,9 @@ extends CountersModel
 	public static final String GRAPH_NAME_LATCH_WAITS               = "LatchWaits";
 	public static final String GRAPH_NAME_LATCH_WAIT_TIME           = "LatchWaitTime";
 
+//	public static final String GRAPH_NAME_FREE_LIST_STALLS          = "FreeListStalls";
+//	public static final String GRAPH_NAME_MEMORY_GRANTS_PENDING     = "MemoryGrantsPending";
+
 	private void addTrendGraphs()
 	{
 //		String[] labels_cpuPct           = new String[] { "CPU usage %" };
@@ -641,6 +644,34 @@ extends CountersModel
 			true,  // visible at start
 			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
 			-1);   // minimum height
+
+// BEGIN --- FIX NAMES ON THE BELOW
+//		//-----
+//		addTrendGraph(GRAPH_NAME_FREE_LIST_STALLS,
+//			"Buffer Cache - Waiting for free pages per Sec", // Menu CheckBox text
+//			"Buffer Cache - Waiting for free pages per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+//			new String[] { "Free list stalls/sec" }, 
+//			LabelType.Static,
+//			TrendGraphDataPoint.Category.CACHE,
+//			false, // is Percent Graph
+//			true,  // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+//
+//		//-----
+//		addTrendGraph(GRAPH_NAME_MEMORY_GRANTS_PENDING,
+//			"'Memory Grants Pending' per Sec", // Menu CheckBox text
+//			"'Memory Grants Pending' per Sec ("+GROUP_NAME+"->"+SHORT_NAME+")", // Label 
+//			TrendGraphDataPoint.Y_AXIS_SCALE_LABELS_NORMAL,
+//			new String[] { "Memory Grants Pending" }, 
+//			LabelType.Static,
+//			TrendGraphDataPoint.Category.MEMORY,
+//			false, // is Percent Graph
+//			true,  // visible at start
+//			0,     // graph is valid from Server Version. 0 = All Versions; >0 = Valid from this version and above 
+//			-1);   // minimum height
+// END --- FIX NAMES ON THE BELOW
 
 //		// if GUI
 //		if (getGuiController() != null && getGuiController().hasGUI())
@@ -1899,6 +1930,56 @@ extends CountersModel
 					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
 			}
 		}
+
+//		// -----------------------------------------------------------------------------------------
+//		if (GRAPH_NAME_FREE_LIST_STALLS.equals(tgdp.getName()))
+//		{
+//			Double[] arr = new Double[1];
+//			
+//			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+//			String pk     = createPkStr(":Buffer Manager", "Free list stalls/sec", "");
+//			
+//			Double val = this.getAbsValueAsDouble(pk, "calculated_value");
+//			
+//			if (val != null)
+//			{
+//				arr[0 ] = val;
+//
+//				// Set the values
+//				tgdp.setDataPoint(this.getTimestamp(), arr);
+//			}
+//			else
+//			{
+//				TrendGraph tg = getTrendGraph(tgdp.getName());
+//				if (tg != null)
+//					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+//			}
+//		}
+//
+//		// -----------------------------------------------------------------------------------------
+//		if (GRAPH_NAME_MEMORY_GRANTS_PENDING.equals(tgdp.getName()))
+//		{
+//			Double[] arr = new Double[1];
+//			
+//			// Note the prefix: 'SQLServer' or 'MSSQL$@@servicename' is removed in SQL query
+//			String pk     = createPkStr(":Memory Manager", "Memory Grants Pending", "");
+//			
+//			Double val = this.getAbsValueAsDouble(pk, "calculated_value");
+//			
+//			if (val != null)
+//			{
+//				arr[0 ] = val;
+//
+//				// Set the values
+//				tgdp.setDataPoint(this.getTimestamp(), arr);
+//			}
+//			else
+//			{
+//				TrendGraph tg = getTrendGraph(tgdp.getName());
+//				if (tg != null)
+//					tg.setWarningLabel("Failed to get value(s) for pk-row: '"+pk+"'='"+val+"'.");
+//			}
+//		}
 	}
 
 	
@@ -1934,6 +2015,11 @@ extends CountersModel
 		if (isAzure)
 			dm_os_performance_counters = "dm_pdw_nodes_os_performance_counters";
 
+		// It seems that some extra values for 'cntr_type' has extended a bit:
+		// https://tsql.tech/create-perfmon-and-filestats-reports-in-powerbi-part-1/
+		//   cntr_type: 65536     -->> PERF_COUNTER_LARGE_RAWCOUNT 
+		//   cntr_type: 272696320 -->> PERF_COUNTER_BULK_COUNT 
+		
 		String sql = 
 			  "select object_name = substring(object_name, charindex(':', object_name),128), -- removing 'SQLServer' or 'MSSQL$@@servicename' for easier lookups\n"
 			+ "       counter_name, \n"
@@ -1941,7 +2027,9 @@ extends CountersModel
 			+ "       calculated_value = convert(numeric(15,2), CASE WHEN cntr_type = 65792 THEN cntr_value ELSE null END), \n"
 			+ "       CASE \n"
 			+ "          WHEN cntr_type = 65792      THEN convert(varchar(30), 'absolute counter')\n" 
+			+ "          WHEN cntr_type = 65536      THEN convert(varchar(30), 'absolute counter')\n" 
 			+ "          WHEN cntr_type = 272696576  THEN convert(varchar(30), 'rate per second') \n" 
+			+ "          WHEN cntr_type = 272696320  THEN convert(varchar(30), 'rate per second') \n" 
 			+ "          WHEN cntr_type = 537003264  THEN convert(varchar(30), 'percentage rate') \n" 
 			+ "          WHEN cntr_type = 1073874176 THEN convert(varchar(30), 'average metric')  \n" 
 			+ "          WHEN cntr_type = 1073939712 THEN convert(varchar(30), 'internal')        \n" 
@@ -1950,7 +2038,9 @@ extends CountersModel
 			+ "       cntr_value, \n"
 			+ "       CASE \n"
 			+ "          WHEN cntr_type = 65792      THEN convert(varchar(30), 'PERF_COUNTER_LARGE_RAWCOUNT') -- provides the last observed value for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type  \n" 
+			+ "          WHEN cntr_type = 65536      THEN convert(varchar(30), 'PERF_COUNTER_LARGE_RAWCOUNT') -- provides the last observed value for the counter; for this type of counter, the values in cntr_value can be used directly, making this the most easily usable type  \n" 
 			+ "          WHEN cntr_type = 272696576  THEN convert(varchar(30), 'PERF_COUNTER_BULK_COUNT')     -- provides the average number of operations per second. Two readings of cntr_value will be required for this counter type, in order to get the per second averages    \n" 
+			+ "          WHEN cntr_type = 272696320  THEN convert(varchar(30), 'PERF_COUNTER_BULK_COUNT')     -- provides the average number of operations per second. Two readings of cntr_value will be required for this counter type, in order to get the per second averages    \n" 
 			+ "          WHEN cntr_type = 537003264  THEN convert(varchar(30), 'PERF_LARGE_RAW_FRACTION')     -- used in conjunction with PERF_LARGE_RAW_BASE to calculate ratio values, such as the cache hit ratio                                                                 \n" 
 			+ "          WHEN cntr_type = 1073874176 THEN convert(varchar(30), 'PERF_AVERAGE_BULK')           -- used to calculate an average number of operations completed during a time interval; like PERF_LARGE_RAW_FRACTION, it uses PERF_LARGE_RAW_BASE to do the calculation \n" 
 			+ "          WHEN cntr_type = 1073939712 THEN convert(varchar(30), 'PERF_LARGE_RAW_BASE')         -- used in the translation of PERF_LARGE_RAW_FRACTION and PERF_AVERAGE_BULK values to readable output; should not be displayed alone.                                  \n" 
@@ -1983,7 +2073,7 @@ extends CountersModel
 				+ "  <tr> <th></th>   <th>cntr_type</th> <th>Description</th> </tr>"
 				+ "  <tr> "
 				+ "       <td>#5</td>"
-				+ "       <td><code>PERF_COUNTER_LARGE_RAWCOUNT</code><br>cntr_type = 65792</td>"
+				+ "       <td><code>PERF_COUNTER_LARGE_RAWCOUNT</code><br>cntr_type = 65792, 65536</td>"
 				+ "       <td>Not calculated at all, simply copies the column 'cntr_value'<br>"
 				+ "           This since PERF_COUNTER_LARGE_RAWCOUNT are a counter that goes up/down and represents <i>last observed value</i>.<br>"
 				+ "           For example number of <i>pages</i> in the data/buffer cache.<br>"
@@ -1991,7 +2081,7 @@ extends CountersModel
 				+ "  </tr>"
 				+ "  <tr>"
 				+ "       <td>#4</td>"
-				+ "       <td><code>PERF_COUNTER_BULK_COUNT</code><br>cntr_type = 272696576</td>"
+				+ "       <td><code>PERF_COUNTER_BULK_COUNT</code><br>cntr_type = 272696576, 272696320</td>"
 				+ "       <td>This counter value represents a rate metric.<br>"
 				+ "           The difference between two samples, divided by time between samples<br>"
 				+ "           <b>Formula</b>: <code>calculated_value = (Value2 - Value1) / (seconds between samples)</code>"

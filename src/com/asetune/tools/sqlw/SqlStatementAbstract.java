@@ -29,9 +29,6 @@ import java.util.ArrayList;
 import javax.swing.JComponent;
 
 import com.asetune.gui.ConnectionProfile;
-import com.asetune.gui.ConnectionProfile.ConnProfileEntry;
-import com.asetune.gui.ConnectionProfile.JdbcEntry;
-import com.asetune.gui.ConnectionProfile.TdsEntry;
 import com.asetune.sql.JdbcUrlParser;
 import com.asetune.sql.SqlProgressDialog;
 import com.asetune.sql.conn.ConnectionProp;
@@ -75,11 +72,32 @@ implements SqlStatement
 	public void readRpcReturnCodeAndOutputParameters(ArrayList<JComponent> resultCompList, boolean asPlainText) throws SQLException
 	{
 	}
-	
+
+	public boolean isCancelled()
+	{
+		if (_progress != null)
+			return _progress.isCancelled();
+		return false;
+	}
+
 	public void setProgressState(String state)
 	{
 		if (_progress != null)
 			_progress.setState(state);
+	}
+
+	public void setProgressState2(String state)
+	{
+		if (_progress != null)
+			_progress.setState2(state);
+	}
+
+	public void setProgressWidth(int widthInChars)
+	{
+		if (_progress != null)
+		{
+			_progress.setWidth(widthInChars);
+		}
 	}
 
 	public void addResultMessage(String msg)
@@ -101,6 +119,15 @@ implements SqlStatement
 	}
 
 
+	public DbxConnection getSourceConnection()
+	{
+		return _conn;
+	}
+
+	public String getSourceDatabaseProductName()
+	{
+		return _dbProductName;
+	}
 
 	/**
 	 * Create a connection 

@@ -52,12 +52,12 @@ public class SqlServerDbSize extends AseAbstract
 		sb.append("Row Count: ").append(_shortRstm.getRowCount()).append("<br>\n");
 		sb.append(_shortRstm.toHtmlTableString("sortable", true, true, null, new ResultSetTableModel.TableStringRenderer()
 		{
-			/**
-			 * If compatibility_level is below "tempdb", then mark the cell as RED
-			 */
 			@Override
 			public String cellValue(ResultSetTableModel rstm, int row, int col, String colName, Object objVal, String strVal)
 			{
+				/**
+				 * If compatibility_level is below "tempdb", then mark the cell as RED
+				 */
 				if ("compatibility_level".equals(colName))
 				{
 					int compatLevel_tempdb = -1;
@@ -75,7 +75,31 @@ public class SqlServerDbSize extends AseAbstract
 					{
 						String tooltip = "Column 'compatibility_level' is less than the 'server level'.\nYou may not take advantage of new functionality, which is available at this SQL-Server version... Server compatibility_level is: "+compatLevel_tempdb;
 						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
-//						strVal = "<font color='red'>" + strVal + "</font>";
+					}
+				}
+				/**
+				 * If 'LogSizeInMb' is *high*, then mark the cell as RED
+				 * Larger than 'DataSizeInMb'
+				 */
+				if ("LogSizeInMb".equals(colName))
+				{
+					int    DataSizeInMb  = rstm.getValueAsInteger(row, "DataSizeInMb", true, -1);
+					int    LogSizeInMb   = rstm.getValueAsInteger(row, "LogSizeInMb",  true, -1);
+					String recoveryModel = rstm.getValueAsString (row, "recovery_model_desc");
+
+					// Only check FULL recovery model
+					if ( ! "FULL".equalsIgnoreCase(recoveryModel) )
+						return strVal;
+
+					// log size needs to bee above some value: 256 MB 
+					if (LogSizeInMb < 256) 
+						return strVal;
+					
+					// When LOG-SIZE is above DATA-SIZE  (take away 100 MB from the log, if it's "close" to DataSize)
+					if ((LogSizeInMb - 100) > DataSizeInMb)
+					{
+						String tooltip = "Column 'LogSizeInMb' is high. You need to 'backup' or 'truncate' the transaction log every now and then.";
+						strVal = "<div title=\""+tooltip+"\"> <font color='red'>" + strVal + "</font><div>";
 					}
 				}
 				return strVal;
@@ -173,6 +197,8 @@ public class SqlServerDbSize extends AseAbstract
 			    + "    ,[DataOsDiskFreePct] \n"
 			    + "    ,[DataOsDiskUsedPct] \n"
 			    + "    ,[DataNextGrowthSizeMb] \n"
+			    + "    ,[LastDbBackupTime] \n"
+			    + "    ,[LastDbBackupAgeInHours] \n"
 			    + "\n"
 			    + "    ,[LogOsDisk] \n"
 			    + "    ,[LogOsDiskFreeMb] \n"
@@ -180,6 +206,8 @@ public class SqlServerDbSize extends AseAbstract
 			    + "    ,[LogOsDiskFreePct] \n"
 			    + "    ,[LogOsDiskUsedPct] \n"
 			    + "    ,[LogNextGrowthSizeMb] \n"
+			    + "    ,[LastLogBackupTime] \n"
+			    + "    ,[LastLogBackupAgeInHours] \n"
 			    + "\n"
 			    + "    ,[DataOsFileName] \n"
 			    + "    ,[LogOsFileName] \n"

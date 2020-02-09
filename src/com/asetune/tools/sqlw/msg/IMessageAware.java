@@ -36,6 +36,7 @@ public interface IMessageAware
 
 	void addTraceMessage  (String msg);
 	void addDebugMessage  (String msg);
+	void addDryRunMessage (String msg);
 	void addInfoMessage   (String msg);
 	void addWarningMessage(String msg);
 	void addErrorMessage  (String msg);

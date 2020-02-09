@@ -22,6 +22,7 @@ package com.asetune.sql.pipe;
 
 import java.util.ArrayList;
 
+import com.asetune.utils.ConnectionProvider;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -36,17 +37,21 @@ public class PipeCommand
 {
 	private String _cmdStr     = null;
 	private String _sqlStr     = null;
+	private ConnectionProvider _connProvider;
 //	private String _paramStr   = null;
 	private ArrayList<IPipeCommand> _pipeList = new ArrayList<IPipeCommand>();
 	private IPipeCommand _cmd = null; // tmp solution
 
-	public PipeCommand(String cmd, String sqlString)
+	public PipeCommand(String cmd, String sqlString, ConnectionProvider connProvider)
 	throws PipeCommandException
 	{
 		if (StringUtil.isNullOrBlank(cmd))
 			throw new PipeCommandException("PipeCommand, cmd can't be null or empty.");
-		_cmdStr = cmd;
-		_sqlStr = sqlString;
+
+		_cmdStr       = cmd;
+		_sqlStr       = sqlString;
+		_connProvider = connProvider;
+
 		parse();
 	}
 	
@@ -83,7 +88,7 @@ public class PipeCommand
 		   )
 		{
 			//_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
-			IPipeCommand cmd = new PipeCommandGrep(_cmdStr, _sqlStr);
+			IPipeCommand cmd = new PipeCommandGrep(_cmdStr, _sqlStr, _connProvider);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
@@ -92,7 +97,7 @@ public class PipeCommand
 		         || _cmdStr.startsWith("iconv ")   || _cmdStr.equals("iconv")
 		        )
 		{
-			IPipeCommand cmd = new PipeCommandConvert(_cmdStr, _sqlStr);
+			IPipeCommand cmd = new PipeCommandConvert(_cmdStr, _sqlStr, _connProvider);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
@@ -100,14 +105,14 @@ public class PipeCommand
 		else if (_cmdStr.startsWith("bcp ") || _cmdStr.equals("bcp"))
 		{
 //			_paramStr = _cmdStr.substring(_cmdStr.indexOf(' ') + 1).trim();
-			IPipeCommand cmd = new PipeCommandBcp(_cmdStr, _sqlStr);
+			IPipeCommand cmd = new PipeCommandBcp(_cmdStr, _sqlStr, _connProvider);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
 		else if (_cmdStr.startsWith("tofile ") || _cmdStr.equals("tofile"))
 		{
-			IPipeCommand cmd = new PipeCommandToFile(_cmdStr, _sqlStr);
+			IPipeCommand cmd = new PipeCommandToFile(_cmdStr, _sqlStr, _connProvider);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
@@ -116,14 +121,14 @@ public class PipeCommand
 		         || _cmdStr.startsWith("chart ") || _cmdStr.equals("chart")
 		        )
 		{
-			IPipeCommand cmd = new PipeCommandGraph(_cmdStr, _sqlStr);
+			IPipeCommand cmd = new PipeCommandGraph(_cmdStr, _sqlStr, _connProvider);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe
 		}
 		else if ( _cmdStr.startsWith("diff ") || _cmdStr.equals("diff") )
 		{
-			IPipeCommand cmd = new PipeCommandDiff(_cmdStr, _sqlStr);
+			IPipeCommand cmd = new PipeCommandDiff(_cmdStr, _sqlStr, _connProvider);
 			_pipeList.add(cmd);
 			_cmd = cmd;
 			// for the moment this doesn't support MULTIPLE commands in the pipe

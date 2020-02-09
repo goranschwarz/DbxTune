@@ -323,7 +323,7 @@ extends CountersModelAppend
 			String ErrorMessage = o_ErrorMessage == null ? "" : o_ErrorMessage.toString();
 
 			//-------------------------------------------------------
-			// Long running transaction
+			// There are not enough 'user connections' available to start a new process
 			//-------------------------------------------------------
 			if (isSystemAlarmsForColumnEnabledAndInTimeRange("UserConnections"))
 			{
@@ -495,6 +495,7 @@ extends CountersModelAppend
 			{
 				// START ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  Current process (0x2bad014c) infected with signal 11 (SIGSEGV)
 				//            ... collect anything in between, as the message ...
+				//   END ROW:          >>>> 00308: <<<< when SPID is changing into a new SPID, if we can't find SPID: fallback on below "end of stack trace,"
 				//   END ROW: 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
 				// ErrorNumber=???, Severity=??, ErrorMessage=
 				if (ErrorMessage.indexOf("Current process (") >= 0 && ErrorMessage.indexOf(") infected with ") >= 0)
@@ -502,6 +503,14 @@ extends CountersModelAppend
 					// Read messages until 'end of stack trace, ' and stuff it in the below StringBuilder
 					StringBuilder sb = new StringBuilder();
 
+					// get SPID and capture entries until we see a new SPID...
+					// below is a "start" for that
+					int col_SPID_pos = findColumn("SPID");
+
+					// Get SPID for this record, so we can check/break when we see a new SPID
+					Object o_firstSPID = col_SPID_pos == -1 ? null : row.get(col_SPID_pos);
+					
+					
 					// Continue to read messages (but do not move the "original r", create a new "rr" to loop on
 					for (int rr=r; rr<lastRefreshRows.size(); rr++)
 					{
@@ -509,13 +518,25 @@ extends CountersModelAppend
 
 						String ee_ErrorMessage = rrRow.get(col_ErrorMessage_pos) + "";
 						sb.append( ee_ErrorMessage ).append("\n");
-						
-						// STOP Looping when we find 'end of stack trace, '
-						if (ee_ErrorMessage.startsWith("end of stack trace, "))
-							break;
 
-						// OK: something is probably wrong (we didn't find 'end of stack trace, '), break the loop after 200 rows...
-						if (rr >= 200)
+						// look for SPID is changed, or: "end of stack trace, "
+						// If 'SPID' is not found, lets fallback on "end of stack trace, ", or even at the very end, where we break after 300 rows
+						Object o_SPID = col_SPID_pos == -1 ? null : rrRow.get(col_SPID_pos);
+						if (o_SPID == null || !(o_SPID instanceof Integer) )
+						{
+							// STOP Looping when we find 'end of stack trace, '
+							if (ee_ErrorMessage.startsWith("end of stack trace, "))
+								break;
+						}
+						else
+						{
+							// STOP Looping when we find a new SPID
+							if ( ! o_SPID.equals(o_firstSPID) )
+								break;
+						}
+						
+						// OK: something is probably wrong (we didn't find 'end of stack trace, ' or The same SPID just continues), break the loop after 300 rows...
+						if (rr >= 300)
 							break;
 					}
 					String fullErrorMessage = sb.toString();
@@ -556,13 +577,15 @@ extends CountersModelAppend
 		Configuration conf = Configuration.getCombinedConfiguration();
 		List<CmSettingsHelper> list = new ArrayList<>();
 
-		list.add(new CmSettingsHelper("UserConnections"        , PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
-		list.add(new CmSettingsHelper("TransactionLogFull"     , PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
-		list.add(new CmSettingsHelper("ConfigChanges"          , PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
-		list.add(new CmSettingsHelper("ProcessInfected"        , PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
+		CmSettingsHelper.Type isAlarmSwitch = CmSettingsHelper.Type.IS_ALARM_SWITCH;
+		
+		list.add(new CmSettingsHelper("UserConnections"        , isAlarmSwitch, PROPKEY_alarm_UserConnections    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_UserConnections    , DEFAULT_alarm_UserConnections    ), DEFAULT_alarm_UserConnections    , "On Error 1601, send 'AlarmEventConfigResourceIsUsedUp'." ));
+		list.add(new CmSettingsHelper("TransactionLogFull"     , isAlarmSwitch, PROPKEY_alarm_TransactionLogFull , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_TransactionLogFull , DEFAULT_alarm_TransactionLogFull ), DEFAULT_alarm_TransactionLogFull , "On Error 7413, send 'AlarmEventFullTranLog'." ));
+		list.add(new CmSettingsHelper("ConfigChanges"          , isAlarmSwitch, PROPKEY_alarm_ConfigChanges      , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ConfigChanges      , DEFAULT_alarm_ConfigChanges      ), DEFAULT_alarm_ConfigChanges      , "On error log message 'The configuration option '.*' has been changed', send 'AlarmEventConfigChanges'." ));
+		list.add(new CmSettingsHelper("ProcessInfected"        , isAlarmSwitch, PROPKEY_alarm_ProcessInfected    , Boolean.class, conf.getBooleanProperty(PROPKEY_alarm_ProcessInfected    , DEFAULT_alarm_ProcessInfected    ), DEFAULT_alarm_ProcessInfected    , "On error log message 'Current process .* infected with signal', send 'AlarmEventProcessInfected'." ));
 
-		list.add(new CmSettingsHelper("Severity"               , PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
-		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)", PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
+		list.add(new CmSettingsHelper("Severity"               , isAlarmSwitch, PROPKEY_alarm_Severity           , Integer.class, conf.getIntProperty    (PROPKEY_alarm_Severity           , DEFAULT_alarm_Severity           ), DEFAULT_alarm_Severity           , "If 'Severity' is greater than ## then send 'AlarmEventErrorLogEntry'." ));
+		list.add(new CmSettingsHelper("SkipList ErrorNumber(s)"               , PROPKEY_alarm_ErrorNumberSkipList, String .class, conf.getProperty       (PROPKEY_alarm_ErrorNumberSkipList, DEFAULT_alarm_ErrorNumberSkipList), DEFAULT_alarm_ErrorNumberSkipList, "Skip errors number in this list, that is if Severity is above that rule. format(comma separated list of numbers): 123, 321, 231" ));
 
 		return list;
 	}
@@ -655,6 +678,112 @@ FIXME: SQL-Server errorlog
 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  [Handler pc: 0x0x0000000001d13540 ut_handle installed by the following function:-]
 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  pc: 0x000000000157c788 conn_hdlr+0xef8()
 00:0004:00000:00308:2018/05/04 19:37:01.48 kernel  end of stack trace, spid 308, kpid 732758348, suid 1
+
+
+
+
+---------------------------------------
+-- Below is stacktrace that has 2 'end of stack trace' with 'FATAL UNHANDLED EXCEPTION: signal 0 hit while handling a previously hit signal' in between
+-- maybe loop until we find a new SPID here instead 
+---------------------------------------
+
+00:0004:00000:00293:2020/01/27 12:18:54.33 kernel  Cannot read, host process disconnected: daniel-ingren 37876 spid: 293
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  Current process (0x72ff02a0) infected with signal 11 (SIGSEGV)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  Current Process is running on Engine 3
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  server is using elf symbols for stack decoding (125189 symbols found)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  Address 0x0x0000001100000000 (), siginfo (code, address) = (1, 0x0x0000001100000000)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  **** Saved signal context (0x0x00002aaac0b1c900): ****
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  uc_flags: 0x1, uc_link: 0x(nil)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  uc_sigmask: 0x7bfbf037 0xb 0x1 0x0
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  uc_stack: ss_sp: 0x(nil), ss_size: 0x0, ss_flags: 0x2
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  General Registers (uc_mcontext.gregs):
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       PC : 0x0000001100000000 ()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel          RAX : 0x0000001100000000  RBX : (nil)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel          RCX : (nil)  RDX : 0x0000000000000001
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       RBP : 0x00002aaac0b1d650  RSP : 0x00002aaac0b1d5d8
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       R8  : 0x00002aab5318caf8  R9  : 0x00000000ffffffff
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       R10 : 0x00002aab0fcdb368  R11 : (nil)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       R12 : 0x00002aab40be17b0  R13 : 0x00002aab5318bba8
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       R14 : 0x00002aab5318dd00  R15 : 0x00002aab5318dbd8
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       RDI : 0x00002aab40be17b0  RSI : (nil)
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       RIP : 0x0000001100000000  CSGSFS : 0x0000000000000033
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       TRAPNO : 0x000000000000000e  ERR : 0x0000000000000014
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel       EFL : 0x0000000000010206
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  **** end of signal context ****
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  ************************************
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  SQL causing error : update brev
+  set brev.xanstal = bf.xid_anst_ratt
+from brev_fel bf
+where bf.xid = brev.xid
+  and bf.xid_anst_fel = brev.xanstal
+
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  Current statement number: 1 Current line number: 1
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  ************************************
+00:0005:00000:01279:2020/01/27 12:20:05.16 server  SQL Text: update brev
+  set brev.xanstal = bf.xid_anst_ratt
+from brev_fel bf
+where bf.xid = brev.xid
+  and bf.xid_anst_fel = brev.xanstal
+00:0005:00000:01279:2020/01/27 12:20:05.16 server  SQL Text: update brev set brev.xanstal = bf.xid_anst_ratt from brev_fel bf where bf.xid = brev.xid and bf.xid_anst_fel = brev.xanstal
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  curdb = 4 tempdb = 2 pstat = 0x10100 p2stat = 0x101000
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  p3stat = 0x800 p4stat = 0x0 p5stat = 0x8 p6stat = 0x1 p7stat = 0x10000
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  lasterror = 0 preverror = 0 transtate = 0
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  curcmd = 197 program = SqlWindow
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  extended error information: hostname: gorans login: sa
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000001534c10 pcstkwalk+0x482()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x00000000015345cf ucstkgentrace+0x20f()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000001530e02 ucbacktrace+0x54()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x00000000017fbd24 terminate_process+0xb14()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x00000000015612a4 kisignal+0x868()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000001100000000 ()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x00000000022d79ad LeUpdateOp::_LeOpNext(ExeCtxt&)+0x14d()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x00000000022b7e60 LeEmitNoSndOp::_LeOpNext(ExeCtxt&)+0x1c0()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x000000000183bffd LePlanNext+0xed()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  [Handler pc: 0x0x0000000001f91ed0 le_execerr installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000001f93334 exec_lava+0x4a4()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000002028383 s_execute+0x1a33()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  [Handler pc: 0x0x000000000208e540 hdl_stack installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  [Handler pc: 0x0x0000000002052ae0 s_handle installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000002057135 sequencer+0xd15()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x000000000203cc66 execproc+0xcf6()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x000000000202b02c s_execute+0x46dc()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  [Handler pc: 0x0x000000000208e540 hdl_stack installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  [Handler pc: 0x0x0000000002052ae0 s_handle installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000002057135 sequencer+0xd15()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x000000000181aeaa tdsrecv_language+0x1ea()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  [Handler pc: 0x0x00000000021a97c0 ut_handle installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  pc: 0x0000000001831ea9 conn_hdlr+0x12f9()
+00:0005:00000:01279:2020/01/27 12:20:05.16 kernel  end of stack trace, spid 1279, kpid 1929314976, suid 1
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  FATAL UNHANDLED EXCEPTION: signal 0 hit while handling a previously hit signal. The server cannot continue and will shut down.
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000001534c10 pcstkwalk+0x482()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x00000000015345cf ucstkgentrace+0x20f()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000001530e02 ucbacktrace+0x54()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x00000000021fdd75 kepanic+0xe5()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000001561607 kisignal+0xbcb()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000001100000000 ()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x00000000022d79ad LeUpdateOp::_LeOpNext(ExeCtxt&)+0x14d()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x00000000022b7e60 LeEmitNoSndOp::_LeOpNext(ExeCtxt&)+0x1c0()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x000000000183bffd LePlanNext+0xed()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x0000000000919347 cleanerr installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x000000000208e520 hdl_backout installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000001f93334 exec_lava+0x4a4()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x00000000017fb83b terminate_process+0x62b()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x0000000001f91ed0 le_execerr installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000002057135 sequencer+0xd15()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000002028383 s_execute+0x1a33()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x000000000202b02c s_execute+0x46dc()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x000000000208e540 hdl_stack installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x0000000002052ae0 s_handle installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000002057135 sequencer+0xd15()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x000000000203cc66 execproc+0xcf6()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x000000000208e540 hdl_stack installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  [Handler pc: 0x0x0000000002052ae0 s_handle installed by the following function:-]
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  pc: 0x0000000001831ea9 conn_hdlr+0x12f9()
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  end of stack trace, spid 1279, kpid 1929314976, suid 1
+00:0005:00000:01279:2020/01/27 12:20:05.18 kernel  ueshutdown: exiting
+00:0000:00000:00000:2020/01/27 12:20:05.18 kernel  Main thread performing final shutdown.
+
+
 
 
 */

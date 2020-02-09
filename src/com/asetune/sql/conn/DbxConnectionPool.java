@@ -197,7 +197,22 @@ public class DbxConnectionPool
 			return;
 
 		// Remove the connection from the bussy
-		_bussy.remove(conn);
+		boolean removed = _bussy.remove(conn);
+		if ( ! removed )
+			_logger.warn("When releasing a connection from connectionPool='"+_name+"'. The connection was not found in the 'bussy' list. releaseConnection(conn='"+conn+"'). After _bussy.remove(conn), the _bussy.size()="+_bussy.size());
+
+		// check that it really was removed, and remove it... MAX attempts = 10, then continue...
+		for (int c=10; c>0; c--)
+		{
+			// If NOT in list... break the loop
+			if (_bussy.indexOf(conn) != -1)
+				break;
+
+			_bussy.remove(conn);
+		}
+		
+		if (_logger.isDebugEnabled())
+			_logger.warn("releaseConnection(conn='"+conn+"') connectionPool='"+_name+"', after _bussy.remove(conn), the _bussy.size()="+_bussy.size());
 
 		// Check if the connection is OK (before we put it in the free pool)
 		try
