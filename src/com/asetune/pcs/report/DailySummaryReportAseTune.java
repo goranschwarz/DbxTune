@@ -28,6 +28,7 @@ import com.asetune.pcs.report.content.ase.AseStatementCacheUsageOverview;
 import com.asetune.pcs.report.content.ase.AseTopCmActiveStatements;
 import com.asetune.pcs.report.content.ase.AseTopCmCachedProcs;
 import com.asetune.pcs.report.content.ase.AseTopCmObjectActivity;
+import com.asetune.pcs.report.content.ase.AseTopCmObjectActivityTabSize;
 import com.asetune.pcs.report.content.ase.AseTopCmStmntCacheDetails;
 import com.asetune.pcs.report.content.ase.AseTopSlowSql;
 import com.asetune.pcs.report.content.os.OsCpuUsageOverview;
@@ -63,6 +64,7 @@ extends DailySummaryReportDefault
 
 		// SQL: Accessed Tables
 		addReportEntry( new AseTopCmObjectActivity(this)    );
+		addReportEntry( new AseTopCmObjectActivityTabSize(this) );
 
 		// Disk IO Activity (Slow devices & Overall charts)
 		addReportEntry( new AseSlowCmDeviceIo(this)         );

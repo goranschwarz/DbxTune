@@ -71,7 +71,8 @@ extends DailySummaryReportAbstract
 		{
 			try
 			{
-				entry.create(getConnection(), getServerName(), pcsSavedConf, localConf);
+				if (entry.isEnabled())
+					entry.create(getConnection(), getServerName(), pcsSavedConf, localConf);
 			} 
 			catch (RuntimeException rte) 
 			{
@@ -422,14 +423,31 @@ extends DailySummaryReportAbstract
 			// Add a section header
 			sb.append("<h2 id='").append(tocDiv).append("'>").append(entry.getSubject()).append("</h2> \n");
 
-			// Get the message text
-			sb.append(entry.getMessageText());
-			
-			// If the entry indicates that it has a problem... then print that.
-			sb.append(entry.getProblemText());
-			
-			// if we should append anything after an entry... Possibly '<br>\n'
-			sb.append(entry.getEndOfReportText());
+			if (entry.isEnabled())
+			{
+				// Get the message text
+				sb.append(entry.getMessageText());
+				
+				// If the entry indicates that it has a problem... then print that.
+				sb.append(entry.getProblemText());
+				
+				// if we should append anything after an entry... Possibly '<br>\n'
+				sb.append(entry.getEndOfReportText());
+
+				// Notes for how to: Disable this entry
+				if (entry.canBeDisabled())
+				{
+					sb.append("<br>");
+					sb.append("<i>To disable this report entry, put the following in the configuration file. ");
+					sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code></i><br>");
+				}
+			}
+			else
+			{
+				// Entry is DISABLED
+				sb.append("This entry is <b>disabled</b>, to enable it; put the following in the configuration file. ");
+				sb.append("<code>").append(entry.getIsEnabledConfigKeyName()).append(" = false</code><br>");
+			}
 		}
 		sb.append("\n<br>");
 

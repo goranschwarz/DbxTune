@@ -55,6 +55,23 @@ public interface IReportEntry
 	String getSubject();
 
 	/**
+	 * is this report entry/section enabled or should we skip this...
+	 */
+	boolean isEnabled();
+	
+	/** 
+	 * Get the configuration 'key' name, for enable/disable this Report Entry 
+	 */
+	String getIsEnabledConfigKeyName();
+
+	/**
+	 * Can this Report entry be enabled/disabled (if true: then we want to write some info about this)
+	 * @return
+	 */
+	boolean canBeDisabled();
+
+	
+	/**
 	 * in what order should the ReportEntries be reported in<br>
 	 * return 0 in case the order is not important (then it will be reported in the order the entries are added)
 	 */

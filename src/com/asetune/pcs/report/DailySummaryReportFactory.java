@@ -66,7 +66,11 @@ public class DailySummaryReportFactory
 	public static final String  PROPKEY_reportHtml_headFile = "DailySummaryReport.report.html.headFile";
 	public static final String  DEFAULT_reportHtml_headFile = null;
 
+	public static final String  PROPKEY_isReportEntryEnabled = "DailySummaryReport.report.entry.enabled.<ENTRY-NAME>"; // at runtime in each isEnabled() replace '<ENTRY-NAME>' with your class name
+	public static final boolean DEFAULT_isReportEntryEnabled = true;
+	
 
+	
 	/**
 	 * Check if the daily summary report is enabled or disabled
 	 * 

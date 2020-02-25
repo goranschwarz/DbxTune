@@ -2141,11 +2141,11 @@ public class ResultSetTableModel
 	
 	public String toString(Object objVal)
 	{
-		return toString(objVal, null, null);
+		return toString(objVal, null, "");
 	}
 	public String toString(Object objVal, String nullReplace)
 	{
-		return toString(objVal, nullReplace, null);
+		return toString(objVal, nullReplace, "");
 	}
 	public String toString(Object objVal, String nullReplace, String blankReplace)
 	{
@@ -2232,11 +2232,14 @@ public class ResultSetTableModel
 			{
 //				strVal = objVal.toString();
 				strVal = toString(objVal, NULL_REPLACE);
-				int strValLen = strVal.length(); 
-				if (strValLen > maxStrLen)
+				if (strVal != null)
 				{
-					strVal =  strVal.substring(0, maxStrLen);
-					strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+"), tooltip on this cell might show full content.</i></font>";
+					int strValLen = strVal.length(); 
+					if (strValLen > maxStrLen)
+					{
+						strVal =  strVal.substring(0, maxStrLen);
+						strVal += "...<br><font color='orange'><i><b>NOTE:</b> content is truncated after " + maxStrLen + " chars (actual length is "+strValLen+"), tooltip on this cell might show full content.</i></font>";
+					}
 				}
 			}
 			

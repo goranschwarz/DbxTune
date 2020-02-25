@@ -52,6 +52,7 @@ import com.asetune.gui.TabularCntrPanel;
 import com.asetune.utils.Configuration;
 import com.asetune.utils.MathUtils;
 import com.asetune.utils.StringUtil;
+import com.asetune.utils.TimeUtils;
 import com.asetune.utils.Ver;
 
 /**
@@ -142,6 +143,14 @@ extends CountersModel
 		addTrendGraphs();
 		
 		CounterSetTemplates.register(this);
+
+		// Reset some config
+		Configuration tempConf = Configuration.getInstance(Configuration.USER_TEMP);
+		if (tempConf != null)
+		{
+			tempConf.setProperty(PROPKEY_disable_tabRowCount_timestamp, DEFAULT_disable_tabRowCount_timestamp);
+			tempConf.save();
+		}
 	}
 
 
@@ -155,6 +164,9 @@ extends CountersModel
 
 	public static final String  PROPKEY_disable_tabRowCount_onTimeout = PROP_PREFIX + ".disable.TabRowCount.onTimeoutException";
 	public static final boolean DEFAULT_disable_tabRowCount_onTimeout = true;
+
+	public static final String  PROPKEY_disable_tabRowCount_timestamp = PROP_PREFIX + ".disable.TabRowCount.timestamp"; // When we do PROPKEY_disable_tabRowCount_onTimeout, then save the time we last did it.
+	public static final String  DEFAULT_disable_tabRowCount_timestamp = "";
 
 	public static final String  PROPKEY_sample_objectName             = PROP_PREFIX + ".sample.ObjectName";
 	public static final boolean DEFAULT_sample_objectName             = false;
@@ -915,6 +927,7 @@ extends CountersModel
 				if (tempConf == null) 
 					return;
 				tempConf.setProperty(PROPKEY_sample_tabRowCount, false);
+				tempConf.setProperty(PROPKEY_disable_tabRowCount_timestamp, TimeUtils.toString(System.currentTimeMillis()));
 				tempConf.save();
 				
 				// This will force the CM to re-initialize the SQL statement.

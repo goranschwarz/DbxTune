@@ -85,6 +85,12 @@ extends ReportEntryAbstract
 	}
 
 	@Override
+	public boolean canBeDisabled()
+	{
+		return false;
+	}
+
+	@Override
 	public String getSubject()
 	{
 		return "Alarm History";

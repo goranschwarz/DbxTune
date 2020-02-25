@@ -61,6 +61,30 @@ implements IReportEntry
 		return _reportingInstance;
 	}
 
+	@Override
+	public boolean isEnabled()
+	{
+		String  key          = getIsEnabledConfigKeyName();
+		boolean defaultValue = DailySummaryReportFactory.DEFAULT_isReportEntryEnabled;
+
+		return Configuration.getCombinedConfiguration().getBooleanProperty(key, defaultValue);
+	}
+	@Override
+	public String getIsEnabledConfigKeyName()
+	{
+		String key = DailySummaryReportFactory.PROPKEY_isReportEntryEnabled;
+
+		key = key.replace("<ENTRY-NAME>", this.getClass().getSimpleName());
+		
+		return key;
+	}
+	@Override
+	public boolean canBeDisabled()
+	{
+		return true;
+	}
+
+
 	public ResultSetTableModel createResultSetTableModel(ResultSet rs, String name, String sql)
 	throws SQLException
 	{
