@@ -101,6 +101,7 @@ extends TabularCntrPanel
 	private JCheckBox sampleSpaceusage_chk;
 	private JCheckBox sampleShowplan_chk;
 	private JCheckBox sampleMonSqlText_chk;
+	private JCheckBox sampleLocks_chk;
 //	private JCheckBox spaceusageInMb_chk;
 
 	static
@@ -532,6 +533,7 @@ extends TabularCntrPanel
 		sampleSpaceusage_chk = new JCheckBox("Sample Spaceusage details");
 		sampleShowplan_chk   = new JCheckBox("Showplan");
 		sampleMonSqlText_chk = new JCheckBox("SQL Text");
+		sampleLocks_chk      = new JCheckBox("Locks");
 		
 		final JCheckBox enableLogGraph_chk   = new JCheckBox("Tran Log Graph");
 		final JCheckBox enableDataGraph_chk  = new JCheckBox("Data Graph");
@@ -571,6 +573,7 @@ extends TabularCntrPanel
 //				+ "</html>");
 		sampleShowplan_chk  .setToolTipText("<html>Get sp_showplan on on SPID's that has an <b>open transaction</b>.</html>");
 		sampleMonSqlText_chk.setToolTipText("<html>Get SQL Text (from monProcessSQLText) on on SPID's that has an <b>open transaction</b>.</html>");
+		sampleLocks_chk     .setToolTipText("<html>Get locks (from syslocks or monLocks) on on SPID's that has an <b>open transaction</b>.</html>");
 
 		Configuration conf = Configuration.getCombinedConfiguration();
 
@@ -580,6 +583,7 @@ extends TabularCntrPanel
 //		spaceusageInMb_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_spaceusageInMb, CmOpenDatabases.DEFAULT_spaceusageInMb));
 		sampleShowplan_chk  .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_showplan  , CmOpenDatabases.DEFAULT_sample_showplan));
 		sampleMonSqlText_chk.setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_monSqlText, CmOpenDatabases.DEFAULT_sample_monSqlText));
+		sampleLocks_chk     .setSelected(conf.getBooleanProperty(CmOpenDatabases.PROPKEY_sample_locks,      CmOpenDatabases.DEFAULT_sample_locks));
 		
 		// Set initial value for Graph Orientation
 		String orientationStr = conf.getProperty(PROPKEY_plotOrientation, DEFAULT_plotOrientation);
@@ -622,6 +626,15 @@ extends TabularCntrPanel
 			public void actionPerformed(ActionEvent e)
 			{
 				helperActionSave(CmOpenDatabases.PROPKEY_sample_monSqlText, ((JCheckBox)e.getSource()).isSelected());
+				getCm().setSql(null); // Causes SQL Statement to be recreated
+			}
+		});
+		sampleLocks_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				helperActionSave(CmOpenDatabases.PROPKEY_sample_locks, ((JCheckBox)e.getSource()).isSelected());
 				getCm().setSql(null); // Causes SQL Statement to be recreated
 			}
 		});
@@ -695,7 +708,8 @@ extends TabularCntrPanel
 		panel.add(sampleSpaceusage_chk, "span, split");
 //		panel.add(spaceusageInMb_chk,   "wrap");
 		panel.add(sampleShowplan_chk,   "");
-		panel.add(sampleMonSqlText_chk, "wrap");
+		panel.add(sampleMonSqlText_chk, "");
+		panel.add(sampleLocks_chk,      "wrap");
 
 		return panel;
 	}

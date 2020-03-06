@@ -162,6 +162,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_holdingLocks       = PROP_PREFIX + ".sample.holdingLocks";
 	public static final boolean DEFAULT_sample_holdingLocks       = true;
 	
+	public static final String  PROPKEY_sample_spidLocks          = PROP_PREFIX + ".sample.spidLocks";
+	public static final boolean DEFAULT_sample_spidLocks          = true;
+
 	private void addTrendGraphs()
 	{
 	}
@@ -207,6 +210,8 @@ extends CountersModel
 			mtd.addColumn("monProcess",  "CachedPlanInXml",            "show_cached_plan_in_xml(<planid>, 0, 0)");
 			mtd.addColumn("monProcess",  "HasProcCallStack",           "Has values for: select * from monProcessProcedures where SPID = <SPID>");
 			mtd.addColumn("monProcess",  "ProcCallStack",                              "select * from monProcessProcedures where SPID = <SPID>");
+			mtd.addColumn("monProcess",  "SpidHasLocks",               "This SPID holds the following loks in the database");
+			mtd.addColumn("monProcess",  "SpidLocks",                  "This SPID holds the following loks in the database");
 		}
 		catch (NameNotFoundException e) {/*ignore*/}
 	}
@@ -323,6 +328,7 @@ extends CountersModel
 		         "WaitEventDesc=convert(varchar(120),''), \n" +
 		         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
+		         "HasSpidLocks=convert(bit,0), \n" +
 		         "S.MemUsageKB, S.PhysicalReads, S.LogicalReads, \n";
 		cols2 += "";
 		cols3 += "S.PagesModified, S.PacketsSent, S.PacketsReceived, S.NetworkPacketSize, \n" +
@@ -333,7 +339,8 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null), \n" +
-		         "CachedPlanInXml=convert(text,null) \n" +
+		         "CachedPlanInXml=convert(text,null), \n" +
+		         "SpidLocks=convert(text,null) \n" +
 		         "";
 
 		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
@@ -408,6 +415,7 @@ extends CountersModel
 		         "WaitEventDesc=convert(varchar(120),''), \n" +
 		         "HasMonSqlText=convert(bit,0), HasDbccSqlText=convert(bit,0), HasProcCallStack=convert(bit,0), \n" +
 		         "HasShowPlan=convert(bit,0), HasStacktrace=convert(bit,0), HasCachedPlanInXml=convert(bit,0), \n" +
+		         "HasSpidLocks=convert(bit,0), \n" +
 		         "MemUsageKB=-1, "+PhysicalReads+", "+LogicalReads+", \n";
 		cols2 += "";
 		cols3 += PagesModified+", PacketsSent=-1, PacketsReceived=-1, NetworkPacketSize=-1, \n" +
@@ -418,7 +426,8 @@ extends CountersModel
 		         "ProcCallStack=convert(text,null), \n" +
 		         "ShowPlanText=convert(text,null), \n" +
 		         "DbccStacktrace=convert(text,null), \n" +
-		         "CachedPlanInXml=convert(text,null) \n" +
+		         "CachedPlanInXml=convert(text,null), \n" +
+		         "SpidLocks=convert(text,null) \n" +
 		         "";
 		if (srvVersion >= Ver.ver(15,0,2) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
@@ -608,6 +617,24 @@ extends CountersModel
 			return cellValue == null ? null : cellValue.toString();
 		}
 		
+		if ("HasSpidLocks".equals(colName))
+		{
+			// Find 'ProcCallStack' column, is so get it and set it as the tool tip
+			int pos_SpidLocks = findColumn("SpidLocks");
+			if (pos_SpidLocks > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos_SpidLocks);
+				if (cellVal instanceof String)
+				{
+					return "<html><pre>" + cellVal + "</pre></html>";
+				}
+			}
+		}
+		if ("SpidLocks".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
+		}
+		
 		return super.getToolTipTextOnTableCell(e, colName, cellValue, modelRow, modelCol);
 	}
 	/** add HTML around the string, and translate linebreaks into <br> */
@@ -643,6 +670,7 @@ extends CountersModel
 		else if ("HasProcCallStack"  .equals(colName)) return Boolean.class;
 		else if ("HasStacktrace"     .equals(colName)) return Boolean.class;
 		else if ("HasCachedPlanInXml".equals(colName)) return Boolean.class;
+		else if ("HasSpidLocks"      .equals(colName)) return Boolean.class;
 		else return super.getColumnClass(columnIndex);
 	}
 
@@ -669,6 +697,7 @@ extends CountersModel
 		boolean getProcCallStack   = conf == null ? true : conf.getBooleanProperty(PROPKEY_sample_procCallStack   , DEFAULT_sample_procCallStack  );
 		boolean getDbccStacktrace  = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_dbccStacktrace  , DEFAULT_sample_dbccStacktrace );
 		boolean getCachedPlanInXml = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_cachedPlanInXml , DEFAULT_sample_cachedPlanInXml);
+		boolean getSpidLocks       = conf == null ? false: conf.getBooleanProperty(PROPKEY_sample_spidLocks       , DEFAULT_sample_spidLocks);
 
 		// Where are various columns located in the Vector 
 		int pos_WaitEventID                = -1, pos_WaitEventDesc   = -1, pos_WaitClassDesc = -1, pos_SPID = -1;
@@ -678,6 +707,7 @@ extends CountersModel
 		int pos_HasProcCallStack           = -1, pos_ProcCallStack   = -1;
 		int pos_HasStacktrace              = -1, pos_DbccStacktrace  = -1;
 		int pos_HasCachedPlanInXml         = -1, pos_CachedPlanInXml = -1, pos_procname = -1;
+		int pos_HasSpidLocks               = -1, pos_SpidLocks       = -1;
 		int pos_BlockingOtherSpids         = -1, pos_BlockingSPID    = -1;
 		int pos_SecondsWaiting             = -1;
 		int pos_BlockingOthersMaxTimeInSec = -1;
@@ -720,6 +750,8 @@ extends CountersModel
 			else if (colName.equals("DbccStacktrace"))             pos_DbccStacktrace             = colId;
 			else if (colName.equals("HasCachedPlanInXml"))         pos_HasCachedPlanInXml         = colId;
 			else if (colName.equals("CachedPlanInXml"))            pos_CachedPlanInXml            = colId;
+			else if (colName.equals("HasSpidLocks"))               pos_HasSpidLocks               = colId;
+			else if (colName.equals("SpidLocks"))                  pos_SpidLocks                  = colId;
 			else if (colName.equals("procname"))                   pos_procname                   = colId;
 			else if (colName.equals("BlockingOtherSpids"))         pos_BlockingOtherSpids         = colId;
 			else if (colName.equals("BlockingSPID"))               pos_BlockingSPID               = colId;
@@ -738,6 +770,7 @@ extends CountersModel
 			     && pos_HasProcCallStack           >= 0 && pos_ProcCallStack   >= 0 
 			     && pos_HasStacktrace              >= 0 && pos_DbccStacktrace  >= 0 
 			     && pos_HasCachedPlanInXml         >= 0 && pos_CachedPlanInXml >= 0 && pos_procname >= 0
+			     && pos_HasSpidLocks               >= 0 && pos_SpidLocks       >= 0
 			     && pos_BlockingOtherSpids         >= 0 && pos_BlockingSPID    >= 0
 			     && pos_SecondsWaiting             >= 0
 			     && pos_BlockingOthersMaxTimeInSec >= 0
@@ -789,6 +822,12 @@ extends CountersModel
 //			_logger.debug("Can't find the position for columns ('HasCachedPlanInXml'="+pos_HasCachedPlanInXml+", 'CachedPlanInXml'="+pos_CachedPlanInXml+")");
 //			return;
 //		}
+		
+		if (pos_HasSpidLocks < 0 || pos_SpidLocks < 0)
+		{
+			_logger.debug("Can't find the position for columns ('HasSpidLocks'="+pos_HasSpidLocks+", 'SpidLocks'="+pos_SpidLocks+")");
+			return;
+		}
 		
 //		if (pos_procname < 0)
 //		{
@@ -937,6 +976,7 @@ extends CountersModel
 				String procCallStack   = "User does not have: sa_role";
 				String showplan        = "User does not have: sa_role";
 				String stacktrace      = "User does not have: sa_role";
+				String spidLocks       = "This was disabled";
 
 				if (getMonitorConfig("SQL batch capture") > 0 && getMonitorConfig("max SQL text monitored") > 0)
 				{
@@ -978,6 +1018,15 @@ extends CountersModel
 					if (stacktrace == null)
 						stacktrace = "Not Available";
 				}
+				
+				if (getSpidLocks)
+				{
+//					spidLocks  = AseConnectionUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid, false, false);
+					spidLocks  = AseConnectionUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), spid, true, false);
+					if (spidLocks == null)
+						spidLocks = "Not Available";
+				}
+
 				boolean b = true;
 				b = !"This was disabled".equals(monSqlText)    && !"Not Available".equals(monSqlText)    && !monSqlText   .startsWith("Not properly configured");
 				counters.setValueAt(new Boolean(b), rowId, pos_HasMonSqlText);
@@ -998,6 +1047,10 @@ extends CountersModel
 				b = !"This was disabled".equals(stacktrace)    && !"Not Available".equals(stacktrace)    && !stacktrace   .startsWith("User does not have");
 				counters.setValueAt(new Boolean(b), rowId, pos_HasStacktrace);
 				counters.setValueAt(stacktrace,     rowId, pos_DbccStacktrace);
+
+				b = !"This was disabled".equals(spidLocks) && !"Not Available".equals(spidLocks);
+				newSample.setValueAt(new Boolean(b), rowId, pos_HasSpidLocks);
+				newSample.setValueAt(spidLocks,      rowId, pos_SpidLocks);
 
 				// Get LIST of SPID's that I'm blocking
 				String blockingList = getBlockingListStrForSpid(counters, spid, pos_BlockingSPID, pos_SPID);

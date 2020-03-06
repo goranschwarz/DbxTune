@@ -238,9 +238,15 @@ var _showSrvTimer = null;
 //-----------------------------------------------------------
 // ACTIVE ALARMS
 //-----------------------------------------------------------
+function radionButtonGroupSetSelectedValue(name, selectdValue) 
+{
+	console.log("radionButtonGroupSetSelectedValue(): name="+name+", selectedValue="+selectdValue);
+	$('input[name="' + name+ '"][value="' + selectdValue + '"]').prop('checked', true);
+}
+
 function activeAlarmsRadioClick(radioBut) 
 {
-	var rVal = radioBut.value;
+	var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 	console.log('activeAlarmsRadioClick(): Active Alarm Window Size[RadioBut]: ' + rVal);
 	
 	if (rVal === "hide")
@@ -251,11 +257,14 @@ function activeAlarmsRadioClick(radioBut)
 	else
 	{
 		// Set The OUTER max-size
-		$("#active-alarms").css("max-height", radioBut.value);
+		$("#active-alarms").css("max-height", rVal);
 
 		// SHOW all Alarms
 		$("#active-alarms-win").css("display", "block");
 	}
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-alarms-show-radio", rVal);
 }
 function activeAlarmsChkClick(checkbox) 
 {
@@ -268,9 +277,26 @@ function activeAlarmsChkClick(checkbox)
 	{
 		$("#active-alarms").css("background-color", 'rgba(255, 195, 83, 0.5)');
 	}
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-alarms-solid-chk", checkbox.checked ? 'checked' : 'not');
 }
-// Always start with: unchecked "Solid Background"
-$("#active-alarms-solid-chk").removeAttr("checked");
+
+// do: deferred (since all DOM elements might not be created yet)
+setTimeout(function()
+{
+	// Restore 'Solid Background' at the ACTIVE ALARMS "window"
+	var savedVal_activeAlarmsSolidChk = getStorage('dbxtune_checkboxes_').get("active-alarms-solid-chk");
+	if (savedVal_activeAlarmsSolidChk == 'checked') $("#active-alarms-solid-chk").attr('checked', 'checked');
+	if (savedVal_activeAlarmsSolidChk == 'not')     $("#active-alarms-solid-chk").removeAttr('checked');
+	activeAlarmsChkClick( document.getElementById("active-alarms-solid-chk") );
+
+	// Restore 'Window Size' at the ACTIVE ALARMS "window"
+	var savedVal_activeAlarmsShowRadio = getStorage('dbxtune_checkboxes_').get("active-alarms-show-radio");
+	console.log("RESTORE ALARM Window size: savedVal_activeAlarmsShowRadio="+savedVal_activeAlarmsShowRadio);
+	activeAlarmsRadioClick( savedVal_activeAlarmsShowRadio );
+	radionButtonGroupSetSelectedValue("active-alarms-show-radio", savedVal_activeAlarmsShowRadio);
+}, 10);
 
 
 function dbxTuneCheckActiveAlarms()

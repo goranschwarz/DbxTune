@@ -187,6 +187,7 @@ public class AseTopCmObjectActivityTabSize extends AseAbstract
 		if (rstm == null)
 			return;
 
+		//dummy
 //		if (_isTableSizeConfigured)
 //			return;
 

@@ -170,6 +170,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>Print statistics about H2 performance after a entry has been stored</LI>
 		<LI>Servers Overview; Daily Report Section: Added links to view "latest" daily report for each on the servers</LI>
 		<li>PCS central: Changed "CentralH2Defrag" to check once a day at 04:00 instead of every 4 hour</li>
+		<li>The Remember "Alarm Window Max Size" and "Solid Background" between sessions (which is visible if there are Active Alarms)</li>
  	</UL>
 
 	<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -279,6 +280,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<ul>
 			<li>added columns 'BlockingOthersMaxTimeInSec' -- Max Time in Seconds this SPID has been Blocking other SPID's from executing, because this SPID hold lock(s), that some other SPID wants to grab.</li>
 			<li>now also sends BlockingLockAlarm after 60 seconds</li>
+			<li>New option "Get SPID Locks" - What locks does this spid hold. (select "db,table,type,cnt" from syslocks where spid = ?)</li>
 		</ul>
 		</LI>
 
@@ -323,6 +325,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 			</li>
 			<li>changed alarm 'AlarmEventOldBackup': This alarm was fired after a ASE Restart, due to dependencies of columns 'LastDbBackupAgeInHours' and 'LastLogBackupAgeInHours' in memory values is NULL after restart.<br>
 			&emsp;&emsp; Now we try to discard those faulty alarms by using the ASE Start time as the "LastBackupTime"...</li>
+			<li>New option "Locks" - What locks does the 'OldestTranSpid' hold. (select "db,table,type,cnt" from syslocks where spid = ?)</li>
 		</ul>
 		</LI>
 
@@ -634,6 +637,7 @@ or at: <A HREF="http://sourceforge.net/projects/asetune/files/">http://sourcefor
 		<LI>in AutoCommit=false, a field 'FetchSize' is added so you can specify the Statement.setFetchSize()</LI>
 		<LI>new menu: File -&gt; View -&gt; Preferences -&gt; ResultSet Table Properties...  to set various Preferences for how the ResultSet Table will display data</LI>
 		<LI>new Code Completion ':r' -- Code Completion Refresh</LI>
+		<LI>ResultSet Tables: Show in-exact number a bit better (in the settings dialog you can choose how many decimals you want to show)</LI>
 	</UL>
 	<!-- ~~~end-of-this-tool~~~ -->
 

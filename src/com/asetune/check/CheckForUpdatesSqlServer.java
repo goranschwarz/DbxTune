@@ -37,6 +37,7 @@ import com.asetune.ICounterController;
 import com.asetune.Version;
 import com.asetune.config.dict.MonTablesDictionary;
 import com.asetune.config.dict.MonTablesDictionaryManager;
+import com.asetune.utils.StringUtil;
 
 public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 {
@@ -131,6 +132,10 @@ public class CheckForUpdatesSqlServer extends CheckForUpdatesDbx
 
 		String srvVersion       = mtd.getDbmsExecutableVersionNum() + "";
 		boolean isAzure         = false; //FIXME; mtd.isClusterEnabled() + "";
+		
+		String atAtVersion = mtd.getDbmsExecutableVersionStr();
+		if (StringUtil.hasValue(atAtVersion))
+			isAzure = atAtVersion.contains("Microsoft SQL Azure");
 		
 		ICounterController cc = CounterController.getInstance();
 		if (cc instanceof CounterControllerSqlServer)

@@ -35,6 +35,8 @@ import com.asetune.config.dict.MonTablesDictionaryManager;
 import com.asetune.config.ui.AseConfigMonitoringDialog;
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.sql.conn.TdsConnection;
+import com.asetune.sql.conn.info.DbxConnectionStateInfoAse;
+import com.asetune.sql.conn.info.DbxConnectionStateInfoAse.LockRecord;
 import com.sybase.jdbc4.jdbc.SybSQLWarning;
 import com.sybase.jdbcx.EedInfo;
 import com.sybase.jdbcx.SybConnection;
@@ -3571,6 +3573,56 @@ public class AseConnectionUtils
 		StringBuilder sb = new StringBuilder();
 		sb.append(htmlBegin).append(query_plan).append(htmlEnd);
 		return sb.toString();
+	}
+
+	/**
+	 * Get a lock summary for a SPID
+	 * 
+	 * @param conn           The connection to use 
+	 * @param spid           The SPID we want to get locks for
+	 * @param asHtml         Produce a HTML table (if false a ASCII table will be produced)
+	 * @param htmlBeginEnd   (if asHtml=true) should we wrap the HTML with begin/end tags
+	 * @return
+	 */
+	public static String getLockSummaryForSpid(DbxConnection conn, int spid, boolean asHtml, boolean htmlBeginEnd)
+	{
+		String sql = "select dbname=db_name(dbid), table_name=object_name(id, dbid), lock_type=type, lock_count=count(*) "
+				+ " from master.dbo.syslocks "
+				+ " where spid = " + spid
+				+ " group by dbid, id, type ";
+
+		List<LockRecord> lockList = new ArrayList<>();
+
+		try (Statement stmnt = conn.createStatement(); ResultSet rs = stmnt.executeQuery(sql))
+		{
+			while(rs.next())
+			{
+				String dbname    = rs.getString(1);
+				String tableName = rs.getString(2);
+				int    lockType  = rs.getInt   (3);
+				int    lockCount = rs.getInt   (4);
+
+				lockList.add( new LockRecord(dbname, tableName, lockType, lockCount) );
+			}
+		}
+		catch (SQLException e)
+		{
+			_logger.warn("Problems when executing sql: "+sql, e);
+		}
+		
+		if (lockList.isEmpty())
+			return null;
+	
+		if (asHtml)
+		{
+			String htmlTable = DbxConnectionStateInfoAse.getLockListTableAsHtmlTable(lockList);
+			if (htmlBeginEnd)
+				return "<html>" + htmlTable + "</html>";
+			else
+				return htmlTable;
+		}
+		else
+			return DbxConnectionStateInfoAse.getLockListTableAsAsciiTable(lockList);
 	}
 
 	/**

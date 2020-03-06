@@ -402,6 +402,7 @@ List of stuff that can be done
 	// a key must is used for the cookie/storage
 	var storedData = getStorage('dbxtune_checkboxes_');
 
+	// Remember CHECKBOX fields
 //	$('div.check input:checkbox').bind('change',function(){
 	$('input[type=checkbox]').bind('change',function(){
 		$('#'+this.id+'txt').toggle($(this).is(':checked'));
@@ -414,6 +415,7 @@ List of stuff that can be done
 		if (val == 'not') $(this).removeAttr('checked');
 		if (val) $(this).trigger('change');
 	});
+
 	// Remember TEXT fields
 	$('input[type=text]').bind('change',function(){
 		// save the data on change
@@ -427,12 +429,32 @@ List of stuff that can be done
 		}
 	});
 
+	// Remember RADIO fields
+//	$('input[type=radio]').bind('change',function(){
+//		// save the data on change
+//		storedData.set(this.id, $(this).val());
+//	}).each(function() {
+//		// on load, set the value to what we read from storage:
+//		var val = storedData.get(this.id);
+//		if (val){
+//			$(this).val(val);
+//			$(this).trigger('change');
+//		}
+//	});
+
+
 	//-----------------------------------------------------------
 	// ACTIVE ALARMS
 	//-----------------------------------------------------------
+	function radionButtonGroupSetSelectedValue(name, selectdValue) 
+	{
+		console.log("radionButtonGroupSetSelectedValue(): name="+name+", selectedValue="+selectdValue);
+		$('input[name="' + name+ '"][value="' + selectdValue + '"]').prop('checked', true);
+	}
+
 	function activeAlarmsRadioClick(radioBut) 
 	{
-		var rVal = radioBut.value;
+		var rVal = typeof(radioBut) == "string" ? radioBut : radioBut.value;
 		console.log('activeAlarmsRadioClick(): Active Alarm Window Size[RadioBut]: ' + rVal);
 		
 		if (rVal === "hide")
@@ -443,11 +465,14 @@ List of stuff that can be done
 		else
 		{
 			// Set The OUTER max-size
-			$("#active-alarms").css("max-height", radioBut.value);
+			$("#active-alarms").css("max-height", rVal);
 
 			// SHOW all Alarms
 			$("#active-alarms-win").css("display", "block");
 		}
+
+		// Save last known value in "WebBrowser storage"
+		getStorage('dbxtune_checkboxes_').set("active-alarms-show-radio", rVal);
 	}
 	function activeAlarmsChkClick(checkbox) 
 	{
@@ -460,9 +485,27 @@ List of stuff that can be done
 		{
 			$("#active-alarms").css("background-color", 'rgba(255, 195, 83, 0.5)');
 		}
+
+		// Save last known value in "WebBrowser storage"
+		getStorage('dbxtune_checkboxes_').set("active-alarms-solid-chk", checkbox.checked ? 'checked' : 'not');
 	}
-	// Always start with: unchecked "Solid Background"
-	$("#active-alarms-solid-chk").removeAttr("checked");
+	
+	// do: deferred (since all DOM elements might not be created yet)
+	setTimeout(function()
+	{
+		// Restore 'Solid Background' at the ACTIVE ALARMS "window"
+		var savedVal_activeAlarmsSolidChk = getStorage('dbxtune_checkboxes_').get("active-alarms-solid-chk");
+		if (savedVal_activeAlarmsSolidChk == 'checked') $("#active-alarms-solid-chk").attr('checked', 'checked');
+		if (savedVal_activeAlarmsSolidChk == 'not')     $("#active-alarms-solid-chk").removeAttr('checked');
+		activeAlarmsChkClick( document.getElementById("active-alarms-solid-chk") );
+
+		// Restore 'Window Size' at the ACTIVE ALARMS "window"
+		var savedVal_activeAlarmsShowRadio = getStorage('dbxtune_checkboxes_').get("active-alarms-show-radio");
+		console.log("RESTORE ALARM Window size: savedVal_activeAlarmsShowRadio="+savedVal_activeAlarmsShowRadio);
+		activeAlarmsRadioClick( savedVal_activeAlarmsShowRadio );
+		radionButtonGroupSetSelectedValue("active-alarms-show-radio", savedVal_activeAlarmsShowRadio);
+	}, 10);
+
 
 	//-----------------------------------------------------------
 	// CHOOSE GRAPHS DIALOG 

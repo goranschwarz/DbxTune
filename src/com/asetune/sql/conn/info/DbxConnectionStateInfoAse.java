@@ -24,12 +24,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.asetune.sql.conn.DbxConnection;
 import com.asetune.utils.DbUtils;
+import com.asetune.utils.StringUtil;
 import com.asetune.utils.Ver;
 
 public class DbxConnectionStateInfoAse
@@ -507,14 +509,26 @@ implements DbxConnectionStateInfo
 	 */
 	public String getLockListTableAsHtmlTable()
 	{
-		if (_lockList.size() == 0)
+		return getLockListTableAsHtmlTable(_lockList);
+	}
+
+	/** 
+	 * @return "" if no locks, otherwise a HTML TABLE, with the headers: DB, Table, Type, Count
+	 */
+	public static String getLockListTableAsHtmlTable(List<LockRecord> list)
+	{
+		if (list.isEmpty())
 			return "";
 
 		StringBuilder sb = new StringBuilder("<TABLE BORDER=1>");
 		sb.append("<TR> <TH>DB</TH> <TH>Table</TH> <TH>Type</TH> <TH>Count</TH> </TR>");
-		for (LockRecord lr : _lockList)
+		for (LockRecord lr : list)
 		{
-			sb.append("<TR>");
+			if (lr._lockType != null && lr._lockType.endsWith("-blk"))
+				sb.append("<TR style='color: red'>");
+			else
+				sb.append("<TR>");
+
 			sb.append("<TD>").append(lr._dbname   ).append("</TD>");
 			sb.append("<TD>").append(lr._tableName).append("</TD>");
 			sb.append("<TD>").append(lr._lockType ).append("</TD>");
@@ -525,6 +539,33 @@ implements DbxConnectionStateInfo
 		return sb.toString();
 	}
 
+	/** 
+	 * @return "" if no locks, otherwise a ASCII TABLE, with the headers: DBName, TableName, LockType, LockCount
+	 */
+	public static String getLockListTableAsAsciiTable(List<LockRecord> list)
+	{
+		if (list.isEmpty())
+			return "";
+
+		// Table HEAD
+		String[] tHead = new String[] {"DBName", "TableName", "LockType", "LockCount"};
+
+		// Table DATA
+		List<List<Object>> tData = new ArrayList<>();
+		for (LockRecord lr : list)
+		{
+			List<Object> row = new ArrayList<>();
+			
+			row.add(lr._dbname   );
+			row.add(lr._tableName);
+			row.add(lr._lockType );
+			row.add(lr._lockCount);
+			
+			tData.add(row);
+		}
+
+		return StringUtil.toTableString(Arrays.asList(tHead), tData);
+	}
 	
 	
 	

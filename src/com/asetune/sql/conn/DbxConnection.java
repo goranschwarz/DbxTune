@@ -1942,10 +1942,11 @@ System.out.println(" ---- i="+i+", c='"+c+"', cc='"+cc+"', inDbmsQicCount="+inDb
 //		else if (DbUtils.DB_PROD_NAME_ORACLE.equals(currentDbProductName))
 //		{
 //		}
-//		// Microsoft
-//		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
-//		{
-//		}
+		// Microsoft
+		else if (DbUtils.DB_PROD_NAME_MSSQL.equals(currentDbProductName))
+		{
+			versionStr = AseConnectionUtils.getAseVersionStr(_conn);
+		}
 		// DB2
 		else if (DbUtils.isProductName(currentDbProductName, DbUtils.DB_PROD_NAME_DB2_LUW, DbUtils.DB_PROD_NAME_DB2_ZOS))
 		{

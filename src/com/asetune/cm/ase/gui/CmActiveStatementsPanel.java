@@ -54,6 +54,7 @@ extends TabularCntrPanel
 	private JCheckBox l_sampleDbccStacktrace_chk;
 	private JCheckBox l_sampleCachedPlanInXml_chk;
 	private JCheckBox l_sampleHoldingLocks_chk;
+	private JCheckBox l_sampleSpidLocks_chk;
 
 	public CmActiveStatementsPanel(CountersModel cm)
 	{
@@ -166,6 +167,7 @@ extends TabularCntrPanel
 		l_sampleDbccStacktrace_chk  = new JCheckBox("Get ASE Stacktrace",        conf == null ? CmActiveStatements.DEFAULT_sample_dbccStacktrace  : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_dbccStacktrace  , CmActiveStatements.DEFAULT_sample_dbccStacktrace ));
 		l_sampleCachedPlanInXml_chk = new JCheckBox("Show Cached Plan in XML",   conf == null ? CmActiveStatements.DEFAULT_sample_cachedPlanInXml : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_cachedPlanInXml , CmActiveStatements.DEFAULT_sample_cachedPlanInXml));
 		l_sampleHoldingLocks_chk    = new JCheckBox("Show SPID's holding locks", conf == null ? CmActiveStatements.DEFAULT_sample_holdingLocks    : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_holdingLocks    , CmActiveStatements.DEFAULT_sample_holdingLocks   ));
+		l_sampleSpidLocks_chk       = new JCheckBox("Get SPID Locks",            conf == null ? CmActiveStatements.DEFAULT_sample_spidLocks       : conf.getBooleanProperty(CmActiveStatements.PROPKEY_sample_spidLocks       , CmActiveStatements.DEFAULT_sample_spidLocks      ));
 
 		l_sampleShowplan_chk       .setName(CmActiveStatements.PROPKEY_sample_showplan       );
 		l_sampleMonSqltext_chk     .setName(CmActiveStatements.PROPKEY_sample_monSqlText     );
@@ -174,6 +176,7 @@ extends TabularCntrPanel
 		l_sampleDbccStacktrace_chk .setName(CmActiveStatements.PROPKEY_sample_dbccStacktrace );
 		l_sampleCachedPlanInXml_chk.setName(CmActiveStatements.PROPKEY_sample_cachedPlanInXml);
 		l_sampleHoldingLocks_chk   .setName(CmActiveStatements.PROPKEY_sample_holdingLocks   );
+		l_sampleSpidLocks_chk      .setName(CmActiveStatements.PROPKEY_sample_spidLocks      );
 		
 		l_sampleShowplan_chk       .setToolTipText("<html>Do 'sp_showplan spid' on every row in the table.<br>       This will help us to diagnose if the current SQL statement is doing something funky.</html>");
 		l_sampleMonSqltext_chk     .setToolTipText("<html>Do 'select SQLText from monProcessSQLText where SPID=spid' on every row in the table.<br>    This will help us to diagnose what SQL the client sent to the server.</html>");
@@ -182,10 +185,12 @@ extends TabularCntrPanel
 		l_sampleDbccStacktrace_chk .setToolTipText("<html>Do 'dbcc stacktrace(spid)' on every row in the table.<br>  This will help us to diagnose what peace of code the ASE Server is currently executing.<br><b>Note:</b> Role 'sybase_ts_role' is needed.</html>");
 		l_sampleCachedPlanInXml_chk.setToolTipText("<html>Do 'select show_cached_plan_in_xml(planid, 0, 0)' on every row in the table.<br>  This will help us to diagnose if the current SQL statement is doing something funky.</html>");
 		l_sampleHoldingLocks_chk   .setToolTipText("<html>Include SPID's that are holding <i>any</i> locks in syslocks.<br>This will help you trace Statements that havn't released it's locks and are <b>not</b> active. (meaning that the control is at the client side)</html>");
+		l_sampleSpidLocks_chk      .setToolTipText("<html>Do 'select <i>db,table,type,cnt</i> from syslocks where spid = ?' on every row in the table.<br>       This will help us to diagnose what the current SQL statement is locking.</html>");
 
 		panel.add(l_sampleMonSqltext_chk,      "");
 		panel.add(l_sampleProcCallStack_chk,   "wrap");
-		panel.add(l_sampleDbccSqltext_chk,     "wrap");
+		panel.add(l_sampleDbccSqltext_chk,     "");
+		panel.add(l_sampleSpidLocks_chk,       "wrap");
 		panel.add(l_sampleShowplan_chk,        "");
 		panel.add(l_sampleCachedPlanInXml_chk, "wrap");
 		panel.add(l_sampleDbccStacktrace_chk,  "");
@@ -272,6 +277,21 @@ extends TabularCntrPanel
 				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
 				if (conf == null) return;
 				conf.setProperty(CmActiveStatements.PROPKEY_sample_holdingLocks, ((JCheckBox)e.getSource()).isSelected());
+				conf.save();
+				
+				// ReInitialize the SQL
+				getCm().setSql(null);
+			}
+		});
+		l_sampleSpidLocks_chk.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				// Need TMP since we are going to save the configuration somewhere
+				Configuration conf = Configuration.getInstance(Configuration.USER_TEMP);
+				if (conf == null) return;
+				conf.setProperty(CmActiveStatements.PROPKEY_sample_spidLocks, ((JCheckBox)e.getSource()).isSelected());
 				conf.save();
 				
 				// ReInitialize the SQL

@@ -71,8 +71,11 @@ implements ActionListener //, FocusListener
 	private JLabel             _r_time_lbl                 = new JLabel("Time");
 	private JTextField         _r_time_txt                 = new JTextField("");
 
-	private JLabel             _r_numberDecimal_lbl        = new JLabel("Decimals on Numbers");
-	private JTextField         _r_numberDecimal_txt        = new JTextField("");
+	private JLabel             _r_minNumberDecimal_lbl   = new JLabel("Min Decimals on Numbers");
+	private JTextField         _r_minNumberDecimal_txt   = new JTextField("");
+
+	private JLabel             _r_maxNumberDecimal_lbl   = new JLabel("Max Decimals on Numbers");
+	private JTextField         _r_maxNumberDecimal_txt   = new JTextField("");
 
 	private JButton            _ok                       = new JButton("OK");
 	private JButton            _cancel                   = new JButton("Cancel");
@@ -120,10 +123,11 @@ implements ActionListener //, FocusListener
 
 	
 		// Renders
-		_r_timestamp_txt    .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIMESTAMP      , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_TIMESTAMP      ));
-		_r_date_txt         .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_DATE           , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_DATE           ));
-		_r_time_txt         .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIME           , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_TIME           ));
-		_r_numberDecimal_txt.setText("" + conf.getIntProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_NUMBER_DECIMALS, ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS));
+		_r_timestamp_txt       .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIMESTAMP          , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_TIMESTAMP          ));
+		_r_date_txt            .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_DATE               , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_DATE               ));
+		_r_time_txt            .setText(     conf.getProperty   (ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIME               , ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_TIME               ));
+		_r_minNumberDecimal_txt.setText("" + conf.getIntProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS, ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS));
+		_r_maxNumberDecimal_txt.setText("" + conf.getIntProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS, ResultSetJXTable.DEFAULT_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS));
 	}
 
 	private void init()
@@ -224,8 +228,11 @@ implements ActionListener //, FocusListener
 		JPanel panel = SwingUtils.createPanel("Content Rendering Settings", true);
 		panel.setLayout(new MigLayout());
 
-		_r_numberDecimal_lbl.setToolTipText("How many decimals should we show on numbers");
-		_r_numberDecimal_txt.setToolTipText(_r_numberDecimal_lbl.getToolTipText());
+		_r_minNumberDecimal_lbl.setToolTipText("Minumum decimals we show on numbers");
+		_r_minNumberDecimal_txt.setToolTipText(_r_minNumberDecimal_lbl.getToolTipText());
+		
+		_r_maxNumberDecimal_lbl.setToolTipText("Maximum decimals we show on numbers");
+		_r_maxNumberDecimal_txt.setToolTipText(_r_maxNumberDecimal_lbl.getToolTipText());
 		
 		_r_timestamp_lbl.setToolTipText("How should a java.sql.Timestamp be presented. See SimpleDateFormat");
 		_r_timestamp_txt.setToolTipText(_r_timestamp_lbl.getToolTipText());
@@ -236,22 +243,26 @@ implements ActionListener //, FocusListener
 		_r_time_lbl.setToolTipText("How should a java.sql.Time be presented. See SimpleDateFormat");
 		_r_time_txt.setToolTipText(_r_time_lbl.getToolTipText());
 		
-		new GInputValidator(_r_numberDecimal_txt, _vg, new GInputValidator.IntegerInputValidator());
-		new GInputValidator(_r_timestamp_txt    , _vg, new GInputValidator.SimpleDateFormatInputValidator());
-		new GInputValidator(_r_date_txt         , _vg, new GInputValidator.SimpleDateFormatInputValidator());
-		new GInputValidator(_r_time_txt         , _vg, new GInputValidator.SimpleDateFormatInputValidator());
+		new GInputValidator(_r_minNumberDecimal_txt, _vg, new GInputValidator.IntegerInputValidator());
+		new GInputValidator(_r_maxNumberDecimal_txt, _vg, new GInputValidator.IntegerInputValidator());
+		new GInputValidator(_r_timestamp_txt       , _vg, new GInputValidator.SimpleDateFormatInputValidator());
+		new GInputValidator(_r_date_txt            , _vg, new GInputValidator.SimpleDateFormatInputValidator());
+		new GInputValidator(_r_time_txt            , _vg, new GInputValidator.SimpleDateFormatInputValidator());
 
-		panel.add(_r_numberDecimal_lbl, "");
-		panel.add(_r_numberDecimal_txt, "pushx, growx, wrap");
+		panel.add(_r_minNumberDecimal_lbl, "");
+		panel.add(_r_minNumberDecimal_txt, "pushx, growx, wrap");
 
-		panel.add(_r_timestamp_lbl,     "");
-		panel.add(_r_timestamp_txt,     "pushx, growx, wrap");
+		panel.add(_r_maxNumberDecimal_lbl, "");
+		panel.add(_r_maxNumberDecimal_txt, "pushx, growx, wrap");
+
+		panel.add(_r_timestamp_lbl,        "");
+		panel.add(_r_timestamp_txt,        "pushx, growx, wrap");
                                         
-		panel.add(_r_date_lbl,          "");
-		panel.add(_r_date_txt,          "pushx, growx, wrap");
+		panel.add(_r_date_lbl,             "");
+		panel.add(_r_date_txt,             "pushx, growx, wrap");
                                         
-		panel.add(_r_time_lbl,          "");
-		panel.add(_r_time_txt,          "pushx, growx, wrap");
+		panel.add(_r_time_lbl,             "");
+		panel.add(_r_time_txt,             "pushx, growx, wrap");
 
 		
 //		_r_numberDecimal_txt.addFocusListener(this);
@@ -334,10 +345,11 @@ implements ActionListener //, FocusListener
 		conf.setProperty(ResultSetJXTable.PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB,   _tt_xmlInlineMaxSize_txt.getText());
 		
 		// Rendering
-		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIMESTAMP,       _r_timestamp_txt    .getText());
-		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_DATE,            _r_time_txt         .getText());
-		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIME,            _r_date_txt         .getText());
-		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_NUMBER_DECIMALS, _r_numberDecimal_txt.getText());
+		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIMESTAMP,           _r_timestamp_txt       .getText());
+		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_DATE,                _r_time_txt            .getText());
+		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_TIME,                _r_date_txt            .getText());
+		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS, _r_minNumberDecimal_txt.getText());
+		conf.setProperty(ResultSetJXTable.PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS, _r_maxNumberDecimal_txt.getText());
 
 		conf.save();
 	}

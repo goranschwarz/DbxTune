@@ -176,6 +176,9 @@ extends CountersModel
 	public static final String  PROPKEY_sample_monSqlText            = PROP_PREFIX + ".sample.monSqltext";
 	public static final boolean DEFAULT_sample_monSqlText            = true;
 
+	public static final String  PROPKEY_sample_locks                 = PROP_PREFIX + ".sample.locks";
+	public static final boolean DEFAULT_sample_locks                 = true;
+
 //	public static final String  PROPKEY_spaceusageInMb               = PROP_PREFIX + ".sample.spaceusageInMb";
 //	public static final boolean DEFAULT_spaceusageInMb               = false;
 	
@@ -894,8 +897,10 @@ extends CountersModel
 		String OldestTranProcName     = "OldestTranProcName     = (select isnull(object_name(p.id, p.dbid), object_name(p.id, 2)) from master.dbo.sysprocesses p where h.spid = p.spid), \n";
 		String OldestTranHasSqlText   = "OldestTranHasSqlText   = convert(bit, 0), \n";
 		String OldestTranHasShowPlan  = "OldestTranHasShowPlan  = convert(bit, 0), \n";
+		String OldestTranHasLocks     = "OldestTranHasLocks     = convert(bit, 0), \n";
 		String OldestTranSqlText      = "OldestTranSqlText      = convert(text, null), \n";
 		String OldestTranShowPlanText = "OldestTranShowPlanText = convert(text, null), \n";
+		String OldestTranLocks        = "OldestTranLocks        = convert(text, null), \n";
 
 //		boolean getMonSqltext = Configuration.getCombinedConfiguration().getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
 //		if (getMonSqltext && srvVersion >= Ver.ver(16,0,0, 2)) // 16.0 PL1 did not have query_text()... so lets use 16.0 SP2 as base instead
@@ -919,8 +924,10 @@ extends CountersModel
 			OldestTranProcName     = "OldestTranProcName     = convert(varchar(30), NULL), \n";
 			OldestTranHasSqlText   = "OldestTranHasSqlText   = convert(bit, 0), \n";
 			OldestTranHasShowPlan  = "OldestTranHasShowPlan  = convert(bit, 0), \n";
+			OldestTranHasLocks     = "OldestTranHasLocks     = convert(bit, 0), \n";
 			OldestTranSqlText      = "OldestTranSqlText      = convert(text, null), \n";
 			OldestTranShowPlanText = "OldestTranShowPlanText = convert(text, null), \n";
+			OldestTranLocks        = "OldestTranLocks        = convert(text, null), \n";
 		}
 
 		cols1 += "od.DBName, od.DBID, " + ceDbRecoveryStatus + "od.AppendLogRequests, od.AppendLogWaits, \n" +
@@ -948,6 +955,7 @@ extends CountersModel
 		         OldestTranProcName  +
 		         OldestTranHasSqlText +
 		         OldestTranHasShowPlan +
+		         OldestTranHasLocks +
 		         PRSUpdateCount + PRSSelectCount + PRSRewriteCount + nl_15702 +
 		         ReservedMb + UsedMb + UnUsedMb + nl_160 +
 		         DataMbReal + IndexMbReal+ LobMb + nl_160 +
@@ -960,7 +968,7 @@ extends CountersModel
 		         "od.BackupStartTime, LastDbBackupAgeInHours = isnull(datediff(hour, od.BackupStartTime, getdate()),-1), \n";
 		cols2 += "";
 		cols3 += QuiesceTag + RawSpaceUsage + nl_160 
-				+ OldestTranSqlText + OldestTranShowPlanText;
+				+ OldestTranSqlText + OldestTranShowPlanText + OldestTranLocks;
 
 		if (srvVersion >= Ver.ver(15,0,1) || (srvVersion >= Ver.ver(12,5,4) && srvVersion < Ver.ver(15,0)) )
 		{
@@ -1111,8 +1119,10 @@ extends CountersModel
 		int pos_OldestTranSpid         = -1; 
 		int pos_OldestTranHasSqlText   = -1; 
 		int pos_OldestTranHasShowPlan  = -1; 
+		int pos_OldestTranHasLocks     = -1; 
 		int pos_OldestTranSqlText      = -1;
 		int pos_OldestTranShowPlanText = -1;
+		int pos_OldestTranLocks        = -1;
 		
 		// Find column Id's
 		List<String> colNames = newSample.getColNames();
@@ -1165,8 +1175,10 @@ extends CountersModel
 			else if (colName.equals("OldestTranSpid"))         pos_OldestTranSpid         = colId;
 			else if (colName.equals("OldestTranHasSqlText"))   pos_OldestTranHasSqlText   = colId;
 			else if (colName.equals("OldestTranHasShowPlan"))  pos_OldestTranHasShowPlan  = colId;
+			else if (colName.equals("OldestTranHasLocks"))     pos_OldestTranHasLocks     = colId;
 			else if (colName.equals("OldestTranSqlText"))      pos_OldestTranSqlText      = colId;
 			else if (colName.equals("OldestTranShowPlanText")) pos_OldestTranShowPlanText = colId;
+			else if (colName.equals("OldestTranLocks"))        pos_OldestTranLocks        = colId;
 		}
 
 		// Loop on all rows
@@ -1331,12 +1343,14 @@ extends CountersModel
 //			OldestTranHasShowPlan
 //			OldestTranSqlText
 //			OldestTranShowPlanText
+//			OldestTranShowLocks
 			Object oval_OldestTranSpid = newSample.getValueAt(rowId, pos_OldestTranSpid);
 			if (oval_OldestTranSpid != null && oval_OldestTranSpid instanceof Number)
 			{
 				Configuration conf = Configuration.getCombinedConfiguration();
 				boolean getShowplan   = conf.getBooleanProperty(PROPKEY_sample_showplan,   DEFAULT_sample_showplan);
 				boolean getMonSqltext = conf.getBooleanProperty(PROPKEY_sample_monSqlText, DEFAULT_sample_monSqlText);
+				boolean getLocks      = conf.getBooleanProperty(PROPKEY_sample_locks,   DEFAULT_sample_locks);
 
 				int OldestTranSpid = ((Number)newSample.getValueAt(rowId, pos_OldestTranSpid)).intValue();
 
@@ -1344,6 +1358,7 @@ extends CountersModel
 				{
 					String sqlText  = "Not properly configured (need 'SQL batch capture' & 'max SQL text monitored').";
 					String showplan = "User does not have: sa_role";
+					String sysLocks = "This was disabled";
 
 					// OldestTranSqlText
 					// if ASE is 16.0 we might already got the SQL Text using query_text(h.spid)
@@ -1375,6 +1390,14 @@ extends CountersModel
 						if (showplan == null || (showplan != null && showplan.matches(".*The query plan for spid '.*' is unavailable.*")) )
 							showplan = "Not Available";
 					}
+					
+					if (getLocks)
+					{
+//						sysLocks  = AseConnectionUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, false, false);
+						sysLocks  = AseConnectionUtils.getLockSummaryForSpid(getCounterController().getMonConnection(), OldestTranSpid, true, false);
+						if (sysLocks == null)
+							sysLocks = "Not Available";
+					}
 
 					// Set the values: *Has* and *Text*
 					boolean b = true;
@@ -1385,6 +1408,10 @@ extends CountersModel
 					b = !"This was disabled".equals(showplan) && !"Not Available".equals(showplan) && !showplan.startsWith("User does not have");
 					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasShowPlan);
 					newSample.setValueAt(showplan,       rowId, pos_OldestTranShowPlanText);
+
+					b = !"This was disabled".equals(sysLocks) && !"Not Available".equals(sysLocks);
+					newSample.setValueAt(new Boolean(b), rowId, pos_OldestTranHasLocks);
+					newSample.setValueAt(sysLocks,       rowId, pos_OldestTranLocks);
 				}
 			}
 		}
@@ -1689,6 +1716,24 @@ extends CountersModel
 		if ("OldestTranShowPlanText".equals(colName))
 		{
 			return cellValue == null ? null : cellValue.toString();
+		}
+		
+		// LOCKS
+		if ("OldestTranHasLocks".equals(colName))
+		{
+			// Find 'OldestTranShowPlanText' column, is so get it and set it as the tool tip
+			int pos = findColumn("OldestTranLocks");
+			if (pos > 0)
+			{
+				Object cellVal = getValueAt(modelRow, pos);
+				if (cellVal instanceof String)
+					//return (String) cellVal;
+					return "<html><pre>" + cellVal + "</pre></html>";
+			}
+		}
+		if ("OldestTranLocks".equals(colName))
+		{
+			return cellValue == null ? null : "<html><pre>" + cellValue + "</pre></html>";
 		}
 		
 		

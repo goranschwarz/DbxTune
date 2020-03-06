@@ -63,7 +63,6 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.StringValue;
-import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.TableColumnExt;
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -114,8 +113,10 @@ implements ToolTipHyperlinkResolver
 //	public static final String  PROPKEY_TABLE_CELL_RENDERER_BIGDECIMAL      = "ResultSetJXTable.cellRenderer.format.BigDecimal";
 //	public static final String  DEFAULT_TABLE_CELL_RENDERER_BIGDECIMAL      = "";
 
-	public static final String  PROPKEY_TABLE_CELL_RENDERER_NUMBER_DECIMALS = "ResultSetJXTable.cellRenderer.format.Number.decimals";
-	public static final int     DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS = 3;
+	public static final String  PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS = "ResultSetJXTable.cellRenderer.format.min.Number.decimals";
+	public static final int     DEFAULT_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS = 0;
+	public static final String  PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS = "ResultSetJXTable.cellRenderer.format.max.Number.decimals";
+	public static final int     DEFAULT_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS = 128;
 //	public static final int     DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS = 9;
 
 
@@ -261,14 +262,16 @@ implements ToolTipHyperlinkResolver
 		StringValue svInExactNumber = new StringValue() 
 		{
 //			int decimals = Configuration.getCombinedConfiguration().getIntProperty("ResultSetJXTable.cellRenderer.format.BigDecimal.decimals", 3);
-			int decimals = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TABLE_CELL_RENDERER_NUMBER_DECIMALS, DEFAULT_TABLE_CELL_RENDERER_NUMBER_DECIMALS);
+			int minDecimals = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS, DEFAULT_TABLE_CELL_RENDERER_MIN_NUMBER_DECIMALS);
+			int maxDecimals = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS, DEFAULT_TABLE_CELL_RENDERER_MAX_NUMBER_DECIMALS);
 
 			NumberFormat nf = null;
 			{ // init/constructor section
 				try
 				{
 					nf = new DecimalFormat();
-					nf.setMinimumFractionDigits(decimals);
+					nf.setMinimumFractionDigits(minDecimals);
+					nf.setMaximumFractionDigits(maxDecimals);
 				}
 				catch (Throwable t)
 				{
@@ -278,8 +281,8 @@ implements ToolTipHyperlinkResolver
 			@Override
 			public String getString(Object value) 
 			{
-				if ( ! (value instanceof BigDecimal) ) 
-					return StringValues.TO_STRING.getString(value);
+//				if ( ! (value instanceof BigDecimal) ) 
+//					return StringValues.TO_STRING.getString(value);
 				return nf.format(value);
 			}
 		};
@@ -840,7 +843,8 @@ implements ToolTipHyperlinkResolver
 				try
 				{
 					// put content in a TEMP file 
-					tmpFile = createTempFile("sqlw_XML_tooltip_", ".html", bytes);
+//					tmpFile = createTempFile("sqlw_XML_tooltip_", ".html", bytes);
+					tmpFile = createTempFile("sqlw_XML_tooltip_", ".xml", bytes);
 
 					// Compose ToolTip HTML (with content, & a LINK to be opened in "browser")
 					String urlStr = ("file:///"+tmpFile);
@@ -857,7 +861,8 @@ implements ToolTipHyperlinkResolver
 						sb.append("Using temp file: <code>").append(tmpFile).append("</code><br>");
 						sb.append("File Size: <code>").append(StringUtil.bytesToHuman(tmpFile.length(), "#.#")).append("</code><br>");
 						sb.append("Guessed Charset: <code>").append(guessedCharset).append("</code><br>");
-						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+//						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.html'</b> will be used)<br>");
+						sb.append("<a href='").append(CmToolTipSupplierDefault.OPEN_IN_EXTERNAL_BROWSER + url).append("'>Open in External Browser</a> (registered application for file extention <b>'.xml'</b> will be used)<br>");
 						sb.append("<hr>");
 
 						int maxDisplayLenKb = Configuration.getCombinedConfiguration().getIntProperty(PROPKEY_TOOLTIP_XML_INLINE_MAX_SIZE_KB, DEFAULT_TOOLTIP_XML_INLINE_MAX_SIZE_KB);
