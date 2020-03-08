@@ -341,7 +341,8 @@ List of stuff that can be done
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-60" onclick="activeAlarmsRadioClick(this);" value="60%"        > 60%
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-95" onclick="activeAlarmsRadioClick(this);" value="95%"        > 95%
 		<input type="radio" name="active-alarms-show-radio" id="active-alarms-show-radio-0"  onclick="activeAlarmsRadioClick(this);" value="hide"       > Minimize &nbsp;&nbsp;&nbsp;
-		<input type="checkbox" name="active-alarms-solid-chk" id="active-alarms-solid-chk"   onclick="activeAlarmsChkClick(this);"   value="solid"> Solid Background
+		<input type="checkbox" name="active-alarms-solid-chk" id="active-alarms-solid-chk"   onclick="activeAlarmsChkClick(this);"   value="solid"> Solid Background &nbsp;&nbsp;&nbsp;
+		<input type="checkbox" name="active-alarms-compExtDesc-chk" id="active-alarms-compExtDesc-chk"   onclick="activeAlarmsCompExtDescClick(this);" title="Show Extended Descriptions Columns as HTML Formated or as 'Plain Text'"  value="compExtDesc" checked> Extended Descriptions as Plain Text
     </div>
     <div id="active-alarms-win" class="active-alarms-win-class">
     </div>
@@ -489,10 +490,28 @@ List of stuff that can be done
 		// Save last known value in "WebBrowser storage"
 		getStorage('dbxtune_checkboxes_').set("active-alarms-solid-chk", checkbox.checked ? 'checked' : 'not');
 	}
+	function activeAlarmsCompExtDescClick(checkbox) 
+	{
+		console.log('activeAlarmsCompExtDescClick(): Checked: ' + checkbox.checked);
+
+		// Save last known value in "WebBrowser storage"
+		getStorage('dbxtune_checkboxes_').set("active-alarms-compExtDesc-chk", checkbox.checked ? 'checked' : 'not');
+
+		// Reload the page
+		//location.reload();
+		
+		toggleActiveAlarmsExtendedDesciption();
+	}
 	
 	// do: deferred (since all DOM elements might not be created yet)
 	setTimeout(function()
 	{
+		// Restore 'Compact Extended Desc' at the ACTIVE ALARMS "window"
+		var savedVal_activeAlarmsCompactExtDescChk = getStorage('dbxtune_checkboxes_').get("active-alarms-compExtDesc-chk");
+		if (savedVal_activeAlarmsCompactExtDescChk == 'checked') $("#active-alarms-compExtDesc-chk").attr('checked', 'checked');
+		if (savedVal_activeAlarmsCompactExtDescChk == 'not')     $("#active-alarms-compExtDesc-chk").removeAttr('checked');
+		//activeAlarmsCompExtDescClick( document.getElementById("active-alarms-compExtDesc-chk") );
+
 		// Restore 'Solid Background' at the ACTIVE ALARMS "window"
 		var savedVal_activeAlarmsSolidChk = getStorage('dbxtune_checkboxes_').get("active-alarms-solid-chk");
 		if (savedVal_activeAlarmsSolidChk == 'checked') $("#active-alarms-solid-chk").attr('checked', 'checked');
@@ -1146,7 +1165,8 @@ List of stuff that can be done
 
 							activeAlarmsWinDiv.appendChild(srvDiv);
 						}
-						let tab = jsonToTable(entry);
+						let stripHtmlInCells = document.getElementById("active-alarms-compExtDesc-chk").checked;
+						let tab = jsonToTable(entry, stripHtmlInCells);
 						srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 						srvDiv.appendChild(tab);
 						srvDiv.appendChild(document.createElement("br"));

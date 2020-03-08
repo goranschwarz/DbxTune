@@ -130,7 +130,7 @@ extends PersistWriterBase
 			_confSlot0.sendErrorQueue(cont);
 
 			// Construct and send JSON
-			jsonStr = toJson(cont, _confSlot0._sendCounters, _confSlot0._sendGraphs);
+			jsonStr = toJson(cont, _confSlot0);
 			sendMessage(jsonStr, _confSlot0);
 		}
 		catch (ConnectException ex) 
@@ -155,7 +155,7 @@ extends PersistWriterBase
 				slot.sendErrorQueue(cont);
 				
 				// Construct and send JSON
-				jsonStr = toJson(cont, slot._sendCounters, slot._sendGraphs);
+				jsonStr = toJson(cont, slot);
 				sendMessage(jsonStr, slot);
 			}
 			catch (ConnectException ex) 
@@ -296,14 +296,14 @@ extends PersistWriterBase
 	 * @return
 	 * @throws IOException
 	 */
-	private String toJson(PersistContainer cont, boolean writeCounters, boolean writeGraphs)
+	private String toJson(PersistContainer cont, ConfigSlot cfgSlot)
 	throws IOException
 	{
 		try
 		{
 			long startTime = System.currentTimeMillis();
 
-			String json = toJsonMessage(cont, writeCounters, writeGraphs);
+			String json = toJsonMessage(cont, cfgSlot);
 
 			long createTime = TimeUtils.msDiffNow(startTime);
 			getStatistics().setLastCreateJsonTimeInMs(createTime);
@@ -322,7 +322,7 @@ extends PersistWriterBase
 			Memory.evaluateAndWait(10*1000); // wait for max 10 sec
 			
 			// Try again
-			return toJsonMessage(cont, writeCounters, writeGraphs);
+			return toJsonMessage(cont, cfgSlot);
 		}
 	}
 	
@@ -335,9 +335,14 @@ extends PersistWriterBase
 	 * @return A JSON String
 	 * @throws IOException 
 	 */
-	private String toJsonMessage(PersistContainer cont, boolean writeCounters, boolean writeGraphs)
+	private String toJsonMessage(PersistContainer cont, ConfigSlot cfgSlot)
 	throws IOException
 	{
+		boolean extAlarmDescAsHtml = cfgSlot._sendAlarmExtDescAsHtml;
+		boolean writeCounters      = cfgSlot._sendCounters;
+		boolean writeGraphs        = cfgSlot._sendGraphs;
+
+
 		StringWriter sw = new StringWriter();
 
 		JsonFactory jfactory = new JsonFactory();
@@ -426,10 +431,10 @@ extends PersistWriterBase
 					w.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
 					w.writeStringField("data"                       , toString( ae.getData()                       ));
 					w.writeStringField("description"                , toString( ae.getDescription()                ));
-					w.writeStringField("extendedDescription"        , toString( ae.getExtendedDescription()        ));
+					w.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
 					w.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
 					w.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-					w.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() ));
+					w.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
 				w.writeEndObject();
 			}
 			w.writeEndArray();
@@ -471,10 +476,10 @@ extends PersistWriterBase
 					w.writeNumberField("threshold"                  , toBigDec( ae.getCrossedThreshold()           ));
 					w.writeStringField("data"                       , toString( ae.getData()                       ));
 					w.writeStringField("description"                , toString( ae.getDescription()                ));
-					w.writeStringField("extendedDescription"        , toString( ae.getExtendedDescription()        ));
+					w.writeStringField("extendedDescription"        , toString( extAlarmDescAsHtml ? ae.getExtendedDescriptionHtml() : ae.getExtendedDescription() ));
 					w.writeStringField("reRaiseData"                , toString( ae.getReRaiseData()                ));
 					w.writeStringField("reRaiseDescription"         , toString( ae.getReRaiseDescription()         ));
-					w.writeStringField("reRaiseExtendedDescription" , toString( ae.getReRaiseExtendedDescription() ));
+					w.writeStringField("reRaiseExtendedDescription" , toString( extAlarmDescAsHtml ? ae.getReRaiseExtendedDescriptionHtml() : ae.getReRaiseExtendedDescription() ));
 				w.writeEndObject();
 			}
 			w.writeEndArray();
@@ -680,6 +685,7 @@ extends PersistWriterBase
 
 		_logger.info("    " + StringUtil.left(key(PROPKEY_errorMemQueueSize                ), spaces) + ": " + _confSlot0._errorMemQueueSize);
 
+		_logger.info("    " + StringUtil.left(key(PROPKEY_sendAlarmExtDescAsHtml           ), spaces) + ": " + _confSlot0._sendAlarmExtDescAsHtml);
 		_logger.info("    " + StringUtil.left(key(PROPKEY_sendCounters                     ), spaces) + ": " + _confSlot0._sendCounters);
 		_logger.info("    " + StringUtil.left(key(PROPKEY_sendGraphs                       ), spaces) + ": " + _confSlot0._sendGraphs);
 		
@@ -707,6 +713,7 @@ extends PersistWriterBase
 
 			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_errorMemQueueSize                , slot._cfgName), spaces) + ": " + slot._errorMemQueueSize);
 
+			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendAlarmExtDescAsHtml           , slot._cfgName), spaces) + ": " + slot._sendAlarmExtDescAsHtml);
 			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendCounters                     , slot._cfgName), spaces) + ": " + slot._sendCounters);
 			if (StringUtil.hasValue(slot._url     )) _logger.info("    " + StringUtil.left(key(PROPKEY_sendGraphs                       , slot._cfgName), spaces) + ": " + slot._sendGraphs);
                                                                                                                                                               
@@ -765,6 +772,7 @@ extends PersistWriterBase
 
 		_confSlot0._errorMemQueueSize                 = conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                ), DEFAULT_errorMemQueueSize);
                                                                                                                              
+		_confSlot0._sendAlarmExtDescAsHtml            = conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml);
 		_confSlot0._sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters);
 		_confSlot0._sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs);
                                                                                                                              
@@ -798,6 +806,7 @@ extends PersistWriterBase
 
 			int    errorMemQueueSize                  = conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                , cfgKey), DEFAULT_errorMemQueueSize);
                                                                                                                              
+			boolean sendAlarmExtDescAsHtml            = conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           , cfgKey), DEFAULT_sendAlarmExtDescAsHtml);
 			boolean sendCounters                      = conf.getBooleanProperty(key(PROPKEY_sendCounters                     , cfgKey), DEFAULT_sendCounters);
 			boolean sendGraphs                        = conf.getBooleanProperty(key(PROPKEY_sendGraphs                       , cfgKey), DEFAULT_sendGraphs  );
 			                                                                                                                 
@@ -831,10 +840,11 @@ extends PersistWriterBase
 				slot._errorSaveToDiskDiscardAfterXDays  = errorSaveToDiskDiscardAfterXDays;
 				slot._errorSaveToDiskSuccessSleepTimeMs = errorSaveToDiskSuccessSleepTimeMs;
 
-				slot._errorMemQueueSize = errorMemQueueSize;
+				slot._errorMemQueueSize      = errorMemQueueSize;
 
-				slot._sendCounters   = sendCounters;
-				slot._sendGraphs     = sendGraphs;
+				slot._sendAlarmExtDescAsHtml = sendAlarmExtDescAsHtml;
+				slot._sendCounters           = sendCounters;
+				slot._sendGraphs             = sendGraphs;
 				
 				slot._header_1       = header_1;
 				slot._header_2       = header_2;
@@ -919,6 +929,9 @@ extends PersistWriterBase
 	public static final int     DEFAULT_errorMemQueueSize                 = 10;
                                                           
 
+	public static final String  PROPKEY_sendAlarmExtDescAsHtml            = "PersistWriterToHttpJson.{KEY}.send.alarm.extendedDescAsHtml";
+	public static final boolean DEFAULT_sendAlarmExtDescAsHtml            = true;
+                                                          
 	public static final String  PROPKEY_sendCounters      = "PersistWriterToHttpJson.{KEY}.send.counters";
 	public static final boolean DEFAULT_sendCounters      = false;
                                                           
@@ -991,8 +1004,9 @@ extends PersistWriterBase
 		int     _errorMemQueueSize = DEFAULT_errorMemQueueSize;
 		LinkedList<String> _errorQueue = new LinkedList<>(); 
 
-		boolean _sendCounters   = DEFAULT_sendCounters;
-		boolean _sendGraphs     = DEFAULT_sendGraphs;
+		boolean _sendAlarmExtDescAsHtml = DEFAULT_sendAlarmExtDescAsHtml;
+		boolean _sendCounters           = DEFAULT_sendCounters;
+		boolean _sendGraphs             = DEFAULT_sendGraphs;
 		
 		String  _header_1 = "";
 		String  _header_2 = "";
@@ -1256,20 +1270,21 @@ extends PersistWriterBase
 		list.add( new CmSettingsHelper("errorSaveToDiskDiscardAfterXDays",  key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorSaveToDiskDiscardAfterXDays ), DEFAULT_errorSaveToDiskDiscardAfterXDays ), DEFAULT_errorSaveToDiskDiscardAfterXDays , "How many days should we save the files."));
 		list.add( new CmSettingsHelper("errorSaveToDiskSuccessSleepTimeMs", key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs), Integer.class, conf.getIntProperty    (key(PROPKEY_errorSaveToDiskSuccessSleepTimeMs), DEFAULT_errorSaveToDiskSuccessSleepTimeMs), DEFAULT_errorSaveToDiskSuccessSleepTimeMs, "After a recovered file has been sent, sleep for a while so we do not overflow the central server with messages."));
 
-		list.add( new CmSettingsHelper("errorMemQueueSize",                 key(PROPKEY_errorMemQueueSize                ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                ), DEFAULT_errorMemQueueSize                 ), DEFAULT_errorMemQueueSize               , "If send errors, in memory queue size for resend (Only valid if 'errorSaveToDisk' is false)"));
-                                                                                                                                                                                                                                                                                                        
-		list.add( new CmSettingsHelper("sendCounters",                      key(PROPKEY_sendCounters                     ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters                      ), DEFAULT_sendCounters                    , "Send Performance Counters data"));
-		list.add( new CmSettingsHelper("sendGraphs",                        key(PROPKEY_sendGraphs                       ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs                        ), DEFAULT_sendGraphs                      , "Send Graph/Chart data"));
-                                                                                                                                                                                                                                                                                                        
-		list.add( new CmSettingsHelper("http-header-1",                     key(PROPKEY_header1                          ), String .class, conf.getProperty       (key(PROPKEY_header1                          ), DEFAULT_header1                           ), DEFAULT_header1                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-2",                     key(PROPKEY_header2                          ), String .class, conf.getProperty       (key(PROPKEY_header2                          ), DEFAULT_header2                           ), DEFAULT_header2                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-3",                     key(PROPKEY_header3                          ), String .class, conf.getProperty       (key(PROPKEY_header3                          ), DEFAULT_header3                           ), DEFAULT_header3                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-4",                     key(PROPKEY_header4                          ), String .class, conf.getProperty       (key(PROPKEY_header4                          ), DEFAULT_header4                           ), DEFAULT_header4                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-5",                     key(PROPKEY_header5                          ), String .class, conf.getProperty       (key(PROPKEY_header5                          ), DEFAULT_header5                           ), DEFAULT_header5                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-6",                     key(PROPKEY_header6                          ), String .class, conf.getProperty       (key(PROPKEY_header6                          ), DEFAULT_header6                           ), DEFAULT_header6                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-7",                     key(PROPKEY_header7                          ), String .class, conf.getProperty       (key(PROPKEY_header7                          ), DEFAULT_header7                           ), DEFAULT_header7                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-8",                     key(PROPKEY_header8                          ), String .class, conf.getProperty       (key(PROPKEY_header8                          ), DEFAULT_header8                           ), DEFAULT_header8                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
-		list.add( new CmSettingsHelper("http-header-9",                     key(PROPKEY_header9                          ), String .class, conf.getProperty       (key(PROPKEY_header9                          ), DEFAULT_header9                           ), DEFAULT_header9                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("errorMemQueueSize",                 key(PROPKEY_errorMemQueueSize                ), Integer.class, conf.getIntProperty    (key(PROPKEY_errorMemQueueSize                ), DEFAULT_errorMemQueueSize                ), DEFAULT_errorMemQueueSize               , "If send errors, in memory queue size for resend (Only valid if 'errorSaveToDisk' is false)"));
+
+		list.add( new CmSettingsHelper("sendAlarmExtDescAsHtml",            key(PROPKEY_sendAlarmExtDescAsHtml           ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml           ), DEFAULT_sendAlarmExtDescAsHtml          , "If we have alarms in the Counter Collector, Send the 'Alarm Extended Descriptions' in HTML.)"));
+		list.add( new CmSettingsHelper("sendCounters",                      key(PROPKEY_sendCounters                     ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendCounters                     ), DEFAULT_sendCounters                     ), DEFAULT_sendCounters                    , "Send Performance Counters data"));
+		list.add( new CmSettingsHelper("sendGraphs",                        key(PROPKEY_sendGraphs                       ), Boolean.class, conf.getBooleanProperty(key(PROPKEY_sendGraphs                       ), DEFAULT_sendGraphs                       ), DEFAULT_sendGraphs                      , "Send Graph/Chart data"));
+
+		list.add( new CmSettingsHelper("http-header-1",                     key(PROPKEY_header1                          ), String .class, conf.getProperty       (key(PROPKEY_header1                          ), DEFAULT_header1                          ), DEFAULT_header1                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-2",                     key(PROPKEY_header2                          ), String .class, conf.getProperty       (key(PROPKEY_header2                          ), DEFAULT_header2                          ), DEFAULT_header2                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-3",                     key(PROPKEY_header3                          ), String .class, conf.getProperty       (key(PROPKEY_header3                          ), DEFAULT_header3                          ), DEFAULT_header3                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-4",                     key(PROPKEY_header4                          ), String .class, conf.getProperty       (key(PROPKEY_header4                          ), DEFAULT_header4                          ), DEFAULT_header4                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-5",                     key(PROPKEY_header5                          ), String .class, conf.getProperty       (key(PROPKEY_header5                          ), DEFAULT_header5                          ), DEFAULT_header5                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-6",                     key(PROPKEY_header6                          ), String .class, conf.getProperty       (key(PROPKEY_header6                          ), DEFAULT_header6                          ), DEFAULT_header6                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-7",                     key(PROPKEY_header7                          ), String .class, conf.getProperty       (key(PROPKEY_header7                          ), DEFAULT_header7                          ), DEFAULT_header7                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-8",                     key(PROPKEY_header8                          ), String .class, conf.getProperty       (key(PROPKEY_header8                          ), DEFAULT_header8                          ), DEFAULT_header8                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
+		list.add( new CmSettingsHelper("http-header-9",                     key(PROPKEY_header9                          ), String .class, conf.getProperty       (key(PROPKEY_header9                          ), DEFAULT_header9                          ), DEFAULT_header9                         , "Extra header values that you want to add the the HTTP Header. Like: Authorization: ..."));
 
 		return list;
 	}

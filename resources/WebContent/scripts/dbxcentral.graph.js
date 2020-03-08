@@ -39,11 +39,8 @@ function getParameter(key, defaultValue)
  * Utility function: Create a HTML Table using a JSON input
  * grabbed from: http://www.encodedna.com/javascript/populate-json-data-to-html-table-using-javascript.htm
  */
-function jsonToTable(json) 
+function jsonToTable(json, stripHtmlInCells) 
 {
-	if (_debug > 1)
-		console.log("jsonToTable(): json=: "+json, json);
-
 	// EXTRACT json VALUES FOR HTML HEADER. 
 	var col = [];
 	for (var i = 0; i < json.length; i++) {
@@ -53,8 +50,6 @@ function jsonToTable(json)
 			}
 		}
 	}
-	if (_debug > 1)
-		console.log("jsonToTable(): headers: "+col, col);
 
 	// CREATE DYNAMIC TABLE.
 	var table = document.createElement("table");
@@ -85,10 +80,76 @@ function jsonToTable(json)
 			var tabCell = tr.insertCell(-1);
 			tabCell.noWrap = true;
 			tabCell.style.border = borderStyle;
-			tabCell.innerHTML = json[i][col[j]];
+			
+			var originTxt   = json[i][col[j]];
+			var strippedTxt = stripHtml( originTxt );
+
+			// If originTxt contains HTML Tags, then add both ORIGIN & STRIPPED and a button where we can "switch" between the two fields
+			if (isHTML(originTxt))
+			{
+				var newDiv = document.createElement('div');
+
+				var newlink = document.createElement('a');
+				newlink.appendChild(document.createTextNode('Toggle: Compact or Formatted Content'));
+				newlink.setAttribute('href', 'javascript:toggleActiveAlarmsExtendedDesciption();');
+				
+				var originDiv   = document.createElement('div');
+				var strippedDiv = document.createElement('div');
+				originDiv  .setAttribute('class', 'active-alarms-extDesc-origin-class');
+				strippedDiv.setAttribute('class', 'active-alarms-extDesc-stripped-class');
+				
+				originDiv  .innerHTML = originTxt;
+				strippedDiv.innerHTML = strippedTxt;
+				
+				originDiv  .style.display = stripHtmlInCells ? 'none'  : 'block';
+				strippedDiv.style.display = stripHtmlInCells ? 'block' : 'none';
+				
+				newDiv.appendChild(newlink);
+				newDiv.appendChild(originDiv);
+				newDiv.appendChild(strippedDiv);
+
+				tabCell.appendChild(newDiv);
+			}
+			else
+			{
+				//var cellContent = stripHtmlInCells ? strippedTxt : originTxt;
+				tabCell.innerHTML = originTxt;
+			}
 		}
 	}
 	return table;
+}
+
+function stripHtml(html)
+{
+	var tmp = document.createElement("DIV");
+	tmp.innerHTML = html;
+	return tmp.textContent || tmp.innerText || "";
+}
+
+function isHTML(str) {
+	var a = document.createElement('div');
+	a.innerHTML = str;
+
+	for (var c = a.childNodes, i = c.length; i--; ) 
+	{
+		if (c[i].nodeType == 1) 
+			return true; 
+	}
+
+	return false;
+}
+
+function toggleActiveAlarmsExtendedDesciption()
+{
+//	var extDesc = document.getElementsByClassName("active-alarms-extDesc-origin-class active-alarms-extDesc-stripped-class");
+	var extDesc = document.querySelectorAll('.active-alarms-extDesc-origin-class,.active-alarms-extDesc-stripped-class')
+
+	// Toggle all elements in the above clases
+	for (let i=0; i<extDesc.length; i++)
+	{
+		extDesc[i].style.display = extDesc[i].style.display === 'none' ? 'block' : 'none';
+	}
 }
 
 /**
@@ -281,10 +342,28 @@ function activeAlarmsChkClick(checkbox)
 	// Save last known value in "WebBrowser storage"
 	getStorage('dbxtune_checkboxes_').set("active-alarms-solid-chk", checkbox.checked ? 'checked' : 'not');
 }
+function activeAlarmsCompExtDescClick(checkbox) 
+{
+	console.log('activeAlarmsCompExtDescClick(): Checked: ' + checkbox.checked);
+
+	// Save last known value in "WebBrowser storage"
+	getStorage('dbxtune_checkboxes_').set("active-alarms-compExtDesc-chk", checkbox.checked ? 'checked' : 'not');
+
+	// Reload the page
+	//location.reload();
+	
+	toggleActiveAlarmsExtendedDesciption();
+}
 
 // do: deferred (since all DOM elements might not be created yet)
 setTimeout(function()
 {
+	// Restore 'Compact Extended Desc' at the ACTIVE ALARMS "window"
+	var savedVal_activeAlarmsCompactExtDescChk = getStorage('dbxtune_checkboxes_').get("active-alarms-compExtDesc-chk");
+	if (savedVal_activeAlarmsCompactExtDescChk == 'checked') $("#active-alarms-compExtDesc-chk").attr('checked', 'checked');
+	if (savedVal_activeAlarmsCompactExtDescChk == 'not')     $("#active-alarms-compExtDesc-chk").removeAttr('checked');
+	//activeAlarmsCompExtDescClick( document.getElementById("active-alarms-compExtDesc-chk") );
+
 	// Restore 'Solid Background' at the ACTIVE ALARMS "window"
 	var savedVal_activeAlarmsSolidChk = getStorage('dbxtune_checkboxes_').get("active-alarms-solid-chk");
 	if (savedVal_activeAlarmsSolidChk == 'checked') $("#active-alarms-solid-chk").attr('checked', 'checked');
@@ -363,7 +442,8 @@ function dbxTuneCheckActiveAlarms()
 
 						activeAlarmsWinDiv.appendChild(srvDiv);
 					}
-					let tab = jsonToTable(entry);
+					let stripHtmlInCells = document.getElementById("active-alarms-compExtDesc-chk").checked;
+					let tab = jsonToTable(entry, stripHtmlInCells);
 					srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 					srvDiv.appendChild(tab);
 					srvDiv.appendChild(document.createElement("br"));
@@ -624,7 +704,8 @@ function dbxTuneGraphSubscribe()
 
 				activeAlarmsWinDiv.appendChild(srvDiv);
 			}
-			let tab = jsonToTable(graphJson.activeAlarms);
+			let stripHtmlInCells = document.getElementById("active-alarms-compExtDesc-chk").checked;
+			let tab = jsonToTable(graphJson.activeAlarms, stripHtmlInCells);
 			srvDiv.innerHTML = "Active Alarms for server: <b>"+graphServerName+"</b>";
 			srvDiv.appendChild(tab);
 			srvDiv.appendChild(document.createElement("br"));
