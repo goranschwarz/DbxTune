@@ -50,7 +50,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/api/sessions' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/sessions</h5>
+		<h5 class='card-header'><a href='/api/sessions?type=last&graphs=false&status=all'>/api/sessions</a></h5>
 		<div class='card-body'>
 		What sessions are available, and some basic information about that session.<br>
 		<br>
@@ -72,7 +72,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/api/graphs' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/graphs</h5>
+		<h5 class='card-header'><a href='/api/graphs?sessionName=SRVNAME'>/api/graphs</a></h5>
 		<div class='card-body'>
 		What graphs are available for a specific server/session or profile<br>
 		<br>
@@ -90,7 +90,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/graph/profiles' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/graph/profiles</h5>
+		<h5 class='card-header'><a href='/api/graph/profiles?name=PROFILE_NAME'>/api/graph/profiles</a></h5>
 		<div class='card-body'>
 		What graph profiles are available<br>
 		<br>
@@ -109,7 +109,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/graph/description' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/graph/description</h5>
+		<h5 class='card-header'><a href='/api/graph/description'>/api/graph/description</a></h5>
 		<div class='card-body'>
 		What graph profiles are available<br>
 		<br>
@@ -128,7 +128,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/healthcheck' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/healthcheck</h5>
+		<h5 class='card-header'><a href='/api/healthcheck?srvInfo=false&srv='>/api/healthcheck</a></h5>
 		<div class='card-body'>
 		If the server is healthy or not<br>
 		<br>
@@ -154,7 +154,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/alarm/active' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/alarm/active</h5>
+		<h5 class='card-header'><a href='/api/alarm/active'>/api/alarm/active</a></h5>
 		<div class='card-body'>
 		Get info about <b>active</b> alarms<br>
 		An empty JSON array, means that there are no active alarms.<br>
@@ -172,7 +172,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/api/alarm/history' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/alarm/history</h5>
+		<h5 class='card-header'><a href='/api/alarm/history?srv=SRVNAME'>/api/alarm/history</a></h5>
 		<div class='card-body'>
 		Get info about <b>historical</b> alarms, all alarms that has been triggered in the past<br>
 		<br>
@@ -192,7 +192,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/graph/data' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/graph/data</h5>
+		<h5 class='card-header'><a href='/api/graph/data?sessionName=SRVNAME&cmName=CmSummary&graphName=aaCpuGraph&startTime=2h'>/api/graph/data</a></h5>
 		<div class='card-body'>
 		Get graph data<br>
 		<br>
@@ -222,7 +222,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/chart/broadcast-ws' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/chart/broadcast-ws</h5>
+		<h5 class='card-header'><a href='/api/chart/broadcast-ws'>/api/chart/broadcast-ws</a></h5>
 		<div class='card-body'>
 		Start to subscribe (using a WebSocket) to graph data (graph data will be "pushed" from DbxCentral to your browser/client)<br>
 		<br>
@@ -240,7 +240,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/api/pcs/receiver' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/pcs/receiver</h5>
+		<h5 class='card-header'><a href='/api/pcs/receiver'>/api/pcs/receiver</a></h5>
 		<div class='card-body'>
 		This is where Dbx Central receives data from any DbxTune Collector.<br>
 		</div> <!-- end: card-body -->
@@ -249,7 +249,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/api/pcs/queueInfo' class='card border-dark mb-5'>
-		<h5 class='card-header'>/api/pcs/queueInfo</h5>
+		<h5 class='card-header'><a href='/api/pcs/queueInfo'>/api/pcs/queueInfo</a></h5>
 		<div class='card-body'>
 		Inbound PCS Queue Size. How many entries are in the Queue waiting to be stored by the Persistence Storage.<br>
 		</div> <!-- end: card-body -->
@@ -262,7 +262,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/admin' class='card border-dark mb-5'>
-		<h5 class='card-header'>/admin</h5>
+		<h5 class='card-header'><a href='/admin'>/admin</a></h5>
 		<div class='card-body'>
 		Various admin commands (not published yet).<br>
 		</div> <!-- end: card-body -->
@@ -271,7 +271,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/admin/shutdown' class='card border-dark mb-5'>
-		<h5 class='card-header'>/admin/shutdown</h5>
+		<h5 class='card-header'><a href='/admin/shutdown'>/admin/shutdown</a></h5>
 		<div class='card-body'>
 		Shutdown or restart DbxCentral.<br>
 		</div> <!-- end: card-body -->
@@ -280,7 +280,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/alarmLog' class='card border-dark mb-5'>
-		<h5 class='card-header'>/alarmLog</h5>
+		<h5 class='card-header'><a href='/alarmLog?name=ALARM.LOG.SRVNAME.log'>/alarmLog</a></h5>
 		<div class='card-body'>
 		Get alarm log file
 		</div> <!-- end: card-body -->
@@ -289,7 +289,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/log' class='card border-dark mb-5'>
-		<h5 class='card-header'>/log</h5>
+		<h5 class='card-header'><a href='/log?name=SRVNAME.log&method=plain&discard=&tail=500'>/log</a></h5>
 		<div class='card-body'>
 		Get log file
 		<br>
@@ -311,7 +311,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/logtail' class='card border-dark mb-5'>
-		<h5 class='card-header'>/logtail</h5>
+		<h5 class='card-header'><a href='/logtail'>/logtail</a></h5>
 		<div class='card-body'>
 		(internal): WebSocket feeder if we have <b>tail -f</b> enabled on a file.
 		</div> <!-- end: card-body -->
@@ -320,7 +320,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/conf' class='card border-dark mb-5'>
-		<h5 class='card-header'>/conf</h5>
+		<h5 class='card-header'><a href='/conf?name=ase.GENERIC.conf'>/conf</a></h5>
 		<div class='card-body'>
 		Get configuration file
 		</div> <!-- end: card-body -->
@@ -329,7 +329,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/report' class='card border-dark mb-5'>
-		<h5 class='card-header'>/report</h5>
+		<h5 class='card-header'><a href='/report?name=SRVNAME&op=viewLatest'>/report</a></h5>
 		<div class='card-body'>
 		Access <i>Daily Report</i> files.
 		<br>
@@ -347,7 +347,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/download-local-dbxtune' class='card border-dark mb-5'>
-		<h5 class='card-header'>/download-local-dbxtune</h5>
+		<h5 class='card-header'><a href='/download-local-dbxtune'>/download-local-dbxtune</a></h5>
 		<div class='card-body'>
 		Download the local latest DbxTune ZIP package located at DbxCentral server.<br>
 		This could be a later version than the "public" found at the official download page.
@@ -357,7 +357,7 @@
 		
 		<!-- ############################################################################# -->
 		<div id='/overview' class='card border-dark mb-5'>
-		<h5 class='card-header'>/overview</h5>
+		<h5 class='card-header'><a href='/overview'>/overview</a></h5>
 		<div class='card-body'>
 		Get an overview page with all managed server and there statuses
 		</div> <!-- end: card-body -->
@@ -366,7 +366,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/logout' class='card border-dark mb-5'>
-		<h5 class='card-header'>/logout</h5>
+		<h5 class='card-header'><a href='/logout'>/logout</a></h5>
 		<div class='card-body'>
 		Logout
 		</div> <!-- end: card-body -->
@@ -375,7 +375,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/login-check' class='card border-dark mb-5'>
-		<h5 class='card-header'>/login-check</h5>
+		<h5 class='card-header'><a href='/login-check'>/login-check</a></h5>
 		<div class='card-body'>
 		Check if we a signed-in or not
 		</div> <!-- end: card-body -->
@@ -384,7 +384,7 @@
 
 		<!-- ############################################################################# -->
 		<div id='/h2ws' class='card border-dark mb-5'>
-		<h5 class='card-header'>/h2ws</h5>
+		<h5 class='card-header'><a href='/h2ws?filename=DBX_CENTRAL_H2WriterStatCronTask.log&startDate=YYYY-MM-DDThh:mm&endDate=YYYY-MM-DDThh:mm'>/h2ws</a></h5>
 		<div class='card-body'>
 		H2 Central Writer Statistics (chart info)
 		<br>

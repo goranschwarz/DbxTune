@@ -848,10 +848,15 @@ public class ResultSetMetaDataCached implements ResultSetMetaData, java.io.Seria
 //	{
 //		_entries.get( column - 1 )._columnDisplaySize = newLen;
 //	}
-	
-	public Entry getEntry(int row)
+
+	/**
+	 * Get internal entry with details.
+	 * @param column  Column Position (with index start at 1) 
+	 * @return
+	 */
+	public Entry getEntry(int column)
 	{
-		return _entries.get(row);
+		return _entries.get(column - 1);
 	}
 
 	public List<Entry> getEntries()

@@ -124,22 +124,23 @@ extends DbmsDdlResolverAbstract
 //			//entry.setColumnType(Types.TIMESTAMP_WITH_TIMEZONE);
 //			//entry.setColumnTypeName("timestamp with time zone");
 //		}
-//
-//		else if ("xid".equalsIgnoreCase(dt))
-//		{
-//			entry.setColumnType(Types.VARCHAR);
-//			entry.setColumnTypeName("varchar");
-//			entry.setPrecision(30);
-//			entry.setColumnDisplaySize(30);
-//		}
-//
-//		else if ("inet".equalsIgnoreCase(dt))
-//		{
-//			entry.setColumnType(Types.VARCHAR);
-//			entry.setColumnTypeName("varchar");
-//			entry.setPrecision(30);
-//			entry.setColumnDisplaySize(30);
-//		}
+
+		else if ("xid".equalsIgnoreCase(dt))
+		{
+			entry.setColumnType(Types.VARCHAR);
+			entry.setColumnTypeName("varchar");
+			entry.setPrecision(30);
+			entry.setColumnDisplaySize(30);
+		}
+
+		// Network Address Types -- https://www.postgresql.org/docs/9.1/datatype-net-types.html
+		else if ("inet".equalsIgnoreCase(dt) || "cidr".equalsIgnoreCase(dt) || "macaddr".equalsIgnoreCase(dt))
+		{
+			entry.setColumnType(Types.VARCHAR);
+			entry.setColumnTypeName("varchar");
+			entry.setPrecision(30);
+			entry.setColumnDisplaySize(30);
+		}
 
 //		else if ("bool".equalsIgnoreCase(dt))
 //		{

@@ -22,6 +22,9 @@ package com.asetune.cm.postgres;
 
 import java.awt.event.MouseEvent;
 import java.sql.Connection;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,6 +39,8 @@ import com.asetune.cm.CountersModel;
 import com.asetune.cm.postgres.gui.CmPgActivityPanel;
 import com.asetune.gui.MainFrame;
 import com.asetune.gui.TabularCntrPanel;
+import com.asetune.sql.ResultSetMetaDataCached;
+import com.asetune.sql.ResultSetMetaDataCached.Entry;
 import com.asetune.utils.StringUtil;
 
 /**
@@ -150,6 +155,56 @@ extends CountersModel
 		return "select * from pg_catalog.pg_stat_activity";
 	}
 
+	/**
+	 * Change data types (or length) for some column  
+	 * <p>
+	 * We could have done that by converting columns into varchar datatypes, but since we do: "select * from ..." 
+	 * for forward/backward compatibility, this is done in the code instead...<br>
+	 * When we switch to "column specified" SQL Statement, then we can get rid of this!  
+	 */
+	@Override
+	public ResultSetMetaDataCached createResultSetMetaData(ResultSetMetaData rsmd) throws SQLException
+	{
+		ResultSetMetaDataCached rsmdc = super.createResultSetMetaData(rsmd);
+
+		if (rsmdc == null)
+			return null;
+		
+		// In PG x.y
+		setColumnShorterLength(rsmdc, "application_name" , 60);  // text --> varchar(60)
+		setColumnShorterLength(rsmdc, "client_addr"      , 30);  // text --> varchar(30)
+		setColumnShorterLength(rsmdc, "client_hostname"  , 60);  // text --> varchar(60)
+		setColumnShorterLength(rsmdc, "state"            , 30);  // text --> varchar(30)
+//		setColumnShorterLength(rsmdc, "backend_xid"      , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
+//		setColumnShorterLength(rsmdc, "backend_xmin"     , 20);  // xid  --- Already set to varchar(30) in com.asetune.sql.ddl.DbmsDdlResolverPostgres
+		
+		// In PG 9.6
+		setColumnShorterLength(rsmdc, "wait_event_type"  , 30);  // text --> varchar(30)
+		setColumnShorterLength(rsmdc, "wait_event"       , 50);  // text --> varchar(50)
+
+		// In PG 10
+		setColumnShorterLength(rsmdc, "backend_type"     , 30);  // text --> varchar(30)
+		
+		return rsmdc;
+	}
+
+	private void setColumnShorterLength(ResultSetMetaDataCached rsmdc, String colName, int newLength)
+	{
+		int colPos = rsmdc.findColumn(colName);
+		
+		// return if column wasn't found
+		if (colPos == -1)
+			return;
+		
+		Entry colEntry = rsmdc.getEntry(colPos);
+		if (colEntry.getPrecision() > newLength)
+		{
+			colEntry.setColumnType(Types.VARCHAR);
+			colEntry.setColumnTypeName("varchar");
+			colEntry.setPrecision(newLength);
+		}
+	}
+	
 	@Override
 	public String getToolTipTextOnTableCell(MouseEvent e, String colName, Object cellValue, int modelRow, int modelCol) 
 	{

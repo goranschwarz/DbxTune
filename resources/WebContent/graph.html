@@ -21,6 +21,22 @@
 			/* height: auto !important; */
 		}
 
+		#active-alarms-top {
+			position: fixed;
+			color: rgba(255, 148, 20, 1.0);
+			top: 10px;
+			font-size: 24px;
+			left: 40%;
+			z-index: 9999;
+			animation: blink 1.5s infinite;
+		}
+
+		@keyframes blink {  
+			0% { opacity: 1.0; }
+			50% { opacity: 0.0; }
+			100% { opacity: 1.0; }
+		}
+
 		#active-alarms {
 			position: fixed;
 			bottom: 0;
@@ -237,6 +253,10 @@
 	</div>
 
 	<!-- Show Active alarms -->
+	<div id="active-alarms-top" style="visibility: hidden;">
+	Active Alarms
+	</div>
+
 	<div id="active-alarms" class="active-alarms-class" style="visibility: hidden;">
 		<div id="active-alarms-ctl" class="active-alarms-ctl-class">
 			There are <span id="active-alarms-count" style="color:red">##</span> Active Alarms...&nbsp;&nbsp;&nbsp; Alarm Window Max Size: 

@@ -394,6 +394,7 @@ function dbxTuneCheckActiveAlarms()
 			var jsonResp = JSON.parse(data);
 				
 			// update ACTIVE Alarm view (note: there can be several servers)
+			var activeAlarmsTopDiv = document.getElementById("active-alarms-top");
 			var activeAlarmsDiv    = document.getElementById("active-alarms");
 			var activeAlarmsWinDiv = document.getElementById("active-alarms-win");
 
@@ -468,11 +469,13 @@ function dbxTuneCheckActiveAlarms()
 //			if (activeAlarmsWinDiv.getElementsByTagName('*').length > 0)
 			if (alarmSumCount > 0)
 			{
+				activeAlarmsTopDiv.style.visibility = 'visible';
 				activeAlarmsDiv.style.visibility = 'visible';
 				pageTitleNotification.on("---ALARM---", 1000);
 			}
 			else
 			{
+				activeAlarmsTopDiv.style.visibility = 'hidden';
 				activeAlarmsDiv.style.visibility = 'hidden';
 				pageTitleNotification.off();
 			}
