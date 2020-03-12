@@ -63,6 +63,7 @@ import org.jdesktop.swingx.decorator.ComponentAdapter;
 import org.jdesktop.swingx.decorator.HighlightPredicate;
 import org.jdesktop.swingx.renderer.DefaultTableRenderer;
 import org.jdesktop.swingx.renderer.StringValue;
+import org.jdesktop.swingx.renderer.StringValues;
 import org.jdesktop.swingx.table.TableColumnExt;
 import org.mozilla.universalchardet.UniversalDetector;
 
@@ -281,9 +282,19 @@ implements ToolTipHyperlinkResolver
 			@Override
 			public String getString(Object value) 
 			{
-//				if ( ! (value instanceof BigDecimal) ) 
-//					return StringValues.TO_STRING.getString(value);
-				return nf.format(value);
+				try
+				{
+					if ( ! (value instanceof Number) ) 
+						return StringValues.TO_STRING.getString(value);
+					
+					return nf.format(value);
+				}
+				catch (RuntimeException rte)
+				{
+					_logger.warn("Problems to render... the value |" + value + "| class=" + (value == null ? null : value.getClass().getName()) + ". returning 'toString instead'. Caught: " + rte, rte);
+					
+					return StringValues.TO_STRING.getString(value);
+				}
 			}
 		};
 		setDefaultRenderer(BigDecimal.class, new DefaultTableRenderer(svInExactNumber));
